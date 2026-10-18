@@ -43,7 +43,7 @@ fn spawn_saved_pet_achievement_fixture(
     app.add_plugins(shared::ProtocolPlugin);
     app.finish();
     app.cleanup();
-    app.insert_resource(GameDatabase { db: database });
+    app.insert_resource(GameDatabase::new(database));
     app.insert_resource(crate::battle_pets::load_test_catalog());
     app.insert_resource(catalog);
     app.init_resource::<BattleIds>();

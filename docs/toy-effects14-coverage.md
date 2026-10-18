@@ -1,5 +1,279 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source370–374: pending Blue/Bronze/Green acceptance, training gap and retained soup proof (2026-10-17)
+
+370–372 test/spec73494c432 adds three exact existing type5 cursor banners to the transmitted-object fixture, now eight IDs. Prior five source rows, including361/369, stay unchanged. Each new case uses its own model/scale and actual target87 cursor, owner/map/facing and ordinary180s expiry assertions. Format/manual readability/diffcheck pass; updated eight-object plus15-caster successor coverage after478 is requested, not passed. No runtime/data/admission change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|370 Blue Dragon Banner199769/388090 | Instant cursor87 effect50→381321 for180000ms; category1246/180000ms recovery. Existing type5/display77021/size0.5 and display bounds are used by its new actual-use case, pending covering proof. No borrowed Black-banner pass, Red-template closure or new native/category-reuse certificate. |
+|371 Bronze Dragon Banner199770/388091 | Same source cursor/lifetime/category, distinct381319/type5/display76419/size0.5. Its own exact actual-use/owner/map/facing/ordinary-expiry case is committed, pending a covering gate, not identity substitution with Blue or Green. |
+|372 Green Dragon Banner199771/388092 | Same source cursor/lifetime/category, distinct381320/type5/display77020/size0.5. Its exact actual-use/expiry case is committed and pending covering proof; no new native or whole-banner-family certificate. |
+|373 Tuskarr Training Dummy199830/388229 | Instant cursor87 summon196394/property2910 for300000ms; Control0/Title0/flags256, item3600000ms recovery. Source says outdoors-only; runtime creature content/model absent. Actual authored dummy combat/target behavior/placement/cleanup and outdoors qualification remain gaps; no inert scenery, invented training flags or copied dummy model. |
+|374 Tuskarr Traveling Soup Pot199892/388258 | Source2000ms cursor87 effect50/base1→381360/type8/display75335/size0.7 for300000ms; item/category recovery300000ms. Source focus4/radius10 links31442/CozyFire7353. Retain [exact seven-item linked-cooking actor/buff1/60s restoration and trigger/audience/cooking CPU scope](#linked-cooking-traps-2026-10-12). Representative both-skin native fire was Little Wickerman, not per-toy Soup pixels; no new positive/native result or guessed Versatility coefficient. |
+
+Evidence: private `rows370-374-{readonly-source,action-source}.json`, `banners370-372-{active-goal,proof-ledger}.json`, actual runtime TDB models/display bounds and existing linked-cooking witnesses.149865 Tea Set remains untouched.
+
+## Source365–369: pending Black Dragon acceptance and seat/tea/Red-banner boundaries (2026-10-17)
+
+369 test/specb53bd5e5b adds the exact existing Black Dragon banner as fifth transmitted-object case. Prior four rows, including361, stay unchanged; cursor selection now names all three actual cursor banners. Format/manual readability/diffcheck pass. Expanded five-object plus15-caster successor coverage after478 is requested, not passed;478's older head contains neither361/369 nor335. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|365 S.E.A.T.199554/387447 | Instant effect50→381218/target62 for300000ms, item300000ms recovery. Actual runtime TDB type7/display51446/size1.5/seat fields1/2/0 exists; pinned62 is caster-ground destination. Actual placement/seating/access/release/lifecycle acceptance remains unverified; no decorative-only success or guessed seat height/recipient rules. |
+|366 Dragon Tea Set199649/394318 | Instant cursor87 effect50→384309 for180000ms, inherited3600000ms recovery. Runtime type10/display78093/size0.5, Data3=3000/Data10=394316/Data23=1. Data10 action394316 has self85/226 and source seated drinking/mana description. Actual serve/use/recipient/drinking/mana/cleanup remains unresolved; no inert prop, guessed refill/mana coefficient or ignoring the action. |
+|367 Whale Bone Tea Set199650/394317 | Same authored cursor/lifetime/recovery, distinct384308/type10/display78092/size0.6/Data10=394315, with Data3=3000/Data23=1 and self85/226 seated-drinking action. Its own service/recipient/effect/lifecycle gap remains; do not substitute Dragon Tea's identity or infer a new149865 Tea Set producer contract. |
+|368 Red Dragon Banner199767/388088 | Instant cursor87 effect50→381317 for180000ms; item-1 and category1246/180000ms recovery. Runtime summoned-object TDB lacks381317. Existing actual learned negative fixture requests [2,0,0], requires gameobject-template refusal and no388088 cast event. Retain that refusal scope, not positive placement/native proof or a copied Black banner template. |
+|369 Black Dragon Banner199768/388089 | Same authored cursor/lifetime/category, distinct existing381318/type5/display71263/size0.5 with display bounds. New exact actual [4,0,-3] cursor/model/scale/owner/map/facing/ordinary180s expiry case is committed and pending a covering successor gate. No new native/art/category-reuse certificate or Red-template closure. |
+
+Evidence: private `rows365-369-{readonly-source,action-source,active-goal}.json`, `banner369-proof-ledger.json`, actual runtime `tdb_gameobject_template` and pinned selector62.149865 Tea Set remains the lead-required untouched gap.
+
+## Source360–364: pending Reliquary/Duck acceptance and banner/sled/vacuum gaps (2026-10-17)
+
+361 test/spec431949735 adds the exact already-loaded Reliquary banner to `toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire`: four IDs now assert actual learning, source cursor/offset destination, type/display/scale/owner/map/facing and ordinary expiry. Real SpellStore loading includes the new root; old three identity rows are unchanged. During this review, existing `cosmetic.rs` already-audited383065 was confirmed:335 test/spec49e9c2d95 adds194056/permanent0 to the caster fixture, now15IDs. Format/manual readability/diffcheck pass for both. Lead accepts335 plus current tip into the gate after478; explicit four-object scope has been requested. Neither new fixture is covered by477/478 or newly passed yet. No production/runtime/data change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|360 Explorers' League Banner198728/384875 | Instant effect50→380638/cursor87 for180000ms; item-1 and category1246/180000ms recovery. Runtime summoned-object TDB table lacks380638. Source template/display and actual placement/lifecycle remain gaps; do not copy Reliquary's76510/0.6 identity or a generic banner by name. |
+|361 Reliquary Banner198729/384876 | Same authored cursor/lifetime/category, distinct existing380639/type5/display76510/size0.6, display bounds present. New actual cursor [4,0,-3]/owner/map/facing/model/ordinary180s expiry acceptance committed, pending a covering successor gate. No native pixels, commerce, sibling identity or full category-reuse certificate. |
+|362 Magical Snow Sled198827/385297 | Source1500ms target18 summon195145/property5456/base1/permanent; Control4/faction35/flags256, inherited300000ms recovery. Runtime creature content absent. Actual sled entry/control/motion/dismount/cleanup remains unresolved; no inert actor, normal pet or forced driver behavior. |
+|363 Lucky Duck198857/385941 | Instant self dummy4 for600000ms, item1800000ms recovery. Source promises escort/careful plush-duck carrying;385941 is not the already-audited335 Duck Lovie383065 route. Actual carry/escort presentation and lifecycle remain gaps; no blanket zero-dummy admission, invented separate duck actor or borrowed nap acceptance. |
+|364 Bag of Furious Winds199337/387068 | Self periodic23/period0→388239 plus aura33/base75 for10000ms; child dummy3/target130, item1800000ms recovery/category override0. Pinned130 is caster-referenced frontal rectangular unit selection. Actual critter eligibility/vacuum child action/direction/control/cleanup remain unresolved; no guessed tick cadence, all-unit suction, damage or ignored slow payload. |
+
+Evidence: private `rows360-364-{readonly-source,action-source,active-goal}.json`, `duck335-proof-ledger.json`, `banner361-proof-ledger.json`. Tea Set149865 remains untouched.
+
+## Source355–359: Taivan buff/pillow boundaries and retained statue proof (2026-10-17)
+
+356 retains [source18 Ornate Dragon Statue actual CPU/both-skin native scope](#placed-statues-and-the-missing-template-audit-2026-10-12), not a fresh certificate. Other rows retain unresolved action/placement/seat boundaries. No runtime/data change, new positive/native admission or own heavy duplicate;478 remains the owner of expanded acceptance verification.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|355 Taivan's Trumpet198537/384539 | Instant target32 summon195387/property3622 (Control0/Title0/flags75639048) for120000ms, item300000ms recovery. Runtime creature content absent. Nearby Versatility buff source is description reference384543, not a root trigger record:189/base0/scalingclass-3/targets22/30 is preserved. Actual Taivan action/recipient eligibility/scaled stat/cleanup remain gaps; no inert companion or guessed flat percentage, radius or descriptive-reference execution. |
+|356 Ornate Dragon Statue198646/384614 | Source1500ms self trigger64/misc10→384618, child target47 summon194793/property64 for300000ms; item900000ms recovery. Existing108683/model-row scale0.7/CDI0.3 and earlier actual learning/source actor/model/scale/stationary/expiry CPU plus both-skin statue pixels are retained. No new current-master/native or full15-minute reuse certificate. |
+|357 Soft Purple Pillow198720/384870 | Source3000ms effect50→376979/target78/radius16=1yd for300000ms, item300000ms recovery. Runtime `tdb_gameobject_template` contains type7/display74543/size3, seat fields1/1/1; display bounds/FDID4382562 exist. Actual source-destination initialization/placement/seating/access/expiry acceptance remains unverified; descriptive “at your feet” does not justify a zero offset or decorative-only acceptance. |
+|358 Skinny Reliquary Pillow198721/384871 | Source3000ms effect50→380634/target78/radius16=1yd for300000ms, item300000ms recovery. Runtime summoned-object TDB table lacks380634. Exact source template/model and actual placement/interaction/lifecycle remain gaps; no copied purple-pillow identity or guessed seat fields/scale. |
+|359 Small Triangular Pillow198722/384872 | Same authored cast/target/radius/lifetime/recovery, distinct380635 absent from runtime summoned-object TDB table. Its own source identity/placement/interaction/lifecycle remains unresolved, not a deduplicated pillow, zero-foot placement or guessed geometry. |
+
+Evidence: private `rows355-359-{readonly-source,action-source,active-goal}.json`, actual runtime summoned-object table, pinned `SpellInfo.cpp` selector78 and exact `SpellRadius`16. Taivan's descriptive stat reference stays distinct from the root graph. Tea Set149865 remains untouched.
+
+## Source350–354: private weather/shell/raft/easel boundaries and retained cooking proof (2026-10-17)
+
+351 retains [source16 cooking-focus CPU proof](#cooking-focus-batch16-2026-10-12); its per-toy Maruuk native pixels remain unclaimed. Other rows retain exact mixed/private/movement gaps. No runtime/data changes, new positive/native certificate or own heavy duplicate.
+
+**329 metadata correction:** summoned-object loading reads runtime `tdb_gameobject_template`, not the empty base/content gameobject tables.377204/type3/display74995/size1.3 is present there; earlier absence claim is withdrawn. Its acceptance/open interaction remains unresolved.351's379147/type8/display75339/size0.75/focus4/radius10 is likewise present in that actual runtime source. Private capsules now record the queried table explicitly.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|350 Centralized Precipitation Emitter198264/385792 | Source5000ms target47 summon195323/property5453 for7200000ms, inherited7200000ms recovery; Control0/Title55/rawflags-1811735808. Runtime content actor absent. Outdoors-only/party-or-raid-only machine and effects, selected weather and restoration/lifecycle remain gaps; no public/owner-only substitute or ordinary decorative actor. |
+|351 Maruuk Cooking Pot198402/383081 | Source2000ms effect50→379147 at target32/base1 for300000ms; item-1 and category97/300000ms recovery. Existing source16 actual learned use/model75339/scale0.75/owner/map/lifetime/real cooking/no-focus-distance-other-map-removal refusal CPU scope is retained. Native shared-fire evidence was Grim, not Maruuk per-toy pixels; no new native result, trap admission or guessed portable timer. |
+|352 Personal Shell198409/383188 | Source cast-index34/base2000ms/minimum500ms, self transform56→existing194226/display105964/misc8 plus26 and312/set1048 for300000ms; item3600000ms recovery. Mixed body/action restriction/animation entry-exit remains unverified. Do not turn flavor safety into invulnerability or discard26/set1048 for a caster-disguise shortcut. |
+|353 Tuskarr Dinghy198428/383268 | Source1500ms self104 plus226/period0 for600000ms, start recovery1500ms and item/spell recovery0. Source explicitly requires rafting across water and jumping to paddle up to130% faster. Water/movement/paddle state and restoration remain gaps; no unconditional speed/land travel, guessed stacking/cadence or ignored periodic payload. |
+|354 Artist's Easel198474/384131 | Source1500ms self373 plus191/base2.5 for2000ms, inherited30000ms recovery. Pinned191 is normal-movement-speed handling, not a generic art attachment. Exact inspiration/pose/movement/cleanup remains unproved; no invented easel summon, screenshot reward or dropped movement/control semantics. |
+
+Evidence: private `rows350-354-{readonly-source,action-source,active-goal}.json`; `game_objects/summoned.rs::load_templates`, pinned `SpellAuraEffects.cpp`, [cooking-focus proof ledger](#cooking-focus-batch16-2026-10-12). Tea Set149865 remains untouched.
+
+## Source345–349: slide/wyrmhole/recalibration/private-environment/perception gaps (2026-10-17)
+
+All five retain distinct unresolved actions, not generic cosmetics. Local runtime content templates/models for195667 and194993 are absent; earlier scenery census explicitly keeps Wyrmhole198156 blocked. Source graph/restrictions do not establish a usable implementation. No runtime/data admission, new positive/native certificate or own heavy duplicate; [pending lead478 scope](#lead-integration-receipt-2026-10-17) is unchanged.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|345 Jar of Excess Slime198090/382452 | Instant self373/104/312(set1047)/23→383129/263 for3000ms; child383129 is self dummy effect3. Inherited15000ms recovery. Sliding movement/animation/control restoration and actual child action remain gaps; amplitude0 does not authorize an invented tick schedule, generic speed boost or ignored child/payload. |
+|346 Wyrmhole Generator: Dragon Isles198156/386379 | Source5000ms target47 summon195667/property3539/base1 for120000ms; Control0/Title0/flags16779280, inherited1800000ms recovery/1000ms start recovery. Item requires skill2827/rank1/level1. Actual random Dragon Isles travel, specialization/triangulation-specific choices, access and teleport lifecycle remain gaps; no hardcoded destinations, inferred engineering bypass or inert portal actor. |
+|347 Atomic Recalibrator198173/384911 | Source1500ms target47 effect179/base1/misc27706 for180000ms; inherited43200000ms recovery. Actual step-on area-trigger eligibility/genetic transformation/expiry and recipient isolation remain unresolved. No single summon substitute, guessed race/model pool or aura applied only to the caster. |
+|348 Environmental Emulator198206/385085 | Source5000ms target47 summon194993/property5453 for7200000ms, inherited7200000ms recovery. Control0/Title55/flags raw-1811735808 are preserved, not coerced into ordinary scenery. Advertised outdoors-only use and party/raid-only machine/effects, environment selection/restoration and lifecycle remain gaps; no owner-only or public substitute, dropped privacy/outdoor rule or generic actor import. |
+|349 Giggle Goggles198227/384585 | Instant self233/base550/misc6409/170 for900000ms; item3600000ms recovery. Source changes perception of the world to gnolls. Exact observer-scoped model/visual selection and restoration remain unproved; no self-only player costume, global NPC mutation or guessed gnoll model pool. |
+
+Evidence: private `rows345-349-{readonly-source,action-source,active-goal}.json`, exact item skill restrictions and preserved signed summon flags. Tea Set149865 remains untouched.
+
+## Source340–344: mailbox/whelps/holiday/feast boundaries and retained sign proof (2026-10-17)
+
+Read-only70391 metadata and runtime/TDB comparison retain exact service/mixed-action contracts.341 keeps its existing bounded source9 sign witness, not a new current/native result. [Gate477 proof and queued478 scope](#lead-integration-receipt-2026-10-17) remain distinct from this source review; no runtime/data changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|340 Ohuna Perch194885/376664 | Instant target47 summon197329/property5385 (Control1/Title5/flags2048) for600000ms, item/category2066 both10800000ms recovery. TDB197329/display109512/scale0.5 exists but runtime content absent; source promises mail retrieval/delivery until duration or called elsewhere. Mail service/owner-recall/actor lifecycle remains unresolved, not inert scenery or borrowed Katy assistant35 behavior. |
+|341 Artisan's Sign197719/381262 | Source2000ms ground138 summon193182/property3548 (Control0/flags8390656) for300000ms, item3600000ms/charges-1. Existing runtime108105 and source9 fixture cover actual learning/source cast, actor/model/owner/map/source position and ordinary expiry. This revisit adds no current/native pixels, commerce or automatic charge-consumption interpretation. |
+|342 Whelps on Strings197961/381736 | Instant self dummy4 plus106/105/104/506 for30000ms, item300000ms recovery. Source explicitly advertises five whelplings carrying the user. Exact mixed movement/control/visual multiplicity/cleanup remains unverified; no single attachment substitute, ignored movement payload or guessed airborne physics. |
+|343 Murglasses197986/381856 | Instant self aura233/base550/misc6379/169 for600000ms, item1800000ms recovery. Source explicitly reduces cooldown during March of the Tadpoles. Exact visual/model scope, festival recovery rule and restoration remain gaps; no unconditional standard recovery certificate, self-only costume substitution or invented holiday divisor. |
+|344 Rock of Appreciation198039/382159 | Instant target47 summon193736/property3076 (Control0/Title0/flags2304) for120000ms, item3600000ms recovery. TDB model choices107289/107290/100230/106517 preserve weights1 and scales1/0.8/1/1; runtime content absent. Actual appreciative critter feast preparation/action/lifecycle remains unproved; no inert critter or guessed food/service/product import. |
+
+Evidence: private `rows340-344-{readonly-source,action-source,active-goal}.json`, source9 `toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire`. Tea Set149865 remains untouched.
+
+## Lead integration receipt (2026-10-17)
+
+Lead gate477 throughd4a4a716c LANDED/master15bef300d. Inspected `gate-ty477-srv.log`: server280passed/0failed/1ignored in445.11s, client9passed/0failed/0ignored, EXIT0/FMT0,2m58s compile/no warning lines. Exact14-ID caster, all13hearthstones, nine-disguise fixture and Oomgut each have explicit ok lines. Ignored test is `zones::world_db_tests::summon_enabler_stalker_spawns_invisible_and_not_selectable`, not a new toy acceptance. Gate478 is explicitly queued through28f1ce365 for three tents,14hearthstones,ten disguises plus Oomgut11IDs and docs through334. Its result remains pending. Neither aggregate integration status nor queued coverage is a new native/full-recovery/full-toy certificate. Private receipt: `lead-gates477-478-ack.json`; no own heavy duplicate.
+
+## Source335–339: pending linked-tent acceptance and nap/seat boundaries (2026-10-17)
+
+338/339 test/spec28f1ce365 adds actual learned Market/Expedition tent cases through the existing Gnoll fixture's source-cast/placement/model/rotation/refresh/other-owner/cancel/death assertions. The helper now accepts four identity parameters and loads real SpellStore because the old setup's selective fixture omitted these new roots/children. Three tent tests await explicitly covering lead478 through28f1ce365; format/manual readability/diffcheck pass. No production/runtime/data changes or own heavy duplicate. Historical331 witness is retained, not a passing certificate for the extracted helper/new cases.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|335 Duck-Stuffed Duck Lovie194056/383065 | Instant self dummy aura4/permanent, source visual118994 and600000ms item recovery. Existing `cosmetic.rs` explicitly audits383065; acceptance-only49e9c2d95 now adds actual learned194056/permanent0/cancellation/unchanged health-model/no-actor to the15-ID caster fixture, pending the lead gate after478. Native nap/duck attachment/pose/audio and recovery remain separate unverified scopes, not automatic closure from a dummy shape. |
+|336 Cushion of Time Travel194057/387288 | Instant target47 summon195980/properties64/base1 for300000ms, inherited21600000ms recovery. TDB195980/display109046 exists, runtime content template/model absent. Actual seat interaction/access/cleanup remains a gap; description's slow forward time is not authority for teleport/time-control mechanics or decorative-only admission. |
+|337 Cold Cushion194058/387381 | Instant target47 summon196013/properties64/base1 for300000ms, inherited21600000ms recovery. TDB196013/display109053 exists, runtime content template/model absent. Cooling-cushion presentation, interaction (if any) and lifecycle remain unverified; no invented seating/healing/buff or inert admission. |
+|338 Market Tent194059/398329 | Source3000ms self linked428 for900000ms→398328/permanent200404/property3911 (Control0/Title0/flags67241992), targets18/79, item120000ms recovery. Runtime111097 exists. Exact actual2yd-back/rotation/model/owner/refresh/cancel/death acceptance is committed, behavioral proof pending. Natural15-minute linked expiry/native/rest remain outside this witness; no invented commerce service. |
+|339 Dragonscale Expedition's Expedition Tent194060/398334 | Same authored cast/lifetime/property/recovery, distinct child398333→200406/display111099. Its own actual-use acceptance is committed and pending a covering gate; source identity is not substituted with Gnoll/Market. Native/rest/natural-expiry and full eligibility remain separate boundaries. |
+
+Evidence: private `rows335-339-{readonly-source,action-source}.json`, `tents338-339-{active-goal,proof-ledger}.json`. Pending33314hearthstone and32210disguise+Oomgut11 fixtures likewise require new-head coverage; lead477 throughd4 does not contain them. Tea Set149865 remains untouched.
+
+## Source330–334: pending Timewalker acceptance and prism/tent/seat/pall boundaries (2026-10-17)
+
+333 test/spec4ee545b9f adds193588/375357 to the existing actual learned-use/saved-bind/refusal/shared-charge helper, making14hearthstone variants. Exact source10s/effect252/self→homebind9/shared2309/one1800000ms charge is unchanged. Format/manual readability/diffcheck pass; explicitly covering lead478 through28f1ce365 is queued, not passed. Lead477 throughd4 contains13earlier variants, not333. No production/runtime/data changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|330 Convergent Prism193033/376088 | Self auras293/misc2164/1,26,321 and60/misc127 for600000ms, inherited5000ms recovery. Existing `toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel` covers actual activation, Frostbolt blocking and cancel restoration. Party/raid-only guided beam/precise targeting presentation and full mixed payload remain separate gaps; no borrowed current/native certificate or dropped action restrictions. |
+|331 Gnoll Tent193476/398159 | Source3000ms cast/self linked428 for900000ms→398162/permanent200391/properties3911 (Control0/Title0/flags67241992), targets18/79. Runtime111084 exists. Existing `toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle` covers actual source cast, one owner actor2yd behind, rotated second owner, refresh deduplication, cancel/death cleanup. Natural15-minute linked expiry/rest/recreation/native presentation remain outside that witness; item120000ms recovery retained. |
+|332 Tuskarr Beanbag193478/376751 | Instant target47 summon191909/properties64/base1 for120000ms; item120000ms recovery/category1153. TDB191909/display108950 exists but runtime content template/model absent. Existing scenery census keeps this interaction toy blocked. Actual seating/recipient access and lifecycle remain unresolved; no decorative-only import or removal of seat semantics. |
+|333 Timewalker's Hearthstone193588/375357 | Actual learned193588 use/saved-bind and shared sibling190237 refusal acceptance committed, behavioral gate pending new-head coverage. Source StartRecoveryCategory133/1500ms start recovery is retained. No new covenant/other eligibility, cross-map wire/native presentation or natural30-minute recharge certificate. |
+|334 Forlorn Funeral Pall194052/383503 | Source500ms cast/target25 transform56→existing194400/display108530/misc8, permanent duration and item600000ms recovery/charges-1. Recently deceased recipient selection and corpse transformation/cleanup remain gaps; no caster-only disguise substitute, living-target permission or invented resurrection/consumption rule. |
+
+Evidence: private `rows330-334-{readonly-source,action-source}.json`, `timewalker333-{active-goal,proof-ledger}.json`; exact existing fixtures above are historical bounded witnesses, not newly rerun proofs. Tea Set149865 remains untouched.
+
+## Source325–329: audio/launch/wisdom/animation/offering boundaries (2026-10-17)
+
+Read-only70391 source inspection establishes the following exact contracts, not new positive acceptance or generic cosmetic admission. No runtime/data changes or own heavy gates; pending Harpy/Cube/caster/hearthstone fixtures retain their separately recorded proof scopes.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|325 Earpieces of Tranquil Focus192099/370568 | Self aura509 for3600000ms, inherited300000ms recovery. Source describes tuning out surrounding musical/vocal projections. Actual audio filtering/recipient scope and restoration remain unproved; pinned TC HandleNULL for509 does not prove an audible client result or authorize ignoring the payload. |
+|326 Element-Infused Rocket Helmet192443/372573 | Instant self knockback effect98/base1200 plus dummy aura4 for3000ms; item86400000ms recovery. Authored launch/movement and safety/landing behavior remain gaps; neither dropped98 nor guessed velocity/height/damage immunity is a valid cosmetic substitute. |
+|327 Stored Wisdom Device192485/373230 | Source500ms cast, target47 summon189951/properties5348 for300000ms; Control0/Title27/Slot0/flags75704584, item1800000ms recovery. TDB189951/display107044/scale1/probability1 exists, runtime content template/model absent. Advice/speech/action and specialized-title lifecycle remain unresolved; no inert-body import or invented quote set. |
+|328 Malfunctioning Stealthman 54 (192495/373351) | Source2000ms cast, self aura312/misc61 for1800000ms, inherited300000ms recovery. Pinned TC labels312 animation replacement set, implemented clientside. Source explicitly describes formerly functioning stealth; actual set61 animation/presentation remains unverified, not authority to grant invisibility/stealth or treat it as a plain attachment. |
+|329 Jeweled Offering193032/374893 | Source2000ms cast, effect50→377204 at target138 (pinned ground destination),300000ms lifetime, item86400000ms recovery. 377204 is chest/type3/display74995/size1.3 and is present in the runtime `tdb_gameobject_template` actually read by summoned-object loading; the earlier base-table absence inference is withdrawn. Recipient acceptance/open interaction and cleanup remain gaps; no guessed possession transfer/loot or decorative-only admission. |
+
+Evidence: private `rows325-329-{readonly-source,action-source,active-goal}.json`; local source `SpellInfo.cpp`, `SpellAuraEffects.cpp`, `SharedDefines.h`. TDB availability and lack of a root script binding do not certify complete behavior. Tea Set149865 remains untouched.
+
+## Source320–324: pending Harpy acceptance and fruit/core/star-mode gaps (2026-10-17)
+
+322 test/spec eb02827f3 adds191891/371470→existing187854/display104851, source600000ms transform56/misc8 and1800000ms item recovery to the actual learned-use/ordinary expiry/restoration/health/recovery fixture. Ten disguise IDs plus Oomgut now make11IDs. Format/manual readability/diffcheck pass; new-head covering lead478 through28f1ce365 is queued, not passed. Lead477 throughd4a4a716c contains the earlier nine-disguise/Cube,14-caster and13-hearthstone fixtures, not this new Harpy tuple.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|320 Bushel of Mysterious Fruit190853/368278 | Self periodic-trigger23 for2000ms, amplitude0, child368291/self dummy effect3; source30000ms recovery. Fruit creation/selection and actual periodic child action remain unresolved. Do not invent a tick cadence, item IDs, count or successful no-op. |
+|321 Infested Automa Core190926/368316 | Self dummy aura4 for300000ms, source600000ms recovery. Visual114187/state/event kit155443 has four model attachments455692–455695, positioner18, attachment-1, plus three effect-type5 entries192944/192946/192947. Actual living back attachment/positioner and lifecycle presentation remain unverified; source visual rows alone do not prove native rendering or complete eligibility. |
+|322 Professor Chirpsnide's Im-PECK-able Harpy Disguise191891/371470 | Existing Chef Fry-Aerie187854/display104851 supplies the exact10-minute source transform. Runtime/TDB model DisplayScale1.5/probability1 are preserved metadata; selected-display transform handoff does not automatically impose NPC scale on the player. Acceptance is pending a new-head covering gate; no native geometry/scale or full30-minute reuse certificate. |
+|323 Falling Star Flinger191925/44012 | Cursor87 dummy effect3; description distinguishes becoming a flinger from subsequent throws to starcatchers. Shared category2017/3000ms category recovery with324 is retained. Mode transitions, recipient selection, projectile/catch action and cleanup remain unresolved; no generic cursor cosmetic success. |
+|324 Falling Star Catcher191937/372282 | Script effect77/base30 with targets47/60; description distinguishes becoming a catcher from subsequent nearby-catcher knockback. Shared category2017/3000ms recovery is not a complete mode/catch/knockback contract. Exact mode authority, recipients, force/action and lifecycle remain gaps; no guessed radius or unconditional knockback. |
+
+Evidence: private `rows320-324-{readonly-source,action-source}.json`, `harpy322-{active-goal,proof-ledger}.json`. No production/runtime/data/UnitScale changes, fake RED or own heavy duplicate. Tea Set149865 remains the lead-required named gap, untouched.
+
+## Source315–319: pending Cube acceptance and cache/song/mines/specimen gaps (2026-10-17)
+
+317 Protopological Cube190457/367568 has existing185567/display105515 and source900000ms self transform56/misc8 with3600000ms item recovery. Test/spec d4a4a716c adds the exact actual-learning/model/ordinary15-minute expiry/restoration/health/recovery case. Expected duration is now per-row because the prior eight cases remain600000ms; their values and599–600s initial window remain unchanged. Nine disguises plus Oomgut now cover10IDs when run. Format/manual readability/diffcheck pass; lead gate477 throughd4a4a716c is reported LANDED/280 passed/master15bef300d; exact fixture ok lines are inspected in the linked receipt, with no own repeat.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|315 Xy'rath's Booby-Trapped Cache190238/367021 | Source1000ms cursor87 effect50→375536 for120000ms, inherited3600000ms recovery. TDB375536 is chest/type3/display71057/lock57. Actual opening/booby-trap reaction/ownership/lifecycle remains unproved; source template availability is not generic decoration or permission to invent loot/damage. |
+|316 Jiro Circle of Song190333/367202 | Source1500ms script77 plus linked428/60000ms→367203. Child has2000ms cast, permanent target47 summon185429/properties4536 (Control0/flags8521992) plus self dummy4. Runtime105536 exists, but circle placement/serenade/root script/child-link cleanup remains unproved; no one-actor substitute or dropped77/dummy payload. Inherited3600000ms recovery retained. |
+|317 Protopological Cube190457/367568 | Existing source/runtime model105515 row has probability0 and DisplayScale1.25, both preserved. The transform handler writes `ModelDisplay { display_id }`; pinned TC HandleAuraTransform likewise chooses CreatureDisplayID and passes it to SetDisplayId. The NPC model row does not by itself create a player-scale assertion. Exact15-minute appearance/expiry/source-recovery fixture is included in landed lead477; native geometry/height, weighted-pool sampling and full1h reuse are not certified. |
+|318 Makaris's Satchel of Mines190734/367999 | Self script77/trigger0 with600000ms item recovery. Source explicitly drops six mines for players to step on; exact authored placements/step triggers/results remain unresolved. No guessed mine IDs, hit/damage/selection rule or generic script/no-op success. |
+|319 Firim's Specimen Container190754/368121 | Self script3/trigger0,900000ms item recovery. Source promises placing one specimen container in front of the caster; exact variant/placement/lifecycle remains unproved. Do not invent an actor by name, opening/research/pet-release interaction from flavor text, or replace placement with caster art. |
+
+`rows315-319-{readonly-source,action-source}.json` and `cube317-proof-ledger.json` preserve70391 roots/children/casts/durations/recovery, actual TDB/runtime rows and the transform-versus-NPC-scale boundary. No runtime/renderer/UnitScale/data/canonical mutation, false RED or generic script/chest admission. Lead477 covers the new Cube and14-caster/13-hearthstone code and is reported landed; no independent per-case/native certificate or own heavy duplicate.149865 Tea Set remains lead-required.
+
+## Source310–314: pending Batons/return-home acceptance and seated-orb gap (2026-10-17)
+
+Test/spec01de71c2e adds one caster row and three existing-helper hearthstone cases without runtime/data changes. The caster fixture now contains14IDs including unchanged309; hearthstone variants now13. Local format/manual readability/diffcheck pass. Lead477 throughd4a4a716c explicitly covers this code and is reported LANDED/280 passed/master15bef300d; exact caster/hearthstone ok lines are inspected, with no own heavy duplicate or borrowed earlier pass.
+
+| Source row | Exact retained source boundary and pending proof |
+|---|---|
+|310 Fire Festival Batons188701/45418 | Already-audited self complete-zero dummy4, source900000ms aura and900000ms item recovery. New exact-row acceptance asserts actual learning/use/published duration/cancellation, unchanged health/global model and no actors. Ordinary15-minute aura expiry/recovery, native baton/dance/audio and calendar semantics are not newly certified. |
+|311 Dominated Hearthstone188952/363799 | Source10s homebind252/shared2309, one charge/1800000ms recharge. New actual learned-use case asserts real persisted bind, absent-bind refusal without charge spend, pending source cast, return position and shared refusal of Necrolord182773. Fixture is included in landed477, not automatic closure from earlier hearthstones. |
+|312 Sphere of Enlightened Cogitation190177/366861 | Self complete-zero dummy4/permanent duration-1, item-1 inherits600000ms spell recovery. Advertised sitting/pondering/orb action and full source presentation remain unproved; zero dummy shape does not establish that contract, permit a blanket cosmetic admission or justify inventing a must-sit gate without its source semantics. |
+|313 Enlightened Hearthstone190196/366945 | Same source10s/homebind252/shared2309 charge shape; source also records category1176. New exact-ID helper case asserts persisted-bind/missing-bind/source-cast/shared-charge behavior and blocks Dominated188952. Secondary category/native/cross-map/full-recharge proof is not inferred; exact case is included in landed477. |
+|314 Broker Translocation Matrix190237/367013 | Source10s/homebind252/shared2309, one charge/1800000ms recharge. New exact-ID actual-learning/persisted-bind/refusal/return/shared-charge case blocks Enlightened190196. No invented destination/eligibility, cross-map/native or natural30-minute recharge certificate; exact case is included in landed477. |
+
+`rows310-314-{readonly-source,action-source,proof-ledger}.json` preserves exact70391 roots/casts/category/charge/item restriction data and new-code proof state. Old10-hearthstone and12-caster results do not certify these additions.309's original13-ID row can be covered by that earlier head or the containing14-ID expansion;310 and the three new returns require a covering new-head gate.149865 Tea Set remains lead-required, with no producer/canonical/data mutation.
+
+## Source305–309: seasonal/flower/cooking boundaries and pending Insoles acceptance (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|305 Winter Veil Chorus Book188680/100343 | Permanent self dummy4 plus aura285→100348's permanent128/129 dummy-aura slots,10000ms item recovery. Source explicitly limits singing to Winter Veil, while ItemSparse RequiredHoliday0 alone is not the complete rule. Seasonal/linked audience/music action remains unproved, not simple singing art or ignored child slots. |
+|306 Spring Florist's Pouch188694/61818 | Target47 summons27870/Wild Flower for60000ms,60000ms item recovery; four model IDs24890/24895/24897/24898. Observed runtime content model rows have DisplayScale8.82/build12340 versus Retail TDB source1.0/build69497. Source SmartAI OnSpawn action80→timed list2787000 casts49801/Grow. Exact content/profile reconciliation, actual planting/growth/lifecycle/native proof remain open; no scalar compensation or ordinary-static-flower admission. |
+|307 Summer Cranial Skillet188695/103977 | Source300000ms self dummy4 has literal base103997/trigger0, plus target18 effect50→209653. TDB209653 is type8/display192, cooking focus4/radius10. Actual kneeling/caster-hosted cooking/placement/link cleanup remains unproved as this mixed root; do not execute a guessed base-point child, ignore the nonzero payload or borrow generic fire-focus acceptance. |
+|308 Eagger Basket188698/61810 | Source self speed31/base60 for10000ms, RequiredAreasID1103 and category1203/10000ms recovery. Retain [Source21's actual-terrain/Goldshire activation/Northshire refusal/area-exit removal/category-history CPU and both-skin area/native witnesses](#source-requiredareasid-lifecycle-2026-10-13). This revisit adds no new advertised Noblegarden-window certificate or full calendar proof; RequiredHoliday0 does not settle that complete rule. |
+|309 Insulated Dancing Insoles188699/45416 | Already-audited self complete-zero dummy4, source permanent duration-1,1000ms item recovery; RequiredHoliday0 and separate RequiredTransmogHoliday341. Test/spec8a986da00 adds the exact item/root/permanent-duration0 row to existing actual learning/use/aura/cancel/unchanged-health/model/no-actor fixture:13IDs at8a986da00, expanded to14 by01de71c2e with309 unchanged. Format/manual readability/diffcheck pass; changed fixture is included in lead477 throughd4a4a716c, reported LANDED/280 passed/master15bef300d; exact caster fixture ok line is inspected in the integration receipt. No borrowed12-ID pass, native Hot Feet/audio, ordinary1000ms reuse or calendar/transmog certificate. |
+
+`rows305-309-{readonly-source,action-source}.json` retains70391 root/child/cast/duration/recovery/item restriction rows plus observed runtime/TDB creature-model, SmartAI and cooking-focus profiles. `insoles309-proof-ledger.json` tracks the new test-only case separately from metadata and historical Source21 proof. No production/data/canonical mutation, false RED, new renderer/actor admission or own duplicate heavy gate;149865 Tea Set stays lead-required.
+
+## Source300–304: scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|300 Scouting Map: The Many Curiosities of Outland187899/360583 | Source2000ms self script3 promises flight-point discovery AND map reveal around Outland. Exact authored discovery/fog/eligibility/persistence remains unproved; no generic cosmetic script or all-Outland node guess. |
+|301 Scouting Map: The Wonders of Kul Tiras and Zandalar187900/360593 | Source2000ms self script3 names both islands' flight points/maps. Exact authored subsets and persistent map/flight state remain unproved; do not borrow another scouting-map certificate or invent a region/faction mapping. |
+|302 Apprentice Slimemancer's Boots187913/360686 | Source180000ms self periodic-trigger23/period10ms→360685's1000ms persistent-area27/dummy4 at target18,300000ms item recovery. Advertised tracking slime while moving and Necrolord pledge OR Renown80 eligibility remain unproved together; retain literal timing/child data without assuming an unconditional spawn schedule, caster-only art or invented pledge gate. |
+|303 Encrypted Banner of the Opportune187957/361085 | Existing182459/display103372/scale1, target47/source2yd seasonal position,60000ms lifetime and inherited600000ms spell recovery. Retain [source9's exact historical actual-learning/use/actor/destination/owner/map/stationary/expiry CPU scope](wiki/systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10), not a fresh per-banner native certificate. |
+|304 Shrouded Banner of the Opportune187958/361090 | Distinct existing182461/display103384/scale1 with the same source2yd/60000ms and inherited600000ms recovery shape. Retain its own row in the same historical source9 CPU fixture; not a substitute Encrypted actor, new current gate or native pixel/audio proof. |
+
+`rows300-304-{readonly-source,action-source}.json` preserves exact70391 roots/on-use ordering, descriptions/casts/period/child/durations/recovery and current runtime banner models. Historical banner proof remains revision-scoped. No player-progress/data/canonical write, generic script/trail admission or positive new simulation/native result;149865 Tea Set stays lead-required.
+
+## Source295–299: exact scouting-map discovery boundaries (2026-10-17)
+
+All five roots are source2000ms self script3 with zero base/misc/trigger payload, item cooldown-1 and spell RecoveryTime0/StartRecoveryTime1500. Matching shape is not a cosmetic contract: each source promises flight-point discovery AND map reveal in its own geography.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|295 Scouting Map: United Fronts of the Broken Isles187875/360532 | Source explicitly names Broken Isles flight points/maps. Authored node/fog sets, eligibility, real discovery and persisted/relogged state remain unproved; no guessed all-Legion node set or borrowed Shadowlands certificate. |
+|296 Scouting Map: The Dangers of Draenor187895/360578 | Source explicitly names Draenor flight points/maps. Exact authored discovery and persisted fog remain unproved; no Warlords-wide ID guess or generic script success. |
+|297 Scouting Map: A Stormstout's Guide to Pandaria187896/360579 | Source explicitly names Pandaria flight points/maps. Exact node/reveal/eligibility/persistence contract remains unproved; the item narrative is not an executable mapping or authority to reveal unrelated regions. |
+|298 Scouting Map: Cataclysm's Consequences187897/360581 | Source explicitly says flight points/maps established during the Cataclysm. Exact authored subset remains unresolved; do not equate that description with all Eastern Kingdoms/Kalimdor nodes or invent map-fog completion. |
+|299 Scouting Map: True Cost of the Northrend Campaign187898/360582 | Source explicitly names Northrend flight points/maps. Actual source-qualified discovery, map reveal and persistent client/server state remain unproved, not a caster visual or no-op. |
+
+`rows295-299-{readonly-source,action-source}.json` preserves exact70391 roots, first TriggerType0 selection ordered by LegacySlotIndex/ID, every on-use candidate and cast/recovery/description records. No player-progress/data/canonical mutation, invented node list, generic script admission or positive simulation/native proof.149865 Tea Set stays lead-required.
+
+## Source290–294: retained banner proof and wings/ride/metadata/scouting gaps (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|290 Tormented Banner of the Opportune187834/360123 | Target47 summon181826/display102568/scale1 for60000ms, inheriting600000ms spell recovery. Retain [source9's historical actual learning/use/authentic actor/destination/owner/map/stationary/expiry CPU scope](wiki/systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10), including this exact ID and source2yd seasonal-banner position. No new current test/native/pixel/audio certificate. |
+|291 Sparkle Wings187840/360184 | Self complete-zero dummy4 for180000ms,300000ms item recovery; source explicitly requires Night Fae covenant membership OR Renown80 with Night Fae. Eligibility and source wing presentation/lifecycle remain unproved as this combined contract; no copied Blazing Wings admission or invented current-covenant-only gate. |
+|292 Mortis Mover187860/360463 | Source1500ms aura285→360454; child has1500ms target18 summon182103/properties5234 (Control4) plus self dummy4; both durations180000ms, item recovery100000ms. TDB103066/scale1 exists, runtime absent. Advertised outdoor eligibility, standing-on/rolling-sphere motion, control and cleanup remain unproved; no ordinary linked/caster actor substitute. |
+|293 Unresolved item187861 / on-use360464 | Toy row1151/Flags2 and Item row exist, but current70391 ItemSparse and runtime content_item187861 are absent. Root source1000ms persistent-area27/dummy4 at target18 for14000ms says “Plant a seed.” Missing authentic item name/definition is a data gap, not permission to synthesize metadata or name the item after its spell. Actual seed action also remains unproved. |
+|294 Scouting Map: Into the Shadowlands187869/360518 | Source2000ms self script3 advertises discovery of flight points and map reveal. Exact authored flight-node/map-fog changes, eligibility and persistence remain unproved; no generic caster art, guessed node list or no-op success. |
+
+`rows290-294-{readonly-source,action-source}.json` preserves exact70391 roots/children/casts/durations/recovery/property fields and runtime/source model/item presence.293's Flags2 is retained literally, not interpreted as a new availability rule. No metadata fallback, producer/data/canonical change, new admission or positive simulation/native result.149865 Tea Set stays lead-required.
+
+## Source285–289: critter/cooldown/stage/friends/containment boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|285 Tome of Small Sins187512/358092 | Source2000ms selected-target25 script3, inherited60000ms spell recovery. Source critter atonement/afterlife action and eligibility explicitly allowing Venthyr covenant members OR Renown80 with Venthyr remain unproved. Do not change that alternative into a current-covenant-only rule, invent output or substitute arbitrary critter death. |
+|286 Nightborne Guard's Vigilance187591/358927 | Self complete-zero dummy4 for2000ms; item-1 inherits180000ms spell recovery. Advertised Nightborne-specific reduced cooldown and suspicious-surroundings presentation remain unproved together; zero-payload shape alone does not authorize cosmetic admission or an invented racial recovery amount. |
+|287 Dance Dance Darkmoon187689/359464 | Source1000ms/300000ms mixed target18 summon181216/properties5235 (Control4/faction35/slot6) with literal base359469 plus self dummy4,1800000ms item recovery. TDB102114/scale0.8 exists, runtime absent. Stage/show/control/action restoration remains unproved; base359469 is not an EffectTriggerSpell record and must not be guessed as an executable child or ordinary actor count. |
+|288 Choofa's Call187705/352289 | Source2000ms/14000ms persistent-area27/dummy4 at target18 plus THREE separate effect64 slots naming352510. That child target72 summons178606/properties1581 (Control1/Title2) for13000ms, with source98628/99697/98623 scales1/1/1.15; runtime absent. Actual repeated child/fuzzy-friend placement/ownership/lifecycle is unproved; graph reachability must not deduplicate away three effect occurrences. Item recovery60000ms retained. |
+|289 Personal Containment Trap187793/359717 | Source300000ms linked428→360395's target18 summon181445/properties5234 (Control4/flags8), literal child base173426. Runtime103058 exists; self imprisonment/control/linked cleanup remains unproved. Item recovery600000ms overrides5000ms spell recovery. No inert cage substitute or interpretation of the non-trigger base as a guessed cast/count. |
+
+`rows285-289-{readonly-source,action-source}.json` preserves exact70391 eligibility text, field representations, child multiplicity, control/cast/duration/recovery and source/runtime model rows. No runtime/data/canonical change, invented rule/cast/count, generic actor/script admission or positive simulation/native proof.149865 Tea Set stays lead-required.
+
+## Source280–284: controlled-cage/steward/realm/customizer boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary |
+|---|---|
+|280 Jailer's Cage187416/357363 | Self linked-summon428→357358 plus aura312/misc1002 for300000ms,900000ms item recovery. Child permanently summons180453/properties5218 (Control4/flags137224) at self. Runtime101685 exists, but actual entering/controlling/link/cleanup and nonzero312 payload remain unproved; not generic scenery. |
+|281 Adamant Vaults Cell187417/357381 | Source300000ms linked428→357383's permanent self summon180464/properties5217 (Control4/flags137224),900000ms item recovery. Runtime101682 exists; actual deluxe-cell entry/control/linked cleanup remains distinct from280 and unproved. Body availability does not admit either Control4 graph. |
+|282 Steward's First Feather187419/357437 | Permanent transform56→174087/misc8 with targets18/8,180000ms item recovery. Runtime98480 exists, but advertised Kyrian pledge and steward-companion recipient/youthful form/restoration require their own proof; no ordinary caster-disguise shortcut or invented eligibility. |
+|283 Maw-Ocular Viewfinder187420/357459 | Source1500ms linked428/600000ms→357460's2000ms child, permanent target47 summon180479/properties4536 plus self dummy4; inherits3600000ms recovery. Runtime source15092/scale1.4 has probability0 versus invisible11686/scale1 probability1. Miniature shadow-realm child/action/presentation/linked cleanup remains unproved; no visible zero-weight replacement or dummy-slot discard. |
+|284 Rockin' Rollin' Racer Customizer19.9.3 187422/357546 | Source3000ms/300000ms graph summons180547/properties5231 (Control0/faction35), sets aura293/misc2038, effect140→357774's180570/properties492 (Control1), and carries aura37/misc85/base1,25/base1,321/base1 and26. Runtime actors are absent. Source customization choices/state/input/action restoration remain unproved; preserve both actor chains and source model probabilities, not an inert racer or ignored control effects. Item recovery5000ms retained. |
+
+`rows280-284-{readonly-source,action-source}.json` retains exact70391 root/child/control/cast/duration/model probability data and runtime presence. No new cage/recipient/realm/customizer admission, producer/data/canonical write or positive simulation/native certificate.No unchanged gate rerun;149865 Tea Set remains lead-required.
+
+## Source275–279: offering-kit targeted acceptance and vesper/transport boundaries (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|275 Vesper of Harmony187176/356451 | Target47 summon180120/properties3911 plus self dummy4 for45000ms; item recovery1800000ms. TDB92678/scale0.5 exists, runtime absent. Exact mixed actor/caster action, placement/lifecycle and native vesper presentation remain unproved; source249's single stationary Vesper is not automatic mixed-root acceptance. |
+|276 Vesper of Clarity187184/356503 | Same mixed root shape with distinct180121/92679/scale0.375,45000ms and1800000ms item recovery; runtime absent. Preserve this source identity/scale and caster slot rather than reusing Harmony's actor or claiming shared native proof. |
+|277 Vesper of Faith187185/356505 | Same mixed root shape with distinct180122/92680/scale0.25,45000ms and1800000ms item recovery; runtime absent. Source placement/actor/caster lifecycle remains unproved. All three ItemEffects author CategoryCoolDownMSec1500 but SpellCategoryID0; do not invent a nonzero shared category. |
+|278 Silver Shardhide Whistle187339/357012 | Self script3/base20 and script3/base2, effect64/misc300→357293 and effect203→122729. Reachable357293 lasts120000ms and triggers357318's20000ms forced-forward241/speed32 payload; RequiredAreasID7354 appears on root/357293. Advertised fast20s versus tired2min transport and Shadowlands eligibility remain unproved together; no guessed fatigue policy, fixed transport substitute or child discard. Item recovery300000ms retained. |
+|279 Offering Kit Maker187344/357020 | Source2000ms self create-item24/count1/product187342,30000ms item recovery. Existing runtime187342 is named Offering Preparation Kit, while source description says Offering Condensing Kit; exact product ID is authoritative for this root. Test/spec04a47a43 and fixture fix62db4212 pass actual learned use, pre-completion absence, one persisted kit, exact30s recovery/refusals and second creation after ordinary recovery:1/1 zero ignored31.60s after1m30s maintained native compile, no compiler warnings; fmt/readability/diffcheck pass. Initial fixture's empty-failure assertion incorrectly included the TWO intentional OnCooldown replies; fix asserts exactly those replies without clearing/suppression, not a production RED/runtime fix. The run finished before the lead's cancel instruction; no owned process remains. Lead gate476 landed277 passed/master0b17f866f; no own package-check repeat. Wrapping/gifting/use of the created kit and native UI are separate, not invented here. |
+
+`rows275-279-{readonly-source,action-source}.json` retains exact70391 roots/children/casts/durations and actual source/runtime model/item rows. `offering279-proof-ledger.json` records exact targeted proof, preserves the initial fixture failure and tracks the separately lead-owned pending package gate. No new runtime/data admission, wrapping/gifting acceptance or native certificate; no own duplicate package gate or149865 Tea Set publication.
+
 ## Source270–274: mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
 
 | Source row | Exact retained source boundary |
@@ -10,7 +284,7 @@
 |273 Shadow Slicing Shortsword187159/356360 | Actual slot1, selected-target25 effect160→356357; child self summon180086/properties64 plus dummy4 for300000ms,300000ms item recovery. Source player-target shadow severing/child ownership/appearance/lifecycle remain unproved. TDB33559/weight0 versus39810/weight1 exists, runtime absent; no chosen-caster or zero-weight model substitute. |
 |274 Shaded Judgment Stone187174/356419 | Source1500ms script3 plus dummy4 both target35/party for300000ms,900000ms item recovery. Advertised recently-deceased party-member soul judgment requires actual corpse-age/party/action proof, not enemy-corpse logic, generic target art or invented judgment text. |
 
-`rows270-274-{readonly-source,action-source}.json` preserves exact70391 on-use selection, periods/casts/durations/targets/payloads and runtime/source models. No producer/data/canonical change, actor/transform/script admission or new positive simulation/native proof.240's admitted native dependency compile continues as the sole owned job; no source mutation/reset/duplicate gate, and149865 Tea Set stays lead-required.
+`rows270-274-{readonly-source,action-source}.json` preserves exact70391 on-use selection, periods/casts/durations/targets/payloads and runtime/source models. No producer/data/canonical change, actor/transform/script admission or new positive simulation/native proof.No unchanged gate rerun;149865 Tea Set stays lead-required.
 
 ## Source265–269: pet-chase/flight/destruction/drag/mixed-shade boundaries (2026-10-17)
 
@@ -22,7 +296,7 @@
 |268 Personal Ball and Chain187113/355953 | Source1000ms linked-summon428/300000ms→355954; child permanent target47 summon179941/properties4447 (Control1/Title0,flags8521994/2) plus self dummy4 and aura33. Runtime179941/display39353 exists. Actual dragging/link/cleanup contract remains unproved; authentic body presence is not a missing-publication fix or generic stationary actor acceptance. |
 |269 Bottled Shade Heart187139/356221 | Source1000ms/600000ms combines transform56→180048/misc8, screen260/misc1917/7 and periodic-trigger23→356235's target32 summon180054/properties5210 for15000ms. Existing runtime180048/97411/scale0.9 does not prove the combined possession/screen/child lifecycle. Missing runtime180054 has authentic source101527/scale1.2/weight2 and101526 at scale1.8/weight3 and scale3/weight1; do not collapse distinct scale rows or drop the periodic child. Item recovery3600000ms retained. |
 
-`rows265-269-{readonly-source,action-source}.json` preserves exact70391 on-use roots, reachable children, cast/duration/property flags and runtime/source weighted model rows. No new pet/script/linked-summon/transform admission, producer/data/canonical writes or positive simulation/native certificate.240 remains the single progressing owned proof;149865 Tea Set stays lead-required and unchanged gates are not repeated.
+`rows265-269-{readonly-source,action-source}.json` preserves exact70391 on-use roots, reachable children, cast/duration/property flags and runtime/source weighted model rows. No new pet/script/linked-summon/transform admission, producer/data/canonical writes or positive simulation/native certificate.149865 Tea Set stays lead-required and unchanged gates are not repeated.
 
 ## Source260–264: paired trophy/oracle/dance/leash/anima-service boundaries (2026-10-17)
 
@@ -34,7 +308,7 @@
 |263 Anima-ted Leash186973/354888 | Minipet-target90 complete-zero dummy4 with permanent duration-1 and1500ms item recovery. Companion-owner linking/recipient eligibility/cancellation remain unproved; no caster attachment or inherited certificate from another leash. |
 |264 Experimental Anima Cell186974/354965 | Source1500ms target47 summon179626/properties64 for600000ms, inherited3600000ms spell recovery. TDB52318/scale1 has probability0, while11686/scale2 has probability1; runtime content absent. Authentic invisible source body must not be replaced by the visible zero-weight row. Advertised outside-Torghast anima-hoard service/eligibility/action remains unproved, not generic scenery. |
 
-`rows260-264-{readonly-source,action-source}.json` preserves exact70391 effect indices/difficulty, cast/duration/recovery, target/property and source/runtime model probabilities. No new actor/fortune/recipient/service admission, production/data/canonical write or positive simulation/native result.240 remains the single progressing owned native proof; unchanged gates are not repeated, and149865 Tea Set stays lead-required.
+`rows260-264-{readonly-source,action-source}.json` preserves exact70391 effect indices/difficulty, cast/duration/recovery, target/property and source/runtime model probabilities. No new actor/fortune/recipient/service admission, production/data/canonical write or positive simulation/native result.Unchanged gates are not repeated;149865 Tea Set stays lead-required.
 
 ## Source255–259: return/music/disturbance/minipet-leash boundaries (2026-10-17)
 
@@ -46,7 +320,7 @@
 |258 Infested Arachnid Casing184495/346120 | Target47 summon175679/properties3911 (Control0/Title0/flags67241992) for120000ms,300000ms item recovery. TDB100008/scale1 exists, runtime absent. Advertised disturbance/risk action remains unresolved; an inert authentic casing is not interaction/lifecycle acceptance. |
 |259 Mawsworn Pet Leash184508/346226 | Minipet-target90 complete-zero dummy4 with permanent duration-1 and1500ms item recovery. Source owner/pet leash linking, recipient eligibility and cancellation/restoration remain unproved; no caster attachment substitute or inferred global/permanent companion mutation. |
 
-`rows255-259-{readonly-source,action-source}.json` preserves exact70391 roots, child/destination/cast/duration/recovery/property data and source/runtime models. No production/data/canonical write, generic script/summon/minipet admission or positive simulation/native certificate.240 remains the single capacity-gated owned proof; no duplicate/reset or unchanged gate rerun, and149865 Tea Set stays lead-required.
+`rows255-259-{readonly-source,action-source}.json` preserves exact70391 roots, child/destination/cast/duration/recovery/property data and source/runtime models. No production/data/canonical write, generic script/summon/minipet admission or positive simulation/native certificate.No unchanged gate rerun;149865 Tea Set stays lead-required.
 
 ## Source250–254: stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
 
@@ -58,7 +332,7 @@
 |253 Jiggles's Favorite Toy184449/345897 | Source30000ms mixed graph: script3/target150, persistent-area effect27/dummy4 at cursor87, plus self dummy4;120000ms item recovery. Ground laser and actual pet chasing require their own target/action/motion proof, not generic self art or dropping the script/dynamic object. |
 |254 Regenerating Slime Vial184476/345939 | Source target47 summon175647/properties3076 (Control0/Title0/flags2304), authored count4,600000ms lifetime and3600000ms item recovery. TDB five equally weighted scale1 models99911/99912/99915/99913/99014 exist; runtime content absent. Exact four-actor source-pool placement/ownership/lifecycle is unproved, not a single-actor substitute or metadata-only summon certificate. |
 
-`rows250-254-{readonly-source,action-source}.json` preserves70391 targets/casts/durations/recovery/property flags and TDB/runtime model separation. No new actor/viewer/minipet/script admission, producer/data/canonical writes or positive simulation/native result. The pending240 job remains the sole owned verification; no duplicate/reset or unchanged gate rerun.149865 Tea Set remains lead-required.
+`rows250-254-{readonly-source,action-source}.json` preserves70391 targets/casts/durations/recovery/property flags and TDB/runtime model separation. No new actor/viewer/minipet/script admission, producer/data/canonical writes or positive simulation/native result. No unchanged gate rerun.149865 Tea Set remains lead-required.
 
 ## Source245–249: critter/passenger/reflection gaps and retained hearth/vesper proof (2026-10-17)
 
@@ -70,11 +344,11 @@
 |248 Mnemonic Attunement Pane184413/345780 | Self periodic-trigger23 for5000ms triggers345784/target72 missile32→345785, which creates cursor87 summon175581/properties3622 for10000ms. TDB94278/scale0.5 exists but runtime absent. Reflection-specific child placement/appearance/lifecycle remains unproved; do not discard the child chain for a generic pane cosmetic. Item recovery300000ms retained. |
 |249 Soothing Vesper184415/345799 | Source cursor87 summon175582/properties3135,180000ms lifetime and300000ms item recovery; existing runtime display99948/scale1. Retain earlier five-stationary-actor real learning/use/source model/owner/map/lifetime/expiry CPU proof including this ID, with later cursor destination contract kept distinct. No new per-Vesper native model/audio or full effect certificate. |
 
-`rows245-249-{readonly-source,action-source}.json` records70391 roots/casts/durations/children/properties and actual source/runtime model separation. Historical cooking/scenery witnesses remain revision-scoped. No production/data/canonical write, generic script/summon admission, new simulation/native result or unchanged gate rerun.240's single owned capacity-gated job remains tracked separately;149865 Tea Set stays lead-required.
+`rows245-249-{readonly-source,action-source}.json` records70391 roots/casts/durations/children/properties and actual source/runtime model separation. Historical cooking/scenery witnesses remain revision-scoped. No production/data/canonical write, generic script/summon admission, new simulation/native result or unchanged gate rerun.149865 Tea Set stays lead-required.
 
-## Source240–244: pending Dominated helm and coin/launch/linked/covenant gaps (2026-10-17)
+## Source240–244: Dominated helm targeted acceptance and coin/launch/linked/covenant gaps (2026-10-17)
 
-240 Helm of the Dominated184223/344795 uses existing175221 with authentic92410–92418 choices. Source self transform56/misc8 lasts600000ms and item-1 inherits3600000ms spell recovery. Test/spec c8feec2e adds this exact nine-display pool to the actual learning/ordinary-expiry/restoration/health/recovery fixture, now eight disguise IDs. Disguise/Oomgut tests and package check remain pending under the single capacity-gated native job; no passing result or new runtime/data/native admission is implied.
+240 Helm of the Dominated184223/344795 uses existing175221 with authentic92410–92418 choices. Source self transform56/misc8 lasts600000ms and item-1 inherits3600000ms spell recovery. Test/spec c8feec2e adds this exact nine-display pool to actual learning/ordinary-expiry/restoration/health/recovery acceptance, now eight disguise IDs. Disguises plus Oomgut pass2/2, zero ignored, nine IDs91.61s after one21m25s maintained native compile, no compiler warnings. Format/readability/diffcheck pass. Lead gate472 landed276 passed on masterca715f278; no own package-check repeat. No runtime/data change, manufactured production RED or native/weighted-pool certificate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -83,7 +357,7 @@
 |243 Battlecry of Krexus184318/345256 | Linked-summon aura428/300000ms triggers345257; child has permanent target47 summon175442/properties64 plus self dummy4. Existing runtime175442/display99668 is authentic but does not prove the child's dummy action or root-linked summon/cleanup/presentation. Inherited3600000ms recovery retained; no generic ghost prop or child payload discard. |
 |244 Kyrian Hearthstone184353/345393 | Source10s homebind252 also explicitly advertises Kyrian pledge eligibility. Actual eligibility/learned-use/shared-charge/native acceptance remains source-specific and unproved; no automatic certificate from the earlier ten hearthstones or invented pledge gate. |
 
-`rows240-244-{readonly-source,action-source}.json` preserves exact70391 roots, reachable child, casts/durations/recovery and runtime model pools. `helm240-proof-ledger.json` records the pending acceptance, not metadata closure. Pinned `SpellAuraEffects.cpp` names428 linked-summon. No source data/canonical mutation, new native result, generic script admission or repeated unchanged gate;149865 Tea Set stays lead-required.
+`rows240-244-{readonly-source,action-source}.json` preserves exact70391 roots, reachable child, casts/durations/recovery and runtime model pools. `helm240-proof-ledger.json` records exact targeted proof and the separately lead-owned pending package gate, not metadata closure. Pinned `SpellAuraEffects.cpp` names428 linked-summon. No source data/canonical mutation, new native result, generic script admission or repeated unchanged gate;149865 Tea Set stays lead-required.
 
 ## Source235–239: advice/riding/sentry/atonement boundaries (2026-10-17)
 

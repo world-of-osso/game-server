@@ -425,9 +425,9 @@ fn switcher() -> Option<Harness> {
             SWITCH_TO_STEADY,
         ],
     )?;
-    h.app.insert_resource(crate::persistence::GameDatabase {
-        db: crate::persistence::temp_database(),
-    });
+    h.app.insert_resource(crate::persistence::GameDatabase::new(
+        crate::persistence::temp_database(),
+    ));
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -499,7 +499,7 @@ fn entering_the_world_restores_the_saved_flight_style() {
     let db = crate::persistence::temp_database();
     crate::persistence_progression::save_flight_style(&db, CHARACTER, FLIGHT_STYLE_SKYRIDING);
     h.app
-        .insert_resource(crate::persistence::GameDatabase { db });
+        .insert_resource(crate::persistence::GameDatabase::new(db));
     let player = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 5.0);
     h.app
         .world_mut()
