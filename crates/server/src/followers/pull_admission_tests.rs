@@ -14,8 +14,10 @@ use shared::casting::CastState;
 use shared::components::{Health, Level, Mana, UnitLevel};
 use std::collections::{BTreeSet, HashMap};
 
-// Native class2/level32 stamina980, Aegis30% + Plate5%, gtHpPerSta32=8.
-const NATIVE_GARRICK_MAX_HEALTH: f32 = 10584.0;
+// Full native kit: Aegis30% + Plate5% + Sanctified Plates402964 7.5%.
+// Protection137028 effect30 modifies label2602/PointsIndex0 by50% (base5→7.5).
+// Native floor(980×1.425)×8=11168; this is an assertion, never an HP grant.
+pub(super) const NATIVE_GARRICK_MAX_HEALTH: f32 = 11168.0;
 
 struct Fixture {
     h: Harness,
