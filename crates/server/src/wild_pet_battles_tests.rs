@@ -39,6 +39,63 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_call_of_winter_uses_legal_buttercup_level_twenty_slot_three() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 3255), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 20, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 1013)
+        .unwrap();
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 3255);
+    assert_eq!(caller.abilities[2], 1013);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 3255, 3, 3, 20).unwrap()
+    );
+    assert_eq!(caller.stats.power, 221);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(1013), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [96]);
+    assert_eq!(state.teams[1].pets[0].health, 51);
+    assert_eq!(state.teams[0].pets[0].health, caller.health);
+    assert_eq!(state.teams[0].pets[0].cooldowns.get(&1013), Some(&3));
+    for team in &state.teams {
+        for pet in &team.pets {
+            assert_eq!(
+                pet.state(catalog.turns.state_id("Weather_Blizzard").unwrap()),
+                1
+            );
+            assert_eq!(
+                pet.state(catalog.turns.state_id("Mechanic_IsChilled").unwrap()),
+                1
+            );
+        }
+    }
+}
+
+#[test]
 fn wild_pet_battles_bonestorm30_uses_legal_whirly_level_four_and_own_maximum_cost() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
