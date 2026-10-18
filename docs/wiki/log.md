@@ -1,6 +1,13 @@
 ## 2026-10-18 — Threat current-reference selection
 
 [Victim selection](systems/creature-aggro.md#victim-update): separate server-owned current reference/deadline, strict thresholds and lower-ranked melee search. Source-clock server RED3 and protocol boundary RED2 precede implementation; active3 GREEN retained while passive-periodic/lazy-offline/clear/removed-fixate RED4 established. Passive/lazy wiring and requested blast-radius integration remain pending; no Azure-specific workaround, wire or data changes.
+## 2026-10-18 — Rays of Light2378 native proof
+
+[Rays of Light](systems/pet-battle-engine.md#rays-of-light--2026-10-18) after531: legalRiverpaw4450/15physicalPass→slot2bothskins. Modern929→902(Scratch27),110damage/Rabbit37,+27cappedheal−Scratch30→899;Foreverretained899→870(Scratch29),112/Rabbit35,+53heal−Scratch27→896. Fullbenchheals0; injuredbench/miss/finalfaintcontrolsCPU-only. Four individually inspected1920×1080 `rays-of-light-{modern,forever}-{before,applied}.png` originals in AgentShared2026-10-18/petbattle-effects;all4phases2framedmodels/ExtractedOnly/tripwire0,geometry95/104onlyHPfills/timedfloats. LocalCASC6/6→lead8productfiles+fragment;9canonicalhashes/links/actual1meshstrictloaderPASS. Freshfc1server/seeder fromlanded506/shared11acleanbeforeafter;leadexplicitlyaccepts frozenengineee951 after exact003e35233 protocol/petbattleUI unchanged versus17unrelatedUI-model changes+networkWorldServerInforeceive. Fullpatches/actualhashes retained;workingShell650notruntimecohort. All3hashesunchangedthroughShellCPUandnative. Bothphysicalforfeitconfirm/Close;knownPIDsabsent/sliceinactive/5961unbound/windowcleared. Coverage report owns exactreceipts/limits;functional/visualonly,noindependentRetailrounding/timing/VFXcertification. Leadacceptednative;closingdocs-onlyhead doesnotchangeproductionorcensus.
+
+## 2026-10-18 — Rays of Light2378
+
+[Rays of Light](systems/pet-battle-engine.md#rays-of-light--2026-10-18): six interleaved24damage12/7/7 and23heal5/Variance20 rows; ONLY2378registry+boundedceil2damage/order2heal selection reuses existinghelpers/math. Actual8fa1d7f3dcore5+owned4450/15unsupportedRED→aa44158cdcore5+owned1GREEN; parameterized258/979controls, nine active pairs/asymmetricenemyhits/distinct3allyheals/caps/eachmiss+allmissheals/deadbothreserves/finalenemyfaintstillheals. Legal Remembered Riverpaw4450/15slot2power180/max929 deals120/Rabbit27 and heals100/200/300→150/250/350; no fixture correction or fabricatedstats. Integrated84395c5b7lib166/main41PASS/shared11acleanbeforeafter; fresh ten-table-reconciled70448census1850/2829=65.39%/1033graphs (+6/+1/no removals); packagecheck27.01s/no warnings/fmtPASS/manualchanged-lineRustreadability no new violations (metrics unavailable). Historical70391/1051/1762/otherrejections retained; onlydocs/censusafterproof. Native-after-landing and independent Retail rounding/timing/VFX remain unproved.
 
 ## 2026-10-18 — Tidal Wave X2309 and Shadow Bolt Volley2523 native proofs
 
@@ -12,6 +19,9 @@
 
 [Skyriding fixture](systems/mounts.md#skyriding-native-prerequisite-fixture--2026-10-18): exact landing-parent8707ac0ea21/21 versusae9a7a53c11/21 proves required-aura checks exposed omitted372773 Dragonrider Energy, not dormantfc03721/21 or later cursor capture. Loading native child lets normal406095 LINKED285 produce it; setup now asserts that aura, no direct insertion or production relaxation. At1342a9fb0 skyriding21+unchangedAkunda1 pass22/22,0ignored24.84s/176192ms; all-target check12.123s/0warnings and fmt pass. Existing gameplay assertions unchanged; no live/full-class claim.
 
+## 2026-10-18 — Native follower spec-kit bridge
+
+[Full-spec bridge](investigations/follower-data.md#level-gated-full-spec-bridge--2026-10-18): additive70448 starter-budget/level-gated priorities, native990 loadouts, COPY-only producer and literal source receipts. Initial role selection REDs reproduce four-slot limitation; native18/19 plus corrected sourced-WoG control pass. Separate urgent19750 restart RED proves the new picker repeatedly interrupted its own cast; identical admitted spell/target preservation committedb84d7744b. Native Demonology shards0→0 RED → kit-only sourced ActiveSpec3adafc8ee. Integratedfebf17169 native23 core+12 legacy defensive+9 CC =44/44 GREEN542.82s, zero ignored/failed; e29b77ff3 check0/2m08s/zero warnings, fmt0 and producer2/2PASS16.616s; nineteen proven tests enabled, behavior proof retained across attributes/docs only. Lead gate/publication pending; no canonical publication or tank movement/live/full-kit acceptance.
 ## 2026-10-18 — Shadow Bolt Volley2523
 
 [Shadow Bolt Volley](systems/pet-battle-engine.md#shadow-bolt-volley--2026-10-18): active70448 turn4136/rows4902–4904 property222[15,100,30,0,0,0], no abilitystates. Actualc66b8d6e1 core4+owned4949/15 unsupportedRED→5fc44fa1e registryONLY/core4+owned1GREEN; existing24/222recipientmapping/variance math unchanged. Parameterize319/2309damage controls (not objectclear), nine active pairs/eachmiss/deadreserve/allies conserved; authored30endpoint76/103notdefault20's81/98. Legal Shadowflame Remnant4949/15slot2power178/max990 capped147/Rabbit0. Integratedlib164/main40PASS/shared11acleanbeforeafter; fresh ten-table-reconciled70448census1844/2829=65.18%/1032graphs (+3/+1/no removals); packagecheck14.25s/no warnings/fmtPASS/manualchanged-lineRustreadability no new violations (metrics unavailable). Historical70391/1762/other rejections retained; onlydocs/censusafterproof. Native-after-landing and independent Retail rounding/timing/VFX remain unproved.
@@ -60,6 +70,18 @@
 ## 2026-10-17 — Bounded Augmentation support stats
 
 [Augmentation](systems/auras.md#augmentation-support-stats-2026-10-17): active70448 Prescience409311→410089 recipient crit and Shifting Sands413984 caster-mastery Versatility; exact spell-specific SimC76f8118 semantics, no generic540. Genuine native RED4→merged5ed1b656 GREEN4/4 in5.52s; initial functional observer mismatch corrected test-only, native zero-variance damage assertion tightened to exact. Docs-only0114bbf7 retains native timer control1/1, scoped server-bin check91s and fmt check pass warning-free; independent lead gate pending. Automatic targeting, E202/dummies, empower grants, Ebon and full-ability/legal/UDP acceptance remain open.
+## 2026-10-18 — TC-backed reach expectations and stair map identity
+
+[Gate527 correction](systems/navigation.md#gate527-expectation-and-fixture-correction): pinned a352b1fa uses3Dchase/shortening; legacy XZ-only reach expectations now measure3Dwith unchanged2yd and existing tolerances. Original stair test fails identically on692cd5862/79aee679f because target lacks InMap; test target receives actual map0 identity so subsequent comparison exercises navigation rather than lost-target stop. No production movement change or canonical asset edits.
+
+## 2026-10-18 — Grounded3Dmelee reach
+
+[Actual run24 regression](systems/navigation.md#grounded-melee-reach-agreement--2026-10-18) reproduces stationary pursuing across40 real-nav/ground/LOS steps: XZ2 but3D2.066. Shared reach predicate and3Dsegment/sphere ground-travel calculation retain2yd/smaller reach, real LOS and support/speed constraints; post-commit targeted GREEN and lead gate remain separate.
+
+## 2026-10-18 — Native tile-corner corridor visibility
+
+[Navigation root](systems/navigation.md#tile-corner-corridor-detours--2026-10-18): actual Stockade2yd LOS-clear crossings detour7–29yd despite a full native portal and clear mesh ray; generated floors reproduce other corner/orientation cases. Complete native visibility corridors may replace a longer A* portal-midpoint corridor without removing detail crossings or increasing area costs. No data rebake, direct movement substitute, reach/LOS tuning or runtime proof; post-commit gate remains separate.
+
 ## 2026-10-17 — Rain of Fire dynamic objects
 
 [Ordinary visibility](systems/spell-casting.md#rain-of-fire-dynamic-object-visibility--2026-10-17): actual Lord Overheat86636 object/source5yd/9s/destination reaches missing-Replicate RED; caster-removal control passes. Actual object now uses shared geometry and ordinary same-copy interest/despawn, with no damage/kit/stat/timer changes. Postmerge source-bound server GREEN2/2/270.2s and check29.25s/fmt/0warnings pass; shared wire1 and engine UDP21/native projection4 pass separately. Joint landing/native escape proof pending; fixture movement is not claimed native input.
@@ -78,6 +100,34 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Natural first-center landing GREEN
+
+[First center landing](investigations/follower-data.md#telash-first-center-landing--2026-10-17):0d000bd4 actual natural landing plus affected original phase2PASS44.03s after genuine1RED40.09s; self388008 normal8s/no airborne cast/no instantGo/retained shield-passive-gravity/barcontinuation verified. Exact70source/HEAD/protocol/published-input guards stable. Case enabled afterward; scoped1ae8e179 server check0/1m00s/zero warnings and fmt0, focused primary-source/readability proof pass; lead integration pending. Return/AfterCast/runes/counters/budgets/pixels remain separate; no gravity restoration invented.
+
+## 2026-10-17 — Natural first-center landing RED
+
+[First center landing](investigations/follower-data.md#telash-first-center-landing--2026-10-17):dcd7fefe actual natural phase/outbound/airborne/no-cast/exact-center prerequisites pass, then missing native3880088-second self CastState1FAIL40.09s. Exactsource/HEAD/protocol/published-input guards stable. Only TC133–144 first-center branch/source boolean added; EVENT_JUMP1004 shared without value/math change. GREEN pending; return actions/AfterCast/runes/counters remain separate and no gravity restoration invented.
+
+## 2026-10-17 — Natural phase-hit outbound jump GREEN
+
+[Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17): source387928effect0→fullmask387981 exact-center bridge d622ea9b passes actual natural callback and original Energyphase controls2/2 in57.23s; exact70source/HEADclean/protocol11a058cf/published5f/private62403 guards stable. Test enabled afterward; no primitive/class reruns. Scoped051a5432 server check0/5.12s/zero warnings and fmt0, focused direct primary-source/readability verification pass; lead independent integration pending. Natural landing/return/runes/counters/budgets/pixels remain separate.
+
+## 2026-10-17 — Natural phase-hit outbound jump RED
+
+[Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17):9937b8dd actual60→100Energy/Icy/channel/ordinary phase/cost/shield/gravity prerequisites pass, then missing outbound motion1FAIL27.52s (unchangedpose/progress0). Exact source/HEAD/protocol/published-input guards stable. Only sourced387928effect0→triggered387981 exact-center hit bridge added; GREEN pending. No manual jump/spell/hook or new stats/HP/resource priming; landing/return/runes/counters remain separate. Primitiveb72 gate head unchanged remotely.
+
+## 2026-10-17 — Finite jump integration proof
+
+[Jump source/runtime](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): nativepair2 retained5aa, affected22 seven passes plus corrected Feral740 one pass (native Mana accessor), unsupported-source17 one retained pass =11 distinct cases, not a fresh11-case execution. Parent191427/196884/189110 effects, cast success/clocks/native zero-cost resources remain while only unsupported254 displacement refuses; old placeholders named/flipped, Harpoon41/Gordoth3 preserved. Scoped server check0/38.20s/zero warnings and fmt0; exact70source/HEAD/clean/protocol11a058cf/5f/private62403 guards stable. Independent source/wiring/artifact PASS with explicit limitations. Full Telash callbacks/runes/ordinary Azure/pixels remain open.
+
+## 2026-10-17 — Native jump GREEN and player displacement boundaries
+
+[Jump source/runtime](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17):5aa9f58a native713/714 launch/midarc/source-time/exact endpoints plus missing-input3PASS138.15s, retained actual-source unsupported1PASS. WorldData connection replaces failed relative startup reopening; initial fixture/compiler failures remain separate. Lead approves named displacement-only refusals191427/189110 progress curves and196884 parabolic/arrival trigger; preserve parent transform/damage/CC/bite/cooldowns/resources. Grepped1539 installed254 IDs against tracked test literals and flipped explicit placeholders, retained Harpoon41 and class effect assertions; regression/check/fmt pending, full Azure/pixels open.
+
+## 2026-10-17 — Native jump planning and launch boundaries
+
+[Jump source and runtime](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): producer510 published exact5f225535/SQL49b238f5; repair511 integrated. Native destination planning2RED60.53s precedes exactly approved TC SpellMgr4940–4956 effect0TargetA87 corrections for387981/388082. After correction, actual native2RED58.95s proves launch teleport after source/floor/LOS prerequisites; no synthetic movement/hook. Dedicated254 source-table handler and asynchronous motion options implemented, GREEN pending;41/Gordoth preserved. Initial test field-access compilation failure is not behavioral RED. Full Azure/pixels/callbacks/runes remain open.
+
 ## 2026-10-17 — Telash server jump-charge producer
 
 [Server-source projection](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): genuine real-copy CLI mode RED→fba6fb2b7PASS10.725s including six legacy controls; exact34 source rows/ten fields/NULLs, duplicate-source atomic refusal and fresh-schema/excerpt-loader proof. COPY367→5f225535 with full sqldiff49b238f5 (one CREATE+34INSERTs only), quick_check=ok; canonical publication lead-owned/pending. Independent artifact PASS; full fresh import, native254 motion/callbacks and ordinary Azure/pixels remain open. Lead separately reports first Energy phase4105 gate504 landed1443/fmtOK, master950d25c7f.
@@ -232,6 +282,14 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Starfall/Moon Tears recipient routing
 
 [Bounded258/979](../pet-battle-effect-coverage.md#starfall-and-moon-tears--implementation2026-10-17): exact active70448 seven-row graphs, source-school distinction and existing Moonlight reuse. Actual routing RED4 plus legal Cosmos owned RED1 precede9b958668 slot/cap/dead/miss/owned GREEN; first weather case exposed only a fixture9-versus-existing8 remaining assumption, corrected test-only9c88c925. Corrected focused weather1/1 passes ataf89ac7c; retain unchanged core4+owned1 GREEN at9b958668. Integrated5d23a60d lib145/main33/check1m36/no warnings/fmt pass; fresh reconciled70448 census1811/2829=64.02%/1025 graphs (+14/+2, no removals). Only subsequent docs/census changes; no redundant broad rerun. Lead gate438 lands145+55 before both-skin native Cosmos1972/1:9 damage/9 healing×3/increased reserve bars/Moonlight8. Four individually inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry91/110 only HP fills/timed floats. Existing7 canonical assets/3-mesh strict loader pass, no publication. Both physical forfeits close, owned processes stop/window clears.979 native and independent Retail timing/VFX remain unproved. No other ambiguous selectors admitted.
+## 2026-10-18 — Mycomancer664 triggered hearthstone acceptance pending
+
+[Exact acceptance and limits](../toy-effects14-coverage.md#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18): test/spec37a6c0598 adds learned264367/actual1299014 ten-second root→1286909/252 saved-bind, shared2309/1800000ms charge and Corewarden refusal. No child-direct substitute or change to25 direct cases/helper. Format/manual readability only; no own compilation/test job, behavior pending lead gate afterst526. No runtime/data/native or missing-bind/cross-map/natural-recharge claim.
+
+## 2026-10-18 — st526 Toy scope landed
+
+[Landing and limits](../toy-effects14-coverage.md#st526-toy-scope-landed-2026-10-18): lead confirms server masterce0fec81c contains feature38d087230/docsfaab75f7e; both ancestry checks pass. Toy successor scope complete with194/0; eight server failures belong to other heads. No native/all1166 gameplay or whole-workspace green claim. No own runtime/data/test jobs.
+
 ## 2026-10-18 — st526 Toy CPU cases pass; full server remains RED
 
 [Exact current proof matrix](../toy-effects14-coverage.md#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18): candidate2ec2e80bc combines feature38d087230/fix31f7e9216; server3909 passed/8 failed/124 ignored2770.80s/EXIT101/FMT0. Toy namespace194/0 includes Royal618/shared-five, old19/Oomgut,21 casters,13 objects,17 stationary and25 hearthstones; Akunda cursor/cooking/lifetime and drift controls now pass. Seven missing-tdb_jump_charge_params startup/orientation failures and Slagmaw119433 damage assertion keep overall integration RED. Engine phase pending; no own runtime/data/test job or native/full1166/landing certificate.

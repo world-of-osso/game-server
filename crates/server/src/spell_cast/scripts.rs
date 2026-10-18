@@ -26,8 +26,8 @@ mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
-pub(crate) use batch9::hostile_ground_fields;
 pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.
@@ -182,6 +182,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
+        }
+        (crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_CAST, 0) => {
+            Some(crate::scripted_ai::azure_vault::cast_absolute_zero_outbound_jump)
         }
         (crate::seething_parachute::PARACHUTE, 1) => {
             Some(crate::seething_parachute::reset_fall_information)

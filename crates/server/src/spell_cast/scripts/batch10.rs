@@ -63,8 +63,8 @@ pub(super) fn energize_flurry(world: &mut World, caster: Entity, target: Entity,
     }
 }
 
-///196884 names215802. Existing generic254 endpoint movement is preserved;
-///this bridge does not certify the lunge's traversal/visual parity.
+///196884 names215802. Keep this bite independently of effect254 displacement;
+///its source parabolic-curve/arrival options are explicitly unsupported.
 pub(super) fn bite_lunge(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     spell_cast::cast_triggered(world, caster, LUNGE_BITE, Some(target), depth + 1);
 }
