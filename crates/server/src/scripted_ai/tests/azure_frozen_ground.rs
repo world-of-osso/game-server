@@ -399,7 +399,35 @@ fn azure_frozen_ground_native_expiry_hazard_is_escaped_by_a_native_follower_on_p
         h.health(unit).current > 0.0,
         "unchanged native follower survives"
     );
-    assert!(!has_own_ground_aura(&h, unit, telash));
+    eprintln!(
+        "Frozen Ground escape boundary: distance={} radius={} aura={} membership={}",
+        at(&h, unit).distance(center),
+        h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius,
+        has_own_ground_aura(&h, unit, telash),
+        h.app
+            .world()
+            .get::<SpellAreaTrigger>(field)
+            .unwrap()
+            .inside
+            .contains(&unit),
+    );
+    // NPC movement and area membership run in separate FixedUpdate systems.
+    // Observe the next membership update after the physical crossing.
+    h.advance(STEP);
+    eprintln!(
+        "Frozen Ground next membership tick: aura={} membership={}",
+        has_own_ground_aura(&h, unit, telash),
+        h.app
+            .world()
+            .get::<SpellAreaTrigger>(field)
+            .unwrap()
+            .inside
+            .contains(&unit),
+    );
+    assert!(
+        !has_own_ground_aura(&h, unit, telash),
+        "native aura cleanup after the membership update following physical escape"
+    );
     for _ in 0..40 {
         h.advance(STEP);
         let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
