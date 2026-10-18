@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source500–504 pending Stone acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source500504-pending-stone-of-hearth-acceptance-and-pennanttableconditional-parasol-boundaries-2026-10-17):d68256325 adds212337/401802/source10s/saved-bind/shared2309/one1800000ms charge and Flame refusal, now19 hearthstones; unchanged helper/old18. Format/manual readability/diffcheck pass, newer head AFTER4964df7af2e6 required. Permanent nonzero pennant, missing interactive Hearthstone table and conditional Parasol226→featherfall105/can-turn409/animation312/parent-removal164/child aura remain gaps, not furniture/always-on featherfall/recursive recast. Retained Abyss Horn visual-only CPU witness does not create gameplay water. No further runtime/data/new native/own heavy duplicate.
+
 ## 2026-10-17 — Toy source495–499 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source495499-observerparty-private-perspectivefixed-gilneaswater-boat-boundaries-and-retained-banner-2026-10-17): Eyes periodic child preserves caster-and-summons target120 and both perception pairs; Date Modulator is outdoors party/raid-private machine plus effects, not global/owner-only perspective. Tess's252/17+77 goes to fixed Gilneas, not current inn bind. Four-seat permanent Control4 Love Boat requires water/radius20yd/holiday recovery; base430489 stays literal, not count/automatic child. Exact Dreaming Banner seasonal CPU row retained, no fresh native/recharge certificate. No further runtime/data/new proof/own heavy duplicate;4964df7af2e6 running.
