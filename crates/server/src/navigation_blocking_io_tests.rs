@@ -53,6 +53,7 @@ fn step_probe(
 fn run_probe(root: PathBuf, probe: TickProbe) {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, NavigationPlugin));
+    app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
@@ -82,14 +83,22 @@ fn write_held_tile(
     reached: mpsc::Sender<()>,
     release: mpsc::Receiver<()>,
 ) -> Result<bool, String> {
+    let mut writer = open_tile_writer(&path)?;
+    reached.send(()).map_err(|error| error.to_string())?;
+    let rescued = release.recv_timeout(IO_RESCUE).is_err();
+    write_tile_bytes(&mut writer, &bytes)?;
+    Ok(rescued)
+}
+
+fn open_tile_writer(path: &Path) -> Result<std::fs::File, String> {
     let deadline = Instant::now() + IO_RESCUE;
-    let mut writer = loop {
+    loop {
         match std::fs::OpenOptions::new()
             .write(true)
             .custom_flags(LINUX_O_NONBLOCK)
             .open(&path)
         {
-            Ok(writer) => break writer,
+            Ok(writer) => return Ok(writer),
             Err(error)
                 if error.raw_os_error() == Some(LINUX_ENXIO) && Instant::now() < deadline =>
             {
@@ -102,26 +111,27 @@ fn write_held_tile(
                 ));
             }
         }
-    };
-    reached.send(()).map_err(|error| error.to_string())?;
-    let rescued = release.recv_timeout(IO_RESCUE).is_err();
-    // The FIFO is nonblocking only for the open handshake; write_all must deliver
-    // the whole real bake, including packets larger than the pipe capacity.
-    let mut remaining = bytes.as_slice();
+    }
+}
+
+fn write_tile_bytes(writer: &mut std::fs::File, bytes: &[u8]) -> Result<(), String> {
+    // The FIFO remains nonblocking after the reader-open handshake. Deliver all
+    // baked packets, including packets larger than pipe capacity, within rescue.
+    let deadline = Instant::now() + IO_RESCUE;
+    let mut remaining = bytes;
     while !remaining.is_empty() {
         match writer.write(remaining) {
             Ok(0) => return Err("held tile writer made no progress".into()),
             Ok(written) => remaining = &remaining[written..],
             Err(error)
-                if error.kind() == std::io::ErrorKind::WouldBlock
-                    && Instant::now() < deadline + IO_RESCUE =>
+                if error.kind() == std::io::ErrorKind::WouldBlock && Instant::now() < deadline =>
             {
                 std::thread::yield_now();
             }
             Err(error) => return Err(format!("write held navigation tile: {error}")),
         }
     }
-    Ok(rescued)
+    Ok(())
 }
 
 fn baked_floor() -> Vec<u8> {
