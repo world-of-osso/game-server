@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source685–689 shared category and exact placement boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source685689-shared-saptor-category-missing-naptent-retained-umbral-banner-and-scripted-starfish-boundaries-2026-10-18): Saptor shares2513 with Pango, keeps one-hour aura/ten-minute recovery and122805 weight0.1. Missing Nap Mat and target22/base0 Tent remain gaps; existing Umbral Banner fixture retains explicit time-leap expiry scope. Starfish retains77 plus permanent child4/PreventionType4. No generic prop/bonus/independent timer, runtime/data/native change or own heavy jobs; lead successor pending.
+
 ## 2026-10-18 — Toy source680–684 mixed props, camera and category timing
 
 [Exact source matrix](../toy-effects14-coverage.md#source680684-mixed-props-staff-image-camera-guides-and-short-recovery-pango-boundaries-2026-10-18): missing Hourglass/Bench retain16 payloads and distinct cancellation/aura shapes; Staff source remains instant despite channel flavor. Camera retains293/60/321 and mutual164 guide removals. Pango's one-hour aura/shared2513 ten-minute recovery remains unverified, not forced into long-recovery helper or labelled runtime unsupported. Metadata only; no runtime/data/native change or own heavy jobs.
