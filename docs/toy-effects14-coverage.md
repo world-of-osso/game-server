@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source450–454: pending Claw/Nightmare-banner acceptance and wisdom/audio/attraction boundaries (2026-10-17)
+
+Test/spec1c5afda02 adds exact Claw to the unchanged disguise fixture, now11 rows plus separate Oomgut12 identities, and exact Nightmare Banner to the transmitted-object fixture, now10 rows. Old10 disguise/nine object identities remain unchanged. Format/manual readability/diffcheck pass; new behavior requires a later covering head, not4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|450 Vibrant Clacking Claw205904/410931 | Instant self transform56→existing205296/misc8, valid displays112407/112523/112524/112525 with equal runtime weights/scale1 for600000ms; inherited category2177/3600000ms recovery. Own learned-use/valid-model/ordinary expiry/native-display/full-health/recovery-refusal assertions committed, behavioral proof pending. No weighted-pool sampling, three-clack animation, player-scale inference or native/full-hour reuse certificate. |
+|451 Inherited Wisdom of Senegos205908/410944 | Source2500ms target32 summon205270/property64 for5000ms; item and category1284 both120000ms recovery. Runtime creature/model absent. Source yes-or-no answer/wisdom action, exact destination and cleanup remain gaps; no inert dragon body, invented answer distribution or guessed player-stat buff. |
+|452 New Niffen No-Sniffin' Tonic205936/411060 | Instant self dummy4/604800000ms, item5000ms recovery. Source blocks other noses' sniff sounds only for a week, not smells. Actual listener-specific sound filtering/source event set/persistence/cleanup remains unresolved; no generic cosmetic aura, global mute or invented smell gameplay. |
+|453 Sniffin' Salts205963/411211 | Instant target73 area-trigger179/create-properties28942 for30000ms, inherited3600000ms recovery. Actual friend-compulsion/visit action/eligibility/area lifecycle remains gap; no arbitrary friend teleport, visual-only patch or guessed attraction radius/control rule. |
+|454 Nightmare Banner206008/411653 | Instant cursor87 effect50→existing402852/type5/display82612/size1 for180000ms; category1246/180000ms recovery. Own learned-use/cursor/model/owner/map/facing/ordinary expiry assertions committed as tenth object row, behavioral proof pending. No dragon-banner identity substitution, new native/category-reuse certificate or invented interaction. |
+
+Evidence: private `rows450-454-{readonly-source,action-source,runtime-source,active-goal,proof-ledger}.json`, exact source category and template/model joins.149865 Tea Set remains untouched.
+
 ## Source445–449: pending Cinder acceptance and drum/ritual/glitter/lava-pack boundaries (2026-10-17)
 
 445 test/spec184f9874d adds Blazing Shadowflame Cinder to the unchanged actual learned-use/replicated-aura/cancel/full-health/model/no-actors caster fixture, now16 identities; original15 unchanged. Format/manual readability/diffcheck pass, exact push/readback retained. New behavior needs a later covering head, not4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.
