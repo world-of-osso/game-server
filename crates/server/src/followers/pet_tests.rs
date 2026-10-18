@@ -55,6 +55,52 @@ fn count_persisted_rows(world: &World) -> u64 {
 }
 
 #[test]
+#[ignore = "RED: follower fixture must use production source-projected spawning"]
+fn follower_lantha_production_spawn_supplies_source_display_and_reach() {
+    let f = fixture();
+    let world = f.h.app.world();
+    let display = world
+        .get::<shared::components::ModelDisplay>(f.unit)
+        .expect("production follower spawn supplies its source model display");
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let source_reach: f32 = source
+        .query_row(
+            "SELECT CombatReach FROM encounter_creature_model_info WHERE DisplayID=?1",
+            [display.display_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let scale = world
+        .get::<shared::components::UnitScale>(f.unit)
+        .unwrap()
+        .0;
+    assert!(source_reach > 0.0);
+    assert_eq!(
+        crate::scripted_ai::model_reach::combat_reach(world, f.unit),
+        Some(source_reach * scale),
+        "Lantha230861 must use actual source model reach, never a default"
+    );
+    assert_eq!(
+        world
+            .get::<shared::components::Npc>(f.unit)
+            .unwrap()
+            .template_id,
+        230861
+    );
+    assert_eq!(
+        world
+            .get::<crate::zones::TempSummon>(f.unit)
+            .unwrap()
+            .summoner,
+        f.h.caster
+    );
+}
+
+#[test]
 fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
     let mut f = fixture();
     let before = count_persisted_rows(f.h.app.world());
