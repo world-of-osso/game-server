@@ -193,19 +193,18 @@ fn dummy19_ardent_defender_direct_damage_nonfatal_then_rescue_then_death() {
     assert_eq!(h.health(caster), 0.0);
 }
 #[test]
-fn dummy19_ardent_defender_melee_reservation_cannot_be_spent_twice_before_flush() {
+fn dummy19_ardent_defender_exclusive_commit_is_consumed_before_next_hit() {
     let mut h = fixture(&[31850], 2);
     let caster = h.caster;
     apply(&mut h, caster, caster, 31850);
-    let mut query = h
-        .app
-        .world_mut()
-        .query::<(&mut Health, &mut crate::auras::ActiveAuras)>();
-    let (mut health, mut auras) = query.get_mut(h.app.world_mut(), caster).unwrap();
-    let before = health.current;
-    let instance =
-        crate::auras::rescue_ardent_defender(&mut health, Some(&mut auras), before).unwrap();
-    assert_eq!(health.current, 200.0);
-    assert!(auras.iter().any(|a| a.instance_id == instance));
-    assert!(crate::auras::rescue_ardent_defender(&mut health, Some(&mut auras), 1000.0).is_none());
+    let before = h.health(caster);
+    let first = crate::auras::apply_attack_damage(h.app.world_mut(), caster, before, 1);
+    assert!(first.prevented);
+    assert!(!first.lethal);
+    assert_eq!(h.health(caster), 200.0);
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 31850));
+    let second = crate::auras::apply_attack_damage(h.app.world_mut(), caster, 1000.0, 1);
+    assert!(!second.prevented);
+    assert!(second.lethal);
+    assert_eq!(h.health(caster), 0.0);
 }

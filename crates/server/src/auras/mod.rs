@@ -241,6 +241,8 @@ pub struct AuraInstance {
     /// `SpellClassOptions.SpellClassSet` of the aura spell.
     pub class_set: u32,
     proc: ProcTimers,
+    /// Guardian Spirit's non-aura effect1, snapshotted at application/refresh.
+    guardian_heal_pct: Option<f32>,
 }
 
 impl AuraInstance {
@@ -293,6 +295,7 @@ impl AuraInstance {
             };
         }
         self.charges = new.charges;
+        self.guardian_heal_pct = new.guardian_heal_pct;
         for fresh in new.effects {
             match self
                 .effects
@@ -701,6 +704,12 @@ fn build_instance(
             .class_options
             .as_ref()
             .map_or(0, |options| options.spell_class_set),
+        guardian_heal_pct: (spell.id == 47_788)
+            .then(|| spell.effects.iter().find(|effect| effect.index == 1))
+            .flatten()
+            .map(|effect| {
+                crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
+            }),
         proc: ProcTimers {
             next_ready_at: now,
             last_attempt_at: now - 10.0,
@@ -1148,40 +1157,83 @@ pub enum RemoveReason {
     Replaced,
 }
 
-///31850s2 rescues exactly the next otherwise fatal attack; reserve its field
-///immediately so deferred melee commands cannot spend the same rescue twice.
-pub(crate) fn rescue_ardent_defender(
-    health: &mut shared::components::Health,
-    auras: Option<&mut ActiveAuras>,
-    loss: f32,
-) -> Option<u32> {
-    if health.current <= 0.0 || loss < health.current {
-        return None;
-    }
-    let aura = auras?.auras.iter_mut().find(|a| {
-        a.spell_id == 31850 && a.effects.iter().any(|e| e.index == 1 && e.amount > 0.0)
-    })?;
-    let effect = aura
-        .effects
-        .iter_mut()
-        .find(|e| e.index == 1)
-        .expect("Ardent Defender field");
-    health.current = health.max * effect.amount / 100.0;
-    effect.amount = 0.0;
-    Some(aura.instance_id)
+/// Result after the real removal/heal, shared by melee, spells and periodic ticks.
+pub(crate) struct DamageCommit {
+    pub lethal: bool,
+    pub prevented: bool,
 }
 
-pub(crate) fn apply_attack_damage(world: &mut World, unit: Entity, loss: f32) -> bool {
-    let mut query = world.query::<(&mut shared::components::Health, Option<&mut ActiveAuras>)>();
-    let Ok((mut health, mut auras)) = query.get_mut(world, unit) else {
-        return false;
-    };
-    let rescue = rescue_ardent_defender(&mut health, auras.as_deref_mut(), loss);
-    let lethal = rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
-    if let Some(instance) = rescue {
-        remove_instance(world, unit, instance, RemoveReason::Consumed);
+/// TC Unit.cpp1003–1031: overkill absorption matches school and only covers
+/// damage strictly below twice maximum health when its native amount is zero.
+fn death_prevention(aura: &AuraInstance, loss: f32, max: f32, school: u32) -> Option<f32> {
+    if aura.spell_id == 31_850 {
+        return aura
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1 && effect.amount > 0.0)
+            .map(|effect| effect.amount);
     }
-    lethal
+    let pct = aura.guardian_heal_pct?;
+    aura.effects
+        .iter()
+        .any(|effect| {
+            effect.aura_type == 316
+                && effect.misc_values[0] as u32 & school != 0
+                && if effect.amount > 0.0 {
+                    loss <= effect.amount
+                } else {
+                    loss < max * 2.0
+                }
+        })
+        .then_some(pct)
+}
+
+pub(crate) fn apply_attack_damage(
+    world: &mut World,
+    unit: Entity,
+    loss: f32,
+    school: u32,
+) -> DamageCommit {
+    let health = world.get::<shared::components::Health>(unit);
+    let rescue = health
+        .filter(|health| health.current > 0.0 && loss >= health.current)
+        .and_then(|health| {
+            world.get::<ActiveAuras>(unit).and_then(|auras| {
+                auras.iter().find_map(|aura| {
+                    death_prevention(aura, loss, health.max, school)
+                        .map(|pct| (aura.instance_id, aura.spell_id, health.max * pct / 100.0))
+                })
+            })
+        });
+    if let Some((instance, spell, heal)) = rescue {
+        // Removing the parent before48153 prevents its +60% healing-taken modifier.
+        // Exclusive World access commits this actual child before the next hit.
+        remove_instance(world, unit, instance, RemoveReason::Consumed);
+        if spell == 47_788 {
+            crate::spell_cast::cast_triggered_with_effect0_amount(
+                world,
+                unit,
+                48_153,
+                Some(unit),
+                1,
+                heal,
+            );
+        } else if let Some(mut health) = world.get_mut::<shared::components::Health>(unit) {
+            health.current = heal;
+        }
+        return DamageCommit {
+            lethal: world
+                .get::<shared::components::Health>(unit)
+                .is_some_and(|health| health.current <= 0.0),
+            prevented: true,
+        };
+    }
+    DamageCommit {
+        lethal: world
+            .get_mut::<shared::components::Health>(unit)
+            .is_some_and(|mut health| crate::death::apply_health_damage(&mut health, loss)),
+        prevented: false,
+    }
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {

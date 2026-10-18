@@ -569,19 +569,12 @@ pub(crate) struct AutoAttackParams<'w, 's> {
     forms: Option<Res<'w, crate::auras::shapeshift::ShapeshiftForms>>,
     world_data: Option<Res<'w, crate::world_data::WorldData>>,
     spells: Option<Res<'w, crate::spell_info::SpellStore>>,
-    senders: Query<'w, 's, &'static mut MessageSender<CombatEvent>>,
-    combat_log: ResMut<'w, CombatLog>,
     commands: Commands<'w, 's>,
-    replication_dirty: Option<Res<'w, ReplicationDirtyQueue>>,
-    player_deaths: MessageWriter<'w, crate::death::PlayerDeathTransition>,
-    aura_events: Option<ResMut<'w, PendingAuraEvents>>,
 }
 
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
 pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) {
     let dt = time.delta_secs();
-    let elapsed = time.elapsed_secs_f64();
-    let mut events = Vec::new();
     let mut swings = Vec::new();
     // Recipient health not yet mutated by this batch's deferred split deliveries.
     let mut redirect_health = HashMap::new();
@@ -663,15 +656,10 @@ pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) 
         }
     }
     for (attacker, target, outcome) in swings {
-        record_swing(&mut params, &mut events, attacker, target, outcome);
+        params.commands.queue(move |world: &mut World| {
+            record_swing(world, attacker, target, outcome);
+        });
     }
-
-    broadcast_events(
-        &events,
-        &mut params.senders,
-        &mut params.combat_log,
-        elapsed,
-    );
 }
 
 struct SwingSnapshot {
@@ -707,40 +695,31 @@ fn snapshot_attacker(
 }
 
 fn record_swing(
-    params: &mut AutoAttackParams,
-    events: &mut Vec<CombatEvent>,
+    world: &mut World,
     attacker_entity: Entity,
     target_entity: Entity,
-    outcome: SwingOutcome,
+    mut outcome: SwingOutcome,
 ) {
-    params.commands.queue(move |world: &mut World| {
-        crate::combat_refs::set_in_combat_with(world, attacker_entity, target_entity);
-    });
-    mark_replication_changed(params.replication_dirty.as_deref(), target_entity);
+    if !commit_melee_loss(world, attacker_entity, target_entity, &mut outcome) {
+        return;
+    }
+    crate::combat_refs::set_in_combat_with(world, attacker_entity, target_entity);
+    mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
     if !outcome.immune
         && !outcome.kind.avoided()
-        && let Some(pending) = params.aura_events.as_deref_mut()
+        && let Some(mut pending) = world.get_resource_mut::<PendingAuraEvents>()
     {
         pending
             .0
             .extend(swing_aura_events(attacker_entity, target_entity, &outcome));
     }
     let caused_damage = outcome.damage > 0.0;
-    record_swing_events(
-        &mut params.commands,
-        events,
-        &mut params.player_deaths,
-        attacker_entity,
-        target_entity,
-        outcome,
-    );
+    record_swing_events(world, attacker_entity, target_entity, outcome);
     if caused_damage {
         // TC Unit::DealMeleeDamage: after health/death and only for damaging swings.
-        params.commands.queue(move |world: &mut World| {
-            crate::auras::damage_shield::retaliate(world, target_entity, attacker_entity);
-        });
+        crate::auras::damage_shield::retaliate(world, target_entity, attacker_entity);
     }
 }
 
@@ -1103,6 +1082,8 @@ struct SwingOutcome {
     damage: f32,
     /// `damage` in the target's health units (level scaling).
     scaled_loss: f32,
+    /// Training-dummy adjusted loss; health-sensitive limits run at commit time.
+    incoming_loss: f32,
     blocked: f32,
     /// Damage beyond the target's health before the swing.
     overkill: f32,
@@ -1180,18 +1161,18 @@ fn try_swing(
     let splits = melee_damage_splits(targets, context, target_entity, attacker.entity);
     let Ok((
         target_pos,
-        mut health,
-        last_damager,
+        health,
+        _last_damager,
         (is_npc, npc_flags),
         target_mods,
         training_dummy,
-        duel,
+        _duel,
         armor,
         flags,
         mut avoidance,
         stand_state,
-        unkillable,
-        script_name,
+        _unkillable,
+        _script_name,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -1211,7 +1192,6 @@ fn try_swing(
         context.sight.send_blocked_swing(commands, attacker.entity);
         return None;
     }
-    let health_before = health.current;
     let unit = |entity| {
         context.scaling.get(entity).map_or(
             UnitScaling::from_item((None, None, None)),
@@ -1326,91 +1306,8 @@ fn try_swing(
         crate::auras::finish_absorbs(world, target_entity, absorption)
     });
     let scaled_loss = crate::level_scaling::health_loss(&attacker_scaling, &target, damage);
-    let overkill = crate::level_scaling::damage_overkill(damage, scaled_loss, health.current);
+    // Commit health-sensitive limits and real rescue children in swing order.
     let incoming_loss = health_loss(training_dummy, scaled_loss);
-    let scripted_loss =
-        crate::scripted_ai::limit_scripted_loss(script_name, health.current, incoming_loss);
-    let (loss, duel_defeated) = crate::duel::duel_health_loss(
-        duel,
-        attacker.entity,
-        health.current,
-        limit_unkillable_loss(
-            health.current,
-            scripted_loss,
-            unkillable && attacker.entity != target_entity,
-        ),
-    );
-    let intercepted = crate::scripted_ai::has_damage_interceptor(script_name);
-    // Interception reactions may heal (Molten Gold136). Keep health uncommitted
-    // until the exclusive-world hook executes; never undo an applied death.
-    if intercepted {
-        let attacker_entity = attacker.entity;
-        commands.queue(move |world: &mut World| {
-            commit_intercepted_melee_loss(
-                world,
-                attacker_entity,
-                target_entity,
-                damage,
-                incoming_loss,
-            );
-        });
-    }
-    let rescue = if intercepted {
-        None
-    } else {
-        crate::auras::rescue_ardent_defender(&mut health, avoidance.1.as_deref_mut(), loss)
-    };
-    let became_lethal =
-        !intercepted && rescue.is_none() && crate::death::apply_health_damage(&mut health, loss);
-    if let Some(instance) = rescue {
-        commands.queue(move |world: &mut World| {
-            crate::auras::remove_instance(
-                world,
-                target_entity,
-                instance,
-                crate::auras::RemoveReason::Consumed,
-            )
-        });
-    }
-    if is_npc && incoming_loss > 0.0 && !intercepted {
-        let attacker_entity = attacker.entity;
-        commands.queue(move |world: &mut World| {
-            crate::creature_tap::record_damage(
-                world,
-                target_entity,
-                attacker_entity,
-                health_before,
-                loss,
-            );
-            crate::scripted_ai::damage_taken(
-                world,
-                target_entity,
-                Some(attacker_entity),
-                health_before,
-                incoming_loss,
-            );
-        });
-    }
-    if !intercepted {
-        let attacker_entity = attacker.entity;
-        commands.queue(move |world: &mut World| {
-            crate::achievement::record_damage(
-                world,
-                attacker_entity,
-                target_entity,
-                health_before,
-                damage,
-                loss,
-            );
-        });
-    }
-    if let Some(mut last_damager) = last_damager {
-        last_damager.0 = attacker.entity;
-    } else {
-        commands
-            .entity(target_entity)
-            .insert(LastDamager(attacker.entity));
-    }
     reset_swing_timers(auto_attack, hand, attacker.swing_time(&weapon));
     Some(SwingOutcome {
         hand,
@@ -1419,12 +1316,13 @@ fn try_swing(
         absorbed,
         damage,
         scaled_loss,
+        incoming_loss,
         blocked,
-        overkill,
+        overkill: 0.0,
         weapon_speed: weapon.speed,
-        npc_died: is_npc && became_lethal,
-        player_died: !is_npc && became_lethal,
-        duel_defeated,
+        npc_died: false,
+        player_died: false,
+        duel_defeated: false,
     })
 }
 
@@ -1656,39 +1554,63 @@ pub(crate) fn deal_direct_damage(world: &mut World, attacker: Entity, victim: En
     deal_health_damage(world, attacker, victim, damage, 1, None, 0.0);
 }
 
-/// Source-script melee interception resolves in the exclusive-world boundary:
-/// snapshot → adjust loss → reaction → health commit → tap/death.
-fn commit_intercepted_melee_loss(
+/// Every swing uses the same exclusive damage commit as direct/periodic hits.
+/// Rescue removal and real healing finish before the next queued swing.
+fn commit_melee_loss(
     world: &mut World,
     attacker: Entity,
     victim: Entity,
-    damage: f32,
-    incoming: f32,
-) {
+    outcome: &mut SwingOutcome,
+) -> bool {
     let Some(health) = world.get::<Health>(victim) else {
-        return;
+        return false;
     };
     if health.current <= 0.0 {
-        return;
+        return false;
     }
     let before = health.current;
-    let loss = crate::scripted_ai::limit_scripted_loss(
+    let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
         before,
-        incoming,
+        outcome.incoming_loss,
     );
-    crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming);
-    let lethal = crate::auras::apply_attack_damage(world, victim, loss);
-    crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
+    let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
+    let (loss, defeated) = crate::duel::duel_health_loss(
+        world.get::<crate::duel::DuelOpponent>(victim),
+        attacker,
+        before,
+        limit_unkillable_loss(before, scripted_loss, protected),
+    );
+    let is_npc = world.get::<Npc>(victim).is_some();
+    if is_npc && outcome.incoming_loss > 0.0 {
+        crate::scripted_ai::damage_taken(
+            world,
+            victim,
+            Some(attacker),
+            before,
+            outcome.incoming_loss,
+        );
+    }
+    let commit = crate::auras::apply_attack_damage(world, victim, loss, 1);
+    let loss = if commit.prevented {
+        outcome.absorbed += outcome.damage;
+        outcome.damage = 0.0;
+        outcome.scaled_loss = 0.0;
+        0.0
+    } else {
+        loss
+    };
+    outcome.overkill =
+        crate::level_scaling::damage_overkill(outcome.damage, outcome.scaled_loss, before);
+    outcome.npc_died = is_npc && commit.lethal;
+    outcome.player_died = !is_npc && commit.lethal;
+    outcome.duel_defeated = defeated;
+    crate::achievement::record_damage(world, attacker, victim, before, outcome.damage, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
     }
-    mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
-    if lethal {
-        world.entity_mut(victim).insert(KillingBlow(Some(attacker)));
-        mark_npc_dead_world(world, victim);
-        crate::spell_cast::log_event(world, death_log_event(attacker, victim));
-    }
+    world.entity_mut(victim).insert(LastDamager(attacker));
+    true
 }
 
 /// Health application for an already-mitigated direct or redirected hit.
@@ -1724,7 +1646,12 @@ pub(crate) fn deal_health_damage(
     if incoming_loss > 0.0 {
         crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming_loss);
     }
-    let lethal = crate::auras::apply_attack_damage(world, victim, loss);
+    let commit = crate::auras::apply_attack_damage(world, victim, loss, school);
+    let (damage, loss, absorbed) = if commit.prevented {
+        (0.0, 0.0, absorbed + damage)
+    } else {
+        (damage, loss, absorbed)
+    };
     crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
@@ -1757,7 +1684,7 @@ pub(crate) fn deal_health_damage(
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, victim, attacker, before, loss);
     }
-    if !lethal {
+    if !commit.lethal {
         return;
     }
     world.entity_mut(victim).insert(KillingBlow(Some(attacker)));
@@ -1843,48 +1770,45 @@ pub(crate) fn combat_stop(world: &mut World, unit: Entity) {
     crate::combat_refs::end_all_combat(world, unit);
 }
 
-fn record_swing_events(
-    commands: &mut Commands,
-    events: &mut Vec<CombatEvent>,
-    player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
-    attacker: Entity,
-    target: Entity,
-    outcome: SwingOutcome,
-) {
-    events.push(build_swing_event(attacker, target, &outcome));
+fn record_swing_events(world: &mut World, attacker: Entity, target: Entity, outcome: SwingOutcome) {
+    let mut events = vec![build_swing_event(attacker, target, &outcome)];
     let damage = outcome.damage;
-    commands.queue(move |world: &mut World| {
-        if damage > 0.0 {
-            crate::creature_aggro::note_damage_taken(world, target);
-        }
-        crate::creature_aggro::add_threat(world, target, attacker, damage);
-    });
+    if damage > 0.0 {
+        crate::creature_aggro::note_damage_taken(world, target);
+    }
+    crate::creature_aggro::add_threat(world, target, attacker, damage);
     let rage_secs = match outcome.hand {
         Hand::Main => outcome.weapon_speed,
         Hand::Off => outcome.weapon_speed / 2.0,
     };
-    commands.queue(move |world: &mut World| {
-        reward_swing_rage(world, attacker, target, rage_secs, damage)
-    });
-    let swing = swing_log_event(attacker, target, &outcome);
-    commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, swing));
+    reward_swing_rage(world, attacker, target, rage_secs, damage);
+    crate::spell_cast::log_event(world, swing_log_event(attacker, target, &outcome));
     if outcome.npc_died || outcome.player_died {
-        commands.entity(target).insert(KillingBlow(Some(attacker)));
-        // Unit::Kill removes death-interrupted auras before damage-shield reactions.
-        // The ordinary aura-lifetime sweep runs later than this deferred melee batch.
-        commands.queue(move |world: &mut World| crate::auras::remove_on_death(world, target));
-        let death = death_log_event(attacker, target);
-        commands.queue(move |world: &mut World| crate::spell_cast::log_event(world, death));
+        world.entity_mut(target).insert(KillingBlow(Some(attacker)));
+        crate::auras::remove_on_death(world, target);
+        crate::spell_cast::log_event(world, death_log_event(attacker, target));
     }
     if outcome.npc_died {
-        mark_npc_dead(commands, target);
+        mark_npc_dead_world(world, target);
         events.push(build_death_event(target));
     }
     if outcome.player_died {
-        player_deaths.write(crate::death::PlayerDeathTransition { player: target });
+        world.write_message(crate::death::PlayerDeathTransition { player: target });
     }
     if outcome.duel_defeated {
-        commands.entity(target).insert(crate::duel::DuelDefeated);
+        world.entity_mut(target).insert(crate::duel::DuelDefeated);
+    }
+    let elapsed = world.resource::<Time>().elapsed_secs_f64();
+    for event in events {
+        world
+            .resource_mut::<CombatLog>()
+            .record(elapsed, event.clone());
+        for mut sender in world
+            .query::<&mut MessageSender<CombatEvent>>()
+            .iter_mut(world)
+        {
+            sender.send::<CombatChannel>(event.clone());
+        }
     }
 }
 
