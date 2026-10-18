@@ -8,7 +8,7 @@ Spell target32 follows pinned TC `a352b1fa` `TARGET_DEST_CASTER_SUMMON`, indepen
 - [x] For represented gravity-enabled non-flyers on dry ground, clamp to floor. GravityDisabled makes the caster flight-capable: preserve above-floor altitude and raise below-floor altitude.
 - [x] Attr9 FORCE_DEST_LOCATION uses a separate ten-step distance backoff with6yd floor-height-change limit, then ground placement; flight does not select ordinary allowed-Z behavior in this mode.
 - [x] Preserve selector18 caster altitude and selector62/138 ground behavior, including existing enabled live-floor behavior.
-- [ ] Missing/invalid height never rejects the cast: ordinary selection retains computed Z; FORCE rejects invalid-height offset candidates and preserves original Z if the final probe is also invalid. Actual688 unavailable-ground regression proof is pending.
+- [x] Actual688 still creates its owned Imp at unchanged height with no GroundMap or an empty geometry directory. Missing/invalid height does not reject ordinary selection. FORCE also preserves Z when the final probe is invalid, but no-height FORCE behavior lacks a dedicated test.
 
 ## How it works
 
@@ -23,9 +23,12 @@ Spell target32 follows pinned TC `a352b1fa` `TARGET_DEST_CASTER_SUMMON`, indepen
 
 - `scripted_ai/tests/herald_target32.rs` — real copy-only30717/Ramparts source actor/reach/geometry, ordinary summon before AI movement, independent flight casters, FORCE height-backoff cases.
 - `spell_cast/target32_controls_tests.rs` — selector18/62/138 controls.
+- `warlock_pet_tests.rs` — additional real688 absent/empty ground-data regression; existing warlock cases unchanged.
 - `spell_cast/live_ground_destination_tests.rs` and existing podium test — retained ground-destination consumers.
 
 ## Known gaps (current cycle)
+
+- [ ] Lantha's existing follower fixture creates an NPC without ModelDisplay; source-reach validation refuses30146 at completion before any Felguard exists. No guessed reach or assertion change; gate blocked pending source-state scope decision.
 
 - [ ] `TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED`: existing live-GO ray1yd/clearance0.5yd is not TC nav/static/unit-halfheight tracing. Helper reuse is intentional; no new collision system.
 - [ ] `TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED`: no HOVER/HoverHeight or UnitFlags2 swim projection; wet/hover parity is not certified.

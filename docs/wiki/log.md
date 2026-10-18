@@ -1,3 +1,7 @@
+## 2026-10-18 — Target32 invalid-height repair / gate tg571
+
+Gate tg571 exposed eight missing-height summon regressions. Merged serverf0f9b31d6/protocola2b07a6; real688 RED1fa8ed113 captures exact NotSupported. e674cf7c0 follows TC Object.cpp701–706/732–748/761–762 and FORCE2808–2829: no invented height and no missing-height cast failure. New688 absent/empty-ground control plus unchanged consumers/primitive batch22/23 GREEN168.86s. Remaining Lantha30146 is refused at completion before spawning: actual display=None/reach=None in incomplete generic-NPC fixture. Diagnostic removed; existing tests unchanged; gate remains blocked, not full GREEN. [Contract](../specs/caster-summon-destination.md).
+
 ## 2026-10-18 — Caster summon destination32
 
 [Primitive](systems/spell-casting.md#caster-summon-destination32--2026-10-18): distinct source reach/front-left selector, represented dry-floor/flight adjustment and separate FORCE backoff. Genuine XY/below-floor/FORCE REDs precede a2373c0c5 targeted7/7 GREEN49.47s, no warnings; three primitive cases enabled afterward without behavior changes. Lead owns check/fmt gate. Exact geometry/hover/swim/height residuals and unchanged42/44/47/49/50/72/55 remain named; INTRO2 is separate.

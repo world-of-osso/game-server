@@ -479,7 +479,6 @@ fn class_completeness_native_water_elemental_recall_dismiss_and_record_reopen() 
 }
 
 #[test]
-#[ignore = "RED: target32 must keep computed height when ground data is unavailable"]
 fn warlock_summon_imp_without_ground_data_keeps_height_and_succeeds() {
     for empty_ground_resource in [false, true] {
         let dir = tempfile::tempdir().unwrap();
