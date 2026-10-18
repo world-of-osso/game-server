@@ -41,6 +41,10 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Natural first-center landing RED
+
+[First center landing](investigations/follower-data.md#telash-first-center-landing--2026-10-17):dcd7fefe actual natural phase/outbound/airborne/no-cast/exact-center prerequisites pass, then missing native3880088-second self CastState1FAIL40.09s. Exactsource/HEAD/protocol/published-input guards stable. Only TC133–144 first-center branch/source boolean added; EVENT_JUMP1004 shared without value/math change. GREEN pending; return actions/AfterCast/runes/counters remain separate and no gravity restoration invented.
+
 ## 2026-10-17 — Natural phase-hit outbound jump GREEN
 
 [Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17): source387928effect0→fullmask387981 exact-center bridge d622ea9b passes actual natural callback and original Energyphase controls2/2 in57.23s; exact70source/HEADclean/protocol11a058cf/published5f/private62403 guards stable. Test enabled afterward; no primitive/class reruns. Scoped051a5432 server check0/5.12s/zero warnings and fmt0, focused direct primary-source/readability verification pass; lead independent integration pending. Natural landing/return/runes/counters/budgets/pixels remain separate.

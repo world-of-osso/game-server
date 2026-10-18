@@ -6,10 +6,9 @@ use bevy::prelude::*;
 use shared::components::Position;
 
 use super::effects::EffectCtx;
-use crate::scripted_ai::jump_movement::{JumpOptions, move_jump_with_options};
+use crate::scripted_ai::jump_movement::{EVENT_JUMP, JumpOptions, move_jump_with_options};
 use crate::spell_info::SpellEffect;
 
-const EVENT_JUMP: u32 = 1004;
 const SPECIAL_FACING_ATTRIBUTES: u32 = 0x0000_1000 | 0x0080_0000;
 
 #[derive(Clone, Copy)]
