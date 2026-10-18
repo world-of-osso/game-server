@@ -1,3 +1,7 @@
+## 2026-10-17 — Bounded Augmentation support stats
+
+[Augmentation](systems/auras.md#augmentation-support-stats-2026-10-17): active70448 Prescience409311→410089 recipient crit and Shifting Sands413984 caster-mastery Versatility; exact spell-specific SimC76f8118 semantics, no generic540. Genuine native RED4 precedes implementation; GREEN/integration pending. Automatic targeting, E202/dummies, empower grants, Ebon and full-ability/legal/UDP acceptance remain open.
+
 ## 2026-10-17 — Power-drain CalcValue source correction
 
 [Power drain](systems/spell-casting.md#native-power-drain8--2026-10-17): original117 fixture expectation missed ExpectedStat base evaluation, CalcValue rounding and the initial base-variance phase; raw-base118 is not the full native result either. Native70448 zero class/coefficient fields still enter the pin's ExpectedStat else branch. Real UnitLevel10 yields3405=100,46453=278/floor80, and16094's native auto-DPS base284. Freshmaster887760ff genuineRED6FAIL/2PASS73.91s →8fd5f604/b8589ad6 GREEN9/9/60.29s/206.409s total, including metadata refusals and signed native-variance endpoints290/384/491. Hash-verified70448 selected inputs match runtime rows; old six passes remain historical, not source-parity proof.
