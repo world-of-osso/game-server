@@ -3336,6 +3336,7 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
         (244470, 1237584, 1800000),
         (259240, 1264653, 300000),
         (264413, 1271973, 1800000),
+        (275988, 1298433, 1800000),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("attachment-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
