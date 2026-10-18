@@ -208,6 +208,16 @@ fn combat_allows(
     if condition.combat && enemies.is_empty() {
         return false;
     }
+    if condition.requires_cast && world.get::<CastState>(target).is_none() {
+        return false;
+    }
+    if entry.slot == Slot::Control
+        && world
+            .get::<crate::auras::ActiveAuras>(target)
+            .is_some_and(|auras| auras.cannot_auto_attack())
+    {
+        return false;
+    }
     let protected = if entry.slot == Slot::Mitigation {
         unit
     } else {
@@ -246,6 +256,7 @@ fn attempt_cast(
         return true;
     }
     let urgent = entry.slot == Slot::Interrupt
+        || entry.slot == Slot::Control
         || entry.slot == Slot::Defensive
         || (entry.slot == Slot::Heal
             && entry
@@ -256,7 +267,7 @@ fn attempt_cast(
         return false;
     }
     if target != unit
-        && entry.slot != Slot::Interrupt
+        && !matches!(entry.slot, Slot::Interrupt | Slot::Control)
         && !ai::pursue(
             world,
             unit,

@@ -10,6 +10,7 @@ pub(super) enum Slot {
     Utility,
     Interrupt,
     Dispel,
+    Control,
     Taunt,
     Heal,
     Hot,
@@ -46,6 +47,7 @@ pub(super) struct Conditions {
     pub source_center: bool,
     pub exclusive_aura: bool,
     pub dispel_types: Vec<u32>,
+    pub requires_cast: bool,
 }
 
 #[derive(Clone, Debug)]
