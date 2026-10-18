@@ -78,6 +78,7 @@ fn continents_app() -> App {
                     &world_data,
                     MapContent::continent(map_id),
                     false,
+                    Some(&mut crate::test_data::ground_map()),
                 );
             }
         },

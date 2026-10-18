@@ -1,5 +1,5 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash power/rune startup/first-loop Frost and Icy clocks are ported;
+//! Telash power/rune startup/first-loop clocks and first100Energy poll are ported;
 //! full phases, jumps and rune interactions remain unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
@@ -30,6 +30,12 @@ const ICE_POWER_PER_TICK: f32 = 2.0;
 const EVENT_FROST_BOMB: u32 = 1;
 const ICY_DEVASTATOR: u32 = 387151;
 const EVENT_ICY_DEVASTATOR: u32 = 2;
+const EVENT_ABSOLUTE_ZERO: u32 = 3;
+const ABSOLUTE_ZERO_POLL_MS: u64 = 500;
+const ABSOLUTE_ZERO_POWER: f32 = 100.0;
+const ABSOLUTE_ZERO_CAST: u32 = 387928;
+const ABSOLUTE_ZERO_SHIELD: u32 = 388084;
+const ACTIVATE_VAULT_RUNE: u32 = 390209;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -243,6 +249,32 @@ struct Telash {
     boss: super::boss_ai::BossAi,
 }
 
+impl Telash {
+    fn start_absolute_zero_when_ready(&mut self, ctx: &mut super::Ctx) {
+        let Some(power) = read_current_primary_power(ctx.world, ctx.me) else {
+            warn!(actor = ?ctx.me, "Telash phase polling requires its actual primary power");
+            return;
+        };
+        if power < ABSOLUTE_ZERO_POWER {
+            return;
+        }
+        ctx.talk(3);
+        ctx.talk(4);
+        ctx.set_react_state(super::ReactState::Passive);
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(super::waypoint_path::GravityDisabled);
+        crate::auras::remove_auras(ctx.world, ctx.me, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == ICE_POWER_PERIODIC
+        });
+        ctx.do_cast_self(ABSOLUTE_ZERO_CAST);
+        ctx.do_cast_self(ABSOLUTE_ZERO_SHIELD);
+        ctx.do_cast_self(ACTIVATE_VAULT_RUNE);
+        self.boss.events.cancel(EVENT_FROST_BOMB);
+        self.boss.events.cancel(EVENT_ICY_DEVASTATOR);
+    }
+}
+
 impl super::boss_ai::BossScript for Telash {
     fn boss_ai(&mut self) -> &mut super::boss_ai::BossAi {
         &mut self.boss
@@ -258,6 +290,10 @@ impl super::boss_ai::BossScript for Telash {
                 if let Some(target) = ctx.select_target_random(75.0, true) {
                     ctx.do_cast_at(Some(target), ICY_DEVASTATOR, false);
                 }
+            }
+            EVENT_ABSOLUTE_ZERO => {
+                self.start_absolute_zero_when_ready(ctx);
+                self.boss.events.repeat(ABSOLUTE_ZERO_POLL_MS);
             }
             _ => {}
         }
@@ -289,6 +325,9 @@ impl super::CreatureAi for Telash {
         ctx.do_cast(ICE_POWER_PERIODIC);
         self.boss.events.schedule(EVENT_FROST_BOMB, 3_500);
         self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 14_500);
+        self.boss
+            .events
+            .schedule(EVENT_ABSOLUTE_ZERO, ABSOLUTE_ZERO_POLL_MS);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
@@ -309,6 +348,11 @@ fn read_telash_primary_powers(world: &World, actor: Entity) -> Option<(PowerType
     table.get(primary)?;
     let powers = PowerPools::from_table(table, vec![primary]);
     Some((primary, powers))
+}
+
+fn read_current_primary_power(world: &World, actor: Entity) -> Option<f32> {
+    let primary = *world.get::<PowerPools>(actor)?.order.first()?;
+    crate::spell_cast::powers::power_value(world, actor, primary).map(|(current, _)| current)
 }
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {

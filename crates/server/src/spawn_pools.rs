@@ -659,14 +659,18 @@ fn apply_pool_changes(
         }
     }
     let mut queue = CommandQueue::default();
-    let mut commands = Commands::new(&mut queue, world);
-    let spawned = crate::zones::spawn_pooled_creatures(
-        &mut commands,
-        world_data,
-        map,
-        map_pools,
-        &changes.spawned,
-    );
+    world.init_resource::<crate::ground::GroundMap>();
+    let spawned = world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
+        let mut commands = Commands::new(&mut queue, world);
+        crate::zones::spawn_pooled_creatures(
+            &mut commands,
+            world_data,
+            map,
+            map_pools,
+            &changes.spawned,
+            Some(&mut ground),
+        )
+    });
     queue.apply(world);
     map_pools.entities.extend(spawned);
 }

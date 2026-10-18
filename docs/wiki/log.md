@@ -1,3 +1,6 @@
+## 2026-10-17 — Ordinary context refusal and fixture source repair
+
+[Level context](systems/level-scaling.md#gate486-fixture-source-audit): gate486 exposed cached Lesser Voidwalker20 versus actual area279/CT11/native30 and unsupported Lucifron map409 difficulty3 versus actual spawn9/18. Three-case reproduction at7763d065a confirms both failures and missing-context panic. Spawn boundary now logs/refuses unresolved actors before entity creation and continues valid population; criterion below/equal/above coverage uses29/30/31, lifecycle uses source9. Focused3/3 PASS60.13s and affected54/54 PASS150.97s (55 pre-existing ignored), fmt0 at5a2c2d449; package check0/warning-free32.05s at docs-only41e030bf1. Requested mastere233d88f1 integration79876f34f retains FIFO selection/fence helpers, moves ground_map beside world_db_path and unions wiki entries; combined affected+focused56PASS150.66s/55ignored, check0/warning-free8.55s. LEAD re-gate/landing pending. No canonical or Herald lifecycle changes.
 ## 2026-10-17 — Agony ramp and native Sudden Onset
 
 [Affliction](systems/auras.md#agony-ramp-and-sudden-onset-2026-10-17): active70448 Agony980 cap8, Sudden1260209 starts3/+10%; legacyWrithe196102 absentcurrentmembership. Genuine nativeeff2f2115 RED8/9 (timed/deadline15vs30,recast2vs1,initial1vs3) plus unchanged CorruptioncontrolPASS before named live-stack/post-hit/refresh-floor implementation. No source coefficients/clocks/RNG/generic resource/trigger change; A226 shard RNG and full-ability gaps stay open. Native9/9 GREEN8.95s at5b0ee370f plus retained controls10/10 GREEN8.87s at557fc91df; scoped check20.53s/fmt PASS warning-free (19/19,0ignored), manual changed-Rust readability inspected. Later master/comment/docs leave native9 logic unchanged; no redundant cohort replay. Independent gate pending. Prior Ebonbaa9b0124 landed with lead4931061/fmtPASS.
@@ -9,6 +12,13 @@
 ## 2026-10-17 — Ebon Might baseline
 
 [Ebon Might](systems/auras.md#ebon-might-baseline-2026-10-17): approved395152/self395296 baseline, native primary support/2-N split/owned1000ms updates and foreign-grant exclusion; native16114cc3 RED6 before implementation, GREEN pending. Source amounts/radius500/MaxTargets30 preserved; Eruption/passive flat extension retained, no generic540/party-only/optional/whole-ability policy. Prior Prescience/Sands slice landed after lead gate482 passed1053/fmt.
+## 2026-10-17 — Omor repeat measurement boundary
+
+[Dispatch versus completion](systems/boss-scripts.md#omor-dispatch-clocks-and-pushback--2026-10-17): gate4851694PASS/1FAIL5.75s Go gap; instrumented native damage adds500ms pushback. Pre-queued master A/B independently shows the same completion-gap compression, so this is a pre-existing measurement flaw, not established queued-specific timer regression. Fixture uses actual dispatch observations with identical repeat bounds; first-Go/hound/shield/credit checks unchanged, deterministic native-pushback control added. Corrected targeted proof pending; no production/RNG/clock/tolerance changes.
+
+## 2026-10-17 — Queued64 source publication and Execute override
+
+[Native script boundary](systems/spell-casting.md#execute-effect64-script-override--2026-10-17): missing mandatory aura-table reproduction passes after lead-owned source publication; full stack redone on current master. First wide1584PASS/18FAIL/14ignored separates nine missing prepared-copy environment inputs, two native61781 exclusion fixtures, six native-delay/application/order fixtures and one real Execute script override. Pinned TC prevents Execute's default64 and directly casts260798 before the survivor refund; all original strict assertions remain. Recovery29/29 passes34.22s at71c0be65/protocola56688e, including queued0/1ms/order/payment/recipient controls; Finalf2be0f8b wide1606server+two single-target cases/0FAIL/17ignored1474.24s (1624361ms wrapper), workspace/all-target check164019ms/zero warnings and fmt/diff/manual Rust readability pass. Source DB remains published318fda95. No fresh-UDP/rendered/full13/40 claim.
 
 ## 2026-10-17 — Bounded Augmentation support stats
 
@@ -31,6 +41,10 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Telash server jump-charge producer
+
+[Server-source projection](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): genuine real-copy CLI mode RED→fba6fb2b7PASS10.725s including six legacy controls; exact34 source rows/ten fields/NULLs, duplicate-source atomic refusal and fresh-schema/excerpt-loader proof. COPY367→5f225535 with full sqldiff49b238f5 (one CREATE+34INSERTs only), quick_check=ok; canonical publication lead-owned/pending. Independent artifact PASS; full fresh import, native254 motion/callbacks and ordinary Azure/pixels remain open. Lead separately reports first Energy phase4105 gate504 landed1443/fmtOK, master950d25c7f.
+
 ## 2026-10-17 — Native field partial acceptance and hazard boundary
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): retained5d native5PASS plus corrected-action936dc1421PASS37.90s, strict source/protocol/HEAD/published-input guards stable; no fresh6/6 claim. Passing fixtures enabled. Additional actual-target attachment/copy-departure and self/ally/other-copy controls are added but ignored pending scoped acceptance. Follower source-reach escape regression uses an actual native aura-created field, authored Garrick model/scale/reach and real Stockade navigation; its RED/GREEN and the hazard-consumer correction remain pending. No health/stat/geometry/default-reach changes.
@@ -38,6 +52,10 @@
 ## 2026-10-17 — Native Sprout initial periodic tick correction
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): first5d4e3f6d packet5PASS/1FAIL121.30s, exact published inputs/source/HEAD guards stable. Failure was the fixture's zero-initial-tick expectation: actual70448 SpellMisc374523 Attributes5=524800/0x80200 includes TC `EXTRA_INITIAL_PERIOD`0x200. Production periodic behavior is correct and unchanged; corrected fixture pins the flag and expects1initial/1beforeperiod/2afterperiod/2afterexit, preserving no-reapplication and caster-filtered cleanup checks. Only failed case is rerun; five passing field/lifecycle/scale/curve cases are retained, not relabeled fresh6/6.
+
+## 2026-10-17 — Rune startup and first natural Energy phase
+
+[Coverage](investigations/follower-data.md#telash-first-energy-phase--2026-10-17): actual Rune startup0vs3 RED→7PASS/check/fmt at40f6e3977, lead497 landed1432 tests; source Rune data published3670 after494 with byte-identical five-insert re-run. First natural100Energy phase reaches genuine0vs1 Go RED51.96s, then4105c8f71 targeted10PASS106.76s/check6.59s/fmt0 with stable52-source/protocol/input guards; gate504 queued. Existing controlled-fixture health buffer is explicit; no ordinary budget, jump/rune interaction or pixel claim.
 
 ## 2026-10-17 — Native fields accepted and Rune source COPY prepared
 
@@ -65,6 +83,84 @@
 ## [2026-10-17] systems | Recuperate effect terminology correction
 
 Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-destination-missiles-2026-10-17):1231411 effect179 is `CREATE_AREATRIGGER`, properties38187, not a scene. Timing proof and runtime behavior unchanged; area-trigger behavior/visuals remain outside that proof.
+## 2026-10-17 — Dead-caster native channel coverage
+
+[Spell casting](systems/spell-casting.md#dead-caster-native-channel-coverage--2026-10-17): native55224 has1100ms prepare then8000ms channel/aura12. Concrete actual-death fixtures measure natural dead-start completion, caster-death interruption and Ghost-release interruption, including functional Stunned refusal and aura cleanup. Baseline9c13da6b already passes3/3 in21.80s (196.412s wrapper), so this is tests/docs-only coverage, no production fix or fabricated RED. Masterc23d4110 integrated433e8ae9 adds only unrelated124 pull dispatch/Omor tests; exact native cases and channel/life/Repop paths unchanged, so retain baseline3 and prior runtime221 within their scopes without replay. Workspace/all-target check37.538s/0warnings and fmt pass. Main-thread readability/command gate for medium test-only work; no new independent verification claim.
+
+## 2026-10-17 — Dead-start cast progression
+
+[Spell casting](systems/spell-casting.md#dead-start-cast-progression-and-death-interruption--2026-10-17): native5 and actual DeathPlugin create a dead player; active35058/passive53008 bars cancel incorrectly, NPC death fails immediate interruption, and post-corpse DEAD incorrectly consumes a new spell event. RED3pass/4fail6.07s. Server-only native spell snapshot now records the last observed life bit; NPC death/removal/despawn interrupt and DEAD actor events suspend. Initial7/7 GREEN12.10s; subsequent merged compilation finds two new-master tuple accesses, corrected without behavior changes. Source review yields genuine spirit-release bar RED (failed-release control passes) and SmartLifetime corpse-removal RED on actual native Brown Ram spawn/factory with unchanged source clocks. Missing Erland fixture is retained as invalid proof, not RED. Added source phase cancellation; current8bcb9970/master6c0cadc9/protocole9b80b8 passes merged221/0/0 in100.09s (329.193s wrapper): eleven new cases,205 prior and five named integration controls. Workspace/all-target check122.640s/0warnings and fmt pass; independent artifact/source/wiring/readability repair verification passes with command proofs main-owned. Dungeon cancel is source/code wiring only; Stockade control does not independently prove active-bar interruption. Failed-release control preserves this project's existing error contract, not whole TC Repop parity. Original cast times/radiusB/variance/resource budgets and original seven test bodies retained; no manual dead-state injection or corpse-delay extension.
+
+## 2026-10-17 — Dead-start versus death-during-cast source qualification
+
+[Spell casting](systems/spell-casting.md#non-instant-progression-qualification--2026-10-17): five read-only probes reconciled with primary files. Already-dead eligible casts progress on player/CORPSE event updates; living→dead interrupts existing generic/channel casts regardless of passive/AllowCast flag. Creature DEAD does not update Unit/events. Newly cached Spell.h confirms IsInterruptable is execution reentrancy, not cast-bar interruptibility. Runtime's unconditional health cancel cannot model both cases. Native35058 requires its actual RadiusB13, not A0; no runtime change/test/census promotion. Existing205+1 proofs retained, non-instant acceptance open.
+
+## 2026-10-17 — Ordinary dead-caster eligibility
+
+[Spell casting](systems/spell-casting.md#ordinary-dead-caster-admission-and-execution--2026-10-17): source passive/AllowCastWhileDead exceptions were missing at both admission and execution. Actual5 kills NPC before15007(active flag),199324(passive without flag) and direct15007 execution, RED2pass/3fail7.28s. Both boundaries now share the source predicate; living aura/unexempt dead116 controls retained. Mergede075b0cf/master42a7ab51/protocol1911f73 passes205/0/0 in44.11s (139.238s wrapper); existing unexempt queued-death control separately1/1 in5.71s. Check19.966s/0warnings, fmt and independent read-only artifact/source/wiring/readability pass; RED fixture byte-identical. No raw state/budget/row/clock/RNG edits. Instant eligibility is not cast-bar death progression or full ability/passive lifecycle proof.
+
+## 2026-10-17 — Creature bool-trigger dead caster
+
+[Spell casting](systems/spell-casting.md#creature-bool-trigger-dead-caster-admission--2026-10-17): TC permits a dead caster for a triggered cast without aura origin; bool FULL_MASK entry supplies no aura. Actual5→dead NPC→116/205406 gives RED2pass/2fail10.64s, while living bool116/dead ordinary116 controls pass. Removed only the unconditional bool-route living gate; metadata/recipient predicates and all other exemptions remain. Merged1a33d5c9/master1e782e6e/protocol523d4f9 passes200/0/0 in72.31s (148.091s wrapper): four new plus196 prior, including actual reflection and repaired resurrection controls. Workspace/all-target check15.734s/0warnings, fmt and independent read-only artifact/source/wiring/readability pass. Reviewer formatting hypothesis falsified by actual fmt check; RED fixture byte-identical. No raw health/stat/Mana/native flags/rows/clock/RNG/budget edits or whole-spell/death-trigger claim.
+
+## 2026-10-17 — Normal explicit AllowDeadTarget
+
+[Spell casting](systems/spell-casting.md#normal-explicit-allowdeadtarget-admission--2026-10-17): actual native5→corpse→9454 exposes unconditional dead-target refusal in player requests and ordinary/triggered creature routes, RED2pass/3fail12.93s. Normal validator now uses native dead-target eligibility while retaining living resurrection rejection and later predicates. All five native cases pass in merged192/3; the three failures were legacy synthetic7328 fixtures missing source corpse metadata. Replacing them with actual Redemption preserves native cost/time/range and requires the source out-of-combat precondition (common harness defaults combat true). Corrected3/3 pass5.37s;192 unchanged results retained, no195 replay. Native2008 living-friendly rejection separately passes1/1 in46.85s. Check19.945s/0warnings, fmt and independent artifact/source/wiring/readability pass. New native proof has no raw row/flag/health/mana/clock/RNG/budget edits or9454 queue parent. Legacy synthetic172 acceptance fixture remains explicitly non-native.
+
+## 2026-10-17 — Shared full-trigger dead recipients
+
+[Spell casting](systems/spell-casting.md#shared-full-trigger-dead-recipient-admission--2026-10-17): actual Death Touch5→present corpse→full-trigger Flame Shock188389 reproduces illegal admission and aura. Source IsAllowingDeadTarget predicate now gates explicit unit life; reflection/relation and other eligibility remain unchanged. Freeze9454 admission/persistence control corrected to match distinct native flags and passes before production. Merged2a90014e/masteraae714c5 passes183/0/0 in52.75s, including actual Frostbolt reflection and all165 previous controls plus5 script/9 missile cases. Workspace/all-target check182.777s/0warnings and fmt pass; independent read-only artifact/source/wiring/readability passes. Raw target-flag/corpse-selector branches have source/code proof, not separate runtime fixtures. No raw health/mana/row/flag/clock/RNG/budget edits.
+
+## 2026-10-17 — Creature-script triggered aura metadata
+
+[Spell casting](systems/spell-casting.md#creature-script-triggered-aura-metadata--2026-10-17): distinct creature bool-true branch bypassed all six implemented fields, native RED2pass/6fail9.38s. Shared caster/target checkers now surround existing recipient admission before success/launch; real producer matrix and generic-stun-exempt Frostbolt controls pass in RED. Merged ce17d43e/master d1957002 passes165/0/0 in49.88s plus5 creature-script controls in11.65s; workspace/all-target check10.323s/0warnings and fmt pass. Independent read-only artifact/wiring/source/readability passes; main confirms the actual diff and byte-identical RED fixture. No row/clock/budget/NoOp changes, no whole-ability/flag/legal-build claim.
+
+## 2026-10-17 — Excluded caster aura-type admission
+
+[Spell casting](systems/spell-casting.md#excluded-caster-aura-type-admission--2026-10-17): actual853 zero-amount stun supplies native449285 excluded12. RED1pass/2fail17.32s proves wrong ordinary error priority and incorrect full-trigger admission; cancellation/native expiry control passes. Shared caster field predicate and metadata-before-generic-CC priority pass current157/0/0 in98.03s (four new+153 adjacent), workspace/all-target check18.988s/0warnings, fmt and independent artifact/wiring/source/readability. That proof did not cover the separate creature-script triggered shortcut; its subsequent qualification is recorded above. Required caster types, midcast/26-positive/whole-ability and legal-build acceptance remain separate.
+
+## 2026-10-16 — Queued effect64 recipient admission
+
+[Spell casting](systems/spell-casting.md#queued-effect64-recipient-admission--2026-10-16): actual470411→188389 queued child and actual Death Touch5 reproduce payment and aura on a present corpse, RED0pass/2fail33.06s. Cost-retaining child now runs maintained normal recipient validation before cost/payment/hit planning; generic full-trigger/reflection helpers unchanged. Current9c01c758/master53a59762/protocol6b06680 passes merged128/0/0 in27.84s (314.078s wrapper), two new+126 prior; workspace/all-target check39.710s/0warnings and fmt pass. Independent artifact/wiring/readability inspection's returned-recipient finding was corrected, then main verified current128/check. Prior missing-PvP-bracket protocol compile log retained as invalid proof. No raw health/mana/clock/budget edits.
+
+## 2026-10-16 — Queued effect64 payment phases
+
+[Spell casting](systems/spell-casting.md#queued-effect64-payment-phases--2026-10-16): source clears child power/reagent ignore bits while native470411 retains parent resources via Attr6=0x20. Actual Flame Shock chain RED1pass/3fail23.12s exposes both wrong payment phases and vanished-target payment; generic full-trigger cost bypass control passes. Shared payment boundary and distinct cost-retaining child route pass merged126/0/0 in58.89s (358.280s wrapper), four new+122 adjacent; workspace/all-target check92.274s/0warnings, fmt and independent artifact/wiring/readability pass. Prior missing-concentration-protocol compiler log retained as invalid proof; landed protocol5e4af62/server9eb0b706 cohort integrated756e8352. No native rows/stat/mana/clock/RNG edits.
+
+## 2026-10-16 — Native queued effect64 integration
+
+[Spell casting](systems/spell-casting.md#queued-effect64-and-required-caster-trigger-integration--2026-10-16): actual native0/1ms parent calls expose inline-child RED0pass/2fail11.81s. Native-delay FIFO callbacks now defer64 without clock edits or early aura activation; required-caster guard and exact retained positive/negative fixtures restored. Current merged106 batch105 passes; its sole due-order fixture used an NPC owner-only log. Test-only correction to the actual player owner's receipts passes1/0/0 in11.00s. Preserve105 unchanged+corrected1 rather than rerunning106; required producer/Stack Timer positives are restored. Workspace/all-target check223.375s/0warnings, fmt and independent artifact/wiring/readability pass.32/140, native64 costs/reagents and general launch-phase parity remain separate.
+
+## 2026-10-16 — Triggered excluded-caster eligibility and required-ref blocker
+
+[Spell casting](systems/spell-casting.md#triggered-excluded-caster-aura-eligibility--2026-10-16): actual146481→146480/146543 RED retained byte-identically; shared exclusion predicate wired before triggered launch. Current merged77/0/0 in45.36s includes two new plus75 prior cases; workspace/all-target check198.441s/0warnings, fmt and independent read-only artifact/wiring/readability pass. Complete required-caster guard on separate branch fails four positive native chains. Subsequent five-way source qualification corrects the initial registration hypothesis: native64 queues children with0/1ms delay at launch, whereas Rust casts inline before parent publication. Pinned EventProcessor callbacks are non-reentrant; application/activation separation alone does not justify a new identity store. Retain failing fixtures/branch, no marker/pregrant/early activation or pending bypass; required field remains open.
+
+## 2026-10-16 — Triggered explicit-target aura eligibility
+
+[Spell casting](systems/spell-casting.md#triggered-explicit-target-aura-eligibility--2026-10-16): native412677→412680 lifetime RED2pass/1fail11.95s exposes forbidden refresh; full-mask flag claim corrected against source. Explicit target checker wired before triggered launch, relation behavior untouched; merged75/0/0 in25.73s includes three new and72 adjacent cases. Workspace/all-target check26.990s/0warnings, fmt and independent read-only artifact/wiring/readability pass. Caster-trigger/auto-self/state/full flag gaps remain open.
+
+## 2026-10-16 — Native target aura-type admission
+
+[Spell casting](systems/spell-casting.md#native-target-aura-type-admission--2026-10-16): ordinary scripted-unit required69/39 and excluded485 RED2pass/5fail6.21s precede the shared type consumer. Native shield, recipient and expiry controls; no invented indicator client ability or unhandled effect registration. Merged master0bf173f4 as2db43289; current66/0/0 in28.63s includes seven new and59 adjacent/LOS controls. Workspace/all-target check51.794s/0warnings, fmt and independent read-only artifact/readability verification pass. Player/completion type transitions remain source/shared-wiring proof; caster/area/full-trigger/health-state boundaries remain open.
+
+## 2026-10-16 — Health aura-state source qualification
+
+[Investigation](investigations/health-aura-state-admission.md): two waves of five bounded read-only explorers reconciled against primary files/native70391. Exact thresholds, seven IDs, packet-before-unit/queued-after-own-unit phases and passive gain/loss qualified; incorrect numeric, missing-data, write-through and broad fractional-stats claims rejected. Missing pinned map/session/opcode sources cached with SHA receipts. No health code or runtime proof; integration/ownership/passive-source seams remain open while independent ledger work continues.
+
+## 2026-10-16 — Native required caster aura-spell admission
+
+[Spell casting](systems/spell-casting.md#native-required-caster-aura-spell-admission--2026-10-16): actual Voidform/Sheilun casts and two-second cloud loss RED3pass/6fail9.05s precede the shared caster identity check. Positive heal, recipient/expiry/NPC/full-trigger controls included. Initial23/24 exposed a fixture's incorrect empty-GCD expectation; the actual native205406/category133/1500ms packet is now asserted exactly, without production changes. Current merged52/0/0 passes19.79s, cold rebuild416.895s/0warnings; workspace/all-target check132.981s/0warnings and fmt/manual Rust readability pass; canonical source-table publication remains lead-owned and absent at final read-only inspection. Target322109→1221044 notification producer remains unqualified and is not invented.
+
+## 2026-10-16 — Native excluded aura-spell admission
+
+[Spell casting](systems/spell-casting.md#native-excluded-aura-spell-admission--2026-10-16): shared caster/target exclusion references now checked at normal admission/completion; native4pass/5fail RED precedes implementation, actual450ms blocker gain/removal included. GREEN37/0/0 in8.88s includes nine new and28 native controls; source Stealth-child closure retained. Master9aca3c1a integrated; current merged37 passes7.71s, workspace/all-target check27.129s/0warnings and fmt/manual Rust readability pass. Target-midcast/charge/GCD lifetime details remain source/code proof, distinct from the actual caster450ms fixture. Required refs/states/types and other implicit targets remain open; no protocol or native-row edits.
+
+## 2026-10-16 — Native aura restrictions metadata loader
+
+[SpellInfo](systems/spell-info.md#native-aura-restrictions-metadata--2026-10-16): dropped metadata/schema RED0/4→GREEN4/0/0, retaining twelve native state/spell/type IDs through the production store. Difficulty0, sparse absence, orphan and missing-source boundaries covered; source publication precedes deployment. Merged39 native controls pass11.45s after owned-slot maintained import and exact10675-row equality; fmt/readability and workspace/all-target check159.051s/0warnings pass. State production/admission and canonical publication remain open.
+## 2026-10-17 — Queued64 child NoPower qualification
+
+[Affordability fixture](systems/spell-casting.md#queued64-child-affordability-qualification--2026-10-17): prior queued64 stack plus effect8, unchanged enemy3405 exhaustion before native470411→188389 dispatch, living recipient and FULL_MASK control. No raw resource/health/clock edits; first baseline019005d6 already17/17 GREEN54.47s/289.908s total, exact regen-control equality, no production fix or invented RED.
 
 ## 2026-10-17 — Native power drain8
 
@@ -405,6 +501,14 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Level-based pet maximum health
 
 [Bounded state2](../pet-battle-effect-coverage.md#level-based-maximum-health--implementation2026-10-17): explicit actual level1..25,5/5/10HP per level, existing percentage/floor/cap and owned-health persistence boundary. Core/owned unsupported-state RED and missing-metadata no-RNG RED precede GREEN; obsolete576 negative removed with remaining negatives retained. All ten fixture tables match active70448; fresh1797/2829/1023 census preserves historical70391. Library139 unchanged passes plus corrected negative1/1, wild/PvP29 plus real-ground configured achievement1/1, check51.00s/no warnings and fmt pass. Initial failures remain documented rather than claiming one all-green broad run. Native proof remains ordered after lead landing.
+## 2026-10-17 — Nazan CT0 source data
+
+[Nazan source data](systems/boss-scripts.md#ramparts-herald-identity-policy--2026-10-17): actual-copy `herald-nazan` CLI missing-profile REDb4a524732→source base0/Heroic2/models/addon projection. CT0/cache bounds1 stay input, not native-level acceptance; no Normal1, canonical placement/binding or original `herald` scope change. New/Herald/Omor3/3 at0a3ab4b24 (27.783s); final Nazan1/1 at7fe38b45e (26.460s), warning-free with ResourceWarning escalated. Five source-drift refusals preserve file bytes; repeat projection/unrelated data preserved. Runtime use/morph and encounter remain open.
+
+## 2026-10-17 — Ordinary creature source context
+
+[Ordinary source context](systems/level-scaling.md#ordinary-source-context--2026-10-17): sourced17536 ordinary map/actual-area/missing-context genuine3RED/2PASS→strict5/5. Actual importer provenance preserves authored fixed stats; the Alterac fixture now supplies real ground. Production-order deferred ground publication reaches genuineRED then strict1/1 at1050147f before ignore removal. Enabled7 context/source/startup cases and affected regressions pass54/54,177.24s at33dcb7b6 (55 pre-existing ignored). No canonical Nazan spawn or temporary-selection change; runtime source preparation and same-actor morph remain open.
+
 ## 2026-10-17 — Herald actor preparation
 
 [Herald source actors](systems/boss-scripts.md#ramparts-herald-identity-policy--2026-10-17): actual-copy CLI missing-profile REDd46482dd→17537 base0/Heroic2 and21252 base0/Normal1/Heroic2 projection479979bd. First attempt preserves correct source gold, exposes fixture zero-gold mistake; independently audited concrete base/Heroic gold expectations and byte-identical refusal pass1/1 in12.947s at252a23c9, warning-free; unchanged OmorPASS retained. Nazan, unrelated difficulties, population, bindings and group357 unchanged. Context tuning and encounter runtime/native proof remain open.
@@ -2237,6 +2341,7 @@ Typed location acceptance: integrated995acc3c native/catalog/prior17/41/pinned8/
 - 2026-10-16: Added [incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16), replacing repeated catalog-wide recursive evaluation with affected-root reconciliation and disposable full-snapshot results. Targeted proof pending.
 
 - 2026-10-16: [Incremental achievement evaluation](systems/dungeon-achievements.md#incremental-evaluation--2026-10-16) integrated proof: 214 required-filter tests plus site-export pass, workspace/all-target check and fmt pass; warm account event 26 definitions / 174 tree nodes, unchanged event zero. Stockade runtime acceptance remains lead-owned.
+- 2026-10-16: [Native aura restrictions producer](systems/spell-info.md#native-aura-restrictions-producer--2026-10-16): maintained CLI drops supplied native rows RED2pass/1fail→GREEN3; merged cbeea718 producer3/0/0, native70391 headercheck and workspace/all-target check66.132s/0warnings pass. Canonical table remains absent pending lead publication; runtime health/aura-state admission is not certified.
 
 - 2026-10-16: [Celebras source port](systems/boss-scripts.md#maraudon-celebras-source-port): real no-Wrath RED, redeemed legacy stats replaced from base0, guardian summoner lifecycle failure reproduced; runtime gate pending.
 - 2026-10-16: Noxxion pinned source port and due-anchored TaskContext repeat; runtime first-cast RED captured, full acceptance pending. [Source](systems/boss-scripts.md#maraudon-noxxion-source-port--2026-10-16).
