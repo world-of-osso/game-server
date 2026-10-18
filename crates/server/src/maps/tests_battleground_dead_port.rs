@@ -4,13 +4,11 @@ use shared::components::Mana;
 use shared::death::DeathState;
 
 #[test]
-#[ignore = "RED: ordinary battleground port omits full resurrection"]
 fn bg_dead_port_concrete_resurrects_after_actual_post_invitation_death() {
     assert_dead_battleground_enters_alive(1018);
 }
 
 #[test]
-#[ignore = "RED: ordinary battleground port omits full resurrection"]
 fn bg_dead_port_random_resurrects_after_actual_post_invitation_death() {
     assert_dead_battleground_enters_alive(32);
 }
