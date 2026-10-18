@@ -33,6 +33,8 @@ mod pull_route_tests;
 mod pull_sources;
 #[cfg(test)]
 mod pull_sources_tests;
+#[cfg(test)]
+mod pull_stat_provenance_tests;
 mod spawning;
 mod stockade_diagnostic;
 mod tank_planner;

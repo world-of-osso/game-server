@@ -38,7 +38,7 @@ fn spawn_source(h: &mut Harness, guid: u32, map: InMap) -> Entity {
     spawn_source_actor(h.app.world_mut(), data, template, spawn, map, &mut ground)
 }
 
-fn add_native_dps(h: &mut Harness, map: InMap) -> Vec<Entity> {
+pub(super) fn add_native_dps(h: &mut Harness, map: InMap) -> Vec<Entity> {
     let profiles: Vec<_> = h
         .app
         .world()
