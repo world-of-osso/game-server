@@ -428,6 +428,109 @@ fn toyfx618_royal_visage_learned_misc0_expiry_and_recovery_restore_model() {
 }
 
 #[test]
+fn toyfx697_masquerade_learned_cast_defers_transform_and_shared_recovery_until_completion() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    const ITEM: u32 = 276207;
+    const SPELL: u32 = 1298957;
+    const SIBLING: u32 = 276925;
+    const CATEGORY: u32 = 2513;
+    const RECOVERY_MS: u32 = 600_000;
+    const AURA_DURATION_MS: u32 = 3_600_000;
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("masquerade-cast.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    let caster = h.caster;
+    let native = h.app.world().get::<ModelDisplay>(caster).copied();
+    let health = *h.app.world().get::<Health>(caster).unwrap();
+    learn_effect_toy(&mut h, character, ITEM);
+    learn_effect_toy(&mut h, character, SIBLING);
+
+    // activate pumps seven50ms frames, still short of the source600ms cast.
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == SPELL));
+    assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), native);
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SPELL)
+    );
+    assert!(!h.inbox.cooldowns.iter().any(|update| {
+        update.spell_id == SPELL && update.category == CATEGORY && !update.is_gcd
+    }));
+    h.advance(20);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        1
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(caster)
+            .unwrap()
+            .display_id,
+        145134
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == SPELL)
+        .unwrap();
+    assert_eq!(aura.duration_ms, AURA_DURATION_MS);
+    assert_eq!(aura.effects[0].misc_values, [267626, 8]);
+    let expiry = aura.expires_at.unwrap();
+    let recovery = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|update| update.spell_id == SPELL && update.category == CATEGORY && !update.is_gcd)
+        .unwrap();
+    assert_eq!(recovery.duration_ms, RECOVERY_MS);
+    let cast_count = h.inbox.go.len();
+    assert_eq!(
+        activate(&mut h, SIBLING)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    assert_eq!(h.inbox.go.len(), cast_count);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(caster)
+            .unwrap()
+            .display_id,
+        145134
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == SPELL)
+            .unwrap()
+            .expires_at,
+        Some(expiry)
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+}
+
+#[test]
 fn toyfx684_pango_cancel_restores_model_without_bypassing_shared_recovery() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
     const PANGO: u32 = 268717;

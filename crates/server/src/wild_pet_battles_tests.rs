@@ -39,6 +39,82 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_sunshell_uses_nonowned_crystalsnap_only_as_enemy_npc() {
+    let catalog = catalog();
+    //70448 NPCTeamMember is empty: level1/Common/breed3 and these benches are
+    //controlled adapter inputs, not actual NPC composition or BossPassive fidelity.
+    let journal = journal();
+    assert!(journal.pets.iter().all(|pet| pet.species_id == 39));
+    let states = owned_states(&catalog, &journal);
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    let enemies = build_team(
+        &catalog,
+        &[
+            Identity {
+                guid: None,
+                species: 3068,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+        ],
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let npc = &enemies.pets[0];
+    assert_eq!(npc.species, 3068);
+    assert_eq!(npc.abilities, [2410, 0, 0]);
+    assert_eq!(
+        npc.stats,
+        ::server::pet_battle::Stats {
+            health: 174,
+            power: 12,
+            speed: 7
+        }
+    );
+    let boss = catalog.turns.state_id("Passive_Boss").unwrap();
+    assert_eq!(catalog.turns.species_states[&3068].get(&boss), Some(&1));
+    //The adapter installs family passives, not species BossPassive.
+    //Retain the named fidelity gap rather than promoting this fixture to parity.
+    assert_eq!(npc.state(boss), 0);
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let (state, events) = initial
+        .step(
+            &catalog.turns,
+            [Action::Pass, Action::Ability(2410)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { target, amount, .. } => Some((target.team, target.slot, *amount)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, [(0, 0, 12), (0, 1, 12), (0, 2, 12)]);
+    assert_eq!(state.teams[1].pets[0].health, 174);
+    assert_eq!(state.teams[1].pets[0].stats.health, 261);
+    assert_eq!(state.teams[1].pets[0].cooldowns.get(&2410), Some(&3));
+    assert!(journal.pets.iter().all(|pet| pet.species_id != 3068));
+}
+
+#[test]
 fn wild_pet_battles_bonestorm30_uses_legal_whirly_level_four_and_own_maximum_cost() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
