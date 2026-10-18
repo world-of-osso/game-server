@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source610–614: pending Etheric Victory and portal/void/snowman/mixed-transmorpher boundaries (2026-10-17)
+
+Acceptance-onlyb7df42b22 appends244470/1237584/1800000ms via the existing audited caster-attachment helper, now19 identities with old18 retained. Format/manual changed-line readability/diffcheck pass; behavior needs a head AFTER50776a8426bf, like603 thirteenth object.507 earlier18 casters/12 objects/16 disguises still lacks observed final result/landing. No runtime/data/new native proof or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|610 Delver's Mana-Bound Ethergate243056/1234526 | Source5000ms target47 summon244139/property6317/flags8423424 for60000ms, inherited7200000ms recovery; runtime creature/model absent. Actual any-player usable portal to Explorers' League Dornogal home base/eligible interaction/destination/lifecycle remains gap; no static portal prop, caster-only homebind or guessed coordinates. |
+|611 Ren'dorei Struggle243146/1234710 | Source2000ms self dummy4/5000ms/speed0.400000006, inherited300000ms recovery. Exact Void presentation/pose/cleanup remains unaudited, absent maintained visual-only list. No generic zero-dummy success or invented void-elf per-use restriction inferred from descriptive text. |
+|612 Jubilant Snowman Costume243304/1235401 | Source3000ms self mixed293/misc3312/0,321,27/misc127 and transform56→existing244559/misc0 for180000ms; inherited600000ms recovery with description promising Winter Veil reduction. Five models138600/138599/138598/138597/138596 each NPC scale2.2/weight1. Actual full mixed pose/control/appearance/cleanup and holiday recovery authority remain unresolved, not ordinary transform/misc8 fixture or invented player scale2.2/holiday timer. |
+|613 Etheric Victory244470/1237584 | Instant self audited dummy4/1800000ms, inherited3600000ms recovery. Own actual bag learning/UseToy/replicated exact aura/cancel/unchanged health-model/no-creature acceptance committed; behavior pending AFTER507. No copied Explosive/Toxic native imagery, boss-combat effect, full-duration/hour reuse or acquisition-qualification certificate. |
+|614 Etheric Brannmorpher244792/1237944 | Actual on-use LegacySlot1, instant target47/base1 summon245374/property4345/flags2056/120000ms plus self trigger64→1237975/effect65 dummy4/120000ms and self script77. Item3600000ms recovery/start1500ms; actor/model absent. Actual Ethereal Transmorpher service/eligible recipient/appearance choice/linked lifecycle remains gap. Description references1237986/one-hour mixed transform+three triggers, not an on-use trigger edge or120s appearance promise; no dropping77/65 or ordinary inert vendor/body-only substitute. |
+
+Evidence: private `rows610-614-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `etheric613-{active-goal,proof-ledger}.json`, `brann614-description-reference-source.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6.149865 Tea Set untouched;498 remains last confirmed landed/master8707ac0ea.
+
 ## Source605–609: courier-mail/finger-ribbon/outdoor-balloon/skiff/pennant boundaries (2026-10-17)
 
 No new acceptance/runtime/data/native proof or own heavy duplicate.507 running through76a8426bf has no observed final aggregate/EXIT/FMT/landing;603 thirteenth-object acceptance remains AFTER507.498 last confirmed landed/master8707ac0ea.

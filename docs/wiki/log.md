@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source610–614 pending Etheric Victory acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source610614-pending-etheric-victory-and-portalvoidsnowmanmixed-transmorpher-boundaries-2026-10-17):b7df42b22 adds244470/1237584/1800000ms as19th audited caster identity; old18/helper unchanged, format/manual readability/diffcheck pass, behavior AFTER507. Missing shared Dornogal portal244139, actual Void presentation, mixed2933212756 snowman with holiday recovery and Brann245374/65/77 service remain exact gaps. Preserve NPC2.2 metadata and description-only1237986 reference without player-scale/root-trigger invention.507 earlier scope still pending final; no runtime/data/new native or own heavy duplicate.
+
 ## 2026-10-17 — Toy source605–609 service/appearance/ride/paddle/pennant gaps
 
 [Exact source matrix](../toy-effects14-coverage.md#source605609-courier-mailfinger-ribbonoutdoor-balloonskiffpennant-boundaries-2026-10-17): missing242136 Courier mail/category2066 and243246 outdoor balloon ride, finger-ribbon art, one-hour skiff104+250ms226/jump paddling and nonzero Astral pennant remain gaps. No inert actors, ring stats, flat130% buff or sibling presentation reuse.507 running without final aggregate/EXIT/FMT/landing;603 thirteenth object remains AFTER507. No new acceptance/runtime/data/native proof or own heavy duplicate.
