@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source585–589 pennant/cartel banner gaps
+
+[Exact source matrix](../toy-effects14-coverage.md#source585589-nonzero-prized-pennant-and-four-missing-cartel-banners-2026-10-17): Prized nonzero permanent pennant and distinct missing Steamwheedle508828/Bilgewater508826/Blackwater508827/VentureCo508830 cursor banners remain gaps. Item category1246/180s shared metadata retained, not independent timer proof or invented cartel qualification.507 queued76a8426bf including type correction/577; no log result, new acceptance/runtime/data/native proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source580–584 boundaries;505 compile correction
 
 [Exact source matrix](../toy-effects14-coverage.md#source580584-mixed-shardpermanent-posesrepeated-jump-procinteractive-tea-boundaries-2026-10-17): no-template mixed transform/scale, permanent circlet/reading, two distinct jump-proc edges and missing interactive tea506612 remain gaps.505 compiled no runtime tests: E0277/EXIT101 from registryu32 creature versus aurai32 misc.76a8426bf changes only that column type, preserving16 rows/literals/helper/assertions; format/manual readability/diffcheck pass, next lead gate pending including577 twelfth object. No manufactured runtimeRED/GREEN, deduplication, copied Tea149865, runtime/data/native change or own heavy duplicate.
