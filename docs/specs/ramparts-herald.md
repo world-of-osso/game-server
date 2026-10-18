@@ -29,6 +29,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 ### Lifecycle and phases
 
 - [ ] Two actual17517 Sentry deaths in one copy start the Herald once through source action1730700; other copies and unrelated deaths do not contribute.
+- [ ] INTRO1 speaks once, becomes passive, stops the original patrol and physically moves to the authored center. Repeated actions do not replay the intro. Arrival stays stopped; `HERALD_INTRO2_UNIMPLEMENTED` leaves arrival→+1s→INTRO2 absent, with no fake event or next-phase effects.
 - [ ] Perform the source center movement, arrival-plus1s intro, landing/morph, grounded30717 summon, flight/hover/facing and zone engagement. Use actual movement completion, not fabricated arrival callbacks.
 - [ ] Preserve flying schedules, last-flight exclusion and passive cast suppression. Descend on source actions or incoming damage below30%; retain minimum1 health until the source fall and subsequent2s transition finish.
 - [ ] Preserve Vazruden's5301 appearance cast,5s aggro speech,5–10s Revenge attempts and incoming-below40 Call Nazan30693. Failed ordinary admission must not be bypassed; pinned TC itself notes the Revenge prerequisite problem.
@@ -47,14 +48,16 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ## Implementation inventory
 
-- `crates/server/src/scripted_ai/hellfire_ramparts.rs` — currently registers Gargolmar and Omor, not Herald/Vazruden.
-- `crates/server/src/scripted_ai/instance_script.rs` — existing copy-local boss/data state; Herald source lifecycle is not implemented.
+- `crates/server/src/scripted_ai/hellfire_ramparts.rs`, `hellfire_ramparts/herald.rs` — registers Gargolmar, Omor and bounded Herald INTRO1; no Vazruden registration. Real NPC death ingress counts Sentry entries in copy-lifetime instance state and dispatches1730700 to the retained ordinary Herald origin. INTRO1 removes active patrol state, not addon path data, then uses real point movement. Initial two cases are GREEN at0916fea91; missing-Herald controls and final integration proof remain pending.
+- `crates/server/src/scripted_ai/instance_script.rs` — copy-local boss/data state and transient Ramparts Sentry count; unload discards it. Forced reset and remaining Herald lifecycle are not implemented.
 - `crates/server/src/zones/entry.rs` — `EntryProjection` reads/rolls represented target fields and applies them to a new or existing entity; `CreatureOrigin` retains ordinary source identity, `AddonPathId` is addon data rather than a running movement cursor. Bounded entry/spawn proof is GREEN; not a Herald AI registration or ordinary-respawn restoration.
 - `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
 - `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows; the separate `herald-nazan` profile selects17536 base0/Heroic2 CT0 with source models/addon, without changing `herald`. Real-copy producer/refusal/idempotence/preservation controls are GREEN; ordinary context resolution is proved separately and runtime use/morph remain open.
 
 ## Tests asserting this spec
+
+- `scripted_ai/tests/herald_intro.rs` — ordinary source Herald/Sentry GUIDs, real lethal transitions, split allocated copies, unrelated/corpse deaths and once-only center movement. Shared fixture defaults stay unchanged; this fixture loads canonical read-only patrol data before reconstructing its ordinary Herald. First b15f94882 run is setupFAIL only (missing fixture waypoints); corrected7844943bc reaches genuine2FAIL21.34s at the missing second-death INTRO1 boundary, then implementation0916fea91 passes2/2 in19.38s. Missing-Herald controls cover retained first death and absent-pair reset; their proof is pending.
 
 - `zones_entry_tests.rs`, `zones_entry_controls_tests.rs` — source Normal/Heroic same-actor stats/origin/addon, real living-player threat/combat references, optional runtime state/equipment, real EventMap/dispatch probe and actual TDB30/100/176396 addon auras11959/3417/347931, including an exact finite5s deadline that a silent refresh would move. Current eight genuine REDs at1e10b0a51 (27.94s) precede implementation. Earlier missing-addon/clock/master-caller setup failures are excluded. Focused11/11 at5f25cf953 (18.56s), then final affected68/68 at9e83421de (233.18s,55 pre-existing ignored). Supplemental actual Morna/Drudge nonzero addon mount/emote1/1 at65e035a2a (10.14s), with no production changes after the affected batch. Strengthened finite-aura case1/1 at44cdfe55c (17.53s), unchanged production; required package check0/warning-free34.97s and fmt0 on that head. Independent landing gate pending. Neither source fixture setup nor these primitive cases certify encounter choreography/native behavior.
 - `scripts/tests/test_nazan_templates.py` — actual read-only world snapshot and real `herald-nazan` CLI; exact represented CT0 base/Heroic fields/models/addon, idempotence, unrelated-data preservation and byte-identical drift refusal. Genuine real-copy missing-profile REDb4a524732 becomes new/Herald/Omor GREEN3/3 at0a3ab4b24 (27.783s), followed by Nazan-only GREEN1/1 at7fe38b45e (26.460s) after read/write naming cleanup; ResourceWarning escalated, warning-free. This is data-only, not morph acceptance.
@@ -73,6 +76,7 @@ Shared entry projection has bounded runtime-fixture GREEN. No registered Herald 
 - [ ] Establish source-data prerequisites and behavioral RED before implementing each bounded slice.
 - [ ] Implement and verify real actor/movement/spell/death ordering, both-dead credit and reset.
 - [ ] Native rendering/audio, obstacle paths, Heroic encounter behavior, loot and persistence remain unproved.
+- [ ] `HERALD_INTRO2_UNIMPLEMENTED`: arrival→+1s→morph/summon/flight is not scheduled or stubbed by the bounded INTRO1 slice.
 - [ ] `CREATURE_ENTRY_RESPAWN_RESTORE_UNIMPLEMENTED`: ordinary respawn does not yet restore the retained original entry. Living projection proof is not until-respawn parity.
 - [ ] `SMARTAI_ACTION36_UPDATE_ENTRY_UNIMPLEMENTED`: SmartAI36 remains excluded; the shared projection is not an action36 port.
 - [ ] Full TC attack-time/resistance/immunity/static-flag/movement-capability projection remains outside the currently represented template fields; no generic TC UpdateEntry parity claim.
