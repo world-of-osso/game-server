@@ -1025,9 +1025,17 @@ pub struct Dest {
 
 /// WoW orientation of a unit (`Rotation.y` is the orientation + pi/2).
 pub fn orientation(world: &World, unit: Entity) -> f32 {
-    world
-        .get::<Rotation>(unit)
-        .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2)
+    orientation_from_rotation(world.get::<Rotation>(unit))
+}
+
+pub(crate) fn orientation_from_rotation(rotation: Option<&Rotation>) -> f32 {
+    rotation.map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2)
+}
+
+/// The same inclusive180° front arc used by incoming spell defenses.
+pub(crate) fn in_front_arc(victim: Vec3, attacker: Vec3, orientation: f32) -> bool {
+    let forward = Vec3::new(orientation.cos(), 0.0, -orientation.sin());
+    forward.dot(attacker - victim) >= 0.0
 }
 
 /// `dist` yards behind `target` (`TARGET_DEST_TARGET_BACK`: `CalcDirectionAngle` pi
