@@ -113,6 +113,7 @@ pub(super) struct QuestSenders<'w, 's> {
     offer_reward: Senders<'w, 's, QuestGiverOfferReward>,
     completed: Senders<'w, 's, QuestGiverQuestComplete>,
     failed: Senders<'w, 's, QuestFailed>,
+    inventory_errors: Senders<'w, 's, shared::protocol::InventoryError>,
     share_offers: Senders<'w, 's, QuestShareOffer>,
     push_results: Senders<'w, 's, QuestPushResult>,
 }
@@ -208,6 +209,7 @@ struct QuestSession<'a, 'w, 's> {
     quests: &'a QuestDb,
     requester: Requester,
     io: &'a mut QuestIo<'w, 's>,
+    item_error_reported: bool,
 }
 
 pub(super) fn process_quest_requests(
@@ -228,8 +230,11 @@ pub(super) fn process_quest_requests(
             quests,
             requester,
             io: &mut io,
+            item_error_reported: false,
         };
-        if let Err(error) = session.handle(request) {
+        if let Err(error) = session.handle(request)
+            && !session.item_error_reported
+        {
             send(&mut session.io.senders.failed, connection, error);
         }
     }
@@ -261,6 +266,7 @@ pub(super) fn process_world_quests(
             quests,
             requester,
             io: &mut io,
+            item_error_reported: false,
         };
         session.visit_world_quests(map.map_id);
     }
@@ -644,6 +650,83 @@ impl<'a> QuestSession<'a, '_, '_> {
         )
     }
 
+    fn create_quest_items(
+        &self,
+        inventory: &InventoryData,
+        items: &[(u32, u32)],
+    ) -> Result<InventoryData, shared::protocol::InventoryError> {
+        use crate::inventory::inventory_model::error;
+        use shared::protocol::InventoryErrorReason;
+        let templates = self.io.effects.templates.as_deref().ok_or_else(|| {
+            error(
+                InventoryErrorReason::InternalBagError,
+                "quest item templates unavailable",
+            )
+        })?;
+        let mut record =
+            persistence::inventory_store::load_inventory_record(self.db, self.character())
+                .ok_or_else(|| {
+                    error(
+                        InventoryErrorReason::InternalBagError,
+                        "quest inventory unavailable",
+                    )
+                })?;
+        record.inventory = inventory.clone();
+        let mut model =
+            crate::inventory::load_model_from_record(self.db, templates, self.character(), record)?;
+        for &(item, count) in items {
+            grant_item(&mut model, self.db, self.quests, templates, item, count)?;
+        }
+        Ok(model.into_record().inventory)
+    }
+
+    fn grant_items(
+        &mut self,
+        quest_id: u32,
+        inventory: &mut InventoryData,
+        items: &[(u32, u32)],
+    ) -> QuestResult {
+        match self.create_quest_items(inventory, items) {
+            Ok(created) => {
+                *inventory = created;
+                Ok(())
+            }
+            Err(error) => {
+                if error.reason == shared::protocol::InventoryErrorReason::ItemMaxCount {
+                    self.report_item_error(quest_id, error);
+                    return Err(failed(quest_id, QuestFailedReason::InventoryFull));
+                }
+                let reason = match error.reason {
+                    shared::protocol::InventoryErrorReason::InvFull
+                    | shared::protocol::InventoryErrorReason::BagFull
+                    | shared::protocol::InventoryErrorReason::CantStack => {
+                        QuestFailedReason::InventoryFull
+                    }
+                    _ => {
+                        warn!("Quest {quest_id} item grant rejected: {error:?}");
+                        QuestFailedReason::NotAvailable
+                    }
+                };
+                Err(failed(quest_id, reason))
+            }
+        }
+    }
+
+    fn report_item_error(&mut self, quest_id: u32, error: shared::protocol::InventoryError) {
+        self.item_error_reported = true;
+        match self
+            .io
+            .senders
+            .inventory_errors
+            .get_mut(self.requester.connection)
+        {
+            Ok(mut sender) => sender.send::<shared::protocol::InventoryChannel>(error),
+            Err(connection) => {
+                warn!("Quest {quest_id} inventory rejection has no sender: {connection:?}")
+            }
+        }
+    }
+
     fn save_log(&mut self, log: &QuestLogData) {
         let character = self.character();
         save_quest_log(self.db, character, log);
@@ -802,7 +885,7 @@ impl<'a> QuestSession<'a, '_, '_> {
                 return Err(failed(quest_id, QuestFailedReason::InventoryFull));
             }
             let count = quest.provided_item_count.max(1);
-            grant_item(inventory, self.db, self.quests, quest.start_item, count);
+            self.grant_items(quest_id, inventory, &[(quest.start_item, count)])?;
             self.save_inventory(&inventory, false);
             let character = self.character();
             self.io
@@ -933,9 +1016,7 @@ impl<'a> QuestSession<'a, '_, '_> {
             settlement.wallet = wallet.clone();
         }
         take_quest_items(self.db, &mut inventory, quest);
-        for &(item_id, count) in &items {
-            grant_item(&mut inventory, self.db, self.quests, item_id, count);
-        }
+        self.grant_items(quest_id, &mut inventory, &items)?;
         inventory.gold = gold;
         log.remove(quest_id);
         log.mark_rewarded(quest_id);
