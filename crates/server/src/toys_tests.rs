@@ -1272,6 +1272,7 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         (199769, 388090, 381321, 5, 77021, 0.5, 0.0, 180),
         (199770, 388091, 381319, 5, 76419, 0.5, 0.0, 180),
         (199771, 388092, 381320, 5, 77020, 0.5, 0.0, 180),
+        (199900, 388267, 206590, 5, 10103, 1.0, 0.0, 300),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
@@ -1293,10 +1294,13 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
                 z: 0.0,
             });
         learn_effect_toy(&mut h, character, item);
-        // Banners use target87: the clicked point, not the caster's feet.
+        // Banners/survey tools use target87: the clicked point, not the caster's feet.
         // Chair42766/MOLL-E54710 remain target47's authored forward offsets.
-        let cursor_banner = matches!(item, 45011 | 198729 | 199768 | 199769 | 199770 | 199771);
-        let destination = cursor_banner.then_some([4.0, 0.0, -3.0]);
+        let cursor_object = matches!(
+            item,
+            45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900
+        );
+        let destination = cursor_object.then_some([4.0, 0.0, -3.0]);
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
