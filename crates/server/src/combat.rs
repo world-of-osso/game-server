@@ -2093,6 +2093,9 @@ fn broadcast_events(
 }
 
 #[cfg(test)]
+#[path = "combat_enemy_dodge_tests.rs"]
+mod enemy_dodge_tests;
+#[cfg(test)]
 #[path = "combat_facing_tests.rs"]
 mod facing_tests;
 #[cfg(test)]
