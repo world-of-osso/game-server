@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Cherry Trail acceptance and puntables/opt-in-fireworks/cooking/water-blaster boundaries (2026-10-17)
+
+[Source520–524 matrix](../../toy-effects14-coverage.md#source520524-pending-cherry-trail-acceptance-and-puntablesopt-in-fireworkscookingwater-blaster-boundaries-2026-10-17) adds acceptance-only4b21ddb7e:220777/447446/source600s as17th existing learned/cancel caster identity, pending newer head AFTER498c013. Missing puntable-box creature237586 is not same-number Bonfire GO; fireworks require attack-to-opt-in viewers/event recovery, missing452051 Lantern retains cooking service, and existing wild type22 water display still refuses its unscripted445930. No inert/shared-number/service shortcut or new native/runtime/data proof. Format/manual readability/diffcheck pass; no own heavy duplicate.
+
 ## Pending colorful-chair acceptance and wing/two-person-cracker boundaries (2026-10-17)
 
 [Source515–519 matrix](../../toy-effects14-coverage.md#source515519-pending-colorful-chair-acceptance-and-wingtwo-person-cracker-boundaries-2026-10-17) adds acceptance-only66ca57ee0:218112/441839→434317/type7/89277/size1.5/source2yd/300s, now11 transmitted-object identities, old ten unchanged. Format/manual readability/diffcheck pass; future head AFTER498c013 required, no seated/native/recharge proof. Distinct Yu'lon/Niuzao occasional eight-hour/20s-period wings and paired Cracker/one surprise recipient remain gaps; no guaranteed proc, name-derived combat buff or solo/both-recipient reward. Draconic Banner exact seasonal CPU witness retained. No further runtime/data/own heavy duplicate.
