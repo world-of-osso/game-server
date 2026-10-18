@@ -1,7 +1,7 @@
 //! Source279: actual learned item creation and ordinary item recovery.
 use super::*;
 
-fn offering_kit_count(h: &Harness, character: u64) -> u32 {
+fn load_offering_kit_count(h: &Harness, character: u64) -> u32 {
     let db = &h.app.world().resource::<GameDatabase>().db;
     persistence::load_inventory(db, character)
         .items
@@ -31,15 +31,15 @@ fn toyfx279_offering_kit_maker_creates_one_persisted_kit_and_preserves_recovery(
         .entity_mut(h.caster)
         .insert(crate::persistence::ClientId(character));
     learn_effect_toy(&mut h, character, TOY);
-    assert_eq!(offering_kit_count(&h, character), 0);
+    assert_eq!(load_offering_kit_count(&h, character), 0);
     assert_eq!(activate(&mut h, TOY)[0].error, None);
     h.advance(20); // Only one second: the authored two-second cast is pending.
-    assert_eq!(offering_kit_count(&h, character), 0);
+    assert_eq!(load_offering_kit_count(&h, character), 0);
     assert!(!h.inbox.go.iter().any(|go| go.spell_id == SPELL));
     h.advance(30);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(h.inbox.go.iter().any(|go| go.spell_id == SPELL));
-    assert_eq!(offering_kit_count(&h, character), 1);
+    assert_eq!(load_offering_kit_count(&h, character), 1);
     let cooldown = h
         .inbox
         .cooldowns
@@ -56,10 +56,19 @@ fn toyfx279_offering_kit_maker_creates_one_persisted_kit_and_preserves_recovery(
         activate(&mut h, TOY)[0].error.as_deref(),
         Some("OnCooldown")
     );
-    assert_eq!(offering_kit_count(&h, character), 1);
+    assert_eq!(load_offering_kit_count(&h, character), 1);
     h.advance(140); // Ordinary seven seconds, beyond the original recovery.
     assert_eq!(activate(&mut h, TOY)[0].error, None);
     h.advance(50);
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert_eq!(offering_kit_count(&h, character), 2);
+    let rejections: Vec<_> = h
+        .inbox
+        .failed
+        .iter()
+        .map(|failure| (failure.spell_id, failure.reason))
+        .collect();
+    assert_eq!(
+        rejections,
+        vec![(SPELL, shared::spell_data::CastFailReason::OnCooldown); 2]
+    );
+    assert_eq!(load_offering_kit_count(&h, character), 2);
 }
