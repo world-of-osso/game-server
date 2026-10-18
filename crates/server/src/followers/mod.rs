@@ -20,6 +20,10 @@ mod pull_readiness;
 #[cfg(test)]
 mod pull_readiness_tests;
 #[cfg(test)]
+mod pull_route;
+#[cfg(test)]
+mod pull_route_tests;
+#[cfg(test)]
 mod pull_sources;
 #[cfg(test)]
 mod pull_sources_tests;
