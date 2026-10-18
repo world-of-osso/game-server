@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source625–629 boundaries and Cold Ones range correction
+
+[Exact source matrix](../toy-effects14-coverage.md#source625629-goggles-distinct-carried-crates-wormhole-and-strategy-game-boundaries-2026-10-18): metadata preserves viewer goggles233/3569/247, distinct crate3393/3392 poses, missing248783 random-travel wormhole and permanent430 strategy game with separate two-second298624 trigger.507 failed234951 because a five-yard fixture point exceeds authored range169/max3. Test-only172cb1782 corrects that point, not runtime authority; format/manual readability/diffcheck pass. Lead509 queued covering all post507 acceptance; no result/landing/native proof or own heavy jobs.
+
 ## 2026-10-17 — Toy source620–624 pending POST/Cosmic hearthstones
 
 [Exact source matrix](../toy-effects14-coverage.md#source620624-pending-postcosmic-hearthstones-and-balloonscaled-spirephase-guise-boundaries-2026-10-17):d981a866d adds245970/1240219 and actual slot1 246565/1242509 to unchanged10s/saved-bind/shared2309 helper, now21 hearthstones/old19 retained; format/manual readability/diffcheck pass, behavior AFTER507. Missing controlled slot6 Brewer balloon246042 and actual Phase Diver state remain gaps; scaled Spire131280/0.5 fixture retained. No inferred mail service, shortened cast, slot0 substitute, independent timer or phase immunity.507 prior19 scope pending final; no runtime/data/new native or own heavy duplicate.
