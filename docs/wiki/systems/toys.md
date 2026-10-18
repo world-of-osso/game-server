@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Soulshape recovery/refresh acceptance and control/music/gang/holiday boundaries (2026-10-17)
+
+[Source400–404 matrix](../../toy-effects14-coverage.md#source400404-pending-soulshape-recoveryrefresh-acceptance-and-controlmusicgangholiday-boundaries-2026-10-17) adds acceptance-only1f028916a: actual200960/392700/100634/source10-minute aura with five-minute recovery, near-threshold refusal/natural reuse while active/refresh/ordinary restoration and exact intentional replies. AURA_UNIQUE is clear and existing stacking refreshes duration; no manual reset. Format/manual readability/diffcheck pass, future covering head required beyond484. Personal Soulshape selection/native behavior stays separate. Control3 boat plus player restrictions, mixed song/no-actions/mount state, linked gang follow/attack and holiday-specific dance recovery remain gaps; no scenery, music-only or static-actor substitutes/runtime/data/new admission.
+
 ## Invocation/eggs/cloak-service/random-talisman/alcohol boundaries (2026-10-17)
 
 [Source395–399 matrix](../../toy-effects14-coverage.md#source395399-invocationeggscloak-servicerandom-talismanalcohol-boundaries-2026-10-17) preserves elemental invocation/base1200, three named egg hatchlings versus literal script base4, linked cloak collection with weighted visible/unused-invisible models, literal Talisman base references versus actual trigger edges, and alcohol effect100/base5. Existing bodies/child transforms do not authorize inert props, random-range guesses, dropped animation/removal or visual-only alcohol. No runtime/data/producer/new native proof or own heavy duplicate;387/393 still require a later head than484.
