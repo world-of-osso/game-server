@@ -24,7 +24,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [ ] Preserve ordinary query success/unbaked/error results. Log worker panic/exit, explicitly fail outstanding and future requests, and never leave them Pending forever or restart silently.
 - [ ] A test-only drain supports synchronous fixtures; production never drains or joins the worker during ticks. A held actual tile read cannot stop ticks; after release the real path publishes.
 
-Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Library worker/types are implemented first; server consumer conversion and integrated proof remain pending.
+Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Worker/types and the Navigation::advance consumer group are implemented; remaining raw-query callers and integrated proof remain pending.
 
 ## C++ script ground waypoints
 
@@ -55,12 +55,13 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 - `crates/los/src/liquid.rs` — shared runtime/bake MH2O parser (server re-exports it).
 - `crates/navigation/` — tiled Recast bake and path-query runtime.
 - `crates/navigation/src/worker.rs` — bounded owned-query worker, coalescing and explicit failure results.
-- `crates/server/src/navigation.rs`, `creature_ai.rs`, `main.rs` — cached route resource, movement integration and startup plugin.
+- `crates/server/src/navigation.rs`, `navigation/requests.rs`, `creature_ai.rs`, `main.rs` — cached route resource, current-ID fixed publication, movement integration and startup plugin.
 
 ## Tests asserting this spec
 
 - `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; integration pending.
 - `crates/server/src/navigation_blocking_io_tests.rs` — actual FIFO tile-read boundary; synchronous RED observed before worker integration.
+- `crates/server/src/navigation_request_tests.rs` — pending hold/continuation, latest pose/ID, completion-set ordering and old-map invalidation controls.
 - `crates/navigation/src/bake.rs` — deterministic walkable floor and steep-slope rejection.
 - `crates/navigation/src/query.rs` — real Stockade obstacle detours with LOS-clear path segments (opt-in); actual Ruby WMO4391189/MODD753 metalplate4496145 doorway re-collected and baked from local assets, then crossed without LOS obstruction (opt-in).
 - `crates/server/src/creature_ai_tests/stockade_chase.rs` — real chase/home/waypoint/repath/unreachable-evade fixtures (opt-in), including the supported narrow arch's exact five-second boundary, reachability/victim resets and raid exemption.

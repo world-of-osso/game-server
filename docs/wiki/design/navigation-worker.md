@@ -1,6 +1,6 @@
 # Navigation worker
 
-Approved design; library worker/types implemented, server caller conversion and integrated GREEN pending. Base server `83a8ce176`, protocol `029a927`. Goal: remove navigation disk/Detour work from fixed ticks while preserving movement and query outcomes. [Contract](../../specs/navigation.md), [current implementation](../systems/navigation.md), [separate CPU gap](../investigations/server-tick-lag.md#sight_faction_main_thread_cpu).
+Approved design; worker/types and Navigation::advance group implemented; other query callers/integrated GREEN pending. Initial base server `83a8ce176`, protocol `029a927`; server `c2bd6e38f` merged and protocol `a2b07a6` selected before route integration. Goal: remove navigation disk/Detour work from fixed ticks while preserving movement and query outcomes. [Contract](../../specs/navigation.md), [current implementation](../systems/navigation.md), [separate CPU gap](../investigations/server-tick-lag.md#sight_faction_main_thread_cpu).
 
 ## Ownership and messages
 

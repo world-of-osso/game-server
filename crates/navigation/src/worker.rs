@@ -74,17 +74,13 @@ impl Mailbox {
         self.ready.remove(&entity);
     }
 
-    fn apply_updates_and_take_ready(
-        &mut self,
-        outgoing: BTreeMap<u64, Option<Request>>,
-    ) -> Vec<Response> {
+    fn apply_updates(&mut self, outgoing: BTreeMap<u64, Option<Request>>) {
         for (entity, request) in outgoing {
             match request {
                 Some(request) => self.queue(request),
                 None => self.cancel(entity),
             }
         }
-        std::mem::take(&mut self.ready).into_values().collect()
     }
 
     fn pop(&mut self) -> Option<Request> {
@@ -155,12 +151,14 @@ impl Worker {
         self.current.insert(request.entity, request.id);
         self.pending.insert(request.entity, request.id);
         self.outgoing.insert(request.entity, Some(request));
+        self.dispatch();
     }
 
     pub fn cancel(&mut self, entity: u64) {
         self.current.remove(&entity);
         self.pending.remove(&entity);
         self.outgoing.insert(entity, None);
+        self.dispatch();
     }
 
     pub fn is_idle(&self) -> bool {
@@ -187,8 +185,9 @@ impl Worker {
                 return Vec::new();
             }
         };
-        if let Err(error) = self.wake_worker() {
-            self.failure = Some(error);
+        if self.wake_worker().is_err() {
+            // The supervisor publishes the cause before dropping the receiver.
+            // Keep pending IDs intact so the next poll surfaces that exact cause.
             return Vec::new();
         }
         self.accept_current(responses)
@@ -212,9 +211,28 @@ impl Worker {
         {
             return Err("navigation worker exited unexpectedly".into());
         }
-        Ok(Some(mailbox.apply_updates_and_take_ready(std::mem::take(
-            &mut self.outgoing,
-        ))))
+        mailbox.apply_updates(std::mem::take(&mut self.outgoing));
+        Ok(Some(
+            std::mem::take(&mut mailbox.ready).into_values().collect(),
+        ))
+    }
+
+    fn dispatch(&mut self) {
+        if self.failure.is_some() {
+            return;
+        }
+        match self.mailbox.try_lock() {
+            Ok(mut mailbox) => mailbox.apply_updates(std::mem::take(&mut self.outgoing)),
+            Err(TryLockError::WouldBlock) => return, // Latest intent remains coalesced locally.
+            Err(TryLockError::Poisoned(_)) => {
+                self.failure = Some("navigation worker mailbox poisoned".into());
+                return;
+            }
+        }
+        if self.wake_worker().is_err() {
+            // poll() handles the published supervisor cause or finished-thread error.
+            return;
+        }
     }
 
     fn wake_worker(&self) -> Result<(), String> {

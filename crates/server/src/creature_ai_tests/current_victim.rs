@@ -8,7 +8,10 @@ pub(super) fn fixture() -> (App, Entity, Entity, Position) {
     let mut app = stockade_app();
     let data =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data");
-    app.insert_resource(crate::navigation::Navigation::new(&data.join("navmesh")));
+    crate::navigation::install_fixture(
+        &mut app,
+        crate::navigation::Navigation::new(&data.join("navmesh")),
+    );
     app.insert_resource(crate::line_of_sight::LineOfSight::load(&data.join("los")).unwrap());
     let from = Position {
         x: 121.1,
@@ -57,20 +60,22 @@ pub(super) fn fixture() -> (App, Entity, Entity, Position) {
             ModelDisplay { display_id: 113753 },
         ))
         .id();
-    let seeded = app
-        .world_mut()
-        .resource_mut::<crate::navigation::Navigation>()
-        .advance(
-            chaser,
-            MoveRequest {
-                map_id: STOCKADE,
-                goal: Goal::Chase(victim.to_bits()),
-                from,
-                to: cached,
-                distance: 0.0,
-                reach: CHASE_REACH,
-            },
-        );
+    let request = MoveRequest {
+        map_id: STOCKADE,
+        goal: Goal::Chase(victim.to_bits()),
+        from,
+        to: cached,
+        distance: 0.0,
+        reach: CHASE_REACH,
+    };
+    let seeded = {
+        let mut navigation = app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>();
+        let _ = navigation.advance(chaser, request);
+        navigation.drain_until_idle();
+        navigation.advance(chaser, request)
+    };
     assert!(
         matches!(seeded, Step::Moved { .. }),
         "real baked route required"

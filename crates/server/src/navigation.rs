@@ -2,12 +2,15 @@
 use bevy::ecs::entity::EntityHashMap;
 use bevy::prelude::*;
 use shared::components::Position;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 const REPATH_DISTANCE: f32 = 1.0;
 const TELEPORT_DISTANCE: f32 = 2.0;
+
+mod requests;
+use requests::{PendingRoute, publish_navigation_results};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Goal {
@@ -19,6 +22,7 @@ pub enum Goal {
     Waypoint(u32, usize),
 }
 
+#[derive(Clone, Copy)]
 pub struct MoveRequest {
     pub map_id: u32,
     pub goal: Goal,
@@ -29,6 +33,7 @@ pub struct MoveRequest {
 }
 
 pub enum Step {
+    Pending,
     Unbaked,
     Moved { position: Position, reached: bool },
     Blocked,
@@ -39,8 +44,10 @@ struct Route {
     map_id: u32,
     goal: Goal,
     destination: Vec3,
+    last_target: Vec3,
     expected_from: Vec3,
     path: Result<Corners, String>,
+    reach: f32,
 }
 
 #[derive(Debug)]
@@ -66,6 +73,12 @@ pub struct Navigation {
     dir: PathBuf,
     maps: Mutex<HashMap<u32, Option<navigation::NavigationMap>>>,
     routes: EntityHashMap<Route>,
+    worker: navigation::worker::Worker,
+    pending: EntityHashMap<PendingRoute>,
+    unbaked: HashSet<u32>,
+    next_id: u64,
+    #[cfg(test)]
+    applied: Vec<(Entity, u64)>,
 }
 
 impl Navigation {
@@ -74,6 +87,12 @@ impl Navigation {
             dir: dir.to_path_buf(),
             maps: Mutex::new(HashMap::new()),
             routes: EntityHashMap::default(),
+            worker: navigation::worker::Worker::new(dir.to_path_buf()),
+            pending: EntityHashMap::default(),
+            unbaked: HashSet::new(),
+            next_id: 0,
+            #[cfg(test)]
+            applied: Vec::new(),
         }
     }
 
@@ -169,55 +188,27 @@ impl Navigation {
 
     /// Drop an interrupted chase corridor before it can resume from stale corners.
     pub(crate) fn cancel_route(&mut self, entity: Entity) {
-        self.routes.remove(&entity);
+        let had_route = self.routes.remove(&entity).is_some();
+        let had_request = self.pending.remove(&entity).is_some();
+        if had_route || had_request {
+            self.worker.cancel(entity.to_bits());
+        }
     }
 
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {
-        let from = point(request.from);
-        let to = point(request.to);
+        self.invalidate_moved_route(entity, &request);
+        if self.unbaked.contains(&request.map_id) {
+            self.cancel_route(entity);
+            return Step::Unbaked;
+        }
         let current = self
             .routes
             .get(&entity)
             .is_some_and(|route| route.reusable(&request));
         if !current {
-            let Some(route) = self.query_route(entity, &request) else {
-                self.routes.remove(&entity);
-                return Step::Unbaked;
-            };
-            self.routes.insert(entity, route);
+            self.request_route(entity, request);
         }
-        let route = self.routes.get_mut(&entity).unwrap();
-        let Ok(corners) = &mut route.path else {
-            return Step::Blocked;
-        };
-        let (next, reached) = corners.advance(from, request.distance, request.reach, to);
-        route.expected_from = next;
-        Step::Moved {
-            position: position(next),
-            reached,
-        }
-    }
-    fn query_route(&self, entity: Entity, request: &MoveRequest) -> Option<Route> {
-        let from = point(request.from);
-        let to = point(request.to);
-        let path = match self.query_path(request.map_id, from, to) {
-            Ok(None) => return None,
-            Ok(Some(points)) => Ok(Corners::new(points)),
-            Err(err) => {
-                error!(
-                    "Creature {entity} navigation {:?} on map {} failed: {err}; no direct movement",
-                    request.goal, request.map_id
-                );
-                Err(err)
-            }
-        };
-        Some(Route {
-            map_id: request.map_id,
-            goal: request.goal,
-            destination: to,
-            expected_from: from,
-            path,
-        })
+        self.advance_published_route(entity, request, !current)
     }
 }
 
@@ -338,6 +329,55 @@ fn position(p: Vec3) -> Position {
     }
 }
 
+#[derive(Resource)]
+struct NavigationPublicationInstalled;
+
+fn install_publication(app: &mut App) {
+    if app
+        .world()
+        .contains_resource::<NavigationPublicationInstalled>()
+    {
+        return;
+    }
+    app.insert_resource(NavigationPublicationInstalled);
+    app.add_systems(
+        FixedFirst,
+        (prune_routes, publish_navigation_results).chain(),
+    );
+}
+
+#[cfg(test)]
+#[derive(Resource)]
+struct NavigationFixtureDrainInstalled;
+
+#[cfg(test)]
+fn drain_fixture_navigation(mut navigation: ResMut<Navigation>) {
+    navigation.drain_until_idle();
+}
+
+#[cfg(test)]
+pub(crate) fn install_fixture(app: &mut App, navigation: Navigation) {
+    install_publication(app);
+    app.insert_resource(navigation);
+    if !app
+        .world()
+        .contains_resource::<NavigationFixtureDrainInstalled>()
+    {
+        app.insert_resource(NavigationFixtureDrainInstalled);
+        app.add_systems(First, (prune_routes, drain_fixture_navigation).chain());
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn drain_fixture(app: &mut App) {
+    if app.world().contains_resource::<Navigation>() {
+        install_publication(app);
+        app.world_mut()
+            .resource_mut::<Navigation>()
+            .drain_until_idle();
+    }
+}
+
 pub struct NavigationPlugin;
 impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
@@ -345,7 +385,7 @@ impl Plugin for NavigationPlugin {
             PostStartup,
             open_navigation.after(crate::ground::open_ground_map),
         );
-        app.add_systems(FixedUpdate, prune_routes);
+        install_publication(app);
     }
 }
 
@@ -363,9 +403,33 @@ mod tests;
 #[path = "navigation_blocking_io_tests.rs"]
 mod blocking_io_tests;
 
+#[cfg(all(test, target_os = "linux"))]
+#[path = "navigation_request_tests.rs"]
+mod request_tests;
+
 fn prune_routes(
     mut nav: ResMut<Navigation>,
-    creatures: Query<Entity, With<crate::creature_ai::CreatureState>>,
+    creatures: Query<
+        (Entity, Option<&crate::maps::InMap>, Option<&Position>),
+        With<crate::creature_ai::CreatureState>,
+    >,
 ) {
-    nav.routes.retain(|entity, _| creatures.contains(*entity));
+    let obsolete: Vec<_> = nav
+        .pending
+        .iter()
+        .filter_map(|(entity, pending)| {
+            let Ok((_, map, position)) = creatures.get(*entity) else {
+                return Some(*entity);
+            };
+            let wrong_map = map.is_some_and(|map| map.map_id != pending.request.map_id);
+            let moved = !pending.done
+                && position.is_none_or(|position| {
+                    horizontal(point(*position) - point(pending.request.from)) > TELEPORT_DISTANCE
+                });
+            (wrong_map || moved).then_some(*entity)
+        })
+        .collect();
+    for entity in obsolete {
+        nav.cancel_route(entity);
+    }
 }

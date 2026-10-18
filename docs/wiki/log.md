@@ -1,3 +1,7 @@
+## 2026-10-18 — Navigation worker and advance caller group
+
+[Worker migration](systems/navigation.md#navigation-worker-migration--2026-10-18): actual held-tile FIFO RED atf52 stalls before=1/held=1, with release/path/cleanup assertions passing. Worker/types4f41 plus receiver-publication ordering6a1 pass6 native library controls. Navigation::advance now queues immediately, installs current-ID routes at FixedFirst, retains old movement while pending and refreshes request feet; map/teleport/despawn cancellation and no-path timer pause are in scope. Server c2bd6e38f merged/protocola2b07a6 selected. Route integration controls are newly implemented, not yet passing evidence; fear/hazard/C++ raw callers still synchronous. No push or universal ten-second fix claim.
+
 ## 2026-10-18 — Navigation worker design and sight CPU gap
 
 [Design](design/navigation-worker.md) records approved pending movement/latest-request/fixed-order/error/test-drain behavior, exclusive map ownership, complete synchronous caller inventory, per-entity queue bound and explicit worker-death failure. Base83a8ce176/protocol029a927; no Rust implementation or RED yet. [SIGHT_FACTION_MAIN_THREAD_CPU](investigations/server-tick-lag.md#sight_faction_main_thread_cpu) records9of12 B partial stacks and sampled A/B CPU counts, with uncaptured maximum-gap stack and load/observer limitations. Navigation reads are a confirmed contributor, not sufficient evidence alone for historical ten-second stalls.

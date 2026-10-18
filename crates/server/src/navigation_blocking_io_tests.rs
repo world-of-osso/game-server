@@ -134,7 +134,7 @@ fn write_tile_bytes(writer: &mut std::fs::File, bytes: &[u8]) -> Result<(), Stri
     Ok(())
 }
 
-fn baked_floor() -> Vec<u8> {
+pub(super) fn baked_floor() -> Vec<u8> {
     let a = Vec3::new(10.0, 0.0, 10.0);
     let b = Vec3::new(10.0, 0.0, 190.0);
     let c = Vec3::new(190.0, 0.0, 190.0);
