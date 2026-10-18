@@ -1,4 +1,4 @@
-//! Ordinary Ramparts actors and real lethal transitions; INTRO2 remains excluded.
+//! Ordinary Ramparts actors and real lethal transitions through pre-INTRO2 arrival.
 use super::*;
 
 const HERALD: u32 = 17_307;
@@ -196,6 +196,9 @@ fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center(
         .distance(Vec3::new(CENTER.x, CENTER.y, CENTER.z));
     let travel_ticks = (distance / (speed * 0.05)).ceil() as usize;
     for _ in 0..=travel_ticks {
+        if h.app.world().get::<Position>(herald) == Some(&CENTER) {
+            break;
+        }
         h.advance(0.05);
     }
     assert_eq!(*h.app.world().get::<Position>(herald).unwrap(), CENTER);
@@ -203,8 +206,8 @@ fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center(
         h.app.world().get::<CreatureMotion>(herald),
         Some(&CreatureMotion::Still)
     );
-    // Source MoveIdle must prevent the original patrol resuming after arrival.
-    h.advance(1.0);
+    // INTRO1 owns the pre-INTRO2 window; source INTRO2 is due at arrival+1s.
+    h.advance(0.8);
     assert_eq!(*h.app.world().get::<Position>(herald).unwrap(), CENTER);
     // Exercise duplicate action delivery only after proving real death ingress.
     dispatch(h.app.world_mut(), herald, Hook::DoAction(START_ENCOUNTER));
@@ -233,7 +236,7 @@ fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center(
     );
     assert!(
         h.creatures_of(17_537).is_empty(),
-        "HERALD_INTRO2_UNIMPLEMENTED: no fake summon"
+        "no premature summon before the source arrival+1s deadline"
     );
     assert_eq!(
         get_boss_state(h.app.world_mut(), map, 1),

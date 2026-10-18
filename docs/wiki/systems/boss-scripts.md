@@ -1,5 +1,15 @@
 # Boss scripts
 
+## Herald INTRO2 first West boundary — 2026-10-18
+
+Pinned TC `boss_vazruden_the_herald.cpp224–241/305–316/260–271` continues actual center point arrival after1s. The existing Herald AI retains its allocation/origin and consumes the shared entry projection for17536;30717 runs while gravity is enabled, then30698/30694 and zone combat run after restoring flight.30698 SpellHit starts actual West2 point movement; arrival casts30700/18430 and changes reaction. `NPC_ONESHOT_EMOTE_UNIMPLEMENTED` means LAND emits nothing, never another pose/emote. Copy-only source templates/spells remain prerequisites, not canonical writes.
+
+Herald engage173–183 schedules victimFireball0, random10–15s and next flight20–30s through real EventMap; Passive suppresses fireball casts while retaining the source3200ms repeat. Vazruden17537 is registered for actual5301 appearance/zone combat and engage speech5s/Revenge5–10s434–450. Ordinary cast admission is unchanged. Future event handlers use real source casts/movement/repeats rather than empty stubs, but later loops remain unverified by this bounded slice.
+
+Two ignored natural REDs4fa9425b8 (pushed first) fail at source arrival+1s,17307 instead of17536,72.14s; preparation/lethal ingress/actual center/.95s negatives succeed. Implementation GREEN pending. `HERALD_RECURRING_FLIGHT_UNVERIFIED`, `HERALD_DESCENT_UNIMPLEMENTED`, `HERALD_PAIRED_CREDIT_UNIMPLEMENTED` and `HERALD_RESET_UNIMPLEMENTED` remain named exclusions, along with native capture and unchanged `CASTER_RELATIVE_DEST_ALLOWED_Z_UNIMPLEMENTED`. No full encounter claim.
+
+Sources: pinned TC a352b1fa above; [contract/tests](../../specs/ramparts-herald.md), [target32 prerequisite](../../specs/caster-summon-destination.md). LittleWigs Vazruden.lua5–14/56–77 corroborates actor/encounter identity, not an intro clock.
+
 Creature scripts by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa: the `CreatureAI`/`ScriptedAI`/`BossAI` layer, `InstanceScript`, `CreatureTextMgr` and the Stockade scripts. Contract: `docs/specs/boss-scripts.md`. Code: `crates/server/src/scripted_ai/`.
 
 ## How a script runs
