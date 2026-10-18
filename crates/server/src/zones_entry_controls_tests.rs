@@ -168,7 +168,7 @@ fn herald_entry_preserves_real_ai_event_progress_without_appearance_replay() {
 fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_refreshed() {
     let (mut data, _) = source_fixture();
     let canonical = crate::test_data::world_data();
-    for entry in [30, 100] {
+    for entry in [30, 100, 176396] {
         data.templates
             .insert(entry, canonical.templates[&entry].clone());
     }
@@ -182,7 +182,7 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
         .execute_batch(
             "CREATE TEMP VIEW content_creature_template_addon AS
         SELECT entry, PathId path_id, mount, auras, StandState bytes1, SheathState bytes2, emote
-        FROM tdb_creature_template_addon WHERE entry IN(30,100)",
+        FROM tdb_creature_template_addon WHERE entry IN(30,100,176396)",
         )
         .unwrap();
     data.template_addons
@@ -199,6 +199,7 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
         .clone();
     assert_eq!(data.template_addons[&30].auras, vec![11959]);
     assert_eq!(data.template_addons[&100].auras, vec![3417]);
+    assert_eq!(data.template_addons[&176396].auras, vec![347931]);
     let mut world = World::new();
     world.insert_resource(Time::<bevy::time::Virtual>::default());
     world.insert_resource(Time::<()>::default());
@@ -265,6 +266,34 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
             .iter()
             .find(|aura| aura.spell_id == 3417),
         Some(&added)
+    );
+    // Defective Sorter's actual347931 addon lasts5s. Unlike permanent auras,
+    // its deadline distinguishes a skipped existing aura from a silent refresh.
+    assert!(update_target(
+        &data, &mut world, actor, &spawn, 176396, None
+    ));
+    let finite = world
+        .get::<crate::auras::ActiveAuras>(actor)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 347931)
+        .unwrap()
+        .clone();
+    assert_eq!(finite.duration_ms, 5000);
+    assert_eq!(finite.expires_at, Some(6.0));
+    world
+        .resource_mut::<Time<bevy::time::Virtual>>()
+        .advance_by(std::time::Duration::from_secs(1));
+    assert!(update_target(
+        &data, &mut world, actor, &spawn, 176396, None
+    ));
+    assert_eq!(
+        world
+            .get::<crate::auras::ActiveAuras>(actor)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 347931),
+        Some(&finite)
     );
 }
 
