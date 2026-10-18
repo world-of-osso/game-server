@@ -46,6 +46,33 @@ fn mana_cost(h: &Harness, healer: Entity, id: u32) -> f32 {
         .sum()
 }
 
+fn print_native_readiness(h: &mut Harness, healer: Entity, tank: Entity, spells: &[u32]) {
+    for &id in spells {
+        let spell = h
+            .app
+            .world()
+            .resource::<SpellStore>()
+            .get(id)
+            .unwrap()
+            .clone();
+        let (_, base_range) = crate::spell_cast::targets::spell_range(&spell, false);
+        let range = crate::auras::spell_mods::modify(
+            h.app.world(),
+            healer,
+            &spell,
+            crate::auras::spell_mods::SpellModOp::Range,
+            base_range,
+        );
+        let costs = spell_costs(h.app.world(), healer, &spell);
+        let readiness =
+            crate::spell_cast::validate_start(h.app.world_mut(), healer, &spell, Some(tank), true);
+        eprintln!(
+            "native readiness spell{id}: {readiness:?}, costs={costs:?}, range={base_range}->{range}, cast={:?}",
+            h.app.world().get::<CastState>(healer)
+        );
+    }
+}
+
 #[test]
 fn tank_pull_healer_ready_affordable_sourced_hot_is_not_default_regrowth() {
     let (mut h, tank, healer) = fixture(&[774, 8936]);
@@ -92,6 +119,7 @@ fn tank_pull_healer_ready_does_not_veto_or_cancel_an_admitted_native_cast() {
     let cast = h.app.world().get::<CastState>(healer).unwrap();
     assert_eq!((cast.spell_id, cast.target), (8936, tank.to_bits()));
     let before = h.app.world().get::<Mana>(healer).unwrap().current;
+    print_native_readiness(&mut h, healer, tank, &[774, 8936]);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
@@ -119,6 +147,7 @@ fn tank_pull_healer_ready_requires_sourced_range_and_same_copy() {
         x: tank_at.x + range + 1.0,
         ..from
     });
+    print_native_readiness(&mut h, healer, tank, &[774]);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
@@ -195,6 +224,7 @@ fn tank_pull_healer_ready_honors_real_level_and_consumed_native_cooldown() {
     let party = [h.caster, tank, healer];
     creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
     h.advance(1);
+    print_native_readiness(&mut h, healer, tank, &[18562]);
     assert!(
         pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
             .unwrap()
