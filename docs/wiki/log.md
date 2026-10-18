@@ -5,6 +5,25 @@
 ## 2026-10-18 — Rays of Light2378 native proof
 
 [Rays of Light](systems/pet-battle-engine.md#rays-of-light--2026-10-18) after531: legalRiverpaw4450/15physicalPass→slot2bothskins. Modern929→902(Scratch27),110damage/Rabbit37,+27cappedheal−Scratch30→899;Foreverretained899→870(Scratch29),112/Rabbit35,+53heal−Scratch27→896. Fullbenchheals0; injuredbench/miss/finalfaintcontrolsCPU-only. Four individually inspected1920×1080 `rays-of-light-{modern,forever}-{before,applied}.png` originals in AgentShared2026-10-18/petbattle-effects;all4phases2framedmodels/ExtractedOnly/tripwire0,geometry95/104onlyHPfills/timedfloats. LocalCASC6/6→lead8productfiles+fragment;9canonicalhashes/links/actual1meshstrictloaderPASS. Freshfc1server/seeder fromlanded506/shared11acleanbeforeafter;leadexplicitlyaccepts frozenengineee951 after exact003e35233 protocol/petbattleUI unchanged versus17unrelatedUI-model changes+networkWorldServerInforeceive. Fullpatches/actualhashes retained;workingShell650notruntimecohort. All3hashesunchangedthroughShellCPUandnative. Bothphysicalforfeitconfirm/Close;knownPIDsabsent/sliceinactive/5961unbound/windowcleared. Coverage report owns exactreceipts/limits;functional/visualonly,noindependentRetailrounding/timing/VFXcertification. Leadacceptednative;closingdocs-onlyhead doesnotchangeproductionorcensus.
+## 2026-10-18 — Singed593 repair/Pango684 owned CPU GREEN
+
+[Exact proof/limits](../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): real535RED→runtime5ea7efcaa at6b54512a0/canonical shared11a058cf, own focused5931/0/25.16s; toys197/0/337.82s includes593, PangoCancelAura/ordinary600sSaptorreuse and unchanged Citizens/generic dummy refusals. Workspace all-targets check1m24s/fmt pass. Only audited Singed slot admitted; sourceTC76/4836–5117, not blanketdummy. Initial old-interface build failures resolved by absolute current shared path without protocol/cache mutation. Lead successor/landing/native/full1166 proof remains pending.
+
+## 2026-10-18 — Gate535 genuine RED; Singed repair pending
+
+[Exact failure/source-grounded repair](../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18):535server315/1/1ignored477.06s/EXIT101/FMT0/CHECK0 rejects593child aura4 before cast; no landing/fixture correction. Authorized5ea7efcaa admits only1220867/slot0 under zero-payload visual-aura guard, preserving unrelated script refusal. TC `SpellAuraEffects.cpp:76,4836–5117` contains named dummy actions, not generic no-op authority. Merged landed baselined0e0d7fc3 for queued64 fidelity, Pango stacked; own focused compile/test running, no GREEN/native proof yet.
+
+## 2026-10-18 — Pango684 cancellation and shared recovery pending
+
+[Exact acceptance/limits](../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Full1166 Pango with real CancelAura/model restoration/no2513 bypass, Saptor refusal near580 simulated seconds and own learned success after600 ordinary seconds. No timer/cooldown edit or prior shared-five change. Format/manual only; uncompiled/unexecuted AFTER535, not all-five lifecycle/wall/hour-expiry/native/distribution proof. No runtime/data/own jobs.
+
+## 2026-10-18 — Mycomancer664 landed after532; Explosive593 queued535
+
+[Current proof/landing](../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): lead receipt plus ancestry confirms8af454985 on server masterd0e0d7fc3.532server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test. Native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd separately queued535; no535result or landing claimed, no own jobs.
+
+## 2026-10-18 — Explosive593 mixed hearthstone and Singed acceptance pending
+
+[Exact acceptance and limits](../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second bind252 plus queued self64→1220867/5000ms dummy4 Singed, shared2309 and Corewarden refusal. Ordinary child expiry tested without replacing/dropping child; native explosive/Singed presentation remains gap, no guessed damage. Original25/helper/Mycomancer unchanged. Format/manual only; uncompiled/unexecuted AFTER532, whose candidatefb2bd5a88 is not landing. No runtime/data/native/own heavy jobs.
 
 ## 2026-10-18 — Rays of Light2378
 
