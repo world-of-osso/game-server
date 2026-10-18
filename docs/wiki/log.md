@@ -44,6 +44,10 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Telash server jump-charge producer
+
+[Server-source projection](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): genuine real-copy CLI mode RED→fba6fb2b7PASS10.725s including six legacy controls; exact34 source rows/ten fields/NULLs, duplicate-source atomic refusal and fresh-schema/excerpt-loader proof. COPY367→5f225535 with full sqldiff49b238f5 (one CREATE+34INSERTs only), quick_check=ok; canonical publication lead-owned/pending. Independent artifact PASS; full fresh import, native254 motion/callbacks and ordinary Azure/pixels remain open. Lead separately reports first Energy phase4105 gate504 landed1443/fmtOK, master950d25c7f.
+
 ## 2026-10-17 — Native field partial acceptance and hazard boundary
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): retained5d native5PASS plus corrected-action936dc1421PASS37.90s, strict source/protocol/HEAD/published-input guards stable; no fresh6/6 claim. Passing fixtures enabled. Additional actual-target attachment/copy-departure and self/ally/other-copy controls are added but ignored pending scoped acceptance. Follower source-reach escape regression uses an actual native aura-created field, authored Garrick model/scale/reach and real Stockade navigation; its RED/GREEN and the hazard-consumer correction remain pending. No health/stat/geometry/default-reach changes.
@@ -51,6 +55,10 @@
 ## 2026-10-17 — Native Sprout initial periodic tick correction
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): first5d4e3f6d packet5PASS/1FAIL121.30s, exact published inputs/source/HEAD guards stable. Failure was the fixture's zero-initial-tick expectation: actual70448 SpellMisc374523 Attributes5=524800/0x80200 includes TC `EXTRA_INITIAL_PERIOD`0x200. Production periodic behavior is correct and unchanged; corrected fixture pins the flag and expects1initial/1beforeperiod/2afterperiod/2afterexit, preserving no-reapplication and caster-filtered cleanup checks. Only failed case is rerun; five passing field/lifecycle/scale/curve cases are retained, not relabeled fresh6/6.
+
+## 2026-10-17 — Rune startup and first natural Energy phase
+
+[Coverage](investigations/follower-data.md#telash-first-energy-phase--2026-10-17): actual Rune startup0vs3 RED→7PASS/check/fmt at40f6e3977, lead497 landed1432 tests; source Rune data published3670 after494 with byte-identical five-insert re-run. First natural100Energy phase reaches genuine0vs1 Go RED51.96s, then4105c8f71 targeted10PASS106.76s/check6.59s/fmt0 with stable52-source/protocol/input guards; gate504 queued. Existing controlled-fixture health buffer is explicit; no ordinary budget, jump/rune interaction or pixel claim.
 
 ## 2026-10-17 — Native fields accepted and Rune source COPY prepared
 

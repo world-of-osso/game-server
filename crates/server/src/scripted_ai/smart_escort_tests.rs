@@ -748,14 +748,13 @@ fn smartai_coverage_despawning_a_native_corpse_interrupts_its_dead_start_cast() 
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let creature = {
         let mut commands = bevy::prelude::Commands::new(&mut queue, h.app.world());
-        let map = crate::maps::InMap::continent(u32::from(spawn.map));
         crate::zones::spawn_creature(
             &mut commands,
             &data,
             template,
             &mut crate::zones::CreatureSpawnContext {
-                map,
-                difficulty_id: crate::zones::map_difficulty_id(h.app.world(), map),
+                map: crate::maps::InMap::continent(u32::from(spawn.map)),
+                difficulty_id: 0,
                 ground: Some(&mut crate::test_data::ground_map()),
                 temporary: false,
             },
@@ -763,7 +762,7 @@ fn smartai_coverage_despawning_a_native_corpse_interrupts_its_dead_start_cast() 
             spawn,
             &mut rand::thread_rng(),
         )
-        .expect("authored Brown Ram native spawn level context")
+        .expect("native Brown Ram level context")
     };
     queue.apply(h.app.world_mut());
     assert!(
