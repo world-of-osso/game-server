@@ -1,6 +1,6 @@
 ## 2026-10-18 — Run-local tank observations
 
-[History boundary](investigations/follower-data.md#run-local-tank-observations--2026-10-18): native effect/update4RED at28281c3a0, pure policy4GREEN. Wire per-run10s effective rates, complete5s health samples and CreatureOrigin per-spawn deaths; copy/roster reset. Observer GREEN and planner remain pending; no runtime/stat/protocol change.
+[History boundary](investigations/follower-data.md#run-local-tank-observations--2026-10-18): native effect/update4RED at28281c3a0, pure policy4GREEN. Wire per-run10s effective rates, complete5s health samples and CreatureOrigin per-spawn deaths; copy/roster reset. Observer4GREEN and master-integrated4GREEN, candidate collector2GREEN; pure model additional-burst RED→5GREEN. Native quantized roll-weight3RED, implementation GREEN pending. World/stat forecast and planner remain unfinished; no runtime/stat/protocol change.
 
 ## 2026-10-18 — Rays of Light2378
 
