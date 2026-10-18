@@ -19,6 +19,10 @@ mod pull_history_tests;
 mod pull_readiness;
 #[cfg(test)]
 mod pull_readiness_tests;
+#[cfg(test)]
+mod pull_sources;
+#[cfg(test)]
+mod pull_sources_tests;
 mod spawning;
 mod stockade_diagnostic;
 #[cfg(test)]
