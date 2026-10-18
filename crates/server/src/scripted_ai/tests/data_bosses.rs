@@ -33,6 +33,8 @@ mod azure_sprout_fields;
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
 mod azure_telash;
+#[path = "azure_telash_return.rs"]
+mod azure_telash_return;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gargolmar.rs"]
@@ -47,6 +49,8 @@ mod gnomeregan;
 mod group_criteria;
 #[path = "herald_intro.rs"]
 mod herald_intro;
+#[path = "herald_target32.rs"]
+mod herald_target32;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]

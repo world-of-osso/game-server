@@ -489,6 +489,7 @@ type AutoAttackTargets<'w, 's> = Query<
         Option<&'static shared::components::PlayerStandState>,
         Has<Unkillable>,
         Option<&'static crate::scripted_ai::CreatureScriptName>,
+        Option<&'static shared::components::Rotation>,
     ),
 >;
 
@@ -952,6 +953,7 @@ fn roll_outcome(
     victim: Victim,
     flags: Option<&crate::zones::CreatureFlagsExtra>,
     can_avoid: bool,
+    in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> MeleeOutcome {
     let swinger = match (attacker.creature, attacker.stats) {
@@ -980,6 +982,15 @@ fn roll_outcome(
         }
         if flags.0 & NO_BLOCK != 0 {
             chances.block = 0.0;
+        }
+    }
+    let ignores_direction = target_auras
+        .is_some_and(|auras| auras.has_type(crate::auras::handlers::IGNORE_HIT_DIRECTION));
+    if !in_front && !ignores_direction {
+        chances.parry = 0.0;
+        chances.block = 0.0;
+        if matches!(victim, Victim::Player(_)) {
+            chances.dodge = 0.0;
         }
     }
     // Unit::MeleeSpellMissChance: victim's attacker-hit modifier, not attacker hit.
@@ -1121,7 +1132,7 @@ fn melee_damage_splits(
     attacker: Entity,
 ) -> Vec<crate::auras::damage_transfer::Split> {
     let candidates = match targets.get_mut(victim) {
-        Ok((_, _, _, _, _, _, _, _, _, avoidance, _, _, _)) => {
+        Ok((_, _, _, _, _, _, _, _, _, avoidance, ..)) => {
             crate::auras::damage_transfer::candidates(avoidance.1.as_deref(), context.spells, 1)
         }
         Err(_) => return Vec::new(),
@@ -1133,8 +1144,7 @@ fn melee_damage_splits(
         {
             continue;
         }
-        let Ok((_, health, _, _, _, _, _, _, _, avoidance, _, _, _)) =
-            targets.get_mut(split.recipient)
+        let Ok((_, health, _, _, _, _, _, _, _, avoidance, ..)) = targets.get_mut(split.recipient)
         else {
             continue;
         };
@@ -1192,6 +1202,7 @@ fn try_swing(
         stand_state,
         unkillable,
         script_name,
+        target_rotation,
     )) = targets.get_mut(target_entity)
     else {
         return None;
@@ -1248,11 +1259,21 @@ fn try_swing(
     if is_npc && npc_flags.is_none() {
         report_missing_creature_flags(commands, target_entity);
     }
+    let victim_position = Vec3::new(target_pos.x, target_pos.y, target_pos.z);
+    let attacker_position = Vec3::new(
+        attacker.position.x,
+        attacker.position.y,
+        attacker.position.z,
+    );
+    let orientation = crate::spell_cast::targets::orientation_from_rotation(target_rotation);
+    let in_front =
+        crate::spell_cast::targets::in_front_arc(victim_position, attacker_position, orientation);
     let kind = roll_outcome(
         attacker,
         victim,
         npc_flags,
         can_avoid((avoidance.0, avoidance.1.as_deref())),
+        in_front,
         avoidance.1.as_deref(),
     );
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
@@ -2071,6 +2092,9 @@ fn broadcast_events(
     }
 }
 
+#[cfg(test)]
+#[path = "combat_facing_tests.rs"]
+mod facing_tests;
 #[cfg(test)]
 #[path = "combat_npc_flags_tests.rs"]
 mod npc_flags_tests;

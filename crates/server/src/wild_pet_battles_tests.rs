@@ -39,6 +39,95 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_mega_discharge_uses_nonowned_enemy_maker_and_named_same_round_policy() {
+    let catalog = catalog();
+    let journal = journal();
+    assert!(journal.pets.iter().all(|pet| pet.species_id == 39));
+    let states = owned_states(&catalog, &journal);
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    //Controlled1/Common/breed3 and benches are not authored NPC composition.
+    let enemies = build_team(
+        &catalog,
+        &[
+            Identity {
+                guid: None,
+                species: 2814,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+        ],
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let npc = &enemies.pets[0];
+    assert_eq!(npc.species, 2814);
+    assert_eq!(npc.abilities, [2365, 0, 0]);
+    assert_eq!(
+        npc.stats,
+        ::server::pet_battle::Stats {
+            health: 491,
+            power: 10,
+            speed: 7
+        }
+    );
+    let boss = catalog.turns.state_id("Passive_Boss").unwrap();
+    assert_eq!(catalog.turns.species_states[&2814].get(&boss), Some(&1));
+    assert_eq!(npc.state(boss), 0);
+    assert_eq!(npc.state(183), 0); //Unnamed source183=2363 remains a fidelity gap.
+    let initial = Battle::new([allies, enemies]).unwrap();
+    //The sourced player is faster: legal Metal Fist384 precedes2365, unboosted.
+    assert_eq!(initial.teams[0].pets[0].abilities[0], 384);
+    let (state, events) = initial
+        .step(
+            &catalog.turns,
+            [Action::Ability(384), Action::Ability(2365)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { caster, amount, .. } => Some((caster.team, *amount)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, [(0, 30), (1, 45), (1, 22), (1, 22)]);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [114, 137, 137]
+    );
+    assert_eq!(state.teams[1].pets[0].health, 461);
+    assert!(events.contains(&Event::AuraApplied {
+        target: ::server::pet_battle::PetRef { team: 1, slot: 0 },
+        ability: 542
+    }));
+    assert!(state.auras.is_empty());
+    //PET_BATTLE_DURATION_ONE_SAME_ROUND_POLICY: application round counts.
+    assert_eq!(
+        state.teams[1].pets[0].state(catalog.turns.state_id("Mod_DamageTakenPercent").unwrap()),
+        0
+    );
+    assert_eq!(state.teams[1].pets[0].cooldowns.get(&2365), Some(&5));
+    assert!(journal.pets.iter().all(|pet| pet.species_id != 2814));
+}
+
+#[test]
 fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_player() {
     let catalog = catalog();
     let journal = journal();
@@ -120,6 +209,83 @@ fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_p
     assert_eq!(state.teams[1].pets[0].health, 156);
     assert_eq!(state.teams[1].pets[0].cooldowns.get(&2351), Some(&5));
     assert!(journal.pets.iter().all(|pet| pet.species_id != 2803));
+}
+
+#[test]
+fn wild_pet_battles_poison_protocol_uses_legal_anomalus_and_existing_periodic_expiry() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 2842), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 1954)
+        .unwrap();
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 2842);
+    assert_eq!(caller.abilities[2], 1954);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 2842, 3, 3, 4).unwrap()
+    );
+    assert_eq!(caller.stats.power, 50);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(1954), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage {
+                amount, periodic, ..
+            } => Some((*periodic, *amount)),
+            _ => None,
+        })
+        .collect();
+    //Beast7 direct is strong versus Critter4; Elemental6 periodic is weak.
+    assert_eq!(hits, [(false, 26), (true, 11)]);
+    assert_eq!(state.teams[1].pets[0].health, 110);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        encounter.battle.teams[0]
+            .pets
+            .each_ref()
+            .map(|pet| pet.health)
+    );
+    assert_eq!(state.auras.len(), 1);
+    assert_eq!(state.auras[0].ability, 379);
+    assert_eq!(state.auras[0].remaining, 1);
+    let (state, events) = state
+        .step(&catalog.turns, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap();
+    let periodic: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage {
+                amount,
+                periodic: true,
+                ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(periodic, [11]);
+    assert_eq!(state.teams[1].pets[0].health, 99);
+    assert!(state.auras.is_empty());
+    assert_eq!(
+        state.teams[1].pets[0].state(catalog.turns.state_id("Mechanic_IsPoisoned").unwrap()),
+        0
+    );
 }
 
 #[test]
