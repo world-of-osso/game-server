@@ -824,6 +824,11 @@ fn threat_current_victim_lazy_clear_returns_none_before_periodic_deadline() {
         None,
         "cleared membership cannot retain a cached victim"
     );
+    // At its spawn, return-home completes immediately; keep the old player out
+    // of proximity so the assertion observes reset, not a new zero-threat fight.
+    app.world_mut()
+        .entity_mut(tank)
+        .insert(crate::maps::InMap::continent(1));
     run(&mut app, 1);
     assert!(
         app.world().get::<CurrentVictim>(creature).is_none(),
