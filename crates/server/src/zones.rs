@@ -24,8 +24,11 @@ pub struct ZonePlugin;
 
 impl Plugin for ZonePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostStartup, spawn_continent_creatures)
-            .add_systems(FixedUpdate, apply_addon_auras);
+        app.add_systems(
+            PostStartup,
+            spawn_continent_creatures.after(crate::ground::open_ground_map),
+        )
+        .add_systems(FixedUpdate, apply_addon_auras);
     }
 }
 
