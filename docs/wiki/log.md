@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source670–674 pending Corewarden acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source670674-pending-corewarden-hearthstone-and-corpse-ritual-mail-viewer-current-location-travel-boundaries-2026-10-18):f30ff0f2c appends actual slot1 265100/1273401/source10s/shared2309 to unchanged saved-bind helper, now25 hearthstones/old24 retained; format/manual readability/diffcheck pass, behavior awaits lead successor. Preserve corpse25 ritual/-100/two9000 payloads, missing257683 mail/base0/shared2066, Brann233/base550 and qualified current-Abundant3+77 travel. No guessed bodies/destinations or runtime/data/native change; no own heavy jobs.
+
 ## 2026-10-18 — Toy source665–669 pending Dominating acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source665669-pending-dominating-victory-and-missing-metadata-qualified-flare-corpse-flagrod-boundaries-2026-10-18):9470e4859 appends264413/1271973/1800000ms to unchanged caster helper, now20 identities/old19 retained; format/manual readability/diffcheck pass, behavior awaits lead successor. Preserve unnamed264368/1271857 metadata gap, qualified32/64/32 flare/missing257541/base0, enemy-corpse22/93 flag and Rod25/395/shrink/two5000 payloads/permanent corpse transform. No invented actor/eligibility/timing, runtime/data/native change or own heavy jobs.
