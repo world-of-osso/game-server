@@ -173,8 +173,11 @@ fn augmentation_support_native_sands_uses_each_aura_caster_and_expires_without_r
 
 #[test]
 fn augmentation_support_native_sands_changes_actual_recipient_damage_and_healing() {
-    let (mut h, ally) = fixture();
-    let owner = h.caster;
+    let (mut h, _) = fixture();
+    // Listen on the actual damage/heal caster's authenticated connection.
+    let ally = h.caster;
+    let owner = spawn_computed_player(&mut h, 13, 1473, 5.0);
+    h.advance(3);
     apply(&mut h, owner, ally, SHIFTING_SANDS);
     h.advance(2);
     let recipient = stats(&h, ally);
