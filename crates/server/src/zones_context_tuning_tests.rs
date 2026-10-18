@@ -114,7 +114,6 @@ fn fixture_actor(world: &mut World) -> Entity {
 }
 
 #[test]
-#[ignore = "RED: ordinary spawn ignores actual terrain area ancestry"]
 fn herald_context_ordinary_spawn_reads_actual_terrain_parent_not_spawn_zone() {
     // Installed source area1221 has CT0, parent16 has CT2; zone9 instead has CT73.
     let mut app = spawn_continent_fixture(sourced_nazan_fixture(), area_fixture(1221));
@@ -133,7 +132,6 @@ fn herald_context_ordinary_spawn_reads_actual_terrain_parent_not_spawn_zone() {
 }
 
 #[test]
-#[ignore = "RED: missing ordinary terrain context is silently treated as fixed level"]
 fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
     let result = std::panic::catch_unwind(|| {
         drop(spawn_continent_fixture(
@@ -157,7 +155,6 @@ fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
 }
 
 #[test]
-#[ignore = "Control: source critter and known untuned area remain fixed"]
 fn herald_context_critter_and_known_zero_area_do_not_inherit_region() {
     let mut known_zero = spawn_continent_fixture(sourced_nazan_fixture(), area_fixture(0));
     let world = known_zero.world_mut();
@@ -184,14 +181,13 @@ fn herald_context_critter_and_known_zero_area_do_not_inherit_region() {
 }
 
 #[test]
-#[ignore = "Control: explicit template tuning wins over map and terrain"]
 fn herald_context_explicit_template_precedes_actual_area_tuning() {
     let mut data = sourced_nazan_fixture();
     let hogger = crate::test_data::world_data().templates[&448].clone();
     assert_eq!(hogger.tuning.as_ref().unwrap().content_tuning_id, 73);
     data.templates.insert(448, hogger);
     data.spawns[0].template_entry = 448;
-    let mut app = spawn_continent_fixture(data, area_fixture(1221));
+    let mut app = spawn_continent_fixture(data.clone(), area_fixture(1221));
     let world = app.world_mut();
     let actor = fixture_actor(world);
     assert_eq!(
@@ -199,10 +195,34 @@ fn herald_context_explicit_template_precedes_actual_area_tuning() {
         73,
         "source Hogger CT73 precedes terrain parent CT2"
     );
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    let content = MapContent {
+        map: crate::maps::InMap {
+            map_id: RAMPARTS,
+            instance_id: 1,
+        },
+        difficulty_id: 1,
+        dead_bosses: vec![],
+    };
+    assert_eq!(
+        spawn_map_creatures(&mut commands, &data, content, false, None),
+        1
+    );
+    queue.apply(app.world_mut());
+    let world = app.world_mut();
+    let mut actors = world.query::<(&crate::maps::InMap, &LevelScaling)>();
+    let (_, scaling) = actors
+        .iter(world)
+        .find(|(map, _)| map.map_id == RAMPARTS)
+        .unwrap();
+    assert_eq!(
+        scaling.content_tuning_id, 73,
+        "Hogger CT73 precedes map543 Normal CT220"
+    );
 }
 
 #[test]
-#[ignore = "RED: ordinary CT0 spawn has no map context tuning"]
 fn herald_context_ordinary_nazan_spawn_uses_authored_normal_and_heroic_map_tuning() {
     use crate::level_scaling::{LevelStats, TuningInputs};
     let mut app = App::new();
