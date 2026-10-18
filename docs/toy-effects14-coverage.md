@@ -1,5 +1,23 @@
 # Toy effects14 — active whole-goal coverage
 
+## Lead498 scoped PASS;newer expansions still pending (2026-10-17)
+
+Inspected498 throughc013eafdd PASS306passed/0failed/1ignored545.19s/client9/EXIT0/FMT0, compile5m37s/no warnings. Exact corrected11-disguise/Claw and473Stasis fixtures, all19 hearthstones through503,16 stationary sources/all7minis,16 caster/Cinder and10 transmitted objects/Nightmare have explicit ok lines. Ignored case remains `zones::world_db_tests::summon_enabler_stalker_spawns_invisible_and_not_selectable`, not new toy acceptance. Landing/master is not established until lead confirms.517eleventh object,524/538eighteen casters and540/542thirteen disguise rows are AFTER498 and unverified; no borrowed larger-scope certificate. Private `lead-gate498-inspected.json` reconciles exact scope; no own heavy duplicate.
+
+## Source540–544: pending Kobyss/Pileus acceptance and reading/pennant/corpse-flag boundaries (2026-10-17)
+
+Test/specf44658cf6 adds225641/455426/source1500ms cast/1800s appearance and225910/456572/instant600s appearance, both3600s recovery; now13 disguise rows plus separate Oomgut14 identities. Identity literals moved to a count-free slice so the behavioral test stays readable; old11 values/order retained with source-verified cast0. Declared cast_ms now tests the pending half-cast/native display before completing Kobyss; existing GCD/expiry/recovery assertions stay intact. Format/manual readability/diffcheck pass; new behavior needs a head AFTER498c013, not its older11-row pass. No runtime/data/producer change.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|540 Illusive Kobyss Lure225641/455426 | Source1500ms self transform56/base1→existing226283/misc8 for1800000ms, inherited3600000ms recovery. Runtime41 model choices/scale1/weight1 retained; own actual pending-cast/valid-model/expiry/native-display/full-health/recovery assertions committed, proof pending. No base1 count/player-scale inference, full weighted-pool/native or natural-hour reuse certificate. |
+|541 Arathi Book Collection225659/455494 | Instant self dummy4/permanent-1, inherited30000ms recovery. Reading pose/book art/conditions/removal remains unaudited, absent maintained visual-only list; no generic zero-dummy admission, invented item/book-page persistence or copied camera pose. |
+|542 Pileus Delight225910/456572 | Instant self transform56→existing226964/misc8 for600000ms, inherited3600000ms recovery;29 runtime model choices/scale1/weight1. Own exact learned-use/valid-model/ordinary expiry/full-health/native-display/recovery acceptance committed, behavior pending newer head. No guessed Fungarian model/range or all-model distribution certificate. |
+|543 Forged Legend's Pennant225933/456798 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Seasonal pennant appearance/eligibility/cleanup remains unaudited; no zero-dummy success or earlier season's art certificate. |
+|544 Forged Flag of Victory225969/457156 | Instant script3/targets22/93, item60000ms recovery. Source-centered enemy-corpse selection additionally requires an enemy player's corpse in front. Exact dead-player/enemy/frontal eligibility/flag identity/placement/lifecycle remain gaps; no living/non-player target or arbitrary corpse/banner substitute. |
+
+Evidence: private `rows540-544-{readonly-source,action-source,runtime-source,disguise-cast-source,active-goal}.json`, `disguises540-542-{active-goal,proof-ledger}.json`, literal41/29 display lists in the test registry.149865 Tea Set remains untouched.
+
 ## Source535–539: pending Toxic Victory acceptance and owned-pet-cooking/finery/dyeing/role-dummy boundaries (2026-10-17)
 
 538 test/spec896be829e adds225547/443689/1800000ms to the unchanged actual learned-use/replicated-aura/cancel/full-health-model/no-actors caster helper, now18 identities; old17 unchanged. Format/manual readability/diffcheck pass; behavior needs a head AFTER498c013.498 has individual corrected Claw/Stasis/Stone503 ok lines, but no final aggregate/landing result yet. No further runtime/data changes or own heavy duplicate.

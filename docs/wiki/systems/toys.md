@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Lead498 PASS and pending Kobyss/Pileus acceptance (2026-10-17)
+
+[Current498 scope and source540–544 matrix](../../toy-effects14-coverage.md#lead498-scoped-passnewer-expansions-still-pending-2026-10-17):498c013 PASS306/0failed/1ignored545.19s/client9/EXIT0/FMT0,5m37s/no warnings, landing pending lead confirmation. Corrected11-disguise/473Stasis,19 hearthstones,16 stationary/16 caster/10 object scopes pass—not newer13/18/11 expansions.
+
+f44658cf6 adds Kobyss225641/455426/226283/41 choices/source1.5s cast/30min and Pileus225910/456572/226964/29 choices/10min, both1h recovery, now13 disguise rows plus Oomgut14IDs. Count-free identity slice retains old11 values/order/verified cast0; data-driven pending-halfcast phase preserves readable behavior and source timing. Format/manual readability/diffcheck pass, future covering head required. Permanent reading/nonzero pennant and exact enemy-player/frontal corpse flag remain gaps; no scale/count/model-pool/native extrapolation or runtime/data/own heavy duplicate.
+
 ## Pending Toxic Victory acceptance and owned-pet-cooking/finery/dyeing/role-dummy boundaries (2026-10-17)
 
 [Source535–539 matrix](../../toy-effects14-coverage.md#source535539-pending-toxic-victory-acceptance-and-owned-pet-cookingfinerydyeingrole-dummy-boundaries-2026-10-17) adds acceptance-only896be829e:225547/443689/source1800s as18th existing learned/cancel caster identity, pending newer head AFTER498c013. Owned non-combat pet target150/candle/395 cooking area, missing royal finery chest, periodic five-second dyeing wheel and outdoors opposing-role damage-and-heal Icarus dummy remain exact gaps, not caster light/inert props/invented items/damage-only dummy. Format/manual readability/diffcheck pass; no further runtime/data/new native/own heavy duplicate.498 corrected Claw/Stasis/Stone individually ok, aggregate still pending.
