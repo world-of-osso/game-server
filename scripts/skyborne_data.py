@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Overlay only Skyborne faction templates and Zephras Isle from pinned local Forever DB2s.
 
-Default source files are the exact local CASC snapshots in scripts/reference/.
+Source files are exact local CASC snapshots supplied through --source-dir.
 No network fetch, inferred faction values, or replacement of other Retail rows.
 """
 
@@ -17,7 +17,6 @@ from pathlib import Path
 import db2_casc
 
 SCRIPTS = Path(__file__).resolve().parent
-DEFAULT_SOURCE = SCRIPTS / "reference/forever-1.60.1.70205"
 BUILD = "1.60.1.70205"
 SOURCES = {
     "character_loadout": (
@@ -413,7 +412,7 @@ def project_items(connection):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument("--source-dir", type=Path, required=True)
     parser.add_argument(
         "--db", type=Path, required=True, help="scratch world.db; no live storage"
     )

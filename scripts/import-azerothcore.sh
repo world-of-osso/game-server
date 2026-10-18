@@ -9,12 +9,13 @@
 # (data/reference/tdb1210/<table>.sql) → mysql_dump.py --prefix tdb_ → tdb_* tables
 # Server-read content_* tables: content_policy.py (Retail-first ID mapping)
 #
-# Usage: ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
+# Usage: FOREVER_DB2_SOURCE=/path/to/forever-db2 ./scripts/import-azerothcore.sh [path/to/azerothcore/data/sql/base/db_world]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DB_PATH="$PROJECT_DIR/data/world.db"
+: "${FOREVER_DB2_SOURCE:?Set FOREVER_DB2_SOURCE to the untracked Forever DB2 directory}"
 
 SQL_DIR="${1:-/home/osso/Repos/azerothcore/data/sql/base/db_world}"
 DB2_CSV_ROOT="${DB2_CSV_ROOT:-$PROJECT_DIR/../game-engine/data/db2}"
@@ -81,7 +82,7 @@ fi
 
 python3 "$SCRIPT_DIR/db2.py" check --csv-root "$DB2_CSV_ROOT"
 python3 "$SCRIPT_DIR/crafting_data.py" --check --source-dir "$CRAFTING_SOURCE_DIR"
-python3 "$SCRIPT_DIR/content_policy.py" --check --csv-root "$DB2_CSV_ROOT"
+python3 "$SCRIPT_DIR/content_policy.py" --source-dir "$FOREVER_DB2_SOURCE" --check --csv-root "$DB2_CSV_ROOT"
 
 rm -f "$DB_PATH" "$DB_PATH-wal" "$DB_PATH-shm"
 echo "Creating $DB_PATH ..."
@@ -104,7 +105,7 @@ python3 "$SCRIPT_DIR/retail_action_bars.py" --db "$DB_PATH"
 # --- Retail DB2 CSV import (build-pinned, see db2.py) ---
 
 echo "  Importing DB2 tables ..."
-python3 "$SCRIPT_DIR/db2.py" import --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
+python3 "$SCRIPT_DIR/db2.py" import --source-dir "$FOREVER_DB2_SOURCE" --csv-root "$DB2_CSV_ROOT" --db "$DB_PATH"
 
 # --- Pinned crafting references (required by content_policy.py) ---
 
@@ -114,7 +115,7 @@ python3 "$SCRIPT_DIR/crafting_data.py" --db "$DB_PATH" --source-dir "$CRAFTING_S
 # --- Retail-first content tables (content_*, see content_policy.py) ---
 
 echo "  Deriving content tables ..."
-python3 "$SCRIPT_DIR/content_policy.py" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT"
+python3 "$SCRIPT_DIR/content_policy.py" --source-dir "$FOREVER_DB2_SOURCE" --db "$DB_PATH" --csv-root "$DB2_CSV_ROOT"
 
 
 echo "Database written to: $DB_PATH"
