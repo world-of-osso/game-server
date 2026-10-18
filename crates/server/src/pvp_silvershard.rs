@@ -187,6 +187,7 @@ pub(super) fn spawn_source_cart(
             &spawn,
             &mut rand::thread_rng(),
         )
+        .expect("temporary cart does not require ordinary level context")
     };
     queue.apply(world);
     entity

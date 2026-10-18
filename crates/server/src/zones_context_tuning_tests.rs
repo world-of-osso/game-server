@@ -88,7 +88,8 @@ fn herald_context_authored_yala_keeps_provenance_selected_fixed_stats() {
         false,
         spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("authored fixed-level creature");
     queue.apply(&mut world);
     assert_eq!(world.get::<UnitLevel>(actor).unwrap().0, 5);
     assert_eq!(world.get::<Health>(actor).unwrap().max, 102.0);
@@ -171,6 +172,19 @@ fn area_fixture(area_id: u32) -> crate::ground::GroundMap {
     crate::ground::GroundMap::with_terrain(tile, terrain)
 }
 
+struct SpawnLogWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl std::io::Write for SpawnLogWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 fn spawn_continent_fixture(mut data: WorldData, mut ground: crate::ground::GroundMap) -> App {
     data.spawns[0].map = 0;
     data.spawns[0].position_x = -1.0;
@@ -239,12 +253,27 @@ fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
     app.add_plugins(MinimalPlugins);
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, app.world());
-    let count = spawn_map_creatures(
-        &mut commands,
-        &data,
-        MapContent::continent(0),
-        false,
-        Some(&mut crate::ground::GroundMap::default()),
+    let bytes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let writer = bytes.clone();
+    let subscriber = bevy::log::tracing_subscriber::fmt()
+        .without_time()
+        .with_ansi(false)
+        .with_writer(move || SpawnLogWriter(writer.clone()))
+        .finish();
+    let count = bevy::log::tracing::subscriber::with_default(subscriber, || {
+        spawn_map_creatures(
+            &mut commands,
+            &data,
+            MapContent::continent(0),
+            false,
+            Some(&mut crate::ground::GroundMap::default()),
+        )
+    });
+    let logs = String::from_utf8(bytes.lock().unwrap().clone()).unwrap();
+    assert!(logs.contains("CREATURE_LEVEL_CONTEXT_GAP"), "{logs}");
+    assert!(
+        logs.contains("creature17536 spawn1 map0 copy0 difficulty0"),
+        "{logs}"
     );
     assert_eq!(
         count, 1,

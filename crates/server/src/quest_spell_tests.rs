@@ -106,7 +106,8 @@ fn spawn_fire(app: &mut App) -> Entity {
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("source fire level context");
     queue.apply(app.world_mut());
     fire
 }

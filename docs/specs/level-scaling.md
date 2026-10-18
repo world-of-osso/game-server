@@ -16,7 +16,7 @@ Data
 Level
 - [x] A tuned creature's own level is its range maximum plus a delta, rolled once per spawn from `LevelScalingDeltaMin..=Max` (Creature::SelectLevel, Creature.cpp:1611-1618; ApplyLevelScaling, :3122-3171).
 - [x] Its level against a unit of level L is `clamp(L, min, max) + delta`, clamped to 1..=126 (Creature::GetLevelForTarget, :3226-3257). The rule lives once, in `shared::level_scaling::LevelScaling::level_for_target`, which server and client both call.
-- [x] Ordinary Retail/non-authored non-critter CT0 spawns resolve ContentTuning from their actual map difficulty, then the terrain area's parent chain, reusing the existing `SummonLevels` inputs. Explicit template tuning takes precedence; critters do not inherit regional tuning. Missing area/tuning/delta context must be reported explicitly, never replaced with legacy levels or guessed tuning.
+- [x] Ordinary Retail/non-authored non-critter CT0 spawns resolve ContentTuning from their actual map difficulty, then the terrain area's parent chain, reusing the existing `SummonLevels` inputs. Explicit template tuning takes precedence; critters do not inherit regional tuning. Missing area/tuning/delta context must log `CREATURE_LEVEL_CONTEXT_GAP` with actor/spawn/map/copy/difficulty and refuse that spawn before queuing an entity. It must not panic the server, use legacy levels or guessed tuning, or prevent other resolvable creatures from spawning.
 - [x] Regional ordinary spawning uses the resolved range and the selected source difficulty's own delta, HealthScalingExpansion and health/armor/damage modifiers before initializing native level, health, armor and scaled stats. Existing guardian/wild level selection remains unchanged.
 - [x] A creature known to have no template or regional tuning keeps its fixed `minlevel` for everyone.
 
@@ -69,7 +69,9 @@ Client
 
 ## Tests asserting this spec
 
-- `zones_context_tuning_tests.rs`: actual sourced17536 base0/Heroic2 fixture through ordinary spawning (not canonical placements), actual MCNK1221→parent16→CT2 instead of spawn zone9, explicit HoggerCT73, Black Sheep critter, known zero-area and missing-context controls. Genuine map/terrain/error RED3 with2 controls passing at5f894225 becomes strict GREEN5/5 at ef5d7503. Actual authored-marker Yala5/102 and production-order PostStartup ground publication extend the enabled proof to7 cases; affected54/54 pass at33dcb7b6 in177.24s (55 pre-existing ignored cases remain unproved).
+- `achievement_creature_type_tests.rs`: controlled Lesser Voidwalker418 at WoW(3,0), actual MCNK area279→CT11 (7..30), source delta0 yields native30, not cached20; criterion21 retains below/equal/above killer levels29/30/31, group-recipient and persistence controls.
+- `scripted_ai/tests/data_bosses.rs`: Lucifron's real map409 spawn20056605 supports9/18; the fixture selects actual9→CT1004, not unsupported legacy3. Copy-local lifecycle assertions remain unchanged.
+- `zones_context_tuning_tests.rs`: missing actual area refuses unresolved17536 without panic or partial entity, logs its complete source context and still spawns explicit-CT Hogger; actual sourced17536 base0/Heroic2 fixture through ordinary spawning (not canonical placements), actual MCNK1221→parent16→CT2 instead of spawn zone9, explicit HoggerCT73, Black Sheep critter, known zero-area and missing-context controls. Genuine map/terrain/error RED3 with2 controls passing at5f894225 becomes strict GREEN5/5 at ef5d7503. Actual authored-marker Yala5/102 and production-order PostStartup ground publication extend the enabled proof to7 cases; affected54/54 pass at33dcb7b6 in177.24s (55 pre-existing ignored cases remain unproved).
 
 - `scripts/tests/test_import_azerothcore.py`:
   - `LocalExpectedStatExtractTests`;

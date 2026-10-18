@@ -109,7 +109,8 @@ fn cobrahn_with_events(extra_events: Vec<smart_ai::SmartEvent>) -> (Harness, Ent
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("source Cobrahn level context");
     queue.apply(app.world_mut());
     let near = [
         spawn.position_x + 25.0,
