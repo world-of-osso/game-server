@@ -211,6 +211,128 @@ fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_p
     assert!(journal.pets.iter().all(|pet| pet.species_id != 2803));
 }
 
+fn team_cloud_owned_encounter(catalog: &WildCatalog, species: u32) -> Encounter {
+    let (level, ability, slot) = match species {
+        191 => (2, 640, 2),
+        4704 => (10, 2525, 1),
+        _ => panic!("Unexpected sourced team-cloud fixture species"),
+    };
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, species), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, level, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), slot, ability)
+        .unwrap();
+    Encounter::start(catalog, &journal, &states, 378, 1, 1, 1).unwrap()
+}
+
+#[test]
+#[ignore = "Approved640/2525 team-cloud RED; remove only with scoped GREEN"]
+fn wild_pet_battles_team_cloud_toxic_smoke_uses_legal_clockwork_rocket_bot() {
+    let catalog = catalog();
+    let encounter = team_cloud_owned_encounter(&catalog, 191);
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 191);
+    assert_eq!(caller.abilities[1], 640); //Source SlotEnum1 => one-based UI2.
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 191, 3, 3, 2).unwrap()
+    );
+    assert_eq!(caller.stats.power, 21);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(640), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage {
+                amount, periodic, ..
+            } => Some((*periodic, *amount)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, [(false, 32), (true, 10)]);
+    assert_eq!(state.teams[1].pets[0].health, 105);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        encounter.battle.teams[0]
+            .pets
+            .each_ref()
+            .map(|pet| pet.health)
+    );
+    assert_eq!(state.auras.len(), 1);
+    assert_eq!(state.auras[0].ability, 639);
+    assert!(state.auras[0].team_bound);
+    assert_eq!(state.auras[0].remaining, 1);
+    let (state, _) = state
+        .step(&catalog.turns, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap();
+    assert_eq!(state.teams[1].pets[0].health, 95);
+    assert!(state.auras.is_empty());
+}
+
+#[test]
+#[ignore = "Approved640/2525 team-cloud RED; remove only with scoped GREEN"]
+fn wild_pet_battles_team_cloud_alluring_spores_uses_legal_living_rose() {
+    let catalog = catalog();
+    let encounter = team_cloud_owned_encounter(&catalog, 4704);
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 4704);
+    assert_eq!(caller.abilities[0], 2525); //Source SlotEnum0 => one-based UI1.
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 4704, 3, 3, 10).unwrap()
+    );
+    assert_eq!(caller.stats.power, 117);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2525), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage {
+                amount, periodic, ..
+            } => Some((*periodic, *amount)),
+            _ => None,
+        })
+        .collect();
+    //Elemental direct/periodic are both weak versus the sourced Critter Rabbit.
+    assert_eq!(hits, [(false, 59), (true, 32)]);
+    assert_eq!(state.teams[1].pets[0].health, 56);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        encounter.battle.teams[0]
+            .pets
+            .each_ref()
+            .map(|pet| pet.health)
+    );
+    assert_eq!(state.auras.len(), 1);
+    assert_eq!(state.auras[0].ability, 2524);
+    assert!(state.auras[0].team_bound);
+    assert_eq!(state.auras[0].remaining, 1);
+    let (state, _) = state
+        .step(&catalog.turns, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap();
+    assert_eq!(state.teams[1].pets[0].health, 24);
+    assert!(state.auras.is_empty());
+}
+
 #[test]
 #[ignore = "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"]
 fn wild_pet_battles_anvil_drop_uses_legal_alvin_and_two_round_continuation() {
