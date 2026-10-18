@@ -18,6 +18,7 @@ struct SwingProjection<'a> {
     attacker: Attacker<'a>,
     source_scaling: UnitScaling<'a>,
     target_scaling: UnitScaling<'a>,
+    target: Entity,
     chances: melee::MeleeChances,
     target_mods: Option<&'a AuraStatMods>,
     armor: f32,
@@ -60,7 +61,7 @@ fn read_estimate(
             .get::<AutoAttack>(enemy)
             .map_or(0.0, |attack| f64::from(attack.timer.max(0.0))),
         remaining_health: f64::from(tank_level_health),
-        valid_until: None,
+        valid_until: read_stat_deadline(world, projection),
         level: world
             .get::<shared::components::UnitLevel>(enemy)
             .ok_or("source creature lacks native level")?
@@ -196,6 +197,7 @@ fn read_swing_projection(
         attacker,
         source_scaling,
         target_scaling,
+        target: tank,
         chances,
         target_mods: world.get::<AuraStatMods>(tank),
         armor,
@@ -292,6 +294,16 @@ fn largest_damage(world: &World, projection: &SwingProjection, base: f32) -> f64
         .into_iter()
         .map(|(outcome, _)| outcome_health_loss(projection, damage, outcome))
         .fold(0.0, f64::max)
+}
+
+fn read_stat_deadline(world: &World, projection: &SwingProjection) -> Option<f64> {
+    [projection.attacker.entity, projection.target]
+        .into_iter()
+        .filter_map(|unit| {
+            let auras = world.get::<crate::auras::ActiveAuras>(unit)?;
+            crate::auras::forecast::first_melee_stat_expiry(unit, auras)
+        })
+        .min_by(f64::total_cmp)
 }
 
 fn validate_estimate(estimate: MeleeEstimate) -> Result<MeleeEstimate, String> {
