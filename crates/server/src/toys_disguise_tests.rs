@@ -1,4 +1,5 @@
 //! Source111–113,178–179,201,234,240,317,322,387,402,450,540,542,548,553,573,638,644 and690: transforms and recovery.
+//! Source684/685/697/702/710: bounded shared2513 use/refusal, not one-hour expiry proof.
 use super::*;
 
 const TEN_MINUTES_MS: u32 = 600_000;
@@ -312,6 +313,121 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             activate(&mut h, item)[0].error.as_deref(),
             Some("OnCooldown"),
             "item{item} recovery outlives its appearance"
+        );
+    }
+}
+
+#[test]
+fn toyfx_shared_transform_category_learned_use_preserves_hour_aura_and_blocks_sibling() {
+    use shared::components::{Health, ModelDisplay};
+    const AURA_DURATION_MS: u32 = 3_600_000;
+    const CATEGORY_RECOVERY_MS: u32 = 600_000;
+    const CATEGORY: u32 = 2513;
+    // Item, spell, creature, display pool, learned sibling sharing category2513.
+    const CASES: &[(u32, u32, i32, &[u32], u32)] = &[
+        (
+            268717,
+            1283490,
+            260345,
+            [143136, 143137, 143138, 143139, 143140].as_slice(),
+            268728,
+        ),
+        (
+            268728,
+            1283502,
+            260346,
+            [136118, 122805, 122804, 122803, 122802, 122801].as_slice(),
+            276207,
+        ),
+        (276207, 1298957, 267626, [145134].as_slice(), 276925),
+        (
+            276925,
+            1301489,
+            268496,
+            [145498, 145499, 145500, 145503, 145504].as_slice(),
+            280419,
+        ),
+        (
+            280419,
+            1308693,
+            271558,
+            [145838, 145885, 146680, 145886, 142345].as_slice(),
+            268717,
+        ),
+    ];
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for &(item, spell, entry, displays, sibling) in CASES {
+        let (mut h, character) = setup(&directory.path().join(format!("category2513-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
+        h.app.insert_resource(spells.clone());
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+        let caster = h.caster;
+        let health = *h.app.world().get::<Health>(caster).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        learn_effect_toy(&mut h, character, sibling);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item{item}");
+        h.advance(20); // Includes Masquerade's authored600ms cast, not its one-hour expiry.
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item{item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item{item}"
+        );
+        let transformed = *h.app.world().get::<ModelDisplay>(caster).unwrap();
+        assert!(displays.contains(&transformed.display_id), "item{item}");
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, AURA_DURATION_MS, "item{item}");
+        assert_eq!(aura.effects[0].misc_values, [entry, 8], "item{item}");
+        let expiry = aura.expires_at.unwrap();
+        let recovery = h
+            .inbox
+            .cooldowns
+            .iter()
+            .find(|update| {
+                update.spell_id == spell && update.category == CATEGORY && !update.is_gcd
+            })
+            .unwrap();
+        assert_eq!(recovery.duration_ms, CATEGORY_RECOVERY_MS, "item{item}");
+        let cast_count = h.inbox.go.len();
+        assert_eq!(
+            activate(&mut h, sibling)[0].error.as_deref(),
+            Some("OnCooldown"),
+            "item{item} blocks learned sibling{sibling}"
+        );
+        assert_eq!(h.inbox.go.len(), cast_count, "sibling{sibling}");
+        assert_eq!(
+            h.app.world().get::<ModelDisplay>(caster),
+            Some(&transformed)
+        );
+        assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(caster)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == spell)
+                .unwrap()
+                .expires_at,
+            Some(expiry),
+            "sibling rejection does not refresh item{item}"
         );
     }
 }
