@@ -1598,7 +1598,7 @@ fn check_ordinary_caster_life(
 
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
-fn validate_start(
+pub(crate) fn validate_start(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
