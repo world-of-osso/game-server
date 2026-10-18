@@ -48,6 +48,7 @@ pub const EFFECT_SCHOOL_DAMAGE: u32 = 2;
 pub const EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT: u32 = 165;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
+pub const EFFECT_POWER_DRAIN: u32 = 8;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
@@ -99,6 +100,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,
         87 => crate::pvp::isle_siege::effect_damage,
+        EFFECT_POWER_DRAIN => power_drain,
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
@@ -114,9 +116,10 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
+        EFFECT_TRIGGER_SPELL => super::queued_triggers::schedule,
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
-        // missile's spell hits the unit target, like TRIGGER_SPELL.
-        EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
+        // missile's spell hits the unit target synchronously.
+        EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_SEND_EVENT => send_game_event,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
@@ -931,15 +934,15 @@ pub(crate) fn deal_effect_damage(
     deal_damage_and_report(world, ctx, target, damage);
 }
 
-struct DamageInput<'a> {
-    amount: f32,
-    crit: bool,
-    periodic: bool,
-    resolved_source: bool,
+pub(super) struct DamageInput<'a> {
+    pub(super) amount: f32,
+    pub(super) crit: bool,
+    pub(super) periodic: bool,
+    pub(super) resolved_source: bool,
     /// Authored effect for native damage; script/copy amounts carry no effect selector.
-    effect: Option<&'a SpellEffect>,
+    pub(super) effect: Option<&'a SpellEffect>,
     /// DAMAGE_SHIELD attributes damage to its owner but bonuses to its aura caster.
-    bonus_caster: Entity,
+    pub(super) bonus_caster: Entity,
 }
 
 /// TC Unit::DealMeleeDamage: shield owner damages the attacker; the original
@@ -1100,30 +1103,23 @@ fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
         || super::attributes(spell, 6) & IGNORE_CASTER_MODIFIERS != 0
 }
 
-fn deal_damage_and_report(
-    world: &mut World,
+/// Numeric source amount before rounding, armor, absorbs, transfer or health scaling.
+/// Callers retain their own spell's downstream resolution and native attributes.
+pub(super) fn damage_before_mitigation(
+    world: &World,
     ctx: &EffectCtx,
     target: Entity,
-    damage: DamageInput,
+    damage: &DamageInput,
 ) -> f32 {
-    let DamageInput {
+    let &DamageInput {
         amount,
-        crit,
         periodic,
         resolved_source,
         effect,
         bonus_caster,
+        ..
     } = damage;
-    if !super::targets::is_alive(world, target) {
-        return 0.0;
-    }
     let school = ctx.spell.school_mask();
-    if crate::auras::is_immune(world, target, school) {
-        let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
-        event.periodic = periodic;
-        log_event(world, event);
-        return 0.0;
-    }
     let amount = if resolved_source {
         amount
     } else {
@@ -1148,14 +1144,39 @@ fn deal_damage_and_report(
         caster: bonus_caster,
         ..*ctx
     };
-    let amount = (if resolved_source {
+    (if resolved_source {
         amount
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
     } * done
         * taken)
         .max(0.0)
-        .round();
+}
+
+fn deal_damage_and_report(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: DamageInput,
+) -> f32 {
+    let DamageInput {
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+        ..
+    } = damage;
+    if !super::targets::is_alive(world, target) {
+        return 0.0;
+    }
+    let school = ctx.spell.school_mask();
+    if crate::auras::is_immune(world, target, school) {
+        let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
+        event.periodic = periodic;
+        log_event(world, event);
+        return 0.0;
+    }
+    let amount = damage_before_mitigation(world, ctx, target, &damage).round();
     let amount = if periodic {
         amount
     } else {
@@ -1304,6 +1325,9 @@ fn push_damage_event(
 }
 
 fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
+    world
+        .entity_mut(target)
+        .insert(crate::combat::KillingBlow(Some(killer)));
     if world.get::<Npc>(target).is_some() {
         crate::combat::mark_npc_dead_world(world, target);
     } else {
@@ -1412,6 +1436,7 @@ fn apply_resolved_heal(
     log_event(world, event);
     if !periodic {
         super::scripts::heal_beacon(world, ctx, target, effective);
+        super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
     if periodic {
         procs::push_event(
@@ -1428,6 +1453,175 @@ fn apply_resolved_heal(
                 reflected: false,
             },
         );
+    }
+}
+
+/// TC a352b1fa EffectPowerDrain: primary power only, no health/crit/absorb path.
+fn power_drain(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
+        return;
+    };
+    let primary = world
+        .get::<super::powers::PowerPools>(target)
+        .and_then(|pools| pools.order.first());
+    if primary != Some(&power) || !super::targets::is_alive(world, target) {
+        return;
+    }
+    let variance = roll_power_drain_variance(effect.variance);
+    let amount = match power_drain_amount(world, ctx, effect, target, variance) {
+        Ok(Some(amount)) => amount,
+        Ok(None) => return,
+        Err(failure) => {
+            error!("Spell {} power drain failed: {failure:?}", ctx.spell.id);
+            return;
+        }
+    };
+    drain_and_credit_power(world, ctx, effect, target, power, amount);
+}
+
+fn drain_and_credit_power(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    power: PowerType,
+    amount: f32,
+) {
+    let Some(change) = super::powers::change_power(world, target, power, -amount) else {
+        debug!("Spell {}: drain target has no {power:?} pool", ctx.spell.id);
+        return;
+    };
+    mark_dirty(world, target);
+    if ctx.caster != target {
+        let multiplier = spell_mods::modify(
+            world,
+            ctx.caster,
+            ctx.spell,
+            SpellModOp::Amplitude,
+            effect.amplitude,
+        );
+        let credit = (-change * multiplier).trunc();
+        energize_unit(world, ctx, ctx.caster, power, credit, false);
+    }
+}
+
+fn power_drain_amount(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    variance: f32,
+) -> Result<Option<f32>, super::CastFailure> {
+    let base_points = power_drain_base_points(world, ctx.caster, ctx.spell, effect)?;
+    // CalcValue applies this same roll before points modifiers and integer rounding.
+    let rolled_points = base_points + base_points * variance;
+    let base = modify_base_points(world, ctx.caster, ctx.spell, effect, rolled_points).round();
+    if base < 0.0 {
+        return Ok(None);
+    }
+    let done = power_drain_bonus_done(world, ctx, effect, target, base);
+    let varied = done + (done * variance).trunc();
+    let taken = crate::auras::damage_taken_multiplier(world, target, ctx.caster, ctx.spell);
+    Ok(Some((varied * taken).max(0.0).trunc()))
+}
+
+/// Validate before target planning/payment on every ordinary and triggered entry.
+pub(super) fn check_power_drain_inputs(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), super::CastFailure> {
+    for effect in spell
+        .effects
+        .iter()
+        .filter(|effect| effect.effect == EFFECT_POWER_DRAIN)
+    {
+        power_drain_base_points(world, caster, spell, effect)?;
+    }
+    Ok(())
+}
+
+/// TC CalcBaseValue's effect8 ExpectedStat branch; no guessed caster level/raw base.
+fn power_drain_base_points(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+) -> Result<f32, super::CastFailure> {
+    let level = world
+        .get::<shared::components::UnitLevel>(caster)
+        .ok_or_else(|| {
+            super::CastFailure::Unsupported(format!(
+                "Spell {} effect8 caster UnitLevel is missing",
+                spell.id
+            ))
+        })?
+        .0;
+    if effect.coefficient != 0.0 {
+        return Ok(calc_base_value(world, caster, spell, effect));
+    }
+    let expected = read_power_drain_expected_stat(world, spell, level)?;
+    let value = expected * effect.base_points / 100.0;
+    let use_float =
+        super::attributes(spell, 12) & SPELL_ATTR12_USE_FLOAT_VALUES_FOR_SCALING_AMOUNTS != 0;
+    Ok(if use_float { value } else { value.round() })
+}
+
+fn read_power_drain_expected_stat(
+    world: &World,
+    spell: &SpellInfo,
+    level: u8,
+) -> Result<f32, super::CastFailure> {
+    let stats = world
+        .get_resource::<crate::level_scaling::CreatureSpellStats>()
+        .ok_or_else(|| {
+            super::CastFailure::Unsupported(format!(
+                "Spell {} effect8 requires expected_stat data",
+                spell.id
+            ))
+        })?;
+    let tuning = spell.misc.as_ref().map_or(0, |misc| misc.content_tuning_id);
+    let auto_attack = super::attributes(spell, 0) & SPELL_ATTR0_SCALES_WITH_CREATURE_LEVEL != 0;
+    Ok(if auto_attack {
+        stats.evaluate(true, level, tuning)
+    } else {
+        stats.player_mana(level, tuning)
+    })
+}
+
+fn power_drain_bonus_done(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+    base: f32,
+) -> f32 {
+    const ATTR3_IGNORE_CASTER_MODIFIERS: u32 = 0x2000_0000;
+    if super::attributes(ctx.spell, 3) & ATTR3_IGNORE_CASTER_MODIFIERS != 0 {
+        return base;
+    }
+    let multiplier = if ignores_caster_damage_modifiers(ctx.spell) {
+        1.0
+    } else {
+        stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.damage_done(ctx.spell.school_mask()))
+            * versatility_multiplier(world, ctx.caster)
+            * crate::auras::summon_damage::multiplier(world, ctx.caster)
+            * creature_type_damage_multiplier(world, ctx.caster, target, ctx.spell)
+            * mechanic_damage_multiplier(world, ctx.caster, ctx.spell, Some(effect))
+    };
+    let bonus = effect_power_bonus(world, ctx.caster, ctx.spell, effect).trunc();
+    modded_amount(world, ctx, (base + bonus) * multiplier, false)
+        .max(0.0)
+        .trunc()
+}
+
+/// Draw once; CalcValue and EffectPowerDrain both consume this signed variance.
+fn roll_power_drain_variance(variance: f32) -> f32 {
+    let half_variance = (variance * 0.5).abs();
+    if half_variance == 0.0 {
+        0.0
+    } else {
+        rand::Rng::gen_range(&mut rand::thread_rng(), -half_variance..=half_variance)
     }
 }
 
@@ -1495,7 +1689,6 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
     );
 }
 
-/// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
 /// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
 /// the existing HIT_TARGET handler: forward destination, retaining child costs.
 pub(super) fn trigger_missile_at_destination(
@@ -1743,4 +1936,45 @@ fn relocate_unit(world: &mut World, target: Entity, position: Vec3, orientation:
 fn modify_charges(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let count = effect.base_points.round().clamp(0.0, f32::from(u8::MAX)) as u8;
     super::restore_charges(world, target, effect.misc_values[0] as u32, count);
+}
+
+#[cfg(test)]
+mod power_drain_amount_tests {
+    use super::*;
+    use crate::spell_cast::{power_drain_tests, test_harness::world_db};
+
+    #[test]
+    fn native_power_drain_frost_breath_reuses_the_same_signed_variance_in_both_stages() {
+        let (h, target) = power_drain_tests::fixture(8);
+        let spell = world_db().unwrap().store.get(16094).unwrap();
+        let effect = spell
+            .effects
+            .iter()
+            .find(|effect| effect.index == 1)
+            .unwrap();
+        let ctx = EffectCtx {
+            caster: h.caster,
+            spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        assert_eq!(
+            power_drain_base_points(h.app.world(), h.caster, spell, effect),
+            Ok(284.0)
+        );
+        // Read-only amount calculation at native range endpoints; no RNG seed or
+        // imported variance is changed. Actual cast coverage uses the real roll.
+        let half_variance = effect.variance * 0.5;
+        for (variance, expected) in [
+            (-half_variance, 290.0),
+            (0.0, 384.0),
+            (half_variance, 491.0),
+        ] {
+            assert_eq!(
+                power_drain_amount(h.app.world(), &ctx, effect, target, variance),
+                Ok(Some(expected)),
+            );
+        }
+    }
 }

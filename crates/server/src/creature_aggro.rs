@@ -203,6 +203,7 @@ fn aggro_on_sight_system(
     attack_distance: AggroDistance,
     bodies: Query<crate::line_of_sight::BodyParts>,
     los: Option<Res<crate::line_of_sight::LineOfSight>>,
+    time: Res<Time>,
     mut commands: Commands,
 ) {
     let players: Vec<(Entity, Position, InMap)> = players
@@ -264,6 +265,7 @@ fn aggro_on_sight_system(
                 creature_position = ?position,
                 target_position = ?players.iter().find(|(unit, ..)| *unit == player).map(|(_, position, _)| position),
                 center_distance,
+                simulation_secs = time.elapsed_secs_f64(),
                 "player proximity acquisition"
             );
             commands.queue(move |world: &mut World| attack_start(world, creature, player));

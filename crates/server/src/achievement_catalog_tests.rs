@@ -484,7 +484,10 @@ fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
         let mut state = PlayerAchievementState::default();
         catalog.update_at(
             &mut state,
-            CriteriaEvent::KillAnyCreature(kind),
+            CriteriaEvent::KillAnyCreature {
+                creature_type: kind,
+                level: None,
+            },
             None,
             1,
             &conditions,
@@ -508,6 +511,59 @@ fn achievements_criteria_killed_creature_type_requires_actual_known_victim() {
                 .is_none()
         );
     }
+}
+
+#[test]
+fn achievements_criteria_demon_level21_requires_live_level_and_every_companion() {
+    let catalog = catalog();
+    for (kind, level, expected) in [
+        (Some(3), None, false),
+        (Some(3), Some(19), true),
+        (Some(3), Some(20), true),
+        (Some(3), Some(21), false),
+        (None, Some(19), false),
+        (Some(7), Some(19), false),
+    ] {
+        let mut state = PlayerAchievementState::default();
+        let event = CriteriaEvent::KillAnyCreature {
+            creature_type: kind,
+            level,
+        };
+        let conditions = PlayerConditions {
+            player: Some(ReferencePlayer {
+                level: 20,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(
+            catalog
+                .update_at(&mut state, event, None, 1, &conditions)
+                .is_empty(),
+            "a statistic cannot grant an achievement"
+        );
+        assert_eq!(state.criteria_progress.get(&4944), Some(&1));
+        assert_eq!(
+            state.criteria_progress.get(&4949),
+            (kind == Some(3)).then_some(&1)
+        );
+        assert_eq!(state.criteria_progress.get(&107647), expected.then_some(&1));
+        let mut unknown_actor = PlayerAchievementState::default();
+        catalog.update_at(
+            &mut unknown_actor,
+            event,
+            None,
+            1,
+            &PlayerConditions::default(),
+        );
+        assert!(!unknown_actor.criteria_progress.contains_key(&107647));
+    }
+    let conn = Connection::open_in_memory().unwrap();
+    assert!(
+        load_criteria_facts(&conn, &[(21, 1)], &HashMap::new())
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[test]
@@ -1941,6 +1997,7 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let (character, _) = crate::persistence::create_character(&db, 17, "Indexed", 1, 1).unwrap();
+    let db = crate::persistence::GameDatabase::new(db);
     let boundary = AccountUpdate {
         account: 17,
         character,
@@ -1973,8 +2030,9 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
         snapshot.progress.len() > 5000,
         "full account+character snapshot required"
     );
+    crate::test_data::drain_persistence(&db);
     assert_eq!(
-        crate::persistence::load_achievements(&db, character).earned_at[&6],
+        crate::persistence::load_achievements(&db.db, character).earned_at[&6],
         boundary.now
     );
     EVALUATION_WORK.with(|work| work.set((0, 0)));
@@ -1986,7 +2044,8 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
     assert!(sync_account_progress(&db, &mut state, &catalog, boundary).is_empty());
     assert_eq!(catalog.snapshot(&state, 1), snapshot);
     assert_eq!(EVALUATION_WORK.with(|work| work.get()), (0, 0));
-    let mut reopened = crate::persistence::load_achievements(&db, character);
+    crate::test_data::drain_persistence(&db);
+    let mut reopened = crate::persistence::load_achievements(&db.db, character);
     assert!(sync_account_progress(&db, &mut reopened, &catalog, boundary).is_empty());
     assert_eq!(catalog.snapshot(&reopened, 1), snapshot);
 }

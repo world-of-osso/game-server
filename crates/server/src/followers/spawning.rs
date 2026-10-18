@@ -59,7 +59,30 @@ pub(super) fn initialize(
         world.get::<UnitFlags>(unit).map_or(0, |flags| flags.0)
             | crate::faction::UNIT_FLAG_PLAYER_CONTROLLED,
     );
-    let (stats, pools, passives) = class_stats(world, &profile, level)?;
+    let (stats, pools, mut passives) = class_stats(world, &profile, level)?;
+    if let Some(catalog) = world.get_resource::<super::FollowerCatalog>() {
+        passives.extend(
+            catalog
+                .kits
+                .iter()
+                .filter(|entry| {
+                    entry.available(profile.spec_id, level)
+                        && entry.slot == super::kit::Slot::Passive
+                })
+                .map(|entry| entry.spell_id),
+        );
+        passives.sort_unstable();
+        passives.dedup();
+    }
+    let kit_spec = world
+        .get_resource::<super::FollowerCatalog>()
+        .filter(|catalog| {
+            catalog
+                .kits
+                .iter()
+                .any(|entry| entry.spec_id == profile.spec_id)
+        })
+        .map(|_| profile.spec_id);
     let armor = derive_creature_armor(world, unit, profile.entry, level)?;
     let mana = Mana {
         current: stats.base_mana,
@@ -91,6 +114,13 @@ pub(super) fn initialize(
             UnitSummonedBy(owner.to_bits()),
             crate::creature_ai::FollowOwner::new(owner),
         ));
+    if let Some(spec) = kit_spec {
+        // Native spell scripts read this literal field (e.g. Demonology's
+        // Shadow Bolt generator); the follower remains an NPC, never a Player.
+        world
+            .entity_mut(unit)
+            .insert(shared::components::ActiveSpec(spec));
+    }
     crate::auras::sync_passives(world, unit, crate::auras::AuraSource::KnownSpell, &passives);
     if form != 0 {
         crate::spell_cast::creature_cast(world, unit, form, Some(unit), true)

@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "azure_absolute_zero.rs"]
+mod azure_absolute_zero;
 #[path = "azure_combat.rs"]
 mod azure_combat;
 #[path = "azure_explosive_brand.rs"]
@@ -13,6 +15,12 @@ mod azure_intro;
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
 mod azure_mechanic_power;
+#[path = "azure_sprout_death.rs"]
+mod azure_sprout_death;
+#[path = "azure_sprout_field_actions.rs"]
+mod azure_sprout_field_actions;
+#[path = "azure_sprout_fields.rs"]
+mod azure_sprout_fields;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
@@ -21,6 +29,8 @@ mod azure_telash;
 mod celebras;
 #[path = "gargolmar.rs"]
 mod gargolmar;
+#[path = "gargolmar_speech.rs"]
+mod gargolmar_speech;
 #[path = "gizlock.rs"]
 mod gizlock;
 #[path = "gnomeregan.rs"]
@@ -35,6 +45,10 @@ mod maraudon;
 mod noxxion;
 #[path = "omor.rs"]
 mod omor;
+#[path = "omor_pushback.rs"]
+mod omor_pushback;
+#[path = "omor_slay.rs"]
+mod omor_slay;
 #[path = "theradras.rs"]
 mod theradras;
 #[path = "vyletongue.rs"]
@@ -70,7 +84,9 @@ fn bound_boss_with_catalog(
     bit: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
-    let difficulty = if map_id == 409 { 3 } else { 1 };
+    // Source Lucifron spawn20056605 supports9/18; map409 difficulty9 supplies CT1004.
+    // Legacy difficulty3 has no installed MapDifficulty row and is not that spawn's context.
+    let difficulty = if map_id == 409 { 9 } else { 1 };
     bound_boss_at_difficulty(entry, map_id, bit, difficulty, catalog)
 }
 
@@ -255,6 +271,7 @@ fn encounter_fixture(
         12201 => Some(prepare_encounter_database("theradras")),
         17306 => Some(prepare_encounter_database("gargolmar")),
         17308 => Some(prepare_encounter_database("omor")),
+        186737 => Some(prepare_encounter_database("telash")),
         _ => None,
     };
     let path = prepared
@@ -264,6 +281,7 @@ fn encounter_fixture(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
+    app.insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&conn).unwrap());
     app.insert_resource(
         super::super::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap(),
     );
@@ -301,6 +319,7 @@ fn encounter_fixture(
             || (entry == 12201 && *id == 12238)
             || (entry == 17306 && *id == 17309)
             || (entry == 17308 && *id == 17540)
+            || (entry == 186737 && *id == 197204)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -450,6 +469,7 @@ fn encounter_fixture(
             app.world().resource::<WorldData>(),
             content,
             false,
+            Some(&mut crate::test_data::ground_map()),
         );
         // Object spawns and their lock sidecar are unchanged by the template import.
         let canonical =
@@ -527,11 +547,17 @@ fn spawn_authored_actor(
         wd,
         wd.template_for(entry, difficulty)
             .expect("authored fixture difficulty"),
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: difficulty,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("authored actor level context");
     commands
         .entity(actor)
         .insert(crate::zones::CreatureDifficulty(difficulty));
@@ -1690,18 +1716,29 @@ fn encounter_coverage_koranthal_uses_source_combat_schedule_and_storm_damage() {
             .iter()
             .any(|chat| chat.content.contains("Shadow Storm"))
     );
-    let before = h.health(h.player()).current;
     h.advance(3.2);
+    assert_eq!(
+        koranthal_storm_damage_count(&h, boss, player),
+        0,
+        "first3s periodic tick launches the missile; its authored5s flight has not landed"
+    );
+    let before = h.health(player).current;
+    h.advance(5.0);
     assert!(
-        h.health(h.player()).current < before,
-        "119973 dummy ->119965 missile -> actual storm damage"
+        koranthal_storm_damage_count(&h, boss, player) > 0,
+        "119973 dummy ->119965 five-second missile -> actual119964 damage"
+    );
+    assert!(
+        h.health(player).current < before,
+        "actual storm health loss"
     );
     assert_eq!(
         h.casts(0, boss, 119300),
         2,
         "Storm reschedules, no Twisted at20.6s"
     );
-    h.advance(12.3);
+    // The extra5s impact observation must not shift the36.2/67.7 source-clock guards.
+    h.advance(7.3);
     assert_eq!(casting(&h), None);
     h.advance(0.2);
     assert_eq!(casting(&h), Some(119300), "rescheduled to36.2s");
@@ -1724,20 +1761,41 @@ fn encounter_coverage_koranthal_shadow_storm_dummy_launches_authored_damage() {
         x: position.x + 3.0,
         ..position
     });
-    let before = h.health(target).current;
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 119973, None, true)
         .expect("real119973 source-area-enemy dummy");
-    h.advance(1.0);
-    assert!(h.health(target).current < before);
-    assert!(
-        h.inbox(0).log.iter().any(|event| {
-            event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(119964)
-                && event.source == Some(boss.to_bits())
-                && event.target == Some(target.to_bits())
-        }),
-        "effect value119965 triggers actual119964 damage on the selected enemy"
+    // Native119965 Speed5/Attr9 speed-as-delay; TC Spell.cpp:880–896 gives5000ms.
+    h.advance(4.95);
+    assert_eq!(
+        koranthal_storm_damage_count(&h, boss, target),
+        0,
+        "no119964 damage before the authored5s destination flight"
     );
+    let before = h.health(target).current;
+    h.advance(0.1);
+    assert_eq!(
+        koranthal_storm_damage_count(&h, boss, target),
+        1,
+        "one actual119964 hit at5s, within one50ms fixture frame"
+    );
+    assert!(
+        h.health(target).current < before,
+        "actual child health loss, not unrelated earlier melee damage"
+    );
+}
+
+/// Recipient-owned positive119964 hits, not generic HP loss from melee or other spells.
+fn koranthal_storm_damage_count(h: &Harness, boss: Entity, target: Entity) -> usize {
+    h.inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            let authored_hit =
+                event.kind == CombatLogKind::Damage && event.spell_id == Some(119964);
+            let owned_hit =
+                event.source == Some(boss.to_bits()) && event.target == Some(target.to_bits());
+            authored_hit && owned_hit && event.amount > 0
+        })
+        .count()
 }
 
 #[test]
@@ -5055,9 +5113,9 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
     for (entry, map_id, bit, encounter) in [(6910, 70, 0, 547), (12118, 409, 0, 663)] {
         let (mut h, boss, map) = bound_boss(entry, map_id, bit);
         let database_file = tempfile::NamedTempFile::new().unwrap();
-        h.app.insert_resource(crate::persistence::GameDatabase {
-            db: redb::Database::create(database_file.path()).unwrap(),
-        });
+        h.app.insert_resource(crate::persistence::GameDatabase::new(
+            redb::Database::create(database_file.path()).unwrap(),
+        ));
         h.engage(boss);
         h.advance(0.05);
         assert_eq!(
@@ -5174,7 +5232,7 @@ fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     h.app
-        .insert_resource(crate::persistence::GameDatabase { db });
+        .insert_resource(crate::persistence::GameDatabase::new(db));
     let player = h.player();
     let character = h
         .app
@@ -5278,9 +5336,9 @@ fn assert_copy_difficulty_credit(
     h.app
         .insert_resource(crate::test_data::achievement_catalog());
     let database_file = tempfile::NamedTempFile::new().unwrap();
-    h.app.insert_resource(crate::persistence::GameDatabase {
-        db: redb::Database::create(database_file.path()).unwrap(),
-    });
+    h.app.insert_resource(crate::persistence::GameDatabase::new(
+        redb::Database::create(database_file.path()).unwrap(),
+    ));
     crate::persistence::create_tables(
         &h.app
             .world()

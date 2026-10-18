@@ -4,7 +4,7 @@ use shared::components::{
     CreatureClassification, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
     SheathState, StandState,
 };
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -190,6 +190,8 @@ pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 #[derive(Resource, Clone, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
+    /// Actual zephras_row_source reconstructed template markers select authored fixed stats.
+    pub(crate) authored_templates: HashSet<u32>,
     pub(crate) summon_levels: summon_levels::SummonLevels,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
     /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
@@ -265,6 +267,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
         .expect("Failed to open world.db");
 
     let expected_stats = load_expected_stats(&conn);
+    let authored_templates = load_authored_template_ids(&conn)
+        .expect("Failed to load authored template provenance from zephras_row_source");
     let summon_levels = summon_levels::SummonLevels::load(&conn)
         .expect("Failed to load temporary guardian level inputs");
     let mut templates = load_templates(&conn, &expected_stats);
@@ -305,6 +309,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
 
     WorldData {
         templates,
+        authored_templates,
         summon_levels,
         difficulty_templates,
         spawns,
@@ -325,6 +330,16 @@ pub fn load_world_data(path: &Path) -> WorldData {
         spawn_string_ids,
         script_spawn_groups,
     }
+}
+
+/// Authored source selection is recorded by the overlay importer, never inferred from stats.
+pub(crate) fn load_authored_template_ids(conn: &Connection) -> rusqlite::Result<HashSet<u32>> {
+    conn.prepare(
+        "SELECT json_extract(row_key, '$.entry') FROM zephras_row_source
+        WHERE table_name='content_creature_template' AND kind='reconstructed'",
+    )?
+    .query_map([], |row| row.get(0))?
+    .collect()
 }
 
 /// `import_instance_population.OFFSET`: content guid of a TDB creature row.
@@ -438,14 +453,14 @@ pub(crate) fn load_expected_stats(conn: &Connection) -> ExpectedStats {
     stats
 }
 
-/// expected_stat CreatureSpellDamage and CreatureAutoAttackDps (a later ID replaces
+/// expected_stat spell damage, auto-attack DPS and PlayerMana (a later ID replaces
 /// an earlier one, as `_expectedStatsByLevel`).
 pub(crate) fn load_creature_spell_stats(
     conn: &Connection,
 ) -> crate::level_scaling::CreatureSpellStats {
     let mut stmt = conn
         .prepare(
-            "SELECT Lvl, ExpansionID, CreatureSpellDamage, CreatureAutoAttackDps
+            "SELECT Lvl, ExpansionID, CreatureSpellDamage, CreatureAutoAttackDps, PlayerMana
              FROM expected_stat ORDER BY ID",
         )
         .expect("Failed to prepare expected_stat spell query");
@@ -454,12 +469,16 @@ pub(crate) fn load_creature_spell_stats(
             Ok((
                 (row.get::<_, i64>(0)? as u8, row.get::<_, i64>(1)? as i32),
                 (row.get::<_, f64>(2)? as f32, row.get::<_, f64>(3)? as f32),
+                row.get::<_, f64>(4)? as f32,
             ))
         })
         .expect("Failed to query expected_stat");
-    let by_level = rows
-        .map(|row| row.expect("Failed to read expected_stat row"))
-        .collect();
+    let (by_level, player_mana_by_level) = rows
+        .map(|row| {
+            let (key, damage, mana) = row.expect("Failed to read expected_stat row");
+            ((key, damage), (key, mana))
+        })
+        .unzip();
     let mut stmt = conn
         .prepare("SELECT ID, ExpansionID FROM content_tuning")
         .expect("Failed to prepare content_tuning query");
@@ -472,6 +491,7 @@ pub(crate) fn load_creature_spell_stats(
         .collect();
     crate::level_scaling::CreatureSpellStats {
         by_level,
+        player_mana_by_level,
         tuning_expansion,
     }
 }
@@ -1121,6 +1141,10 @@ fn startup_load_world_data(mut commands: Commands) {
             .expect("Failed to load authored Molten Gold area12928 from local TDB"),
     );
     commands.insert_resource(
+        crate::spell_cast::area_trigger::load_aura_field_catalog(&conn)
+            .expect("Failed to load source aura395 area-trigger properties/actions/Curve inputs"),
+    );
+    commands.insert_resource(
         crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).expect(
             "Failed to load Gust Slash area13339 and its orbit; run scripts/import-battlegrounds.py",
         ),
@@ -1163,6 +1187,10 @@ fn startup_load_world_data(mut commands: Commands) {
     commands.insert_resource(crate::pvp::arena_cage::Catalog::load(&conn).expect(
         "Load Cage of Carnage entrance areatrigger actions; run scripts/import-battlegrounds.py",
     ));
+    commands.insert_resource(
+        crate::pvp::random_bg::Catalog::load(&conn)
+            .expect("Load configured Random32 battleground templates"),
+    );
     commands.insert_resource(
         crate::pvp::arena::Catalog::load(&conn)
             .expect("Load source-backed arena maps; run scripts/import-arenas.py before startup"),

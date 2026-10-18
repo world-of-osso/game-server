@@ -68,7 +68,44 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
         .unwrap()
         .send::<InstanceChannel>(command);
     let mut replies = Vec::new();
-    for _ in 0..10 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while replies.is_empty() && std::time::Instant::now() < deadline {
+        h.app.update();
+        replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+        std::thread::yield_now();
+    }
+    // Host routing fills receivers after First; let the collection inbox consume
+    // the same committed reply before callers inspect both message types.
+    h.app.update();
+    replies.pop().expect("Trading Post server reply")
+}
+
+#[test]
+fn trading_post_query_never_waits_for_a_busy_durable_writer() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderqueue").unwrap();
+    prepare(&mut h, 1790812900);
+    assert_eq!(request(&mut h, TradingPostRequest::Balance).tender, 0);
+    let held = h.db().begin_write().unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
+    let release = std::thread::spawn(move || {
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
+        held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
+    });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(TradingPostRequest::Balance);
+    let mut replies = Vec::new();
+    for _ in 0..4 {
         h.app.update();
         replies.extend(
             h.app
@@ -78,7 +115,85 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
                 .receive(),
         );
     }
-    replies.pop().expect("Trading Post server reply")
+    assert!(
+        !release.is_finished(),
+        "Trading Post tick must return while writer is held"
+    );
+    let replies_before_commit = replies.len();
+    release_writer.send(()).unwrap();
+    release.join().unwrap();
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while replies.is_empty() && std::time::Instant::now() < deadline {
+        h.app.update();
+        replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+        std::thread::yield_now();
+    }
+    assert_eq!(
+        replies_before_commit, 0,
+        "no reply before settlement and request commit"
+    );
+    assert_eq!(replies.len(), 1);
+    assert!(replies[0].error.is_none());
+    assert_eq!(replies[0].tender, 0);
+}
+
+#[test]
+fn trading_post_same_tick_earned_tender_funds_purchase_in_fifo_order() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Tenderorder").unwrap();
+    prepare(&mut h, 1790812900);
+    open_tawny(&mut h);
+    assert_eq!(request(&mut h, TradingPostRequest::Balance).tender, 0);
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    for asset in [117491, 117490, 117489, 213134] {
+        let creature = h
+            .app
+            .world_mut()
+            .spawn((
+                Npc {
+                    template_id: asset,
+                    name: String::new(),
+                },
+                crate::maps::InMap::continent(0),
+            ))
+            .id();
+        crate::achievement::record_creature_death(h.app.world_mut(), creature, Some(h.player));
+    }
+    // No App update separates the real earned credit from this purchase request.
+    let purchased = request(&mut h, TradingPostRequest::Purchase { vendor_item_id: 4 });
+    release.join().unwrap();
+    assert!(purchased.error.is_none(), "{:?}", purchased.error);
+    assert!(purchased.points >= 200);
+    assert_eq!(
+        purchased.tender, 0,
+        "the purchase spends the newly earned100 Tender"
+    );
+    let row = purchased.items.iter().find(|row| row.id == 4).unwrap();
+    assert!(row.purchased && row.collected);
+    let committed = store::load(h.db(), ACCOUNT);
+    assert_eq!(committed.tender, 0);
+    assert!(committed.claimed.contains(&1));
+    assert!(committed.purchases.contains_key(&4));
+    assert!(
+        crate::persistence::appearance_store::load_account_appearances(h.db(), ACCOUNT).has(37866)
+    );
+    drop(h);
+    let db = redb::Database::open(file.path()).unwrap();
+    assert_eq!(store::load(&db, ACCOUNT), committed);
+    assert!(
+        crate::persistence::appearance_store::load_account_appearances(&db, ACCOUNT).has(37866)
+    );
 }
 
 #[test]
@@ -364,7 +479,8 @@ fn trading_post_purchase_reply_does_not_publish_an_adventure_guide_snapshot() {
         .send::<InstanceChannel>(TradingPostRequest::Purchase { vendor_item_id: 4 });
     let mut replies = Vec::new();
     let mut guide_replies = Vec::new();
-    for _ in 0..10 {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while replies.is_empty() && std::time::Instant::now() < deadline {
         h.app.update();
         replies.extend(
             h.app

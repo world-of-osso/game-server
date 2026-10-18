@@ -227,7 +227,12 @@ impl<R: BattleRng> Runtime<'_, R> {
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
-                    other_team_slot(target, effect.order)
+                    let order = match ability {
+                        774 => (effect.order - 1) % 3 + 1,
+                        920 | 2378 => effect.order.div_ceil(2),
+                        _ => effect.order,
+                    };
+                    other_team_slot(target, order)
                 } else {
                     target
                 };
@@ -241,6 +246,9 @@ impl<R: BattleRng> Runtime<'_, R> {
                 damage.property = 24;
                 damage.params[2] = p[4];
                 self.damage_effect(caster, target, ability, &damage)
+            }
+            62 if matches!(ability, 649 | 1761) => {
+                self.percent_damage(caster, caster, ability, effect)
             }
             62 => self.percent_damage(caster, target, ability, effect),
             141 => self.split_damage(caster, target, ability, effect),
@@ -297,6 +305,15 @@ impl<R: BattleRng> Runtime<'_, R> {
                     .insert(p[0] as u32, value);
                 Ok(true)
             }
+            23 if matches!(ability, 258 | 979 | 2378) => {
+                let order = if ability == 2378 {
+                    effect.order / 2
+                } else {
+                    effect.order - 3
+                };
+                let recipient = other_team_slot(caster, order);
+                self.heal_recipient(caster, recipient, effect)
+            }
             23 | 53 => self.heal_effect(caster, effect),
             31 => {
                 let control = matches!(p[0], 22 | 35 | 36 | 64);
@@ -312,7 +329,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
             26 | 28 | 50 | 52 | 54 | 63 => {
-                let target = if matches!(ability, 527 | 1010) && effect.property == 50 {
+                let target = if matches!(ability, 527 | 920 | 1010) && effect.property == 50 {
                     other_team_slot(target, effect.order.div_ceil(2))
                 } else {
                     target
@@ -397,12 +414,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         {
             return Ok(false);
         }
-        let previous = self.healing_target;
-        self.healing_target = Some(recipient);
         let mut heal = effect.clone();
         heal.property = 23;
         heal.params[2] = p[4];
-        let result = self.heal_effect(caster, &heal);
+        self.heal_recipient(caster, recipient, &heal)
+    }
+    fn heal_recipient(
+        &mut self,
+        caster: PetRef,
+        recipient: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let previous = self.healing_target.replace(recipient);
+        let result = self.heal_effect(caster, effect);
         self.healing_target = previous;
         result
     }

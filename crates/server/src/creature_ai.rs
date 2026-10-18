@@ -20,7 +20,7 @@ use std::time::Duration;
 /// Walk speed in world-units per second (base WoW walk speed).
 const BASE_WALK_SPEED: f32 = 2.5;
 /// Run speed in world-units per second (AzerothCore `baseMoveSpeed[MOVE_RUN]`).
-const BASE_RUN_SPEED: f32 = 7.0;
+pub(crate) const BASE_RUN_SPEED: f32 = 7.0;
 /// Maximum chase distance from spawn before evading (yards).
 const LEASH_DISTANCE: f32 = 40.0;
 /// Horizontal distance a chaser closes to (yards), inside the 5 yard
@@ -63,7 +63,7 @@ type Roaming = (
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
-type ActiveUncontrolled = (
+pub(crate) type ActiveUncontrolled = (
     Without<GridDormant>,
     Without<Confused>,
     Without<Feared>,
@@ -752,6 +752,16 @@ fn follow_leader_step(
 
 // -- Chase logic --
 
+type ChasingUnits<'w, 's> = Query<
+    'w,
+    's,
+    Chaser,
+    (
+        ActiveUncontrolled,
+        Without<crate::scripted_ai::caster_chase::CasterChase>,
+    ),
+>;
+
 /// Run pursuing creatures toward their target each tick
 /// (`ChaseMovementGenerator`, run speed × the aura speed multiplier) until within
 /// `CHASE_REACH`, on the floor under it, facing the way it runs and, in reach, the target.
@@ -763,10 +773,15 @@ pub(crate) fn chase_system(
     mut ground: Option<ResMut<GroundMap>>,
     mut nav: Option<ResMut<Navigation>>,
     mut commands: Commands,
-    mut units: ParamSet<(Query<Chaser, ActiveUncontrolled>, Query<&Position>)>,
+    los: Option<Res<crate::line_of_sight::LineOfSight>>,
+    mut units: ParamSet<(ChasingUnits, Query<ChaseView>, Query<FollowerChaseTrace>)>,
 ) {
     let dt = time.delta_secs();
-    let targets = victim_positions(&mut units);
+    if bevy::log::tracing::enabled!(target: "game_server::chase_trace", bevy::log::tracing::Level::DEBUG)
+    {
+        trace_tank_chases(&mut units, nav.as_deref(), time.elapsed_secs_f64());
+    }
+    let targets = read_chase_targets(&mut units, los.as_deref());
     for (
         entity,
         mut pos,
@@ -785,6 +800,23 @@ pub(crate) fn chase_system(
         let CreatureState::Pursuing { target } = *state else {
             continue;
         };
+        // TC a352b1fa ChaseMovementGenerator: lost victim or current range+LOS
+        // stops the active spline before its cached corridor's final leg.
+        let current_target = targets.get(&entity);
+        if current_target.is_none_or(|target| target.in_reach_and_visible) {
+            if let Some(nav) = nav.as_deref_mut() {
+                nav.cancel_route(entity);
+            }
+            let mut stride = Stride::still(*pos);
+            if let Some(target) = current_target {
+                stride.facing = facing_along(target.position.x - pos.x, target.position.z - pos.z);
+            }
+            queues.apply(entity, &mut pos, bearing, stride);
+            if cannot_reach.is_some() {
+                commands.entity(entity).remove::<CannotReachTarget>();
+            }
+            continue;
+        }
         // MotionMaster initializes a newly-preempting active generator with
         // diff0. The default spline may already have moved before sight/aggro.
         let initializing =
@@ -801,9 +833,7 @@ pub(crate) fn chase_system(
             queues.apply(entity, &mut pos, bearing, stride);
             continue;
         }
-        let Some(target_pos) = targets.get(&Entity::from_bits(target)) else {
-            continue; // target despawned or invalid
-        };
+        let target_pos = &targets[&entity].position;
         let run_speed = spawn.speed_run * BASE_RUN_SPEED * speed;
         let reach = follower_reach.map_or(CHASE_REACH, |reach| reach.0);
         let mut next_position = match (nav.as_deref_mut(), map) {
@@ -914,27 +944,96 @@ fn no_path_evade_system(
     }
 }
 
-/// Where each chased unit stands at the start of the chase step. A victim may be a
-/// creature that moves in the same step (a soldier and the worg it fights).
-fn victim_positions(
-    units: &mut ParamSet<(Query<Chaser, ActiveUncontrolled>, Query<&Position>)>,
-) -> EntityHashMap<Position> {
-    let victims: Vec<Entity> = units
+type ChaseView = (
+    crate::line_of_sight::BodyParts<'static>,
+    Option<&'static Health>,
+    Has<DeathState>,
+    Option<&'static crate::death::PlayerDeathState>,
+    Option<&'static crate::networking::CombatTarget>,
+    Option<&'static InMap>,
+);
+struct ChaseTarget {
+    position: Position,
+    in_reach_and_visible: bool,
+}
+
+type FollowerChaseTrace = (
+    Entity,
+    &'static crate::followers::Follower,
+    &'static Position,
+    &'static CreatureState,
+    Option<&'static crate::networking::CombatTarget>,
+    &'static Health,
+);
+
+/// Diagnostic-only: a selective follower query, never a full-population trace scan.
+fn trace_tank_chases(
+    units: &mut ParamSet<(ChasingUnits, Query<ChaseView>, Query<FollowerChaseTrace>)>,
+    nav: Option<&Navigation>,
+    simulation_secs: f64,
+) {
+    for (entity, follower, position, state, target, health) in &units.p2() {
+        if follower.profile.role != shared::group::GroupRole::Tank {
+            continue;
+        }
+        debug!(target: "game_server::chase_trace",
+            actor = entity.to_bits(), simulation_secs,
+            victim = ?target.and_then(|target| target.0).map(Entity::to_bits),
+            position = ?position, state = ?state,
+            health = health.current, max_health = health.max,
+            navigation_loaded = nav.is_some(), "tank chase frame");
+        if let Some(nav) = nav {
+            nav.trace_cached_route(entity, simulation_secs);
+        }
+    }
+}
+
+/// Snapshot before any chaser moves: mutual chases see the same tick's poses.
+fn read_chase_targets(
+    units: &mut ParamSet<(ChasingUnits, Query<ChaseView>, Query<FollowerChaseTrace>)>,
+    los: Option<&crate::line_of_sight::LineOfSight>,
+) -> EntityHashMap<ChaseTarget> {
+    let chasing: Vec<_> = units
         .p0()
         .iter()
-        .filter_map(|(_, _, _, state, ..)| match *state {
-            CreatureState::Pursuing { target } => Entity::try_from_bits(target),
-            _ => None,
+        .filter_map(|(entity, _, _, state, _, _, _, _, _, _, reach, _)| {
+            let stop_reach = reach.map_or(CHASE_REACH, |reach| reach.0.min(CHASE_REACH));
+            match *state {
+                CreatureState::Pursuing { target } => {
+                    Some((entity, Entity::try_from_bits(target)?, stop_reach))
+                }
+                _ => None,
+            }
         })
         .collect();
-    let positions = units.p1();
-    victims
+    let views = units.p1();
+    chasing
         .into_iter()
-        .filter_map(|victim| {
-            positions
-                .get(victim)
-                .ok()
-                .map(|position| (victim, *position))
+        .filter_map(|(entity, victim, stop_reach)| {
+            let (watcher, _, _, _, current, map) = views.get(entity).ok()?;
+            let (target, health, dead, player_death, _, target_map) = views.get(victim).ok()?;
+            let lost = current.is_some_and(|current| current.0 != Some(victim));
+            let not_alive = dead
+                || health.is_some_and(|health| health.current <= 0.0)
+                || player_death
+                    .is_some_and(|death| death.state != shared::death::DeathState::Alive);
+            if lost || not_alive || map != target_map {
+                return None;
+            }
+            let from = Vec3::new(watcher.2.x, watcher.2.y, watcher.2.z);
+            let to = Vec3::new(target.2.x, target.2.y, target.2.z);
+            let in_reach = from.distance(to) <= stop_reach;
+            let visible = in_reach
+                && los.zip(map).is_some_and(|(los, map)| {
+                    crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
+                });
+            Some((
+                entity,
+                ChaseTarget {
+                    position: *target.2,
+                    in_reach_and_visible: visible,
+                },
+            ))
         })
         .collect()
 }

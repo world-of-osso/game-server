@@ -1,6 +1,6 @@
 # Server auras
 
-Server-side aura runtime in `crates/server/src/auras/`: aura instances on every unit, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
+Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
 ## What it must do
 
@@ -18,7 +18,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] Apply ADD_FLAT/PCT_MODIFIER (class mask) and label modifiers (`SpellLabel`) to cast time, duration, cooldown, GCD, costs, range, points, coefficients, crit, damage/heal and proc/aura fields.
 - [x] Apply `RequiredAuraSpellID` cost gating, charge-category auras (411/453/454), damage/heal multipliers, absorbs, school immunity, crit, spell haste, power regen and movement speed.
 - [x] MECHANIC_IMMUNITY 77 uses MiscValue to reject matching spell-category or effect mechanics; applying immunity removes existing matching auras through normal removal hooks. Removing immunity restores susceptibility.
-- [x] REDUCE_PUSHBACK 149 sums aura percentages (bounded to 0–100%) to reduce damage pushback for casts and channels; positive non-periodic damage causes at most two pushbacks. Fully protected casts consume no pushback count.
+- [x] REDUCE_PUSHBACK 149 sums aura percentages (bounded to 0–100%) to reduce damage pushback for casts and channels; positive non-periodic damage causes at most two pushbacks. Fully protected casts consume no pushback count. Normal-cast remaining time is capped at that cast's original haste-adjusted duration; an early hit cannot add unelapsed progress. Keep the duration fixed and rewind elapsed progress no earlier than zero. Repeated early hits share that same cap; channel behaviour remains unchanged.
 - [x] USE_NORMAL_MOVEMENT_SPEED 191 caps run, swim and flight at the strongest positive aura amount in yards/second before slows; roots/stuns still stop movement. Removing the aura restores uncapped speed.
 - [x] Auto-apply passive known spells; remove them when unlearned.
 - [x] Fold aura stat changes into `stats::StatModifiers` (applied once, in `CharacterStats`); keep combat multipliers in `AuraStatMods`.
@@ -34,6 +34,9 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] MOD_BLOCK_PERCENT 51: add to a player's block chance when it can block and holds a shield (StatSystem.cpp:496-501); creatures' block ignores it.
 - [x] MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417: divide the GCD of a spell its class mask affects by 1 + haste, within 750-1500 ms (Spell.cpp:9220-9224).
 
+- [x] Cold dormant creatures defer aura-state initialization and authored addon effects until activity resumes. A real player-grid wake applies the addon exactly once in that same fixed step; another sleep/wake does not reset or reapply it. Active spawns retain first-step application, health, clocks and population.
+- [ ] Native CPU timings are diagnostic only; performance acceptance uses frozen matching release baseline/after artifacts in an allocated window.
+
 ## How it works
 
 - [Auras](../wiki/systems/auras.md)
@@ -48,5 +51,6 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - `crates/server/src/auras/handlers.rs`: aura type registry.
 - `crates/server/src/auras/scripts.rs`: `AuraScripts` hooks, including Turtle's catalog pacify child lifecycle.
 - `crates/server/src/auras/unit_state.rs`: invisibility, unattackable, confuse and transform unit state.
-- `crates/server/src/auras/tests.rs`: real-DB App tests.
+- `crates/server/src/auras/tests.rs`: real-DB App tests, including an actual authored Cenarion15184 spawn/addon18950 and real player-grid wake.
+- `crates/server/src/zones.rs`: authored creature spawning and activity-gated addon application.
 - `crates/server/src/auras/polymorph_tests.rs`: Polymorph 118 on a kobold and a level-scaled Blackrock Spy.

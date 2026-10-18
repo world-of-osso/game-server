@@ -129,6 +129,34 @@ impl GroundMap {
         }
     }
 
+    /// Explicit terrain-area fixtures grouped by actual map/tile; no production probe override.
+    #[cfg(test)]
+    pub(crate) fn with_area_samples(samples: &[(u32, Vec3, u32)]) -> Self {
+        let mut tiles: HashMap<(u32, (u32, u32)), Vec<(f32, f32, u32)>> = HashMap::new();
+        for &(map, position, area) in samples {
+            let tile = bevy_to_tile(position.x, position.z);
+            let (x, y, _) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+            tiles.entry((map, tile)).or_default().push((x, y, area));
+        }
+        let mut ground = Self::default();
+        for ((map, tile), points) in tiles {
+            let terrain = crate::terrain_height::test_helpers::terrain_areas(&points);
+            let map = ground
+                .maps
+                .entry(map)
+                .or_insert_with(|| Some(MapGround::default()));
+            map.as_mut().unwrap().tiles.insert(
+                tile,
+                Some(TileGround {
+                    terrain,
+                    wmos: Vec::new(),
+                    flight_min: None,
+                }),
+            );
+        }
+        ground
+    }
+
     pub(crate) fn data_dir(&self) -> &Path {
         &self.data_dir
     }
