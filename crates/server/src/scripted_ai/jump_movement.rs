@@ -9,6 +9,8 @@ use super::{Hook, MotionType};
 use crate::combat::DeathState;
 use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 
+/// TC a352b1fa SharedDefines.h:6740, generic jump completion ID.
+pub(crate) const EVENT_JUMP: u32 = 1004;
 const MAX_JUMP_SPEED: f32 = 50.0;
 const MAX_JUMP_HEIGHT: f32 = 1000.0;
 const MIN_DURATION_MS: u32 = 1;

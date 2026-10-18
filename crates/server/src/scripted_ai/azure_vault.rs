@@ -1,6 +1,6 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
 //! Telash power/rune startup/first-loop clocks, first100Energy poll and outbound
-//! jump hit are ported; landing/return phases and rune interactions remain open.
+//! jump hit/first center landing are ported; return phases and rune interactions remain open.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -35,6 +35,7 @@ const ABSOLUTE_ZERO_POLL_MS: u64 = 500;
 const ABSOLUTE_ZERO_POWER: f32 = 100.0;
 pub(crate) const ABSOLUTE_ZERO_CAST: u32 = 387928;
 const ABSOLUTE_ZERO_JUMP: u32 = 387981;
+const ABSOLUTE_ZERO_DAMAGE: u32 = 388008;
 const TELASH_JUMP_POSITION_WOW: Vec3 = Vec3::new(-5336.8003, 1066.6493, 344.32678);
 const ABSOLUTE_ZERO_SHIELD: u32 = 388084;
 const ACTIVATE_VAULT_RUNE: u32 = 390209;
@@ -90,7 +91,10 @@ pub(super) fn creature_ai(
             boss,
             tasks: super::EventMap::default(),
         })),
-        TELASH_SCRIPT => Some(Box::new(Telash { boss })),
+        TELASH_SCRIPT => Some(Box::new(Telash {
+            boss,
+            is_in_center: false,
+        })),
         _ => None,
     }
 }
@@ -249,6 +253,7 @@ impl super::CreatureAi for Leymor {
 
 struct Telash {
     boss: super::boss_ai::BossAi,
+    is_in_center: bool,
 }
 
 impl Telash {
@@ -330,6 +335,15 @@ impl super::CreatureAi for Telash {
         self.boss
             .events
             .schedule(EVENT_ABSOLUTE_ZERO, ABSOLUTE_ZERO_POLL_MS);
+    }
+
+    fn movement_inform(&mut self, ctx: &mut super::Ctx, _kind: super::MotionType, id: u32) {
+        // TC boss_telash_greywing.cpp:133–144 first-center branch; type is ignored.
+        // Return-landing actions remain a separate, not-yet-ported boundary.
+        if id == super::jump_movement::EVENT_JUMP && !self.is_in_center {
+            ctx.do_cast_self(ABSOLUTE_ZERO_DAMAGE);
+            self.is_in_center = true;
+        }
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
