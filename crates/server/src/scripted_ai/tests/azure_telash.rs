@@ -8,6 +8,83 @@ const FROST_BOMB: u32 = 386781;
 const FROST_BOMB_AURA: u32 = 386881;
 const ICY_DEVASTATOR: u32 = 387151;
 const ICY_DEVASTATOR_DAMAGE: u32 = 387152;
+const VAULT_RUNE: u32 = 197204;
+
+#[test]
+fn azure_telash_native_group_zero_spawns_three_owned_runes_at_authored_positions_once() {
+    let connection = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("read-only authored Rune group positions");
+    let mut statement = connection
+        .prepare("SELECT position_x,position_y,position_z FROM tdb_creature_summon_groups WHERE summonerId=186737 AND summonerType=0 AND groupId=0 AND entry=197204")
+        .unwrap();
+    let expected_positions = statement
+        .query_map([], |row| {
+            let (x, y, z) =
+                crate::terrain_height::wow_to_bevy(row.get(0)?, row.get(1)?, row.get(2)?);
+            Ok(Position { x, y, z })
+        })
+        .unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .unwrap();
+    assert_eq!(expected_positions.len(), 3, "actual group0 prerequisite");
+    let (mut h, telash, map) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    assert!(
+        h.app
+            .world()
+            .resource::<WorldData>()
+            .templates
+            .contains_key(&VAULT_RUNE),
+        "actual Rune template prepared by the source producer, not a hand-built actor"
+    );
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, 100.0)),
+        "native initial power prerequisite"
+    );
+    let runes = h.creatures_of(VAULT_RUNE);
+    assert_eq!(
+        runes.len(),
+        3,
+        "JustAppeared must summon its actual source group0"
+    );
+    let position_key = |position: &Position| {
+        (
+            position.x.to_bits(),
+            position.y.to_bits(),
+            position.z.to_bits(),
+        )
+    };
+    let expected: std::collections::HashSet<_> =
+        expected_positions.iter().map(position_key).collect();
+    let actual: std::collections::HashSet<_> = runes
+        .iter()
+        .map(|&rune| {
+            assert_eq!(h.app.world().get::<InMap>(rune), Some(&map));
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::zones::TempSummon>(rune)
+                    .unwrap()
+                    .summoner,
+                telash,
+                "actual source summoner owns each Rune"
+            );
+            assert!(h.app.world().get::<Health>(rune).unwrap().current > 0.0);
+            position_key(h.app.world().get::<Position>(rune).unwrap())
+        })
+        .collect();
+    assert_eq!(
+        actual, expected,
+        "exact authored positions in the owner's copy"
+    );
+    let before: std::collections::HashSet<_> = runes.into_iter().collect();
+    h.advance(0.1);
+    let after: std::collections::HashSet<_> = h.creatures_of(VAULT_RUNE).into_iter().collect();
+    assert_eq!(
+        after, before,
+        "ordinary ticks must not duplicate the startup group"
+    );
+}
 
 #[test]
 fn azure_telash_appears_with_sixty_native_energy() {

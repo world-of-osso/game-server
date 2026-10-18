@@ -219,6 +219,7 @@ pub(super) fn outgoing_to_owner_multiplier(world: &World, attacker: Entity, vict
 pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
     super::augmentation::consumes_field(spell_id, effect_index)
         || super::ebon_might::consumes_field(spell_id, effect_index)
+        || (spell_id == super::agony::SUDDEN_ONSET && effect_index == 1)
         || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
