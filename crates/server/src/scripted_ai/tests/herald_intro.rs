@@ -26,13 +26,18 @@ fn ordinary_ramparts() -> (Harness, InMap, Entity, Vec<Entity>) {
         crate::test_data::world_data().waypoints.clone();
     let incomplete_herald = actors_in_copy(&mut h, HERALD, map)[0];
     h.app.world_mut().entity_mut(incomplete_herald).despawn();
-    spawn_source_herald(&mut h, map);
+    spawn_source_actor(&mut h, map, 20_202_693);
     h.advance(0.05);
     let heralds = actors_in_copy(&mut h, HERALD, map);
     let sentries = actors_in_copy(&mut h, SENTRY, map);
     assert_eq!(heralds.len(), 1, "ordinary Herald population");
     assert_eq!(sentries.len(), 2, "ordinary pair of Sentries");
     let herald = heralds[0];
+    assert_source_origins(&h, herald, &sentries);
+    (h, map, herald, sentries)
+}
+
+fn assert_source_origins(h: &Harness, herald: Entity, sentries: &[Entity]) {
     let origin = h
         .app
         .world()
@@ -57,21 +62,16 @@ fn ordinary_ramparts() -> (Harness, InMap, Entity, Vec<Entity>) {
             .get::<crate::creature_ai::WaypointState>(herald)
             .is_some()
     );
-    (h, map, herald, sentries)
 }
 
-fn spawn_source_herald(h: &mut Harness, map: InMap) {
+fn spawn_source_actor(h: &mut Harness, map: InMap, guid: u32) -> Entity {
     let data = h.app.world().resource::<WorldData>();
-    let spawn = data
-        .spawns
-        .iter()
-        .find(|spawn| spawn.guid == 20_202_693)
-        .unwrap();
+    let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
     let mut queue = bevy::ecs::world::CommandQueue::default();
-    crate::zones::spawn_creature(
+    let actor = crate::zones::spawn_creature(
         &mut Commands::new(&mut queue, h.app.world()),
         data,
-        data.template_for(HERALD, 1).unwrap(),
+        data.template_for(spawn.template_entry, 1).unwrap(),
         &mut crate::zones::CreatureSpawnContext {
             map,
             difficulty_id: 1,
@@ -82,8 +82,9 @@ fn spawn_source_herald(h: &mut Harness, map: InMap) {
         spawn,
         &mut rand::thread_rng(),
     )
-    .expect("source Herald with authored patrol");
+    .expect("ordinary source actor");
     queue.apply(h.app.world_mut());
+    actor
 }
 
 fn kill_actor(h: &mut Harness, actor: Entity) {
@@ -131,6 +132,11 @@ fn spawn_second_copy(h: &mut Harness) -> InMap {
                 .map
         },
     );
+    fill_ramparts_copy(h, map);
+    map
+}
+
+fn fill_ramparts_copy(h: &mut Harness, map: InMap) {
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, h.app.world());
     crate::zones::spawn_map_creatures(
@@ -146,11 +152,9 @@ fn spawn_second_copy(h: &mut Harness) -> InMap {
     );
     queue.apply(h.app.world_mut());
     h.advance(0.05);
-    map
 }
 
 #[test]
-#[ignore = "RED: real Sentry deaths do not start the Herald INTRO1"]
 fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center() {
     let (mut h, map, herald, sentries) = ordinary_ramparts();
     let listener = *h.app.world().get::<Position>(sentries[0]).unwrap();
@@ -223,7 +227,6 @@ fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center(
 }
 
 #[test]
-#[ignore = "RED: missing copy-local Sentry death ingress"]
 fn encounter_coverage_herald_intro_split_copies_unrelated_and_corpse_deaths_do_not_count() {
     let (mut h, first_map, first_herald, first_sentries) = ordinary_ramparts();
     let second_map = spawn_second_copy(&mut h);
@@ -253,4 +256,44 @@ fn encounter_coverage_herald_intro_split_copies_unrelated_and_corpse_deaths_do_n
         is_passive(&h, second_herald),
         "independent second-copy start"
     );
+}
+
+#[test]
+fn encounter_coverage_herald_intro_missing_herald_retains_one_death_and_resets_a_pair() {
+    for deaths_before_herald in [1, 2] {
+        let (mut h, map, herald, sentries) = ordinary_ramparts();
+        h.app.world_mut().entity_mut(herald).despawn();
+        for sentry in sentries.iter().take(deaths_before_herald) {
+            kill_actor(&mut h, *sentry);
+        }
+        h.advance(0.05);
+        let herald = spawn_source_actor(&mut h, map, 20_202_693);
+        h.advance(0.05);
+        assert!(
+            !is_passive(&h, herald),
+            "appearance alone does not start INTRO1"
+        );
+        if deaths_before_herald == 1 {
+            kill_actor(&mut h, sentries[1]);
+        } else {
+            // Fixture reconstruction, not a claim of implemented encounter reset.
+            for sentry in sentries {
+                h.app.world_mut().entity_mut(sentry).despawn();
+            }
+            let first = spawn_source_actor(&mut h, map, 20_202_705);
+            let second = spawn_source_actor(&mut h, map, 20_202_706);
+            kill_actor(&mut h, first);
+            h.advance(0.05);
+            assert!(
+                !is_passive(&h, herald),
+                "absent-Herald pair reset the count"
+            );
+            kill_actor(&mut h, second);
+        }
+        h.advance(0.05);
+        assert!(
+            is_passive(&h, herald),
+            "two deaths start even across absent-Herald delivery"
+        );
+    }
 }

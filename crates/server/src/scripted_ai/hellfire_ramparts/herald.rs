@@ -46,19 +46,22 @@ pub(crate) fn on_unit_death(world: &mut World, unit: Entity) {
     }
     // Source resets even when the stored Herald is absent.
     script.ramparts_sentry_deaths = 0;
-    let herald = world
-        .query::<(Entity, &InMap, &CreatureOrigin)>()
-        .iter(world)
-        .find_map(|(actor, copy, origin)| {
-            (*copy == map && origin.original_entry == HERALD).then_some(actor)
-        });
-    if let Some(herald) = herald {
+    if let Some(herald) = find_herald(world, map) {
         super::super::dispatch(
             world,
             herald,
             super::super::Hook::DoAction(ACTION_START_ENCOUNTER),
         );
     }
+}
+
+fn find_herald(world: &mut World, map: InMap) -> Option<Entity> {
+    world
+        .query::<(Entity, &InMap, &CreatureOrigin)>()
+        .iter(world)
+        .find_map(|(actor, copy, origin)| {
+            (*copy == map && origin.original_entry == HERALD).then_some(actor)
+        })
 }
 
 #[derive(Default)]
