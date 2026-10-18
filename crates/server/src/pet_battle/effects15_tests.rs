@@ -1,6 +1,180 @@
 use super::effects2_tests::use_ability;
 use super::*;
 
+fn sunshell_enemy_battle(catalog: &Catalog) -> Battle {
+    // Synthetic enemy-side controls are not an authored Crystalsnap NPC team.
+    let mut initial = battle(catalog, 7, 7, [2410, 595, 123]);
+    initial.teams.swap(0, 1);
+    initial
+}
+
+fn enemy_sunshell(initial: &Battle, catalog: &Catalog) -> (Battle, Vec<Event>) {
+    initial
+        .step(
+            catalog,
+            [Action::Pass, Action::Ability(2410)],
+            &mut Fixed(500_000),
+        )
+        .unwrap()
+}
+
+#[test]
+fn pet_battle_sunshell_enemy_all_active_pairs_damage_all_players_and_raise_only_maximum_hp() {
+    let catalog = catalog();
+    for player_active in 0..3 {
+        for npc_active in 0..3 {
+            let mut initial = sunshell_enemy_battle(&catalog);
+            initial.teams[0].active = player_active;
+            initial.teams[1].active = npc_active;
+            let (state, events) = enemy_sunshell(&initial, &catalog);
+            assert_eq!(damage(&events), [30; 3]);
+            assert_eq!(
+                state.teams[0].pets.each_ref().map(|pet| pet.health),
+                [9970; 3]
+            );
+            assert_eq!(
+                state.teams[1].pets.each_ref().map(|pet| pet.health),
+                [10000; 3]
+            );
+            assert_eq!(state.teams[0].active, player_active);
+            assert_eq!(state.teams[1].active, npc_active);
+            assert_eq!(
+                state.teams[1].pets[npc_active].cooldowns.get(&2410),
+                Some(&3)
+            );
+            for team in &state.teams {
+                for pet in &team.pets {
+                    assert_eq!(pet.stats.health, 15000);
+                    assert_eq!(pet.state(catalog.state_id("Weather_Sunlight").unwrap()), 1);
+                    assert_eq!(
+                        pet.state(catalog.state_id("Mod_HealingDealtPercent").unwrap()),
+                        25
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn pet_battle_sunshell_individual_and_all_player_misses_do_not_cancel_sunny_day() {
+    let catalog = catalog();
+    for player_active in 0..3 {
+        for missed in [None, Some(0), Some(1), Some(2)] {
+            let mut initial = sunshell_enemy_battle(&catalog);
+            initial.teams[0].active = player_active;
+            for slot in 0..3 {
+                if missed.is_none() || missed == Some(slot) {
+                    initial.teams[0].pets[slot]
+                        .states
+                        .insert(catalog.state_id("Stat_Dodge").unwrap(), 100);
+                }
+            }
+            //70448 row4579/80 has Accuracy200 and ChainFailure0, independent of4576–4578.
+            let (state, events) = enemy_sunshell(&initial, &catalog);
+            assert_eq!(damage(&events).len(), if missed.is_none() { 0 } else { 2 });
+            for slot in 0..3 {
+                assert_eq!(
+                    state.teams[0].pets[slot].health,
+                    if missed.is_none() || missed == Some(slot) {
+                        10000
+                    } else {
+                        9970
+                    }
+                );
+            }
+            assert!(
+                state
+                    .teams
+                    .iter()
+                    .flat_map(|team| &team.pets)
+                    .all(|pet| pet.stats.health == 15000)
+            );
+        }
+    }
+}
+
+#[test]
+fn pet_battle_sunshell_dead_reserves_are_not_hit_or_resurrected() {
+    let catalog = catalog();
+    for dead in [1, 2] {
+        let mut initial = sunshell_enemy_battle(&catalog);
+        for team in &mut initial.teams {
+            team.pets[dead].health = 0;
+            team.pets[dead]
+                .states
+                .insert(catalog.state_id("Is_Dead").unwrap(), 1);
+        }
+        let (state, events) = enemy_sunshell(&initial, &catalog);
+        assert_eq!(damage(&events), [30; 2]);
+        for team in &state.teams {
+            assert_eq!(team.pets[dead].health, 0);
+            assert_eq!(
+                team.pets[dead].state(catalog.state_id("Is_Dead").unwrap()),
+                1
+            );
+            assert!(team.pets.iter().all(|pet| pet.stats.health == 15000));
+        }
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, Event::Revived(_)))
+        );
+    }
+}
+
+#[test]
+fn pet_battle_sunshell_global_healing_bonus_and_expiry_reuse_sunlight_convention() {
+    let catalog = catalog();
+    let (mut state, _) = enemy_sunshell(&sunshell_enemy_battle(&catalog), &catalog);
+    for team in &mut state.teams {
+        team.pets[0].health = 5000;
+    }
+    let (mut state, _) = state
+        .step(&catalog, [Action::Ability(123); 2], &mut Fixed(500_000))
+        .unwrap();
+    assert_eq!(state.teams[0].pets[0].health, 5225);
+    assert_eq!(state.teams[1].pets[0].health, 5225);
+    for _ in 0..7 {
+        state = state
+            .step(&catalog, [Action::Pass; 2], &mut Fixed(500_000))
+            .unwrap()
+            .0;
+    }
+    assert!(state.auras.is_empty());
+    for pet in state.teams.iter().flat_map(|team| &team.pets) {
+        assert_eq!(pet.stats.health, 10000);
+        assert_eq!(pet.state(catalog.state_id("Weather_Sunlight").unwrap()), 0);
+        assert_eq!(
+            pet.state(catalog.state_id("Mod_HealingDealtPercent").unwrap()),
+            0
+        );
+    }
+}
+
+#[test]
+fn pet_battle_sunshell_weather_replacement_restores_maximum_and_removes_old_bonus() {
+    let catalog = catalog();
+    let (state, _) = enemy_sunshell(&sunshell_enemy_battle(&catalog), &catalog);
+    let (state, _) = state
+        .step(
+            &catalog,
+            [Action::Pass, Action::Ability(595)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    assert!(state.auras.iter().all(|aura| aura.ability != 403));
+    for pet in state.teams.iter().flat_map(|team| &team.pets) {
+        assert_eq!(pet.stats.health, 10000);
+        assert_eq!(pet.state(catalog.state_id("Weather_Sunlight").unwrap()), 0);
+        assert_eq!(
+            pet.state(catalog.state_id("Mod_HealingDealtPercent").unwrap()),
+            0
+        );
+        assert_eq!(pet.state(catalog.state_id("Weather_Moonlight").unwrap()), 1);
+    }
+}
+
 fn shell_rush_battle(catalog: &Catalog) -> Battle {
     let mut initial = battle(catalog, 9, 4, [1989, 110, 123]);
     for (pet, (health, maximum)) in
