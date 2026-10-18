@@ -213,6 +213,26 @@ fn cold_character_selection_returns_while_writer_is_held_and_reopens_initialized
     assert_eq!(gold, persistence::InventoryData::default().gold);
     drop(app);
     let reopened = redb::Database::open(file.path()).unwrap();
+    use redb::ReadableDatabase;
+    let read = reopened.begin_read().unwrap();
+    for name in [
+        "character_inventories",
+        "pvp_states",
+        "world_maps",
+        "friends",
+        "ignore_lists",
+        "collections",
+        "reputations_retail_v2",
+    ] {
+        assert!(
+            read.open_table(redb::TableDefinition::<u64, &[u8]>::new(name))
+                .unwrap()
+                .get(character)
+                .unwrap()
+                .is_some(),
+            "missing durable {name}"
+        );
+    }
     assert_eq!(persistence::load_inventory(&reopened, character).gold, gold);
     assert_eq!(
         persistence::load_collections(&reopened, character),
@@ -257,15 +277,19 @@ fn character_relogin_reads_owned_achievements_while_default_or_migration_write_i
             signal.expect("fixture explicitly releases the held writer");
         });
         crate::achievement::save_monthly_contribution(&db, 1, character, &pending);
-        let (app, player) = select_character_in_world(db, 1, character);
+        let (mut app, connection) =
+            queue_character_selection(db, 1, character, crate::maps::MapStore::continents());
+        app.update();
+        app.update();
         assert!(
             !holder.is_finished(),
             "selection must return while the writer is held; legacy={legacy_row}"
         );
-        let loaded = app
-            .world()
-            .get::<crate::achievement::PlayerAchievementState>(player)
-            .unwrap();
+        let loaded = crate::achievement::load_character_progress(
+            app.world().resource::<GameDatabase>(),
+            1,
+            character,
+        );
         assert!(
             loaded.earned_ids.contains(&14782),
             "login lost queued achievement; legacy={legacy_row}"
@@ -274,6 +298,14 @@ fn character_relogin_reads_owned_achievements_while_default_or_migration_write_i
         assert_eq!(loaded.criteria_progress[&162], 41);
         release.send(()).unwrap();
         holder.join().unwrap();
+        let player = finish_character_selection(&mut app, connection);
+        let hydrated = app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap();
+        assert!(hydrated.earned_ids.contains(&14782));
+        assert_eq!(hydrated.earned_at[&14782], 100);
+        assert_eq!(hydrated.criteria_progress[&162], 41);
         drop(app);
         let reopened = redb::Database::open(file.path()).unwrap();
         let saved = persistence::load_achievements(&reopened, character);
@@ -420,19 +452,32 @@ fn select_character_with_maps(
     character_id: u64,
     maps: crate::maps::MapStore,
 ) -> (App, Entity) {
-    let (mut app, _) = queue_character_selection(db, account_id, character_id, maps);
-    app.update();
+    let (mut app, connection) = queue_character_selection(db, account_id, character_id, maps);
+    let player = finish_character_selection(&mut app, connection);
+    (app, player)
+}
+
+fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while app
+        .world()
+        .get::<crate::auth::InWorld>(connection)
+        .is_none()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "selection never completed"
+        );
+        app.update();
+        std::thread::yield_now();
+    }
     app.update();
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
-
-    let player = app
-        .world_mut()
-        .query::<(Entity, &ClientId)>()
-        .iter(app.world())
-        .find_map(|(entity, client_id)| (client_id.0 == character_id).then_some(entity))
-        .expect("selecting a character should spawn its player entity");
-    (app, player)
+    app.world()
+        .get::<crate::networking::PlayerLink>(connection)
+        .unwrap()
+        .0
 }
 
 #[test]
@@ -1216,8 +1261,7 @@ fn select_again(app: &mut App, account_id: u64, character_id: u64) {
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    app.update();
-    app.update();
+    finish_character_selection(app, connection);
 }
 
 #[test]

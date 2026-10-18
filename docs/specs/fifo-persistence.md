@@ -13,7 +13,10 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [ ] Trading Post requests execute after preceding Guide contribution/Tender settlement on the same FIFO; publish replies and collection changes only after their own commit. Same-tick earned Tender must fund a purchase and survive reopen.
 - [ ] Preserve purchase/cart/refund/freeze and UTC-month rollover behavior, including snapshot settlement; no tick-thread write initialization disguised as a read.
 - [ ] Guild-news queries/sticky requests and dirty subscriber publications read behind preceding achievement commits on that same FIFO; no early stale reply or consumed-but-lost notification.
-- [ ] Login and missing-component Guide loads read character contributions from the writer-fed account cache. Raw default/migration writes are unavailable in production; ordinary reopen drains the prior writer.
+- [ ] Login and missing-component Guide loads read character contributions from the writer-fed account cache. Raw achievement default/migration writes are unavailable in production; ordinary reopen drains the prior writer.
+- [ ] Unwarmed character selection hydrates missing secondary rows and legacy reputation/currency conversions as one typed job on the existing FIFO. Request processing returns while the writer is held; world admission waits for its receipt. Queued achievement contributions remain authoritative when admission continues.
+- [ ] Password login persists its new token on that FIFO; authentication, replacement-session disconnect and token publication wait for the receipt. Abandoned/disconnected requests cannot authenticate another connection. Existing token login and credential/ban checks retain their behavior.
+- [ ] Held-writer ordering fixtures use explicit release and observable pre/post-commit state, not short wall-clock thresholds or timed auto-release.
 
 ## How it works
 
@@ -48,4 +51,4 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 
 ## Out of scope
 
-Other unlanded performance topics (login off-thread, navigation, catalog/indexing, guild/companion/charter/PvP conversions) remain separate triage work. No second writer, netcode changes, gameplay timer changes or reduced population.
+Other unlanded performance topics (password-hash off-thread work, navigation, catalog/indexing, guild/companion/charter/PvP conversions) remain separate triage work. No second writer, netcode changes, gameplay timer changes or reduced population.
