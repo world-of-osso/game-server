@@ -33,6 +33,8 @@ mod azure_sprout_fields;
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
 mod azure_telash;
+#[path = "azure_telash_return.rs"]
+mod azure_telash_return;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gargolmar.rs"]
