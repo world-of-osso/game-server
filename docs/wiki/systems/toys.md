@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Arachnoserum acceptance and pennant/linked-carry/stone-metadata boundaries (2026-10-17)
+
+[Source550–554 matrix](../../toy-effects14-coverage.md#source550554-pending-arachnoserum-acceptance-and-pennantlinked-carrystone-metadata-boundaries-2026-10-17) adds acceptance-onlyc3fe0958c:228705/462934/229772/sixteen valid models/instant10min/1h recovery as15th disguise plus Oomgut16IDs, unchanged registry phase/old14 data.119763 NPC scale0.4 is metadata, not player scaling. Format/manual readability/diffcheck pass; newer covering head required. Nonzero pennant, actual outdoors Lil Wick linked285/Control4 carry and stone slow90/periodic action remain gaps; root462924 SpellMisc absence is70391-specific, not fabricated default timing or all-profile absence. Lampyridae exact attachment CPU scope retained.498 landed/master8707ac0ea; no further runtime/data/own heavy duplicate.
+
 ## Pending Shroud acceptance;498 landed and selected-pet/paid-elixir/guard-radius boundaries (2026-10-17)
 
 [Source545–549 matrix](../../toy-effects14-coverage.md#source545549-pending-shroud-acceptance-and-selected-petpaid-elixirguard-radiuspennant-boundaries-2026-10-17) adds acceptance-only7463a1090:226810/459531/228081/three models/source1.5s/20min/1h recovery as14th disguise plus Oomgut15IDs; existing cast_ms phase/old13 data unchanged. Format/manual readability/diffcheck pass, newer head required. Selected minipet90 leash, actual50silver Noggenfogger outcomes, City-of-Threads guard-radius visualization and nonzero pennant remain gaps, not caster/own-critter substitution/free aura/guessed overlay/stealth. Lead confirms498 LANDED/master8707ac0ea; local c013 ancestry exits0. Its older11disguise/10object/16caster scope does not certify new14/11/18 expansions; no further runtime/data/own heavy duplicate.

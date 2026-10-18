@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source550–554: pending Arachnoserum acceptance and pennant/linked-carry/stone-metadata boundaries (2026-10-17)
+
+553 test/specc3fe0958c appends228705/462934/229772/sixteen valid displays/instant600s/3600s recovery to the unchanged count-free registry/cast phase, now15 disguise rows plus separate Oomgut16 identities; old14 data unchanged. Format/manual readability/diffcheck pass, behavior needs a head AFTER498c013. Lead498 remains landed/master8707ac0ea; no borrowed larger-scope proof, further runtime/data or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|550 Unbound Strategist's Pennant227539/460083 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Actual seasonal pennant art/eligibility/removal remains unaudited; no zero-dummy or Unbound Legend sibling certificate. |
+|551 Lampyridae Lure228413/462145 | Instant self audited dummy4/1800000ms, inherited7200000ms recovery. Existing exact six-attachment fixture retains learned use/aura/cancel/unchanged health-model CPU scope. Native firefly presentation, natural duration/two-hour recharge remain separate; no invented server companion or borrowed other-lure imagery. |
+|552 Candleflexer's Dumbbell228698/462683 | Source1500ms self linked285→462682 for3600000ms; child target48 summon229637/property6045/Control4/flags67241992/base173426 plus self dummy4, also3600000ms; spell3600000ms recovery. Runtime creature/model absent. Actual outdoors-only Lil Wick carry/control/linked lifecycle remains gap; no173426 actors/automatic child edge, strength buff or static carrier prop. |
+|553 Arachnoserum228705/462934 | Instant self transform56→existing229772/misc8 for600000ms, inherited3600000ms recovery;16 model choices.119763's NPC DisplayScale0.4 is retained literally, not imposed on player scale. Own valid-model/ordinary expiry/full-health/native-display/recovery case committed, proof pending newer head; no full weighted-pool/native/venom/combat or natural-hour reuse certificate. |
+|554 Rockslidomancer's Stone228706/462924 | Self trigger64/misc1000→462756, which has slow33/base90 plus periodic23/every1000ms/trigger0 for300000ms; root recovery3600000ms. Pinned70391 has no root462924 SpellMisc row, so do not invent its cast/duration metadata or infer all profiles are absent. Actual stone appearance/periodic action/slow/cleanup remains unresolved, not a direct ordinary transform or slow-only success. |
+
+Evidence: private `rows550-554-{readonly-source,action-source,runtime-source,active-goal}.json`, `arachno553-{active-goal,proof-ledger}.json`, exact missing70391 root-metadata boundary.149865 Tea Set remains untouched.
+
 ## Source545–549: pending Shroud acceptance and selected-pet/paid-elixir/guard-radius/pennant boundaries (2026-10-17)
 
 548 test/spec7463a1090 appends226810/459531/228081/three valid displays/source1500ms cast/1200s appearance/3600s recovery to the count-free disguise registry, now14 rows plus separate Oomgut15 identities. Existing cast_ms pending-cast phase and old13 data stay unchanged. Format/manual readability/diffcheck pass; behavior needs a newer covering head, not498c013. Lead confirms498 LANDED/master8707ac0ea, independently checked c013 ancestry exit0; newer11-object/18-caster/14-disguise scopes remain unverified. No further runtime/data/own heavy duplicate.
