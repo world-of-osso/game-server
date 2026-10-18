@@ -33,6 +33,167 @@ const HAMSTRING: u32 = 1715;
 /// MOD_ROOT_2 455.
 const FROST_NOVA: u32 = 122;
 
+const CENARION_GUARD: u32 = 15184;
+const AUTHORED_GUARD_AURA: u32 = 18950;
+
+fn cold_guard_harness() -> Harness {
+    crate::spell_cast::test_harness::harness_with_plugins(
+        Vec::new(),
+        &[AUTHORED_GUARD_AURA],
+        4,
+        false,
+        |app| {
+            app.add_plugins(crate::grid_activity::GridActivityPlugin);
+            app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
+        },
+    )
+    .expect("authored guard spell data")
+}
+
+fn spawn_authored_guard(h: &mut Harness) -> (Entity, Position, crate::maps::InMap) {
+    use rand::SeedableRng;
+    let data = crate::test_data::world_data();
+    let spawn = data
+        .spawns
+        .iter()
+        .find(|spawn| {
+            spawn.template_entry == CENARION_GUARD
+                && spawn.movement_type == 0
+                && data
+                    .addon_for(spawn)
+                    .is_some_and(|addon| addon.auras.contains(&AUTHORED_GUARD_AURA))
+        })
+        .expect("actual stationary Cenarion guard with authored addon18950");
+    let template = data.template_for(spawn.template_entry, 0).unwrap();
+    let map = crate::maps::InMap::continent(u32::from(spawn.map));
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    let mut rng = rand::rngs::StdRng::seed_from_u64(1);
+    let creature = crate::zones::spawn_creature(
+        &mut commands,
+        data,
+        template,
+        &mut crate::zones::CreatureSpawnContext {
+            map,
+            difficulty_id: 0,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
+        false,
+        spawn,
+        &mut rng,
+    )
+    .expect("native guard level context");
+    queue.apply(h.app.world_mut());
+    let home = *h.app.world().get::<Position>(creature).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<crate::zones::AddonAuras>(creature)
+            .unwrap()
+            .0
+            .contains(&AUTHORED_GUARD_AURA)
+    );
+    (creature, home, map)
+}
+
+#[test]
+fn cold_authored_spawn_defers_addon_until_real_player_wake_in_same_fixed_step() {
+    let mut h = cold_guard_harness();
+    let (creature, home, map) = spawn_authored_guard(&mut h);
+    let far = Position {
+        x: home.x + 10_000.0,
+        ..home
+    };
+    h.app.world_mut().entity_mut(h.caster).insert((far, map));
+    let health = h.health(creature);
+    let population = h
+        .app
+        .world_mut()
+        .query::<&Npc>()
+        .iter(h.app.world())
+        .count();
+    h.advance(1);
+    assert!(
+        h.app.world().get::<GridDormant>(creature).is_some(),
+        "real grid registration must put the cold spawn to sleep"
+    );
+    assert!(
+        auras_of(&h, creature, AUTHORED_GUARD_AURA).is_empty(),
+        "inactive grid applied its authored addon effect"
+    );
+    assert!(
+        h.app.world().get::<ActiveAuras>(creature).is_none(),
+        "dormant cold population must not initialize aura state"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::zones::AddonAuras>(creature)
+            .is_some()
+    );
+    assert_eq!(h.health(creature), health);
+
+    let before = h.app.world().resource::<Time<Fixed>>().elapsed();
+    h.app.world_mut().entity_mut(h.caster).insert(home);
+    h.advance(1);
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - before,
+        std::time::Duration::from_millis(50)
+    );
+    assert!(h.app.world().get::<GridDormant>(creature).is_none());
+    let applied = auras_of(&h, creature, AUTHORED_GUARD_AURA);
+    assert_eq!(
+        applied.len(),
+        1,
+        "authored addon must apply in the same fixed step as real player wake"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::zones::AddonAuras>(creature)
+            .is_none()
+    );
+    assert_eq!(h.health(creature), health);
+    h.advance(1);
+    assert_eq!(auras_of(&h, creature, AUTHORED_GUARD_AURA), applied);
+    h.app.world_mut().entity_mut(h.caster).insert(far);
+    h.advance(1);
+    assert!(h.app.world().get::<GridDormant>(creature).is_some());
+    h.app.world_mut().entity_mut(h.caster).insert(home);
+    h.advance(1);
+    assert!(h.app.world().get::<GridDormant>(creature).is_none());
+    assert_eq!(
+        auras_of(&h, creature, AUTHORED_GUARD_AURA),
+        applied,
+        "waking again must not reset or reapply the addon"
+    );
+    assert_eq!(h.health(creature), health);
+    assert_eq!(
+        h.app
+            .world_mut()
+            .query::<&Npc>()
+            .iter(h.app.world())
+            .count(),
+        population
+    );
+}
+
+#[test]
+fn active_authored_spawn_applies_its_addon_in_its_first_fixed_step() {
+    let mut h = cold_guard_harness();
+    let (creature, home, map) = spawn_authored_guard(&mut h);
+    h.app.world_mut().entity_mut(h.caster).insert((home, map));
+    let health = h.health(creature);
+    h.advance(1);
+    assert!(h.app.world().get::<GridDormant>(creature).is_none());
+    let applied = auras_of(&h, creature, AUTHORED_GUARD_AURA);
+    assert_eq!(applied.len(), 1);
+    h.advance(1);
+    assert_eq!(auras_of(&h, creature, AUTHORED_GUARD_AURA), applied);
+    assert_eq!(h.health(creature), health);
+}
+
 fn apply(app: &mut App, caster: Entity, target: Entity, spell_id: u32) {
     let spell = app
         .world()

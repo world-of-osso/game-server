@@ -154,7 +154,7 @@ fn install_quest_log(temp: &tempfile::TempDir, world: &mut World, player: Entity
             ..Default::default()
         },
     );
-    world.insert_resource(crate::persistence::GameDatabase { db });
+    world.insert_resource(crate::persistence::GameDatabase::new(db));
     world.insert_resource(quests);
     world.insert_resource(crate::quest::QuestDirty::default());
     world
@@ -728,6 +728,81 @@ fn smartai_coverage_force_despawn_uses_authored_delay_and_respawn_without_death_
             .respawn_timer,
         60.0
     );
+}
+
+#[test]
+fn smartai_coverage_despawning_a_native_corpse_interrupts_its_dead_start_cast() {
+    use crate::spell_cast::test_harness::{harness, prepare_class_world};
+    use shared::casting::CastState;
+
+    const DEATH_TOUCH: u32 = 5;
+    const NETHER_EXPLOSION: u32 = 35058;
+    let data = prepare_class_world().world_data();
+    let spawn = data
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == 20_004_147)
+        .expect("native Brown Ram world spawn");
+    let template = data.templates.get(&spawn.template_entry).unwrap();
+    let mut h = harness(Vec::new(), &[DEATH_TOUCH, NETHER_EXPLOSION], 2).unwrap();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let creature = {
+        let mut commands = bevy::prelude::Commands::new(&mut queue, h.app.world());
+        crate::zones::spawn_creature(
+            &mut commands,
+            &data,
+            template,
+            &mut crate::zones::CreatureSpawnContext {
+                map: crate::maps::InMap::continent(u32::from(spawn.map)),
+                difficulty_id: 0,
+                ground: Some(&mut crate::test_data::ground_map()),
+                temporary: false,
+            },
+            false,
+            spawn,
+            &mut rand::thread_rng(),
+        )
+        .expect("native Brown Ram level context")
+    };
+    queue.apply(h.app.world_mut());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::RespawnDelay>(creature)
+            .is_some()
+    );
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        h.caster,
+        DEATH_TOUCH,
+        Some(creature),
+        false,
+    )
+    .unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::Corpse>(creature)
+            .is_some()
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), creature, NETHER_EXPLOSION, None, false)
+        .unwrap();
+    assert!(h.app.world().get::<CastState>(creature).is_some());
+    // Respect the native world's existing respawn/corpse delays; no clock override.
+    lifetimes::despawn_creature(h.app.world_mut(), creature, 0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::Corpse>(creature)
+            .is_none()
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(creature)
+            .is_some()
+    );
+    assert!(h.app.world().get::<CastState>(creature).is_none());
 }
 
 #[test]

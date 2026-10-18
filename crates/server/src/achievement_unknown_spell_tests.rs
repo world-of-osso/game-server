@@ -72,7 +72,7 @@ fn achievements_criteria_unknown_spell_native_login_waits_for_real_spell_authori
     ));
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(crate::spell_info::load_class_spells(&conn).unwrap());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let unknown = spawn_login(&mut app, 17, untrained, "Untrained");
     let known = spawn_login(&mut app, 17, trained, "Trained");
     assert!(app.world().get::<KnownSpells>(unknown).is_none());
@@ -231,7 +231,7 @@ fn achievements_criteria_unknown_spell_real_select_character_does_not_lose_login
     app.register_message::<EnterWorldResponse>();
     app.register_message::<LoadTerrain>();
     app.add_message::<crate::death::PlayerDeathTransition>();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(load_achievement_catalog(&conn).unwrap());
     app.insert_resource(crate::spell_info::load_class_spells(&conn).unwrap());
     app.insert_resource(crate::mount_journal::load(&conn).unwrap());
@@ -268,14 +268,7 @@ fn achievements_criteria_unknown_spell_real_select_character_does_not_lose_login
         .send::<AuthChannel>(SelectCharacter {
             character_id: character,
         });
-    for _ in 0..4 {
-        app.update();
-    }
-    let player = app
-        .world()
-        .get::<PlayerLink>(connection)
-        .expect("actual select must enter world")
-        .0;
+    let player = crate::test_data::wait_for_selected_player(&mut app, connection);
     assert!(app.world().get::<KnownSpells>(player).is_some());
     assert!(app.world().get::<AccountMounts>(player).is_some());
     let state = app.world().get::<PlayerAchievementState>(player).unwrap();

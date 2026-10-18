@@ -77,7 +77,7 @@ fn setup_with(
         .unwrap()
         .item_guid;
     assert!(!model.is_soulbound(guid), "candidate must be unbound");
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app
         .world_mut()
         .entity_mut(h.caster)

@@ -1,6 +1,6 @@
 # Server auras
 
-Server-side aura runtime in `crates/server/src/auras/`: aura instances on every unit, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
+Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
 ## What it must do
 
@@ -34,6 +34,9 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - [x] MOD_BLOCK_PERCENT 51: add to a player's block chance when it can block and holds a shield (StatSystem.cpp:496-501); creatures' block ignores it.
 - [x] MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417: divide the GCD of a spell its class mask affects by 1 + haste, within 750-1500 ms (Spell.cpp:9220-9224).
 
+- [x] Cold dormant creatures defer aura-state initialization and authored addon effects until activity resumes. A real player-grid wake applies the addon exactly once in that same fixed step; another sleep/wake does not reset or reapply it. Active spawns retain first-step application, health, clocks and population.
+- [ ] Native CPU timings are diagnostic only; performance acceptance uses frozen matching release baseline/after artifacts in an allocated window.
+
 ## How it works
 
 - [Auras](../wiki/systems/auras.md)
@@ -48,5 +51,6 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on every 
 - `crates/server/src/auras/handlers.rs`: aura type registry.
 - `crates/server/src/auras/scripts.rs`: `AuraScripts` hooks, including Turtle's catalog pacify child lifecycle.
 - `crates/server/src/auras/unit_state.rs`: invisibility, unattackable, confuse and transform unit state.
-- `crates/server/src/auras/tests.rs`: real-DB App tests.
+- `crates/server/src/auras/tests.rs`: real-DB App tests, including an actual authored Cenarion15184 spawn/addon18950 and real player-grid wake.
+- `crates/server/src/zones.rs`: authored creature spawning and activity-gated addon application.
 - `crates/server/src/auras/polymorph_tests.rs`: Polymorph 118 on a kobold and a level-scaled Blackrock Spy.

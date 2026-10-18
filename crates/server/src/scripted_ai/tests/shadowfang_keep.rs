@@ -180,6 +180,7 @@ fn encounter_coverage_silverlaine_normal_progress_reopens_and_filters_only_its_p
             dead_bosses,
         },
         false,
+        Some(&mut crate::test_data::ground_map()),
     );
     queue.apply(h.app.world_mut());
     let new_entries: Vec<_> = h

@@ -74,7 +74,7 @@ fn achievements_criteria_native_any_item_receipts_use_canonical_quality_and_coun
     persistence::create_tables(&db);
     let mut h = harness_with_plugins(false, |app| {
         app.insert_resource(load_achievement_catalog(&conn).unwrap());
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.add_plugins(AchievementPlugin);
     })
     .unwrap();

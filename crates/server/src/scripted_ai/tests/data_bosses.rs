@@ -84,7 +84,9 @@ fn bound_boss_with_catalog(
     bit: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
-    let difficulty = if map_id == 409 { 3 } else { 1 };
+    // Source Lucifron spawn20056605 supports9/18; map409 difficulty9 supplies CT1004.
+    // Legacy difficulty3 has no installed MapDifficulty row and is not that spawn's context.
+    let difficulty = if map_id == 409 { 9 } else { 1 };
     bound_boss_at_difficulty(entry, map_id, bit, difficulty, catalog)
 }
 
@@ -467,6 +469,7 @@ fn encounter_fixture(
             app.world().resource::<WorldData>(),
             content,
             false,
+            Some(&mut crate::test_data::ground_map()),
         );
         // Object spawns and their lock sidecar are unchanged by the template import.
         let canonical =
@@ -544,11 +547,17 @@ fn spawn_authored_actor(
         wd,
         wd.template_for(entry, difficulty)
             .expect("authored fixture difficulty"),
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: difficulty,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("authored actor level context");
     commands
         .entity(actor)
         .insert(crate::zones::CreatureDifficulty(difficulty));
@@ -5104,9 +5113,9 @@ fn data_bound_dungeon_smartai_and_scriptless_raid_get_copy_scoped_lifecycle() {
     for (entry, map_id, bit, encounter) in [(6910, 70, 0, 547), (12118, 409, 0, 663)] {
         let (mut h, boss, map) = bound_boss(entry, map_id, bit);
         let database_file = tempfile::NamedTempFile::new().unwrap();
-        h.app.insert_resource(crate::persistence::GameDatabase {
-            db: redb::Database::create(database_file.path()).unwrap(),
-        });
+        h.app.insert_resource(crate::persistence::GameDatabase::new(
+            redb::Database::create(database_file.path()).unwrap(),
+        ));
         h.engage(boss);
         h.advance(0.05);
         assert_eq!(
@@ -5223,7 +5232,7 @@ fn achievements_criteria_native_encounter_loot_credit_precedes_lock_commit() {
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     h.app
-        .insert_resource(crate::persistence::GameDatabase { db });
+        .insert_resource(crate::persistence::GameDatabase::new(db));
     let player = h.player();
     let character = h
         .app
@@ -5327,9 +5336,9 @@ fn assert_copy_difficulty_credit(
     h.app
         .insert_resource(crate::test_data::achievement_catalog());
     let database_file = tempfile::NamedTempFile::new().unwrap();
-    h.app.insert_resource(crate::persistence::GameDatabase {
-        db: redb::Database::create(database_file.path()).unwrap(),
-    });
+    h.app.insert_resource(crate::persistence::GameDatabase::new(
+        redb::Database::create(database_file.path()).unwrap(),
+    ));
     crate::persistence::create_tables(
         &h.app
             .world()

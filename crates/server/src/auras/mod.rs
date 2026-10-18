@@ -16,13 +16,16 @@
 //! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
+pub(crate) mod agony;
 pub(crate) mod area_avoidance;
+pub(crate) mod augmentation;
 pub(crate) mod base_armor;
 mod charred_warblades;
 pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
 pub(crate) mod damage_transfer;
+pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fixate;
@@ -139,6 +142,7 @@ impl Plugin for AuraPlugin {
                 )
                     .chain()
                     .after(crate::spell_cast::advance_casts)
+                    .after(crate::spell_cast::queued_triggers::resolve_due)
                     .after(crate::combat::auto_attack_system),
             );
     }
@@ -263,13 +267,18 @@ impl AuraInstance {
         }
     }
 
-    /// Take over a reapplication's duration, amounts and charges; add a stack.
+    /// Refresh duration/amounts/charges; add a stack except Agony's preserved floor.
     fn refresh_from(&mut self, new: AuraInstance) {
         self.duration_ms = new.duration_ms;
         self.expires_at = new.expires_at;
         self.max_stacks = new.max_stacks;
         if self.max_stacks > 0 {
-            self.stacks = (self.stacks + 1).min(self.max_stacks);
+            self.stacks = if self.spell_id == agony::AGONY {
+                // Native980 refresh keeps damage level, raising only a new initial floor.
+                self.stacks.max(new.stacks).min(self.max_stacks)
+            } else {
+                (self.stacks + 1).min(self.max_stacks)
+            };
         }
         self.charges = new.charges;
         for fresh in new.effects {
@@ -562,6 +571,7 @@ fn build_effect(
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
+    let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let period_ms = if effect.aura_period_ms > 0 {
         spell_mods::modify(
             world,
@@ -606,6 +616,7 @@ fn build_instance(
     let max_stacks = options.map_or(0.0, |options| options.cumulative_aura as f32);
     let max_stacks =
         spell_mods::modify(world, caster, spell, SpellModOp::MaxAuraStacks, max_stacks);
+    let max_stacks = max_stacks.clamp(0.0, 255.0) as u8;
     let charges = options.map_or(0.0, |options| options.proc_charges.max(0) as f32);
     let charges = crate::spell_cast::scripts::proc_charges(world, caster, spell, charges);
     let charges = spell_mods::modify(world, caster, spell, SpellModOp::ProcCharges, charges);
@@ -649,8 +660,8 @@ fn build_instance(
         effects,
         duration_ms,
         expires_at: (duration_ms > 0).then(|| now + f64::from(duration_ms) / 1000.0),
-        stacks: 1,
-        max_stacks: max_stacks.clamp(0.0, 255.0) as u8,
+        stacks: agony::initial_stacks(world, caster, spell.id).min(max_stacks.max(1)),
+        max_stacks,
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,
         hidden: passive || attributes(spell, 0) & ATTR0_DO_NOT_DISPLAY != 0,
@@ -1311,6 +1322,8 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     let (mut stats, mut combat) = stat_mods::compute(&auras);
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
+    let primary_support = ebon_might::primary_bonus(&auras);
+    ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
@@ -1771,8 +1784,15 @@ pub fn interrupt_auras(
 
 // --- Systems ---
 
-/// Every unit (player or NPC) carries `ActiveAuras`, `UnitAuras` and `AuraStatMods`.
-type UnitsMissingAuras = QueryState<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>;
+/// Active units carry aura state; dormant cold spawns initialize in their waking step.
+type UnitsMissingAuras = QueryState<
+    Entity,
+    (
+        Or<(With<Player>, With<Npc>)>,
+        Without<ActiveAuras>,
+        Without<GridDormant>,
+    ),
+>;
 
 fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
     let units: Vec<Entity> = missing.iter(world).collect();
@@ -2081,6 +2101,10 @@ mod tests;
 mod toy_effects_tests;
 
 #[cfg(test)]
+mod agony_tests;
+#[cfg(test)]
+mod augmentation_tests;
+#[cfg(test)]
 mod autoattack_crit_tests;
 #[cfg(test)]
 mod bloodsurge_tests;
@@ -2092,6 +2116,8 @@ mod crit_damage_bonus_tests;
 mod critical_chaos_tests;
 #[cfg(test)]
 mod defensives_tests;
+#[cfg(test)]
+mod ebon_might_tests;
 #[cfg(test)]
 mod enduring_torment_tests;
 #[cfg(test)]
