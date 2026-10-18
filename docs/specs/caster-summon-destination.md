@@ -28,7 +28,7 @@ Spell target32 follows pinned TC `a352b1fa` `TARGET_DEST_CASTER_SUMMON`, indepen
 
 ## Known gaps (current cycle)
 
-- [ ] Lantha's existing follower fixture creates an NPC without ModelDisplay; source-reach validation refuses30146 at completion before any Felguard exists. No guessed reach or assertion change; gate blocked pending source-state scope decision.
+- [ ] Lantha fixture source-state repair GREEN pending: production follower spawn supplies the source display and loaded source combat reaches. Runtime missing-display refusal remains unchanged; no default reach or changed assertions.
 
 - [ ] `TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED`: existing live-GO ray1yd/clearance0.5yd is not TC nav/static/unit-halfheight tracing. Helper reuse is intentional; no new collision system.
 - [ ] `TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED`: no HOVER/HoverHeight or UnitFlags2 swim projection; wet/hover parity is not certified.
