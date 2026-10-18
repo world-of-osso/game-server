@@ -243,6 +243,48 @@ fn tank_pull_healer_ready_honors_real_level_and_consumed_native_cooldown() {
 }
 
 #[test]
+fn tank_pull_healer_area_ready_requires_tank_in_native_tranquility_area() {
+    let (mut h, tank, healer) = fixture(&[740]);
+    let source_level = h
+        .app
+        .world()
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .find(|entry| entry.spell_id == 740)
+        .unwrap()
+        .min_level;
+    let owner = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert((Level(source_level), UnitLevel(source_level)));
+    for unit in [tank, healer] {
+        let profile = h.app.world().get::<Follower>(unit).unwrap().profile.clone();
+        super::spawning::initialize(h.app.world_mut(), owner, unit, profile).unwrap();
+    }
+    h.advance(3);
+    let at = *h.app.world().get::<Position>(tank).unwrap();
+    h.app.world_mut().entity_mut(healer).insert(at);
+    let party = [owner, tank, healer];
+    assert!(
+        pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
+            .unwrap()
+            .is_some()
+    );
+    h.app.world_mut().entity_mut(healer).insert(Position {
+        x: at.x + 1000.0,
+        ..at
+    });
+    assert!(
+        pull_readiness::read_ready_heal(h.app.world_mut(), tank, &party)
+            .unwrap()
+            .is_none(),
+        "caster-area healing cannot certify an out-of-area tank"
+    );
+}
+
+#[test]
 fn tank_pull_healer_ready_missing_kit_does_not_substitute_default_profile_heal() {
     let (mut h, tank, healer) = fixture(&[774, 8936]);
     let party = [h.caster, tank, healer];
