@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source345–349 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source345349-slidewyrmholerecalibrationprivate-environmentperception-gaps-2026-10-17): mixed slide/periodic child, engineering2827/rank1 Wyrmhole random/triangulated travel, recalibrator area-trigger27706, outdoors party/raid-private environment Title55/rawsignedflags and observer-scoped gnoll perception remain distinct gaps.195667/194993 runtime content absent; existing198156 census stays blocked. No invented tick/destination/model pools, public/owner-only privacy substitute, inert imports or new positive/native proof. Lead478 owns expanded acceptance verification; no heavy duplicate.
+
 ## 2026-10-17 — Toy source340–344 and inspected477 proof
 
 [Exact source matrix](../toy-effects14-coverage.md#source340344-mailboxwhelpsholidayfeast-boundaries-and-retained-sign-proof-2026-10-17): Ohuna Control1/Title5 mail/recall, mixed five-whelp movement, Murglasses holiday recovery and four-model appreciative-critter feast remain gaps;341 retains exact historical sign CPU proof, not native certification. No runtime/data/inert imports or own heavy duplicate. [Gate477 receipt](../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) now independently inspected: server280passed/0failed/1ignored445.11s, client9passed, EXIT0/FMT0,2m58s compile/no warning lines; caster14/all13hearthstones/nine-disguise+Oomgut explicit ok. Ignored case is named invisible-stalker test.478 expanded cases remain queued, not passed.
