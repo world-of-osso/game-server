@@ -37,6 +37,7 @@ pub(super) mod cast_admission;
 mod data_bosses;
 mod dungeonach;
 mod smart_combat;
+mod rainfire_visibility;
 mod wailing_caverns;
 const NPC_LORD_OVERHEAT: u32 = 46264;
 const NPC_HOGGER: u32 = 46254;

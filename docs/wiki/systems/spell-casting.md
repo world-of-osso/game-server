@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Rain of Fire dynamic-object visibility — 2026-10-17
+
+Actual86636 persistent objects now carry shared `DynamicObjectInfo` and existing Position through ordinary Replicate/NetworkVisibility. Existing same-copy100yd interest owns visibility, and actual DynamicObject expiry/caster removal owns despawn; neither server damage nor duration changes. Source70448 Effect88312 is effect27/periodicDamage3 with destination53/enemy28, Radius8=5 and Duration105=9s. Overheat86633 remains unit damage, not a ground area.
+
+The real Lord Overheat/interest RED reaches a genuine object with correct5yd/9s geometry but no replication; caster-removal control passes before the change. Tests retain actual boss casts and area damage, distinguish fixture position changes from native input, and exercise other-copy exclusion. Native escape and joint consumer acceptance remain pending. [Contract](../../specs/rain-of-fire-visibility.md).
+
 ## Self hits alongside destination missiles (2026-10-17)
 
 TC a352b1fa `Spell.cpp:2486–2521,4096–4138` keeps caster-targeted hits at zero delay even when other effects have a traveling destination. `missiles::hit_delays` preserves that separation; unitless effects land at the destination delay, not alongside the early self hit. Native Recuperate1231411 combines a self trigger1231418 with destination effect179 (`CREATE_AREATRIGGER`, properties38187) and Speed10: delaying the self trigger broke its immediate aura application and full-health termination tests. Shared aura-stack slots are unchanged. This fix addresses hit timing only; these tests do not certify area-trigger behavior or visuals.
