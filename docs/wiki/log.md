@@ -1,3 +1,7 @@
+## 2026-10-18 — Masquerade697 authored cast timing acceptance pending
+
+[Exact acceptance/limits](../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 learned600ms cast with no early appearance/SpellGo/category recovery, then source145134/misc267626,8/one-hour aura/2513 recovery and Idol refusal. Old fixtures unchanged; format/manual only, uncompiled/unexecuted AFTER541. No runtime/data/protocol/new CancelCast, exact-timing/native/hour-expiry/all-five certificate or own jobs.
+
 ## 2026-10-18 — Gate541 GREEN/landed Singed593 and Pango684
 
 [Exact gate/landing proof](../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt plus ancestry confirmsa6f8505f7 on master312f5aebd.541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's real runtime admission failure repaired by named Singed slot, not fixture change or blanketdummy. Native/full1166/all-five/hour-expiry/distribution limits remain; no duplicate jobs.

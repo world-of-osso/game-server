@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Masquerade697 authored cast pre/post-completion acceptance pending after541 (2026-10-18)
+
+Test/spec35168319d adds `toyfx697_masquerade_learned_cast_defers_transform_and_shared_recovery_until_completion`, extending existing Full1166 item276207/root1298957. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 ItemEffect234767/slot0/TriggerType0 selects CastTime36=600ms, single self56/misc267626,8/display145134/Duration42=3600000ms, category2513/recovery600000ms. Actual learned use's initial seven50ms frames must leave model/aura/SpellGo/category recovery uncommitted; after completion, the test asserts one root SpellGo/source appearance/aura/recovery and learned Idol276925 refusal without another cast/model/deadline change, preserving health. Prior shared-five, Pango, Royal and old misc8 fixtures remain unchanged.
+
+Format/manual readability only, UNCOMPILED/UNEXECUTED AFTER541; no new runtime/data/protocol/clock changes or own jobs. This brackets pre/post completion, not exact600ms scheduling, interruption, one-hour expiry, native presentation or all-five lifecycle. Cancellation was inspected as a candidate only; no new CancelCast API was introduced. [Contract](specs/toys.md), [test](../crates/server/src/toys_disguise_tests.rs).
+
 ## Gate541 GREEN and landed: Singed593 repair plus Pango684 lifecycle (2026-10-18)
 
 Lead explicit landing receipt: featurea6f8505f7 is on server master312f5aebd23c11f6545f0a58c37212be595d8330; ancestry independently passes. Gate541 server317 passed/0 failed/1 ignored in469.98s, EXIT0/FMT0/CHECK0, with exact Explosive593 and Pango684 tests OK. The [owned CPU proof](#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18) remains valid.535's real admission failure is repaired/landed through541, not relabelled as a fixture problem. Named Singed slot only; unrelated scripted-dummy refusals stay intact. Earlier pending labels below are historical for these covered cases, not current landing status. Native explosive/Singed art, all-five lifecycle, one-hour expiry/distribution and full1166 gameplay completion remain unclaimed.

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Masquerade697 authored cast timing acceptance pending (2026-10-18)
+
+[Exact acceptance/limits](../../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 with learned-use pre/post source600ms cast boundary: no early SpellGo/appearance/category recovery, then145134/misc267626,8/one-hour aura/shared2513 and Idol refusal. Prior fixtures unchanged. Format/manual only; uncompiled/unexecuted AFTER541. No new CancelCast/runtime/data/protocol or native/exact-timing/hour-expiry/all-five claim.
+
 ## Gate541 Singed593 and Pango684 landed (2026-10-18)
 
 [Current gate/landing proof](../../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt/ancestry confirmsa6f8505f7 on server master312f5aebd;541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's genuine runtime admission failure repaired via named Singed slot, not blanketdummy. Earlier pending labels below are historical; native/full1166/all-five/hour-expiry/distribution limits persist.
