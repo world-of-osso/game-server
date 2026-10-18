@@ -849,7 +849,6 @@ fn swing_damage(
     target_mods: Option<&AuraStatMods>,
     additional_done_mult: f32,
 ) -> f32 {
-    const PHYSICAL: u32 = 1;
     let mut rng = rand::thread_rng();
     let base = if let Some((_, attack_power)) = attacker.spirit_wolf {
         // Guardian::UpdateDamagePhysical, StatSystem.cpp:1423. Only owner AP
@@ -865,7 +864,17 @@ fn swing_damage(
             None => creature_weapon_damage(scaling),
         }
     };
-    let done = attacker.mods.map_or(1.0, |mods| {
+    apply_swing_multipliers(base, attacker.mods, target_mods, additional_done_mult)
+}
+
+fn apply_swing_multipliers(
+    base: f32,
+    attacker_mods: Option<&AuraStatMods>,
+    target_mods: Option<&AuraStatMods>,
+    additional_done_mult: f32,
+) -> f32 {
+    const PHYSICAL: u32 = 1;
+    let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
@@ -953,6 +962,19 @@ fn roll_outcome(
     can_avoid: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> MeleeOutcome {
+    let chances = read_outcome_chances(attacker, victim, can_avoid, target_auras);
+    melee::roll_melee_outcome(
+        &chances,
+        rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
+    )
+}
+
+fn read_outcome_chances(
+    attacker: &Attacker,
+    victim: Victim,
+    can_avoid: bool,
+    target_auras: Option<&crate::auras::ActiveAuras>,
+) -> melee::MeleeChances {
     let swinger = match (attacker.creature, attacker.stats) {
         (true, _) => Swinger::Creature {
             miss_pct: creature_miss_chance(attacker.mods),
@@ -993,10 +1015,7 @@ fn roll_outcome(
     });
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (chances.crit + crit_modifier + autoattack_crit_modifier).max(0.0);
-    melee::roll_melee_outcome(
-        &chances,
-        rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
-    )
+    chances
 }
 
 /// Who the swing lands on: a creature (by level difference), or a player's
