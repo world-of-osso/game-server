@@ -113,6 +113,14 @@ fn chaos_strike_spends_40_fury_and_hits_twice() {
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(h.power(PowerType::Fury), 10.0);
     h.advance(1);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage && event.spell_id == Some(199_547)),
+        "second native hit waits300ms"
+    );
+    h.advance(6);
     let npc = h.npc.to_bits();
     let log = std::mem::take(&mut h.inbox.log);
     for spell_id in [222_031, 199_547] {

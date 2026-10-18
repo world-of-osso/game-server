@@ -1,5 +1,6 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash power/first-loop Frost and Icy clocks are ported; full phases/jumps/runes are unported.
+//! Telash power/rune startup/first-loop Frost and Icy clocks are ported;
+//! full phases, jumps and rune interactions remain unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -23,6 +24,7 @@ const SPROUT_SCRIPT: &str = "npc_ley_line_sprouts";
 const LEY_LINE_SPROUT_AURA: u32 = 374161;
 const ARCANE_POWER: u32 = 374736;
 const TELASH_INITIAL_POWER: f32 = 60.0;
+const TELASH_VAULT_RUNES_GROUP: u32 = 0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
 const EVENT_FROST_BOMB: u32 = 1;
@@ -269,6 +271,7 @@ impl super::CreatureAi for Telash {
     }
 
     fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        ctx.summon_creature_group(TELASH_VAULT_RUNES_GROUP);
         let Some((primary, mut powers)) = read_telash_primary_powers(ctx.world, ctx.me) else {
             warn!(actor = ?ctx.me, "Telash initial power requires native template/class/power data");
             return;
