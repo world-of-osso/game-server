@@ -5,6 +5,7 @@ import csv
 import hashlib
 import io
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -15,6 +16,8 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2
 import zephras_content
+
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
 
 
 class Db2OverlayTests(unittest.TestCase):
@@ -51,7 +54,7 @@ class Db2OverlayTests(unittest.TestCase):
 
     def import_csvs(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            db2.import_tables(db2.DEFAULT_BUILD, self.root, self.path)
+            db2.import_tables(db2.DEFAULT_BUILD, self.root, self.path, SOURCE)
 
     def test_refresh_restores_derived_reactions_and_records_provenance_twice(self):
         before = self.connection.execute(

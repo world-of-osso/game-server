@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Add the new-character kit tables to an imported world.db, additively.
 
-  add_player_create_info.py --db data/world.db.new [--csv-root DIR] [--tdb-dir DIR]
+  add_player_create_info.py --source-dir DIR --db data/world.db.new [--csv-root DIR] [--tdb-dir DIR]
 
 The import now loads the CharacterLoadout, CharacterLoadoutItem, ItemEffect and
 ItemXItemEffect DB2s and TrinityCore's playercreateinfo_action / playercreateinfo_item,
@@ -69,9 +69,9 @@ def table_ddl(name):
     )
 
 
-def add_player_create_info(conn, csv_dir):
+def add_player_create_info(conn, csv_dir, source_dir):
     """Replace kit DB2 tables and add missing installed item definitions; return added IDs."""
-    skyborne_rows = skyborne_data.load_rows(skyborne_data.DEFAULT_SOURCE)
+    skyborne_rows = skyborne_data.load_rows(source_dir)
     for db2_name in DB2_TABLES:
         name = db2.table_name(db2_name)
         header, rows = db2.read_csv(csv_dir / f"{db2_name}.csv")
@@ -102,6 +102,7 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--db", required=True, type=Path)
+    parser.add_argument("--source-dir", required=True, type=Path)
     parser.add_argument("--csv-root", type=Path, default=db2.DEFAULT_CSV_ROOT)
     parser.add_argument(
         "--tdb-dir", type=Path, default=SCRIPT_DIR.parent / "data/reference/tdb1210"
@@ -109,7 +110,9 @@ def main():
     args = parser.parse_args()
     load_tdb_tables(args.db, args.tdb_dir)
     with sqlite3.connect(args.db) as conn:
-        added = add_player_create_info(conn, args.csv_root / db2.DEFAULT_BUILD)
+        added = add_player_create_info(
+            conn, args.csv_root / db2.DEFAULT_BUILD, args.source_dir
+        )
         retail_action_bars.relocate_unpaged_buttons(conn)
     print(f"added {len(added)} kit items to content_item")
 
