@@ -57,6 +57,7 @@ pub(in crate::scripted_ai) fn despawn_creature(
     force_respawn_secs: u32,
 ) {
     crate::combat::combat_stop(world, entity);
+    crate::spell_cast::cancel_cast(world, entity);
     if world.get::<crate::zones::TempSummon>(entity).is_some() {
         crate::zones::unsummon(world, entity);
         return;

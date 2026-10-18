@@ -13,7 +13,10 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [ ] Trading Post requests execute after preceding Guide contribution/Tender settlement on the same FIFO; publish replies and collection changes only after their own commit. Same-tick earned Tender must fund a purchase and survive reopen.
 - [ ] Preserve purchase/cart/refund/freeze and UTC-month rollover behavior, including snapshot settlement; no tick-thread write initialization disguised as a read.
 - [ ] Guild-news queries/sticky requests and dirty subscriber publications read behind preceding achievement commits on that same FIFO; no early stale reply or consumed-but-lost notification.
-- [ ] Login and missing-component Guide loads read character contributions from the writer-fed account cache. Raw default/migration writes are unavailable in production; ordinary reopen drains the prior writer.
+- [ ] Login and missing-component Guide loads read character contributions from the writer-fed account cache. Raw achievement default/migration writes are unavailable in production; ordinary reopen drains the prior writer.
+- [ ] Unwarmed character selection hydrates missing secondary rows and legacy reputation/currency conversions as one typed job on the existing FIFO. Request processing returns while the writer is held; world admission waits for its receipt. Queued achievement contributions remain authoritative when admission continues.
+- [ ] Password login persists its new token on that FIFO; authentication, replacement-session disconnect and token publication wait for the receipt. Abandoned/disconnected requests cannot authenticate another connection. Existing token login and credential/ban checks retain their behavior.
+- [ ] Held-writer ordering fixtures use explicit release and observable pre/post-commit state, not short wall-clock thresholds or timed auto-release.
 
 ## How it works
 
@@ -43,9 +46,10 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [x] Minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import integrated with master b8b6c2f9d and landed netdelta;13 core controls pass within28 affected controls.
 - [x] Periodic/account/Guide/Tender and Trading Post request ordering, crash/reopen and migration controls pass; corrected20-ACK same-frame/due-save/reopen control passes separately.
 - [ ] Gate441 found one real timing failure (news fixture0vs1) and prompted a production-reader audit. Four runtime ordering REDs prove stale guild request, lost subscriber notification, blocked raw login initialization and stale Guide overwrite; all four now GREEN. Reader coverage22 controls plus the corrected original atomic-news control passes with0ignored; independent targeted re-gate/check/fmt pending.
-- [ ] Post-landing11-peer plain-release acceptance.
+- [x] Post-landing11-peer plain-release90s bounded dummy acceptance:20.0Hz,15.575ms mean/69.9ms maximum, not controlled FIFO-only A/B or hostile-AI/cold-tail proof. See [receipt summary](../wiki/investigations/server-tick-lag.md#cold-selection-hydration-and-password-tokens).
+- [ ] Cold-hydration/password-token follow-up:93 distinct targeted controls covered82+11 with0ignored; current lead gate/check pending.
 - [ ] Exact PvP release20 stall attribution; ACK handler has no direct character save. Other synchronous callers are not inferred to be its cause.
 
 ## Out of scope
 
-Other unlanded performance topics (login off-thread, navigation, catalog/indexing, guild/companion/charter/PvP conversions) remain separate triage work. No second writer, netcode changes, gameplay timer changes or reduced population.
+Other unlanded performance topics (password-hash off-thread work, navigation, catalog/indexing, guild/companion/charter/PvP conversions) remain separate triage work. No second writer, netcode changes, gameplay timer changes or reduced population.

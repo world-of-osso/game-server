@@ -116,9 +116,10 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_WEAPON_PERCENT_DAMAGE => weapon_percent_damage,
         EFFECT_DISPEL => dispel,
         EFFECT_WEAPON_DAMAGE | EFFECT_NORMALIZED_WEAPON_DMG => weapon_damage,
+        EFFECT_TRIGGER_SPELL => super::queued_triggers::schedule,
         // Spell::EffectTriggerMissileSpell (SpellEffects.cpp:725-778): the
-        // missile's spell hits the unit target, like TRIGGER_SPELL.
-        EFFECT_TRIGGER_SPELL | EFFECT_TRIGGER_MISSILE => trigger_spell,
+        // missile's spell hits the unit target synchronously.
+        EFFECT_TRIGGER_MISSILE => trigger_spell,
         EFFECT_SEND_EVENT => send_game_event,
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
@@ -933,15 +934,15 @@ pub(crate) fn deal_effect_damage(
     deal_damage_and_report(world, ctx, target, damage);
 }
 
-struct DamageInput<'a> {
-    amount: f32,
-    crit: bool,
-    periodic: bool,
-    resolved_source: bool,
+pub(super) struct DamageInput<'a> {
+    pub(super) amount: f32,
+    pub(super) crit: bool,
+    pub(super) periodic: bool,
+    pub(super) resolved_source: bool,
     /// Authored effect for native damage; script/copy amounts carry no effect selector.
-    effect: Option<&'a SpellEffect>,
+    pub(super) effect: Option<&'a SpellEffect>,
     /// DAMAGE_SHIELD attributes damage to its owner but bonuses to its aura caster.
-    bonus_caster: Entity,
+    pub(super) bonus_caster: Entity,
 }
 
 /// TC Unit::DealMeleeDamage: shield owner damages the attacker; the original
@@ -1102,30 +1103,23 @@ fn ignores_caster_damage_modifiers(spell: &SpellInfo) -> bool {
         || super::attributes(spell, 6) & IGNORE_CASTER_MODIFIERS != 0
 }
 
-fn deal_damage_and_report(
-    world: &mut World,
+/// Numeric source amount before rounding, armor, absorbs, transfer or health scaling.
+/// Callers retain their own spell's downstream resolution and native attributes.
+pub(super) fn damage_before_mitigation(
+    world: &World,
     ctx: &EffectCtx,
     target: Entity,
-    damage: DamageInput,
+    damage: &DamageInput,
 ) -> f32 {
-    let DamageInput {
+    let &DamageInput {
         amount,
-        crit,
         periodic,
         resolved_source,
         effect,
         bonus_caster,
+        ..
     } = damage;
-    if !super::targets::is_alive(world, target) {
-        return 0.0;
-    }
     let school = ctx.spell.school_mask();
-    if crate::auras::is_immune(world, target, school) {
-        let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
-        event.periodic = periodic;
-        log_event(world, event);
-        return 0.0;
-    }
     let amount = if resolved_source {
         amount
     } else {
@@ -1150,14 +1144,39 @@ fn deal_damage_and_report(
         caster: bonus_caster,
         ..*ctx
     };
-    let amount = (if resolved_source {
+    (if resolved_source {
         amount
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
     } * done
         * taken)
         .max(0.0)
-        .round();
+}
+
+fn deal_damage_and_report(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+    damage: DamageInput,
+) -> f32 {
+    let DamageInput {
+        crit,
+        periodic,
+        resolved_source,
+        effect,
+        ..
+    } = damage;
+    if !super::targets::is_alive(world, target) {
+        return 0.0;
+    }
+    let school = ctx.spell.school_mask();
+    if crate::auras::is_immune(world, target, school) {
+        let mut event = log_amount(ctx, target, CombatLogKind::Miss(MissKind::Immune));
+        event.periodic = periodic;
+        log_event(world, event);
+        return 0.0;
+    }
+    let amount = damage_before_mitigation(world, ctx, target, &damage).round();
     let amount = if periodic {
         amount
     } else {
@@ -1669,7 +1688,6 @@ fn remove_aura(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target
     );
 }
 
-/// 64 TRIGGER_SPELL: cast `EffectTriggerSpell` at this target.
 /// TC EffectTriggerMissileSpell HIT mode (SpellEffects.cpp:757-788), distinct from
 /// the existing HIT_TARGET handler: forward destination, retaining child costs.
 pub(super) fn trigger_missile_at_destination(

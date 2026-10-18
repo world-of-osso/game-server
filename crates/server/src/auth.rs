@@ -113,19 +113,76 @@ pub fn process_login_requests(
     mut connected: ResMut<ConnectedAccounts>,
     mut senders: Query<&mut MessageSender<LoginResponse>>,
     mut commands: Commands,
+    mut pending: Local<HashMap<Entity, PendingLoginToken>>,
+    active: Query<(), (With<Connected>, Without<PendingForcedDisconnect>)>,
 ) {
     let Some(db) = db.as_ref() else { return };
+    pending.retain(|&entity, login| {
+        if active.get(entity).is_err() || receivers.get(entity).is_err() {
+            return false;
+        }
+        let Some(result) = login.receipt.result() else {
+            return true;
+        };
+        match result {
+            Ok(token) => publish_authenticated_login(
+                entity,
+                login.account_id,
+                &token,
+                db,
+                &mut connected,
+                &mut senders,
+                &mut commands,
+            ),
+            Err(error) => send_login_error(entity, &mut senders, &error),
+        }
+        false
+    });
     let logins = collect_pending_auth_requests(&mut receivers);
     for (entity, req) in logins {
-        handle_login(
-            entity,
-            &req,
-            db,
-            &mut connected,
-            &mut senders,
-            &mut commands,
-        );
+        if pending.contains_key(&entity) || active.get(entity).is_err() {
+            continue;
+        }
+        match persistence_accounts::validate_login_credentials(
+            &db.db,
+            req.token.as_deref(),
+            &req.username,
+            &req.password,
+        ) {
+            Ok((account_id, Some(token))) => publish_authenticated_login(
+                entity,
+                account_id,
+                &token,
+                db,
+                &mut connected,
+                &mut senders,
+                &mut commands,
+            ),
+            Ok((account_id, None)) => {
+                let receipt = db
+                    .writer
+                    .enqueue_result("password login token", move |raw| {
+                        persistence_accounts::ensure_account_not_banned(raw, account_id)?;
+                        Ok(persistence_accounts::generate_token_for_account(
+                            raw, account_id,
+                        ))
+                    });
+                pending.insert(
+                    entity,
+                    PendingLoginToken {
+                        account_id,
+                        receipt,
+                    },
+                );
+            }
+            Err(error) => send_login_error(entity, &mut senders, &error),
+        }
     }
+}
+
+pub(crate) struct PendingLoginToken {
+    account_id: u64,
+    receipt: crate::persistence_writer::CommitReceipt<String>,
 }
 
 fn collect_pending_auth_requests<M: lightyear::prelude::Message>(
@@ -140,30 +197,15 @@ fn collect_pending_auth_requests<M: lightyear::prelude::Message>(
     out
 }
 
-fn handle_login(
+fn publish_authenticated_login(
     entity: Entity,
-    req: &LoginRequest,
+    account_id: u64,
+    token: &str,
     db: &GameDatabase,
     connected: &mut ConnectedAccounts,
     senders: &mut Query<&mut MessageSender<LoginResponse>>,
     commands: &mut Commands,
 ) {
-    let token_ref = req.token.as_deref();
-    let result = persistence_accounts::login_with_credentials(
-        &db.db,
-        token_ref,
-        &req.username,
-        &req.password,
-    );
-
-    let (account_id, token) = match result {
-        Ok(pair) => pair,
-        Err(e) => {
-            send_login_error(entity, senders, &e);
-            return;
-        }
-    };
-
     if let Some(previous) = replace_connected_account(connected, account_id, entity) {
         info!(
             "Account {account_id} re-authenticated on {entity:?}; disconnecting older session {previous:?}"
@@ -178,7 +220,7 @@ fn handle_login(
 
     let chars = persistence::list_characters_for_account(&db.db, account_id);
     let entries = load_roster_entries(&db.db, &chars);
-    send_login_success(entity, senders, &token, entries);
+    send_login_success(entity, senders, token, entries);
     commands
         .entity(entity)
         .remove::<(PendingAuth, PendingAuthTimer)>()
@@ -314,6 +356,10 @@ fn send_register_response(
         error: error.map(|s| s.to_string()),
     });
 }
+
+#[cfg(test)]
+#[path = "auth_writer_tests.rs"]
+mod writer_tests;
 
 #[cfg(test)]
 mod tests {

@@ -93,16 +93,17 @@ fn trading_post_query_never_waits_for_a_busy_durable_writer() {
     prepare(&mut h, 1790812900);
     assert_eq!(request(&mut h, TradingPostRequest::Balance).tender, 0);
     let held = h.db().begin_write().unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
     let release = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
     h.app
         .world_mut()
         .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
         .unwrap()
         .send::<InstanceChannel>(TradingPostRequest::Balance);
-    let started = std::time::Instant::now();
     let mut replies = Vec::new();
     for _ in 0..4 {
         h.app.update();
@@ -114,8 +115,12 @@ fn trading_post_query_never_waits_for_a_busy_durable_writer() {
                 .receive(),
         );
     }
-    let elapsed = started.elapsed();
+    assert!(
+        !release.is_finished(),
+        "Trading Post tick must return while writer is held"
+    );
     let replies_before_commit = replies.len();
+    release_writer.send(()).unwrap();
     release.join().unwrap();
     crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -130,10 +135,6 @@ fn trading_post_query_never_waits_for_a_busy_durable_writer() {
         );
         std::thread::yield_now();
     }
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "Trading Post request tick waited: {elapsed:?}"
-    );
     assert_eq!(
         replies_before_commit, 0,
         "no reply before settlement and request commit"

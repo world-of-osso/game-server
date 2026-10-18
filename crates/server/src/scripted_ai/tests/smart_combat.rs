@@ -45,11 +45,17 @@ fn geomancer() -> (Harness, Entity) {
         &mut commands,
         wd,
         &wd.templates[&GEOMANCER],
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: 0,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("source geomancer level context");
     queue.apply(app.world_mut());
     // Outside proximity aggro until explicitly engaged; inside Fireball's range.
     let (player, connection) = spawn_player(

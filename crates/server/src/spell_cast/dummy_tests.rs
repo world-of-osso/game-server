@@ -73,7 +73,7 @@ fn dummy_channel_destination_uses_live_channel_not_unrelated_explicit_unit() {
         .world_mut()
         .get_mut::<super::PendingCastSpell>(h.caster)
         .unwrap()
-        .0
+        .spell
         .cast_destination = Some(requested.to_array());
     assert_eq!(destination(&h, Some(h.npc)).unwrap().position, requested);
     let caster = h.caster;
@@ -374,6 +374,15 @@ fn dummy_warrior_rampage_spends_rage_hits_and_enrages() {
     assert_eq!(h.power(PowerType::Rage), 200.0);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, 184362));
     h.advance(3);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Damage
+                && matches!(event.spell_id, Some(184709 | 201364 | 201363))),
+        "native later hits wait300ms and900ms"
+    );
+    h.advance(16);
     for id in [184707, 184709, 201364, 201363] {
         assert!(
             h.inbox

@@ -152,6 +152,231 @@ fn source_start_facing_is_used_on_login_without_repositioning_saved_characters()
 }
 
 #[test]
+fn cold_character_selection_returns_while_writer_is_held_and_reopens_initialized_state() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let raw = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&raw);
+    let (character, _) = persistence::create_character(&raw, 1, "Coldwriter", 1, 1).unwrap();
+    // Never call hydration/loaders here: secondary character rows remain absent.
+    let db = GameDatabase::new(raw);
+    let held = db.db.begin_write().unwrap();
+    let (release, blocked) = std::sync::mpsc::channel();
+    let holder = std::thread::spawn(move || {
+        let explicitly_released = blocked.recv_timeout(Duration::from_secs(5)).is_ok();
+        held.abort().unwrap();
+        explicitly_released
+    });
+    let (mut app, connection) =
+        queue_character_selection(db, 1, character, crate::maps::MapStore::continents());
+    app.update();
+    app.update();
+    assert!(
+        !holder.is_finished(),
+        "cold selection blocked on the durable writer"
+    );
+    assert!(
+        app.world()
+            .get::<crate::auth::InWorld>(connection)
+            .is_none()
+    );
+    assert_eq!(
+        app.world_mut()
+            .query::<&ClientId>()
+            .iter(app.world())
+            .count(),
+        0
+    );
+    release.send(()).unwrap();
+    assert!(
+        holder.join().unwrap(),
+        "writer watchdog is not a success condition"
+    );
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while app
+        .world()
+        .get::<crate::auth::InWorld>(connection)
+        .is_none()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "cold selection never completed"
+        );
+        app.update();
+        std::thread::yield_now();
+    }
+    let gold = app
+        .world_mut()
+        .query::<&Gold>()
+        .single(app.world())
+        .unwrap()
+        .0;
+    assert_eq!(gold, persistence::InventoryData::default().gold);
+    drop(app);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    use redb::ReadableDatabase;
+    let read = reopened.begin_read().unwrap();
+    for name in [
+        "character_inventories",
+        "pvp_states",
+        "world_maps",
+        "friends",
+        "ignore_lists",
+        "collections",
+        "reputations_retail_v2",
+    ] {
+        assert!(
+            read.open_table(redb::TableDefinition::<u64, &[u8]>::new(name))
+                .unwrap()
+                .get(character)
+                .unwrap()
+                .is_some(),
+            "missing durable {name}"
+        );
+    }
+    assert_eq!(persistence::load_inventory(&reopened, character).gold, gold);
+    assert_eq!(
+        persistence::load_collections(&reopened, character),
+        crate::collection::default_collection_state()
+    );
+}
+
+#[test]
+fn cold_hydration_migrates_legacy_rows_after_prior_fifo_updates_and_survives_reopen() {
+    for queued_update in [false, true] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let raw = redb::Database::create(file.path()).unwrap();
+        persistence::create_tables(&raw);
+        let (character, _) = persistence::create_character(&raw, 1, "Coldmigrate", 1, 1).unwrap();
+        let legacy: shared::reputation::CharacterReputation = serde_json::from_value(
+            serde_json::json!({"values":{"72":21250,"76":0,"576":12200},"tracked":[72],"watched":72}),
+        ).unwrap();
+        let txn = raw.begin_write().unwrap();
+        txn.open_table(redb::TableDefinition::<u64, &[u8]>::new("reputations"))
+            .unwrap()
+            .insert(character, bitcode::encode(&legacy).as_slice())
+            .unwrap();
+        txn.commit().unwrap();
+        let wallet: shared::currency::CurrencyWallet = serde_json::from_value(
+            serde_json::json!({"entries":[{"id":1,"amount":420,"week_earned":20},{"id":2,"amount":80,"week_earned":3}]}),
+        ).unwrap();
+        persistence::save_currencies(&raw, character, &wallet);
+        let db = GameDatabase::new(raw);
+        let held = db.db.begin_write().unwrap();
+        let (release, blocked) = std::sync::mpsc::channel();
+        let holder = std::thread::spawn(move || {
+            let signal = blocked.recv_timeout(Duration::from_secs(5));
+            held.abort().unwrap();
+            signal.expect("explicit writer release");
+        });
+        if queued_update {
+            db.writer.enqueue("fixture newer wallet", move |raw| {
+                let mut newer = wallet;
+                newer.entries[0].amount = 777;
+                persistence::save_currencies(raw, character, &newer);
+                Ok(())
+            });
+        }
+        let (mut app, connection) =
+            queue_character_selection(db, 1, character, crate::maps::MapStore::continents());
+        app.update();
+        app.update();
+        assert!(!holder.is_finished());
+        assert!(
+            app.world()
+                .get::<crate::auth::InWorld>(connection)
+                .is_none()
+        );
+        release.send(()).unwrap();
+        holder.join().unwrap();
+        let player = finish_character_selection(&mut app, connection);
+        let currencies = &app
+            .world()
+            .get::<crate::currency::PlayerCurrencies>(player)
+            .unwrap()
+            .0;
+        let honor = if queued_update { 777 } else { 420 };
+        assert_eq!(currencies.get(1792), honor);
+        assert_eq!(currencies.get(1602), 80);
+        assert_eq!(currencies.get(1), 0);
+        assert_eq!(
+            app.world()
+                .get::<crate::pvp::PlayerPvpState>(player)
+                .unwrap()
+                .progress
+                .honor,
+            honor
+        );
+        let reputation = app
+            .world()
+            .get::<shared::reputation::CharacterReputation>(player)
+            .unwrap();
+        assert_eq!(reputation.get_value(72), 4250);
+        assert_eq!(reputation.get_value(76), -42000);
+        assert_eq!(reputation.watched_faction(), Some(72));
+        drop(app);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        assert_eq!(
+            persistence::load_currencies(&reopened, character).get(1792),
+            honor
+        );
+        let reputation = persistence::load_reputation(&reopened, character, || {
+            panic!("migration must be durable")
+        });
+        assert_eq!(reputation.get_value(72), 4250);
+        use redb::ReadableDatabase;
+        assert!(
+            reopened
+                .begin_read()
+                .unwrap()
+                .open_table(redb::TableDefinition::<u64, &[u8]>::new("reputations"))
+                .unwrap()
+                .get(character)
+                .unwrap()
+                .is_none()
+        );
+    }
+}
+
+#[test]
+fn abandoned_cold_hydration_does_not_enter_a_reauthenticated_connection() {
+    let db = test_db();
+    let (character, _) = persistence::create_character(&db.db, 1, "Colddepart", 1, 1).unwrap();
+    let held = db.db.begin_write().unwrap();
+    let (release, blocked) = std::sync::mpsc::channel();
+    let holder = std::thread::spawn(move || {
+        let signal = blocked.recv_timeout(Duration::from_secs(5));
+        held.abort().unwrap();
+        signal.expect("explicit writer release");
+    });
+    let (mut app, connection) =
+        queue_character_selection(db, 1, character, crate::maps::MapStore::continents());
+    app.update();
+    app.update();
+    assert!(!holder.is_finished());
+    app.world_mut()
+        .entity_mut(connection)
+        .insert(Authenticated { account_id: 2 });
+    release.send(()).unwrap();
+    holder.join().unwrap();
+    crate::test_data::drain_persistence(app.world().resource::<GameDatabase>());
+    for _ in 0..4 {
+        app.update();
+    }
+    assert!(
+        app.world()
+            .get::<crate::auth::InWorld>(connection)
+            .is_none()
+    );
+    assert_eq!(
+        app.world_mut()
+            .query::<&ClientId>()
+            .iter(app.world())
+            .count(),
+        0
+    );
+}
+
+#[test]
 fn character_relogin_reads_owned_achievements_while_default_or_migration_write_is_pending() {
     for legacy_row in [false, true] {
         let file = tempfile::NamedTempFile::new().unwrap();
@@ -188,15 +413,19 @@ fn character_relogin_reads_owned_achievements_while_default_or_migration_write_i
             signal.expect("fixture explicitly releases the held writer");
         });
         crate::achievement::save_monthly_contribution(&db, 1, character, &pending);
-        let (app, player) = select_character_in_world(db, 1, character);
+        let (mut app, connection) =
+            queue_character_selection(db, 1, character, crate::maps::MapStore::continents());
+        app.update();
+        app.update();
         assert!(
             !holder.is_finished(),
             "selection must return while the writer is held; legacy={legacy_row}"
         );
-        let loaded = app
-            .world()
-            .get::<crate::achievement::PlayerAchievementState>(player)
-            .unwrap();
+        let loaded = crate::achievement::load_character_progress(
+            app.world().resource::<GameDatabase>(),
+            1,
+            character,
+        );
         assert!(
             loaded.earned_ids.contains(&14782),
             "login lost queued achievement; legacy={legacy_row}"
@@ -205,6 +434,14 @@ fn character_relogin_reads_owned_achievements_while_default_or_migration_write_i
         assert_eq!(loaded.criteria_progress[&162], 41);
         release.send(()).unwrap();
         holder.join().unwrap();
+        let player = finish_character_selection(&mut app, connection);
+        let hydrated = app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap();
+        assert!(hydrated.earned_ids.contains(&14782));
+        assert_eq!(hydrated.earned_at[&14782], 100);
+        assert_eq!(hydrated.criteria_progress[&162], 41);
         drop(app);
         let reopened = redb::Database::open(file.path()).unwrap();
         let saved = persistence::load_achievements(&reopened, character);
@@ -283,7 +520,7 @@ fn select_character_in_world(
     )
 }
 
-fn select_character_with_maps(
+fn queue_character_selection(
     db: GameDatabase,
     account_id: u64,
     character_id: u64,
@@ -342,18 +579,25 @@ fn select_character_with_maps(
         .expect("connection should have a character-select sender")
         .send::<AuthChannel>(SelectCharacter { character_id });
 
-    app.update();
-    app.update();
+    (app, connection)
+}
+
+fn select_character_with_maps(
+    db: GameDatabase,
+    account_id: u64,
+    character_id: u64,
+    maps: crate::maps::MapStore,
+) -> (App, Entity) {
+    let (mut app, connection) = queue_character_selection(db, account_id, character_id, maps);
+    let player = finish_character_selection(&mut app, connection);
+    (app, player)
+}
+
+fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
+    let player = crate::test_data::wait_for_selected_player(app, connection);
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
-
-    let player = app
-        .world_mut()
-        .query::<(Entity, &ClientId)>()
-        .iter(app.world())
-        .find_map(|(entity, client_id)| (client_id.0 == character_id).then_some(entity))
-        .expect("selecting a character should spawn its player entity");
-    (app, player)
+    player
 }
 
 #[test]
@@ -564,8 +808,14 @@ fn selecting_character_with_invalid_race_class_is_rejected() {
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..3 {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while app.world().resource::<EnterWorldReplies>().0.is_empty() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "selection rejection missing"
+        );
         app.update();
+        std::thread::yield_now();
     }
 
     let responses = &app.world().resource::<EnterWorldReplies>().0;
@@ -649,9 +899,7 @@ fn entering_world_sends_one_system_motd_message() {
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..4 {
-        app.update();
-    }
+    crate::test_data::wait_for_selected_player(&mut app, connection);
 
     let messages = &app.world().resource::<ChatReplies>().0;
     assert_eq!(messages.len(), 1);
@@ -725,9 +973,7 @@ fn initial_terrain_on_enter_map(map_id: u32, wow_position: (f32, f32, f32)) -> L
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..4 {
-        app.update();
-    }
+    crate::test_data::wait_for_selected_player(&mut app, connection);
     app.world()
         .resource::<TerrainReplies>()
         .0
@@ -818,9 +1064,7 @@ fn character_saved_in_wailing_caverns_logs_in_after_server_restart_with_gatherin
             .get_mut::<MessageSender<SelectCharacter>>(connection)
             .unwrap()
             .send::<AuthChannel>(SelectCharacter { character_id });
-        for _ in 0..4 {
-            app.update();
-        }
+        crate::test_data::wait_for_selected_player(&mut app, connection);
         let map = app
             .world_mut()
             .query::<(&ClientId, &crate::maps::InMap)>()
@@ -1137,8 +1381,7 @@ fn select_again(app: &mut App, account_id: u64, character_id: u64) {
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    app.update();
-    app.update();
+    finish_character_selection(app, connection);
 }
 
 #[test]

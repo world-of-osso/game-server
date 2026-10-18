@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
@@ -59,6 +60,11 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
         .or_else(|| batch14::cast_effect(spell, index))
         .or_else(|| batch9::cast_effect(spell, index))
 }
+/// Native per-unit scripts replace the default effect handler before dispatch.
+pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    batch13::effect_handler(spell, index)
+}
+
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
@@ -221,7 +227,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch10::LIGHTNING_BOLT, 0) => Some(batch10::energize_lightning_bolt),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
-        (batch9::SCOURGE_STRIKE, 0) => Some(batch9::apply_missing_plague),
+        (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
         (batch8::REAP, 0) => Some(batch8::reap),
         (batch8::PROVOKE, 0) => Some(batch8::provoke),
@@ -260,6 +266,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (PENANCE, 0) => Some(penance),
         (COBRA_SHOT, 1) => Some(cobra_shot),
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
+        (crate::auras::augmentation::PRESCIENCE, 1) => {
+            Some(crate::auras::augmentation::grant_prescience)
+        }
         (PYRE_IMPACT, 0) => Some(pyre),
         (DEATH_COIL, 0) => Some(death_coil),
         (DEMON_SPIKES, 0) => Some(demon_spikes),
@@ -317,6 +326,7 @@ pub fn damage_amount(spell_id: u32) -> Option<DamageAmountHook> {
         return Some(hook);
     }
     match spell_id {
+        crate::auras::agony::AGONY => Some(crate::auras::agony::tick_damage),
         touch_of_death::TOUCH_OF_DEATH => Some(touch_of_death::damage),
         batch13::SHADOW_WORD_DEATH => Some(batch13::death_execute),
         batch11::SINISTER_STRIKE => Some(batch11::sinister_damage),
@@ -386,6 +396,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        crate::auras::ebon_might::EBON => Some(crate::auras::ebon_might::cast_self_buff),
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
         }
@@ -421,6 +432,7 @@ pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Enti
 
 pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
     match (spell_id, effect_index) {
+        (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),

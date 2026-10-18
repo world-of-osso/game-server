@@ -57,6 +57,8 @@ pub enum AuraKind {
     TalentSwap,
     /// Trigger a summon on application and remove it with its aura.
     LinkedSummon,
+    /// Source-defined area trigger owned by this exact aura effect.
+    AreaTrigger,
     /// Trigger and remove an owned child aura; only zero parent amounts are supported.
     Linked,
     /// Permission to keep masked casts/channels moving (`spell_cast`).
@@ -269,6 +271,8 @@ pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
 pub const MODIFY_FALL_DAMAGE_PCT: u32 = 374;
 /// TC HandleForceMoveForward sets UnitFlags2::FORCE_MOVEMENT.
 pub const FORCE_MOVE_FORWARD: u32 = 241;
+/// TC HandleCreateAreaTrigger: original caster, attached aura target, exact effect lifetime.
+pub const CREATE_AREATRIGGER: u32 = 395;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -290,6 +294,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
         SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
         LINKED_SUMMON => LinkedSummon,
+        CREATE_AREATRIGGER => AreaTrigger,
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,

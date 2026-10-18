@@ -48,6 +48,8 @@ mod shrine;
 mod sightless;
 #[path = "toys_stampwhistle_tests.rs"]
 mod stampwhistle;
+#[path = "toys_stasis_sand_tests.rs"]
+mod stasis_sand;
 #[path = "toys_stone_whistle_tests.rs"]
 mod stone_whistle;
 #[path = "toys_summon_level_tests.rs"]
@@ -1261,11 +1263,19 @@ fn toyfx3_bobber_overrides_remain_explicitly_unsupported() {
 #[test]
 fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
     // DB2/TDB: Stormwind Banner45011->62736->194274 (generic),
-    // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605.
+    // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605,
+    // Reliquary Banner198729->384876->380639 and sourced dragon banners.
     for (item, spell, entry, go_type, display, scale, offset, lifetime_seconds) in [
         (45011, 62736, 194274, 5, 10483, 1.0, 0.0, 180),
         (33223, 42766, 186475, 7, 7467, 1.0, 2.0, 300),
         (40768, 54710, 191605, 19, 8171, 0.5, 3.0, 600),
+        (198729, 384876, 380639, 5, 76510, 0.6, 0.0, 180),
+        (199768, 388089, 381318, 5, 71263, 0.5, 0.0, 180),
+        (199769, 388090, 381321, 5, 77021, 0.5, 0.0, 180),
+        (199770, 388091, 381319, 5, 76419, 0.5, 0.0, 180),
+        (199771, 388092, 381320, 5, 77020, 0.5, 0.0, 180),
+        (199900, 388267, 206590, 5, 10103, 1.0, 0.0, 300),
+        (206008, 411653, 402852, 5, 82612, 1.0, 0.0, 180),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
@@ -1277,6 +1287,8 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         h.app
             .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
         h.app
+            .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+        h.app
             .world_mut()
             .entity_mut(h.caster)
             .insert(shared::components::Rotation {
@@ -1285,9 +1297,13 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
                 z: 0.0,
             });
         learn_effect_toy(&mut h, character, item);
-        // Banner62736 is target87: the clicked point, not the caster's feet.
+        // Banners/survey tools use target87: the clicked point, not the caster's feet.
         // Chair42766/MOLL-E54710 remain target47's authored forward offsets.
-        let destination = (item == 45011).then_some([4.0, 0.0, -3.0]);
+        let cursor_object = matches!(
+            item,
+            45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900 | 206008
+        );
+        let destination = cursor_object.then_some([4.0, 0.0, -3.0]);
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
@@ -1316,6 +1332,13 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         assert_eq!(
             world.get::<crate::maps::InMap>(*object),
             world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert_eq!(
+            world
+                .get::<crate::game_objects::summoned::SummonedObject>(*object)
+                .unwrap()
+                .owner,
+            Some(h.caster)
         );
         assert_eq!(
             world
@@ -3296,7 +3319,9 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
         (182890, 340276, 180000),
         (188699, 45416, 0), // Source duration-1: permanent until cancelled.
         (188701, 45418, 900000),
+        (194056, 383065, 0), // Source duration-1: permanent until cancelled.
         (204220, 403491, 300000),
+        (205418, 409891, 600000),
         (230727, 467285, 1800000),
         (259240, 1264653, 300000),
     ] {
@@ -3387,6 +3412,13 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (89869, 131171, 66768, 45436, 150000),
         (141299, 225824, 114846, 73493, 60000),
         (184415, 345799, 175582, 99948, 180000),
+        (201931, 395720, 199047, 112284, 300000),
+        (202261, 398246, 200350, 114420, 300000),
+        (202851, 398245, 200961, 112316, 300000),
+        (202856, 399246, 200966, 112319, 300000),
+        (202859, 399250, 200969, 112322, 300000),
+        (202862, 399253, 200972, 112325, 300000),
+        (202865, 399257, 200975, 112328, 300000),
         (272339, 1290957, 263908, 143906, 60000),
         (279590, 1306978, 270689, 146432, 60000),
     ] {
@@ -3399,9 +3431,20 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
         learn_effect_toy(&mut h, character, item);
-        let destination = if matches!(item, 89869 | 184415) {
+        // Keep each mini's source-speed missile in flight during the first pump.
+        let (missile_root, cursor_distance) = match item {
+            201931 => (Some(398485), 12.0), // Maiev: speed 12, one-second flight.
+            202261 => (Some(398491), 18.0), // Sneed: speed 30, 0.6-second flight.
+            202851 => (Some(399232), 18.0), // Huntress: speed 30, 0.6-second flight.
+            202856 => (Some(399247), 18.0), // Tauren: speed 30, 0.6-second flight.
+            202859 => (Some(399262), 18.0), // Ghoul: speed 30, 0.6-second flight.
+            202862 => (Some(399265), 18.0), // Murloc: speed 30, 0.6-second flight.
+            202865 => (Some(399268), 18.0), // Whelp Egg: speed 30, 0.6-second flight.
+            _ => (None, 2.0),
+        };
+        let destination = if matches!(item, 89869 | 184415) || missile_root.is_some() {
             let origin = h.app.world().get::<Position>(h.caster).unwrap();
-            Some([origin.x + 2.0, origin.y, origin.z])
+            Some([origin.x + cursor_distance, origin.y, origin.z])
         } else {
             None
         };
@@ -3410,16 +3453,31 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             None,
             "item {item}"
         );
+        if let Some(root_spell) = missile_root {
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == root_spell));
+            let world = h.app.world_mut();
+            let early_actors = world
+                .query::<(&Npc, &SummonedCreature)>()
+                .iter(world)
+                .filter(|(npc, summon)| npc.template_id == entry && summon.spell_id == spell)
+                .count();
+            assert_eq!(
+                early_actors, 0,
+                "item {item}: actor appeared before source flight"
+            );
+        }
         h.advance(60); // Includes the globe's authored 3000ms cast.
         assert!(
             h.inbox.failed.is_empty(),
             "item {item}: {:?}",
             h.inbox.failed
         );
-        assert!(
-            h.inbox.go.iter().any(|go| go.spell_id == spell),
-            "item {item}"
-        );
+        if missile_root.is_none() {
+            assert!(
+                h.inbox.go.iter().any(|go| go.spell_id == spell),
+                "item {item}"
+            );
+        }
         let world = h.app.world_mut();
         let actors: Vec<_> = world
             .query::<(Entity, &Npc, &SummonedCreature)>()
@@ -3457,7 +3515,15 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
                 .get::<crate::creature_ai::FollowOwner>(actor)
                 .is_none()
         );
+        let is_pet = world
+            .get::<shared::components::UnitIsPet>(actor)
+            .is_some_and(|pet| pet.0);
+        assert!(!is_pet, "item {item}");
         let placed = *world.get::<Position>(actor).unwrap();
+        if let Some(destination) = destination {
+            assert!((placed.x - destination[0]).abs() < 0.001, "item {item}");
+            assert!((placed.z - destination[2]).abs() < 0.001, "item {item}");
+        }
         world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
         let expires = world
             .get::<SummonedCreature>(actor)

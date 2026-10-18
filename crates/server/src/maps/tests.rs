@@ -989,6 +989,7 @@ fn harness_with_content_and(extra: impl FnOnce(&mut App)) -> Option<Harness> {
     let bossmod = crate::scripted_ai::bossmod::load_catalog(&conn).expect("boss-mod catalog");
     harness_with(move |app| {
         app.insert_resource(world_data);
+        app.insert_resource(crate::test_data::ground_map());
         app.insert_resource(objects);
         app.insert_resource(bossmod);
         extra(app);
@@ -1671,7 +1672,11 @@ fn relog_saved_character(h: &mut Harness, character_id: u64) -> Entity {
         .get_mut::<MessageSender<shared::protocol::SelectCharacter>>(connection)
         .unwrap()
         .send::<shared::protocol::AuthChannel>(shared::protocol::SelectCharacter { character_id });
-    h.advance(10);
+    h.advance(2);
+    crate::test_data::drain_persistence(
+        h.app.world().resource::<crate::persistence::GameDatabase>(),
+    );
+    h.advance(8);
     h.app
         .world()
         .get::<PlayerLink>(connection)
