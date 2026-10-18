@@ -101,10 +101,23 @@ fn kit_fixture() -> (Harness, Entity, Position, BTreeSet<u32>) {
 
 fn sample_kit_positions(h: &mut Harness, tank: Entity, attacks: &BTreeSet<u32>) -> Vec<Position> {
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let mut reported = false;
+    let initial = *h.app.world().get::<Position>(tank).unwrap();
     let positions = (0..90)
-        .map(|_| {
+        .map(|tick| {
             h.advance(1);
-            *h.app.world().get::<Position>(tank).unwrap()
+            let at = *h.app.world().get::<Position>(tank).unwrap();
+            if at != initial && !reported {
+                reported = true;
+                let world = h.app.world();
+                let target = world.get::<crate::networking::CombatTarget>(tank).and_then(|target| target.0);
+                eprintln!("FIRST MOVEMENT tick{tick} state={:?} following={} target={target:?} target_at={:?} owner_at={:?}",
+                    world.get::<crate::creature_ai::CreatureState>(tank),
+                    world.get::<crate::creature_ai::FollowOwner>(tank).is_some(),
+                    target.and_then(|target| world.get::<Position>(target)),
+                    world.get::<Position>(h.caster));
+            }
+            at
         })
         .collect();
     assert!(
