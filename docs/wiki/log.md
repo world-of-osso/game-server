@@ -1,3 +1,7 @@
+## 2026-10-18 — Gate541 GREEN/landed Singed593 and Pango684
+
+[Exact gate/landing proof](../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt plus ancestry confirmsa6f8505f7 on master312f5aebd.541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's real runtime admission failure repaired by named Singed slot, not fixture change or blanketdummy. Native/full1166/all-five/hour-expiry/distribution limits remain; no duplicate jobs.
+
 ## 2026-10-18 — Singed593 repair/Pango684 owned CPU GREEN
 
 [Exact proof/limits](../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): real535RED→runtime5ea7efcaa at6b54512a0/canonical shared11a058cf, own focused5931/0/25.16s; toys197/0/337.82s includes593, PangoCancelAura/ordinary600sSaptorreuse and unchanged Citizens/generic dummy refusals. Workspace all-targets check1m24s/fmt pass. Only audited Singed slot admitted; sourceTC76/4836–5117, not blanketdummy. Initial old-interface build failures resolved by absolute current shared path without protocol/cache mutation. Lead successor/landing/native/full1166 proof remains pending.

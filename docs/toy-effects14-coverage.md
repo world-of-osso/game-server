@@ -1,5 +1,9 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate541 GREEN and landed: Singed593 repair plus Pango684 lifecycle (2026-10-18)
+
+Lead explicit landing receipt: featurea6f8505f7 is on server master312f5aebd23c11f6545f0a58c37212be595d8330; ancestry independently passes. Gate541 server317 passed/0 failed/1 ignored in469.98s, EXIT0/FMT0/CHECK0, with exact Explosive593 and Pango684 tests OK. The [owned CPU proof](#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18) remains valid.535's real admission failure is repaired/landed through541, not relabelled as a fixture problem. Named Singed slot only; unrelated scripted-dummy refusals stay intact. Earlier pending labels below are historical for these covered cases, not current landing status. Native explosive/Singed art, all-five lifecycle, one-hour expiry/distribution and full1166 gameplay completion remain unclaimed.
+
 ## Singed593 repair and Pango684 CPU verification GREEN; successor landing pending (2026-10-18)
 
 Runtime5ea7efcaa verified at6b54512a0 with absolute canonical shared11a058cfb818947e63f0e3f9ce0e99513a563609. Existing535 is the real RED reproduction; no ignored test or weakened assertion. Owned agent-run focused593 compiles in7m03s and passes1/0 in25.16s. Owned `toys::` sweep passes197/0 in337.82s, explicitly including Explosive593, Pango684 cancellation/ordinary600s Saptor reuse, Citizens unresolved-anchor refusal and generic unsupported-dummy refusal. Workspace all-targets check passes in1m24s; fmt check passes. No later code change invalidates this proof.

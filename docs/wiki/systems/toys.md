@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate541 Singed593 and Pango684 landed (2026-10-18)
+
+[Current gate/landing proof](../../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt/ancestry confirmsa6f8505f7 on server master312f5aebd;541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's genuine runtime admission failure repaired via named Singed slot, not blanketdummy. Earlier pending labels below are historical; native/full1166/all-five/hour-expiry/distribution limits persist.
+
 ## Singed593 and Pango684 owned CPU verification GREEN (2026-10-18)
 
 [Exact proof/limits](../../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): runtime5ea7efcaa at6b54512a0, canonical shared11a058cf; real535RED→focused5931/0/25.16s, own toys197/0/337.82s includes593/Pango684 and preserved Citizens/generic dummy refusals. Workspace all-targets check/fmt pass. Minimal audited Singed slot only; no blanketdummy or10186 edit.593/Pango earlier pending labels are historical; lead successor/landing receipt and native/full1166 proof remain absent.
