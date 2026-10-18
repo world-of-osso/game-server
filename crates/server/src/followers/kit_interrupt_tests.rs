@@ -187,6 +187,103 @@ fn follower_kit_interrupt_respects_source_level_gate() {
     );
 }
 
+fn install_native_catalog(h: &mut Harness) {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::catalog::load_catalog(&db).unwrap());
+}
+
+#[test]
+#[ignore = "RED: absent spec rows must retain the explicit legacy interrupt bridge"]
+fn follower_kit_interrupt_absent_rows_preserve_legacy_kick() {
+    let (mut h, unit) = level32(209059);
+    h.app
+        .world_mut()
+        .resource_mut::<super::FollowerCatalog>()
+        .kits
+        .clear();
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    let enemy = h.npc;
+    assert!(try_candidates(&mut h, unit, &[enemy]));
+    h.advance(3);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt
+                && event.source == Some(unit.to_bits())
+                && event.spell_id == Some(2139))
+    );
+}
+
+#[test]
+#[ignore = "RED: actual learned pet interrupt must preserve the companion owner's cast"]
+fn follower_kit_interrupt_actual_felguard_keeps_owner_cast() {
+    let (mut fixture, pet) = super::pet_tests::felguard_at_level(17);
+    install_native_catalog(&mut fixture.h);
+    utility_tests::start_enemy_fireball(&mut fixture.h, pet);
+    let enemy = fixture.h.npc;
+    let unit = fixture.unit;
+    crate::spell_cast::creature_cast(fixture.h.app.world_mut(), unit, 686, Some(enemy), false)
+        .unwrap();
+    assert!(try_candidates(&mut fixture.h, unit, &[enemy]));
+    fixture.h.advance(8);
+    assert_eq!(
+        fixture
+            .h
+            .app
+            .world()
+            .get::<CastState>(unit)
+            .unwrap()
+            .spell_id,
+        686
+    );
+    assert!(
+        fixture
+            .h
+            .inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt
+                && event.source == Some(pet.to_bits())
+                && event.spell_id == Some(347008))
+    );
+}
+
+#[test]
+#[ignore = "RED: a native level16 Felguard must not gain level17 Axe Toss"]
+fn follower_kit_interrupt_unlearned_pet_spell_is_not_granted() {
+    let (mut fixture, pet) = super::pet_tests::felguard_at_level(16);
+    install_native_catalog(&mut fixture.h);
+    assert!(
+        fixture
+            .h
+            .app
+            .world()
+            .get::<crate::pet_control::PetCharm>(pet)
+            .unwrap()
+            .spell_slot(89766)
+            .is_none()
+    );
+    utility_tests::start_enemy_fireball(&mut fixture.h, pet);
+    let enemy = fixture.h.npc;
+    assert!(!try_candidates(&mut fixture.h, fixture.unit, &[enemy]));
+    fixture.h.advance(8);
+    assert!(fixture.h.app.world().get::<CastState>(enemy).is_some());
+    assert!(
+        !fixture
+            .h
+            .inbox
+            .go
+            .iter()
+            .any(|go| go.caster == pet.to_bits() && go.spell_id == 89766)
+    );
+}
+
 fn prepare_native_charge_target(h: &mut Harness) {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),

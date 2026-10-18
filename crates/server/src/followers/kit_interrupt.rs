@@ -33,7 +33,7 @@ pub(super) fn try_interrupt_candidates(
             }
             // Explicit core compatibility for absent spec rows. Demonology's
             // interrupt remains its actual learned pet spell, never a player grant.
-            _ => super::ai::interrupt_enemy(world, unit, target, profile.spec_id),
+            _ => interrupt_enemy(world, unit, target, profile.spec_id),
         };
         if accepted {
             return true;
@@ -100,4 +100,56 @@ fn try_source_spells(world: &mut World, unit: Entity, target: Entity, spells: &[
         }
     }
     false
+}
+
+// Exact legacy bridge relocation, staged test-only until the shared caller lands.
+/// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
+/// are verified in local SpellName/SpellEffect12.1.5.70448 (Skull Bash's
+/// effect68 child93985 is referenced by its source description). Holy/Restoration
+/// have no selected kick; Demonology's pet interrupt is not a player cast.
+fn interrupt_spell(spec: u32) -> Option<u32> {
+    match spec {
+        66 => Some(96231),    // Protection Paladin: Rebuke.
+        73 => Some(6552),     // Protection Warrior: Pummel.
+        63 => Some(2139),     // Fire Mage: Counterspell.
+        262 => Some(57994),   // Elemental Shaman: Wind Shear.
+        253 => Some(147362),  // Beast Mastery Hunter: Counter Shot.
+        1467 => Some(351338), // Devastation Evoker: Quell.
+        269 => Some(116705),  // Windwalker Monk: Spear Hand Strike.
+        103 => Some(106839),  // Feral Druid: Skull Bash.
+        _ => None,
+    }
+}
+
+fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
+    let interruptible = world
+        .get::<CastState>(enemy)
+        .is_some_and(|cast| cast.interruptible);
+    if !interruptible {
+        return false;
+    }
+    let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
+        return false;
+    };
+    if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
+        return false;
+    }
+    match crate::spell_cast::creature_cast_interrupting_self(world, caster, spell, Some(enemy)) {
+        Ok(()) => true,
+        Err(failure) => {
+            debug!("Follower {unit} interrupt {spell} at {enemy}: {failure:?}");
+            false
+        }
+    }
+}
+
+/// CreatureFamily29/SkillLine761 teaches Felguard Axe Toss89766 at17; source
+/// SpellEffect64 triggers the real347008 effect68. Never cast an unlearned pet spell.
+fn interrupt_source(world: &World, unit: Entity, spec: u32) -> Option<(Entity, u32)> {
+    if spec != 266 {
+        return interrupt_spell(spec).map(|spell| (unit, spell));
+    }
+    let pet = crate::hunter_pet::summoned_pet(world, unit)?;
+    let charm = world.get::<crate::pet_control::PetCharm>(pet)?;
+    charm.spell_slot(89766).map(|_| (pet, 89766))
 }
