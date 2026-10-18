@@ -10,6 +10,8 @@ Wailing ritual: source groups2/3 select5762/5763; project only their actual Norm
 rows, retaining existing base templates/models and all population/credit.
 Leymor: native374360 summons TDB190509; base0/models and actual Normal1/Mythic23
 rows only, without inventing a follower205 difficulty or any placements.
+Telash: source group0 uses Vault Rune197204; project its base/models and actual
+Normal1/Mythic23 rows without creating205 rows, addons or placements.
 """
 import argparse
 import sqlite3
@@ -255,7 +257,7 @@ def import_herald_actors(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','herald'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -277,6 +279,10 @@ def main():
                 entries = [import_base_template(conn, 190509, 'npc_ley_line_sprouts')]
                 project_difficulty(conn, 190509, 1)
                 project_difficulty(conn, 190509, 23)
+            elif args.encounter == 'telash':
+                entries = [import_base_template(conn, 197204, '')]
+                project_difficulty(conn, 197204, 1)
+                project_difficulty(conn, 197204, 23)
             elif args.encounter == 'theradras':
                 entries = import_zaetar_spirit(conn)
             elif args.encounter == 'celebras':
