@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mixed props, staff image, camera guides and short-recovery Pango boundaries (2026-10-18)
+
+[Source680–684 matrix](../../toy-effects14-coverage.md#source680684-mixed-props-staff-image-camera-guides-and-short-recovery-pango-boundaries-2026-10-18) preserves missing Hourglass/Bench mixed16 payloads and distinct aura/cancel contracts, source-instant missing original-owner staff image, camera293/60/321 with both mutual164 guide removals, and Pango's one-hour transform versus category2513 ten-minute recovery. Existing five Pango models establish metadata, not learned/restoration/category behavior; long-recovery helper cannot certify this timing without changing its contract. No runtime unsupported/RED claim, invented channel flag or generic camera substitute. No runtime/data/native change or own heavy jobs.
+
 ## Black-hole game, key inventory, rainbow chain, retained pillow and dual hologram boundaries (2026-10-18)
 
 [Source675–679 matrix](../../toy-effects14-coverage.md#source675679-black-hole-game-key-inventory-rainbow-chain-retained-pillow-and-dual-hologram-boundaries-2026-10-18) preserves actual430 feeding game, all-shard inventory conversion, mixed rainbow241/56misc12/42/409 with proc2000ms and both164 removals, retained11-second Pillow fixture and both missing hologram259655/259656/base0/stacking contracts. No automatic win/free key, pure disguise, recast parachute, one static gnome or guessed holiday recovery. Metadata only; no runtime/data/native change or own heavy work, lead successor pending.

@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source680–684 mixed props, camera and category timing
+
+[Exact source matrix](../toy-effects14-coverage.md#source680684-mixed-props-staff-image-camera-guides-and-short-recovery-pango-boundaries-2026-10-18): missing Hourglass/Bench retain16 payloads and distinct cancellation/aura shapes; Staff source remains instant despite channel flavor. Camera retains293/60/321 and mutual164 guide removals. Pango's one-hour aura/shared2513 ten-minute recovery remains unverified, not forced into long-recovery helper or labelled runtime unsupported. Metadata only; no runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source675–679 game, inventory, mixed rainbow and hologram boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source675679-black-hole-game-key-inventory-rainbow-chain-retained-pillow-and-dual-hologram-boundaries-2026-10-18): actual430 feeding game and all-shard conversion remain gaps; rainbow retains241/56misc12/42/409/proc2000ms, child launch and both164 removals. Existing11-second Pillow fixture retained; both259655/259656/base0 stacking holograms missing, holiday recovery unresolved. No generic success/free key/pure disguise/static gnome, runtime/data/native change or own heavy jobs; lead successor pending.
