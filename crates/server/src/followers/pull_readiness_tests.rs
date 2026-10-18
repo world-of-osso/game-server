@@ -54,7 +54,7 @@ fn tank_pull_healer_ready_affordable_sourced_hot_is_not_default_regrowth() {
     let regrowth = mana_cost(&h, healer, 8936);
     assert!(
         hot > 0.0 && regrowth > hot,
-        "actual source cost counterexample"
+        "actual source costs: Rejuvenation={hot}, Regrowth={regrowth}"
     );
     let available = (hot + regrowth) * 0.5;
     h.app.world_mut().get_mut::<Mana>(healer).unwrap().current = available;
