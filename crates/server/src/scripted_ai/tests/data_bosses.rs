@@ -45,6 +45,8 @@ mod maraudon;
 mod noxxion;
 #[path = "omor.rs"]
 mod omor;
+#[path = "omor_pushback.rs"]
+mod omor_pushback;
 #[path = "omor_slay.rs"]
 mod omor_slay;
 #[path = "theradras.rs"]

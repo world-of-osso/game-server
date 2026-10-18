@@ -751,6 +751,29 @@ fn cobra_shot(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     reduce_cooldown(world, caster, KILL_COMMAND, f64::from(seconds));
 }
 
+/// SimC76f8118 monk4002–4070 uses result_total, including overheal.
+/// Native115129 selects its own caster-centered20yd area; no explicit unit/range override.
+pub(super) fn cast_expel_harm_damage(
+    world: &mut World,
+    ctx: &super::effects::EffectCtx,
+    total: f32,
+) {
+    const EXPEL_HARM: u32 = 322101;
+    const EXPEL_HARM_DAMAGE: u32 = 115129;
+    if ctx.spell.id != EXPEL_HARM {
+        return;
+    }
+    let percent = script_effect_value(world, ctx.caster, EXPEL_HARM, 1);
+    super::cast_triggered_with_effect0_amount(
+        world,
+        ctx.caster,
+        EXPEL_HARM_DAMAGE,
+        None,
+        ctx.depth + 1,
+        total * percent / 100.0,
+    );
+}
+
 pub(crate) fn script_effect_value(world: &World, caster: Entity, spell_id: u32, index: u8) -> f32 {
     let spell = world
         .resource::<crate::spell_info::SpellStore>()

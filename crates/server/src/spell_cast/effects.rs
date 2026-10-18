@@ -1436,6 +1436,7 @@ fn apply_resolved_heal(
     log_event(world, event);
     if !periodic {
         super::scripts::heal_beacon(world, ctx, target, effective);
+        super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
     if periodic {
         procs::push_event(

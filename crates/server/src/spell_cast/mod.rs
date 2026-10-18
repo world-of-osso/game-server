@@ -135,6 +135,8 @@ mod excluded_aura_spell_tests;
 #[cfg(test)]
 mod excluded_caster_type_tests;
 #[cfg(test)]
+mod expel_harm_tests;
+#[cfg(test)]
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
@@ -2888,18 +2890,20 @@ fn launch_triggered_spell(
 }
 
 /// Effect64 clears IGNORE_POWER_COST/IGNORE_REAGENT_COST from FULL_MASK.
-pub(super) fn cast_queued_trigger_with_item_level(
+pub(super) fn cast_costed_trigger_with_context(
     world: &mut World,
     caster: Entity,
     spell_id: u32,
     explicit: Option<Entity>,
     depth: u8,
     item_level: Option<u16>,
+    destination: Option<[f32; 3]>,
 ) -> bool {
     let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
         return false;
     };
     spell.cast_item_level = item_level;
+    spell.cast_destination = destination;
     match execute_costed_trigger(world, caster, &spell, explicit, depth) {
         Ok(()) => true,
         Err(failure) => {
