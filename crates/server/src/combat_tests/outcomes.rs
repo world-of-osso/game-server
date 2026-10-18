@@ -38,6 +38,12 @@ fn player_target(app: &mut App, defense: PlayerDefense) -> Entity {
     app.world_mut()
         .spawn((
             pos(1.0, 0.0, 0.0),
+            // These defense/CC controls face the attacker at the origin.
+            shared::components::Rotation {
+                x: 0.0,
+                y: std::f32::consts::PI + std::f32::consts::FRAC_PI_2,
+                z: 0.0,
+            },
             Health {
                 current: 1.0e6,
                 max: 1.0e6,

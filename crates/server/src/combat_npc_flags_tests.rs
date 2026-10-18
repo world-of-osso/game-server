@@ -21,9 +21,14 @@ fn native_target(entry: u32) -> (Harness, Entity) {
         &world_db().unwrap().powers_db,
     ));
     let caster = h.caster;
-    let target =
-        crate::zones::summon_creature(h.app.world_mut(), caster, entry, [3.0, 0.0, 0.0, 0.0])
-            .expect("native level80 template");
+    // Face the caster so the native flag, not a rear attack, excludes defense.
+    let target = crate::zones::summon_creature(
+        h.app.world_mut(),
+        caster,
+        entry,
+        [3.0, 0.0, 0.0, std::f32::consts::PI],
+    )
+    .expect("native level80 template");
     assert_eq!(h.app.world().get::<UnitLevel>(target).unwrap().0, 80);
     (h, target)
 }
