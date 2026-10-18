@@ -2,6 +2,30 @@
 
 Current source inspected October 1, 2026 at `8193d7e`, including server/shared integration `b0153e4`, importer `13241e0` and supplier runtime `cd9b690`. The [tracked spec](../../specs/bot-economy.md) owns approved behavior. Bounded live CLI and native AH/mail audit PASS exist. [[auction-house]] owns the pinned final CLI, native links and historical/focused source receipts; the final delta and actor-parity gates passed; the returned-goods follow-up has focused regression proof.
 
+## FIFO cycle publication
+
+A private current-master capture (`ce0fec81c`, protocol`11a058cf`) found main TID380605 in `fdatasync` through `persistence::next_id` (`persistence.rs:1088`) from `economy::cycle::take_or_gather_resource` (`cycle.rs:211` before this change), reached from FixedMain `update_economy`. The existing persistence writer was separately waiting for jobs. Evidence: `game-engine/data/diagnostics/server-live-frame-cost-2026-10-16/blocking-io-ce0-owned-pressure2-stack-05.log`. The owned bounded scratch writer generated16GiB total in a1GiB file; no canonical data or UID1001 processes were changed. All eleven peers completed; the prior3.246s timeout failure was not deterministically repeated, and stack attachment perturbs timing. This capture proves the synchronous caller, not a performance improvement.
+
+`economy/ids.rs` reserves bounded per-cycle character/item/auction/mail ranges on the existing FIFO. A reservation receipt exposes IDs only after durable high-water marks. `cycle.rs` prepares state/row changes using those IDs, including auction settlement mail; `publication.rs` submits atomic market persistence and publishes only its successful receipt. Existing auction/inventory checks plus the expected economy and replaced-mailbox rows reject stale inputs. A real auction buyout between mailbox snapshot and queued commit reproduced lost11-copper seller mail; the expected-mailbox check rejects that cycle without merging or patching rows, preserving proceeds for the next scheduled collection. Failure warns with cycle and reason, clears pending state and waits for the next configured cycle, not a retry loop.
+
+Merchant request systems own deferred decoded requests because Lightyear clears unread transport inboxes each frame. Only economic vendors wait during market commit; per-connection/type FIFO and existing system order are retained. Update publication precedes merchant processing, so success or failure releases requests against current state. [Visible behavior contract](../../specs/bot-economy.md#durability-and-acceptance).
+
+Structural real-sync regression was genuinely RED: fixed ticks resumed only after the deadlock rescue released the real FileBackend sync. Current scoped proof covers57 distinct server economy controls (56 unchanged controls plus the corrected real-buyout fixture), one admin control and seven peer-example controls; no duplicate counts. The buyout fixture first genuinely lost11-copper mail; after the guard it preserves that mail, aborts the stale cycle and collects it exactly once on the next scheduled cycle. Its initial post-fix gold expectation exceeded the gatherer capital cap; the corrected fixture supplies sufficient configured headroom rather than changing product accounting. Workspace all-targets check and fmt pass, no compiler warnings. Independent artifact verification passes the mailbox fix and wiring; lead integration gate and post-landing live proof remain separate. **MAIN_THREAD_ASSET_READS** remains open: separate captured main-thread navigation reads (`navigation/query.rs:272` via `creature_ai.rs:556`) and LOS reads (`combat.rs:535`) are not fixed by this slice. Dormant-aura A/B stays parked.
+
+### Whole-row input audit
+
+| Market input/write | Async-cycle protection |
+|---|---|
+| Economy state row | Exact expected persisted state checked under the market write lock; receipt-gated memory publication; economic-vendor mutations deferred until resolution |
+| Existing auctions purchased/deleted | Exact expected auction row checked under the same lock; publication applies only transaction deltas, never replaces the full live auction map |
+| New gatherer inventories/new auctions/item and mail IDs | Fresh durable reserved high-water ranges; restart tests burn unused IDs and mixed allocators cannot collide |
+| Existing gatherer inventory rows | Exact expected inventory before the full replacement, including zero-popularity/no-listing paths |
+| Gatherer mailbox replacements | Exact expected mailbox read before collection; concurrent payout/expiry append rejects the cycle |
+| Sale-mail appends | Existing mailbox read/append happens inside the write transaction, after replacements; no prepared full-row overwrite |
+| Inventory records and definition-source rows | Not produced by the async cycle; existing synchronous merchant/AH callers remain outside the new window |
+
+These are all `commit_market` row inputs. Failed/conflicting cycles use the existing failure-to-next-scheduled-cycle path, never merging or patching changed rows.
+
 ## Observed model
 
 `crates/server/src/economy/model.rs` contains `MerchantState` with gold and a vector of `StockBatch` records. Each batch records remaining quantity, ingredient expenditure, unit price and expiry. `craft_stock` validates recipe expansion and configured membership, checks shared quantity capacity and affordability, and records stock. `sell_stock` removes sold quantity and its proportional ingredient cost, retaining rounding remainder in unsold stock. `expire_stock` removes expired batches and returns remaining ingredient cost; callers must credit and persist the refund. `credit_capital` credits available headroom and returns overflow for caller accounting. It does not reduce an already-over-limit wallet, so existing over-cap wallets after reducing the configured cap remain a known configuration-reconciliation limitation. Capped credits are not unconditional-cap proof.

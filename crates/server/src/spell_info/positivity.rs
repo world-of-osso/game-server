@@ -3,7 +3,9 @@
 //! An aura is a debuff by these per-effect marks, not by who cast it
 //! (`AuraApplication::_InitFlags`, SpellAuras.cpp:113-147).
 //!
-//! Every effect and aura case of `_isPositiveEffectImpl` is ported. Not modelled:
+//! Every effect and aura case of `_isPositiveEffectImpl` is ported. Native70448
+//! aura342 shares aura192's signed haste rule; the pinned TC switch omits342
+//! although both use HandleModMeleeRangedSpeedPct. Not modelled:
 //! - `spell_custom_attr` negative marks (TrinityCore reads them first);
 //! - the marks of already-initialized triggered spells, which TrinityCore reads in load
 //!   order; here a triggered spell is always evaluated fresh;
@@ -253,7 +255,7 @@ fn aura_decides(
     match effect.aura {
         // Sign-dependent stats: negative base points (or per-level points) are debuffs.
         29 | 30 | 400 | 49 | 135 | 59 | 20 | 21 | 290 | 54 | 55 | 57 | 140 | 192 | 65 | 216
-        | 143 | 91 | 133 | 137 | 58 | 80 | 34 | 129 => {
+        | 143 | 91 | 133 | 137 | 58 | 80 | 34 | 129 | 342 => {
             negative_if(bp < 0.0 || effect.real_points_per_level < 0.0)
         }
         9 | 138 | 13 | 22 | 101 | 189 | 99 | 124 | 79 | 252 | 193 | 166 | 136 | 118 => {
