@@ -244,11 +244,15 @@ fn assert_wolf_landed_damage(h: &Harness, wolf: Entity, dummy: Entity, increased
         if event.kind != CombatLogKind::Damage {
             continue;
         }
+        let damage_before_block = event.amount + event.blocked;
         if increased_ap {
-            assert!(event.amount > baseline_critical_max * 10, "{event:?}");
+            assert!(
+                damage_before_block > baseline_critical_max * 10,
+                "{event:?}"
+            );
         } else {
             assert!(
-                (1..=baseline_critical_max).contains(&event.amount),
+                (1..=baseline_critical_max).contains(&damage_before_block),
                 "{event:?}"
             );
         }
