@@ -116,6 +116,18 @@ fn sample_kit_positions(h: &mut Harness, tank: Entity, attacks: &BTreeSet<u32>) 
                     world.get::<crate::creature_ai::FollowOwner>(tank).is_some(),
                     target.and_then(|target| world.get::<Position>(target)),
                     world.get::<Position>(h.caster));
+                let follower = world.get::<Follower>(tank).unwrap().clone();
+                let party = super::ai::party_units(h.app.world_mut(), follower.owner);
+                let engaged: Vec<_> = super::ai::engaged_enemies(h.app.world_mut(), &follower, tank, &party)
+                    .iter().map(|(enemy, _)| h.app.world().get::<crate::zones::CreatureOrigin>(*enemy).map(|origin| origin.guid)).collect();
+                eprintln!("FIRST MOVEMENT engaged_source_guids={engaged:?}");
+                if let Some(target_guid) = target.and_then(|target| h.app.world().get::<crate::zones::CreatureOrigin>(target)).map(|origin| origin.guid) {
+                    let history = super::pull_history::snapshot(h.app.world(), h.caster).unwrap();
+                    let route = super::pull_route::read_route(h.app.world_mut(), &super::pull_route::Request {
+                        tank, target_guid, difficulty: 1, cleared: &history.cleared_spawns,
+                    });
+                    eprintln!("FIRST MOVEMENT target_guid={target_guid} route={route:?}");
+                }
             }
             at
         })
