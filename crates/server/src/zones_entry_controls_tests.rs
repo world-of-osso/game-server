@@ -200,6 +200,7 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
     assert_eq!(data.template_addons[&100].auras, vec![3417]);
     let mut world = World::new();
     world.insert_resource(Time::<bevy::time::Virtual>::default());
+    world.insert_resource(Time::<()>::default());
     world.init_resource::<crate::auras::UnhandledAuras>();
     world.insert_resource(
         crate::spell_cast::test_harness::world_db()
