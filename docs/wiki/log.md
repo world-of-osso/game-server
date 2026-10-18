@@ -1,3 +1,7 @@
+## 2026-10-17 — Published Curve and native aura395 field implementation
+
+[Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): lead gate462 landed the maintained Curve publisher and published62817 readable rows; IDs121405/121406 remain unauthenticated/absent. Versioned private backup preserves143 Stockade/225 Azure actors. Four new native fixtures21f3045a compile and reach genuine shared missing-field ROOT failures87.99s; downstream scale/action/lifecycle assertions were not reached. Source-defined generic field implementation is committed before targeted GREEN/check/fmt/independent proof; no acceptance or native-pixel claim yet. This supersedes the earlier publication-pending state, without relabeling historical8f27/318 evidence.
+
 ## 2026-10-17 — Stomp stack expectation timing
 
 [Native phase boundary](investigations/follower-data.md#stomp-expected-stack-timing--2026-10-17): unchanged current-master repro matches451; log-only diagnostic proves9 actual live stacks/5 corpses versus stale14 expectation. Test now samples Stomp-time stacks and independently accounts for all native Sprouts. Focused matching/nonmatching2PASS72.31s/check0 2m51s/fmt0, strict8f27/twenty-seven-source/HEAD/clean guards stable; original tolerance and production mechanics unchanged.

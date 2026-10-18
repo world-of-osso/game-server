@@ -208,6 +208,14 @@ Effect 179 dispatches once per cast through `area_trigger.rs`. Radius is the fir
 
 The nine matrix roots all lack trigger bindings, including Wildfire Bomb's child 265163. Purging Breath 1287715 → 1287711 supplies an authentic non-matrix damage binding for engine proof. Local AreaTriggerCreateProperties (FDID 1937227) contains none of these matrix create-property IDs: their server actions/scripts cannot be reconstructed from that client table. Selector87 destination propagation was added by master toy-effects4; area-trigger actions without bindings and moving-orb behavior remain unclaimed.
 
+## Aura-owned native fields — 2026-10-17
+
+[Contract](../../specs/follower-dungeons.md#azure-sourced-partial), [published Curve inputs](world-data.md#native-curve-type-inputs). Aura395 has a separate lifecycle from effect179: REAL application creates an actual `SpellAreaTrigger` plus an exact target/instance/effect binding; original caster and attached aura target remain distinct. Removal/death, missing ownership or map departure retires that field and undoes only its caster's action aura. Refresh does not duplicate or restart it; TC `SpellAuras.cpp::SetDuration/RefreshDuration` does not change the duration captured by the REAL-only create handler.
+
+The catalog admits unscripted fixed spheres with one CAST/ENEMY action and supported native Type0/Flags0 scale curves. Other scripts/shapes/actions/modes and missing Curve IDs report explicit errors, never guessed radii/types. Native25356→29766 casts374523 once on entry; its1000ms periodic aura owns damage, not the field clock. Sphere checks include source unit combat reach and strict3D distance. Effect179 retains its existing explicit-binding behavior. Unsupported NPC reach inputs remain explicit source gaps, not zero-sized units.
+
+Published33927 points scale the source5yd sphere from1.25 to5 near6s. Actual374161 lasts300s, so the last live scale sample precedes expiry; the field must not be asserted alive at300s. Four new native fixtures at21f3045a reach shared missing-field REDs in87.99s after actual fourteen summons/self-auras; downstream action/scale/lifecycle assertions are not independent REDs. Implementation is committed before GREEN proof; targeted acceptance, follower hazard projection and native pixels remain open. Source: pinned TC a352b1fa `SpellAuraEffects.cpp::HandleCreateAreaTrigger`, `AreaTrigger.cpp::{CalcCurrentScale,SearchUnitInSphere,UndoActions}`, `Object.cpp::_IsWithinDist` and the actual70448 rows.
+
 ## Authoritative target LOS — 2026-10-16
 
 [Contract](../../specs/line-of-sight.md#player-casts-authoritative-target-visibility). Stockade's moving Petty Criminal advanced about4yd during845ms between the native request sample and server receipt. The former client-endpoint check refused it despite a clear authoritative ray (`end_in_body=false`, segment clear, caster origin correct).

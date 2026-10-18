@@ -1,7 +1,14 @@
 //! Spell-created area triggers, distinct from static map/quest triggers.
 //! TC a352b1fa Spell::EffectCreateAreaTrigger: one object at the destination
-//! lasting CalcDuration. Only explicit DB2 EffectTriggerSpell bindings execute;
-//! absent server-side AreaTrigger actions/scripts are not guessed from spell names.
+//! lasting CalcDuration; effect179 retains its explicit DB2 trigger binding.
+//! Aura395 uses exact aura-effect ownership and supported source template actions.
+//! Missing or unsupported source definitions never acquire guessed geometry.
+mod aura_owned;
+mod catalog;
+
+pub(crate) use aura_owned::{on_applied as on_aura_applied, on_removed as on_aura_removed};
+pub(crate) use catalog::load_catalog as load_aura_field_catalog;
+
 use super::effects::EffectCtx;
 use super::targets::{self, Relation};
 use crate::maps::InMap;
@@ -121,6 +128,10 @@ pub(super) fn update_area_triggers(world: &mut World) {
 }
 
 fn update_trigger(world: &mut World, entity: Entity) {
+    if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
+        aura_owned::update(world, entity);
+        return;
+    }
     let Some(trigger) = world.get::<SpellAreaTrigger>(entity).cloned() else {
         return;
     };
