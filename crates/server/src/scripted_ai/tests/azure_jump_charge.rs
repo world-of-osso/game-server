@@ -6,7 +6,7 @@ const RETURN_JUMP: u32 = 388082;
 const FIXTURE_STEP_SECONDS: f32 = 0.05;
 const POSITION_TOLERANCE: f32 = 0.001;
 
-fn read_source_jump_seconds(parameter: u32) -> f32 {
+pub(super) fn read_source_jump_seconds(parameter: u32) -> f32 {
     let db = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("published jump-charge database prerequisite");
     db.query_row(

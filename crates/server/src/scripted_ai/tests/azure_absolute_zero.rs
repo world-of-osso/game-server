@@ -251,3 +251,107 @@ fn azure_telash_natural_absolute_zero_hit_launches_source_outbound_jump() {
         "TC uses a full-mask triggered child, not an ordinary child SpellGo"
     );
 }
+
+#[test]
+#[ignore = "next actual first-landing1004 callback RED"]
+fn azure_telash_natural_first_landing_starts_native_absolute_zero_cast() {
+    let (mut h, telash) = super::azure_frost_bomb::fixture();
+    assert_eq!(h.creatures_of(197204).len(), 3);
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(telash).insert(visibility);
+    let source_cast_ms = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(388008)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .cast_time
+        .unwrap()
+        .base_ms;
+    assert_eq!(source_cast_ms, 8000, "native cast504 prerequisite");
+    h.engage(telash);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, PHASE_ENERGY))
+    );
+    h.advance(19.0);
+    let preceding = h
+        .app
+        .world()
+        .get::<CastState>(telash)
+        .expect("actual preceding native Icy channel");
+    assert_eq!(preceding.spell_id, 387151);
+    assert_eq!(preceding.cast_type, shared::casting::CastType::Channel);
+    advance_until_phase_or_ready_deadline(&mut h, telash);
+    assert_eq!(completed_casts(&h, telash, ABSOLUTE_ZERO), 1);
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((0.0, PHASE_ENERGY))
+    );
+    h.advance(0.25);
+    let center = Position {
+        x: -5336.8003,
+        y: 344.32678,
+        z: -1066.6493,
+    };
+    assert_ne!(
+        *h.app.world().get::<Position>(telash).unwrap(),
+        center,
+        "still airborne"
+    );
+    assert!(
+        h.app.world().get::<CastState>(telash).is_none(),
+        "388008 cannot start before the real landing"
+    );
+    let seconds = super::azure_jump_charge::read_source_jump_seconds(713);
+    let frames = (seconds / FIXTURE_STEP_SECONDS).ceil() as usize + 2;
+    for _ in 0..frames {
+        if h.app.world().get::<Position>(telash) == Some(&center) {
+            break;
+        }
+        h.advance(FIXTURE_STEP_SECONDS);
+    }
+    assert_eq!(
+        *h.app.world().get::<Position>(telash).unwrap(),
+        center,
+        "actual native outbound landing prerequisite, not a synthetic MovementInform"
+    );
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(telash)
+        .expect("source first real1004 landing must start388008");
+    assert_eq!(cast.spell_id, 388008);
+    assert_eq!(cast.cast_type, shared::casting::CastType::Normal);
+    assert_eq!(cast.target, telash.to_bits());
+    assert_eq!(cast.duration, source_cast_ms as f32 / 1000.0);
+    let elapsed = cast.elapsed;
+    assert!(h.has_aura(telash, ZERO_SHIELD));
+    assert!(!h.has_aura(telash, ICE_POWER));
+    assert_eq!(
+        h.app.world().get::<ReactState>(telash),
+        Some(&ReactState::Passive)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::scripted_ai::waypoint_path::GravityDisabled>(telash)
+            .is_some()
+    );
+    assert_eq!(
+        completed_casts(&h, telash, 388008),
+        0,
+        "eight-second cast is not an instant hit"
+    );
+    h.advance(0.1);
+    let continuing = h.app.world().get::<CastState>(telash).unwrap();
+    assert_eq!(continuing.spell_id, 388008);
+    assert!(
+        continuing.elapsed > elapsed,
+        "landing cast continues rather than restarting"
+    );
+}
