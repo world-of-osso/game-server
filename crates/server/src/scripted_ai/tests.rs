@@ -30,6 +30,14 @@ use crate::spell_cast::effects::{EffectCtx, deal_damage};
 use crate::spell_info::SpellStore;
 use crate::world_data::{CreatureSpawn, WorldData};
 
+/// Install an observable fixture AI without pretending an unported script is registered.
+pub(crate) fn install_fixture_ai(world: &mut World, actor: Entity, ai: Box<dyn CreatureAi>) {
+    world.entity_mut(actor).insert(CreatureAiState {
+        ai: Some(ai),
+        pending: Default::default(),
+    });
+}
+
 /// `SSCreatureIds` of the bosses.
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
