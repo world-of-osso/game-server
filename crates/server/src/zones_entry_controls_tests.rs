@@ -25,7 +25,7 @@ fn update_target(
         entry,
         &mut CreatureSpawnContext {
             map,
-            difficulty_id: 1,
+            difficulty_id: if map.map_id == 543 { 1 } else { 0 },
             ground: None,
             temporary: false,
         },
