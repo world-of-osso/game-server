@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source605–609: courier-mail/finger-ribbon/outdoor-balloon/skiff/pennant boundaries (2026-10-17)
+
+No new acceptance/runtime/data/native proof or own heavy duplicate.507 running through76a8426bf has no observed final aggregate/EXIT/FMT/landing;603 thirteenth-object acceptance remains AFTER507.498 last confirmed landed/master8707ac0ea.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|605 Radiant Lynx Whistle239693/1229295 | Instant target47 summon242136/property6273/Control1/Title5/flags2048 for600000ms; runtime creature/model absent. Spell category2066/category recovery10800000ms, normal recovery0. Actual Courier Lynx mail delivery/retrieval, eligible mailbox interaction and despawn/elsewhere lifecycle remain gaps; no inert feline, generic pet or mail service inferred from actor alone. |
+|606 Chowdar's Favorite Ribbon242323/1232024 | Instant self dummy4/600000ms, no source SpellCooldowns row/item overrides-1. Actual finger-ribbon appearance/conditions/removal remains unaudited, absent maintained visual-only list; no gameplay ring/equipment/stat or arbitrary resizing mechanic inferred from flavor. |
+|607 Festival Hot Air Balloon242520/1232535 | Source1500ms target47/base1 summon243246/property6305/Control0/Title0/flags67241992 for3600000ms, inherited3600000ms recovery; runtime creature/model absent. Actual outdoor-only boarding/riding/upward balloon motion/exit/cleanup remain gap; Control0 alone does not make a stationary prop the promised ride. |
+|608 Azure Sea Skiff242534/1232666 | Source1500ms self waterwalk104 plus periodic226/every250ms/trigger0 for3600000ms, normal recovery0/start1500ms. Actual skiff/water/jump paddling up to130% faster/cleanup remains unresolved; distinct one-hour duration is not Barge's ten-minute certificate, fixed130% speed or generic waterwalk-only success. |
+|609 Astral Legend's Pennant242636/1233142 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Actual Astral pennant art/eligibility/removal remains unaudited; no zero-dummy or Prized/Unbound sibling certificate. |
+
+Evidence: private `rows605-609-{readonly-source,action-source,runtime-action-source,active-goal}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6, missing242136/243246 actor-model and category2066 join.149865 Tea Set untouched.
+
 ## Source600–604: pending Dastardly Banner and crate/juggling/retained scaled-banner-podium boundaries (2026-10-17)
 
 Acceptance-only3eabc6183 appends239007/1227030/527088/type5/display102616/scale1/cursor/180s as13th transmitted-object identity; old12/helper unchanged. Format/manual changed-line readability/diffcheck pass; behavior needs a head AFTER50776a8426bf.507 covers earlier12 objects/16 disguises/18 casters, no result/landing observed. No production/data/new native proof or own heavy duplicate.
