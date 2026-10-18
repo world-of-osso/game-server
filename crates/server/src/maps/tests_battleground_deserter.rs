@@ -3,6 +3,7 @@ use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 
 // TC a352b1fa Player.h2594: IsDeserter() is HasAura(26013).
 const DESERTER_SPELL_ID: u32 = 26013;
+const DUNGEON_DESERTER_SPELL_ID: u32 = 71041;
 
 #[test]
 fn bg_deserter_solo_concrete_refuses_active_aura_and_allows_clear_aura() {
@@ -24,6 +25,18 @@ fn bg_deserter_party_random_refuses_every_member_until_the_aura_is_cleared() {
     assert_party_deserter_refusal(32);
 }
 
+#[test]
+fn bg_deserter_dungeon_aura_does_not_refuse_battleground_admission() {
+    let (mut h, players, _database) = deserter_harness(1);
+    apply_sourced_aura(&mut h, &players[0], DUNGEON_DESERTER_SPELL_ID);
+    let updates = request_queue(&mut h, &players[0], 1018);
+    assert!(
+        updates.iter().all(|update| update.error.is_none()),
+        "non-BG Deserter: {updates:?}"
+    );
+    assert_queued(&h, &players, 1018);
+}
+
 fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempFile) {
     let source = crate::spell_cast::test_harness::world_db().expect("native spell source");
     let spell = source
@@ -33,7 +46,12 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
         .clone();
     assert_eq!(spell.name, "Deserter");
     assert_eq!((spell.effects[0].effect, spell.effects[0].aura), (6, 4));
-    let spells = crate::spell_info::SpellStore::fixture(vec![spell]);
+    let dungeon_deserter = source
+        .store
+        .get(DUNGEON_DESERTER_SPELL_ID)
+        .expect("native Dungeon Deserter")
+        .clone();
+    let spells = crate::spell_info::SpellStore::fixture(vec![spell, dungeon_deserter]);
     let database_file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
@@ -41,7 +59,6 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
         app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
         app.insert_resource(spells);
-        app.add_message::<shared::protocol::CombatLogEvent>();
         app.add_plugins((crate::group::GroupPlugin, crate::pvp::PvpPlugin));
     })
     .expect("real map/channel fixture");
@@ -62,17 +79,17 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
     (h, players, database_file)
 }
 
-fn apply_deserter(h: &mut Harness, who: &Traveler) {
+fn apply_sourced_aura(h: &mut Harness, who: &Traveler, spell_id: u32) {
     let spell = h
         .app
         .world()
         .resource::<crate::spell_info::SpellStore>()
-        .get(DESERTER_SPELL_ID)
+        .get(spell_id)
         .unwrap();
     let application = AuraApplication {
         caster: who.player,
         target: who.player,
-        spell_id: DESERTER_SPELL_ID,
+        spell_id,
         effect_mask: crate::auras::aura_effect_mask(spell),
         source: AuraSource::Cast,
     };
@@ -84,9 +101,12 @@ fn apply_deserter(h: &mut Harness, who: &Traveler) {
         .expect("applied native aura");
     let aura = active
         .iter()
-        .find(|aura| aura.spell_id == DESERTER_SPELL_ID)
+        .find(|aura| aura.spell_id == spell_id)
         .unwrap();
-    assert!(aura.remaining_ms(crate::auras::aura_now(h.app.world())) > 0);
+    assert!(
+        aura.expires_at
+            .is_some_and(|expires| expires > crate::auras::aura_now(h.app.world()))
+    );
 }
 
 fn clear_deserter(h: &mut Harness, who: &Traveler) {
@@ -156,7 +176,7 @@ fn assert_queued(h: &Harness, players: &[Traveler], queue_id: u32) {
 fn assert_solo_deserter_refusal(queue_id: u32) {
     let (mut h, players, _database) = deserter_harness(1);
     let who = &players[0];
-    apply_deserter(&mut h, who);
+    apply_sourced_aura(&mut h, who, DESERTER_SPELL_ID);
     let updates = request_queue(&mut h, who, queue_id);
     assert!(
         updates.iter().any(|update| update
@@ -180,7 +200,7 @@ fn assert_party_deserter_refusal(queue_id: u32) {
     form_source_five_player_parties(&mut h, &players, 25);
     let leader = &players[0];
     let last_member = &players[4];
-    apply_deserter(&mut h, last_member);
+    apply_sourced_aura(&mut h, last_member, DESERTER_SPELL_ID);
     let updates = request_queue(&mut h, leader, queue_id);
     assert!(
         updates.iter().any(|update| update
