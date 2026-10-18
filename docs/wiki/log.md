@@ -1,3 +1,6 @@
+## 2026-10-18 — Direct member-rank assignment
+
+[Authority](systems/guild-lifecycle.md#direct-member-rank-assignment): source TC1894–1930 direction/self and source UI hierarchy/index mapping qualified first. Actual typed-request RED2/2 refused legitimate GM/multirank and promote-only assignments; earlier snapshot import compilation failure unclaimed. One direct validated rank/member transaction, recipient refresh and no synthetic step events; existing explicit step history preserved. GREEN/transport/joint/native proof remains pending.
 ## Vault Rune scripted field implementation
 
 [Native Rune](systems/spell-casting.md#vault-rune-scripted-field): separate native388072/FRIEND action from exact scripted callbacks; general unit membership, full-set publication, actions before Enter/Exit hooks, OnRemove before clearing. Field REDd471, entry REDf034 and action/missing-field REDce21 retained separately. Existing aura87 handles native-50/mask127; Native first4 atf9e7 PASS93.75s, test-onlyd208 other5 PASS201.03s, explicit9-case composite; affected395/Sprout9 PASS201.94s, scoped check2m38s/no warnings/fmt PASS at docs-only80ea, stable source/protocol/DB guards. Independent lead gate pending. No activation/strip/return/visual or full-Azure claim.
