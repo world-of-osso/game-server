@@ -1261,11 +1261,13 @@ fn toyfx3_bobber_overrides_remain_explicitly_unsupported() {
 #[test]
 fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
     // DB2/TDB: Stormwind Banner45011->62736->194274 (generic),
-    // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605.
+    // Fishing Chair33223->42766->186475, MOLL-E40768->54710->191605,
+    // Reliquary Banner198729->384876->380639.
     for (item, spell, entry, go_type, display, scale, offset, lifetime_seconds) in [
         (45011, 62736, 194274, 5, 10483, 1.0, 0.0, 180),
         (33223, 42766, 186475, 7, 7467, 1.0, 2.0, 300),
         (40768, 54710, 191605, 19, 8171, 0.5, 3.0, 600),
+        (198729, 384876, 380639, 5, 76510, 0.6, 0.0, 180),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
@@ -1277,6 +1279,8 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         h.app
             .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
         h.app
+            .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+        h.app
             .world_mut()
             .entity_mut(h.caster)
             .insert(shared::components::Rotation {
@@ -1285,9 +1289,9 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
                 z: 0.0,
             });
         learn_effect_toy(&mut h, character, item);
-        // Banner62736 is target87: the clicked point, not the caster's feet.
+        // Both banners use target87: the clicked point, not the caster's feet.
         // Chair42766/MOLL-E54710 remain target47's authored forward offsets.
-        let destination = (item == 45011).then_some([4.0, 0.0, -3.0]);
+        let destination = matches!(item, 45011 | 198729).then_some([4.0, 0.0, -3.0]);
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
@@ -1316,6 +1320,13 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         assert_eq!(
             world.get::<crate::maps::InMap>(*object),
             world.get::<crate::maps::InMap>(h.caster)
+        );
+        assert_eq!(
+            world
+                .get::<crate::game_objects::summoned::SummonedObject>(*object)
+                .unwrap()
+                .owner,
+            Some(h.caster)
         );
         assert_eq!(
             world
