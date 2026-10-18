@@ -4,11 +4,10 @@ Lord Overheat's actual Rain of Fire86636 dynamic object is visible through ordin
 
 ## What it must do
 
-- [ ] Publish actual caster/spell/radius and resolved Position only for86636 persistent areas.
-- [ ] Use existing same-copy/range visibility; other copies never receive the area.
-- [ ] Remove on actual server expiry or caster despawn; no predicted client expiry.
-- [ ] Preserve actual area application, periodic damage and removal when a unit leaves.
-- [ ] Keep unit-targeted Overheat86633 distinct from ground geometry.
+- [x] Publish actual caster/spell/radius and resolved Position only for86636 persistent areas.
+- [x] Use existing same-copy/range visibility; other copies never receive the area.
+- [x] Remove on actual server expiry or caster despawn; no predicted client expiry.
+- [x] Preserve actual area application, periodic damage and removal when a unit leaves.
 
 ## How it works
 
@@ -30,4 +29,5 @@ Lord Overheat's actual Rain of Fire86636 dynamic object is visible through ordin
 
 ## Out of scope
 
+- Unit-targeted Overheat86633 and other spells remain unchanged; they are not ground-area features.
 - Other areas, geometry/stat/kit changes, follower behavior, guessed cast-centre or lifetime reconstruction.

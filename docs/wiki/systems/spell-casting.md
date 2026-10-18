@@ -4,7 +4,7 @@
 
 Actual86636 persistent objects now carry shared `DynamicObjectInfo` and existing Position through ordinary Replicate/NetworkVisibility. Existing same-copy100yd interest owns visibility, and actual DynamicObject expiry/caster removal owns despawn; neither server damage nor duration changes. Source70448 Effect88312 is effect27/periodicDamage3 with destination53/enemy28, Radius8=5 and Duration105=9s. Overheat86633 remains unit damage, not a ground area.
 
-The real Lord Overheat/interest RED reaches a genuine object with correct5yd/9s geometry but no replication; caster-removal control passes before the change. Tests retain actual boss casts and area damage, distinguish fixture position changes from native input, and exercise other-copy exclusion. Native escape and joint consumer acceptance remain pending. [Contract](../../specs/rain-of-fire-visibility.md).
+The real Lord Overheat/interest RED reaches a genuine object with correct5yd/9s geometry but no replication; caster-removal control passes before the change. Tests retain actual boss casts and area damage, distinguish fixture position changes from native input, and exercise other-copy exclusion. Postmerge server270.2s GREEN2/2 and shared wire1/1 accompany engine real-UDP21/native projection4 GREEN; affected server check29.25s/fmt pass without warnings. Position changes in the server fixture are not native movement-input proof. Joint consumer gate and fresh actual-client escape remain pending. [Contract](../../specs/rain-of-fire-visibility.md).
 
 ## Self hits alongside destination missiles (2026-10-17)
 
