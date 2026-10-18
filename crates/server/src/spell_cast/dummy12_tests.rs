@@ -441,6 +441,9 @@ fn dummy12_rake_bleed_snapshots_stealth_bonus_across_later_rank_removal() {
         )
         .unwrap();
         assert!(h.health(h.npc) < before);
+        // Effect64 applies the native zero-delay child on the next event update.
+        h.advance(1);
+        assert!(crate::auras::has_aura(h.app.world(), h.npc, 155722));
         crate::auras::remove_auras(
             h.app.world_mut(),
             caster,

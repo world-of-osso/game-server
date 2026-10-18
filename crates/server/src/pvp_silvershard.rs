@@ -169,6 +169,7 @@ pub(super) fn spawn_source_cart(
         equipment_id: 0,
     };
     let mut queue = CommandQueue::default();
+    let difficulty_id = crate::zones::map_difficulty_id(world, map);
     let entity = {
         let data = world.resource::<WorldData>();
         let mut commands = Commands::new(&mut queue, world);
@@ -176,11 +177,17 @@ pub(super) fn spawn_source_cart(
             &mut commands,
             data,
             &data.templates[&entry],
-            map,
+            &mut crate::zones::CreatureSpawnContext {
+                map,
+                difficulty_id,
+                ground: None,
+                temporary: true,
+            },
             true,
             &spawn,
             &mut rand::thread_rng(),
         )
+        .expect("temporary cart does not require ordinary level context")
     };
     queue.apply(world);
     entity
