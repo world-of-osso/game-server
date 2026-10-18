@@ -202,6 +202,123 @@ fn toyfx673_corewarden_hearthstone_learned_use_returns_to_bind_and_blocks_preyse
 }
 
 #[test]
+fn toyfx593_explosive_hearthstone_returns_to_bind_and_expires_queued_singed_aura() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    const ITEM: u32 = 236687;
+    const ROOT: u32 = 1220729;
+    const SINGED: u32 = 1220867;
+    const SIBLING: u32 = 265100;
+    const CHARGE_CATEGORY: u32 = 2309;
+    const RECHARGE_MS: u32 = 1_800_000;
+    const SINGED_DURATION_MS: u32 = 5000;
+    const FRAME_SECONDS: f64 = 0.05;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("explosive.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let bind = crate::spell_cast::homebind::load_bind(
+        &h.app.world().resource::<GameDatabase>().db,
+        character,
+    )
+    .unwrap();
+    let caster = h.caster;
+    let health = *h.app.world().get::<Health>(caster).unwrap();
+    let display = h.app.world().get::<ModelDisplay>(caster).copied();
+    h.app.world_mut().entity_mut(caster).insert(bind);
+    let mut origin = bind.0.bevy_position();
+    origin.x += 30.0;
+    *h.app.world_mut().get_mut::<Position>(caster).unwrap() = origin;
+    learn_effect_toy(&mut h, character, ITEM);
+    learn_effect_toy(&mut h, character, SIBLING);
+
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    h.advance(100);
+    assert_eq!(h.app.world().get::<Position>(caster), Some(&origin));
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == ROOT));
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == SINGED)
+    );
+    h.advance(110);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == ROOT).count(),
+        1
+    );
+    assert_eq!(
+        h.app.world().get::<Position>(caster),
+        Some(&bind.0.bevy_position())
+    );
+    let singed = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == SINGED)
+        .unwrap();
+    assert_eq!(singed.duration_ms, SINGED_DURATION_MS);
+    assert_eq!(singed.effects[0].aura_type, 4);
+    assert_eq!(singed.effects[0].misc_values, [0, 0]);
+    let expiry = singed.expires_at.unwrap();
+    let remaining = expiry - crate::auras::aura_now(h.app.world());
+    assert!((4.0..=5.0).contains(&remaining));
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SINGED)
+    );
+    let charge = h
+        .inbox
+        .charges
+        .iter()
+        .find(|charge| charge.spell_id == ROOT && charge.category == CHARGE_CATEGORY)
+        .unwrap();
+    assert_eq!(charge.current, 0);
+    assert_eq!(charge.max, 1);
+    assert_eq!(charge.recharge_ms, RECHARGE_MS);
+    let cast_count = h.inbox.go.len();
+    assert!(activate(&mut h, SIBLING)[0].error.is_some());
+    let remaining = expiry - crate::auras::aura_now(h.app.world());
+    h.advance((remaining / FRAME_SECONDS).floor() as usize - 2);
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SINGED)
+    );
+    h.advance(6);
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SINGED)
+    );
+    assert_eq!(h.inbox.go.len(), cast_count);
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
+}
+
+#[test]
 fn toyfx664_mycomancer_learned_root_triggers_homebind_after_cast_and_blocks_corewarden() {
     use shared::components::{Health, ModelDisplay};
     const ITEM: u32 = 264367;
