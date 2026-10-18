@@ -244,10 +244,11 @@ def replace_source_base_templates(connection, entries):
                        f'{retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon WHERE entry IN({selected})')
 
 
-def validate_nazan_source(connection):
+def read_nazan_source(connection):
+    """Read and authenticate source rows before any content-table writes."""
     identity = connection.execute(
-        'SELECT name,AIName,ScriptName FROM tdb_creature_template WHERE entry=17536').fetchone()
-    if identity != ('Nazan', '', ''):
+        'SELECT entry,name,AIName,ScriptName FROM tdb_creature_template WHERE entry=17536').fetchone()
+    if identity != (17536, 'Nazan', '', ''):
         raise ValueError('Nazan17536 source identity changed')
     difficulties = connection.execute(
         'SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty '
@@ -263,9 +264,10 @@ def validate_nazan_source(connection):
         'SELECT count(*) FROM tdb_creature_template_addon WHERE entry=17536').fetchone()[0]
     if addons != 1:
         raise ValueError('Nazan17536 missing source addon')
+    return identity[0]
 
 
-def project_nazan_heroic(connection):
+def write_nazan_heroic(connection):
     # CT0 has no stored range. Bounds1 are cache placeholders, never native-level acceptance;
     # ordinary runtime spawning resolves the actual map/area range before selecting stats.
     written = connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
@@ -282,10 +284,10 @@ def project_nazan_heroic(connection):
 
 
 def import_nazan_template(connection):
-    validate_nazan_source(connection)
-    replace_source_base_templates(connection, [17536])
-    project_nazan_heroic(connection)
-    return [17536]
+    entry = read_nazan_source(connection)
+    replace_source_base_templates(connection, [entry])
+    write_nazan_heroic(connection)
+    return [entry]
 
 
 def import_herald_actors(connection):
