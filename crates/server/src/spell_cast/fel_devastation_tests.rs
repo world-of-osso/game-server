@@ -6,7 +6,8 @@ use crate::class_progression::ActiveSpec;
 use crate::stats::CharacterStats;
 use bevy::prelude::*;
 use shared::components::{Level, Position, PowerType, Rotation};
-use shared::protocol::{CastFailReason, CombatLogEvent, CombatLogKind, MissKind};
+use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
+use shared::spell_data::CastFailReason;
 
 const ROOT: u32 = 212084;
 const DAMAGE: u32 = 212105;
