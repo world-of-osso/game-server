@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Invocation/eggs/cloak-service/random-talisman/alcohol boundaries (2026-10-17)
+
+[Source395–399 matrix](../../toy-effects14-coverage.md#source395399-invocationeggscloak-servicerandom-talismanalcohol-boundaries-2026-10-17) preserves elemental invocation/base1200, three named egg hatchlings versus literal script base4, linked cloak collection with weighted visible/unused-invisible models, literal Talisman base references versus actual trigger edges, and alcohol effect100/base5. Existing bodies/child transforms do not authorize inert props, random-range guesses, dropped animation/removal or visual-only alcohol. No runtime/data/producer/new native proof or own heavy duplicate;387/393 still require a later head than484.
+
 ## Pending Ohn'ir return-home acceptance and pelt/catch/orb/eight-trigger boundaries (2026-10-17)
 
 [Source390–394 matrix](../../toy-effects14-coverage.md#source390394-pending-ohnir-return-home-acceptance-and-peltcatchorbeight-trigger-boundaries-2026-10-17) adds acceptance-only00ee4d3e3:200630/391042/source10s252/savedbind/shared2309one1800000mscharge, now15hearthstone variants. Format/manual readability/diffcheck pass; future covering head required, not484afad. Missing pile/orb runtime identities, bouquet missile→cursor-centered1yd friendly catch and eight distinct Palooza area-trigger children remain exact action/lifecycle gaps. Orb availability outside Cobalt Assembly is not a new must-be-outside gate; preserve both distinct misc300 children and index order without guessed timing. No runtime/data/new native or full-recharge certificate.

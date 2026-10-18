@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source395–399: invocation/eggs/cloak-service/random-talisman/alcohol boundaries (2026-10-17)
+
+These rows retain exact scripted/service/gameplay contracts despite existing actor or transform metadata. No generic script/dummy admission, runtime/data/producer changes or new positive/native certificate. Lead484's older15-caster/nine-object head remains distinct from later pending387/393 acceptance.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|395 Primal Invocation Quintessence200636/391122 | Source2000ms self script77/literal base1200/trigger0; category2071/3600000ms recovery and1500ms start recovery. Source advertises elemental invocation followed by transformation for1200/60=20min. Actual elemental selection/summon/transform/recipient cleanup remains unresolved;1200 is not a guessed creature/spell ID, root aura duration or permission for cosmetic no-op. |
+|396 Obsidian Egg Clutch200640/391148 | Source1500ms self script77/base4 plus linked428/600000ms→391155; child2000ms target47 summon197547/property4536/base1 plus self dummy4 for600000ms. Existing25204 body is not the full promised three eggs and named Rowdy/Onion/Blitz hatch sequence. Exact root action/hatching/multiplicity/link lifecycle remains gaps; no guessed four-egg count, one-actor substitute or dropped script/dummy slot. Item900000ms recovery retained. |
+|397 Armoire of Endless Cloaks200707/391776 | Instant self linked428/300000ms→391777/permanent197811/property4536 at47, item900000ms recovery. Existing model109750/weight1 and invisible11686/weight0 remain distinct. Actual cloak collection/access/selection/appearance/linked cleanup remain unresolved; no inert armoire or choosing zero-weight invisible model to bypass service semantics. |
+|398 Talisman of Sargha200857/392210 | Source1500ms self77/base392200 plus self3/base392209, both trigger0; item3600000ms recovery. Literal references392200/392209 have distinct transforms197918/197921, animation set1060 and effect164, but those rows do not establish root random selection/execution/cleanup. No automatic executable base fields, guessed inclusive range/pool, simple costume or ignored animation/removal payload. |
+|399 Ohn Lite Branded Horn200869/392343 | Instant self effect100/base5, item30000ms recovery and source category59. Pinned100 is INEBRIATE. Actual drunkenness/state/wire/decay and drinking presentation remain unproved; no visual-only horn success, guessed drunk-state scaling or incidental mana/resource gain. |
+
+Evidence: private `rows395-399-{readonly-source,action-source,active-goal}.json`, exact runtime models and pinned `SharedDefines.h`100. Referenced base-point rows remain separate from literal trigger edges.149865 Tea Set remains untouched.
+
 ## Source390–394: pending Ohn'ir return-home acceptance and pelt/catch/orb/eight-trigger boundaries (2026-10-17)
 
 393 test/spec00ee4d3e3 adds200630/391042 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now15hearthstone variants. One charge/1800000ms recharge and Timewalker193588 shared refusal remain exact. Format/manual readability/diffcheck pass; new15-variant behavioral proof requires a covering future head, not484afad. New387 mixed-control Wand is likewise beyond484. No runtime/data/producer change or own heavy duplicate.
