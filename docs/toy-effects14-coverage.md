@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Explosive593 mixed hearthstone and Singed CPU acceptance pending after532 (2026-10-18)
+
+Test/spec `bb325c6a4` adds `toyfx593_explosive_hearthstone_returns_to_bind_and_expires_queued_singed_aura` for Full1166 item236687. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 retains actual root1220729/CastTime7=10000ms and both effects:252/targets1,9 plus self64→1220867/Singed, instant dummy4/misc0,0/Duration28=5000ms. Real learning/use checks no early return/root completion/Singed, then root completion/saved-bind return/root2309 one charge/recharge1800000ms, unchanged health/model and learned Corewarden refusal. The test asserts child aura presence before and removal after ordinary source expiry; it does not invoke the child directly. The25 direct cases/helper and separate Mycomancer fixture remain unchanged.
+
+Format/manual readability only; UNCOMPILED/UNEXECUTED here, requires lead covering gate AFTER532 (`8af454985` cover). Gate532 candidatefb2bd5a88 is not a landing. This proves no native explosive/Singed presentation, guessed damage, cross-map/missing-bind/natural-recharge or full1166 gameplay outcome. [Contract](specs/toys.md), [test](../crates/server/src/toys_hearthstone_tests.rs); earlier row593's native-presentation gap remains.
+
 ## Mycomancer664 triggered hearthstone acceptance pending after st526 (2026-10-18)
 
 Test/spec `37a6c0598` adds `toyfx664_mycomancer_learned_root_triggers_homebind_after_cast_and_blocks_corewarden` for Full1166 item264367. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 ItemEffect228781/slot0/TriggerType0 selects root1299014, sourceCastTime7=10000ms; its self/homebind-target64 triggers1286909, instant252. Root category2309 retains one charge/1800000ms recharge. The test learns the real item, uses its root, checks no early return or root completion, then one root completion/saved-bind return, unchanged health/model, root charge report and learned Corewarden265100 refusal without another cast. It does not directly invoke child1286909 or change the25 direct-hearth cases/helper.
