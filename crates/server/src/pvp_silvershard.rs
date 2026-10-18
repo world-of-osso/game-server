@@ -170,8 +170,7 @@ pub(super) fn spawn_source_cart(
     };
     let mut queue = CommandQueue::default();
     let difficulty_id = crate::zones::map_difficulty_id(world, map);
-    world.init_resource::<crate::ground::GroundMap>();
-    let entity = world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
+    let entity = {
         let data = world.resource::<WorldData>();
         let mut commands = Commands::new(&mut queue, world);
         crate::zones::spawn_creature(
@@ -181,14 +180,14 @@ pub(super) fn spawn_source_cart(
             &mut crate::zones::CreatureSpawnContext {
                 map,
                 difficulty_id,
-                ground: Some(&mut ground),
-                temporary: false,
+                ground: None,
+                temporary: true,
             },
             true,
             &spawn,
             &mut rand::thread_rng(),
         )
-    });
+    };
     queue.apply(world);
     entity
 }
