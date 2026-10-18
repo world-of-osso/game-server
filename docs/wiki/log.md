@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy raw source690–694 pending Pearl acceptance and explicit exclusion
+
+[Exact source matrix](../toy-effects14-coverage.md#source690694-pending-pearl-disguise-throne-loot-bot-kill-rain-and-one-excluded-source-only-identity-2026-10-18):83c3de3d2 appends Full1166 Pearl274921/1295623/265732/ten displays/5min/1hr to unchanged disguise helper, now19 rows plus separate Oomgut20 identities; format/manual readability/diffcheck pass, behavior pending successor. Raw block has four runtime identities plus275039 Curse of the Aqir, named SOURCE-ONLY/OUTSIDE Full1166 without import/admission/acceptance. Throne/base0, resource/corpse loot bot and player-kill rain remain gaps. No runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source685–689 shared category and exact placement boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source685689-shared-saptor-category-missing-naptent-retained-umbral-banner-and-scripted-starfish-boundaries-2026-10-18): Saptor shares2513 with Pango, keeps one-hour aura/ten-minute recovery and122805 weight0.1. Missing Nap Mat and target22/base0 Tent remain gaps; existing Umbral Banner fixture retains explicit time-leap expiry scope. Starfish retains77 plus permanent child4/PreventionType4. No generic prop/bonus/independent timer, runtime/data/native change or own heavy jobs; lead successor pending.
