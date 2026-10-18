@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source640–644 pending Dredger acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source640644-pending-dredger-disguise-and-linked-companion-mixed406-boundaries-2026-10-18):2cc3d9ec3 appends256893/1260864/254071/four displays/10min/15min to unchanged disguise helper, now18 rows plus separate Oomgut19 identities; format/manual readability/diffcheck pass, behavior awaits lead successor after cancelled509. Exodar linked428 plus repeated495 edges, missing traveling cat and Seed406/20/target0 versus Steward406/294/self remain exact gaps. No static actor/pure-transform substitute, runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source635–639 pending Potatoad acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source635639-pending-potatoad-disguise-and-pet-command-bundle-egg-arcantina-boundaries-2026-10-18):e29972e08 appends252265/1254376/251887/five displays/10min/20min to unchanged disguise helper, now17 rows plus separate Oomgut18 identities. Format/manual readability/diffcheck pass, behavior pending lead successor.509 cancelled before start for separate master compile interaction; not a toy RED. Pet90/87 move/stay, missing bundle251069/base0, unaudited Egg and distinct Arcantina script payloads1255786/1246474 remain gaps. No runtime/data/native change or own heavy jobs.

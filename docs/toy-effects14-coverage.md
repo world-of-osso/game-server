@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source640–644: pending Dredger disguise and linked-companion, mixed406 boundaries (2026-10-18)
+
+Acceptance-only2cc3d9ec3 appends Dredger to unchanged disguise helper:18 rows plus separate Oomgut19 identities, old17 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor after509 cancellation-before-start. Mixed seed/Steward and linked companions remain outside that pure-transform acceptance. No runtime/data/native changes or own heavy jobs.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|640 Exodar Replica254666/1257742 | Instant self428/base1→1288866 plus495→1258382 for3600000ms; explicit item3600000ms recovery. Child1288866 target32/base1 summon existing253016/property6664/Control0/flags133128+Flags1=2, display137713/scale1, plus another self495→1258382. Leaf1258382 dummy3 targets18/8. Actual following/linked lifecycle and both495 edges remain unaccepted; no stationary Exodar scenery or dropping a repeated edge. |
+|641 Fortune's Waving Cat256141/1259999 | Source1500ms target32/base1 summon253791/property3214/Control1/flags133896 plus self495→1260009 for3600000ms; explicit item600000ms recovery overrides spell0. Leaf1260009 dummy3 targets18/8, runtime cat/model absent. Actual traveling companion/wave/linked effect lifecycle remains gap; no stationary cat or inferred wealth gameplay. |
+|642 Verdant Rutaani Seed256552/1260483 | Instant self transform56/base1/misc253946/8 plus aura406/misc20/0 with target0/0 for1800000ms; inherited3600000ms recovery. Existing four displays137957/137958/137959/137960, each scale1/weight1. Actual mixed presentation/state/cleanup remains gap; do not erase target0, route406 to self by assumption or certify via pure-transform helper. |
+|643 Steward's Bauble256881/1260784 | Instant self transform56/misc254059/8 plus self406/misc294/0 for600000ms, inherited900000ms recovery. Existing displays92915/91896/96576/96577, each scale1/weight1. Actual mixed steward state/presentation/restoration remains gap; distinct from Seed's406 recipient/misc and ordinary Dredger disguise. No invented service actor from helpful-wing flavor. |
+|644 Wretched Dredger's Brand256893/1260864 | Instant self transform56/misc254071/8 for600000ms, inherited900000ms recovery. Existing displays100712/93612/98057/93614, each scale1/weight1. Own learned-use/model-membership/ordinary expiry/health/native-model restoration/recovery-refusal acceptance committed, behavior pending successor. No guarantee of all four choices, native imagery or full15-minute reuse; adjacent mixed406 spells excluded. |
+
+Evidence: private `rows640-644-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `brand644-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6. Full1166 admission unchanged;149865 Tea Set untouched.507 failed/172cb1782 fixture correction pending covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source635–639: pending Potatoad disguise and pet-command, bundle, egg, Arcantina boundaries (2026-10-18)
 
 Acceptance-onlye29972e08 appends Hexed Potatoad Mucus to the unchanged disguise helper:17 rows plus separate Oomgut18 identities, old16 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor.509 was cancelled before starting because of a separate master merge-interaction compile break, not a toy test result.507 remains failed;172cb1782 fixture correction and later acceptances still lack covering success/landing.

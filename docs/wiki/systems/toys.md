@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Dredger disguise and linked-companion, mixed406 boundaries (2026-10-18)
+
+[Source640–644 matrix](../../toy-effects14-coverage.md#source640644-pending-dredger-disguise-and-linked-companion-mixed406-boundaries-2026-10-18) adds acceptance-only2cc3d9ec3 for256893/1260864/254071/four exact displays/10-minute appearance/15-minute recovery:18 disguise rows plus separate Oomgut19 identities, old17/helper unchanged; behavior awaits lead successor. Exodar's two495→1258382 edges and linked428 chain, missing traveling cat253791, Rutaani406/misc20/target0 and Steward406/misc294/self remain distinct gaps. No static companion or pure-transform substitute for mixed406. No runtime/data/native change or own heavy work.
+
 ## Pending Potatoad disguise and pet-command, bundle, egg, Arcantina boundaries (2026-10-18)
 
 [Source635–639 matrix](../../toy-effects14-coverage.md#source635639-pending-potatoad-disguise-and-pet-command-bundle-egg-arcantina-boundaries-2026-10-18) adds acceptance-onlye29972e08 for252265/1254376/251887/five exact source displays/10-minute appearance/20-minute recovery:17 disguise rows plus separate Oomgut18 identities, old16/helper unchanged. Behavior pending lead successor;509 cancelled before start for unrelated master compile interaction. Exact vanity-pet90/87 move/stay, missing bundle251069/base0/target32, unaudited Potatoad Egg and two distinct Arcantina script base-point payloads remain gaps. No combat-pet substitute, assumed summon count or invented travel destination; no runtime/data/native change.
