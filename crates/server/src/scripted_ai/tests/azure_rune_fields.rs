@@ -36,6 +36,27 @@ pub(super) fn assert_native_source(h: &Harness) {
         properties,
         (30743, 4, 7.0, 7.0, "at_telash_greywing_vault_rune".into())
     );
+    let action: (u32, u32, u32) = connection.query_row(
+        "SELECT ActionType,ActionParam,TargetType FROM tdb_areatrigger_template_actions WHERE AreaTriggerId=30743 AND IsCustom=0",
+        [], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    ).expect("native Rune template action prerequisite");
+    assert_eq!(action, (0, 388072, 1));
+    let protection = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(388072)
+        .expect("native protection spell prerequisite");
+    assert_eq!(protection.effects.len(), 1);
+    let protection = &protection.effects[0];
+    assert_eq!(
+        (
+            protection.effect,
+            protection.aura,
+            protection.misc_values[0]
+        ),
+        (6, 87, 127)
+    );
     let effect = h
         .app
         .world()

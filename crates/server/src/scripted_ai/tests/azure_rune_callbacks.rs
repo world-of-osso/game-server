@@ -13,6 +13,7 @@ struct RuneCastEvent {
     caster: Entity,
     spell: u32,
     inside: HashSet<Entity>,
+    protected: HashSet<Entity>,
 }
 
 #[derive(Resource, Default)]
@@ -25,12 +26,25 @@ struct RuneCastObserver;
 impl CreatureAi for RuneCastObserver {
     fn on_spell_cast(&mut self, ctx: &mut Ctx, spell: u32) {
         let caster = ctx.me;
-        let inside = ctx
+        let inside: HashSet<Entity> = ctx
             .world
             .query::<&SpellAreaTrigger>()
             .iter(ctx.world)
             .filter(|field| field.caster == caster && field.spell_id == RUNE_AURA)
             .flat_map(|field| field.inside.iter().copied())
+            .collect();
+        let protected = inside
+            .iter()
+            .copied()
+            .filter(|unit| {
+                ctx.world
+                    .get::<crate::auras::ActiveAuras>(*unit)
+                    .is_some_and(|auras| {
+                        auras
+                            .iter()
+                            .any(|aura| aura.spell_id == 388072 && aura.caster == caster)
+                    })
+            })
             .collect();
         ctx.world
             .resource_mut::<RuneCastEvents>()
@@ -39,6 +53,7 @@ impl CreatureAi for RuneCastObserver {
                 caster,
                 spell,
                 inside,
+                protected,
             });
     }
 }
@@ -164,6 +179,93 @@ fn azure_rune_native_player_entries_publish_membership_and_cast_shield_once() {
 }
 
 #[test]
+fn azure_rune_native_template_action_precedes_player_callback_and_undoes_on_exit() {
+    let (mut h, rune) = observed_fixture(205);
+    cast_rune_aura(&mut h, rune);
+    let player = h.players[0].0;
+    place_player(&mut h, player, rune, 0.5);
+    h.advance(0.05);
+    assert!(
+        h.has_aura(player, 388072),
+        "native CAST388072/FRIEND action must run"
+    );
+    let events = casts(&h, rune, SHIELD);
+    assert_eq!(events.len(), 1);
+    assert!(
+        events[0].protected.contains(&player),
+        "DoActions precedes OnUnitEnter"
+    );
+    let mods = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(player)
+        .unwrap();
+    for school in [1, 2, 4, 8, 16, 32, 64] {
+        assert_eq!(mods.damage_taken(school), 0.5, "native aura87 -50/mask127");
+    }
+    place_player(&mut h, player, rune, 20.0);
+    h.advance(0.05);
+    assert!(
+        !h.has_aura(player, 388072),
+        "exit undoes native action aura"
+    );
+    assert!(!h.has_aura(rune, SHIELD));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(player)
+            .unwrap()
+            .damage_taken(64),
+        1.0
+    );
+}
+
+#[test]
+fn azure_rune_native_nonfriend_npc_is_inside_without_action_or_player_activation() {
+    let (mut h, rune) = observed_fixture(205);
+    cast_rune_aura(&mut h, rune);
+    let npc = h.creatures_of(186737)[0];
+    let position = rune_position(&h, rune, 0.5);
+    h.app.world_mut().entity_mut(npc).insert(position);
+    assert!(
+        !crate::spell_cast::targets::relation_matches(
+            h.app.world(),
+            rune,
+            npc,
+            crate::spell_cast::targets::Relation::Ally
+        ),
+        "native Telash is not Rune FRIEND"
+    );
+    h.advance(0.05);
+    let fields = owned_fields(&mut h, rune);
+    assert_eq!(fields.len(), 1, "native field prerequisite");
+    assert!(
+        h.app
+            .world()
+            .get::<SpellAreaTrigger>(fields[0])
+            .unwrap()
+            .inside
+            .contains(&npc),
+        "base membership is not Player-only or FRIEND-filtered"
+    );
+    assert!(
+        !h.has_aura(npc, 388072),
+        "FRIEND action must not cast on nonfriend member"
+    );
+    assert!(
+        !h.has_aura(rune, SHIELD),
+        "NPC membership cannot activate390201"
+    );
+    let player = h.players[0].0;
+    place_player(&mut h, player, rune, 0.5);
+    h.advance(0.05);
+    assert_eq!(
+        casts(&h, rune, SHIELD)[0].inside,
+        HashSet::from([npc, player])
+    );
+}
+
+#[test]
 fn azure_rune_native_same_tick_swap_keeps_shield_until_last_living_exit() {
     let (mut h, rune) = observed_fixture(205);
     cast_rune_aura(&mut h, rune);
@@ -208,7 +310,7 @@ fn azure_rune_native_npc_other_copy_dead_and_ghost_do_not_activate_shield() {
     h.advance(0.05);
     assert!(
         !h.has_aura(rune, SHIELD),
-        "native NPC or player in another copy does not enter this player-only field"
+        "native NPC or player in another copy does not activate the Player-only Rune callback"
     );
     for state in [
         shared::death::DeathState::Dead,
