@@ -61,7 +61,7 @@ pub(super) fn spawn_profile_fixture_with_plugins(
 
 #[test]
 fn follower_selection_is_not_engagement_but_native_attack_is() {
-    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
+    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;
     let before = h.health(enemy);
     let position = *h
@@ -106,6 +106,14 @@ fn follower_selection_is_not_engagement_but_native_attack_is() {
             .any(|event| event.source == Some(unit.to_bits())
                 && event.kind == shared::protocol::CombatLogKind::Damage),
         "real owner attack must engage follower"
+    );
+    eprintln!(
+        "MEREDY_ENGAGEMENT_PROFILE {profile:?} EVENTS {:?}",
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.source == Some(unit.to_bits()))
+            .collect::<Vec<_>>()
     );
 }
 
