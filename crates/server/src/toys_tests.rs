@@ -580,7 +580,7 @@ fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
             .iter()
             .any(|result| result.operation == ToyOperation::Learn && result.error.is_none()),
         "physical toy {item_id} did not learn: {results:?}; errors: {:?}",
-        drain::<InventoryError>(&mut h.app, h.connection)
+        h.inbox.inventory_errors
     );
 }
 
