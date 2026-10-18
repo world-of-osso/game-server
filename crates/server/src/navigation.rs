@@ -359,6 +359,10 @@ fn open_navigation(mut commands: Commands) {
 #[path = "navigation_tests.rs"]
 mod tests;
 
+#[cfg(all(test, target_os = "linux"))]
+#[path = "navigation_blocking_io_tests.rs"]
+mod blocking_io_tests;
+
 fn prune_routes(
     mut nav: ResMut<Navigation>,
     creatures: Query<Entity, With<crate::creature_ai::CreatureState>>,
