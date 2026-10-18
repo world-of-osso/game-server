@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source495–499: observer/party-private perspective/fixed-Gilneas/water-boat boundaries and retained banner (2026-10-17)
+
+Exact recipient/private/control/travel contracts remain distinct from cosmetics or scenery. No further runtime/data/new acceptance/native proof or own heavy duplicate;4964df7af2e6 is running with expanded missile filters.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|495 Eyes For You Only210974/427779 | Instant self periodic23/every1000ms→429097 plus screen260/2145/7 for1800000ms; item1800000ms recovery. Child1000ms has dummy4/target120 (caster and summons) plus self perception233 pairs7249/207 and7353/223. Exact observer/non-party filtering/summons/refresh/restore remains unresolved; no global despawn, self-only overlay or dropped perception sibling. |
+|496 Date Simulation Modulator210975/427782 | Source5000ms target47 summon213454/property5453/Title55/raw flags-1811735808 for7200000ms; inherited7200000ms recovery. Runtime creature/model absent. Actual outdoors-only machine/perspective and party-or-raid-only machine/effect visibility/cleanup remain gaps; no global world filter, owner-only audience substitute or inert private prop. |
+|497 Dreaming Banner of the Aspects211424/429364 | Instant target47 summon existing214220/display115934/scale1/property64/base1 for60000ms; inherited600000ms recovery. Exact existing seasonal16-case row retains actual learned-use/source2yd front/owner/map/faction/stationary/ordinary expiry CPU witness. No fresh native/state-kit/natural ten-minute recharge certificate. |
+|498 Tess's Peacebloom211788/430265 | Source10000ms252/targets1/17 plus self script77; inherited1800000ms recovery/start1500ms. Explicit destination is Gilneas City, not the character's current inn bind. Actual fixed destination/script/phase/transfer/persistence remains unverified; no ordinary hearthstone-helper or invented city coordinates. |
+|499 Exquisite Love Boat211864/430488 | Source1500ms target47 summon214956/property827 for permanent-1; Control4/Flags0=8/Flags1=128, literal base430489, source radius20yd. Runtime creature/model absent. Full water-surface/within20yd/four-seat controlled cruise/cleanup and Love-is-in-the-Air recovery remain gaps; no430489 actors or automatic trigger edge inferred from base, static boat, land placement or guessed holiday divisor. |
+
+Evidence: private `rows495-499-{readonly-source,action-source,runtime-source,boat-radius-source,active-goal}.json`, pinned target120 and exact SpellRadius9→20yd join.149865 Tea Set remains untouched.
+
 ## Source490–494: monument/raid-aura/pennant/moving-trail/owl-rest/sleep boundaries (2026-10-17)
 
 Mixed service/area/periodic or unaudited visual/action contracts remain gaps. No further runtime/data/new acceptance/native proof or own heavy duplicate;4964df7af2e6 remains lead-owned/pending.

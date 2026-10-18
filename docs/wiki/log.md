@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source495–499 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source495499-observerparty-private-perspectivefixed-gilneaswater-boat-boundaries-and-retained-banner-2026-10-17): Eyes periodic child preserves caster-and-summons target120 and both perception pairs; Date Modulator is outdoors party/raid-private machine plus effects, not global/owner-only perspective. Tess's252/17+77 goes to fixed Gilneas, not current inn bind. Four-seat permanent Control4 Love Boat requires water/radius20yd/holiday recovery; base430489 stays literal, not count/automatic child. Exact Dreaming Banner seasonal CPU row retained, no fresh native/recharge certificate. No further runtime/data/new proof/own heavy duplicate;4964df7af2e6 running.
+
 ## 2026-10-17 — Toy source490–494 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source490494-monumentraid-aurapennantmoving-trailowl-restsleep-boundaries-2026-10-17): missing Murkmorpher212150/interaction plus actual raid-area65/425841, permanent nonzero Verdant pennant, Socks500ms periodic child→1s persistent-area27 trail, Owl Post resting and missing213113 Leafbed usable sleep remain gaps.425843 description reference is not an executable root edge; no automatic model change, caster-only/deduplicated trail or static bed admission. No further runtime/data/new acceptance/native proof/own heavy duplicate;4964df7af2e6 lead-owned pending.
