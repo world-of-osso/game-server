@@ -69,6 +69,7 @@ Client
 
 ## Tests asserting this spec
 
+- Gate486 repair at5a2c2d449: genuine3FAIL at7763d065a→focused3PASS/60.13s; requested affected54PASS/150.97s with55 pre-existing ignored, fmt0. Package check/push pending; this does not certify Herald runtime morph.
 - `achievement_creature_type_tests.rs`: controlled Lesser Voidwalker418 at WoW(3,0), actual MCNK area279→CT11 (7..30), source delta0 yields native30, not cached20; criterion21 retains below/equal/above killer levels29/30/31, group-recipient and persistence controls.
 - `scripted_ai/tests/data_bosses.rs`: Lucifron's real map409 spawn20056605 supports9/18; the fixture selects actual9→CT1004, not unsupported legacy3. Copy-local lifecycle assertions remain unchanged.
 - `zones_context_tuning_tests.rs`: missing actual area refuses unresolved17536 without panic or partial entity, logs its complete source context and still spawns explicit-CT Hogger; actual sourced17536 base0/Heroic2 fixture through ordinary spawning (not canonical placements), actual MCNK1221→parent16→CT2 instead of spawn zone9, explicit HoggerCT73, Black Sheep critter, known zero-area and missing-context controls. Genuine map/terrain/error RED3 with2 controls passing at5f894225 becomes strict GREEN5/5 at ef5d7503. Actual authored-marker Yala5/102 and production-order PostStartup ground publication extend the enabled proof to7 cases; affected54/54 pass at33dcb7b6 in177.24s (55 pre-existing ignored cases remain unproved).
