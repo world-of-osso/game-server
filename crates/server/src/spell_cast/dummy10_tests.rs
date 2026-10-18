@@ -143,9 +143,14 @@ fn dummy10_consecration_stays_at_cast_position_pulses_and_expires() {
     assert_eq!(hits(&h, 81297).len(), count);
 }
 #[test]
-fn dummy10_feral_lunge_launches_named_bite_only_at_hit_enemy() {
+fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() {
     let mut h =
         harness_with_native_enemy_dodge_reduction(Vec::new(), &[196884, 215802], 7).unwrap();
+    h.app
+        .insert_resource(crate::test_data::world_data().clone());
+    let before = *h.app.world().get::<Position>(h.caster).unwrap();
+    let mana_before = super::powers::power_value(h.app.world(), h.caster, PowerType::Mana)
+        .expect("native Mana component prerequisite");
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 10.0,
         y: 0.0,
@@ -157,6 +162,20 @@ fn dummy10_feral_lunge_launches_named_bite_only_at_hit_enemy() {
     landed(&h);
     assert_eq!(hits(&h, 215802), vec![h.npc]);
     assert!(!hits(&h, 215802).contains(&other));
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        before,
+        "JUMP254_PARABOLIC_CURVE_TRIGGER: only displacement refuses"
+    );
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 196884));
+    assert!(h.inbox.cooldowns.iter().any(|update| {
+        update.spell_id == 196884 && !update.is_gcd && update.duration_ms == 30_000
+    }));
+    assert_eq!(
+        super::powers::power_value(h.app.world(), h.caster, PowerType::Mana),
+        Some(mana_before),
+        "native spell has no power cost"
+    );
 }
 #[test]
 fn dummy10_voidform_applies_named_damage_buff_for_native_duration() {
