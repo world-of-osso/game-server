@@ -73,7 +73,7 @@ fn seed_stable(path: &Path) {
 fn open_db(path: &Path) -> GameDatabase {
     let db = redb::Database::create(path).expect("redb");
     persistence::create_tables(&db);
-    GameDatabase { db }
+    GameDatabase::new(db)
 }
 
 struct PetHarness {

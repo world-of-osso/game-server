@@ -10,7 +10,7 @@ use shared::protocol::{AuthChannel, EnterWorldResponse, LoadTerrain, SelectChara
 
 use super::*;
 use crate::auth::Authenticated;
-use crate::persistence::{self, ClientId, GameDatabase};
+use crate::persistence::{self, GameDatabase};
 
 const HUMAN: u8 = 1;
 const ORC: u8 = 2;
@@ -205,14 +205,7 @@ fn select_character(app: &mut App, account_id: u64, character_id: u64) -> Entity
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..3 {
-        app.update();
-    }
-    app.world_mut()
-        .query::<(Entity, &ClientId)>()
-        .iter(app.world())
-        .find_map(|(entity, client)| (client.0 == character_id).then_some(entity))
-        .expect("selected character spawns")
+    crate::test_data::wait_for_selected_player(app, connection)
 }
 
 #[test]
@@ -220,9 +213,7 @@ fn entering_world_rescales_persisted_health_and_follows_spec_and_admin_level() {
     let Some((spells, classes)) = world_spell_data() else {
         return;
     };
-    let db = GameDatabase {
-        db: persistence::temp_database(),
-    };
+    let db = GameDatabase::new(persistence::temp_database());
     let (character_id, _) = persistence::create_character(&db.db, 3, "Uther", HUMAN, PALADIN)
         .expect("create character");
     // An existing character saved with the old 100-health placeholder, at half health.

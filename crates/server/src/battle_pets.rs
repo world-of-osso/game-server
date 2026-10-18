@@ -7,7 +7,7 @@ use crate::networking::PlayerLink;
 use crate::persistence::GameDatabase;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, TableDefinition};
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{
     CreatureClassification, CreatureMotion, Health, ModelDisplay, MovementSpeed, Npc, Position,
@@ -30,34 +30,20 @@ pub(crate) const ACCOUNT_PET_JOURNALS: TableDefinition<u64, &[u8]> =
 
 /// Load by authenticated account, never character id. An absent journal is empty.
 pub(crate) fn load_journal(db: &Database, account_id: u64) -> PetJournal {
-    let transaction = db.begin_write().expect("begin pet journal load");
+    let transaction = db.begin_read().expect("begin pet journal load");
     let journal = {
-        let table = transaction
-            .open_table(ACCOUNT_PET_JOURNALS)
-            .expect("open account pet journals");
+        let table = match transaction.open_table(ACCOUNT_PET_JOURNALS) {
+            Ok(table) => table,
+            Err(redb::TableError::TableDoesNotExist(_)) => return PetJournal::default(),
+            Err(error) => panic!("open account pet journals: {error}"),
+        };
         table
             .get(account_id)
             .expect("read account pet journal")
             .map(|value| serde_json::from_slice(value.value()).expect("decode account pet journal"))
             .unwrap_or_default()
     };
-    transaction
-        .commit()
-        .expect("commit pet journal table initialization");
     journal
-}
-
-/// Read the same authoritative account journal inside the achievement write transaction.
-pub(crate) fn unique_species_in_transaction(txn: &redb::WriteTransaction, account_id: u64) -> u32 {
-    let table = txn
-        .open_table(ACCOUNT_PET_JOURNALS)
-        .expect("open owned pet journal");
-    let journal: PetJournal = table
-        .get(account_id)
-        .expect("read owned pet journal")
-        .map(|row| serde_json::from_slice(row.value()).expect("decode owned pet journal"))
-        .unwrap_or_default();
-    u32::try_from(journal.unique_species()).expect("journal count fits u32")
 }
 
 pub(crate) fn save_journal(db: &Database, account_id: u64, journal: &PetJournal) {
@@ -614,7 +600,7 @@ mod tests {
         save_journal(&db, 42, &journal);
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.insert_resource(load_test_catalog());
         app.add_systems(Update, load_account_journals);
         let owner = app
@@ -638,9 +624,7 @@ mod tests {
     #[test]
     fn companion_guids_are_unique_between_accounts_and_preserve_grant_level() {
         let (mut app, first, _) = follower_app();
-        app.insert_resource(GameDatabase {
-            db: crate::persistence::temp_database(),
-        });
+        app.insert_resource(GameDatabase::new(crate::persistence::temp_database()));
         app.world_mut()
             .get_mut::<AccountPetJournal>(first)
             .unwrap()

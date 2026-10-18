@@ -10,6 +10,8 @@ Wailing ritual: source groups2/3 select5762/5763; project only their actual Norm
 rows, retaining existing base templates/models and all population/credit.
 Leymor: native374360 summons TDB190509; base0/models and actual Normal1/Mythic23
 rows only, without inventing a follower205 difficulty or any placements.
+Telash: source group0 uses Vault Rune197204; project its base/models and actual
+Normal1/Mythic23 rows without creating205 rows, addons or placements.
 """
 import argparse
 import sqlite3
@@ -203,9 +205,59 @@ def import_fiendish_hound(connection):
     return [17540]
 
 
+def read_herald_actor_source(connection, entry, script, expected_difficulties):
+    identity = connection.execute(
+        'SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?', (entry,)).fetchone()
+    difficulties = connection.execute(
+        'SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty '
+        'WHERE Entry=? ORDER BY DifficultyID', (entry,)).fetchall()
+    if identity != ('', script) or tuple(row[0] for row in difficulties) != expected_difficulties:
+        raise ValueError(f'Herald summon{entry} source identity or difficulties changed')
+    for _, tuning in difficulties:
+        levels = connection.execute(
+            'SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=?', (tuning,)).fetchone()
+        if levels is None:
+            raise ValueError(f'Herald summon{entry} missing authored content tuning{tuning}')
+    models = connection.execute(
+        'SELECT count(*) FROM tdb_creature_template_model WHERE CreatureID=?', (entry,)).fetchone()[0]
+    addons = connection.execute(
+        'SELECT count(*) FROM tdb_creature_template_addon WHERE entry=?', (entry,)).fetchone()[0]
+    if models == 0 or addons != 1:
+        raise ValueError(f'Herald summon{entry} missing source models or addon')
+    return entry, tuple(row[0] for row in difficulties)
+
+
+def import_herald_actors(connection):
+    effect = connection.execute(
+        'SELECT Effect,EffectMiscValue_0,EffectMiscValue_1 FROM spell_effect '
+        'WHERE SpellID=30717 AND EffectIndex=0 AND DifficultyID=0').fetchone()
+    if effect != (28, 17537, 64):
+        raise ValueError('Herald30717 must summon authored Vazruden17537/property64')
+    sources = [read_herald_actor_source(connection, 17537, 'boss_vazruden', (0, 2)),
+               read_herald_actor_source(connection, 21252, '', (0, 1, 2))]
+    entries = ','.join(str(entry) for entry, _ in sources)
+    connection.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM '
+                       f'tdb_creature_template_difficulty WHERE Entry IN({entries}) AND DifficultyID=0')
+    connection.execute(f'DELETE FROM content_creature_template WHERE entry IN({entries})')
+    retail_content.insert_tdb_templates(connection, entries, replace_legacy=True)
+    connection.execute(f'DELETE FROM content_creature_template_model WHERE CreatureID IN({entries})')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM '
+                       f'tdb_creature_template_model WHERE CreatureID IN({entries})')
+    connection.execute(f'DELETE FROM content_creature_template_addon WHERE entry IN({entries})')
+    connection.execute(f'INSERT INTO content_creature_template_addon SELECT entry, '
+                       f'{retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon WHERE entry IN({entries})')
+    for entry, difficulties in sources:
+        for difficulty in difficulties:
+            if difficulty != 0:
+                project_difficulty(connection, entry, difficulty)
+    return [entry for entry, _ in sources]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -221,10 +273,16 @@ def main():
                 entries = [import_demonic_leap_template(conn)]
             elif args.encounter == 'omor':
                 entries = import_fiendish_hound(conn)
+            elif args.encounter == 'herald':
+                entries = import_herald_actors(conn)
             elif args.encounter == 'leymor':
                 entries = [import_base_template(conn, 190509, 'npc_ley_line_sprouts')]
                 project_difficulty(conn, 190509, 1)
                 project_difficulty(conn, 190509, 23)
+            elif args.encounter == 'telash':
+                entries = [import_base_template(conn, 197204, '')]
+                project_difficulty(conn, 197204, 1)
+                project_difficulty(conn, 197204, 23)
             elif args.encounter == 'theradras':
                 entries = import_zaetar_spirit(conn)
             elif args.encounter == 'celebras':

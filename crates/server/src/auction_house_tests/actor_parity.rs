@@ -82,7 +82,7 @@ fn reopen(db: redb::Database, path: &Path) -> redb::Database {
 fn run_expiry(db: redb::Database) -> redb::Database {
     let mut app = App::new();
     app.insert_resource(reload_auctions(&db));
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.init_resource::<crate::maps::ServerClock>();
     app.add_systems(Update, super::super::handlers::expire_auctions);
     app.update();
@@ -90,7 +90,7 @@ fn run_expiry(db: redb::Database) -> redb::Database {
     app.world_mut()
         .remove_resource::<GameDatabase>()
         .unwrap()
-        .db
+        .into_database()
 }
 
 fn create_actor_pair(

@@ -39,7 +39,7 @@ Wander, waypoint and formation systems skip entities with `DeathState`. Every sp
 
 ## Chase and Aggro
 
-`CreatureState::Pursuing { target }` overrides wander/waypoint AI. `chase_system` runs at `speed_run × 7` yd/s (`ChaseMovementGenerator`), stopping `CHASE_REACH` (2 yd) short of the actual victim on the terminal route leg. Chase, home and waypoint legs share the [baked navigation resource](navigation.md), with ground support rather than target-height interpolation. That page defines repathing, failed-route evade and the explicit unbaked-map boundary.
+`CreatureState::Pursuing { target }` overrides wander/waypoint AI. `chase_system` runs at `speed_run × 7` yd/s (`ChaseMovementGenerator`), stopping `CHASE_REACH` (2 yd) short of the actual victim on the terminal route leg, with an earlier current-victim range/LOS stop before cached intermediate corners. Chase, home and waypoint legs share the [baked navigation resource](navigation.md), with ground support rather than target-height interpolation. That page defines repathing, failed-route evade and the explicit unbaked-map boundary.
 
 Who enters `Pursuing`, threat and target selection are [[creature-aggro]].
 
@@ -98,3 +98,19 @@ Creature data is stored in WoW coordinate space. The AI operates in Bevy space (
 - [[combat]] — the creature's `CombatTarget` drives its auto-attack
 - [[navigation]] — shared offline geometry, baked routes and unreachable chase behavior
 - [[tick-model]] — AI systems run at step 2 of the 20Hz pipeline
+
+
+## Current-victim stop contract — 2026-10-17
+
+Run22's final pull initially engaged three units through real Avenger's Shield chain hits. Three further units attacked Garrick before receiving party damage as his chase entered their proximity radii. No matching formation links exist for those six source spawns; the final approach ran at20ticks/s. Exact per-tick server victim/path state was not recorded, so this does not establish which cached corridor caused that run's first extra acquisition.
+
+A production RED over the real Stockade bake proves a bounded correctness gap independently: chaser `(121.1,-25.6,-3.9)`, current victim `(122.66,-25.61,-3.91)` (1.560yd, server LOS clear), cached destination `(123.6,-25.61,-4.14)` (0.968yd drift, still reusable). `chase_system` advanced to x121.49999 in50ms because `Corners::advance` deferred reach checks until the corridor's final leg. The cached destination is constructed from retained geometry, not relabeled as an actual recorded route.
+
+Before advancing a cached route, shared chase now validates the current victim and stops in the existing2yd region with authoritative server body-ray LOS; smaller follower reaches stay smaller. Stopping drops the stale corridor and publishes Still/facing through the existing movement queues. Dead/despawned/ghost/wrong-copy victims and explicit attack-victim changes stop the old chase; ordinary AI retains responsibility for reselecting an already engaged live alternate or following its owner when none remains. Aggro, selection, pull policy, kits and stats are unchanged. A nearby target behind a wall is not a successful in-range stop. The new pre-stop requires an actual `LineOfSight` resource; the existing no-resource test-world visibility convention must not certify it.
+
+Pinned TC a352b1fa sources: `ChaseMovementGenerator.cpp:28–30,44–55,99–110,125–140` (lost target/range+LOS stops), `CreatureAI.cpp:244–261` and `ScriptedFollowerAI.cpp:145–147` (valid-victim selection), `Creature.cpp:2165–2206` (unchanged aggro distance). Source SHA receipts and original production RED live under `/home/osso/.worktrees/bot-harness-2026-10-15/` and engine `data/diagnostics/bot-predicate-2026-10-17/tc-a352b1fa-chase/receipt.json`. New controls cover actual follower death/reselection ordering and real-nav invalid-target, movement-resumption and blocked-LOS behavior. Native run23 and full clear remain separate acceptance, not established by this RED.
+
+
+### Run23 diagnostic frames
+
+Enable `game_server::chase_trace=debug,game_server::creature_sight=debug,game_server::creature_aggro=debug` in `RUST_LOG` for the bounded private run. The selective follower query logs each tank's actual entity, `CombatTarget` victim, `CreatureState`, position and health before chase decisions on every fixed tick. A same-actor/same-`simulation_secs` event logs the borrowed cached route: map/goal, destination, expected origin, complete corners, next-corner index and terminal leg (or explicit absent cache). Player/creature proximity acquisitions carry the same fixed simulation clock, their real target and positions. This captures the formerly missing run22 boundary without changing target selection, route progress, motion or aggro. Trace is disabled unless its dedicated debug target is enabled; it does not scan the whole world for tank identities.

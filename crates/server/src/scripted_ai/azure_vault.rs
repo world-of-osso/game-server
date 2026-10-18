@@ -19,6 +19,9 @@ const EXPLOSIVE_BRAND_CHILD: u32 = 374582;
 const EXPLOSIVE_BRAND_DAMAGE: u32 = 374570;
 const LEYMOR_SCRIPT: &str = "boss_leymor";
 const TELASH_SCRIPT: &str = "boss_telash_greywing";
+const SPROUT_SCRIPT: &str = "npc_ley_line_sprouts";
+const LEY_LINE_SPROUT_AURA: u32 = 374161;
+const ARCANE_POWER: u32 = 374736;
 const TELASH_INITIAL_POWER: f32 = 60.0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
@@ -34,7 +37,8 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
-const ERUPTING_FISSURE: u32 = 386660;
+pub(crate) const ERUPTING_FISSURE: u32 = 386660;
+const FISSURE_SPROUT_SELECTOR: u32 = 394154;
 const EVENT_ERUPTING_FISSURE: u32 = 4;
 const EVENT_EXPLOSIVE_BRAND: u32 = 6;
 const CONSUMING_STOMP: u32 = 374720;
@@ -54,7 +58,7 @@ const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
 const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, LEYMOR_SCRIPT | TELASH_SCRIPT)
+    matches!(name, LEYMOR_SCRIPT | TELASH_SCRIPT | SPROUT_SCRIPT)
 }
 
 pub(super) fn creature_ai(
@@ -66,6 +70,9 @@ pub(super) fn creature_ai(
     let maps = world.get_resource::<crate::maps::MapStore>()?;
     if maps.instance_scripts.get(&map.map_id).map(String::as_str) != Some(AZURE_INSTANCE) {
         return None;
+    }
+    if script_name == SPROUT_SCRIPT {
+        return Some(Box::new(LeyLineSprout));
     }
     let boss = super::instance_script::bound_boss(world, actor)?;
     match script_name {
@@ -107,6 +114,42 @@ pub(super) fn finish_leymor_intro(
             leymor,
             super::Hook::DoAction(ACTION_FINISH_LEYMOR_INTRO),
         );
+    }
+}
+
+struct LeyLineSprout;
+
+impl super::CreatureAi for LeyLineSprout {
+    fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        ctx.do_cast_self(LEY_LINE_SPROUT_AURA);
+        ctx.do_cast_at(None, ARCANE_POWER, true);
+    }
+
+    fn spell_hit(&mut self, ctx: &mut super::Ctx, _caster: Entity, spell_id: u32) {
+        // TC boss_leymor.cpp:303–310: death owns stack consumption, not this hit.
+        if matches!(spell_id, FISSURE_SPROUT_SELECTOR | EXPLOSIVE_BRAND_DAMAGE) {
+            crate::combat::kill_unit(ctx.world, ctx.me, ctx.me);
+        }
+    }
+
+    fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
+        // TC boss_leymor.cpp:286–300: the actual TempSummon owner loses one stack.
+        let Some(owner) = ctx.world.get::<crate::zones::TempSummon>(ctx.me) else {
+            return;
+        };
+        let owner = owner.summoner;
+        let instance = ctx
+            .world
+            .get::<crate::auras::ActiveAuras>(owner)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == ARCANE_POWER)
+                    .map(|aura| aura.instance_id)
+            });
+        if let Some(instance) = instance {
+            crate::auras::spend_stack(ctx.world, owner, instance);
+        }
     }
 }
 
@@ -327,6 +370,25 @@ pub(crate) fn cast_brand_child(
         ctx.caster,
         EXPLOSIVE_BRAND_CHILD,
         None,
+        ctx.depth + 1,
+    );
+}
+
+/// TC boss_leymor.cpp:495–513: once-effect HIT preserves the actual destination.
+pub(crate) fn cast_fissure_selector(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    let Some(destination) = ctx.dest else {
+        warn!("Erupting Fissure386660 cannot cast394154 without its hit destination");
+        return;
+    };
+    crate::spell_cast::cast_triggered_at_destination(
+        world,
+        ctx.caster,
+        FISSURE_SPROUT_SELECTOR,
+        destination.position,
         ctx.depth + 1,
     );
 }

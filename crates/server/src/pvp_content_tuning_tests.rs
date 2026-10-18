@@ -104,7 +104,7 @@ fn achievements_criteria_content268_full_hundred_settlements_grant_both_factions
         assert_eq!(stored.criteria_progress.get(&45044), Some(&100));
         world.entity_mut(players[index].1).insert(stored);
     }
-    world.insert_resource(GameDatabase { db: reopened });
+    world.insert_resource(GameDatabase::new(reopened));
     for (index, earned) in [(0, 908), (1, 909)] {
         crate::achievement::record_player_event(
             &mut world,

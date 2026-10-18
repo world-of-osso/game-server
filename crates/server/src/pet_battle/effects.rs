@@ -77,7 +77,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 damage.params[2] = 0;
                 self.damage_effect(caster, target, ability, &damage)
             }
-            75 | 76 => self.charged_damage(caster, target, ability, effect),
+            75 | 76 | 77 => self.charged_damage(caster, target, ability, effect),
             370 => self.damage_with_species_bonus(caster, target, ability, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
@@ -227,7 +227,12 @@ impl<R: BattleRng> Runtime<'_, R> {
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
-                    other_team_slot(target, effect.order)
+                    let order = match ability {
+                        774 => (effect.order - 1) % 3 + 1,
+                        920 => effect.order.div_ceil(2),
+                        _ => effect.order,
+                    };
+                    other_team_slot(target, order)
                 } else {
                     target
                 };
@@ -242,6 +247,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 damage.params[2] = p[4];
                 self.damage_effect(caster, target, ability, &damage)
             }
+            62 if ability == 649 => self.percent_damage(caster, caster, ability, effect),
             62 => self.percent_damage(caster, target, ability, effect),
             141 => self.split_damage(caster, target, ability, effect),
             384 | 385 => {
@@ -297,6 +303,10 @@ impl<R: BattleRng> Runtime<'_, R> {
                     .insert(p[0] as u32, value);
                 Ok(true)
             }
+            23 if matches!(ability, 258 | 979) => {
+                let recipient = other_team_slot(caster, effect.order - 3);
+                self.heal_recipient(caster, recipient, effect)
+            }
             23 | 53 => self.heal_effect(caster, effect),
             31 => {
                 let control = matches!(p[0], 22 | 35 | 36 | 64);
@@ -312,7 +322,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
             26 | 28 | 50 | 52 | 54 | 63 => {
-                let target = if matches!(ability, 527 | 1010) && effect.property == 50 {
+                let target = if matches!(ability, 527 | 920 | 1010) && effect.property == 50 {
                     other_team_slot(target, effect.order.div_ceil(2))
                 } else {
                     target
@@ -353,11 +363,16 @@ impl<R: BattleRng> Runtime<'_, R> {
         ability: u32,
         effect: &Effect,
     ) -> Result<bool, String> {
+        let (wearer, duration) = if effect.property == 77 {
+            (target, effect.params[2])
+        } else {
+            (caster, -1)
+        };
         let charge = self
             .battle
             .auras
             .iter()
-            .find(|a| a.target == caster && a.ability == effect.aura)
+            .find(|a| a.target == wearer && a.ability == effect.aura)
             .map(|a| a.serial);
         if let Some(serial) = charge {
             let hit = self.damage_effect(caster, target, ability, effect)?;
@@ -366,8 +381,8 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         let mut charge = effect.clone();
         charge.property = 26;
-        charge.params[2] = -1;
-        self.add_aura_effect(caster, target, &charge)
+        charge.params[2] = duration;
+        self.add_aura_to_wearer(caster, wearer, &charge)
     }
     fn equalize_health(&mut self, caster: PetRef, target: PetRef, effect: &Effect) -> bool {
         let mut accuracy = effect.clone();
@@ -392,12 +407,19 @@ impl<R: BattleRng> Runtime<'_, R> {
         {
             return Ok(false);
         }
-        let previous = self.healing_target;
-        self.healing_target = Some(recipient);
         let mut heal = effect.clone();
         heal.property = 23;
         heal.params[2] = p[4];
-        let result = self.heal_effect(caster, &heal);
+        self.heal_recipient(caster, recipient, &heal)
+    }
+    fn heal_recipient(
+        &mut self,
+        caster: PetRef,
+        recipient: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let previous = self.healing_target.replace(recipient);
+        let result = self.heal_effect(caster, effect);
         self.healing_target = previous;
         result
     }

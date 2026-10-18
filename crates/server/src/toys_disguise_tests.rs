@@ -1,10 +1,10 @@
-//! Source111–113: real transforms and item overrides versus spell-owned recovery.
+//! Source111–113,178–179,201,234,240,317 and322: real transforms and source recovery.
 use super::*;
 
 #[test]
-fn toyfx111_113_disguises_real_learning_models_expiry_and_source_recovery_precedence() {
+fn toyfx_source_disguises_learning_expiry_and_recovery() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
-    const DURATION_MS: u32 = 600_000;
+    const TEN_MINUTES_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
@@ -12,21 +12,93 @@ fn toyfx111_113_disguises_real_learning_models_expiry_and_source_recovery_preced
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for (item, spell, entry, displays, recovery_ms) in [
-        (164373, 281298, 121865, [11611, 976, 765, 4905], 7_200_000),
+    for (item, spell, entry, displays, recovery_ms, duration_ms) in [
+        (
+            164373,
+            281298,
+            121865,
+            [11611, 976, 765, 4905].as_slice(),
+            7_200_000,
+            TEN_MINUTES_MS,
+        ),
         (
             164374,
             281302,
             144261,
-            [41083, 78767, 76947, 41724],
+            [41083, 78767, 76947, 41724].as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
         ),
         (
             164375,
             281303,
             144262,
-            [88011, 88009, 88016, 88012],
+            [88011, 88009, 88016, 88012].as_slice(),
             7_200_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            170154,
+            303994,
+            155896,
+            [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
+            3_600_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            170155,
+            303995,
+            155897,
+            [
+                92514, 92515, 92516, 92517, 92518, 92519, 92520, 92521, 92522, 92523, 92524, 92525,
+                92526, 92527, 92528, 92529,
+            ]
+            .as_slice(),
+            3_600_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            174873,
+            305123,
+            156286,
+            [92868, 92880, 92874, 92871].as_slice(),
+            3_600_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            183903,
+            343827,
+            174859,
+            [96239, 96240, 96241, 96242, 96243].as_slice(),
+            3_600_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            184223,
+            344795,
+            175221,
+            [
+                92410, 92411, 92412, 92413, 92414, 92415, 92416, 92417, 92418,
+            ]
+            .as_slice(),
+            3_600_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            190457,
+            367568,
+            185567,
+            [105515].as_slice(),
+            3_600_000,
+            900_000,
+        ),
+        (
+            191891,
+            371470,
+            187854,
+            [104851].as_slice(),
+            1_800_000,
+            TEN_MINUTES_MS,
         ),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
@@ -60,11 +132,15 @@ fn toyfx111_113_disguises_real_learning_models_expiry_and_source_recovery_preced
             .iter()
             .find(|aura| aura.spell_id == spell)
             .unwrap();
-        assert_eq!(aura.duration_ms, DURATION_MS, "item{item}");
+        assert_eq!(aura.duration_ms, duration_ms, "item{item}");
         assert_eq!(aura.effects[0].misc_values, [entry, 8], "item{item}");
         let expiry = aura.expires_at.unwrap();
         let remaining = expiry - crate::auras::aura_now(h.app.world());
-        assert!((599.0..=600.0).contains(&remaining), "item{item}");
+        let expected_seconds = f64::from(duration_ms) / 1000.0;
+        assert!(
+            ((expected_seconds - 1.0)..=expected_seconds).contains(&remaining),
+            "item{item}"
+        );
         let cooldown = h
             .inbox
             .cooldowns

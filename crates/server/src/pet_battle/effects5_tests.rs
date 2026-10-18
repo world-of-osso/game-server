@@ -110,8 +110,8 @@ fn pet_battle_dragons_call_test_only_templates_and_unestablished_parameters_reje
 fn pet_battle_dragons_call_unknown_species_identity_is_not_synthesized() {
     let c = catalog();
     let stats = calculate_stats(&c, 2621, 3, 3, 2).unwrap();
-    assert!(Pet::new(&c, 0, stats, 1, [393, 2283, 0], States::new()).is_err());
-    assert!(Pet::new(&c, u32::MAX, stats, 1, [393, 2283, 0], States::new()).is_err());
+    assert!(Pet::new(&c, 0, 1, stats, 1, [393, 2283, 0], States::new()).is_err());
+    assert!(Pet::new(&c, u32::MAX, 1, stats, 1, [393, 2283, 0], States::new()).is_err());
 }
 
 #[test]

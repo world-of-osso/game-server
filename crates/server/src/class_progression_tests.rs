@@ -441,7 +441,7 @@ fn setup_progression_app(
     app.register_message::<SetActionButton>();
     app.register_message::<CommitTraitConfig>();
     app.register_message::<shared::protocol::TraitLoadoutRequest>();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(classes);
     app.add_plugins((ClassProgressionPlugin, crate::profession::ProfessionPlugin));
     app.add_plugins(crate::experience::ExperiencePlugin);
@@ -1391,7 +1391,7 @@ fn admin_set_level_persists_and_updates_online_player() {
     let db = temp_database();
     let (character_id, _) = persistence::create_character(&db, 1, "Uther", HUMAN, PALADIN).unwrap();
     let mut app = App::new();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     let player = app
         .world_mut()
         .spawn((ClientId(character_id), Level(1), UnitLevel(1)))
@@ -1430,7 +1430,7 @@ fn admin_set_rested_offline_persists_and_clamps_pool() {
     let (character_id, _) =
         persistence::create_character(&db, 1, "Restprobe", HUMAN, PALADIN).unwrap();
     let mut app = App::new();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     for (requested, expected) in [(75, 75), (u32::MAX, 375), (0, 0)] {
         let response = app
             .world_mut()
@@ -1907,7 +1907,7 @@ fn admin_set_level_resets_xp_online_and_offline() {
     save_xp(&db, online, 500);
     save_xp(&db, offline, 700);
     let mut app = App::new();
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.world_mut()
         .spawn((ClientId(online), Level(1), UnitLevel(1)));
     for name in ["Uther", "Turalyon"] {
