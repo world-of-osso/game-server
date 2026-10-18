@@ -2086,6 +2086,8 @@ mod tests;
 mod toy_effects_tests;
 
 #[cfg(test)]
+mod agony_tests;
+#[cfg(test)]
 mod augmentation_tests;
 #[cfg(test)]
 mod autoattack_crit_tests;
