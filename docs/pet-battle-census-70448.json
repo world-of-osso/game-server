@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "5fd087534f23be05bb559c7fe797fdef2c779dcc",
+  "validator_revision": "5fc44fa1ec4a563b8ff81424fd6a37b8cc434df5",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1836,
+  "admitted_effect_rows": 1844,
   "effect_rows": 2829,
-  "admitted_abilities": 1030,
+  "admitted_abilities": 1032,
   "abilities": 1404,
   "properties": [
     {
@@ -70,7 +70,7 @@
       ]
     },
     {
-      "admitted_rows": 600,
+      "admitted_rows": 603,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -364,9 +364,6 @@
         4214,
         4216,
         4218,
-        4234,
-        4235,
-        4236,
         4255,
         4265,
         4273,
@@ -1022,7 +1019,7 @@
       ]
     },
     {
-      "admitted_rows": 15,
+      "admitted_rows": 17,
       "handler": true,
       "property": 85,
       "rows": 29,
@@ -1038,9 +1035,7 @@
         2519,
         2798,
         3201,
-        3216,
-        4237,
-        4238
+        3216
       ]
     },
     {
@@ -1547,7 +1542,7 @@
       ]
     },
     {
-      "admitted_rows": 82,
+      "admitted_rows": 85,
       "handler": true,
       "property": 222,
       "rows": 90,
@@ -1556,10 +1551,7 @@
         2799,
         3827,
         3828,
-        3829,
-        4902,
-        4903,
-        4904
+        3829
       ]
     },
     {
@@ -6585,7 +6577,7 @@
     },
     {
       "ability": 2309,
-      "error": "ability 2309: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2310,
@@ -7365,7 +7357,7 @@
     },
     {
       "ability": 2523,
-      "error": "ability 2523: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2524,

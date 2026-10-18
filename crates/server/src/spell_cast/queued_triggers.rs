@@ -11,6 +11,7 @@ pub(crate) struct PendingTriggers(BTreeMap<u64, VecDeque<QueuedTrigger>>);
 struct QueuedTrigger {
     caster: Entity,
     target: Entity,
+    destination: Option<[f32; 3]>,
     spell_id: u32,
     depth: u8,
     item_level: Option<u16>,
@@ -44,6 +45,7 @@ pub(super) fn schedule(
     let trigger = QueuedTrigger {
         caster: ctx.caster,
         target,
+        destination: ctx.spell.cast_destination,
         spell_id: effect.trigger_spell,
         depth: ctx.depth + 1,
         item_level: ctx.spell.cast_item_level,
@@ -66,13 +68,14 @@ pub(crate) fn resolve_due(world: &mut World) {
         if world.get_entity(trigger.caster).is_err() || world.get_entity(trigger.target).is_err() {
             continue;
         }
-        super::cast_queued_trigger_with_item_level(
+        super::cast_costed_trigger_with_context(
             world,
             trigger.caster,
             trigger.spell_id,
             Some(trigger.target),
             trigger.depth,
             trigger.item_level,
+            trigger.destination,
         );
     }
 }

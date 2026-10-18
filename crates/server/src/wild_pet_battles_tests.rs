@@ -121,6 +121,86 @@ fn wild_pet_battles_bonestorm_uses_legal_graves_level_two_and_own_maximum_cost()
 }
 
 #[test]
+fn wild_pet_battles_shadow_bolt_volley_uses_legal_shadowflame_remnant_level_fifteen() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 4949), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 15, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states.get_mut(&41).unwrap().selected_abilities[1] = 2523;
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 4949);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 178);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.health, 990);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2523), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [147]);
+    assert_eq!(state.teams[1].pets[0].health, 0);
+    for slot in 0..3 {
+        assert_eq!(
+            state.teams[0].pets[slot].health,
+            encounter.battle.teams[0].pets[slot].health
+        );
+    }
+}
+
+#[test]
+fn wild_pet_battles_team_wave_x_uses_legal_swoggy_level_four_option() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 3570), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let states = owned_states(&catalog, &journal);
+    assert_eq!(states[&41].selected_abilities[2], 2309);
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 3570);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 60);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.health, 321);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2309), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [56]);
+    assert_eq!(state.teams[1].pets[0].health, 91);
+    for slot in 0..3 {
+        assert_eq!(
+            state.teams[0].pets[slot].health,
+            encounter.battle.teams[0].pets[slot].health
+        );
+    }
+}
+
+#[test]
 fn wild_pet_battles_magma_wave_uses_legal_molten_hatchling_level_four_option() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
