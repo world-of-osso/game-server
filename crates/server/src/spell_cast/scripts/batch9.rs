@@ -197,6 +197,50 @@ pub(super) fn inside_owned_consecration(world: &mut World, caster: Entity) -> bo
         })
 }
 
+/// Native field radius for policy callers; no substitute radius for other spells.
+pub(crate) fn ground_pulse_radius(world: &World, caster: Entity, spell_id: u32) -> Option<f32> {
+    if !matches!(
+        spell_id,
+        CONSECRATION | EARTHQUAKE | HEALING_RAIN | RAIN_OF_FIRE | SIGIL_OF_FLAME | EMERALD_BLOSSOM
+    ) {
+        return None;
+    }
+    let spell = world.resource::<SpellStore>().get(spell_id)?;
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    Some(read_ground_pulses(world, &ctx).radius)
+}
+
+/// Owned fields keep their actual centers when their caster moves.
+pub(crate) fn owned_ground_fields(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+) -> Vec<(Vec3, f32)> {
+    let now = crate::auras::aura_now(world);
+    let map = world.get::<crate::maps::InMap>(caster).copied();
+    world
+        .query::<(
+            &GroundPulses,
+            &shared::components::Position,
+            &crate::maps::InMap,
+        )>()
+        .iter(world)
+        .filter(|(field, _, field_map)| {
+            field.caster == caster
+                && field.root == spell_id
+                && field.expires_at > now
+                && Some(**field_map) == map
+        })
+        .map(|(field, center, _)| (Vec3::new(center.x, center.y, center.z), field.radius))
+        .collect()
+}
+
 /// Active harmful bound fields affecting this unit, not friendly healing fields.
 pub(crate) fn hostile_ground_fields(world: &mut World, unit: Entity) -> Vec<(Entity, Vec3, f32)> {
     let now = crate::auras::aura_now(world);

@@ -120,6 +120,7 @@ pub(super) fn damages_enemy_team(ability: u32) -> bool {
             | 2346
             | 2356
             | 2364
+            | 2378
             | 2385
             | 2417
             | 2523
