@@ -47,6 +47,28 @@ fn apply_owned_aura(world: &mut World, caster: Entity, target: Entity, spell_id:
     );
 }
 
+pub(super) fn cast_effect(spell: u32, index: u8) -> Option<effects::CastEffectHandler> {
+    ((spell, index) == (EXECUTE, 0)).then_some(cast_execute_damage)
+}
+
+/// TC spell_warr_execute::HandleExecuteCast prevents default effect64 and casts
+/// the authored damage child directly (spell_warrior.cpp:779–801).
+fn cast_execute_damage(
+    world: &mut World,
+    ctx: &effects::EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+    target: Entity,
+) {
+    spell_cast::cast_queued_trigger_with_item_level(
+        world,
+        ctx.caster,
+        effect.trigger_spell,
+        Some(target),
+        ctx.depth + 1,
+        ctx.spell.cast_item_level,
+    );
+}
+
 ///163201 and its260798 damage child both have native Speed0. Refund after that
 ///successful launch resolves, using paid raw Rage including OptionalCost.
 pub(in crate::spell_cast) fn refund_execute(

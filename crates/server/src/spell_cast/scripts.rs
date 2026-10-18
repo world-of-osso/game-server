@@ -53,6 +53,7 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
         return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
     }
     super::toy_scripts::cast_effect(spell, index)
+        .or_else(|| batch13::cast_effect(spell, index))
         .or_else(|| batch14::cast_effect(spell, index))
         .or_else(|| batch9::cast_effect(spell, index))
 }
