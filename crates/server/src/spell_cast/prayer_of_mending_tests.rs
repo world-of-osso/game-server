@@ -148,3 +148,70 @@ fn prayer_of_mending_native_damage_heals_then_delayed_jump_keeps_original_priest
     assert_eq!(transferred.stacks, 4);
     assert!(!has_aura(h.app.world(), healthy_decoy, MENDING_WARD));
 }
+
+#[test]
+fn prayer_of_mending_native_no_stack_override_preserves_agony_floor_and_refresh() {
+    for talent in [false, true] {
+        let ids = if talent {
+            vec![980, 1_260_209]
+        } else {
+            vec![980]
+        };
+        let mut h = harness(Vec::new(), &ids, 9).unwrap();
+        if talent {
+            crate::auras::apply_aura(
+                h.app.world_mut(),
+                &crate::auras::AuraApplication {
+                    caster: h.caster,
+                    target: h.caster,
+                    spell_id: 1_260_209,
+                    effect_mask: u32::MAX,
+                    source: crate::auras::AuraSource::Cast,
+                },
+            );
+        }
+        h.cast_and_deliver(980, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.npc)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 980)
+            .unwrap();
+        let initial = if talent { 3 } else { 1 };
+        assert_eq!(aura.stacks, initial);
+        let period = aura
+            .effects
+            .iter()
+            .find(|effect| effect.aura_type == 3)
+            .unwrap()
+            .period_ms;
+        let dt = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
+        h.advance((period as f32 / 1000.0 / dt).ceil() as usize);
+        let stacks = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(h.npc)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 980)
+            .unwrap()
+            .stacks;
+        assert_eq!(stacks, initial + 1);
+        h.cast_and_deliver(980, Some(h.npc));
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(h.npc)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 980)
+                .unwrap()
+                .stacks,
+            stacks
+        );
+    }
+}
