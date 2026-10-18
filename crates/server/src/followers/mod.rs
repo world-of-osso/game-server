@@ -31,7 +31,6 @@ mod pull_sources;
 mod pull_sources_tests;
 mod spawning;
 mod stockade_diagnostic;
-#[cfg(test)]
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;

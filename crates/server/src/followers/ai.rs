@@ -384,6 +384,9 @@ pub(super) fn pursue(
     spell_id: u32,
     melee: bool,
 ) -> bool {
+    if super::tank_planner::apply_admitted_position(world, unit, Some(target)) {
+        return true;
+    }
     let reach = if melee {
         Some(2.0)
     } else {
@@ -437,6 +440,9 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 
 pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
+    if super::tank_planner::apply_admitted_position(world, unit, None) {
+        return;
+    }
     let unsafe_approach = super::hazards::target_is_hazardous(world, unit, owner)
         || super::hazards::path_crosses_hostile_field(world, unit, owner);
     if unsafe_approach {

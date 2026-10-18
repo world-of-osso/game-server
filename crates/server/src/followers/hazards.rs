@@ -89,13 +89,23 @@ pub(super) fn target_is_hazardous(world: &mut World, unit: Entity, target: Entit
 }
 
 pub(super) fn path_crosses_hostile_field(world: &mut World, unit: Entity, target: Entity) -> bool {
+    let Some(to) = world.get::<Position>(target).copied() else {
+        return false;
+    };
+    point_route_crosses_hostile_field(world, unit, to)
+}
+
+pub(super) fn point_route_crosses_hostile_field(
+    world: &mut World,
+    unit: Entity,
+    to: Position,
+) -> bool {
     let fields = hostile_fields(world, unit);
     if fields.is_empty() {
         return false;
     }
-    let (Some(from), Some(to), Some(map)) = (
+    let (Some(from), Some(map)) = (
         world.get::<Position>(unit).copied(),
-        world.get::<Position>(target).copied(),
         world.get::<InMap>(unit).copied(),
     ) else {
         return false;
@@ -141,7 +151,7 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         );
         return true;
     };
-    advance_escape(world, unit, map.map_id, from, position(to), goal);
+    advance_grounded_route(world, unit, map, from, position(to), goal);
     true
 }
 
@@ -232,10 +242,10 @@ fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
     })
 }
 
-fn advance_escape(
+pub(super) fn advance_grounded_route(
     world: &mut World,
     unit: Entity,
-    map: u32,
+    map: InMap,
     from: Position,
     to: Position,
     goal: Goal,
@@ -254,7 +264,7 @@ fn advance_escape(
     let step = world.resource_mut::<Navigation>().advance(
         unit,
         MoveRequest {
-            map_id: map,
+            map_id: map.map_id,
             goal,
             from,
             to,
@@ -265,7 +275,7 @@ fn advance_escape(
     if let Step::Moved { mut position, .. } = step {
         let crate::ground::GroundProbe::Supported(height) = world
             .resource_mut::<crate::ground::GroundMap>()
-            .ground_at(map, point(position))
+            .creature_ground_in(map, point(position))
         else {
             error!("Follower {unit} escape route lost ground support");
             return;
