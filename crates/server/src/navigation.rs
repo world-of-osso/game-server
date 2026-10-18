@@ -259,7 +259,7 @@ impl Corners {
                 } else {
                     at.y = corner.y;
                 }
-                if last || (in_reach_leg && horizontal(at - target) <= reach + 0.0001) {
+                if last || (in_reach_leg && within_reach(at, target, reach)) {
                     return (at, true);
                 }
                 budget -= remaining;
@@ -296,14 +296,19 @@ fn terminal_leg(points: &[Vec3]) -> usize {
     first + 1
 }
 
-/// Stop on the actual victim's reach circle, not two yards from its projected nav point.
+/// The existing reach is a3Dsphere; chase admission and route arrival share this test.
+pub(crate) fn within_reach(from: Vec3, target: Vec3, reach: f32) -> bool {
+    from.distance_squared(target) <= reach * reach
+}
+
+/// Ground travel to the actual victim's3Dsphere, not its projected nav point.
 /// Called only on the final corridor leg, never across an intervening obstacle.
-fn distance_to_reach(from: Vec3, corner: Vec3, target: Vec3, reach: f32) -> f32 {
-    let offset = Vec2::new(from.x - target.x, from.z - target.z);
-    let delta = Vec2::new(corner.x - from.x, corner.z - from.z);
-    let distance = delta.length();
+pub(crate) fn distance_to_reach(from: Vec3, corner: Vec3, target: Vec3, reach: f32) -> f32 {
+    let offset = from - target;
+    let delta = corner - from;
+    let distance = horizontal(delta);
     let c = offset.length_squared() - reach * reach;
-    if c <= 0.0 {
+    if within_reach(from, target, reach) {
         return 0.0;
     }
     let a = delta.length_squared();

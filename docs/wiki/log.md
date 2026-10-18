@@ -1,3 +1,7 @@
+## 2026-10-18 — Grounded3Dmelee reach
+
+[Actual run24 regression](systems/navigation.md#grounded-melee-reach-agreement--2026-10-18) reproduces stationary pursuing across40 real-nav/ground/LOS steps: XZ2 but3D2.066. Shared reach predicate and3Dsegment/sphere ground-travel calculation retain2yd/smaller reach, real LOS and support/speed constraints; post-commit targeted GREEN and lead gate remain separate.
+
 ## 2026-10-18 — Native tile-corner corridor visibility
 
 [Navigation root](systems/navigation.md#tile-corner-corridor-detours--2026-10-18): actual Stockade2yd LOS-clear crossings detour7–29yd despite a full native portal and clear mesh ray; generated floors reproduce other corner/orientation cases. Complete native visibility corridors may replace a longer A* portal-midpoint corridor without removing detail crossings or increasing area costs. No data rebake, direct movement substitute, reach/LOS tuning or runtime proof; post-commit gate remains separate.
