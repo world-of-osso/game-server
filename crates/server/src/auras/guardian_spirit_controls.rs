@@ -149,6 +149,91 @@ fn two_native_melee_attackers(h: &mut Harness) {
 }
 
 #[test]
+fn guardian_spirit_native_shared_ardent_two_melee_hits_consume_once() {
+    let mut h = harness(Vec::new(), &[31_850, ANNIHILATION, 381_775, 62_627], 2).unwrap();
+    cast_native_attack(&mut h, ANNIHILATION);
+    cast_native_attack(&mut h, 381_775);
+    assert_eq!(h.health(h.caster), 1.0);
+    h.cast_and_deliver(31_850, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has_aura(h.app.world(), h.caster, 31_850));
+    two_native_melee_attackers(&mut h);
+    let swings: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id.is_none()
+                && event.target == Some(h.caster.to_bits())
+                && matches!(
+                    event.kind,
+                    CombatLogKind::Damage | CombatLogKind::Miss(MissKind::Absorb)
+                )
+        })
+        .collect();
+    assert_eq!(swings.len(), 2, "{swings:?}");
+    assert!(swings[0].absorbed > 0 && swings[0].amount == 0);
+    assert!(swings[1].amount > 0 && swings[1].absorbed == 0);
+    // Untuned fixture NPCs use combat::BASE_DAMAGE10; the consumed Ardent's
+    //30% reduction must not survive into the next same-frame swing.
+    assert_eq!(swings[1].amount, if swings[1].crit { 20 } else { 10 });
+    assert_eq!(h.health(h.caster), 200.0 - swings[1].amount as f32);
+    assert!(!has_aura(h.app.world(), h.caster, 31_850));
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Death)
+    );
+    let combat = h.app.world().resource::<crate::combat::CombatLog>();
+    let entries = combat.range(0.0, f64::MAX);
+    let attacks: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry.event.spell_id == 0 && entry.event.target == h.caster.to_bits())
+        .collect();
+    assert_eq!(attacks.len(), 2);
+    assert_eq!(attacks[0].timestamp, attacks[1].timestamp);
+}
+
+#[test]
+fn guardian_spirit_native_shared_ardent_periodic_reports_partial_absorption() {
+    let mut h = harness(Vec::new(), &[31_850, DEATH_BY_DARKNESS, 98_957], 2).unwrap();
+    h.cast_and_deliver(31_850, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    cast_native_attack(&mut h, DEATH_BY_DARKNESS);
+    assert_eq!(h.health(h.caster), 300.0);
+    cast_native_attack(&mut h, 98_957);
+    let period = h
+        .app
+        .world()
+        .get::<super::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 98_957)
+        .unwrap()
+        .effects[0]
+        .period_ms;
+    let dt = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
+    let frames = (period as f32 / 1000.0 / dt).ceil() as usize;
+    h.advance(frames);
+    assert_eq!(h.health(h.caster), 200.0);
+    assert!(!has_aura(h.app.world(), h.caster, 31_850));
+    let hit = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage && event.spell_id == Some(98_957) && event.periodic
+        })
+        .unwrap();
+    assert_eq!((hit.amount, hit.absorbed, hit.overflow), (100, 460, 0));
+    h.advance(frames);
+    assert_eq!(h.health(h.caster), 0.0);
+}
+
+#[test]
 fn guardian_spirit_native_two_melee_hits_commit_real_child_before_second() {
     let mut h = harness(
         Vec::new(),
