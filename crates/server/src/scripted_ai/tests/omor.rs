@@ -779,6 +779,86 @@ fn encounter_coverage_omor_caster_retreats_from_contact_without_melee() {
     );
 }
 
+fn enable_omor_cast_observation(h: &mut Harness, boss: Entity) {
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    let origin = h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64();
+    h.app
+        .insert_resource(super::super::cast_admission::CastAdmissions {
+            actor: boss,
+            origin,
+            entries: Vec::new(),
+        });
+}
+
+#[test]
+fn encounter_coverage_omor_native_pushback_delays_completion_not_dispatch() {
+    let (mut h, boss, _) = orbital_fixture();
+    let origin = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: origin.x + 5.0,
+        ..origin
+    });
+    enable_omor_cast_observation(&mut h, boss);
+    h.engage(boss);
+    h.advance(1.0);
+    let cast = h
+        .app
+        .world()
+        .get::<shared::components::CastState>(boss)
+        .unwrap();
+    assert_eq!(
+        (cast.spell_id, cast.duration, cast.pushback_count),
+        (30686, 3.0, 0)
+    );
+    h.hit_pct(boss, 81.0); // The same real damage/threshold path as the clock fixture.
+    h.advance(0.05);
+    let cast = h
+        .app
+        .world()
+        .get::<shared::components::CastState>(boss)
+        .unwrap();
+    assert_eq!(
+        (cast.spell_id, cast.duration, cast.pushback_count),
+        (30686, 3.5, 1)
+    );
+    let mut completed_at = None;
+    for _ in 0..60 {
+        h.advance(0.05);
+        if h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == boss.to_bits() && go.spell_id == 30686)
+        {
+            completed_at = Some(h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64());
+            break;
+        }
+    }
+    let observation = h
+        .app
+        .world()
+        .resource::<super::super::cast_admission::CastAdmissions>();
+    let dispatch = observation
+        .entries
+        .iter()
+        .find(|cast| cast.spell == 30686)
+        .unwrap();
+    assert_eq!(dispatch.result, Ok(()));
+    assert!(
+        (0.0..=0.2).contains(&dispatch.time),
+        "native first event remains immediate"
+    );
+    let completion = (completed_at.expect("actual pushed-back Shadow Bolt completion")
+        - observation.origin) as f32;
+    let latency = completion - dispatch.time;
+    assert!(
+        (3.5..=3.7).contains(&latency),
+        "native3s cast plus500ms pushback: latency={latency}"
+    );
+}
+
 #[test]
 fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let (mut h, boss, map) = orbital_fixture();
@@ -789,66 +869,20 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
         x: origin.x + 5.0,
         ..origin
     });
-    let mut visibility = crate::interest::NetworkVisibility::default();
-    visibility.gain_visibility(h.players[0].1);
-    h.app.world_mut().entity_mut(boss).insert(visibility);
-    let origin_time = h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64();
-    h.app
-        .insert_resource(super::super::cast_admission::CastAdmissions {
-            actor: boss,
-            origin: origin_time,
-            entries: Vec::new(),
-        });
+    enable_omor_cast_observation(&mut h, boss);
     h.engage(boss);
     let mut cursor = 0;
     let mut casts = Vec::new();
     let mut shield_seen = false;
     let mut treacherous_seen = false;
     for tick in 1..=1400 {
-        if tick == 801 || tick == 901 {
-            let before = h
-                .app
-                .world()
-                .get::<shared::components::CastState>(boss)
-                .map(|cast| {
-                    (
-                        cast.spell_id,
-                        cast.duration,
-                        cast.elapsed,
-                        cast.pushback_count,
-                    )
-                });
-            h.hit_pct(boss, if tick == 801 { 81.0 } else { 1.0 });
-            let after = h
-                .app
-                .world()
-                .get::<shared::components::CastState>(boss)
-                .map(|cast| {
-                    (
-                        cast.spell_id,
-                        cast.duration,
-                        cast.elapsed,
-                        cast.pushback_count,
-                    )
-                });
-            eprintln!("OMOR native hit tick={tick} cast before={before:?} after={after:?}");
+        if tick == 801 {
+            h.hit_pct(boss, 81.0);
+        }
+        if tick == 901 {
+            h.hit_pct(boss, 1.0);
         }
         h.advance(0.05);
-        if tick == 801 || tick == 901 {
-            let after_events = h
-                .app
-                .world()
-                .get::<shared::components::CastState>(boss)
-                .map(|cast| {
-                    (
-                        cast.spell_id,
-                        cast.duration,
-                        cast.elapsed,
-                        cast.pushback_count,
-                    )
-                });
-            eprintln!("OMOR after damage events tick={tick} cast={after_events:?}");
-        }
         shield_seen |= h.has_aura(boss, 31901);
         treacherous_seen |= h.has_aura(player, 30695);
         let gos = &h.inbox(0).spell_gos;
@@ -872,8 +906,8 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
             .map(|cast| (cast.spell, cast.time, &cast.result))
             .collect::<Vec<_>>()
     );
-    // Go is cast completion. EventMap may defer another due event behind the
-    // authored3s Shadow Bolt or2s Treacherous Aura cast; no timer is shortened.
+    // First Go still checks actual completion. Repeat anchors are dispatches:
+    // native damage pushback can delay one Go without retiming its next event.
     for (spell, first, repeat) in [
         (30686, (3.0, 3.2), (6.0, 13.2)),
         (30695, (18.0, 28.2), (30.0, 45.2)),
@@ -890,11 +924,24 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
             times[0] >= first.0 && times[0] <= first.1,
             "first{spell}: {times:?}"
         );
+        let dispatches: Vec<_> = admissions
+            .iter()
+            .filter(|cast| cast.spell == spell)
+            .collect();
         assert!(
-            times
+            dispatches.iter().all(|cast| cast.result.is_ok()),
+            "native dispatch admission{spell}"
+        );
+        let dispatch_times: Vec<_> = dispatches.iter().map(|cast| cast.time).collect();
+        assert!(
+            dispatch_times.len() >= 2,
+            "actual repeat dispatch{spell}: {dispatch_times:?}"
+        );
+        assert!(
+            dispatch_times
                 .windows(2)
                 .all(|p| p[1] - p[0] >= repeat.0 - 0.1 && p[1] - p[0] <= repeat.1),
-            "dispatch-anchored repeat{spell}: {times:?}"
+            "dispatch-anchored repeat{spell}: dispatch={dispatch_times:?}, completed={times:?}"
         );
     }
     let shields: Vec<_> = casts.iter().filter(|(id, _, _)| *id == 31901).collect();
