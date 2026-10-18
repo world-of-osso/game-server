@@ -21,6 +21,8 @@ const SECOND_WIND: u32 = 425_782;
 /// Lift Off: APPLY_AURA DUMMY on the caster, 2 s (SpellDuration 39), which Skyward Ascent's
 /// effect 1 FORCE_CAST 140 casts.
 const LIFT_OFF: u32 = 404_191;
+/// Skyriding 406095 effect 1 LINKED 285 applies this native action prerequisite.
+const DRAGONRIDER_ENERGY: u32 = 372_773;
 /// Standing Lift Off: DUMMY 450 and FORCE_CAST of the two-second Lift Off aura.
 const STANDING_LIFT_OFF: u32 = 374_763;
 /// Tutorial highlights removed by Surge Forward / Skyward Ascent and Whirling Surge.
@@ -42,6 +44,7 @@ fn skyrider() -> Option<Harness> {
         false,
         &[
             SKYRIDING_BASICS,
+            DRAGONRIDER_ENERGY,
             SURGE_FORWARD,
             SKYWARD_ASCENT,
             AERIAL_HALT,
@@ -70,6 +73,10 @@ fn skyrider() -> Option<Harness> {
     mount(&mut h);
     let motion = *h.app.world().get::<PlayerMotion>(h.caster).unwrap();
     assert!(motion.contains(PlayerMotion::CAN_ADV_FLY), "{motion:?}");
+    assert!(
+        crate::auras::has_aura(h.app.world(), h.caster, DRAGONRIDER_ENERGY),
+        "Mount capability's native linked aura supplies the skyriding action prerequisite"
+    );
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     Some(h)
 }
