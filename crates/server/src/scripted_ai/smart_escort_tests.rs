@@ -752,11 +752,17 @@ fn smartai_coverage_despawning_a_native_corpse_interrupts_its_dead_start_cast() 
             &mut commands,
             &data,
             template,
-            crate::maps::InMap::continent(u32::from(spawn.map)),
+            &mut crate::zones::CreatureSpawnContext {
+                map: crate::maps::InMap::continent(u32::from(spawn.map)),
+                difficulty_id: 0,
+                ground: Some(&mut crate::test_data::ground_map()),
+                temporary: false,
+            },
             false,
             spawn,
             &mut rand::thread_rng(),
         )
+        .expect("native Brown Ram level context")
     };
     queue.apply(h.app.world_mut());
     assert!(
