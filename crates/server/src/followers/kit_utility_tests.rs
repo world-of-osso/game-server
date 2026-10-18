@@ -208,6 +208,33 @@ fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
     utility_tests::start_enemy_fireball(&mut h, unit);
     uses_spell(&mut h, unit, 118);
     assert!(crate::auras::has_aura(h.app.world(), h.npc, 118));
+    for _ in 0..40 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits() && go.spell_id == 118)
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn follower_kit_utility_meredy_does_not_control_an_idle_attacker() {
+    let (mut h, unit) = level32(209059);
+    for _ in 0..80 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == unit.to_bits() && go.spell_id == 118)
+    );
 }
 
 #[test]
