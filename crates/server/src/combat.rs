@@ -479,7 +479,7 @@ type AutoAttackTargets<'w, 's> = Query<
         &'static Position,
         &'static mut Health,
         Option<&'static mut LastDamager>,
-        Has<Npc>,
+        (Has<Npc>, Option<&'static crate::zones::CreatureFlagsExtra>),
         Option<&'static AuraStatMods>,
         Has<TrainingDummy>,
         Option<&'static DuelOpponent>,
@@ -950,6 +950,7 @@ pub(crate) fn armor_mitigated(
 fn roll_outcome(
     attacker: &Attacker,
     victim: Victim,
+    flags: Option<&crate::zones::CreatureFlagsExtra>,
     can_avoid: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> MeleeOutcome {
@@ -971,6 +972,16 @@ fn roll_outcome(
     } else {
         melee::swing_chances(swinger, victim, can_avoid)
     };
+    if let (Victim::Creature { .. }, Some(flags)) = (victim, flags) {
+        const NO_PARRY: u32 = 0x4;
+        const NO_BLOCK: u32 = 0x10;
+        if flags.0 & NO_PARRY != 0 {
+            chances.parry = 0.0;
+        }
+        if flags.0 & NO_BLOCK != 0 {
+            chances.block = 0.0;
+        }
+    }
     // Unit::MeleeSpellMissChance: victim's attacker-hit modifier, not attacker hit.
     let hit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_HIT_CHANCE)
@@ -997,6 +1008,24 @@ fn roll_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
     )
+}
+
+#[derive(Component)]
+struct MissingCreatureFlagsReported;
+
+fn report_missing_creature_flags(commands: &mut Commands, victim: Entity) {
+    commands
+        .entity(victim)
+        .queue(|mut actor: EntityWorldMut<'_>| {
+            if actor.contains::<MissingCreatureFlagsReported>() {
+                return;
+            }
+            error!(
+                victim = ?actor.id(),
+                "NPC autoattack victim has no CreatureFlagsExtra; retaining unfiltered avoidance"
+            );
+            actor.insert(MissingCreatureFlagsReported);
+        });
 }
 
 /// Who the swing lands on: a creature (by level difference), or a player's
@@ -1153,7 +1182,7 @@ fn try_swing(
         target_pos,
         mut health,
         last_damager,
-        is_npc,
+        (is_npc, npc_flags),
         target_mods,
         training_dummy,
         duel,
@@ -1216,9 +1245,13 @@ fn try_swing(
     );
     let sitting = stand_state.is_some_and(|state| !state.0.is_stand());
     let victim = swing_victim(is_npc, armor.1, level_difference, sitting);
+    if is_npc && npc_flags.is_none() {
+        report_missing_creature_flags(commands, target_entity);
+    }
     let kind = roll_outcome(
         attacker,
         victim,
+        npc_flags,
         can_avoid((avoidance.0, avoidance.1.as_deref())),
         avoidance.1.as_deref(),
     );
@@ -2038,6 +2071,9 @@ fn broadcast_events(
     }
 }
 
+#[cfg(test)]
+#[path = "combat_npc_flags_tests.rs"]
+mod npc_flags_tests;
 #[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;

@@ -454,6 +454,24 @@ fn hunter_pet_dismiss_command_abandons_the_saved_wolf() {
 }
 
 #[test]
+fn native_called_hunter_pet_carries_source_creature_flags_extra() {
+    let p = hunter_with_wolf().expect("native called Hunter pet");
+    let world = p.h.app.world();
+    let entry = world
+        .get::<shared::components::Npc>(p.pet)
+        .unwrap()
+        .template_id;
+    let expected = world.resource::<WorldData>().templates[&entry].flags_extra;
+    assert_eq!(
+        world
+            .get::<crate::zones::CreatureFlagsExtra>(p.pet)
+            .map(|flags| flags.0),
+        Some(expected),
+        "ordinary Call Pet caches its authored template flags"
+    );
+}
+
+#[test]
 fn a_called_wolf_sends_its_owner_the_retail_pet_bar() {
     let Some(p) = hunter_with_wolf() else {
         return;
