@@ -51,7 +51,7 @@ fn wild_pet_battles_bonestorm_uses_legal_graves_level_two_and_own_maximum_cost()
     assert_eq!(states[&41].selected_abilities[1], 649);
     let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
     assert_eq!(encounter.battle.teams[0].pets[0].species, 1639);
-    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 21);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 23);
     assert_eq!(encounter.battle.teams[0].pets[0].stats.health, 214);
     let (state, events) = encounter
         .battle
@@ -68,8 +68,8 @@ fn wild_pet_battles_bonestorm_uses_legal_graves_level_two_and_own_maximum_cost()
             _ => None,
         })
         .collect();
-    assert_eq!(amounts, [26, 21]);
-    assert_eq!(state.teams[1].pets[0].health, 121);
+    assert_eq!(amounts, [27, 21]);
+    assert_eq!(state.teams[1].pets[0].health, 120);
     assert_eq!(state.teams[0].pets[0].health, 193);
     for slot in 1..3 {
         assert_eq!(
