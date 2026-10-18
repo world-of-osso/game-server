@@ -4,7 +4,7 @@ use super::*;
 use crate::spell_cast::test_harness::Harness;
 use shared::components::{Health, Level};
 
-fn level32(entry: u32) -> (Harness, Entity) {
+pub(super) fn level32(entry: u32) -> (Harness, Entity) {
     level32_with_plugins(entry, |_| {})
 }
 
@@ -38,7 +38,7 @@ fn wounded(h: &mut Harness, unit: Entity, fraction: f32) {
     health.current = health.max * fraction;
 }
 
-fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
+pub(super) fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
     for _ in 0..600 {
         update_ai(h.app.world_mut());
         h.advance(1);
