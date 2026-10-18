@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Prized pennant and four missing cartel banners (2026-10-17)
+
+[Source585–589 matrix](../../toy-effects14-coverage.md#source585589-nonzero-prized-pennant-and-four-missing-cartel-banners-2026-10-17) retains nonzero permanent Prized pennant and exact Steamwheedle508828/Bilgewater508826/Blackwater508827/VentureCo508830 cursor-banner gaps. All four runtime objects absent; explicit shared item category1246/180s is not four independent timers. No guessed object art/type/scale, per-use cartel eligibility or sibling substitution.507 queued at76a8426bf; no result, runtime/data/native change or own heavy duplicate.
+
 ## Shard/permanent poses/repeated jump proc/tea boundaries and505 type correction (2026-10-17)
 
 [Source580–584 matrix](../../toy-effects14-coverage.md#source580584-mixed-shardpermanent-posesrepeated-jump-procinteractive-tea-boundaries-2026-10-17) preserves no-template transform plus scale, permanent circlet/reading presentation, both Hat42→1216102 jump edges and missing interactive tea506612. No guessed model/scale, ring stats, spawned desk, deduplicated proc or Tea149865 copy.505 stopped at compile E0277/EXIT101;76a8426bf fixes only registry creature typeu32→i32, all16 rows/assertions unchanged, format/manual readability/diffcheck pass. Next lead proof must include577 twelfth object; no runtime result, data/native change or own heavy duplicate.

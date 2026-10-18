@@ -1,5 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source585–589: nonzero Prized pennant and four missing cartel banners (2026-10-17)
+
+No new acceptance/runtime/data/native proof or own heavy duplicate. Lead507 queued at76a8426bf includes the505 type correction and577 twelfth object; log not yet observed.505 remains compileFAIL,498 last confirmed landed/master8707ac0ea. Full1166 remains unchanged.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|585 Prized Legend's Pennant235519/1217166 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Actual seasonal pennant art/eligibility/removal remains unaudited; no zero-dummy success or copied earlier pennant/native proof. |
+|586 Steamwheedle Cartel Banner235669/1218160 | Instant target87 transmitted50→508828 for180000ms; runtime GO absent. Exact Steamwheedle banner identity/cursor placement/lifecycle/native art remains gap, not a sibling/Alliance banner substitution. |
+|587 Bilgewater Cartel Banner235670/1218159 | Same source shape/duration, distinct missing508826; preserve Bilgewater mapping rather than item-order inference. |
+|588 Blackwater Cartel Banner235671/1218161 | Same source shape/duration, distinct missing508827; preserve Blackwater identity. |
+|589 Venture Co. Banner235672/1218162 | Same source shape/duration, distinct missing508830; preserve Venture Co. identity. |
+
+All four cartel item effects have normal recovery-1 and explicit category1246/recovery180000ms; no SpellCooldowns row in this source block. Shared-category authority/sibling refusal and all four authentic object/type/display records remain unresolved, not four independent toy timers or a guessed GO type/display/scale. Their descriptions plant banners; vendor/cartel names alone do not establish a new per-use reputation/faction requirement.
+
+Evidence: private `rows585-589-{readonly-source,action-source,runtime-action-source,active-goal}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6.149865 Tea Set untouched.
+
 ## Source580–584: mixed shard/permanent poses/repeated jump-proc/interactive tea boundaries (2026-10-17)
 
 Lead505 failed compilation E0277/EXIT101 before runtime: typed disguise creature columnu32 conflicted with authored aura.misc_values i32. Test-only76a8426bf changes that column to i32, preserving all16 rows/literals/helper/assertions; format/manual readability/diffcheck pass. No runtime RED/GREEN or new-scope certificate. Current tip also includes577 twelfth object AFTER505; next covering gate must include it.498 remains last confirmed landed/master8707ac0ea; no own heavy duplicate.
