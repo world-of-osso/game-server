@@ -106,7 +106,10 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
             .id();
         let mut threat = ThreatTable::default();
         threat.add_threat(target.to_bits(), 73.0);
-        world.entity_mut(actor).insert((position, threat));
+        // Source intro is passive before UpdateEntry; InitEntry reinitializes react state.
+        world
+            .entity_mut(actor)
+            .insert((position, threat, crate::scripted_ai::ReactState::Passive));
         crate::combat_refs::set_in_combat_with(&mut world, actor, target);
         assert!(
             world
@@ -139,6 +142,10 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
         assert!(projection.apply(world.entity_mut(actor), false));
         assert_eq!(world.get::<Npc>(actor).unwrap().template_id, NAZAN);
         assert_eq!(world.get::<Npc>(actor).unwrap().name, "Nazan");
+        assert_eq!(
+            world.get::<crate::scripted_ai::ReactState>(actor),
+            Some(&crate::scripted_ai::ReactState::Aggressive)
+        );
         // Pinned UnitDefines.h186; UpdateEntry clears template flags but retains real combat.
         assert_eq!(world.get::<UnitFlags>(actor).unwrap().0, 0x0008_0000);
         assert!(
@@ -172,6 +179,11 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
         assert_eq!(
             world.get::<CreatureArmor>(actor).unwrap().0,
             stats.armor(30)
+        );
+        assert_eq!(
+            crate::level_scaling::UnitScaling::of(&world, actor).swing_damage_range(2.0),
+            Some(stats.swing_damage_range(30, 2.0)),
+            "target DamageModifier reaches ordinary combat stats"
         );
         assert_eq!(
             world.get::<UnitPose>(actor).unwrap().sheath_state,
