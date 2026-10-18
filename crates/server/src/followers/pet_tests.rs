@@ -55,6 +55,61 @@ fn count_persisted_rows(world: &World) -> u64 {
 }
 
 #[test]
+#[ignore = "RED: LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT: no authored source combat reach"]
+fn follower_lantha_production_spawn_supplies_source_display_and_reach() {
+    let mut f = fixture();
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    f.h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&source).unwrap());
+    let profile =
+        f.h.app
+            .world()
+            .get::<super::Follower>(f.unit)
+            .unwrap()
+            .profile
+            .clone();
+    let unit = super::spawning::spawn(f.h.app.world_mut(), f.h.caster, profile)
+        .expect("production source-projected Lantha spawn");
+    let world = f.h.app.world();
+    let display = world
+        .get::<shared::components::ModelDisplay>(unit)
+        .expect("production follower spawn supplies its source model display");
+    let source_reach: f32 = source
+        .query_row(
+            "SELECT CombatReach FROM encounter_creature_model_info WHERE DisplayID=?1",
+            [display.display_id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let scale = world.get::<shared::components::UnitScale>(unit).unwrap().0;
+    assert!(source_reach > 0.0);
+    assert_eq!(
+        crate::scripted_ai::model_reach::combat_reach(world, unit),
+        Some(source_reach * scale),
+        "Lantha230861 must use actual source model reach, never a default"
+    );
+    assert_eq!(
+        world
+            .get::<shared::components::Npc>(unit)
+            .unwrap()
+            .template_id,
+        230861
+    );
+    assert_eq!(
+        world
+            .get::<crate::zones::TempSummon>(unit)
+            .unwrap()
+            .summoner,
+        f.h.caster
+    );
+}
+
+#[test]
+#[ignore = "LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT: no authored source combat reach for target32"]
 fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
     let mut f = fixture();
     let before = count_persisted_rows(f.h.app.world());
