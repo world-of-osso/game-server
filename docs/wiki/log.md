@@ -1,3 +1,7 @@
+## 2026-10-18 — Three-item2513 cancellation/recovery batch pending
+
+[Exact batch/limits](../toy-effects14-coverage.md#three-item-batch-saptor685-idol702-badge710-cancellationrecovery-pending-after548-2026-10-18):604c35311 batches Saptor685/Idol702/Badge710 learned-use/source-model/one-hour aura, real cancellation/restoration/no2513 bypass and ordinary600s Pango reuse. Original fixtures and weights unchanged. Format/manual only, uncompiled/unexecuted AFTER548; no Masquerade cancellation/hour-expiry/exact-wall/native/distribution or runtime/data claim, no own jobs.
+
 ## 2026-10-18 — Doomsday419 ordinary recovery/product cap pending
 
 [Exact acceptance/limits](../toy-effects14-coverage.md#doomsday419-ordinary-recovery-and-unique-product-repeat-pending-after543-2026-10-18):cb46a33f9 extends learned202309/398572 with first persisted202310 held across ordinary300s recovery, early refusal and completed second root while preserving original GUID/one unit. TC `SpellEffects.cpp:1426–1440` stores only allowed quantity, no invented cast rejection. Original first-product/Offering tests unchanged. Format/manual only, uncompiled/unexecuted AFTER543; no runtime/data/clock/inventory mutation or product-use/native/bank/account-cap claim.

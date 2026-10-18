@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Three-item shared2513 cancellation/recovery batch pending (2026-10-18)
+
+[Exact batch/limits](../../toy-effects14-coverage.md#three-item-batch-saptor685-idol702-badge710-cancellationrecovery-pending-after548-2026-10-18):604c35311 adds actual Saptor685/Idol702/Badge710 learned cancellation/restoration/no2513 bypass/ordinary600s Pango reuse. Source pools and weights untouched; prior fixtures unchanged. One future gate for three identities, uncompiled/unexecuted AFTER548 with format/manual evidence only. No Masquerade cancellation/hour-expiry/exact-wall/native/distribution certificate or runtime/data edit.
+
 ## Doomsday419 ordinary recovery/product cap acceptance pending (2026-10-18)
 
 [Exact acceptance/limits](../../toy-effects14-coverage.md#doomsday419-ordinary-recovery-and-unique-product-repeat-pending-after543-2026-10-18):cb46a33f9 keeps the real first202310 product while learned202309 refuses near295s and completes again after300 ordinary seconds; source MaxCount1 must preserve original GUID/quantity rather than duplicate/replace. TC `SpellEffects.cpp:1426–1440` bounds created quantity, not necessarily root-cast admission. Old first-product/Offering fixtures unchanged. Format/manual only, uncompiled/unexecuted AFTER543; no product-use/native/bank/account-cap certificate or runtime/data/clock/inventory mutation.

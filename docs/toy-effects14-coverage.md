@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Three-item batch: Saptor685, Idol702, Badge710 cancellation/recovery pending after548 (2026-10-18)
+
+Test/spec604c35311 adds `toyfx_shared_saptor_idol_badge_cancel_and_recover_without_bypassing_category`, extending three existing Full1166 identities in one future gate tip:268728/1283502/misc260346,276925/1301489/misc268496,280419/1308693/misc271558. Each uses actual learned use/source display pool/self56/misc8/3600000ms aura, reports shared2513/600000ms recovery, then real CancelAura must restore the prior model/remove the replicated aura. Both own item and learned Pango refuse immediately; Pango still refuses near580 ordinary simulated seconds, then succeeds once after600 seconds with its own source pool/misc260345,8/one-hour aura and unchanged health. No source weights or deadline/category state are rewritten; Saptor's0.1 row and Badge4/2/1/2/1 weights remain untouched.
+
+Format/manual readability only, UNCOMPILED/UNEXECUTED AFTER548; current548 covers only8877979e3/Doomsday, not this three-item batch. Existing Pango, shared-five, Masquerade, Royal and old misc8 fixtures are unchanged. No runtime/data/native edits or own jobs; Masquerade cancellation, ordinary one-hour expiry, exact wall timing, native art and weighted frequencies remain unproved. [Contract](specs/toys.md), [test](../crates/server/src/toys_disguise_tests.rs).
+
 ## Doomsday419 ordinary recovery and unique-product repeat pending after543 (2026-10-18)
 
 Test/speccb46a33f9 adds `toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product`, extending Full1166 toy202309/root398572 rather than substituting same-name product202310. Source/runtime202310 has stack1/MaxCount1/LimitCategory0; root source3000ms CreateItem24/base1 and300000ms recovery remain unchanged. The fixture learns/creates the first persisted product, keeps its real GUID in bags, checks refusal near295 ordinary simulated seconds, then completes a second actual learned root after300 seconds. Persisted inventory must still contain exactly the original GUID/one unit, never a duplicate/replacement or new toy202309. It does not force a cast failure merely for a product cap: pinned TC `SpellEffects.cpp:1426–1440` reduces creatable quantity through CanStoreNewItem/ITEM_MAX_COUNT.
