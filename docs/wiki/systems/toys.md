@@ -20,7 +20,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Source vesper/transport boundaries and pending offering-kit acceptance (2026-10-17)
 
-[Source275–279 matrix](../../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17) records three distinct mixed actor/caster Vesper identities/scales and Whistle fast/tired transport/area gaps.279 has an exact existing create-item product187342/count1/source2s/item30s contract; actual learned-use/persisted-inventory acceptance is drafted externally and awaits240 compile completion before code changes. Source naming differs from runtime item name, so retain the exact ID. No shared Vesper/transport shortcut, wrapping/gifting claim, new runtime/data admission or positive proof.
+[Source275–279 matrix](../../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17) records three distinct mixed actor/caster Vesper identities/scales and Whistle fast/tired transport/area gaps.279 has an exact existing create-item product187342/count1/source2s/item30s contract; Test/spec04a47a43 and fixture fix62db4212 now assert actual learned use, persisted quantity, cast and ordinary recovery/reuse. Corrected targeted run remains pending, with no279 pass claimed; initial fixture mistakenly treated its two intended cooldown refusals as unexpected failures. Source naming differs from runtime item name, so retain the exact ID. No shared Vesper/transport shortcut, wrapping/gifting claim, new runtime/data admission or positive proof.
 
 ## Source mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
 
@@ -40,15 +40,15 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Source stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
 
-[Source250–254 matrix](../../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17) retains coordinated steward stacking, death-only viewer spirit-healer replacement, slime-minipet party appearance, ground-laser chasing and exact four-slime source-pool lifecycle gaps. Authentic source models and generic aura/summon support do not establish these combined contracts. No actor/viewer/minipet/script admission, runtime/data write or new positive proof;240 remains the single tracked pending job.
+[Source250–254 matrix](../../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17) retains coordinated steward stacking, death-only viewer spirit-healer replacement, slime-minipet party appearance, ground-laser chasing and exact four-slime source-pool lifecycle gaps. Authentic source models and generic aura/summon support do not establish these combined contracts. No actor/viewer/minipet/script admission, runtime/data write or new positive proof.
 
 ## Source critter/passenger/reflection boundaries and retained hearth/vesper proof (2026-10-17)
 
 [Source245–249 matrix](../../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17) retains authentic half-critter destruction, wounded-ally carrying and chained reflection-summon gaps. Stretcher properties5075 is Control0, with one zero-probability source model; no fabricated vehicle or arbitrary visible selection.246 linked cooking and249 stationary Vesper retain earlier exact CPU witnesses, not new per-toy native/audio proof. No runtime/data admission or repeated unchanged gate.
 
-## Pending Dominated helm and coin/launch/linked/covenant boundaries (2026-10-17)
+## Dominated helm targeted acceptance and coin/launch/linked/covenant boundaries (2026-10-17)
 
-[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; targeted tests remain pending under the admitted owned job; lead gate472 owns its separate package check, with no own repeat. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
+[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-dominated-helm-targeted-acceptance-and-coinlaunchlinkedcovenant-gaps-2026-10-17) records240 test/spec c8feec2e actual175221/nine-display learning/ten-minute restoration/inherited recovery: two disguise/Oomgut tests/nine IDs pass91.61s after21m25s compile, with no compiler warnings and fmt/readability/diffcheck pass. Lead gate472 owns its separate package check and remains queued, not a confirmed pass; no own repeat. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
 
 ## Source advice/riding/sentry/atonement boundaries (2026-10-17)
 
