@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source535–539 pending Toxic Victory acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source535539-pending-toxic-victory-acceptance-and-owned-pet-cookingfinerydyeingrole-dummy-boundaries-2026-10-17):896be829e adds225547/443689/source1800s as18th existing caster identity, format/manual readability/diffcheck pass, future head AFTER498c013 required. Own non-combat pet150/candle/395 cooking, missing Finery Chest452682, periodic dyeing wheel and missing outdoors60s Icarus damage-and-heal/opposing-role dummy retain exact recipient/action/lifecycle gaps. No generic light/inert chest/five-item yield/damage-only dummy or flavor-derived qualification. No further runtime/data/new native/own heavy duplicate;498 corrected Claw/Stasis/Stone individual ok lines, aggregate/landing pending.
+
 ## 2026-10-17 — Toy source530–534 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source530534-layered-spinself-memorytorchmixed-levitationmoving-hologram-boundaries-2026-10-17): Ravager slow33/nested5s10s30s periodics/7s stun/parent removal, personalized Memory Chord with literal model weights, unaudited permanent torch, hover106/featherfall105/waterwalk104/animation1151 and missing forward horse225414 retain mixed action/appearance/lifecycle gaps. No cosmetic-only control, removal-as-recast, generic self copy, cooking/fire-flight guess or stationary horse admission. No further runtime/data/new proof/own heavy duplicate;498c013 in progress.

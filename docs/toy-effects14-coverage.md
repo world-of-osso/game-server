@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source535–539: pending Toxic Victory acceptance and owned-pet-cooking/finery/dyeing/role-dummy boundaries (2026-10-17)
+
+538 test/spec896be829e adds225547/443689/1800000ms to the unchanged actual learned-use/replicated-aura/cancel/full-health-model/no-actors caster helper, now18 identities; old17 unchanged. Format/manual readability/diffcheck pass; behavior needs a head AFTER498c013.498 has individual corrected Claw/Stasis/Stone503 ok lines, but no final aggregate/landing result yet. No further runtime/data changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|535 Pet-Sized Candle224643/453621 | Instant target150 dummy4 plus area-trigger aura395/create-properties33706 for300000ms, inherited600000ms recovery. Pinned150 selects the caster's own non-combat pet, not the player/combat pet/any critter. Actual pet-head candle/moving cooking-area/service/eligibility/removal remains gap; no caster-only light, decorative pet aura or invented cooking radius. |
+|536 Sovereign's Finery Chest224783/453922 | Source1000ms cursor87 effect50→452682 for120000ms; inherited3600000ms recovery. Runtime tdb_gameobject_template absent. Actual chest/royal-clothes selection/caster-and-others recipient/appearance/cleanup remains unresolved, not inert chest or guessed outfit/items. |
+|537 Web-Vandal's Spinning Wheel225347/454947 | Instant self periodic-dummy226/every1000ms for5000ms, inherited60000ms recovery. Full wheel/dyeing/spool presentation/periodic conditions/lifecycle remains unaudited; no generic dummy aura, invented five-item yield or assumed inventory crafting operation. |
+|538 Toxic Victory225547/443689 | Instant self audited dummy4/1800000ms, inherited3600000ms recovery. Own learned-use/replication/cancel/full-health-model/no-actors case committed as18th caster identity, behavioral proof pending newer head. Native victory art, natural thirty-minute expiry/hour recharge remain separate; flavor text is not an invented per-use Zekvir qualification gate. |
+|539 Ancient Construct225556/455291 | Instant cursor87 summon226220/property2910/UseCreatureLevel for60000ms, inherited3600000ms recovery. Runtime creature/model absent. Source outdoors-only Icarus dummy must accept damage and healing from opposing roles; exact role/health/challenge/presentation/lifecycle remains gap, not inert statue, damage-only training dummy or copied Black Dragon dummy lifespan. |
+
+Evidence: private `rows535-539-{readonly-source,action-source,runtime-source,active-goal}.json`, `toxic538-{active-goal,proof-ledger}.json`, pinned target150 and exact missing-object/creature boundaries.149865 Tea Set remains untouched.
+
 ## Source530–534: layered-spin/self-memory/torch/mixed-levitation/moving-hologram boundaries (2026-10-17)
 
 Mixed movement/control, personalized appearance and unaudited visuals remain gaps. No new acceptance/runtime/data/native proof or own heavy duplicate;498c013 remains lead-owned/in progress.

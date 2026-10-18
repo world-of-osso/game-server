@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Toxic Victory acceptance and owned-pet-cooking/finery/dyeing/role-dummy boundaries (2026-10-17)
+
+[Source535–539 matrix](../../toy-effects14-coverage.md#source535539-pending-toxic-victory-acceptance-and-owned-pet-cookingfinerydyeingrole-dummy-boundaries-2026-10-17) adds acceptance-only896be829e:225547/443689/source1800s as18th existing learned/cancel caster identity, pending newer head AFTER498c013. Owned non-combat pet target150/candle/395 cooking area, missing royal finery chest, periodic five-second dyeing wheel and outdoors opposing-role damage-and-heal Icarus dummy remain exact gaps, not caster light/inert props/invented items/damage-only dummy. Format/manual readability/diffcheck pass; no further runtime/data/new native/own heavy duplicate.498 corrected Claw/Stasis/Stone individually ok, aggregate still pending.
+
 ## Layered-spin/self-memory/torch/mixed-levitation/moving-hologram boundaries (2026-10-17)
 
 [Source530–534 matrix](../../toy-effects14-coverage.md#source530534-layered-spinself-memorytorchmixed-levitationmoving-hologram-boundaries-2026-10-17) retains Ravager slow33 and nested5s/10s/30s periodic chain ending7s stun/parent removal, personalized Memory Chord with literal11686/weight1/22903/weight0, unaudited permanent torch, all hover/featherfall/waterwalk/animation1151 siblings and missing forward-racing horse225414. No cosmetic-only spin, removal-as-cast, generic player-copy body, cooking torch guess, free flight or stationary horse shortcut. No further runtime/data/new proof/own heavy duplicate;498 in progress.
