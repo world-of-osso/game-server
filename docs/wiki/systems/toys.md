@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mixed parachute, cycle-script, retained wine, photo and ash boundaries (2026-10-18)
+
+[Source650–654 matrix](../../toy-effects14-coverage.md#source650654-mixed-parachute-cycle-script-retained-wine-photo-and-ash-boundaries-2026-10-18) preserves parachute's five root effects/negative98 payload/area8537/category1470, three distinct Cycle script base points, existing Wine fixture, nonzero-trigger proc Photo Finisher and both Ashen Horn140 edges including35/395 child. No global slow-fall, fabricated spirit, screenshot substitute or normal64 flattening. Metadata only; no new acceptance/runtime/data/native proof or own heavy work, lead successor pending after cancelled509.
+
 ## Pending Lightcalled hearthstone and jumpable-monument, gold-fountain boundaries (2026-10-18)
 
 [Source645–649 matrix](../../toy-effects14-coverage.md#source645649-pending-lightcalled-hearthstone-and-jumpable-monument-gold-fountain-boundaries-2026-10-18) adds acceptance-only57aa5b0c5:257736/1261979/source10s/shared2309 blocks Cosmic246565 via unchanged saved-bind helper, now22 hearthstones/old21 retained; behavior awaits lead successor. Missing247940/254652/254655 monuments require actual shared jump collision with distinct casts/base0, not ordinary scenery. Missing255051 fountain retains mixed64→425841/effect65 and actual gold-offering authority; no guessed cost/reward. No runtime/data/native change or own heavy jobs.
