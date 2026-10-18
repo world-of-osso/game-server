@@ -153,6 +153,9 @@ fn spawn_second_copy(h: &mut Harness) -> InMap {
 #[ignore = "RED: real Sentry deaths do not start the Herald INTRO1"]
 fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center() {
     let (mut h, map, herald, sentries) = ordinary_ramparts();
+    let listener = *h.app.world().get::<Position>(sentries[0]).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(listener);
     kill_actor(&mut h, sentries[0]);
     h.advance(0.05);
     assert!(!is_passive(&h, herald), "one death cannot start the intro");
@@ -201,6 +204,17 @@ fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center(
             .unwrap()
             .template_id,
         HERALD
+    );
+    let intro_yells = h.inbox(0).chat.iter().filter(|message| {
+        matches!(message.channel, ChatType::MonsterYell(speaker) if speaker == herald.to_bits())
+    }).count();
+    assert_eq!(
+        intro_yells, 1,
+        "duplicate actions do not replay INTRO1 speech"
+    );
+    assert!(
+        h.creatures_of(17_537).is_empty(),
+        "HERALD_INTRO2_UNIMPLEMENTED: no fake summon"
     );
     assert_eq!(
         get_boss_state(h.app.world_mut(), map, 1),

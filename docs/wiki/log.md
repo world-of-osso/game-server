@@ -1,3 +1,7 @@
+## 2026-10-18 — Herald Sentry INTRO1 implementation
+
+[Bounded INTRO1](systems/boss-scripts.md#herald-sentry-intro1--2026-10-18): ordinary GUID/patrol and real lethal/copy controls reach genuine2RED21.34s at7844943bc after excluding missing-waypoint setupFAIL. Added transient copy counter, source1730700 once-only AI, stop original patrol and actual center point movement. Targeted GREEN pending; no INTRO2 stub, morph/summon/flight/phases/credit/reset/native claim.
+
 ## 2026-10-18 — Sunshell2410
 
 [Sunshell](systems/pet-battle-engine.md#sunshell--2026-10-18): ONLY2410registry/reuse404+403; b273core5+nonownedNPCRED→194804production/9130GREEN5+1, nineactivepairs/30×3/misses+allmissweather/deadreserves/all6maximumHPwithoutcurrentHPincrease/globalhealing25/replacement/expiry. Crystalsnap3068ONLYguidNoneenemyteam1,neverplayerjournal;controlledlevel1/Common/breed3/source174HP/12power/7speed→12×3/max261/current174/CD3. MissingNPCcomposition andsourceBoss1/runtimeBoss0 retained as namedgaps;initialfixtureBossruntime1 overclaimcorrectedbeforeGREEN. Integrated2203lib177/main43/check18.27s/no warnings/fmt/shared11aclean/ten-table70448census1858/2829=65.68%/1035graphs,ONLY+4/+1;historical70391/1051/1762retained. LEADacceptsCPUenemyproof2410;native `NPC_PET_BATTLE_ENCOUNTER_SERVICE_ABSENT` (no liveNPCtrainer/teamcompositionservice),NOprivatehook/nevermake3068wildorowned. Asset-only13canonicalfileshashlinks;no nativeNPC/fullboss/Retailtiming/VFXclaim.
