@@ -1,5 +1,6 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
-//! Telash power/first-loop Frost and Icy clocks are ported; full phases/jumps/runes are unported.
+//! Telash power/rune startup/first-loop clocks and first100Energy poll are ported;
+//! full phases, jumps and rune interactions remain unported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -23,11 +24,18 @@ const SPROUT_SCRIPT: &str = "npc_ley_line_sprouts";
 const LEY_LINE_SPROUT_AURA: u32 = 374161;
 const ARCANE_POWER: u32 = 374736;
 const TELASH_INITIAL_POWER: f32 = 60.0;
+const TELASH_VAULT_RUNES_GROUP: u32 = 0;
 const ICE_POWER_PERIODIC: u32 = 389453;
 const ICE_POWER_PER_TICK: f32 = 2.0;
 const EVENT_FROST_BOMB: u32 = 1;
 const ICY_DEVASTATOR: u32 = 387151;
 const EVENT_ICY_DEVASTATOR: u32 = 2;
+const EVENT_ABSOLUTE_ZERO: u32 = 3;
+const ABSOLUTE_ZERO_POLL_MS: u64 = 500;
+const ABSOLUTE_ZERO_POWER: f32 = 100.0;
+const ABSOLUTE_ZERO_CAST: u32 = 387928;
+const ABSOLUTE_ZERO_SHIELD: u32 = 388084;
+const ACTIVATE_VAULT_RUNE: u32 = 390209;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -37,7 +45,8 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
-const ERUPTING_FISSURE: u32 = 386660;
+pub(crate) const ERUPTING_FISSURE: u32 = 386660;
+const FISSURE_SPROUT_SELECTOR: u32 = 394154;
 const EVENT_ERUPTING_FISSURE: u32 = 4;
 const EVENT_EXPLOSIVE_BRAND: u32 = 6;
 const CONSUMING_STOMP: u32 = 374720;
@@ -122,6 +131,33 @@ impl super::CreatureAi for LeyLineSprout {
     fn just_appeared(&mut self, ctx: &mut super::Ctx) {
         ctx.do_cast_self(LEY_LINE_SPROUT_AURA);
         ctx.do_cast_at(None, ARCANE_POWER, true);
+    }
+
+    fn spell_hit(&mut self, ctx: &mut super::Ctx, _caster: Entity, spell_id: u32) {
+        // TC boss_leymor.cpp:303–310: death owns stack consumption, not this hit.
+        if matches!(spell_id, FISSURE_SPROUT_SELECTOR | EXPLOSIVE_BRAND_DAMAGE) {
+            crate::combat::kill_unit(ctx.world, ctx.me, ctx.me);
+        }
+    }
+
+    fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
+        // TC boss_leymor.cpp:286–300: the actual TempSummon owner loses one stack.
+        let Some(owner) = ctx.world.get::<crate::zones::TempSummon>(ctx.me) else {
+            return;
+        };
+        let owner = owner.summoner;
+        let instance = ctx
+            .world
+            .get::<crate::auras::ActiveAuras>(owner)
+            .and_then(|auras| {
+                auras
+                    .iter()
+                    .find(|aura| aura.spell_id == ARCANE_POWER)
+                    .map(|aura| aura.instance_id)
+            });
+        if let Some(instance) = instance {
+            crate::auras::spend_stack(ctx.world, owner, instance);
+        }
     }
 }
 
@@ -213,6 +249,32 @@ struct Telash {
     boss: super::boss_ai::BossAi,
 }
 
+impl Telash {
+    fn start_absolute_zero_when_ready(&mut self, ctx: &mut super::Ctx) {
+        let Some(power) = read_current_primary_power(ctx.world, ctx.me) else {
+            warn!(actor = ?ctx.me, "Telash phase polling requires its actual primary power");
+            return;
+        };
+        if power < ABSOLUTE_ZERO_POWER {
+            return;
+        }
+        ctx.talk(3);
+        ctx.talk(4);
+        ctx.set_react_state(super::ReactState::Passive);
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert(super::waypoint_path::GravityDisabled);
+        crate::auras::remove_auras(ctx.world, ctx.me, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == ICE_POWER_PERIODIC
+        });
+        ctx.do_cast_self(ABSOLUTE_ZERO_CAST);
+        ctx.do_cast_self(ABSOLUTE_ZERO_SHIELD);
+        ctx.do_cast_self(ACTIVATE_VAULT_RUNE);
+        self.boss.events.cancel(EVENT_FROST_BOMB);
+        self.boss.events.cancel(EVENT_ICY_DEVASTATOR);
+    }
+}
+
 impl super::boss_ai::BossScript for Telash {
     fn boss_ai(&mut self) -> &mut super::boss_ai::BossAi {
         &mut self.boss
@@ -229,6 +291,10 @@ impl super::boss_ai::BossScript for Telash {
                     ctx.do_cast_at(Some(target), ICY_DEVASTATOR, false);
                 }
             }
+            EVENT_ABSOLUTE_ZERO => {
+                self.start_absolute_zero_when_ready(ctx);
+                self.boss.events.repeat(ABSOLUTE_ZERO_POLL_MS);
+            }
             _ => {}
         }
         // TC starts with one Frost/Icy each; post-phase action/counters remain unported.
@@ -241,6 +307,7 @@ impl super::CreatureAi for Telash {
     }
 
     fn just_appeared(&mut self, ctx: &mut super::Ctx) {
+        ctx.summon_creature_group(TELASH_VAULT_RUNES_GROUP);
         let Some((primary, mut powers)) = read_telash_primary_powers(ctx.world, ctx.me) else {
             warn!(actor = ?ctx.me, "Telash initial power requires native template/class/power data");
             return;
@@ -258,6 +325,9 @@ impl super::CreatureAi for Telash {
         ctx.do_cast(ICE_POWER_PERIODIC);
         self.boss.events.schedule(EVENT_FROST_BOMB, 3_500);
         self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 14_500);
+        self.boss
+            .events
+            .schedule(EVENT_ABSOLUTE_ZERO, ABSOLUTE_ZERO_POLL_MS);
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
@@ -278,6 +348,11 @@ fn read_telash_primary_powers(world: &World, actor: Entity) -> Option<(PowerType
     table.get(primary)?;
     let powers = PowerPools::from_table(table, vec![primary]);
     Some((primary, powers))
+}
+
+fn read_current_primary_power(world: &World, actor: Entity) -> Option<f32> {
+    let primary = *world.get::<PowerPools>(actor)?.order.first()?;
+    crate::spell_cast::powers::power_value(world, actor, primary).map(|(current, _)| current)
 }
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
@@ -342,6 +417,25 @@ pub(crate) fn cast_brand_child(
         ctx.caster,
         EXPLOSIVE_BRAND_CHILD,
         None,
+        ctx.depth + 1,
+    );
+}
+
+/// TC boss_leymor.cpp:495–513: once-effect HIT preserves the actual destination.
+pub(crate) fn cast_fissure_selector(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    let Some(destination) = ctx.dest else {
+        warn!("Erupting Fissure386660 cannot cast394154 without its hit destination");
+        return;
+    };
+    crate::spell_cast::cast_triggered_at_destination(
+        world,
+        ctx.caster,
+        FISSURE_SPROUT_SELECTOR,
+        destination.position,
         ctx.depth + 1,
     );
 }

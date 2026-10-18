@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Admit source-selected encounter summon templates into independent COPIES.
+"""Admit source-selected encounter actor templates into independent COPIES.
 
 No placements, guessed stats, loot or schedules. Kystia: local TDB255050/models/
 Normal1 and DB2 summon1264098. Golden Serpent: pinned Spit Gold removal summons
@@ -10,6 +10,10 @@ Wailing ritual: source groups2/3 select5762/5763; project only their actual Norm
 rows, retaining existing base templates/models and all population/credit.
 Leymor: native374360 summons TDB190509; base0/models and actual Normal1/Mythic23
 rows only, without inventing a follower205 difficulty or any placements.
+Herald-Nazan: actual17536 base0/Heroic2 CT0 rows/models/addon; native levels remain
+runtime map/area decisions, not cache bounds1. No Normal1 or placement is added.
+Telash: source group0 uses Vault Rune197204; project its base/models and actual
+Normal1/Mythic23 rows without creating205 rows, addons or placements.
 """
 import argparse
 import sqlite3
@@ -203,9 +207,110 @@ def import_fiendish_hound(connection):
     return [17540]
 
 
+def read_herald_actor_source(connection, entry, script, expected_difficulties):
+    identity = connection.execute(
+        'SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?', (entry,)).fetchone()
+    difficulties = connection.execute(
+        'SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty '
+        'WHERE Entry=? ORDER BY DifficultyID', (entry,)).fetchall()
+    if identity != ('', script) or tuple(row[0] for row in difficulties) != expected_difficulties:
+        raise ValueError(f'Herald summon{entry} source identity or difficulties changed')
+    for _, tuning in difficulties:
+        levels = connection.execute(
+            'SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=?', (tuning,)).fetchone()
+        if levels is None:
+            raise ValueError(f'Herald summon{entry} missing authored content tuning{tuning}')
+    models = connection.execute(
+        'SELECT count(*) FROM tdb_creature_template_model WHERE CreatureID=?', (entry,)).fetchone()[0]
+    addons = connection.execute(
+        'SELECT count(*) FROM tdb_creature_template_addon WHERE entry=?', (entry,)).fetchone()[0]
+    if models == 0 or addons != 1:
+        raise ValueError(f'Herald summon{entry} missing source models or addon')
+    return entry, tuple(row[0] for row in difficulties)
+
+
+def replace_source_base_templates(connection, entries):
+    """Replace only selected base0 rows/models/addons with their actual TDB inputs."""
+    selected = ','.join(str(entry) for entry in entries)
+    connection.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
+    connection.execute('DROP TABLE IF EXISTS temp.tdb_difficulty')
+    connection.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM '
+                       f'tdb_creature_template_difficulty WHERE Entry IN({selected}) AND DifficultyID=0')
+    connection.execute(f'DELETE FROM content_creature_template WHERE entry IN({selected})')
+    retail_content.insert_tdb_templates(connection, selected, replace_legacy=True)
+    connection.execute(f'DELETE FROM content_creature_template_model WHERE CreatureID IN({selected})')
+    connection.execute('INSERT INTO content_creature_template_model SELECT * FROM '
+                       f'tdb_creature_template_model WHERE CreatureID IN({selected})')
+    connection.execute(f'DELETE FROM content_creature_template_addon WHERE entry IN({selected})')
+    connection.execute(f'INSERT INTO content_creature_template_addon SELECT entry, '
+                       f'{retail_content.ADDON_COLUMNS} FROM tdb_creature_template_addon WHERE entry IN({selected})')
+
+
+def read_nazan_source(connection):
+    """Read and authenticate source rows before any content-table writes."""
+    identity = connection.execute(
+        'SELECT entry,name,AIName,ScriptName FROM tdb_creature_template WHERE entry=17536').fetchone()
+    if identity != (17536, 'Nazan', '', ''):
+        raise ValueError('Nazan17536 source identity changed')
+    difficulties = connection.execute(
+        'SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty '
+        'WHERE Entry=17536 ORDER BY DifficultyID').fetchall()
+    if difficulties != [(0, 0), (2, 0)]:
+        raise ValueError('Nazan17536 source difficulties must remain base0/Heroic2 CT0')
+    models = connection.execute(
+        'SELECT Idx,CreatureDisplayID FROM tdb_creature_template_model '
+        'WHERE CreatureID=17536 ORDER BY Idx').fetchall()
+    if models != [(0, 18812)]:
+        raise ValueError('Nazan17536 source model identity changed')
+    addons = connection.execute(
+        'SELECT count(*) FROM tdb_creature_template_addon WHERE entry=17536').fetchone()[0]
+    if addons != 1:
+        raise ValueError('Nazan17536 missing source addon')
+    return identity[0]
+
+
+def write_nazan_heroic(connection):
+    # CT0 has no stored range. Bounds1 are cache placeholders, never native-level acceptance;
+    # ordinary runtime spawning resolves the actual map/area range before selecting stats.
+    written = connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
+        (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
+         LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
+         DamageModifier,lootid,mingold,maxgold)
+        SELECT d.Entry,d.DifficultyID,1,1,health_expansion(d.HealthScalingExpansion),
+            d.ContentTuningID,d.HealthScalingExpansion,d.LevelScalingDeltaMin,d.LevelScalingDeltaMax,
+            d.HealthModifier,d.ManaModifier,d.ArmorModifier,d.DamageModifier,d.LootID,d.GoldMin,d.GoldMax
+        FROM tdb_creature_template_difficulty d
+        WHERE d.Entry=17536 AND d.DifficultyID=2 AND d.ContentTuningID=0''').rowcount
+    if written != 1:
+        raise ValueError('Nazan17536 missing actual CT0 Heroic2 row')
+
+
+def import_nazan_template(connection):
+    entry = read_nazan_source(connection)
+    replace_source_base_templates(connection, [entry])
+    write_nazan_heroic(connection)
+    return [entry]
+
+
+def import_herald_actors(connection):
+    effect = connection.execute(
+        'SELECT Effect,EffectMiscValue_0,EffectMiscValue_1 FROM spell_effect '
+        'WHERE SpellID=30717 AND EffectIndex=0 AND DifficultyID=0').fetchone()
+    if effect != (28, 17537, 64):
+        raise ValueError('Herald30717 must summon authored Vazruden17537/property64')
+    sources = [read_herald_actor_source(connection, 17537, 'boss_vazruden', (0, 2)),
+               read_herald_actor_source(connection, 21252, '', (0, 1, 2))]
+    replace_source_base_templates(connection, [entry for entry, _ in sources])
+    for entry, difficulties in sources:
+        for difficulty in difficulties:
+            if difficulty != 0:
+                project_difficulty(connection, entry, difficulty)
+    return [entry for entry, _ in sources]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -221,10 +326,18 @@ def main():
                 entries = [import_demonic_leap_template(conn)]
             elif args.encounter == 'omor':
                 entries = import_fiendish_hound(conn)
+            elif args.encounter == 'herald':
+                entries = import_herald_actors(conn)
+            elif args.encounter == 'herald-nazan':
+                entries = import_nazan_template(conn)
             elif args.encounter == 'leymor':
                 entries = [import_base_template(conn, 190509, 'npc_ley_line_sprouts')]
                 project_difficulty(conn, 190509, 1)
                 project_difficulty(conn, 190509, 23)
+            elif args.encounter == 'telash':
+                entries = [import_base_template(conn, 197204, '')]
+                project_difficulty(conn, 197204, 1)
+                project_difficulty(conn, 197204, 23)
             elif args.encounter == 'theradras':
                 entries = import_zaetar_spirit(conn)
             elif args.encounter == 'celebras':
@@ -235,7 +348,7 @@ def main():
                 entries = import_wailing_ritual_difficulties(conn)
             else:
                 entries = [import_mirror_template(conn)]
-    print(f'Prepared sourced encounter summon entries:{entries}; no placement inserted')
+    print(f'Prepared sourced encounter entries:{entries}; no placement inserted')
 
 
 if __name__ == '__main__':

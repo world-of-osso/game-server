@@ -10,6 +10,7 @@ reviewed copies; structural binding is not mechanic or native certification.
 import argparse
 import csv
 import hashlib
+import io
 import json
 import sqlite3
 from contextlib import closing
@@ -292,6 +293,19 @@ OMOR_SOURCES = {
     "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e",
     "Outland/HellfireCitadel/HellfireRamparts/boss_omor_the_unscarred.cpp": "958cac5caa7d131b172988e15943afd5571a48db2013b23010ef50cf3c2bbe2d",
 }
+HERALD_PRIMARY = dict(
+    map_id=543, entry=17307, encounter_id=1892, bit=1,
+    script="boss_vazruden_the_herald", journal_id=529, actor_id=1106, display_id=18944,
+)
+HERALD_SOURCES = {
+    "Outland/HellfireCitadel/HellfireRamparts/hellfire_ramparts.h": "9896de99ab8f2049a445af5168b152387bdd019315d898a44e8bf83d72967bce",
+    "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e",
+    "Outland/HellfireCitadel/HellfireRamparts/boss_vazruden_the_herald.cpp": "7a79dab1f28d5915d77c4d972c5f8f611e95a8bed5640374a490fc73a0806bba",
+}
+HERALD_RETAIL_BUILD = "12.1.5.70448"
+HERALD_CREDIT_POLICY = "ENCOUNTER_CREDIT_FROM_RETAIL_DUNGEONENCOUNTER"
+HERALD_IDENTITY_GAP = "HERALD_RETAIL_IDENTITY_GAP"
+
 PROFILES = {
     "omor": (OMOR_PRIMARY, OMOR_SOURCES),
     "gargolmar": (GARGOLMAR_PRIMARY, GARGOLMAR_SOURCES),
@@ -314,6 +328,7 @@ PROFILES = {
     "slagmaw": (SLAGMAW_PRIMARY, SLAGMAW_SOURCES),
     "gordoth": (GORDOTH_PRIMARY, GORDOTH_SOURCES),
     "cobrahn": (COBRAHN_PRIMARY, WAILING_SOURCES),
+    "herald": (HERALD_PRIMARY, HERALD_SOURCES),
 }
 
 # Normal DB2 bits, not the source SAI ordinals. Journal actors/models are exact
@@ -427,7 +442,40 @@ def validate_journal(journal, creatures, primary=PRIMARY):
         raise ValueError(f"missing journal primary actor relation: {primary['entry']}")
 
 
-def main():
+def read_herald_identity_csv(path, expected):
+    if path is None or path.suffix != '.csv':
+        raise ValueError(f'{HERALD_IDENTITY_GAP}: required active70448 CSV input: {path}')
+    try:
+        content = path.read_bytes()
+        rows = csv.DictReader(io.StringIO(content.decode('utf-8')))
+        matching = [row for row in rows if row.get('ID') == str(expected['ID'])]
+    except (OSError, UnicodeError, csv.Error) as error:
+        raise ValueError(f'{HERALD_IDENTITY_GAP}: cannot read {path}: {error}') from error
+    if len(matching) != 1:
+        raise ValueError(f'{HERALD_IDENTITY_GAP}: expected one {expected["ID"]} row in {path}')
+    if any(matching[0].get(key) != str(value) for key, value in expected.items()):
+        raise ValueError(f'{HERALD_IDENTITY_GAP}: active70448 identity disagrees in {path}')
+    return hashlib.sha256(content).hexdigest()
+
+
+def read_herald_retail_identity(dungeon, journal, creatures, build):
+    if build != HERALD_RETAIL_BUILD:
+        raise ValueError(f'{HERALD_IDENTITY_GAP}: expected Retail {HERALD_RETAIL_BUILD}, got {build}')
+    primary = HERALD_PRIMARY
+    name = 'Vazruden the Herald'
+    inputs = [
+        (dungeon, dict(ID=primary['encounter_id'], MapID=primary['map_id'],
+                       Bit=primary['bit'], DifficultyID=0, Name_lang=name)),
+        (journal, dict(ID=primary['journal_id'], DungeonEncounterID=primary['encounter_id'],
+                       JournalInstanceID=248, Name_lang=name)),
+        (creatures, dict(ID=primary['actor_id'], JournalEncounterID=primary['journal_id'],
+                         CreatureDisplayInfoID=primary['display_id'], Name_lang=name)),
+    ]
+    hashes = {str(path): read_herald_identity_csv(path, expected) for path, expected in inputs}
+    return dict(credit_identity_policy=HERALD_CREDIT_POLICY, retail_source_sha256=hashes)
+
+
+def read_binding_arguments():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--encounter", choices=list(PROFILES), default="kystia")
     parser.add_argument("--db", type=Path, required=True)
@@ -435,12 +483,23 @@ def main():
     parser.add_argument("--journal", type=Path, required=True)
     parser.add_argument("--journal-build", required=True)
     parser.add_argument("--creatures", type=Path, required=True)
+    parser.add_argument("--dungeon-encounter", type=Path,
+                        help="active70448 DungeonEncounter.csv, required for Herald")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main():
+    args = read_binding_arguments()
     primary, sources = PROFILES[args.encounter]
     validate_source_files(args.tc_dir, sources)
-    validate_journal(args.journal, args.creatures, primary)
+    identity_report = {}
+    if args.encounter == 'herald':
+        identity_report = read_herald_retail_identity(
+            args.dungeon_encounter, args.journal, args.creatures, args.journal_build)
+    else:
+        validate_journal(args.journal, args.creatures, primary)
     with closing(
         sqlite3.connect(args.db.resolve().as_uri() + "?mode=ro", uri=True)
     ) as conn:
@@ -454,6 +513,7 @@ def main():
                 source_sha256=sources,
                 primary_actor=primary,
                 bindings=rows,
+                **identity_report,
             ),
             indent=2,
         )

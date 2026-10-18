@@ -2027,6 +2027,11 @@ class Db2ReimportTests(unittest.TestCase):
         self.csv_root = root / "csv"
         self.csv_dir = self.csv_root / db2.DEFAULT_BUILD
         write_header_only_csvs(self.csv_dir)
+        active = self.csv_root / "active"
+        active.mkdir()
+        (active / "receipt.json").write_text(
+            json.dumps({"identity": {"build": db2.DEFAULT_BUILD}})
+        )
         with (self.csv_dir / "SpellName.csv").open("a", newline="") as handle:
             csv.writer(handle).writerow([35395, "Crusader Strike"])
         self.db = root / "world.db"
@@ -2043,9 +2048,58 @@ class Db2ReimportTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT * FROM chr_races").fetchall(), [(1, "Human")])
             self.assertEqual(conn.execute("SELECT count(*) FROM db2_build").fetchone()[0], len(db2.TABLES))
 
+    def test_native_aura_restrictions_survive_import_and_replace_on_reimport(self):
+        # Exact 12.1.5.70391 fields/rows: Victory Rush, Execute, Massacre and
+        # spell170183's nonzero required/excluded aura-spell references.
+        columns = (
+            "ID", "DifficultyID", "CasterAuraState", "TargetAuraState",
+            "ExcludeCasterAuraState", "ExcludeTargetAuraState", "CasterAuraSpell",
+            "TargetAuraSpell", "ExcludeCasterAuraSpell", "ExcludeTargetAuraSpell",
+            "CasterAuraType", "TargetAuraType", "ExcludeCasterAuraType",
+            "ExcludeTargetAuraType", "SpellID",
+        )
+        native_rows = [
+            {"ID": 91, "CasterAuraState": 10, "SpellID": 34428},
+            {"ID": 8972, "TargetAuraState": 2, "SpellID": 163201},
+            {"ID": 14127, "TargetAuraState": 13, "SpellID": 281000},
+            {"ID": 9155, "CasterAuraSpell": 170198, "TargetAuraSpell": 170198,
+             "ExcludeCasterAuraSpell": 170183, "ExcludeTargetAuraSpell": 170183,
+             "SpellID": 170183},
+        ]
+        for selected in (native_rows, native_rows[-1:]):
+            with (self.csv_dir / "SpellAuraRestrictions.csv").open("w", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(columns)
+                writer.writerows(
+                    tuple(row.get(column, 0) for column in columns)
+                    for row in selected
+                )
+            result = run_db2_import(self.csv_root, self.db)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            with closing(sqlite3.connect(self.db)) as conn:
+                table = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' "
+                    "AND name='spell_aura_restrictions'"
+                ).fetchone()
+                self.assertIsNotNone(
+                    table, "successful DB2 import discarded the native aura restriction rows"
+                )
+                observed = conn.execute(
+                    f"SELECT {','.join(columns)} FROM spell_aura_restrictions ORDER BY ID"
+                ).fetchall()
+                expected = sorted(
+                    tuple(row.get(column, 0) for column in columns)
+                    for row in selected
+                )
+                self.assertEqual(observed, expected)
+                receipt = conn.execute(
+                    "SELECT build FROM db2_build WHERE table_name='spell_aura_restrictions'"
+                ).fetchone()
+                self.assertEqual(receipt, (db2.DEFAULT_BUILD,))
+
     def test_header_mismatch_fails_and_leaves_previous_import_intact(self):
         self.assertEqual(run_db2_import(self.csv_root, self.db).returncode, 0)
-        (self.csv_dir / "SpellName.csv").write_text("ID,Name_lang,Extra\n1,Renamed,0\n")
+        (self.csv_dir / "SpellName.csv").write_text("ID\n1\n")
         result = run_db2_import(self.csv_root, self.db)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("SpellName.csv header does not match spell_name", result.stderr)
@@ -2075,7 +2129,7 @@ class PinnedBuildImportTests(unittest.TestCase):
         return self.conn.execute(sql, params).fetchall()
 
     def test_every_table_records_the_pinned_build(self):
-        self.assertEqual(self.one("SELECT DISTINCT build FROM db2_build"), [("12.1.0.69933",)])
+        self.assertEqual(self.one("SELECT DISTINCT build FROM db2_build"), [("12.1.5.70448",)])
         self.assertEqual(self.one("SELECT count(*) FROM db2_build"), [(len(db2.TABLES),)])
 
     def test_crusader_strike_is_a_paladin_class_skill_ability(self):

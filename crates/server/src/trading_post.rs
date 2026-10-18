@@ -1,6 +1,8 @@
 //! Server-authoritative Mainline Trading Post, using existing monthly gameplay credit.
 #[path = "trading_post_catalog.rs"]
 mod catalog;
+#[path = "trading_post_persistence.rs"]
+mod persistence;
 #[cfg(test)]
 #[path = "trading_post_tests.rs"]
 mod tests;
@@ -57,6 +59,7 @@ fn load_catalog(mut commands: Commands) {
 }
 
 fn receive_requests(world: &mut World) {
+    persistence::flush_replies(world);
     let requests: Vec<_> = world
         .query_filtered::<(
             Entity,
@@ -75,19 +78,7 @@ fn receive_requests(world: &mut World) {
     for (connection, account, player, request) in requests {
         info!(?connection, account, ?request, "TP_DELIVERY_SERVER_RECV");
         crate::adventure_guide::settle_month_for_connection(world, connection);
-        let result = execute(world, connection, account, player, &request);
-        info!(?connection, ?result, "TP_DELIVERY_SERVER_EXECUTE");
-        if let Ok(changed) = &result {
-            publish_collections(world, account, changed);
-        }
-        let rows = match (&request, &result) {
-            (TradingPostRequest::Query, _) => Rows::Catalog,
-            (_, Ok(changed)) if !changed.is_empty() => {
-                Rows::AffectedBy(changed.iter().map(|(vendor, _)| *vendor).collect())
-            }
-            _ => Rows::None,
-        };
-        send_snapshot(world, connection, account, result.err(), rows);
+        persistence::queue_request(world, connection, account, player, &request);
     }
 }
 
@@ -146,44 +137,6 @@ fn affected_rows(catalog: &catalog::CatalogData, vendors: &[u32]) -> HashSet<u32
         .collect()
 }
 
-fn catalog_offers<'a>(
-    catalog: &'a catalog::CatalogData,
-    vendors: &[u32],
-    refund_duration: u32,
-) -> Result<Vec<store::Offer<'a>>, String> {
-    vendors
-        .iter()
-        .map(|id| {
-            let (row, grant) = catalog.items.get(id).ok_or("Unknown Trading Post item.")?;
-            let grant = grant.as_ref().map_err(Clone::clone)?;
-            Ok(store::Offer {
-                vendor: *id,
-                price: row.price,
-                grant,
-                refund_duration,
-            })
-        })
-        .collect()
-}
-
-fn purchase_cart(
-    world: &World,
-    account: u64,
-    catalog: &catalog::CatalogData,
-    vendors: &[u32],
-    now: i64,
-) -> Result<Vec<(u32, store::Grant)>, String> {
-    let window = world
-        .get_resource::<RefundWindow>()
-        .map_or(0, |window| window.0);
-    let offers = catalog_offers(catalog, vendors, window)?;
-    let state = store::checkout(&world.resource::<GameDatabase>().db, account, &offers, now)?;
-    Ok(offers
-        .iter()
-        .map(|offer| (offer.vendor, state.purchases[&offer.vendor].granted.clone()))
-        .collect())
-}
-
 fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<Entity, String> {
     let active = world
         .get::<crate::npc_interaction::ActiveInteraction>(connection)
@@ -196,85 +149,11 @@ fn active_vendor(world: &World, connection: Entity, player: Entity) -> Result<En
     Ok(active.npc)
 }
 
-/// A purchase or refund returns its vendor item and the grant to publish.
-fn execute(
+fn prepare_snapshot(
     world: &World,
     connection: Entity,
-    account: u64,
-    player: Entity,
-    request: &TradingPostRequest,
-) -> Result<Vec<(u32, store::Grant)>, String> {
-    if matches!(
-        request,
-        TradingPostRequest::Query | TradingPostRequest::Balance
-    ) {
-        return Ok(Vec::new());
-    }
-    active_vendor(world, connection, player)?;
-    let catalog = world
-        .resource::<catalog::Catalog>()
-        .0
-        .as_ref()
-        .map_err(Clone::clone)?;
-    let now = world.resource::<crate::maps::ServerClock>().unix();
-    let db = &world.resource::<GameDatabase>().db;
-    match request {
-        TradingPostRequest::Query | TradingPostRequest::Balance => Ok(Vec::new()),
-        TradingPostRequest::Checkout { vendor_item_ids } => {
-            purchase_cart(world, account, catalog, vendor_item_ids, now)
-        }
-        TradingPostRequest::Purchase { vendor_item_id } => {
-            let (row, grant) = catalog
-                .items
-                .get(vendor_item_id)
-                .ok_or("Unknown Trading Post item.")?;
-            let grant = grant.as_ref().map_err(Clone::clone)?;
-            store::purchase(
-                db,
-                account,
-                store::Offer {
-                    vendor: *vendor_item_id,
-                    price: row.price,
-                    grant,
-                    refund_duration: world
-                        .get_resource::<RefundWindow>()
-                        .map_or(0, |window| window.0),
-                },
-                now,
-            )?;
-            Ok(vec![(*vendor_item_id, grant.clone())])
-        }
-        TradingPostRequest::Refund { vendor_item_id } => {
-            let state = store::load(db, account);
-            let receipt = state
-                .purchases
-                .get(vendor_item_id)
-                .ok_or("Trading Post receipt unavailable.")?;
-            let grant = receipt.granted.clone();
-            store::refund(db, account, *vendor_item_id, now)?;
-            Ok(vec![(*vendor_item_id, grant)])
-        }
-        TradingPostRequest::Freeze { vendor_item_id } => {
-            if let Some(id) = vendor_item_id {
-                let (_, grant) = catalog
-                    .items
-                    .get(id)
-                    .ok_or("Unknown frozen Trading Post item.")?;
-                grant.as_ref().map_err(Clone::clone)?;
-            }
-            store::freeze(db, account, *vendor_item_id);
-            Ok(Vec::new())
-        }
-    }
-}
-
-fn send_snapshot(
-    world: &mut World,
-    connection: Entity,
-    account: u64,
-    error: Option<String>,
-    rows: Rows,
-) {
+    rows: &Rows,
+) -> (TradingPostSnapshot, Option<catalog::CatalogData>, i64) {
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let calendar = crate::adventure_guide::calendar_month(now);
     let summary = world
@@ -285,13 +164,7 @@ fn send_snapshot(
             start_unix: calendar.start_unix,
             end_unix: calendar.end_unix,
         });
-    let state = store::settle(
-        &world.resource::<GameDatabase>().db,
-        account,
-        summary.start_unix,
-        0,
-        &[],
-    );
+    let state = store::State::default();
     let npc = world
         .get::<PlayerLink>(connection)
         .and_then(|link| active_vendor(world, connection, link.0).ok())
@@ -313,7 +186,7 @@ fn send_snapshot(
                 .into(),
             refund_gap(world.get_resource::<RefundWindow>().map_or(0, |window| window.0)),
         ],
-            error,
+            error: None,
         };
     if let crate::adventure_guide::AdventureCatalog::Ready(data) =
         world.resource::<crate::adventure_guide::AdventureCatalog>()
@@ -329,34 +202,37 @@ fn send_snapshot(
             })
             .collect();
     }
-    match &world.resource::<catalog::Catalog>().0 {
+    let reply_catalog = match &world.resource::<catalog::Catalog>().0 {
         Ok(catalog) => {
-            snapshot.items = match rows {
+            let affected = match rows {
                 Rows::Catalog => {
                     snapshot.categories = catalog.categories.clone();
-                    collection_rows(world, account, catalog, &state, now)
+                    None
                 }
-                Rows::AffectedBy(vendors) => {
-                    let affected = affected_rows(catalog, &vendors);
-                    collection_rows(world, account, catalog, &state, now)
-                        .into_iter()
-                        .filter(|row| affected.contains(&row.id))
-                        .collect()
-                }
-                Rows::None => Vec::new(),
+                Rows::AffectedBy(vendors) => Some(affected_rows(catalog, vendors)),
+                Rows::None => Some(HashSet::new()),
             };
+            let items = catalog
+                .items
+                .iter()
+                .filter(|(id, _)| affected.as_ref().is_none_or(|ids| ids.contains(*id)))
+                .map(|(id, (row, grant))| {
+                    let mut row = row.clone();
+                    row.usable = item_usability(world, connection, row.item_id);
+                    (*id, (row, grant.clone()))
+                })
+                .collect();
+            Some(catalog::CatalogData {
+                categories: Vec::new(),
+                items,
+            })
         }
-        Err(error) => snapshot.source_gaps.push(error.clone()),
-    }
-    for row in &mut snapshot.items {
-        row.usable = item_usability(world, connection, row.item_id);
-    }
-    if let Some(mut sender) = world.get_mut::<MessageSender<TradingPostSnapshot>>(connection) {
-        info!(?connection, full=snapshot.catalog_complete, rows=snapshot.items.len(), tender=snapshot.tender, frozen=?snapshot.frozen_item_id, error=?snapshot.error, "TP_DELIVERY_SERVER_SEND");
-        sender.send::<InstanceChannel>(snapshot);
-    } else {
-        error!(?connection, "TP_DELIVERY_SERVER_MISSING_SENDER");
-    }
+        Err(error) => {
+            snapshot.source_gaps.push(error.clone());
+            None
+        }
+    };
+    (snapshot, reply_catalog, summary.start_unix)
 }
 
 /// Existing Player::CanUseItem class/race/level facts, also used by merchant lists.
@@ -378,13 +254,12 @@ fn refund_gap(window: u32) -> String {
 }
 
 fn collection_rows(
-    world: &World,
+    db: &redb::Database,
     account: u64,
     catalog: &catalog::CatalogData,
     state: &store::State,
     now: i64,
 ) -> Vec<TradingPostItem> {
-    let db = &world.resource::<GameDatabase>().db;
     let appearances = crate::persistence::appearance_store::load_account_appearances(db, account);
     let mounts = crate::persistence::mount_store::load(db, account);
     let toys = crate::persistence::toy_store::load(db, account);

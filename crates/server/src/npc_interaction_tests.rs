@@ -17,6 +17,8 @@ use crate::gold::GoldUpdateQueue;
 
 #[path = "npc_interaction/guild_tabard_tests.rs"]
 mod guild_tabard_tests;
+#[path = "npc_interaction/mobile_banking_tests.rs"]
+mod mobile_banking_tests;
 #[path = "transmog_tests.rs"]
 mod transmog_tests;
 
@@ -83,9 +85,9 @@ fn harness_with(player_faction: u32, extra: impl FnOnce(&mut App)) -> Option<Har
     add_inbox::<AuctionSearchResults>(&mut app);
     add_inbox::<AuctionOperationResponse>(&mut app);
     app.insert_resource(templates);
-    app.insert_resource(crate::persistence::GameDatabase {
-        db: crate::persistence::temp_database(),
-    });
+    app.insert_resource(crate::persistence::GameDatabase::new(
+        crate::persistence::temp_database(),
+    ));
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((
         NpcInteractionPlugin,

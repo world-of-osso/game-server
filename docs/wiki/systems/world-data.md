@@ -6,6 +6,10 @@ Creature spawn orientation is loaded from `creature.orientation` (WoW heading ra
 
 Static, read-only world data loaded from SQLite at server startup. Two Bevy resources: `WorldData` (creatures, spawns, waypoints) and `SpellStore` / `ClassSpells` (Retail DB2 spells and class lists, see [[spell-info]]).
 
+## Template source selection
+
+Verified2026-10-17: `zephras_content.py::OverlayWriter.insert` records authored overlay provenance in `zephras_row_source`. `world_data::load_authored_template_ids` reads only `table_name='content_creature_template'`, `kind='reconstructed'` and the JSON `row_key.entry`, retaining those IDs in `WorldData.authored_templates`. Ordinary spawning selects their authored fixed stats before considering regional Retail tuning. This is source selection, not a fallback: absence of tuning, level shape and absence of a TDB row never classify a template. Yala Windwatcher249363 has the actual reconstructed marker and retains level5/102HP; Retail source17536CT0 still requires real map/area context. [Scaling contract](../../specs/level-scaling.md).
+
 ## Database
 
 File: `data/world.db` (132 MB). Regenerate with `scripts/import-azerothcore.sh`.
@@ -40,6 +44,10 @@ Source: `~/Repos/azerothcore/data/sql/base/db_world/`
 Quest, vendor, trainer, loot, gossip and item tables are imported from the same dumps; tables, row counts, the Wrath→Retail ID mapping and the derived Retail-first `content_*` tables (the ones the server should read) are in [[content-import]]. No server code reads them yet.
 
 `scripts/mysql_dump.py` loads every dump table (MySQL string escapes decoded; `--schema world_schema.sql` reloads the dump tables into a populated `world.db` in one transaction without touching DB2 tables).
+
+### Native Curve type inputs
+
+The maintained publisher includes `curve(ID, Type, Flags)` rather than guessing interpolation from `curve_point`. [Curve publication](../../db2-active-inputs.md#native-curve-type-publication) owns installed-build provenance, readable-row coverage and explicit encrypted exclusions. This data-input change does not implement area-trigger scale or certify canonical publication.
 
 ### Spell/Class Data (Retail WoW DB2 CSVs)
 

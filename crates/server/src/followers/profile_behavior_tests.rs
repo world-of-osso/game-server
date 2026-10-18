@@ -368,3 +368,257 @@ profile_case!(follower_labelled_kybel_devastation_evoker, 215240);
 profile_case!(follower_labelled_bo_windwalker_monk, 227734);
 profile_case!(follower_labelled_lantha_demonology_warlock, 230861);
 profile_case!(follower_labelled_ralia_feral_druid, 232800);
+
+#[test]
+fn current_victim_garrick_primary_death_without_alternate_returns_to_owner() {
+    use bevy::ecs::system::RunSystemOnce;
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    let primary = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    crate::combat::mark_npc_dead_world(h.app.world_mut(), primary);
+    update_ai(h.app.world_mut());
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(unit)
+            .unwrap(),
+        crate::creature_ai::CreatureState::Idle
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .unwrap()
+            .owner,
+        h.caster
+    );
+    let before = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(unit)
+        .unwrap();
+    h.app
+        .world_mut()
+        .run_system_once(crate::creature_ai::chase_system)
+        .unwrap();
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<shared::components::Position>(unit)
+            .unwrap(),
+        before
+    );
+}
+
+#[test]
+fn current_victim_garrick_primary_death_preserves_live_alternate_party_defence() {
+    let (mut h, unit, _) = spawn_profile_fixture(209057);
+    update_ai(h.app.world_mut());
+    h.advance(3);
+    let alternate = spawn_npc(&mut h.app, 5.0);
+    h.app.world_mut().entity_mut(alternate).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+    ));
+    let owner = h.caster;
+    crate::creature_aggro::add_threat(h.app.world_mut(), alternate, owner, 100.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(alternate)
+            .unwrap()
+            .0,
+        Some(owner),
+        "fixture must establish real party engagement before primary death"
+    );
+    let primary = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<Health>(primary)
+        .unwrap()
+        .current = 0.0;
+    crate::combat::mark_npc_dead_world(h.app.world_mut(), primary);
+    update_ai(h.app.world_mut());
+    assert_eq!(
+        *h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(unit)
+            .unwrap(),
+        crate::creature_ai::CreatureState::Pursuing {
+            target: alternate.to_bits()
+        }
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(unit)
+            .unwrap()
+            .0,
+        Some(alternate)
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::FollowOwner>(unit)
+            .is_none()
+    );
+    let before = h.health(alternate);
+    for _ in 0..45 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.health(alternate) < before,
+        "real sourced Garrick spells still defend the party after the primary dies"
+    );
+}
+
+struct ChaseTraceWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+impl std::io::Write for ChaseTraceWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[test]
+#[ignore = "requires real Stockade navigation and server LOS bake"]
+fn diagnostic_tank_chase_trace_records_victim_and_pre_stop_cached_route_at_same_tick() {
+    use crate::navigation::{Goal, MoveRequest, Step};
+    use bevy::ecs::system::RunSystemOnce;
+    use shared::components::{ModelDisplay, Position};
+    const CHILD: &str = "TANK_CHASE_TRACE_CAPTURE_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "diagnostic_tank_chase_trace_records_victim_and_pre_stop_cached_route_at_same_tick",
+                "--ignored",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return;
+    }
+    let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
+    let victim = h.npc;
+    let data = crate::ground::ground_data_dir();
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&data.join("navmesh")));
+    h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&data.join("los")).unwrap());
+    let from = Position {
+        x: 121.1,
+        y: -25.6,
+        z: -3.9,
+    };
+    let cached = Position {
+        x: 123.6,
+        y: -25.61,
+        z: -4.14,
+    };
+    let map = crate::maps::InMap::continent(34);
+    h.app.world_mut().entity_mut(tank).insert((
+        from,
+        map,
+        ModelDisplay { display_id: 113753 },
+        crate::creature_ai::SpawnPoint {
+            x: from.x,
+            y: from.y,
+            z: from.z,
+            wander_distance: 0.0,
+            speed_walk: 1.0,
+            speed_run: 1.14286,
+        },
+        crate::creature_ai::CreatureState::Pursuing {
+            target: victim.to_bits(),
+        },
+        crate::networking::CombatTarget(Some(victim)),
+    ));
+    h.app
+        .world_mut()
+        .entity_mut(victim)
+        .insert((cached, map, ModelDisplay { display_id: 35076 }));
+    let seed = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::navigation::Navigation>()
+        .advance(
+            tank,
+            MoveRequest {
+                map_id: 34,
+                goal: Goal::Chase(victim.to_bits()),
+                from,
+                to: cached,
+                distance: 0.0,
+                reach: 2.0,
+            },
+        );
+    assert!(matches!(seed, Step::Moved { .. }));
+    *h.app.world_mut().get_mut::<Position>(victim).unwrap() = Position {
+        x: 122.66,
+        y: -25.61,
+        z: -3.91,
+    };
+    h.app
+        .world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_millis(50));
+    let tick = h.app.world().resource::<Time>().elapsed_secs_f64();
+    let bytes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let writer = bytes.clone();
+    let subscriber = bevy::log::tracing_subscriber::fmt()
+        .with_env_filter("game_server::chase_trace=debug")
+        .without_time()
+        .with_ansi(false)
+        .with_writer(move || ChaseTraceWriter(writer.clone()))
+        .finish();
+    bevy::log::tracing::subscriber::with_default(subscriber, || {
+        h.app
+            .world_mut()
+            .run_system_once(crate::creature_ai::chase_system)
+            .unwrap();
+    });
+    assert_eq!(
+        *h.app.world().get::<Position>(tank).unwrap(),
+        from,
+        "diagnostic trace must not change the current-victim stop"
+    );
+    let text = String::from_utf8(bytes.lock().unwrap().clone()).unwrap();
+    assert!(
+        text.contains("tank chase frame"),
+        "missing tank trace: {text}"
+    );
+    assert!(
+        text.contains(&format!("actor={}", tank.to_bits())),
+        "{text}"
+    );
+    assert!(
+        text.contains(&format!("victim=Some({})", victim.to_bits())),
+        "{text}"
+    );
+    assert!(text.contains(&format!("simulation_secs={tick}")), "{text}");
+    assert!(
+        text.contains("tank cached chase route")
+            && text.contains("destination:")
+            && text.contains("points:")
+            && text.contains("next:")
+            && text.contains("terminal_leg:"),
+        "missing real pre-stop cache: {text}"
+    );
+}

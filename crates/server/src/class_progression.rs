@@ -307,7 +307,7 @@ fn compute_known_spells(
 /// auto-learned abilities for the race up to `level` (LearnSkillRewardedSpells,
 /// Player.cpp:25407-25457). An AutomaticSkillRank ability needs the line's starting
 /// value to reach its `MinSkillLineRank`.
-fn default_skill_spells(class: &ClassInfo, race: u8, level: u8) -> Vec<KnownSpell> {
+pub(crate) fn default_skill_spells(class: &ClassInfo, race: u8, level: u8) -> Vec<KnownSpell> {
     let mut learned_lines = Vec::new();
     let mut spells = Vec::new();
     for line in &class.default_skills {

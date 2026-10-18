@@ -4,6 +4,44 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+/// Advance the real selection/admission path until its player is published.
+pub(crate) fn wait_for_selected_player(
+    app: &mut bevy::prelude::App,
+    connection: bevy::prelude::Entity,
+) -> bevy::prelude::Entity {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        if let Some(link) = app.world().get::<crate::networking::PlayerLink>(connection) {
+            let player = link.0;
+            app.update();
+            return player;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "selection never published its player"
+        );
+        app.update();
+        drain_persistence(app.world().resource::<crate::persistence::GameDatabase>());
+    }
+}
+
+/// Wait for a real FIFO fence before asserting durable fixture rows.
+pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
+    let receipt = db.writer.enqueue("fixture durability fence", |_| Ok(()));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        if let Some(result) = receipt.result() {
+            result.expect("fixture persistence fence failed");
+            return;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "fixture persistence fence timed out"
+        );
+        std::thread::yield_now();
+    }
+}
+
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.
 /// Prepared/mutable database copies must use their own loaders, never this cache.
 pub(crate) fn world_data() -> &'static crate::world_data::WorldData {
@@ -65,6 +103,22 @@ fn prepared_class_fixture_remains_read_only_and_app_mutations_are_isolated() {
 /// `data/world.db` of this checkout.
 pub(crate) fn world_db_path() -> PathBuf {
     require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
+}
+
+/// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
+pub(crate) fn ground_map() -> crate::ground::GroundMap {
+    let connection = rusqlite::Connection::open_with_flags(
+        world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("read-only terrain map metadata");
+    let store = crate::maps::store::load_map_store(&connection).expect("source map metadata");
+    let wdts = store
+        .maps
+        .into_iter()
+        .map(|(id, map)| (id, map.wdt_file_data_id))
+        .collect();
+    crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), wdts)
 }
 
 /// `path`, panicking with how to provide it when it does not exist.
