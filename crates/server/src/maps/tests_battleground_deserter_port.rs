@@ -2,12 +2,17 @@ use super::*;
 
 #[test]
 fn bg_deserter_port_concrete_refuses_late_aura_and_releases_reservation() {
-    assert_late_deserter_port_refusal(1018);
+    assert_late_deserter_port_refusal(1018, 19, shared::battleground::BgPhase::InProgress);
 }
 
 #[test]
 fn bg_deserter_port_random_refuses_late_aura_and_releases_reservation() {
-    assert_late_deserter_port_refusal(32);
+    assert_late_deserter_port_refusal(32, 19, shared::battleground::BgPhase::InProgress);
+}
+
+#[test]
+fn bg_deserter_port_waiting_copy_refuses_late_aura_and_releases_reservation() {
+    assert_late_deserter_port_refusal(1018, 1, shared::battleground::BgPhase::Waiting);
 }
 
 #[test]
@@ -110,11 +115,6 @@ fn enter_supports(h: &mut Harness, supports: &[Traveler], match_id: u64) -> InMa
     }
     let copy = h.map_of(&supports[0]).unwrap();
     assert!(supports.iter().all(|who| h.map_of(who) == Some(copy)));
-    assert!(
-        supports
-            .iter()
-            .all(|who| battleground(h, who).phase == shared::battleground::BgPhase::InProgress)
-    );
     copy
 }
 
@@ -132,12 +132,22 @@ fn request_port(h: &mut Harness, who: &Traveler, match_id: u64) -> Vec<PvpStateU
         .expect("normal invitation response")
 }
 
-fn assert_late_deserter_port_refusal(queue_id: u32) {
+fn assert_late_deserter_port_refusal(
+    queue_id: u32,
+    support_count: usize,
+    expected_phase: shared::battleground::BgPhase,
+) {
     let (mut h, players, _database) = pending_battleground(queue_id);
     let held = &players[0];
     let character = h.app.world().get::<ClientId>(held.player).unwrap().0;
     let invitation = battleground(&h, held).clone();
-    let copy = enter_supports(&mut h, &players[1..], invitation.match_id);
+    let supports = &players[1..=support_count];
+    let copy = enter_supports(&mut h, supports, invitation.match_id);
+    assert!(
+        supports
+            .iter()
+            .all(|who| battleground(&h, who).phase == expected_phase)
+    );
     assert!(
         h.new_worlds(held).is_empty(),
         "held player was not accepted"
@@ -176,7 +186,12 @@ fn assert_late_deserter_port_refusal(queue_id: u32) {
         Some(TransferAbortReason::MapNotAllowed),
         "normal decline must release the real copy reservation"
     );
-    assert!(players[1..].iter().all(|who| h.map_of(who) == Some(copy)));
+    assert!(supports.iter().all(|who| h.map_of(who) == Some(copy)));
+    assert!(
+        players[support_count + 1..]
+            .iter()
+            .all(|who| h.map_of(who) == Some(STORMWIND))
+    );
     clear_deserter(&mut h, held);
     let updates = request_queue(&mut h, held, queue_id);
     assert!(
