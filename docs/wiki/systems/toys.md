@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Private weather/shell/raft/easel boundaries and retained cooking proof (2026-10-17)
+
+[Source350–354 matrix](../../toy-effects14-coverage.md#source350354-private-weathershellrafteasel-boundaries-and-retained-cooking-proof-2026-10-17) keeps Title55 outdoor/party-private weather, mixed shell105964/action26/set1048, water/jump-paddle Dinghy104/226 and Easel373/191/base2.5 action/movement gaps.351 retains exact [source16 cooking CPU scope](../../toy-effects14-coverage.md#cooking-focus-batch16-2026-10-12); shared Grim native fire is not Maruuk per-toy pixels. **329 correction:** runtime `tdb_gameobject_template` is authoritative for summoned objects and contains offering377204/74995; earlier absence inference from empty base/content GO tables is withdrawn, interaction gap unchanged. No runtime/data/new admission or own heavy duplicate.
+
 ## Slide/wyrmhole/recalibration/private-environment/perception boundaries (2026-10-17)
 
 [Source345–349 matrix](../../toy-effects14-coverage.md#source345349-slidewyrmholerecalibrationprivate-environmentperception-gaps-2026-10-17) preserves mixed slide373/104/312set1047/periodic23-child/263, engineering2827/rank1 Wyrmhole access/travel/triangulation, recalibrator area-trigger179/27706, outdoors party/raid-private Title55 environment and observer-scoped233 gnoll perception. Wyrmhole195667/environment194993 runtime templates are absent, and the existing Wyrmhole census remains blocked. No guessed cadence/destinations/race pools, privacy reduction, inert imports or new positive/native proof; pending lead478 is not duplicated.
@@ -24,7 +28,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Audio/launch/wisdom/animation/offering boundaries (2026-10-17)
 
-[Source325–329 matrix](../../toy-effects14-coverage.md#source325329-audiolaunchwisdomanimationoffering-boundaries-2026-10-17) preserves509 audio-filtering scope, mixed98/base1200 launch,189951/properties5348/Title27 wisdom actor,312/set61 animation replacement and377204/type3 offering interaction. Wisdom/display107044 and offering/display74995 exist in TDB but not runtime templates; availability does not prove advice or acceptance action. Source cast/duration/item-versus-inherited recovery remains exact. No new positive/native proof, inert import, guessed stealth/launch/loot behavior or own heavy duplicate.
+[Source325–329 matrix](../../toy-effects14-coverage.md#source325329-audiolaunchwisdomanimationoffering-boundaries-2026-10-17) preserves509 audio-filtering scope, mixed98/base1200 launch,189951/properties5348/Title27 wisdom actor,312/set61 animation replacement and377204/type3 offering interaction. Wisdom/display107044 exists in source TDB but lacks runtime content; offering377204/display74995 is present in the runtime TDB table actually loaded for summoned objects (earlier absence inference corrected). Availability does not prove advice or acceptance action. Source cast/duration/item-versus-inherited recovery remains exact. No new positive/native proof, inert import, guessed stealth/launch/loot behavior or own heavy duplicate.
 
 ## Pending Harpy acceptance and fruit/core/star-mode boundaries (2026-10-17)
 
