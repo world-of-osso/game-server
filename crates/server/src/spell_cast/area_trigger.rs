@@ -5,6 +5,7 @@
 //! Missing or unsupported source definitions never acquire guessed geometry.
 mod aura_owned;
 mod catalog;
+mod frozen_ground;
 mod vault_rune;
 
 pub(crate) use aura_owned::{on_applied as on_aura_applied, on_removed as on_aura_removed};
@@ -22,7 +23,9 @@ pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
 /// Aura395 collides with the unit's source reach; effect179 keeps its spell radius.
 pub(crate) fn avoidance_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
-    if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
+    if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some()
+        || world.get::<frozen_ground::FrozenGround>(entity).is_some()
+    {
         return aura_owned::collision_radius(world, entity, unit);
     }
     Some(world.get::<SpellAreaTrigger>(entity)?.radius)
@@ -60,6 +63,14 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
             dest.orientation,
             duration,
         );
+        return;
+    }
+    if ctx.spell.id == frozen_ground::SPELL
+        && effect.misc_values[0] == frozen_ground::CREATE_PROPERTIES
+    {
+        if let Err(reason) = frozen_ground::create(world, ctx, dest.position) {
+            warn!(spell = ctx.spell.id, "Frozen Ground not created: {reason}");
+        }
         return;
     }
     let Some(map) = world.get::<InMap>(ctx.caster).copied() else {
@@ -137,6 +148,10 @@ pub(super) fn update_area_triggers(world: &mut World) {
 }
 
 fn update_trigger(world: &mut World, entity: Entity) {
+    if world.get::<frozen_ground::FrozenGround>(entity).is_some() {
+        frozen_ground::update(world, entity);
+        return;
+    }
     if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
         aura_owned::update(world, entity);
         return;

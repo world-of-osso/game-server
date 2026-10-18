@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Ordinary Frozen Ground — 2026-10-18
+
+Exact387149/26505 dispatch creates a destination-owned field using existing source catalog30679/CAST387150/ENEMY, curve53094 and native duration. Only this effect179 binding is added. It reuses source-reach membership and caster-scoped action undo from aura-owned fields; the destination does not follow the bomb target. Aura387150 owns periodic damage and slow; the field has no damage tick clock. Caster/map loss and natural expiry retire its membership actions.
+
+Separate test-only15d93895d (history-rewritten into867c3a7e6) reached actual ordinaryFrost expiry: missing387150 and radius0vs5 are accepted genuine REDs. Follower spawn/reach/private-nav prerequisites passed, then its consumer stopped at the same missing Player aura; that is not an independent escape RED. Implementation GREEN and downstream lifecycle/escape proof are pending. Foreign-caster preservation has no fabricated normal-play producer/control; no full-Azure, budget, Mythic or VFX claim.
+
+Private2515 geometry has4LOS/4M2-floor/4nav tiles,512 immutable input hashes:450 local70448 content-key/MD5-authenticated files plus31M2/31skins authorized from canonical published data, explicitly not re-verified against70448 keys. Three WMO group FDIDs were initially misclassified in a later canonical audit, corrected via GFID/listfile and authenticated on extraction. Original archive failures have no proven resolution-content divergence or diagnosed cause; no cache repair. Sources: TC a352b1fa Frost expiry and AreaTrigger action/scale semantics, native70448 properties26505/template30679/curve53094, [contract](../../specs/follower-dungeons.md#azure-sourced-partial), `spell_cast/area_trigger/frozen_ground.rs`; receipts under `/home/osso/.worktrees/follower-dungeons-2026-10-13/azure-frozen-ground-private-70448/` and `azure-frozen-ground-proof-ledger.json`.
+
 ## Expel Harm total-heal consequence — 2026-10-17
 
 Named322101-only nonperiodic callback runs after resolved self-heal logging and the existing Beacon call. It uses literal total `amount`, including overheal, and native e1 percentage10 to dispatch actual115129 with the existing dynamic child helper and no explicit unit. Do not substitute `effective` health gained or recalculate heal coefficients/variance/crit. Child native CANT_CRIT/ignore-caster-percent attributes retain root heal modifiers once and normal victim immunity/absorb. Other healing and Beacon's effective-transfer policy remain unchanged; no new state/generic extraction/trigger API.
