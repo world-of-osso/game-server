@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source515–519: pending colorful-chair acceptance and wing/two-person-cracker boundaries (2026-10-17)
+
+517 test/spec66ca57ee0 adds exact Colorful Beach Chair to the existing transmitted-object helper, now11 identities with old ten unchanged. Actual learned3s cast/type7/model89277/size1.5/source2yd front/owner/map/facing/ordinary300s expiry assertions are committed; format/manual readability/diffcheck pass, behavior needs a head AFTER498c013. Seated interaction remains separate. No further runtime/data changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|515 Essence of Yu'lon217725/440836 | Instant self periodic-dummy226/every20000ms for28800000ms/eight hours; category2272 recovery10000ms. Exact occasional Yu'lon wings/conditions/visual lifecycle remains unaudited; no guaranteed20s activation, borrowed Chi-Ji/Xuen art or invented healing/stat buff. |
+|516 Fortitude of Niuzao217726/440838 | Same eight-hour periodic226/20000ms/category2272/10000ms, distinct Niuzao identity. Actual occasional wing cadence/eligibility/cleanup remains gap, not one-shot aura, inherited sibling certificate or name-derived tank bonus. |
+|517 Colorful Beach Chair218112/441839 | Source3000ms target47 effect50→existing434317/type7/display89277/size1.5 for300000ms; source radius2yd, item300000ms recovery. Own actual placement/model/scale/state/expiry acceptance committed as eleventh object row, behavioral proof pending. No cursor87/scale1/fishing-chair substitute or seated/native/full-recharge certificate. |
+|518 Draconic Banner of the Aspects218128/442240 | Instant target47 summon existing220620/display118153/scale1/property64/base1 for60000ms, inherited600000ms recovery. Exact existing seasonal16-case row retains learned-use/source2yd front/owner/map/faction/stationary/ordinary expiry CPU witness. No fresh native/state-kit/ten-minute recharge proof. |
+|519 Winter Veil Cracker218308/472725 | Instant self periodic-dummy226/every2000ms for3600000ms, item1800000ms recovery. Source requires a second person to pull and one participant receives a surprise. Actual paired interaction/eligibility/recipient/payload/holding cleanup remains unresolved; no solo-success aura, both-participant reward or guessed gift pool/currency. |
+
+Evidence: private `rows515-519-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `chair517-{active-goal,proof-ledger}.json`, actual chair display bounds and radius7→2yd.149865 Tea Set remains untouched.
+
 ## Gate496 fixture-order failures corrected;498 pending (2026-10-17)
 
 Inspected496 through4df7af2e6 FAILED303passed/2failed/1ignored536.82s/client9/EXIT101/FMT0, compile2m16s/no warnings. Exact450 Claw first recovery check saw source1500ms GCD and returned OnGlobalCooldown, not OnCooldown. Exact473 Stasis checked toy recovery after restored Frostbolt entered combat, returning AffectingCombat. Lead accepted both as fixture ordering errors; test-onlyc013eafdd naturally advances30frames/1500ms before longer recovery and checks Stasis recovery before casting the restored Frostbolt. Identities/durations/cast/refusal assertions remain; no timer/combat reset, failure clearing or expectation weakening. Format/fmtcheck/manual readability/diffcheck/exact push readback pass, corrected behavior not yet certified.
