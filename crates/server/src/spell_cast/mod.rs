@@ -134,6 +134,8 @@ pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod readiness_lifetime_tests;
 #[cfg(test)]
+mod scourge_eruption_tests;
+#[cfg(test)]
 mod summon_lifetime_tests;
 #[cfg(test)]
 mod touch_of_death_tests;
