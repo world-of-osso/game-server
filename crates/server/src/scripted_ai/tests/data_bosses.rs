@@ -21,6 +21,8 @@ mod azure_mechanic_power;
 mod azure_rune_callbacks;
 #[path = "azure_rune_fields.rs"]
 mod azure_rune_fields;
+#[path = "azure_rune_strip.rs"]
+mod azure_rune_strip;
 #[path = "azure_sprout_death.rs"]
 mod azure_sprout_death;
 #[path = "azure_sprout_field_actions.rs"]
