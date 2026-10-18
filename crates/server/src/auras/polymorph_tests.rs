@@ -266,7 +266,6 @@ fn polymorph_expires_after_60_seconds_and_restores_the_kobold() {
 }
 
 fn assert_kobold_attacks_again(h: &mut Harness) {
-    let health = h.health(h.caster);
     let first_event = h.inbox.log.len();
     h.advance(100);
     let swings: Vec<_> = h.inbox.log[first_event..]
@@ -283,8 +282,8 @@ fn assert_kobold_attacks_again(h: &mut Harness) {
         })
         .collect();
     assert!(
-        h.health(h.caster) < health,
-        "the kobold attacks again; actual swings={swings:?}"
+        !swings.is_empty(),
+        "the kobold must resume an actual melee swing at the mage"
     );
 }
 
@@ -302,7 +301,20 @@ fn polymorph_expiry_with_native_evasive_maneuvers_still_resumes_swing_attempts()
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(has_aura(h.app.world(), h.caster, EVASIVE_MANEUVERS));
+    let health = h.health(h.caster);
+    let first_event = h.inbox.log.len();
     assert_kobold_attacks_again(&mut h);
+    assert_eq!(
+        h.health(h.caster),
+        health,
+        "native guaranteed misses deal no damage"
+    );
+    assert!(h.inbox.log[first_event..].iter().any(|event| {
+        event.source == Some(h.npc.to_bits())
+            && event.target == Some(h.caster.to_bits())
+            && event.spell_id.is_none()
+            && event.kind == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Miss)
+    }));
 }
 
 /// The user's Retail observation: a sheep regains 5% of its max health every second.

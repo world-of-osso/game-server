@@ -2775,3 +2775,5 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 ## Native Mobile Banking acceptance complete
 
 [Native proof](systems/guild-perks.md#native-mobile-banking-proof): both-skin cast/bank/nonmember refusal/despawn and actual post2h accepted casts pass on identical artifacts. Forever7242700ms complements the retained Modern-origin7311223ms interval. Fifteen inspected unchanged full-HD originals published; owned runtimes stopped and owner-checked window cleared. Earlier interrupted overall results remain intact; countdown labels are not timing oracles.
+
+- 2026-10-18: Gate547 Polymorph HP-oracle failure qualified with native50240 forced misses: RED7d14e1113 logs three actual zero-damage melee misses while oldHPassertion fails. Replace both recovery HP checks with directed ordinary swing events, retain real native forced-miss control;264consumer unchanged. See [auras](systems/auras.md#polymorph-recovery-swing-oracle--2026-10-18).

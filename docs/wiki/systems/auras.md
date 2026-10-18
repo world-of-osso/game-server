@@ -58,6 +58,10 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 
 The shared-slot boundary was exposed by [native Sprout Arcane Power](../investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): fourteen actual source casters reached the correct summoner but beneficial replacement retained only one count. Passive/native multislot exceptions, channels and the native DOT rule stay out of shared-slot merging. This rule does not implement aura276's damage modifier.
 
+### Polymorph recovery swing oracle — 2026-10-18
+
+Post-break/expiry attack resumption is proved by a new ordinary melee combat-log event from the Kobold to the Mage (no spell, Damage or Miss), not an HP decrease within100 simulation frames. `combat.rs::swing_log_event` publishes avoided attempts with zero damage, so the previous HP oracle could reject correct resumed attacks. Native Evasive Maneuvers50240, normally cast after full Polymorph expiry, deterministically produces three real Miss(Miss) events with unchanged Mage health while the old oracle fails. The control retains the actual60s expiry, display restoration and ordinary attack path; no RNG/stat/row edits or264 consumer relaxation. A positive swing event also fails if the creature genuinely remains unable to attack.
+
 ### Classification
 
 - **Harmful** (`AuraApplication::_InitFlags`, SpellAuras.cpp:113-147): from itself or a caster not friendly to the target, an aura with a negative applied effect; from a friendly caster, an aura with no positive applied effect. Effect positivity is `spell_info::positivity`, a port of `SpellInfo::_InitializeSpellPositivity` / `_isPositiveEffectImpl` (SpellInfo.cpp:4612-5105): `SPELL_ATTR0_AURA_IS_DEBUFF` and `SPELL_ATTR4_AURA_IS_BUFF` first, then effect and aura types, base-point signs and enemy implicit targets. Polymorph 118 (MOD_CONFUSE, TRANSFORM at an enemy target) is a debuff on the neutral Blackrock Spy (`FactionTemplate` 7), which the old hostility rule made a buff. `spell_custom_attr` marks are not modelled.
