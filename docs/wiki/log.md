@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source665–669 pending Dominating acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source665669-pending-dominating-victory-and-missing-metadata-qualified-flare-corpse-flagrod-boundaries-2026-10-18):9470e4859 appends264413/1271973/1800000ms to unchanged caster helper, now20 identities/old19 retained; format/manual readability/diffcheck pass, behavior awaits lead successor. Preserve unnamed264368/1271857 metadata gap, qualified32/64/32 flare/missing257541/base0, enemy-corpse22/93 flag and Rod25/395/shrink/two5000 payloads/permanent corpse transform. No invented actor/eligibility/timing, runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source660–664 pending Preyseeker acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source660664-pending-preyseeker-hearthstone-and-minipet-leash-tap-state-mixed-mushroom-triggered-homebind-boundaries-2026-10-18):3b3f52940 appends263933/1270814/source10s/shared2309 to unchanged saved-bind helper, now24 hearthstones/old23 retained; source PreventionType4 retained without broader prevention certificate. Format/manual readability/diffcheck pass; behavior pending lead successor. Target90 leash, tap-state lens, missing mixed76/179 mushroom and actual Mycomancer1299014/64→1286909/252 remain gaps. No substituted child root, runtime/data/native change or own heavy jobs.
