@@ -41,7 +41,6 @@ fn read_movement_intent(h: &Harness, unit: Entity) -> MovementIntent {
 }
 
 #[test]
-#[ignore = "RED: full-kit picker wastes Counterspell on a noninterruptible cast"]
 fn follower_kit_interrupt_does_not_spend_on_noninterruptible_cast() {
     let (mut h, unit) = level32(209059);
     utility_tests::start_enemy_fireball(&mut h, unit);
@@ -63,7 +62,6 @@ fn follower_kit_interrupt_does_not_spend_on_noninterruptible_cast() {
 }
 
 #[test]
-#[ignore = "RED: ready Shield must follow a genuinely cooling Rebuke, before other actions"]
 fn follower_kit_interrupt_rebuke_cooldown_uses_ready_shield_before_buffs() {
     let (mut h, unit) = level32(209057);
     utility_tests::start_enemy_fireball(&mut h, unit);
@@ -129,7 +127,6 @@ fn two_casting_enemies(h: &mut Harness, unit: Entity) -> [Entity; 2] {
 }
 
 #[test]
-#[ignore = "RED: picker must continue to the second source-ready caster without chasing"]
 fn follower_kit_interrupt_uses_second_engaged_caster_without_chasing() {
     let (mut h, unit) = level32(209059);
     let candidates = two_casting_enemies(&mut h, unit);
@@ -152,7 +149,6 @@ fn follower_kit_interrupt_uses_second_engaged_caster_without_chasing() {
 }
 
 #[test]
-#[ignore = "RED: failed native readiness must preserve an existing cast and movement intent"]
 fn follower_kit_interrupt_out_of_range_preserves_cast_and_navigation_intent() {
     let (mut h, unit) = level32(209059);
     let candidates = two_casting_enemies(&mut h, unit);
@@ -172,7 +168,6 @@ fn follower_kit_interrupt_out_of_range_preserves_cast_and_navigation_intent() {
 }
 
 #[test]
-#[ignore = "RED: populated kit must never substitute a below-level interrupt"]
 fn follower_kit_interrupt_respects_source_level_gate() {
     let (mut h, unit) = at_level(209059, 1, |_| {});
     utility_tests::start_enemy_fireball(&mut h, unit);
@@ -198,7 +193,6 @@ fn install_native_catalog(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED: absent spec rows must retain the explicit legacy interrupt bridge"]
 fn follower_kit_interrupt_absent_rows_preserve_legacy_kick() {
     let (mut h, unit) = level32(209059);
     h.app
@@ -221,7 +215,6 @@ fn follower_kit_interrupt_absent_rows_preserve_legacy_kick() {
 }
 
 #[test]
-#[ignore = "RED: actual learned pet interrupt must preserve the companion owner's cast"]
 fn follower_kit_interrupt_actual_felguard_keeps_owner_cast() {
     let (mut fixture, pet) = super::pet_tests::felguard_at_level(17);
     install_native_catalog(&mut fixture.h);
@@ -255,7 +248,6 @@ fn follower_kit_interrupt_actual_felguard_keeps_owner_cast() {
 }
 
 #[test]
-#[ignore = "RED: a native level16 Felguard must not gain level17 Axe Toss"]
 fn follower_kit_interrupt_unlearned_pet_spell_is_not_granted() {
     let (mut fixture, pet) = super::pet_tests::felguard_at_level(16);
     install_native_catalog(&mut fixture.h);
@@ -306,7 +298,6 @@ fn prepare_native_charge_target(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED: picker must retain ordinary Skull Bash parent and native-only charge motion"]
 fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
     let (mut h, unit) = level32(232800);
     prepare_native_charge_target(&mut h);
