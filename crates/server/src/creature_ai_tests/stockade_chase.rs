@@ -453,6 +453,20 @@ fn riverpaw_runs_on_the_floor_facing_its_way_and_stops_facing_the_player() {
             target: target.to_bits(),
         },
     );
+    #[derive(Resource, Default)]
+    struct GroundedChaseSamples(Vec<Position>);
+    app.init_resource::<GroundedChaseSamples>();
+    app.add_systems(
+        FixedUpdate,
+        (move |world: &mut World| {
+            let position = *world.get::<Position>(chaser).unwrap();
+            world
+                .resource_mut::<GroundedChaseSamples>()
+                .0
+                .push(position);
+        })
+        .after(chase_system),
+    );
     let mut ground = stockade_ground();
     let mut last = *app.world().get::<Position>(chaser).unwrap();
     let mut ran = 0;
@@ -481,15 +495,38 @@ fn riverpaw_runs_on_the_floor_facing_its_way_and_stops_facing_the_player() {
     }
     assert!(ran > 5, "ran {ran} ticks");
     let target_pos = bevy(PLAYER_ON_FLOOR);
-    // TC a352b1fa Position.h121–127/155–157 and PathGenerator.cpp982–1010 use3D.
-    // Keep the original2yd value and0.01yd tolerance, not its XZ projection.
+    // TC a352b1fa ChaseMovementGenerator.cpp44–53 and Position.h121–127/155–157:
+    // in-range3Dpredicate, not exact boundary; PathGenerator.cpp1031–1034 is a guesstimate.
+    // Keep2yd and the existing0.01yd upper epsilon. Observe every fixed movement tick.
     let gap = Vec3::new(
         target_pos.x - last.x,
         target_pos.y - last.y,
         target_pos.z - last.z,
     )
     .length();
-    assert!((gap - 2.0).abs() < 0.01, "stops2yd short in3D: {gap}");
+    assert!(gap <= 2.0 + 0.01, "stops inside2yd3Dreach: {gap}");
+    let mut first_entry = None;
+    for &sample in &app.world().resource::<GroundedChaseSamples>().0 {
+        if let Some(entry) = first_entry {
+            assert_eq!(
+                sample, entry,
+                "must not move after first grounded3Dreach entry"
+            );
+        } else {
+            let offset = Vec3::new(
+                sample.x - target_pos.x,
+                sample.y - target_pos.y,
+                sample.z - target_pos.z,
+            );
+            if offset.length_squared() <= 2.0 * 2.0 {
+                let floor =
+                    floor_under(&mut ground, sample).expect("ground support at reach entry");
+                assert!((sample.y - floor).abs() < 0.05);
+                first_entry = Some(sample);
+            }
+        }
+    }
+    assert!(first_entry.is_some(), "must actually enter grounded3Dreach");
     assert_eq!(
         *app.world().get::<CreatureMotion>(chaser).unwrap(),
         CreatureMotion::Still
