@@ -56,10 +56,14 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
         return Some(crate::scripted_ai::murder_row::cast_initial_felshield);
     }
     super::toy_scripts::cast_effect(spell, index)
-        .or_else(|| batch13::cast_effect(spell, index))
         .or_else(|| batch14::cast_effect(spell, index))
         .or_else(|| batch9::cast_effect(spell, index))
 }
+/// Native per-unit scripts replace the default effect handler before dispatch.
+pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    batch13::effect_handler(spell, index)
+}
+
 pub(super) use batch12::empower_gargoyles;
 pub(super) use batch13::refund_execute;
 pub(crate) use batch13::{HAUNT, RAPID_FIRE, cast_rapid_fire_tick, reset_haunt_on_death};
