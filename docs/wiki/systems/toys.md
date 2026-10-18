@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Cold Ones rack and mixed chair/device/crate/homebind boundaries (2026-10-17)
+
+[Source575–579 matrix](../../toy-effects14-coverage.md#source575579-pending-cold-ones-rack-acceptance-and-mixed-chairdevicecratehomebind-boundaries-2026-10-17) adds acceptance-only0e4c5ed9b:234951/1215364/505415/type22/display97591/scale0.75/actual cursor/180s as12th object, old11/helper unchanged; format/manual readability/diffcheck pass, behavior needs head AFTER505. Rack's Data0 can aura is not automatic trigger/item yield. Missing controlled chair232549/mixed aura, step-on goblination area36000, distinct carried crate3141 and homebind252 plus cancellation298 remain gaps; no ordinary chair/self transform/20th simple hearthstone substitution. Lead505 queued through Golem573; no result/landing inferred or own heavy duplicate.
+
 ## Pending Golem self-transform and banners/unnamed-season/carried-crate boundaries (2026-10-17)
 
 [Source570–574 matrix](../../toy-effects14-coverage.md#source570574-pending-golem-self-transform-and-retained-bannersunnamed-seasoncarried-crate-boundaries-2026-10-17) adds acceptance-only06d44ef20:233202/473407/234479/six valid models/instant30min/1h recovery as16th disguise plus Oomgut17IDs; old15/helper unchanged, behavior awaits lead covering head. Existing Prized/Astral source-banner cases retained;232308/233151 remains missing item/model metadata with literal `[Season]`. Hallowfall self293/misc3118/1 carried-crate appearance remains gap, not inventory supply yield. No separate possession actor inferred from Golem self56, runtime/data/native proof or own heavy duplicate.
