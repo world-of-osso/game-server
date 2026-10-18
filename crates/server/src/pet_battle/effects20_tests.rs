@@ -109,6 +109,40 @@ fn pet_battle_poison_protocol_each_miss_skips_only_its_paired_poison_and_all_mis
 }
 
 #[test]
+fn pet_battle_poison_protocol_direct_miss_cannot_poison_on_later_favorable_random_draws() {
+    struct FavorableAfterMiss(bool);
+    impl BattleRng for FavorableAfterMiss {
+        fn draw(&mut self) -> u32 {
+            if self.0 {
+                self.0 = false;
+                950_000
+            } else {
+                0
+            }
+        }
+    }
+    let catalog = catalog();
+    let mut initial = poison_battle(&catalog);
+    initial.teams[0].pets[0].stats.speed = 200;
+    initial.teams[1].pets[0]
+        .states
+        .insert(catalog.state_id("Stat_Dodge").unwrap(), 50);
+    //First direct hit misses50% dodge. Later zero draws would pass the aura's
+    //own accuracy roll: per-victim ChainFailure must still exclude this pet.
+    let (state, events) = initial
+        .step(
+            &catalog,
+            [Action::Ability(1954), Action::Pass],
+            &mut FavorableAfterMiss(true),
+        )
+        .unwrap();
+    assert_eq!(poisoned_slots(&state), [1, 2]);
+    assert_eq!(state.teams[1].pets[0].health, 10000);
+    assert_eq!(damage_amounts(&events, false), [40; 2]);
+    assert_eq!(damage_amounts(&events, true), [60; 2]);
+}
+
+#[test]
 fn pet_battle_poison_protocol_blocked_or_zero_direct_damage_cannot_qualify_a_poison() {
     let catalog = catalog();
     let mut initial = poison_battle(&catalog);
