@@ -179,7 +179,7 @@ fn azure_telash_ice_power_ticks_add_two_energy_each_native_second() {
     );
 }
 
-fn assert_living_victim(h: &mut Harness, telash: Entity) {
+pub(super) fn assert_living_victim(h: &mut Harness, telash: Entity) {
     let player = h.player();
     assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
     assert_eq!(
