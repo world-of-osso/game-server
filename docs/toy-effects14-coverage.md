@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Pango684 cancellation and ordinary shared recovery pending after535 (2026-10-18)
+
+Test/spec `223d0916c` adds `toyfx684_pango_cancel_restores_model_without_bypassing_shared_recovery`, extending the existing Full1166 Pango268717/1283490 baseline, not adding a new runtime identity. Actual learned use selects a source Pango model; real CancelAura removes its replicated aura/restores the previous model. Both learned Pango and Saptor268728/1283502 must still refuse. Ordinary50ms frames advance past580 simulated seconds while Saptor still refuses, then past600 seconds when its own learned root succeeds exactly once with source model/misc260346,8/one-hour duration and unchanged health. Neither aura deadlines nor cooldown state are edited; a failed use near580s must not restart recovery.
+
+Format/manual readability only; UNCOMPILED/UNEXECUTED AFTER535, whose38ced31bd cover excludes this test. Earlier shared-five baseline remains unchanged; this narrow Pango→Saptor case does not certify all five identities' cancellation/reuse, wall-clock timing, one-hour expiry, native art or weighted frequencies. No runtime/data changes or own heavy jobs. [Contract](specs/toys.md), [test](../crates/server/src/toys_disguise_tests.rs).
+
 ## Mycomancer664 gate532 passed and landed; Explosive593 queued535 (2026-10-18)
 
 Lead landing receipt confirms `8af454985` on server master `d0e0d7fc322b48e37c041a8e6cb24e9147ea6d58`; ancestry independently passes. Gate532 candidatefb2bd5a88 has the identical hearthstone test blob and reports server315 passed/0 failed/1 ignored/673.31s, EXIT0/FMT0/CHECK0. Exact Mycomancer664 learned-root test passes. Its [bounded CPU contract](#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18) is now executed/landed, not native/missing-bind/cross-map/natural-recharge proof. Explosive593 `38ced31bd` is separately queued as gate535;532 does not cover it. Earlier pending labels below retain source-stage history, not current Mycomancer status.

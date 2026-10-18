@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pango684 cancellation and shared recovery pending (2026-10-18)
+
+[Exact acceptance and limits](../../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Pango identity with real CancelAura restoration/no shared2513 bypass, refusal near580 simulated seconds and learned Saptor success after600 ordinary seconds. No deadline/cooldown mutation; prior shared-five fixture unchanged. Format/manual only, uncompiled/unexecuted AFTER535; no all-five lifecycle, wall-duration/hour-expiry/native/weighted-frequency certificate or runtime/data edit.
+
 ## Mycomancer664 landed after532; Explosive593 queued535 (2026-10-18)
 
 [Current proof and landing](../../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): feature8af454985 landed server masterd0e0d7fc3 per lead receipt and ancestry.532 server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test; native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd is separately queued535, not covered by532. Earlier pending labels below are source-stage history.
