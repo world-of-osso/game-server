@@ -99,3 +99,13 @@ fn tank_pull_budget_healer_incapacity_and_unknown_rates_never_get_nominal_capaci
     input.incoming_dps = f64::NAN;
     assert_eq!(evaluate(&input), Decision::Wait(Reason::Invalid));
 }
+
+#[test]
+fn tank_pull_budget_next_unaccounted_burst_is_added_to_sustained_debt() {
+    let mut input = measured();
+    input.incoming_dps = 160.0;
+    input.opening_burst = 100.0;
+    // 600 sustained debt plus the next100 damage not already in that rate leaves200,
+    // below the unchanged300 reserve. Taking max(600,100) incorrectly admits it.
+    assert_eq!(evaluate(&input), Decision::Wait(Reason::Reserve));
+}
