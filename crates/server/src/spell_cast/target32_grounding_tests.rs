@@ -36,8 +36,9 @@ fn caster_world() -> (World, Entity) {
             MAP,
             CENTER,
             Rotation {
+                x: 0.0,
                 y: std::f32::consts::FRAC_PI_2,
-                ..Default::default()
+                z: 0.0,
             },
         ))
         .id();
