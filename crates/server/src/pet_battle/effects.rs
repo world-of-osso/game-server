@@ -230,7 +230,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 let target = if super::rules::damages_enemy_team(ability) {
                     let order = match ability {
                         774 => (effect.order - 1) % 3 + 1,
-                        920 | 2378 => effect.order.div_ceil(2),
+                        920 | 1013 | 2378 => effect.order.div_ceil(2),
                         _ => effect.order,
                     };
                     other_team_slot(target, order)
@@ -240,6 +240,11 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, effect)
             }
             29 => {
+                let target = if ability == 1013 {
+                    other_team_slot(target, effect.order.div_ceil(2))
+                } else {
+                    target
+                };
                 if !self.required_states(caster, target, p[2], p[3]) {
                     return Ok(false);
                 }
