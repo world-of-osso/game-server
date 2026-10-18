@@ -69,10 +69,8 @@ fn toyfx473_stasis_sand_stuns_until_source_expiry_and_preserves_item_recovery() 
     );
     assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
     assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
-    h.cast_and_deliver(FROSTBOLT, Some(h.npc));
-    h.advance(80);
-    assert!(h.inbox.go.iter().any(|event| event.spell_id == FROSTBOLT));
     assert_eq!(h.inbox.failed.len(), 1, "{:?}", h.inbox.failed);
+    // Check out-of-combat toy recovery before the restored Frostbolt starts combat.
     assert_eq!(
         activate(&mut h, ITEM)[0].error.as_deref(),
         Some("OnCooldown")
@@ -80,4 +78,8 @@ fn toyfx473_stasis_sand_stuns_until_source_expiry_and_preserves_item_recovery() 
     assert_eq!(h.inbox.failed.len(), 2, "{:?}", h.inbox.failed);
     assert_eq!(h.inbox.failed[1].spell_id, SPELL);
     assert_eq!(h.inbox.failed[1].reason, CastFailReason::OnCooldown);
+    h.cast_and_deliver(FROSTBOLT, Some(h.npc));
+    h.advance(80);
+    assert!(h.inbox.go.iter().any(|event| event.spell_id == FROSTBOLT));
+    assert_eq!(h.inbox.failed.len(), 2, "{:?}", h.inbox.failed);
 }

@@ -156,6 +156,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             .find(|cooldown| cooldown.spell_id == spell && !cooldown.is_gcd)
             .unwrap();
         assert_eq!(cooldown.duration_ms, recovery_ms, "item{item}");
+        h.advance(30); // Let the source1500ms GCD expire before checking longer toy recovery.
         assert_eq!(
             activate(&mut h, item)[0].error.as_deref(),
             Some("OnCooldown"),
