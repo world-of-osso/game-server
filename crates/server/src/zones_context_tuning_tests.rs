@@ -80,7 +80,7 @@ fn area_fixture(area_id: u32) -> crate::ground::GroundMap {
     crate::ground::GroundMap::with_terrain(tile, terrain)
 }
 
-fn spawn_continent_fixture(mut data: WorldData, ground: crate::ground::GroundMap) -> App {
+fn spawn_continent_fixture(mut data: WorldData, mut ground: crate::ground::GroundMap) -> App {
     data.spawns[0].map = 0;
     data.spawns[0].position_x = -1.0;
     data.spawns[0].position_y = -1.0;
@@ -89,11 +89,17 @@ fn spawn_continent_fixture(mut data: WorldData, ground: crate::ground::GroundMap
     data.spawns[0].spawn_difficulties = vec![0];
     data.spawns_by_map = HashMap::from([(0, vec![0])]);
     let mut app = App::new();
-    app.add_plugins(MinimalPlugins).insert_resource(ground);
+    app.add_plugins(MinimalPlugins);
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, app.world());
     assert_eq!(
-        spawn_map_creatures(&mut commands, &data, MapContent::continent(0), false),
+        spawn_map_creatures(
+            &mut commands,
+            &data,
+            MapContent::continent(0),
+            false,
+            Some(&mut ground)
+        ),
         1
     );
     queue.apply(app.world_mut());
@@ -130,7 +136,10 @@ fn herald_context_ordinary_spawn_reads_actual_terrain_parent_not_spawn_zone() {
 #[ignore = "RED: missing ordinary terrain context is silently treated as fixed level"]
 fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
     let result = std::panic::catch_unwind(|| {
-        spawn_continent_fixture(sourced_nazan_fixture(), crate::ground::GroundMap::default());
+        drop(spawn_continent_fixture(
+            sourced_nazan_fixture(),
+            crate::ground::GroundMap::default(),
+        ));
     });
     let panic = result
         .err()
@@ -213,7 +222,7 @@ fn herald_context_ordinary_nazan_spawn_uses_authored_normal_and_heroic_map_tunin
             dead_bosses: vec![],
         };
         assert_eq!(
-            spawn_map_creatures(&mut commands, &data, content.clone(), false),
+            spawn_map_creatures(&mut commands, &data, content.clone(), false, None),
             1
         );
         queue.apply(app.world_mut());

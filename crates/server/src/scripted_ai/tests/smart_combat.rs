@@ -45,7 +45,12 @@ fn geomancer() -> (Harness, Entity) {
         &mut commands,
         wd,
         &wd.templates[&GEOMANCER],
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: 0,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),

@@ -333,6 +333,19 @@ pub mod test_helpers {
         flat_terrain_in_area(corner_x, corner_y, height, 0)
     }
 
+    /// Explicit MCNK areas under the supplied WoW points, for fixed-region fixtures.
+    pub fn terrain_areas(points: &[(f32, f32, u32)]) -> TerrainHeightMap {
+        let chunks = points
+            .iter()
+            .flat_map(|&(x, y, area)| {
+                let corner_x = (x / CHUNK_SIZE).ceil() * CHUNK_SIZE;
+                let corner_y = (y / CHUNK_SIZE).ceil() * CHUNK_SIZE;
+                flat_terrain_in_area(corner_x, corner_y, 0.0, area).chunks
+            })
+            .collect();
+        TerrainHeightMap { chunks }
+    }
+
     /// Explicit MCNK area fixture, consumed through GroundMap::area_at.
     pub fn flat_terrain_in_area(
         corner_x: f32,

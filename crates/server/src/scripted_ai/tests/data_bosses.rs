@@ -458,6 +458,7 @@ fn encounter_fixture(
             app.world().resource::<WorldData>(),
             content,
             false,
+            Some(&mut crate::test_data::ground_map()),
         );
         // Object spawns and their lock sidecar are unchanged by the template import.
         let canonical =
@@ -535,7 +536,12 @@ fn spawn_authored_actor(
         wd,
         wd.template_for(entry, difficulty)
             .expect("authored fixture difficulty"),
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: difficulty,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
