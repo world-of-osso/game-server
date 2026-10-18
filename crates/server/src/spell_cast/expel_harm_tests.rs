@@ -12,6 +12,7 @@ const EXPEL_HARM: u32 = 322101;
 const DAMAGE: u32 = 115129;
 const MISTWEAVER: u32 = 137024;
 const VIVIFY: u32 = 116670;
+const ENVELOPING_MIST: u32 = 124682;
 const FIREBALL: u32 = 133;
 const MARK: u32 = 1126;
 const SHIELD: u32 = 17;
@@ -22,6 +23,7 @@ const IDS: &[u32] = &[
     DAMAGE,
     MISTWEAVER,
     VIVIFY,
+    ENVELOPING_MIST,
     FIREBALL,
     MARK,
     SHIELD,
@@ -305,6 +307,23 @@ fn mistweaver_expel_native_immunity_and_absorb_apply_to_actual_child_not_the_sel
         }
         assert!(auras::has_aura(h.app.world(), target, spell));
         assert!(caster != priest);
+    }
+}
+
+#[test]
+fn mistweaver_expel_native_enveloping_and_vivify_preserve_healing_without_damage_children() {
+    let mut h = fixture(15.0);
+    injure(&mut h, 4);
+    for spell in [ENVELOPING_MIST, VIVIFY] {
+        h.cast_and_deliver(spell, Some(h.caster));
+        h.advance(50);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert!(
+            events(&h, spell, CombatLogKind::Heal)
+                .iter()
+                .any(|e| e.amount > 0)
+        );
+        assert!(events(&h, DAMAGE, CombatLogKind::Damage).is_empty());
     }
 }
 
