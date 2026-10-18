@@ -211,6 +211,44 @@ fn follower_kit_garrick32_finishes_flash_of_light() {
 }
 
 #[test]
+fn follower_kit_native_lay_on_hands_cooldown_allows_lower_heal() {
+    let (mut h, unit) = level32(209057);
+    wounded(&mut h, unit, 0.15);
+    uses_spell(&mut h, unit, 633);
+    wounded(&mut h, unit, 0.15);
+    uses_spell(&mut h, unit, 19750);
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits() && go.spell_id == 633)
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn follower_kit_crenna_does_not_reapply_active_rejuvenation() {
+    let (mut h, unit) = level32(209072);
+    let patient = h.caster;
+    wounded(&mut h, patient, 0.7);
+    uses_spell(&mut h, unit, 774);
+    for _ in 0..80 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(crate::auras::has_aura(h.app.world(), patient, 774));
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits() && go.spell_id == 774)
+            .count(),
+        1
+    );
+}
+
+#[test]
 #[ignore = "RED: Garrick previously lacked active mitigation"]
 fn follower_kit_garrick32_shield_of_the_righteous() {
     let (mut h, unit) = level32(209057);

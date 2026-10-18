@@ -8,6 +8,8 @@ use super::{Follower, FollowerCatalog, ai};
 use crate::maps::InMap;
 use crate::networking::CombatTarget;
 
+const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
+
 pub(super) fn update(
     world: &mut World,
     unit: Entity,
@@ -221,13 +223,21 @@ fn attempt_cast(
     follower: &Follower,
     entry: &Entry,
 ) -> bool {
+    // An already admitted heal must finish; selecting it again is not a new
+    // emergency. Re-starting it each tick would consume no mana and heal nobody.
+    if world
+        .get::<CastState>(unit)
+        .is_some_and(|cast| cast.spell_id == entry.spell_id && cast.target == target.to_bits())
+    {
+        return true;
+    }
     let urgent = entry.slot == Slot::Interrupt
         || entry.slot == Slot::Defensive
         || (entry.slot == Slot::Heal
             && entry
                 .conditions
                 .health_below
-                .is_some_and(|health| health <= 0.40));
+                .is_some_and(|health| health <= PROJECT_URGENT_HEAL_THRESHOLD));
     if world.get::<CastState>(unit).is_some() && !urgent {
         return false;
     }
