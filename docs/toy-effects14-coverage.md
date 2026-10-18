@@ -1,5 +1,9 @@
 # Toy effects14 — active whole-goal coverage
 
+## Mycomancer664 gate532 passed and landed; Explosive593 queued535 (2026-10-18)
+
+Lead landing receipt confirms `8af454985` on server master `d0e0d7fc322b48e37c041a8e6cb24e9147ea6d58`; ancestry independently passes. Gate532 candidatefb2bd5a88 has the identical hearthstone test blob and reports server315 passed/0 failed/1 ignored/673.31s, EXIT0/FMT0/CHECK0. Exact Mycomancer664 learned-root test passes. Its [bounded CPU contract](#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18) is now executed/landed, not native/missing-bind/cross-map/natural-recharge proof. Explosive593 `38ced31bd` is separately queued as gate535;532 does not cover it. Earlier pending labels below retain source-stage history, not current Mycomancer status.
+
 ## Explosive593 mixed hearthstone and Singed CPU acceptance pending after532 (2026-10-18)
 
 Test/spec `bb325c6a4` adds `toyfx593_explosive_hearthstone_returns_to_bind_and_expires_queued_singed_aura` for Full1166 item236687. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 retains actual root1220729/CastTime7=10000ms and both effects:252/targets1,9 plus self64→1220867/Singed, instant dummy4/misc0,0/Duration28=5000ms. Real learning/use checks no early return/root completion/Singed, then root completion/saved-bind return/root2309 one charge/recharge1800000ms, unchanged health/model and learned Corewarden refusal. The test asserts child aura presence before and removal after ordinary source expiry; it does not invoke the child directly. The25 direct cases/helper and separate Mycomancer fixture remain unchanged.

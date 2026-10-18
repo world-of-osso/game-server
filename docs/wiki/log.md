@@ -1,3 +1,7 @@
+## 2026-10-18 — Mycomancer664 landed after532; Explosive593 queued535
+
+[Current proof/landing](../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): lead receipt plus ancestry confirms8af454985 on server masterd0e0d7fc3.532server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test. Native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd separately queued535; no535result or landing claimed, no own jobs.
+
 ## 2026-10-18 — Explosive593 mixed hearthstone and Singed acceptance pending
 
 [Exact acceptance and limits](../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second bind252 plus queued self64→1220867/5000ms dummy4 Singed, shared2309 and Corewarden refusal. Ordinary child expiry tested without replacing/dropping child; native explosive/Singed presentation remains gap, no guessed damage. Original25/helper/Mycomancer unchanged. Format/manual only; uncompiled/unexecuted AFTER532, whose candidatefb2bd5a88 is not landing. No runtime/data/native/own heavy jobs.
