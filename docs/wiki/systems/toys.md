@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending mixed Chewed Wand acceptance and zombie/cage/rod/pelt boundaries (2026-10-17)
+
+[Source385–389 matrix](../../toy-effects14-coverage.md#source385389-pending-mixed-chewed-wand-acceptance-and-zombiecagerodpelt-boundaries-2026-10-17) adds acceptance-only27772d6ad: learned200249/389324/source1700ms self56+confusion5/10000ms, damaged37 health, cast blocking, ordinary expiry/restoration and1800000ms recovery refusal. Format/manual readability/diffcheck pass; future covering head required, not484afad. Runtime sheep weights1:1/build12340 versus pinned2:1/build69497 remain an explicit profile gap, no producer fix or sampling certificate. Mixed zombie speed/keybound406, Control4 prison, selected-player Dust Pile/misc9 and absent-runtime lounging pelt remain separate action/eligibility/lifecycle gaps. No plain-disguise shortcut, runtime/data/new native proof or own heavy duplicate.
+
 ## Compass/lava/unnamed-money/speech/leap boundaries (2026-10-17)
 
 [Source380–384 matrix](../../toy-effects14-coverage.md#source380384-compasslavaunnamed-moneyspeechleap-boundaries-2026-10-17) preserves north-pointing compass guidance, Dragon-Isles/outdoors lava immunity, unnamed200142's20g/payment and once-plus-three missile graph, mixed base7/script/aura speech, and caster-back leap/area-trigger odor actions.200142 has Toy/Item/on-use rows but no ItemSparse; coin GO identities absent from runtime TDB, no invented name or dropped cost/duplicate child. No audited-cosmetic shortcut, runtime/data/new positive proof or own heavy duplicate;484's exact older-head scope stays pending.
