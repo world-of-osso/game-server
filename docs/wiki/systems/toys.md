@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Shared Saptor category, missing nap/tent, retained Umbral banner and scripted starfish boundaries (2026-10-18)
+
+[Source685–689 matrix](../../toy-effects14-coverage.md#source685689-shared-saptor-category-missing-naptent-retained-umbral-banner-and-scripted-starfish-boundaries-2026-10-18) preserves Saptor's shared2513 ten-minute recovery/one-hour aura and122805 weight0.1, missing Nap Mat263791, existing Umbral Banner143906/60s fixture with explicit time-leap scope, missing target22/base0 Tent265250 and Starfish77 plus permanent child4. No equalized models, target87 tent, chair/fishing bonus or inert badge substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
+
 ## Mixed props, staff image, camera guides and short-recovery Pango boundaries (2026-10-18)
 
 [Source680–684 matrix](../../toy-effects14-coverage.md#source680684-mixed-props-staff-image-camera-guides-and-short-recovery-pango-boundaries-2026-10-18) preserves missing Hourglass/Bench mixed16 payloads and distinct aura/cancel contracts, source-instant missing original-owner staff image, camera293/60/321 with both mutual164 guide removals, and Pango's one-hour transform versus category2513 ten-minute recovery. Existing five Pango models establish metadata, not learned/restoration/category behavior; long-recovery helper cannot certify this timing without changing its contract. No runtime unsupported/RED claim, invented channel flag or generic camera substitute. No runtime/data/native change or own heavy jobs.

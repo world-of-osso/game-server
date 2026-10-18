@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source685–689: shared Saptor category, missing nap/tent, retained Umbral banner and scripted starfish boundaries (2026-10-18)
+
+Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Existing Umbral Banner exact stationary fixture retained among17 identities, not a new native/qualification certificate. Source Saptor shares Pango's shorter recovery category, outside the long-recovery disguise helper contract.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|685 Saptor Salve268728/1283502 | Instant self transform56/misc260346/8 for3600000ms, normal recovery0/category2513 recovery600000ms shared with Pango. Existing displays136118/122805/122804/122803/122802/122801 all scale1;122805 weight0.1, other five1. Actual learned model selection/restoration/shared reuse remains unverified; no equalized weights, independent timer or borrowed recovery-outlives-appearance certificate. |
+|686 Nap Mat272287/1290644 | Instant target47/base1 summon263791/property64/Control0/flags0 for600000ms, inherited1200000ms recovery; runtime actor/model absent. Actual mat/napping presentation/placement/lifecycle remains gap; no guessed creature/model, generic sleep aura or chair semantics from the name. |
+|687 Umbral Champion's Illustrious Banner272339/1290957 | Instant target47/base1 summon existing263908/property64/Control0/flags0 for60000ms, inherited600000ms recovery; display143906/scale1. Existing exact learned stationary-source fixture retained, including its explicit simulation-time expiry method, not ordinary wall-duration, native banner, arena acquisition qualification or full ten-minute reuse proof. |
+|688 Tuskarr Ice Fishing Tent274730/1295126 | Instant target22/base0 summon265250/property64/Control0/flags0 for900000ms, inherited3600000ms recovery; runtime actor/model absent. Actual target-selected tent/placement/fishing interaction/lifecycle remains gap; no target87 cursor substitute, assumed one static tent or fishing bonus from flavor. |
+|689 Gold Starfish274817/1295425 | Instant self script77 plus64→1295424/permanent self dummy4; explicit item10000ms recovery, child PreventionType4 retained. Actual badge display/script state/cleanup remains unaudited; no inert generic aura or acquisition/reputation gameplay inferred from "highest honor". Preserve77 and permanent child separately from root with no duration. |
+
+Evidence: private `rows685-689-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, shared2513 join and original0.1 model weight. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source680–684: mixed props, staff image, camera guides and short-recovery Pango boundaries (2026-10-18)
 
 Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Pango's one-hour appearance/ten-minute category recovery does not fit the existing disguise helper's recovery-outlives-appearance assertions; neither source timing nor existing assertions changed to force admission. Behavior remains unverified, not declared unsupported or RED.
