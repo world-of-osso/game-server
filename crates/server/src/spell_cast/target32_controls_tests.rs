@@ -47,9 +47,15 @@ fn resolve(world: &mut World, caster: Entity, selector: u32) -> Dest {
     };
     let requested = Some([WEST.x, WEST.y, WEST.z]);
     let destination = effect_dest(world, caster, Some(caster), &effect, requested);
-    ground_destination(world, caster, &effect, destination)
-        .unwrap()
-        .unwrap()
+    ground_destination(
+        world,
+        caster,
+        &crate::spell_info::SpellInfo::default(),
+        &effect,
+        destination,
+    )
+    .unwrap()
+    .unwrap()
 }
 
 #[test]

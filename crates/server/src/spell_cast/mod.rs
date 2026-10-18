@@ -2417,7 +2417,7 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
-        let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        let mut dest = targets::ground_destination(world, caster, spell, effect, dest)?;
         if let Some(dest) = &mut dest {
             scripts::relocate_destination(spell.id, effect, dest);
         }

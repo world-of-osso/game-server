@@ -32,6 +32,9 @@ use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
 use crate::spell_info::{SpellEffect, SpellInfo};
 
+#[path = "caster_summon_destination.rs"]
+mod caster_summon_destination;
+
 const MELEE_RANGE: f32 = 5.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
 const SPELL_ATTR1_EXCLUDE_CASTER: u32 = 0x0008_0000;
@@ -1043,7 +1046,7 @@ fn behind(world: &World, target: Entity, dist: f32) -> Option<Vec3> {
 /// `TARGET_DEST_CASTER_FRONT_LEFT`44 and its kin without a radius
 /// (`Spell::SelectImplicitCasterDestTargets`, Spell.cpp:1621-1629).
 const DEFAULT_TOTEM_DISTANCE: f32 = 3.0;
-/// PetDefines.h92, then Spell.cpp1635 clamps to GetCombatReach.
+/// PetDefines.h98, then Spell.cpp1635 clamps to GetCombatReach.
 const PET_FOLLOW_DISTANCE: f32 = 1.0;
 
 fn caster_summon_point(world: &World, caster: Entity) -> Option<Vec3> {
@@ -1242,9 +1245,13 @@ pub fn effect_dest(
 pub(super) fn ground_destination(
     world: &mut World,
     caster: Entity,
+    spell: &SpellInfo,
     effect: &SpellEffect,
     destination: Option<Dest>,
 ) -> Result<Option<Dest>, super::CastFailure> {
+    if effect.implicit_targets.contains(&32) {
+        return caster_summon_destination::read_destination(world, caster, spell, destination);
+    }
     let requires_ground = effect
         .implicit_targets
         .iter()
