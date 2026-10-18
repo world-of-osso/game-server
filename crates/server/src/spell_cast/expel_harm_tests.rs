@@ -311,10 +311,19 @@ fn mistweaver_expel_native_immunity_and_absorb_apply_to_actual_child_not_the_sel
 #[test]
 fn mistweaver_expel_native_repeated_casts_have_one_child_per_own_heal_without_stale_amounts() {
     let mut h = fixture(15.0);
+    let cooldown = world_db()
+        .unwrap()
+        .store
+        .get(EXPEL_HARM)
+        .unwrap()
+        .cooldowns
+        .as_ref()
+        .unwrap();
+    let wait = cooldown.recovery_ms.max(cooldown.category_recovery_ms) as usize / 50 + 4;
     let mut totals = Vec::new();
     for _ in 0..3 {
         totals.push(expel(&mut h).amount);
-        h.advance(31);
+        h.advance(wait);
     }
     let hits = events(&h, DAMAGE, CombatLogKind::Damage);
     assert_eq!(hits.len(), 3);
