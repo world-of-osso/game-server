@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Platter/tiny-rocks/vehicle-detection/hourglass-action boundaries and retained banner (2026-10-17)
+
+[Source465–469 matrix](../../toy-effects14-coverage.md#source465469-plattertiny-rocksvehicle-detectionhourglass-action-boundaries-and-retained-banner-2026-10-17) preserves mixed platter/script/service and base4/special-flag rock multiplicity with missing bodies. Idol296 sets vehicle8196 and500ms periodic child retains all four ordered repeated script recipients; not decorative tracking. Minute Glass override2600 grants six distinct60/120/300/600/1800/3600s mixed aura/area actions, not one root timer. Smoldering Banner208057 retains exact seasonal-fixture CPU witness. No runtime/data/new proof/native/own heavy duplicate;492 running.
+
 ## Pennant/mannequin/grain/relative-coordinate/pocketwatch boundaries (2026-10-17)
 
 [Source460–464 matrix](../../toy-effects14-coverage.md#source460464-pennantmannequingrainrelative-coordinatepocketwatch-boundaries-2026-10-17) preserves nonzero permanent Crimson pennant, script-driven mannequin selection, missing403749 grain crate, permanent1500ms periodic Thinking Cap and nonzero hour-long Pocketwatch. Source cap swaps w2/w1 with50000 offsets and re-equips to reset its coordinate origin; actual projection/thought behavior remains gap, not cosmetic or guessed map axes. No infection from grain's name or server-clock shift from pocketwatch. No runtime/data/new proof or own heavy duplicate;4920c77 compiling.

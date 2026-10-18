@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source465–469: platter/tiny-rocks/vehicle-detection/hourglass-action boundaries and retained banner (2026-10-17)
+
+No new acceptance/runtime/data changes or own heavy duplicate. Smoldering Banner retains its exact existing seasonal fixture; the other four retain functional/mixed contracts.4920c77bfdaa is running, no final result yet.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|465 Portable Party Platter207092/416145 | Source1000ms self script77 plus cursor87 summon210154/property5336 for180000ms; Control1/flags268439840, inherited7200000ms/start1500ms recovery. Runtime creature/model absent. Actual platter/pastry distribution/owner/placement/lifecycle remains unresolved; no inert decorative platter, invented servings or ignored script/control flags. |
+|466 Tiny Box of Tiny Rocks207099/386906 | Instant target47 summon195880/property3076/base4 for600000ms; flags2304, item900000ms recovery. Runtime creature/model absent. Exact source multiplicity, elemental behavior/placement/cleanup remain gaps; no arbitrary single scenery stone, erased base4 or guessed pet/control profile. |
+|467 Idol of Ohn'ahra207730/414338 | Instant self296/vehicle8196 plus periodic23/every500ms→416866, permanent-1; normal recovery0/start1500ms. Pinned296 sets a vehicle on the target. Child retains four script3 slots in order22/51,22/7,22/51,22/7. Actual vehicle/detection/object eligibility/repeated recipients/cancel lifecycle remain gaps, not decorative bird, deduplicated trigger or generic tracking aura. |
+|468 Smoldering Banner of the Aspects208057/417591 | Instant target47 summon existing208477/display113602/scale1/property64/base1 for60000ms; inherited600000ms recovery. Exact row in existing seasonal16-case fixture covers learned use/source2yd front/owner/map/faction/stationary/ordinary expiry, explicit ok in489. No fresh native/state-kit/full ten-minute reuse certificate. |
+|469 Minute Glass208058/417592 | Instant self override293/misc2600/1 for1800000ms, inherited3600000ms recovery. Override2600 grants417618/417902/417903/417906/417909/417912 for actual60/120/300/600/1800/3600s respectively; each mixes self dummy4 and target47 area179→29579. Actual actionbar input/selected timer/area/cleanup/restoration remains unresolved; no aura-only hourglass, one-duration substitute or dropped long timer when root expires. |
+
+Evidence: private `rows465-469-{readonly-source,action-source,action-extra-source,active-goal}.json`, pinned296 handler, complete override/duration joins and retained seasonal fixture.149865 Tea Set remains untouched.
+
 ## Source460–464: pennant/mannequin/grain/relative-coordinate/pocketwatch boundaries (2026-10-17)
 
 Distinct nonzero/script/periodic or missing-object contracts remain unaccepted. No runtime/data/producer/new proof or own heavy duplicate. Lead4920c77bfdaa is now compiling in the saved log; no behavioral result yet.

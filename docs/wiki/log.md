@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source465–469 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source465469-plattertiny-rocksvehicle-detectionhourglass-action-boundaries-and-retained-banner-2026-10-17): mixed platter/script/service and tiny-rock base4/special flags retain missing-body/action gaps. Idol296 is actual vehicle8196 with500ms periodic child and four ordered repeated script recipients, not generic bird tracking. Minute Glass override2600 grants six actual60/120/300/600/1800/3600s mixed self-aura/area29579 actions; no root-only timer shortcut. Exact Smoldering Banner existing seasonal CPU witness retained, no new native/full-recovery claim. No runtime/data/new proof/own heavy duplicate;4920c77 running.
+
 ## 2026-10-17 — Toy source460–464 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source460464-pennantmannequingrainrelative-coordinatepocketwatch-boundaries-2026-10-17): permanent nonzero Crimson pennant, mannequin script/model selection, missing403749 grain crate, permanent Thinking Cap periodic226/1500ms plus relative-coordinate/re-equip/thought contract and nonzero hour Pocketwatch remain gaps. Literal w2/w1-minus50000 display retained; no guessed map axes, decorative-only cap, grain infection or server-clock shift. No runtime/data/new proof or own heavy duplicate; saved4920c77 log is compiling without behavioral result.
