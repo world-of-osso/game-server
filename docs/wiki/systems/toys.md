@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate492 cursor-flight RED; runtime proposal awaiting approval (2026-10-17)
+
+[Current RED/proposal matrix](../../toy-effects14-coverage.md#gate492-cursor-flight-red-runtime-proposal-awaiting-approval-2026-10-17) supersedes earlier492 queued/running entries:286passed/1failed/1ignored544.23s/client9/EXIT101/FMT0,2m14s/no warnings. Maiev actually appears before source flight,1/expected0. Lead-approvedde2724abe honestly ignores the whole16-row fixture with every assertion retained; later mini rows were not reached, no fix/aggregate/landing certificate.387 corrected regen,393Ohn'ir,402Soulshape and419Doomsday individually pass. Proposal awaiting approval adds87 to existing destination whitelist, backed by70448 effect32/87 roots/speeds and pinnedTCa352b1fa destination distance/speed/HasDst logic. New445/450/454/457/473/477 tests remain after492 and unverified; no production/data/new native change or own heavy duplicate.
+
 ## Pending Deepdweller return-home acceptance and mounted-pennant/mirror/memory/ring boundaries (2026-10-17)
 
 [Source475–479 matrix](../../toy-effects14-coverage.md#source475479-pending-deepdweller-return-home-acceptance-and-mounted-pennantmirrormemoryring-boundaries-2026-10-17) adds acceptance-onlyeea1ff744:208704/420418/source10s/shared2309 as17th saved-bind helper case, with actual Path-of-Naaru sibling refusal; newer head beyond4920c77 required. Racer pennant is mounted78 plus400ms periodic/keybound406 and area8051, not a back-aura shortcut. Zero-entry man'ari Mirror, group8008-qualified Tyrhold/Valdrakken memory disc and periodic party rings/spacing/five-minute child lifetime/holiday recovery retain gaps. Local format/manual readability/diffcheck pass; no runtime/data/model guesses/native proof or own heavy duplicate.
