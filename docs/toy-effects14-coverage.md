@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source635–639: pending Potatoad disguise and pet-command, bundle, egg, Arcantina boundaries (2026-10-18)
+
+Acceptance-onlye29972e08 appends Hexed Potatoad Mucus to the unchanged disguise helper:17 rows plus separate Oomgut18 identities, old16 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor.509 was cancelled before starting because of a separate master merge-interaction compile break, not a toy test result.507 remains failed;172cb1782 fixture correction and later acceptances still lack covering success/landing.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|635 Magical Pet Clicker251491/1252228 | Instant two dummy3 slots targeting90 and87, no duration, inherited5000ms recovery. Actual selected vanity pet movement to chosen area followed by stay/authority/lifecycle remains gap. Preserve both recipients; not caster visual, combat-pet command or immediate teleport. |
+|636 Bursting Bounty Bundle251633/1252822 | Instant target32/base0 summon251069/property3076/Control0/flags2304 for20000ms; explicit item600000ms recovery, runtime actor/model absent. Actual bundle/Dundun behavior remains gap; base0/multiplicity/placement retained literally, not default one stationary actor or generic animal summon. |
+|637 Potatoad Egg251903/1253466 | Instant self dummy4/zero payload for3600000ms, inherited3600000ms recovery. Exact authored presentation/conditions/removal remains unaudited, absent maintained visual-only list; terse "Potatoad" text is not authority for guessed transform or creature summon. |
+|638 Hexed Potatoad Mucus252265/1254376 | Instant self transform56/misc251887/8 for600000ms, inherited1200000ms recovery. Existing Potatoad models128024/128022/128026/128025/128023, each scale1/weight1. Own learned-use/model-membership/ordinary expiry/health/native-model restoration/recovery-refusal acceptance committed, behavior pending successor after cancelled509. No guarantee of all five choices, native imagery or full20-minute reuse. |
+|639 Personal Key to the Arcantina253629/1255801 | Source5000ms two self dummy3 effects with distinct base-point payloads1255786 and1246474, inherited900000ms recovery/start1500ms, no duration. Actual Arcantina travel/destination/return and eligibility authority remain unresolved; preserve both script payloads, which are not EffectTriggerSpell edges. No generic dummy success, ordinary homebind or guessed coordinates. |
+
+Evidence: private `rows635-639-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `mucus638-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6. No runtime/data/native changes or own heavy duplicate; Full1166 admission unchanged,149865 Tea Set untouched.498 remains last confirmed landed/master8707ac0ea.
+
 ## Source630–634: broker disguise, shared grafts, mixed stall and updraft boundaries (2026-10-18)
 
 Metadata inspection only; lead509 remains queued at172cb1782 without observed result. No new acceptance, runtime/data/native changes or own heavy jobs.
