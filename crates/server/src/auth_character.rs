@@ -189,23 +189,62 @@ pub fn process_select_character(
     mut commands: Commands,
     mut player_deaths: MessageWriter<crate::death::PlayerDeathTransition>,
     mut maps: crate::maps::LoginMaps,
+    mut pending: Local<std::collections::HashMap<Entity, PendingCharacterHydration>>,
+    active: Query<
+        &Authenticated,
+        (
+            With<Connected>,
+            Without<InWorld>,
+            Without<crate::auth::PendingForcedDisconnect>,
+        ),
+    >,
 ) {
     let Some(db) = db.as_ref() else { return };
-    let requests: Vec<_> = collect_select_requests(&mut receivers);
-    for (entity, account_id, req) in requests {
+    pending.retain(|&entity, hydration| {
+        let Ok(auth) = active.get(entity) else {
+            return false;
+        };
+        if auth.account_id != hydration.account_id {
+            return false;
+        }
+        let Some(result) = hydration.receipt.result() else {
+            return true;
+        };
+        match result {
+            Ok(hydrated) => handle_select(
+                CharacterSelection {
+                    connection: entity,
+                    account_id: hydration.account_id,
+                    character_id: hydration.character_id,
+                    hydrated,
+                },
+                db,
+                &mut enter_senders,
+                &mut terrain_senders,
+                &mut commands,
+                &mut player_deaths,
+                &mut maps,
+            ),
+            Err(error) => send_enter_error(entity, &mut enter_senders, &error),
+        }
+        false
+    });
+    for (entity, account_id, req) in collect_select_requests(&mut receivers) {
+        if pending.contains_key(&entity) || active.get(entity).is_err() {
+            continue;
+        }
         save_and_despawn_stale_player(&db.db, &existing_players, req.character_id, &mut commands);
-        handle_select(
-            CharacterSelection {
-                connection: entity,
+        let character_id = req.character_id;
+        let receipt = db.writer.enqueue_result("character hydration", move |raw| {
+            hydrate_character(raw, account_id, character_id)
+        });
+        pending.insert(
+            entity,
+            PendingCharacterHydration {
                 account_id,
-                request: &req,
+                character_id,
+                receipt,
             },
-            db,
-            &mut enter_senders,
-            &mut terrain_senders,
-            &mut commands,
-            &mut player_deaths,
-            &mut maps,
         );
     }
 }
@@ -291,14 +330,41 @@ pub(crate) fn save_and_despawn_stale_player(
     }
 }
 
-struct CharacterSelection<'a> {
+struct PendingCharacterHydration {
+    account_id: u64,
+    character_id: u64,
+    receipt: crate::persistence_writer::CommitReceipt<HydratedCharacter>,
+}
+
+#[derive(Clone)]
+struct HydratedCharacter {
+    data: CharacterData,
+    state: SelectedCharacterState,
+}
+
+fn hydrate_character(
+    db: &redb::Database,
+    account_id: u64,
+    character_id: u64,
+) -> Result<HydratedCharacter, String> {
+    if !validate_ownership(db, account_id, character_id) {
+        return Err("Character not found".into());
+    }
+    let data = persistence::load_character(db, character_id).ok_or("Character data missing")?;
+    crate::race_class::validate_race_class(data.race, data.class)?;
+    let state = load_durable_character_state(db, character_id, data.race, data.class);
+    Ok(HydratedCharacter { data, state })
+}
+
+struct CharacterSelection {
     connection: Entity,
     account_id: u64,
-    request: &'a SelectCharacter,
+    character_id: u64,
+    hydrated: HydratedCharacter,
 }
 
 fn handle_select(
-    selection: CharacterSelection<'_>,
+    selection: CharacterSelection,
     db: &GameDatabase,
     enter_senders: &mut Query<&mut MessageSender<EnterWorldResponse>>,
     terrain_senders: &mut Query<&mut MessageSender<LoadTerrain>>,
@@ -306,23 +372,15 @@ fn handle_select(
     player_deaths: &mut MessageWriter<crate::death::PlayerDeathTransition>,
     maps: &mut crate::maps::LoginMaps,
 ) {
-    let character_id = selection.request.character_id;
-    if !validate_ownership(db, selection.account_id, character_id) {
-        send_enter_error(selection.connection, enter_senders, "Character not found");
-        return;
-    }
-    let Some(mut data) = persistence::load_character(&db.db, character_id) else {
-        send_enter_error(
-            selection.connection,
-            enter_senders,
-            "Character data missing",
-        );
-        return;
-    };
-    if let Err(error) = crate::race_class::validate_race_class(data.race, data.class) {
-        send_enter_error(selection.connection, enter_senders, &error);
-        return;
-    }
+    let character_id = selection.character_id;
+    let HydratedCharacter {
+        mut data,
+        mut state,
+    } = selection.hydrated;
+    // Pending character contributions remain authoritative even if a newer update
+    // was queued after hydration completed but before this receipt was consumed.
+    state.achievements =
+        crate::achievement::load_character_progress(db, selection.account_id, character_id);
     let saved_map = crate::maps::persistence::load_character_map(&db.db, character_id);
     let dungeon_difficulty = crate::maps::difficulty::load_dungeon_difficulty(&db.db, character_id);
     let raid_difficulty = crate::maps::raid::load(&db.db, character_id);
@@ -350,13 +408,6 @@ fn handle_select(
     {
         data.health = 0.0;
     }
-    let state = load_selected_character_state(
-        db,
-        selection.account_id,
-        character_id,
-        data.race,
-        data.class,
-    );
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
         commands,
@@ -439,11 +490,12 @@ fn build_player_init_state(state: SelectedCharacterState) -> PlayerInitState {
     }
 }
 
-fn validate_ownership(db: &GameDatabase, account_id: u64, character_id: u64) -> bool {
-    let chars = persistence::list_characters_for_account(&db.db, account_id);
+fn validate_ownership(db: &redb::Database, account_id: u64, character_id: u64) -> bool {
+    let chars = persistence::list_characters_for_account(db, account_id);
     chars.iter().any(|(id, _)| *id == character_id)
 }
 
+#[derive(Clone)]
 struct SelectedCharacterState {
     gold: u64,
     guild: Option<GuildMembership>,
@@ -458,6 +510,7 @@ struct SelectedCharacterState {
     reputation: shared::reputation::CharacterReputation,
 }
 
+#[cfg(test)]
 fn load_selected_character_state(
     db: &GameDatabase,
     account_id: u64,
@@ -465,22 +518,35 @@ fn load_selected_character_state(
     race: u8,
     class: u8,
 ) -> SelectedCharacterState {
-    let currencies = persistence::load_currencies(&db.db, character_id);
-    let mut pvp = persistence::load_pvp(&db.db, character_id);
+    let mut state = load_durable_character_state(&db.db, character_id, race, class);
+    state.achievements = crate::achievement::load_character_progress(db, account_id, character_id);
+    state
+}
+
+/// Called only by the FIFO worker in production: missing rows and legacy
+/// conversions may write, so this is not a tick-thread read API.
+fn load_durable_character_state(
+    db: &redb::Database,
+    character_id: u64,
+    race: u8,
+    class: u8,
+) -> SelectedCharacterState {
+    let currencies = persistence::load_currencies(db, character_id);
+    let mut pvp = persistence::load_pvp(db, character_id);
     crate::pvp::sync_progress_currencies_from_wallet(&mut pvp, &currencies);
 
     SelectedCharacterState {
-        gold: persistence::load_inventory(&db.db, character_id).gold,
-        guild: persistence::load_character_guild(&db.db, character_id),
-        professions: persistence::load_professions(&db.db, character_id),
-        achievements: crate::achievement::load_character_progress(db, account_id, character_id),
+        gold: persistence::load_inventory(db, character_id).gold,
+        guild: persistence::load_character_guild(db, character_id),
+        professions: persistence::load_professions(db, character_id),
+        achievements: Default::default(),
         pvp: crate::pvp::PlayerPvpState::from_progress(pvp),
-        world_map: persistence::load_world_map(&db.db, character_id),
-        friends: persistence::load_friends(&db.db, character_id),
-        ignore_list: persistence::load_ignore_list(&db.db, character_id),
-        collections: persistence::load_collections(&db.db, character_id),
+        world_map: persistence::load_world_map(db, character_id),
+        friends: persistence::load_friends(db, character_id),
+        ignore_list: persistence::load_ignore_list(db, character_id),
+        collections: persistence::load_collections(db, character_id),
         currencies,
-        reputation: persistence::load_reputation(&db.db, character_id, || {
+        reputation: persistence::load_reputation(db, character_id, || {
             shared::reputation::CharacterReputation::new_for_player(
                 &default_faction_registry(),
                 race,
