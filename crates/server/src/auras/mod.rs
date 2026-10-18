@@ -2150,6 +2150,8 @@ mod enduring_torment_tests;
 #[cfg(test)]
 mod fear_tests;
 #[cfg(test)]
+mod guardian_spirit_tests;
+#[cfg(test)]
 mod monster_rising_tests;
 #[cfg(test)]
 mod power_strike_tests;
