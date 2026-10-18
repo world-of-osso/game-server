@@ -83,10 +83,37 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
             y: 89.05998,
             z: -1740.5852,
         };
-        let target = world.spawn_empty().id();
+        let target = world
+            .spawn((
+                shared::components::Player {
+                    name: "EntryTarget".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: Default::default(),
+                },
+                Health {
+                    current: 100.0,
+                    max: 100.0,
+                },
+                UnitLevel(30),
+                UnitFactionTemplate(1),
+                map,
+                Position {
+                    x: position.x + 3.0,
+                    ..position
+                },
+            ))
+            .id();
         let mut threat = ThreatTable::default();
         threat.add_threat(target.to_bits(), 73.0);
         world.entity_mut(actor).insert((position, threat));
+        crate::combat_refs::set_in_combat_with(&mut world, actor, target);
+        assert!(
+            world
+                .get::<shared::components::CombatStatus>(actor)
+                .unwrap()
+                .0
+        );
         world.get_mut::<Health>(actor).unwrap().current = 1.0;
         let placement = CreatureSpawn {
             template_entry: NAZAN,
@@ -112,6 +139,14 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
         projection.apply(world.entity_mut(actor), false);
         assert_eq!(world.get::<Npc>(actor).unwrap().template_id, NAZAN);
         assert_eq!(world.get::<Npc>(actor).unwrap().name, "Nazan");
+        // Pinned UnitDefines.h186; UpdateEntry clears template flags but retains real combat.
+        assert_eq!(world.get::<UnitFlags>(actor).unwrap().0, 0x0008_0000);
+        assert!(
+            world
+                .get::<shared::components::CombatStatus>(actor)
+                .unwrap()
+                .0
+        );
         assert_eq!(world.get::<ModelDisplay>(actor).unwrap().display_id, 18_812);
         assert_eq!(*world.get::<Position>(actor).unwrap(), position);
         assert_eq!(*world.get::<crate::maps::InMap>(actor).unwrap(), map);
@@ -160,6 +195,10 @@ fn herald_entry_unresolved_target_context_refuses_without_mutating_actor() {
     let (data, spawn) = source_fixture();
     let (mut world, actor) = spawn_herald(&data, &spawn, 1);
     let original = world.get::<Npc>(actor).unwrap().template_id;
+    // Controlled map transfer leaves no terrain context; it is not a canonical placement.
+    world
+        .entity_mut(actor)
+        .insert(crate::maps::InMap::continent(0));
     let projection = read_entry_projection(
         &data,
         NAZAN,
