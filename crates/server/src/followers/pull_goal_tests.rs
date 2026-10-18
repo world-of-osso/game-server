@@ -1,6 +1,6 @@
 //! User pacing policy at real kit/AI/chase boundaries, not injected admitted points.
 use super::pull_budget::{Decision, Reason};
-use super::pull_movement_tests::{load_native_kit, place_on_source_floor};
+use super::pull_movement_tests::load_native_kit;
 use super::pull_route_tests::route_fixture_with_plugins;
 use super::{pull_admission, pull_history, pull_route};
 use crate::maps::InMap;
@@ -27,12 +27,60 @@ fn source(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
         .0
 }
 
+fn place_at_authored_entrance(h: &mut Harness, tank: Entity) -> Position {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    // Native WorldSafeLoc3599, area-trigger101's Stockade entrance destination.
+    let (wx, wy, wz): (f32, f32, f32) = db
+        .query_row(
+            "SELECT LocX, LocY, LocZ FROM tdb_world_safe_locs WHERE ID=3599 AND MapID=34",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(wx, wy, wz);
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    let crate::ground::GroundProbe::Supported(y) = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, Vec3::new(x, y, z))
+    else {
+        panic!("authored entrance must have actual native floor support")
+    };
+    let from = Position { x, y, z };
+    let point = Vec3::new(x, y, z);
+    assert!(
+        !h.app
+            .world()
+            .resource::<crate::navigation::Navigation>()
+            .query_path(map.map_id, point, point)
+            .unwrap()
+            .unwrap()
+            .is_empty()
+    );
+    h.app.world_mut().entity_mut(tank).insert(from);
+    h.app.world_mut().entity_mut(h.caster).insert(from);
+    let mut home = h
+        .app
+        .world_mut()
+        .get_mut::<crate::creature_ai::SpawnPoint>(tank)
+        .unwrap();
+    home.x = x;
+    home.y = y;
+    home.z = z;
+    from
+}
+
 fn fixture() -> Fixture {
     let (mut h, tank) = route_fixture_with_plugins(|app| {
         app.add_plugins(crate::stats::StatsPlugin);
     });
     load_native_kit(&mut h, tank);
-    let from = place_on_source_floor(&mut h, tank);
+    let from = place_at_authored_entrance(&mut h, tank);
     let healer = super::pull_forecast_tests::add_native_healer(&mut h);
     let map = *h.app.world().get::<InMap>(tank).unwrap();
     let mut members = vec![tank, healer];
@@ -109,6 +157,7 @@ fn measured_fixture() -> Fixture {
             .collect();
     let calibration = actors
         .into_iter()
+        .filter(|actor| crate::spell_cast::targets::is_hostile(f.h.app.world(), f.tank, *actor))
         .filter_map(|actor| {
             crate::combat::forecast::read_generic_creature(f.h.app.world(), actor, f.tank)
                 .ok()
