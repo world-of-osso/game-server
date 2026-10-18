@@ -37,18 +37,6 @@ fn count_go(h: &Harness, telash: Entity, spell: u32) -> usize {
         .count()
 }
 
-fn cast_starts(h: &Harness, telash: Entity, spell: u32) -> usize {
-    h.inbox(0)
-        .log
-        .iter()
-        .filter(|event| {
-            event.source == Some(telash.to_bits())
-                && event.spell_id == Some(spell)
-                && event.kind == CombatLogKind::CastStart
-        })
-        .count()
-}
-
 fn center_cast_fixture() -> (Harness, Entity) {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     super::azure_absolute_zero::complete_ordinary_rune_activation_phase(&mut h, telash);
@@ -76,11 +64,7 @@ fn center_cast_fixture() -> (Harness, Entity) {
 }
 
 fn complete_center_cast(h: &mut Harness, telash: Entity) -> f64 {
-    assert_eq!(
-        count_go(h, telash, RETURN),
-        0,
-        "no return before actual native completion"
-    );
+    let center = at(h, telash);
     let cast = h.app.world().get::<CastState>(telash).unwrap();
     let frames = ((cast.duration - cast.elapsed) / STEP).ceil() as usize + 2;
     for _ in 0..frames {
@@ -88,6 +72,11 @@ fn complete_center_cast(h: &mut Harness, telash: Entity) -> f64 {
         if count_go(h, telash, DAMAGE) == 1 {
             return crate::auras::aura_now(h.app.world());
         }
+        assert_eq!(
+            at(h, telash),
+            center,
+            "no return movement before actual native completion"
+        );
     }
     panic!("actual8s388008 must complete before AfterCast RED");
 }
@@ -99,18 +88,36 @@ fn assert_clock(actual: f64, expected: f64, label: &str) {
     );
 }
 
+fn normal_cast_started(
+    previous: Option<(u32, shared::casting::CastType, f32)>,
+    current: &CastState,
+) -> Option<u32> {
+    let normal = current.cast_type == shared::casting::CastType::Normal;
+    if !normal || ![FROST, ICY].contains(&current.spell_id) {
+        return None;
+    }
+    let continuing = previous.is_some_and(|(spell, kind, elapsed)| {
+        (spell, kind) == (current.spell_id, current.cast_type) && elapsed <= current.elapsed
+    });
+    (!continuing).then_some(current.spell_id)
+}
+
 fn record_starts(h: &mut Harness, telash: Entity, seconds: f32, observed: &mut Vec<(u32, f64)>) {
     for _ in 0..(seconds / STEP).round() as usize {
-        let old = h.inbox(0).log.len();
+        let previous = h
+            .app
+            .world()
+            .get::<CastState>(telash)
+            .map(|cast| (cast.spell_id, cast.cast_type, cast.elapsed));
         h.advance(STEP);
-        let now = crate::auras::aura_now(h.app.world());
-        observed.extend(h.inbox(0).log[old..].iter().filter_map(|event| {
-            let spell = event.spell_id?;
-            (event.source == Some(telash.to_bits())
-                && event.kind == CombatLogKind::CastStart
-                && [FROST, ICY].contains(&spell))
-            .then_some((spell, now))
-        }));
+        let started = h
+            .app
+            .world()
+            .get::<CastState>(telash)
+            .and_then(|cast| normal_cast_started(previous, cast));
+        if let Some(spell) = started {
+            observed.push((spell, crate::auras::aura_now(h.app.world())));
+        }
     }
 }
 
@@ -187,11 +194,6 @@ fn azure_telash_native_aftercast_returns_to_current_max_threat_nearest_point_and
             numeric_top > incumbent && numeric_top < incumbent * 1.3,
             "actual higher numeric threat does not replace current MaxThreat reference"
         );
-        assert_eq!(
-            count_go(&h, telash, RETURN),
-            1,
-            "actual388008 AfterCast must cast388082"
-        );
         let destination = engine_position(point);
         let destination = Vec3::new(destination.x, destination.y, destination.z);
         h.advance(0.25);
@@ -201,7 +203,7 @@ fn azure_telash_native_aftercast_returns_to_current_max_threat_nearest_point_and
         let fraction = horizontal.dot(total) / total.length_squared();
         assert!(
             fraction > 0.0 && fraction < 1.0,
-            "real durational714, not teleport"
+            "actual388008 AfterCast must start real durational714 return movement, not remain at center or teleport"
         );
         let linear_y = center.y + (destination.y - center.y) * fraction;
         assert!(flying.y > linear_y, "actual source parabolic return motion");
@@ -388,6 +390,7 @@ fn azure_telash_native_aftercast_no_victim_causes_neither_return_nor_action_time
     let (mut h, telash) = center_cast_fixture();
     let player = h.player();
     let original = *h.app.world().get::<Position>(player).unwrap();
+    let center = at(&h, telash);
     let cast = h.app.world().get::<CastState>(telash).unwrap();
     let remaining = cast.duration - cast.elapsed;
     h.advance(remaining - 0.1);
@@ -432,7 +435,12 @@ fn azure_telash_native_aftercast_no_victim_causes_neither_return_nor_action_time
         None,
         "native damage did not recreate a victim before guard observation"
     );
-    assert_eq!(count_go(&h, telash, RETURN), 0);
+    h.advance(0.25);
+    assert_eq!(
+        at(&h, telash),
+        center,
+        "no-victim completion must not launch return movement"
+    );
     h.app.world_mut().entity_mut(player).insert(original);
     for entry in entries {
         h.app
@@ -448,14 +456,12 @@ fn azure_telash_native_aftercast_no_victim_causes_neither_return_nor_action_time
         })
         .is_engaged()
     );
-    let frost = cast_starts(&h, telash, FROST);
-    let icy = cast_starts(&h, telash, ICY);
-    h.advance(16.0);
-    assert_eq!(
-        (cast_starts(&h, telash, FROST), cast_starts(&h, telash, ICY)),
-        (frost, icy),
-        "restored victim exposes any action1 timers wrongly queued before the no-victim guard"
+    let mut observed = Vec::new();
+    record_starts(&mut h, telash, 16.0, &mut observed);
+    assert!(
+        observed.is_empty(),
+        "native CastState transitions expose any action1 timers wrongly queued before the no-victim guard"
     );
-    assert_eq!(count_go(&h, telash, RETURN), 0);
+    assert_eq!(at(&h, telash), center);
     assert!(!h.has_aura(telash, ICE));
 }
