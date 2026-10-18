@@ -19,6 +19,13 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - [x] Resolve sourced17536CT0 at the ordinary-spawn boundary through real map/area context: Normal1→220, Heroic2→1065, source deltas/modifiers and derived level/HP/armor/scaled damage. `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` is retired only for that proved boundary; neither legacy62 nor an uncontextualized level1 cache is acceptance. Fixtures add no canonical Nazan placement.
 - [ ] Prove actual runtime use of the prepared source template and same-actor `UpdateEntry`; retain `HERALD_NAZAN_ENTRY_MORPH_UNIMPLEMENTED`. Ordinary-spawn fixture proof does not certify morph or the encounter.
 
+### Same-actor projection prerequisite
+
+- [x] Initial spawning and living same-actor entry updates consume one template projection; preserve the caller-selected initial template, RNG order, spawn overrides, deferred addon application and ordinary spawn controls.
+- [x] Retain ordinary origin GUID/original entry independently of current `Npc.template_id`. Updating to17536 keeps the entity, current position/map, live AI/event progress, home/waypoint cursor and threat/combat references; source contextual target stats reset health to the new maximum.
+- [x] Preserve original spawn-addon priority: Herald content GUID20202693 supplies sheath0/path36215440 instead of Nazan template sheath1/path0. Nonzero mount/emote/path fields act; zero does not erase prior runtime state. Missing default equipment retains it; explicit equipment0 clears it. Addon auras are additive and existing instances are not refreshed.
+- [x] Missing target/context/origin refuses before actor mutation with an actionable diagnostic. No legacy level/tuning substitution or actor recreation.
+
 ### Lifecycle and phases
 
 - [ ] Two actual17517 Sentry deaths in one copy start the Herald once through source action1730700; other copies and unrelated deaths do not contribute.
@@ -42,12 +49,14 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 - `crates/server/src/scripted_ai/hellfire_ramparts.rs` — currently registers Gargolmar and Omor, not Herald/Vazruden.
 - `crates/server/src/scripted_ai/instance_script.rs` — existing copy-local boss/data state; Herald source lifecycle is not implemented.
+- `crates/server/src/zones/entry.rs` — `EntryProjection` reads/rolls represented target fields and applies them to a new or existing entity; `CreatureOrigin` retains ordinary source identity, `AddonPathId` is addon data rather than a running movement cursor. Bounded entry/spawn proof is GREEN; not a Herald AI registration or ordinary-respawn restoration.
 - `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
 - `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows; the separate `herald-nazan` profile selects17536 base0/Heroic2 CT0 with source models/addon, without changing `herald`. Real-copy producer/refusal/idempotence/preservation controls are GREEN; ordinary context resolution is proved separately and runtime use/morph remain open.
 
 ## Tests asserting this spec
 
+- `zones_entry_tests.rs`, `zones_entry_controls_tests.rs` — source Normal/Heroic same-actor stats/origin/addon, real living-player threat/combat references, optional runtime state/equipment, real EventMap/dispatch probe and actual TDB30/100/176396 addon auras11959/3417/347931, including an exact finite5s deadline that a silent refresh would move. Current eight genuine REDs at1e10b0a51 (27.94s) precede implementation. Earlier missing-addon/clock/master-caller setup failures are excluded. Focused11/11 at5f25cf953 (18.56s), then final affected68/68 at9e83421de (233.18s,55 pre-existing ignored). Supplemental actual Morna/Drudge nonzero addon mount/emote1/1 at65e035a2a (10.14s), with no production changes after the affected batch. Strengthened finite-aura case1/1 at44cdfe55c (17.53s), unchanged production; required package check0/warning-free34.97s and fmt0 on that head. Independent landing gate pending. Neither source fixture setup nor these primitive cases certify encounter choreography/native behavior.
 - `scripts/tests/test_nazan_templates.py` — actual read-only world snapshot and real `herald-nazan` CLI; exact represented CT0 base/Heroic fields/models/addon, idempotence, unrelated-data preservation and byte-identical drift refusal. Genuine real-copy missing-profile REDb4a524732 becomes new/Herald/Omor GREEN3/3 at0a3ab4b24 (27.783s), followed by Nazan-only GREEN1/1 at7fe38b45e (26.460s) after read/write naming cleanup; ResourceWarning escalated, warning-free. This is data-only, not morph acceptance.
 - `crates/server/src/zones_context_tuning_tests.rs` — sourced17536 ordinary Normal/Heroic map stats, actual MCNK area ancestry, explicit-template/critter/known-zero/missing-context controls, authored-source stats and real PostStartup publication ordering. Seven enabled cases pass within affected54/54 at33dcb7b6 (177.24s); no canonical Nazan spawn or morph acceptance.
 
@@ -57,13 +66,16 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - `scripts/tests/test_encounter_serverside_spells.py` — real CLI fixture for all seven authored spell/effect rows, idempotence, unrelated-data preservation and atomic refusal; producer suite GREEN6/6.
 - `scripts/tests/fixtures/herald-serverside-spells.json` — exact TDB1210 records selected by the pinned script.
 
-No Herald encounter behavioral acceptance exists yet. Source/70448 identity audits and data preparation are not runtime GREEN.
+Shared entry projection has bounded runtime-fixture GREEN. No registered Herald encounter behavioral acceptance exists yet; source/70448 identity audits, data preparation and this primitive do not certify the encounter.
 
 ## Known gaps (current cycle)
 
 - [ ] Establish source-data prerequisites and behavioral RED before implementing each bounded slice.
 - [ ] Implement and verify real actor/movement/spell/death ordering, both-dead credit and reset.
-- [ ] Native rendering/audio, obstacle paths, Heroic behavior, loot and persistence remain unproved.
+- [ ] Native rendering/audio, obstacle paths, Heroic encounter behavior, loot and persistence remain unproved.
+- [ ] `CREATURE_ENTRY_RESPAWN_RESTORE_UNIMPLEMENTED`: ordinary respawn does not yet restore the retained original entry. Living projection proof is not until-respawn parity.
+- [ ] `SMARTAI_ACTION36_UPDATE_ENTRY_UNIMPLEMENTED`: SmartAI36 remains excluded; the shared projection is not an action36 port.
+- [ ] Full TC attack-time/resistance/immunity/static-flag/movement-capability projection remains outside the currently represented template fields; no generic TC UpdateEntry parity claim.
 
 ## Out of scope
 
