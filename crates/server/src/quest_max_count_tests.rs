@@ -27,7 +27,7 @@ fn configure_unique_quest(app: &mut App, starter: bool) {
         )
         .unwrap();
     let mut quests = app.world_mut().resource_mut::<QuestDb>();
-    // The normal catalog retains only authored quest references; this concrete fixture adds its real product row.
+    // This fixture's added quest references keep the authentic product metadata.
     quests.items.insert(PRODUCT, info);
     let quest = quests.quests.get_mut(&BEATING_THEM_BACK).unwrap();
     quest.objectives.clear();

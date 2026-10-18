@@ -657,6 +657,9 @@ impl<'a> QuestSession<'a, '_, '_> {
     ) -> Result<InventoryData, shared::protocol::InventoryError> {
         use crate::inventory::inventory_model::error;
         use shared::protocol::InventoryErrorReason;
+        if items.is_empty() {
+            return Ok(inventory.clone());
+        }
         let templates = self.io.effects.templates.as_deref().ok_or_else(|| {
             error(
                 InventoryErrorReason::InternalBagError,
