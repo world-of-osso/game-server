@@ -909,7 +909,7 @@ pub(crate) fn attack_stop(world: &mut World, unit: Entity) {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[test]

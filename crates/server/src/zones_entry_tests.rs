@@ -5,7 +5,7 @@ use shared::components::ThreatTable;
 const HERALD: u32 = 17_307;
 const NAZAN: u32 = 17_536;
 
-fn source_fixture() -> (WorldData, CreatureSpawn) {
+pub(super) fn source_fixture() -> (WorldData, CreatureSpawn) {
     let mut data = super::context_tuning_tests::sourced_nazan_fixture();
     let canonical = crate::test_data::world_data();
     data.addons = canonical.addons.clone();
@@ -23,7 +23,11 @@ fn source_fixture() -> (WorldData, CreatureSpawn) {
     (data, spawn)
 }
 
-fn spawn_herald(data: &WorldData, spawn: &CreatureSpawn, difficulty: u32) -> (World, Entity) {
+pub(super) fn spawn_herald(
+    data: &WorldData,
+    spawn: &CreatureSpawn,
+    difficulty: u32,
+) -> (World, Entity) {
     let mut world = World::new();
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let actor = spawn_creature(

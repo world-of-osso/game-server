@@ -1023,6 +1023,10 @@ mod context_tuning_tests;
 mod entry_tests;
 
 #[cfg(test)]
+#[path = "zones_entry_controls_tests.rs"]
+mod entry_controls_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::world_data::{CreatureModelInfo, CreatureSpawn, CreatureTemplate};
