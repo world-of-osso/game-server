@@ -11,7 +11,7 @@ use std::path::PathBuf;
 const TARGET_GUID: u32 = 20375682;
 const INTERVENING_GUID: u32 = 20375688;
 
-fn route_fixture() -> (Harness, Entity) {
+pub(super) fn route_fixture() -> (Harness, Entity) {
     let (mut h, tank, previous) = source_fixture(46249);
     h.app.world_mut().despawn(previous);
     let data = crate::test_data::world_data();

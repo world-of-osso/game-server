@@ -2,6 +2,10 @@
 use super::Follower;
 use bevy::prelude::*;
 
+/// The planner's admitted movement destination; kits must not replace it.
+#[derive(Component, Clone, Copy)]
+pub(super) struct AdmittedPosition(pub Vec3);
+
 pub(super) fn read_engaged_caster_candidates(
     world: &mut World,
     unit: Entity,
