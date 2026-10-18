@@ -38,6 +38,14 @@
 ## 2026-10-17 — Bounded Augmentation support stats
 
 [Augmentation](systems/auras.md#augmentation-support-stats-2026-10-17): active70448 Prescience409311→410089 recipient crit and Shifting Sands413984 caster-mastery Versatility; exact spell-specific SimC76f8118 semantics, no generic540. Genuine native RED4→merged5ed1b656 GREEN4/4 in5.52s; initial functional observer mismatch corrected test-only, native zero-variance damage assertion tightened to exact. Docs-only0114bbf7 retains native timer control1/1, scoped server-bin check91s and fmt check pass warning-free; independent lead gate pending. Automatic targeting, E202/dummies, empower grants, Ebon and full-ability/legal/UDP acceptance remain open.
+## 2026-10-18 — Grounded3Dmelee reach
+
+[Actual run24 regression](systems/navigation.md#grounded-melee-reach-agreement--2026-10-18) reproduces stationary pursuing across40 real-nav/ground/LOS steps: XZ2 but3D2.066. Shared reach predicate and3Dsegment/sphere ground-travel calculation retain2yd/smaller reach, real LOS and support/speed constraints; post-commit targeted GREEN and lead gate remain separate.
+
+## 2026-10-18 — Native tile-corner corridor visibility
+
+[Navigation root](systems/navigation.md#tile-corner-corridor-detours--2026-10-18): actual Stockade2yd LOS-clear crossings detour7–29yd despite a full native portal and clear mesh ray; generated floors reproduce other corner/orientation cases. Complete native visibility corridors may replace a longer A* portal-midpoint corridor without removing detail crossings or increasing area costs. No data rebake, direct movement substitute, reach/LOS tuning or runtime proof; post-commit gate remains separate.
+
 ## 2026-10-17 — Rain of Fire dynamic objects
 
 [Ordinary visibility](systems/spell-casting.md#rain-of-fire-dynamic-object-visibility--2026-10-17): actual Lord Overheat86636 object/source5yd/9s/destination reaches missing-Replicate RED; caster-removal control passes. Actual object now uses shared geometry and ordinary same-copy interest/despawn, with no damage/kit/stat/timer changes. Postmerge source-bound server GREEN2/2/270.2s and check29.25s/fmt/0warnings pass; shared wire1 and engine UDP21/native projection4 pass separately. Joint landing/native escape proof pending; fixture movement is not claimed native input.
