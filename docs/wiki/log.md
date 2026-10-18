@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source490–494 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source490494-monumentraid-aurapennantmoving-trailowl-restsleep-boundaries-2026-10-17): missing Murkmorpher212150/interaction plus actual raid-area65/425841, permanent nonzero Verdant pennant, Socks500ms periodic child→1s persistent-area27 trail, Owl Post resting and missing213113 Leafbed usable sleep remain gaps.425843 description reference is not an executable root edge; no automatic model change, caster-only/deduplicated trail or static bed admission. No further runtime/data/new acceptance/native proof/own heavy duplicate;4964df7af2e6 lead-owned pending.
+
 ## 2026-10-17 — Toy source485–489 boundaries;496 queued
 
 [Exact source matrix](../toy-effects14-coverage.md#source485489-festive-friendgrowthracial-homebind-boundaries-and-retained-interactive-banner-2026-10-17): linked Festive Pepe model114425/scale0.2/probability0, complete three-friend and fast-growth contracts remain unaudited. Chilling Banner is actual type22 object with424023/3600s caster aura use witness, not inert type5/native/access/expiry certification. Draenic Hologem's explicit draenei/lightforged restriction stays a gap despite source race halves-1/PlayerCondition0 and normal shared2309 homebind encoding; no invented mask or Human-helper certificate. No further runtime/data/own heavy duplicate.4964df7af2e6 queued with toys/toy/mail/summon/missile/fmt; local16 proof stays8687f84c5.

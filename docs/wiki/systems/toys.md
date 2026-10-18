@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Monument/raid-aura/pennant/moving-trail/owl-rest/sleep boundaries (2026-10-17)
+
+[Source490–494 matrix](../../toy-effects14-coverage.md#source490494-monumentraid-aurapennantmoving-trailowl-restsleep-boundaries-2026-10-17) preserves Murkmorpher missing body/interaction plus raid-area65 child;425843 description reference is not a root trigger. Permanent nonzero Verdant pennant, Socks500ms periodic→1s persistent-area27 trail, Owl Post nearby rest and missing Leafbed usable sleep/pose remain unaudited. No automatic shape/one-aura trail/inert bed substitution or guessed multiplicity. No further runtime/data/new proof/own heavy duplicate;496 lead-owned/pending.
+
 ## Festive friend/growth/racial-homebind boundaries and retained interactive banner (2026-10-17)
 
 [Source485–489 matrix](../../toy-effects14-coverage.md#source485489-festive-friendgrowthracial-homebind-boundaries-and-retained-interactive-banner-2026-10-17) preserves linked Festive Pepe114425/scale0.2/probability0, unaudited three-friend and rapid-growth presentation, and explicitly Draenei-only Hologem despite source ItemSparse race halves-1/on-use condition0. Human homebind acceptance cannot close racial qualification. Chilling Banner is type22/Data0→424023, with retained actual object-use/3600s caster aura/unchanged-health/model CPU witness, not inert type5 or native/access/expiry proof. No further runtime/data/own heavy duplicate;4964df7af2e6 queued with missile filters/fmt.
