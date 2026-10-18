@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source570–574 pending Golem acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source570574-pending-golem-self-transform-and-retained-bannersunnamed-seasoncarried-crate-boundaries-2026-10-17):06d44ef20 appends233202/473407/234479/six valid models/instant1800s/3600s as16th disguise plus Oomgut17IDs; old15/helper unchanged, format/manual readability/diffcheck pass, behavior pending lead covering head. Existing Prized/Astral source-banner cases retained.232308/233151 missing metadata/model and Hallowfall self293/3118/1 carried-crate appearance remain gaps; no invented season, possession actor or inventory supplies. No runtime/data/new native proof/own heavy duplicate;498 landed remains scoped older11 disguises.
+
 ## 2026-10-17 — Toy source565–569 seasonal banner boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source565569-existing-seasonal-banners-and-unnamed-season-four-metadata-gap-2026-10-17): four existing Tempered/Prized/Unbound/Forged actor cases retained, property64/front2yd/60s/source600s recovery.232304 exists in Toy with literal `[Season]` source description but no70448 ItemSparse/runtime content_item or233147 creature-model; no invented name/display or dropped catalog row. Shared fixture's faction-refusal controls are only war banners, not these seasonal identities. No new behavior/native/eligibility/recharge certificate, runtime/data or heavy gate;498 remains landed.

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Golem self-transform and banners/unnamed-season/carried-crate boundaries (2026-10-17)
+
+[Source570–574 matrix](../../toy-effects14-coverage.md#source570574-pending-golem-self-transform-and-retained-bannersunnamed-seasoncarried-crate-boundaries-2026-10-17) adds acceptance-only06d44ef20:233202/473407/234479/six valid models/instant30min/1h recovery as16th disguise plus Oomgut17IDs; old15/helper unchanged, behavior awaits lead covering head. Existing Prized/Astral source-banner cases retained;232308/233151 remains missing item/model metadata with literal `[Season]`. Hallowfall self293/misc3118/1 carried-crate appearance remains gap, not inventory supply yield. No separate possession actor inferred from Golem self56, runtime/data/native proof or own heavy duplicate.
+
 ## Seasonal banners and unnamed season-four metadata gap (2026-10-17)
 
 [Source565–569 matrix](../../toy-effects14-coverage.md#source565569-existing-seasonal-banners-and-unnamed-season-four-metadata-gap-2026-10-17) retains existing Tempered/Prized/Unbound/Forged exact display/owner/map/faction0/front2yd/stationary60s behavior cases.232304 remains a Toy identity with literal `[Season]` description but missing70448 ItemSparse/runtime item/233147 creature-model; no guessed seasonal name or sibling art. All source roots use property64/600s recovery. No new pass/native/reward-eligibility/recharge certificate, runtime/data or own heavy duplicate.
