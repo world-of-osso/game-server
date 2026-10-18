@@ -30,6 +30,7 @@ fn spawn_copy_actors(app: &mut App, content: crate::zones::MapContent) -> Vec<u3
         app.world().resource::<WorldData>(),
         content,
         false,
+        Some(&mut crate::test_data::ground_map()),
     );
     queue.apply(app.world_mut());
     let world = app.world_mut();

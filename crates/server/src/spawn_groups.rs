@@ -216,7 +216,8 @@ fn apply(world: &mut World, map: crate::maps::InMap, plan: Plan) {
         .copy_difficulty(map)
         .map_or(0, |difficulty| difficulty.difficulty_id);
     let mut queue = bevy::ecs::world::CommandQueue::default();
-    {
+    world.init_resource::<crate::ground::GroundMap>();
+    world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
         let mut commands = Commands::new(&mut queue, world);
         let world_data = world.resource::<crate::world_data::WorldData>();
         crate::zones::spawn_grouped_creatures(
@@ -225,6 +226,7 @@ fn apply(world: &mut World, map: crate::maps::InMap, plan: Plan) {
             map,
             difficulty_id,
             &plan.creatures,
+            Some(&mut ground),
         );
         let catalog = world.resource::<crate::game_objects::GameObjectSpawns>();
         for spawn in catalog
@@ -235,7 +237,7 @@ fn apply(world: &mut World, map: crate::maps::InMap, plan: Plan) {
             let object = crate::game_objects::spawn_game_object(&mut commands, spawn, map);
             commands.entity(object).insert(GroupedObject(spawn.guid));
         }
-    }
+    });
     queue.apply(world);
 }
 
