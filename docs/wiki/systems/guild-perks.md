@@ -54,7 +54,7 @@ Historical source inspection before the user decision above, not effect acceptan
 
 | Boundary | Established evidence | Remaining gap |
 |---|---|---|
-| Reputation representation | Shared `CharacterReputation` stores faction values; authenticated `reputation_factions.rs` includes Guild1168 atNeutral0. TC a352b1fa `CriteriaHandler.cpp:2069` reads faction1168 directly. | Current cast-versus-chest-use qualification, not a missing reputation table. Do not substitute membership, rank or default Friendly. |
+| Reputation representation | Shared `CharacterReputation` stores faction values; authenticated `reputation_factions.rs` includes Guild1168 atNeutral0. TC a352b1fa `CriteriaHandler.cpp:2069` reads faction1168 directly. | Resolved by the user policy above: member/perk casting versus Friendly chest use. Do not substitute membership, rank or default Friendly for standing. |
 | Mobile data | Active83958: script77 without trigger,3600000ms recovery. Child88304/88306: actual206602/206603, type34,300000ms duration. | User decision above authorizes faction dispatch; installed effect50/type34 runtime supplies the lifetime. |
 | Contemporary fork candidate | RoleplayCore8604a936f3eaceb5034eb9e082e78640bf39fad6 `spell_generic.cpp:5920–5957` checks Friendly1168 at cast and dispatches Alliance88304/Horde88306. SQL binding was retrieved, not merely inferred from a search snippet. | User decision explicitly rejects the fork's Friendly CAST gate; only chest USERS require Friendly. |
 
