@@ -1,3 +1,7 @@
+## Vault Rune scripted field implementation
+
+[Native Rune](systems/spell-casting.md#vault-rune-scripted-field): separate native388072/FRIEND action from exact scripted callbacks; general unit membership, full-set publication, actions before Enter/Exit hooks, OnRemove before clearing. Field REDd471, entry REDf034 and action/missing-field REDce21 retained separately. Existing aura87 handles native-50/mask127; GREEN/controls pending. No activation/strip/return/visual or full-Azure claim.
+
 ## 2026-10-18 — Call of Winter1013
 
 [Call of Winter](systems/pet-battle-engine.md#call-of-winter--2026-10-18): ONLYregistry+24/29pairedceil2recipient/ownChilled52; existingconditionalmath/Blizzard205unchanged. Actualc6f9core6+Buttercup1unsupportedRED→ae7production/165fixture-onlyChilleddelta+Elementalweakcorrections/merged2be80GREEN6+1. Nineactivepairs/chillednone-each-all/48base+12bonus/misses+allmissweather/deadreserves/priorweather60+15/replacementexpiry/finalfaintnamedpolicy; legal3255/20slot3power221→64/Rabbit83/alliesunchanged/CD3. Integratedlib183/main44/check2m16s/no warnings/fmt/shared11aclean;fresh10typed70448tables/census1865/2829=65.92%/1036graphs,+7/+1ONLY1013/historical70391+1051/1762retained. Nativefollowslanding;noRetailtiming/rounding/VFXclaim.
