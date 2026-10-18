@@ -28,6 +28,11 @@ fn pet_battle_call_of_winter_all_active_pairs_test_each_recipients_existing_chil
                     };
                     assert_eq!(state.teams[1].pets[slot].health, expected);
                     assert_eq!(state.teams[0].pets[slot].health, 10000);
+                    //Weather adds its delta without replacing an existing Chilled state.
+                    assert_eq!(
+                        state.teams[1].pets[slot].state(chilled),
+                        if chilled_slots.contains(&slot) { 2 } else { 1 }
+                    );
                 }
                 assert_eq!(state.teams[0].active, ally_active);
                 assert_eq!(state.teams[1].active, enemy_active);
@@ -38,7 +43,7 @@ fn pet_battle_call_of_winter_all_active_pairs_test_each_recipients_existing_chil
                 //Weather205 is applied by row2301 AFTER all six damage rows.
                 //It cannot supply Chilled or its25% bonus retroactively to these hits.
                 for pet in state.teams.iter().flat_map(|team| &team.pets) {
-                    assert_eq!(pet.state(chilled), 1);
+                    assert!(pet.state(chilled) > 0);
                     assert_eq!(pet.state(catalog.state_id("Weather_Blizzard").unwrap()), 1);
                     assert_eq!(
                         pet.state(catalog.state_id("Mod_PetTypeDamageDealtPercent").unwrap()),

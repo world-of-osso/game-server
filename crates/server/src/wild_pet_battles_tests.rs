@@ -77,8 +77,9 @@ fn wild_pet_battles_call_of_winter_uses_legal_buttercup_level_twenty_slot_three(
             _ => None,
         })
         .collect();
-    assert_eq!(amounts, [96]);
-    assert_eq!(state.teams[1].pets[0].health, 51);
+    //Elemental6 is weak against Rabbit's Critter4: existing0.67 multiplier/floor.
+    assert_eq!(amounts, [64]);
+    assert_eq!(state.teams[1].pets[0].health, 83);
     assert_eq!(state.teams[0].pets[0].health, caller.health);
     assert_eq!(state.teams[0].pets[0].cooldowns.get(&1013), Some(&3));
     for team in &state.teams {
