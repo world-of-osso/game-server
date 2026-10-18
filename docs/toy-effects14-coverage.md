@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source390–394: pending Ohn'ir return-home acceptance and pelt/catch/orb/eight-trigger boundaries (2026-10-17)
+
+393 test/spec00ee4d3e3 adds200630/391042 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now15hearthstone variants. One charge/1800000ms recharge and Timewalker193588 shared refusal remain exact. Format/manual readability/diffcheck pass; new15-variant behavioral proof requires a covering future head, not484afad. New387 mixed-control Wand is likewise beyond484. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|390 Comfortable Pile of Pelts200551/390453 | Instant target47 summon197289/property64/base1 for600000ms, inherited1200000ms recovery; runtime creature content/model absent. Actual lounging/placement/interaction/lifecycle remains unresolved; no inert pile, copied197280 pelt or invented sitting profile. |
+|391 Lover's Bouquet200597/390907 | Instant cursor87 missile32→390925, child dummy4/30000ms with cursor87 plus31/destination ally-area/radius1yd; item300000ms recovery. Actual throw/travel/friend catch/recipient aura and cleanup remain unproved; no automatic caster attachment, dropped area recipient or invented catch contest/result. |
+|392 Somewhat-Stabilized Arcana200628/391023 | Source1500ms target47 summon197500/property64/base1 for600000ms, inherited3600000ms recovery; runtime content/model absent. Actual arcana-orb identity/action/lifecycle and source promise of availability outside Cobalt Assembly remain gaps. “Outside” is not an invented must-be-outside use gate, copied orb power or generic decorative admission. |
+|393 Ohn'ir Windsage's Hearthstone200630/391042 | Source10000ms self252/homebind9, shared2309/one1800000ms charge, StartRecoveryCategory133/1500ms start recovery. New actual learned-use/persisted-bind/missing-bind refusal/pending-cast/return/shared-Timewalker-block case committed, covering proof pending. No new eligibility, cross-map/native or natural30-minute recharge certificate. |
+|394 Happy Tuskarr Palooza200631/391048 | Instant root has eight distinct64 triggers plus self dummy4/10000ms; item1800000ms recovery/category override0. In effect-index order, child/misc pairs are391052/0,391059/100,391060/200,391061/250,391062/300,391063/150,391064/350,391065/300. Children each create their own10000ms area-trigger26829–26836 at selectors50/43/44/48/42/41/47/49. Exact dance/recipient/placement/scheduling/presentation/cleanup remains gaps; preserve all eight, including both distinct misc300 children, rather than one actor/no-op or guessed timing rule. |
+
+Evidence: private `rows390-394-{readonly-source,action-source,active-goal}.json`, `hearth393-{active-goal,proof-ledger}.json`, exact source selector31/radius and trigger-index graph.149865 Tea Set remains untouched.
+
 ## Source385–389: pending mixed Chewed Wand acceptance and zombie/cage/rod/pelt boundaries (2026-10-17)
 
 387 test/spec27772d6ad adds a separate actual learned-use test for both source self transform56 and confusion5, not a simple-disguise tuple that ignores control. It asserts source1700ms cast remains pending, valid sheep display, damaged37 health unchanged, ordinary casting blocked while confused, ordinary10000ms expiry/restored display/casting/replicated aura removal, and1800000ms recovery/refusal. Format/manual readability/diffcheck pass; behavioral proof requires a later covering head, not484 throughafad56176. Runtime16372 display weights1:1/build12340 versus pinned Retail2:1/build69497 remain an explicit profile gap; no producer fix or weighted-pool certificate. No runtime/data change or own heavy duplicate.
