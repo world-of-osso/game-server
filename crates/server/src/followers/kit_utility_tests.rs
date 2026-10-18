@@ -1,0 +1,108 @@
+//! Source-native dispel/CC conditions; no movement or alternate interrupt owner.
+use super::kit_tests::{level32, uses_spell};
+use super::{update_ai, utility_tests};
+use crate::spell_cast::test_harness::Harness;
+use bevy::prelude::*;
+use shared::components::Health;
+use shared::protocol::CombatLogKind;
+
+fn cast_debuff(h: &mut Harness, spell: u32, spec: u32) {
+    let enemy = h.npc;
+    let patient = h.caster;
+    utility_tests::prepare_enemy_spec(h, enemy, spec);
+    crate::spell_cast::creature_cast(h.app.world_mut(), enemy, spell, Some(patient), false)
+        .unwrap();
+    h.advance(3);
+    assert!(crate::auras::has_aura(h.app.world(), patient, spell));
+}
+
+fn assert_party_dispel(entry: u32, spell: u32, debuff: u32, enemy_spec: u32) {
+    let (mut h, unit) = level32(entry);
+    // The debuffed member is NOT the lowest-health member. Targeting must test
+    // native dispel eligibility before ranking the party by health.
+    {
+        let mut health = h.app.world_mut().get_mut::<Health>(unit).unwrap();
+        health.current = health.max * 0.7;
+    }
+    cast_debuff(&mut h, debuff, enemy_spec);
+    uses_spell(&mut h, unit, spell);
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, debuff));
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.kind == CombatLogKind::Dispel
+                && event.source == Some(unit.to_bits())
+                && event.target == Some(h.caster.to_bits())
+                && event.spell_id == Some(spell)
+                && event.extra_spell_id == Some(debuff)
+        }),
+        "native dispel must name the eligible patient and removed aura"
+    );
+}
+
+#[test]
+#[ignore = "RED: Crenna's Nature's Cure is inventoried but never selected"]
+fn follower_kit_utility_crenna_dispels_party_magic() {
+    assert_party_dispel(209072, 88423, 589, 257);
+}
+
+#[test]
+#[ignore = "RED: Henry's Purify is inventoried but never selected"]
+fn follower_kit_utility_henry_dispels_party_magic() {
+    assert_party_dispel(215011, 527, 589, 257);
+}
+
+#[test]
+#[ignore = "RED: Meredy never removes a party curse"]
+fn follower_kit_utility_meredy_dispels_curse_on_healthier_member() {
+    assert_party_dispel(209059, 475, 702, 266);
+}
+
+#[test]
+fn follower_kit_utility_garrick_does_not_cleanse_unsupported_magic() {
+    let (mut h, unit) = level32(209057);
+    cast_debuff(&mut h, 589, 257);
+    for _ in 0..80 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 589));
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == unit.to_bits() && go.spell_id == 213644)
+    );
+}
+
+#[test]
+fn follower_kit_utility_crenna_does_not_dispel_an_empty_patient() {
+    let (mut h, unit) = level32(209072);
+    for _ in 0..80 {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == unit.to_bits() && go.spell_id == 88423)
+    );
+}
+
+#[test]
+#[ignore = "RED: Polymorph is inventoried but never selected when the real kick is cooling down"]
+fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
+    let (mut h, unit) = level32(209059);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    update_ai(h.app.world_mut());
+    h.advance(80);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt && event.spell_id == Some(2139))
+    );
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    uses_spell(&mut h, unit, 118);
+    assert!(crate::auras::has_aura(h.app.world(), h.npc, 118));
+}

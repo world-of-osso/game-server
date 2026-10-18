@@ -133,6 +133,8 @@ mod kit_source_tests;
 #[cfg(test)]
 mod kit_tests;
 #[cfg(test)]
+mod kit_utility_tests;
+#[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
 mod passive_stats_tests;
