@@ -158,6 +158,10 @@ pub(crate) fn spawn_group_spawn(
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CreatureDifficulty(pub u32);
 
+/// Source template flags resolved at spawn and same-actor entry projection.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CreatureFlagsExtra(pub u32);
+
 /// Spawn every creature of the copy's map spawned at its difficulty,
 /// with the template of that difficulty, except the bosses
 /// kept dead. When `replicate` is true, adds `Replicate` (requires lightyear plugins).
@@ -1570,6 +1574,41 @@ mod tests {
         let (level, powers) = query.single(app.world()).unwrap();
         assert_eq!(*level, UnitLevel(7));
         assert!(powers.entries.is_empty());
+    }
+
+    #[test]
+    fn native_ordinary_spawn_carries_source_creature_flags_extra() {
+        use bevy::ecs::system::RunSystemOnce;
+        let data = crate::test_data::world_data();
+        let spawn = data
+            .spawns
+            .iter()
+            .find(|spawn| spawn.template_entry == 6 && spawn.map == 0)
+            .expect("native Kobold6 placement")
+            .clone();
+        let expected = data.templates[&spawn.template_entry].flags_extra;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let unit = app
+            .world_mut()
+            .run_system_once(move |mut commands: Commands| {
+                let spawned = spawn_creatures(
+                    &mut commands,
+                    data,
+                    crate::maps::InMap::continent(spawn.map),
+                    0,
+                    false,
+                    std::iter::once(&spawn),
+                    None,
+                );
+                spawned[&spawn.guid]
+            })
+            .unwrap();
+        assert_eq!(app.world().get::<Npc>(unit).unwrap().template_id, 6);
+        assert_eq!(
+            app.world().get::<CreatureFlagsExtra>(unit).unwrap().0,
+            expected
+        );
     }
 
     #[test]

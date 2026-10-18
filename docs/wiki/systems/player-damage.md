@@ -10,13 +10,19 @@ How a player's auto-attacks and spells turn stats into damage, in the order Trin
 2. **Roll:** `melee::weapon_damage_range` = (min or max + AP / 6 × speed) × (1 + versatility), × 0.5 for the off hand. `melee::roll_weapon_damage` picks a whole number in the truncated bounds (Unit::CalculateDamage `urand`).
 3. **Done/taken:** × aura physical damage done × MOD_AUTOATTACK_DAMAGE × target physical damage taken (`AuraStatMods`), rounded.
 4. **Armor:** `combat::armor_mitigated` against `target_armor`: a creature's `CreatureArmor` through `UnitScaling::armor_against` (its ExpectedStat armor at its level for the attacker), a player's `CharacterStats.armor`. The constant is `ArmorConstants.at(attacker level against the target)`. Without the `ArmorConstants` resource (unit tests) there is no mitigation.
-5. **Outcome:** `melee::player_swing_chances` + `roll_melee_outcome` (one roll in 0..10000, chances truncated to hundredths), then `outcome_damage`: avoidance 0, crit × 2, glancing −10%/level, block −30% (the blocked amount goes to the combat log).
+5. **Outcome:** `melee::swing_chances` with `combat::roll_outcome` applying cached NPC victim NO_PARRY/NO_BLOCK, then `roll_melee_outcome` (one roll in 0..10000, chances truncated to hundredths), then `outcome_damage`: avoidance 0, crit × 2, glancing −10%/level, block −30% (the blocked amount goes to the combat log).
 6. **Level scaling:** `damage_dealt` (a tuned creature attacker's multiplier) and `health_loss` (a tuned creature target's health ratio), unchanged from [[level-scaling]].
 7. **Timers:** the swung hand restarts at weapon speed / (1 + haste); the other hand is pushed to at least 0.2 s.
 
-Creatures skip steps 1, 2 and 5: their base is the ExpectedStat roll (tuned) or 10, every 2 s, and they always hit. Step 4 applies to them too, so a player's gear armor mitigates creature swings.
+Creatures use the ExpectedStat roll (tuned) or10 every2s instead of the player weapon/AP roll. Their existing hit table shares the victim flag filtering; armor also applies to creature swings.
 
 Avoided swings emit `CombatEventType::Miss | Dodge | Parry` and `CombatLogKind::Miss(..)` with amount 0, add 0 threat, still give swing rage and raise no proc events.
+
+## NPC avoidance flags — 2026-10-18
+
+`zones::CreatureFlagsExtra(u32)` is server-only source template metadata. `EntryProjection::apply_core` copies it while the template is already present, covering ordinary spawn, summons and same-actor entry projection. `combat::roll_outcome` reads that component and zeroes only parry for0x4 and block for0x10 on creature victims; there is no per-swing WorldData lookup, wire change or extra random draw. Missing metadata is not a query filter: the NPC retains its existing avoidance and remains attackable, with an explicit error queued once per entity. A private diagnostic marker deduplicates even multiple attackers in one deferred batch. This compatibility behavior is explicitly requested for manually constructed NPCs; normal spawns always cache the source flags.
+
+Pinned TC a352b1fa Unit.cpp2378–2488/2749–2861 and CreatureData.h323–325 supply the two masks. Aura251, facing, runtime IsTotem, NO_CRIT/NO_CRUSHING and other flags remain named gaps; no NO_DODGE or SUNWELL flag is invented. Genuinecfb1638ac RED uses actual native Ice Tomb36980/level80 and256 ordinary wire-observed swings, seeing15Parry/7Block; unflagged native Grandmaster Dummy31144 control passes. Probability of missing both outcomes at6%+3% is0.91^256=3.27037e-11; corrected masks forbid them deterministically. Initialc7d19 fixture panic omitted actual class-level authority and is NOT feature RED. Full read-only native WorldData fixes that setup, without changing rows, levels, HP/stat values, clocks or RNG. Native GREEN, ordinary-spawn cache proof and final checks remain pending; source/receipts live in engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-flags-*` and `npc-auto-flags-*`.
 
 ## Hit table values
 
