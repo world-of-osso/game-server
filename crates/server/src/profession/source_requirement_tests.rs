@@ -44,7 +44,7 @@ fn fixture(id: u32, tools: Option<Tools>) -> (World, Entity, u64, SpellInfo) {
         data.reagents.insert(2963, vec![(id, 2)]);
     }
     let mut world = World::new();
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     world.insert_resource(ItemTemplates {
         retail: HashMap::from([(id, template)]),
         forever: HashMap::from([(id, template)]),

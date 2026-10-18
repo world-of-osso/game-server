@@ -38,7 +38,7 @@ fn achievements_criteria_native_penance_healing_counts_effective_and_raw_peaks_a
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     bevy::app::Plugin::build(&AchievementPlugin, &mut h.app);
     *h.app.world_mut().get_mut::<Health>(ally).unwrap() = Health {
         current: 0.0,

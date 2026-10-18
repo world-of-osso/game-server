@@ -7,7 +7,8 @@
 //! its auras end with its duration or its caster.
 
 use bevy::prelude::*;
-use shared::components::Position;
+use lightyear::prelude::{NetworkTarget, Replicate};
+use shared::components::{DynamicObjectInfo, Position, RAIN_OF_FIRE_SPELL_ID};
 
 use super::effects::EffectCtx;
 use super::targets::{self, Relation};
@@ -54,11 +55,12 @@ pub(crate) fn create(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
     };
     let duration_ms = super::duration_ms(world, ctx.caster, ctx.spell).max(0);
     let now = crate::auras::aura_now(world);
+    let radius = targets::effect_radius(effect);
     let object = DynamicObject {
         caster: ctx.caster,
         spell_id: ctx.spell.id,
         effect_mask: 1 << effect.index,
-        radius: targets::effect_radius(effect),
+        radius,
         relation: dynobj_relation(effect),
         started_at: now,
         expires_at: now + f64::from(duration_ms as u32) / 1000.0,
@@ -75,12 +77,20 @@ pub(crate) fn create(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
             map,
         ))
         .id();
+    if ctx.spell.id == RAIN_OF_FIRE_SPELL_ID {
+        world.entity_mut(entity).insert((
+            DynamicObjectInfo {
+                caster: ctx.caster.to_bits(),
+                spell_id: ctx.spell.id,
+                radius,
+            },
+            Replicate::to_clients(NetworkTarget::All),
+            crate::interest::NetworkVisibility::default(),
+        ));
+    }
     info!(
         "Spell {} of {}: dynamic object {entity} at {:?}, radius {}",
-        ctx.spell.id,
-        ctx.caster,
-        dest.position,
-        targets::effect_radius(effect)
+        ctx.spell.id, ctx.caster, dest.position, radius
     );
     update_object(world, entity);
 }

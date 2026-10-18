@@ -11,7 +11,7 @@ fn create_rating_world(file: &tempfile::NamedTempFile) -> World {
     crate::persistence::create_tables(&db);
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     let mut world = World::new();
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     world.insert_resource(load_achievement_catalog(&conn).unwrap());
     world.insert_resource(arena::Catalog::load(&conn).unwrap());
     world.insert_resource(

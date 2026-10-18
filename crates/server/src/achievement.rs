@@ -21,6 +21,7 @@ pub(crate) use catalog::{
 };
 #[path = "achievement_account.rs"]
 mod account_store;
+pub(crate) use account_store::AccountProgressCache;
 #[path = "achievement_publication.rs"]
 mod publication;
 pub(crate) use publication::flush_updates as flush_achievement_updates;
@@ -1291,7 +1292,7 @@ fn update_player_events(
             && let Some(db) = world.get_resource::<GameDatabase>()
         {
             toasts.extend(account_store::sync_account_progress(
-                &db.db,
+                db,
                 &mut state,
                 &catalog,
                 account_store::AccountUpdate {
@@ -1317,16 +1318,25 @@ fn update_player_events(
     })
 }
 
+/// Runtime loads share the owned snapshots inserted before FIFO submission.
+pub(crate) fn load_character_progress(
+    db: &GameDatabase,
+    account: u64,
+    character: u64,
+) -> PlayerAchievementState {
+    account_store::load_character_progress(db, account, character)
+}
+
 pub(crate) fn save_monthly_contribution(
-    db: &redb::Database,
+    db: &GameDatabase,
     account: u64,
     character: u64,
     state: &PlayerAchievementState,
-) {
-    account_store::save_monthly_contribution(db, account, character, state);
+) -> crate::persistence_writer::CommitReceipt {
+    account_store::save_monthly_contribution(db, account, character, state)
 }
 pub(crate) fn monthly_contributions(
-    db: &redb::Database,
+    db: &GameDatabase,
     account: u64,
 ) -> Vec<PlayerAchievementState> {
     account_store::monthly_contributions(db, account)
@@ -1668,6 +1678,10 @@ fn query_comparison_target(
     let name = catalog::bound_text(&player.name, shared::protocol::ACHIEVEMENT_NAME_MAX_BYTES);
     Ok((name, catalog.page(state, query, player.race)))
 }
+
+#[cfg(test)]
+#[path = "achievement_writer_tests.rs"]
+mod writer_tests;
 
 #[cfg(test)]
 #[path = "achievement_absent_aura_tests.rs"]
