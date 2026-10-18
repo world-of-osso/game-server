@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Permanent-pod/random-wormhole/seed/recipient-gift boundaries and retained Camera (2026-10-17)
+
+[Source525–529 matrix](../../toy-effects14-coverage.md#source525529-permanent-podrandom-wormholeseedrecipient-gift-boundaries-and-retained-camera-2026-10-17) preserves permanent three-model Escape Pod, RequiredSkill2875 random Khaz Algar wormhole/missing actor, mixed seed/area33467 and friendly missile Hat/60s aura plus actual recipient223316 product. Product shares the toy's name but has distinct ID/DurationInInventory60/MaxCount1; caster-only creation is not the contract. Existing Filmless Camera attachment/cancel CPU proof retained, not native photography output. No further runtime/data/new proof/own heavy duplicate;498 lead-owned/in progress.
+
 ## Pending Cherry Trail acceptance and puntables/opt-in-fireworks/cooking/water-blaster boundaries (2026-10-17)
 
 [Source520–524 matrix](../../toy-effects14-coverage.md#source520524-pending-cherry-trail-acceptance-and-puntablesopt-in-fireworkscookingwater-blaster-boundaries-2026-10-17) adds acceptance-only4b21ddb7e:220777/447446/source600s as17th existing learned/cancel caster identity, pending newer head AFTER498c013. Missing puntable-box creature237586 is not same-number Bonfire GO; fireworks require attack-to-opt-in viewers/event recovery, missing452051 Lantern retains cooking service, and existing wild type22 water display still refuses its unscripted445930. No inert/shared-number/service shortcut or new native/runtime/data proof. Format/manual readability/diffcheck pass; no own heavy duplicate.

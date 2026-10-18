@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source525–529: permanent-pod/random-wormhole/seed/recipient-gift boundaries and retained Camera (2026-10-17)
+
+No new acceptance/runtime/data/native proof or own heavy duplicate. Existing Filmless Camera attachment witness stays bounded; permanent appearance, qualified random travel and mixed ally-targeted item creation need their own contracts.498c013 remains lead-owned/in progress.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|525 Defective Escape Pod221962/452311 | Source2000ms self transform56→existing224771/misc8/permanent-1; valid models120107/120108/120109, inherited600000ms recovery. Actual permanent appearance/shelter limitations/eligibility/removal/reuse remain unverified; no timed-disguise helper assumption, teleport or invulnerability invented from the description. |
+|526 Filmless Camera221964/455023 | Instant self audited dummy4/permanent-1, inherited30000ms recovery. Existing exact six-attachment fixture retains actual learned use/aura/cancel/no gameplay model/health change CPU witness. No new camera pose/native pixels, photography output or recovery-passage certificate. |
+|527 Wormhole Generator: Khaz Algar221966/448126 | Source5000ms target47 summon223342/property3539/flags16779280/base1 for120000ms; spell1800000ms/start1000ms recovery. Runtime creature/model absent. Item RequiredSkill2875/rank1 plus actual wormhole interaction/random qualified Khaz Algar destination/transfer remain gaps; no inert portal, guessed coordinates/pool or borrowed Pandaria travel certificate. |
+|528 Satchel of Stormborn Seeds223146/448389 | Source3000ms self dummy4 plus target47 area179→33467 for30000ms, inherited60000ms recovery. Actual planting/growth/area/recipient/presentation/cleanup remains unresolved; no aura-only seed, dropped area sibling or guessed harvest/damage. |
+|529 Trusty Hat223312/448938 | Instant friendly21 missile32/speed1.5→448937: friendly21 dummy4/60000ms plus CreateItem24/base1→223316 to that recipient, item1800000ms recovery. Runtime physical223316 shares the name but is not toy223312; DurationInInventory60/stack1/MaxCount1. Exact allied delivery/appearance/recipient inventory/expiry/cap lifecycle remains unverified; no caster-only product, dropped aura, wrong toy ID or item-count2 expectation. |
+
+Evidence: private `rows525-529-{readonly-source,action-source,runtime-action-source,active-goal}.json`, actual product join/skill fields and existing Camera fixture.149865 Tea Set remains untouched.
+
 ## Source520–524: pending Cherry Trail acceptance and puntables/opt-in-fireworks/cooking/water-blaster boundaries (2026-10-17)
 
 524 test/spec4b21ddb7e adds220777/447446/600000ms to the unchanged actual learned-use/replicated-aura/cancel/full-health-model/no-actors caster helper, now17 identities; old16 unchanged. Format/manual readability/diffcheck pass; new behavior requires a head AFTER498c013. No further runtime/data change or own heavy duplicate.
