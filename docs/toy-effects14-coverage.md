@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source370–374: pending Blue/Bronze/Green acceptance, training gap and retained soup proof (2026-10-17)
+
+370–372 test/spec73494c432 adds three exact existing type5 cursor banners to the transmitted-object fixture, now eight IDs. Prior five source rows, including361/369, stay unchanged. Each new case uses its own model/scale and actual target87 cursor, owner/map/facing and ordinary180s expiry assertions. Format/manual readability/diffcheck pass; updated eight-object plus15-caster successor coverage after478 is requested, not passed. No runtime/data/admission change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|370 Blue Dragon Banner199769/388090 | Instant cursor87 effect50→381321 for180000ms; category1246/180000ms recovery. Existing type5/display77021/size0.5 and display bounds are used by its new actual-use case, pending covering proof. No borrowed Black-banner pass, Red-template closure or new native/category-reuse certificate. |
+|371 Bronze Dragon Banner199770/388091 | Same source cursor/lifetime/category, distinct381319/type5/display76419/size0.5. Its own exact actual-use/owner/map/facing/ordinary-expiry case is committed, pending a covering gate, not identity substitution with Blue or Green. |
+|372 Green Dragon Banner199771/388092 | Same source cursor/lifetime/category, distinct381320/type5/display77020/size0.5. Its exact actual-use/expiry case is committed and pending covering proof; no new native or whole-banner-family certificate. |
+|373 Tuskarr Training Dummy199830/388229 | Instant cursor87 summon196394/property2910 for300000ms; Control0/Title0/flags256, item3600000ms recovery. Source says outdoors-only; runtime creature content/model absent. Actual authored dummy combat/target behavior/placement/cleanup and outdoors qualification remain gaps; no inert scenery, invented training flags or copied dummy model. |
+|374 Tuskarr Traveling Soup Pot199892/388258 | Source2000ms cursor87 effect50/base1→381360/type8/display75335/size0.7 for300000ms; item/category recovery300000ms. Source focus4/radius10 links31442/CozyFire7353. Retain [exact seven-item linked-cooking actor/buff1/60s restoration and trigger/audience/cooking CPU scope](#linked-cooking-traps-2026-10-12). Representative both-skin native fire was Little Wickerman, not per-toy Soup pixels; no new positive/native result or guessed Versatility coefficient. |
+
+Evidence: private `rows370-374-{readonly-source,action-source}.json`, `banners370-372-{active-goal,proof-ledger}.json`, actual runtime TDB models/display bounds and existing linked-cooking witnesses.149865 Tea Set remains untouched.
+
 ## Source365–369: pending Black Dragon acceptance and seat/tea/Red-banner boundaries (2026-10-17)
 
 369 test/specb53bd5e5b adds the exact existing Black Dragon banner as fifth transmitted-object case. Prior four rows, including361, stay unchanged; cursor selection now names all three actual cursor banners. Format/manual readability/diffcheck pass. Expanded five-object plus15-caster successor coverage after478 is requested, not passed;478's older head contains neither361/369 nor335. No runtime/data/producer change or own heavy duplicate.
