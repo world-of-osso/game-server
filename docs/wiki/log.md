@@ -2760,3 +2760,5 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 ## Native Mobile Banking acceptance complete
 
 [Native proof](systems/guild-perks.md#native-mobile-banking-proof): both-skin cast/bank/nonmember refusal/despawn and actual post2h accepted casts pass on identical artifacts. Forever7242700ms complements the retained Modern-origin7311223ms interval. Fifteen inspected unchanged full-HD originals published; owned runtimes stopped and owner-checked window cleared. Earlier interrupted overall results remain intact; countdown labels are not timing oracles.
+
+- 2026-10-18: Native143 SpellLabel cooldown recovery reuses286 start/remaining lifecycle. Normal Autumn leaf RED2/3→native7+retained10GREEN; label2960-only native row absent,143refresh/source-only, Seasons/charge/time-rate/fullability excluded. See [auras](systems/auras.md#cooldown-recovery-rates).
