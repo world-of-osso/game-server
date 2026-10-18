@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Dominating Victory and missing metadata, qualified flare, corpse flag/rod boundaries (2026-10-18)
+
+[Source665–669 matrix](../../toy-effects14-coverage.md#source665669-pending-dominating-victory-and-missing-metadata-qualified-flare-corpse-flagrod-boundaries-2026-10-18) adds acceptance-only9470e4859:264413/1271973/30-minute aura via unchanged caster helper, now20 identities/old19 retained; behavior awaits lead successor. Unnamed264368/1271857 lacks item/spell metadata; missing257541 flare retains32/64/32 chain, distinct area groups and base0; corpse flag22/93 and Rod25/mixed395/shrink/two5000 payloads/permanent corpse transform remain gaps. No substituted metadata, static helper or caster disguise. No runtime/data/native change or own heavy work.
+
 ## Pending Preyseeker hearthstone and minipet leash, tap-state, mixed mushroom, triggered-homebind boundaries (2026-10-18)
 
 [Source660–664 matrix](../../toy-effects14-coverage.md#source660664-pending-preyseeker-hearthstone-and-minipet-leash-tap-state-mixed-mushroom-triggered-homebind-boundaries-2026-10-18) adds acceptance-only3b3f52940:263933/1270814/source10s/shared2309 blocks Naaru263489 via unchanged bind helper, now24 hearthstones/old23 retained; behavior awaits lead successor. Permanent target90 leash, once/twice lens state, missing642496+42098 mixed76/179 mushroom and Mycomancer actual10s root1299014/64→instant252 child1286909 remain distinct gaps. No caster-only leash, fabricated tap window, ordinary mushroom summon or direct-child hearthstone substitution. No runtime/data/native change or own heavy jobs.

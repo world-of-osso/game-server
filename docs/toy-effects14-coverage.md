@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source665–669: pending Dominating Victory and missing metadata, qualified flare, corpse flag/rod boundaries (2026-10-18)
+
+Acceptance-only9470e4859 appends264413/1271973/1800000ms to unchanged audited caster helper, now20 identities/old19 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor after cancelled509. No runtime/data/native change or own heavy jobs.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|665 Unnamed264368/1271857 | Toy and actual on-use ItemEffect root exist, but ItemSparse/content_item name and spell metadata are absent. No duration/cast/effect/mechanic fabricated, no sibling Mycomancer or other hearthstone substituted. Metadata gap remains explicit. |
+|666 Dominating Victory264413/1271973 | Instant self audited dummy4/zero payload for1800000ms, inherited3600000ms recovery. Own actual bag learning/UseToy/replicated exact aura/cancellation/unchanged health-model/no-creature acceptance committed, behavior pending successor. No copied Etheric/Toxic native imagery, boss-combat effect, full-hour reuse or acquisition-qualification certificate. |
+|667 Midnight Delver's Flare Gun264414/1271978 | Instant effect32/target72 plus64→1271983/misc3000/target0; child32/target47→1271984; leaf target87/base0 summons257541/property6593/Control0/Faction35/flags268435456 with permanent duration. Root/child recovery3600000ms; required areas8766 at root versus8004 on children, PreventionType4 on root/first child. Runtime actor/model absent. Actual qualified helper arrival/selection/placement/lifecycle remains gap; no guessed fellow-delver, inert flare, dropped32 edge or default one actor from base0. |
+|668 Galactic Flag of Victory264517/1272178 | Instant dummy3/targets22/93, explicit item60000ms recovery, no duration. Actual enemy-player corpse eligibility/front placement/authored flag/lifecycle remains unresolved. No generic cosmetic success, living/friendly corpse substitute or imported Flag of Ownership semantics. |
+|669 Rod of Exanguishation264666/1272270 | Source3000ms target25 dummy4 plus395/misc40862 and64→1272269/misc5000 for10000ms, inherited600000ms recovery. Child1272269 target25 scale61/base-50/misc5000 for5000ms plus64→1272272/misc5000; leaf permanent target25 transform56→existing257639/misc8/display31171/scale1. Actual corpse qualification/sequencing/shrink/area/appearance restoration remains gap; preserve both5000 trigger payloads and non-self recipient, not caster disguise or guessed half-size timing. |
+
+Evidence: private `rows665-669-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `dominating666-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, separate8766/8004 area joins. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source660–664: pending Preyseeker hearthstone and minipet leash, tap-state, mixed mushroom, triggered-homebind boundaries (2026-10-18)
 
 Acceptance-only3b3f52940 appends direct252 Preyseeker263933/1270814 to unchanged saved-bind/shared2309 helper, now24 hearthstones/old23 retained; sibling Naaru263489 is blocked after spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after cancelled509. Actual Mycomancer root is not substituted with its direct252 child or included in that24-case certificate. No runtime/data/native change or own heavy jobs.
