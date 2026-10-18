@@ -253,7 +253,6 @@ fn azure_telash_natural_absolute_zero_hit_launches_source_outbound_jump() {
 }
 
 #[test]
-#[ignore = "next actual first-landing1004 callback RED"]
 fn azure_telash_natural_first_landing_starts_native_absolute_zero_cast() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     assert_eq!(h.creatures_of(197204).len(), 3);
