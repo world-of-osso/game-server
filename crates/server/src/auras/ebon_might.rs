@@ -5,7 +5,6 @@ use shared::components::Player;
 
 use super::{ActiveAuras, AuraInstance};
 use crate::class_progression::ActiveSpec;
-use crate::spell_cast::targets;
 use crate::spell_info::{ClassSpells, SpecInfo, SpellInfo};
 use crate::stats::{CharacterStats, PrimaryStat, StatModifiers};
 
@@ -33,19 +32,12 @@ fn is_damage_player(world: &World, unit: Entity) -> bool {
 
 /// Apply native friendliness/map/radius/player/exclude-caster rules first,
 /// then filter the known damage roles before the authored target cap.
-pub(crate) fn select_allies(
-    world: &mut World,
-    caster: Entity,
+pub(crate) fn filter_allies(
+    world: &World,
     spell: &SpellInfo,
-    explicit: Option<Entity>,
-) -> Vec<Entity> {
-    let effect = spell
-        .effects
-        .iter()
-        .find(|effect| effect.index == 0)
-        .expect("Ebon area effect");
-    let mut units = targets::select_targets(world, caster, explicit, spell, effect, 0, false)
-        .expect("native Ebon allied-area selectors");
+    _explicit: Option<Entity>,
+    units: &mut Vec<Entity>,
+) {
     units.retain(|&unit| is_damage_player(world, unit));
     let cap = spell
         .target_restrictions
@@ -55,7 +47,6 @@ pub(crate) fn select_allies(
     if cap > 0 {
         units.truncate(cap as usize);
     }
-    units
 }
 
 pub(crate) fn cast_self_buff(world: &mut World, caster: Entity, _spell: &SpellInfo) {
