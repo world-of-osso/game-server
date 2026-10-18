@@ -171,6 +171,8 @@ Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actio
 
 - Vibrant Clacking Claw205904/410931 uses its existing205296 four-display pool112407/112523/112524/112525 for600000ms, with inherited category2177 recovery3600000ms. Actual learned use must choose a valid display, preserve unchanged full health, expire naturally/restoring the native appearance and refuse while recovery remains. Single-use model validity does not certify weighted sampling, all three authored clacks or native presentation.
 
+- Colorful Beach Chair218112/441839 transmits existing434317/type7/display89277/size1.5 after its3000ms cast, at target47's authored2yd forward destination for300000ms. Preserve owner/map/facing and ordinary expiry; seated interaction, native presentation and natural300000ms item recovery remain separate proof scopes. Do not substitute a cursor87 target, fishing-chair model or scale1.
+
 - Nightmare Banner206008/411653 transmits existing402852/type5/display82612/size1 to the actual target87 cursor for180000ms. Preserve owner/map/facing and ordinary expiry; category1246 recovery180000ms and native presentation remain separate proof scopes. Do not substitute a dragon banner or invent interactions.
 
 - Blazing Shadowflame Cinder205418/409891 uses its existing audited self dummy4 for600000ms. Actual learned use must preserve its replicated aura/cancellation, unchanged full health/model and absence of summoned actors. Item900000ms recovery, native shadowflame presentation and natural ten-minute expiry/reuse remain separate proof scopes; no damage, invented creature or unaudited-sibling admission.
