@@ -252,15 +252,35 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
             .count(),
         1
     );
+    // Full-mask children intentionally emit no CastSuccess event. Compare the
+    // actual motion with an ordinary parent cast, not an invented wire message.
+    let (mut native, native_unit) = level32(232800);
+    prepare_native_charge_target(&mut native);
+    let native_enemy = native.npc;
+    utility_tests::prepare_enemy_spec(&mut native, native_enemy, 63);
+    crate::spell_cast::creature_cast(
+        native.app.world_mut(),
+        native_enemy,
+        133,
+        Some(native_unit),
+        false,
+    )
+    .unwrap();
+    let native_intent = read_movement_intent(&native, native_unit);
+    crate::spell_cast::creature_cast(
+        native.app.world_mut(),
+        native_unit,
+        106839,
+        Some(native_enemy),
+        false,
+    )
+    .unwrap();
+    assert_eq!(read_movement_intent(&native, native_unit), native_intent);
+    native.advance(20);
     assert_eq!(
-        h.inbox
-            .log
-            .iter()
-            .filter(|event| event.kind == CombatLogKind::CastSuccess
-                && event.source == Some(unit.to_bits())
-                && event.spell_id == Some(221514))
-            .count(),
-        1
+        *native.app.world().get::<Position>(native_unit).unwrap(),
+        after,
+        "picker motion must equal ordinary sourced spell execution"
     );
     assert!(
         h.inbox
