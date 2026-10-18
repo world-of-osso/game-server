@@ -1126,6 +1126,10 @@ fn startup_load_world_data(mut commands: Commands) {
             .expect("Failed to load authored Molten Gold area12928 from local TDB"),
     );
     commands.insert_resource(
+        crate::spell_cast::area_trigger::load_aura_field_catalog(&conn)
+            .expect("Failed to load source aura395 area-trigger properties/actions/Curve inputs"),
+    );
+    commands.insert_resource(
         crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).expect(
             "Failed to load Gust Slash area13339 and its orbit; run scripts/import-battlegrounds.py",
         ),

@@ -979,6 +979,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        crate::spell_cast::area_trigger::on_aura_applied(world, target, &aura);
         fixate::on_applied(world, target, &aura);
         crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
@@ -1157,6 +1158,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    crate::spell_cast::area_trigger::on_aura_removed(world, unit, aura);
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
