@@ -41,6 +41,8 @@ mod gnomeregan;
 mod group_criteria;
 #[path = "herald_intro.rs"]
 mod herald_intro;
+#[path = "herald_intro2.rs"]
+mod herald_intro2;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
