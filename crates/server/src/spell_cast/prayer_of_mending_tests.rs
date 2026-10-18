@@ -1,8 +1,9 @@
 //! Native Prayer of Mending admission; TC a352b1fa spell_priest.cpp3636–3806.
-use super::test_harness::{Harness, harness, spawn_player, varied};
+use super::test_harness::{Harness, harness, spawn_peer_connection, spawn_player, varied};
 use crate::auras::has_aura;
 use bevy::prelude::Entity;
 use shared::casting::CastState;
+use shared::components::Position;
 use shared::protocol::CombatLogKind;
 
 const PRAYER_OF_MENDING: u32 = 33_076;
@@ -33,13 +34,62 @@ fn ordinary_damage(h: &mut Harness) {
 }
 
 fn ordinary_damage_to(h: &mut Harness, target: Entity) {
-    crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, ANNIHILATION, Some(target), false)
-        .unwrap();
+    native_damage_to(h, ANNIHILATION, target);
+}
+
+/// Only the authored zero-delay Annihilation and24yd/s Fireball9053 are used.
+fn native_damage_to(h: &mut Harness, spell: u32, target: Entity) {
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, spell, Some(target), false).unwrap();
     let dt = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
-    let frames = h.app.world().get::<CastState>(h.npc).map_or(0, |cast| {
+    let cast_frames = h.app.world().get::<CastState>(h.npc).map_or(0, |cast| {
         ((cast.duration - cast.elapsed).max(0.0) / dt).ceil() as usize
     });
-    h.advance(frames + 3);
+    let speed = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .speed;
+    // TC AddUnitTarget minimum missile distance5, not a test clock override.
+    let flight = if speed > 0.0 {
+        unit_distance(h, h.npc, target).max(5.0) / speed
+    } else {
+        0.0
+    };
+    h.advance(cast_frames + (flight / dt).ceil() as usize + 3);
+}
+
+fn unit_distance(h: &Harness, from: Entity, to: Entity) -> f32 {
+    let a = h.app.world().get::<Position>(from).unwrap();
+    let b = h.app.world().get::<Position>(to).unwrap();
+    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
+}
+
+fn wait_for_native_jump(h: &mut Harness, from: Entity, to: Entity) {
+    let speed = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(MENDING_JUMP)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .speed;
+    let dt = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
+    h.advance((unit_distance(h, from, to).max(5.0) / speed / dt).ceil() as usize + 3);
+}
+
+fn owned_ward(h: &Harness, target: Entity, priest: Entity) -> Option<&crate::auras::AuraInstance> {
+    h.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)?
+        .iter()
+        .find(|aura| aura.spell_id == MENDING_WARD && aura.caster == priest)
 }
 
 #[test]
@@ -212,4 +262,171 @@ fn prayer_of_mending_native_no_stack_override_preserves_agony_floor_and_refresh(
             stacks
         );
     }
+}
+
+#[test]
+fn prayer_of_mending_native_expiry_does_not_heal_on_later_damage() {
+    let mut h = fixture();
+    h.cast_and_deliver(PRAYER_OF_MENDING, Some(h.caster));
+    let duration = owned_ward(&h, h.caster, h.caster).unwrap().duration_ms;
+    let dt = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
+    h.advance((duration as f32 / 1000.0 / dt).ceil() as usize + 3);
+    assert!(!has_aura(h.app.world(), h.caster, MENDING_WARD));
+    ordinary_damage(&mut h);
+    assert_eq!(h.health(h.caster), 200.0);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.spell_id == Some(MENDING_HEAL))
+    );
+}
+
+#[test]
+fn prayer_of_mending_native_exhausts_five_stacks_with_full_health_jump_ally() {
+    const FIREBALL: u32 = 9053; // Native7, no coefficient/variance,24yd/s.
+    let mut h = harness(
+        Vec::new(),
+        &[
+            PRAYER_OF_MENDING,
+            MENDING_WARD,
+            MENDING_HEAL,
+            MENDING_JUMP,
+            FIREBALL,
+        ],
+        5,
+    )
+    .unwrap();
+    let priest = h.caster;
+    let other = spawn_player(&mut h.app, 1, 12.0);
+    h.cast_and_deliver(PRAYER_OF_MENDING, Some(priest));
+    let mut holder = priest;
+    for remaining in (1..=5).rev() {
+        assert_eq!(owned_ward(&h, holder, priest).unwrap().stacks, remaining);
+        native_damage_to(&mut h, FIREBALL, holder);
+        assert_eq!(h.health(holder), 1000.0);
+        assert!(!has_aura(h.app.world(), holder, MENDING_WARD));
+        let next = if holder == priest { other } else { priest };
+        wait_for_native_jump(&mut h, holder, next);
+        if remaining > 1 {
+            assert_eq!(owned_ward(&h, next, priest).unwrap().stacks, remaining - 1);
+        }
+        holder = next;
+    }
+    assert!(!has_aura(h.app.world(), priest, MENDING_WARD));
+    assert!(!has_aura(h.app.world(), other, MENDING_WARD));
+    let heals = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(MENDING_HEAL))
+        .count();
+    assert_eq!(heals, 5);
+    native_damage_to(&mut h, FIREBALL, priest);
+    assert_eq!(h.health(priest), 993.0);
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(
+                |event| event.kind == CombatLogKind::Heal && event.spell_id == Some(MENDING_HEAL)
+            )
+            .count(),
+        heals
+    );
+}
+
+#[test]
+fn prayer_of_mending_native_no_jump_recipient_consumes_current_ward() {
+    const FIREBALL: u32 = 9053;
+    let mut h = harness(
+        Vec::new(),
+        &[
+            PRAYER_OF_MENDING,
+            MENDING_WARD,
+            MENDING_HEAL,
+            MENDING_JUMP,
+            ANNIHILATION,
+            FIREBALL,
+        ],
+        5,
+    )
+    .unwrap();
+    let priest = h.caster;
+    // Native root range40, jump radius30:35 is in root range but out of jump range.
+    let holder = spawn_player(&mut h.app, 1, 35.0);
+    h.cast_and_deliver(PRAYER_OF_MENDING, Some(holder));
+    assert!(owned_ward(&h, holder, priest).is_some());
+    ordinary_damage_to(&mut h, holder);
+    wait_for_native_jump(&mut h, holder, priest);
+    assert!(!has_aura(h.app.world(), holder, MENDING_WARD));
+    assert!(!has_aura(h.app.world(), priest, MENDING_WARD));
+    let before = h.health(holder);
+    let heals = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(MENDING_HEAL))
+        .count();
+    assert_eq!(heals, 1);
+    native_damage_to(&mut h, FIREBALL, holder);
+    assert_eq!(h.health(holder), before - 7.0);
+    assert_eq!(
+        h.inbox
+            .log
+            .iter()
+            .filter(
+                |event| event.kind == CombatLogKind::Heal && event.spell_id == Some(MENDING_HEAL)
+            )
+            .count(),
+        heals
+    );
+}
+
+#[test]
+fn prayer_of_mending_native_foreign_ward_is_not_consumed_or_used_as_jump_owner() {
+    let mut h = fixture();
+    let priest = h.caster;
+    let holder = spawn_player(&mut h.app, 1, 12.0);
+    let foreign = spawn_player(&mut h.app, 5, 70.0);
+    let foreign_holder = spawn_player(&mut h.app, 1, 72.0);
+    h.app
+        .world_mut()
+        .entity_mut(foreign)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            PRAYER_OF_MENDING,
+        ]));
+    let connection = spawn_peer_connection(&mut h.app, foreign, 2);
+    h.cast_and_deliver(PRAYER_OF_MENDING, Some(holder));
+    // Both roots use ordinary authenticated player requests, not direct aura writes.
+    let main_connection = h.connection;
+    h.caster = foreign;
+    h.connection = connection;
+    h.cast_and_deliver(PRAYER_OF_MENDING, Some(foreign_holder));
+    h.advance(3);
+    h.caster = priest;
+    h.connection = main_connection;
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(owned_ward(&h, foreign_holder, foreign).unwrap().stacks, 5);
+    ordinary_damage_to(&mut h, holder);
+    wait_for_native_jump(&mut h, holder, priest);
+    assert_eq!(owned_ward(&h, priest, priest).unwrap().stacks, 4);
+    assert_eq!(owned_ward(&h, foreign_holder, foreign).unwrap().stacks, 5);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(MENDING_HEAL)
+                && event.source == Some(foreign.to_bits()))
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(MENDING_HEAL)
+                && event.source == Some(priest.to_bits())
+                && event.target == Some(holder.to_bits()))
+    );
 }
