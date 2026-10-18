@@ -1278,6 +1278,7 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         (206008, 411653, 402852, 5, 82612, 1.0, 0.0, 180),
         (218112, 441839, 434317, 7, 89277, 1.5, 2.0, 300),
         (234951, 1215364, 505415, 22, 97591, 0.75, 0.0, 180),
+        (239007, 1227030, 527088, 5, 102616, 1.0, 0.0, 180),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
@@ -1303,7 +1304,7 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         // Chairs42766/441839 and MOLL-E54710 retain target47's authored forward offsets.
         let cursor_object = matches!(
             item,
-            45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900 | 206008 | 234951
+            45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900 | 206008 | 234951 | 239007
         );
         let destination = cursor_object.then_some([4.0, 0.0, -3.0]);
         assert_eq!(
