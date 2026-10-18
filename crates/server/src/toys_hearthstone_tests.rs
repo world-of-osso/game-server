@@ -125,3 +125,18 @@ fn toyfx190_eternal_traveler_hearthstone_learned_use_returns_to_bind_and_blocks_
 fn toyfx225_necrolord_hearthstone_learned_use_returns_to_bind_and_blocks_eternal_traveler() {
     assert_toy_hearthstone_bind_and_shared_charge(182773, 340200, 172179);
 }
+
+#[test]
+fn toyfx311_dominated_hearthstone_learned_use_returns_to_bind_and_blocks_necrolord() {
+    assert_toy_hearthstone_bind_and_shared_charge(188952, 363799, 182773);
+}
+
+#[test]
+fn toyfx313_enlightened_hearthstone_learned_use_returns_to_bind_and_blocks_dominated() {
+    assert_toy_hearthstone_bind_and_shared_charge(190196, 366945, 188952);
+}
+
+#[test]
+fn toyfx314_broker_matrix_learned_use_returns_to_bind_and_blocks_enlightened() {
+    assert_toy_hearthstone_bind_and_shared_charge(190237, 367013, 190196);
+}
