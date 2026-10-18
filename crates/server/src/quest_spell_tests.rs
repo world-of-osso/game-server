@@ -97,11 +97,17 @@ fn spawn_fire(app: &mut App) -> Entity {
         &mut commands,
         world_data,
         template,
-        InMap::continent(0),
+        &mut crate::zones::CreatureSpawnContext {
+            map: InMap::continent(0),
+            difficulty_id: crate::zones::map_difficulty_id(app.world(), InMap::continent(0)),
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("source fire level context");
     queue.apply(app.world_mut());
     fire
 }
