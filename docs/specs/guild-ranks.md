@@ -14,6 +14,13 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Promote/demote requires its flag and a lower-ranked target in the same guild. Promotion never reaches the actor's rank; rank 0 never changes.
 - [ ] Names are nonempty, at most 15 characters, without control characters.
 
+### Direct member-rank assignment
+- [x] One authenticated `SetMemberRank { character_name, rank }` assigns the target directly to an existing zero-based rank in one rank/member transaction; no chained step requests. The actor/guild come from the connection and persisted membership, never the packet.
+- [x] Choose Demote when destination>current, Promote otherwise, matching pinned TC `Guild.cpp:1894–1930`. Recheck the corresponding right, reject self with the existing InvalidName refusal, and retain strict hierarchy: target and destination must both be below actor; rank0/out-of-range/cross-guild targets refuse without writes. Authorized unchanged destination leaves state unchanged; the source UI does not send current selection.
+- [x] Normal recipient snapshots/ChangedGuilds refresh follow the existing handler. Current rank settings/other members remain unchanged; assigned state survives redb reopen.
+- [x] Direct TC `SendGuildRanksUpdate`→`Member::ChangeRank` has no lifecycle-log call. Direct assignments append no synthetic step events; explicit Promote/Demote commands keep their existing logging.
+- Named exclusions: `GUILD_RANK_ASSIGNMENT_AUTHENTICATOR_GAP`, `GUILD_RANK_ASSIGNMENT_LEADERSHIP_GAP` (transfer/disband), `GUILD_RANK_ASSIGNMENT_CONFIG_EXCLUDED` (existing creation/reordering unchanged). No authenticator eligibility fields are fabricated. Protocol/server/client land together; native proof is post-landing.
+
 ### Social permissions
 - [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.
 - [x] Chat membership decisions use authoritative persisted guild IDs when components are stale.

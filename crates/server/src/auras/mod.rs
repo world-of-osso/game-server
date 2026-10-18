@@ -28,6 +28,7 @@ pub(crate) mod damage_transfer;
 pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
+mod fel_devastation;
 mod fixate;
 mod fleeing;
 pub(crate) mod handlers;
@@ -190,9 +191,20 @@ pub struct AuraEffectState {
     pub period_ms: u32,
     pub trigger_spell: u32,
     pub class_mask: [u32; 4],
-    next_tick_at: f64,
+    /// Application time, or the owning dynamic object's phase origin.
+    periodic_started_at: f64,
+    next_tick_index: u64,
     /// SCHOOL_ABSORB points left (whole aura, not per stack).
     absorb_remaining: f32,
+}
+
+impl AuraEffectState {
+    fn next_tick_at(&self) -> f64 {
+        // Form the ordinal offset in native milliseconds before converting to
+        // seconds: neither repeated addition nor fractional-period products drift.
+        let offset_ms = self.next_tick_index as f64 * f64::from(self.period_ms);
+        self.periodic_started_at + offset_ms / 1000.0
+    }
 }
 
 /// Proc timers (TrinityCore `Aura` proc fields).
@@ -599,10 +611,11 @@ fn build_effect(
         class_mask: effect.spell_class_mask,
         // `AuraEffect::ResetPeriodic` (SpellAuraEffects.cpp:957-960): with
         // SPELL_ATTR5_EXTRA_INITIAL_PERIOD the first tick lands on apply.
-        next_tick_at: if attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0 {
-            now
+        periodic_started_at: now,
+        next_tick_index: if attributes(spell, 5) & ATTR5_EXTRA_INITIAL_PERIOD != 0 {
+            0
         } else {
-            now + f64::from(period_ms) / 1000.0
+            1
         },
         absorb_remaining: amount.max(0.0),
     }
@@ -820,7 +833,8 @@ pub fn align_area_aura(
         {
             let period = f64::from(effect.period_ms) / 1000.0;
             let elapsed_ticks = ((now - started_at) / period).floor().max(0.0);
-            effect.next_tick_at = started_at + (elapsed_ticks + 1.0) * period;
+            effect.periodic_started_at = started_at;
+            effect.next_tick_index = elapsed_ticks as u64 + 1;
         }
     }
     auras.dirty = true;
@@ -2122,6 +2136,8 @@ fn receive_cancel_aura(world: &mut World) {
     }
 }
 
+#[cfg(test)]
+mod periodic_deadline_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
