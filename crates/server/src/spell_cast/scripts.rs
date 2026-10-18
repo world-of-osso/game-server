@@ -183,6 +183,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }
+        (crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_CAST, 0) => {
+            Some(crate::scripted_ai::azure_vault::cast_absolute_zero_outbound_jump)
+        }
         (crate::seething_parachute::PARACHUTE, 1) => {
             Some(crate::seething_parachute::reset_fall_information)
         }

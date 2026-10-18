@@ -193,6 +193,8 @@ pub struct WorldData {
     /// Actual zephras_row_source reconstructed template markers select authored fixed stats.
     pub(crate) authored_templates: HashSet<u32>,
     pub(crate) summon_levels: summon_levels::SummonLevels,
+    /// Source server SQL jump-charge options, loaded from this world's connection.
+    pub(crate) jump_charge_params: crate::spell_cast::jump_charge::JumpChargeParams,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
     /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
     pub difficulty_templates: HashMap<(u32, u32), CreatureTemplate>,
@@ -266,6 +268,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("Failed to open world.db");
 
+    let jump_charge_params = crate::spell_cast::jump_charge::load_params(&conn)
+        .expect("Failed to load source tdb_jump_charge_params");
     let expected_stats = load_expected_stats(&conn);
     let authored_templates = load_authored_template_ids(&conn)
         .expect("Failed to load authored template provenance from zephras_row_source");
@@ -311,6 +315,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         templates,
         authored_templates,
         summon_levels,
+        jump_charge_params,
         difficulty_templates,
         spawns,
         spawns_by_map,
