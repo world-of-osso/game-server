@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source690–694: pending Pearl disguise, throne, loot-bot, kill-rain and one excluded source-only identity (2026-10-18)
+
+These are raw continuation inspection slots, not absolute Toy indices: five source rows contain four Full1166 runtime identities plus explicitly excluded Curse of the Aqir275039. Runtime universe remains1166; no import, admission or acceptance for the extra. Acceptance-only83c3de3d2 appends Full1166 Pearl274921 to unchanged disguise helper, now19 rows plus separate Oomgut20 identities/old18 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor. No runtime/data/native change or own heavy jobs.
+
+| Inspection slot | Exact retained source boundary |
+|---|---|
+|690 Pearl of Jubilation274921/1295623 | Instant self transform56/misc265732/8 for300000ms, inherited3600000ms recovery. Existing crab displays103316/103317/103857/103318/103319/103320/103321/103324/103325/103860, each scale1/weight1. Own learned-use/model-membership/ordinary expiry/health/native-model restoration/recovery-refusal acceptance committed, behavior pending successor. No guarantee of all ten selections, native imagery or full-hour reuse. |
+|691 Varian's Dragon Throne274967/1295724 | Instant target87/base0 summon260074/property64/Control0/flags0 for300000ms, explicit item600000ms recovery/category59. Runtime actor/model absent. Actual throne/cursor placement/seating/lifecycle remains gap; no generic static prop, assumed one actor or GO-chair substitution. |
+|692 SOURCE-ONLY: Curse of the Aqir275039 | Named active70448 extra already identified in the1176-source/1166-runtime diff. Absent runtime Toy universe; explicitly outside Full1166. No new feature requirement, import, admission, runtime change or acceptance added. Raw-source capsule retention does not expand scope. |
+|693 G-00275683/1297638 | Source1000ms dummy3/targets18/8, inherited3000ms recovery/start1500ms, no duration. Actual Neutralized Venom Clot eligibility/consumption, corpse-area loot ownership/collection and venomous-goo lifecycle remain unresolved. No generic dummy success, free loot, guessed radius/item count or arbitrary corpse removal. |
+|694 Ula'tek's Sssacrificial Rain275825/1293322 | Instant self dummy4/zero trigger for1800000ms, explicit item1800000ms recovery. ProcChance101/mask2/0/zero proc recovery retained. Actual enemy-player-kill qualification/corpse-to-pool presentation/recipient/lifecycle remains gap; unaudited despite dummy shape. No inert attachment, invented trigger child or unrestricted corpse transform. |
+
+Evidence: private `rows690-694-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `pearl690-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, explicit raw5/runtime4 boundary.149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source685–689: shared Saptor category, missing nap/tent, retained Umbral banner and scripted starfish boundaries (2026-10-18)
 
 Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Existing Umbral Banner exact stationary fixture retained among17 identities, not a new native/qualification certificate. Source Saptor shares Pango's shorter recovery category, outside the long-recovery disguise helper contract.

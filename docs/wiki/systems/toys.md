@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Pearl disguise, throne, loot-bot, kill-rain and excluded source-only identity (2026-10-18)
+
+[Raw source690–694 matrix](../../toy-effects14-coverage.md#source690694-pending-pearl-disguise-throne-loot-bot-kill-rain-and-one-excluded-source-only-identity-2026-10-18) adds acceptance-only83c3de3d2 for Full1166 Pearl274921/1295623/265732/ten displays/5min/1hr:19 disguise rows plus separate Oomgut20 identities, old18/helper unchanged; behavior pending lead successor. This raw block has four runtime identities plus named275039 Curse of the Aqir, explicitly SOURCE-ONLY/OUTSIDE Full1166 with no admission/import/acceptance. Missing target87/base0 Throne260074, resource-gated corpse loot bot and kill-proc enemy-player rain remain gaps. No static throne/free loot/inert rain substitute; no runtime/data/native change or own heavy jobs.
+
 ## Shared Saptor category, missing nap/tent, retained Umbral banner and scripted starfish boundaries (2026-10-18)
 
 [Source685–689 matrix](../../toy-effects14-coverage.md#source685689-shared-saptor-category-missing-naptent-retained-umbral-banner-and-scripted-starfish-boundaries-2026-10-18) preserves Saptor's shared2513 ten-minute recovery/one-hour aura and122805 weight0.1, missing Nap Mat263791, existing Umbral Banner143906/60s fixture with explicit time-leap scope, missing target22/base0 Tent265250 and Starfish77 plus permanent child4. No equalized models, target87 tent, chair/fishing bonus or inert badge substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
