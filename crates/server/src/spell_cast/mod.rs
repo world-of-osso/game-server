@@ -2408,7 +2408,7 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
-        let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        let mut dest = targets::ground_destination(world, caster, spell, effect, dest)?;
         if let Some(dest) = &mut dest {
             scripts::relocate_destination(spell.id, effect, dest);
         }
@@ -3347,6 +3347,8 @@ mod rezrtap_tests;
 mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
+#[cfg(test)]
+mod target32_controls_tests;
 #[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]
