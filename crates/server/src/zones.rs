@@ -353,133 +353,60 @@ pub(crate) fn spawn_creature(
     rng: &mut impl rand::Rng,
 ) -> Option<Entity> {
     let map = context.map;
-    {
-        let tuning = match read_spawn_tuning(world_data, template, spawn, context) {
-            Ok(tuning) => tuning,
-            Err(MissingSpawnLevelContext) => {
-                error!(
-                    "CREATURE_LEVEL_CONTEXT_GAP: refusing creature{} spawn{} map{} copy{} difficulty{}",
-                    template.entry, spawn.guid, map.map_id, map.instance_id, context.difficulty_id,
-                );
-                return None;
-            }
-        };
-        let scaling = tuning.map(|(range, stats)| (roll_spawn_scaling(range, rng), stats));
-        let (level, health, armor) = match &scaling {
-            Some((scaling, tuning)) => {
-                let level = scaling.native_level();
-                (level, tuning.max_health(level), tuning.armor(level))
-            }
-            None => (
-                template.min_level,
-                resolve_health(world_data, template),
-                template.armor,
-            ),
-        };
-        let (display_id, display_scale) = choose_display(template, spawn, rng);
-        let bundle = creature_bundle(spawn, &template.name, health, display_id);
-
-        let mut entity = commands.spawn((
-            bundle,
-            map,
-            NativeObjectScale(display_scale),
-            shared::components::UnitScale(display_scale),
-            crate::creature_ai::HomeOrientation(spawn.orientation + std::f32::consts::FRAC_PI_2),
-        ));
-        let source_guid = spawn.guid;
-        entity.queue(move |actor: EntityWorldMut| {
-            crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
-        });
-        if let Some((scaling, tuning)) = scaling {
-            entity.insert((scaling, ScaledStats(tuning)));
-        }
-        // NPC power pools need creature class/level stats, which are not imported.
-        entity.insert((
-            UnitLevel(level),
-            CreatureClassification::from_rank(template.rank)
-                .expect("creature_template.rank is validated when loaded"),
-            CreatureArmor(armor),
-            UnitPowers::default(),
-            UnitFactionTemplate(u32::from(template.faction)),
-            UnitFlags(spawn.unit_flags.unwrap_or(template.unit_flags)),
-            // The merged content view includes Retail-only services such as
-            // Transmogrifier; an AzerothCore mask would discard their flags.
-            NpcFlags(template.npc_flags),
-            shared::components::CreatureMotion::Still,
-            // Set by the movement systems while it moves (`creature_ai::Bearing`).
-            shared::components::MovementSpeed(0.0),
-        ));
-        if let Some(&vignette) = world_data.vignettes.get(&template.entry) {
-            crate::vignettes::show(&mut entity, vignette);
-        }
-        if replicate {
-            entity.insert((
-                Replicate::to_clients(NetworkTarget::All),
-                NetworkVisibility::default(),
-            ));
-        }
-        let addon = world_data.addon_for(spawn);
-        let pose = unit_pose(addon);
-        entity.insert((pose, SpawnPose(pose)));
-        if let Some(equipment) = creature_equipment(world_data, spawn, rng) {
-            entity.insert(equipment);
-        }
-        insert_ai_components(&mut entity, spawn, template, addon, world_data);
-        crate::pvp::insert_track_switch(&mut entity, spawn);
-        crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
-        crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
-        crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
-        let string_ids = CreatureStringIds {
-            template: world_data.template_string_ids.get(&template.entry).cloned(),
-            spawn: world_data.spawn_string_ids.get(&spawn.guid).cloned(),
-            script: None,
-        };
-        if let Some(faction) = crate::pvp::isle::creature_faction(spawn.map, &string_ids) {
-            entity.insert(UnitFactionTemplate(faction));
-        }
-        if string_ids != CreatureStringIds::default() {
-            entity.insert(string_ids);
-        }
-        insert_mana(&mut entity, world_data, template, level);
-        if template.regenerates_health {
-            entity.insert(crate::spell_cast::powers::CreatureHealthRegenTimer::default());
-        }
-        if let Some(addon) = addon {
-            insert_addon_components(&mut entity, addon);
-        }
-        Some(entity.id())
-    }
-}
-
-/// Mana classes (paladin 2, mage 8: `ChrClasses.DisplayPower` mana) get
-/// creature_classlevelstats `basemana` × `ManaModifier`, full
-/// (Creature::UpdateLevelDependantStats → `SetCreateMana`, `SetInitialPowerValue`).
-fn insert_mana(
-    entity: &mut EntityCommands,
-    world_data: &WorldData,
-    template: &CreatureTemplate,
-    level: u8,
-) {
-    const MANA_CLASSES: [u8; 2] = [2, 8];
-    if !MANA_CLASSES.contains(&template.unit_class) {
-        return;
-    }
-    let base = world_data
-        .class_level_base_mana
-        .get(&(level, template.unit_class))
-        .copied()
-        .unwrap_or(0);
-    let max = (base as f32 * template.mana_modifier).round();
-    entity.insert((
-        shared::components::Mana { current: max, max },
-        crate::spell_cast::powers::PowerPools {
-            order: vec![shared::components::PowerType::Mana],
-            ..Default::default()
+    let projection =
+        read_entry_projection(world_data, Some(template), context, spawn, Some(spawn), rng)?;
+    let (x, y, z) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
+    let orientation = spawn.orientation + std::f32::consts::FRAC_PI_2;
+    let mut entity = commands.spawn((
+        Position { x, y, z },
+        Rotation {
+            x: 0.0,
+            y: orientation,
+            z: 0.0,
         },
+        Zone {
+            id: u32::from(spawn.zone_id),
+        },
+        map,
+        crate::creature_ai::HomeOrientation(orientation),
+        shared::components::CreatureMotion::Still,
+        shared::components::MovementSpeed(0.0),
     ));
-    if template.regenerates_power {
-        entity.insert(crate::spell_cast::powers::CreatureRegenTimer::default());
+    entity.queue(move |actor: EntityWorldMut| {
+        projection.apply(actor, true);
+    });
+    let source_guid = spawn.guid;
+    entity.queue(move |actor: EntityWorldMut| {
+        crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
+    });
+    if let Some(&vignette) = world_data.vignettes.get(&template.entry) {
+        crate::vignettes::show(&mut entity, vignette);
     }
+    if replicate {
+        entity.insert((
+            Replicate::to_clients(NetworkTarget::All),
+            NetworkVisibility::default(),
+        ));
+    }
+    let addon = world_data.addon_for(spawn);
+    insert_ai_components(&mut entity, spawn, template, addon, world_data);
+    crate::pvp::insert_track_switch(&mut entity, spawn);
+    crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
+    crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
+    crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
+    let string_ids = CreatureStringIds {
+        template: world_data.template_string_ids.get(&template.entry).cloned(),
+        spawn: world_data.spawn_string_ids.get(&spawn.guid).cloned(),
+        script: None,
+    };
+    if let Some(faction) = crate::pvp::isle::creature_faction(spawn.map, &string_ids) {
+        entity.insert(UnitFactionTemplate(faction));
+    }
+    if string_ids != CreatureStringIds::default() {
+        entity.insert(string_ids);
+    }
+    Some(entity.id())
 }
 
 /// A creature summoned by `summoner` (`TempSummon`, `TEMPSUMMON_MANUAL_DESPAWN`):
@@ -585,22 +512,6 @@ pub(crate) fn unsummon(world: &mut World, summon: Entity) {
     }
 }
 
-/// Creature::UpdateEntry draws melee weapons (SHEATH_STATE_MELEE); the addon then sets
-/// its stand state, sheath state and emote state (Creature::LoadCreaturesAddon).
-fn unit_pose(addon: Option<&CreatureAddon>) -> UnitPose {
-    addon.map_or(
-        UnitPose {
-            sheath_state: SheathState::Melee,
-            ..UnitPose::default()
-        },
-        |addon| UnitPose {
-            stand_state: addon.stand_state,
-            sheath_state: addon.sheath_state,
-            emote_state: addon.emote_state,
-        },
-    )
-}
-
 /// Creature::LoadEquipment(creature.equipment_id): its entry's equipment of that ID,
 /// a random one for -1 (ObjectMgr::GetEquipmentInfo), none for 0.
 fn creature_equipment(
@@ -615,22 +526,6 @@ fn creature_equipment(
         id => equipment.get(&(id as u8)),
     }?;
     (!chosen.entries.is_empty()).then(|| chosen.clone())
-}
-
-/// `creature_addon` mount and auras (Creature::LoadCreaturesAddon).
-fn insert_addon_components(entity: &mut EntityCommands, addon: &CreatureAddon) {
-    if addon.mount != 0 {
-        entity.insert(Mounted {
-            mount_display_id: addon.mount,
-            ..Default::default()
-        });
-    }
-    if !addon.auras.is_empty() {
-        entity.insert((
-            AddonAuras(addon.auras.clone()),
-            SpawnAddonAuras(addon.auras.clone()),
-        ));
-    }
 }
 
 /// The `creature_addon.auras` a creature spawned with, applied again when it gets
@@ -746,42 +641,6 @@ fn apply_addon_aura(world: &mut World, creature: Entity, spell_id: u32) {
             source: crate::auras::AuraSource::Cast,
         },
     );
-}
-
-/// Core creature components without replication marker.
-fn creature_bundle(
-    spawn: &crate::world_data::CreatureSpawn,
-    name: &str,
-    health: f32,
-    display_id: u32,
-) -> (Position, Npc, Health, ModelDisplay, Zone, Rotation) {
-    // Spawn data is WoW coords; convert to Bevy space for ECS.
-    let (bx, by, bz) =
-        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
-    (
-        Position {
-            x: bx,
-            y: by,
-            z: bz,
-        },
-        Npc {
-            template_id: spawn.template_entry,
-            name: name.to_owned(),
-        },
-        Health {
-            current: health,
-            max: health,
-        },
-        ModelDisplay { display_id },
-        Zone {
-            id: spawn.zone_id as u32,
-        },
-        Rotation {
-            x: 0.0,
-            y: spawn.orientation + std::f32::consts::FRAC_PI_2,
-            z: 0.0,
-        },
-    )
 }
 
 /// Native object multiplier retained when aura61 is applied or removed.
