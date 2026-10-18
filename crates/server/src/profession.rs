@@ -89,10 +89,11 @@ impl PlayerProfessions {
         }
     }
 
-    pub fn snapshot(&self) -> ProfessionSnapshot {
+    pub fn snapshot(&self, data: &ProfessionData) -> ProfessionSnapshot {
         ProfessionSnapshot {
             lines: self.lines.clone(),
             spells: self.spells.clone(),
+            recipe_sources: data.trainer_sources(&self.lines),
         }
     }
 }
@@ -734,13 +735,14 @@ pub(crate) fn save_and_send_professions(
     changed: Query<(Entity, &ClientId, &PlayerProfessions), Changed<PlayerProfessions>>,
     mut connections: Query<(&PlayerLink, &mut MessageSender<ProfessionSnapshot>)>,
     db: Option<Res<GameDatabase>>,
+    data: Res<ProfessionData>,
 ) {
     for (player, character_id, profs) in &changed {
         if let Some(db) = db.as_deref() {
             persistence::save_professions(&db.db, character_id.0, profs);
         }
         if let Some((_, mut sender)) = connections.iter_mut().find(|(link, _)| link.0 == player) {
-            sender.send::<ProfessionChannel>(profs.snapshot());
+            sender.send::<ProfessionChannel>(profs.snapshot(&data));
         }
     }
 }
