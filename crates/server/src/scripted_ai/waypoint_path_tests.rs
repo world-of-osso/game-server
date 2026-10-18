@@ -5,6 +5,49 @@ use bevy::ecs::system::RunSystemOnce;
 use std::time::Duration;
 
 #[test]
+fn navigation_deferred_waypoint_does_not_start_or_advance_node_before_publication() {
+    let (mut world, actor, _) = motion_ownership_world();
+    let previous = &world.get::<PathMovement>(actor).unwrap().path;
+    let path = ScriptPath {
+        id: previous.id,
+        move_type: previous.move_type,
+        flags: 0,
+        velocity: previous.velocity,
+        has_node_timing: previous.has_node_timing,
+        nodes: previous.nodes.clone(),
+    };
+    {
+        let mut movement = world.get_mut::<PathMovement>(actor).unwrap();
+        movement.path = Arc::new(path);
+        movement.wait_ms = 0;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    world.insert_resource(crate::navigation::Navigation::new(dir.path()));
+    world.insert_resource(crate::ground::GroundMap::new(dir.path(), HashMap::new()));
+    let before = *world.get::<Position>(actor).unwrap();
+    path_movement_system(&mut world);
+    let movement = world
+        .get::<PathMovement>(actor)
+        .expect("pending query must not retire the generator");
+    assert!(
+        !movement.started,
+        "queuing navigation must not start a waypoint"
+    );
+    assert_eq!(movement.node, 0);
+    assert!(movement.spline.is_none());
+    assert_eq!(*world.get::<Position>(actor).unwrap(), before);
+    world
+        .resource_mut::<crate::navigation::Navigation>()
+        .drain_until_idle();
+    path_movement_system(&mut world);
+    assert!(
+        world.get::<PathMovement>(actor).is_none(),
+        "ready unbaked result retains stop-without-arrival semantics"
+    );
+    assert!(world.resource::<ArrivalReceipts>().0.is_empty());
+}
+
+#[test]
 fn waypoint_source_short_initial_segment_still_moves_to_the_real_destination() {
     // TC MoveSpline.cpp::_checkPathLengths starts at segment1, not segment0.
     let spline = launch(

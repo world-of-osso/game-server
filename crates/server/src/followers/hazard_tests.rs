@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use shared::components::Position;
 
 #[test]
-fn follower_hazard_probe_waits_for_fixed_publication_before_starting_pursuit() {
+fn navigation_deferred_hazard_probe_waits_for_publication_before_pursuit() {
     let start = Position { x: 103.0, ..FROM };
     let (mut h, unit, _) = stockade_fixture(start);
     hostile_field_at(
