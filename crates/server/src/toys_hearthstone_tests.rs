@@ -77,6 +77,16 @@ fn assert_toy_hearthstone_bind_and_shared_charge(item: u32, spell: u32, sibling:
 }
 
 #[test]
+fn toyfx70448_hiveborne_hearthstone_returns_to_bind_and_blocks_shadeweaver() {
+    assert_toy_hearthstone_bind_and_shared_charge(281136, 1310234, 281615);
+}
+
+#[test]
+fn toyfx70448_shadeweaver_hearthstone_returns_to_bind_and_blocks_hiveborne() {
+    assert_toy_hearthstone_bind_and_shared_charge(281615, 1311934, 281136);
+}
+
+#[test]
 fn toyfx78_greatfather_hearthstone_learned_use_returns_to_bind_and_spends_shared_charge() {
     assert_toy_hearthstone_bind_and_shared_charge(162973, 278244, 163045);
 }
