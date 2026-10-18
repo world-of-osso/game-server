@@ -1,4 +1,4 @@
-//! Source111–113,178–179,201,234,240 and317: real transforms and source recovery.
+//! Source111–113,178–179,201,234,240,317 and322: real transforms and source recovery.
 use super::*;
 
 #[test]
@@ -91,6 +91,14 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             [105515].as_slice(),
             3_600_000,
             900_000,
+        ),
+        (
+            191891,
+            371470,
+            187854,
+            [104851].as_slice(),
+            1_800_000,
+            TEN_MINUTES_MS,
         ),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
