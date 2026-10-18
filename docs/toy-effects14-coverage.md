@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source420–424: pending three-mini acceptance and fishing/compass boundaries (2026-10-17)
+
+422–424 test/spec53f4ae444 expands the existing stationary-source fixture from11 to14 exact identities. Each new root has its own source speed30/valid18yd cursor, parent-before-child event assertions and one authentic actor/model, owner/map/non-pet/non-following/stationary/compressed300s expiry checks. Original11 identities remain unchanged. Format/manual readability/diffcheck pass; behavioral proof requires a newer lead-owned covering head, not489c043. Live489 currently marks387Wand FAILED and393Ohnir/402Soulshape ok; final details/result remain pending. No runtime/data/producer changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|420 Dented Can202360/398703 | Instant fishing-destination39 effect50→existing385913/type5/display10303/size2 plus self dummy4, permanent duration-1; inherited5000ms recovery/1500ms start recovery, source12–15yd range. Actual fishing/channel/water eligibility, garbage-hook placement and coupled cleanup remain gaps. No ordinary cursor87, functioning loot bobber, guessed catch probability or dropped mixed self payload. |
+|421 Lost Compass202711/399041 | Instant self dummy4/permanent-1, inherited1000ms recovery. Hold-out compass pose/attachment/orientation/cleanup remain unaudited; root absent from maintained source audit. No automatic facing change, travel/scouting mutation or blanket zero-dummy admission. |
+|422 Warcraft Rumble Toy: Night Elf Huntress202851/399232 | Cursor87 missile32/speed30→398245→existing200961/display112316/scale1/property5515 for300000ms; item60000ms recovery. Own learned-use/parent-child/actor/placement/state/expiry acceptance committed, behavioral proof pending. No borrowed Sneed result/native upgrade-tier claim. |
+|423 Warcraft Rumble Toy: Stonehoof Tauren202856/399247 | Distinct cursor87 missile32/speed30→399246→existing200966/display112319/scale1/property5515 for300000ms; item60000ms recovery. Own exact identity acceptance committed, pending newer-head proof; not Huntress/model substitution. |
+|424 Warcraft Rumble Toy: Undead Ghoul202859/399262 | Distinct cursor87 missile32/speed30→399250→existing200969/display112322/scale1/property5515 for300000ms; item60000ms recovery. Child summon28 retains Speed1 metadata, not an invented second missile. Own exact identity acceptance pending newer-head proof; native/tier/full-height/wall lifetime/minute reuse separate. |
+
+Evidence: private `rows420-424-{readonly-source,action-source,active-goal}.json`, `minis422-424-{active-goal,proof-ledger}.json`, actual content creature/model and tdb_gameobject_template read-only queries, pinned target39 and exact ranges.149865 Tea Set remains untouched.
+
 ## Source415–419: pending Sneed/product acceptance and bobber/Furbolg/screen-effect boundaries (2026-10-17)
 
 417 test/specd3bed536f adds Sneed as eleventh stationary-source row. A single root/distance match preserves Maiev's speed12/12yd witness and gives Sneed its own speed30/18yd witness within source20yd range; both retain parent-before-child, horizontal cursor, owner/map/non-pet/stationary/compressed300s expiry assertions.419 test/spec50f7b11fc adds actual learned202309/398572/source3s CreateItem24→one persisted202310, published300000ms recovery and exact immediate refusal preserving quantity. Existing279 counter is parameterized only by item ID; its187342/source timing/quantity/recovery assertions remain unchanged. Format/manual readability/diffcheck pass; new11-row fixture and both create-item tests require a later covering head, not489c043. No runtime/data/producer changes or own heavy duplicate.
