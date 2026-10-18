@@ -81,9 +81,11 @@ fn adventure_guide_missing_component_keeps_queued_character_progress() {
     pending.earned_at.insert(14782, 100);
     pending.criteria_progress.insert(162, 41);
     let held = h.db().begin_write().unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
     let release = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
     crate::achievement::save_monthly_contribution(
         h.app.world().resource::<GameDatabase>(),
@@ -92,9 +94,12 @@ fn adventure_guide_missing_component_keeps_queued_character_progress() {
         &pending,
     );
     let connection = h.connection;
-    let started = std::time::Instant::now();
     settle_month_for_connection(h.app.world_mut(), connection).unwrap();
-    let elapsed = started.elapsed();
+    assert!(
+        !release.is_finished(),
+        "Guide reader must return while writer is held"
+    );
+    release_writer.send(()).unwrap();
     release.join().unwrap();
     crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     let loaded = h
@@ -102,10 +107,6 @@ fn adventure_guide_missing_component_keeps_queued_character_progress() {
         .world()
         .get::<PlayerAchievementState>(h.player)
         .unwrap();
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "Guide reader waited: {elapsed:?}"
-    );
     assert!(
         loaded.earned_ids.contains(&14782),
         "Guide replaced pending character progress with stale redb rows"
@@ -138,18 +139,19 @@ fn adventure_guide_month_refresh_never_waits_for_a_busy_durable_writer() {
         .db
         .begin_write()
         .unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
     let release = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
-    let started = std::time::Instant::now();
     let refreshed = settle_month_for_connection(h.app.world_mut(), connection).unwrap();
-    let elapsed = started.elapsed();
-    release.join().unwrap();
     assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "Guide month settlement tick waited for writer: {elapsed:?}"
+        !release.is_finished(),
+        "Guide settlement must return while writer is held"
     );
+    release_writer.send(()).unwrap();
+    release.join().unwrap();
     assert_eq!(refreshed, baseline);
 }
 
