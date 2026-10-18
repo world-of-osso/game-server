@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source470–474 pending Stasis acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source470474-pending-stasis-acceptance-and-torchritualfollowerrandom-wolf-boundaries-2026-10-17):52e9f7c80 adds actual learned Stasis208415/419271/stun12/source60s/300s recovery, real Frostbolt Stunned refusal and post-expiry restored cast, replicated removal/full-health/model/retained cooldown. Two intentional replies are asserted, not cleared. Actual Retail authority is content_item/item_sparse/effect joins. Torch includes kill-credit229063 plus actual ancient-device actions; incomplete ritual, Boffins real follow actor and random-volume wolf remain gaps. Format/manual readability/diffcheck pass; newer head beyond4920c77 required. No production/data/native/time-freeze/movement-input proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source465–469 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source465469-plattertiny-rocksvehicle-detectionhourglass-action-boundaries-and-retained-banner-2026-10-17): mixed platter/script/service and tiny-rock base4/special flags retain missing-body/action gaps. Idol296 is actual vehicle8196 with500ms periodic child and four ordered repeated script recipients, not generic bird tracking. Minute Glass override2600 grants six actual60/120/300/600/1800/3600s mixed self-aura/area29579 actions; no root-only timer shortcut. Exact Smoldering Banner existing seasonal CPU witness retained, no new native/full-recovery claim. No runtime/data/new proof/own heavy duplicate;4920c77 running.
