@@ -190,7 +190,7 @@ def read_description_reference_sources(db2, references):
     evidence = {}
     for name, records in expected.items():
         path = db2 / (name + '.csv')
-        with path.open() as stream:
+        with path.open(newline='') as stream:
             selected = [row for row in csv.DictReader(stream) if int(row['ID']) in records]
         if len(selected) != len(records):
             raise ValueError(f'{name}: description-reference source rows missing')
