@@ -60,9 +60,11 @@ fn assert_guild_news_reader_order(subscribe_first: bool) {
         assert!(baseline[0].entries.is_empty());
     }
     let held = h.db().begin_write().unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
     let release = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
     update_player_events(
         h.app.world_mut(),
@@ -79,7 +81,6 @@ fn assert_guild_news_reader_order(subscribe_first: bool) {
             .send::<GuildChannel>(GuildNewsRequest::Query);
     }
     let mut replies = Vec::new();
-    let started = std::time::Instant::now();
     for _ in 0..4 {
         h.app.update();
         replies.extend(
@@ -90,8 +91,12 @@ fn assert_guild_news_reader_order(subscribe_first: bool) {
                 .receive(),
         );
     }
-    let elapsed = started.elapsed();
+    assert!(
+        !release.is_finished(),
+        "news tick must return while writer is held"
+    );
     let before_commit = replies.len();
+    release_writer.send(()).unwrap();
     release.join().unwrap();
     crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -106,10 +111,6 @@ fn assert_guild_news_reader_order(subscribe_first: bool) {
         );
         std::thread::yield_now();
     }
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "news tick blocked: {elapsed:?}"
-    );
     assert_eq!(
         before_commit, 0,
         "no stale reply before commit; subscribed={subscribe_first}"
@@ -145,18 +146,22 @@ fn achievement_monthly_snapshot_never_waits_for_a_busy_durable_writer() {
     let (character, _) = persistence::create_character(&db, 41, "Asyncproof", 1, 1).unwrap();
     let db = GameDatabase::new(db);
     let held = db.db.begin_write().unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
     let blocker = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
-    let started = std::time::Instant::now();
-    save_monthly_contribution(&db, 41, character, &PlayerAchievementState::default());
-    let elapsed = started.elapsed();
-    blocker.join().unwrap();
+    let receipt = save_monthly_contribution(&db, 41, character, &PlayerAchievementState::default());
     assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "tick waited for writer: {elapsed:?}"
+        !blocker.is_finished(),
+        "monthly submission must return while writer is held"
     );
+    assert!(receipt.result().is_none());
+    release_writer.send(()).unwrap();
+    blocker.join().unwrap();
+    crate::test_data::drain_persistence(&db);
+    assert!(receipt.result().unwrap().is_ok());
 }
 
 #[test]
@@ -169,11 +174,12 @@ fn achievement_account_snapshot_never_waits_for_a_busy_durable_writer() {
     let mut state = PlayerAchievementState::default();
     state.criteria_progress.insert(162, 41);
     let held = db.db.begin_write().unwrap();
+    let (release_writer, writer_held) = std::sync::mpsc::channel();
     let blocker = std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        let signal = writer_held.recv_timeout(std::time::Duration::from_secs(5));
         held.abort().unwrap();
+        signal.expect("fixture explicitly releases the held writer");
     });
-    let started = std::time::Instant::now();
     account_store::save_account_progress(
         &db,
         &state,
@@ -186,13 +192,13 @@ fn achievement_account_snapshot_never_waits_for_a_busy_durable_writer() {
             now: 100,
         },
     );
-    let elapsed = started.elapsed();
+    assert!(
+        !blocker.is_finished(),
+        "account submission must return while writer is held"
+    );
+    release_writer.send(()).unwrap();
     blocker.join().unwrap();
     let db = db.into_database();
-    assert!(
-        elapsed < std::time::Duration::from_millis(50),
-        "account tick waited for writer: {elapsed:?}"
-    );
     assert_eq!(
         persistence::load_achievements(&db, character).criteria_progress[&162],
         41

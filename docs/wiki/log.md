@@ -4,6 +4,10 @@
 ## 2026-10-17 — Rain of Fire dynamic objects
 
 [Ordinary visibility](systems/spell-casting.md#rain-of-fire-dynamic-object-visibility--2026-10-17): actual Lord Overheat86636 object/source5yd/9s/destination reaches missing-Replicate RED; caster-removal control passes. Actual object now uses shared geometry and ordinary same-copy interest/despawn, with no damage/kit/stat/timer changes. Postmerge source-bound server GREEN2/2/270.2s and check29.25s/fmt/0warnings pass; shared wire1 and engine UDP21/native projection4 pass separately. Joint landing/native escape proof pending; fixture movement is not claimed native input.
+## 2026-10-17 — Cold hydration and password-token FIFO
+
+[Cold login boundaries](investigations/server-tick-lag.md#cold-selection-hydration-and-password-tokens): two genuine unwarmed-selection/password-login writer-hold REDs; hydration/token jobs use existing FIFO receipts, retaining cached achievement authority. Six timing sites converted to explicit release; migration/abandonment controls added. First GREEN attempt exposed only private-interface compilation errors, repaired without suppression; behavioral coverage93 distinct controls passes82latest+11retained (not repeated93), including five corrected receipt-aware fixtures and actual achievement/Stats/PvP consumers; lead gate pending. Preceding frozen plain11-peer90s proof accepted as bounded20Hz/15.575ms mean PASS, not causal A/B;~1GiB server swap is observation only.
+
 ## 2026-10-17 — FIFO reader coherence
 
 [Reader audit and ordering proof](investigations/server-tick-lag.md#reader-coherence-follow-up): full gate exposed a durable news read racing queued writes. Requests/publications now read on the same FIFO; login/Guide use writer-fed character contributions. Raw migration helpers are unavailable in production. Original news assertions retained behind an explicitly controlled commit boundary; targeted re-gate/live acceptance remain open. Site live-copy capture explicitly excluded as `SITE_COPY_LIVE_REDB_SNAPSHOT`.
