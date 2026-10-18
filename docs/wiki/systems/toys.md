@@ -2,9 +2,13 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Batons/return-home acceptance and seated-orb boundary (2026-10-17)
+
+[Source310–314 matrix](../../toy-effects14-coverage.md#source310314-pending-batonsreturn-home-acceptance-and-seated-orb-gap-2026-10-17) adds test/spec01de71c2e: Batons exact900000ms caster row makes14IDs, while Dominated/Enlightened/Broker Matrix real learned saved-bind/source10s/shared2309 cases make13 hearthstone variants. Local format/readability/diffcheck pass; explicit new-head gate proof remains pending, not borrowed from earlier counts.312's seated/orb action remains unproved despite zero dummy shape. No runtime/data admission, native/ordinary recovery/cross-map certificate or own heavy duplicate.
+
 ## Seasonal/flower/cooking boundaries and pending Insoles acceptance (2026-10-17)
 
-[Source305–309 matrix](../../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17) retains Winter Veil/285-child music, observed Wild Flower legacy8.82-versus-Retail1 model state plus scripted Grow, and mixed caster-hosted cooking gaps.308 keeps [earlier actual-area/native scope](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13) without a new calendar certificate.309 test/spec8a986da00 adds exact permanent188699/45416 to the existing caster fixture, now13IDs; local format/readability/diffcheck pass, behavioral acceptance pending lead's next gate after476. Separate RequiredTransmogHoliday341 is not an invented use-time rule; no fresh native/recovery/calendar proof or runtime/data admission.
+[Source305–309 matrix](../../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17) retains Winter Veil/285-child music, observed Wild Flower legacy8.82-versus-Retail1 model state plus scripted Grow, and mixed caster-hosted cooking gaps.308 keeps [earlier actual-area/native scope](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13) without a new calendar certificate.309 test/spec8a986da00 adds exact permanent188699/45416 to the existing caster fixture (13IDs at8a986da00;14 after01de71c2e,309 unchanged); local format/readability/diffcheck pass, behavioral acceptance pending lead's next gate after476. Separate RequiredTransmogHoliday341 is not an invented use-time rule; no fresh native/recovery/calendar proof or runtime/data admission.
 
 ## Source scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
 
