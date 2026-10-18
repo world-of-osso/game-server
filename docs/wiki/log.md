@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source520–524 pending Cherry Trail acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source520524-pending-cherry-trail-acceptance-and-puntablesopt-in-fireworkscookingwater-blaster-boundaries-2026-10-17):4b21ddb7e adds220777/447446/source600s to unchanged caster helper, now17 identities; format/manual readability/diffcheck pass, newer head AFTER498c013 required. Missing puntable-box creature237586 cannot use same-number Bonfire GO; fireworks preserve attack-opt-in viewer audience/event recovery, missing Lantern452051 preserves actual cooking, wild type22 water display retains unimplemented445930 refusal. No inert substitutes, new native/runtime/data proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source515–519 pending colorful-chair acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source515519-pending-colorful-chair-acceptance-and-wingtwo-person-cracker-boundaries-2026-10-17):66ca57ee0 adds218112/441839/type7/434317/89277/size1.5/source2yd/cast3s/300s to transmitted-object helper, now11 identities, old ten unchanged. Format/manual readability/diffcheck pass, newer head AFTER498c013 required; seating/native/recharge remain separate. Distinct eight-hour/20s-period Yu'lon/Niuzao wings and paired Cracker/one-recipient surprise retain exact action/cadence/eligibility gaps. Draconic Banner existing seasonal CPU scope retained. No further runtime/data/own heavy duplicate.

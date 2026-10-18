@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source520–524: pending Cherry Trail acceptance and puntables/opt-in-fireworks/cooking/water-blaster boundaries (2026-10-17)
+
+524 test/spec4b21ddb7e adds220777/447446/600000ms to the unchanged actual learned-use/replicated-aura/cancel/full-health-model/no-actors caster helper, now17 identities; old16 unchanged. Format/manual readability/diffcheck pass; new behavior requires a head AFTER498c013. No further runtime/data change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|520 Box of Puntables218310/442444 | Source3000ms cursor87 summon237586/property6195/base1/flags8521736 for180000ms; spell1800000ms/start1500ms recovery. Runtime creature/model absent. Unrelated gameobject237586 is a Bonfire, not this creature. Actual box/creature release/punting/eligibility/lifecycle remain gaps; no shared-number GO substitution, inert box or invented creatures/counts. |
+|521 Barrel of Fireworks219387/443465 | Instant cursor87 summon221183/property2910/UseCreatureLevel for300000ms; spell3600000ms/start1500ms recovery, reduced during source goblin revelries. Runtime creature/model absent. Actual friend use and attack-to-opt-in viewer audience/firework lifecycle/holiday recovery remain unresolved; no forced all-viewer effect, inert barrel or guessed event divisor. |
+|522 Stonebound Lantern219403/453265 | Source2000ms cursor87 effect50/base1→452051 for300000ms; category97 recovery300000ms. Runtime tdb_gameobject_template has no452051. Source explicitly supplies light and cooking; actual lantern/cooking-focus/service/presentation/cleanup remains gaps, not decorative lantern-only admission or invented calming stat buff. |
+|523 X-treme Water Blaster Display220692/445938 | Source3000ms cursor87 wild-object76→existing441724/type22/display90648/size1.5 for180000ms; item1800000ms recovery. Object Data0→445930 remains an unimplemented script. Existing exact classifier fixture retains refusal for that unscripted object spell; no positive use/native certificate, inert display, guessed water guns or harmless-script shortcut. |
+|524 Cherry Blossom Trail220777/447446 | Instant self audited dummy4/600000ms, inherited600000ms recovery. Own learned-use/replication/cancel/full-health-model/no-server-actors case committed as17th caster identity, behavioral proof pending newer head. Native moving blossoms, natural duration/recovery and complete presentation remain separate; no gameplay ground-field or invented plants. |
+
+Evidence: private `rows520-524-{readonly-source,action-source,runtime-source,active-goal}.json`, `cherry524-{active-goal,proof-ledger}.json`, authoritative creature-versus-GO namespace distinction and retained wild-display refusal.149865 Tea Set remains untouched.
+
 ## Source515–519: pending colorful-chair acceptance and wing/two-person-cracker boundaries (2026-10-17)
 
 517 test/spec66ca57ee0 adds exact Colorful Beach Chair to the existing transmitted-object helper, now11 identities with old ten unchanged. Actual learned3s cast/type7/model89277/size1.5/source2yd front/owner/map/facing/ordinary300s expiry assertions are committed; format/manual readability/diffcheck pass, behavior needs a head AFTER498c013. Seated interaction remains separate. No further runtime/data changes or own heavy duplicate.
