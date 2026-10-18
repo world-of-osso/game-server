@@ -1,5 +1,5 @@
 //! Actual Stockade population and baked route: cost intervening aggro, not only endpoints.
-use super::pull_forecast_tests::source_fixture;
+use super::pull_forecast_tests::source_fixture_with_plugins;
 use super::pull_route::{self, Request};
 use crate::maps::InMap;
 use crate::spell_cast::test_harness::Harness;
@@ -12,7 +12,11 @@ const TARGET_GUID: u32 = 20375682;
 const INTERVENING_GUID: u32 = 20375688;
 
 pub(super) fn route_fixture() -> (Harness, Entity) {
-    let (mut h, tank, previous) = source_fixture(46249);
+    route_fixture_with_plugins(|_| {})
+}
+
+pub(super) fn route_fixture_with_plugins(configure: impl FnOnce(&mut App)) -> (Harness, Entity) {
+    let (mut h, tank, previous) = source_fixture_with_plugins(46249, configure);
     h.app.world_mut().despawn(previous);
     let data = crate::test_data::world_data();
     h.app.insert_resource(data.clone());

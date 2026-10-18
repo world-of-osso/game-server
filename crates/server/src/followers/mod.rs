@@ -14,6 +14,8 @@ mod pull_budget;
 mod pull_budget_tests;
 #[cfg(test)]
 mod pull_forecast_tests;
+#[cfg(test)]
+mod pull_goal_tests;
 pub(crate) mod pull_history;
 #[cfg(test)]
 mod pull_history_tests;

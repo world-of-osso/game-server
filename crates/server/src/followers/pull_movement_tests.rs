@@ -32,7 +32,7 @@ fn tank_pull_movement_regroup_cannot_replace_the_admitted_position() {
     }
 }
 
-fn load_native_kit(h: &mut Harness, tank: Entity) -> BTreeSet<u32> {
+pub(super) fn load_native_kit(h: &mut Harness, tank: Entity) -> BTreeSet<u32> {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -54,7 +54,7 @@ fn load_native_kit(h: &mut Harness, tank: Entity) -> BTreeSet<u32> {
     attacks
 }
 
-fn place_on_source_floor(h: &mut Harness, tank: Entity) -> Position {
+pub(super) fn place_on_source_floor(h: &mut Harness, tank: Entity) -> Position {
     // Existing Riverpaw floor oracle: inside native Shield range, outside melee reach.
     let (x, y, z) = crate::terrain_height::wow_to_bevy(128.5, 52.0, -33.86);
     let from = Position { x, y, z };
