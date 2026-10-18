@@ -1,6 +1,13 @@
 ## 2026-10-17 — Ordinary context refusal and fixture source repair
 
 [Level context](systems/level-scaling.md#gate486-fixture-source-audit): gate486 exposed cached Lesser Voidwalker20 versus actual area279/CT11/native30 and unsupported Lucifron map409 difficulty3 versus actual spawn9/18. Three-case reproduction at7763d065a confirms both failures and missing-context panic. Spawn boundary now logs/refuses unresolved actors before entity creation and continues valid population; criterion below/equal/above coverage uses29/30/31, lifecycle uses source9. Focused3/3 PASS60.13s and affected54/54 PASS150.97s (55 pre-existing ignored), fmt0 at5a2c2d449; package check0/warning-free32.05s at docs-only41e030bf1. LEAD re-gate/landing pending. No canonical or Herald lifecycle changes.
+## 2026-10-17 — Ebon simultaneous source snapshot
+
+[Ebon](systems/auras.md#ebon-might-baseline-2026-10-17): original native6 GREEN at224e0300; two same-frame ordinary HostClient casts additionally reproduce11.671872 versus12.72 before the first tick. FixedUpdate aura modifiers preceded normal Update CharacterStats production. Reuse the existing cached native producer before the Ebon snapshot; no formula duplication, fallback, timer or global schedule change. At06b2d6cd7 expanded Ebon8/8 passes12.93s, prior support4/4 +legacy Eruption2/2 +native timer1/1 pass (15/15,0 ignored); source coefficient/variance unchanged. Scoped server-bin check28.73s/fmt pass warning-free; independent lead gate pending.
+
+## 2026-10-17 — Ebon Might baseline
+
+[Ebon Might](systems/auras.md#ebon-might-baseline-2026-10-17): approved395152/self395296 baseline, native primary support/2-N split/owned1000ms updates and foreign-grant exclusion; native16114cc3 RED6 before implementation, GREEN pending. Source amounts/radius500/MaxTargets30 preserved; Eruption/passive flat extension retained, no generic540/party-only/optional/whole-ability policy. Prior Prescience/Sands slice landed after lead gate482 passed1053/fmt.
 
 ## 2026-10-17 — Bounded Augmentation support stats
 
@@ -8,6 +15,10 @@
 ## 2026-10-17 — Rain of Fire dynamic objects
 
 [Ordinary visibility](systems/spell-casting.md#rain-of-fire-dynamic-object-visibility--2026-10-17): actual Lord Overheat86636 object/source5yd/9s/destination reaches missing-Replicate RED; caster-removal control passes. Actual object now uses shared geometry and ordinary same-copy interest/despawn, with no damage/kit/stat/timer changes. Postmerge source-bound server GREEN2/2/270.2s and check29.25s/fmt/0warnings pass; shared wire1 and engine UDP21/native projection4 pass separately. Joint landing/native escape proof pending; fixture movement is not claimed native input.
+## 2026-10-17 — Cold hydration and password-token FIFO
+
+[Cold login boundaries](investigations/server-tick-lag.md#cold-selection-hydration-and-password-tokens): two genuine unwarmed-selection/password-login writer-hold REDs; hydration/token jobs use existing FIFO receipts, retaining cached achievement authority. Six timing sites converted to explicit release; migration/abandonment controls added. First GREEN attempt exposed only private-interface compilation errors, repaired without suppression; behavioral coverage93 distinct controls passes82latest+11retained (not repeated93), including five corrected receipt-aware fixtures and actual achievement/Stats/PvP consumers; lead gate pending. Preceding frozen plain11-peer90s proof accepted as bounded20Hz/15.575ms mean PASS, not causal A/B;~1GiB server swap is observation only.
+
 ## 2026-10-17 — FIFO reader coherence
 
 [Reader audit and ordering proof](investigations/server-tick-lag.md#reader-coherence-follow-up): full gate exposed a durable news read racing queued writes. Requests/publications now read on the same FIFO; login/Guide use writer-fed character contributions. Raw migration helpers are unavailable in production. Original news assertions retained behind an explicitly controlled commit boundary; targeted re-gate/live acceptance remain open. Site live-copy capture explicitly excluded as `SITE_COPY_LIVE_REDB_SNAPSHOT`.
@@ -56,6 +67,14 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Sprout death stack consumption
 
 [Native Sprout deaths](investigations/follower-data.md#sprout-death-stack-consumption--2026-10-17): original-caster-first fourteen-child RED→GREEN1/45.34s; actual owner stack consumption, final replicated removal and duplicate-corpse exclusion. Timer/amount assertions and integration gates pending.
+## 2026-10-17 — BONESTORM!1761 thirty-percent cost
+
+[1761 source/proof](../pet-battle-effect-coverage.md#bonestorm1761--implementation2026-10-17): source70448 three13-point24rows then30%62casterMAX, only1761registry/existing649guard extensionc8a1a99f9. Genuine065586471core5+ownedWhirly1unsupportedRED→core5+owned2GREEN (Graves649 retainedcontrol). Parameterizeexisting4controls/newlastenemyfaintcase insteadofduplicatecases;9active/eachmiss/deadreserve/allmisscost/MAX10003notcurrent5000orenemy4711/type controls. Lastenemy1HP damage1 then self3000/Winner0/caster7000. LegalWhirly2986/4power60/max399 deals52/Rabbit95,pays119/self280.1762/50%deferred becauseonlyownerBoneshard1963 lacks source states, no fabrication. Integrated5fd087534lib163/main38PASS/shared019cleanbeforeafter;freshall10table-reconciled70448census1836/2829=64.90%/1030graphs(+4/+1/no removals),historical70391/1762/otherrejectionsretained. Changed-lineRustreadabilityclean;a7020be50packagecheck23.83s/no warnings/workspacefmtPASS/shared019cleanbeforeafter. Onlydocs/censusafterintegratedproof; native-after-landing pending,ordinaryselfaccuracy/lowHPpassives/Retailtimingunqualified.
+
+## 2026-10-17 — BONESTORM bounded self-cost recipient
+
+[649 source/proof](../pet-battle-effect-coverage.md#bonestorm--implementation2026-10-17): active70448 three13-point24 rows then10%-maximum-health62. Core4 actualREDd1454c008; firstownedfixture assumes wrongpower21, corrected via namedstates to23/max214 in2f6030ee0 and genuineownedroutingRED before production. Only649registry+62casterrecipient in a9062da8b; core4/owned1GREEN all9active/eachmiss/deadreserve/allmissstillcost/casterMAX10003notcurrent3000orenemy4711/untypedcost1000vsstrong/weaktypes. LegalGraves1639/2slot2 deals27/Rabbit120,pays21/self193. Noopcode/math/generalrouting/passiveredesign; ordinaryselfaccuracy/low-healthpassive/Retailtimingunqualified. Integrated466cfbee3lib162/main37PASS/shared019cleanbeforeafter;freshall10table-reconciled70448 census1832/2829=64.76%/1029graphs (+4/+1/no removals),historical70391/allotherrejectionsunchanged. Changed-lineRustreadabilityclean;3b58231cd packagecheck54.03s/no warnings/workspacefmtPASS/shared019cleanbeforeafter. Onlydocs/censusafterintegratedproof; native-after-landing pending.
+
 ## 2026-10-17 — Magma Wave bounded recipient
 
 [319 source/proof](../pet-battle-effect-coverage.md#magma-wave--implementation2026-10-17): active70448 three7point damage rows then existing85state69 object clear; one-line41737ef9 registry addition only. Actual651ccfd7core4+owned1 routingRED,core4GREEN coversall9active/eachmiss/deadreserve/both-team Rocket294 removal despite allmisses/Healthy577preservation. Owned MoltenHatchling428/4power47 expected23 incorrectly omits Elemental-v-Critter. Test-onlye6568abf correction yields15/Rabbit132, integrated5ee64433lib158/main36PASS/shareda566cleanbeforeafter. Freshall10table-reconciled70448 census1828/2829=64.62%/1028graphs (+5/+1/no removals), historical70391unchanged/otherrejectionsretained. Packagecheck429b17e0 passes1m23/no warnings/workspacefmtPASS/shareda566cleanbeforeafter; changed-line readability no violations, onlydocs/censusafterintegratedproof. Post-landing native pending.
@@ -2167,6 +2186,10 @@ User clarification: World of Osso has no resurrection guild perk. Removed Quick/
 ## 2026-10-17 — Mobile Banking user policy implemented
 
 User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed3600000ms. Installed faction children/type34/lifetime and Friendly1168 chest-user gate; no Friendly cast gate. Real server5/5 and tooltip1/1 GREEN; midcast loss checked before consumption. Native actual5min/2h both-skin proof pending. Resurrection perk excluded by user, not a gap.
+
+## Mobile Banking native acceptance boundary reconciled
+
+[Native Mobile proof](systems/guild-perks.md#native-mobile-banking-proof): code gates landed; both-skin body controls and Modern real2h recast are proven. Final Forever accepted recast remains unobserved after transport loss, not an effect failure. No completed-proof claim.
 - 2026-10-17: Omor30707 summon speech: distinguish invalid full-mana fixture failure from genuine128-cast missingTalk0 RED123cf9ad; source30% branch15c8e222, strict ignoredGREEN pending. See [boss scripts](systems/boss-scripts.md#omor-summon-cast-speech--2026-10-17).
 
 - 2026-10-17: Omor30707 strict ignoredGREEN1/1/68.03s at15c8e222; enabled ordinary acceptance only after receipt.
@@ -2194,3 +2217,7 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 - 2026-10-17: Herald copy-only server-spell profile: realCLI invalid-choiceREDfd9ad1db→GREEN6/6/0.201s2e0a3835. All7+7actualTDBrecords/everyfield/idempotence/unrelateddata/atomicmissing30698effect refusal; existing3profiles/canonical/symlinkguards retained. No actor/binder/runtime/credit claim.
 
 - 2026-10-17: Herald70448 binding CLI REDac42b003→25/25aefee7b0; strictretailCSV/build/namedgap/sourcehash/primaryonly/populationpreservation. Fixed actual SQLite fixture lifetime warning using closing+transaction contexts, not suppression; affected binding3/spellproducer6 GREEN9/9/0.896s with ResourceWarning elevated at9874a576. Unchanged22bindingproofretained. Structuraldata only, runtimepairedcreditstillOPEN.
+
+## Native Mobile Banking acceptance complete
+
+[Native proof](systems/guild-perks.md#native-mobile-banking-proof): both-skin cast/bank/nonmember refusal/despawn and actual post2h accepted casts pass on identical artifacts. Forever7242700ms complements the retained Modern-origin7311223ms interval. Fifteen inspected unchanged full-HD originals published; owned runtimes stopped and owner-checked window cleared. Earlier interrupted overall results remain intact; countdown labels are not timing oracles.

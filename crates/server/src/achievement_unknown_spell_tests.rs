@@ -268,14 +268,7 @@ fn achievements_criteria_unknown_spell_real_select_character_does_not_lose_login
         .send::<AuthChannel>(SelectCharacter {
             character_id: character,
         });
-    for _ in 0..4 {
-        app.update();
-    }
-    let player = app
-        .world()
-        .get::<PlayerLink>(connection)
-        .expect("actual select must enter world")
-        .0;
+    let player = crate::test_data::wait_for_selected_player(&mut app, connection);
     assert!(app.world().get::<KnownSpells>(player).is_some());
     assert!(app.world().get::<AccountMounts>(player).is_some());
     let state = app.world().get::<PlayerAchievementState>(player).unwrap();
