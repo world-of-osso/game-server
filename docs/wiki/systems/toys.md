@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Layered-spin/self-memory/torch/mixed-levitation/moving-hologram boundaries (2026-10-17)
+
+[Source530–534 matrix](../../toy-effects14-coverage.md#source530534-layered-spinself-memorytorchmixed-levitationmoving-hologram-boundaries-2026-10-17) retains Ravager slow33 and nested5s/10s/30s periodic chain ending7s stun/parent removal, personalized Memory Chord with literal11686/weight1/22903/weight0, unaudited permanent torch, all hover/featherfall/waterwalk/animation1151 siblings and missing forward-racing horse225414. No cosmetic-only spin, removal-as-cast, generic player-copy body, cooking torch guess, free flight or stationary horse shortcut. No further runtime/data/new proof/own heavy duplicate;498 in progress.
+
 ## Permanent-pod/random-wormhole/seed/recipient-gift boundaries and retained Camera (2026-10-17)
 
 [Source525–529 matrix](../../toy-effects14-coverage.md#source525529-permanent-podrandom-wormholeseedrecipient-gift-boundaries-and-retained-camera-2026-10-17) preserves permanent three-model Escape Pod, RequiredSkill2875 random Khaz Algar wormhole/missing actor, mixed seed/area33467 and friendly missile Hat/60s aura plus actual recipient223316 product. Product shares the toy's name but has distinct ID/DurationInInventory60/MaxCount1; caster-only creation is not the contract. Existing Filmless Camera attachment/cancel CPU proof retained, not native photography output. No further runtime/data/new proof/own heavy duplicate;498 lead-owned/in progress.

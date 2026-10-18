@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source530–534: layered-spin/self-memory/torch/mixed-levitation/moving-hologram boundaries (2026-10-17)
+
+Mixed movement/control, personalized appearance and unaudited visuals remain gaps. No new acceptance/runtime/data/native proof or own heavy duplicate;498c013 remains lead-owned/in progress.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|530 Practice Ravager224192/451985 | Instant self slow33/base30 plus periodic23/5000ms→451987; that child has dummy4 plus periodic23/10000ms→451988, then periodic23/30000ms→453018/stun12/7000ms and remove164 referencing451985. Root/intermediate durations600000ms, item600000ms recovery. Actual spin/movement/refresh ordering/delayed stun/cleanup remains unresolved; no cosmetic-only spin, parent recast from removal or name-derived combat damage. |
+|531 Memory Chord224251/452114 | Instant self linked428→452115 for180000ms; child target47 summon224624/property4625/permanent-1, item300000ms recovery. Runtime 'You' models11686/weight1 and22903/weight0 retained literally. Actual caster-memory appearance/behavior/owner/linked cleanup remains unverified; no fixed generic body as a personalized copy or model-pool rewrite. |
+|532 Cave Spelunker's Torch224552/453163 | Instant self dummy4/permanent-1, inherited5000ms recovery. Held torch/illumination/conditions/removal remain unaudited, absent from maintained visual-only list. No generic zero-dummy admission, borrowed Pyrreth/credit action or invented cooking/fire damage. |
+|533 Silver Linin' Scepter224554/453193 | Instant self hover106/featherfall105/waterwalk104/animation312-set1151 for30000ms; normal300000ms/category1470 recovery180000ms. Actual combined movement/pose/stacking/restoration remains unverified; no animation-only aura, ignored movement siblings or free-flight ability inferred from hovering. |
+|534 Hanna's Locket224585/453419 | Source1500ms target47 summon225414/property1162/Title9/UseSummonerFaction4096 for12000ms, inherited600000ms recovery. Runtime creature/model absent. Actual forward-racing horse hologram/destination/motion/owner/expiry remains gap; no stationary/following horse substitute, guessed speed or combat-pet mechanics. |
+
+Evidence: private `rows530-534-{readonly-source,action-source,runtime-source,active-goal}.json`, literal nested periods/removal edge and actual weighted model rows.149865 Tea Set remains untouched.
+
 ## Source525–529: permanent-pod/random-wormhole/seed/recipient-gift boundaries and retained Camera (2026-10-17)
 
 No new acceptance/runtime/data/native proof or own heavy duplicate. Existing Filmless Camera attachment witness stays bounded; permanent appearance, qualified random travel and mixed ally-targeted item creation need their own contracts.498c013 remains lead-owned/in progress.

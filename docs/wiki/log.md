@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source530–534 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source530534-layered-spinself-memorytorchmixed-levitationmoving-hologram-boundaries-2026-10-17): Ravager slow33/nested5s10s30s periodics/7s stun/parent removal, personalized Memory Chord with literal model weights, unaudited permanent torch, hover106/featherfall105/waterwalk104/animation1151 and missing forward horse225414 retain mixed action/appearance/lifecycle gaps. No cosmetic-only control, removal-as-recast, generic self copy, cooking/fire-flight guess or stationary horse admission. No further runtime/data/new proof/own heavy duplicate;498c013 in progress.
+
 ## 2026-10-17 — Toy source525–529 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source525529-permanent-podrandom-wormholeseedrecipient-gift-boundaries-and-retained-camera-2026-10-17): permanent224771 Pod/three models, RequiredSkill2875/rank1 random Khaz Algar wormhole/missing223342, mixed seed/33467 area and friendly missile1.5 Hat→60s aura plus recipient223316 item remain gaps. Same-name physical223316 is distinct from toy223312, DurationInInventory60/stack1/MaxCount1; no caster-only creation/count2 assumption. Existing Filmless Camera actual attachment/cancel CPU scope retained without native photography proof. No further runtime/data/new proof/own heavy duplicate;498c013 in progress.
