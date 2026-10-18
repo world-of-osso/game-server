@@ -47,7 +47,7 @@ fn apply_owned_aura(world: &mut World, caster: Entity, target: Entity, spell_id:
     );
 }
 
-pub(super) fn cast_effect(spell: u32, index: u8) -> Option<effects::CastEffectHandler> {
+pub(super) fn effect_handler(spell: u32, index: u8) -> Option<effects::EffectHandler> {
     ((spell, index) == (EXECUTE, 0)).then_some(cast_execute_damage)
 }
 

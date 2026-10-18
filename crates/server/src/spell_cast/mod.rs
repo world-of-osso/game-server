@@ -2507,7 +2507,8 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let handler = effects::handler(effect.effect);
+        let handler = scripts::effect_handler(spell.id, effect.index)
+            .or_else(|| effects::handler(effect.effect));
         let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
             if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
