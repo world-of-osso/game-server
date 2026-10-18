@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mixed Memento, mask, qualified swim, retained Venomous banner and story-view boundaries (2026-10-18)
+
+[Source705–709 matrix](../../toy-effects14-coverage.md#source705709-mixed-memento-mask-qualified-swim-retained-venomous-banner-and-story-view-boundaries-2026-10-18) preserves Memento56+370/shared2513, unaudited Amani Mask, water/8993-qualified swim241+58/base1200+56 alongside descriptive300%, existing Venomous Banner146432/60s fixture and Storytime260/2565/7. No dropped370, invented curse, normalized speed formula, native banner or generic story attachment certificate. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
+
 ## Unnamed homebind metadata, current-camp recall, shared Idol, corpse haunt and targeted star boundaries (2026-10-18)
 
 [Source700–704 matrix](../../toy-effects14-coverage.md#source700704-unnamed-homebind-metadata-current-camp-recall-shared-idol-corpse-haunt-and-targeted-star-boundaries-2026-10-18) preserves unnamed276370/1299513 homebind source with missing item identity, actual current-camp9076 recall, Idol shared2513 short recovery, corpse226/15000ms/trigger0 haunting and Otoola's targeted32→dummy4 badge. No fabricated name, fixed/homebind recall, long-recovery transform certificate, inert haunt or self-only star substitute. Metadata only; no runtime/data/native change or own heavy work, lead successor pending.

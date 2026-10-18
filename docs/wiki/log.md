@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source705–709 mixed state and qualified movement boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source705709-mixed-memento-mask-qualified-swim-retained-venomous-banner-and-story-view-boundaries-2026-10-18): preserve Memento56+370/shared2513, unaudited Mask, qualified water/8993 swim with literal58/base1200 versus descriptive300%, existing Venomous Banner fixture/explicit time-leap scope and Storytime260/2565/7. No guessed curse/speed normalization or generic presentation substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
+
 ## 2026-10-18 — Toy source700–704 exact identity and recipient boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source700704-unnamed-homebind-metadata-current-camp-recall-shared-idol-corpse-haunt-and-targeted-star-boundaries-2026-10-18): unnamed276370/1299513 retains10s252/shared2309 but lacks item identity; Lightveil retains actual current camp/9076, Idol shared2513 short recovery, Jaktu corpse226/15s/trigger0 and Otoola friend/foe missile32→4. No invented name/coordinates/child, borrowed helper or self-recipient substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.

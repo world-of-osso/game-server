@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source705–709: mixed Memento, mask, qualified swim, retained Venomous banner and story-view boundaries (2026-10-18)
+
+Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Existing Venomous Banner exact stationary fixture retained among17 identities, including explicit simulation-time expiry, not a new native/qualification certificate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|705 Forgotten Memento279021/1305951 | Instant self transform56→existing269968/misc8/display138136/scale1 plus370/misc652/1 for3600000ms, normal recovery0/category2513 recovery600000ms. Actual mixed Amani state/presentation/restoration/shared reuse remains gap; not pure transform or long-recovery disguise helper. Keep370 and shorter shared category. |
+|706 Ancient Amani Mask279052/1303320 | Instant self dummy4/zero payload for600000ms, inherited900000ms recovery. Actual authored mask/cancellation/cleanup remains unaudited, absent maintained visual-only list; trouble-removing flavor does not authorize invented permanent curse/control or generic dummy success. |
+|707 Idol of Blue Water and Blue Sky279054/1269487 | Instant self241,58/base1200 and transform56→existing269988/misc8/display103956/scale1 for20000ms, inherited60000ms recovery; RequiredAreas8993, description requires water/The Coiled Isle and says300%. Preserve literal1200 payload and separate descriptive300% without normalizing either into a certified speed formula. Actual qualified swim/surge/model/landing cleanup remains gap, not generic movement buff or pure disguise. |
+|708 Venomous Champion's Illustrious Banner279590/1306978 | Instant target47/base1 summon existing270689/property64/Control0/flags0 for60000ms, inherited600000ms recovery; display146432/scale1. Existing exact learned stationary-source fixture retained; explicit time-leap expiry is not ordinary wall-duration, native art, arena acquisition qualification or full ten-minute reuse proof. |
+|709 Book of Storytime280201/1307925 | Instant self260/misc2565/7 for3600000ms, explicit item3600000ms recovery. Actual narrative/world-view presentation/conditions/restoration remains gap; no generic book attachment, invented world-state rewrite or caster stat effect. |
+
+Evidence: private `rows705-709-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact2513 join. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source700–704: unnamed homebind metadata, current-camp recall, shared Idol, corpse haunt and targeted star boundaries (2026-10-18)
 
 Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Unnamed homebind is not added to25 learned-hearthstone cases without its missing item metadata; dynamic recall and targeted badge are not generic self cosmetics.
