@@ -15,7 +15,8 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 ### Prepared actors
 
 - [x] Project17537's actual base0 and Heroic2, and21252's actual base0/Normal1/Heroic2, with source models/addons. Do not create a Normal1 row for17537; preserve unrelated difficulties, Nazan, population, bindings and group357's flags.
-- [ ] Resolve Nazan17536's sourceCT0 through its real map/area context before runtime use. Record `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` until implemented; neither legacy62 nor an uncontextualized level1 cache is acceptance. Prove the ordinary-spawn boundary with a sourced17536 fixture only, not a fabricated canonical placement; retain separate `HERALD_NAZAN_ENTRY_MORPH_UNIMPLEMENTED` until real same-actor morph is proved.
+- [x] Resolve sourced17536CT0 at the ordinary-spawn boundary through real map/area context: Normal1→220, Heroic2→1065, source deltas/modifiers and derived level/HP/armor/scaled damage. `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` is retired only for that proved boundary; neither legacy62 nor an uncontextualized level1 cache is acceptance. Fixtures add no canonical Nazan placement.
+- [ ] Prove actual runtime source-template preparation and same-actor `UpdateEntry`; retain `HERALD_NAZAN_ENTRY_MORPH_UNIMPLEMENTED`. Ordinary-spawn fixture proof does not certify morph or the encounter.
 
 ### Lifecycle and phases
 
@@ -45,6 +46,8 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows;17536 remains unresolved until map-context tuning works.
 
 ## Tests asserting this spec
+
+- `crates/server/src/zones_context_tuning_tests.rs` — sourced17536 ordinary Normal/Heroic map stats, actual MCNK area ancestry, explicit-template/critter/known-zero/missing-context controls, authored-source stats and real PostStartup publication ordering. Seven enabled cases pass within affected54/54 at33dcb7b6 (177.24s); no canonical Nazan spawn or morph acceptance.
 
 - `scripts/tests/test_herald_templates.py` — actual-world-copy CLI projection of17537/21252, idempotence, exact authored gold and byte-identical identity refusal; GREEN1/1 at252a23c9 (12.947s), with unchanged Omor actual-copy control retained from479979bd.
 - `scripts/tests/test_herald_binding_cli.py` — pinned-source/70448 binding CLI, primary-only preservation and named identity gaps; GREEN with unchanged binding controls and warning-free affected producer fixtures.
