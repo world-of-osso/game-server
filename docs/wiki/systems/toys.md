@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Seasonal/flower/cooking boundaries and pending Insoles acceptance (2026-10-17)
+
+[Source305–309 matrix](../../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17) retains Winter Veil/285-child music, observed Wild Flower legacy8.82-versus-Retail1 model state plus scripted Grow, and mixed caster-hosted cooking gaps.308 keeps [earlier actual-area/native scope](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13) without a new calendar certificate.309 test/spec8a986da00 adds exact permanent188699/45416 to the existing caster fixture, now13IDs; local format/readability/diffcheck pass, behavioral acceptance pending lead's next gate after476. Separate RequiredTransmogHoliday341 is not an invented use-time rule; no fresh native/recovery/calendar proof or runtime/data admission.
+
 ## Source scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
 
 [Source300–304 matrix](../../toy-effects14-coverage.md#source300304-scoutingslime-trail-boundaries-and-retained-seasonal-banners-2026-10-17) keeps Outland/two-island flight-map discovery and source10ms-period/one-second slime-child moving-trail/pledge-OR-renown80 gaps distinct. Encrypted/Shrouded retain their exact [historical source9 banner CPU rows](#toy-effects9-stationary-banners-and-sign-2026-10-10), source models/2yd placement/expiry, not fresh native certificates. No invented discovery set, unconditional trail schedule, caster visual shortcut or new runtime/data admission.
