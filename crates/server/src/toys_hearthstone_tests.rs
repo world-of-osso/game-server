@@ -165,3 +165,8 @@ fn toyfx477_deepdweller_hearthstone_learned_use_returns_to_bind_and_blocks_path_
 fn toyfx482_flame_hearthstone_learned_use_returns_to_bind_and_blocks_deepdweller() {
     assert_toy_hearthstone_bind_and_shared_charge(209035, 422284, 208704);
 }
+
+#[test]
+fn toyfx503_stone_of_hearth_learned_use_returns_to_bind_and_blocks_flame() {
+    assert_toy_hearthstone_bind_and_shared_charge(212337, 401802, 209035);
+}
