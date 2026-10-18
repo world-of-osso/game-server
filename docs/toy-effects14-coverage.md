@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source430–434: cooking/forced-form/clan/linked-hologram boundaries and retained Will (2026-10-17)
+
+No new acceptance/runtime/data admission. Existing433 is already one of the15 caster identities covered by484; its metadata does not certify siblings. Lead492 through0c77bfdaa is queued for the corrected regen/actor-phase tests, result pending.489 remains failed as recorded below; no own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|430 Brazier of Madness203757/401672 | Source2000ms cursor87 effect50/base1→386682 for300000ms; category97 recovery300000ms. Source explicitly enables cooking. Runtime tdb_gameobject_template has no386682 row. Exact cooking-focus identity/service/placement/expiry remain gaps, not decorative-only brazier or a borrowed sibling's cooking/native certificate. |
+|431 Spore-Bound Essence203852/402642 | Instant self ForceCast2/effect160→402636, child source2000ms self transform56→existing202340/display88121/misc8 for300000ms; item3600000ms recovery. Actual forced-child execution/cast semantics/restore and source presentation remain unverified. No fabricated root2s cast, guessed random spore form, NPC-scale inference or direct-transform shortcut. |
+|432 Clan Banner204170/403127 | Instant self dummy4/base1 for600000ms, item600000ms recovery. Exact chosen Orc clan/back-banner/earned selection and recipient lifecycle remain unresolved; no generic zero-dummy admission, guessed clan choice or invented base1 child/count. |
+|433 Hraxian's Unbreakable Will204220/403491 | Instant self audited dummy4/300000ms with120000ms inherited recovery. Existing exact row in15-ID caster fixture covers actual learned use, replicated/cancelled aura, unchanged full health/model/no actors in passing484. Manifestation art/native animation, natural five-minute expiry and two-minute reuse are separate; no new broader certificate. |
+|434 Holoviewer: The Scarlet Queen204256/403711 | Source1500ms self linked-summon428→403712 for300000ms, item1800000ms recovery overriding root3600000ms. Child source2000ms target47 summon202736/property64/base1 plus self dummy4/permanent-1; existing Visage Stand/display111698/model-scale0.35. Root text names Alexstrasza, child text King Mechagon; retain literal IDs/mixed payload rather than substituting a model by text. Full hologram/linked cleanup/child visual contract remains unaudited. No NPC-to-player scale inference or inert stand-only admission. |
+
+Evidence: private `rows430-434-{readonly-source,action-source,runtime-source,active-goal}.json`, exact maintained visual audit/caster fixture and linked-summon path.149865 Tea Set remains untouched.
+
 ## Gate489 assertion corrections; behavioral proof pending (2026-10-17)
 
 Inspected489 throughc043f0f8c FAILED284/2/1ignored577.08s/EXIT101/FMT0. Acceptance correction0c77bfdaa changes tests/spec only, with format/manual readability/diffcheck pass and exact pushed readback; no newer behavioral result. Original failures and correction are preserved, not represented as production RED→GREEN.

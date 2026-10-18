@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Cooking/forced-form/clan/linked-hologram boundaries and retained Will (2026-10-17)
+
+[Source430–434 matrix](../../toy-effects14-coverage.md#source430434-cookingforced-formclanlinked-hologram-boundaries-and-retained-will-2026-10-17) preserves missing runtime386682 cooking-service scope, self ForceCast2→402636/202340 form, chosen-clan nonzero dummy and linked hologram428→403712 with mixed self aura/Visage Stand. Root Alexstrasza versus child King Mechagon text does not authorize model substitution; exact cast and item-recovery overrides retained. Hraxian204220 is already an exact15-caster484 row, not new native/natural-expiry/reuse proof. No runtime/data/admission changes or own heavy duplicate. Lead492 queued0c77bfdaa owns corrected regen/actor-phase proof;489 failure remains explicit.
+
 ## Gate489 assertion corrections; behavioral proof pending (2026-10-17)
 
 [Current correction/proof matrix](../../toy-effects14-coverage.md#gate489-assertion-corrections-behavioral-proof-pending-2026-10-17) supersedes queued/live489 statements below. Saved489c043 FAILED284/2/1ignored577.08s/EXIT101/FMT0.0c77bfdaa replaces387's frozen-health expectation with a same-clock untargeted health/level/combat/regen-phase control, requiring positive natural regen; destination-child SpellGo expectations become actual pre/post-flight actor assertions in the16-row mini fixture. Source `DEST_TARGETS` lacks87, an unverified immediate-flight hypothesis, not an excuse to weaken ordering or claim production GREEN.393/402 individually ok;419 remains after the gate. Format/manual readability/diffcheck pass; corrected behavior/newer lead gate pending, no runtime/data change or own heavy duplicate.
