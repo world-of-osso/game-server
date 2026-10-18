@@ -1,6 +1,6 @@
 ## 2026-10-18 — mc548b five-regression recovery targeted GREEN
 
-[Current proof/limits](../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [roots/repairs](systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): mc548b771/5/13ignored, exact requestedcfdf merge356d4493a/protocol999b52e reproduces0/5; f97c118e4 passes5/0/25.95s. One shared Inbox consumer repairs three item-use helper double-drains; production retains real metadata and makes empty grants/capacity checks no-ops. Original expected counts and real MaxCount/source/typed-error guards unchanged. No own broad rerun or combined landing/native/full1166 claim; lead rerun pending.
+[Current proof/limits](../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [roots/repairs](systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): mc548b771/5/13ignored, exact requestedcfdf merge356d4493a/protocol999b52e reproduces0/5; f97c118e4 passes5/0/25.95s. One shared Inbox consumer repairs three item-use helper double-drains; production retains real metadata and makes empty grants/capacity checks no-ops. Original expected counts and real MaxCount/source/typed-error guards unchanged. The three-item2513 test individually passed REDmc548b; no aggregate-green inference. No own broad rerun or combined landing/native/full1166 claim; lead rerun pending.
 
 ## 2026-10-18 — Gate548 MaxCount repair targeted GREEN; combined gate pending
 

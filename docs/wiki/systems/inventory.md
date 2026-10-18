@@ -32,7 +32,7 @@ Source: pinned TC `Player.cpp:9490–9512,9928–9954` (personal-bank ownership,
 | Quest requests at23749fa05 | RED0/2→GREEN3/0: starter/turn-in cap rejection, bank/inventory/gold/log retention, initial-grant positives. Synthetic references hydrate real product metadata; no canonical data edit. |
 | Create-item atc67ea2596 | Production ProfessionData RED2/1→GREEN4/0: direct refusal/typed owner error, true full-bag error unchanged, first-product positive, triggered-effect cap. One intermediate compile failure exposed the former string-erasing Bags adapter; fixed rather than parsed. |
 | Shared/client | Protocol2a5307c wire1/0; engined73fa72e6 account dispatch1/0. Append-only enum, source wording; no native presentation certificate. |
-| Integration | Lead owns the broad toys/inventory/item/loot/mail/vendor/quest_reward/profession/bank/check/fmt gate across all three repos. No broad/final-green or landing claim yet; three-item2513 batch remains behavior-unexecuted. |
+| Integration | Lead owns the broad toys/inventory/item/loot/mail/vendor/quest_reward/profession/bank/check/fmt gate across all three repos. No broad/final-green or landing claim; the three-item2513 batch individually passed mc548b, whose aggregate remains RED. |
 
 ## Storage
 

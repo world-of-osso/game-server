@@ -4,7 +4,7 @@
 
 Lead mc548b server2644c24f2 was RED771/5/13ignored816.87s, protocol stage passed. Exact requested cfdfc3ee6 merge356d4493a/protocol999b52e reproduced0/5; final repairf97c118e4 passes all unchanged five cases5/0/25.95s. [Authoritative roots/repairs/proof](wiki/systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): one InventoryError inbox consumer fixes three item-use fixture adapters; authentic quest metadata is retained for valid references; empty item batches/capacity checks are no-ops for XP-only rewards. No oracle counts, source data, MaxCount checks, source qualification or typed full-bag distinction were weakened.
 
-This is not a broad mc548b success or landing. Lead owns the combined rerun; server changes are protocol999b52e-aligned, engine error-dispatch implementation remains unchanged. Toy batch5efec9c6f stays stacked; whole1166/native completion remains unclaimed.
+This is not a broad mc548b success or landing. Lead owns the combined rerun; server changes are protocol999b52e-aligned, engine error-dispatch implementation remains unchanged. Toy batch5efec9c6f stays stacked; its exact Saptor/Idol/Badge cancellation/recovery test individually passed mc548b, but that aggregate was RED. Whole1166/native completion and landing remain unclaimed.
 
 ## Gate548 MaxCount defect: coordinated repair targeted GREEN; integration pending (2026-10-18)
 
@@ -12,7 +12,7 @@ This is not a broad mc548b success or landing. Lead owns the combined rerun; ser
 
 Targeted proof: shared-model RED0/2→5/0 at1a811a183; quest RED0/2→3/0 at23749fa05; production-profession Doomsday RED2/1→4/0 atc67ea2596, including genuine-full and triggered-effect controls. Protocol2a5307c wire1/0 and engined73fa72e6 account-dispatch1/0 preserve Retail GlobalStrings10918/ERR_ITEM_MAX_COUNT. Source clarification supersedes the earlier two-SpellGo assumption: regular preflight (`Spell.cpp:7648–7656`) refuses the second use with equip error/DONT_REPORT; triggered effects separately test the lower storage bound (`SpellEffects.cpp:1426–1440`). Original GUID/count, inventory/gold/log and closed-bank access guards are asserted.
 
-Lead owns one combined three-repo broad gate; no own broad rerun, no final integration/landing/native/full1166 claim. Toy batch5efec9c6f is retained: all three cancellation/recovery cases compile in the current unit binary but remain behavior-unexecuted pending that gate. Earlier pending labels below are source-stage history; no source weights/data were changed. [Contracts](specs/inventory.md), [quest scope](specs/quests.md), [toy scope](specs/toys.md).
+Lead owns one combined three-repo broad gate; no own broad rerun, no final integration/landing/native/full1166 claim. Toy batch5efec9c6f is retained: all three cancellation/recovery cases individually passed mc548b, whose aggregate remains RED pending the corrected rerun. Earlier pending labels below are source-stage history; no source weights/data were changed. [Contracts](specs/inventory.md), [quest scope](specs/quests.md), [toy scope](specs/toys.md).
 
 ## Three-item batch: Saptor685, Idol702, Badge710 cancellation/recovery pending after548 (2026-10-18)
 

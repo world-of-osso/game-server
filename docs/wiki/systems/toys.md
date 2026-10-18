@@ -4,7 +4,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## mc548b five-regression recovery targeted GREEN (2026-10-18)
 
-[Current five-case proof/limits](../../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [root-cause matrix](inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): exactcfdfc3ee6/protocol999b52e reproduction0/5→f97c118e4 GREEN5/0/25.95s. Three failures were competing test-harness error consumers; two production fixes retain authentic quest metadata and avoid inventory work for empty grants. All original expected outcomes remain unchanged; real creation caps/typed errors/source identity remain enforced. Lead combined rerun/landing/native/full1166 proof remains pending; no own broad rerun.
+[Current five-case proof/limits](../../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [root-cause matrix](inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): exactcfdfc3ee6/protocol999b52e reproduction0/5→f97c118e4 GREEN5/0/25.95s. Three failures were competing test-harness error consumers; two production fixes retain authentic quest metadata and avoid inventory work for empty grants. All original expected outcomes remain unchanged; real creation caps/typed errors/source identity remain enforced. The exact three-item Saptor/Idol/Badge cancellation/recovery test individually passed mc548b; this does not make that RED aggregate green. Lead combined rerun/landing/native/full1166 proof remains pending; no own broad rerun.
 
 ## Gate548 MaxCount repair targeted GREEN; coordinated gate pending (2026-10-18)
 
