@@ -234,7 +234,7 @@ class ItemSparseSourceTest(unittest.TestCase):
     def test_exact_real_selected_record_bytes(self):
         self.assert_selected_items(
             (
-                Path(__file__).parent / "fixtures/item_sparse_6fcc3191_selected.db2"
+                Path(os.environ["ITEM_SPARSE_SELECTED_FIXTURE"])
             ).read_bytes()
         )
 
