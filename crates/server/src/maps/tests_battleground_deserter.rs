@@ -1,6 +1,9 @@
 use super::*;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 
+#[path = "tests_battleground_deserter_port.rs"]
+mod port;
+
 // TC a352b1fa Player.h2594: IsDeserter() is HasAura(26013).
 const DESERTER_SPELL_ID: u32 = 26013;
 const DUNGEON_DESERTER_SPELL_ID: u32 = 71041;
@@ -59,7 +62,11 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
         app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
         app.insert_resource(spells);
-        app.add_plugins((crate::group::GroupPlugin, crate::pvp::PvpPlugin));
+        app.add_plugins((
+            crate::group::GroupPlugin,
+            crate::pvp::PvpPlugin,
+            crate::experience::ExperiencePlugin,
+        ));
     })
     .expect("real map/channel fixture");
     let players: Vec<_> = (1..=count)

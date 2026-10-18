@@ -1236,7 +1236,11 @@ fn deal_damage_and_report(
     if incoming_loss > 0.0 {
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, incoming_loss);
     }
-    let lethal = crate::auras::apply_attack_damage(world, target, loss);
+    let commit = crate::auras::apply_attack_damage(world, target, loss, school);
+    let prevented = commit.absorbed_damage(amount, loss);
+    let (amount, absorbed) = (amount - prevented, absorbed + prevented);
+    let scaled_loss = (scaled_loss - commit.absorbed_loss).max(0.0);
+    let loss = (loss - commit.absorbed_loss).max(0.0);
     crate::achievement::record_damage(world, ctx.caster, target, before, amount, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
@@ -1281,7 +1285,7 @@ fn deal_damage_and_report(
     if amount > 0.0 && !recorded_hit {
         push_damage_event(world, ctx, target, periodic, scaled_loss);
     }
-    if lethal {
+    if commit.lethal {
         kill(world, ctx.caster, target, ctx.depth == 0);
     }
     let effective = (amount - overkill).max(0.0);

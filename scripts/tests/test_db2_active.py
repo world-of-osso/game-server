@@ -13,6 +13,8 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2
 
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+
 
 class ActiveDb2Tests(unittest.TestCase):
     def test_private_root_does_not_read_canonical_csvs(self):
@@ -52,7 +54,7 @@ class ActiveDb2Tests(unittest.TestCase):
                 (root / 'active').unlink(missing_ok=True)
                 (root / 'active').symlink_to(build)
                 result = subprocess.run(
-                    [sys.executable, str(SCRIPTS / 'db2.py'), 'import', '--db', str(database)],
+                    [sys.executable, str(SCRIPTS / 'db2.py'), 'import', '--source-dir', str(SOURCE), '--db', str(database)],
                     env={**os.environ, 'DB2_CSV_ROOT': str(root)}, capture_output=True, text=True,
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

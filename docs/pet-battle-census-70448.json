@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "63f67710b10b58e0178c91b461e5483ed7ca8162",
+  "validator_revision": "c7abb9d35c60303e282f095a610876086516c72a",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1875,
+  "admitted_effect_rows": 1885,
   "effect_rows": 2829,
-  "admitted_abilities": 1038,
+  "admitted_abilities": 1040,
   "abilities": 1404,
   "properties": [
     {
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "admitted_rows": 621,
+      "admitted_rows": 627,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -276,9 +276,6 @@
         3315,
         3465,
         3482,
-        3550,
-        3551,
-        3552,
         3567,
         3568,
         3639,
@@ -363,9 +360,6 @@
         4333,
         4359,
         4360,
-        4364,
-        4365,
-        4366,
         4377,
         4378,
         4443,
@@ -675,7 +669,7 @@
       ]
     },
     {
-      "admitted_rows": 108,
+      "admitted_rows": 109,
       "handler": true,
       "property": 50,
       "rows": 194,
@@ -758,7 +752,6 @@
         4251,
         4266,
         4274,
-        4367,
         4379,
         4696,
         4780,
@@ -795,7 +788,7 @@
       ]
     },
     {
-      "admitted_rows": 55,
+      "admitted_rows": 58,
       "handler": true,
       "property": 54,
       "rows": 77,
@@ -809,9 +802,6 @@
         1482,
         1572,
         2386,
-        3553,
-        3554,
-        3555,
         3569,
         4194,
         4582,
@@ -5894,7 +5884,7 @@
     },
     {
       "ability": 1954,
-      "error": "ability 1954: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 1955,
@@ -6766,7 +6756,7 @@
     },
     {
       "ability": 2365,
-      "error": "ability 2365: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2366,
