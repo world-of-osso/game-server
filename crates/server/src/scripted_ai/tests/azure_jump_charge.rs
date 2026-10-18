@@ -124,7 +124,6 @@ fn assert_native_jump(spell_id: u32, parameter: u32, wow_destination: Vec3) {
 }
 
 #[test]
-#[ignore = "native254 motion RED pending repaired-master gate"]
 fn azure_telash_387981_jumps_to_authored_elevated_center_without_teleport() {
     // TC boss_telash_greywing.cpp TelashJumpPosition, not a derived floor point.
     assert_native_jump(
@@ -135,7 +134,6 @@ fn azure_telash_387981_jumps_to_authored_elevated_center_without_teleport() {
 }
 
 #[test]
-#[ignore = "native254 motion RED pending repaired-master gate"]
 fn azure_telash_388082_jumps_to_authored_return_endpoint_without_teleport() {
     // Proves real388082 motion to source return point0, not the later selector/hook.
     assert_native_jump(RETURN_JUMP, 714, Vec3::new(-5350.0835, 1089.8976, 340.5709));

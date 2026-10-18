@@ -11,7 +11,7 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 
 ### Initial runtime subset
 - [x] Apply only pinned TC SpellMgr.cpp4940–4956 load-time corrections:387981/388082 effect0 TargetA87, retaining authored destinations. Raw SQL remains unchanged; no generic target46 support.
-- [ ] Actual Telash387981/388082 effect254 casts move asynchronously to their exact source-authored destinations, including elevated endpoints; no launch teleport, ground snap or LOS-clamped replacement destination.
+- [x] Actual Telash387981/388082 effect254 casts move asynchronously to their exact source-authored destinations, including elevated endpoints; no launch teleport, ground snap or LOS-clamped replacement destination.
 - [ ] Source time mode, applicable speed cap, nullable-height semantics and facing options determine the motion. Missing parameters or unsupported options fail explicitly, never by teleport fallback.
 - [ ] Reuse real movement ownership, interpolation and arrival1004 dispatch; effect41 and existing Gordoth movement remain unchanged.
 - [ ] Native tests observe launch, mid-flight arc and source-derived landing time/position without constructing movement components or dispatching synthetic landing hooks.
@@ -28,13 +28,25 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 
 ## Tests asserting this spec
 - `scripts/tests/test_jump_charge_params.py` — real-copy producer CLI/source preservation and refusal boundary.
-- `crates/server/src/scripted_ai/tests/azure_jump_charge.rs` — test-first actual387981/388082 source-destination launch/midpoint/landing cases; ignored until the repaired-master RED queue. No movement components or synthetic arrival hooks. Existing Gordoth controls remain required regression proof.
+- `crates/server/src/scripted_ai/tests/azure_jump_charge.rs` — actual387981/388082 source-destination launch/midpoint/landing GREEN at5aa9f58a; enabled afterward. No movement components or synthetic arrival hooks.
+- `spell_cast/jump_charge.rs` tests — missing-source refusal/no movement and actual unsupported source options. Native pair+missing control3PASS138.15s, retained unsupported1PASS; not a fresh4-case run.
+- `spell_cast/dummy10_tests.rs`, `dummy14_tests.rs`, `teleport_tests.rs` — named player-displacement refusals preserve parent success, bite/transform/damage/CC, cooldowns and native zero resource costs. Reconciled old teleport-placeholder assertions; scoped proof pending.
+- Existing Gordoth arrival/death/lower-point ownership and Harpoon41 controls remain required regression proof.
 
 ## Known gaps (current cycle)
 - [x] Producer first: source-backed COPY preparation and scoped proof at fba6fb2b, pushed2399bcd06; lead gate510 landed and published5f225535 with byte-identical whole-database delta49b238f5.
 - [x] Merge repaired masterefd627da1 (gate511) and record separate source-target planning RED:2FAIL60.53s at1b5370e7, missing destination versus wrong caster destination. Initial test compilation failure is not behavioral proof.
 - [x] After exact source target fixes, observe genuine launch-teleport RED:2FAIL58.95s at985d91f3 after planning/native inputs/floor/LOS prerequisites. Outbound also ground-snapped to0; return to340.57086 instead of340.5709.
 - [ ] Prove bounded254 movement implementation and missing/unsupported controls, preserve41/Gordoth, then scoped check/fmt/readability/independent proof. First GREEN attempt:1PASS/3fixture-startup failures; relative database reopening removed in favor of the existing `WorldData` load and prepared-copy connection.
+
+## Named unsupported displacement gaps
+
+Lead-approved finite713/714 publication does not retain the old effect254 teleport placeholder. Only effect254 displacement refuses; parent casts and their other effects, trigger chains except the jump arrival trigger, resources and cooldowns remain independent.
+
+- `JUMP254_PROGRESS_CURVE`:191427 (Havoc Metamorphosis), effect2/param9/progress1717;189110 (Infernal Strike), effect1/param2/progress1636. No transform, damage, CC or parent-cast refusal.
+- `JUMP254_PARABOLIC_CURVE_TRIGGER`:196884 (Feral Lunge), effect1/param1211/parabolic79789/arrival215802. Its existing dummy-effect bite215802 still executes; no additional jump-arrival bite is fabricated.
+
+Audit: all1539 installed native effect254 spell IDs checked against tracked server Rust test literals. Old movement assertions were in the Infernal Strike matrix and mixed Harpoon/Feral matrix; Feral bite and Meta damage/CC tests now also assert unchanged caster position and preserved parent effects.439683 matches only an aura-restriction loader fixture, not movement acceptance.
 
 ## Out of scope
 - Parent387928 hit, Telash landing reaction, AfterCast return selection, post-phase counters and rune scripts: later independent REDs.

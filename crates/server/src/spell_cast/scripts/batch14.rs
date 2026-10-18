@@ -181,8 +181,8 @@ pub(in crate::spell_cast) fn cast_effect(spell: u32, index: u8) -> Option<CastEf
         _ => None,
     }
 }
-///Named landing damage/stun at the validated destination. Preserve native254
-///endpoint movement; this does not implement leap traversal or talent resets.
+///Named damage/stun at the validated destination remains independent of effect254.
+///Its source progress-curve displacement is unsupported; transform triggers still run.
 fn land_metamorphosis(
     world: &mut World,
     ctx: &EffectCtx,
