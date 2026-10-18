@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source650–654: mixed parachute, cycle-script, retained wine, photo and ash boundaries (2026-10-18)
+
+No new acceptance or runtime/data/native change. Existing Wine identity remains in the19-caster fixture, not a fresh proof. Lead successor remains unassigned after509 cancellation-before-start;507 failure and later unverified acceptances are not relabelled green.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|650 Shroom Jumper's Parachute258963/1264273 | Instant self105/misc917504, trigger64→1264272/effect98/misc-250,409 and two139 slots/misc1059 and1102 for120000ms; inherited1200000ms normal recovery plus category1470/180000ms. RequiredAreas8537 joins15947/15968/15355/16648; description restricts outdoor Midnight. Actual qualified fall/movement/linked-state/cleanup remains gap. Preserve all five root effects and both139 entries; no global slow-fall aura or independent three-minute toy reuse. |
+|651 Gift of the Cycle259084/1264356 | Source900ms self77/base1264373 plus two dummy3 slots/base1264408 and1264411, inherited180000ms recovery, no duration. Actual cycle-spirit selection/presentation/lifecycle remains unresolved. These three base-point script payloads are not trigger edges; no guessed summoned body, generic visual success or arbitrary selection algorithm. |
+|652 Sin'dorei Wine259240/1264653 | Instant self audited dummy4/zero payload for300000ms, inherited300000ms recovery. Existing exact learned-use/replicated-aura/cancel/unchanged health-model/no-creature fixture retained among19 casters. No new native toast/full-duration/reuse or additional recipient effect inferred from "those around you". |
+|653 Photo Finisher259335/1264476 | Instant self dummy4 with nonzero trigger1264477 for3600000ms; leaf effect250/self, no duration. ProcChance101/ProcTypeMask0/8/zero proc recovery retained literally; no source SpellCooldowns row/item overrides-1. Actual eligible epic-victory capture/whelping presentation/recipient/cleanup remains gap. Not zero-trigger cosmetic acceptance or an agent-created screenshot substitute. |
+|654 Ashen Horn of the Fallen Keeper259899/1265309 | Instant self331/misc582/0 and260/misc1477/7 plus two distinct effect140 edges→1265312 and1265313 for600000ms; explicit item1800000ms recovery/category recovery0. First child is effect35/aura395/misc40432; second is dummy4. Actual ash encasement/ember presentation/area/state restoration remains gap. Preserve both140 edges and the35 child, not ordinary64 triggers or a copied dummy-only attachment certificate. |
+
+Evidence: private `rows650-654-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact8537 area and1470 Slow Fall joins. Full1166 admission unchanged;149865 Tea Set untouched, no own heavy jobs.498 remains last confirmed landed/master8707ac0ea.
+
 ## Source645–649: pending Lightcalled hearthstone and jumpable-monument, gold-fountain boundaries (2026-10-18)
 
 Acceptance-only57aa5b0c5 appends Lightcalled257736/1261979 to unchanged saved-bind/shared2309 helper, now22 hearthstones/old21 retained; sibling Cosmic246565 is blocked after charge spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after509 cancellation-before-start. No runtime/data/native changes or own heavy work.

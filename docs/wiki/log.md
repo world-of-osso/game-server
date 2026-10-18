@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source650–654 mixed effect and recipient boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source650654-mixed-parachute-cycle-script-retained-wine-photo-and-ash-boundaries-2026-10-18): parachute preserves five root slots/two139/negative98/area8537/category1470; Cycle preserves three script base points; Wine's existing19-caster identity retained. Photo preserves nonzero trigger→250 and proc101/mask0/8; Ashen Horn preserves both140 edges including35/395 child. No new acceptance, runtime/data/native proof or own heavy jobs; successor pending after cancelled509.
+
 ## 2026-10-18 — Toy source645–649 pending Lightcalled acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source645649-pending-lightcalled-hearthstone-and-jumpable-monument-gold-fountain-boundaries-2026-10-18):57aa5b0c5 appends257736/1261979/source10s/shared2309 to unchanged persisted-bind helper, now22 hearthstones/old21 retained; format/manual readability/diffcheck pass, behavior pending lead successor. Three missing jumpable monuments retain base0/distinct casts; missing255051 gold fountain retains64→425841/effect65/120s/category59 with actual payment contract unresolved. No collision-free substitute, guessed multiplicity/cost/reward, runtime/data/native change or own heavy work.
