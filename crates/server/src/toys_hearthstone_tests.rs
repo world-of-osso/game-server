@@ -200,3 +200,71 @@ fn toyfx661_preyseeker_hearthstone_learned_use_returns_to_bind_and_blocks_naaru(
 fn toyfx673_corewarden_hearthstone_learned_use_returns_to_bind_and_blocks_preyseeker() {
     assert_toy_hearthstone_bind_and_shared_charge(265100, 1273401, 263933);
 }
+
+#[test]
+fn toyfx664_mycomancer_learned_root_triggers_homebind_after_cast_and_blocks_corewarden() {
+    use shared::components::{Health, ModelDisplay};
+    const ITEM: u32 = 264367;
+    const ROOT: u32 = 1299014;
+    const SIBLING: u32 = 265100;
+    const CHARGE_CATEGORY: u32 = 2309;
+    const RECHARGE_MS: u32 = 1_800_000;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("mycomancer.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let bind = crate::spell_cast::homebind::load_bind(
+        &h.app.world().resource::<GameDatabase>().db,
+        character,
+    )
+    .expect("character creation persists the home bind used by child1286909");
+    let caster = h.caster;
+    let health = *h.app.world().get::<Health>(caster).unwrap();
+    let display = h.app.world().get::<ModelDisplay>(caster).copied();
+    h.app.world_mut().entity_mut(caster).insert(bind);
+    let mut origin = bind.0.bevy_position();
+    origin.x += 30.0;
+    *h.app.world_mut().get_mut::<Position>(caster).unwrap() = origin;
+    learn_effect_toy(&mut h, character, ITEM);
+    learn_effect_toy(&mut h, character, SIBLING);
+
+    // The learned root casts for10s; its64 child performs252, not a substituted root.
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    h.advance(100);
+    assert_eq!(h.app.world().get::<Position>(caster), Some(&origin));
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == ROOT));
+    h.advance(110);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == ROOT).count(),
+        1
+    );
+    assert_eq!(
+        h.app.world().get::<Position>(caster),
+        Some(&bind.0.bevy_position())
+    );
+    let charge = h
+        .inbox
+        .charges
+        .iter()
+        .find(|charge| charge.spell_id == ROOT && charge.category == CHARGE_CATEGORY)
+        .expect("the learned root publishes its shared hearthstone charge");
+    assert_eq!(charge.current, 0);
+    assert_eq!(charge.max, 1);
+    assert_eq!(charge.recharge_ms, RECHARGE_MS);
+    let cast_count = h.inbox.go.len();
+    assert!(activate(&mut h, SIBLING)[0].error.is_some());
+    h.advance(220);
+    assert_eq!(h.inbox.go.len(), cast_count);
+    assert_eq!(
+        h.app.world().get::<Position>(caster),
+        Some(&bind.0.bevy_position())
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
+}
