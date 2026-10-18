@@ -28,6 +28,9 @@ impl<R: BattleRng> Runtime<'_, R> {
         failed: bool,
     ) -> Result<bool, String> {
         let p = effect.params;
+        if ability == 1954 && effect.property == 54 {
+            return self.apply_poison_protocol_aura(caster, target, effect);
+        }
         if matches!(effect.property, 50 | 52 | 54) && p[0] != 0 && failed {
             return Ok(false);
         }
@@ -425,6 +428,31 @@ impl<R: BattleRng> Runtime<'_, R> {
             pet.health = shared_health.min(pet.stats.health);
         }
         true
+    }
+    fn apply_poison_protocol_aura(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let recipient = other_team_slot(target, effect.order - 3);
+        let action_start = self
+            .events
+            .iter()
+            .rposition(
+                |event| matches!(event, Event::Used { pet, ability: 1954, .. } if *pet == caster),
+            )
+            .expect("Poison Protocol has its own ability-use event");
+        //PET_BATTLE_POISON_PROTOCOL_PER_VICTIM_CHAIN_POLICY: only this action's
+        //positive direct hit qualifies the corresponding victim's poison row.
+        let qualified = self.events[action_start + 1..].iter().any(|event| {
+            matches!(event, Event::Damage { caster: attacker, target: victim, amount, periodic: false, .. }
+                if *attacker == caster && *victim == recipient && *amount > 0)
+        });
+        if !qualified {
+            return Ok(false);
+        }
+        self.add_aura_effect(caster, recipient, effect)
     }
     fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
         let p = effect.params;

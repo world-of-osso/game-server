@@ -13,6 +13,16 @@ python3 scripts/generate_toy_facing_requirements.py --database data/world.db --r
 
 No generator exports its own DB2 or mutates world.db. Facing flags come from the selected Toy roots; target bounding radii come from the source dump, not guessed CombatReach values. [Facing/area behavior](specs/toys.md#source-area-group-closure--active2026-10-13).
 
+## Selected Toy membership additions
+
+`import-toys.py` normally replaces the full Toy catalog. For an approved additive batch, repeat `--item-id`; only those items are added/refreshed from the supplied CSV, and unrelated rows stay unchanged. Missing requested source items fail before database mutation. Reports cover the selected batch and retain unresolved reference diagnostics.
+
+```sh
+python3 scripts/import-toys.py "$CURRENT_CSV_DIR/Toy.csv" data/world.db.copy --item-id 281136 --item-id 281615 --report data/hearthstone-import.json
+```
+
+Run on an independent copy. This mode imports only Toy membership, not missing Item/ItemEffect/Spell dependencies. The lead owns canonical publication after source/SQL-diff verification. [Expanded70448 hearthstone contract](specs/toys.md#expanded-build70448-hearthstones).
+
 ## Deployment
 
 The lead's server data sync must include both generated JSON files with world.db before starting the new binary. These files are data artifacts, not tracked server-source inputs. Regenerate them in the DB2-follow apply step; rebuilding the server cannot update their contents.
