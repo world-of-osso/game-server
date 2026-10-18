@@ -491,7 +491,7 @@ fn defensives_turtle_pacifies_swings_and_abilities_until_expiry() {
         h.inbox
             .failed
             .iter()
-            .any(|event| event.reason == shared::spell_data::CastFailReason::Pacified),
+            .any(|event| event.reason == shared::spell_data::CastFailReason::CantDoThatRightNow),
         "{:?}",
         h.inbox.failed
     );
