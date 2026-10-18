@@ -310,7 +310,9 @@ fn edit_rank(
                 withdrawals_per_day,
             };
         }
-        GuildRankRequest::Leave | GuildRankRequest::RemoveMember { .. } => {
+        GuildRankRequest::Leave
+        | GuildRankRequest::RemoveMember { .. }
+        | GuildRankRequest::SetMemberRank { .. } => {
             return Err(GuildRankError::Permissions);
         }
         GuildRankRequest::Query | GuildRankRequest::QueryEventLog => {}
