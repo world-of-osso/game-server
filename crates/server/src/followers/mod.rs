@@ -15,6 +15,10 @@ mod pull_forecast_tests;
 pub(crate) mod pull_history;
 #[cfg(test)]
 mod pull_history_tests;
+#[cfg(test)]
+mod pull_readiness;
+#[cfg(test)]
+mod pull_readiness_tests;
 mod spawning;
 mod stockade_diagnostic;
 #[cfg(test)]

@@ -7,7 +7,7 @@ use crate::world_data::WorldData;
 use bevy::prelude::*;
 use shared::components::{Health, Npc, UnitLevel, UnitPowers};
 
-fn source_fixture(entry: u32) -> (Harness, Entity, Entity) {
+pub(super) fn source_fixture(entry: u32) -> (Harness, Entity, Entity) {
     let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
     h.advance(3);
     let map = InMap {
@@ -135,7 +135,7 @@ fn read_native_healer_profile() -> super::Profile {
         .unwrap()
 }
 
-fn add_native_healer(h: &mut Harness) -> Entity {
+pub(super) fn add_native_healer(h: &mut Harness) -> Entity {
     let profile = read_native_healer_profile();
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[profile.entry]);
     h.app
