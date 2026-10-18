@@ -7,8 +7,7 @@ mod party;
 mod pull_budget;
 #[cfg(test)]
 mod pull_budget_tests;
-#[cfg(test)]
-mod pull_history;
+pub(crate) mod pull_history;
 #[cfg(test)]
 mod pull_history_tests;
 mod spawning;

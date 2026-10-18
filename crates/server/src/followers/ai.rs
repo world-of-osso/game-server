@@ -13,6 +13,7 @@ use crate::networking::CombatTarget;
 pub(crate) struct FollowerReach(pub f32);
 
 pub(super) fn update(world: &mut World) {
+    super::pull_history::sample_all(world);
     let followers: Vec<_> = world
         .query::<(Entity, &Follower)>()
         .iter(world)

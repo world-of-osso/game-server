@@ -1,3 +1,7 @@
+## 2026-10-18 — Run-local tank observations
+
+[History boundary](investigations/follower-data.md#run-local-tank-observations--2026-10-18): native effect/update4RED at28281c3a0, pure policy4GREEN. Wire per-run10s effective rates, complete5s health samples and CreatureOrigin per-spawn deaths; copy/roster reset. Observer GREEN and planner remain pending; no runtime/stat/protocol change.
+
 ## 2026-10-18 — Shadow Bolt Volley2523
 
 [Shadow Bolt Volley](systems/pet-battle-engine.md#shadow-bolt-volley--2026-10-18): active70448 turn4136/rows4902–4904 property222[15,100,30,0,0,0], no abilitystates. Actualc66b8d6e1 core4+owned4949/15 unsupportedRED→5fc44fa1e registryONLY/core4+owned1GREEN; existing24/222recipientmapping/variance math unchanged. Parameterize319/2309damage controls (not objectclear), nine active pairs/eachmiss/deadreserve/allies conserved; authored30endpoint76/103notdefault20's81/98. Legal Shadowflame Remnant4949/15slot2power178/max990 capped147/Rabbit0. Integratedlib164/main40PASS/shared11acleanbeforeafter; fresh ten-table-reconciled70448census1844/2829=65.18%/1032graphs (+3/+1/no removals); packagecheck14.25s/no warnings/fmtPASS/manualchanged-lineRustreadability no new violations (metrics unavailable). Historical70391/1762/other rejections retained; onlydocs/censusafterproof. Native-after-landing and independent Retail rounding/timing/VFX remain unproved.
