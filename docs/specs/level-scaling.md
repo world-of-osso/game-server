@@ -5,6 +5,7 @@ The creatures are Retail spawns ([retail-spawn-source](retail-spawn-source.md)),
 ## What it must do
 
 Data
+- [x] Template provenance selects stat authority: `zephras_row_source` records with `table_name='content_creature_template'` and `kind='reconstructed'` identify authored Zephras/Skyborn templates. Those retain their authored fixed levels/stats. Never infer authored origin from missing ContentTuning, level shape or absent TDB rows; Retail CT0 still requires real context. This is source selection, not a legacy-stat fallback.
 - [x] `db2.py extract` decodes ExpectedStat (FDID 1937326), ExpectedStatMod (1969773) and ContentTuningXExpected (2976765) from local CASC into `expected_stat`, `expected_stat_mod` and `content_tuning_x_expected`. The ID comes from the file's ID list (first column) and the parent field from its relationship map (last column).
 - [x] A tuned `content_creature_template` row carries its ContentTuning range as `minlevel`/`maxlevel`, plus TrinityCore's difficulty-0 values:
   - `HealthScalingExpansion`;
@@ -15,7 +16,9 @@ Data
 Level
 - [x] A tuned creature's own level is its range maximum plus a delta, rolled once per spawn from `LevelScalingDeltaMin..=Max` (Creature::SelectLevel, Creature.cpp:1611-1618; ApplyLevelScaling, :3122-3171).
 - [x] Its level against a unit of level L is `clamp(L, min, max) + delta`, clamped to 1..=126 (Creature::GetLevelForTarget, :3226-3257). The rule lives once, in `shared::level_scaling::LevelScaling::level_for_target`, which server and client both call.
-- [x] Untuned creatures keep one fixed level (`minlevel`) for everyone.
+- [x] Ordinary Retail/non-authored non-critter CT0 spawns resolve ContentTuning from their actual map difficulty, then the terrain area's parent chain, reusing the existing `SummonLevels` inputs. Explicit template tuning takes precedence; critters do not inherit regional tuning. Missing area/tuning/delta context must log `CREATURE_LEVEL_CONTEXT_GAP` with actor/spawn/map/copy/difficulty and refuse that spawn before queuing an entity. It must not panic the server, use legacy levels or guessed tuning, or prevent other resolvable creatures from spawning.
+- [x] Regional ordinary spawning uses the resolved range and the selected source difficulty's own delta, HealthScalingExpansion and health/armor/damage modifiers before initializing native level, health, armor and scaled stats. Existing guardian/wild level selection remains unchanged.
+- [x] A creature known to have no template or regional tuning keeps its fixed `minlevel` for everyone.
 
 Health and damage
 - [x] Max health is `ceil(ExpectedStat.CreatureHealth(level, expansion) × ContentTuningXExpected mods × class mod × HealthModifier)` at the creature's own level (GetMaxHealthByLevel, :3173-3179; DB2Manager::EvaluateExpectedStat, DB2Stores.cpp:2512-2618).
@@ -58,13 +61,18 @@ Client
 - `scripts/content_policy.py` `build_templates` — tuned template columns
 - `shared-protocol src/level_scaling.rs` — `LevelScaling`, `level_for_viewer`, `gray_level`, `LevelDifficulty`
 - `crates/server/src/level_scaling.rs` — `ExpectedStats`, `LevelStats`, `ScaledStats`, `UnitScaling`, `damage_dealt`, `health_loss`
-- `crates/server/src/world_data.rs` — `load_expected_stats`, `TemplateTuning`
-- `crates/server/src/zones.rs` — `spawn_level_scaling`, spawn level and health
+- `crates/server/src/world_data.rs` — `load_expected_stats`, `TemplateTuning`, actual authored-template provenance IDs from `zephras_row_source`
+- `crates/server/src/zones.rs` — ordinary `CreatureSpawnContext`, template/map/actual-area `read_spawn_tuning`, source range/delta roll, native level/health/armor/scaled stats; explicit `CREATURE_LEVEL_CONTEXT_GAP` for unresolved ordinary input. Temporary spawn initialization remains separate and unchanged.
 - `crates/server/src/combat.rs` `try_swing`/`swing_damage`, `spell_cast/effects.rs` `deal_damage` — damage scaling
 - `crates/server/src/experience.rs` `KillVictim::level_for`, `creature_aggro.rs` `aggro_on_sight_system`
 - `game-engine src/rendering/ui/unit_frames.rs` `build_target_state`, `src/network_runtime/replication.rs`
 
 ## Tests asserting this spec
+
+- Gate486 repair at5a2c2d449: genuine3FAIL at7763d065a→focused3PASS/60.13s; requested affected54PASS/150.97s with55 pre-existing ignored, fmt0. Package check0/warning-free32.05s at docs-only41e030bf1. Requested mastere233d88f1 integration79876f34f preserves FIFO selection/fence helpers and relocates ground_map beside world_db_path: combined affected+focused56PASS/150.66s/55ignored, check0/warning-free8.55s; LEAD re-gate/landing pending. This does not certify Herald runtime morph.
+- `achievement_creature_type_tests.rs`: controlled Lesser Voidwalker418 at WoW(3,0), actual MCNK area279→CT11 (7..30), source delta0 yields native30, not cached20; criterion21 retains below/equal/above killer levels29/30/31, group-recipient and persistence controls.
+- `scripted_ai/tests/data_bosses.rs`: Lucifron's real map409 spawn20056605 supports9/18; the fixture selects actual9→CT1004, not unsupported legacy3. Copy-local lifecycle assertions remain unchanged.
+- `zones_context_tuning_tests.rs`: missing actual area refuses unresolved17536 without panic or partial entity, logs its complete source context and still spawns explicit-CT Hogger; actual sourced17536 base0/Heroic2 fixture through ordinary spawning (not canonical placements), actual MCNK1221→parent16→CT2 instead of spawn zone9, explicit HoggerCT73, Black Sheep critter, known zero-area and missing-context controls. Genuine map/terrain/error RED3 with2 controls passing at5f894225 becomes strict GREEN5/5 at ef5d7503. Actual authored-marker Yala5/102 and production-order PostStartup ground publication extend the enabled proof to7 cases; affected54/54 pass at33dcb7b6 in177.24s (55 pre-existing ignored cases remain unproved).
 
 - `scripts/tests/test_import_azerothcore.py`:
   - `LocalExpectedStatExtractTests`;
@@ -99,5 +107,5 @@ Client
 
 - Player-side stat squish.
 - Group scaling (`ScalingPlayerLevelDelta`), Chromie Time (`MaxCreatureScalingLevel`) and `ScalingFactionGroup`.
-- Instance and map-difficulty ContentTuning (MapDifficulty/AreaTable fallbacks in ApplyLevelScaling).
+- Same-actor entry morph (`Creature::UpdateEntry`) and encounter lifecycle; ordinary-spawn context tuning does not prove those boundaries.
 - Retail's ÷10 XP for creatures of an older expansion stays omitted ([experience](experience.md)).

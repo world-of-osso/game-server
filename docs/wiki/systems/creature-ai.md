@@ -77,6 +77,8 @@ Also used by `combat.rs` to reset position on respawn after death.
 
 Active SmartAI escorts carry `ScriptedPath` even while paused at an ambush. Path start removes `GridDormant`; grid registration and sleeping transitions do not put active paths to sleep. This keeps combat cleanup, timed continuation and out-of-range failure running beyond the original spawn grid. Feero976 reproduced the failure at second camp3756.44 (spawn grid5, acceptor grid7); same-coordinate lifecycle regression and both-skin earned native completion cover the correction. See [escort contract](../../specs/escort-quests.md).
 
+Cold dormant spawns retain pending addon auras without bulk aura-state initialization. On a real player-grid wake, the existing FixedPreUpdate activity transition permits initialization and the authored addon in the same FixedUpdate step; another sleep/wake does not reset an existing aura. See [aura contract](../../specs/auras.md) and [[auras]]. This does not change spawn population or the following timers.
+
 Timers: dormant state resumes where it stopped. Aura expiry and periodic tick times are absolute, so on reactivation expired auras end and missed ticks run at once. `respawn_system` is not gated (it only visits dead creatures): a dormant creature respawns at its spawn point on its normal timer.
 
 With all 24,521 map 0 creatures and no players, an idle dev server uses about 8% of one core (81% without grid activation).

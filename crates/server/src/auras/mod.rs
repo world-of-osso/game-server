@@ -1788,8 +1788,15 @@ pub fn interrupt_auras(
 
 // --- Systems ---
 
-/// Every unit (player or NPC) carries `ActiveAuras`, `UnitAuras` and `AuraStatMods`.
-type UnitsMissingAuras = QueryState<Entity, (Or<(With<Player>, With<Npc>)>, Without<ActiveAuras>)>;
+/// Active units carry aura state; dormant cold spawns initialize in their waking step.
+type UnitsMissingAuras = QueryState<
+    Entity,
+    (
+        Or<(With<Player>, With<Npc>)>,
+        Without<ActiveAuras>,
+        Without<GridDormant>,
+    ),
+>;
 
 fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
     let units: Vec<Entity> = missing.iter(world).collect();
