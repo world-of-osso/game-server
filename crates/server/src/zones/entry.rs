@@ -1,6 +1,10 @@
 //! Shared initial-spawn / same-actor template projection (TC Creature::UpdateEntry).
 use super::*;
 
+/// Source addon path data, separate from the active movement generator's cursor.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AddonPathId(pub u32);
+
 pub(crate) struct EntryProjection;
 
 pub(crate) fn read_entry_projection(
