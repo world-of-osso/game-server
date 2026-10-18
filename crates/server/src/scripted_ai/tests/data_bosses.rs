@@ -15,6 +15,8 @@ mod azure_leymor_children;
 mod azure_mechanic_power;
 #[path = "azure_sprout_death.rs"]
 mod azure_sprout_death;
+#[path = "azure_sprout_field_actions.rs"]
+mod azure_sprout_field_actions;
 #[path = "azure_sprout_fields.rs"]
 mod azure_sprout_fields;
 #[path = "azure_sprouts.rs"]
@@ -272,6 +274,7 @@ fn encounter_fixture(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
+    app.insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&conn).unwrap());
     app.insert_resource(
         super::super::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap(),
     );
