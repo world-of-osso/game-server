@@ -33,6 +33,16 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
     let (x, y, z) = crate::terrain_height::wow_to_bevy(128.5, 52.0, -33.86);
     let from = Position { x, y, z };
     h.app.world_mut().entity_mut(tank).insert(from);
+    {
+        let mut home = h
+            .app
+            .world_mut()
+            .get_mut::<crate::creature_ai::SpawnPoint>(tank)
+            .unwrap();
+        home.x = from.x;
+        home.y = from.y;
+        home.z = from.z;
+    }
     h.app.world_mut().entity_mut(owner).insert(from);
     let map = *h.app.world().get::<InMap>(tank).unwrap();
     h.app

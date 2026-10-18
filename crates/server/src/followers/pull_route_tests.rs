@@ -31,8 +31,17 @@ pub(super) fn route_fixture() -> (Harness, Entity) {
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
     let model = &data.templates[&209057].models[0];
     let (x, y, z) = crate::terrain_height::wow_to_bevy(103.0, 76.0, -34.85623);
+    let template = &data.templates[&209057];
     h.app.world_mut().entity_mut(tank).insert((
         Position { x, y, z },
+        crate::creature_ai::SpawnPoint {
+            x,
+            y,
+            z,
+            wander_distance: 0.0,
+            speed_walk: template.speed_walk,
+            speed_run: template.speed_run,
+        },
         ModelDisplay {
             display_id: model.display_id,
         },
@@ -65,6 +74,7 @@ pub(super) fn route_fixture() -> (Harness, Entity) {
     );
     assert!(count > 2, "actual full Normal Stockade population");
     queue.apply(h.app.world_mut());
+    h.app.insert_resource(ground);
     h.app.insert_resource(crate::navigation::Navigation::new(
         &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground/navmesh"),
     ));
