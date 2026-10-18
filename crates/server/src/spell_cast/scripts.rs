@@ -389,6 +389,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        crate::auras::ebon_might::EBON => Some(crate::auras::ebon_might::cast_self_buff),
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
         }
@@ -424,6 +425,7 @@ pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Enti
 
 pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
     match (spell_id, effect_index) {
+        (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),

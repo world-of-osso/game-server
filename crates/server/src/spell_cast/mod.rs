@@ -2249,7 +2249,13 @@ fn plan_targets(
         hit::remove_defended_targets(world, caster, spell, &mut plan);
         return Ok(plan);
     }
-    let cap = max_targets(spell);
+    // Ebon's source damage-role filter owns its native cap after filtering;
+    // retain implicit area admission instead of requiring an explicit target.
+    let cap = if spell.id == crate::auras::ebon_might::EBON {
+        0
+    } else {
+        max_targets(spell)
+    };
     let mut plan = Vec::new();
     // Units per leading effect (`processedEffectsMaskForSpell`).
     let mut selected: Vec<(usize, Vec<Entity>)> = Vec::new();

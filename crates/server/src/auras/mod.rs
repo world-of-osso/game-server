@@ -24,6 +24,7 @@ pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
 pub(crate) mod damage_transfer;
+pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fixate;
@@ -978,6 +979,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        crate::spell_cast::area_trigger::on_aura_applied(world, target, &aura);
         fixate::on_applied(world, target, &aura);
         crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
@@ -1156,6 +1158,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    crate::spell_cast::area_trigger::on_aura_removed(world, unit, aura);
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
@@ -1311,6 +1314,8 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     let (mut stats, mut combat) = stat_mods::compute(&auras);
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
+    let primary_support = ebon_might::primary_bonus(&auras);
+    ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
@@ -2094,6 +2099,8 @@ mod crit_damage_bonus_tests;
 mod critical_chaos_tests;
 #[cfg(test)]
 mod defensives_tests;
+#[cfg(test)]
+mod ebon_might_tests;
 #[cfg(test)]
 mod enduring_torment_tests;
 #[cfg(test)]

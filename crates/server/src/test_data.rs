@@ -4,6 +4,27 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+/// Advance the real selection/admission path until its player is published.
+pub(crate) fn wait_for_selected_player(
+    app: &mut bevy::prelude::App,
+    connection: bevy::prelude::Entity,
+) -> bevy::prelude::Entity {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        if let Some(link) = app.world().get::<crate::networking::PlayerLink>(connection) {
+            let player = link.0;
+            app.update();
+            return player;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "selection never published its player"
+        );
+        app.update();
+        drain_persistence(app.world().resource::<crate::persistence::GameDatabase>());
+    }
+}
+
 /// Wait for a real FIFO fence before asserting durable fixture rows.
 pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
     let receipt = db.writer.enqueue("fixture durability fence", |_| Ok(()));
