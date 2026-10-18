@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 
 #[path = "smooth.rs"]
 mod smooth;
+#[path = "visibility.rs"]
+mod visibility;
 
 struct Corridor {
     start: [f32; 3],
@@ -143,11 +145,14 @@ impl NavigationMap {
         {
             return Err("unreachable target (incomplete corridor)".into());
         }
-        Ok(Corridor {
-            start: start_pos,
-            end: end_pos,
-            polygons: corridor[..count as usize].to_vec(),
-        })
+        self.optimize_visible_corridor(
+            Corridor {
+                start: start_pos,
+                end: end_pos,
+                polygons: corridor[..count as usize].to_vec(),
+            },
+            &filter,
+        )
     }
 
     fn nearest(
@@ -389,6 +394,10 @@ fn validate_packet(bytes: &[u8]) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[cfg(all(test, feature = "bake"))]
+#[path = "seam_tests.rs"]
+mod seam_tests;
 
 #[cfg(all(test, feature = "bake"))]
 mod tests {

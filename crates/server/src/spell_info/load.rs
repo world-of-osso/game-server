@@ -208,6 +208,19 @@ pub(super) fn append_serverside_spells(
 fn finish(spells: &mut Spells) {
     for spell in spells.iter_mut() {
         spell.effects.sort_unstable_by_key(|effect| effect.index);
+        apply_azure_jump_destination_fix(spell);
+    }
+}
+
+/// TC a352b1fa SpellMgr.cpp:4940–4956 ApplySpellFix: these two effect0 targets
+/// are TARGET_DEST_DEST, retaining the script-supplied elevated destination.
+fn apply_azure_jump_destination_fix(spell: &mut SpellInfo) {
+    const TARGET_DEST_DEST: u32 = 87;
+    if !matches!(spell.id, 387981 | 388082) {
+        return;
+    }
+    if let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) {
+        effect.implicit_targets[0] = TARGET_DEST_DEST;
     }
 }
 

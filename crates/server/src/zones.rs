@@ -1061,6 +1061,12 @@ mod tests {
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
             "CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
+             CREATE TABLE tdb_jump_charge_params (
+                id INTEGER PRIMARY KEY, speed REAL NOT NULL,
+                treatSpeedAsMoveTimeSeconds INTEGER NOT NULL, unlimitedSpeed INTEGER NOT NULL,
+                minHeight REAL, maxHeight REAL, spellVisualId INTEGER, progressCurveId INTEGER,
+                parabolicCurveId INTEGER, triggerSpellId INTEGER
+             );
              CREATE TABLE content_tuning_level (ID INTEGER, minlevel INTEGER, maxlevel INTEGER);
              CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
              CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContentTuningID INTEGER);
