@@ -1583,8 +1583,8 @@ mod tests {
         let spawn = data
             .spawns
             .iter()
-            .find(|spawn| spawn.template_entry == 6 && spawn.map == 0)
-            .expect("native Kobold6 placement")
+            .find(|spawn| spawn.template_entry == 49_869 && spawn.map == 0)
+            .expect("native Stormwind Infantry placement")
             .clone();
         let expected = data.templates[&spawn.template_entry].flags_extra;
         let mut app = App::new();
@@ -1599,12 +1599,12 @@ mod tests {
                     0,
                     false,
                     std::iter::once(&spawn),
-                    None,
+                    Some(&mut crate::test_data::ground_map()),
                 );
                 spawned[&spawn.guid]
             })
             .unwrap();
-        assert_eq!(app.world().get::<Npc>(unit).unwrap().template_id, 6);
+        assert_eq!(app.world().get::<Npc>(unit).unwrap().template_id, 49_869);
         assert_eq!(
             app.world().get::<CreatureFlagsExtra>(unit).unwrap().0,
             expected
