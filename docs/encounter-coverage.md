@@ -2,7 +2,7 @@
 
 ## Target32 prerequisite residual — 2026-10-18
 
-`LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT`: Lantha230861's actual TDB display122612 has no `encounter_creature_model_info` row in canonical data or the local full TDB1210 source. Source reach cannot be supplied; its Felguard target32 summon continues refusing explicitly, without guessed defaults. LEAD approved ignoring only the existing Lantha summon case and its new source-projection RED control; no other assertion changed. Shared follower fixture projection was reverted, not expanded into a new loader. This gap is distinct from unavailable height: TC's INVALID_HEIGHT branch preserves computed Z and does not fail the cast. [Contract and proof](specs/caster-summon-destination.md).
+`LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT`: Lantha230861's actual TDB display122612 has no `encounter_creature_model_info` row in canonical data or the local full TDB1210 source. Source reach cannot be supplied; its Felguard target32 summon continues refusing explicitly, without guessed defaults. LEAD approved ignoring only the existing Lantha summon case and its new source-projection RED control; no other assertion changed. Shared follower fixture projection was reverted, not expanded into a new loader. This gap is distinct from unavailable height: TC's INVALID_HEIGHT branch preserves computed Z and does not fail the cast. [Contract and proof](specs/caster-summon-destination.md). After exact master748a5ad78 merge, targeted requested22 plus18 shared-profile consumers pass40/40 in180.27s at7b336d72a; two approved Lantha ignores and one pre-existing navigation diagnostic remain. LEAD independent gate pending.
 
 Verified: 2026-10-13. **Census, not completion certification.**
 
