@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Batons/return-home acceptance and seated-orb boundary (2026-10-17)
+
+[Source310–314 matrix](../../toy-effects14-coverage.md#source310314-pending-batonsreturn-home-acceptance-and-seated-orb-gap-2026-10-17) adds test/spec01de71c2e: Batons exact900000ms caster row makes14IDs, while Dominated/Enlightened/Broker Matrix real learned saved-bind/source10s/shared2309 cases make13 hearthstone variants. Local format/readability/diffcheck pass; explicit new-head gate proof remains pending, not borrowed from earlier counts.312's seated/orb action remains unproved despite zero dummy shape. No runtime/data admission, native/ordinary recovery/cross-map certificate or own heavy duplicate.
+
+## Seasonal/flower/cooking boundaries and pending Insoles acceptance (2026-10-17)
+
+[Source305–309 matrix](../../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17) retains Winter Veil/285-child music, observed Wild Flower legacy8.82-versus-Retail1 model state plus scripted Grow, and mixed caster-hosted cooking gaps.308 keeps [earlier actual-area/native scope](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13) without a new calendar certificate.309 test/spec8a986da00 adds exact permanent188699/45416 to the existing caster fixture (13IDs at8a986da00;14 after01de71c2e,309 unchanged); local format/readability/diffcheck pass, behavioral acceptance pending lead's next gate after476. Separate RequiredTransmogHoliday341 is not an invented use-time rule; no fresh native/recovery/calendar proof or runtime/data admission.
+
 ## Source scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
 
 [Source300–304 matrix](../../toy-effects14-coverage.md#source300304-scoutingslime-trail-boundaries-and-retained-seasonal-banners-2026-10-17) keeps Outland/two-island flight-map discovery and source10ms-period/one-second slime-child moving-trail/pledge-OR-renown80 gaps distinct. Encrypted/Shrouded retain their exact [historical source9 banner CPU rows](#toy-effects9-stationary-banners-and-sign-2026-10-10), source models/2yd placement/expiry, not fresh native certificates. No invented discovery set, unconditional trail schedule, caster visual shortcut or new runtime/data admission.
@@ -22,9 +30,9 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 [Source280–284 matrix](../../toy-effects14-coverage.md#source280284-controlled-cagestewardrealmcustomizer-boundaries-2026-10-17) keeps Control4 cage entry/link cleanup, pledged steward-companion transformation, invisible-body linked realm and complete Racer customization/control restoration gaps. Existing cage/steward/realm bodies are not new admission; source-selected invisible11686 must not be replaced with zero-weight15092. No ordinary self costume, inert racer or dropped child/control payload, runtime/data write or new positive proof. Lead472 owns240's package gate.
 
-## Source vesper/transport boundaries and pending offering-kit acceptance (2026-10-17)
+## Offering-kit targeted acceptance and vesper/transport boundaries (2026-10-17)
 
-[Source275–279 matrix](../../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17) records three distinct mixed actor/caster Vesper identities/scales and Whistle fast/tired transport/area gaps.279 has an exact existing create-item product187342/count1/source2s/item30s contract; Test/spec04a47a43 and fixture fix62db4212 now assert actual learned use, persisted quantity, cast and ordinary recovery/reuse. Corrected targeted run remains pending, with no279 pass claimed; initial fixture mistakenly treated its two intended cooldown refusals as unexpected failures. Source naming differs from runtime item name, so retain the exact ID. No shared Vesper/transport shortcut, wrapping/gifting claim, new runtime/data admission or positive proof.
+[Source275–279 matrix](../../toy-effects14-coverage.md#source275279-offering-kit-targeted-acceptance-and-vespertransport-boundaries-2026-10-17) records three distinct mixed actor/caster Vesper identities/scales and Whistle fast/tired transport/area gaps.279 has an exact existing create-item product187342/count1/source2s/item30s contract; Test/spec04a47a43 and fixture fix62db4212 pass actual learned use, persisted quantity, cast and ordinary recovery/reuse:1/1 zero ignored31.60s after1m30s compile/no compiler warnings, fmt/readability/diffcheck pass. The initial fixture mistakenly treated its two intended cooldown refusals as unexpected failures; final exact-message assertions handle both. Lead476 owns the queued package gate; no own repeat or inferred landing. Source naming differs from runtime item name, so retain the exact ID. No shared Vesper/transport shortcut, wrapping/gifting claim, new runtime/data admission or native certificate.
 
 ## Source mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
 
@@ -52,7 +60,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Dominated helm targeted acceptance and coin/launch/linked/covenant boundaries (2026-10-17)
 
-[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-dominated-helm-targeted-acceptance-and-coinlaunchlinkedcovenant-gaps-2026-10-17) records240 test/spec c8feec2e actual175221/nine-display learning/ten-minute restoration/inherited recovery: two disguise/Oomgut tests/nine IDs pass91.61s after21m25s compile, with no compiler warnings and fmt/readability/diffcheck pass. Lead gate472 owns its separate package check and remains queued, not a confirmed pass; no own repeat. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
+[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-dominated-helm-targeted-acceptance-and-coinlaunchlinkedcovenant-gaps-2026-10-17) records240 test/spec c8feec2e actual175221/nine-display learning/ten-minute restoration/inherited recovery: two disguise/Oomgut tests/nine IDs pass91.61s after21m25s compile, with no compiler warnings and fmt/readability/diffcheck pass. Lead gate472 landed276 passed/masterca715f278; no own package-check repeat. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
 
 ## Source advice/riding/sentry/atonement boundaries (2026-10-17)
 
