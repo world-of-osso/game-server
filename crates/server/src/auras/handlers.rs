@@ -247,6 +247,8 @@ pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 /// Percent faster/slower cooldown recovery, matched by the native class mask.
 pub const MOD_RECOVERY_RATE: u32 = 286;
+/// Percent cooldown recovery selected by either native SpellLabel misc value.
+pub const MOD_RECOVERY_RATE_BY_SPELL_LABEL: u32 = 143;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
@@ -264,6 +266,7 @@ pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
 pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
+pub const DISABLE_ATTACKING_EXCEPT_ABILITIES: u32 = 264;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
@@ -298,7 +301,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
-        DISABLE_CASTING_EXCEPT_ABILITIES => CastRestriction,
+        DISABLE_CASTING_EXCEPT_ABILITIES | DISABLE_ATTACKING_EXCEPT_ABILITIES => CastRestriction,
         MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
         MOD_DETECTED_RANGE => DetectedRange,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
@@ -396,7 +399,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
         | MOD_COOLDOWN_BY_HASTE_REGEN
         | MOD_SPELL_CATEGORY_COOLDOWN
-        | MOD_RECOVERY_RATE => SpellMod,
+        | MOD_RECOVERY_RATE
+        | MOD_RECOVERY_RATE_BY_SPELL_LABEL => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,

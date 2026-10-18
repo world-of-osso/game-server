@@ -83,6 +83,95 @@ pub(super) fn fixture() -> (App, Entity, Entity, Position) {
     (app, victim, chaser, from)
 }
 
+#[test]
+#[ignore = "requires real Stockade navigation, ground and server LOS bake"]
+fn current_victim_run24_height_difference_moves_into_real_three_dimensional_reach() {
+    let (mut app, victim, chaser, _) = fixture();
+    let from = Position {
+        x: 109.70202,
+        y: -25.606234,
+        z: 2.872613,
+    };
+    let target = Position {
+        x: 107.715996,
+        y: -26.124136,
+        z: 3.108669,
+    };
+    *app.world_mut().get_mut::<Position>(chaser).unwrap() = from;
+    *app.world_mut().get_mut::<Position>(victim).unwrap() = target;
+    app.world_mut()
+        .entity_mut(chaser)
+        .insert(crate::followers::FollowerReach(CHASE_REACH));
+    let point = |p: Position| Vec3::new(p.x, p.y, p.z);
+    let gap = point(from) - point(target);
+    assert!(gap.x.hypot(gap.z) <= CHASE_REACH + 0.0001);
+    assert!(gap.length() > CHASE_REACH);
+    let map = crate::maps::InMap::continent(STOCKADE);
+    let mut bodies = app.world_mut().query::<crate::line_of_sight::BodyParts>();
+    let world = app.world();
+    assert!(crate::line_of_sight::unit_sees(
+        Some(world.resource::<crate::line_of_sight::LineOfSight>()),
+        map,
+        bodies.get(world, chaser).unwrap(),
+        bodies.get(world, victim).unwrap()
+    ));
+    let data =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../game-engine/data");
+    let mut los = los::LosMap::new(&data.join("los/34"));
+    let mut ground = stockade_ground();
+    let mut last = from;
+    for _ in 0..40 {
+        step(&mut app);
+        let next = *app.world().get::<Position>(chaser).unwrap();
+        clear_step(&mut los, last, next);
+        let floor = floor_under(&mut ground, next).expect("real support under chase feet");
+        assert!((next.y - floor).abs() < 0.05, "feet {next:?} floor{floor}");
+        last = next;
+        if point(next).distance_squared(point(target)) <= CHASE_REACH * CHASE_REACH {
+            break;
+        }
+    }
+    assert!(
+        point(last).distance(point(from)) > 0.001,
+        "live victim outside3Dreach must not leave Garrick motionless in Pursuing"
+    );
+    assert!(
+        point(last).distance_squared(point(target)) <= CHASE_REACH * CHASE_REACH,
+        "grounded chase must reach the unchanged3Dsphere: {last:?} target{target:?}"
+    );
+    step(&mut app);
+    step(&mut app);
+    assert_eq!(
+        *app.world().get::<Position>(chaser).unwrap(),
+        last,
+        "after real reach and LOS, the existing stop must hold without jitter"
+    );
+}
+
+#[test]
+fn current_victim_unbaked_ground_step_uses_the_same_three_dimensional_sphere() {
+    let from = Position {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let victim = Position {
+        x: 2.0,
+        y: -0.5,
+        z: 0.0,
+    };
+    let after = chase_step(from, &victim, 0.4, CHASE_REACH);
+    let gap = Vec3::new(after.x - victim.x, after.y - victim.y, after.z - victim.z);
+    assert!(after.x > from.x, "outside3Dsphere requires ground progress");
+    assert!(gap.length_squared() <= CHASE_REACH * CHASE_REACH);
+    assert_eq!(
+        after.y, from.y,
+        "unbaked ground step cannot fly toward target height"
+    );
+    let flat = Position { y: 0.0, ..victim };
+    assert_eq!(chase_step(from, &flat, 0.4, CHASE_REACH), from);
+}
+
 fn step(app: &mut App) {
     app.world_mut()
         .resource_mut::<Time>()

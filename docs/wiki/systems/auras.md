@@ -58,12 +58,24 @@ This is a simplified TrinityCore `Aura::CanStackWith`:
 
 The shared-slot boundary was exposed by [native Sprout Arcane Power](../investigations/follower-data.md#sprout-native-spawn-aura--2026-10-17): fourteen actual source casters reached the correct summoner but beneficial replacement retained only one count. Passive/native multislot exceptions, channels and the native DOT rule stay out of shared-slot merging. This rule does not implement aura276's damage modifier.
 
+### Polymorph recovery swing oracle — 2026-10-18
+
+Post-break/expiry attack resumption is proved by a new ordinary melee combat-log event from the Kobold to the Mage (no spell, Damage or Miss), not an HP decrease within100 simulation frames. `combat.rs::swing_log_event` publishes avoided attempts with zero damage, so the previous HP oracle could reject correct resumed attacks. Native Evasive Maneuvers50240, normally cast after full Polymorph expiry, deterministically produces three real Miss(Miss) events with unchanged Mage health while the old oracle fails. The control retains the actual60s expiry, display restoration and ordinary attack path; no RNG/stat/row edits or264 consumer relaxation. A positive swing event also fails if the creature genuinely remains unable to attack.
+
 ### Classification
 
 - **Harmful** (`AuraApplication::_InitFlags`, SpellAuras.cpp:113-147): from itself or a caster not friendly to the target, an aura with a negative applied effect; from a friendly caster, an aura with no positive applied effect. Effect positivity is `spell_info::positivity`, a port of `SpellInfo::_InitializeSpellPositivity` / `_isPositiveEffectImpl` (SpellInfo.cpp:4612-5105): `SPELL_ATTR0_AURA_IS_DEBUFF` and `SPELL_ATTR4_AURA_IS_BUFF` first, then effect and aura types, base-point signs and enemy implicit targets. Polymorph 118 (MOD_CONFUSE, TRANSFORM at an enemy target) is a debuff on the neutral Blackrock Spy (`FactionTemplate` 7), which the old hostility rule made a buff. `spell_custom_attr` marks are not modelled.
 - **Hidden:** passive (`SPELL_ATTR0` 0x40), or `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG` (0x80).
 - **From player:** the caster has `Player` at application.
 - **Dispel type:** `spell_categories.DispelType`.
+
+### Native signed haste positivity — 2026-10-18
+
+Native70448 Curse of Weakness702 has aura342=−20 on effect0 and aura290=0 on effect1. The positivity classifier lacked342, so both effects were positive and ordinary friendly Remove Curse475 left the actual curse in place. Add342 to the existing signed-stat rule (negative base/per-level points), preserving passive/attribute precedence and the generic dispel/picker predicates. No spell-ID exception or stored aura flag override.
+
+Pinned TC a352b1fa `SpellInfo.cpp4833–4859` covers counterpart192 but also omits342. Applying the same signed rule to342 is a native70448 counterpart extension, not an exact TC342 positivity port: `SpellAuraEffects.cpp264/414` maps both to `HandleModMeleeRangedSpeedPct`. Native Curse of the Satyr442804 is negative, Slice and Dice5171 stays positive and passive Crusading Strikes404542 stays positive.
+
+Behavioral RED0/3 includes a normal creature702 application followed by a real Mage player475 cast: SpellGo succeeds but the curse remains with `harmful=false`. Generic fix makes all three pass, including the previously ignored [follower classification regression](../investigations/follower-data.md#native-dispel-and-caster-control-conditions--2026-10-18). Targeted49/49 GREEN includes retained utility, polymorph/positive-buff, cancel and ordinary Purify controls. This proves the player dispel boundary and metadata polarity, not a complete positivity port, follower702 targeting/full kit, legal loadout or fresh-UDP/rendered behavior. [Contract](../../specs/auras.md).
 
 ## Typed invisibility and spell-area eligibility (2026-10-11)
 
@@ -149,6 +161,16 @@ World of Osso user decision (2026-10-05): spell 1231411 triggers aura 1231418 (O
 Casting at full health stays allowed and ends at the first healing tick without a Heal event. `world.db` SpellMisc 785968/785975 and SpellEffect 1223435/1223445 contain no applicable full-health rejection rule; no Recuperate-specific Retail rule is established. TrinityCore `a352b1fa` `SharedDefines.h:1714` defines `SPELL_FAILED_ALREADY_AT_FULL_HEALTH = 2`, but `Spell.cpp:7461-7476` uses it for consumable items with direct HEAL effects, not this triggered aura. Its `SpellAuraEffects.cpp:5879-5881` skips full-health ticks only for permanent auras, so early completion deliberately differs from TC.
 
 Heal log `amount` is raw healing and `overflow` is overheal; effective healing is `amount - overflow` (`spell_cast/effects.rs`). Behavioral tests cast the real data spells, verify immediate aura/channel removal, absence of later heal events, and unchanged Renew overheal ticks.
+
+## Native attack restriction264 — 2026-10-18
+
+`casting_restriction.rs` now reads aura264 at ordinary player admission/completion, separately from263: TC a352b1fa `Spell.cpp:5774–5791` blocks ranged-slot/next-swing/autoattack-enabling spells and attack/weapon-damage effects unless the parent aura's native family matches caster-class metadata and its flags overlap the cast. The existing263 parent-family matcher is shared with an explicit aura-type argument; effect masks are not substituted. Passive264 casts, NPC casts and full-triggered casts bypass this player-only check. `ActiveAuras::cannot_auto_attack` separately stops every unit's ordinary swings while264 is present (`Unit.cpp:2259`), without labelling264 as25/60 Pacify.
+
+Genuine REDbc5a0c05e fails2/2 in6.34s/155823ms: normal Turtle186265 produces205769, but Steady Shot reports later Pacified instead of source264 CantDoThatRightNow; a native Phalanx287353 NPC, which has264 but no pacify/263, still lands a20damage autoswing. Production312234334 adds those consumers; Turtle's existing defensive test now expects the more specific source-priority refusal, retaining its no-swing and post-expiry positive-damage assertions. No native rows, clocks, RNG, actor budgets, wire fields or producer scripts change.
+
+Integrated4457dcfe9 passes24/24,0failed,0ignored in7.06s/146566ms: eight new cases include eight unchanged native predicate rows (5019/75/2764/6603/27580/96/1464/585), actual Cheetah utility/Fireball damage, Steady Shot midcast gain, natural expiry and full-trigger damage, plus NPC swing suppression/removal. Thirteen existing263 family/class/recipient/NPC/trigger controls and three real Turtle controls remain green. Native264 positive offensive-family exceptions have no qualified current input: only three parent rows have nonzero masks; Felstorm/Wrathstorm use pet-family57 absent from player class sets, while Hunter205769 overlaps only itself and non-attack186265. The shared matcher has real263 positive/negative behavior proof; do not call that a new264 positive-case proof. Passive/NPC ordinary spell exemption is source inspection here, not a new264 runtime certificate. Opcode17/78 predicate rejection does not certify their still-unbound execution. Server/all-target check atc2156173b passes107.438s without warnings; fmt and manual changed-Rust readability pass (metrics CLI unavailable). No whole-ability, legal-loadout, rendered/fresh-UDP or full13/40 claim.
+
+[Contract](../../specs/class-completeness.md); receipts `data/class-completeness6-2026-10-12/aura264-{goal,proof-ledger}.json` and `aura264-{readonly-native-candidates,family-qualification}.json`.
 
 ## Mechanic immunity, pushback and normalized movement
 
@@ -370,6 +392,10 @@ Aura341 contributes signed integer milliseconds to the caster's matching native 
 Native Counterspell/Quick Witted tests prove25s→20s recovery with real blocked/successful recasts. Native Optical Blast supplies both24s timers, using an Energy-bearing fixture; Angel's Mercy reduces Desperate Prayer90s→70s. Tests also cover category0 exclusion, absent talent, unlearning, learning during an active lockout and native30000−30000ms clamping. Cross-class/internal-trigger fixtures do not claim player spellbook availability. [Contract](../../specs/class-completeness.md#category-cooldown-modifiers).
 
 ## Cooldown recovery rates
+
+Aura143 (`MOD_RECOVERY_RATE_BY_SPELL_LABEL`) shares the286 timer machinery but selects the affected spell by native `SpellLabel`: primary MiscValue OR nonzero MiscValueB, without the class-mask restriction. Source: pinned TC a352b1fa `SpellHistory.cpp448–451` and `SpellAuraEffects.cpp6271–6284`. Existing aura apply/refresh/remove hooks retime running spell/category deadlines; no new polling or alternate clock.
+
+Normal native Blessing of Autumn388010 leaf casts produce its30% effect. Matching Divine Protection498 starts60000→46153ms; Hammer of Justice853 category32 starts45000→34615ms. Seven real-App controls cover those starts, already-running application, player cancellation, natural expiry plus actual blocked/successful recast, unlabelled Healing Potion439 and foreign recipient. Initial matching-start RED2/3 became GREEN7; all ten286 controls remain GREEN. Native rows contain no2960-labelled spell without16: the secondary-only selector and143-specific unchanged refresh are source-wired, not independently native-certified. The full Seasons cycle, Autumn's charge173, global ModTimeRate, legal loadout and rendered/full-ability coverage remain open. [Contract](../../specs/auras.md).
 
 Aura286 matches native class masks and multiplies cooldowns by100/(100+amount), clamping the amount to−99. `spell_cast::recovery_rate` applies the factor after haste and before341 offsets. Aura apply/remove rescales only remaining time; unchanged refreshes do nothing, while changed native amounts undo/reapply the factor. Expiry follows the same removal path. Source: TC SpellHistory.cpp432–455/608–628 and SpellAuraEffects.cpp6258.
 

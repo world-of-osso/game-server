@@ -11,6 +11,8 @@ mod azure_explosive_brand;
 mod azure_frost_bomb;
 #[path = "azure_intro.rs"]
 mod azure_intro;
+#[path = "azure_jump_charge.rs"]
+mod azure_jump_charge;
 #[path = "azure_leymor_children.rs"]
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
@@ -375,6 +377,7 @@ fn encounter_fixture(
         class_level_base_mana: data.base_mana.clone(),
         expected_stats: expected,
         summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
+        jump_charge_params: crate::spell_cast::jump_charge::load_params(&conn).unwrap(),
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
@@ -2733,6 +2736,20 @@ fn engaged_slagmaw() -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
+fn slagmaw_missile_hits(h: &Harness, boss: Entity, target: Entity) -> usize {
+    h.inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            let missile_damage =
+                event.kind == CombatLogKind::Damage && event.spell_id == Some(119433);
+            let owned_target =
+                event.source == Some(boss.to_bits()) && event.target == Some(target.to_bits());
+            missile_damage && owned_target && event.amount > 0
+        })
+        .count()
+}
+
 /// TC boss_slagmaw: Lava Spit119434 at a random threat target from1s, re-armed1s
 /// (one event per UpdateAI, waiting out each3s cast); after five, Magnaw Submerge
 /// 120384, a server-side teleport other than the last (initially West) 3s later
@@ -2749,15 +2766,49 @@ fn encounter_coverage_slagmaw_spits_five_then_submerges_and_teleports() {
     h.advance(0.15);
     assert_eq!(casting(&h, boss), Some(119434));
     let tank = h.player();
-    let full = h.health(tank).max;
-    h.advance(3.2);
-    assert_eq!(h.casts(0, boss, 119434), 1);
-    assert!(
-        h.health(tank).current < full,
-        "119433 missile damages the target area"
+    let tick = h.app.world().resource::<Time<Fixed>>().timestep();
+    let cast = h.app.world().get::<CastState>(boss).unwrap();
+    assert_eq!(cast.duration, 3.0, "DB2 CastingTimeIndex14");
+    let remaining = Duration::from_secs_f32(cast.duration - cast.elapsed);
+    let now = h.app.world().resource::<Time<Fixed>>().elapsed();
+    let complete_by = now + remaining + tick;
+    // Preserve the original fourth-spit checkpoint, independent of this flight check.
+    let fourth_spit_at = now + Duration::from_millis(14_900);
+    while h.casts(0, boss, 119434) == 0 {
+        assert!(
+            h.app.world().resource::<Time<Fixed>>().elapsed() < complete_by,
+            "three-second cast completes within its fixed-tick quantization"
+        );
+        h.advance(tick.as_secs_f32());
+        assert_eq!(slagmaw_missile_hits(&h, boss, tank), 0);
+    }
+    let launched_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    assert!(launched_at >= now + remaining, "no early cast completion");
+    let spell = h.app.world().resource::<SpellStore>().get(119434).unwrap();
+    let misc = spell.misc.as_ref().unwrap();
+    assert_eq!(misc.attributes[9] & 0x10, 0x10, "speed is delay in seconds");
+    assert_eq!(misc.speed, 1.0);
+    assert_eq!((misc.launch_delay, misc.min_duration), (0.0, 0.0));
+    let impact_at = launched_at + Duration::from_secs_f32(misc.speed);
+    while h.app.world().resource::<Time<Fixed>>().elapsed() + tick < impact_at {
+        h.advance(tick.as_secs_f32());
+        assert_eq!(
+            slagmaw_missile_hits(&h, boss, tank),
+            0,
+            "119433 cannot damage before the authored missile delay"
+        );
+    }
+    h.advance(tick.as_secs_f32());
+    assert_eq!(h.app.world().resource::<Time<Fixed>>().elapsed(), impact_at);
+    assert_eq!(
+        slagmaw_missile_hits(&h, boss, tank),
+        1,
+        "119433 damages the target exactly when its missile is due, not on a melee roll"
     );
     // Each due event runs the update after the previous3s cast ends.
-    h.advance(11.7);
+    while h.app.world().resource::<Time<Fixed>>().elapsed() < fourth_spit_at {
+        h.advance(tick.as_secs_f32());
+    }
     assert_eq!(h.casts(0, boss, 119434), 4);
     let mut waited = 0.0;
     while h.casts(0, boss, 119434) < 5 {

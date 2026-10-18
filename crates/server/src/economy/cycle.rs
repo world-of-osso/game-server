@@ -1,9 +1,10 @@
+use super::store;
 use super::{
     Config, VendorSupply,
     model::{
         self, ConsumerPolicy, EconomyState, MaterialLot, MerchantConfig, MerchantState, Recipe,
     },
-    store::{self, MarketChanges},
+    store::MarketChanges,
 };
 use crate::auction_house::{AuctionHouseState, deposit_cost, duration_secs};
 use crate::persistence::mail_store;
@@ -11,7 +12,73 @@ use crate::persistence::{self, AuctionData, InventoryData, InventoryItemData};
 use shared::protocol::AuctionDuration;
 use std::collections::{BTreeMap, HashSet};
 
-/// One bounded wall-clock cycle; persistence commits before runtime state changes.
+pub(super) struct CycleStorage<'a> {
+    pub db: &'a redb::Database,
+    pub ids: &'a mut super::ids::ReservedIds,
+}
+
+#[derive(Clone)]
+pub(super) struct PreparedCycle {
+    pub state: EconomyState,
+    pub changes: MarketChanges,
+}
+
+impl PreparedCycle {
+    pub fn publish(self, auctions: &mut AuctionHouseState, economy: &mut EconomyState) -> Vec<u64> {
+        auctions.pending_criteria.extend(self.changes.criteria);
+        for id in &self.changes.deleted_auctions {
+            auctions.auctions.remove(id);
+        }
+        for auction in self.changes.auctions {
+            auctions.auctions.insert(auction.auction_id, auction);
+        }
+        *economy = self.state;
+        self.changes.inventories.iter().map(|(id, _)| *id).collect()
+    }
+}
+
+pub(super) fn load_and_prepare_cycle(
+    storage: &mut CycleStorage<'_>,
+    auctions: &AuctionHouseState,
+    economy: &EconomyState,
+    config: &Config,
+    now: u64,
+    draw: &mut impl FnMut() -> u64,
+) -> Result<PreparedCycle, String> {
+    config.validate_vendor_supplies()?;
+    let mut next = economy.clone();
+    let mut changes = MarketChanges {
+        expected_economy: store::load_state(storage.db)?,
+        ..Default::default()
+    };
+    gather_resources(
+        storage,
+        auctions,
+        &mut next,
+        config,
+        now,
+        draw,
+        &mut changes,
+    )?;
+    let supplies = changes.auctions.clone();
+    let mut book = PurchaseBook::new(auctions.auctions.values().chain(supplies.iter()), now);
+    rotate_merchants(
+        storage,
+        &mut next,
+        config,
+        now,
+        draw,
+        &mut book,
+        &mut changes,
+    )?;
+    next.last_cycle = now;
+    Ok(PreparedCycle {
+        state: next,
+        changes,
+    })
+}
+
+#[cfg(test)]
 pub fn run_cycle(
     db: &redb::Database,
     auctions: &mut AuctionHouseState,
@@ -20,32 +87,25 @@ pub fn run_cycle(
     now: u64,
     draw: &mut impl FnMut() -> u64,
 ) -> Result<Vec<u64>, String> {
-    config.validate_vendor_supplies()?;
     if economy.last_cycle != 0 && now.saturating_sub(economy.last_cycle) < config.cycle_secs {
         return Ok(Vec::new());
     }
-    let mut next = economy.clone();
-    let mut changes = MarketChanges::default();
-    gather_resources(db, auctions, &mut next, config, now, draw, &mut changes)?;
-    let supplies = changes.auctions.clone();
-    let mut book = PurchaseBook::new(auctions.auctions.values().chain(supplies.iter()), now);
-    rotate_merchants(db, &mut next, config, now, draw, &mut book, &mut changes)?;
-    next.last_cycle = now;
-    store::commit_market(db, Some(&next), &changes)?;
-    auctions.pending_criteria.extend(changes.criteria);
-    for id in &changes.deleted_auctions {
-        auctions.auctions.remove(id);
-    }
-    for auction in changes.auctions {
-        auctions.auctions.insert(auction.auction_id, auction);
-    }
-    let changed = changes.inventories.iter().map(|(id, _)| *id).collect();
-    *economy = next;
-    Ok(changed)
+    let counts = super::ids::reservation_counts(config, economy)?;
+    let mut ids = super::ids::reserve(db, counts)?;
+    let plan = load_and_prepare_cycle(
+        &mut CycleStorage { db, ids: &mut ids },
+        auctions,
+        economy,
+        config,
+        now,
+        draw,
+    )?;
+    store::commit_market(db, Some(&plan.state), &plan.changes)?;
+    Ok(plan.publish(auctions, economy))
 }
 
 fn gather_resources(
-    db: &redb::Database,
+    storage: &mut CycleStorage<'_>,
     auctions: &AuctionHouseState,
     next: &mut EconomyState,
     config: &Config,
@@ -66,36 +126,44 @@ fn gather_resources(
     for &item_id in &config.gatherables {
         let market = &config.markets[&item_id];
         let Some(&seller) = next.gatherers.get(&item_id) else {
-            let seller = persistence::next_id(db, "character");
+            let seller = storage.ids.take("character")?;
             next.gatherers.insert(item_id, seller);
             let inventory = InventoryData {
                 gold: config.gatherer_capital,
                 items: Vec::new(),
             };
             post_resource_supply(
-                db, config, now, draw, changes, item_id, seller, inventory, 0,
+                storage, config, now, draw, changes, item_id, seller, inventory, 0,
             )?;
             continue;
         };
-        let mut inventory = persistence::load_inventory(db, seller);
+        let mut inventory = persistence::load_inventory(storage.db, seller);
         changes
             .expected_inventories
             .push((seller, inventory.clone()));
-        collect_gatherer_mail(db, next, config, now, seller, &mut inventory, changes)?;
+        collect_gatherer_mail(
+            storage.db,
+            next,
+            config,
+            now,
+            seller,
+            &mut inventory,
+            changes,
+        )?;
         if market.popularity_bps == 0 {
             changes.inventories.push((seller, inventory));
             continue;
         }
         let listed = active.get(&(seller, item_id)).copied().unwrap_or(0);
         post_resource_supply(
-            db, config, now, draw, changes, item_id, seller, inventory, listed,
+            storage, config, now, draw, changes, item_id, seller, inventory, listed,
         )?;
     }
     Ok(())
 }
 
 fn post_resource_supply(
-    db: &redb::Database,
+    storage: &mut CycleStorage<'_>,
     config: &Config,
     now: u64,
     draw: &mut impl FnMut() -> u64,
@@ -135,9 +203,10 @@ fn post_resource_supply(
         let price = unit_price
             .checked_mul(u64::from(count))
             .ok_or("gatherer stack price overflows")?;
-        let item = take_or_gather_resource(db, config, &mut inventory, item_id, retained, count);
+        let item =
+            take_or_gather_resource(storage, config, &mut inventory, item_id, retained, count)?;
         inventory.gold -= deposit;
-        let auction_id = persistence::next_id(db, "auction");
+        let auction_id = storage.ids.take("auction")?;
         changes.auctions.push(AuctionData {
             auction_id,
             seller_character_id: seller,
@@ -156,7 +225,7 @@ fn post_resource_supply(
         });
     }
     changes.inventories.push((seller, inventory));
-    // IDs are allocated separately, but supply, deposits and actor identity commit together.
+    // Reserved high-water marks are durable before preparing market rows.
     Ok(())
 }
 
@@ -169,9 +238,10 @@ fn collect_gatherer_mail(
     inventory: &mut InventoryData,
     changes: &mut MarketChanges,
 ) -> Result<(), String> {
-    let (delivered, pending): (Vec<_>, Vec<_>) = mail_store::load_mailbox(db, seller)
-        .into_iter()
-        .partition(|mail| mail.is_delivered(now));
+    let mailbox = mail_store::load_mailbox(db, seller);
+    changes.expected_mailboxes.push((seller, mailbox.clone()));
+    let (delivered, pending): (Vec<_>, Vec<_>) =
+        mailbox.into_iter().partition(|mail| mail.is_delivered(now));
     let proceeds = delivered.iter().try_fold(0u64, |sum, mail| {
         sum.checked_add(mail.money)
             .ok_or("gatherer mail money overflows")
@@ -194,26 +264,26 @@ fn collect_gatherer_mail(
 }
 
 fn take_or_gather_resource(
-    db: &redb::Database,
+    storage: &mut CycleStorage<'_>,
     config: &Config,
     inventory: &mut InventoryData,
     item_id: u32,
     retained: Option<usize>,
     count: u32,
-) -> InventoryItemData {
+) -> Result<InventoryItemData, String> {
     if let Some(index) = retained {
         if inventory.items[index].stack_count == count {
-            return inventory.items.remove(index);
+            return Ok(inventory.items.remove(index));
         }
         let mut split = inventory.items[index].clone();
         inventory.items[index].stack_count -= count;
         split.stack_count = count;
-        split.item_guid = persistence::next_id(db, "item_instance");
-        return split;
+        split.item_guid = storage.ids.take("item_instance")?;
+        return Ok(split);
     }
     let metadata = &config.items[&item_id];
-    InventoryItemData {
-        item_guid: persistence::next_id(db, "item_instance"),
+    Ok(InventoryItemData {
+        item_guid: storage.ids.take("item_instance")?,
         item_id,
         name: metadata.name.clone(),
         quality: metadata.quality,
@@ -221,7 +291,7 @@ fn take_or_gather_resource(
         stack_count: count,
         vendor_sell_price: metadata.vendor_sell_price,
         unique_auction: false,
-    }
+    })
 }
 
 struct PurchaseBook<'a> {
@@ -280,7 +350,7 @@ impl<'a> PurchaseBook<'a> {
 }
 
 fn rotate_merchants(
-    db: &redb::Database,
+    storage: &mut CycleStorage<'_>,
     next: &mut EconomyState,
     config: &Config,
     now: u64,
@@ -295,7 +365,7 @@ fn rotate_merchants(
     for business in &config.merchants {
         expire_merchant_stock(next, business, now)?;
         consume_merchant_stock(next, business, config, &mut policy, draw)?;
-        produce_merchant_stock(db, next, business, config, now, draw, book, changes)?;
+        produce_merchant_stock(storage, next, business, config, now, draw, book, changes)?;
     }
     Ok(())
 }
@@ -352,7 +422,7 @@ fn consume_merchant_stock(
 }
 
 fn produce_merchant_stock(
-    db: &redb::Database,
+    storage: &mut CycleStorage<'_>,
     next: &mut EconomyState,
     business: &MerchantConfig,
     config: &Config,
@@ -369,7 +439,7 @@ fn produce_merchant_stock(
         return Ok(());
     };
     acquire_ingredients(
-        db,
+        storage,
         merchant,
         recipe,
         business.capacity,
@@ -448,7 +518,7 @@ fn purchase_supplier_material(
 }
 
 fn acquire_ingredients(
-    db: &redb::Database,
+    storage: &mut CycleStorage<'_>,
     merchant: &mut MerchantState,
     recipe: &Recipe,
     capacity: u32,
@@ -495,7 +565,10 @@ fn acquire_ingredients(
             changes.deleted_auctions.push(auction.auction_id);
         }
         changes.mails.push(crate::auction_house::seller_sale_mail(
-            db, auction, price, None,
+            storage.ids.take("mail")?,
+            auction,
+            price,
+            None,
         ));
         changes
             .criteria

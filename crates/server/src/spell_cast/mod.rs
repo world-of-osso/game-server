@@ -23,6 +23,8 @@ pub mod area_trigger;
 #[cfg(test)]
 mod attack_power_tests;
 #[cfg(test)]
+mod attack_restriction_tests;
+#[cfg(test)]
 mod attack_speed_tests;
 mod aura_spell_restrictions;
 #[cfg(test)]
@@ -181,6 +183,8 @@ pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
 mod enemy_dodge_tests;
 #[cfg(test)]
+mod label_recovery_tests;
+#[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
 mod mechanic_duration_tests;
@@ -283,6 +287,7 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
+pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
