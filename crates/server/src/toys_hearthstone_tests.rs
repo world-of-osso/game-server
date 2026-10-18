@@ -195,3 +195,8 @@ fn toyfx659_naaru_enfold_learned_use_returns_to_bind_and_blocks_lightcalled() {
 fn toyfx661_preyseeker_hearthstone_learned_use_returns_to_bind_and_blocks_naaru() {
     assert_toy_hearthstone_bind_and_shared_charge(263933, 1270814, 263489);
 }
+
+#[test]
+fn toyfx673_corewarden_hearthstone_learned_use_returns_to_bind_and_blocks_preyseeker() {
+    assert_toy_hearthstone_bind_and_shared_charge(265100, 1273401, 263933);
+}
