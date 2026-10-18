@@ -230,13 +230,18 @@ impl<R: BattleRng> Runtime<'_, R> {
                 let target = if super::rules::damages_enemy_team(ability) {
                     let order = match ability {
                         774 => (effect.order - 1) % 3 + 1,
-                        920 | 1013 | 2378 => effect.order.div_ceil(2),
+                        920 | 1013 | 2378 | 2457 => effect.order.div_ceil(2),
                         _ => effect.order,
                     };
                     other_team_slot(target, order)
                 } else {
                     target
                 };
+                if ability == 2457 {
+                    //A skipped/dead/blocked pair must not drain the preceding pair's hit.
+                    let last = self.catalog.state_id("Last_HitDealt")?;
+                    self.battle.pet_mut(caster).states.insert(last, 0);
+                }
                 self.damage_effect(caster, target, ability, effect)
             }
             29 => {
@@ -294,7 +299,12 @@ impl<R: BattleRng> Runtime<'_, R> {
                 }
                 let amount =
                     f64::from(self.state(caster, "Last_HitDealt")) * f64::from(p[0]) / 100.0;
-                self.heal_pet(caster, amount);
+                let recipient = if ability == 2457 {
+                    other_team_slot(caster, effect.order / 2)
+                } else {
+                    caster
+                };
+                self.heal_pet(recipient, amount);
                 Ok(true)
             }
             79 => {
