@@ -1,3 +1,7 @@
+## 2026-10-18 — Shared2513 five-identity baseline pending after513
+
+[Exact new baseline matrix](../toy-effects14-coverage.md#shared2513-five-identity-baseline-new-acceptance-pending-after513-2026-10-18):1c143bea6 adds separate learned-use/model/hour-duration/deadline/health/ten-minute-category/shared-sibling-refusal cases for Pango/Saptor/Masquerade/Idol/Badge. Old19 registry/helper and Oomgut unchanged. Format/manual readability/diffcheck pass; no local compile/execution, successor AFTER513 required. No cancel/hour-expiry/natural-reuse/distribution/native proof, mixed Memento admission or runtime/data change; queued64 repair remains assigned elsewhere.
+
 ## 2026-10-18 — Full1166 toy metadata availability, not runtime proof
 
 [Exact availability matrix](../toy-effects14-coverage.md#full1166-metadata-availability-exact-absences-not-failure-verdicts-2026-10-18): all1166 runtime IDs inventoried, ten extras excluded.29 source ItemSparse/runtime-content absence sets match;15 lack TriggerType0; Rezan272071/Stone462924 lack SpellMisc, unnamed1271857 lacks name/misc/effects; zero dangling ItemEffect links. No invented mechanics, automatic importer/code failure inference or revoked existing behavior proof. No runtime/data/native change or own heavy jobs;513 remains integration RED.
