@@ -1,5 +1,14 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Prayer of Mending baseline (active70448)
+
+- Ordinary33076 must cast real41635 with native effect0 jump count plus the initial recipient, using source per-cast aura-stack arguments before initial stack/log/view publication.
+- Damage on the ward holder must cast real33110 from the original Priest, launch real155793 with the remaining stacks and original-caster context, then consume that holder's ward. Native missile flight, heal amount/variance and ordinary RNG remain authoritative.
+- Jump selection retains native candidates/EXCLUDE_CASTER and random choice within injury/player-priority buckets; full-health candidates remain eligible when no higher-priority candidate exists. The runtime has no producer for the separate NPC static-flag4 treat-as-raid priority; that classification remains unqualified, not an invented flag.
+- Expiry, last-stack exhaustion, foreign ownership and no-eligible-recipient cases must preserve ownership and consume at most one ward per damage event. With no per-cast stack override, ordinary stacking and Agony's native1/3 initial floor/refresh behavior stay unchanged.
+- This baseline excludes talent custom arguments/bonuses, ward tooltip-point/visual projection, AI policy changes and generic aura4/original-caster completeness. Runtime proof and remaining boundaries live in [auras](../wiki/systems/auras.md).
+
+
 Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class-completeness.md), [spell-casting system](../wiki/systems/spell-casting.md#level80-class-completeness).
 
 ## What it must do

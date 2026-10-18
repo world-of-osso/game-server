@@ -291,7 +291,9 @@ impl AuraInstance {
                 // Native980 refresh keeps damage level, raising only a new initial floor.
                 self.stacks.max(new.stacks).min(self.max_stacks)
             } else {
-                (self.stacks + 1).min(self.max_stacks)
+                // Unit::_TryStackingOrRefreshingExistingAura adds the requested
+                // cast's stack amount; ordinary applications still request one.
+                self.stacks.saturating_add(new.stacks).min(self.max_stacks)
             };
         }
         self.charges = new.charges;
@@ -680,7 +682,10 @@ fn build_instance(
         effects,
         duration_ms,
         expires_at: (duration_ms > 0).then(|| now + f64::from(duration_ms) / 1000.0),
-        stacks: agony::initial_stacks(world, caster, spell.id).min(max_stacks.max(1)),
+        stacks: spell
+            .cast_aura_stacks
+            .unwrap_or_else(|| agony::initial_stacks(world, caster, spell.id))
+            .min(max_stacks.max(1)),
         max_stacks,
         charges: charges.clamp(0.0, 255.0) as u8,
         passive,

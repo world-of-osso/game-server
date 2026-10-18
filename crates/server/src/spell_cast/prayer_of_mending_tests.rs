@@ -54,7 +54,6 @@ fn prayer_of_mending_native_unprotected_damage_does_not_heal_or_jump() {
 }
 
 #[test]
-#[ignore = "Missing native33076->41635 ward; run explicitly for behavioral RED before implementation"]
 fn prayer_of_mending_native_normal_player_cast_applies_real_ward() {
     let mut h = fixture();
     h.cast_and_deliver(PRAYER_OF_MENDING, Some(h.caster));
@@ -93,7 +92,6 @@ fn prayer_of_mending_native_normal_player_cast_applies_real_ward() {
 }
 
 #[test]
-#[ignore = "Missing native ward/heal/delayed original-caster jump; baseline RED published before implementation"]
 fn prayer_of_mending_native_damage_heals_then_delayed_jump_keeps_original_priest() {
     let mut h = fixture();
     let holder = spawn_player(&mut h.app, 1, 12.0);
