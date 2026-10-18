@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source570–574: pending Golem self-transform and retained banners/unnamed-season/carried-crate boundaries (2026-10-17)
+
+Acceptance-only06d44ef20 adds233202/473407/234479/six valid displays/instant1800s/3600s recovery to the unchanged disguise registry/helper, now16 rows plus separate Oomgut17 identities. Old15 literals/order unchanged. Format/manual changed-line readability/diffcheck pass; behavior needs a lead covering head AFTER498c013, not the older11-row certificate. No production/data/engine/protocol/new native proof or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|570 Prized Champion's Prestigious Banner232306/469617 | Instant target47/base1 summon233149/display123658/property64/flags0,2yd front/60000ms lifetime/600000ms recovery. Existing `toyfx9` source-position/exact owner-map-faction0/stationary/ordinary-expiry fixture retained, not new native/reward/recharge acceptance. |
+|571 Astral Champion's Prestigious Banner232307/469618 | Same authored placement/property/lifetime/recovery,233150/display123659. Existing exact fixture retained; name is Astral, not inferred from another banner's Unbound label. |
+|572 unnamed232308/469619 | Toy source Season4, literal spell description `[Season]`; source target47/base1 summon233151/property64/2yd/60000ms/600000ms recovery.70448 ItemSparse/runtime content_item and233151 creature/model absent. No guessed name/display/season reward or sibling substitution; identity remains in1166. |
+|573 G.O.L.E.M, Jr.233202/473407 | Instant self transform56/base1→existing234479/misc8 for1800000ms, inherited3600000ms recovery. Models124464/124467/124468/124471/124470/124469 retain scale1/weight1. Own model membership/ordinary expiry/full-health/native-display/recovery acceptance committed, behavior pending. Source says control but encodes a self transform, not a separately summoned possession actor; no fabricated control bar/abilities, complete six-model distribution or native/full-hour certificate. |
+|574 Hallowfall Supply Cache233486/474100 | Instant self aura293/misc3118/1 for900000ms; inherited10000ms recovery/start1500ms. Actual authored carried crate/pose/appearance/cleanup remains unverified; no spawned supply cache, delivered supplies/inventory yield or generic aura-only full certificate. |
+
+Evidence: private `rows570-574-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `golem573-{active-goal,proof-ledger}.json`;70448/key88d5e8ef05ec5a8446cdec93d142d7c6 explicit.498 remains landed/master8707ac0ea;149865 Tea Set untouched.
+
 ## Source565–569: existing seasonal banners and unnamed season-four metadata gap (2026-10-17)
 
 All five are authorized runtime Toy identities. Local70448/key88d5e8ef05ec5a8446cdec93d142d7c6 gives each instant target47 summon28/base1/property64/Control0/Title0/flags0, radius7=2yd,60000ms lifetime and inherited600000ms recovery. No new code/proof, source import or own heavy duplicate.
