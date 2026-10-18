@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source560–564: retained balloons/victory and random-delve/recipient-spotlight/local-disguise boundaries (2026-10-17)
+
+Read-only block uses local70448/key88d5e8ef05ec5a8446cdec93d142d7c6, not a relabelled70391 receipt. All five are existing runtime Toy identities. No new acceptance/runtime/data/native proof or own heavy duplicate;498 remains landed/master8707ac0ea and post498 expansions remain pending.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|560 20th Anniversary Balloon Chest229828/465643 | Instant target47 summon231372/property4799/flags8587776 for300000ms, inherited300000ms recovery. Existing `toyfx28` learned-use case requests one source actor. Runtime models retain83608/scale1/weight0 and122842/scale1.5/weight1, empty AI/script/MovementType0. Existing fixture is not a new native balloon/chest interaction or all-model certificate; NPC display scales remain metadata. |
+|561 Explosive Victory230727/467285 | Instant self dummy4/1800000ms, inherited3600000ms recovery. Already present in the18-identity caster attachment fixture before Cherry/Toxic additions; no duplicate row or19th-identity claim. Retain learned-use/aura/cancel/unchanged health-model/no-actor scope; native Underpin aura and natural expiry/hour recovery remain separate. |
+|562 Delve-O-Bot7001 230850/467470 | Instant mixed effect179/misc35060/target47 plus self trigger64/misc3000→467465 and self root26, parent4500ms; child target18 summon232267/property6089/flags75667992/300000ms, runtime creature/model absent. Source promises random Bountiful Delve destination, random-delve alternative only when none are Bountiful, and completion-driven cooldown reset; inherited3600000ms recovery. Destination authority, ride/teleport, eligibility, completion event and mixed lifecycle remain gaps; no static bot, arbitrary travel or generic root-only success. |
+|563 Spotlight Materializer1000 230924/467730 | Instant dummy4/target57 (`TARGET_UNIT_TARGET_RAID`) for1800000ms, inherited3600000ms recovery. Description says party member; actual eligible selected recipient, authored spotlight and cleanup remain unverified. No self-aura substitution, changed group recipient rules or borrowed caster-attachment certificate. |
+|564 Throwaway Gangster Disguise231064/467987 | Instant self aura243/misc35/1200000ms, inherited3600000ms recovery, RequiredAreasID8306; description restricts use to Undermine and promises locals leave caster alone. Exact area membership, faction/perception consequence and restoration remain unresolved. Not transform56, arbitrary appearance, global friendliness or cosmetic-only admission. |
+
+Evidence: private `rows560-564-{readonly-source,action-source,runtime-action-source,active-goal}.json`; existing source cases retained without new proof claims.149865 Tea Set untouched.
+
 ## Source555–559: trial/bling/observer-spiders/qualified-return-home/screen boundaries (2026-10-17)
 
 No new acceptance/runtime/data/native proof or own heavy duplicate. Existing generic return-home, aura or screen transport does not settle the actual qualification/observer/presentation contracts.498 remains landed/master8707ac0ea; newer expansions await covering proof.
