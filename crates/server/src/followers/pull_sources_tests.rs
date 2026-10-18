@@ -100,6 +100,29 @@ fn tank_pull_sources_uses_actual_azure_formation_and_population_difficulty() {
 }
 
 #[test]
+fn tank_pull_sources_refuses_missing_catalog_and_ambiguous_guid_association() {
+    let map = InMap {
+        map_id: 34,
+        instance_id: 71,
+    };
+    assert!(
+        pull_sources::read_present_sources(&mut World::new(), map, 1, &BTreeSet::new()).is_err()
+    );
+    let (mut h, tank, enemy) = source_fixture(46249);
+    load_map_sources(h.app.world_mut(), 34);
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    let origin = *h
+        .app
+        .world()
+        .get::<crate::zones::CreatureOrigin>(enemy)
+        .unwrap();
+    h.app.world_mut().spawn((map, origin));
+    assert!(
+        pull_sources::read_present_sources(h.app.world_mut(), map, 1, &BTreeSet::new()).is_err()
+    );
+}
+
+#[test]
 fn tank_pull_sources_native_observed_death_clears_only_that_source_guid() {
     let (mut h, tank, enemy) = source_fixture(46249);
     load_map_sources(h.app.world_mut(), 34);
