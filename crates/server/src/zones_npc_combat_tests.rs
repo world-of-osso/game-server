@@ -77,6 +77,12 @@ fn fight_app(spawns: Vec<CreatureSpawn>) -> Option<App> {
         std::time::Duration::from_millis(50),
     ));
     app.insert_resource(load_world_data(&crate::test_data::world_db_path()));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     app.insert_resource(templates);
     app.add_plugins((
         crate::creature_ai::CreatureAiPlugin,
