@@ -1022,7 +1022,7 @@ fn read_chase_targets(
             }
             let from = Vec3::new(watcher.2.x, watcher.2.y, watcher.2.z);
             let to = Vec3::new(target.2.x, target.2.y, target.2.z);
-            let in_reach = from.distance(to) <= stop_reach;
+            let in_reach = crate::navigation::within_reach(from, to, stop_reach);
             let visible = in_reach
                 && los.zip(map).is_some_and(|(los, map)| {
                     crate::line_of_sight::unit_sees(Some(los), *map, watcher, target)
@@ -1042,7 +1042,10 @@ fn read_chase_targets(
 /// the height is the caller's (the floor there).
 fn chase_step(position: Position, target: &Position, step: f32, reach: f32) -> Position {
     let gap = (target.x - position.x).hypot(target.z - position.z);
-    let travel = (gap - reach).clamp(0.0, step);
+    let from = Vec3::new(position.x, position.y, position.z);
+    let toward = Vec3::new(target.x, position.y, target.z);
+    let victim = Vec3::new(target.x, target.y, target.z);
+    let travel = crate::navigation::distance_to_reach(from, toward, victim, reach).clamp(0.0, step);
     if travel <= 0.0 {
         return position;
     }
