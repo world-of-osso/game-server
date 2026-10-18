@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy gate513 remains RED at queued destination boundary
+
+[Exact gate matrix](../toy-effects14-coverage.md#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18):311 passed/1 failed/1 ignored914.05s/EXIT101, client9/FMT0. Current19-disguise-plus-Oomgut/21-caster/13-object/17-stationary/25-hearthstone acceptance helpers completed OK; integration failed because Akunda child fire used caster instead of explicit parent cursor. New queued64 payload/fresh-child reconstruction drops parent `cast_destination` while keeping item level. Existing assertion not weakened; runtime fix proposed to lead, not implemented here. No new toy landing/native/full1166 certificate or own heavy rerun.
+
 ## 2026-10-18 — Toy tail metadata reconciliation, not runtime completion
 
 [Exact proof matrix](../toy-effects14-coverage.md#tail-reconciliation-and-source-only-names715720-metadata-proof-not-runtime-completion-2026-10-18): all151 authorized IDs after checkpoint559/228966 accounted for in31 active70448 source capsules, no missing/unexpected/provenance/order gaps. Source1176/runtime1166 and same ten excluded extras unchanged; final six named boundary-only, no import/admission/acceptance. Toy hash matches checkpoint559. Lead513 queued7099f3a38 covers current acceptance/fixture correction; no result/new toy landing. Metadata accounting does not certify whole1166 review/behavior/native presentation; no own heavy jobs or runtime/data/native change.
