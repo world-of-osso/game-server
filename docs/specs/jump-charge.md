@@ -23,8 +23,8 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 ## Implementation inventory
 - `scripts/encounter_serverside_spells.py --encounter telash-jumps` — independent-copy server-source producer for all source jump rows, retaining nullable options and rejecting duplicate identities before writes.
 - `scripts/tdb_schema.sql`, `scripts/import-azerothcore.sh` — fresh-import schema and required `jump_charge_params.sql` excerpt registration.
-- `crates/server/src/spell_cast/effects.rs`, `teleport.rs` — current254 dispatch still uses teleport; replacement is gated on producer publication.
-- `crates/server/src/scripted_ai/jump_movement.rs` — existing speed-based server motion/arrival path; sourced254 subset pending.
+- `crates/server/src/spell_cast/jump_charge.rs`, `effects.rs` — dedicated254 source-table consumer/startup loader; exact destination, explicit unsupported/missing refusal. Canonical source table publication is complete; native movement GREEN is pending.
+- `crates/server/src/scripted_ai/jump_movement.rs` — shared asynchronous server motion/arrival; sourced time/unlimited/height options added while Gordoth keeps its speed/min-height defaults. Native254 jumping animation is unproved.
 
 ## Tests asserting this spec
 - `scripts/tests/test_jump_charge_params.py` — real-copy producer CLI/source preservation and refusal boundary.
@@ -33,7 +33,8 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 ## Known gaps (current cycle)
 - [x] Producer first: source-backed COPY preparation and scoped proof at fba6fb2b, pushed2399bcd06; lead gate510 landed and published5f225535 with byte-identical whole-database delta49b238f5.
 - [x] Merge repaired masterefd627da1 (gate511) and record separate source-target planning RED:2FAIL60.53s at1b5370e7, missing destination versus wrong caster destination. Initial test compilation failure is not behavioral proof.
-- [ ] After exact source target fixes, observe genuine no-teleport motion RED, then bounded movement implementation and scoped controls/check/fmt.
+- [x] After exact source target fixes, observe genuine launch-teleport RED:2FAIL58.95s at985d91f3 after planning/native inputs/floor/LOS prerequisites. Outbound also ground-snapped to0; return to340.57086 instead of340.5709.
+- [ ] Prove bounded254 movement implementation and missing/unsupported controls, preserve41/Gordoth, then scoped check/fmt/readability/independent proof.
 
 ## Out of scope
 - Parent387928 hit, Telash landing reaction, AfterCast return selection, post-phase counters and rune scripts: later independent REDs.

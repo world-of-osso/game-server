@@ -1,6 +1,7 @@
 //! TC a352b1fa MotionMaster::MoveJump / MoveSpline's two-point parabolic spline.
-//! Subset used by Gordoth: explicit speed, min height, default max1000, no facing
-//! target/transport/curve or nav generation. Native jumping animation is unproved.
+//! Gordoth retains its explicit-speed subset; effect254 also supplies source time,
+//! speed-cap and height options. Facing target/transport/curves are not implemented.
+//! Native jumping animation is unproved.
 use bevy::prelude::*;
 use shared::components::{Position, Rotation};
 
@@ -11,6 +12,15 @@ use crate::interest::{InterestDirtyQueue, mark_interest_position_changed};
 const MAX_JUMP_SPEED: f32 = 50.0;
 const MAX_JUMP_HEIGHT: f32 = 1000.0;
 const MIN_DURATION_MS: u32 = 1;
+
+#[derive(Clone, Copy)]
+pub(crate) struct JumpOptions {
+    pub speed: f32,
+    pub time_mode: bool,
+    pub unlimited_speed: bool,
+    pub min_height: f32,
+    pub max_height: f32,
+}
 
 #[derive(Component, Debug, Clone, Copy)]
 pub(crate) struct JumpMovement {
@@ -37,13 +47,35 @@ pub(crate) fn move_jump(
     speed: f32,
     min_height: f32,
 ) {
+    move_jump_with_options(
+        world,
+        unit,
+        id,
+        target,
+        JumpOptions {
+            speed,
+            time_mode: false,
+            unlimited_speed: false,
+            min_height,
+            max_height: MAX_JUMP_HEIGHT,
+        },
+    );
+}
+
+pub(crate) fn move_jump_with_options(
+    world: &mut World,
+    unit: Entity,
+    id: u32,
+    target: Position,
+    options: JumpOptions,
+) {
     let Some(from) = world.get::<Position>(unit).copied() else {
         warn!("MoveJump {unit}: missing source position");
         return;
     };
     let from = Vec3::new(from.x, from.y, from.z);
     let to = Vec3::new(target.x, target.y, target.z);
-    let Some(jump) = calculate_jump(id, from, to, speed, min_height) else {
+    let Some(jump) = calculate_jump(id, from, to, options) else {
         warn!("MoveJump {unit}: speed below source minimum");
         return;
     };
@@ -52,21 +84,29 @@ pub(crate) fn move_jump(
 
 /// Source speed cap/height calculation and CommonInitializer's integer duration,
 /// whose linear segment starts at minimal_duration1.
-fn calculate_jump(
-    id: u32,
-    from: Vec3,
-    to: Vec3,
-    speed: f32,
-    min_height: f32,
-) -> Option<JumpMovement> {
-    let speed = speed.min(MAX_JUMP_SPEED);
+fn calculate_jump(id: u32, from: Vec3, to: Vec3, options: JumpOptions) -> Option<JumpMovement> {
+    let distance = from.distance(to);
+    let requested_speed = if options.time_mode {
+        // EffectJumpCharge converts FloatSeconds to integer Milliseconds first.
+        let time_ms = (options.speed * 1000.0).trunc();
+        if time_ms < 1.0 {
+            return None;
+        }
+        distance / (time_ms / 1000.0)
+    } else {
+        options.speed
+    };
+    let speed = if options.unlimited_speed {
+        requested_speed
+    } else {
+        requested_speed.min(MAX_JUMP_SPEED)
+    };
     if speed < 0.01 {
         return None;
     }
-    let distance = from.distance(to);
     let seconds = distance / speed;
-    let height =
-        (shared::skyriding::GRAVITY * seconds * seconds / 8.0).clamp(min_height, MAX_JUMP_HEIGHT);
+    let height = (shared::skyriding::GRAVITY * seconds * seconds / 8.0)
+        .clamp(options.min_height, options.max_height);
     let duration_ms = MIN_DURATION_MS + (distance * (1000.0 / speed)) as u32;
     Some(JumpMovement {
         id,
