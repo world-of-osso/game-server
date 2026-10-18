@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mixed prison/horn/Loamm-travel boundaries and retained friend effects (2026-10-17)
+
+[Source440–444 matrix](../../toy-effects14-coverage.md#source440444-mixed-prisonhornloamm-travel-boundaries-and-retained-friend-effects-2026-10-17) retains Titan prison mixed105/base10000/104/191/106 control, unaudited half-second horn and actual Zaralek→Loamm transfer/script gaps. RequiredAreas7894 is a group containing Loamm14520/Zaralek14022/map2454, not Dalaran Island's same-number area. Existing Mortar selected-friend cast/delivery and Fist selected-friend/compressed-day aura witnesses stay bounded, not full hostile/native/facing/impact/recharge certificates. No runtime/data/new acceptance or own heavy duplicate;492 pending.
+
 ## Linked-hologram/stone-smash/holiday-basket boundaries and retained Bear (2026-10-17)
 
 [Source435–439 matrix](../../toy-effects14-coverage.md#source435439-linked-hologramstone-smashholiday-basket-boundaries-and-retained-bear-2026-10-17) preserves Lady of Dreams360s versus Timeless One300s linked428 roots, distinct stand identities and mixed permanent child aura; shared111698/scale0.35 does not certify either hologram. Stone Breaker's two root children, literal misc1300/700 and repeated28357 area edges remain distinct unresolved actions. Bear204405 retains exact CPU/earlier both-skin model evidence, not fresh pixels/recovery. Drake Basket retains caster aura/cancel proof, with mounted-drake and Noblegarden recovery gaps explicit. No runtime/data/admission/new proof or own heavy duplicate;492 queued0c77bfdaa.

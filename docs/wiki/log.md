@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source440–444 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source440444-mixed-prisonhornloamm-travel-boundaries-and-retained-friend-effects-2026-10-17): Titan prison full mixed control and unaudited Obsidian horn remain gaps; Mortar's existing selected-friendly cast/delivery and Fist's recipient/compressed-day aura proof retained without hostile/facing/native/recharge extrapolation. Mitts409147 preserves10s252/1/17 plus script77, source RequiredAreas7894→Loamm14520/Zaralek14022/map2454, not Area7894; actual qualified tunnel destination/transfer/persistence unverified. No invented coordinates, saved-bind substitute or description-only Loamm exclusion. No runtime/data/new acceptance/own heavy duplicate;492 remains pending.
+
 ## 2026-10-17 — Toy source435–439 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source435439-linked-hologramstone-smashholiday-basket-boundaries-and-retained-bear-2026-10-17): Lady of Dreams360s and Timeless One300s linked holograms retain distinct stands/mixed child auras and literal source text, not stand-only or model-name substitution. Stone Breaker's two root children,191/dummy/script and both28357 area edges remain an unresolved smashing contract; misc1300/700 not guessed counts. Bear204405 exact CPU/earlier both-skin model evidence retained without new pixels/recovery; Basket204675 caster aura/cancel witness does not certify mounted Dragonriding presentation or Noblegarden cooldown. No runtime/data/new admission/proof or own heavy duplicate.4920c77 queued.

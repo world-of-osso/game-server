@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source440–444: mixed prison/horn/Loamm-travel boundaries and retained friend effects (2026-10-17)
+
+Metadata-only continuation; no runtime/data/new acceptance or own heavy duplicate. Existing Mortar and Fist individual CPU witnesses do not certify opposite target classes, native presentation or full recovery passage. Lead492 corrected-test gate remains pending.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|440 Titan Containment Device204686/406069 | Instant self dummy4 plus105/base10000,104,191,106 for300000ms; inherited3600000ms recovery. Source prison/self-entrapment requires the complete mixed movement/control/visual lifecycle. No inert cage, dummy-only aura, guessed ten-thousand actors or ignored control siblings. |
+|441 Obsidian Battle Horn204687/406077 | Source500ms self dummy4/5000ms; item60000ms recovery. Exact horn audio/pose/attachment/lifecycle remains unaudited, root absent from maintained visual-only list. No generic zero-dummy success, invented combat/aggro signal or borrowed other-horn audio certificate. |
+|442 Mallard Mortar204818/406870 | Source2000ms target25 script3/speed10, inherited600000ms recovery/1500ms start recovery, FacingCasterFlags1. Existing exact selected-friendly Mortar witness checks real cast delay and delivery, explicit ok in489. Hostile eligibility/facing boundary and full source-speed impact/native duck/sound/recovery remain separate; no whole friend-or-foe certificate from one friend. |
+|443 B.B.F. Fist205045/408067 | Instant target25 audited dummy4/86400000ms, item86400000ms recovery. Retained exact selected-friend fixture checks aura recipient, unchanged health and compressed one-day expiry; explicit ok in489. No natural-day/full recharge/native two-person fist-bump certificate or self substitution. |
+|444 Niffen Diggin' Mitts205255/409147 | Source10000ms effect252/targets1/17 plus script77/self, inherited3600000ms recovery/1500ms start recovery. RequiredAreas group7894 contains14520 Loamm and14022 Zaralek Cavern on map2454, not AreaID7894 Dalaran Island. Actual qualified tunnel-to-Loamm destination/script/transfer/persistence remains unresolved; no saved-homebind substitute, invented coordinates or extra Loamm exclusion inferred from description alone. |
+
+Evidence: private `rows440-444-{readonly-source,action-source,area-source,active-goal}.json`, exact RequiredAreas→AreaGroupMember join, maintained visual-only list and selected-recipient fixtures.149865 Tea Set remains untouched.
+
 ## Source435–439: linked-hologram/stone-smash/holiday-basket boundaries and retained Bear (2026-10-17)
 
 Metadata-only continuation; no new acceptance/runtime/data admission or own heavy duplicate. Lead492 through0c77bfdaa remains queued, not a covering pass. Existing Bear CPU/historical native evidence and basket aura witness stay bounded to their actual scopes, not the full toy descriptions.
