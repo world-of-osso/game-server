@@ -46,8 +46,14 @@ def policy(slot, priority, target='enemy', **conditions):
     return slot, priority, dict(target=target, **conditions)
 
 
-def combat_policy(spec, name, spell):
+def combat_policy(spec, name, spell, dispel_effects, control_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
+    if dispel_effects and name in {'Cleanse Toxins', "Nature's Cure", 'Remove Corruption', 'Purify', 'Purify Disease', 'Remove Curse', 'Expunge', 'Cauterizing Flame', 'Dispel Magic', 'Purge', 'Soothe'}:
+        return policy('dispel', 42, 'party')
+    if control_effects and name in {'Polymorph', 'Hammer of Justice', 'Leg Sweep', 'Paralysis', 'Fear', 'Hex'}:
+        area = any(15 in targets or 16 in targets for targets in control_effects)
+        source = any(15 in targets for targets in control_effects)
+        return policy('control', 43, requires_cast=True, min_enemies=1 if area else 0, source_center=source)
     emergency = {'Lay on Hands', 'Guardian Spirit'}
     if name in emergency:
         return policy('heal', 10, 'party', health_below=0.20)
@@ -145,10 +151,68 @@ def selected_source_rows(db2, source):
     }
 
 
+def read_periodic_description_child(db, spell, name):
+    """Read the unique native same-name damage aura named by a dummy root."""
+    description = db.execute('SELECT Description_lang FROM spell WHERE ID=?', (spell,)).fetchone()
+    if not description:
+        raise ValueError(f'{name} {spell}: native description missing')
+    description = description[0]
+    fields = ['ID', 'SpellID', 'DifficultyID', 'Effect', 'EffectAura', 'EffectTriggerSpell']
+    columns = ','.join(fields)
+    root_rows = [dict(zip(fields, row)) for row in db.execute(
+        f'SELECT {columns} FROM spell_effect WHERE SpellID=? AND DifficultyID=0 ORDER BY ID', (spell,))]
+    if not root_rows or any(row['EffectTriggerSpell'] for row in root_rows):
+        raise ValueError(f'{name} {spell}: expected native dummy root without trigger edge')
+    candidates = []
+    for child in sorted({int(value) for value in re.findall(r'\$(\d+)', description)}):
+        child_name = db.execute('SELECT Name_lang FROM spell_name WHERE ID=?', (child,)).fetchone()
+        if child_name != (name,):
+            continue
+        periodic = [dict(zip(fields, row)) for row in db.execute(
+            f'SELECT {columns} FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND Effect=6 AND EffectAura=3 ORDER BY ID', (child,))]
+        if periodic:
+            candidates.append((child, periodic))
+    if len(candidates) != 1:
+        raise ValueError(f'{name} {spell}: description must reference exactly one native same-name periodic damage aura; found {len(candidates)}')
+    child, periodic = candidates[0]
+    return dict(spell_id=spell, name=name, child_spell_id=child, description=description,
+                root_effect_rows=root_rows, child_periodic_effect_rows=periodic,
+                fact='ROOT_CHILD_LINK_DESCRIPTION_ONLY')
+
+
+def read_description_reference_sources(db2, references):
+    """Verify the actual description/name/effect fields against pinned DB2 CSVs."""
+    expected = {
+        'Spell': {row['spell_id']: {'ID': row['spell_id'], 'Description_lang': row['description']} for row in references},
+        'SpellName': {spell: {'ID': spell, 'Name_lang': row['name']} for row in references for spell in [row['spell_id'], row['child_spell_id']]},
+        'SpellEffect': {effect['ID']: effect for row in references for key in ['root_effect_rows', 'child_periodic_effect_rows'] for effect in row[key]},
+    }
+    evidence = {}
+    for name, records in expected.items():
+        path = db2 / (name + '.csv')
+        with path.open(newline='') as stream:
+            selected = [row for row in csv.DictReader(stream) if int(row['ID']) in records]
+        if len(selected) != len(records):
+            raise ValueError(f'{name}: description-reference source rows missing')
+        for row in selected:
+            if any(str(value) != row[field] for field, value in records[int(row['ID'])].items()):
+                raise ValueError(f'{name} {row["ID"]}: description-reference source differs from world.db')
+        evidence[name] = dict(path=str(path.resolve()), sha256=digest(path), selected_rows=selected)
+    return evidence
+
+
 def kit_rows(db, source):
     availability = defaultdict(list)
+    description_links = {}
+    reference_rows = {}
     slots = {}
     inventory = []
+    dispels = defaultdict(list)
+    for spell, dispel_type, target in db.execute('SELECT SpellID,EffectMiscValue_0,ImplicitTarget_0 FROM spell_effect WHERE DifficultyID=0 AND Effect=38'):
+        dispels[spell].append((dispel_type, target))
+    controls = defaultdict(list)
+    for spell, target_a, target_b in db.execute('SELECT SpellID,ImplicitTarget_0,ImplicitTarget_1 FROM spell_effect WHERE DifficultyID=0 AND Effect=6 AND EffectAura IN(5,7,12,27,60)'):
+        controls[spell].append((target_a, target_b))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
         for spell_text, passive in loadout['known'].items():
@@ -159,7 +223,17 @@ def kit_rows(db, source):
             name, required = native
             if level < required:
                 continue
-            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell)
+            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell, dispels[spell], controls[spell])
+            if rule[0] == 'dispel':
+                effects = dispels[spell]
+                rule[2]['dispel_types'] = sorted({row[0] for row in effects})
+                rule[2]['target'] = 'enemy' if all(row[1] == 6 for row in effects) else 'party'
+            if name in {'Moonfire', 'Sunfire'} and not passive:
+                if spell not in description_links:
+                    description_links[spell] = read_periodic_description_child(db, spell, name)
+                link = description_links[spell]
+                rule[2]['missing_aura'] = link['child_spell_id']
+                reference_rows[(spec, spell)] = dict(spec_id=spec, **link)
             # SoTR's armor aura is named literally by its source tooltip; the
             # native effect64 children are NOT that armor aura.
             if name == 'Shield of the Righteous' and not passive:
@@ -193,7 +267,7 @@ def kit_rows(db, source):
                 continue
             rows.append((spec, spell, start, end, slot, priority, json.dumps(conditions, sort_keys=True), POLICY))
             start = end = level
-    return rows, inventory
+    return rows, inventory, list(reference_rows.values())
 
 
 def prepare(args):
@@ -211,9 +285,11 @@ def prepare(args):
         raise ValueError('expected native loadouts for all eleven followers, levels1..90')
     with closing(sqlite3.connect(args.world_db.resolve().as_uri() + '?mode=ro', uri=True)) as db:
         evidence = read_sources(args.db2_root, db)
-        rows, inventory = kit_rows(db, source)
+        rows, inventory, references = kit_rows(db, source)
+        reference_sources = read_description_reference_sources(args.db2_root, references)
         with closing(sqlite3.connect(args.output_db)) as output:
             db.backup(output)
+            output.execute('DROP TABLE IF EXISTS follower_spec_kit')
             output.execute(SCHEMA)
             output.executemany('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', rows)
             output.commit()
@@ -225,8 +301,9 @@ def prepare(args):
                    producer_sha256=digest(__file__), source_database=str(args.world_db.resolve()),
                    source_database_sha256=before, output_database=str(args.output_db.resolve()),
                    output_database_sha256=digest(args.output_db), source_json_sha256=digest(args.source_json),
-                   changed_tables=['follower_spec_kit'], rows=len(rows), sources=evidence,
+                   changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), sources=evidence,
                    chosen_loadouts=source['loadouts'], trait_source_trees=source['trees'], level32_inventory=inventory,
+                   aura_reference_rows=references, description_reference_sources=reference_sources,
                    selected_source_rows=selected_source_rows(args.db2_root, source),
                    sqldiff=str(args.sqldiff.resolve()), sqldiff_sha256=digest(args.sqldiff))
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')

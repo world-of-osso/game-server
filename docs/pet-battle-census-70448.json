@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "84395c5b773a8ca2ee52915ff784f58c55b59fec",
+  "validator_revision": "2be80bcec5969c27ae0de1be296a2032b04dcf43",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1850,
+  "admitted_effect_rows": 1865,
   "effect_rows": 2829,
-  "admitted_abilities": 1033,
+  "admitted_abilities": 1036,
   "abilities": 1404,
   "properties": [
     {
@@ -67,7 +67,7 @@
       ]
     },
     {
-      "admitted_rows": 606,
+      "admitted_rows": 615,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -222,9 +222,6 @@
         2272,
         2273,
         2274,
-        2295,
-        2297,
-        2299,
         2375,
         2376,
         2377,
@@ -284,9 +281,6 @@
         3552,
         3567,
         3568,
-        3603,
-        3604,
-        3605,
         3639,
         3678,
         3679,
@@ -379,9 +373,6 @@
         4378,
         4443,
         4571,
-        4576,
-        4577,
-        4578,
         4600,
         4606,
         4607,
@@ -539,7 +530,7 @@
       ]
     },
     {
-      "admitted_rows": 10,
+      "admitted_rows": 13,
       "handler": true,
       "property": 29,
       "rows": 23,
@@ -551,9 +542,6 @@
         1652,
         1653,
         2138,
-        2296,
-        2298,
-        2300,
         4299,
         4798,
         4800
@@ -994,7 +982,7 @@
       ]
     },
     {
-      "admitted_rows": 13,
+      "admitted_rows": 15,
       "handler": true,
       "property": 80,
       "rows": 24,
@@ -1003,12 +991,10 @@
         1345,
         1349,
         1353,
-        2301,
         2378,
         4256,
         4334,
         4572,
-        4579,
         4601
       ]
     },
@@ -1303,7 +1289,7 @@
       ]
     },
     {
-      "admitted_rows": 12,
+      "admitted_rows": 13,
       "handler": true,
       "property": 145,
       "rows": 18,
@@ -1312,7 +1298,6 @@
         3018,
         3130,
         3132,
-        3606,
         4821
       ]
     },
@@ -4687,7 +4672,7 @@
     },
     {
       "ability": 1013,
-      "error": "ability 1013: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 1014,
@@ -5979,7 +5964,7 @@
     },
     {
       "ability": 1989,
-      "error": "ability 1989: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 1990,
@@ -6967,7 +6952,7 @@
     },
     {
       "ability": 2410,
-      "error": "ability 2410: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2411,

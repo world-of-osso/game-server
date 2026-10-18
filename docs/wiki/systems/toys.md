@@ -2,6 +2,34 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Masquerade697 authored cast timing acceptance pending (2026-10-18)
+
+[Exact acceptance/limits](../../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 with learned-use pre/post source600ms cast boundary: no early SpellGo/appearance/category recovery, then145134/misc267626,8/one-hour aura/shared2513 and Idol refusal. Prior fixtures unchanged. Format/manual only; uncompiled/unexecuted AFTER541. No new CancelCast/runtime/data/protocol or native/exact-timing/hour-expiry/all-five claim.
+
+## Gate541 Singed593 and Pango684 landed (2026-10-18)
+
+[Current gate/landing proof](../../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt/ancestry confirmsa6f8505f7 on server master312f5aebd;541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's genuine runtime admission failure repaired via named Singed slot, not blanketdummy. Earlier pending labels below are historical; native/full1166/all-five/hour-expiry/distribution limits persist.
+
+## Singed593 and Pango684 owned CPU verification GREEN (2026-10-18)
+
+[Exact proof/limits](../../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): runtime5ea7efcaa at6b54512a0, canonical shared11a058cf; real535RED→focused5931/0/25.16s, own toys197/0/337.82s includes593/Pango684 and preserved Citizens/generic dummy refusals. Workspace all-targets check/fmt pass. Minimal audited Singed slot only; no blanketdummy or10186 edit.593/Pango earlier pending labels are historical; lead successor/landing receipt and native/full1166 proof remain absent.
+
+## Gate535 RED and narrow Singed admission repair pending (2026-10-18)
+
+[Exact failure/repair scope](../../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18): actual593 refused child dummy4;535server315/1/1ignored/EXIT101/FMT0/CHECK0, not fixture failure or landing. Authorized5ea7efcaa admits only audited1220867/slot0 through existing zero-payload visual-aura guard. TC `SpellAuraEffects.cpp:76,4836–5117` has spell-specific dummy handlers; generic dummy admission would falsely accept unresolved scripts. Citizens/Personal Anchor refusal retained. Own focused compile/test running; no GREEN/native certificate yet, Pango remains stacked.
+
+## Pango684 cancellation and shared recovery pending (2026-10-18)
+
+[Exact acceptance and limits](../../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Pango identity with real CancelAura restoration/no shared2513 bypass, refusal near580 simulated seconds and learned Saptor success after600 ordinary seconds. No deadline/cooldown mutation; prior shared-five fixture unchanged. Format/manual only, uncompiled/unexecuted AFTER535; no all-five lifecycle, wall-duration/hour-expiry/native/weighted-frequency certificate or runtime/data edit.
+
+## Mycomancer664 landed after532; Explosive593 queued535 (2026-10-18)
+
+[Current proof and landing](../../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): feature8af454985 landed server masterd0e0d7fc3 per lead receipt and ancestry.532 server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test; native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd is separately queued535, not covered by532. Earlier pending labels below are source-stage history.
+
+## Explosive593 mixed hearthstone and Singed acceptance pending (2026-10-18)
+
+[Exact acceptance and limits](../../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second252 plus queued self64→1220867/Singed dummy4/5000ms, real learned bind/shared2309 and ordinary child expiry. Native explosion/Singed art remains unverified; no invented damage or simple-hearth substitution.25 direct cases/helper and Mycomancer unchanged. Format/manual only; uncompiled/unexecuted after532; candidatefb2bd5a88 is not landing. No runtime/data/native edit or own heavy job.
+
 ## Mycomancer664 triggered hearthstone acceptance pending (2026-10-18)
 
 [Exact acceptance and limits](../../toy-effects14-coverage.md#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18): test/spec37a6c0598 learns264367 and uses actual ten-second root1299014→64→instant1286909/252, checking saved-bind return, root charge2309, unchanged health/model and Corewarden refusal. Separate fixture leaves25 direct-hearth cases/helper untouched. Format/manual readability only; uncompiled/unexecuted, lead successor afterst526 required. No missing-bind/cross-map/native/natural-recharge certificate or runtime/data edit.
