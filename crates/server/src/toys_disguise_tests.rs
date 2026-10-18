@@ -1,4 +1,4 @@
-//! Source111–113,178–179,201,234,240,317,322,387 and402: real transforms and source recovery.
+//! Source111–113,178–179,201,234,240,317,322,387,402 and450: real transforms and source recovery.
 use super::*;
 
 #[test]
@@ -98,6 +98,14 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             187854,
             [104851].as_slice(),
             1_800_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            205904,
+            410931,
+            205296,
+            [112407, 112523, 112524, 112525].as_slice(),
+            3_600_000,
             TEN_MINUTES_MS,
         ),
     ] {
