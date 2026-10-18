@@ -14,7 +14,8 @@ pub(super) fn wait_for_native_school_unlock(h: &mut Harness, interrupt: u32) {
         .get(interrupt)
         .unwrap();
     let duration = spell.misc.as_ref().unwrap().duration.unwrap().duration_ms;
-    let cooldown = spell.cooldowns.as_ref().unwrap().recovery_ms;
+    let cooldown = spell.cooldowns.as_ref().unwrap();
+    let cooldown = cooldown.recovery_ms.max(cooldown.category_recovery_ms);
     assert!(duration > 0 && (duration as u32) < cooldown);
     let frame_ms = match h.app.world().resource::<TimeUpdateStrategy>() {
         TimeUpdateStrategy::ManualDuration(step) => step.as_millis(),
@@ -42,6 +43,18 @@ fn assert_party_dispel(entry: u32, spell: u32, debuff: u32, enemy_spec: u32) {
         health.current = health.max * 0.7;
     }
     cast_debuff(&mut h, debuff, enemy_spec);
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == debuff)
+        .unwrap();
+    println!(
+        "native dispel fixture spell={spell} debuff={debuff} harmful={} type={} caster={}",
+        aura.harmful, aura.dispel_type, aura.caster
+    );
     uses_spell(&mut h, unit, spell);
     assert!(!crate::auras::has_aura(h.app.world(), h.caster, debuff));
     assert!(
