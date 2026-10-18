@@ -155,9 +155,27 @@ fn tank_acquired(f: &Fixture) -> bool {
         })
 }
 
+fn engaged_sources(f: &mut Fixture) -> Vec<Entity> {
+    let follower =
+        f.h.app
+            .world()
+            .get::<super::Follower>(f.tank)
+            .unwrap()
+            .clone();
+    let party = super::ai::party_units(f.h.app.world_mut(), follower.owner);
+    super::ai::engaged_enemies(f.h.app.world_mut(), &follower, f.tank, &party)
+        .into_iter()
+        .map(|(enemy, _)| enemy)
+        .collect()
+}
+
 #[test]
 fn tank_owner_pacing_idle_selection_never_acquires_or_pulls() {
     let mut f = measured_fixture();
+    assert!(
+        engaged_sources(&mut f).is_empty(),
+        "idle fixture must have no residual native engagement"
+    );
     assert!(matches!(
         candidate_budget(&mut f),
         Decision::Allow {
@@ -182,6 +200,12 @@ fn tank_owner_pacing_active_chain_requires_a_passing_budget() {
     let mut f = measured_fixture();
     damage(&mut f.h, f.engaged, 1.0);
     pull_history::sample_all(f.h.app.world_mut());
+    let engaged = engaged_sources(&mut f);
+    assert!(engaged.contains(&f.engaged));
+    assert!(
+        !engaged.contains(&f.candidate),
+        "candidate must be a genuinely new pack"
+    );
     assert!(
         matches!(
             candidate_budget(&mut f),
@@ -216,6 +240,12 @@ fn tank_owner_pacing_active_affordable_sourced_pack_can_be_selected() {
     let mut f = measured_fixture();
     damage(&mut f.h, f.engaged, 1.0);
     pull_history::sample_all(f.h.app.world_mut());
+    let engaged = engaged_sources(&mut f);
+    assert!(engaged.contains(&f.engaged));
+    assert!(
+        !engaged.contains(&f.candidate),
+        "candidate must be a genuinely new pack"
+    );
     assert!(
         matches!(
             candidate_budget(&mut f),
