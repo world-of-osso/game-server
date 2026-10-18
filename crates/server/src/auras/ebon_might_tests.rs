@@ -191,6 +191,25 @@ fn augmentation_ebon_native_three_specs_split_primary_support_and_exclude_other_
 }
 
 #[test]
+fn augmentation_ebon_native_one_recipient_receives_full_source_share() {
+    let mut h = fixture();
+    let owner = h.caster;
+    let ally = player(&mut h, 8, 63, 3.0);
+    h.advance(3);
+    let baseline = stats(&h, ally).primary.intellect;
+    let grant = stats(&h, owner).primary.intellect * 0.08;
+    cast_ebon(&mut h);
+    assert_stat(stats(&h, ally).primary.intellect, baseline + grant);
+    let self_expiry = owned(&h, owner, owner, SELF_BUFF).expires_at;
+    remove_auras(h.app.world_mut(), ally, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == EBON
+    });
+    h.advance(22);
+    assert_eq!(stats(&h, ally).primary.intellect, baseline);
+    assert_eq!(owned(&h, owner, owner, SELF_BUFF).expires_at, self_expiry);
+}
+
+#[test]
 fn augmentation_ebon_native_damage_role_filter_precedes_thirty_target_cap() {
     let mut h = fixture();
     let owner = h.caster;
