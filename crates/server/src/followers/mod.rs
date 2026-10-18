@@ -5,8 +5,7 @@ mod hazards;
 mod kit;
 mod kit_ai;
 mod kit_area;
-// Provider stays test-only until the atomic shared-planner caller integration.
-#[cfg(test)]
+// Joint activation: requires the shared-planner caller in the same gate.
 mod kit_interrupt;
 mod party;
 mod spawning;
