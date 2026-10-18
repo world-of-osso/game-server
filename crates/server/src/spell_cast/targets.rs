@@ -11,8 +11,8 @@
 //! UNIT_TARGET_ENEMY, 15
 //! UNIT_SRC_AREA_ENEMY, 16 UNIT_DEST_AREA_ENEMY, 18 DEST_CASTER, 21
 //! UNIT_TARGET_ALLY, 22 SRC_CASTER, 25 UNIT_TARGET_ANY, 30 UNIT_SRC_AREA_ALLY,
-//! 31 UNIT_DEST_AREA_ALLY, 32 DEST_CASTER_FRONT_LEFT (3 yards ahead-left of the caster
-//! without a radius; collision is not modelled), 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
+//! 31 UNIT_DEST_AREA_ALLY, 32 DEST_CASTER_SUMMON (front-left at max(1yd, combat reach),
+//! ignoring radius), 53 DEST_TARGET_ENEMY, 60 UNIT_CONE_ENTRY (units ahead of the
 //! caster that meet the effect's `conditions`), 63 DEST_TARGET_ANY, 132
 //! DEST_TARGET_ALLY, 65 DEST_TARGET_BACK (the explicit target's position moved the
 //! effect radius behind it; collision is not modelled), 76 DEST_CHANNEL_TARGET
@@ -31,6 +31,9 @@ use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate
 use crate::faction::{FactionTemplates, Reaction, UnitFaction};
 
 use crate::spell_info::{SpellEffect, SpellInfo};
+
+#[path = "caster_summon_destination.rs"]
+mod caster_summon_destination;
 
 const MELEE_RANGE: f32 = 5.0;
 /// TC a352b1fa SpellInfo::CheckTarget, SharedDefines.h:492.
@@ -97,6 +100,8 @@ enum Selector {
     /// Area center = the caster's position moved `angle` (radians from its facing) by
     /// the effect radius, else `DEFAULT_TOTEM_DISTANCE`.
     CasterOffset(f32),
+    ///32: fixed pet-follow distance clamped to the caster's source combat reach.
+    CasterSummon,
     /// Units a persistent area aura affects: no unit at cast time.
     DynObj(Relation),
     /// Units in the cone ahead of the caster meeting the effect's conditions
@@ -120,7 +125,8 @@ fn selector(id: u32) -> Option<Selector> {
         56 => Selector::RaidArea,
         5 => Selector::Pet,
         119 => Selector::RaidCorpses,
-        32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
+        32 => Selector::CasterSummon,
+        44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
         42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
         47 => Selector::CasterOffset(0.0),
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
@@ -491,6 +497,7 @@ pub fn select_targets(
             Selector::CasterOffset(angle) => {
                 center = caster_offset(world, caster, angle, radius(effect, slot));
             }
+            Selector::CasterSummon => center = caster_summon_point(world, caster),
             Selector::DynObj(_) => selected_any = true,
             Selector::GameObjectsAroundSource => {
                 selected_any = true;
@@ -1036,9 +1043,17 @@ fn behind(world: &World, target: Entity, dist: f32) -> Option<Vec3> {
     ))
 }
 
-/// `TARGET_DEST_CASTER_FRONT_LEFT` and its kin without a radius
+/// `TARGET_DEST_CASTER_FRONT_LEFT`44 and its kin without a radius
 /// (`Spell::SelectImplicitCasterDestTargets`, Spell.cpp:1621-1629).
 const DEFAULT_TOTEM_DISTANCE: f32 = 3.0;
+/// PetDefines.h98, then Spell.cpp1635 clamps to GetCombatReach.
+const PET_FOLLOW_DISTANCE: f32 = 1.0;
+
+fn caster_summon_point(world: &World, caster: Entity) -> Option<Vec3> {
+    let reach = crate::scripted_ai::model_reach::combat_reach(world, caster)?;
+    let distance = PET_FOLLOW_DISTANCE.max(reach);
+    caster_offset(world, caster, std::f32::consts::FRAC_PI_4, distance)
+}
 
 /// The caster's position moved `dist` yards (`DEFAULT_TOTEM_DISTANCE` when 0) at `angle`
 /// from its facing.
@@ -1185,13 +1200,15 @@ pub fn effect_dest(
                 let distance = clamp_player_front_distance(world, caster, id, distance);
                 caster_offset(world, caster, angle, distance)
             }
+            Selector::CasterSummon => caster_summon_point(world, caster),
             _ => continue,
         };
         let facing = match selector {
             Selector::CenterCaster
             | Selector::ForwardLeap
             | Selector::CasterRandom
-            | Selector::CasterOffset(_) => orientation(world, caster),
+            | Selector::CasterOffset(_)
+            | Selector::CasterSummon => orientation(world, caster),
             Selector::DestRandom | Selector::DestOffset(_) => dest?.orientation,
             Selector::ExistingDest => {
                 dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
@@ -1207,6 +1224,7 @@ pub fn effect_dest(
         });
     }
     if dest.is_none()
+        && !effect.implicit_targets.contains(&32)
         && matches!(
             effect.effect,
             super::summon::EFFECT_SUMMON | super::area_trigger::EFFECT_CREATE_AREATRIGGER
@@ -1227,9 +1245,13 @@ pub fn effect_dest(
 pub(super) fn ground_destination(
     world: &mut World,
     caster: Entity,
+    spell: &SpellInfo,
     effect: &SpellEffect,
     destination: Option<Dest>,
 ) -> Result<Option<Dest>, super::CastFailure> {
+    if effect.implicit_targets.contains(&32) {
+        return caster_summon_destination::read_destination(world, caster, spell, destination);
+    }
     let requires_ground = effect
         .implicit_targets
         .iter()
