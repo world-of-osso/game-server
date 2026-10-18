@@ -673,14 +673,15 @@ fn threat_current_victim_exact_melee_threshold_retains_incumbent() {
     let (mut app, creature, tank) = current_victim_fixture();
     let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
     add_threat(app.world_mut(), creature, melee, 1100.0);
-    run(&mut app, 1);
+    // TC ThreatManager.h:86 and ThreatManager.cpp:216–230: periodic1000ms update.
+    run(&mut app, 21);
     assert_eq!(
         state(&app, creature),
         pursuing(tank),
         "TC strict110% boundary"
     );
     add_threat(app.world_mut(), creature, melee, 10.0);
-    run(&mut app, 1);
+    run(&mut app, 21);
     assert_eq!(
         state(&app, creature),
         pursuing(melee),
@@ -693,14 +694,14 @@ fn threat_current_victim_exact_ranged_threshold_retains_incumbent() {
     let (mut app, creature, tank) = current_victim_fixture();
     let ranged = spawn_player(&mut app, at(0.0, 30.0), 5);
     add_threat(app.world_mut(), creature, ranged, 1300.0);
-    run(&mut app, 1);
+    run(&mut app, 21);
     assert_eq!(
         state(&app, creature),
         pursuing(tank),
         "TC strict130% boundary"
     );
     add_threat(app.world_mut(), creature, ranged, 10.0);
-    run(&mut app, 1);
+    run(&mut app, 21);
     assert_eq!(
         state(&app, creature),
         pursuing(ranged),
@@ -715,7 +716,7 @@ fn threat_current_victim_lower_melee_challenger_beats_highest_ranged() {
     let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
     add_threat(app.world_mut(), creature, ranged, 1200.0);
     add_threat(app.world_mut(), creature, melee, 1150.0);
-    run(&mut app, 1);
+    run(&mut app, 21);
     assert_eq!(
         state(&app, creature),
         pursuing(melee),
