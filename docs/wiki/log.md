@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source645–649 pending Lightcalled acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source645649-pending-lightcalled-hearthstone-and-jumpable-monument-gold-fountain-boundaries-2026-10-18):57aa5b0c5 appends257736/1261979/source10s/shared2309 to unchanged persisted-bind helper, now22 hearthstones/old21 retained; format/manual readability/diffcheck pass, behavior pending lead successor. Three missing jumpable monuments retain base0/distinct casts; missing255051 gold fountain retains64→425841/effect65/120s/category59 with actual payment contract unresolved. No collision-free substitute, guessed multiplicity/cost/reward, runtime/data/native change or own heavy work.
+
 ## 2026-10-18 — Toy source640–644 pending Dredger acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source640644-pending-dredger-disguise-and-linked-companion-mixed406-boundaries-2026-10-18):2cc3d9ec3 appends256893/1260864/254071/four displays/10min/15min to unchanged disguise helper, now18 rows plus separate Oomgut19 identities; format/manual readability/diffcheck pass, behavior awaits lead successor after cancelled509. Exodar linked428 plus repeated495 edges, missing traveling cat and Seed406/20/target0 versus Steward406/294/self remain exact gaps. No static actor/pure-transform substitute, runtime/data/native change or own heavy jobs.

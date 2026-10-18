@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Lightcalled hearthstone and jumpable-monument, gold-fountain boundaries (2026-10-18)
+
+[Source645–649 matrix](../../toy-effects14-coverage.md#source645649-pending-lightcalled-hearthstone-and-jumpable-monument-gold-fountain-boundaries-2026-10-18) adds acceptance-only57aa5b0c5:257736/1261979/source10s/shared2309 blocks Cosmic246565 via unchanged saved-bind helper, now22 hearthstones/old21 retained; behavior awaits lead successor. Missing247940/254652/254655 monuments require actual shared jump collision with distinct casts/base0, not ordinary scenery. Missing255051 fountain retains mixed64→425841/effect65 and actual gold-offering authority; no guessed cost/reward. No runtime/data/native change or own heavy jobs.
+
 ## Pending Dredger disguise and linked-companion, mixed406 boundaries (2026-10-18)
 
 [Source640–644 matrix](../../toy-effects14-coverage.md#source640644-pending-dredger-disguise-and-linked-companion-mixed406-boundaries-2026-10-18) adds acceptance-only2cc3d9ec3 for256893/1260864/254071/four exact displays/10-minute appearance/15-minute recovery:18 disguise rows plus separate Oomgut19 identities, old17/helper unchanged; behavior awaits lead successor. Exodar's two495→1258382 edges and linked428 chain, missing traveling cat253791, Rutaani406/misc20/target0 and Steward406/misc294/self remain distinct gaps. No static companion or pure-transform substitute for mixed406. No runtime/data/native change or own heavy work.

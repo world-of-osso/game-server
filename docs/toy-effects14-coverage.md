@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source645–649: pending Lightcalled hearthstone and jumpable-monument, gold-fountain boundaries (2026-10-18)
+
+Acceptance-only57aa5b0c5 appends Lightcalled257736/1261979 to unchanged saved-bind/shared2309 helper, now22 hearthstones/old21 retained; sibling Cosmic246565 is blocked after charge spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after509 cancellation-before-start. No runtime/data/native changes or own heavy work.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|645 Lightcalled Hearthstone257736/1261979 | Source10000ms252/targets1/9, normal recovery0/start1500ms/shared2309/max1/recharge1800000ms, actual slot0 on-use. Own absent-bind refusal/no charge spending, persisted-bind pending return, health/model preservation and sibling charge refusal acceptance committed, behavior pending successor. Sunwell flavor is not a different destination, faster cast, independent timer or native/cross-map/natural-recharge proof. |
+|646 Jade Monument258129/1244268 | Source1000ms target47/base0 summon247940/property1362/Control0/flags2048 for300000ms; inherited600000ms recovery, runtime actor/model absent. Actual you-and-others jumpable monument/collision/placement/lifetime remains gap. Base0 retained, not assumed one ordinary stationary summon or non-colliding decoration. |
+|647 Gilded Coil Spire258135/1262837 | Source1500ms target47/base0 summon254652/property6661/Control0/Title61/flags2048 for300000ms; inherited600000ms recovery, runtime actor/model absent. Actual shared jumpable spire/collision/lifecycle remains gap; no revival/rebirth gameplay from item flavor or Jade Monument body substitution. |
+|648 Azure Thunder Coil Pillar258136/1262850 | Source1000ms target47/base0 summon254655/property6661/Control0/Title61/flags2048 for300000ms; inherited600000ms recovery, runtime actor/model absent. Actual shared jumpable pillar/collision/lifecycle remains gap, distinct from Gilded's1500ms cast. No lightning damage, generic static pillar or guessed summon multiplicity. |
+|649 Gilded Fountain258840/1264100 | Instant target47/base1 summon255051/property3354/Control1/flags141576 for120000ms plus self64→425841/effect65 dummy4 for120000ms; explicit item600000ms recovery/category59, spell recovery0. Runtime actor/model absent. Actual gold-offering interaction/cost/result/recipient/lifecycle remains unresolved; preserve the65 child and mixed service contract, not an inert fountain, free reward or guessed gold amount. |
+
+Evidence: private `rows645-649-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `hearth645-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact2309 charge and59 Item-Drink category joins. Full1166 admission unchanged;149865 Tea Set untouched.507 failed/172cb1782 correction and subsequent acceptance still await covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source640–644: pending Dredger disguise and linked-companion, mixed406 boundaries (2026-10-18)
 
 Acceptance-only2cc3d9ec3 appends Dredger to unchanged disguise helper:18 rows plus separate Oomgut19 identities, old17 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor after509 cancellation-before-start. Mixed seed/Steward and linked companions remain outside that pure-transform acceptance. No runtime/data/native changes or own heavy jobs.
