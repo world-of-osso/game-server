@@ -2,13 +2,11 @@ use super::*;
 use shared::components::{Level, UnitLevel};
 
 #[test]
-#[ignore = "RED: retained bracket maximum is not revalidated at invitation accept"]
 fn bg_bracket_port_concrete_refuses_xp_level_up_beyond_retained_maximum() {
     assert_overlevel_port_refused(1018);
 }
 
 #[test]
-#[ignore = "RED: retained bracket maximum is not revalidated at invitation accept"]
 fn bg_bracket_port_random_refuses_xp_level_up_beyond_retained_maximum() {
     assert_overlevel_port_refused(32);
 }
