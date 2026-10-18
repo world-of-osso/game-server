@@ -17,10 +17,13 @@ fn feero() -> (tempfile::TempDir, World, Entity, Entity) {
     ai.events = scripts.0[&4484].clone();
     ai.states = vec![EventState::default(); ai.events.len()];
     let conn = Connection::open_with_flags(source, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    world.insert_resource(crate::faction::load_faction_templates(&conn).unwrap());
+    world.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&conn).unwrap());
     let expected = crate::world_data::load_expected_stats(&conn);
     let mut templates = crate::world_data::load_templates(&conn, &expected);
     templates.retain(|entry, _| [4484, 3879, 3893, 3898, 3899, 3900].contains(entry));
     crate::world_data::load_template_models(&conn, &mut templates);
+    let display_id = templates[&4484].models[0].display_id;
     let mut query = conn
         .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
         .unwrap();
@@ -49,6 +52,7 @@ fn feero() -> (tempfile::TempDir, World, Entity, Entity) {
             max: 100.0,
         },
         UnitFactionTemplate(35),
+        shared::components::ModelDisplay { display_id },
         UnitFlags(0x200),
         map,
     ));
