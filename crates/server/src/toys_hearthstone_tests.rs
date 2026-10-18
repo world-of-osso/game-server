@@ -185,3 +185,8 @@ fn toyfx623_cosmic_hearthstone_learned_use_returns_to_bind_and_blocks_post_expre
 fn toyfx645_lightcalled_hearthstone_learned_use_returns_to_bind_and_blocks_cosmic() {
     assert_toy_hearthstone_bind_and_shared_charge(257736, 1261979, 246565);
 }
+
+#[test]
+fn toyfx659_naaru_enfold_learned_use_returns_to_bind_and_blocks_lightcalled() {
+    assert_toy_hearthstone_bind_and_shared_charge(263489, 1270583, 257736);
+}
