@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Approved cursor-flight fix; complete16-row local GREEN (2026-10-17)
+
+[Current approved fix/proof matrix](../../toy-effects14-coverage.md#approved-cursor-flight-fix-complete16-row-local-green-2026-10-17) supersedes pending approval/ignored492 state below. Lead-approved8687f84c5 adds only87 to the existing destination whitelist/comment and removes honest ignore; every assertion/16 identities retained. Authorized native helper PASS1/0failed/0ignored47.72s, compile3m43s/no warnings: all seven minis preserve source flight/pre-actor-zero/post-actor-one plus existing actor/placement/state/expiry semantics, alongside old nine scenery rows. Format/fmtcheck/manual readability/diffcheck and exact pushed readback pass. Other new tests compiled but filtered, not behaviorally certified. Successor492 aggregate/landing remain lead-owned/pending; no deployment/native/full-height/wall-time/recovery certificate or further own heavy duplicate. Only explicitly approved runtime exception; data/producer/engine/protocol unchanged.
+
 ## Pending Flame return-home acceptance and unnamed hat/ride/private-weather boundaries (2026-10-17)
 
 [Source480–484 matrix](../../toy-effects14-coverage.md#source480484-pending-flame-return-home-acceptance-and-unnamed-hatrideprivate-weather-boundaries-2026-10-17) adds acceptance-only2302a9e1b:209035/422284/source10s/shared2309 as18th saved-bind case, with Deepdweller sibling refusal; newer head beyond492 required. Missing ItemSparse208880 stays unnamed despite periodic drake-hat/Brewfest description. Gryphon Control5 and rolling Barrel Control0 still require actual ride/control, not scenery; actors absent. Dreamsurge331 is target-only weather488/density1 plus screen2078/7 and zone-weather restoration, not phase or screen-only behavior. Format/manual readability/diffcheck pass; runtime cursor87 proposal awaits approval, no production/data/native/own heavy duplicate.
