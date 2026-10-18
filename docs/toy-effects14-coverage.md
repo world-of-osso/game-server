@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate513: acceptance helpers pass, queued-trigger destination regression keeps integration RED (2026-10-18)
+
+Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed; current feature changes after7099 are documentation only. No passing integration or new toy landing claim.
+
+| Proof scope | Exact result and limit |
+|---|---|
+| Compilation/client/format | Server compiled; client9 passed; FMT0. These do not override the server failure. |
+| Server integration |311 passed/1 failed/1 ignored in914.05s; EXIT101. Sole failure: `toyfx84_akunda_real_learning_child_destination_visible_trap_cooking_and_expiry`, line112. |
+| Current acceptance helpers |19-disguise registry plus separate Oomgut identity,21-caster helper,13-transmitted-object helper,17-stationary helper and all25 hearthstone cases completed OK. Stationary expiry remains explicit simulation-time leap; helper success is not overall integration/native/landing proof. Cold Ones' source-range fixture correction is covered. |
+| Exact regression boundary |Akunda279076 triggers child279077/target87. Child fire appeared at caster `[-8949.95,82.63029,132.493]` instead of requested parent cursor `[-8947.95,82.63029,132.493]`; original learned-use assertion remains intact. Not cooking failure, fixture range error or permission to weaken destination. |
+| Root cause and authority |Integrated Effect64 now routes to `queued_triggers::schedule`, bypassing the old destination-preserving handler. Queue payload and fresh-child reconstruction retain item level but omit parent `cast_destination`. Preserve that explicit field through queue/delivery; do not substitute caster/self destination. Runtime fix proposed to lead, not implemented under this thread's87-only runtime limit; successor proof required. |
+
+Evidence: lead log `gate-ty513-srv.log`, private `lead-gate513-inspected.json`, `gate513-current-code-scope-ledger.json`, `gate513-destination-regression-active-goal.json`; integrated `spell_cast/{effects.rs,queued_triggers.rs,mod.rs}`. Individual CPU results do not certify source-choice distributions, native visuals, full recovery or1166 behavior. Tail metadata accounting and ten excluded source-only names remain unchanged. No runtime/data/native change,149865 edit or own heavy duplicate; last confirmed toy landing remains498 at then-master8707ac0ea.
+
 ## Tail reconciliation and source-only names715–720: metadata proof, not runtime completion (2026-10-18)
 
 All remaining active-source IDs after the final Full1166 ID280541 are excluded extras. Raw715–720 name ledger: Feathers of Akil'zon280823; Rite of Jan'alai's Flame280825; Hiveborne Hearthstone281136; Shadeweaver's Hearthstone281615; Libram of the Matriarch284159; Kinduru's Spiriting Quill286643. Each remains SOURCE-ONLY/OUTSIDE Full1166: no new mechanics requirement, import, admission or acceptance. Together with earlier named275039/280820/280821/280822 these are the same ten extras recorded at checkpoint559.
@@ -9,14 +23,14 @@ All remaining active-source IDs after the final Full1166 ID280541 are excluded e
 | Active source provenance |12.1.5.70448/key88d5e8ef05ec5a8446cdec93d142d7c6; active symlink resolves70448; Toy SHA-256 `1d3f17983a1f4b3c51230c94e753a1cd12af499aaa1866367151058112bbbaf0`, unchanged from checkpoint559. |
 | Universe membership |1176 distinct source IDs versus1166 runtime Toy IDs; same ten source-only extras, runtime-only empty. Read-only reconciliation, not an import or behavioral census. |
 | Checkpoint559 tail metadata |After228966, all151 authorized runtime IDs are represented in31 source capsules560–714. Raw155 captured IDs include four excluded extras. Missing/unexpected authorized IDs and capsule provenance/order mismatches are all empty. This proves the tail's metadata accounting, not whole1166 review completeness or behavior. |
-| Current acceptance revision |Lead513 queued at7099f3a38 covers Cold Ones range-fixture correction and19 disguise rows plus Oomgut20 identities,21 casters,13 transmitted objects,17 stationary actors and25 hearthstones. Stationary expiry retains explicit simulation-time-leap scope. No result/new toy landing observed; no own heavy duplicate. |
+| Current acceptance revision |[Gate513 result](#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18) distinguishes successful individual acceptance helpers from failed integration; no new toy landing or own heavy duplicate. |
 | Remaining behavioral scope |Documented mixed effects, recipients, eligibility, interactions, model selection, movement and native presentation gaps remain open. Source-order tail exhaustion does not turn those gaps into success. Last confirmed toy landing remains498 at then-master8707ac0ea; separate master compile repair efd627da1 is not toy proof. |
 
 Evidence: private `source-only-tail715-720-names.json`, `source-tail-active70448-reconciliation.json`, `source-tail-reconciliation-active-goal.json`, `lead-gate513-owner.json`. Earlier70391 receipts remain historical; no relabelled provenance. No runtime/data/native change, source-only admission or149865 Tea Set edit.
 
 ## Source710–714: last Full1166 IDs, weighted badge, Windwell and three excluded source-only names (2026-10-18)
 
-Raw inspection slots710/711 are the last Full1166 IDs in active70448 source order:280419 and280541. Slots712–714 are three named source-only extras, explicitly outside1166. This is metadata-tail inspection, not1166 behavioral completion or landing. Lead513 queued at7099f3a38 covers the fixture correction and all later acceptance:19 disguises plus Oomgut20 IDs,21 casters,13 objects,17 stationary actors with explicit time-leap expiry,25 hearthstones. No513 result or new toy landing observed. No new acceptance, runtime/data/native change or own heavy jobs.
+Raw inspection slots710/711 are the last Full1166 IDs in active70448 source order:280419 and280541. Slots712–714 are three named source-only extras, explicitly outside1166. This is metadata-tail inspection, not1166 behavioral completion or landing. [Gate513 result](#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18) supersedes its queue-only status; successful individual helpers do not override the Akunda integration failure. No new acceptance, runtime/data/native change or own heavy jobs.
 
 | Inspection slot | Exact retained source boundary |
 |---|---|
@@ -26,7 +40,7 @@ Raw inspection slots710/711 are the last Full1166 IDs in active70448 source orde
 |713 SOURCE-ONLY: Trail of Halazzi280821 | Named active70448 extra absent runtime Toy universe; outside Full1166. No new feature requirement, import, admission or acceptance. |
 |714 SOURCE-ONLY: Nalorakk's Strength Charm280822 | Named active70448 extra absent runtime Toy universe; outside Full1166. No new feature requirement, import, admission or acceptance. |
 
-Evidence: private `rows710-714-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, raw5/runtime2 boundary and original weighted models. Six later raw IDs are also previously named source-only extras, not more Full1166 work.149865 Tea Set untouched.513 awaits execution/result after the separate master compile repair landed at efd627da1 per lead.498 remains last confirmed toy landing, recorded at then-master8707ac0ea; current master repair is not a new toy certificate.
+Evidence: private `rows710-714-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, raw5/runtime2 boundary and original weighted models. Six later raw IDs are also previously named source-only extras, not more Full1166 work.149865 Tea Set untouched.513 subsequently failed on the queued-trigger destination regression after the separate master compile repair landed at efd627da1 per lead.498 remains last confirmed toy landing, recorded at then-master8707ac0ea; current master repair is not a new toy certificate.
 
 ## Source705–709: mixed Memento, mask, qualified swim, retained Venomous banner and story-view boundaries (2026-10-18)
 
