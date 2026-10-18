@@ -224,12 +224,13 @@ fn wild_pet_battles_anvil_drop_uses_legal_alvin_and_two_round_continuation() {
     states
         .get_mut(&41)
         .unwrap()
-        .select_ability(&catalog.turns, journal.get(41).unwrap(), 1, 2483)
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 2, 2483)
         .unwrap();
     let encounter = Encounter::start(&catalog, &journal, &states, 378, 10, 1, 1).unwrap();
     let caller = &encounter.battle.teams[0].pets[0];
     assert_eq!(caller.species, 3274);
-    assert_eq!(caller.abilities[0], 2483);
+    //Source SlotEnum1 is zero-based; journal selection/UI slot2 is one-based.
+    assert_eq!(caller.abilities[1], 2483);
     assert_eq!(
         caller.stats,
         calculate_stats(&catalog.turns, 3274, 3, 3, 15).unwrap()
