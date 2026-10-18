@@ -48,6 +48,7 @@ TABLES = [
     "SpellCooldowns",
     "SpellDuration",
     "SpellAuraOptions",
+    "SpellAuraRestrictions",
     "SpellCategories",
     "SpellCategory",
     "SpellLevels",
