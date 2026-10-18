@@ -101,35 +101,10 @@ fn kit_fixture() -> (Harness, Entity, Position, BTreeSet<u32>) {
 
 fn sample_kit_positions(h: &mut Harness, tank: Entity, attacks: &BTreeSet<u32>) -> Vec<Position> {
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
-    let mut reported = false;
-    let initial = *h.app.world().get::<Position>(tank).unwrap();
     let positions = (0..90)
-        .map(|tick| {
+        .map(|_| {
             h.advance(1);
-            let at = *h.app.world().get::<Position>(tank).unwrap();
-            if at != initial && !reported {
-                reported = true;
-                let world = h.app.world();
-                let target = world.get::<crate::networking::CombatTarget>(tank).and_then(|target| target.0);
-                eprintln!("FIRST MOVEMENT tick{tick} state={:?} following={} target={target:?} target_at={:?} owner_at={:?}",
-                    world.get::<crate::creature_ai::CreatureState>(tank),
-                    world.get::<crate::creature_ai::FollowOwner>(tank).is_some(),
-                    target.and_then(|target| world.get::<Position>(target)),
-                    world.get::<Position>(h.caster));
-                let follower = world.get::<Follower>(tank).unwrap().clone();
-                let party = super::ai::party_units(h.app.world_mut(), follower.owner);
-                let engaged: Vec<_> = super::ai::engaged_enemies(h.app.world_mut(), &follower, tank, &party)
-                    .iter().map(|(enemy, _)| h.app.world().get::<crate::zones::CreatureOrigin>(*enemy).map(|origin| origin.guid)).collect();
-                eprintln!("FIRST MOVEMENT engaged_source_guids={engaged:?}");
-                if let Some(target_guid) = target.and_then(|target| h.app.world().get::<crate::zones::CreatureOrigin>(target)).map(|origin| origin.guid) {
-                    let history = super::pull_history::snapshot(h.app.world(), h.caster).unwrap();
-                    let route = super::pull_route::read_route(h.app.world_mut(), &super::pull_route::Request {
-                        tank, target_guid, difficulty: 1, cleared: &history.cleared_spawns,
-                    });
-                    eprintln!("FIRST MOVEMENT target_guid={target_guid} route={route:?}");
-                }
-            }
-            at
+            *h.app.world().get::<Position>(tank).unwrap()
         })
         .collect();
     assert!(
@@ -235,13 +210,88 @@ fn production_tank_goal_allows_existing_fight_defense_without_a_healer() {
 
 #[test]
 fn production_tank_goal_refuses_unbudgeted_pursuit_without_injected_position() {
-    let (mut h, tank, from, attacks) = kit_fixture();
-    // No healer, no calibrated fight, and real off-target source aggro in this route.
-    // Only actual AI runs: no caller inserts an AdmittedPosition or a forced victim.
-    let positions = sample_kit_positions(&mut h, tank, &attacks);
+    let (mut h, tank, from, _) = kit_fixture();
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    // Actual owner attack changes the active victim to the far Riverpaw source.
+    // Its corridor crosses other packs, unlike the later defense-only old fixture.
+    let target = h
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, origin, copy)| origin.guid == 20375669 && **copy == map)
+        .unwrap()
+        .0;
+    h.select(Some(target));
+    h.attack(target);
+    h.advance(3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(h.caster)
+            .unwrap()
+            .victim,
+        target
+    );
+    super::update_ai(h.app.world_mut());
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(tank)
+            .unwrap()
+            .0,
+        Some(target),
+        "ordinary owner attack must reach the actual tank pursuit boundary"
+    );
+    let history = super::pull_history::snapshot(h.app.world(), h.caster).unwrap();
+    let route = super::pull_route::read_route(
+        h.app.world_mut(),
+        &super::pull_route::Request {
+            tank,
+            target_guid: 20375669,
+            difficulty: 1,
+            cleared: &history.cleared_spawns,
+        },
+    )
+    .unwrap();
+    let sources = super::pull_sources::read_present_sources(
+        h.app.world_mut(),
+        map,
+        1,
+        &history.cleared_spawns,
+    )
+    .unwrap();
+    let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
+    let party = super::ai::party_units(h.app.world_mut(), follower.owner);
+    let engaged_packs: BTreeSet<_> =
+        super::ai::engaged_enemies(h.app.world_mut(), &follower, tank, &party)
+            .iter()
+            .map(|(enemy, _)| {
+                let guid = h
+                    .app
+                    .world()
+                    .get::<crate::zones::CreatureOrigin>(*enemy)
+                    .unwrap()
+                    .guid;
+                sources[&guid].pack_guid
+            })
+            .collect();
+    assert!(
+        route
+            .spawns
+            .iter()
+            .any(|guid| !engaged_packs.contains(&sources[guid].pack_guid)),
+        "this exact tick must expose a genuinely unengaged pack: route={route:?}, engaged={engaged_packs:?}"
+    );
+    assert!(matches!(
+        super::pull_admission::read_pull_budget(h.app.world_mut(), tank, &route.spawns, 1).unwrap(),
+        super::pull_budget::Decision::Wait(super::pull_budget::Reason::Healer)
+    ));
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    h.advance(1);
     assert_stationary(
-        &positions,
+        &[*h.app.world().get::<Position>(tank).unwrap()],
         from,
-        "production planner let kit pursuit start an unbudgeted route",
+        "production planner started an actually unbudgeted route at its movement boundary",
     );
 }
