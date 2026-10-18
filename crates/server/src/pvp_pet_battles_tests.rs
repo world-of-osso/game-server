@@ -17,9 +17,9 @@ fn build_app(track_achievements: bool) -> App {
     app.finish();
     app.cleanup();
     app.insert_resource(super::super::tests::catalog());
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(tempfile::NamedTempFile::new().unwrap().path()).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(
+        redb::Database::create(tempfile::NamedTempFile::new().unwrap().path()).unwrap(),
+    ));
     app.insert_resource(crate::battle_pets::load_test_catalog());
     app.add_systems(Update, crate::battle_pets::load_account_journals);
     app.init_resource::<Matchmaker>();
@@ -204,9 +204,7 @@ fn petbattle_pvp_owned_injuries_choices_survive_forfeit_requeue_and_database_reo
     let mut app = app();
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("pvp-owned.redb");
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(redb::Database::create(&path).unwrap()));
     let a = player(&mut app, 41).0;
     let b = player(&mut app, 42).0;
     let mut journal = app
@@ -516,9 +514,9 @@ fn assert_native_pet_team_level_win(levels: [u8; 3], qualifies: bool) {
     use shared::components::{CharacterAppearance, Player};
     let mut app = build_app(true);
     let file = tempfile::NamedTempFile::new().unwrap();
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(file.path()).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(
+        redb::Database::create(file.path()).unwrap(),
+    ));
     crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
     let character = crate::persistence::create_character(
         &app.world().resource::<GameDatabase>().db,
@@ -725,9 +723,7 @@ fn achievements_criteria_pet_win_credits_actual_winner_once_and_not_the_loser() 
     let mut app = build_app(true);
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("pet-zone-proof.redb");
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(&db_path).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(redb::Database::create(&db_path).unwrap()));
     crate::persistence::create_tables(&app.world().resource::<GameDatabase>().db);
     let characters = [(41, "Petwinner"), (42, "Petloser")].map(|(account, name)| {
         crate::persistence::create_character(

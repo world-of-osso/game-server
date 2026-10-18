@@ -32,6 +32,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_offering_kit_tests.rs"]
+mod offering_kit;
 #[path = "toys_oomgut_tests.rs"]
 mod oomgut;
 #[path = "toys_owner_flags_tests.rs"]
@@ -117,7 +119,7 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
         .insert_resource(crate::game_objects::summoned::load_templates(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
     h.app.insert_resource(shared_world_data(&path));
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app.init_resource::<crate::gold::GoldUpdateQueue>();
     h.app.add_systems(
         Update,
@@ -331,7 +333,7 @@ fn toys_learn_favourite_and_reopen_on_another_character() {
     assert_ne!(other, character);
     let mut h = harness(Vec::new(), &[TRANSFORM], 8).unwrap();
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app
         .world_mut()
@@ -1113,23 +1115,29 @@ fn toyfx3_convergent_prism_is_usable_and_removes_no_actions_on_cancel() {
     assert!(crate::auras::cast_blocker(h.app.world(), h.caster, &frostbolt).is_none());
 }
 
-#[test]
-fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
+fn assert_linked_tent_use_refresh_cancel_and_other_owner_lifecycle(
+    item: u32,
+    root_spell: u32,
+    child_spell: u32,
+    display: u32,
+) {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("toys.redb"));
     place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
     h.app
         .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
-    learn_effect_toy(&mut h, character, 193476); // Gnoll Tent398159->398162->200391.
-    assert_eq!(activate(&mut h, 193476)[0].error, None);
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    learn_effect_toy(&mut h, character, item);
+    assert_eq!(activate(&mut h, item)[0].error, None);
     h.advance(60); // Authentic cast time is3000ms; ToyResult only reports start.
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     let summons = |world: &mut World| -> Vec<(Entity, Entity)> {
         world
             .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
             .iter(world)
-            .filter(|(_, s)| s.spell_id == 398162)
+            .filter(|(_, s)| s.spell_id == child_spell)
             .map(|(e, s)| (e, s.owner))
             .collect()
     };
@@ -1156,7 +1164,7 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
             .get::<shared::components::ModelDisplay>(first[0].0)
             .unwrap()
             .display_id,
-        111084
+        display
     );
     let apply = |world: &mut World, unit| {
         crate::auras::apply_aura(
@@ -1164,7 +1172,7 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
             &crate::auras::AuraApplication {
                 caster: unit,
                 target: unit,
-                spell_id: 398159,
+                spell_id: root_spell,
                 effect_mask: 1,
                 source: crate::auras::AuraSource::Cast,
             },
@@ -1201,7 +1209,7 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
         h.app.world_mut(),
         h.caster,
         crate::auras::RemoveReason::Cancelled,
-        |a| a.spell_id == 398159,
+        |a| a.spell_id == root_spell,
     );
     let remaining = summons(h.app.world_mut());
     assert_eq!(remaining.len(), 1);
@@ -1210,9 +1218,24 @@ fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
         h.app.world_mut(),
         other,
         crate::auras::RemoveReason::Death,
-        |a| a.spell_id == 398159,
+        |a| a.spell_id == root_spell,
     );
     assert!(summons(h.app.world_mut()).is_empty());
+}
+
+#[test]
+fn toyfx3_linked_tent_use_refresh_cancel_and_other_owner_lifecycle() {
+    assert_linked_tent_use_refresh_cancel_and_other_owner_lifecycle(193476, 398159, 398162, 111084);
+}
+
+#[test]
+fn toyfx338_market_tent_use_refresh_cancel_and_other_owner_lifecycle() {
+    assert_linked_tent_use_refresh_cancel_and_other_owner_lifecycle(194059, 398329, 398328, 111097);
+}
+
+#[test]
+fn toyfx339_expedition_tent_use_refresh_cancel_and_other_owner_lifecycle() {
+    assert_linked_tent_use_refresh_cancel_and_other_owner_lifecycle(194060, 398334, 398333, 111099);
 }
 
 #[test]
@@ -3271,6 +3294,8 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
         (163744, 280053, 300000),
         (180947, 335276, 900000),
         (182890, 340276, 180000),
+        (188699, 45416, 0), // Source duration-1: permanent until cancelled.
+        (188701, 45418, 900000),
         (204220, 403491, 300000),
         (230727, 467285, 1800000),
         (259240, 1264653, 300000),

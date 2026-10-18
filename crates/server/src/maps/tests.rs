@@ -502,7 +502,7 @@ fn housing_harness(db: redb::Database) -> Harness {
     )
     .unwrap();
     harness_with(move |app| {
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::housing::HousingAvailability(Ok(catalog)));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         // Production world startup replaces the generic population through Commands.
@@ -1587,10 +1587,9 @@ fn exercise_pvp_reconnect(
                 .world_mut()
                 .remove_resource::<crate::persistence::GameDatabase>(),
         );
-        h.app.insert_resource(crate::persistence::GameDatabase {
-            db: redb::Database::open(database_path)
-                .expect("reopen durable battleground entry point"),
-        });
+        h.app.insert_resource(crate::persistence::GameDatabase::new(
+            redb::Database::open(database_path).expect("reopen durable battleground entry point"),
+        ));
     }
     if matches!(case, ReconnectCase::ExpiredMatch) {
         h.advance(6001);
@@ -1840,7 +1839,7 @@ fn exercise_arena_channel_with_reconnect(
         if let Some(classes) = classes {
             app.insert_resource(classes);
         }
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         if reconnect.is_some() {
             crate::networking::install_disconnect_fixture(app);
             app.add_systems(Update, crate::auth_character::process_select_character);
@@ -2927,7 +2926,7 @@ fn flag_match_with_reconnect(
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(flags);
         if reconnect.is_some() {
             crate::networking::install_disconnect_fixture(app);
@@ -4286,9 +4285,9 @@ fn raid_entry_authentic_lucifron_death_saves_only_players_of_his_copy() {
         ))
         .id();
     let history_file = tempfile::NamedTempFile::new().unwrap();
-    world.insert_resource(crate::persistence::GameDatabase {
-        db: redb::Database::create(history_file.path()).unwrap(),
-    });
+    world.insert_resource(crate::persistence::GameDatabase::new(
+        redb::Database::create(history_file.path()).unwrap(),
+    ));
     crate::combat::mark_npc_dead_world(&mut world, lucifron);
     {
         use redb::ReadableDatabase;
