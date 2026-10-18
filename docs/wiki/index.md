@@ -734,7 +734,7 @@ Server gameplay systems.
 | [[creature-ai]] | Three movement types (idle/wander/waypoint by addon path_id), formations, addon mounts/auras, grid activation (GridDormant), SpawnPoint, chase system, 40-yard leash/evade, return-to-spawn |
 | [[dungeon-achievements]] | Account aggregation/migration, raw producer/current-root inventory, earned level/class predicates, area/rank criteria, bounded pages/dates and ordered dungeon grants |
 | [[boss-scripts]] | ScriptName creature AI (CreatureAI hooks, EventMap, BossAI, InstanceScript per copy, creature_text Talk), Stockade boss ports, SmartAI combat timers/victim/CMC chase control, creature casts/ExpectedStat spell damage, dynamic objects |
-| [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade and engaged-player threat update/clear delivery |
+| [[creature-aggro]] | AggroMode, damage/heal school-modified threat, victim selection, evade, threat delivery; sourced ModelReaches required by NPC sight fixtures |
 | [[toys]] | Local Toy.db2 catalog, atomic account learning/favourites, account broadcasts and authoritative UseToy cooldowns; explicit effect/data gaps |
 | [[inventory]] | Owner-only snapshots/deltas, GUID-owned Retail/Forever definitions, source-qualified requirements/unique limits, transfers/stacking/equipment scaling, placements, instance tables and parity gaps |
 | [[quests]] | Quest content load, AzerothCore accept/prerequisite/marker rules, per-player giver markers, kill and bag-item progress, turn-in rewards, quest log persistence and deltas |
