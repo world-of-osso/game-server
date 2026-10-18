@@ -1,5 +1,9 @@
 # Toy effects14 — active whole-goal coverage
 
+## st526 Toy scope landed (2026-10-18)
+
+Lead confirms server master merge `ce0fec81c1caeaa20ff8d47b572cde1e49afbd65` contains feature `38d087230` and proof docs `faab75f7e`; Git ancestry independently confirms both. The successor gate for this Toy scope is complete: `toys::tests`194 passed/0 failed. The eight server failures belong to other heads; the full server result remains RED, not whole-workspace success. This supersedes pending/absence-of-landing statements below for these covered tests only. No native or all1166 gameplay certificate follows; all per-test limits in the [CPU matrix](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18) remain.
+
 ## st526 server result: Toy CPU acceptance passes, full workspace remains RED (2026-10-18)
 
 Lead-owned candidate2ec2e80bc9d5267f73ad9b9ef25e7fbd58767775 combines feature38d087230 and assigned queued64/skyriding fix31f7e9216. Server compilation finished in2m30s; the server result below is final. Engine phase is separate and has no observed final result. Earlier source-stage pending statements below are historical; this matrix defines current CPU proof, not native readiness.

@@ -1,3 +1,7 @@
+## 2026-10-18 — st526 Toy scope landed
+
+[Landing and limits](../toy-effects14-coverage.md#st526-toy-scope-landed-2026-10-18): lead confirms server masterce0fec81c contains feature38d087230/docsfaab75f7e; both ancestry checks pass. Toy successor scope complete with194/0; eight server failures belong to other heads. No native/all1166 gameplay or whole-workspace green claim. No own runtime/data/test jobs.
+
 ## 2026-10-18 — st526 Toy CPU cases pass; full server remains RED
 
 [Exact current proof matrix](../toy-effects14-coverage.md#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18): candidate2ec2e80bc combines feature38d087230/fix31f7e9216; server3909 passed/8 failed/124 ignored2770.80s/EXIT101/FMT0. Toy namespace194/0 includes Royal618/shared-five, old19/Oomgut,21 casters,13 objects,17 stationary and25 hearthstones; Akunda cursor/cooking/lifetime and drift controls now pass. Seven missing-tdb_jump_charge_params startup/orientation failures and Slagmaw119433 damage assertion keep overall integration RED. Engine phase pending; no own runtime/data/test job or native/full1166/landing certificate.

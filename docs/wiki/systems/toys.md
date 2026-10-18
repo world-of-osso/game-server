@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## st526 Toy landing (2026-10-18)
+
+[Landing and limits](../../toy-effects14-coverage.md#st526-toy-scope-landed-2026-10-18): lead-confirmed server master `ce0fec81c1caeaa20ff8d47b572cde1e49afbd65` contains feature38d087230 and docsfaab75f7e, independently confirmed by ancestry. Covered successor scope complete with194 Toy CPU passes/0 failures; eight server failures belong to other heads. Earlier pending labels below are historical for covered tests. Native/all1166 gameplay acceptance and whole-workspace green remain unclaimed.
+
 ## st526 Toy CPU results without whole-workspace success (2026-10-18)
 
 [Exact current proof matrix](../../toy-effects14-coverage.md#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18): candidate2ec2e80bc/feature38d087230/fix31f7e9216 compiled; server3909/8/124ignored/2770.80s/EXIT101/FMT0. Toy namespace194 passed/0 failed, including Royal misc0, shared-five baseline, old19/Oomgut,21 casters,13 objects,17 stationary and25 hearthstones. Akunda cursor/cooking/lifetime and drift controls pass with assigned queue fix. Seven missing-table startup/orientation failures plus Slagmaw damage failure keep the workspace RED; engine result pending. No own runtime/data/test job, native/full1166 gameplay or new landing certificate. Earlier pending labels retain source-stage history; this linked matrix governs current proof limits.
