@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Royal Visage618 misc0 acceptance pending after513 (2026-10-18)
+
+[Exact pending acceptance](../../toy-effects14-coverage.md#royal-visage618-misc0-acceptance-pending-execution-after513-2026-10-18):0305a0e91/ce32419fb tests245631/1239480/236348/misc0/display121918 through real bag learning/use, exact ten-minute deadline, ordinary near-expiry/restoration/aura removal/health and thirty-minute recovery refusal. Old19 misc8 registry/helper, Oomgut and shared-five fixture unchanged. Format/manual readability/diffcheck pass, no local compile/execution; successor AFTER513 required. No native/full-reuse/quest/selection certificate or runtime/data change; queued64 repair remains assigned elsewhere.
+
 ## Shared2513 five-identity learned-use baseline pending after513 (2026-10-18)
 
 [Exact new baseline matrix](../../toy-effects14-coverage.md#shared2513-five-identity-baseline-new-acceptance-pending-after513-2026-10-18) adds acceptance-only1c143bea6 for Pango/Saptor/Masquerade/Idol/Badge: real learned source model/one-hour aura deadline/health, ten-minute2513 report and learned-sibling refusal without cast/model/deadline mutation. Old19 long-recovery registry/helper and Oomgut remain unchanged. Format/manual readability/diffcheck pass, compilation/behavior pending a successor after513. No cancellation/hour expiry/natural reuse/weighted-frequency/native certificate; mixed Memento excluded, no runtime/data/source-only admission change. Assigned owner retains queued64 repair.

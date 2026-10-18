@@ -1,3 +1,7 @@
+## 2026-10-18 — Royal Visage618 misc0 acceptance pending after513
+
+[Exact pending acceptance](../toy-effects14-coverage.md#royal-visage618-misc0-acceptance-pending-execution-after513-2026-10-18):0305a0e91/ce32419fb adds actual245631/1239480/236348/misc0/display121918 learned-use/source-deadline/ordinary ten-minute expiry/restoration/aura-removal/health and thirty-minute recovery-refusal test. Old19 misc8/helper, Oomgut and shared-five baseline unchanged. Format/manual readability/diffcheck pass; no local compile/execution, successor AFTER513 required. No native/full-reuse/selection/quest certificate, runtime/data change or own heavy jobs.
+
 ## 2026-10-18 — Shared2513 five-identity baseline pending after513
 
 [Exact new baseline matrix](../toy-effects14-coverage.md#shared2513-five-identity-baseline-new-acceptance-pending-after513-2026-10-18):1c143bea6 adds separate learned-use/model/hour-duration/deadline/health/ten-minute-category/shared-sibling-refusal cases for Pango/Saptor/Masquerade/Idol/Badge. Old19 registry/helper and Oomgut unchanged. Format/manual readability/diffcheck pass; no local compile/execution, successor AFTER513 required. No cancel/hour-expiry/natural-reuse/distribution/native proof, mixed Memento admission or runtime/data change; queued64 repair remains assigned elsewhere.

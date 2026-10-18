@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Royal Visage618 misc0 acceptance: pending execution after513 (2026-10-18)
+
+Acceptance-only0305a0e91/ce32419fb adds a separate actual learned-use test for245631/1239480, self56/misc236348/0/display121918, instant600000ms appearance and1800000ms recovery. The19-row misc8 registry/helper, Oomgut and five-case shared2513 baseline remain unchanged.
+
+| Proof scope | Exact boundary |
+|---|---|
+| Implemented assertions | Real bag learning/UseToy, exact model/aura/misc0/source duration and finite expiry deadline within source time; unchanged health; reported30-minute recovery; refusal before expiry; ordinary50ms simulation frames retain model just before ten-minute expiry, then restore previous model/remove replicated aura; recovery still refuses afterward and only one root cast occurred. |
+| Local evidence | Format/manual changed-test readability/diffcheck pass, commits pushed/read back. No local compilation or execution; covering successor AFTER513 required. No invented RED/GREEN. |
+| Unproved | Native body/animation/wire/pixels/audio, full30-minute natural reuse, acquisition/quest eligibility or prince/king selection. Source misc0 is not replaced with8; ordinary simulation-time expiry is not ten minutes of wall-clock presentation. |
+
+Evidence: private `royal618-{active-goal,proof-ledger}.json`, earlier `rows615-619-{readonly-source,action-source,runtime-action-source}.json`. No runtime/data/source-only admission/149865 change or own heavy job. The independent queued64 repair remains with its assigned owner;513 integration failure is not overridden by adding this test.
+
 ## Shared2513 five-identity baseline: new acceptance pending after513 (2026-10-18)
 
 Acceptance-only1c143bea6 adds a separate bounded learned-use test for the five pure transforms below, without changing the19-row long-recovery registry/helper or separate Oomgut test. Each fixture learns both actual bag items, uses its root, checks source display membership/self56 misc8/3600000ms duration/finite deadline/unchanged health and category2513 recovery600000ms, then rejects the learned sibling without another cast, model replacement or deadline refresh.
@@ -32,7 +44,7 @@ Evidence: private `full1166-metadata-availability-{inventory,active-goal}.json`.
 
 ## Gate513: acceptance helpers pass, queued-trigger destination regression keeps integration RED (2026-10-18)
 
-Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed. The separate shared2513 baseline1c143bea6 was added afterward and is not covered by this result. No passing integration or new toy landing claim.
+Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed. The separate shared2513 baseline1c143bea6 and Royal misc0 acceptance0305a0e91/ce32419fb were added afterward and are not covered by this result. No passing integration or new toy landing claim.
 
 | Proof scope | Exact result and limit |
 |---|---|
@@ -333,7 +345,7 @@ Acceptance-only4a0133a68 appends245942/1240082/246037/display129958/180s plus cu
 |615 Echo of Xal'atath244888/1238260 | Instant self proc aura42/trigger0 for3600000ms, inherited60000ms recovery. ProcTypeMask2/chance10/ProcCategoryRecovery120000ms/charges0 retained literally. Actual foe-kill-triggered occasional authored voice/attachment/recipient conditions/cleanup remains gap; trigger0 is not permission for an inert proc, guessed child/sound or generic attack proc. |
 |616 K'aresh Memory Crystal245567/1239717 | Instant self script3/zero payload, inherited1800000ms recovery; no duration index. Actual K'areshi appearance selection/duration/restoration remains unresolved; no invented creature ID or ten-minute transform/aura-only success from description. |
 |617 Rolling Snowball245580/1239176 | Source4000ms target18 summon245763/property3608/Control4/flags2048 for30000ms, inherited600000ms recovery with Winter Veil reduction described; runtime creature/model absent. Actual jump-on/rolling/control/exit/holiday recovery remains gap; no inert snowball scenery, generic damage ball or guessed holiday reduction. |
-|618 Royal Visage245631/1239480 | Instant self transform56→existing236348/misc1=0 for600000ms, inherited1800000ms recovery; authentic Arthas display121918/scale1/weight1. Source/model metadata established, actual learned-use/expiry/recovery/native appearance unverified. Do not borrow misc8 disguise fixture assertions or infer prince/king selection/quest eligibility from flavor. |
+|618 Royal Visage245631/1239480 | Instant self transform56→existing236348/misc1=0 for600000ms, inherited1800000ms recovery; authentic Arthas display121918/scale1/weight1. Source/model metadata established; [separate exact-misc0 acceptance](#royal-visage618-misc0-acceptance-pending-execution-after513-2026-10-18) committed, execution pending after513. Native/full-reuse/selection/quest eligibility remain unproved; no borrowed misc8 assertion or inferred restriction. |
 |619 Sea-Blessed Shrine245942/1240082 | Instant target87 summon246037/property2910/flags256 for180000ms, inherited300000ms recovery/start1500ms; authentic display129958/scale1. Own exact learned cursor placement/model/owner/map/non-pet/non-follow/stationary/expiry acceptance committed, behavior pending AFTER507. Explicit simulation-time expiry method preserved; no native shrine/combat blessing/full five-minute reuse certificate. |
 
 Evidence: private `rows615-619-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `seashrine619-{active-goal,proof-ledger}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6.507 earlier16 stationary/18 caster/12 object scopes remain pending final result, while new17/19/13 scopes are AFTER507.149865 Tea Set untouched;498 last confirmed landed/master8707ac0ea.
