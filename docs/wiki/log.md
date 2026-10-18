@@ -1,6 +1,10 @@
+## 2026-10-17 — Toy source310–314 pending acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source310314-pending-batonsreturn-home-acceptance-and-seated-orb-gap-2026-10-17): test/spec01de71c2e adds Batons900000ms caster row (14IDs) and three exact source10s/shared2309 actual saved-bind/refusal/return cases (13hearthstones). Format/manual readability/diffcheck pass; covering new-head behavioral gate remains pending, no borrowed earlier result or own heavy duplicate.312 sitting/orb action stays unproved; no runtime/data/canonical, native/cross-map/full-recharge or new eligibility certificate.
+
 ## 2026-10-17 — Toy source305–309 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17):305 seasonal/285-child music,306 observed content-scale8.82/build12340 versus TDB1/build69497 plus SmartAI Grow49801, and307 nonzero-base/caster-hosted cooking remain gaps.308 retains exact earlier area/native scope, not a new calendar certificate.309 test/spec8a986da00 adds permanent188699/45416 to the caster fixture13IDs; fmt/manual readability/diffcheck pass, next lead gate after476 owns pending behavioral proof. No fake RED, runtime/data change, native/recovery/calendar/transmog certificate or own heavy duplicate.
+[Exact source matrix](../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17):305 seasonal/285-child music,306 observed content-scale8.82/build12340 versus TDB1/build69497 plus SmartAI Grow49801, and307 nonzero-base/caster-hosted cooking remain gaps.308 retains exact earlier area/native scope, not a new calendar certificate.309 test/spec8a986da00 adds permanent188699/45416 to the caster fixture13IDs at8a986da00 (later14 at01de71c2e,309 unchanged); fmt/manual readability/diffcheck pass, next lead gate after476 owns pending behavioral proof. No fake RED, runtime/data change, native/recovery/calendar/transmog certificate or own heavy duplicate.
 
 ## 2026-10-17 — Toy source300–304 boundaries
 
