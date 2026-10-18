@@ -153,3 +153,155 @@ fn follower_leaves_hostile_consecration_on_actual_stockade_navigation() {
         );
     }
 }
+
+const NATIVE_SPROUT_AURA: u32 = 374161;
+const NATIVE_SPROUT_DAMAGE: u32 = 374523;
+
+fn load_native_field_fixture(h: &mut crate::spell_cast::test_harness::Harness, unit: Entity) {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&db).unwrap());
+    h.app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+    let entry = h
+        .app
+        .world()
+        .get::<shared::components::Npc>(unit)
+        .unwrap()
+        .template_id;
+    let (display_id, scale) = load_single_follower_model(&db, entry);
+    // The common class-profile fixture does not render models. Supply the actual
+    // source body fields used by zones::choose_display, never guessed geometry.
+    h.app.world_mut().entity_mut(unit).insert((
+        shared::components::ModelDisplay { display_id },
+        shared::components::UnitScale(scale),
+        crate::zones::NativeObjectScale(scale),
+    ));
+}
+
+fn load_single_follower_model(db: &rusqlite::Connection, entry: u32) -> (u32, f32) {
+    let mut statement = db.prepare(
+        "SELECT CreatureDisplayID,DisplayScale FROM content_creature_template_model WHERE CreatureID=?1 ORDER BY Idx",
+    ).unwrap();
+    let models = statement
+        .query_map([entry], |row| {
+            Ok((row.get::<_, u32>(0)?, row.get::<_, f32>(1)?))
+        })
+        .unwrap()
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .unwrap();
+    assert_eq!(
+        models.len(),
+        1,
+        "single authored follower model prerequisite"
+    );
+    models[0]
+}
+
+fn cast_native_hostile_field(h: &mut crate::spell_cast::test_harness::Harness) -> (Entity, Entity) {
+    use crate::spell_cast::area_trigger::SpellAreaTrigger;
+    let caster = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert((FROM, InMap::continent(34)));
+    crate::spell_cast::cast_triggered(
+        h.app.world_mut(),
+        caster,
+        NATIVE_SPROUT_AURA,
+        Some(caster),
+        1,
+    );
+    let fields: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &SpellAreaTrigger)>()
+        .iter(h.app.world())
+        .filter(|(_, field)| field.spell_id == NATIVE_SPROUT_AURA && field.caster == caster)
+        .map(|(entity, _)| entity)
+        .collect();
+    assert_eq!(
+        fields.len(),
+        1,
+        "native aura395 creates the real field; not a hand-built hazard"
+    );
+    (fields[0], caster)
+}
+
+#[test]
+#[ignore = "RED: follower escape ignores native aura395 combat-reach envelope"]
+fn follower_native_aura395_escape_leaves_the_actual_source_collision_envelope() {
+    use crate::spell_cast::area_trigger::SpellAreaTrigger;
+    let start = Position {
+        x: FROM.x + 2.0,
+        ..FROM
+    };
+    let (mut h, unit, engine) = stockade_fixture(start);
+    load_native_field_fixture(&mut h, unit);
+    let (field, caster) = cast_native_hostile_field(&mut h);
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), unit)
+        .expect("authored follower combat reach, not a body-radius default");
+    let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+    let distance = point(start).distance(point(FROM));
+    assert!(
+        distance > radius && distance < radius + reach,
+        "actual native fringe prerequisite"
+    );
+    assert!(crate::spell_cast::targets::relation_matches(
+        h.app.world(),
+        caster,
+        unit,
+        crate::spell_cast::targets::Relation::Enemy,
+    ));
+    let mut collision = los::LosMap::new(&engine.join("los/34"));
+    let mut previous = start;
+    for tick in 0..200 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(unit).unwrap();
+        assert!(
+            collision
+                .clear(point(previous) + Vec3::Y, point(at) + Vec3::Y)
+                .unwrap(),
+            "native escape tick{tick} crossed actual collision"
+        );
+        previous = at;
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::Health>(unit)
+            .unwrap()
+            .current
+            > 0.0
+    );
+    let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+    let distance = point(previous).distance(point(FROM));
+    assert!(
+        distance > radius + reach,
+        "escape stopped inside native affect range: distance{distance}, radius{radius}, source reach{reach}"
+    );
+    let own_damage = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(unit)
+        .unwrap()
+        .iter()
+        .any(|aura| aura.spell_id == NATIVE_SPROUT_DAMAGE && aura.caster == caster);
+    assert!(
+        !own_damage,
+        "escaped follower no longer carries the field caster's aura"
+    );
+    for _ in 0..40 {
+        h.advance(1);
+        let at = *h.app.world().get::<Position>(unit).unwrap();
+        let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+        assert!(
+            point(at).distance(point(FROM)) > radius + reach,
+            "ordinary follow/combat must not re-enter the native collision envelope"
+        );
+    }
+}

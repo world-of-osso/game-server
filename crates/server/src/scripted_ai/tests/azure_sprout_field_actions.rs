@@ -52,7 +52,6 @@ fn advance_field_clock(h: &mut Harness, milliseconds: u64) {
 }
 
 #[test]
-#[ignore = "RED: native aura395 field scale and exact expiry missing"]
 fn azure_aura395_native_scale_reaches_authored_curve_points_before_aura_expiry() {
     let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let (child, _) = isolate_native_sprout(&mut h);
@@ -94,7 +93,6 @@ fn count_field_ticks(h: &Harness, caster: Entity, target: Entity) -> usize {
 }
 
 #[test]
-#[ignore = "RED: aura395 native reach, periodic entry and caster-filtered exit missing"]
 fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other_caster() {
     let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let (child, other_caster) = isolate_native_sprout(&mut h);
@@ -182,4 +180,42 @@ fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other
         "removed aura produces no future ticks"
     );
     assert!(count_field_ticks(&h, other_caster, player) > 0);
+}
+
+#[test]
+#[ignore = "native aura395 self/ally/other-copy acceptance pending"]
+fn azure_aura395_native_field_excludes_self_ally_and_other_copy_with_a_real_enemy_control() {
+    let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
+    let (child, ally) = isolate_native_sprout(&mut h);
+    let field = find_field(&mut h, child);
+    let center = *h.app.world().get::<Position>(field).unwrap();
+    let map = *h.app.world().get::<InMap>(child).unwrap();
+    let other_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(center.x, center.y, center.z);
+    let (remote, connection) = spawn_player(&mut h.app, other_map, [x, y, z, 0.0], 2);
+    h.players.push((remote, connection, Inbox::default()));
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(center);
+    h.app.world_mut().entity_mut(ally).insert(center);
+    h.advance(0.1);
+    assert!(
+        h.has_aura(player, SPROUT_DAMAGE),
+        "actual same-copy hostile control must be affected"
+    );
+    assert!(
+        !h.has_aura(child, SPROUT_DAMAGE),
+        "self is not an enemy action target"
+    );
+    assert!(
+        !h.has_aura(ally, SPROUT_DAMAGE),
+        "same-copy ally is not an enemy action target"
+    );
+    assert!(
+        !h.has_aura(remote, SPROUT_DAMAGE),
+        "same position in another copy is excluded"
+    );
+    assert!(h.app.world().get_entity(field).is_ok());
 }
