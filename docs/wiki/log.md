@@ -1,6 +1,6 @@
 ## Absolute Zero Rune strip
 
-[388008 effect1](systems/spell-casting.md#absolute-zero-rune-strip): separate9efa1PASS(cancel)/1genuineFAIL(205 completed strip)56.08s/compile2m11s, qualified ordinary activation/Player entry/native8s cast/exact hits/real damage;23 downstream. Ordered388065 then390201 handler only, no synthetic unoccupied shield producer. Forward418/protocol029 GREEN pending; AfterCast/return/counters excluded.
+[388008 effect1](systems/spell-casting.md#absolute-zero-rune-strip): separate9efa1PASS(cancel)/1genuineFAIL(205 completed strip)56.08s/compile2m11s, qualified ordinary activation/Player entry/native8s cast/exact hits/real damage;23 downstream. Ordered388065 then390201 handler only, no synthetic unoccupied shield producer. Production2d2996e47 merged required418 as26c397763/protocol029: fresh native strip2+retained activation2 GREEN4/0ignored116.75s, compile3m14s, stable source/HEAD/protocol/worldce guards. Completed205+23, occupied-only Mythic consequence and cancellation pass. Independent lead gate owns check/fmt; AfterCast/return/counters excluded.
 
 ## Vault Rune phase activation
 
