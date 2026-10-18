@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source710–714: last Full1166 IDs, weighted badge, Windwell and three excluded source-only names (2026-10-18)
+
+Raw inspection slots710/711 are the last Full1166 IDs in active70448 source order:280419 and280541. Slots712–714 are three named source-only extras, explicitly outside1166. This is metadata-tail inspection, not1166 behavioral completion or landing. Lead513 queued at7099f3a38 covers the fixture correction and all later acceptance:19 disguises plus Oomgut20 IDs,21 casters,13 objects,17 stationary actors with explicit time-leap expiry,25 hearthstones. No513 result or new toy landing observed. No new acceptance, runtime/data/native change or own heavy jobs.
+
+| Inspection slot | Exact retained source boundary |
+|---|---|
+|710 Cursed Badge of the Soulcoilers280419/1308693 | Instant self transform56/misc271558/8 for3600000ms, normal recovery0/category2513 recovery600000ms. Existing Ula'tek Brute displays145838/145885/146680/145886/142345 each scale1 with respective weights4/2/1/2/1. Actual learned weighted appearance/restoration/shared reuse remains unverified; no equalized weights, independent timer, permanent curse or long-recovery helper certificate. |
+|711 Shen'dorei Windwell280541/1309196 | Instant base0 summon271783/property6198/Control0/Faction35/flags133128 with both targets87/87 for900000ms, explicit item900000ms recovery/category59. Runtime actor/model absent. Actual portable Windwell placement/interaction/lifecycle remains gap; preserve both target fields and base0, not deduplicated target metadata, assumed summon count, inert prop or invented travel destination. |
+|712 SOURCE-ONLY: Loa-Blessed Victory280820 | Named active70448 extra absent runtime Toy universe; outside Full1166. No import, admission, runtime change or acceptance. Similarity to earlier Victory rows does not authorize adding it. |
+|713 SOURCE-ONLY: Trail of Halazzi280821 | Named active70448 extra absent runtime Toy universe; outside Full1166. No new feature requirement, import, admission or acceptance. |
+|714 SOURCE-ONLY: Nalorakk's Strength Charm280822 | Named active70448 extra absent runtime Toy universe; outside Full1166. No new feature requirement, import, admission or acceptance. |
+
+Evidence: private `rows710-714-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, raw5/runtime2 boundary and original weighted models. Six later raw IDs are also previously named source-only extras, not more Full1166 work.149865 Tea Set untouched.513 awaits execution/result after the separate master compile repair landed at efd627da1 per lead.498 remains last confirmed toy landing, recorded at then-master8707ac0ea; current master repair is not a new toy certificate.
+
 ## Source705–709: mixed Memento, mask, qualified swim, retained Venomous banner and story-view boundaries (2026-10-18)
 
 Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Existing Venomous Banner exact stationary fixture retained among17 identities, including explicit simulation-time expiry, not a new native/qualification certificate.

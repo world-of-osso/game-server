@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy raw source710–714 last Full1166 IDs, not runtime completion
+
+[Exact source matrix](../toy-effects14-coverage.md#source710714-last-full1166-ids-weighted-badge-windwell-and-three-excluded-source-only-names-2026-10-18): last Full1166 IDs280419/280541 preserve Badge weights4/2/1/2/1/shared2513 and missing Windwell271783/base0/both87 targets. Three following names280820/280821/280822 explicitly SOURCE-ONLY/OUTSIDE1166, no import/admission/acceptance. Metadata-tail inspection does not certify1166 behavior/landing. Lead513 queued7099f3a38 after separate master compile repair efd627da1 covers all current acceptance and fixture correction; no result/new toy landing observed. No runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source705–709 mixed state and qualified movement boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source705709-mixed-memento-mask-qualified-swim-retained-venomous-banner-and-story-view-boundaries-2026-10-18): preserve Memento56+370/shared2513, unaudited Mask, qualified water/8993 swim with literal58/base1200 versus descriptive300%, existing Venomous Banner fixture/explicit time-leap scope and Storytime260/2565/7. No guessed curse/speed normalization or generic presentation substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
