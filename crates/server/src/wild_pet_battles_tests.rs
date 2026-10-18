@@ -91,11 +91,12 @@ fn wild_pet_battles_mega_discharge_uses_nonowned_enemy_maker_and_named_same_roun
     assert_eq!(npc.state(boss), 0);
     assert_eq!(npc.state(183), 0); //Unnamed source183=2363 remains a fidelity gap.
     let initial = Battle::new([allies, enemies]).unwrap();
-    //The sourced player is faster: Bite occurs before2365 and is not boosted.
+    //The sourced player is faster: legal Metal Fist384 precedes2365, unboosted.
+    assert_eq!(initial.teams[0].pets[0].abilities[0], 384);
     let (state, events) = initial
         .step(
             &catalog.turns,
-            [Action::Ability(110), Action::Ability(2365)],
+            [Action::Ability(384), Action::Ability(2365)],
             &mut Fixed(500_000),
         )
         .unwrap();
