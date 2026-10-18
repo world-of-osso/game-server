@@ -792,17 +792,46 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
+    let origin_time = h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64();
+    h.app
+        .insert_resource(super::super::cast_admission::CastAdmissions {
+            actor: boss,
+            origin: origin_time,
+            entries: Vec::new(),
+        });
     h.engage(boss);
     let mut cursor = 0;
     let mut casts = Vec::new();
     let mut shield_seen = false;
     let mut treacherous_seen = false;
     for tick in 1..=1400 {
-        if tick == 801 {
-            h.hit_pct(boss, 81.0);
-        }
-        if tick == 901 {
-            h.hit_pct(boss, 1.0);
+        if tick == 801 || tick == 901 {
+            let before = h
+                .app
+                .world()
+                .get::<shared::components::CastState>(boss)
+                .map(|cast| {
+                    (
+                        cast.spell_id,
+                        cast.duration,
+                        cast.elapsed,
+                        cast.pushback_count,
+                    )
+                });
+            h.hit_pct(boss, if tick == 801 { 81.0 } else { 1.0 });
+            let after = h
+                .app
+                .world()
+                .get::<shared::components::CastState>(boss)
+                .map(|cast| {
+                    (
+                        cast.spell_id,
+                        cast.duration,
+                        cast.elapsed,
+                        cast.pushback_count,
+                    )
+                });
+            eprintln!("OMOR native hit tick={tick} cast before={before:?} after={after:?}");
         }
         h.advance(0.05);
         shield_seen |= h.has_aura(boss, 31901);
@@ -816,6 +845,18 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
         cursor = gos.len();
     }
     eprintln!("OMOR source casts={casts:?}");
+    let admissions = &h
+        .app
+        .world()
+        .resource::<super::super::cast_admission::CastAdmissions>()
+        .entries;
+    eprintln!(
+        "OMOR dispatches={:?}",
+        admissions
+            .iter()
+            .map(|cast| (cast.spell, cast.time, &cast.result))
+            .collect::<Vec<_>>()
+    );
     // Go is cast completion. EventMap may defer another due event behind the
     // authored3s Shadow Bolt or2s Treacherous Aura cast; no timer is shortened.
     for (spell, first, repeat) in [
