@@ -58,6 +58,9 @@ const TEAM_HORDE: u8 = 2;
 /// `ITEM_QUALITY_POOR`.
 const QUALITY_POOR: u8 = 0;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct MerchantRequests;
+
 pub struct MerchantPlugin;
 
 impl Plugin for MerchantPlugin {
@@ -77,7 +80,8 @@ impl Plugin for MerchantPlugin {
                     process_buyback_requests,
                     process_repair_requests,
                 )
-                    .chain(),
+                    .chain()
+                    .in_set(MerchantRequests),
             );
     }
 }
@@ -354,15 +358,19 @@ fn open_vendor(interaction: Option<&ActiveInteraction>) -> Option<Entity> {
 }
 
 /// Run `handle` for each request; a refusal answers `MerchantFailed` for its NPC.
+type DeferredRequests<M> = std::collections::HashMap<Entity, Vec<M>>;
+
 fn process<M: lightyear::prelude::Message + std::fmt::Debug>(
     requests: &mut Requests<M>,
     shop: &mut Shop,
+    deferred: &mut DeferredRequests<M>,
     npc_of: impl Fn(&M) -> u64,
     handle: impl Fn(&mut Shop, &mut Customer, M) -> MerchantResult,
 ) {
     if !shop.ready() {
         return;
     }
+    deferred.retain(|connection, _| requests.contains(*connection));
     for (connection, in_world, link, interaction, mut buyback, mut receiver) in requests.iter_mut()
     {
         let mut customer = Customer {
@@ -372,7 +380,13 @@ fn process<M: lightyear::prelude::Message + std::fmt::Debug>(
             vendor: open_vendor(interaction),
             buyback: &mut *buyback,
         };
-        for request in receiver.receive() {
+        let queued = deferred.entry(connection).or_default();
+        // Lightyear clears unread inboxes each frame, so own deferred requests here.
+        queued.extend(receiver.receive());
+        if economic_vendor_pending(shop, &customer) {
+            continue;
+        }
+        for request in queued.drain(..) {
             let npc = npc_of(&request);
             // One line per decoded vendor request: the server-side record of what a client sent.
             info!(
@@ -384,6 +398,23 @@ fn process<M: lightyear::prelude::Message + std::fmt::Debug>(
             }
         }
     }
+}
+
+fn economic_vendor_pending(shop: &Shop, customer: &Customer) -> bool {
+    if !shop
+        .economy
+        .as_ref()
+        .is_some_and(|economy| economy.market_commit_pending())
+    {
+        return false;
+    }
+    let Some(vendor) = customer.vendor else {
+        return false;
+    };
+    let Ok(entry) = shop.vendor_entry(vendor) else {
+        return false;
+    };
+    economic::is_business(shop, entry)
 }
 
 /// Buyback slots live for one session in the world.
@@ -418,20 +449,48 @@ fn send_vendor_lists(
     }
 }
 
-fn process_buy_requests(mut requests: Requests<BuyItem>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, buy);
+fn process_buy_requests(
+    mut requests: Requests<BuyItem>,
+    mut shop: Shop,
+    mut deferred: Local<DeferredRequests<BuyItem>>,
+) {
+    process(&mut requests, &mut shop, &mut deferred, |req| req.npc, buy);
 }
 
-fn process_sell_requests(mut requests: Requests<SellItem>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, sell);
+fn process_sell_requests(
+    mut requests: Requests<SellItem>,
+    mut shop: Shop,
+    mut deferred: Local<DeferredRequests<SellItem>>,
+) {
+    process(&mut requests, &mut shop, &mut deferred, |req| req.npc, sell);
 }
 
-fn process_sell_all_junk_requests(mut requests: Requests<SellAllJunkItems>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, sell_all_junk);
+fn process_sell_all_junk_requests(
+    mut requests: Requests<SellAllJunkItems>,
+    mut shop: Shop,
+    mut deferred: Local<DeferredRequests<SellAllJunkItems>>,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut deferred,
+        |req| req.npc,
+        sell_all_junk,
+    );
 }
 
-fn process_buyback_requests(mut requests: Requests<BuybackItemRequest>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, buy_back);
+fn process_buyback_requests(
+    mut requests: Requests<BuybackItemRequest>,
+    mut shop: Shop,
+    mut deferred: Local<DeferredRequests<BuybackItemRequest>>,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut deferred,
+        |req| req.npc,
+        buy_back,
+    );
 }
 
 /// AzerothCore `Player::BuyItemFromVendorSlot`: `count` purchases of
@@ -681,8 +740,18 @@ fn buy_back(shop: &mut Shop, customer: &mut Customer, req: BuybackItemRequest) -
     Ok(())
 }
 
-fn process_repair_requests(mut requests: Requests<RepairItem>, mut shop: Shop) {
-    process(&mut requests, &mut shop, |req| req.npc, repair);
+fn process_repair_requests(
+    mut requests: Requests<RepairItem>,
+    mut shop: Shop,
+    mut deferred: Local<DeferredRequests<RepairItem>>,
+) {
+    process(
+        &mut requests,
+        &mut shop,
+        &mut deferred,
+        |req| req.npc,
+        repair,
+    );
 }
 
 /// AzerothCore `DurabilityRepairAll` / `DurabilityRepair`: each damaged item costs
