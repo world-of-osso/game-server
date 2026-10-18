@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate535 genuine RED; narrow Singed admission repair pending verification (2026-10-18)
+
+Lead535 covered38ced31bd and failed actual learned Explosive593 before cast: `unsupported toy spell: aura 4` at hearthstone test239; server315 passed/1 failed/1 ignored/477.06s, EXIT101/FMT0/CHECK0. This is missing runtime support, not a fixture error; nothing from535 is landed. Prior acceptance-only reasoning incorrectly assumed this child was admitted.
+
+Authorized repair `5ea7efcaa` adds only Singed1220867/slot0/zero amount to existing `cosmetic::is_visual_aura`, retaining effect6/aura4/zero misc/no trigger/item/mechanic/authored-visual guards. Ordinary aura code already applies, replicates and expires such admitted auras. No blanket dummy4 admission: pinned TC `SpellAuraEffects.cpp:76` maps4 to `HandleAuraDummy`;4836–5117 contains spell-specific apply/remove actions, not a universal no-op. Singed has source self/zero payload/visual156804/5000ms and no matching pinned handler case. Existing unresolved Citizens/Personal Anchor must stay refused. Local branch merges confirmed landed baselined0e0d7fc3 for the same queued64 ordering; Pango223d0916c remains stacked. Focused593 own agent-run compilation/test is running; no GREEN, successor or native certificate yet. [Contract](specs/toys.md), [guard](../crates/server/src/spell_cast/cosmetic.rs).
+
 ## Pango684 cancellation and ordinary shared recovery pending after535 (2026-10-18)
 
 Test/spec `223d0916c` adds `toyfx684_pango_cancel_restores_model_without_bypassing_shared_recovery`, extending the existing Full1166 Pango268717/1283490 baseline, not adding a new runtime identity. Actual learned use selects a source Pango model; real CancelAura removes its replicated aura/restores the previous model. Both learned Pango and Saptor268728/1283502 must still refuse. Ordinary50ms frames advance past580 simulated seconds while Saptor still refuses, then past600 seconds when its own learned root succeeds exactly once with source model/misc260346,8/one-hour duration and unchanged health. Neither aura deadlines nor cooldown state are edited; a failed use near580s must not restart recovery.
