@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source590–594 recipient/paddle/shop/homebind/pose gaps
+
+[Exact source matrix](../toy-effects14-coverage.md#source590594-ally-returnpaddleoutdoor-stallmixed-homebindtorq-pose-boundaries-2026-10-17): true friendly-player sawblade return, waterwalk+250ms periodic raft/jump paddling, missing controlled outdoor stall237883, explosive homebind252+child1220867 and Torq5000ms pose remain exact gaps. No guaranteed return, flat130% speed, generic vendor, ignored child or invented image-file output.507 queued76a8426bf; no new acceptance/runtime/data/native proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source585–589 pennant/cartel banner gaps
 
 [Exact source matrix](../toy-effects14-coverage.md#source585589-nonzero-prized-pennant-and-four-missing-cartel-banners-2026-10-17): Prized nonzero permanent pennant and distinct missing Steamwheedle508828/Bilgewater508826/Blackwater508827/VentureCo508830 cursor banners remain gaps. Item category1246/180s shared metadata retained, not independent timer proof or invented cartel qualification.507 queued76a8426bf including type correction/577; no log result, new acceptance/runtime/data/native proof or own heavy duplicate.

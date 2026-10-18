@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source590–594: ally-return/paddle/outdoor-stall/mixed-homebind/Torq-pose boundaries (2026-10-17)
+
+No new acceptance/runtime/data/native proof or own heavy duplicate. Lead507 remains queued at76a8426bf for current16-disguise/18-caster/12-object acceptances; no result/landing inferred.498 last confirmed landed/master8707ac0ea.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|590 Throwin' Sawblade235799/1218412 | Instant friendly-target21 script77, speed20, inherited5000ms recovery. Actual eligible friendly-player throw/flight/possible automatic return and recipient/multiplicity remain unresolved; no caster aura, attack damage or guaranteed unconditional return. |
+|591 Personal Fishing Barge235801/1218420 | Source1500ms self waterwalk104 plus periodic226/every250ms/trigger0 for600000ms; normal recovery0/start1500ms. Actual raft presentation/water behavior/jump paddling up to130% faster/cleanup remains gap; no waterwalk-only success, constant130% speed or invented periodic child spell. |
+|592 Storefront-in-a-Box235807/1218435 | Source3000ms target47 summon237883/property4563/Control1/Title0/flags133120/base1 for900000ms, inherited900000ms recovery. Runtime creature/model absent. Actual outdoor-only goblin market stall/placement/interaction/lifecycle remains gap; no generic vendor service, inert shop or uncontrolled stationary substitute. |
+|593 Explosive Hearthstone236687/1220729 | Source10000ms homebind252/targets1/9 plus self trigger64→1220867/self dummy4 for5000ms, shared charge2309/start1500ms/normal recovery0. Exact extra explosive payload remains unaudited, not in maintained cosmetic list; actual saved-bind/charge/child action/native outcome together remain unverified. No dropping child to append a20th simple hearthstone or guessed explosion damage. |
+|594 Take-Home Torq236749/1220759 | Instant self trigger64/misc1100→1220760/self dummy4/5000ms; inherited300000ms recovery. Exact Torq/pose/photo presentation and cleanup remain unaudited; no fabricated summoned template, guaranteed image-file output or generic camera/caster-attachment certificate. |
+
+Evidence: private `rows590-594-{readonly-source,action-source,runtime-action-source,active-goal}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6, missing237883 actor and exact2309 category join.149865 Tea Set untouched.
+
 ## Source585–589: nonzero Prized pennant and four missing cartel banners (2026-10-17)
 
 No new acceptance/runtime/data/native proof or own heavy duplicate. Lead507 queued at76a8426bf includes the505 type correction and577 twelfth object; log not yet observed.505 remains compileFAIL,498 last confirmed landed/master8707ac0ea. Full1166 remains unchanged.
