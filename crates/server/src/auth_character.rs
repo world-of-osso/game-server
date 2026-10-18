@@ -330,7 +330,7 @@ pub(crate) fn save_and_despawn_stale_player(
     }
 }
 
-struct PendingCharacterHydration {
+pub(crate) struct PendingCharacterHydration {
     account_id: u64,
     character_id: u64,
     receipt: crate::persistence_writer::CommitReceipt<HydratedCharacter>,
