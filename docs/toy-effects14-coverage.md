@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## st526 server result: Toy CPU acceptance passes, full workspace remains RED (2026-10-18)
+
+Lead-owned candidate2ec2e80bc9d5267f73ad9b9ef25e7fbd58767775 combines feature38d087230 and assigned queued64/skyriding fix31f7e9216. Server compilation finished in2m30s; the server result below is final. Engine phase is separate and has no observed final result. Earlier source-stage pending statements below are historical; this matrix defines current CPU proof, not native readiness.
+
+| Scope | Exact observed result and limit |
+|---|---|
+| Full server target |3909 passed/8 failed/124 ignored in2770.80s; EXIT101/FMT0. Whole workspace is not green or ready. |
+| Toy namespace |`toys::tests`:194 passed/0 failed, including19-row long-disguise helper plus Oomgut,21-caster,13-transmitted-object,17-stationary and25-hearthstone cases. Stationary expiry retains its explicit simulation-time-leap scope; these results are not1166 gameplay/native completion. |
+| Six new identities |Royal618 misc0 learned-use/ordinary ten-minute expiry/restoration/recovery test OK; shared2513 five-identity model/duration/deadline/health/category-report/sibling-refusal baseline OK. Five baseline cases do not prove ordinary one-hour expiry, cancellation, natural ten-minute reuse or weighted frequencies. |
+| Queue regression |Akunda actual learned root/child cursor/trap/cooking/expiry test and source-drift controls OK with assigned fix31f7e9216. Original destination assertion retained; no runtime patch made by this thread. |
+| Other failures and next phase |Seven startup/orientation tests report missing `tdb_jump_charge_params` at world_data.rs272; Slagmaw test fails its119433 target-area damage assertion. Causes/remediation stay with owning lanes; no fix or rerun here. Engine result remains pending; no overall/native/new toy landing claim. |
+
+Evidence: `gate-st526-srv.log`, private `st526-server-inspected.json`, `st526-new-six-observed.json`, `lead-st526-owner.json`. Candidate disguise/hearthstone/Akunda test blobs match38d087230 exactly; general Toy test differences are only two GameDatabase constructor repairs. This thread started no Cargo/server/client/test job and changed no runtime/data,149865 Tea Set or source-only admission.
+
 ## Royal Visage618 misc0 acceptance: pending execution after513 (2026-10-18)
 
 Acceptance-only0305a0e91/ce32419fb adds a separate actual learned-use test for245631/1239480, self56/misc236348/0/display121918, instant600000ms appearance and1800000ms recovery. The19-row misc8 registry/helper, Oomgut and five-case shared2513 baseline remain unchanged.
@@ -7,7 +21,7 @@ Acceptance-only0305a0e91/ce32419fb adds a separate actual learned-use test for24
 | Proof scope | Exact boundary |
 |---|---|
 | Implemented assertions | Real bag learning/UseToy, exact model/aura/misc0/source duration and finite expiry deadline within source time; unchanged health; reported30-minute recovery; refusal before expiry; ordinary50ms simulation frames retain model just before ten-minute expiry, then restore previous model/remove replicated aura; recovery still refuses afterward and only one root cast occurred. |
-| Local evidence | Format/manual changed-test readability/diffcheck pass, commits pushed/read back. No local compilation or execution; covering successor AFTER513 required. No invented RED/GREEN. |
+| Evidence | Format/manual changed-test readability/diffcheck pass, commits pushed/read back. [Lead st526 CPU result](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18) observes this exact test OK; full server remains RED for other failures. No local test job or native certificate. |
 | Unproved | Native body/animation/wire/pixels/audio, full30-minute natural reuse, acquisition/quest eligibility or prince/king selection. Source misc0 is not replaced with8; ordinary simulation-time expiry is not ten minutes of wall-clock presentation. |
 
 Evidence: private `royal618-{active-goal,proof-ledger}.json`, earlier `rows615-619-{readonly-source,action-source,runtime-action-source}.json`. No runtime/data/source-only admission/149865 change or own heavy job. The independent queued64 repair remains with its assigned owner;513 integration failure is not overridden by adding this test.
@@ -24,7 +38,7 @@ Acceptance-only1c143bea6 adds a separate bounded learned-use test for the five p
 |Idol of Ula'tek276925/1301489 |268496 |Badge280419 |
 |Cursed Badge of the Soulcoilers280419/1308693 |271558 |Pango268717 |
 
-Format/manual changed-test readability/diffcheck pass; no local compilation or execution. This new five-identity baseline is AFTER513 and needs a covering successor. It does not certify cancellation, ordinary one-hour expiry, natural ten-minute reuse, weighted selection frequencies or native presentation. Saptor0.1 and Badge4/2/1/2/1 source weights remain untouched; mixed Memento56+370 remains outside the pure-transform fixture. No runtime/data change, source-only admission,149865 edit or own heavy job; queued64 regression repair remains with its assigned owner.
+Format/manual changed-test readability/diffcheck pass; [lead st526 CPU result](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18) observes this exact five-case test OK. No local test job; full server remains RED for other failures. It does not certify cancellation, ordinary one-hour expiry, natural ten-minute reuse, weighted selection frequencies or native presentation. Saptor0.1 and Badge4/2/1/2/1 source weights remain untouched; mixed Memento56+370 remains outside the pure-transform fixture. No runtime/data change, source-only admission,149865 edit or own heavy job; queued64 regression repair remains with its assigned owner.
 
 Evidence: private `shared2513-five-{active-goal,proof-ledger}.json`; exact source/model/category capsules already linked in source684/685/697/702/710 matrices. Earlier metadata-only boundaries remain valid for deeper lifecycle/native gaps; they are not relabelled passing by writing a test.
 
@@ -40,7 +54,7 @@ Read-only source70448/key88d5e8ef05ec5a8446cdec93d142d7c6 inventory covers all11
 | Fully absent root metadata |Unnamed264368 links1271857, whose SpellName/SpellMisc/SpellEffect metadata is absent; item identity metadata is also absent. This agrees with its explicit source665 boundary, not a new guessed mechanic. |
 | Link integrity |Zero ItemXItemEffect links point to missing ItemEffect rows. This is metadata linkage only, not complete executable contracts or behavior. |
 
-Evidence: private `full1166-metadata-availability-{inventory,active-goal}.json`. No import, admission, runtime/data/native change,149865 edit or own heavy job. [Gate513 remains integration RED](#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18); availability accounting does not override that failure.
+Evidence: private `full1166-metadata-availability-{inventory,active-goal}.json`. No import, admission, runtime/data/native change,149865 edit or own heavy job. [Latest full server result remains RED](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18); metadata availability does not override runtime results.
 
 ## Gate513: acceptance helpers pass, queued-trigger destination regression keeps integration RED (2026-10-18)
 
@@ -52,7 +66,7 @@ Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed
 | Server integration |311 passed/1 failed/1 ignored in914.05s; EXIT101. Sole failure: `toyfx84_akunda_real_learning_child_destination_visible_trap_cooking_and_expiry`, line112. |
 | Gate513-covered acceptance helpers |19-disguise registry plus separate Oomgut identity,21-caster helper,13-transmitted-object helper,17-stationary helper and all25 hearthstone cases completed OK. Stationary expiry remains explicit simulation-time leap; helper success is not overall integration/native/landing proof. Cold Ones' source-range fixture correction is covered. |
 | Exact regression boundary |Akunda279076 triggers child279077/target87. Child fire appeared at caster `[-8949.95,82.63029,132.493]` instead of requested parent cursor `[-8947.95,82.63029,132.493]`; original learned-use assertion remains intact. Not cooking failure, fixture range error or permission to weaken destination. |
-| Root cause and authority |Integrated Effect64 now routes to `queued_triggers::schedule`, bypassing the old destination-preserving handler. Queue payload and fresh-child reconstruction retain item level but omit parent `cast_destination`. Preserve that explicit field through queue/delivery; do not substitute caster/self destination. Runtime fix proposed to lead, not implemented under this thread's87-only runtime limit; successor proof required. |
+| Root cause and authority |Integrated Effect64 now routes to `queued_triggers::schedule`, bypassing the old destination-preserving handler. Queue payload and fresh-child reconstruction retain item level but omit parent `cast_destination`. Preserve that explicit field through queue/delivery; do not substitute caster/self destination. Assigned fix31f7e9216 and the [st526 result](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18) subsequently close this exact Akunda CPU regression; full workspace still fails elsewhere. No runtime edit by this thread. |
 
 Evidence: lead log `gate-ty513-srv.log`, private `lead-gate513-inspected.json`, `gate513-current-code-scope-ledger.json`, `gate513-destination-regression-active-goal.json`; integrated `spell_cast/{effects.rs,queued_triggers.rs,mod.rs}`. Individual CPU results do not certify source-choice distributions, native visuals, full recovery or1166 behavior. Tail metadata accounting and ten excluded source-only names remain unchanged. No runtime/data/native change,149865 edit or own heavy duplicate; last confirmed toy landing remains498 at then-master8707ac0ea.
 
@@ -65,7 +79,7 @@ All remaining active-source IDs after the final Full1166 ID280541 are excluded e
 | Active source provenance |12.1.5.70448/key88d5e8ef05ec5a8446cdec93d142d7c6; active symlink resolves70448; Toy SHA-256 `1d3f17983a1f4b3c51230c94e753a1cd12af499aaa1866367151058112bbbaf0`, unchanged from checkpoint559. |
 | Universe membership |1176 distinct source IDs versus1166 runtime Toy IDs; same ten source-only extras, runtime-only empty. Read-only reconciliation, not an import or behavioral census. |
 | Checkpoint559 tail metadata |After228966, all151 authorized runtime IDs are represented in31 source capsules560–714. Raw155 captured IDs include four excluded extras. Missing/unexpected authorized IDs and capsule provenance/order mismatches are all empty. This proves the tail's metadata accounting, not whole1166 review completeness or behavior. |
-| Current acceptance revision |[Gate513 result](#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18) distinguishes successful individual acceptance helpers from failed integration; no new toy landing or own heavy duplicate. |
+| Current acceptance revision |[st526 server result](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18) records current Toy CPU results separately from failed full integration; no new toy landing or own heavy duplicate. |
 | Remaining behavioral scope |Documented mixed effects, recipients, eligibility, interactions, model selection, movement and native presentation gaps remain open. Source-order tail exhaustion does not turn those gaps into success. Last confirmed toy landing remains498 at then-master8707ac0ea; separate master compile repair efd627da1 is not toy proof. |
 
 Evidence: private `source-only-tail715-720-names.json`, `source-tail-active70448-reconciliation.json`, `source-tail-reconciliation-active-goal.json`, `lead-gate513-owner.json`. Earlier70391 receipts remain historical; no relabelled provenance. No runtime/data/native change, source-only admission or149865 Tea Set edit.
