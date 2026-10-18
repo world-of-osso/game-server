@@ -1102,6 +1102,50 @@ fn third_primary_profession_is_refused_but_cooking_is_not() {
 }
 
 #[test]
+fn modern_crafting_unlearned_recipe_refuses_cast_until_real_trainer_purchase() {
+    let mut h = harness(10).unwrap();
+    h.set_gold(1000);
+    let npc = h.open_trainer(5564);
+    h.buy(npc, 264578);
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    // Rank is an explicit fixture prerequisite, not evidence of acquiring skill points.
+    with_learner(h.app.world_mut(), h.player, |learner, profs| {
+        learner.set_skill(profs, 2532, 1, 15, 300);
+    });
+    h.advance(3);
+    h.give(2318, "Light Leather", 4);
+    h.give(2320, "Coarse Thread", 1);
+    h.take::<CastFailed>();
+    let inventory = persistence::load_inventory(h.db(), h.character_id);
+    let professions = h.professions();
+    assert!(!professions.knows(2153));
+    h.craft(2153, 1);
+    assert!(!h.casting());
+    assert!(!h.take::<CastFailed>().is_empty());
+    assert_eq!(
+        persistence::load_inventory(h.db(), h.character_id),
+        inventory
+    );
+    assert_eq!(h.professions(), professions);
+    assert_eq!(
+        persistence::load_professions(h.db(), h.character_id),
+        professions
+    );
+    h.buy(npc, 2153);
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    assert!(h.professions().knows(2153));
+    assert_eq!(h.gold(), inventory.gold - 50);
+    assert_eq!(h.line(2532).unwrap().rank, 15);
+    assert_eq!(h.bag_count(2318), 4);
+    assert_eq!(h.bag_count(2320), 1);
+    assert_eq!(h.bag_count(2303), 0);
+    assert_eq!(
+        h.take::<ProfessionSnapshot>().last(),
+        Some(&h.professions().snapshot())
+    );
+}
+
+#[test]
 fn modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence() {
     let Some(mut h) = harness(10) else { return };
     h.set_gold(1000);
