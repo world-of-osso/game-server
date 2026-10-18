@@ -580,7 +580,7 @@ fn expired_auction_without_bid_returns_item_to_seller() {
             mails: vec![(
                 auction.seller_character_id,
                 super::super::operations::build_auction_mail(
-                    &db,
+                    persistence::next_id(&db, "mail"),
                     &super::super::operations::auction_mail_subject(
                         "AUCTION_EXPIRED_MAIL_SUBJECT",
                         &auction,
@@ -644,7 +644,7 @@ fn relist_after_expired_auction() {
             mails: vec![(
                 seller_id,
                 super::super::operations::build_auction_mail(
-                    &db,
+                    persistence::next_id(&db, "mail"),
                     "Auction expired",
                     "expired",
                     auction.deposit,
