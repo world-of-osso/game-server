@@ -7,7 +7,28 @@ use shared::protocol::InventoryErrorReason;
 const PRODUCT: u32 = 202310;
 
 fn configure_unique_quest(app: &mut App, starter: bool) {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let info = conn
+        .query_row(
+            "SELECT Name,Quality,RequiredLevel,SellPrice FROM content_item WHERE ID=?1",
+            [PRODUCT],
+            |row| {
+                Ok(crate::quest_data::QuestItemInfo {
+                    name: row.get(0)?,
+                    quality: row.get(1)?,
+                    required_level: row.get(2)?,
+                    sell_price: row.get(3)?,
+                })
+            },
+        )
+        .unwrap();
     let mut quests = app.world_mut().resource_mut::<QuestDb>();
+    // The normal catalog retains only authored quest references; this concrete fixture adds its real product row.
+    quests.items.insert(PRODUCT, info);
     let quest = quests.quests.get_mut(&BEATING_THEM_BACK).unwrap();
     quest.objectives.clear();
     quest.choice_items.clear();
@@ -81,6 +102,32 @@ fn expect_cap_error(app: &mut App, client: &Client) {
         failures.is_empty(),
         "ownership-cap refusal must not be mislabeled as a full inventory"
     );
+}
+
+#[test]
+fn quest_reward_max_count_allows_initial_starter_and_reward_creation() {
+    for starter in [true, false] {
+        let mut app = setup_app().expect("authentic quest data");
+        configure_unique_quest(&mut app, starter);
+        let client = spawn_client(&mut app, 1);
+        let npc = spawn_npc(&mut app, MARSHAL_MCBRIDE, 2.0);
+        enter_world(&mut app, &client);
+        accept(&mut app, &client, npc, BEATING_THEM_BACK);
+        if !starter {
+            turn_in(&mut app, &client, npc, BEATING_THEM_BACK, None);
+        }
+        assert!(received::<InventoryError>(&mut app, &client).is_empty());
+        assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+        let inventory = persistence::load_inventory(db(&app), client.character_id);
+        let products: Vec<_> = inventory
+            .items
+            .iter()
+            .filter(|item| item.item_id == PRODUCT)
+            .collect();
+        assert_eq!(products.len(), 1);
+        assert_eq!(products[0].stack_count, 1);
+        assert_eq!(products[0].name, "Defective Doomsday Device");
+    }
 }
 
 #[test]
