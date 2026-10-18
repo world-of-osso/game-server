@@ -24,6 +24,7 @@ pub mod area_trigger;
 mod attack_power_tests;
 #[cfg(test)]
 mod attack_speed_tests;
+mod aura_spell_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
 #[cfg(test)]
@@ -59,9 +60,17 @@ mod control_dream_tests;
 pub(crate) mod cosmetic;
 pub mod creature;
 #[cfg(test)]
+mod creature_trigger_aura_tests;
+#[cfg(test)]
+mod creature_trigger_dead_caster_tests;
+#[cfg(test)]
 mod creature_type_damage_tests;
 #[cfg(test)]
 mod critical_block_tests;
+#[cfg(test)]
+mod dead_cast_progress_tests;
+#[cfg(test)]
+mod dead_caster_channel_tests;
 mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
@@ -122,7 +131,13 @@ mod dummy9_tests;
 mod dummy_tests;
 pub mod effects;
 #[cfg(test)]
+mod excluded_aura_spell_tests;
+#[cfg(test)]
+mod excluded_caster_type_tests;
+#[cfg(test)]
 mod fount_strength_tests;
+#[cfg(test)]
+mod full_trigger_dead_target_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
@@ -130,15 +145,33 @@ mod hit;
 pub(crate) mod mobile_banking;
 #[cfg(test)]
 mod mobile_banking_tests;
+#[cfg(test)]
+mod normal_allow_dead_target_tests;
 pub(crate) mod omor_orbital;
 #[cfg(test)]
+mod ordinary_dead_caster_tests;
+#[cfg(test)]
+mod queued_trigger_cost_tests;
+#[cfg(test)]
+mod queued_trigger_target_tests;
+#[cfg(test)]
+mod queued_trigger_tests;
+#[cfg(test)]
 mod readiness_lifetime_tests;
+#[cfg(test)]
+mod required_caster_aura_tests;
 #[cfg(test)]
 mod scourge_eruption_tests;
 #[cfg(test)]
 mod summon_lifetime_tests;
 #[cfg(test)]
+mod target_aura_type_tests;
+#[cfg(test)]
 mod touch_of_death_tests;
+#[cfg(test)]
+mod triggered_caster_aura_tests;
+#[cfg(test)]
+mod triggered_target_aura_tests;
 #[cfg(test)]
 mod warrior_stun_tests;
 mod warrior_stuns;
@@ -260,6 +293,8 @@ pub(crate) mod toy_scripts;
 mod toy_weather;
 mod toy_wormhole;
 
+pub(crate) mod queued_triggers;
+
 pub struct SpellCastPlugin;
 
 impl Plugin for SpellCastPlugin {
@@ -275,6 +310,7 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<teleport_positions::SpellTargetPositions>()
             .add_systems(Startup, teleport_positions::load_positions_startup)
             .init_resource::<missiles::PendingSpellHits>()
+            .init_resource::<queued_triggers::PendingTriggers>()
             .init_resource::<guardian::GuardianSpells>()
             .add_systems(Startup, guardian::load_startup)
             .init_resource::<summon::SummonPropertiesStore>()
@@ -297,6 +333,7 @@ impl Plugin for SpellCastPlugin {
                     charge::advance,
                     missiles::resolve_due_hits,
                     start_queued_casts,
+                    queued_triggers::resolve_due,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
                     assisted_costs::publish,
@@ -340,6 +377,10 @@ pub enum CastFailure {
     Moving,
     NoTarget,
     InvalidTarget,
+    /// `SPELL_FAILED_CASTER_AURASTATE` (also covers required/excluded aura spells).
+    CasterAuraState,
+    /// `SPELL_FAILED_TARGET_AURASTATE` (also covers required/excluded aura spells).
+    TargetAuraState,
     OutOfRange,
     TooClose,
     /// `SPELL_FAILED_UNIT_NOT_INFRONT`.
@@ -409,6 +450,14 @@ impl CastFailure {
             Self::Moving => (R::CantCastWhileMoving, None),
             Self::NoTarget => (R::NoTarget, None),
             Self::InvalidTarget => (R::InvalidTarget, None),
+            Self::CasterAuraState => (
+                R::InvalidTarget,
+                Some("SPELL_FAILED_CASTER_AURASTATE".into()),
+            ),
+            Self::TargetAuraState => (
+                R::InvalidTarget,
+                Some("SPELL_FAILED_TARGET_AURASTATE".into()),
+            ),
             Self::OutOfRange => (R::OutOfRange, None),
             Self::TooClose => (R::TooClose, None),
             Self::NotInFront => (R::NotInFront, None),
@@ -1524,6 +1573,23 @@ fn taught_by_known_spell(world: &World, caster: Entity, spell_id: u32) -> bool {
         })
 }
 
+fn ordinary_cast_allows_dead_caster(spell: &SpellInfo) -> bool {
+    const ALLOW_CAST_WHILE_DEAD: u32 = 0x0080_0000;
+    crate::auras::is_passive(spell) || attributes(spell, 0) & ALLOW_CAST_WHILE_DEAD != 0
+}
+
+/// TC CheckCast: ordinary passive spells and AllowCastWhileDead survive this check.
+fn check_ordinary_caster_life(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    if !targets::is_alive(world, caster) && !ordinary_cast_allows_dead_caster(spell) {
+        return Err(CastFailure::CasterDead);
+    }
+    Ok(())
+}
+
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
 fn validate_start(
@@ -1533,14 +1599,13 @@ fn validate_start(
     explicit: Option<Entity>,
     ignore_cast_in_progress: bool,
 ) -> Result<Option<Entity>, CastFailure> {
-    if !targets::is_alive(world, caster) {
-        return Err(CastFailure::CasterDead);
-    }
+    check_ordinary_caster_life(world, caster, spell)?;
+    casting_restriction::check_cast(world, caster, spell)?;
+    shapeshift::check_cast(world, caster, spell)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
     if let Some(block) = crate::auras::cast_blocker(world, caster, spell) {
         return Err(CastFailure::CrowdControlled(block));
     }
-    casting_restriction::check_cast(world, caster, spell)?;
-    shapeshift::check_cast(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     validate_caster_state(world, caster, spell)?;
     toy_scripts::check_cast(world, caster, spell)?;
@@ -1567,6 +1632,7 @@ fn validate_start(
         )));
     }
     let target = validate_target(world, caster, spell, explicit, Sight::Start)?;
+    aura_spell_restrictions::check_target(world, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
@@ -1732,7 +1798,12 @@ fn validate_target(
     // A unit of another map copy is not found (`ObjectAccessor::GetUnit` searches the
     // caster's map).
     let target_alive = targets::is_alive(world, target);
-    if target_alive == resurrects
+    let invalid_life = if target_alive {
+        resurrects
+    } else {
+        !spell.allows_dead_target()
+    };
+    if invalid_life
         || !targets::same_map(world, caster, target)
         || !targets::creature_type_allowed(world, spell, target)
     {
@@ -1957,9 +2028,11 @@ fn insert_cast_state(world: &mut World, caster: Entity, spell: &SpellInfo, cast:
         CastType::Channel => channel_allows_moving(world, caster, spell),
     };
     debug!(caster = ?caster, state = ?cast, "Cast state started");
-    world
-        .entity_mut(caster)
-        .insert((cast.clone(), PendingCastSpell(spell.clone())));
+    let pending = PendingCastSpell {
+        spell: spell.clone(),
+        caster_was_alive: targets::is_alive(world, caster),
+    };
+    world.entity_mut(caster).insert((cast.clone(), pending));
     mark_dirty(world, caster);
 }
 
@@ -2048,15 +2121,15 @@ pub(crate) fn execute_cast(
     spell: &SpellInfo,
     explicit: Option<Entity>,
 ) -> Result<(), CastFailure> {
-    if !targets::is_alive(world, caster) {
-        return Err(CastFailure::CasterDead);
-    }
+    check_ordinary_caster_life(world, caster, spell)?;
     mobile_banking::check_cast(world, caster, spell.id)?;
     druid_transform::before_cast(world, caster, spell, 0)?;
     casting_restriction::check_cast(world, caster, spell)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
+    aura_spell_restrictions::check_target(world, explicit, spell)?;
     if cast_time_ms(world, caster, spell) > 0 {
         toy_facing::check_cast(world, caster, spell.id, explicit)?;
     }
@@ -2087,9 +2160,7 @@ pub(crate) fn execute_cast(
         // TC Spell.cpp3543-3546: one UseItem credit after successful cast checks.
         crate::achievement::record_item_use(world, caster, item);
     }
-    spend_costs(world, caster, &costs);
-    scripts::empower_gargoyles(world, caster, &costs);
-    crate::profession::take_reagents(world, caster, spell);
+    take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
     log_event(
         world,
@@ -2444,7 +2515,8 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let handler = effects::handler(effect.effect);
+        let handler = scripts::effect_handler(spell.id, effect.index)
+            .or_else(|| effects::handler(effect.effect));
         let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
             if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
@@ -2773,6 +2845,27 @@ fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<Spell
     spell
 }
 
+fn plan_triggered_spell(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> Result<TargetPlan, CastFailure> {
+    druid_transform::before_cast(world, caster, spell, depth)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    // CheckTarget's TARGETS_DEAD is independent of BAD_TARGETS/relation bypass.
+    // Non-unit objects have no Health and do not take this unit-only check.
+    let target_dead = explicit
+        .and_then(|target| world.get::<Health>(target))
+        .is_some_and(|health| health.current <= 0.0);
+    if target_dead && !spell.allows_dead_target() {
+        return Err(CastFailure::InvalidTarget);
+    }
+    aura_spell_restrictions::check_target(world, explicit, spell)?;
+    plan_targets(world, caster, spell, explicit, true)
+}
+
 fn launch_triggered_spell(
     world: &mut World,
     caster: Entity,
@@ -2780,12 +2873,7 @@ fn launch_triggered_spell(
     explicit: Option<Entity>,
     depth: u8,
 ) -> bool {
-    if let Err(failure) = druid_transform::before_cast(world, caster, spell, depth) {
-        warn!("Triggered spell {} skipped: {failure:?}", spell.id);
-        return false;
-    }
-    // `TRIGGERED_FULL_MASK` includes `TRIGGERED_IGNORE_TARGET_CHECK`.
-    match plan_targets(world, caster, spell, explicit, true) {
+    match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(plan) => {
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
@@ -2797,6 +2885,66 @@ fn launch_triggered_spell(
             false
         }
     }
+}
+
+/// Effect64 clears IGNORE_POWER_COST/IGNORE_REAGENT_COST from FULL_MASK.
+pub(super) fn cast_queued_trigger_with_item_level(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    item_level: Option<u16>,
+) -> bool {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return false;
+    };
+    spell.cast_item_level = item_level;
+    match execute_costed_trigger(world, caster, &spell, explicit, depth) {
+        Ok(()) => true,
+        Err(failure) => {
+            warn!("Queued spell {spell_id} skipped: {failure:?}");
+            false
+        }
+    }
+}
+
+fn execute_costed_trigger(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    depth: u8,
+) -> Result<(), CastFailure> {
+    druid_transform::before_cast(world, caster, spell, depth)?;
+    aura_spell_restrictions::check_caster(world, caster, spell)?;
+    let explicit = validate_target(world, caster, spell, explicit, Sight::Start)?;
+    aura_spell_restrictions::check_target(world, explicit, spell)?;
+    let costs = spell_costs(world, caster, spell)?;
+    crate::profession::check_cast_items(world, caster, spell)?;
+    let prepared = resources::snapshot(world, caster, spell, &costs);
+    let plan = plan_targets(world, caster, &prepared, explicit, true)?;
+    take_cast_resources(world, caster, &prepared, &costs);
+    crate::achievement::record_spell_cast(world, caster, prepared.id);
+    missiles::launch(world, caster, &prepared, plan, depth);
+    druid_transform::after_cast(world, caster, &prepared);
+    Ok(())
+}
+
+/// Native TakePower/TakeReagents still check costs before this payment boundary.
+fn take_cast_resources(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    costs: &[(CostPool, f32)],
+) {
+    const SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES: u32 = 0x20;
+    if attributes(spell, 6) & SPELL_ATTR6_DO_NOT_CONSUME_RESOURCES != 0 {
+        return;
+    }
+    spend_costs(world, caster, costs);
+    scripts::empower_gargoyles(world, caster, costs);
+    crate::profession::take_reagents(world, caster, spell);
 }
 
 fn spend_costs(world: &mut World, caster: Entity, costs: &[(CostPool, f32)]) {
@@ -3065,6 +3213,21 @@ pub(crate) fn receive_stop_requests(world: &mut World) {
     }
 }
 
+/// Creature::Update does not run Unit events in DEAD (after corpse removal).
+fn npc_event_updates_suspended(world: &World, caster: Entity) -> bool {
+    world.get::<Npc>(caster).is_some()
+        && world.get::<crate::combat::DeathState>(caster).is_some()
+        && world.get::<crate::combat::Corpse>(caster).is_none()
+}
+
+fn cast_can_remain_dead(world: &World, caster: Entity) -> bool {
+    world
+        .get::<PendingCastSpell>(caster)
+        .is_some_and(|pending| {
+            !pending.caster_was_alive && ordinary_cast_allows_dead_caster(&pending.spell)
+        })
+}
+
 pub(crate) fn advance_casts(world: &mut World) {
     let dt = world.resource::<Time>().delta_secs();
     let mut casts = world.query::<(Entity, &CastState)>();
@@ -3078,47 +3241,66 @@ pub(crate) fn advance_casts(world: &mut World) {
             continue;
         };
         let alive = targets::is_alive(world, caster);
-        if (!cast_while_moving && moving) || !alive {
+        if !alive && npc_event_updates_suspended(world, caster) {
+            continue;
+        }
+        let movement_interrupts = !cast_while_moving && moving;
+        let death_interrupts = !alive && !cast_can_remain_dead(world, caster);
+        if movement_interrupts || death_interrupts {
             debug!(caster = ?caster, moving, alive, cast_while_moving, "Cast progress interrupted by movement or death");
             cancel_cast(world, caster);
             continue;
         }
-        let Some(mut cast) = world.get_mut::<CastState>(caster) else {
-            continue;
-        };
-        let result = cast.tick(dt);
-        let spell_id = cast.spell_id;
-        let target = (cast.target != 0)
-            .then(|| Entity::try_from_bits(cast.target))
-            .flatten();
-        mark_dirty(world, caster);
-        match result {
-            // Channel periodic effects tick as auras (`crate::auras`).
-            CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-            CastTickResult::ChannelComplete => {
-                crate::auras::channel_completed(world, caster, spell_id);
-                end_cast(world, caster);
-                crate::scripted_ai::dispatch(
-                    world,
-                    caster,
-                    crate::scripted_ai::Hook::ChannelFinished { spell_id },
-                );
-            }
-            CastTickResult::Completed => {
-                debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
-                world.entity_mut(caster).remove::<CastState>();
-                complete_cast(world, caster, spell_id, target);
-            }
+        if let Some(mut pending) = world.get_mut::<PendingCastSpell>(caster)
+            && pending.caster_was_alive != alive
+        {
+            pending.caster_was_alive = alive;
+        }
+        tick_and_resolve_cast(world, caster, dt);
+    }
+}
+
+fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
+    let Some(mut cast) = world.get_mut::<CastState>(caster) else {
+        return;
+    };
+    let result = cast.tick(dt);
+    let spell_id = cast.spell_id;
+    let target = (cast.target != 0)
+        .then(|| Entity::try_from_bits(cast.target))
+        .flatten();
+    mark_dirty(world, caster);
+    match result {
+        // Channel periodic effects tick as auras (`crate::auras`).
+        CastTickResult::InProgress | CastTickResult::ChannelTick => {}
+        CastTickResult::ChannelComplete => {
+            crate::auras::channel_completed(world, caster, spell_id);
+            end_cast(world, caster);
+            crate::scripted_ai::dispatch(
+                world,
+                caster,
+                crate::scripted_ai::Hook::ChannelFinished { spell_id },
+            );
+        }
+        CastTickResult::Completed => {
+            debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
+            world.entity_mut(caster).remove::<CastState>();
+            complete_cast(world, caster, spell_id, target);
         }
     }
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.
 #[derive(Component)]
-struct PendingCastSpell(SpellInfo);
+struct PendingCastSpell {
+    spell: SpellInfo,
+    /// Life observed at insertion or the previous progress tick, not a native flag.
+    caster_was_alive: bool,
+}
 
 fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Option<Entity>) {
-    let Some(PendingCastSpell(spell)) = world.entity_mut(caster).take::<PendingCastSpell>() else {
+    let Some(PendingCastSpell { spell, .. }) = world.entity_mut(caster).take::<PendingCastSpell>()
+    else {
         debug!(caster = ?caster, spell_id, "Cast completion has no pending spell snapshot");
         return;
     };

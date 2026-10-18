@@ -14,8 +14,10 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ### Prepared actors
 
+- [x] A separate copy-only `herald-nazan` profile projects17536's actual base0/Heroic2 CT0 fields/models/addon, without changing the existing `herald` profile's preserve-Nazan contract. Preserve CT0 and its unresolved cache bounds1; runtime context, not an importer-assigned220/1065, chooses native levels. No synthetic Normal1, population, binding or authored-provenance changes.
 - [x] Project17537's actual base0 and Heroic2, and21252's actual base0/Normal1/Heroic2, with source models/addons. Do not create a Normal1 row for17537; preserve unrelated difficulties, Nazan, population, bindings and group357's flags.
-- [ ] Resolve Nazan17536's sourceCT0 through its real map/area context before runtime use. Record `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` until implemented; neither legacy62 nor an uncontextualized level1 cache is acceptance.
+- [x] Resolve sourced17536CT0 at the ordinary-spawn boundary through real map/area context: Normal1→220, Heroic2→1065, source deltas/modifiers and derived level/HP/armor/scaled damage. `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` is retired only for that proved boundary; neither legacy62 nor an uncontextualized level1 cache is acceptance. Fixtures add no canonical Nazan placement.
+- [ ] Prove actual runtime use of the prepared source template and same-actor `UpdateEntry`; retain `HERALD_NAZAN_ENTRY_MORPH_UNIMPLEMENTED`. Ordinary-spawn fixture proof does not certify morph or the encounter.
 
 ### Lifecycle and phases
 
@@ -42,9 +44,12 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - `crates/server/src/scripted_ai/instance_script.rs` — existing copy-local boss/data state; Herald source lifecycle is not implemented.
 - `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
-- `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows;17536 remains unresolved until map-context tuning works.
+- `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows; the separate `herald-nazan` profile selects17536 base0/Heroic2 CT0 with source models/addon, without changing `herald`. Real-copy producer/refusal/idempotence/preservation controls are GREEN; ordinary context resolution is proved separately and runtime use/morph remain open.
 
 ## Tests asserting this spec
+
+- `scripts/tests/test_nazan_templates.py` — actual read-only world snapshot and real `herald-nazan` CLI; exact represented CT0 base/Heroic fields/models/addon, idempotence, unrelated-data preservation and byte-identical drift refusal. Genuine real-copy missing-profile REDb4a524732 becomes new/Herald/Omor GREEN3/3 at0a3ab4b24 (27.783s), followed by Nazan-only GREEN1/1 at7fe38b45e (26.460s) after read/write naming cleanup; ResourceWarning escalated, warning-free. This is data-only, not morph acceptance.
+- `crates/server/src/zones_context_tuning_tests.rs` — sourced17536 ordinary Normal/Heroic map stats, actual MCNK area ancestry, explicit-template/critter/known-zero/missing-context controls, authored-source stats and real PostStartup publication ordering. Seven enabled cases pass within affected54/54 at33dcb7b6 (177.24s); no canonical Nazan spawn or morph acceptance.
 
 - `scripts/tests/test_herald_templates.py` — actual-world-copy CLI projection of17537/21252, idempotence, exact authored gold and byte-identical identity refusal; GREEN1/1 at252a23c9 (12.947s), with unchanged Omor actual-copy control retained from479979bd.
 - `scripts/tests/test_herald_binding_cli.py` — pinned-source/70448 binding CLI, primary-only preservation and named identity gaps; GREEN with unchanged binding controls and warning-free affected producer fixtures.

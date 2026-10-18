@@ -68,9 +68,14 @@ impl EventMap {
         self.insert(self.time + delay_ms, event_id);
     }
 
+    /// `CancelEvent`: remove all queued instances without changing clock/repeat state.
+    pub fn cancel(&mut self, event_id: u32) {
+        self.events.retain(|&(_, id)| id != event_id);
+    }
+
     /// `RescheduleEvent`: cancel every queued event of this id before scheduling.
     pub fn reschedule(&mut self, event_id: u32, delay_ms: u64) {
-        self.events.retain(|&(_, id)| id != event_id);
+        self.cancel(event_id);
         self.schedule(event_id, delay_ms);
     }
 
@@ -115,5 +120,40 @@ impl EventMap {
     #[cfg(test)]
     pub fn pending(&self) -> Vec<u32> {
         self.events.iter().map(|&(_, id)| id).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::EventMap;
+
+    #[test]
+    fn event_map_cancel_removes_all_matching_deadlines_and_preserves_repeat() {
+        let mut events = EventMap::default();
+        events.schedule(3, 500);
+        events.schedule(1, 750);
+        events.schedule(1, 900);
+        events.schedule(2, 800);
+        events.schedule(4, 900);
+        events.update(500);
+        assert_eq!(events.execute_event(), Some(3));
+        events.cancel(1);
+        events.cancel(2);
+        events.repeat(500);
+        events.update(399);
+        assert_eq!(events.execute_event(), None);
+        events.update(1);
+        assert_eq!(events.execute_event(), Some(4));
+        events.update(100);
+        assert_eq!(events.execute_event(), Some(3));
+        assert_eq!(events.execute_event(), None);
+        events.schedule(1, 10);
+        events.schedule(1, 20);
+        events.reschedule(1, 30);
+        events.update(29);
+        assert_eq!(events.execute_event(), None);
+        events.update(1);
+        assert_eq!(events.execute_event(), Some(1));
+        assert_eq!(events.execute_event(), None);
     }
 }

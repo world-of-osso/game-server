@@ -41,6 +41,7 @@ fn source_harness(corner: [f32; 2], height: f32) -> Harness {
             dead_bosses: Vec::new(),
         },
         false,
+        Some(&mut crate::test_data::ground_map()),
     );
     crate::game_objects::spawn_map_game_objects(&mut commands, &objects, COPY, 0, None);
     queue.apply(h.app.world_mut());

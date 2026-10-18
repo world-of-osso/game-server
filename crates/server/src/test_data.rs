@@ -105,6 +105,22 @@ pub(crate) fn world_db_path() -> PathBuf {
     require(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/world.db"))
 }
 
+/// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
+pub(crate) fn ground_map() -> crate::ground::GroundMap {
+    let connection = rusqlite::Connection::open_with_flags(
+        world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("read-only terrain map metadata");
+    let store = crate::maps::store::load_map_store(&connection).expect("source map metadata");
+    let wdts = store
+        .maps
+        .into_iter()
+        .map(|(id, map)| (id, map.wdt_file_data_id))
+        .collect();
+    crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), wdts)
+}
+
 /// `path`, panicking with how to provide it when it does not exist.
 pub(crate) fn require(path: PathBuf) -> PathBuf {
     assert!(
