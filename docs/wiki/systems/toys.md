@@ -2,6 +2,198 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## st526 Toy CPU results without whole-workspace success (2026-10-18)
+
+[Exact current proof matrix](../../toy-effects14-coverage.md#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18): candidate2ec2e80bc/feature38d087230/fix31f7e9216 compiled; server3909/8/124ignored/2770.80s/EXIT101/FMT0. Toy namespace194 passed/0 failed, including Royal misc0, shared-five baseline, old19/Oomgut,21 casters,13 objects,17 stationary and25 hearthstones. Akunda cursor/cooking/lifetime and drift controls pass with assigned queue fix. Seven missing-table startup/orientation failures plus Slagmaw damage failure keep the workspace RED; engine result pending. No own runtime/data/test job, native/full1166 gameplay or new landing certificate. Earlier pending labels retain source-stage history; this linked matrix governs current proof limits.
+
+## Royal Visage618 misc0 acceptance pending after513 (2026-10-18)
+
+[Exact pending acceptance](../../toy-effects14-coverage.md#royal-visage618-misc0-acceptance-pending-execution-after513-2026-10-18):0305a0e91/ce32419fb tests245631/1239480/236348/misc0/display121918 through real bag learning/use, exact ten-minute deadline, ordinary near-expiry/restoration/aura removal/health and thirty-minute recovery refusal. Old19 misc8 registry/helper, Oomgut and shared-five fixture unchanged. Format/manual readability/diffcheck pass; [st526 CPU result](#st526-toy-cpu-results-without-whole-workspace-success-2026-10-18) observes this exact test OK, with full server RED elsewhere and no local test job. No native/full-reuse/quest/selection certificate or runtime/data change; queued64 repair remains assigned elsewhere.
+
+## Shared2513 five-identity learned-use baseline pending after513 (2026-10-18)
+
+[Exact new baseline matrix](../../toy-effects14-coverage.md#shared2513-five-identity-baseline-new-acceptance-pending-after513-2026-10-18) adds acceptance-only1c143bea6 for Pango/Saptor/Masquerade/Idol/Badge: real learned source model/one-hour aura deadline/health, ten-minute2513 report and learned-sibling refusal without cast/model/deadline mutation. Old19 long-recovery registry/helper and Oomgut remain unchanged. Format/manual readability/diffcheck pass; [st526 CPU result](#st526-toy-cpu-results-without-whole-workspace-success-2026-10-18) observes this exact five-case baseline OK, not whole-workspace success. No cancellation/hour expiry/natural reuse/weighted-frequency/native certificate; mixed Memento excluded, no runtime/data/source-only admission change. Assigned owner retains queued64 repair.
+
+## Full1166 metadata availability without failure inference (2026-10-18)
+
+[Exact availability matrix](../../toy-effects14-coverage.md#full1166-metadata-availability-exact-absences-not-failure-verdicts-2026-10-18) checks all1166 runtime IDs against active70448:29 identical source-identity/runtime-content absences,15 without TriggerType0 roots, two named roots without SpellMisc plus unnamed264368's fully absent spell metadata, zero dangling ItemEffect links. Missing metadata is not automatically a code/import failure or permission for another trigger/default mechanic; retained Rezan behavior is not revoked by absent SpellMisc. No source-only admission/import/runtime change or behavior proof from this inventory; [current integration status](#st526-toy-cpu-results-without-whole-workspace-success-2026-10-18) remains RED.
+
+## Gate513 queued-trigger destination regression (2026-10-18)
+
+[Exact gate matrix](../../toy-effects14-coverage.md#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18): server311/1/1ignored/914.05s/EXIT101, client9/FMT0. All then-covered acceptance helpers completed OK, but Akunda's actual child279077 fire spawned at caster instead of parent cursor. Integrated Effect64's new queue drops parent `cast_destination`, retaining only item level before fresh-child reconstruction; old destination-preserving handler is bypassed. Explicit destination must survive queue/delivery, not a weaker fixture or caster fallback. Assigned fix31f7e9216 subsequently passes the exact Akunda case in [st526](#st526-toy-cpu-results-without-whole-workspace-success-2026-10-18); this thread made no runtime/data/native change. Whole workspace remains RED elsewhere, without native/full1166 completion or new landing certificate.
+
+## Tail metadata reconciliation and unchanged Full1166 boundary (2026-10-18)
+
+[Exact proof matrix and excluded names](../../toy-effects14-coverage.md#tail-reconciliation-and-source-only-names715720-metadata-proof-not-runtime-completion-2026-10-18) reconciles all151 authorized IDs after checkpoint559/228966 across31 active70448 source capsules, with no missing/unexpected IDs or provenance/order mismatches. Source1176/runtime1166 difference remains the same ten named extras, none admitted/imported/accepted; final six names are boundary-only. Toy hash and active symlink agree with checkpoint559. This establishes tail metadata accounting, not whole1166 review completeness or runtime behavior. [Gate513 status](#gate513-queued-trigger-destination-regression-2026-10-18) records the failed integration separately from passing individual helpers; no new toy landing or own heavy duplicate. Mixed/native gaps remain open.
+
+## Last Full1166 IDs, weighted badge, Windwell and excluded source-only names (2026-10-18)
+
+[Raw source710–714 matrix](../../toy-effects14-coverage.md#source710714-last-full1166-ids-weighted-badge-windwell-and-three-excluded-source-only-names-2026-10-18) reaches the last two Full1166 IDs280419/280541: Badge retains weights4/2/1/2/1 and one-hour appearance/shared2513 ten-minute recovery; missing Windwell271783 retains base0/both87 targets. Later Loa-Blessed Victory280820, Trail of Halazzi280821 and Nalorakk's Strength Charm280822 are named SOURCE-ONLY/OUTSIDE1166, with no import/admission/acceptance. Metadata-tail inspection is not runtime completion or landing. [Gate513 status](#gate513-queued-trigger-destination-regression-2026-10-18) supersedes queue-only status after separate master compile repair efd627da1; no new toy landing. No new acceptance/runtime/data/native change or own heavy work.
+
+## Mixed Memento, mask, qualified swim, retained Venomous banner and story-view boundaries (2026-10-18)
+
+[Source705–709 matrix](../../toy-effects14-coverage.md#source705709-mixed-memento-mask-qualified-swim-retained-venomous-banner-and-story-view-boundaries-2026-10-18) preserves Memento56+370/shared2513, unaudited Amani Mask, water/8993-qualified swim241+58/base1200+56 alongside descriptive300%, existing Venomous Banner146432/60s fixture and Storytime260/2565/7. No dropped370, invented curse, normalized speed formula, native banner or generic story attachment certificate. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
+
+## Unnamed homebind metadata, current-camp recall, shared Idol, corpse haunt and targeted star boundaries (2026-10-18)
+
+[Source700–704 matrix](../../toy-effects14-coverage.md#source700704-unnamed-homebind-metadata-current-camp-recall-shared-idol-corpse-haunt-and-targeted-star-boundaries-2026-10-18) preserves unnamed276370/1299513 homebind source with missing item identity, actual current-camp9076 recall, Idol shared2513 short recovery, corpse226/15000ms/trigger0 haunting and Otoola's targeted32→dummy4 badge. No fabricated name, fixed/homebind recall, long-recovery transform certificate, inert haunt or self-only star substitute. Metadata only; no runtime/data/native change or own heavy work, lead successor pending.
+
+## Pending Corrosive Victory and mixed Effigy, short-category mask, stand, companion-command boundaries (2026-10-18)
+
+[Source695–699 matrix](../../toy-effects14-coverage.md#source695699-pending-corrosive-victory-and-mixed-effigy-short-category-mask-stand-companion-command-boundaries-2026-10-18) adds acceptance-onlyad2f092f7:275988/1298433/30-minute aura via unchanged caster helper, now21 identities/old20 retained; behavior awaits lead successor. Effigy retains1250 trigger payload plus transform/200ms area chain; NPC scale0.6 is not player scale. Mask retains one-hour appearance/shared2513 ten-minute recovery; Stand retains47/138/base0; Companion Crystal retains150/critter kill authority. No flattened child, stationary-only stand or combat-pet shortcut. No runtime/data/native change or own heavy work.
+
+## Pending Pearl disguise, throne, loot-bot, kill-rain and excluded source-only identity (2026-10-18)
+
+[Raw source690–694 matrix](../../toy-effects14-coverage.md#source690694-pending-pearl-disguise-throne-loot-bot-kill-rain-and-one-excluded-source-only-identity-2026-10-18) adds acceptance-only83c3de3d2 for Full1166 Pearl274921/1295623/265732/ten displays/5min/1hr:19 disguise rows plus separate Oomgut20 identities, old18/helper unchanged; behavior pending lead successor. This raw block has four runtime identities plus named275039 Curse of the Aqir, explicitly SOURCE-ONLY/OUTSIDE Full1166 with no admission/import/acceptance. Missing target87/base0 Throne260074, resource-gated corpse loot bot and kill-proc enemy-player rain remain gaps. No static throne/free loot/inert rain substitute; no runtime/data/native change or own heavy jobs.
+
+## Shared Saptor category, missing nap/tent, retained Umbral banner and scripted starfish boundaries (2026-10-18)
+
+[Source685–689 matrix](../../toy-effects14-coverage.md#source685689-shared-saptor-category-missing-naptent-retained-umbral-banner-and-scripted-starfish-boundaries-2026-10-18) preserves Saptor's shared2513 ten-minute recovery/one-hour aura and122805 weight0.1, missing Nap Mat263791, existing Umbral Banner143906/60s fixture with explicit time-leap scope, missing target22/base0 Tent265250 and Starfish77 plus permanent child4. No equalized models, target87 tent, chair/fishing bonus or inert badge substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
+
+## Mixed props, staff image, camera guides and short-recovery Pango boundaries (2026-10-18)
+
+[Source680–684 matrix](../../toy-effects14-coverage.md#source680684-mixed-props-staff-image-camera-guides-and-short-recovery-pango-boundaries-2026-10-18) preserves missing Hourglass/Bench mixed16 payloads and distinct aura/cancel contracts, source-instant missing original-owner staff image, camera293/60/321 with both mutual164 guide removals, and Pango's one-hour transform versus category2513 ten-minute recovery. Existing five Pango models establish metadata, not learned/restoration/category behavior; long-recovery helper cannot certify this timing without changing its contract. No runtime unsupported/RED claim, invented channel flag or generic camera substitute. No runtime/data/native change or own heavy jobs.
+
+## Black-hole game, key inventory, rainbow chain, retained pillow and dual hologram boundaries (2026-10-18)
+
+[Source675–679 matrix](../../toy-effects14-coverage.md#source675679-black-hole-game-key-inventory-rainbow-chain-retained-pillow-and-dual-hologram-boundaries-2026-10-18) preserves actual430 feeding game, all-shard inventory conversion, mixed rainbow241/56misc12/42/409 with proc2000ms and both164 removals, retained11-second Pillow fixture and both missing hologram259655/259656/base0/stacking contracts. No automatic win/free key, pure disguise, recast parachute, one static gnome or guessed holiday recovery. Metadata only; no runtime/data/native change or own heavy work, lead successor pending.
+
+## Pending Corewarden hearthstone and corpse ritual, mail, viewer, current-location travel boundaries (2026-10-18)
+
+[Source670–674 matrix](../../toy-effects14-coverage.md#source670674-pending-corewarden-hearthstone-and-corpse-ritual-mail-viewer-current-location-travel-boundaries-2026-10-18) adds acceptance-onlyf30ff0f2c:actual slot1 265100/1273401/source10s/shared2309 blocks Preyseeker263933 through unchanged helper, now25 hearthstones/old24 retained; behavior awaits lead successor. Corpse25 ritual/-100 scale/two9000 payloads, missing mailbox257683/base0/shared2066, Brann viewer233/base550/9049/251 and qualified current-Abundant3+77 travel remain gaps. No self-disguise, inert rift, stat buff or guessed destination substitute; no runtime/data/native change or own heavy work.
+
+## Pending Dominating Victory and missing metadata, qualified flare, corpse flag/rod boundaries (2026-10-18)
+
+[Source665–669 matrix](../../toy-effects14-coverage.md#source665669-pending-dominating-victory-and-missing-metadata-qualified-flare-corpse-flagrod-boundaries-2026-10-18) adds acceptance-only9470e4859:264413/1271973/30-minute aura via unchanged caster helper, now20 identities/old19 retained; behavior awaits lead successor. Unnamed264368/1271857 lacks item/spell metadata; missing257541 flare retains32/64/32 chain, distinct area groups and base0; corpse flag22/93 and Rod25/mixed395/shrink/two5000 payloads/permanent corpse transform remain gaps. No substituted metadata, static helper or caster disguise. No runtime/data/native change or own heavy work.
+
+## Pending Preyseeker hearthstone and minipet leash, tap-state, mixed mushroom, triggered-homebind boundaries (2026-10-18)
+
+[Source660–664 matrix](../../toy-effects14-coverage.md#source660664-pending-preyseeker-hearthstone-and-minipet-leash-tap-state-mixed-mushroom-triggered-homebind-boundaries-2026-10-18) adds acceptance-only3b3f52940:263933/1270814/source10s/shared2309 blocks Naaru263489 via unchanged bind helper, now24 hearthstones/old23 retained; behavior awaits lead successor. Permanent target90 leash, once/twice lens state, missing642496+42098 mixed76/179 mushroom and Mycomancer actual10s root1299014/64→instant252 child1286909 remain distinct gaps. No caster-only leash, fabricated tap window, ordinary mushroom summon or direct-child hearthstone substitution. No runtime/data/native change or own heavy jobs.
+
+## Pending Naaru hearthstone and skip-rock, mixed mushroom, retained catch, periodic voidwalker boundaries (2026-10-18)
+
+[Source655–659 matrix](../../toy-effects14-coverage.md#source655659-pending-naaru-hearthstone-and-skip-rock-mixed-mushroom-retained-catch-periodic-voidwalker-boundaries-2026-10-18) adds acceptance-only8ead527f5:263489/1270583/source10s/shared2309 blocks Lightcalled257736 through unchanged persisted-bind helper, now23 hearthstones/old22 retained; behavior awaits lead successor. Skip-rock nonzero trigger/base1, qualified50+179 mushroom with missing404325/40621, retained3300ms Valdekar fixture and100ms/trigger0/three-voidwalker contract remain distinct. No guessed count/impulse/body or inert periodic aura substitute; no runtime/data/native change or own heavy work.
+
+## Mixed parachute, cycle-script, retained wine, photo and ash boundaries (2026-10-18)
+
+[Source650–654 matrix](../../toy-effects14-coverage.md#source650654-mixed-parachute-cycle-script-retained-wine-photo-and-ash-boundaries-2026-10-18) preserves parachute's five root effects/negative98 payload/area8537/category1470, three distinct Cycle script base points, existing Wine fixture, nonzero-trigger proc Photo Finisher and both Ashen Horn140 edges including35/395 child. No global slow-fall, fabricated spirit, screenshot substitute or normal64 flattening. Metadata only; no new acceptance/runtime/data/native proof or own heavy work, lead successor pending after cancelled509.
+
+## Pending Lightcalled hearthstone and jumpable-monument, gold-fountain boundaries (2026-10-18)
+
+[Source645–649 matrix](../../toy-effects14-coverage.md#source645649-pending-lightcalled-hearthstone-and-jumpable-monument-gold-fountain-boundaries-2026-10-18) adds acceptance-only57aa5b0c5:257736/1261979/source10s/shared2309 blocks Cosmic246565 via unchanged saved-bind helper, now22 hearthstones/old21 retained; behavior awaits lead successor. Missing247940/254652/254655 monuments require actual shared jump collision with distinct casts/base0, not ordinary scenery. Missing255051 fountain retains mixed64→425841/effect65 and actual gold-offering authority; no guessed cost/reward. No runtime/data/native change or own heavy jobs.
+
+## Pending Dredger disguise and linked-companion, mixed406 boundaries (2026-10-18)
+
+[Source640–644 matrix](../../toy-effects14-coverage.md#source640644-pending-dredger-disguise-and-linked-companion-mixed406-boundaries-2026-10-18) adds acceptance-only2cc3d9ec3 for256893/1260864/254071/four exact displays/10-minute appearance/15-minute recovery:18 disguise rows plus separate Oomgut19 identities, old17/helper unchanged; behavior awaits lead successor. Exodar's two495→1258382 edges and linked428 chain, missing traveling cat253791, Rutaani406/misc20/target0 and Steward406/misc294/self remain distinct gaps. No static companion or pure-transform substitute for mixed406. No runtime/data/native change or own heavy work.
+
+## Pending Potatoad disguise and pet-command, bundle, egg, Arcantina boundaries (2026-10-18)
+
+[Source635–639 matrix](../../toy-effects14-coverage.md#source635639-pending-potatoad-disguise-and-pet-command-bundle-egg-arcantina-boundaries-2026-10-18) adds acceptance-onlye29972e08 for252265/1254376/251887/five exact source displays/10-minute appearance/20-minute recovery:17 disguise rows plus separate Oomgut18 identities, old16/helper unchanged. Behavior pending lead successor;509 cancelled before start for unrelated master compile interaction. Exact vanity-pet90/87 move/stay, missing bundle251069/base0/target32, unaudited Potatoad Egg and two distinct Arcantina script base-point payloads remain gaps. No combat-pet substitute, assumed summon count or invented travel destination; no runtime/data/native change.
+
+## Broker disguise, shared grafts, mixed stall and updraft boundaries (2026-10-18)
+
+[Source630–634 matrix](../../toy-effects14-coverage.md#source630634-broker-disguise-shared-grafts-mixed-stall-and-updraft-boundaries-2026-10-18) preserves Cartel Xy transform56/misc0 without invented creature, distinct Void/Light marks sharing category2433/50-minute recovery, missing outdoor stall249056 plus effect164→carried-crate removal, and full updraft105/104/106/506 movement contract. No zero-dummy cosmetic admission, independent graft timer, static stall or flight substitute. Metadata only; lead509 queued without result/landing, no own heavy work.
+
+## Goggles, distinct crates, wormhole and strategy-game boundaries (2026-10-18)
+
+[Source625–629 matrix](../../toy-effects14-coverage.md#source625629-goggles-distinct-carried-crates-wormhole-and-strategy-game-boundaries-2026-10-18) preserves goggles233/3569/247 viewer presentation, distinct carried-crate3393/3392 poses, missing wormhole actor248783 with actual random Midnight travel, and permanent strategy-game430/3707 plus separate two-second298624 trigger. Metadata only; no generic aura, static portal or automatic-win substitute. Gate507 failed only Cold Ones234951 at the five-yard fixture cursor; source/runtime range169 is0–3 yards. Test-only172cb1782 uses a nonzero in-range cursor, other12 rows/assertions unchanged. Lead509 queued at that revision; no behavioral success or landing inferred.
+
+## Pending POST/Cosmic hearthstones and balloon/scaled-spire/phase-guise boundaries (2026-10-17)
+
+[Source620–624 matrix](../../toy-effects14-coverage.md#source620624-pending-postcosmic-hearthstones-and-balloonscaled-spirephase-guise-boundaries-2026-10-17) adds acceptance-onlyd981a866d:POST245970/1240219 and actual slot1 Cosmic246565/1242509 via unchanged source10s/saved-bind/shared2309 helper, now21 identities/old19 retained; behavior AFTER507. Missing controlled slot6 Brewer balloon246042 and actual Phase Diver state remain gaps; existing Lightning Spire display131280/scale0.5 fixture retained. No mail service from Title5, shortened POST cast, substituted Cosmic slot0, invented phase immunity or native/recharge certificate. No runtime/data/new native or own heavy duplicate.
+
+## Pending Sea-Blessed Shrine and kill-proc/memory/rolling/Royal Visage boundaries (2026-10-17)
+
+[Source615–619 matrix](../../toy-effects14-coverage.md#source615619-pending-sea-blessed-shrine-and-kill-procscripted-memoryrolling-snowballroyal-visage-boundaries-2026-10-17) adds acceptance-only4a0133a68:245942/1240082/246037/display129958/cursor/180s as17th stationary actor, old16/helper unchanged; behavior AFTER507. Existing explicit time-leap expiry is not ordinary50ms/wall proof. Kill-proc42/trigger0 voice, script-only K'areshi appearance, missing controlled snowball245763/holiday recovery and actual Royal Visage misc0/display121918 remain gaps; no inert proc, guessed appearance, stationary rolling prop or borrowed misc8 certificate. No runtime/data/new native or own heavy duplicate.
+
+## Pending Etheric Victory and portal/void/snowman/transmorpher boundaries (2026-10-17)
+
+[Source610–614 matrix](../../toy-effects14-coverage.md#source610614-pending-etheric-victory-and-portalvoidsnowmanmixed-transmorpher-boundaries-2026-10-17) adds acceptance-onlyb7df42b22:244470/1237584/1800s as19th audited caster identity, old18/helper unchanged; behavior AFTER507. Missing any-player Dornogal portal244139, unaudited Void pose, mixed snowman293/321/27/56/holiday timer and mixed Brann245374/65/77 service remain gaps. NPC scale2.2 is not player scale; description-reference1237986 is not a root trigger. No runtime/data/new native or own heavy duplicate.
+
+## Courier-mail/finger-ribbon/outdoor-balloon/skiff/pennant boundaries (2026-10-17)
+
+[Source605–609 matrix](../../toy-effects14-coverage.md#source605609-courier-mailfinger-ribbonoutdoor-balloonskiffpennant-boundaries-2026-10-17) preserves missing actual Courier Lynx242136 mail/category2066, finger-ribbon art, outdoor riding balloon243246, one-hour skiff104+250ms226/jump paddling and nonzero Astral pennant gaps. No inert courier/balloon, gameplay ring, flat130% speed or copied sibling art.507 runtime still lacks final result/landing;603 thirteenth object remains newer. No runtime/data/native proof or own heavy duplicate.
+
+## Pending Dastardly Banner and crate/juggling/scaled-banner-podium boundaries (2026-10-17)
+
+[Source600–604 matrix](../../toy-effects14-coverage.md#source600604-pending-dastardly-banner-and-cratejugglingretained-scaled-banner-podium-boundaries-2026-10-17) adds acceptance-only3eabc6183:239007/1227030/527088/type5/display102616/size1/cursor/180s as13th object, old12/helper unchanged; behavior awaits head AFTER507. Distinct carried crate3185 and exact juggling removal203/reapplication64/mixed293/406 remain gaps. Existing Flame's Radiance scale0.75 case and authentic grounded static Podium20min CPU/historical native-source receipts retained, not new wall-duration/recharge/qualification proof. No runtime/data/new native or own heavy duplicate.
+
+## Flarendo/fountain and paired bobber overrides (2026-10-17)
+
+[Source595–599 matrix](../../toy-effects14-coverage.md#source595599-flarendofountain-and-paired-fishing-bobber-override-boundaries-2026-10-17) retains exact Flarendo pose/fountain36404 and three paired258 fishing overrides: Rocket520304/520305, Goblet520306/520311, Wellington520308/520309 against35591, each referencing131474. Only replacement520305 exists at runtime, type17/display101984/size2; no generic35591 art substitute, deduplicated pair or two immediate Fishing casts. Actual bobber selection/fishing/cleanup remains gap; no catch bonus from flavor.507 queued, no new proof/runtime/data/native change or own heavy duplicate.
+
+## Ally-return/paddle/outdoor-stall/mixed-homebind/Torq-pose boundaries (2026-10-17)
+
+[Source590–594 matrix](../../toy-effects14-coverage.md#source590594-ally-returnpaddleoutdoor-stallmixed-homebindtorq-pose-boundaries-2026-10-17) preserves friendly-player sawblade return, raft waterwalk plus250ms periodic/jump paddling, missing controlled outdoor stall237883, homebind252 plus unaudited explosive child1220867 and Torq's5000ms pose. No caster projectile substitute, fixed130% buff, generic vendor, child-dropping twentieth hearthstone or invented photo-file output.507 queued at76a8426bf; no new proof/runtime/data/native change or own heavy duplicate.
+
+## Prized pennant and four missing cartel banners (2026-10-17)
+
+[Source585–589 matrix](../../toy-effects14-coverage.md#source585589-nonzero-prized-pennant-and-four-missing-cartel-banners-2026-10-17) retains nonzero permanent Prized pennant and exact Steamwheedle508828/Bilgewater508826/Blackwater508827/VentureCo508830 cursor-banner gaps. All four runtime objects absent; explicit shared item category1246/180s is not four independent timers. No guessed object art/type/scale, per-use cartel eligibility or sibling substitution.507 queued at76a8426bf; no result, runtime/data/native change or own heavy duplicate.
+
+## Shard/permanent poses/repeated jump proc/tea boundaries and505 type correction (2026-10-17)
+
+[Source580–584 matrix](../../toy-effects14-coverage.md#source580584-mixed-shardpermanent-posesrepeated-jump-procinteractive-tea-boundaries-2026-10-17) preserves no-template transform plus scale, permanent circlet/reading presentation, both Hat42→1216102 jump edges and missing interactive tea506612. No guessed model/scale, ring stats, spawned desk, deduplicated proc or Tea149865 copy.505 stopped at compile E0277/EXIT101;76a8426bf fixes only registry creature typeu32→i32, all16 rows/assertions unchanged, format/manual readability/diffcheck pass. Next lead proof must include577 twelfth object; no runtime result, data/native change or own heavy duplicate.
+
+## Pending Cold Ones rack and mixed chair/device/crate/homebind boundaries (2026-10-17)
+
+[Source575–579 matrix](../../toy-effects14-coverage.md#source575579-pending-cold-ones-rack-acceptance-and-mixed-chairdevicecratehomebind-boundaries-2026-10-17) adds acceptance-only0e4c5ed9b:234951/1215364/505415/type22/display97591/scale0.75/actual cursor/180s as12th object, old11/helper unchanged; format/manual readability/diffcheck pass, behavior needs head AFTER505. Rack's Data0 can aura is not automatic trigger/item yield. Missing controlled chair232549/mixed aura, step-on goblination area36000, distinct carried crate3141 and homebind252 plus cancellation298 remain gaps; no ordinary chair/self transform/20th simple hearthstone substitution. Lead505 queued through Golem573; no result/landing inferred or own heavy duplicate.
+
+## Pending Golem self-transform and banners/unnamed-season/carried-crate boundaries (2026-10-17)
+
+[Source570–574 matrix](../../toy-effects14-coverage.md#source570574-pending-golem-self-transform-and-retained-bannersunnamed-seasoncarried-crate-boundaries-2026-10-17) adds acceptance-only06d44ef20:233202/473407/234479/six valid models/instant30min/1h recovery as16th disguise plus Oomgut17IDs; old15/helper unchanged, behavior awaits lead covering head. Existing Prized/Astral source-banner cases retained;232308/233151 remains missing item/model metadata with literal `[Season]`. Hallowfall self293/misc3118/1 carried-crate appearance remains gap, not inventory supply yield. No separate possession actor inferred from Golem self56, runtime/data/native proof or own heavy duplicate.
+
+## Seasonal banners and unnamed season-four metadata gap (2026-10-17)
+
+[Source565–569 matrix](../../toy-effects14-coverage.md#source565569-existing-seasonal-banners-and-unnamed-season-four-metadata-gap-2026-10-17) retains existing Tempered/Prized/Unbound/Forged exact display/owner/map/faction0/front2yd/stationary60s behavior cases.232304 remains a Toy identity with literal `[Season]` description but missing70448 ItemSparse/runtime item/233147 creature-model; no guessed seasonal name or sibling art. All source roots use property64/600s recovery. No new pass/native/reward-eligibility/recharge certificate, runtime/data or own heavy duplicate.
+
+## Retained balloons/victory and random-delve/recipient-spotlight/local-disguise boundaries (2026-10-17)
+
+[Source560–564 matrix](../../toy-effects14-coverage.md#source560564-retained-balloonsvictory-and-random-delverecipient-spotlightlocal-disguise-boundaries-2026-10-17) records exact local70448 metadata. Balloon source actor and Explosive Victory caster cases already exist; no duplicate fixture or expanded caster count. Random Bountiful Delve travel/completion reset, actual target57 party-member Spotlight and Undermine-only aura243/misc35 consequences remain gaps, not static bot/self aura/body transform. Source232267 model absent;231372 retains both model weights/scales.498 remains landed; no new behavioral/native proof, runtime/data or own heavy duplicate.
+
+## Trial/bling/observer-spiders/qualified-return-home/screen boundaries (2026-10-17)
+
+[Source555–559 matrix](../../toy-effects14-coverage.md#source555559-trialblingobserver-spidersqualified-return-homescreen-boundaries-2026-10-17) preserves missing avoid-hit Trial actor, unaudited permanent Coldflame attachment, observer-only233/7825/240 spider perception, qualified Threads homebind and actual2243 screen presentation. Threads description requires qualification while item faction/reputation/on-use condition fields are0; no invented threshold/account scope/per-use gate or generic Human-helper full certificate. No global NPC/screen mutation, inert trial or flavor-derived veteran rule.498 landed/master8707ac0ea; no further runtime/data/new native/own heavy duplicate.
+
+## Pending Arachnoserum acceptance and pennant/linked-carry/stone-metadata boundaries (2026-10-17)
+
+[Source550–554 matrix](../../toy-effects14-coverage.md#source550554-pending-arachnoserum-acceptance-and-pennantlinked-carrystone-metadata-boundaries-2026-10-17) adds acceptance-onlyc3fe0958c:228705/462934/229772/sixteen valid models/instant10min/1h recovery as15th disguise plus Oomgut16IDs, unchanged registry phase/old14 data.119763 NPC scale0.4 is metadata, not player scaling. Format/manual readability/diffcheck pass; newer covering head required. Nonzero pennant, actual outdoors Lil Wick linked285/Control4 carry and stone slow90/periodic action remain gaps; root462924 SpellMisc absence is70391-specific, not fabricated default timing or all-profile absence. Lampyridae exact attachment CPU scope retained.498 landed/master8707ac0ea; no further runtime/data/own heavy duplicate.
+
+## Pending Shroud acceptance;498 landed and selected-pet/paid-elixir/guard-radius boundaries (2026-10-17)
+
+[Source545–549 matrix](../../toy-effects14-coverage.md#source545549-pending-shroud-acceptance-and-selected-petpaid-elixirguard-radiuspennant-boundaries-2026-10-17) adds acceptance-only7463a1090:226810/459531/228081/three models/source1.5s/20min/1h recovery as14th disguise plus Oomgut15IDs; existing cast_ms phase/old13 data unchanged. Format/manual readability/diffcheck pass, newer head required. Selected minipet90 leash, actual50silver Noggenfogger outcomes, City-of-Threads guard-radius visualization and nonzero pennant remain gaps, not caster/own-critter substitution/free aura/guessed overlay/stealth. Lead confirms498 LANDED/master8707ac0ea; local c013 ancestry exits0. Its older11disguise/10object/16caster scope does not certify new14/11/18 expansions; no further runtime/data/own heavy duplicate.
+
+## Lead498 PASS and pending Kobyss/Pileus acceptance (2026-10-17)
+
+[Current498 scope and source540–544 matrix](../../toy-effects14-coverage.md#lead498-scoped-passnewer-expansions-still-pending-2026-10-17):498c013 PASS306/0failed/1ignored545.19s/client9/EXIT0/FMT0,5m37s/no warnings, landing pending lead confirmation. Corrected11-disguise/473Stasis,19 hearthstones,16 stationary/16 caster/10 object scopes pass—not newer13/18/11 expansions.
+
+f44658cf6 adds Kobyss225641/455426/226283/41 choices/source1.5s cast/30min and Pileus225910/456572/226964/29 choices/10min, both1h recovery, now13 disguise rows plus Oomgut14IDs. Count-free identity slice retains old11 values/order/verified cast0; data-driven pending-halfcast phase preserves readable behavior and source timing. Format/manual readability/diffcheck pass, future covering head required. Permanent reading/nonzero pennant and exact enemy-player/frontal corpse flag remain gaps; no scale/count/model-pool/native extrapolation or runtime/data/own heavy duplicate.
+
+## Pending Toxic Victory acceptance and owned-pet-cooking/finery/dyeing/role-dummy boundaries (2026-10-17)
+
+[Source535–539 matrix](../../toy-effects14-coverage.md#source535539-pending-toxic-victory-acceptance-and-owned-pet-cookingfinerydyeingrole-dummy-boundaries-2026-10-17) adds acceptance-only896be829e:225547/443689/source1800s as18th existing learned/cancel caster identity, pending newer head AFTER498c013. Owned non-combat pet target150/candle/395 cooking area, missing royal finery chest, periodic five-second dyeing wheel and outdoors opposing-role damage-and-heal Icarus dummy remain exact gaps, not caster light/inert props/invented items/damage-only dummy. Format/manual readability/diffcheck pass; no further runtime/data/new native/own heavy duplicate.498 corrected Claw/Stasis/Stone individually ok, aggregate still pending.
+
+## Layered-spin/self-memory/torch/mixed-levitation/moving-hologram boundaries (2026-10-17)
+
+[Source530–534 matrix](../../toy-effects14-coverage.md#source530534-layered-spinself-memorytorchmixed-levitationmoving-hologram-boundaries-2026-10-17) retains Ravager slow33 and nested5s/10s/30s periodic chain ending7s stun/parent removal, personalized Memory Chord with literal11686/weight1/22903/weight0, unaudited permanent torch, all hover/featherfall/waterwalk/animation1151 siblings and missing forward-racing horse225414. No cosmetic-only spin, removal-as-cast, generic player-copy body, cooking torch guess, free flight or stationary horse shortcut. No further runtime/data/new proof/own heavy duplicate;498 in progress.
+
+## Permanent-pod/random-wormhole/seed/recipient-gift boundaries and retained Camera (2026-10-17)
+
+[Source525–529 matrix](../../toy-effects14-coverage.md#source525529-permanent-podrandom-wormholeseedrecipient-gift-boundaries-and-retained-camera-2026-10-17) preserves permanent three-model Escape Pod, RequiredSkill2875 random Khaz Algar wormhole/missing actor, mixed seed/area33467 and friendly missile Hat/60s aura plus actual recipient223316 product. Product shares the toy's name but has distinct ID/DurationInInventory60/MaxCount1; caster-only creation is not the contract. Existing Filmless Camera attachment/cancel CPU proof retained, not native photography output. No further runtime/data/new proof/own heavy duplicate;498 lead-owned/in progress.
+
+## Pending Cherry Trail acceptance and puntables/opt-in-fireworks/cooking/water-blaster boundaries (2026-10-17)
+
+[Source520–524 matrix](../../toy-effects14-coverage.md#source520524-pending-cherry-trail-acceptance-and-puntablesopt-in-fireworkscookingwater-blaster-boundaries-2026-10-17) adds acceptance-only4b21ddb7e:220777/447446/source600s as17th existing learned/cancel caster identity, pending newer head AFTER498c013. Missing puntable-box creature237586 is not same-number Bonfire GO; fireworks require attack-to-opt-in viewers/event recovery, missing452051 Lantern retains cooking service, and existing wild type22 water display still refuses its unscripted445930. No inert/shared-number/service shortcut or new native/runtime/data proof. Format/manual readability/diffcheck pass; no own heavy duplicate.
+
+## Pending colorful-chair acceptance and wing/two-person-cracker boundaries (2026-10-17)
+
+[Source515–519 matrix](../../toy-effects14-coverage.md#source515519-pending-colorful-chair-acceptance-and-wingtwo-person-cracker-boundaries-2026-10-17) adds acceptance-only66ca57ee0:218112/441839→434317/type7/89277/size1.5/source2yd/300s, now11 transmitted-object identities, old ten unchanged. Format/manual readability/diffcheck pass; future head AFTER498c013 required, no seated/native/recharge proof. Distinct Yu'lon/Niuzao occasional eight-hour/20s-period wings and paired Cracker/one surprise recipient remain gaps; no guaranteed proc, name-derived combat buff or solo/both-recipient reward. Draconic Banner exact seasonal CPU witness retained. No further runtime/data/own heavy duplicate.
+
+## Gate496 ordering corrections and source510–514 boundaries (2026-10-17)
+
+[Current496/498 proof and source matrix](../../toy-effects14-coverage.md#gate496-fixture-order-failures-corrected498-pending-2026-10-17) supersedes earlier running496 entries.496 FAILED303/2/1ignored536.82s/client9/EXIT101/FMT0,2m16s/no warnings:450 checked longer recovery during GCD,473 checked item recovery after restored Frostbolt started combat. Lead-approved test-onlyc013eafdd waits ordinary1500ms and reorders Stasis check before Frostbolt; no reset/clear/weakened assertion, corrected behavior pending498 including503.16 stationary/16 caster/10 object/18 hearthstone fixtures have scoped individual successes, not whole-gate/landing proof.
+
+[Source510–514](../../toy-effects14-coverage.md#source510514-critter-beamduck-eggfaction-chestperiodic-wing-boundaries-2026-10-17) retains critter128/beam/figurine, missing interactive duck egg, unnamed216887 faction equipment chest and distinct Xuen/Chi-Ji occasional eight-hour/20s-period/category2272 wing contracts; no generic stun, inert egg, invented item or guaranteed proc. No further runtime/data/new native/own heavy duplicate.
+
 ## Mount-randomization/quest-credit/colored-parasol/fallen-player burial boundaries (2026-10-17)
 
 [Source505–509 matrix](../../toy-effects14-coverage.md#source505509-mount-randomizationquest-creditcolored-parasolfallen-player-burial-boundaries-2026-10-17) preserves per-mount customization plus quest80201 completion, three distinct colored conditional Parasols and fallen-player Gravestone transformation. All colored child remove164 fields literally reference white parent431949; do not silently rewrite to each color, treat removal as recast or drop105/409/312/431982 siblings. Existing burial model117236 does not certify dead-player eligibility/lifecycle or allow a living-target substitute. No further runtime/data/new proof/own heavy duplicate.496 marks disguise/Stasis failed, final diagnostics pending.
@@ -351,6 +543,8 @@ Two additional holiday roots use the same persisted-bind/shared2309-charge path:
 163463/279223 triggers279222 after source1.5s cast+3s fixed missile flight, then one143222 source soul. Genuine importer RED precedes exact one-entry/ten-model admission; actual learned-use RED finds early arrival because front47 was unrecognized and unit-only delay storage discarded unitless destination flight. The existing scheduler now retains that delay without a fake target or toy-ID special case. Real cast/flight, source display membership/front,30s recovery/reuse and coexisting independent60s lifetimes pass. Whole-Toy150/150, affected49/49, importer3/3 and check/fmt pass. [Exact revisions, current-copy publication receipt and boundaries](../../toy-effects14-coverage.md#forlorn-toll85-source-summon-2026-10-16) distinguish server timing from all-ten native appearances, ghost/wandering semantics and complete-toy parity; canonical template publication remains lead-owned.
 
 ## Akunda source child and visible trap (2026-10-16)
+
+The queued64 cursor regression and captured-context fix are tracked in [spell casting](spell-casting.md#queued-effect64-captured-destinations--2026-10-18); its current proof limits apply to the destination chain below.
 
 163211/279076 first refuses linked trap302746; exact source type6/display16675 profile now joins31442/display0 without generic trap admission. A separate genuine child-position RED finds279077 at the caster rather than clicked point; existing effect64/32 unit-trigger routing now retains the parent's explicit destination/item level through its depth-checked loader/launcher. Actual learned-use root/child/visible-source trap, ordinary recipe consumption/output, environmental CozyFire refresh, five source-drift refusals and ordinary300s cleanup pass. Whole-Toy149/149, affected29/29 and check/fmt/manual readability pass. [Exact proofs and source boundaries](../../toy-effects14-coverage.md#akunda84-visible-linked-trap-boundary-2026-10-16) separate server behavior from native pixels/audio, broad trigger completeness and full-retail parity;82 missing ItemSparse/83 specialized title27 remain named gaps.
 

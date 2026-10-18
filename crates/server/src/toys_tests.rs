@@ -1276,6 +1276,9 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         (199771, 388092, 381320, 5, 77020, 0.5, 0.0, 180),
         (199900, 388267, 206590, 5, 10103, 1.0, 0.0, 300),
         (206008, 411653, 402852, 5, 82612, 1.0, 0.0, 180),
+        (218112, 441839, 434317, 7, 89277, 1.5, 2.0, 300),
+        (234951, 1215364, 505415, 22, 97591, 0.75, 0.0, 180),
+        (239007, 1227030, 527088, 5, 102616, 1.0, 0.0, 180),
     ] {
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) = setup(&dir.path().join("toys.redb"));
@@ -1298,12 +1301,17 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
             });
         learn_effect_toy(&mut h, character, item);
         // Banners/survey tools use target87: the clicked point, not the caster's feet.
-        // Chair42766/MOLL-E54710 remain target47's authored forward offsets.
+        // Chairs42766/441839 and MOLL-E54710 retain target47's authored forward offsets.
         let cursor_object = matches!(
             item,
-            45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900 | 206008
+            45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900 | 206008 | 234951 | 239007
         );
-        let destination = cursor_object.then_some([4.0, 0.0, -3.0]);
+        // Cold Ones1215364 uses SpellRange169: three yards, not the banners' five-yard point.
+        let destination = if item == 234951 {
+            Some([2.0, 0.0, -1.0])
+        } else {
+            cursor_object.then_some([4.0, 0.0, -3.0])
+        };
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
@@ -3322,8 +3330,13 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
         (194056, 383065, 0), // Source duration-1: permanent until cancelled.
         (204220, 403491, 300000),
         (205418, 409891, 600000),
+        (220777, 447446, 600000),
+        (225547, 443689, 1800000),
         (230727, 467285, 1800000),
+        (244470, 1237584, 1800000),
         (259240, 1264653, 300000),
+        (264413, 1271973, 1800000),
+        (275988, 1298433, 1800000),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("attachment-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
@@ -3419,6 +3432,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (202859, 399250, 200969, 112322, 300000),
         (202862, 399253, 200972, 112325, 300000),
         (202865, 399257, 200975, 112328, 300000),
+        (245942, 1240082, 246037, 129958, 180000),
         (272339, 1290957, 263908, 143906, 60000),
         (279590, 1306978, 270689, 146432, 60000),
     ] {
@@ -3442,7 +3456,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             202865 => (Some(399268), 18.0), // Whelp Egg: speed 30, 0.6-second flight.
             _ => (None, 2.0),
         };
-        let destination = if matches!(item, 89869 | 184415) || missile_root.is_some() {
+        let destination = if matches!(item, 89869 | 184415 | 245942) || missile_root.is_some() {
             let origin = h.app.world().get::<Position>(h.caster).unwrap();
             Some([origin.x + cursor_distance, origin.y, origin.z])
         } else {
