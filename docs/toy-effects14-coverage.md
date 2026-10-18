@@ -1,5 +1,25 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate496 fixture-order failures corrected;498 pending (2026-10-17)
+
+Inspected496 through4df7af2e6 FAILED303passed/2failed/1ignored536.82s/client9/EXIT101/FMT0, compile2m16s/no warnings. Exact450 Claw first recovery check saw source1500ms GCD and returned OnGlobalCooldown, not OnCooldown. Exact473 Stasis checked toy recovery after restored Frostbolt entered combat, returning AffectingCombat. Lead accepted both as fixture ordering errors; test-onlyc013eafdd naturally advances30frames/1500ms before longer recovery and checks Stasis recovery before casting the restored Frostbolt. Identities/durations/cast/refusal assertions remain; no timer/combat reset, failure clearing or expectation weakening. Format/fmtcheck/manual readability/diffcheck/exact push readback pass, corrected behavior not yet certified.
+
+496 has explicit individual ok lines for all16 stationary sources,16 caster/Cinder,10 transmitted objects/Nightmare and all18 hearthstones through Flame482.503Stone is after that head. Lead498 throughc013eafdd now includes503 and both corrections with toys/toy/mail/summon/missile/fmt filters; queued, aggregate/landing pending. Earlier496 running/pending statements below are historical. Evidence: `lead-gate496-inspected.json`, `gate496-fixture-order-{active-goal,proof-ledger}.json`, `lead-gate498-owner.json`. No further runtime/data/own heavy duplicate.
+
+## Source510–514: critter-beam/duck-egg/faction-chest/periodic-wing boundaries (2026-10-17)
+
+No new acceptance/runtime/data/native proof. Distinct target qualifiers, interactions and occasional visual cadence remain unresolved;498 successor owns corrected-test proof.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|510 Beautification Iris215147/435608 | Source5000ms target6 stun12/permanent-1, inherited600000ms recovery; TargetCreatureType128 selects critters. Actual colored gemstone beam/jeweled-figurine presentation/qualified critter/lifecycle remains unverified; no living-player generic stun surrogate or invented model transform. |
+|511 Duck Disguiser216881/437726 | Source3000ms cursor87 effect50→428166 for180000ms, item180000ms recovery. Runtime tdb_gameobject_template has no428166 row. Actual interactive egg/tiny-duck transformation/recipient/restore remain gaps, not inert egg or direct caster-transform shortcut. |
+|512 Unnamed toy216887/437770 | Local ItemSparse lacks216887. Source3000ms self script3/zero payload, inherited7200000ms recovery. Source faction-equipment chest for caster/allies requires actual distribution/recipient/gear-or-appearance/cleanup contract; no invented item name, generic script success, caster-only effect or guessed faction items. |
+|513 Fury of Xuen217723/440837 | Instant self periodic-dummy226/every20000ms for28800000ms/eight hours; shared category2272/10000ms recovery. Actual occasional Xuen wings/proc eligibility/presentation/cleanup remains unaudited; raw period does not certify guaranteed wing activation every20s. No one-shot aura or invented proc probability. |
+|514 Kindness of Chi-Ji217724/440839 | Same source eight-hour periodic226/20000ms and category2272/10000ms, distinct Chi-Ji wing identity. Full occasional visual cadence/conditions/lifecycle remains gap; no Xuen art substitute or shared-category/native certificate borrowed from a sibling. |
+
+Evidence: private `rows510-514-{readonly-source,action-source,runtime-source,active-goal}.json`, exact critter mask and missing ItemSparse/object boundaries.149865 Tea Set remains untouched.
+
 ## Source505–509: mount-randomization/quest-credit/colored-parasol/fallen-player burial boundaries (2026-10-17)
 
 No new acceptance/runtime/data changes or own heavy duplicate.496 currently marks expanded disguise and Stasis fixtures failed, with final diagnostics still pending; no new passing gate/landing inferred. These sources retain their literal mixed behavior rather than shortcutting through cosmetics or ordinary living-target transforms.

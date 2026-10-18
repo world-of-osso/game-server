@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate496 ordering corrections and source510–514 boundaries (2026-10-17)
+
+[Current496/498 proof and source matrix](../../toy-effects14-coverage.md#gate496-fixture-order-failures-corrected498-pending-2026-10-17) supersedes earlier running496 entries.496 FAILED303/2/1ignored536.82s/client9/EXIT101/FMT0,2m16s/no warnings:450 checked longer recovery during GCD,473 checked item recovery after restored Frostbolt started combat. Lead-approved test-onlyc013eafdd waits ordinary1500ms and reorders Stasis check before Frostbolt; no reset/clear/weakened assertion, corrected behavior pending498 including503.16 stationary/16 caster/10 object/18 hearthstone fixtures have scoped individual successes, not whole-gate/landing proof.
+
+[Source510–514](../../toy-effects14-coverage.md#source510514-critter-beamduck-eggfaction-chestperiodic-wing-boundaries-2026-10-17) retains critter128/beam/figurine, missing interactive duck egg, unnamed216887 faction equipment chest and distinct Xuen/Chi-Ji occasional eight-hour/20s-period/category2272 wing contracts; no generic stun, inert egg, invented item or guaranteed proc. No further runtime/data/new native/own heavy duplicate.
+
 ## Mount-randomization/quest-credit/colored-parasol/fallen-player burial boundaries (2026-10-17)
 
 [Source505–509 matrix](../../toy-effects14-coverage.md#source505509-mount-randomizationquest-creditcolored-parasolfallen-player-burial-boundaries-2026-10-17) preserves per-mount customization plus quest80201 completion, three distinct colored conditional Parasols and fallen-player Gravestone transformation. All colored child remove164 fields literally reference white parent431949; do not silently rewrite to each color, treat removal as recast or drop105/409/312/431982 siblings. Existing burial model117236 does not certify dead-player eligibility/lifecycle or allow a living-target substitute. No further runtime/data/new proof/own heavy duplicate.496 marks disguise/Stasis failed, final diagnostics pending.
