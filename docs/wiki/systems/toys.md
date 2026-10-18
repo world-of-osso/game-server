@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Deepdweller return-home acceptance and mounted-pennant/mirror/memory/ring boundaries (2026-10-17)
+
+[Source475–479 matrix](../../toy-effects14-coverage.md#source475479-pending-deepdweller-return-home-acceptance-and-mounted-pennantmirrormemoryring-boundaries-2026-10-17) adds acceptance-onlyeea1ff744:208704/420418/source10s/shared2309 as17th saved-bind helper case, with actual Path-of-Naaru sibling refusal; newer head beyond4920c77 required. Racer pennant is mounted78 plus400ms periodic/keybound406 and area8051, not a back-aura shortcut. Zero-entry man'ari Mirror, group8008-qualified Tyrhold/Valdrakken memory disc and periodic party rings/spacing/five-minute child lifetime/holiday recovery retain gaps. Local format/manual readability/diffcheck pass; no runtime/data/model guesses/native proof or own heavy duplicate.
+
 ## Pending Stasis acceptance and torch/ritual/follower/random-wolf boundaries (2026-10-17)
 
 [Source470–474 matrix](../../toy-effects14-coverage.md#source470474-pending-stasis-acceptance-and-torchritualfollowerrandom-wolf-boundaries-2026-10-17) adds acceptance-only52e9f7c80: actual Stasis208415/419271 self-stun60s/300s recovery, real Frostbolt Stunned refusal, ordinary expiry/removal/restored cast and retained cooldown; exact intentional replies preserved. Retail item comes from content_item/item_sparse joins, not legacy item_template. Torch's mixed kill-credit229063/device actions, seven-second incomplete ritual, Boffins actual follower and random-volume giant wolf remain gaps. Format/manual readability/diffcheck pass; future covering head beyond4920c77 required, no native movement/time-freeze/runtime/data admission or own heavy duplicate.
