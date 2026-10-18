@@ -1,6 +1,7 @@
 //! Spell-created area triggers, distinct from static map/quest triggers.
 //! TC a352b1fa Spell::EffectCreateAreaTrigger: one object at the destination
-//! lasting CalcDuration; effect179 retains its explicit DB2 trigger binding.
+//! lasting CalcDuration; effect179 retains its explicit DB2 trigger binding,
+//! except the finite Frozen Ground source-template binding.
 //! Aura395 uses exact aura-effect ownership and supported source template actions.
 //! Missing or unsupported source definitions never acquire guessed geometry.
 mod aura_owned;
@@ -21,7 +22,7 @@ use std::collections::HashSet;
 
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
-/// Aura395 collides with the unit's source reach; effect179 keeps its spell radius.
+/// Source-bound spheres add native unit reach; other effect179 keeps its spell radius.
 pub(crate) fn avoidance_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
     if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some()
         || world.get::<frozen_ground::FrozenGround>(entity).is_some()

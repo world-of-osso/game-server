@@ -1,3 +1,7 @@
+## 2026-10-18 — Frozen Ground native2+1 and controls qualification
+
+[Current matrix](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18):13d7 Player periodic/slow/lifecycle+curve/30s2PASS;5730 genuine follower escape/next-membership cleanup1PASS118.14s, no source scheduling change. Retained Rune/Sprout/curve3PASS91.01s but08e3→b24e world guardfailed; source/protocol stable, no automatic rerun or clean-controls/final-gate claim. History rewritten b548→867c, then exactac365 merged; originalRED content proof preserved.
+
 ## 2026-10-18 — Ordinary Frozen Ground source field
 
 [Finite387149/26505 binding](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): accepted real Frost-expiry aura/geometry RED;4LOS/4M2-floor/4nav private2515 bake with explicit mixed input provenance. Source action/curve/lifetime implementation committed before GREEN; downstream native follower escape/lifecycle proof pending, no arbitrary179/Mythic/VFX/full-Azure expansion.
