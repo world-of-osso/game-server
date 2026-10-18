@@ -8,7 +8,6 @@ const CAUSALITY_TEAR: u32 = 436_117;
 const CYCLES: usize = 4;
 
 #[test]
-#[ignore = "RED: repeated fractional period addition drops native expiry ticks"]
 fn periodic_native_fractional_period_keeps_every_expiry_tick_across_several_lifetimes() {
     let mut h = harness(Vec::new(), &[CAUSALITY_TEAR], 8).unwrap();
     let spell = world_db().unwrap().store.get(CAUSALITY_TEAR).unwrap();
