@@ -12,6 +12,12 @@ use std::path::PathBuf;
 fn create_world_schema(conn: &rusqlite::Connection) {
     conn.execute_batch(
         "CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
+        CREATE TABLE tdb_jump_charge_params (
+            id INTEGER PRIMARY KEY, speed REAL NOT NULL,
+            treatSpeedAsMoveTimeSeconds INTEGER NOT NULL, unlimitedSpeed INTEGER NOT NULL,
+            minHeight REAL, maxHeight REAL, spellVisualId INTEGER, progressCurveId INTEGER,
+            parabolicCurveId INTEGER, triggerSpellId INTEGER
+        );
         CREATE TABLE content_creature_template (
             entry INTEGER PRIMARY KEY, name TEXT, subname TEXT,
             minlevel INTEGER, maxlevel INTEGER, faction INTEGER, npcflag INTEGER,

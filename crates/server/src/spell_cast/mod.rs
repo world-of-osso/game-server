@@ -283,6 +283,7 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
+pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
