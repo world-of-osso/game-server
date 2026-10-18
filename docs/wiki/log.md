@@ -1,3 +1,6 @@
+## 2026-10-18 — Native attack restriction264
+
+[Native264](systems/auras.md#native-attack-restriction264--2026-10-18): actual Turtle producer yields wrong Pacified priority; native Phalanx NPC with264/no25 still swings. Genuinebc5a0c05e RED2→312234334 consumer; native/retained22GREEN, fresh-master4457dcfe9 expanded24/24 GREEN7.06s/146566ms. Eight new cases exercise real attack predicates, Cheetah/Fireball, midcast gain, natural expiry, full-trigger damage and NPC swing removal; real263 family controls retained. No row/clock/RNG/budget/producer/wire changes; no264 positive offensive-family input qualified or whole-ability claim. All-target check107.438s/0warnings and fmt/manual Rust readability pass.
 ## 2026-10-18 — Call of Winter1013
 
 [Call of Winter](systems/pet-battle-engine.md#call-of-winter--2026-10-18): ONLYregistry+24/29pairedceil2recipient/ownChilled52; existingconditionalmath/Blizzard205unchanged. Actualc6f9core6+Buttercup1unsupportedRED→ae7production/165fixture-onlyChilleddelta+Elementalweakcorrections/merged2be80GREEN6+1. Nineactivepairs/chillednone-each-all/48base+12bonus/misses+allmissweather/deadreserves/priorweather60+15/replacementexpiry/finalfaintnamedpolicy; legal3255/20slot3power221→64/Rabbit83/alliesunchanged/CD3. Integratedlib183/main44/check2m16s/no warnings/fmt/shared11aclean;fresh10typed70448tables/census1865/2829=65.92%/1036graphs,+7/+1ONLY1013/historical70391+1051/1762retained. Nativefollowslanding;noRetailtiming/rounding/VFXclaim.
@@ -2780,6 +2783,7 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 
 [Native proof](systems/guild-perks.md#native-mobile-banking-proof): both-skin cast/bank/nonmember refusal/despawn and actual post2h accepted casts pass on identical artifacts. Forever7242700ms complements the retained Modern-origin7311223ms interval. Fifteen inspected unchanged full-HD originals published; owned runtimes stopped and owner-checked window cleared. Earlier interrupted overall results remain intact; countdown labels are not timing oracles.
 
+- 2026-10-18: Gate547 Polymorph HP-oracle failure qualified with native50240 forced misses: RED7d14e1113 logs three actual zero-damage melee misses while oldHPassertion fails. Replace both recovery HP checks with directed ordinary swing events, retain real native forced-miss control;264consumer unchanged. See [auras](systems/auras.md#polymorph-recovery-swing-oracle--2026-10-18).
 ## 2026-10-18 — Follower dummy-root periodic maintenance
 
 [Investigation](investigations/follower-data.md#dummy-root-periodic-maintenance--2026-10-18): genuine repeated8921/starved93402 RED→native two-child-aura/Wrath GREEN; three-row COPY only, source-description references and native CSV fields verified, ROOT_CHILD_LINK_DESCRIPTION_ONLY per-row receipt. Producer3 integration+4 validation passes across explicit runs; scoped check/fmt pass. Lead gate/publication pending; full-kit/live/joint interrupt gates remain open.
