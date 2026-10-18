@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Trial/bling/observer-spiders/qualified-return-home/screen boundaries (2026-10-17)
+
+[Source555–559 matrix](../../toy-effects14-coverage.md#source555559-trialblingobserver-spidersqualified-return-homescreen-boundaries-2026-10-17) preserves missing avoid-hit Trial actor, unaudited permanent Coldflame attachment, observer-only233/7825/240 spider perception, qualified Threads homebind and actual2243 screen presentation. Threads description requires qualification while item faction/reputation/on-use condition fields are0; no invented threshold/account scope/per-use gate or generic Human-helper full certificate. No global NPC/screen mutation, inert trial or flavor-derived veteran rule.498 landed/master8707ac0ea; no further runtime/data/new native/own heavy duplicate.
+
 ## Pending Arachnoserum acceptance and pennant/linked-carry/stone-metadata boundaries (2026-10-17)
 
 [Source550–554 matrix](../../toy-effects14-coverage.md#source550554-pending-arachnoserum-acceptance-and-pennantlinked-carrystone-metadata-boundaries-2026-10-17) adds acceptance-onlyc3fe0958c:228705/462934/229772/sixteen valid models/instant10min/1h recovery as15th disguise plus Oomgut16IDs, unchanged registry phase/old14 data.119763 NPC scale0.4 is metadata, not player scaling. Format/manual readability/diffcheck pass; newer covering head required. Nonzero pennant, actual outdoors Lil Wick linked285/Control4 carry and stone slow90/periodic action remain gaps; root462924 SpellMisc absence is70391-specific, not fabricated default timing or all-profile absence. Lampyridae exact attachment CPU scope retained.498 landed/master8707ac0ea; no further runtime/data/own heavy duplicate.
