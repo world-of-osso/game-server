@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate535 RED and narrow Singed admission repair pending (2026-10-18)
+
+[Exact failure/repair scope](../../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18): actual593 refused child dummy4;535server315/1/1ignored/EXIT101/FMT0/CHECK0, not fixture failure or landing. Authorized5ea7efcaa admits only audited1220867/slot0 through existing zero-payload visual-aura guard. TC `SpellAuraEffects.cpp:76,4836–5117` has spell-specific dummy handlers; generic dummy admission would falsely accept unresolved scripts. Citizens/Personal Anchor refusal retained. Own focused compile/test running; no GREEN/native certificate yet, Pango remains stacked.
+
 ## Pango684 cancellation and shared recovery pending (2026-10-18)
 
 [Exact acceptance and limits](../../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Pango identity with real CancelAura restoration/no shared2513 bypass, refusal near580 simulated seconds and learned Saptor success after600 ordinary seconds. No deadline/cooldown mutation; prior shared-five fixture unchanged. Format/manual only, uncompiled/unexecuted AFTER535; no all-five lifecycle, wall-duration/hour-expiry/native/weighted-frequency certificate or runtime/data edit.

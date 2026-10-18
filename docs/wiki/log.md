@@ -1,3 +1,7 @@
+## 2026-10-18 — Gate535 genuine RED; Singed repair pending
+
+[Exact failure/source-grounded repair](../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18):535server315/1/1ignored477.06s/EXIT101/FMT0/CHECK0 rejects593child aura4 before cast; no landing/fixture correction. Authorized5ea7efcaa admits only1220867/slot0 under zero-payload visual-aura guard, preserving unrelated script refusal. TC `SpellAuraEffects.cpp:76,4836–5117` contains named dummy actions, not generic no-op authority. Merged landed baselined0e0d7fc3 for queued64 fidelity, Pango stacked; own focused compile/test running, no GREEN/native proof yet.
+
 ## 2026-10-18 — Pango684 cancellation and shared recovery pending
 
 [Exact acceptance/limits](../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Full1166 Pango with real CancelAura/model restoration/no2513 bypass, Saptor refusal near580 simulated seconds and own learned success after600 ordinary seconds. No timer/cooldown edit or prior shared-five change. Format/manual only; uncompiled/unexecuted AFTER535, not all-five lifecycle/wall/hour-expiry/native/distribution proof. No runtime/data/own jobs.
