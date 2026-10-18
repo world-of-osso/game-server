@@ -9,11 +9,11 @@ use bevy::prelude::*;
 use shared::components::{Health, Position};
 use shared::protocol::CombatLogKind;
 
-struct Fixture {
-    h: Harness,
-    tank: Entity,
+pub(super) struct Fixture {
+    pub(super) h: Harness,
+    pub(super) tank: Entity,
     candidate: Entity,
-    engaged: Entity,
+    pub(super) engaged: Entity,
 }
 
 fn source(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
@@ -111,7 +111,7 @@ fn fixture() -> Fixture {
     }
 }
 
-fn damage(h: &mut Harness, target: Entity, amount: f32) {
+pub(super) fn damage(h: &mut Harness, target: Entity, amount: f32) {
     let spell = h
         .app
         .world()
@@ -143,7 +143,7 @@ fn sample(f: &mut Fixture, frames: usize) {
     }
 }
 
-fn measured_fixture() -> Fixture {
+pub(super) fn measured_fixture() -> Fixture {
     let mut f = fixture();
     sample(&mut f, 100);
     let map = *f.h.app.world().get::<InMap>(f.tank).unwrap();

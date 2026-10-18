@@ -1,3 +1,7 @@
+## 2026-10-18 — Endpoint affordability proof prepared
+
+[Proof and limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18): lead approves origin-independent endpoint bounds only at measuredHPS0; explicit positive-HPS refusal, same native arithmetic and complete target table. Only passing endpoints require full authored-point routes. Inline pacing diagnostics removed; native execution/report and eligibility GREEN pending. No budget/stat/kit changes or global affordability claim.
+
 ## 2026-10-18 — Native trigger pull eligibility RED and repair
 
 [Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): real Stockade53488/20375809+20375810 candidate/proximity2RED44.05s. Route now uses native relation selection and cached template aggression, not faction hostility alone. Policy3 failed only positive-capacity prerequisites; no budget/stat/kit tuning or pacing acceptance. Eligibility GREEN and real-combat enumeration pending.

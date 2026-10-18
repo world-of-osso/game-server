@@ -15,6 +15,8 @@ mod pull_budget_tests;
 #[cfg(test)]
 mod pull_eligibility_tests;
 #[cfg(test)]
+mod pull_endpoint_tests;
+#[cfg(test)]
 mod pull_forecast_tests;
 #[cfg(test)]
 mod pull_goal_tests;

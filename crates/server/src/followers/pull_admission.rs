@@ -40,6 +40,22 @@ pub(super) fn read_pull_budget(
     Ok(pull_budget::evaluate(&input))
 }
 
+/// Native numeric report uses exactly the input and arithmetic used for admission.
+#[cfg(test)]
+pub(super) fn read_forecast_health(
+    world: &mut World,
+    tank: Entity,
+    projected: &BTreeSet<u32>,
+    difficulty: u32,
+) -> Result<(f64, f64, usize), String> {
+    let run = read_run_budget(world, tank)?;
+    let projection = read_projection(world, tank, &run, projected, difficulty)?;
+    let input = read_budget_input(world, tank, &run, &projection)?;
+    pull_budget::read_forecast_health(&input)
+        .map(|(forecast, reserve)| (forecast, reserve, projection.pack_count))
+        .ok_or("Native forecast report lacks valid measured inputs".into())
+}
+
 fn read_run_budget(world: &World, tank: Entity) -> Result<RunBudget, String> {
     let follower = world
         .get::<Follower>(tank)

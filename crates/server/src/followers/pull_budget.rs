@@ -1,7 +1,7 @@
 //! USER project policy, not Retail coefficients. Source estimates are supplied by the
 //! shared follower planner; this module never substitutes nominal/prior-run rates.
 const OBSERVATION_SECONDS: f64 = 10.0;
-const TANK_HP_RESERVE_FRACTION: f64 = 0.30;
+pub(super) const TANK_HP_RESERVE_FRACTION: f64 = 0.30;
 
 pub(super) struct BudgetInput {
     pub observation_seconds: f64,
@@ -98,12 +98,28 @@ pub(super) fn evaluate(input: &BudgetInput) -> Decision {
     forecast_decision(input, damage, healing)
 }
 
-fn forecast_decision(input: &BudgetInput, damage: f64, healing: f64) -> Decision {
+fn forecast_health(input: &BudgetInput, damage: f64, healing: f64) -> f64 {
     let duration = input.hostile_health / damage;
     let sustained_debt = (input.incoming_dps - healing).max(0.0) * duration;
     let damage_debt = sustained_debt + input.opening_burst;
     let prevented = input.confirmed_cooldown_credit.min(damage_debt);
-    let forecast = input.tank_health - damage_debt + prevented;
+    input.tank_health - damage_debt + prevented
+}
+
+#[cfg(test)]
+pub(super) fn read_forecast_health(input: &BudgetInput) -> Option<(f64, f64)> {
+    if !valid_estimates(input) {
+        return None;
+    }
+    let (damage, healing) = measured_rates(input)?;
+    Some((
+        forecast_health(input, damage, healing),
+        input.tank_max_health * TANK_HP_RESERVE_FRACTION,
+    ))
+}
+
+fn forecast_decision(input: &BudgetInput, damage: f64, healing: f64) -> Decision {
+    let forecast = forecast_health(input, damage, healing);
     if forecast >= input.tank_max_health * TANK_HP_RESERVE_FRACTION {
         Decision::Allow {
             bootstrap: false,
