@@ -1,5 +1,5 @@
 //! Source target32 summon primitive on actual Ramparts actors and geometry.
-use super::herald_intro::{actors_in_copy, kill_actor, ordinary_ramparts_at, spawn_second_copy};
+use super::herald_intro::{actors_in_copy, kill_actor, ordinary_ramparts_at};
 use super::*;
 
 const NAZAN: u32 = 17_536;
@@ -249,4 +249,60 @@ fn encounter_coverage_herald_target32_gravity_disabled_preserves_above_and_raise
             );
         }
     }
+}
+
+#[test]
+#[ignore = "RED: FORCE_DEST_LOCATION takes MovePosition height backoff, not flyer allowed-Z"]
+fn encounter_coverage_herald_target32_force_uses_height_backoff_and_ground_position() {
+    let (mut h, map, herald) = elevated_nazan_for_target32();
+    h.app
+        .world_mut()
+        .entity_mut(herald)
+        .insert(crate::scripted_ai::waypoint_path::GravityDisabled);
+    let mut spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(30717)
+        .unwrap()
+        .clone();
+    let wanted = crate::spell_cast::targets::effect_dest(
+        h.app.world(),
+        herald,
+        Some(herald),
+        &spell.effects[0],
+        None,
+    )
+    .unwrap()
+    .position;
+    let origin = Vec3::new(WEST.x, WEST.y, WEST.z);
+    for step in 0..10 {
+        let probe = origin.lerp(wanted, 1.0 - step as f32 / 10.0) + Vec3::Y * 6.0;
+        let crate::ground::GroundProbe::Supported(floor) = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .creature_ground_in(map, probe)
+        else {
+            panic!("real source floor throughout the forced-offset control");
+        };
+        assert!(
+            (WEST.y - floor).abs() > 6.0,
+            "source control has no acceptable6yd height change along the offset"
+        );
+    }
+    // Counterfactual source-defined flag control; no database/authored row is changed.
+    assert_eq!(spell.misc.as_ref().unwrap().attributes[9] & 0x1, 0);
+    spell.misc.as_mut().unwrap().attributes[9] |= 0x1;
+    h.app.insert_resource(SpellStore::fixture(vec![spell]));
+    crate::spell_cast::creature_cast(h.app.world_mut(), herald, 30717, Some(herald), false)
+        .expect("ordinary source32 cast with the explicit FORCE flag control");
+    let child = actors_in_copy(&mut h, VAZRUDEN, map)[0];
+    assert_grounded(h.app.world_mut(), map, child);
+    let position = h.app.world().get::<Position>(child).unwrap();
+    assert_eq!(
+        (position.x, position.z),
+        (WEST.x, WEST.z),
+        "all ten offsets exceed6yd: TC retains XY then updates ground Z"
+    );
 }
