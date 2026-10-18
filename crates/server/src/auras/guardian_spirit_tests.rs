@@ -12,6 +12,37 @@ const ANNIHILATION: u32 = 209_140;
 /// Native single-effect Shadow damage1000, instant/no coefficient/variance/cost.
 const DEATH_BY_DARKNESS: u32 = 314_616;
 
+#[test]
+fn guardian_spirit_native_shared_ardent_reports_actual_post_rescue_damage() {
+    let mut h = harness(Vec::new(), &[31_850, ANNIHILATION, DEATH_BY_DARKNESS], 2).unwrap();
+    h.cast_and_deliver(31_850, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has_aura(h.app.world(), h.caster, 31_850));
+    cast_native_attack(&mut h, ANNIHILATION);
+    // Ardent's native30% damage reduction:800→560, leaving440.
+    assert_eq!(h.health(h.caster), 440.0);
+    cast_native_attack(&mut h, DEATH_BY_DARKNESS);
+    assert_eq!(h.health(h.caster), 200.0);
+    // Native target floor20%: the700 hit loses240 health, absorbing460.
+    let hit = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage && event.spell_id == Some(DEATH_BY_DARKNESS)
+        })
+        .unwrap();
+    assert_eq!((hit.amount, hit.absorbed, hit.overflow), (240, 460, 0));
+    assert!(!has_aura(h.app.world(), h.caster, 31_850));
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Death)
+    );
+}
+
 fn fixture() -> Harness {
     harness(
         Vec::new(),
@@ -63,6 +94,36 @@ fn guardian_spirit_native_player_cast_consumes_before_real_rescue_heal() {
     // first prevents its separate +60% healing-taken effect amplifying48153.
     assert_eq!(h.health(h.caster), 600.0);
     assert!(!has_aura(h.app.world(), h.caster, GUARDIAN_SPIRIT));
+    assert!(h.inbox.log.iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(DEATH_BY_DARKNESS)
+            && event.amount == 0
+            && event.absorbed == 1000
+            && event.overflow == 0
+    }));
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Death)
+    );
+    let removed = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::AuraRemoved && event.spell_id == Some(GUARDIAN_SPIRIT)
+        })
+        .unwrap();
+    let healed = h
+        .inbox
+        .log
+        .iter()
+        .position(|event| {
+            event.kind == CombatLogKind::Heal && event.spell_id == Some(GUARDIAN_HEAL)
+        })
+        .unwrap();
+    assert!(removed < healed);
     assert!(h.inbox.log.iter().any(|event| {
         event.kind == CombatLogKind::Heal
             && event.spell_id == Some(GUARDIAN_HEAL)
