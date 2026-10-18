@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mount-randomization/quest-credit/colored-parasol/fallen-player burial boundaries (2026-10-17)
+
+[Source505–509 matrix](../../toy-effects14-coverage.md#source505509-mount-randomizationquest-creditcolored-parasolfallen-player-burial-boundaries-2026-10-17) preserves per-mount customization plus quest80201 completion, three distinct colored conditional Parasols and fallen-player Gravestone transformation. All colored child remove164 fields literally reference white parent431949; do not silently rewrite to each color, treat removal as recast or drop105/409/312/431982 siblings. Existing burial model117236 does not certify dead-player eligibility/lifecycle or allow a living-target substitute. No further runtime/data/new proof/own heavy duplicate.496 marks disguise/Stasis failed, final diagnostics pending.
+
 ## Pending Stone-of-Hearth acceptance and pennant/table/conditional-parasol boundaries (2026-10-17)
 
 [Source500–504 matrix](../../toy-effects14-coverage.md#source500504-pending-stone-of-hearth-acceptance-and-pennanttableconditional-parasol-boundaries-2026-10-17) adds acceptance-onlyd68256325:212337/401802/source10s/shared2309 as19th saved-bind case with Flame refusal, pending a head after4964df7af2e6. Permanent nonzero pennant, missing interactive Hearthstone table and next-fall Parasol remain gaps. Parasol child mixes featherfall/can-turn409/animation1133/removal164 plus dummy child; parent removal is not recursive recast or always-on slow fall. Abyss Horn existing visual-only/no gameplay water/actor CPU scope retained. Format/manual readability/diffcheck pass; no further runtime/data/new native/own heavy duplicate.

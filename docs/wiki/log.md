@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source505–509 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source505509-mount-randomizationquest-creditcolored-parasolfallen-player-burial-boundaries-2026-10-17): per-mount customizable-skyriding appearance randomization plus actual quest80201 completion, Jade/Crimson/Ebony conditional105/409/312/431982 payloads and fallen-player burial remain gaps. Colored remove164 fields all target white431949, not their own roots; literal mismatch retained without repair/recursive casting. Gravestone217846/117236 does not certify corpse eligibility or permit living/self transform substitute. No further runtime/data/new proof/own heavy duplicate;496 marks expanded disguise and Stasis failed, final diagnostics pending.
+
 ## 2026-10-17 — Toy source500–504 pending Stone acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source500504-pending-stone-of-hearth-acceptance-and-pennanttableconditional-parasol-boundaries-2026-10-17):d68256325 adds212337/401802/source10s/saved-bind/shared2309/one1800000ms charge and Flame refusal, now19 hearthstones; unchanged helper/old18. Format/manual readability/diffcheck pass, newer head AFTER4964df7af2e6 required. Permanent nonzero pennant, missing interactive Hearthstone table and conditional Parasol226→featherfall105/can-turn409/animation312/parent-removal164/child aura remain gaps, not furniture/always-on featherfall/recursive recast. Retained Abyss Horn visual-only CPU witness does not create gameplay water. No further runtime/data/new native/own heavy duplicate.
