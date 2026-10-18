@@ -25,13 +25,20 @@ fn place_party_at_endpoint(
     actor: Entity,
     party: &[Entity],
 ) -> Result<Vec3, String> {
-    let map = *f.h.app.world().get::<crate::maps::InMap>(f.tank).unwrap();
     let position =
         *f.h.app
             .world()
             .get::<Position>(actor)
             .ok_or("Endpoint actor lacks position")?;
-    let point = Vec3::new(position.x, position.y, position.z);
+    place_party_at_authored_point(f, Vec3::new(position.x, position.y, position.z), party)
+}
+
+fn place_party_at_authored_point(
+    f: &mut Fixture,
+    point: Vec3,
+    party: &[Entity],
+) -> Result<Vec3, String> {
+    let map = *f.h.app.world().get::<crate::maps::InMap>(f.tank).unwrap();
     let crate::ground::GroundProbe::Supported(y) =
         f.h.app
             .world_mut()
@@ -40,7 +47,11 @@ fn place_party_at_endpoint(
     else {
         return Err("Native endpoint lacks actual ground support".into());
     };
-    let from = Position { y, ..position };
+    let from = Position {
+        x: point.x,
+        y,
+        z: point.z,
+    };
     for &member in party {
         f.h.app.world_mut().entity_mut(member).insert(from);
     }
@@ -71,7 +82,7 @@ fn eligible_target(f: &Fixture, actor: Entity) -> bool {
         != crate::creature_aggro::AggroMode::Passive
 }
 
-fn endpoint_budget_row(
+fn read_route_budget_row(
     f: &mut Fixture,
     guid: u32,
     cleared: &std::collections::BTreeSet<u32>,
@@ -89,7 +100,7 @@ fn endpoint_budget_row(
         Err(error) => return json!({"error": error, "allowed": false}),
     };
     let mut row = json!({
-        "endpoint_pack_count": route.pack_count,
+        "footprint_pack_count": route.pack_count,
         "spawns": route.spawns,
         "allowed": false,
     });
@@ -150,7 +161,7 @@ fn native_tank_endpoint_budget_lower_bound_enumeration() {
         }
         let mut row = match place_party_at_endpoint(&mut f, actor, &party) {
             Ok(point) => {
-                let mut row = endpoint_budget_row(&mut f, source.guid, &history.cleared_spawns);
+                let mut row = read_route_budget_row(&mut f, source.guid, &history.cleared_spawns);
                 row["endpoint"] = json!([point.x, point.y, point.z]);
                 row
             }
@@ -195,6 +206,85 @@ fn native_tank_endpoint_budget_lower_bound_enumeration() {
     });
     println!(
         "TANK_ENDPOINT_ENUMERATION {}",
+        serde_json::to_string(&report).unwrap()
+    );
+}
+
+#[test]
+fn native_tank_authored_routes_for20375689() {
+    const TARGET_GUID: u32 = 20375689;
+    let mut f = measured_fixture();
+    damage(&mut f.h, f.engaged, 1.0);
+    pull_history::sample_all(f.h.app.world_mut());
+    let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
+    require_zero_measured_healing(history.healer_hps);
+    let (map, members, _) = super::party::read_admission(f.h.app.world(), f.h.caster).unwrap();
+    let mut party = members.to_vec();
+    party.push(f.h.caster);
+    // Cleared spawns remain valid authored origins, but never return as damage debt.
+    let origins = pull_sources::read_present_sources(
+        f.h.app.world_mut(),
+        map,
+        1,
+        &std::collections::BTreeSet::new(),
+    )
+    .unwrap();
+    let target = origins[&TARGET_GUID].actor.unwrap();
+    assert!(
+        eligible_target(&f, target),
+        "route target must remain real native combat content"
+    );
+    let entrance = *f.h.app.world().get::<Position>(f.tank).unwrap();
+    let points = std::iter::once((
+        "entrance",
+        3599,
+        Vec3::new(entrance.x, entrance.y, entrance.z),
+    ))
+    .chain(
+        origins
+            .values()
+            .map(|source| ("source_spawn", source.guid, source.position)),
+    );
+    let mut rows = Vec::new();
+    for (kind, id, point) in points {
+        let mut row = match place_party_at_authored_point(&mut f, point, &party) {
+            Ok(grounded) => {
+                let mut row = read_route_budget_row(&mut f, TARGET_GUID, &history.cleared_spawns);
+                row["origin"] = json!([grounded.x, grounded.y, grounded.z]);
+                row
+            }
+            Err(error) => json!({"error": error, "allowed": false}),
+        };
+        row["origin_kind"] = json!(kind);
+        row["origin_id"] = json!(id);
+        rows.push(row);
+    }
+    assert_eq!(
+        rows.len(),
+        origins.len() + 1,
+        "enumerate every authored source origin and the actual entrance"
+    );
+    let allowed = rows.iter().filter(|row| row["allowed"] == true).count();
+    let health = *f.h.app.world().get::<Health>(f.tank).unwrap();
+    let report = json!({
+        "proof": "complete native routes from every Normal Stockade authored spawn origin plus WorldSafeLoc3599; requested target20375689 only",
+        "target": TARGET_GUID,
+        "entry": 46248,
+        "native_orientation": crate::spell_cast::targets::orientation(f.h.app.world(), f.tank),
+        "measured_dps": history.group_dps,
+        "measured_hps": history.healer_hps,
+        "observation_seconds": history.observation_seconds,
+        "completed_fights": history.completed_fights,
+        "native_tank_health": health.current,
+        "native_tank_max_health": health.max,
+        "reserve_health": f64::from(health.max) * TANK_HP_RESERVE_FRACTION,
+        "cleared_spawns": history.cleared_spawns,
+        "authored_origins": rows.len(),
+        "allowed_routes": allowed,
+        "rows": rows,
+    });
+    println!(
+        "TANK_AUTHORED_ROUTE_ENUMERATION {}",
         serde_json::to_string(&report).unwrap()
     );
 }
