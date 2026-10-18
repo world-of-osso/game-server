@@ -66,6 +66,7 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
             crate::group::GroupPlugin,
             crate::pvp::PvpPlugin,
             crate::experience::ExperiencePlugin,
+            crate::death::DeathPlugin,
         ));
     })
     .expect("real map/channel fixture");
