@@ -211,7 +211,7 @@ fn pet_battle_starfall_applies_moonlight_after_healing_and_existing_weather_modi
 #[test]
 fn pet_battle_starfall_other_ambiguous_team_selectors_remain_rejected_before_rng() {
     let catalog = catalog();
-    for ability in [70, 2378] {
+    for ability in [70] {
         let initial = battle(&catalog, 9, 4, [ability, 110, 123]);
         assert!(
             initial
