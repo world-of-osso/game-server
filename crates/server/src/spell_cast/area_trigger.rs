@@ -19,6 +19,14 @@ use std::collections::HashSet;
 
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
+/// Aura395 collides with the unit's source reach; effect179 keeps its spell radius.
+pub(crate) fn avoidance_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
+    if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
+        return aura_owned::collision_radius(world, entity, unit);
+    }
+    Some(world.get::<SpellAreaTrigger>(entity)?.radius)
+}
+
 #[derive(Component, Debug, Clone)]
 pub struct SpellAreaTrigger {
     pub caster: Entity,

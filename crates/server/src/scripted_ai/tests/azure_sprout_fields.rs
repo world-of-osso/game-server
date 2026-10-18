@@ -220,7 +220,6 @@ fn azure_aura395_same_caster_keeps_different_target_instances_independent() {
 }
 
 #[test]
-#[ignore = "native aura395 attachment/copy-departure acceptance pending"]
 fn azure_aura395_attachment_follows_its_target_and_copy_departure_retires_only_its_field() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let children = h.creatures_of(190509);

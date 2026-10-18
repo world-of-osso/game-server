@@ -233,7 +233,6 @@ fn cast_native_hostile_field(h: &mut crate::spell_cast::test_harness::Harness) -
 }
 
 #[test]
-#[ignore = "RED: follower escape ignores native aura395 combat-reach envelope"]
 fn follower_native_aura395_escape_leaves_the_actual_source_collision_envelope() {
     use crate::spell_cast::area_trigger::SpellAreaTrigger;
     let start = Position {
