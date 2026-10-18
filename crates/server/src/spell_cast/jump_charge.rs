@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn jump_charge_missing_native_parameters_does_not_teleport() {
         let mut h = super::super::test_harness::harness(Vec::new(), &[387981], 12).unwrap();
-        let mut data = super::super::test_harness::world_db().unwrap().world_data();
+        let mut data = crate::test_data::world_data().clone();
         data.jump_charge_params.0.remove(&713);
         h.app.insert_resource(data);
         let before = *h.app.world().get::<Position>(h.caster).unwrap();
