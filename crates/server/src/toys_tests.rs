@@ -3410,6 +3410,9 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (184415, 345799, 175582, 99948, 180000),
         (201931, 395720, 199047, 112284, 300000),
         (202261, 398246, 200350, 114420, 300000),
+        (202851, 398245, 200961, 112316, 300000),
+        (202856, 399246, 200966, 112319, 300000),
+        (202859, 399250, 200969, 112322, 300000),
         (272339, 1290957, 263908, 143906, 60000),
         (279590, 1306978, 270689, 146432, 60000),
     ] {
@@ -3426,6 +3429,9 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         let (missile_root, cursor_distance) = match item {
             201931 => (Some(398485), 12.0), // Maiev: speed 12, one-second flight.
             202261 => (Some(398491), 18.0), // Sneed: speed 30, 0.6-second flight.
+            202851 => (Some(399232), 18.0), // Huntress: speed 30, 0.6-second flight.
+            202856 => (Some(399247), 18.0), // Tauren: speed 30, 0.6-second flight.
+            202859 => (Some(399262), 18.0), // Ghoul: speed 30, 0.6-second flight.
             _ => (None, 2.0),
         };
         let destination = if matches!(item, 89869 | 184415) || missile_root.is_some() {
