@@ -3,10 +3,20 @@ use super::Follower;
 use bevy::prelude::*;
 
 pub(super) fn read_engaged_caster_candidates(
-    _world: &mut World,
-    _unit: Entity,
-    _follower: &Follower,
-    _party: &[Entity],
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
 ) -> Vec<Entity> {
-    Vec::new()
+    super::ai::engaged_enemies(world, follower, unit, party)
+        .into_iter()
+        .filter(|(enemy, _)| {
+            let interruptible = world
+                .get::<shared::casting::CastState>(*enemy)
+                .is_some_and(|cast| cast.interruptible);
+            let protected = crate::auras::has_breakable_by_damage_cc(world, *enemy);
+            interruptible && !protected
+        })
+        .map(|(enemy, _)| enemy)
+        .collect()
 }
