@@ -266,7 +266,7 @@ impl AuraInstance {
         }
     }
 
-    /// Take over a reapplication's duration, amounts and charges; add a stack.
+    /// Refresh duration/amounts/charges; add a stack except Agony's preserved floor.
     fn refresh_from(&mut self, new: AuraInstance) {
         self.duration_ms = new.duration_ms;
         self.expires_at = new.expires_at;
