@@ -6,14 +6,14 @@ const VAULT_RUNE: u32 = 197204;
 const RUNE_AURA: u32 = 388065;
 const RUNE_PROPERTIES: u32 = 26586;
 
-fn fixture() -> (Harness, Entity) {
-    let (mut h, _telash, _map) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+pub(super) fn fixture(difficulty: u32) -> (Harness, Entity) {
+    let (mut h, _telash, _map) = bound_boss_at_difficulty(186737, 2515, 2, difficulty, None);
     let runes = h.creatures_of(VAULT_RUNE);
     assert_eq!(runes.len(), 3, "native Telash group0 prerequisite");
     (h, runes[0])
 }
 
-fn assert_native_source(h: &Harness) {
+pub(super) fn assert_native_source(h: &Harness) {
     let connection = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("published Rune source database");
     let properties: (u32, u32, f32, f32, String) = connection
@@ -54,7 +54,7 @@ fn assert_native_source(h: &Harness) {
 
 #[test]
 fn azure_rune_native_aura395_creates_owned_scripted_sphere() {
-    let (mut h, rune) = fixture();
+    let (mut h, rune) = fixture(205);
     assert_native_source(&h);
     assert!(!h.has_aura(rune, RUNE_AURA));
     crate::spell_cast::creature_cast(h.app.world_mut(), rune, RUNE_AURA, Some(rune), true)
