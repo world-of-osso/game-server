@@ -9,6 +9,7 @@ pub(crate) struct MeleeEstimate {
     pub interval_secs: f64,
     pub next_swing_secs: f64,
     pub remaining_health: f64,
+    pub valid_until: Option<f64>,
     pub level: u8,
     pub rank: u8,
 }
@@ -59,6 +60,7 @@ fn read_estimate(
             .get::<AutoAttack>(enemy)
             .map_or(0.0, |attack| f64::from(attack.timer.max(0.0))),
         remaining_health: f64::from(tank_level_health),
+        valid_until: None,
         level: world
             .get::<shared::components::UnitLevel>(enemy)
             .ok_or("source creature lacks native level")?

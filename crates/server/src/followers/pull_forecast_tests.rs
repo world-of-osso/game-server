@@ -5,7 +5,7 @@ use crate::maps::InMap;
 use crate::spell_cast::test_harness::Harness;
 use crate::world_data::WorldData;
 use bevy::prelude::*;
-use shared::components::{Health, UnitLevel};
+use shared::components::{Health, Npc, UnitLevel, UnitPowers};
 
 fn source_fixture(entry: u32) -> (Harness, Entity, Entity) {
     let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
@@ -119,6 +119,96 @@ fn tank_pull_forecast_smartai_and_named_boss_have_no_numeric_forecast() {
             "scripted source{entry} must wait, not receive guessed timing/burst"
         );
     }
+}
+
+fn read_native_healer_profile() -> super::Profile {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    super::catalog::load_catalog(&db)
+        .unwrap()
+        .profiles
+        .into_iter()
+        .find(|profile| profile.entry == 209072)
+        .unwrap()
+}
+
+fn add_native_healer(h: &mut Harness) -> Entity {
+    let profile = read_native_healer_profile();
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[profile.entry]);
+    h.app
+        .world_mut()
+        .resource_mut::<WorldData>()
+        .templates
+        .extend(native.templates);
+    let owner = h.caster;
+    let map = *h.app.world().get::<InMap>(owner).unwrap();
+    let healer = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(healer).insert((
+        Npc {
+            template_id: profile.entry,
+            name: profile.name.clone(),
+        },
+        UnitPowers::default(),
+        map,
+    ));
+    super::spawning::initialize(h.app.world_mut(), owner, healer, profile).unwrap();
+    healer
+}
+
+#[test]
+fn tank_pull_forecast_lifetime_stops_at_native_divine_protection_stat_expiry() {
+    let (mut h, tank, enemy) = source_fixture(46249);
+    crate::spell_cast::creature_cast(h.app.world_mut(), tank, 498, Some(tank), false).unwrap();
+    h.advance(3);
+    let expiry = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 498)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    let estimate = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    assert_eq!(
+        estimate.valid_until,
+        Some(expiry),
+        "do not credit native20% mitigation past its actual lifetime"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(tank)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 498),
+        "projection must not expire the real aura"
+    );
+}
+
+#[test]
+fn tank_pull_forecast_lifetime_does_not_blanket_refuse_for_a_pure_native_hot() {
+    let (mut h, tank, enemy) = source_fixture(46249);
+    let healer = add_native_healer(&mut h);
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(tank)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 774 && aura.expires_at.is_some())
+    );
+    let estimate = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    assert_eq!(
+        estimate.valid_until, None,
+        "pure healing expiry is not a melee stat expiry"
+    );
 }
 
 #[test]
