@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Full1166 metadata availability: exact absences, not failure verdicts (2026-10-18)
+
+Read-only source70448/key88d5e8ef05ec5a8446cdec93d142d7c6 inventory covers all1166 runtime Toy IDs, excluding all ten source-only extras. It checks identity/root metadata availability, not semantic review, runtime admission, native behavior or a repair requirement.
+
+| Availability scope | Exact result and limit |
+|---|---|
+| Source identity/runtime content |29 IDs lack ItemSparse rows; exactly the same29 lack runtime `content_item`. Full exact IDs are retained in the private inventory. Matching absence sets do not establish a broken importer or authorize synthesis. |
+| Source on-use roots |15 IDs have no TriggerType0 root:72220–72233 and Stormforged Grapple Launcher138111. No other trigger kind substituted or toy removed from the denominator. Missing on-use root alone is not a runtime-bug verdict. |
+| Partial spell metadata |Echoes of Rezan160509/272071 and Rockslidomancer's Stone228706/462924 have names/effects but no SpellMisc row. This absence does not invalidate retained behavior proof or establish an unsupported action. |
+| Fully absent root metadata |Unnamed264368 links1271857, whose SpellName/SpellMisc/SpellEffect metadata is absent; item identity metadata is also absent. This agrees with its explicit source665 boundary, not a new guessed mechanic. |
+| Link integrity |Zero ItemXItemEffect links point to missing ItemEffect rows. This is metadata linkage only, not complete executable contracts or behavior. |
+
+Evidence: private `full1166-metadata-availability-{inventory,active-goal}.json`. No import, admission, runtime/data/native change,149865 edit or own heavy job. [Gate513 remains integration RED](#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18); availability accounting does not override that failure.
+
 ## Gate513: acceptance helpers pass, queued-trigger destination regression keeps integration RED (2026-10-18)
 
 Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed; current feature changes after7099 are documentation only. No passing integration or new toy landing claim.

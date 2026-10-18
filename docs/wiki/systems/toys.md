@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Full1166 metadata availability without failure inference (2026-10-18)
+
+[Exact availability matrix](../../toy-effects14-coverage.md#full1166-metadata-availability-exact-absences-not-failure-verdicts-2026-10-18) checks all1166 runtime IDs against active70448:29 identical source-identity/runtime-content absences,15 without TriggerType0 roots, two named roots without SpellMisc plus unnamed264368's fully absent spell metadata, zero dangling ItemEffect links. Missing metadata is not automatically a code/import failure or permission for another trigger/default mechanic; retained Rezan behavior is not revoked by absent SpellMisc. No source-only admission/import/runtime change or new behavior proof;513 remains integration RED.
+
 ## Gate513 queued-trigger destination regression (2026-10-18)
 
 [Exact gate matrix](../../toy-effects14-coverage.md#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18): server311/1/1ignored/914.05s/EXIT101, client9/FMT0. All current acceptance helpers completed OK, but Akunda's actual child279077 fire spawned at caster instead of parent cursor. Integrated Effect64's new queue drops parent `cast_destination`, retaining only item level before fresh-child reconstruction; old destination-preserving handler is bypassed. Explicit destination must survive queue/delivery, not a weaker fixture or caster fallback. Runtime fix proposed to lead only; this thread made no runtime/data/native change. Integration remains RED and unlanded; individual CPU evidence is not native/full1166 completion.
