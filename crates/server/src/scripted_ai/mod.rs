@@ -134,12 +134,13 @@ impl Plugin for ScriptedAiPlugin {
 #[derive(Component, Debug, Clone)]
 pub struct CreatureScriptName(pub String);
 
-/// A scripted phase does not call TC UpdateVictim; the pre-AI generic updater
-/// must not refresh/evade that actor until the script resumes combat updates.
+/// A scripted phase does not call TC UpdateVictim: pause active-victim projection
+/// and evade until combat updates resume. ThreatManager's reference still updates.
 #[derive(Component)]
 pub(crate) struct ScriptedVictimUpdatePaused;
 
-/// `ReactStates`: a passive creature neither attacks on sight nor picks a victim
+/// `ReactStates`: a passive creature neither attacks on sight nor projects a new attack victim.
+/// Its threat-manager current reference still updates independently
 /// (`CreatureAI::UpdateVictim` stops its attack); an aggressive one does both.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ReactState {
@@ -742,6 +743,12 @@ impl Ctx<'_> {
         if target.is_some() {
             self.do_cast_at(target, spell_id, false);
         }
+    }
+
+    /// `UnitAI::SelectTarget(MaxThreat)` with default offset/predicate:
+    /// current threat-manager reference first, not numeric top or attack target.
+    pub fn select_target_max_threat(&mut self) -> Option<Entity> {
+        crate::creature_aggro::current_victim(self.world, self.me)
     }
 
     /// `UnitAI::SelectTarget(SelectTargetMethod::Random, 0, dist, playerOnly)`: a

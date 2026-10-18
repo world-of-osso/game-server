@@ -1,6 +1,6 @@
 //! Creature aggro (docs/specs/creature-aggro.md): hostile creatures attack
 //! players that come within their aggro radius, any creature with a threat
-//! list fights back when damaged, the top-threat unit is chased and
+//! list fights back when damaged, its threat-selected current victim is chased and
 //! auto-attacked, and a creature with no valid target left evades home.
 //!
 //! AzerothCore references: `CreatureAI::MoveInLineOfSight` (CreatureAI.cpp:166),
@@ -31,9 +31,9 @@ pub(crate) const MAX_AGGRO_RADIUS: f32 = 45.0;
 #[path = "creature_aggro_distance.rs"]
 mod attack_distance;
 pub(crate) use attack_distance::AggroDistance;
-/// `ATTACK_DISTANCE` (ObjectDefines.h:25): melee range for the threat
-/// swap threshold.
-const ATTACK_DISTANCE: f32 = 5.0;
+#[path = "creature_threat.rs"]
+mod victim;
+pub(crate) use victim::{CurrentVictim, current_victim};
 /// `Creature::CanCreatureAttack` (Creature.cpp:2741-2755): a victim farther than this
 /// from the creature's home is out of reach: the continent visibility range
 /// (`Visibility.Distance.Continents` = 100, worldserver.conf.dist:2365; under the
@@ -273,33 +273,6 @@ fn aggro_on_sight_system(
     }
 }
 
-type Engaged<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static Position,
-        &'static UnitFactionTemplate,
-        &'static mut ThreatTable,
-        &'static mut CreatureState,
-        Option<&'static mut CombatTarget>,
-        &'static InMap,
-        Option<&'static crate::scripted_ai::ReactState>,
-        Option<&'static crate::auras::ActiveAuras>,
-        (
-            Option<&'static SpawnPoint>,
-            Option<&'static LastDamagedTime>,
-        ),
-        Has<crate::scripted_ai::ScriptedVictimUpdatePaused>,
-        Option<&'static Fixate>,
-    ),
-    (
-        Without<DeathState>,
-        Without<GridDormant>,
-        Without<crate::followers::Follower>,
-    ),
->;
-
 /// `Creature::SetLastDamagedTime`: until when direct damage exempts the creature's
 /// victims from the home distance check.
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
@@ -345,113 +318,64 @@ pub(crate) fn within_reach_of_home(
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Fixate(pub Entity);
 
-/// `CreatureAI::UpdateVictim` / `Creature::SelectVictim`: drop threat
-/// entries that are no longer valid targets, attack the top-threat unit
-/// (a challenger needs 110% of the current target's threat in melee range,
-/// 130% beyond it: `ThreatMgr::getHostileTarget`), and evade when no valid
-/// target is left. A passive creature keeps its victim without attacking it
-/// (`CreatureAI::UpdateVictim`, `scripted_ai::Ctx::update_victim`).
-pub(crate) fn update_victim_system(
-    time: Res<Time>,
-    mut engaged: Engaged,
-    victims: Victims,
-    templates: Res<FactionTemplates>,
-    maps: Option<Res<crate::maps::MapStore>>,
-    mut commands: Commands,
-) {
-    let now = time.elapsed_secs_f64();
-    for (
-        creature,
-        position,
-        faction,
-        mut threat,
-        mut state,
-        combat_target,
-        map,
-        react,
-        auras,
-        (home, last_damaged),
-        scripted_update_paused,
-        fixate,
-    ) in &mut engaged
+/// Select through the server-owned threat reference, then project active attacks.
+pub(crate) fn update_victim_system(world: &mut World) {
+    let creatures: Vec<_> = world
+        .query_filtered::<(Entity, &CreatureState), (
+            With<ThreatTable>,
+            With<Position>,
+            With<UnitFactionTemplate>,
+            With<InMap>,
+            Without<DeathState>,
+            Without<GridDormant>,
+            Without<crate::followers::Follower>,
+        )>()
+        .iter(world)
+        .filter(|(_, state)| matches!(state, CreatureState::Pursuing { .. }))
+        .map(|(creature, _)| creature)
+        .collect();
+    for creature in creatures {
+        // ThreatManager updates independently of AI/react state (TC:216–230).
+        victim::update_reference_when_due(world, creature);
+        update_active_projection(world, creature);
+    }
+}
+
+fn update_active_projection(world: &mut World, creature: Entity) {
+    let paused = world
+        .get::<crate::scripted_ai::ScriptedVictimUpdatePaused>(creature)
+        .is_some();
+    let passive = world.get::<crate::scripted_ai::ReactState>(creature)
+        == Some(&crate::scripted_ai::ReactState::Passive);
+    if paused || passive {
+        return;
+    }
+    let Some(target) = (crate::scripted_ai::Ctx {
+        world,
+        me: creature,
+    })
+    .select_target_max_threat() else {
+        enter_evade_mode(world, creature);
+        return;
+    };
+    project_victim(world, creature, target);
+}
+
+fn project_victim(world: &mut World, creature: Entity, target: Entity) {
+    let next = CreatureState::Pursuing {
+        target: target.to_bits(),
+    };
+    if world.get::<CreatureState>(creature) != Some(&next) {
+        world.entity_mut(creature).insert(next);
+    }
+    if world
+        .get::<CombatTarget>(creature)
+        .and_then(|target| target.0)
+        != Some(target)
     {
-        let dungeon = maps
-            .as_deref()
-            .and_then(|maps| maps.map(map.map_id))
-            .is_some_and(|entry| entry.is_dungeon());
-        let CreatureState::Pursuing { target } = *state else {
-            continue;
-        };
-        if scripted_update_paused || react == Some(&crate::scripted_ai::ReactState::Passive) {
-            continue;
-        }
-        let valid = |unit: u64| {
-            Entity::try_from_bits(unit).is_some_and(|unit| {
-                valid_victim(&victims, &templates, faction.0, map, unit)
-                    && victims.get(unit).is_ok_and(|(victim, ..)| {
-                        within_reach_of_home(home, last_damaged, now, dungeon, victim)
-                    })
-            })
-        };
-        let current = valid(target).then_some(target);
-        if current.is_none() {
-            threat.remove(target);
-        }
-        while let Some(top) = threat.top_threat().map(|entry| entry.entity) {
-            if valid(top) {
-                break;
-            }
-            threat.remove(top);
-        }
-        let Some(top) = threat.top_threat().map(|entry| entry.entity) else {
-            commands.queue(move |world: &mut World| enter_evade_mode(world, creature));
-            continue;
-        };
-        let top_in_melee = Entity::try_from_bits(top)
-            .and_then(|top| victims.get(top).ok())
-            .is_some_and(|(top_pos, ..)| distance(position, top_pos) <= ATTACK_DISTANCE);
-        let taunted = auras.and_then(|auras| {
-            auras
-                .iter()
-                .filter(|aura| {
-                    aura.effects
-                        .iter()
-                        .any(|effect| effect.aura_type == crate::auras::handlers::MOD_TAUNT)
-                        && valid(aura.caster.to_bits())
-                })
-                .last()
-                .map(|aura| aura.caster.to_bits())
-        });
-        // ReselectVictim: a listed fixate target is always preferred; removing its
-        // threat reference clears the fixate.
-        let fixated = fixate
-            .map(|fixate| fixate.0.to_bits())
-            .filter(|&fixated| threat.entries().iter().any(|entry| entry.entity == fixated));
-        if fixate.is_some() && fixated.is_none() {
-            commands.entity(creature).remove::<Fixate>();
-        }
-        let Some(victim) = fixated
-            .or(taunted)
-            .or_else(|| threat.aggro_target(current, top_in_melee))
-        else {
-            continue;
-        };
-        let attacking = combat_target
-            .as_ref()
-            .is_some_and(|combat_target| combat_target.0.map(Entity::to_bits) == Some(victim));
-        if victim == target && attacking {
-            continue;
-        }
-        if victim != target {
-            *state = CreatureState::Pursuing { target: victim };
-        }
-        let victim = Entity::from_bits(victim);
-        match combat_target {
-            Some(mut combat_target) => combat_target.0 = Some(victim),
-            None => {
-                commands.entity(creature).insert(CombatTarget(Some(victim)));
-            }
-        }
+        world
+            .entity_mut(creature)
+            .insert(CombatTarget(Some(target)));
     }
 }
 
@@ -636,6 +560,13 @@ pub(crate) fn add_school_threat(
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {
         threat.add_threat(attacker.to_bits(), amount);
     }
+    // AddThreat only forces initial selection while no current reference exists.
+    if world
+        .get::<CurrentVictim>(creature)
+        .is_none_or(|reference| reference.target.is_none())
+    {
+        let _ = current_victim(world, creature);
+    }
     let engages = world.get::<CreatureState>(creature) == Some(&CreatureState::Idle);
     if engages {
         let mut entity = world.entity_mut(creature);
@@ -727,6 +658,7 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
         .remove::<crate::spell_cast::SpellHistory>();
     let mut entity = world.entity_mut(creature);
     entity.insert(CreatureState::Returning);
+    entity.remove::<CurrentVictim>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }
@@ -776,6 +708,7 @@ fn remove_auras_on_evade(world: &mut World, creature: Entity) {
 /// A dying creature forgets its fight (`Creature::setDeathState` →
 /// `ClearAllThreat`, `CombatStop`), so it respawns idle.
 pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
+    entity.remove::<CurrentVictim>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }

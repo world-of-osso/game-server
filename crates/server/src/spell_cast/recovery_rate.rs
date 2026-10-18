@@ -4,17 +4,33 @@ use bevy::prelude::*;
 use std::collections::BTreeSet;
 
 use super::{SpellHistory, history_now, send_to_owner};
-use crate::auras::{ActiveAuras, AuraInstance, handlers, spell_mods};
+use crate::auras::{ActiveAuras, AuraEffectState, AuraInstance, handlers, spell_mods};
 use crate::spell_info::{SpellInfo, SpellStore};
 use shared::protocol::SpellCooldownUpdate;
+
+fn is_recovery_effect(effect: &AuraEffectState) -> bool {
+    matches!(
+        effect.aura_type,
+        handlers::MOD_RECOVERY_RATE | handlers::MOD_RECOVERY_RATE_BY_SPELL_LABEL
+    )
+}
+
+fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
+    match effect.aura_type {
+        handlers::MOD_RECOVERY_RATE => spell_mods::class_mask_affects(aura, effect, spell),
+        handlers::MOD_RECOVERY_RATE_BY_SPELL_LABEL => {
+            let [primary, secondary] = effect.misc_values;
+            spell.labels.contains(&(primary as u32))
+                || (secondary != 0 && spell.labels.contains(&(secondary as u32)))
+        }
+        _ => false,
+    }
+}
 
 fn aura_multiplier(aura: &AuraInstance, spell: &SpellInfo) -> f64 {
     aura.effects
         .iter()
-        .filter(|effect| {
-            effect.aura_type == handlers::MOD_RECOVERY_RATE
-                && spell_mods::class_mask_affects(aura, effect, spell)
-        })
+        .filter(|effect| affects_spell(aura, effect, spell))
         .map(|effect| {
             let amount = effect.amount * aura.stack_multiplier();
             100.0 / (100.0 + f64::from(amount.max(-99.0)))
@@ -43,10 +59,7 @@ pub(crate) fn capture_previous_rate_aura(
             old.spell_id == incoming.spell_id
                 && old.caster == incoming.caster
                 && old.source == incoming.source
-                && old
-                    .effects
-                    .iter()
-                    .any(|effect| effect.aura_type == handlers::MOD_RECOVERY_RATE)
+                && old.effects.iter().any(is_recovery_effect)
         })
         .cloned()
 }
@@ -55,8 +68,15 @@ fn rates_unchanged(previous: &AuraInstance, current: &AuraInstance) -> bool {
     let rates = |aura: &AuraInstance| {
         aura.effects
             .iter()
-            .filter(|effect| effect.aura_type == handlers::MOD_RECOVERY_RATE)
-            .map(|effect| (effect.class_mask, effect.amount * aura.stack_multiplier()))
+            .filter(|effect| is_recovery_effect(effect))
+            .map(|effect| {
+                (
+                    effect.aura_type,
+                    effect.class_mask,
+                    effect.misc_values,
+                    effect.amount * aura.stack_multiplier(),
+                )
+            })
             .collect::<Vec<_>>()
     };
     previous.class_set == current.class_set && rates(previous) == rates(current)
@@ -114,11 +134,7 @@ fn calculate_deadline_or_warn(
 }
 
 fn retime_running_cooldowns(world: &mut World, unit: Entity, aura: &AuraInstance, apply: bool) {
-    if !aura
-        .effects
-        .iter()
-        .any(|effect| effect.aura_type == handlers::MOD_RECOVERY_RATE)
-    {
+    if !aura.effects.iter().any(is_recovery_effect) {
         return;
     }
     let Some(snapshot) = world.get::<SpellHistory>(unit).cloned() else {
