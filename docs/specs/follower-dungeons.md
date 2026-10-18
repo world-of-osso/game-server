@@ -63,6 +63,7 @@ Azure2498/map2515 retains its existing encounter ordinals and ordinary follower 
 - `scripts/tests/test_follower_import.py` — pinned-data import/application and failure-boundary tests.
 
 ## Tests asserting this spec
+- `crates/server/src/scripted_ai/tests/azure_sprout_field_actions.rs` — ignored native scale/300s expiry and combat-reach fringe/periodic entry/caster-filtered exit cases. Published-baseline execution reaches the shared missing-field ROOT failure; downstream action/scale assertions are not independent REDs or acceptance evidence yet.
 - `crates/server/src/scripted_ai/tests/azure_sprout_fields.rs` — ignored native creation and lifecycle regressions: exact aura removal preserves other field identities; native recast/refresh does not duplicate fields; actual death removes its field; separate aura targets retain independent fields even with one original caster. Creation has a recorded missing-field RED; added lifecycle assertions remain unexecuted, not a lifecycle RED/GREEN claim. Keep these ignored until their production/input prerequisites are available; no scale/action acceptance from fixture presence.
 - `scripts/tests/test_follower_import.py` — source binary to SQLite round-trip, exact authentic spell rows, reapplication/preservation, invalid layout/source, read-only audit and database output rejection.
 - `scripts/tests/test_follower_profiles.py` — eleven verified profiles, source model preservation, repeated SQL application and database-overwrite refusal.
