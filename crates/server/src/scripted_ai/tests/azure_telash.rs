@@ -11,7 +11,6 @@ const ICY_DEVASTATOR_DAMAGE: u32 = 387152;
 const VAULT_RUNE: u32 = 197204;
 
 #[test]
-#[ignore = "RED: source Telash group0 startup is not ported"]
 fn azure_telash_native_group_zero_spawns_three_owned_runes_at_authored_positions_once() {
     let connection = Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("read-only authored Rune group positions");
