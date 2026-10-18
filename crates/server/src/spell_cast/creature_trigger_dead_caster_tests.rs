@@ -57,7 +57,8 @@ fn native_dead_creature_bool_trigger_still_checks_sheilun_caster_requirement() {
         true,
     )
     .expect_err("dead non-aura triggered caster still needs its own cloud")
-    .to_contract();
+    .to_contract()
+    .unwrap();
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some("SPELL_FAILED_CASTER_AURASTATE"));
 }

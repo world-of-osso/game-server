@@ -233,6 +233,7 @@ impl EntryProjection {
                 template_id: entry,
                 name: self.template.name.clone(),
             },
+            CreatureFlagsExtra(self.template.flags_extra),
             Health {
                 current: self.stats.health,
                 max: self.stats.health,

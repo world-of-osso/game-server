@@ -48,25 +48,36 @@ pub(crate) fn remove_items(
     inventory.items.retain(|item| item.stack_count > 0);
 }
 
-/// Add a new stack; the inventory model places it on next load.
+/// Quest starters/rewards use the same ownership and storage checks as other creation.
 pub(crate) fn grant_item(
-    inventory: &mut InventoryData,
+    inventory: &mut crate::inventory::inventory_model::InventoryModel,
     db: &Database,
     quests: &QuestDb,
+    templates: &crate::item_templates::ItemTemplates,
     item_id: u32,
     count: u32,
-) {
-    let info = quests.items.get(&item_id).cloned().unwrap_or_default();
-    inventory.items.push(InventoryItemData {
+) -> Result<(), shared::protocol::InventoryError> {
+    let missing = || {
+        crate::inventory::inventory_model::error(
+            shared::protocol::InventoryErrorReason::ItemNotFound,
+            format!("quest item {item_id} has no Retail definition"),
+        )
+    };
+    let info = quests.items.get(&item_id).ok_or_else(missing)?;
+    let template = *templates.get(Retail, item_id).ok_or_else(missing)?;
+    let item = InventoryItemData {
         item_guid: persistence::next_id(db, "item_instance"),
         item_id,
-        name: info.name,
+        name: info.name.clone(),
         quality: info.quality,
         required_level: info.required_level,
         stack_count: count,
         vendor_sell_price: info.sell_price,
         unique_auction: false,
-    });
+    };
+    inventory.store_item(item, Retail, template, &mut || {
+        persistence::next_id(db, "item_instance")
+    })
 }
 
 /// The objectives the protocol has a kind for; the exploration/event requirement only

@@ -576,6 +576,7 @@ fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonPr
 
 struct SummonTemplate {
     entry: u32,
+    flags_extra: u32,
     level: u8,
     name: String,
     health: f32,
@@ -600,6 +601,7 @@ fn read_summon_template(
     let display_scale = model_display_scale(template, display_id);
     Some(SummonTemplate {
         entry,
+        flags_extra: template.flags_extra,
         level,
         name: template.name.clone(),
         health: crate::hunter_pet::pet_max_health(data, template, level),
@@ -758,6 +760,7 @@ fn spawn_summon(
                 template_id: template.entry,
                 name: template.name.clone(),
             },
+            crate::zones::CreatureFlagsExtra(template.flags_extra),
             Health {
                 current: health,
                 max: health,
