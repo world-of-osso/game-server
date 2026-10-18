@@ -2772,3 +2772,5 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 ## Native Mobile Banking acceptance complete
 
 [Native proof](systems/guild-perks.md#native-mobile-banking-proof): both-skin cast/bank/nonmember refusal/despawn and actual post2h accepted casts pass on identical artifacts. Forever7242700ms complements the retained Modern-origin7311223ms interval. Fifteen inspected unchanged full-HD originals published; owned runtimes stopped and owner-checked window cleared. Earlier interrupted overall results remain intact; countdown labels are not timing oracles.
+
+- 2026-10-18: AURA_POSITIVITY_702 actual native creature curse→real player Remove Curse RED0/3→GREEN3; generic342 signed-stat counterpart, no per-spell or follower override. Prior ignored702 enabled; targeted49PASS128.05s. PinnedTC342 omission and source/native qualification explicit in [auras](systems/auras.md#native-signed-haste-positivity--2026-10-18); full positivity/follower702 picker/legal/freshUDP remain unclaimed.
