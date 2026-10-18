@@ -3,6 +3,10 @@ mod ai;
 mod catalog;
 mod hazards;
 mod party;
+#[cfg(test)]
+mod pull_budget;
+#[cfg(test)]
+mod pull_budget_tests;
 mod spawning;
 mod stockade_diagnostic;
 

@@ -33,6 +33,23 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 - [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
 - [x] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
 
+## Shared tank pull project policies
+
+`TANK_PULL_BUDGET` USER-approved values (verbatim):
+- observation window for measured group DPS and healing: 10 s
+- HP reserve: the forecast must leave ≥ 30% of tank max HP untouched
+- first pull of a run: single pack only, with no overlap until one fight has produced real measurements. No reuse of prior-run numbers.
+
+`TANK_CHAIN_HEALTH_STABILITY`: every party member's health/maxHP must be≥80% at every observed sample spanning the trailing5s before an overlap; absent/incomplete history is not stable. These are project policy values, not Retail constants. Healer casting is explicitly NOT a veto. Block further pulls when the healer cannot pay its next sourced heal cost, or is dead, crowd-controlled or out of range of the tank. Ongoing defense/hazard escape is not a new-pull request.
+
+Forecast the engaged plus candidate/route-aggroed mob set from sourced rank/classification/level, actual creature stat tables and spells/timers; no invented elite multiplier or imported DPS figure. Use current tankHP/maxHP, actual10s measured groupDPS/effective healing and confirmed source cooldown effects. Forecast time-to-clear from remaining hostileHP/measured groupDPS, sustained net damage over that time and the source opening burst. Prevented damage credit cannot create health. Require the minimum forecast health to retain30%maxHP; unknown/non-finite estimates never receive nominal/prior-run rates. The explicitly allowed first single-pack calibration has no fabricated numeric forecast.
+
+Maintain static source spawn GUID/template/position knowledge for the current dungeon copy, including unseen/hidden spawns. Clear only the particular observed dead spawn, never a template or disappearance. Preserve the internal spawnGUID→entity association; no new protocol/admin oracle or guessed nearest-position match. Authored formation membership identifies a pack; ungrouped source spawns are singletons, not guessed geometric clusters. Live visible positions retain full-update/ordinary-interest qualification; hidden spawns need not be visible to be known present.
+
+One shared server follower tank planner serves Garrick/Azure Vault. New pulls need an admitted budget; unsafe candidates permit a demonstrably cleaner candidate or wait, not a blanket pack-count ban. Existing owner selection is not itself engagement; autonomous tank pulls are distinct policy-admitted AI actions. Prioritize loose party attackers/casters, use existing kit Rebuke approach/interrupt before conditional LOS pulls, collect melee and position hostiles so modeled frontals face away from the group. Use existing hazard escape and keep movement in the current fight unless the additional aggro set is budget-admitted. No stat/kit grants or compulsory jitter when all positioning objectives are satisfied. Harness owns ordinary player assist/input and replicated-health/combat proof, not a second per-dungeon follower AI.
+
+Pure budget decision controls are separate from runtime planner/caster integration and native clear acceptance; neither CPU estimates nor partial fights certify a dungeon clear.
+
 ## Azure sourced partial
 
 Leymor starts in375729 stasis with PC/NPC attack immunity until its authored `leymor_arcane_tender` formation depletes. Non-following groupAI0 still has group membership, including its leader. Only the last living member in that map copy completes intro key4; it survives boss reset/death for the instance lifetime without DB persistence. After one second Leymor removes stasis/immunities, casts375749 and announces group0 once. Other copies remain locked. NPC immunity0x200 rejects non-player-controlled attackers independently of PC immunity0x100. Final native Azure acceptance uses user-selected build70448; historical70391 evidence is not relabeled.
