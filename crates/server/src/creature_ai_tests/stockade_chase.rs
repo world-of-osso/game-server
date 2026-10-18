@@ -519,8 +519,12 @@ fn riverpaw_runs_on_the_floor_facing_its_way_and_stops_facing_the_player() {
                 sample.z - target_pos.z,
             );
             if offset.length_squared() <= 2.0 * 2.0 {
-                let floor =
-                    floor_under(&mut ground, sample).expect("ground support at reach entry");
+                let GroundProbe::Supported(floor) = ground.creature_ground_in(
+                    crate::maps::InMap::continent(STOCKADE),
+                    Vec3::new(sample.x, sample.y, sample.z),
+                ) else {
+                    panic!("creature ground support at reach entry: {sample:?}");
+                };
                 assert!((sample.y - floor).abs() < 0.05);
                 first_entry = Some(sample);
             }
