@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source595–599 pose/fountain/paired-bobber gaps
+
+[Exact source matrix](../toy-effects14-coverage.md#source595599-flarendofountain-and-paired-fishing-bobber-override-boundaries-2026-10-17): Flarendo's own5000ms pose, fountain36404 and Rocket520304/520305/Goblet520306/520311/Wellington520308/520309 paired258 overrides remain exact gaps. Runtime only520305 replacement exists, type17/display101984/size2;35591 generic bobber is not replacement art. Preserve both records/131474 references without immediate Fishing casts, guessed pair selection/cast conversion or flavor catch bonus.507 queued76a8426bf, no result/new acceptance/runtime/data/native proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source590–594 recipient/paddle/shop/homebind/pose gaps
 
 [Exact source matrix](../toy-effects14-coverage.md#source590594-ally-returnpaddleoutdoor-stallmixed-homebindtorq-pose-boundaries-2026-10-17): true friendly-player sawblade return, waterwalk+250ms periodic raft/jump paddling, missing controlled outdoor stall237883, explosive homebind252+child1220867 and Torq5000ms pose remain exact gaps. No guaranteed return, flat130% speed, generic vendor, ignored child or invented image-file output.507 queued76a8426bf; no new acceptance/runtime/data/native proof or own heavy duplicate.

@@ -1,5 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source595–599: Flarendo/fountain and paired fishing-bobber override boundaries (2026-10-17)
+
+No new acceptance/runtime/data/native proof or own heavy duplicate. Lead507 remains queued76a8426bf with no log result observed;498 last confirmed landed/master8707ac0ea.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|595 Take-Home Flarendo236751/1220768 | Instant self trigger64/misc1100→1220767/self dummy4/5000ms; inherited300000ms recovery. Actual Flarendo/pose/photo presentation/cleanup remains unaudited, distinct from Torq1220760. No copied sibling art, invented summoned actor or guaranteed image-file output. |
+|596 Gallagio Pipeline Rerouter236769/1220840 | Source5000ms target47 area-trigger179/misc36404 for120000ms, inherited600000ms recovery. Actual fountain plumbing/runoff presentation/location/lifecycle remains gap; no static creature/GO substitution or guessed dye/skin damage inferred from flavor. |
+|597 Limited Edition Rocket Bobber237345/1222880 | Source cast index255/base1000/min500ms, two self aura258 records: misc35591→520304 and35591→520305, each references131474.3600000ms duration, item900000ms recovery/category11/category override-1; start1500ms. Runtime35591 exists,520305 type17/display101984/size2 exists,520304 absent. Exact paired replacement/selection and actual fishing bobber behavior remain gap, not a one-model fallback. |
+|598 Artisan Beverage Goblet Bobber237346/1222884 | Same cast/duration/recovery shape, two distinct258 replacements35591→520306/520311, both runtime replacements absent. Actual fishing replacement/eligible selection/cleanup remains gap; not inventory goblet/drink or copied Rocket display. |
+|599 Organically-Sourced Wellington Bobber237347/1222888 | Same shape, two distinct258 replacements35591→520308/520309, both absent. Actual fishing replacement/selection/cleanup remains gap; flavor does not establish improved fish catch/yield. |
+
+Every bobber aura record keeps its131474 reference and both effect indexes; those references do not establish two immediate Fishing casts, bobber spawns on toy use or which paired record applies. Runtime base35591 is a type17/display668/size1 fishing bobber, not authentic replacement art. Exact fishing-use conditions/splash/interaction and previous-bobber restoration remain separate from an aura-only cosmetic contract. No category11 shared900000ms timer inferred from a-1 category override, deduplicated pair or invented cast-speed conversion.
+
+Evidence: private `rows595-599-{readonly-source,action-source,runtime-action-source,active-goal}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6.149865 Tea Set untouched.
+
 ## Source590–594: ally-return/paddle/outdoor-stall/mixed-homebind/Torq-pose boundaries (2026-10-17)
 
 No new acceptance/runtime/data/native proof or own heavy duplicate. Lead507 remains queued at76a8426bf for current16-disguise/18-caster/12-object acceptances; no result/landing inferred.498 last confirmed landed/master8707ac0ea.
