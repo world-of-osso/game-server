@@ -267,3 +267,26 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
         Some(&added)
     );
 }
+
+#[test]
+fn herald_entry_missing_or_mismatched_origin_refuses_before_actor_mutation() {
+    let (data, spawn) = source_fixture();
+    for wrong_guid in [None, Some(20_202_705)] {
+        let (mut world, actor) = spawn_herald(&data, &spawn, 1);
+        let health = *world.get::<Health>(actor).unwrap();
+        let position = *world.get::<Position>(actor).unwrap();
+        let mut request = spawn.clone();
+        if let Some(guid) = wrong_guid {
+            request.guid = guid; // An actual other spawn, not this actor's origin.
+        } else {
+            world.entity_mut(actor).remove::<CreatureOrigin>();
+        }
+        assert!(!update_target(
+            &data, &mut world, actor, &request, 17536, None
+        ));
+        assert_eq!(world.get::<Npc>(actor).unwrap().template_id, 17307);
+        assert_eq!(*world.get::<Health>(actor).unwrap(), health);
+        assert_eq!(*world.get::<Position>(actor).unwrap(), position);
+        assert_eq!(world.query::<&Npc>().iter(&world).count(), 1);
+    }
+}
