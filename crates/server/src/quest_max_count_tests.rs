@@ -69,10 +69,16 @@ fn hold_product(app: &App, client: &Client, banked: bool) -> u64 {
 
 fn expect_cap_error(app: &mut App, client: &Client) {
     let errors = received::<InventoryError>(app, client);
-    assert_eq!(errors.len(), 1);
+    let failures = received::<QuestFailed>(app, client);
+    assert_eq!(
+        errors.len(),
+        1,
+        "quest failures={failures:?}; inventory={:?}",
+        persistence::load_inventory(db(app), client.character_id)
+    );
     assert_eq!(errors[0].reason, InventoryErrorReason::ItemMaxCount);
     assert!(
-        received::<QuestFailed>(app, client).is_empty(),
+        failures.is_empty(),
         "ownership-cap refusal must not be mislabeled as a full inventory"
     );
 }
