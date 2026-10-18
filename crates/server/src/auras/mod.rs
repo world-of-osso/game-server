@@ -24,6 +24,7 @@ pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
 pub(crate) mod damage_transfer;
+pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fixate;
@@ -1311,6 +1312,8 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     let (mut stats, mut combat) = stat_mods::compute(&auras);
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
+    let primary_support = ebon_might::primary_bonus(&auras);
+    ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
