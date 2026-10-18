@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Published extras and census cardinality (2026-10-18)
+
+[Current regression/correction](../../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg578's12 census failures and st574's additional `toys_effect_census` share one stale1166 oracle after the two-row publication. Keep Full1166 as the baseline and append only named published70448 item/name/spell triples, asserting both identities and resulting count. Exact748a5ad78 merge preserves batch1; intentionally RED batch2 tests remain isolated. Thirteen census plus three batch1 targets pending; no runtime/data change or gate success claim.
+
 ## mc548c landing and expanded70448 hearthstone admission (2026-10-18)
 
 [Current landing and batch1 matrix](../../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-green-2026-10-18): lead confirms coordinated MaxCount landing and merged-engine1604/0; earlier pending labels below are historical. Expanded scope starts with two70448 hearthstones whose dependencies already exist but Toy membership is missing. Selected producer3808fe58f preserves unrelated rows; authentic copied-world diff has only twoToy INSERTs. Producer RED0/2→GREEN2/0; actual learned-use CPU RED0/2 before lead publication→canonical GREEN3/0/71.90s including retained three-item2513 case. Lead published the independently reproduced two-row world fragment and16 source-authenticated audio files; direct canonical rows/SHA readback agrees. Broad tg/toy gate, source landing and native proof remain pending. Historical Full1166 denominator and5efec9c6f families preserved.

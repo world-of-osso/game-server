@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## tg578 census regression: named baseline and published extras (2026-10-18)
+
+Lead tg578 is RED:12 toyfx8–14/18 census callers still asserted1166 after canonical publication added two Toy rows; check/fmt passed. Lead st574 also fails `toys_effect_census`, giving13 instances of the same shared-oracle failure. This is not a runtime or source-row defect. The branch's earlier bounded3/0 proof omitted these existing callers and did not establish gate readiness.
+
+The shared oracle now asserts `FULL1166_BASELINE_COUNT + PUBLISHED_70448_TOYS.len()`, then verifies each named extra's actual item/name/on-use spell. The only published extras are281136/Hiveborne/1310234 and281615/Shadeweaver/1311934; no bare1168 bump or admission of the remaining eight. Future batches append identities after publication. Exact server master748a5ad78 merged; local batch2 RED761d7e0bf remains isolated off this corrective tip. Requested13 census cases plus the three batch1 cases await targeted verification; no source landing/regate claim.
+
 ## mc548c MaxCount landed; expanded70448 hearthstone batch GREEN (2026-10-18)
 
 Lead explicitly reports every mc548c stage passed and coordinated landing: protocola2b07a6, server4531b5842, enginedf9adafca; merged-engine whole ui-model/network1604 passed/0 failed. The Doomsday MaxCount repair and retained three-item5efec9c6f Saptor/Idol/Badge families are landed, not merely candidate merges. Earlier pending labels below are historical. Native error pixels and all1166 gameplay acceptance remain unproved.
