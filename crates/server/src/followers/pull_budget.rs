@@ -101,7 +101,7 @@ pub(super) fn evaluate(input: &BudgetInput) -> Decision {
 fn forecast_decision(input: &BudgetInput, damage: f64, healing: f64) -> Decision {
     let duration = input.hostile_health / damage;
     let sustained_debt = (input.incoming_dps - healing).max(0.0) * duration;
-    let damage_debt = sustained_debt.max(input.opening_burst);
+    let damage_debt = sustained_debt + input.opening_burst;
     let prevented = input.confirmed_cooldown_credit.min(damage_debt);
     let forecast = input.tank_health - damage_debt + prevented;
     if forecast >= input.tank_max_health * TANK_HP_RESERVE_FRACTION {

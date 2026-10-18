@@ -67,6 +67,7 @@ fn tank_pull_budget_allows_stable_overlap_with_real_ten_second_capacity() {
 fn tank_pull_budget_forecast_leaves_at_least_thirty_percent_max_health() {
     let mut input = measured();
     input.incoming_dps = 160.0; // 10s forecast:900-(160-100)*10=300, inclusive boundary.
+    input.opening_burst = 0.0; // Isolate sustained reserve; unaccounted bursts have their own case.
     assert!(matches!(
         evaluate(&input),
         Decision::Allow {
