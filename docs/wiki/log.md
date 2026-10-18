@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source360–364 and pending335/361 acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source360364-pending-reliquaryduck-acceptance-and-bannersledvacuum-gaps-2026-10-17):361431949735 adds existing Reliquary380639/type5/76510/0.6/cursor87/180s as fourth actual transmitted-object case, preserving old three rows and asserting concrete owner/map/facing/expiry. Existing cosmetic.rs already audits335383065;49e9c2d95 adds exact194056/permanent0/cancel/unchanged-health-model/no-actor as15th caster row. Format/manual readability/diffcheck pass; lead accepts335/current tip into gate after478, expanded four-object coverage requested, not passed. Missing380638 sibling, controlled sled, distinct Lucky Duck385941 and rectangle-target130 vacuum action remain gaps; no runtime/data/new admission or own heavy duplicate.
+
 ## 2026-10-17 — Toy source355–359 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source355359-taivan-buffpillow-boundaries-and-retained-statue-proof-2026-10-17): Taivan195387/nearby scaled384543 remains an action/stat/recipient gap; description reference is not a root trigger or flat percentage. Ornate statue194793/108683/0.7/CDI0.3 retains earlier CPU/both-skin proof without a fresh native certificate. Three pillow roots keep target78/radius1yd/3s/5min:Purple376979/type7/74543/size3 exists in runtimeTDB,380634/380635 do not. Placement initialization/seat/identity gaps stay explicit; no zero-foot guess, copied geometry, inert import, runtime/data/new positive claim or own heavy duplicate.
