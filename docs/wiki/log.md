@@ -6,6 +6,10 @@
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): first5d4e3f6d packet5PASS/1FAIL121.30s, exact published inputs/source/HEAD guards stable. Failure was the fixture's zero-initial-tick expectation: actual70448 SpellMisc374523 Attributes5=524800/0x80200 includes TC `EXTRA_INITIAL_PERIOD`0x200. Production periodic behavior is correct and unchanged; corrected fixture pins the flag and expects1initial/1beforeperiod/2afterperiod/2afterexit, preserving no-reapplication and caster-filtered cleanup checks. Only failed case is rerun; five passing field/lifecycle/scale/curve cases are retained, not relabeled fresh6/6.
 
+## 2026-10-17 — Rune startup and first natural Energy phase
+
+[Coverage](investigations/follower-data.md#telash-first-energy-phase--2026-10-17): actual Rune startup0vs3 RED→7PASS/check/fmt at40f6e3977, lead497 landed1432 tests; source Rune data published3670 after494 with byte-identical five-insert re-run. First natural100Energy phase reaches genuine0vs1 Go RED51.96s, then4105c8f71 targeted10PASS106.76s/check6.59s/fmt0 with stable52-source/protocol/input guards; gate504 queued. Existing controlled-fixture health buffer is explicit; no ordinary budget, jump/rune interaction or pixel claim.
+
 ## 2026-10-17 — Native fields accepted and Rune source COPY prepared
 
 [Fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): genuine follower collision-envelope RED→six hazard PASS; requested fresh Azure/aura82PASS/check/fmt at931db8fe, with exact guards. [Rune producer](investigations/follower-data.md#telash-rune-source-projection--2026-10-17): source-preflighted CLI RED→real-copy process1PASS14.184s atf4e617611; d1→3670 COPY full-database delta is only five197204 content inserts, no canonical writes. Native Rune startup/phase/jumps and pixels remain separate open boundaries; lead owns publication.
