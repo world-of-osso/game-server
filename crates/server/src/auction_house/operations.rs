@@ -233,7 +233,7 @@ fn stage_previous_bidder_refund(
     changes.mails.push((
         previous_bidder,
         build_auction_mail(
-            db,
+            persistence::next_id(db, "mail"),
             &auction_mail_subject("AUCTION_OUTBID_MAIL_SUBJECT", auction),
             "",
             0,
@@ -378,7 +378,7 @@ pub(super) fn cancel_auction(
         mails: vec![(
             character_id,
             build_auction_mail(
-                db,
+                persistence::next_id(db, "mail"),
                 &auction_mail_subject("AUCTION_REMOVED_MAIL_SUBJECT", auction),
                 "",
                 0,
@@ -426,7 +426,7 @@ fn seller_proceeds(auction: &AuctionData, sale_price: u64) -> u64 {
 
 /// Seller settlement shared by player and economy purchases.
 pub(crate) fn seller_sale_mail(
-    db: &redb::Database,
+    mail_id: u64,
     auction: &AuctionData,
     sale_price: u64,
     buyer_name: Option<&str>,
@@ -436,7 +436,7 @@ pub(crate) fn seller_sale_mail(
     (
         auction.seller_character_id,
         build_auction_mail(
-            db,
+            mail_id,
             &auction_mail_subject("AUCTION_SOLD_MAIL_SUBJECT", auction),
             &auction_invoice_body(auction, buyer_name, sale_price, house_fee),
             seller_proceeds,
@@ -454,11 +454,16 @@ pub(crate) fn sale_mails(
     // Retail GetInboxInvoiceInfo permits a nil participant name (MailFrame.lua:556-558).
     let buyer_name = persistence::load_character(db, buyer_character_id).map(|buyer| buyer.name);
     vec![
-        seller_sale_mail(db, auction, sale_price, buyer_name.as_deref()),
+        seller_sale_mail(
+            persistence::next_id(db, "mail"),
+            auction,
+            sale_price,
+            buyer_name.as_deref(),
+        ),
         (
             buyer_character_id,
             build_auction_mail(
-                db,
+                persistence::next_id(db, "mail"),
                 &auction_mail_subject("AUCTION_WON_MAIL_SUBJECT", auction),
                 &auction_invoice_body(auction, Some(&auction.seller_name), sale_price, 0),
                 0,
@@ -491,7 +496,7 @@ fn auction_invoice_body(
 
 /// Build instant Auction House mail without delivering it before the market commit.
 pub(crate) fn build_auction_mail(
-    db: &redb::Database,
+    mail_id: u64,
     subject: &str,
     body: &str,
     money: u64,
@@ -499,7 +504,7 @@ pub(crate) fn build_auction_mail(
 ) -> MailData {
     let now = unix_now();
     MailData {
-        mail_id: persistence::next_id(db, "mail"),
+        mail_id,
         sender: MailSender::AuctionHouse,
         subject: subject.to_string(),
         body: body.to_string(),

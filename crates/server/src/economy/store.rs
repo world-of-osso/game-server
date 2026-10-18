@@ -12,14 +12,18 @@ const STATE_KEY: u64 = 0;
 type StoreResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 /// Persist these rows together; callers publish in-memory changes only after success.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct MarketChanges {
+    /// Cycle input checked under the write lock before replacing merchant state.
+    pub expected_economy: Option<EconomyState>,
     pub auctions: Vec<AuctionData>,
     pub deleted_auctions: Vec<u64>,
     /// Existing rows that must still match, checked while holding the write transaction.
     pub expected_auctions: Vec<(u64, AuctionData)>,
     /// Inventory snapshots checked under the same write lock, before any changes.
     pub expected_inventories: Vec<(u64, InventoryData)>,
+    /// Mailbox snapshots must still match before replacing collected mail.
+    pub expected_mailboxes: Vec<(u64, Vec<MailData>)>,
     pub inventories: Vec<(u64, InventoryData)>,
     pub records: Vec<(u64, InventoryRecord)>,
     /// Identity for new GUIDs minted from owned market items.
@@ -69,6 +73,8 @@ pub fn commit_market(
         let txn = db.begin_write()?;
         check_expected_auctions(&txn, &changes.expected_auctions)?;
         check_expected_inventories(&txn, &changes.expected_inventories)?;
+        check_expected_economy(&txn, changes.expected_economy.as_ref())?;
+        check_expected_mailboxes(&txn, &changes.expected_mailboxes)?;
         if let Some(state) = state {
             txn.open_table(STATE)?
                 .insert(STATE_KEY, bitcode::encode(state).as_slice())?;
@@ -83,6 +89,45 @@ pub fn commit_market(
         Ok(())
     };
     commit().map_err(|error| format!("commit market: {error}"))
+}
+
+fn check_expected_mailboxes(
+    txn: &WriteTransaction,
+    expected: &[(u64, Vec<MailData>)],
+) -> StoreResult<()> {
+    if expected.is_empty() {
+        return Ok(());
+    }
+    let table = txn.open_table(MAILBOXES)?;
+    for (id, snapshot) in expected {
+        let persisted: Vec<MailData> = table
+            .get(*id)?
+            .map(|row| bitcode::decode(row.value()))
+            .transpose()?
+            .unwrap_or_default();
+        if persisted != *snapshot {
+            return Err(format!("mailbox {id} changed since it was read").into());
+        }
+    }
+    Ok(())
+}
+
+fn check_expected_economy(
+    txn: &WriteTransaction,
+    expected: Option<&EconomyState>,
+) -> StoreResult<()> {
+    let Some(expected) = expected else {
+        return Ok(());
+    };
+    let table = txn.open_table(STATE)?;
+    let row = table
+        .get(STATE_KEY)?
+        .ok_or("economy state no longer exists")?;
+    let persisted: EconomyState = bitcode::decode(row.value())?;
+    if persisted != *expected {
+        return Err("economy state changed since it was read".into());
+    }
+    Ok(())
 }
 
 fn check_expected_auctions(
