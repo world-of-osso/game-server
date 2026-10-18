@@ -224,12 +224,13 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             135 => self.kill_effect(caster, ability, effect),
             136 => self.cleanse(caster),
+            145 if ability == 1989 => self.force_swap(caster, effect),
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
                     let order = match ability {
                         774 => (effect.order - 1) % 3 + 1,
-                        920 => effect.order.div_ceil(2),
+                        920 | 2378 => effect.order.div_ceil(2),
                         _ => effect.order,
                     };
                     other_team_slot(target, order)
@@ -305,8 +306,13 @@ impl<R: BattleRng> Runtime<'_, R> {
                     .insert(p[0] as u32, value);
                 Ok(true)
             }
-            23 if matches!(ability, 258 | 979) => {
-                let recipient = other_team_slot(caster, effect.order - 3);
+            23 if matches!(ability, 258 | 979 | 2378) => {
+                let order = if ability == 2378 {
+                    effect.order / 2
+                } else {
+                    effect.order - 3
+                };
+                let recipient = other_team_slot(caster, order);
                 self.heal_recipient(caster, recipient, effect)
             }
             23 | 53 => self.heal_effect(caster, effect),

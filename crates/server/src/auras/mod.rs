@@ -845,10 +845,14 @@ pub(super) fn reduce_cast_pushback(world: &mut World, target: Entity) {
     }
     let factor = 1.0 - reduction / 100.0;
     cast.pushback_count += 1;
-    cast.duration = match cast.cast_type {
-        CastType::Normal => cast.duration + CAST_DELAY * factor,
-        CastType::Channel => (cast.duration * (1.0 - CHANNEL_FRACTION * factor)).max(cast.elapsed),
-    };
+    match cast.cast_type {
+        // TC Spell::Delayed caps remaining time at the original cast time.
+        // Remaining=duration-elapsed: adding delay with that cap rewinds progress to zero.
+        CastType::Normal => cast.elapsed = (cast.elapsed - CAST_DELAY * factor).max(0.0),
+        CastType::Channel => {
+            cast.duration = (cast.duration * (1.0 - CHANNEL_FRACTION * factor)).max(cast.elapsed);
+        }
+    }
     crate::spell_cast::mark_dirty(world, target);
 }
 
@@ -1729,6 +1733,30 @@ pub fn channel_ended(world: &mut World, caster: Entity, spell_id: u32) {
     }
 }
 
+fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
+    !aura.passive
+        && aura.dispel_type != 0
+        && (dispel_type == DISPEL_ALL || u32::from(aura.dispel_type) == dispel_type)
+        && aura.harmful != hostile
+}
+
+/// Read the exact eligibility predicate used by ordinary SPELL_EFFECT_DISPEL.
+pub(crate) fn has_dispellable_aura(
+    world: &World,
+    dispeller: Entity,
+    target: Entity,
+    types: &[u32],
+) -> bool {
+    let hostile = targets::is_hostile(world, dispeller, target);
+    world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras.iter().any(|aura| {
+            types
+                .iter()
+                .any(|dispel_type| aura_can_be_dispelled(aura, hostile, *dispel_type))
+        })
+    })
+}
+
 /// SPELL_EFFECT_DISPEL: remove up to `count` non-passive auras of
 /// `dispel_type` — buffs from a hostile target, debuffs from a friendly one.
 /// Logs `dispel` (dispeller, target, dispelling spell) once per removed aura, naming the
@@ -1746,12 +1774,7 @@ pub fn dispel(world: &mut World, dispel: &CombatLogEvent, dispel_type: u32, coun
     };
     let chosen: Vec<u32> = auras
         .iter()
-        .filter(|aura| {
-            !aura.passive
-                && aura.dispel_type != 0
-                && (dispel_type == DISPEL_ALL || u32::from(aura.dispel_type) == dispel_type)
-                && aura.harmful != hostile
-        })
+        .filter(|aura| aura_can_be_dispelled(aura, hostile, dispel_type))
         .take(count)
         .map(|aura| aura.instance_id)
         .collect();

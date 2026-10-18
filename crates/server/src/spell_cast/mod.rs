@@ -137,6 +137,8 @@ mod excluded_aura_spell_tests;
 #[cfg(test)]
 mod excluded_caster_type_tests;
 #[cfg(test)]
+mod expel_harm_tests;
+#[cfg(test)]
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
@@ -283,6 +285,7 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
+pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;

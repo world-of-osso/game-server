@@ -37,6 +37,9 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
         EnemySelection::Attack(enemy) => Some(enemy),
         _ => None,
     };
+    if super::kit_ai::update(world, unit, follower, &party, enemy) {
+        return;
+    }
     if enemy.is_some_and(|enemy| interrupt_enemy(world, unit, enemy, follower.profile.spec_id)) {
         return;
     }
@@ -83,7 +86,7 @@ fn stop_attacking_cc(world: &mut World, unit: Entity) {
     }
 }
 
-fn hold_combat(world: &mut World, unit: Entity) {
+pub(super) fn hold_combat(world: &mut World, unit: Entity) {
     // A controlled enemy is still engaged: never combat_stop or reset its threat.
     world
         .entity_mut(unit)
@@ -101,7 +104,7 @@ fn escape_pet_hazard(world: &mut World, unit: Entity) {
     }
 }
 
-fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
+pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
     let Some(pet) = crate::hunter_pet::summoned_pet(world, unit) else {
         return;
     };
@@ -113,7 +116,7 @@ fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
     crate::pet_control::order_companion_pet(world, unit, target);
 }
 
-fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
+pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
     // The approved player-spec bridge's Demonology summon names its own creature
     // in SpellEffect; Hunter's empty stable never receives a guessed pet.
     if follower.profile.spec_id != 266 || crate::hunter_pet::summoned_pet(world, unit).is_some() {
@@ -212,8 +215,25 @@ fn select_enemy(
     unit: Entity,
     party: &[Entity],
 ) -> EnemySelection {
+    let enemies = engaged_enemies(world, follower, unit, party);
+    let attackable = enemies
+        .iter()
+        .find(|(enemy, _)| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
+    match attackable {
+        Some(&(enemy, _)) => EnemySelection::Attack(enemy),
+        None if enemies.is_empty() => EnemySelection::None,
+        None => EnemySelection::Hold,
+    }
+}
+
+pub(super) fn engaged_enemies(
+    world: &mut World,
+    follower: &Follower,
+    unit: Entity,
+    party: &[Entity],
+) -> Vec<(Entity, Option<Entity>)> {
     let Some(&map) = world.get::<InMap>(unit) else {
-        return EnemySelection::None;
+        return Vec::new();
     };
     let selected = world
         .get::<CombatTarget>(follower.owner)
@@ -254,14 +274,7 @@ fn select_enemy(
             follower.profile.role == GroupRole::Tank && victim.is_some_and(|victim| victim != unit);
         (!lost_threat, selected != Some(*enemy), enemy.to_bits())
     });
-    let attackable = enemies
-        .iter()
-        .find(|(enemy, _)| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
-    match attackable {
-        Some(&(enemy, _)) => EnemySelection::Attack(enemy),
-        None if enemies.is_empty() => EnemySelection::None,
-        None => EnemySelection::Hold,
-    }
+    enemies
 }
 
 /// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
@@ -282,7 +295,7 @@ fn interrupt_spell(spec: u32) -> Option<u32> {
     }
 }
 
-fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
+pub(super) fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
     let interruptible = world
         .get::<CastState>(enemy)
         .is_some_and(|cast| cast.interruptible);
@@ -363,7 +376,13 @@ fn needs_taunt(world: &World, tank: Entity, enemy: Entity, follower: &Follower) 
             .is_some_and(|victim| victim != tank)
 }
 
-fn pursue(world: &mut World, unit: Entity, target: Entity, spell_id: u32, melee: bool) -> bool {
+pub(super) fn pursue(
+    world: &mut World,
+    unit: Entity,
+    target: Entity,
+    spell_id: u32,
+    melee: bool,
+) -> bool {
     let reach = if melee {
         Some(2.0)
     } else {
@@ -415,7 +434,7 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
     }
 }
 
-fn regroup(world: &mut World, unit: Entity, owner: Entity) {
+pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
     let unsafe_approach = super::hazards::target_is_hazardous(world, unit, owner)
         || super::hazards::path_crosses_hostile_field(world, unit, owner);

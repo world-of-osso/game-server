@@ -74,7 +74,10 @@ fn navigation_stormwind_stairs_reach_upper_landing() {
     app.update();
     let from = wow(-8737.0, 993.0, 79.5);
     let goal = wow(-8737.0, 971.0, 85.3);
-    let target = app.world_mut().spawn(position(goal)).id();
+    let target = app
+        .world_mut()
+        .spawn((position(goal), crate::maps::InMap::continent(0)))
+        .id();
     let mob = app
         .world_mut()
         .spawn((
@@ -117,7 +120,7 @@ fn navigation_stormwind_stairs_reach_upper_landing() {
         "creature reached upper landing: {last:?}"
     );
     assert!(
-        ((last.x - goal.x).hypot(last.z - goal.z) - 2.0).abs() < 0.05,
+        (last.distance(goal) - 2.0).abs() < 0.05,
         "stops in reach on the landing: {last:?}"
     );
 }

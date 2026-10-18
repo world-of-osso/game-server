@@ -246,9 +246,12 @@ fn spell_teleport_ground_leap_rejects_out_of_range_and_nonfinite_destinations() 
 }
 
 #[test]
-fn spell_teleport_matrix_infernal_strike_uses_requested_ground_destination() {
+fn spell_teleport_infernal_strike_refuses_jump254_progress_curve1636_only() {
     use lightyear::prelude::*;
     let mut h = harness(Vec::new(), &[189110], 12).unwrap();
+    h.app
+        .insert_resource(crate::test_data::world_data().clone());
+    let fury_before = h.power(shared::components::PowerType::Fury);
     h.app
         .insert_resource(crate::terrain_height::test_helpers::flat_ground(
             33.0, 33.0, 2.0,
@@ -281,18 +284,30 @@ fn spell_teleport_matrix_infernal_strike_uses_requested_ground_destination() {
     assert_eq!(
         *h.app.world().get::<Position>(h.caster).unwrap(),
         Position {
-            x: 30.0,
+            x: 10.0,
             y: 2.0,
             z: -10.0
-        }
+        },
+        "JUMP254_PROGRESS_CURVE: source param2/curve1636 is not a teleport"
+    );
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 189110));
+    assert!(h.inbox.cooldowns.iter().any(|update| {
+        update.spell_id == 189110 && !update.is_gcd && update.duration_ms == 1_000
+    }));
+    assert_eq!(
+        h.power(shared::components::PowerType::Fury),
+        fury_before,
+        "native spell has no power cost"
     );
 }
 
 #[test]
-fn spell_teleport_matrix_harpoon_and_feral_lunge_move_caster_not_target() {
+fn spell_teleport_harpoon_moves_but_feral_lunge_refuses_jump254_curve_trigger() {
     for id in [186260, 196884] {
         // Harpoon190925 trigger and matrix Feral Lunge.
         let mut h = harness(Vec::new(), &[id], 7).unwrap();
+        h.app
+            .insert_resource(crate::test_data::world_data().clone());
         h.app
             .insert_resource(crate::terrain_height::test_helpers::flat_ground(
                 33.0, 33.0, 2.0,
@@ -329,10 +344,11 @@ fn spell_teleport_matrix_harpoon_and_feral_lunge_move_caster_not_target() {
         let plan =
             super::plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), true).unwrap();
         super::resolve_effects(h.app.world_mut(), h.caster, &spell, &plan, 0);
+        let expected = if id == 196884 { start } else { destination };
         assert_eq!(
             *h.app.world().get::<Position>(h.caster).unwrap(),
-            destination,
-            "spell{id}"
+            expected,
+            "Harpoon41 moves; JUMP254_PARABOLIC_CURVE_TRIGGER refuses196884 displacement"
         );
         assert_eq!(*h.app.world().get::<Position>(h.npc).unwrap(), destination);
     }

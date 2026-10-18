@@ -11,6 +11,8 @@ mod azure_explosive_brand;
 mod azure_frost_bomb;
 #[path = "azure_intro.rs"]
 mod azure_intro;
+#[path = "azure_jump_charge.rs"]
+mod azure_jump_charge;
 #[path = "azure_leymor_children.rs"]
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
@@ -45,6 +47,8 @@ mod maraudon;
 mod noxxion;
 #[path = "omor.rs"]
 mod omor;
+#[path = "omor_pushback.rs"]
+mod omor_pushback;
 #[path = "omor_slay.rs"]
 mod omor_slay;
 #[path = "theradras.rs"]
@@ -373,6 +377,7 @@ fn encounter_fixture(
         class_level_base_mana: data.base_mana.clone(),
         expected_stats: expected,
         summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
+        jump_charge_params: crate::spell_cast::jump_charge::load_params(&conn).unwrap(),
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
