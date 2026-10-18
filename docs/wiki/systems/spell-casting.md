@@ -1,5 +1,17 @@
 # Spell Casting
 
+## Caster summon destination32 — 2026-10-18
+
+Target32 now has its own `CasterSummon` selector rather than aliasing44. Pinned TC `a352b1fa` Spell.cpp1613–1641 and SpellInfo.cpp280/292 select front-left at max(PET_FOLLOW_DIST1, source combat reach), ignoring radius. The mutable planning step reads geometry before summon creation; real30717/source18812 reach10 proves placement before later AI can mask it.
+
+`caster_summon_destination.rs` separates ordinary collision/allowed-Z from Attr9 FORCE_DEST_LOCATION. Ordinary selection uses existing `GroundMap::clamp_live_movement`, then dry-floor placement for represented non-flyers; GravityDisabled or player CAN_FLY/FLYING preserves altitude above floor and raises it below floor. FORCE uses ten distance-backoff samples with6yd height-change limit and final ground placement, independently of flight. Missing geometry refuses rather than inventing a height.
+
+Residuals remain explicit: `TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED` (live-GO1yd ray/0.5yd clearance is not TC nav/static/halfheight tracing), `TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED` (no added hover/swim state projection), and `TARGET32_HEIGHT_PROBE_PARITY_UNIMPLEMENTED` (existing sampler differs from TC MAX_HEIGHT/near-height choice). `CASTER_RELATIVE_DEST_ALLOWED_Z_UNIMPLEMENTED` covers unchanged42,44,47,49,50,72,55. These limitations preclude a complete TC movement-parity claim.
+
+Proof: genuine independent XY and below-floor REDs, separate FORCE RED, then a2373c0c5 targeted7/7 GREEN (49.47s test execution, no warnings). Includes selector18/62/138 and retained live-floor/podium controls. Three primitive tests enabled afterward without assertion/product changes. Natural Herald INTRO2 tests remain on a separate branch; no INTRO2/native/whole-encounter claim. Lead owns independent check/fmt gate.
+
+Sources: pinned TC Spell.cpp1613–1641/9286–9292, Object.cpp698–766/2787–2906, PetDefines.h92; [contract and tests](../../specs/caster-summon-destination.md). Related: [Herald](../../specs/ramparts-herald.md).
+
 ## Expel Harm total-heal consequence — 2026-10-17
 
 Named322101-only nonperiodic callback runs after resolved self-heal logging and the existing Beacon call. It uses literal total `amount`, including overheal, and native e1 percentage10 to dispatch actual115129 with the existing dynamic child helper and no explicit unit. Do not substitute `effective` health gained or recalculate heal coefficients/variance/crit. Child native CANT_CRIT/ignore-caster-percent attributes retain root heal modifiers once and normal victim immunity/absorb. Other healing and Beacon's effective-transfer policy remain unchanged; no new state/generic extraction/trigger API.

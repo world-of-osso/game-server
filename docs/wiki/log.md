@@ -1,3 +1,7 @@
+## 2026-10-18 — Caster summon destination32
+
+[Primitive](systems/spell-casting.md#caster-summon-destination32--2026-10-18): distinct source reach/front-left selector, represented dry-floor/flight adjustment and separate FORCE backoff. Genuine XY/below-floor/FORCE REDs precede a2373c0c5 targeted7/7 GREEN49.47s, no warnings; three primitive cases enabled afterward without behavior changes. Lead owns check/fmt gate. Exact geometry/hover/swim/height residuals and unchanged42/44/47/49/50/72/55 remain named; INTRO2 is separate.
+
 ## 2026-10-18 — Direct member-rank assignment
 
 [Authority](systems/guild-lifecycle.md#direct-member-rank-assignment): source TC1894–1930 direction/self and source UI hierarchy/index mapping qualified first. Actual typed-request RED2/2 refused legitimate GM/multirank and promote-only assignments; earlier snapshot import compilation failure unclaimed. One direct validated rank/member transaction, recipient refresh and no synthetic step events; existing explicit step history preserved. GREEN/transport/joint/native proof remains pending.
