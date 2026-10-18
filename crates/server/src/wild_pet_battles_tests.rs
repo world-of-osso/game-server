@@ -112,7 +112,8 @@ fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_p
     assert_eq!(amounts, [16; 3]);
     assert_eq!(
         state.teams[0].pets.each_ref().map(|pet| pet.health),
-        [131, 84, 104]
+        //Rare/breed3 level1 Squirrel starts159HP, not Rabbit's147HP.
+        [143, 84, 104]
     );
     assert_eq!(state.teams[0].active, 1);
     assert_eq!(state.teams[1].active, 0);
