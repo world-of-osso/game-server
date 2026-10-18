@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source350–354 and329 runtime-table correction
+
+[Exact source matrix](../toy-effects14-coverage.md#source350354-private-weathershellrafteasel-boundaries-and-retained-cooking-proof-2026-10-17): private outdoor weather, mixed shell/action/animation, water/jump-paddle raft and easel movement/pose remain gaps; Maruuk retains exact source16 cooking CPU scope without per-toy native pixels. **Correction to earlier325–329 entry:** summoned-object loader reads runtime `tdb_gameobject_template`, which contains offering377204/type3/display74995 and cooking379147/type8/display75339; earlier offering absence inference from base/content tables was wrong and is withdrawn. Offering interaction gap unchanged. No runtime/data/new admission or own heavy duplicate.
+
 ## 2026-10-17 — Toy source345–349 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source345349-slidewyrmholerecalibrationprivate-environmentperception-gaps-2026-10-17): mixed slide/periodic child, engineering2827/rank1 Wyrmhole random/triangulated travel, recalibrator area-trigger27706, outdoors party/raid-private environment Title55/rawsignedflags and observer-scoped gnoll perception remain distinct gaps.195667/194993 runtime content absent; existing198156 census stays blocked. No invented tick/destination/model pools, public/owner-only privacy substitute, inert imports or new positive/native proof. Lead478 owns expanded acceptance verification; no heavy duplicate.

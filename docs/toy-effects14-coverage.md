@@ -1,5 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source350–354: private weather/shell/raft/easel boundaries and retained cooking proof (2026-10-17)
+
+351 retains [source16 cooking-focus CPU proof](#cooking-focus-batch16-2026-10-12); its per-toy Maruuk native pixels remain unclaimed. Other rows retain exact mixed/private/movement gaps. No runtime/data changes, new positive/native certificate or own heavy duplicate.
+
+**329 metadata correction:** summoned-object loading reads runtime `tdb_gameobject_template`, not the empty base/content gameobject tables.377204/type3/display74995/size1.3 is present there; earlier absence claim is withdrawn. Its acceptance/open interaction remains unresolved.351's379147/type8/display75339/size0.75/focus4/radius10 is likewise present in that actual runtime source. Private capsules now record the queried table explicitly.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|350 Centralized Precipitation Emitter198264/385792 | Source5000ms target47 summon195323/property5453 for7200000ms, inherited7200000ms recovery; Control0/Title55/rawflags-1811735808. Runtime content actor absent. Outdoors-only/party-or-raid-only machine and effects, selected weather and restoration/lifecycle remain gaps; no public/owner-only substitute or ordinary decorative actor. |
+|351 Maruuk Cooking Pot198402/383081 | Source2000ms effect50→379147 at target32/base1 for300000ms; item-1 and category97/300000ms recovery. Existing source16 actual learned use/model75339/scale0.75/owner/map/lifetime/real cooking/no-focus-distance-other-map-removal refusal CPU scope is retained. Native shared-fire evidence was Grim, not Maruuk per-toy pixels; no new native result, trap admission or guessed portable timer. |
+|352 Personal Shell198409/383188 | Source cast-index34/base2000ms/minimum500ms, self transform56→existing194226/display105964/misc8 plus26 and312/set1048 for300000ms; item3600000ms recovery. Mixed body/action restriction/animation entry-exit remains unverified. Do not turn flavor safety into invulnerability or discard26/set1048 for a caster-disguise shortcut. |
+|353 Tuskarr Dinghy198428/383268 | Source1500ms self104 plus226/period0 for600000ms, start recovery1500ms and item/spell recovery0. Source explicitly requires rafting across water and jumping to paddle up to130% faster. Water/movement/paddle state and restoration remain gaps; no unconditional speed/land travel, guessed stacking/cadence or ignored periodic payload. |
+|354 Artist's Easel198474/384131 | Source1500ms self373 plus191/base2.5 for2000ms, inherited30000ms recovery. Pinned191 is normal-movement-speed handling, not a generic art attachment. Exact inspiration/pose/movement/cleanup remains unproved; no invented easel summon, screenshot reward or dropped movement/control semantics. |
+
+Evidence: private `rows350-354-{readonly-source,action-source,active-goal}.json`; `game_objects/summoned.rs::load_templates`, pinned `SpellAuraEffects.cpp`, [cooking-focus proof ledger](#cooking-focus-batch16-2026-10-12). Tea Set149865 remains untouched.
+
 ## Source345–349: slide/wyrmhole/recalibration/private-environment/perception gaps (2026-10-17)
 
 All five retain distinct unresolved actions, not generic cosmetics. Local runtime content templates/models for195667 and194993 are absent; earlier scenery census explicitly keeps Wyrmhole198156 blocked. Source graph/restrictions do not establish a usable implementation. No runtime/data admission, new positive/native certificate or own heavy duplicate; [pending lead478 scope](#lead-integration-receipt-2026-10-17) is unchanged.
@@ -70,7 +86,7 @@ Read-only70391 source inspection establishes the following exact contracts, not 
 |326 Element-Infused Rocket Helmet192443/372573 | Instant self knockback effect98/base1200 plus dummy aura4 for3000ms; item86400000ms recovery. Authored launch/movement and safety/landing behavior remain gaps; neither dropped98 nor guessed velocity/height/damage immunity is a valid cosmetic substitute. |
 |327 Stored Wisdom Device192485/373230 | Source500ms cast, target47 summon189951/properties5348 for300000ms; Control0/Title27/Slot0/flags75704584, item1800000ms recovery. TDB189951/display107044/scale1/probability1 exists, runtime content template/model absent. Advice/speech/action and specialized-title lifecycle remain unresolved; no inert-body import or invented quote set. |
 |328 Malfunctioning Stealthman 54 (192495/373351) | Source2000ms cast, self aura312/misc61 for1800000ms, inherited300000ms recovery. Pinned TC labels312 animation replacement set, implemented clientside. Source explicitly describes formerly functioning stealth; actual set61 animation/presentation remains unverified, not authority to grant invisibility/stealth or treat it as a plain attachment. |
-|329 Jeweled Offering193032/374893 | Source2000ms cast, effect50→377204 at target138 (pinned ground destination),300000ms lifetime, item86400000ms recovery. TDB377204 is chest/type3/display74995/size1.3, runtime gameobject template absent. Recipient acceptance/open interaction and cleanup remain gaps; no guessed possession transfer/loot or decorative-only admission. |
+|329 Jeweled Offering193032/374893 | Source2000ms cast, effect50→377204 at target138 (pinned ground destination),300000ms lifetime, item86400000ms recovery. 377204 is chest/type3/display74995/size1.3 and is present in the runtime `tdb_gameobject_template` actually read by summoned-object loading; the earlier base-table absence inference is withdrawn. Recipient acceptance/open interaction and cleanup remain gaps; no guessed possession transfer/loot or decorative-only admission. |
 
 Evidence: private `rows325-329-{readonly-source,action-source,active-goal}.json`; local source `SpellInfo.cpp`, `SpellAuraEffects.cpp`, `SharedDefines.h`. TDB availability and lack of a root script binding do not certify complete behavior. Tea Set149865 remains untouched.
 
