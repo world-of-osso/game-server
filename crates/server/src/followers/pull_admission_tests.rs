@@ -397,6 +397,49 @@ fn tank_pull_admission_native_scripted_source_has_no_automatic_numeric_budget() 
 }
 
 #[test]
+fn tank_pull_admission_native_roster_change_rejects_old_snapshot_before_next_tick() {
+    let mut f = measured_fixture();
+    let owner = f.h.caster;
+    let profile =
+        f.h.app
+            .world()
+            .get::<Follower>(f.members[2])
+            .unwrap()
+            .profile
+            .clone();
+    let map = *f.h.app.world().get::<InMap>(f.tank).unwrap();
+    let replacement = crate::spell_cast::test_harness::spawn_npc(&mut f.h.app, 0.0);
+    f.h.app.world_mut().entity_mut(replacement).insert((
+        shared::components::Npc {
+            template_id: profile.entry,
+            name: profile.name.clone(),
+        },
+        shared::components::UnitPowers::default(),
+        map,
+    ));
+    super::spawning::initialize(f.h.app.world_mut(), owner, replacement, profile).unwrap();
+    f.members[2] = replacement;
+    f.h.app
+        .world_mut()
+        .get_mut::<super::stockade_diagnostic::DiagnosticParty>(owner)
+        .unwrap()
+        .members = f.members.clone();
+    assert!(
+        pull_history::snapshot(f.h.app.world(), owner).is_none(),
+        "new authoritative five-member roster must invalidate old calibration before next sampler tick"
+    );
+    assert!(f.read(&[f.second]).is_err());
+    pull_history::sample_all(f.h.app.world_mut());
+    assert!(matches!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Allow {
+            bootstrap: true,
+            forecast_health: None
+        }
+    ));
+}
+
+#[test]
 fn tank_pull_admission_native_new_copy_discards_completed_fight_and_rates() {
     let mut f = measured_fixture();
     let old = *f.h.app.world().get::<InMap>(f.tank).unwrap();
