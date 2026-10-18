@@ -1,6 +1,6 @@
-## 2026-10-18 — MaxCount landed; expanded70448 hearthstone RED
+## 2026-10-18 — MaxCount landed; expanded70448 hearthstone RED to GREEN
 
-[Current landing/batch1 matrix](../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-red-2026-10-18): explicit lead mc548c receipt lands MaxCount and retained three-item family proof; earlier pending labels are historical. Two newly scoped hearthstones have real source dependencies but no Toy membership: actual learned-use RED0/2/56.76s. Selected producer3808fe58f preserves unrelated rows, RED0/2→GREEN2/0; copied-world diff is twoToy INSERTs,16 local-CASC audio files authenticated. Lead canonical world/audio publication precedes CPU GREEN; no native/full1166 claim.
+[Current landing/batch1 matrix](../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-green-2026-10-18): explicit lead mc548c receipt lands MaxCount and retained three-item family proof; earlier pending labels are historical. Two newly scoped hearthstones have real source dependencies but no Toy membership: actual learned-use RED0/2/56.76s. Selected producer3808fe58f preserves unrelated rows, RED0/2→GREEN2/0; copied-world diff is twoToy INSERTs,16 local-CASC audio files authenticated. After lead's byte-identical diff/fresh-CASC publication, canonical GREEN3/0/71.90s covers both hearthstones and retained5efec9c6f case. Direct canonical row/audio hashes agree; broad tg/toy gate/source landing/native/full1166 still unclaimed.
 
 ## 2026-10-18 — Post-guild merge codec and MaxCount targets GREEN
 

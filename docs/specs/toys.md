@@ -2,9 +2,9 @@
 
 ## Expanded build70448 hearthstones
 
-- [ ] Admit Hiveborne281136/1310234 and Shadeweaver281615/1311934 from their exact build70448 Toy rows without replacing the historical1166 catalog or admitting the other eight newly scoped toys in this batch.
-- [ ] Actual bag learning and UseToy must preserve the existing persisted-homebind requirement, source10000ms cast and shared charge2309 (one charge/1800000ms recharge). No early teleport/SpellGo, no charge spent for absent bind, and successful use blocks its sibling while preserving health/model.
-- [ ] Selected Toy import must preserve unrelated catalog rows, remain idempotent and reject a requested missing source identity before mutation. Existing full-catalog import remains available explicitly without selection.
+- [x] Admit Hiveborne281136/1310234 and Shadeweaver281615/1311934 from their exact build70448 Toy rows without replacing the historical1166 catalog or admitting the other eight newly scoped toys in this batch.
+- [x] Actual bag learning and UseToy must preserve the existing persisted-homebind requirement, source10000ms cast and shared charge2309 (one charge/1800000ms recharge). No early teleport/SpellGo, no charge spent for absent bind, and successful use blocks its sibling while preserving health/model.
+- [x] Selected Toy import must preserve unrelated catalog rows, remain idempotent and reject a requested missing source identity before mutation. Existing full-catalog import remains available explicitly without selection.
 
 CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Remaining eight toys are later batches.
 
