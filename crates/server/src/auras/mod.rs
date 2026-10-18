@@ -17,6 +17,7 @@
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 pub(crate) mod area_avoidance;
+pub(crate) mod augmentation;
 pub(crate) mod base_armor;
 mod charred_warblades;
 pub(crate) mod damage_shield;
@@ -562,6 +563,7 @@ fn build_effect(
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
+    let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let period_ms = if effect.aura_period_ms > 0 {
         spell_mods::modify(
             world,
@@ -2078,6 +2080,8 @@ mod tests;
 #[cfg(test)]
 mod toy_effects_tests;
 
+#[cfg(test)]
+mod augmentation_tests;
 #[cfg(test)]
 mod autoattack_crit_tests;
 #[cfg(test)]
