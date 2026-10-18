@@ -51,7 +51,7 @@ fn apply_invitation_response(
         .get(&request.match_id)
         .ok_or("battleground invitation is no longer available")?;
     let map = matched.map;
-    let maximum_level = matched.instance.template.bracket.max_level;
+    let maximum_level = matched.instance.bracket.max_level;
     // TC Handler359–365 / Battleground1528–1533: use the retained bracket, not BML max.
     let above_maximum = if request.accepted && invitation.arena.is_none() {
         let level = world
