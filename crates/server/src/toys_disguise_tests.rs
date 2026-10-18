@@ -3,7 +3,7 @@ use super::*;
 
 const TEN_MINUTES_MS: u32 = 600_000;
 // Item, spell, creature, displays, recovery ms, aura duration ms, cast ms.
-const SOURCE_DISGUISES: &[(u32, u32, u32, &[u32], u32, u32, u32)] = &[
+const SOURCE_DISGUISES: &[(u32, u32, i32, &[u32], u32, u32, u32)] = &[
     (
         164373,
         281298,
