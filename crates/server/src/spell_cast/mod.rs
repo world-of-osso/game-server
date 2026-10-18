@@ -3348,6 +3348,8 @@ mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
 #[cfg(test)]
+mod target32_grounding_tests;
+#[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]
 mod tests;
