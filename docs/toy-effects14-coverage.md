@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source680–684: mixed props, staff image, camera guides and short-recovery Pango boundaries (2026-10-18)
+
+Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Pango's one-hour appearance/ten-minute category recovery does not fit the existing disguise helper's recovery-outlives-appearance assertions; neither source timing nor existing assertions changed to force admission. Behavior remains unverified, not declared unsupported or RED.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|680 Enchanted Hourglass268455/1282444 | Instant target47/base0 summon259940/property64/Control0/flags0 plus self16/misc95177 for300000ms, inherited300000ms recovery. Runtime actor/model absent. Actual hourglass/placement/effect16/cancellation lifecycle remains gap. Aura text says unsummon "bench" despite no encoded dummy4 slot; do not copy Bench's aura or invent linked428 ownership. |
+|681 Animated Bench268456/1282018 | Instant target47/base0 summon259917/property64/Control0/flags0 plus self dummy4 and16/misc95178 for300000ms, inherited300000ms recovery. Runtime actor/model absent. Actual sitting/seat authority, effect16 and aura-cancel unsummon contract remain gap; not generic static scenery or Hourglass substitution. |
+|682 Malfunctioning Staff268504/1266234 | Source instant target47/base0 summon254150/property6563/Control0/Faction35/flags16 for30000ms, inherited60000ms recovery; runtime actor/model absent. Actual original-owner image/presentation/lifecycle remains gap. Description says channel Arcane magic but source casting index is instant with Attributes1=0; no invented channeled-cast flag or stationary default actor from base0. |
+|683 Pin-o-Matic Camera268695/1285766 | Instant self293/misc3598/-1000,60/misc127,321 and64→1285910 for600000ms, explicit item2000ms recovery. Portrait1285910 and square1285913 each carry260/misc0/7 plus164 removing the other guide. Actual camera composition/capture/control/guide switching/cleanup remains gap. Preserve both mutual removal edges and negative payload; not generic caster attachment or screenshot-tool substitute. |
+|684 Pango Plating268717/1283490 | Instant self transform56/misc260345/8 for3600000ms, normal recovery0/category2513 recovery600000ms. Existing Pango displays143136/143137/143138/143139/143140, each scale1/weight1. Actual learned appearance/restoration and shared ten-minute category behavior unverified. No independent hour-long timer, shortened aura or borrowed long-recovery disguise certificate; basic source transform shape is not itself a runtime-failure finding. |
+
+Evidence: private `rows680-684-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, category2513 Toy-Transform join. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source675–679: black-hole game, key inventory, rainbow chain, retained pillow and dual hologram boundaries (2026-10-18)
 
 Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Existing Pillow learned-use/expiry fixture retained; later acceptances still await lead successor after cancelled509.
