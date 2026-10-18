@@ -376,6 +376,9 @@ fn toyfx618_royal_visage_learned_misc0_expiry_and_recovery_restore_model() {
     assert_eq!(aura.duration_ms, DURATION_MS);
     assert_eq!(aura.effects[0].misc_values, [CREATURE, 0]);
     let expiry = aura.expires_at.unwrap();
+    let expected_seconds = f64::from(DURATION_MS) / 1000.0;
+    let remaining = expiry - crate::auras::aura_now(h.app.world());
+    assert!(((expected_seconds - 1.0)..=expected_seconds).contains(&remaining));
     let recovery = h
         .inbox
         .cooldowns
