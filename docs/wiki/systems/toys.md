@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Singed593 and Pango684 owned CPU verification GREEN (2026-10-18)
+
+[Exact proof/limits](../../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): runtime5ea7efcaa at6b54512a0, canonical shared11a058cf; real535RED→focused5931/0/25.16s, own toys197/0/337.82s includes593/Pango684 and preserved Citizens/generic dummy refusals. Workspace all-targets check/fmt pass. Minimal audited Singed slot only; no blanketdummy or10186 edit.593/Pango earlier pending labels are historical; lead successor/landing receipt and native/full1166 proof remain absent.
+
 ## Gate535 RED and narrow Singed admission repair pending (2026-10-18)
 
 [Exact failure/repair scope](../../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18): actual593 refused child dummy4;535server315/1/1ignored/EXIT101/FMT0/CHECK0, not fixture failure or landing. Authorized5ea7efcaa admits only audited1220867/slot0 through existing zero-payload visual-aura guard. TC `SpellAuraEffects.cpp:76,4836–5117` has spell-specific dummy handlers; generic dummy admission would falsely accept unresolved scripts. Citizens/Personal Anchor refusal retained. Own focused compile/test running; no GREEN/native certificate yet, Pango remains stacked.
