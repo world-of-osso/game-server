@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source435–439 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source435439-linked-hologramstone-smashholiday-basket-boundaries-and-retained-bear-2026-10-17): Lady of Dreams360s and Timeless One300s linked holograms retain distinct stands/mixed child auras and literal source text, not stand-only or model-name substitution. Stone Breaker's two root children,191/dummy/script and both28357 area edges remain an unresolved smashing contract; misc1300/700 not guessed counts. Bear204405 exact CPU/earlier both-skin model evidence retained without new pixels/recovery; Basket204675 caster aura/cancel witness does not certify mounted Dragonriding presentation or Noblegarden cooldown. No runtime/data/new admission/proof or own heavy duplicate.4920c77 queued.
+
 ## 2026-10-17 — Toy source430–434 boundaries;492 queued
 
 [Exact source matrix](../toy-effects14-coverage.md#source430434-cookingforced-formclanlinked-hologram-boundaries-and-retained-will-2026-10-17): missing runtime386682 cooking brazier, ForceCast2→402636→202340/88121 transform, nonzero chosen-clan banner and linked428/403712 mixed summon+self-aura hologram retain exact action/selection/lifecycle gaps. Hraxian204220/403491 is an existing15-caster484 accepted row, not new art/expiry/reuse proof. Root/child hologram text discrepancy preserved without model substitution or guessed scale. No runtime/data/producer/new acceptance/native changes or own heavy duplicate. Lead492 queued0c77bfdaa for corrected same-clock regen and actual actor-phase tests;489 remains failed.
