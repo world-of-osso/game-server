@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "741b4c231520a2858accad5415314f6806e5cb9c",
+  "validator_revision": "5fc44fa1ec4a563b8ff81424fd6a37b8cc434df5",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1841,
+  "admitted_effect_rows": 1844,
   "effect_rows": 2829,
-  "admitted_abilities": 1031,
+  "admitted_abilities": 1032,
   "abilities": 1404,
   "properties": [
     {
@@ -1542,7 +1542,7 @@
       ]
     },
     {
-      "admitted_rows": 82,
+      "admitted_rows": 85,
       "handler": true,
       "property": 222,
       "rows": 90,
@@ -1551,10 +1551,7 @@
         2799,
         3827,
         3828,
-        3829,
-        4902,
-        4903,
-        4904
+        3829
       ]
     },
     {
@@ -7360,7 +7357,7 @@
     },
     {
       "ability": 2523,
-      "error": "ability 2523: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 2524,
