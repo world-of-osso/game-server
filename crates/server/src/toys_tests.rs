@@ -3409,6 +3409,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (141299, 225824, 114846, 73493, 60000),
         (184415, 345799, 175582, 99948, 180000),
         (201931, 395720, 199047, 112284, 300000),
+        (202261, 398246, 200350, 114420, 300000),
         (272339, 1290957, 263908, 143906, 60000),
         (279590, 1306978, 270689, 146432, 60000),
     ] {
@@ -3421,9 +3422,13 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
         learn_effect_toy(&mut h, character, item);
-        // Maiev's 12-yard destination keeps its speed-12 missile in flight during pump.
-        let cursor_distance = if item == 201931 { 12.0 } else { 2.0 };
-        let destination = if matches!(item, 89869 | 184415 | 201931) {
+        // Keep each mini's source-speed missile in flight during the first pump.
+        let (missile_root, cursor_distance) = match item {
+            201931 => (Some(398485), 12.0), // Maiev: speed 12, one-second flight.
+            202261 => (Some(398491), 18.0), // Sneed: speed 30, 0.6-second flight.
+            _ => (None, 2.0),
+        };
+        let destination = if matches!(item, 89869 | 184415) || missile_root.is_some() {
             let origin = h.app.world().get::<Position>(h.caster).unwrap();
             Some([origin.x + cursor_distance, origin.y, origin.z])
         } else {
@@ -3434,8 +3439,8 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             None,
             "item {item}"
         );
-        if item == 201931 {
-            assert!(h.inbox.go.iter().any(|go| go.spell_id == 398485));
+        if let Some(root_spell) = missile_root {
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == root_spell));
             assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
         }
         h.advance(60); // Includes the globe's authored 3000ms cast.
