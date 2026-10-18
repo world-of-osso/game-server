@@ -5,9 +5,9 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 ## What it must do
 
 ### Producer
-- [ ] Preserve the exact source table's columns, row values and NULLs in `tdb_jump_charge_params`; no invented speed, height, visual, curve or trigger values.
-- [ ] Preparation accepts independent copies only, is idempotent, refuses malformed source atomically and changes no unrelated tables, actors, placements or difficulty rows.
-- [ ] Fresh world imports retain the same source table. COPY receipts identify the source dump, code/input/output hashes and complete schema/row delta; canonical publication remains lead-owned.
+- [x] Preserve the exact source table's columns, row values and NULLs in `tdb_jump_charge_params`; no invented speed, height, visual, curve or trigger values.
+- [x] Preparation accepts independent copies only, is idempotent, refuses malformed source atomically and changes no unrelated tables, actors, placements or difficulty rows.
+- [x] Fresh-import schema/table registration retains the same source table. COPY receipts identify the source dump, code/input/output hashes and complete schema/row delta; canonical publication remains lead-owned. Schema plus real excerpt-loader behavior is proved; a complete fresh-world import is not.
 
 ### Initial runtime subset
 - [ ] Actual Telash387981/388082 effect254 casts move asynchronously to their exact source-authored destinations, including elevated endpoints; no launch teleport, ground snap or LOS-clamped replacement destination.
@@ -30,7 +30,7 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 - Native254 motion cases are pending the published source table; existing Gordoth controls remain required regression proof.
 
 ## Known gaps (current cycle)
-- [ ] Producer first: source-backed COPY preparation, scoped proof, push/gate and lead publication.
+- [ ] Producer first: source-backed COPY preparation and scoped proof complete at fba6fb2b; push/gate and lead publication pending.
 - [ ] Runtime only after publication: genuine no-teleport RED, bounded motion implementation and scoped controls/check/fmt.
 
 ## Out of scope
