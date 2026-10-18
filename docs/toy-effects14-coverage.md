@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source490–494: monument/raid-aura/pennant/moving-trail/owl-rest/sleep boundaries (2026-10-17)
+
+Mixed service/area/periodic or unaudited visual/action contracts remain gaps. No further runtime/data/new acceptance/native proof or own heavy duplicate;4964df7af2e6 remains lead-owned/pending.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|490 Magical Murkmorpher210467/425839 | Instant target47 summon212150/property4345/flags2056/base1 plus self trigger64→425841 for120000ms; child is raid-area effect65/dummy4/120000ms, not an ordinary self effect6 aura. Item3600000ms recovery. Runtime creature/model absent. Actual monument/appearance-changing interaction/raid recipient/cleanup remains unresolved. Description reference425843 is not a literal root trigger; no inert statue, automatic transformation or guessed model/eligibility. |
+|491 Verdant Legend's Pennant210497/425994 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Actual seasonal pennant art/eligibility/cleanup remains unaudited; no zero-dummy admission or borrowed Crimson/Obsidian certificate. |
+|492 Winter Veil Socks210656/426377 | Instant self periodic23/every500ms→426379 for120000ms; child target18 persistent-area27/dummy4/1000ms. Spell600000ms/start1500ms recovery. Actual festive footwear/moving ground-trail placement/multiplicity/presentation/cleanup remains unresolved; no caster-only aura, deduplicated child, invented trail count or permanent ground effect. |
+|493 Owl Post210725/426679 | Source3000ms self dummy4/30000ms, inherited60000ms recovery. Authored placed post/nearby owls resting/selection/lifecycle remains unaudited; no generic zero-dummy success, inert post-only substitute or guessed feeding/follower gameplay. |
+|494 Improvised Leafbed210864/427288 | Instant target47 summon213113/property64/base1 for600000ms, inherited1200000ms recovery. Runtime creature/model absent. Actual usable sleep/bed placement/pose/cleanup remains gaps; no static foliage or guessed seat/control profile from a missing body. |
+
+Evidence: private `rows490-494-{readonly-source,action-source,runtime-action-source,active-goal}.json`, pinned effect65/27 identities and explicit description-reference boundary.149865 Tea Set remains untouched.
+
 ## Source485–489: festive friend/growth/racial-homebind boundaries and retained interactive banner (2026-10-17)
 
 Metadata-only continuation; no further runtime/data changes or own heavy duplicate. Lead496 through4df7af2e6 is queued with missile-expanded filters/fmt, result pending; local16-row proof8687f84c5 remains scoped as above. Ordinary Human hearthstone witnesses cannot certify the explicitly Draenei-restricted Hologem.
