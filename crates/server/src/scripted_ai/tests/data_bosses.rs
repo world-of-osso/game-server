@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "azure_absolute_zero.rs"]
+mod azure_absolute_zero;
 #[path = "azure_combat.rs"]
 mod azure_combat;
 #[path = "azure_explosive_brand.rs"]
@@ -15,6 +17,8 @@ mod azure_leymor_children;
 mod azure_mechanic_power;
 #[path = "azure_sprout_death.rs"]
 mod azure_sprout_death;
+#[path = "azure_sprout_field_actions.rs"]
+mod azure_sprout_field_actions;
 #[path = "azure_sprout_fields.rs"]
 mod azure_sprout_fields;
 #[path = "azure_sprouts.rs"]
@@ -78,7 +82,9 @@ fn bound_boss_with_catalog(
     bit: u32,
     catalog: Option<bossmod::Catalog>,
 ) -> (Harness, Entity, InMap) {
-    let difficulty = if map_id == 409 { 3 } else { 1 };
+    // Source Lucifron spawn20056605 supports9/18; map409 difficulty9 supplies CT1004.
+    // Legacy difficulty3 has no installed MapDifficulty row and is not that spawn's context.
+    let difficulty = if map_id == 409 { 9 } else { 1 };
     bound_boss_at_difficulty(entry, map_id, bit, difficulty, catalog)
 }
 
@@ -263,6 +269,7 @@ fn encounter_fixture(
         12201 => Some(prepare_encounter_database("theradras")),
         17306 => Some(prepare_encounter_database("gargolmar")),
         17308 => Some(prepare_encounter_database("omor")),
+        186737 => Some(prepare_encounter_database("telash")),
         _ => None,
     };
     let path = prepared
@@ -272,6 +279,7 @@ fn encounter_fixture(
     app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
     app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
     app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
+    app.insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&conn).unwrap());
     app.insert_resource(
         super::super::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap(),
     );
@@ -309,6 +317,7 @@ fn encounter_fixture(
             || (entry == 12201 && *id == 12238)
             || (entry == 17306 && *id == 17309)
             || (entry == 17308 && *id == 17540)
+            || (entry == 186737 && *id == 197204)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
@@ -458,6 +467,7 @@ fn encounter_fixture(
             app.world().resource::<WorldData>(),
             content,
             false,
+            Some(&mut crate::test_data::ground_map()),
         );
         // Object spawns and their lock sidecar are unchanged by the template import.
         let canonical =
@@ -535,11 +545,17 @@ fn spawn_authored_actor(
         wd,
         wd.template_for(entry, difficulty)
             .expect("authored fixture difficulty"),
-        map,
+        &mut crate::zones::CreatureSpawnContext {
+            map: map,
+            difficulty_id: difficulty,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("authored actor level context");
     commands
         .entity(actor)
         .insert(crate::zones::CreatureDifficulty(difficulty));

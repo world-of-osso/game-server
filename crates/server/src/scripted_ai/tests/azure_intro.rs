@@ -97,6 +97,7 @@ fn spawn_second_copy(h: &mut Harness) -> (Entity, InMap) {
             dead_bosses: Vec::new(),
         },
         false,
+        Some(&mut crate::test_data::ground_map()),
     );
     queue.apply(h.app.world_mut());
     h.advance(0.1);

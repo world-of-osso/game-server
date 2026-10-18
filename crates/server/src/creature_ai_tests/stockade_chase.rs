@@ -106,7 +106,7 @@ fn navigation_stockade_chase_routes_around_walls() {
     }
     let goal = bevy(PLAYER_ON_FLOOR);
     assert!(
-        ((last.x - goal.x).hypot(last.z - goal.z) - 2.0).abs() < 0.05,
+        (Vec3::new(last.x - goal.x, last.y - goal.y, last.z - goal.z).length() - 2.0).abs() < 0.05,
         "stopped {last:?}, target {goal:?}"
     );
     let spawn = bevy(SLAYER_SPAWN);
@@ -407,7 +407,15 @@ fn navigation_stockade_repaths_when_target_moves() {
         CreatureState::Pursuing { .. }
     ));
     assert!(
-        ((last.x - new_goal.x).hypot(last.z - new_goal.z) - 2.0).abs() < 0.1,
+        (Vec3::new(
+            last.x - new_goal.x,
+            last.y - new_goal.y,
+            last.z - new_goal.z
+        )
+        .length()
+            - 2.0)
+            .abs()
+            < 0.1,
         "stopped {last:?}, target {new_goal:?}"
     );
 }
@@ -433,7 +441,7 @@ fn same_angle(a: f32, b: f32) -> bool {
 }
 
 /// The slayer runs across the floor to the player: it stands on the floor each tick (the
-/// player is a yard higher), faces where it runs with `Run` motion, then stops 2 yd short,
+/// player is higher), faces where it runs with `Run` motion, then stops2yd short in3D,
 /// `Still`, facing the player (`ChaseMovementGenerator` `SetInFront`).
 #[test]
 fn riverpaw_runs_on_the_floor_facing_its_way_and_stops_facing_the_player() {
@@ -444,6 +452,20 @@ fn riverpaw_runs_on_the_floor_facing_its_way_and_stops_facing_the_player() {
         CreatureState::Pursuing {
             target: target.to_bits(),
         },
+    );
+    #[derive(Resource, Default)]
+    struct GroundedChaseSamples(Vec<Position>);
+    app.init_resource::<GroundedChaseSamples>();
+    app.add_systems(
+        FixedUpdate,
+        (move |world: &mut World| {
+            let position = *world.get::<Position>(chaser).unwrap();
+            world
+                .resource_mut::<GroundedChaseSamples>()
+                .0
+                .push(position);
+        })
+        .after(chase_system),
     );
     let mut ground = stockade_ground();
     let mut last = *app.world().get::<Position>(chaser).unwrap();
@@ -473,8 +495,42 @@ fn riverpaw_runs_on_the_floor_facing_its_way_and_stops_facing_the_player() {
     }
     assert!(ran > 5, "ran {ran} ticks");
     let target_pos = bevy(PLAYER_ON_FLOOR);
-    let gap = (target_pos.x - last.x).hypot(target_pos.z - last.z);
-    assert!((gap - 2.0).abs() < 0.01, "stops 2 yd short: {gap}");
+    // TC a352b1fa ChaseMovementGenerator.cpp44–53 and Position.h121–127/155–157:
+    // in-range3Dpredicate, not exact boundary; PathGenerator.cpp1031–1034 is a guesstimate.
+    // Keep2yd and the existing0.01yd upper epsilon. Observe every fixed movement tick.
+    let gap = Vec3::new(
+        target_pos.x - last.x,
+        target_pos.y - last.y,
+        target_pos.z - last.z,
+    )
+    .length();
+    assert!(gap <= 2.0 + 0.01, "stops inside2yd3Dreach: {gap}");
+    let mut first_entry = None;
+    for &sample in &app.world().resource::<GroundedChaseSamples>().0 {
+        if let Some(entry) = first_entry {
+            assert_eq!(
+                sample, entry,
+                "must not move after first grounded3Dreach entry"
+            );
+        } else {
+            let offset = Vec3::new(
+                sample.x - target_pos.x,
+                sample.y - target_pos.y,
+                sample.z - target_pos.z,
+            );
+            if offset.length_squared() <= 2.0 * 2.0 {
+                let GroundProbe::Supported(floor) = ground.creature_ground_in(
+                    crate::maps::InMap::continent(STOCKADE),
+                    Vec3::new(sample.x, sample.y, sample.z),
+                ) else {
+                    panic!("creature ground support at reach entry: {sample:?}");
+                };
+                assert!((sample.y - floor).abs() < 0.05);
+                first_entry = Some(sample);
+            }
+        }
+    }
+    assert!(first_entry.is_some(), "must actually enter grounded3Dreach");
     assert_eq!(
         *app.world().get::<CreatureMotion>(chaser).unwrap(),
         CreatureMotion::Still

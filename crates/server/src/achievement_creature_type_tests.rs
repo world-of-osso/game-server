@@ -18,11 +18,17 @@ fn spawn_source_kill_target(h: &mut Harness, entry: u32) -> Entity {
         &mut commands,
         data,
         template,
-        InMap::continent(0),
+        &mut crate::zones::CreatureSpawnContext {
+            map: InMap::continent(0),
+            difficulty_id: crate::zones::map_difficulty_id(world, InMap::continent(0)),
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("native source creature level context");
     queue.apply(world);
     let position = *world.get::<Position>(target).unwrap();
     world.entity_mut(h.caster).insert(Position {
@@ -199,21 +205,27 @@ fn spawn_controlled_native_target(h: &mut Harness, entry: u32) -> Entity {
         &mut commands,
         data,
         template,
-        InMap::continent(0),
+        &mut crate::zones::CreatureSpawnContext {
+            map: InMap::continent(0),
+            difficulty_id: crate::zones::map_difficulty_id(world, InMap::continent(0)),
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),
-    );
+    )
+    .expect("native controlled creature level context");
     queue.apply(world);
     target
 }
 
-fn add_level20_group_recipient(h: &mut Harness, character: u64, member: u64) -> Entity {
+fn add_level30_group_recipient(h: &mut Harness, character: u64, member: u64) -> Entity {
     use crate::group::{GroupRegistry, OnlineMember, OnlineView};
     let recipient = crate::spell_cast::test_harness::spawn_player(&mut h.app, 9, 2.0);
     h.app.world_mut().entity_mut(recipient).insert((
         crate::persistence::ClientId(member),
-        shared::components::Level(20),
+        shared::components::Level(30),
         PlayerAchievementState::default(),
     ));
     let connection =
@@ -233,7 +245,7 @@ fn add_level20_group_recipient(h: &mut Harness, character: u64, member: u64) -> 
                     entity: id,
                     name: name.into(),
                     class: 9,
-                    level: 20,
+                    level: 30,
                     portrait: Default::default(),
                     dungeon_difficulty: 1,
                     raid_difficulty: Default::default(),
@@ -273,22 +285,33 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         crate::persistence::ClientId(character),
         PlayerAchievementState::default(),
     ));
-    let recipient = add_level20_group_recipient(&mut h, character, member);
-    // The production content view gives Lesser Voidwalker418 an untuned level20.
+    let recipient = add_level30_group_recipient(&mut h, character, member);
+    // TC Creature::ApplyLevelScaling/SelectLevel (a352b1fa:3122/1610): templateCT0
+    // inherits actual terrain area279 CT11 (7..30), delta0 => native30, not cache20.
     // Legacy Imp416 says5, but native ContentTuning482 makes its actual level90.
-    for (level, kills, previous, expected) in [(19, 1, 0, 0), (20, 2, 0, 1), (21, 3, 1, 2)] {
+    for (level, kills, previous, expected) in [(29, 1, 0, 0), (30, 2, 0, 1), (31, 3, 1, 2)] {
         h.app
             .world_mut()
             .entity_mut(h.caster)
             .insert(shared::components::Level(level));
         let target = spawn_controlled_native_target(&mut h, 418);
+        let scaling = h
+            .app
+            .world()
+            .get::<shared::level_scaling::LevelScaling>(target)
+            .expect("actual terrain supplies regional tuning");
+        assert_eq!(scaling.content_tuning_id, 11);
+        assert_eq!(
+            (scaling.min_level, scaling.max_level, scaling.delta),
+            (7, 30, 0)
+        );
         assert_eq!(
             h.app
                 .world()
                 .get::<shared::components::UnitLevel>(target)
                 .unwrap()
                 .0,
-            20
+            30
         );
         assert_eq!(crate::unit_creature_type::get(h.app.world(), target), 3);
         assert!(!crate::spell_cast::try_cast_triggered(
@@ -337,7 +360,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
         assert_eq!(
             recipient_state.criteria_progress.get(&107647),
             Some(&kills),
-            "eligible recipient compares their own20, not killer level"
+            "eligible recipient compares their own30, not killer level"
         );
         assert_eq!(recipient_state.criteria_progress.get(&4944), Some(&kills));
         h.cast(686, Some(target));

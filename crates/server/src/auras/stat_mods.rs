@@ -336,6 +336,14 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
         let combat = &mut acc.combat;
         let stats = &mut acc.stats;
         match effect.aura_type {
+            // Only these sourced spell fields bind support540 to a stat;
+            // other540 spells remain unsupported (TC's handler is NULL).
+            540 if aura.spell_id == super::augmentation::PRESCIENCE_BUFF && effect.index == 0 => {
+                stats.crit_pct += amount;
+            }
+            540 if aura.spell_id == super::augmentation::SHIFTING_SANDS && effect.index == 0 => {
+                stats.versatility_pct += amount;
+            }
             // MiscValue is the stat index; negative is every stat.
             MOD_STAT => add_to_stats(&mut stats.primary_flat, amount, |index| {
                 misc < 0 || misc as usize == index
