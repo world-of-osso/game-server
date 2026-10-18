@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source620–624: pending POST/Cosmic hearthstones and balloon/scaled-spire/phase-guise boundaries (2026-10-17)
+
+Acceptance-onlyd981a866d appends two real learned-use identities to unchanged saved-bind/shared2309 helper, now21 hearthstones/old19 retained. POST245970/1240219 blocks Stone212337; Cosmic246565/1242509 blocks POST245970. Format/manual two-one-call-test readability/diffcheck pass; behavior needs a head AFTER50776a8426bf. No runtime/data/new native proof or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|620 Brewer's Balloon245946/1240088 | Source1000ms target43/base1 summon246042/property3141/Control1/Title5/Slot6/flags256 for60000ms; normal recovery0/start1000ms. Runtime creature/model absent. Actual summon-and-dismiss relation/placement/lifecycle remains gap; Title5 alone does not establish mail service or a static target47 prop. |
+|621 P.O.S.T. Master's Express Hearthstone245970/1240219 | Source10000ms252/targets1/9, item overrides-1/condition0, normal recovery0/start1500ms/shared2309/max1/recharge1800000ms. Own absent-bind refusal/no charge spending, actual persisted bind/pending-cast return, unchanged health-model and sibling charge-refusal acceptance committed, behavior pending AFTER507. Description's delivery guarantee does not shorten the source10s cast. |
+|622 Lightning-Blessed Spire246227/1240408 | Instant target87 summon246171/property2910/flags256 for180000ms, inherited300000ms recovery/start1500ms; display131280/NPC scale0.5/weight1. Existing exact scaled-scenery fixture retained, not new native lightning/damage/blessing or full five-minute reuse proof. |
+|623 Cosmic Hearthstone246565/1242509 | Actual TriggerType0 LegacySlot1, source10000ms252/targets1/9/shared2309/max1/recharge1800000ms, normal recovery0/start1500ms. Own same real saved-bind/charge helper acceptance committed; slot1 root preserved, no unrelated slot0 substitution or independent30min timer. Behavior pending AFTER507; native visuals/cross-map/natural recharge remain separate. |
+|624 Guise of the Phase Diver246903/1244178 | Instant self dummy4/3600000ms, normal recovery0/start1500ms. Actual ethereal-state appearance/phase authority/conditions/restoration remains unaudited, absent maintained visual-only list. No generic caster aura, invented invisibility/phase mask/immunity or body transformation from flavor. |
+
+Evidence: private `rows620-624-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `hearth621-623-{active-goal,proof-ledger}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6 and exact category2309 join. Qualified558 and mixed579/593 remain outside ordinary hearth acceptance.507 earlier19-hearthstone scope has no observed final aggregate/landing; newer21 identities await covering proof.149865 Tea Set untouched;498 last confirmed landed/master8707ac0ea.
+
 ## Source615–619: pending Sea-Blessed Shrine and kill-proc/scripted-memory/rolling-snowball/Royal Visage boundaries (2026-10-17)
 
 Acceptance-only4a0133a68 appends245942/1240082/246037/display129958/180s plus cursor selection to unchanged stationary-source fixture, now17 identities/old16 retained. Format/manual literal readability/diffcheck pass; behavior needs head AFTER50776a8426bf. Expiry uses the fixture's existing explicit simulation-time leap, not ordinary50ms/wall-duration acceptance. No runtime/data/new native proof or own heavy duplicate.
