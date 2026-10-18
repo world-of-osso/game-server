@@ -26,8 +26,8 @@ mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
-pub(crate) use batch9::hostile_ground_fields;
 pub(super) use batch9::update_ground_pulses;
+pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
 pub(crate) use batch19::{copy_havoc, dispersion_tick, on_dispelled, replace_havoc};
 pub(crate) use batch20::proc_charges;
 /// OnEffectHit runs once per effect without replacing generic or aura dispatch.

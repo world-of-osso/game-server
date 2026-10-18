@@ -21,6 +21,7 @@ pub(crate) struct FollowerCatalog {
     pub profiles: Vec<Profile>,
     pub follower_ids: HashSet<u32>,
     pub dungeons: HashMap<u32, Dungeon>,
+    pub(super) kits: Vec<super::kit::Entry>,
 }
 
 pub(crate) fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog> {
@@ -78,6 +79,7 @@ pub(crate) fn load_catalog(db: &Connection) -> rusqlite::Result<FollowerCatalog>
         profiles,
         follower_ids,
         dungeons,
+        kits: super::kit::load(db)?,
     })
 }
 
