@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source485–489: festive friend/growth/racial-homebind boundaries and retained interactive banner (2026-10-17)
+
+Metadata-only continuation; no further runtime/data changes or own heavy duplicate. Lead496 through4df7af2e6 is queued with missile-expanded filters/fmt, result pending; local16-row proof8687f84c5 remains scoped as above. Ordinary Human hearthstone witnesses cannot certify the explicitly Draenei-restricted Hologem.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|485 Festive Trans-Dimensional Bird Whistle209859/423674 | Source2000ms self linked428→423638 for3600000ms; instant child target47 summon existing210898/property3449/flags2056. Festive Pepe model114425/scale0.2/probability0 retained literally; item60000ms recovery. Complete Pepe/sleigh presentation/relative motion/owner/linked cleanup remain unverified; no inert prop or probability/scale rewrite. |
+|486 Friendsurge Defenders209944/423865 | Source2000ms self dummy4/1800000ms, inherited1800000ms recovery. Authored trio of Emerald Dream friends/selection/presentation/lifecycle remains unaudited; no generic zero-dummy admission, single-friend substitute or invented three server-AI actors. |
+|487 Chilling Celebration Banner210042/424022 | Instant cursor87 effect50→existing409869/type22/display84868/size1 for180000ms; category1246 recovery180000ms. Object Data0→audited424023, Data2=1. Retained exact fixture learns/places it, uses the real spellcaster object and observes424023/3600000ms on caster with unchanged full health/model; explicit ok in492. It is not an inert type5 banner. Native art, full access/audience guards, object expiry and natural recharge remain separate proof scopes. |
+|488 Fast Growing Seed210411/425503 | Source3000ms self dummy4/30000ms, inherited60000ms recovery. Actual planting/rapid-growth presentation/placement/cleanup remains unaudited; no generic aura-only seed, guessed tree/server body, farm harvest or forced cursor target. |
+|489 Draenic Hologem210455/438606 | Source10000ms252/targets1/9, shared2309/max1/recharge1800000ms. Description explicitly allows only draenei/lightforged draenei, while source ItemSparse AllowableRaces low/high are both-1 and on-use PlayerCondition0. Exact eligible-race positives/other-race refusal plus actual saved-bind/charge lifecycle remain unverified; no invented item race mask or Human-helper full certificate. |
+
+Evidence: private `rows485-489-{readonly-source,action-source,runtime-action-source,active-goal}.json`, actual type22 object-spell join/fixture, literal Toy/ItemSparse/on-use restriction fields.149865 Tea Set remains untouched.
+
 ## Approved cursor-flight fix; complete16-row local GREEN (2026-10-17)
 
 Lead approved only adding87 to `missiles::DEST_TARGETS`, removing the honest ignore and running the complete stationary-source fixture locally.8687f84c5 implements exactly that runtime constant/comment change; every identity/assertion is unchanged and the ignore is removed. Authorized native helper local proof PASS1/0failed/0ignored47.72s, all16 identities; compile3m43s/no warnings. Format/fmtcheck/manual readability/diffcheck and exact push/readback pass. This supersedes the pending-approval/ignored state below, not its historical RED evidence. Successor-to492 aggregate/landing remain lead-owned and pending; no deployment/native certificate.
