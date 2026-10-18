@@ -224,25 +224,41 @@ fn herald_context_ordinary_spawn_reads_actual_terrain_parent_not_spawn_zone() {
 
 #[test]
 fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
-    let result = std::panic::catch_unwind(|| {
-        drop(spawn_continent_fixture(
-            sourced_nazan_fixture(),
-            crate::ground::GroundMap::default(),
-        ));
+    let mut data = sourced_nazan_fixture();
+    data.spawns[0].map = 0;
+    data.spawns[0].spawn_difficulties = vec![0];
+    let hogger = crate::test_data::world_data().templates[&448].clone();
+    data.templates.insert(448, hogger);
+    data.spawns.push(CreatureSpawn {
+        guid: 2,
+        template_entry: 448,
+        ..data.spawns[0].clone()
     });
-    let panic = result
-        .err()
-        .expect("unknown context must not silently become fixed level1");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or_default();
-    assert!(message.contains("CREATURE_LEVEL_CONTEXT_GAP"), "{message}");
-    assert!(
-        message.contains("17536") && message.contains("map0"),
-        "{message}"
+    data.spawns_by_map = HashMap::from([(0, vec![0, 1])]);
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    let count = spawn_map_creatures(
+        &mut commands,
+        &data,
+        MapContent::continent(0),
+        false,
+        Some(&mut crate::ground::GroundMap::default()),
     );
+    assert_eq!(
+        count, 1,
+        "unknown context refuses only the unresolved spawn"
+    );
+    queue.apply(app.world_mut());
+    let world = app.world_mut();
+    let actor = fixture_actor(world);
+    assert_eq!(world.get::<Npc>(actor).unwrap().template_id, 448);
+    assert_eq!(
+        world.get::<LevelScaling>(actor).unwrap().content_tuning_id,
+        73
+    );
+    assert_eq!(world.query::<&Npc>().iter(world).count(), 1);
 }
 
 #[test]
