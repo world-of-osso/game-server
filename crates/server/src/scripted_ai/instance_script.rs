@@ -60,6 +60,8 @@ pub struct InstanceScript {
     pub(crate) handled_area_triggers: HashSet<u32>,
     /// Instance script GetData/SetData state; neither boss saves nor actor resets own it.
     pub(crate) data: HashMap<u32, u32>,
+    /// Ramparts OnUnitDeath state, discarded with this copy; not a saved boss bit.
+    pub(crate) ramparts_sentry_deaths: u8,
 }
 
 impl InstanceScript {
@@ -108,6 +110,7 @@ fn compatibility_catalog(map_id: u32) -> InstanceScript {
         boss_creatures: Vec::new(),
         handled_area_triggers: HashSet::new(),
         data: HashMap::new(),
+        ramparts_sentry_deaths: 0,
     };
     for row in include_str!("encounter_compat.csv")
         .lines()
@@ -237,7 +240,7 @@ pub(super) fn bound_boss(world: &World, creature: Entity) -> Option<super::boss_
 pub struct InstanceScripts(pub HashMap<InMap, InstanceScript>);
 
 /// The copy's instance script, created from `instance_template.script` when missing.
-fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript> {
+pub(super) fn instance_script(world: &mut World, map: InMap) -> Option<&mut InstanceScript> {
     if !world
         .get_resource_or_init::<InstanceScripts>()
         .0
