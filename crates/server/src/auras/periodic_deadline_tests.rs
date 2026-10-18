@@ -26,7 +26,8 @@ fn periodic_native_fractional_period_keeps_every_expiry_tick_across_several_life
         .find(|effect| effect.index == 0)
         .unwrap()
         .aura_period_ms;
-    let expected = (duration / period) as usize;
+    assert!(duration > 0 && period > 0, "finite native periodic fixture");
+    let expected = duration as usize / period as usize;
     // Advance ordinary application frames, not a rewritten clock: repeated0.2s
     // addition drifts past expiry at later virtual uptime.
     h.advance(1280);
