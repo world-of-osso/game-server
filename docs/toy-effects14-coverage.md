@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source400–404: pending Soulshape recovery/refresh acceptance and control/music/gang/holiday boundaries (2026-10-17)
+
+402 test/spec1f028916a adds a separate actual learned-use case because its300000ms recovery is shorter than its600000ms appearance. It asserts immediate and near-five-minute refusal, natural five-minute reuse while still100634, refreshed source lifetime, ordinary expiry/native-display/health restoration and exactly two published recoveries/two intentional refusal events. No timer/cooldown reset or failure suppression. Source Attributes1=1024 lacks AURA_UNIQUE0x800; existing same-caster/source stacking refreshes duration. Format/manual readability/diffcheck pass; behavioral proof requires a future covering head beyond484afad, as do387/393. No runtime/data/producer changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|400 Wheeled Floaty Boaty Controller200878/392427 | Source3000ms target18 summon198014/property428/base1, Control3/faction1616, plus self37/base1/misc85,25/base1 and321/base1 for300000ms; item30000ms recovery. Runtime creature content/model absent. Actual control/action-bar pilot handoff/restrictions/release/lifecycle remains gaps; no normal pet/scenery substitute or ignored player payload. |
+|401 Compendium of Love200926/392603 | Instant self60/misc127,26,321 and336 for15000ms, inherited180000ms recovery. Pinned321 is no-actions and336 mount restrictions. Exact Divo-song playback/action/movement/mount restoration remains unverified; no simple music attachment that ignores mixed state or guessed audio sequence. |
+|402 Seed of Renewed Souls200960/392700 | Instant self transform56→existing176925/display100634/misc8 for600000ms, inherited300000ms recovery. New exact encoded-transform/recovery-before-expiry/refresh/ordinary-expiry case committed, pending covering proof. Personal selected-Soulshape state, native model/pixels and complete Soulshape behavior are not certified by this single encoded display. |
+|403 The Super Shellkhan Gang200999/392825 | Instant self linked428/900000ms→392827/permanent198147/property5502 at72; Control0/Title0/flags133128/Flags1=2, item1800000ms recovery. Existing71611 body does not prove the promised gang following/charging/Super Spinning Attack or linked cleanup/multiplicity. No one-static-actor substitute or ignored extra flag word. |
+|404 Shuffling Sands201435/393985 | Instant self191/base1 for600000ms, item1800000ms recovery. Source explicitly promises dancing and reduced recovery during Darkspear Dash. Exact movement/animation/control restoration and event-specific recovery remain gaps; no generic dance art, unconditional cooldown certificate or guessed festival multiplier. |
+
+Evidence: private `rows400-404-{readonly-source,action-source,active-goal}.json`, `soulshape402-{active-goal,proof-ledger}.json`, pinned aura321/336 and exact source refresh flag/production stacking rule.149865 Tea Set remains untouched.
+
 ## Source395–399: invocation/eggs/cloak-service/random-talisman/alcohol boundaries (2026-10-17)
 
 These rows retain exact scripted/service/gameplay contracts despite existing actor or transform metadata. No generic script/dummy admission, runtime/data/producer changes or new positive/native certificate. Lead484's older15-caster/nine-object head remains distinct from later pending387/393 acceptance.
