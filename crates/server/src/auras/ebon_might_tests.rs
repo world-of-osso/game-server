@@ -1,12 +1,12 @@
 //! Native70448 Ebon395152/self395296, SimC76f8118 sc_evoker.cpp4731+.
 //! No generic540, optional hero/set/PvP or critical-duration certificate.
-use shared::components::{CombatRatings, DerivedStats, Level, PowerType, UnitStats};
+use shared::components::{CombatRatings, DerivedStats, Level, Position, PowerType, UnitStats};
 use shared::protocol::CombatLogKind;
 
 use super::*;
 use crate::class_progression::{ActiveSpec, KnownSpells};
 use crate::spell_cast::test_harness::{
-    Harness, harness_with, spawn_connection, spawn_player, world_db,
+    Harness, harness_with, spawn_connection, spawn_player, varied, world_db,
 };
 use crate::stats::CharacterStats;
 
@@ -16,7 +16,16 @@ const SANDS_OF_TIME: u32 = 395_153;
 const ERUPTION: u32 = 395_160;
 const INTELLECT: u32 = 1459;
 const MASTERY: u32 = 406_380;
-const IDS: &[u32] = &[EBON, SELF_BUFF, SANDS_OF_TIME, ERUPTION, INTELLECT, MASTERY];
+const FIREBALL: u32 = 133;
+const IDS: &[u32] = &[
+    EBON,
+    SELF_BUFF,
+    SANDS_OF_TIME,
+    ERUPTION,
+    INTELLECT,
+    MASTERY,
+    FIREBALL,
+];
 
 fn fixture() -> Harness {
     let mut h = harness_with(Vec::new(), IDS, 13, true).unwrap();
@@ -154,6 +163,30 @@ fn augmentation_ebon_native_three_specs_split_primary_support_and_exclude_other_
     assert_stat(
         stats(&h, intellect).spell_power,
         bases[2].spell_power + grant,
+    );
+    // The500yd support test is complete; place this recipient in ordinary
+    // Fireball range and observe its own authenticated damage connection.
+    h.app.world_mut().entity_mut(intellect).insert(Position {
+        x: 5.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    let peer = spawn_connection(&mut h.app, intellect);
+    let connection = std::mem::replace(&mut h.connection, peer);
+    h.cast_and_deliver(FIREBALL, Some(h.npc));
+    h.advance(80);
+    h.connection = connection;
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let damage = h
+        .inbox
+        .log
+        .iter()
+        .find(|event| event.spell_id == Some(FIREBALL) && event.kind == CombatLogKind::Damage)
+        .unwrap();
+    let crit = if damage.crit { 2.0 } else { 1.0 };
+    // Native70448 effect91: SP3.8812499 and unchanged0.05 variance.
+    assert!(
+        varied((bases[2].spell_power + grant) * 3.8812499 * crit).contains(&(damage.amount as f32))
     );
 }
 
