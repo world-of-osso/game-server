@@ -40,7 +40,7 @@ pub(super) fn source_fixture(entry: u32) -> (Harness, Entity, Entity) {
     (h, tank, enemy)
 }
 
-fn spawn_source_actor(
+pub(super) fn spawn_source_actor(
     world: &mut World,
     data: &WorldData,
     template: &crate::world_data::CreatureTemplate,

@@ -7,6 +7,10 @@ mod kit_ai;
 mod kit_area;
 mod party;
 #[cfg(test)]
+mod pull_admission;
+#[cfg(test)]
+mod pull_admission_tests;
+#[cfg(test)]
 mod pull_budget;
 #[cfg(test)]
 mod pull_budget_tests;
