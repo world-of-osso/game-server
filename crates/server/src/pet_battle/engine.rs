@@ -402,6 +402,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             let events_before_turn = self.events.len();
             let mut effect_target = target;
             for effect in self.catalog.turn_effects(turn.id) {
+                // Primal Cry's damage/slow pairs have independent failure chains.
+                if ability == 920 && effect.property == 24 {
+                    failed = false;
+                }
                 if effect.property == 194 {
                     let missed = self.events[events_before_turn..]
                         .iter()

@@ -774,9 +774,13 @@ pub(crate) fn chase_system(
     mut nav: Option<ResMut<Navigation>>,
     mut commands: Commands,
     los: Option<Res<crate::line_of_sight::LineOfSight>>,
-    mut units: ParamSet<(ChasingUnits, Query<ChaseView>)>,
+    mut units: ParamSet<(ChasingUnits, Query<ChaseView>, Query<FollowerChaseTrace>)>,
 ) {
     let dt = time.delta_secs();
+    if bevy::log::tracing::enabled!(target: "game_server::chase_trace", bevy::log::tracing::Level::DEBUG)
+    {
+        trace_tank_chases(&mut units, nav.as_deref(), time.elapsed_secs_f64());
+    }
     let targets = read_chase_targets(&mut units, los.as_deref());
     for (
         entity,
@@ -953,9 +957,40 @@ struct ChaseTarget {
     in_reach_and_visible: bool,
 }
 
+type FollowerChaseTrace = (
+    Entity,
+    &'static crate::followers::Follower,
+    &'static Position,
+    &'static CreatureState,
+    Option<&'static crate::networking::CombatTarget>,
+    &'static Health,
+);
+
+/// Diagnostic-only: a selective follower query, never a full-population trace scan.
+fn trace_tank_chases(
+    units: &mut ParamSet<(ChasingUnits, Query<ChaseView>, Query<FollowerChaseTrace>)>,
+    nav: Option<&Navigation>,
+    simulation_secs: f64,
+) {
+    for (entity, follower, position, state, target, health) in &units.p2() {
+        if follower.profile.role != shared::group::GroupRole::Tank {
+            continue;
+        }
+        debug!(target: "game_server::chase_trace",
+            actor = entity.to_bits(), simulation_secs,
+            victim = ?target.and_then(|target| target.0).map(Entity::to_bits),
+            position = ?position, state = ?state,
+            health = health.current, max_health = health.max,
+            navigation_loaded = nav.is_some(), "tank chase frame");
+        if let Some(nav) = nav {
+            nav.trace_cached_route(entity, simulation_secs);
+        }
+    }
+}
+
 /// Snapshot before any chaser moves: mutual chases see the same tick's poses.
 fn read_chase_targets(
-    units: &mut ParamSet<(ChasingUnits, Query<ChaseView>)>,
+    units: &mut ParamSet<(ChasingUnits, Query<ChaseView>, Query<FollowerChaseTrace>)>,
     los: Option<&crate::line_of_sight::LineOfSight>,
 ) -> EntityHashMap<ChaseTarget> {
     let chasing: Vec<_> = units

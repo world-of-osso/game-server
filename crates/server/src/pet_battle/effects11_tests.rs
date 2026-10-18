@@ -149,18 +149,12 @@ fn pet_battle_rapid_fire_dead_reserve_stays_dead_through_both_waves() {
 }
 
 #[test]
-fn pet_battle_rapid_fire_other_wave_and_interleaved_selectors_remain_rejected() {
+fn pet_battle_rapid_fire_other_wave_selector_remains_rejected() {
     let catalog = catalog();
-    for ability in [2064, 920] {
-        let initial = battle(&catalog, 9, 4, [ability, 110, 123]);
-        assert!(
-            initial
-                .step(
-                    &catalog,
-                    [Action::Ability(ability), Action::Pass],
-                    &mut NoDraw
-                )
-                .is_err()
-        );
-    }
+    let initial = battle(&catalog, 9, 4, [2064, 110, 123]);
+    assert!(
+        initial
+            .step(&catalog, [Action::Ability(2064), Action::Pass], &mut NoDraw)
+            .is_err()
+    );
 }

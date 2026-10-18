@@ -39,6 +39,53 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_primal_cry_uses_legal_meadowstomper_level_two_pair() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 1446), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 2, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let states = owned_states(&catalog, &journal);
+    assert_eq!(states[&41].selected_abilities[1], 920);
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 1446);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 22);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(920), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let damage: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(damage, [31]);
+    assert_eq!(state.teams[1].pets[0].health, 116);
+    assert_eq!(
+        state.teams[1].pets[0].state(catalog.turns.state_id("Mod_SpeedPercent").unwrap()),
+        -25
+    );
+    assert_eq!(state.auras.len(), 1);
+    assert_eq!(state.auras[0].ability, 154);
+    assert_eq!(
+        state.teams[0].pets[1].health,
+        encounter.battle.teams[0].pets[1].health
+    );
+    assert_eq!(
+        state.teams[0].pets[2].health,
+        encounter.battle.teams[0].pets[2].health
+    );
+}
+
+#[test]
 fn wild_pet_battles_rapid_fire_uses_legal_peddlefeet_level_ten_two_wave_loadout() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
@@ -648,7 +695,7 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
     app.add_plugins(shared::ProtocolPlugin);
     app.finish();
     app.cleanup();
-    app.insert_resource(GameDatabase { db: database });
+    app.insert_resource(GameDatabase::new(database));
     app.insert_resource(crate::battle_pets::load_test_catalog());
     app.insert_resource(catalog());
     app.init_resource::<BattleIds>();

@@ -154,7 +154,7 @@ fn install_quest_log(temp: &tempfile::TempDir, world: &mut World, player: Entity
             ..Default::default()
         },
     );
-    world.insert_resource(crate::persistence::GameDatabase { db });
+    world.insert_resource(crate::persistence::GameDatabase::new(db));
     world.insert_resource(quests);
     world.insert_resource(crate::quest::QuestDirty::default());
     world

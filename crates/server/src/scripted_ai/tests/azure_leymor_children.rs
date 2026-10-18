@@ -10,6 +10,194 @@ const STOMP_DAMAGE: u32 = 374731;
 const BRAND: u32 = 374567;
 const BRAND_CHILD: u32 = 374582;
 
+const FISSURE: u32 = 386660;
+const FISSURE_SELECTOR: u32 = 394154;
+const SPROUT: u32 = 190509;
+const ARCANE_POWER: u32 = 374736;
+
+fn aim_at_nearest_native_sprout(h: &mut Harness, leymor: Entity, children: &[Entity]) -> Entity {
+    let origin = *h.app.world().get::<Position>(leymor).unwrap();
+    let distance = |child| {
+        let pos = h.app.world().get::<Position>(child).unwrap();
+        (pos.x - origin.x).hypot(pos.z - origin.z)
+    };
+    let nearest = children
+        .iter()
+        .copied()
+        .min_by(|left, right| distance(*left).total_cmp(&distance(*right)))
+        .unwrap();
+    let position = *h.app.world().get::<Position>(nearest).unwrap();
+    let offset = Vec3::new(position.x - origin.x, 0.0, origin.z - position.z);
+    let selector = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(FISSURE_SELECTOR)
+        .unwrap();
+    let radius = selector.effects[0].radius[0].unwrap().radius;
+    assert!(offset.length() > 0.0 && offset.length() < radius);
+    // Aim the controlled fixture at a real native child without moving any Sprout.
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(position);
+    h.app.world_mut().get_mut::<Rotation>(leymor).unwrap().y =
+        offset.z.atan2(offset.x) + std::f32::consts::FRAC_PI_2;
+    nearest
+}
+
+#[test]
+fn azure_leymor_fissure_completion_kills_native_sprouts_and_consumes_owner_stacks() {
+    let (mut h, leymor) = prepare_leymor_for_later_clock();
+    h.advance(13.8);
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(children.len(), 14);
+    let nearest = aim_at_nearest_native_sprout(&mut h, leymor, &children);
+    let player = h.player();
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        14
+    );
+    assert!(h.app.world().get::<Health>(player).unwrap().current > 0.0);
+    assert_eq!(h.casts(0, leymor, FISSURE), 0);
+    h.advance(0.3);
+    let cast = h.app.world().get::<CastState>(leymor).unwrap();
+    assert_eq!(cast.spell_id, FISSURE);
+    let remaining = cast.duration - cast.elapsed;
+    h.advance(remaining + 0.2);
+    assert_first_fissure_and_living_victim(&mut h, leymor);
+    assert!(
+        !crate::spell_cast::targets::is_alive(h.app.world(), nearest),
+        "ordinary Fissure394154 hit kills the actual qualifying native Sprout"
+    );
+    let dead = children
+        .iter()
+        .filter(|&&child| !crate::spell_cast::targets::is_alive(h.app.world(), child))
+        .count();
+    assert!(dead > 0 && dead < children.len());
+    let remaining = children.len() as u32 - dead as u32;
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        remaining,
+        "exactly one owner-stack decrement per actual hit/death"
+    );
+    h.advance(0.2);
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        remaining
+    );
+}
+
+#[test]
+fn azure_leymor_fissure_cancelled_cast_keeps_all_native_sprouts_and_stacks() {
+    let (mut h, leymor) = prepare_leymor_for_later_clock();
+    h.advance(13.8);
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(children.len(), 14);
+    aim_at_nearest_native_sprout(&mut h, leymor, &children);
+    h.advance(0.3);
+    let cast = h.app.world().get::<CastState>(leymor).unwrap();
+    assert_eq!(cast.spell_id, FISSURE);
+    let remaining = cast.duration - cast.elapsed;
+    crate::spell_cast::cancel_cast(h.app.world_mut(), leymor);
+    h.advance(remaining + 0.2);
+    assert_eq!(h.casts(0, leymor, FISSURE), 0);
+    assert!(
+        children
+            .into_iter()
+            .all(|child| crate::spell_cast::targets::is_alive(h.app.world(), child))
+    );
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        14
+    );
+}
+
+#[test]
+fn azure_leymor_fissure_selector_uses_caster_front_entry_and_copy_not_destination() {
+    let (mut h, leymor) = prepare_leymor_for_later_clock();
+    let children = h.creatures_of(SPROUT);
+    assert_eq!(children.len(), 14);
+    let (front, behind, remote) = (children[0], children[1], children[2]);
+    let origin = *h.app.world().get::<Position>(leymor).unwrap();
+    let front_pose = Position {
+        x: origin.x + 10.0,
+        ..origin
+    };
+    let back_pose = Position {
+        x: origin.x - 10.0,
+        ..origin
+    };
+    let map = *h.app.world().get::<InMap>(leymor).unwrap();
+    let remote_map = InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    };
+    // Controlled selection fixture only; ordinary-parent proof above leaves Sprouts unmoved.
+    h.app.world_mut().entity_mut(front).insert(front_pose);
+    h.app.world_mut().entity_mut(behind).insert(back_pose);
+    h.app
+        .world_mut()
+        .entity_mut(remote)
+        .insert((front_pose, remote_map));
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(front_pose);
+    h.app.world_mut().get_mut::<Rotation>(leymor).unwrap().y = std::f32::consts::FRAC_PI_2;
+    let mut spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(FISSURE_SELECTOR)
+        .unwrap()
+        .clone();
+    spell.cast_destination = Some([back_pose.x, back_pose.y, back_pose.z]);
+    assert_eq!(
+        spell.misc.as_ref().unwrap().speed,
+        0.0,
+        "native394154 hits immediately"
+    );
+    let selected = crate::spell_cast::targets::select_targets(
+        h.app.world_mut(),
+        leymor,
+        None,
+        &spell,
+        &spell.effects[0],
+        0,
+        true,
+    )
+    .expect("native110 resolves using actual conditions");
+    assert!(selected.contains(&front));
+    for excluded in [behind, remote, player, leymor] {
+        assert!(
+            !selected.contains(&excluded),
+            "native110 excludes {excluded:?}"
+        );
+    }
+    assert!(selected.iter().all(|child| children.contains(child)));
+    crate::spell_cast::cast_triggered_at_destination(
+        h.app.world_mut(),
+        leymor,
+        FISSURE_SELECTOR,
+        Vec3::new(back_pose.x, back_pose.y, back_pose.z),
+        0,
+    );
+    // Sample the immediate hit, before generic cleanup unsummons the cross-copy probe
+    // whose owner intentionally remains in the original copy (summon.rs:867–881).
+    for &child in &selected {
+        assert!(!crate::spell_cast::targets::is_alive(h.app.world(), child));
+    }
+    for survivor in [behind, remote, player] {
+        assert!(
+            crate::spell_cast::targets::is_alive(h.app.world(), survivor),
+            "immediate survivor={survivor:?}, behind={behind:?}, remote={remote:?}, player={player:?}, health={:?}, map={:?}",
+            h.app.world().get::<Health>(survivor),
+            h.app.world().get::<InMap>(survivor),
+        );
+    }
+    assert_eq!(
+        crate::auras::aura_count(h.app.world(), leymor, ARCANE_POWER),
+        14 - selected.len() as u32
+    );
+}
+
 fn prepare_running_stomp() -> (Harness, Entity) {
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(39.2); // Six fixture seconds plus39.2 reaches actual45.2s.
