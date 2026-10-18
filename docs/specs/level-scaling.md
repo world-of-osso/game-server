@@ -15,7 +15,9 @@ Data
 Level
 - [x] A tuned creature's own level is its range maximum plus a delta, rolled once per spawn from `LevelScalingDeltaMin..=Max` (Creature::SelectLevel, Creature.cpp:1611-1618; ApplyLevelScaling, :3122-3171).
 - [x] Its level against a unit of level L is `clamp(L, min, max) + delta`, clamped to 1..=126 (Creature::GetLevelForTarget, :3226-3257). The rule lives once, in `shared::level_scaling::LevelScaling::level_for_target`, which server and client both call.
-- [x] Untuned creatures keep one fixed level (`minlevel`) for everyone.
+- [ ] Ordinary non-critter CT0 spawns resolve ContentTuning from their actual map difficulty, then the terrain area's parent chain, reusing the existing `SummonLevels` inputs. Explicit template tuning takes precedence; critters do not inherit regional tuning. Missing area/tuning/delta context must be reported explicitly, never replaced with legacy levels or guessed tuning.
+- [ ] Regional ordinary spawning uses the resolved range and the selected source difficulty's own delta, HealthScalingExpansion and health/armor/damage modifiers before initializing native level, health, armor and scaled stats. Existing guardian/wild level selection remains unchanged.
+- [x] A creature known to have no template or regional tuning keeps its fixed `minlevel` for everyone.
 
 Health and damage
 - [x] Max health is `ceil(ExpectedStat.CreatureHealth(level, expansion) × ContentTuningXExpected mods × class mod × HealthModifier)` at the creature's own level (GetMaxHealthByLevel, :3173-3179; DB2Manager::EvaluateExpectedStat, DB2Stores.cpp:2512-2618).
@@ -99,5 +101,5 @@ Client
 
 - Player-side stat squish.
 - Group scaling (`ScalingPlayerLevelDelta`), Chromie Time (`MaxCreatureScalingLevel`) and `ScalingFactionGroup`.
-- Instance and map-difficulty ContentTuning (MapDifficulty/AreaTable fallbacks in ApplyLevelScaling).
+- Same-actor entry morph (`Creature::UpdateEntry`) and encounter lifecycle; ordinary-spawn context tuning does not prove those boundaries.
 - Retail's ÷10 XP for creatures of an older expansion stays omitted ([experience](experience.md)).

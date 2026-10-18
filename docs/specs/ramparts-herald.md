@@ -15,7 +15,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 ### Prepared actors
 
 - [x] Project17537's actual base0 and Heroic2, and21252's actual base0/Normal1/Heroic2, with source models/addons. Do not create a Normal1 row for17537; preserve unrelated difficulties, Nazan, population, bindings and group357's flags.
-- [ ] Resolve Nazan17536's sourceCT0 through its real map/area context before runtime use. Record `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` until implemented; neither legacy62 nor an uncontextualized level1 cache is acceptance.
+- [ ] Resolve Nazan17536's sourceCT0 through its real map/area context before runtime use. Record `HERALD_NAZAN_MAP_TUNING_UNIMPLEMENTED` until implemented; neither legacy62 nor an uncontextualized level1 cache is acceptance. Prove the ordinary-spawn boundary with a sourced17536 fixture only, not a fabricated canonical placement; retain separate `HERALD_NAZAN_ENTRY_MORPH_UNIMPLEMENTED` until real same-actor morph is proved.
 
 ### Lifecycle and phases
 
