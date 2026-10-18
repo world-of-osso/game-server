@@ -1,3 +1,7 @@
+## 2026-10-17 — Attacker251 / Guardian merge
+
+[Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): rewrite maps old035ae5cfb to de08aab30, identical tree; original proof labels retained. Merge masterac36572bb preserves Guardian same-tick try_swing one-shot health commit and251 scalar/roll consumer; requested original9 plus Guardian/Ardent integration proof pending.
+
 ## 2026-10-17 — Autoattack attacker251
 
 [Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): TC Unit.cpp2389/2775 signed caster modifier. Ordered ignored d5587d263 native2RED/4PASS87.19s (negative20Dodge; positive20Damage/0Dodge); minimal transient snapshot/roll consumer preserves gates/clocks/RNG. At1dbe19063 explicit ignored6/6GREEN110.87s,0warnings before enabling allsix. Master7a0f00fc0 integrated e4d9c1efd: ordinary affected cohort122PASS/3legacyLOSignored154.21s,0warnings, all6newnative enabled. Lead gate pending; expertise/248/Totem/flags not certified.
@@ -15,7 +19,7 @@
 
 ## 2026-10-18 — Target32 invalid-height repair / gate tg571
 
-Gate tg571 exposed eight missing-height summon regressions. Merged serverf0f9b31d6/protocola2b07a6; real688 RED1fa8ed113 captures exact NotSupported. e674cf7c0 follows TC Object.cpp701–706/732–748/761–762 and FORCE2808–2829: no invented height and no missing-height cast failure. New688 absent/empty-ground control plus unchanged consumers/primitive batch22/23 GREEN168.86s. Remaining Lantha30146 is refused at completion before spawning: actual display=None/reach=None in incomplete generic-NPC fixture. Diagnostic removed. LEAD approved named LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT split: actual source display122612 lacks a model-info row even in full local TDB1210, so no reach default. Only the existing Lantha case and new source control ignored; assertions unchanged. Shared-helper expansion reverted. Exactmaster748a5ad78 merged; final7b336d72a batch40PASS/0FAIL/3ignored180.27s (requested22 plus18 profile consumers, two Lantha gaps plus one existing navigation diagnostic). No warnings; LEAD owns independent check/fmt/gate. [Contract](../specs/caster-summon-destination.md).
+Gate tg571 exposed eight missing-height summon regressions. Merged serverf0f9b31d6/protocola2b07a6; real688 RED1fa8ed113 captures exact NotSupported. e674cf7c0 follows TC Object.cpp701–706/732–748/761–762 and FORCE2808–2829: no invented height and no missing-height cast failure. New688 absent/empty-ground control plus unchanged consumers/primitive batch22/23 GREEN168.86s. Remaining Lantha30146 is refused at completion before spawning: actual display=None/reach=None in incomplete generic-NPC fixture. Diagnostic removed; existing tests unchanged; gate remains blocked, not full GREEN. [Contract](../specs/caster-summon-destination.md).
 
 ## 2026-10-18 — Caster summon destination32
 
@@ -77,6 +81,10 @@ Gate tg571 exposed eight missing-height summon regressions. Merged serverf0f9b31
 ## 2026-10-18 — Native attack restriction264
 
 [Native264](systems/auras.md#native-attack-restriction264--2026-10-18): actual Turtle producer yields wrong Pacified priority; native Phalanx NPC with264/no25 still swings. Genuinebc5a0c05e RED2→312234334 consumer; native/retained22GREEN, fresh-master4457dcfe9 expanded24/24 GREEN7.06s/146566ms. Eight new cases exercise real attack predicates, Cheetah/Fireball, midcast gain, natural expiry, full-trigger damage and NPC swing removal; real263 family controls retained. No row/clock/RNG/budget/producer/wire changes; no264 positive offensive-family input qualified or whole-ability claim. All-target check107.438s/0warnings and fmt/manual Rust readability pass.
+## 2026-10-18 — Anvil2483 deferred with Tea Party2064 OverrideIndex1 gap
+
+[Single gap](systems/pet-battle-engine.md#anvil-drop--tea-party--deferred-overrideindex1-2026-10-18) `PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN`: Anvil4816/4817 and Tea Party3729 retain nonzero property24 OverrideIndex; no guessed hit/critical/variance reuse. Actual core5 RED365a1a3d7, owned slot correction1a68de2e6 then genuine owned RED; local unshipped registry-only experiment still fails parameter preflight. Remove experiment from published history/production diff; retain six ignored REDs and coverage1885/1040. No handler/parameter/math/clock/native claim; sourced behavior packet pending.
+
 ## 2026-10-18 — Poison Protocol1954 CPU
 
 [Poison Protocol](systems/pet-battle-engine.md#poison-protocol--cpu-2026-10-18): only registry+bounded54 per-victim current-action positive direct damage qualification; named source-row project policy, existing379 math/clock unchanged. Actual core7+owned1 unsupported RED and favorable-after-miss RED→c7abb9d35 core8+owned1 GREEN/no fixture correction. Nine active pairs/misses/block/zero/dead/faint/prior-periodic exclusion/swap/refresh/expiry; legal Anomalus2842/4 slot3/power50 direct26+periodic11, Rabbit147→110→99. Retained lib209/main48/shareda2b clean, all ten typed70448 tables, census1885/2829=66.63%/1040graphs (+6/+1 only1954), fmt/manual readability. Lead final gate/native pending; historical70391/1051/1762 preserved, Retail timing/rounding/VFX unproven. Prior Blood engage failure unresolved; recurrence requires investigation.
@@ -2893,3 +2901,7 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 [Investigation](investigations/follower-data.md#dummy-root-periodic-maintenance--2026-10-18): genuine repeated8921/starved93402 RED→native two-child-aura/Wrath GREEN; three-row COPY only, source-description references and native CSV fields verified, ROOT_CHILD_LINK_DESCRIPTION_ONLY per-row receipt. Producer3 integration+4 validation passes across explicit runs; scoped check/fmt pass. Lead gate/publication pending; full-kit/live/joint interrupt gates remain open.
 - 2026-10-18: Native143 SpellLabel cooldown recovery reuses286 start/remaining lifecycle. Normal Autumn leaf RED2/3→native7+retained10GREEN; label2960-only native row absent,143refresh/source-only, Seasons/charge/time-rate/fullability excluded. See [auras](systems/auras.md#cooldown-recovery-rates).
 - 2026-10-18: AURA_POSITIVITY_702 actual native creature curse→real player Remove Curse RED0/3→GREEN3; generic342 signed-stat counterpart, no per-spell or follower override. Prior ignored702 enabled; targeted49PASS128.05s. PinnedTC342 omission and source/native qualification explicit in [auras](systems/auras.md#native-signed-haste-positivity--2026-10-18); full positivity/follower702 picker/legal/freshUDP remain unclaimed.
+
+## 2026-10-18 — Shared death-prevention commit
+
+Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame mitigation boundaries in [auras](systems/auras.md#shared-death-prevention-commit--2026-10-18); native rows/clocks/RNG unchanged, final combined gate pending.

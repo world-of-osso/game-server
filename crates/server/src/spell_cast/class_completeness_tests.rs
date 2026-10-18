@@ -138,15 +138,10 @@ fn toyfx54_podium_destination_snaps_to_authored_ground_not_airborne_caster() {
     else {
         panic!("real Northshire destination terrain required");
     };
-    let grounded = super::targets::ground_destination(
-        h.app.world_mut(),
-        h.caster,
-        data.store.get(1227063).unwrap(),
-        effect,
-        Some(selected),
-    )
-    .unwrap()
-    .unwrap();
+    let grounded =
+        super::targets::ground_destination(h.app.world_mut(), h.caster, effect, Some(selected))
+            .unwrap()
+            .unwrap();
     assert_eq!(grounded.position.x, selected.position.x);
     assert_eq!(grounded.position.z, selected.position.z);
     assert_eq!(grounded.orientation, selected.orientation);
