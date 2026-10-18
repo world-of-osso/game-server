@@ -97,7 +97,7 @@ fn herald_context_authored_yala_keeps_provenance_selected_fixed_stats() {
     assert!(world.get::<ScaledStats>(actor).is_none());
 }
 
-fn sourced_nazan_fixture() -> WorldData {
+pub(super) fn sourced_nazan_fixture() -> WorldData {
     let source = crate::test_data::world_db_path();
     let connection = Connection::open_with_flags(source, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     // Temporary views project actual TDB base/difficulty fields; the source stays read-only.
@@ -114,14 +114,14 @@ fn sourced_nazan_fixture() -> WorldData {
            NULL detection_range
          FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry
          LEFT JOIN content_tuning_level l ON l.ID=d.ContentTuningID
-         WHERE t.entry=17536 AND d.DifficultyID=0;
+         WHERE t.entry IN(17307,17536) AND d.DifficultyID=0;
          CREATE TEMP VIEW content_creature_template_difficulty AS
          SELECT d.*,COALESCE(l.minlevel,1) minlevel,COALESCE(l.maxlevel,1) maxlevel,
            d.HealthScalingExpansion exp
          FROM tdb_creature_template_difficulty d
-         LEFT JOIN content_tuning_level l ON l.ID=d.ContentTuningID WHERE d.Entry=17536;
+         LEFT JOIN content_tuning_level l ON l.ID=d.ContentTuningID WHERE d.Entry IN(17307,17536);
          CREATE TEMP VIEW content_creature_template_model AS
-         SELECT * FROM tdb_creature_template_model WHERE CreatureID=17536;",
+         SELECT * FROM tdb_creature_template_model WHERE CreatureID IN(17307,17536);",
         )
         .unwrap();
     let expected_stats = crate::world_data::load_expected_stats(&connection);
