@@ -13,6 +13,39 @@ ROOT = Path(__file__).resolve().parents[1]
 DB2 = Path('/home/osso/Projects/world-of-osso/game-engine/data/db2/active')
 SOURCE = Path(os.environ['FOLLOWER_KIT_SOURCE_OUTPUT'])
 
+from scripts.follower_spec_kits import read_periodic_description_child
+
+
+class DescriptionReferenceTests(unittest.TestCase):
+    def setUp(self):
+        self.db = sqlite3.connect(':memory:')
+        native = (ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro'
+        self.db.execute('ATTACH DATABASE ? AS native', (native,))
+        self.db.execute('CREATE TABLE spell AS SELECT ID,Description_lang FROM native.spell WHERE ID=8921')
+        self.db.execute('CREATE TABLE spell_name AS SELECT ID,Name_lang FROM native.spell_name WHERE ID IN(8921,164812,155625)')
+        self.db.execute('CREATE TABLE spell_effect AS SELECT ID,SpellID,DifficultyID,Effect,EffectAura,EffectTriggerSpell FROM native.spell_effect WHERE SpellID IN(8921,164812,155625)')
+        self.addCleanup(self.db.close)
+
+    def test_native_reference_selects_periodic_child(self):
+        link = read_periodic_description_child(self.db, 8921, 'Moonfire')
+        self.assertEqual(link['child_spell_id'], 164812)
+        self.assertEqual(link['fact'], 'ROOT_CHILD_LINK_DESCRIPTION_ONLY')
+
+    def test_missing_reference_fails_explicitly(self):
+        self.db.execute("UPDATE spell SET Description_lang=''")
+        with self.assertRaisesRegex(ValueError, 'found 0'):
+            read_periodic_description_child(self.db, 8921, 'Moonfire')
+
+    def test_absent_native_child_fails_explicitly(self):
+        self.db.execute('DELETE FROM spell_name WHERE ID=164812')
+        with self.assertRaisesRegex(ValueError, 'found 0'):
+            read_periodic_description_child(self.db, 8921, 'Moonfire')
+
+    def test_multiple_native_same_name_periodic_children_fail_explicitly(self):
+        self.db.execute("UPDATE spell SET Description_lang='$164812d $155625d'")
+        with self.assertRaisesRegex(ValueError, 'found 2'):
+            read_periodic_description_child(self.db, 8921, 'Moonfire')
+
 
 class FollowerKitProducerTests(unittest.TestCase):
     def command(self, output, receipt, diff, world_db=None, source=None):
