@@ -1,3 +1,7 @@
+## 2026-10-17 — Native field partial acceptance and hazard boundary
+
+[Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): retained5d native5PASS plus corrected-action936dc1421PASS37.90s, strict source/protocol/HEAD/published-input guards stable; no fresh6/6 claim. Passing fixtures enabled. Additional actual-target attachment/copy-departure and self/ally/other-copy controls are added but ignored pending scoped acceptance. Follower source-reach escape regression uses an actual native aura-created field, authored Garrick model/scale/reach and real Stockade navigation; its RED/GREEN and the hazard-consumer correction remain pending. No health/stat/geometry/default-reach changes.
+
 ## 2026-10-17 — Native Sprout initial periodic tick correction
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): first5d4e3f6d packet5PASS/1FAIL121.30s, exact published inputs/source/HEAD guards stable. Failure was the fixture's zero-initial-tick expectation: actual70448 SpellMisc374523 Attributes5=524800/0x80200 includes TC `EXTRA_INITIAL_PERIOD`0x200. Production periodic behavior is correct and unchanged; corrected fixture pins the flag and expects1initial/1beforeperiod/2afterperiod/2afterexit, preserving no-reapplication and caster-filtered cleanup checks. Only failed case is rerun; five passing field/lifecycle/scale/curve cases are retained, not relabeled fresh6/6.
