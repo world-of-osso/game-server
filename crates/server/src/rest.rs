@@ -852,7 +852,7 @@ mod tests {
         };
         save_rest(&db, 7, &state.logout_data(unix_secs() - 80 * 3600));
 
-        let (mut app, player) = resting_app(Some(GameDatabase { db }));
+        let (mut app, player) = resting_app(Some(GameDatabase::new(db)));
         app.update();
 
         assert_eq!(rested(&app, player), 5_295);

@@ -20,6 +20,23 @@ pub(crate) fn ground_map() -> crate::ground::GroundMap {
     crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), wdts)
 }
 
+/// Wait for a real FIFO fence before asserting durable fixture rows.
+pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
+    let receipt = db.writer.enqueue("fixture durability fence", |_| Ok(()));
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        if let Some(result) = receipt.result() {
+            result.expect("fixture persistence fence failed");
+            return;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "fixture persistence fence timed out"
+        );
+        std::thread::yield_now();
+    }
+}
+
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.
 /// Prepared/mutable database copies must use their own loaders, never this cache.
 pub(crate) fn world_data() -> &'static crate::world_data::WorldData {

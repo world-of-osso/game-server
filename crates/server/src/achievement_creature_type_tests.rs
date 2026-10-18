@@ -98,7 +98,7 @@ fn achievements_criteria_native_creature_type_preserves_lethal_victim_and_reopen
     h.app.insert_resource(crate::world_data::load_world_data(
         &crate::test_data::world_db_path(),
     ));
-    h.app.insert_resource(GameDatabase { db: database });
+    h.app.insert_resource(GameDatabase::new(database));
     h.app
         .insert_resource(load_achievement_catalog(&conn).unwrap());
     h.app.world_mut().entity_mut(h.caster).insert((
@@ -276,7 +276,7 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
     h.app.insert_resource(crate::world_data::load_world_data(
         &crate::test_data::world_db_path(),
     ));
-    h.app.insert_resource(GameDatabase { db: database });
+    h.app.insert_resource(GameDatabase::new(database));
     h.app
         .insert_resource(load_achievement_catalog(&conn).unwrap());
     h.app.world_mut().entity_mut(h.caster).insert((
