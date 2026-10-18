@@ -247,6 +247,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 damage.params[2] = p[4];
                 self.damage_effect(caster, target, ability, &damage)
             }
+            62 if ability == 649 => self.percent_damage(caster, caster, ability, effect),
             62 => self.percent_damage(caster, target, ability, effect),
             141 => self.split_damage(caster, target, ability, effect),
             384 | 385 => {
