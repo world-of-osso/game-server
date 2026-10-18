@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source660–664: pending Preyseeker hearthstone and minipet leash, tap-state, mixed mushroom, triggered-homebind boundaries (2026-10-18)
+
+Acceptance-only3b3f52940 appends direct252 Preyseeker263933/1270814 to unchanged saved-bind/shared2309 helper, now24 hearthstones/old23 retained; sibling Naaru263489 is blocked after spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after cancelled509. Actual Mycomancer root is not substituted with its direct252 child or included in that24-case certificate. No runtime/data/native change or own heavy jobs.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|660 Holy Pet Leash263871/1270734 | Instant permanent dummy4/zero payload on target90, explicit item1500ms recovery. Actual cherished minipet tether/selection/range/visual/removal remains unaudited; not self caster attachment, combat-pet control or a fabricated Sunwell buff. |
+|661 Preyseeker's Hearthstone263933/1270814 | Source10000ms252/targets1/9, normal recovery0/start1500ms/shared2309/max1/recharge1800000ms, PreventionType4 retained literally. Own absent-bind refusal/no charge spending, persisted-bind pending return, health/model preservation and sibling charge-refusal acceptance committed, behavior pending successor. Baseline helper does not certify additional prevention scenarios, native/cross-map/natural recharge or damage from flavor. |
+|662 Feeling Fielder Mk. 7263975/1270879 | Instant self dummy3/zero payload, no duration or source SpellCooldowns row, category2470. Actual once-good/twice-bad lens state/presentation/reset remains unresolved; no generic dummy success, random mood or fixed two-second click window inferred from description. |
+|663 Madcap Redcap264313/1271680 | Source1000ms two target87 effects:76→GO642496 and179/misc42098 for180000ms, inherited3600000ms recovery. Runtime content GO and area-trigger rows absent. Actual shared mushroom treat/fungus interaction/eligible recipients/lifecycle remains gap; not50/ordinary stationary summon, dropped179 effect or guessed friend transform. |
+|664 Mycomancer's Hearthspore264367/1299014 | Actual item root source10000ms64→1286909 targeting1/9; child instant252/targets1/9. Root normal recovery0/start1500ms/shared2309/max1/recharge1800000ms. Actual learned root chain/absent-bind refusal/charge spending/return timing remains unverified. Preserve root1299014 and child distinction; no direct252 replacement, skipped root cast or borrowed24-hearthstone helper certificate. |
+
+Evidence: private `rows660-664-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `hearth661-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact2309 and2470 joins. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source655–659: pending Naaru hearthstone and skip-rock, mixed mushroom, retained catch, periodic voidwalker boundaries (2026-10-18)
 
 Acceptance-only8ead527f5 appends Naaru's Enfold263489/1270583 to unchanged saved-bind/shared2309 helper, now23 hearthstones/old22 retained; sibling Lightcalled257736 is blocked after charge spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after509 cancellation-before-start. No runtime/data/native changes or own heavy jobs.

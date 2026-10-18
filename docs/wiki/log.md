@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source660–664 pending Preyseeker acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source660664-pending-preyseeker-hearthstone-and-minipet-leash-tap-state-mixed-mushroom-triggered-homebind-boundaries-2026-10-18):3b3f52940 appends263933/1270814/source10s/shared2309 to unchanged saved-bind helper, now24 hearthstones/old23 retained; source PreventionType4 retained without broader prevention certificate. Format/manual readability/diffcheck pass; behavior pending lead successor. Target90 leash, tap-state lens, missing mixed76/179 mushroom and actual Mycomancer1299014/64→1286909/252 remain gaps. No substituted child root, runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source655–659 pending Naaru acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source655659-pending-naaru-hearthstone-and-skip-rock-mixed-mushroom-retained-catch-periodic-voidwalker-boundaries-2026-10-18):8ead527f5 appends263489/1270583/source10s/shared2309 to unchanged saved-bind helper, now23 hearthstones/old22 retained; format/manual readability/diffcheck pass, behavior awaits lead successor. Preserve skip-rock nonzero trigger/base1, qualified50+179 mushroom/missing404325/40621, retained3300ms Valdekar fixture and periodic100ms/trigger0/three-voidwalker multiplicity. No guessed mechanics, runtime/data/native change or own heavy jobs.

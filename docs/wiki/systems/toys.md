@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Preyseeker hearthstone and minipet leash, tap-state, mixed mushroom, triggered-homebind boundaries (2026-10-18)
+
+[Source660–664 matrix](../../toy-effects14-coverage.md#source660664-pending-preyseeker-hearthstone-and-minipet-leash-tap-state-mixed-mushroom-triggered-homebind-boundaries-2026-10-18) adds acceptance-only3b3f52940:263933/1270814/source10s/shared2309 blocks Naaru263489 via unchanged bind helper, now24 hearthstones/old23 retained; behavior awaits lead successor. Permanent target90 leash, once/twice lens state, missing642496+42098 mixed76/179 mushroom and Mycomancer actual10s root1299014/64→instant252 child1286909 remain distinct gaps. No caster-only leash, fabricated tap window, ordinary mushroom summon or direct-child hearthstone substitution. No runtime/data/native change or own heavy jobs.
+
 ## Pending Naaru hearthstone and skip-rock, mixed mushroom, retained catch, periodic voidwalker boundaries (2026-10-18)
 
 [Source655–659 matrix](../../toy-effects14-coverage.md#source655659-pending-naaru-hearthstone-and-skip-rock-mixed-mushroom-retained-catch-periodic-voidwalker-boundaries-2026-10-18) adds acceptance-only8ead527f5:263489/1270583/source10s/shared2309 blocks Lightcalled257736 through unchanged persisted-bind helper, now23 hearthstones/old22 retained; behavior awaits lead successor. Skip-rock nonzero trigger/base1, qualified50+179 mushroom with missing404325/40621, retained3300ms Valdekar fixture and100ms/trigger0/three-voidwalker contract remain distinct. No guessed count/impulse/body or inert periodic aura substitute; no runtime/data/native change or own heavy work.
