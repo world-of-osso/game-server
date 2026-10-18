@@ -87,6 +87,8 @@ fn toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product() {
     )
     .unwrap();
     h.app
+        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+    h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     h.app
         .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
@@ -124,11 +126,25 @@ fn toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product() {
     assert_eq!(load_created_item_count(&h, character, PRODUCT), 1);
     h.advance(120);
     assert!(crate::auras::aura_now(h.app.world()) - first_completed > 300.0);
-    assert_eq!(activate(&mut h, TOY)[0].error, None);
+    assert_eq!(
+        activate(&mut h, TOY)[0].error.as_deref(),
+        Some("You can't carry any more of those items.")
+    );
     h.advance(70);
     assert_eq!(
         h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
-        2
+        1
+    );
+    assert_eq!(h.inbox.inventory_errors.len(), 1);
+    assert_eq!(
+        h.inbox.inventory_errors[0].reason,
+        shared::protocol::InventoryErrorReason::ItemMaxCount
+    );
+    assert!(
+        !h.inbox
+            .failed
+            .iter()
+            .any(|failure| failure.reason == shared::spell_data::CastFailReason::InventoryFull)
     );
     let db = &h.app.world().resource::<GameDatabase>().db;
     let final_inventory = persistence::load_inventory(db, character);
@@ -148,6 +164,52 @@ fn toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product() {
         0,
         "learning consumed toy202309; creation must not mint the same-name toy"
     );
+}
+
+#[test]
+fn toyfx419_doomsday_triggered_effect_cap_preserves_original_product_guid() {
+    const SPELL: u32 = 398572;
+    const PRODUCT: u32 = 202310;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("doomsday-triggered.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    h.app
+        .insert_resource(crate::profession::load_profession_data(&conn).unwrap());
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::persistence::ClientId(character));
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        caster,
+        SPELL,
+        Some(caster),
+        1
+    ));
+    h.advance(5);
+    assert_eq!(load_created_item_count(&h, character, PRODUCT), 1);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let before = persistence::load_inventory(db, character);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        caster,
+        SPELL,
+        Some(caster),
+        1
+    ));
+    h.advance(5);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(persistence::load_inventory(db, character), before);
+    assert_eq!(load_created_item_count(&h, character, PRODUCT), 1);
 }
 
 #[test]
