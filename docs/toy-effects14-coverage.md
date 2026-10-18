@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source700–704: unnamed homebind metadata, current-camp recall, shared Idol, corpse haunt and targeted star boundaries (2026-10-18)
+
+Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Unnamed homebind is not added to25 learned-hearthstone cases without its missing item metadata; dynamic recall and targeted badge are not generic self cosmetics.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|700 Unnamed276370/1299513 | Toy/on-use root and source10000ms252/targets1/9/shared2309/max1/recharge1800000ms exist; ItemSparse/content_item identity metadata absent. Normal recovery0/start1500ms. Preserve unnamed source contract, no invented name/acquisition or learned-use certificate from a sibling hearthstone. |
+|701 Lightveil Recall Beacon276371/1299515 | Source10000ms self dummy3/zero payload, explicit item900000ms recovery overrides spell0/start1500ms; RequiredAreas9076. Actual current active Umbral Base Camp destination on Naigtal or Val and eligible recall authority remain unresolved. No ordinary homebind, fixed guessed camp, shorter cast or generic dummy success. |
+|702 Idol of Ula'tek276925/1301489 | Instant self transform56/misc268496/8 for3600000ms, normal recovery0/category2513 recovery600000ms. Existing displays145498/145499/145500/145503/145504 each scale1/weight1. Actual learned appearance/restoration/shared reuse remains unverified, like Pango/Saptor/Mask; no independent timer, altered aura or long-recovery helper certificate. |
+|703 Jaktu's Cursed Blade277954/1303056 | Source2000ms target25 periodic226/15000ms/trigger0/zero payload for600000ms, inherited600000ms recovery. Actual player-corpse qualification/periodic spirit haunting/presentation/lifecycle remains gap. No inert periodic aura, guessed child/spirit actor or living-target cosmetic substitute. |
+|704 Otoola's Recognition278557/1305146 | Instant target25 missile32→1305147; child target25 dummy4 for30000ms, inherited root30000ms recovery/start1500ms. Actual friend-or-foe badge projectile/recipient/visual/removal remains unaudited. No self-only Starfish copy, dropped missile, invented corpse-only rule or generic zero-dummy success. |
+
+Evidence: private `rows700-704-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact2309/2513 joins. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source695–699: pending Corrosive Victory and mixed Effigy, short-category mask, stand, companion-command boundaries (2026-10-18)
 
 Acceptance-onlyad2f092f7 appends Full1166 Corrosive275988/1298433/1800000ms to unchanged audited caster helper, now21 identities/old20 retained. Format/manual literal readability/diffcheck pass; behavior awaits lead successor after cancelled509. No runtime/data/native change or own heavy jobs; no source-only extra admitted.

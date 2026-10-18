@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source700–704 exact identity and recipient boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source700704-unnamed-homebind-metadata-current-camp-recall-shared-idol-corpse-haunt-and-targeted-star-boundaries-2026-10-18): unnamed276370/1299513 retains10s252/shared2309 but lacks item identity; Lightveil retains actual current camp/9076, Idol shared2513 short recovery, Jaktu corpse226/15s/trigger0 and Otoola friend/foe missile32→4. No invented name/coordinates/child, borrowed helper or self-recipient substitute. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
+
 ## 2026-10-18 — Toy source695–699 pending Corrosive acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source695699-pending-corrosive-victory-and-mixed-effigy-short-category-mask-stand-companion-command-boundaries-2026-10-18):ad2f092f7 appends275988/1298433/1800000ms to unchanged caster helper, now21 identities/old20 retained; format/manual readability/diffcheck pass, behavior pending successor. Preserve Effigy1250/transform/200ms area chain and NPC0.6, Mask shared2513 shorter recovery, Stand47/138/base0 and Companion150 critter authority. No source-only admission, runtime/data/native change or own heavy jobs.

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Unnamed homebind metadata, current-camp recall, shared Idol, corpse haunt and targeted star boundaries (2026-10-18)
+
+[Source700–704 matrix](../../toy-effects14-coverage.md#source700704-unnamed-homebind-metadata-current-camp-recall-shared-idol-corpse-haunt-and-targeted-star-boundaries-2026-10-18) preserves unnamed276370/1299513 homebind source with missing item identity, actual current-camp9076 recall, Idol shared2513 short recovery, corpse226/15000ms/trigger0 haunting and Otoola's targeted32→dummy4 badge. No fabricated name, fixed/homebind recall, long-recovery transform certificate, inert haunt or self-only star substitute. Metadata only; no runtime/data/native change or own heavy work, lead successor pending.
+
 ## Pending Corrosive Victory and mixed Effigy, short-category mask, stand, companion-command boundaries (2026-10-18)
 
 [Source695–699 matrix](../../toy-effects14-coverage.md#source695699-pending-corrosive-victory-and-mixed-effigy-short-category-mask-stand-companion-command-boundaries-2026-10-18) adds acceptance-onlyad2f092f7:275988/1298433/30-minute aura via unchanged caster helper, now21 identities/old20 retained; behavior awaits lead successor. Effigy retains1250 trigger payload plus transform/200ms area chain; NPC scale0.6 is not player scale. Mask retains one-hour appearance/shared2513 ten-minute recovery; Stand retains47/138/base0; Companion Crystal retains150/critter kill authority. No flattened child, stationary-only stand or combat-pet shortcut. No runtime/data/native change or own heavy work.
