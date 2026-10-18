@@ -44,6 +44,8 @@ pub(crate) struct InventoryModel {
     bags: Vec<Vec<Option<InventoryItemData>>>,
     /// Attached only for an authorized character bank move; persisted separately.
     bank: Option<crate::persistence::banks::BankData>,
+    /// Passive personal-bank ownership; never permits bank-location operations.
+    bank_owned: Vec<(ItemDefinitionSource, InventoryItemData)>,
     /// Owned items with no free bag slot; kept so saving never drops them.
     overflow: Vec<InventoryItemData>,
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
@@ -94,6 +96,7 @@ impl InventoryModel {
         let mut model = Self {
             bags: vec![Vec::new(); usize::from(BAG_COUNT)],
             bank: None,
+            bank_owned: Vec::new(),
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
@@ -137,6 +140,23 @@ impl InventoryModel {
             model.sync_appearance(slot);
         }
         model
+    }
+
+    pub(crate) fn load_bank_ownership(&mut self, db: &redb::Database, character_id: u64) {
+        let bank = crate::persistence::banks::load_character_bank(db, character_id);
+        self.bank_owned = bank
+            .tabs
+            .into_iter()
+            .flat_map(|tab| tab.slots)
+            .flatten()
+            .map(|item| {
+                let source = crate::persistence::inventory_store::load_item_definition_source(
+                    db,
+                    item.item_guid,
+                );
+                (source, item)
+            })
+            .collect();
     }
 
     pub(crate) fn attach_bank(
@@ -1322,19 +1342,93 @@ impl InventoryModel {
         self.gold = gold;
     }
 
-    /// Items of `(source, item_id)` in bags, equipment and overflow.
+    /// TC Player.cpp:9490–9512,9928–9954 counts equipment, bags and personal bank.
     pub(crate) fn owned_count(&self, source: ItemDefinitionSource, item_id: u32) -> u32 {
+        self.owned_count_excluding(source, item_id, None)
+    }
+
+    fn owned_count_excluding(
+        &self,
+        source: ItemDefinitionSource,
+        item_id: u32,
+        skip: Option<u64>,
+    ) -> u32 {
+        self.carried_count_excluding(source, item_id, skip)
+            .saturating_add(self.bank_count_excluding(source, item_id, skip))
+    }
+
+    fn carried_count_excluding(
+        &self,
+        source: ItemDefinitionSource,
+        item_id: u32,
+        skip: Option<u64>,
+    ) -> u32 {
+        self.carried_items()
+            .filter(|item| {
+                item.item_id == item_id
+                    && Some(item.item_guid) != skip
+                    && self.definition_source(item.item_guid) == source
+            })
+            .map(|item| item.stack_count)
+            .fold(0, u32::saturating_add)
+    }
+
+    fn carried_items(&self) -> impl Iterator<Item = &InventoryItemData> {
         self.bags
             .iter()
             .flatten()
             .flatten()
             .chain(self.equipped.values())
             .chain(&self.overflow)
-            .filter(|item| {
-                item.item_id == item_id && self.definition_source(item.item_guid) == source
+    }
+
+    fn bank_count_excluding(
+        &self,
+        source: ItemDefinitionSource,
+        item_id: u32,
+        skip: Option<u64>,
+    ) -> u32 {
+        if let Some(bank) = &self.bank {
+            let items = bank.tabs.iter().flat_map(|tab| tab.slots.iter().flatten());
+            return items
+                .filter(|item| {
+                    item.item_id == item_id
+                        && Some(item.item_guid) != skip
+                        && self.definition_source(item.item_guid) == source
+                })
+                .map(|item| item.stack_count)
+                .fold(0, u32::saturating_add);
+        }
+        let carried_guids: HashSet<_> = self.carried_items().map(|item| item.item_guid).collect();
+        self.bank_owned
+            .iter()
+            .filter(|(owned_source, item)| {
+                let same_definition = *owned_source == source && item.item_id == item_id;
+                let excluded =
+                    Some(item.item_guid) == skip || carried_guids.contains(&item.item_guid);
+                same_definition && !excluded
             })
-            .map(|item| item.stack_count)
-            .sum()
+            .map(|(_, item)| item.stack_count)
+            .fold(0, u32::saturating_add)
+    }
+
+    fn check_max_count(
+        &self,
+        item: &InventoryItemData,
+        source: ItemDefinitionSource,
+        template: ItemTemplate,
+    ) -> OpResult {
+        if template.max_count <= 0 {
+            return Ok(());
+        }
+        let owned = self.owned_count_excluding(source, item.item_id, Some(item.item_guid));
+        if u64::from(owned) + u64::from(item.stack_count) > template.max_count as u64 {
+            return Err(error(
+                InventoryErrorReason::ItemMaxCount,
+                format!("item {} ownership cap {}", item.item_id, template.max_count),
+            ));
+        }
+        Ok(())
     }
 
     /// Items of `(source, item_id)` in bags (not equipment or overflow).
@@ -1522,6 +1616,7 @@ impl InventoryModel {
         template: ItemTemplate,
         mint: &mut impl FnMut() -> u64,
     ) -> OpResult {
+        self.check_max_count(&item, source, template)?;
         self.register_definition(&item, source, template);
         let max_stack = template.max_stack.max(1);
         if self.room_for(&item, max_stack) < item.stack_count {
@@ -1570,6 +1665,7 @@ impl InventoryModel {
         template: ItemTemplate,
         mint: &mut impl FnMut() -> u64,
     ) -> OpResult {
+        self.check_max_count(&item, source, template)?;
         self.register_definition(&item, source, template);
         let mut guid = Some(item.item_guid);
         let mut left = item.stack_count;
@@ -1689,6 +1785,7 @@ impl InventoryModel {
             ));
         };
         self.check_location(location)?;
+        self.check_max_count(&item, source, template)?;
         self.register_definition(&item, source, template);
         self.check_bag_type(location, &item)?;
         let max_stack = template.max_stack.max(1);

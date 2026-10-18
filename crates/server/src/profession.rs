@@ -465,24 +465,31 @@ impl Bags<'_> {
         })
     }
 
-    fn store(&self, model: &mut InventoryModel, item: InventoryItemData) -> Result<(), String> {
+    fn store(
+        &self,
+        model: &mut InventoryModel,
+        item: InventoryItemData,
+    ) -> Result<(), shared::protocol::InventoryError> {
         let template = *self
             .templates
             .get(
                 shared::item_data::ItemDefinitionSource::Retail,
                 item.item_id,
             )
-            .ok_or_else(|| format!("item {} has no template", item.item_id))?;
+            .ok_or_else(|| {
+                crate::inventory::inventory_model::error(
+                    shared::protocol::InventoryErrorReason::ItemNotFound,
+                    format!("item {} has no template", item.item_id),
+                )
+            })?;
         let db = &self.db.db;
         let mut mint = || persistence::next_id(db, "item_instance");
-        model
-            .store_item(
-                item,
-                shared::item_data::ItemDefinitionSource::Retail,
-                template,
-                &mut mint,
-            )
-            .map_err(|error| format!("{error:?}"))
+        model.store_item(
+            item,
+            shared::item_data::ItemDefinitionSource::Retail,
+            template,
+            &mut mint,
+        )
     }
 }
 
@@ -600,7 +607,12 @@ pub(crate) fn check_cast_items(
                 .new_item(item, count)
                 .map_err(CastFailure::Unsupported)?;
             bags.store(&mut model, item)
-                .map_err(|_| CastFailure::InventoryFull)?;
+                .map_err(|error| match error.reason {
+                    shared::protocol::InventoryErrorReason::ItemMaxCount => {
+                        CastFailure::Inventory(error)
+                    }
+                    _ => CastFailure::InventoryFull,
+                })?;
         }
         Ok(())
     })
