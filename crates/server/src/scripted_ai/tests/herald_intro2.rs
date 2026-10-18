@@ -1,8 +1,6 @@
 //! Natural center-arrival INTRO2 transition through the first real West arrival.
 use super::herald_intro::{actors_in_copy, spawn_second_copy};
-use super::herald_target32::{
-    assert_grounded, prepared_ramparts as prepared_target32, reach_center,
-};
+use super::herald_target32::{prepared_ramparts as prepared_target32, reach_center};
 use super::*;
 use shared::components::UnitPose;
 const HERALD: u32 = 17_307;
@@ -28,6 +26,32 @@ fn prepared_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
         ));
     }
     (h, map, herald, sentries)
+}
+
+fn received_casts(h: &Harness, caster: Entity, spell_id: u32) -> usize {
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == caster.to_bits() && go.spell_id == spell_id)
+        .count()
+}
+
+fn assert_summon_at_floor(world: &mut World, map: InMap, actor: Entity) {
+    let position = *world.get::<Position>(actor).unwrap();
+    let probe = world
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, Vec3::new(position.x, position.y, position.z));
+    let crate::ground::GroundProbe::Supported(floor) = probe else {
+        panic!("actual Ramparts source floor required: {probe:?}");
+    };
+    // Re-probing the same f32 triangle at the grounded Y changes ray arithmetic
+    // by3ULPs here. This is numeric roundoff, not a gameplay placement allowance.
+    let roundoff = 4.0 * (floor.next_up() - floor);
+    assert!(
+        (position.y - floor).abs() <= roundoff,
+        "30717 source floor: position={} floor={floor} fourULPs={roundoff}",
+        position.y
+    );
 }
 
 fn ai_identity(h: &Harness, actor: Entity) -> *const () {
@@ -158,7 +182,7 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
                 .properties_id,
             64
         );
-        assert_grounded(h.app.world_mut(), map, child);
+        assert_summon_at_floor(h.app.world_mut(), map, child);
         h.advance(0.05);
         assert!(
             h.has_aura(child, 5301),
@@ -210,7 +234,7 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
         );
         for spell in [30717, 30698, 30694, 30700, 18430] {
             assert_eq!(
-                h.casts(0, herald, spell),
+                received_casts(&h, herald, spell),
                 1,
                 "one source transition cast for{spell}"
             );
@@ -277,7 +301,7 @@ fn encounter_coverage_herald_intro2_copy_and_duplicate_notifications_do_not_repl
     h.advance(1.1);
     assert_eq!(actors_in_copy(&mut h, VAZRUDEN, map).len(), 1);
     assert_eq!(
-        h.casts(0, herald, 30717),
+        received_casts(&h, herald, 30717),
         1,
         "no replayed summon on duplicate arrival/action"
     );
