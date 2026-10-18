@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source335–339: pending linked-tent acceptance and nap/seat boundaries (2026-10-17)
+
+338/339 test/spec28f1ce365 adds actual learned Market/Expedition tent cases through the existing Gnoll fixture's source-cast/placement/model/rotation/refresh/other-owner/cancel/death assertions. The helper now accepts four identity parameters and loads real SpellStore because the old setup's selective fixture omitted these new roots/children. Three tent tests await explicitly covering new-head behavioral proof; format/manual readability/diffcheck pass. No production/runtime/data changes or own heavy duplicate. Historical331 witness is retained, not a passing certificate for the extracted helper/new cases.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|335 Duck-Stuffed Duck Lovie194056/383065 | Instant self dummy aura4/permanent, source visual118994 and600000ms item recovery. Actual nap/duck attachment/pose and exit lifecycle remain unverified. A dummy aura/visual row alone does not prove sleeping behavior or authorize a generic no-op. |
+|336 Cushion of Time Travel194057/387288 | Instant target47 summon195980/properties64/base1 for300000ms, inherited21600000ms recovery. TDB195980/display109046 exists, runtime content template/model absent. Actual seat interaction/access/cleanup remains a gap; description's slow forward time is not authority for teleport/time-control mechanics or decorative-only admission. |
+|337 Cold Cushion194058/387381 | Instant target47 summon196013/properties64/base1 for300000ms, inherited21600000ms recovery. TDB196013/display109053 exists, runtime content template/model absent. Cooling-cushion presentation, interaction (if any) and lifecycle remain unverified; no invented seating/healing/buff or inert admission. |
+|338 Market Tent194059/398329 | Source3000ms self linked428 for900000ms→398328/permanent200404/property3911 (Control0/Title0/flags67241992), targets18/79, item120000ms recovery. Runtime111097 exists. Exact actual2yd-back/rotation/model/owner/refresh/cancel/death acceptance is committed, behavioral proof pending. Natural15-minute linked expiry/native/rest remain outside this witness; no invented commerce service. |
+|339 Dragonscale Expedition's Expedition Tent194060/398334 | Same authored cast/lifetime/property/recovery, distinct child398333→200406/display111099. Its own actual-use acceptance is committed and pending a covering gate; source identity is not substituted with Gnoll/Market. Native/rest/natural-expiry and full eligibility remain separate boundaries. |
+
+Evidence: private `rows335-339-{readonly-source,action-source}.json`, `tents338-339-{active-goal,proof-ledger}.json`. Pending33314hearthstone and32210disguise+Oomgut11 fixtures likewise require new-head coverage; lead477 throughd4 does not contain them. Tea Set149865 remains untouched.
+
 ## Source330–334: pending Timewalker acceptance and prism/tent/seat/pall boundaries (2026-10-17)
 
 333 test/spec4ee545b9f adds193588/375357 to the existing actual learned-use/saved-bind/refusal/shared-charge helper, making14hearthstone variants. Exact source10s/effect252/self→homebind9/shared2309/one1800000ms charge is unchanged. Format/manual readability/diffcheck pass; explicitly covering new-head behavioral proof is requested, not passed. Lead477 throughd4 contains13earlier variants, not333. No production/runtime/data changes or own heavy duplicate.
