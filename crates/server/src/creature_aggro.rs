@@ -1,6 +1,6 @@
 //! Creature aggro (docs/specs/creature-aggro.md): hostile creatures attack
 //! players that come within their aggro radius, any creature with a threat
-//! list fights back when damaged, the top-threat unit is chased and
+//! list fights back when damaged, its threat-selected current victim is chased and
 //! auto-attacked, and a creature with no valid target left evades home.
 //!
 //! AzerothCore references: `CreatureAI::MoveInLineOfSight` (CreatureAI.cpp:166),

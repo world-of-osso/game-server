@@ -166,18 +166,23 @@ pub(super) fn available(world: &World, creature: Entity, unit: Entity) -> bool {
     let Some(map) = world.get::<InMap>(creature) else {
         return false;
     };
-    let alive = living_target(world, unit);
-    let attackable = world
+    if !living_target(world, unit) || world.get::<InMap>(unit) != Some(map) {
+        return false;
+    }
+    if world.get::<TaxiFlight>(unit).is_some() {
+        return false;
+    }
+    if world
         .get::<UnitFlags>(unit)
-        .is_none_or(|flags| flags.can_be_attacked_by(false));
-    alive
-        && world.get::<InMap>(unit) == Some(map)
-        && world.get::<TaxiFlight>(unit).is_none()
-        && attackable
-        && world
-            .resource::<FactionTemplates>()
-            .can_attack(unit_faction(world, creature), unit_faction(world, unit))
-        && crate::auras::stealth::can_detect(world, creature, unit)
+        .is_some_and(|flags| !flags.can_be_attacked_by(false))
+    {
+        return false;
+    }
+    let factions = world.resource::<FactionTemplates>();
+    if !factions.can_attack(unit_faction(world, creature), unit_faction(world, unit)) {
+        return false;
+    }
+    crate::auras::stealth::can_detect(world, creature, unit)
         && within_home_reach(world, creature, unit)
 }
 

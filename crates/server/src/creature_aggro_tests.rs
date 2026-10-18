@@ -642,11 +642,12 @@ fn highest_threat_attacker_takes_aggro_past_the_threshold() {
     add_threat(app.world_mut(), spider, tank, 100.0);
     // Ranged challenger (30 yd) needs 130%: 120 is not enough.
     add_threat(app.world_mut(), spider, mage, 120.0);
-    run(&mut app, 1);
+    // TC ThreatManager.h:86 / ThreatManager.cpp:216–230: cross1000ms reselection.
+    run(&mut app, 21);
     assert_eq!(state(&app, spider), pursuing(tank));
 
     add_threat(app.world_mut(), spider, mage, 15.0);
-    run(&mut app, 1);
+    run(&mut app, 21);
     assert_eq!(state(&app, spider), pursuing(mage));
     assert_eq!(
         app.world().get::<CombatTarget>(spider).unwrap().0,

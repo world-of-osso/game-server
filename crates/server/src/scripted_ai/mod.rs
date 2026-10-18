@@ -139,7 +139,8 @@ pub struct CreatureScriptName(pub String);
 #[derive(Component)]
 pub(crate) struct ScriptedVictimUpdatePaused;
 
-/// `ReactStates`: a passive creature neither attacks on sight nor picks a victim
+/// `ReactStates`: a passive creature neither attacks on sight nor projects a new attack victim.
+/// Its threat-manager current reference still updates independently
 /// (`CreatureAI::UpdateVictim` stops its attack); an aggressive one does both.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ReactState {
