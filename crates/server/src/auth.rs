@@ -316,6 +316,10 @@ fn send_register_response(
 }
 
 #[cfg(test)]
+#[path = "auth_writer_tests.rs"]
+mod writer_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::persistence::ClientId;

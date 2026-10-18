@@ -152,6 +152,75 @@ fn source_start_facing_is_used_on_login_without_repositioning_saved_characters()
 }
 
 #[test]
+fn cold_character_selection_returns_while_writer_is_held_and_reopens_initialized_state() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let raw = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&raw);
+    let (character, _) = persistence::create_character(&raw, 1, "Coldwriter", 1, 1).unwrap();
+    // Never call hydration/loaders here: secondary character rows remain absent.
+    let db = GameDatabase::new(raw);
+    let held = db.db.begin_write().unwrap();
+    let (release, blocked) = std::sync::mpsc::channel();
+    let holder = std::thread::spawn(move || {
+        let explicitly_released = blocked.recv_timeout(Duration::from_secs(5)).is_ok();
+        held.abort().unwrap();
+        explicitly_released
+    });
+    let (mut app, connection) =
+        queue_character_selection(db, 1, character, crate::maps::MapStore::continents());
+    app.update();
+    app.update();
+    assert!(
+        !holder.is_finished(),
+        "cold selection blocked on the durable writer"
+    );
+    assert!(
+        app.world()
+            .get::<crate::auth::InWorld>(connection)
+            .is_none()
+    );
+    assert_eq!(
+        app.world_mut()
+            .query::<&ClientId>()
+            .iter(app.world())
+            .count(),
+        0
+    );
+    release.send(()).unwrap();
+    assert!(
+        holder.join().unwrap(),
+        "writer watchdog is not a success condition"
+    );
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while app
+        .world()
+        .get::<crate::auth::InWorld>(connection)
+        .is_none()
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "cold selection never completed"
+        );
+        app.update();
+        std::thread::yield_now();
+    }
+    let gold = app
+        .world_mut()
+        .query::<&Gold>()
+        .single(app.world())
+        .unwrap()
+        .0;
+    assert_eq!(gold, persistence::InventoryData::default().gold);
+    drop(app);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    assert_eq!(persistence::load_inventory(&reopened, character).gold, gold);
+    assert_eq!(
+        persistence::load_collections(&reopened, character),
+        crate::collection::default_collection_state()
+    );
+}
+
+#[test]
 fn character_relogin_reads_owned_achievements_while_default_or_migration_write_is_pending() {
     for legacy_row in [false, true] {
         let file = tempfile::NamedTempFile::new().unwrap();
@@ -283,7 +352,7 @@ fn select_character_in_world(
     )
 }
 
-fn select_character_with_maps(
+fn queue_character_selection(
     db: GameDatabase,
     account_id: u64,
     character_id: u64,
@@ -342,6 +411,16 @@ fn select_character_with_maps(
         .expect("connection should have a character-select sender")
         .send::<AuthChannel>(SelectCharacter { character_id });
 
+    (app, connection)
+}
+
+fn select_character_with_maps(
+    db: GameDatabase,
+    account_id: u64,
+    character_id: u64,
+    maps: crate::maps::MapStore,
+) -> (App, Entity) {
+    let (mut app, _) = queue_character_selection(db, account_id, character_id, maps);
     app.update();
     app.update();
     app.world_mut().run_schedule(FixedUpdate);
