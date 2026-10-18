@@ -1,10 +1,149 @@
-//! Source111–113,178–179,201,234,240,317,322,387,402 and450: real transforms and source recovery.
+//! Source111–113,178–179,201,234,240,317,322,387,402,450,540 and542: transforms and recovery.
 use super::*;
+
+const TEN_MINUTES_MS: u32 = 600_000;
+// Item, spell, creature, displays, recovery ms, aura duration ms, cast ms.
+const SOURCE_DISGUISES: &[(u32, u32, u32, &[u32], u32, u32, u32)] = &[
+    (
+        164373,
+        281298,
+        121865,
+        [11611, 976, 765, 4905].as_slice(),
+        7_200_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        164374,
+        281302,
+        144261,
+        [41083, 78767, 76947, 41724].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        164375,
+        281303,
+        144262,
+        [88011, 88009, 88016, 88012].as_slice(),
+        7_200_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        170154,
+        303994,
+        155896,
+        [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        170155,
+        303995,
+        155897,
+        [
+            92514, 92515, 92516, 92517, 92518, 92519, 92520, 92521, 92522, 92523, 92524, 92525,
+            92526, 92527, 92528, 92529,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        174873,
+        305123,
+        156286,
+        [92868, 92880, 92874, 92871].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        183903,
+        343827,
+        174859,
+        [96239, 96240, 96241, 96242, 96243].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        184223,
+        344795,
+        175221,
+        [
+            92410, 92411, 92412, 92413, 92414, 92415, 92416, 92417, 92418,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        190457,
+        367568,
+        185567,
+        [105515].as_slice(),
+        3_600_000,
+        900_000,
+        0,
+    ),
+    (
+        191891,
+        371470,
+        187854,
+        [104851].as_slice(),
+        1_800_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        205904,
+        410931,
+        205296,
+        [112407, 112523, 112524, 112525].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        225641,
+        455426,
+        226283,
+        [
+            115492, 115491, 115488, 115487, 115483, 115482, 115479, 115478, 115473, 115472, 115469,
+            115468, 115465, 115464, 115461, 115460, 115459, 115458, 115455, 115454, 115451, 115450,
+            115447, 115446, 115443, 115442, 115439, 115438, 115435, 115434, 115431, 115430, 115428,
+            115426, 115424, 115419, 115417, 115415, 115413, 115411, 115410,
+        ]
+        .as_slice(),
+        3_600_000,
+        1_800_000,
+        1_500,
+    ),
+    (
+        225910,
+        456572,
+        226964,
+        [
+            119251, 115218, 115217, 115216, 115215, 115214, 115213, 115212, 115211, 115210, 115209,
+            115208, 115207, 115206, 115205, 115204, 115202, 115201, 115200, 115199, 115198, 115197,
+            115196, 115195, 115194, 115192, 115190, 114563, 114562,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+];
 
 #[test]
 fn toyfx_source_disguises_learning_expiry_and_recovery() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
-    const TEN_MINUTES_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
@@ -12,103 +151,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for (item, spell, entry, displays, recovery_ms, duration_ms) in [
-        (
-            164373,
-            281298,
-            121865,
-            [11611, 976, 765, 4905].as_slice(),
-            7_200_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            164374,
-            281302,
-            144261,
-            [41083, 78767, 76947, 41724].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            164375,
-            281303,
-            144262,
-            [88011, 88009, 88016, 88012].as_slice(),
-            7_200_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            170154,
-            303994,
-            155896,
-            [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            170155,
-            303995,
-            155897,
-            [
-                92514, 92515, 92516, 92517, 92518, 92519, 92520, 92521, 92522, 92523, 92524, 92525,
-                92526, 92527, 92528, 92529,
-            ]
-            .as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            174873,
-            305123,
-            156286,
-            [92868, 92880, 92874, 92871].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            183903,
-            343827,
-            174859,
-            [96239, 96240, 96241, 96242, 96243].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            184223,
-            344795,
-            175221,
-            [
-                92410, 92411, 92412, 92413, 92414, 92415, 92416, 92417, 92418,
-            ]
-            .as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            190457,
-            367568,
-            185567,
-            [105515].as_slice(),
-            3_600_000,
-            900_000,
-        ),
-        (
-            191891,
-            371470,
-            187854,
-            [104851].as_slice(),
-            1_800_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            205904,
-            410931,
-            205296,
-            [112407, 112523, 112524, 112525].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-    ] {
+    for &(item, spell, entry, displays, recovery_ms, duration_ms, cast_ms) in SOURCE_DISGUISES {
         let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
@@ -120,6 +163,20 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
         let health = *h.app.world().get::<Health>(caster).unwrap();
         learn_effect_toy(&mut h, character, item);
         assert_eq!(activate(&mut h, item)[0].error, None, "item{item}");
+        let cast_frames = (f64::from(cast_ms) / 1000.0 / FRAME_SECONDS).ceil() as usize;
+        if cast_frames > 0 {
+            let first_half = cast_frames / 2;
+            h.advance(first_half);
+            assert!(
+                !h.inbox.go.iter().any(|go| go.spell_id == spell),
+                "item{item}"
+            );
+            assert_eq!(
+                h.app.world().get::<ModelDisplay>(caster).copied(),
+                native_display
+            );
+            h.advance(cast_frames - first_half);
+        }
         h.advance(5);
         assert!(
             h.inbox.failed.is_empty(),
