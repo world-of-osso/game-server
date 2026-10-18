@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source455–459: pending Naaru return-home acceptance and explosive-show/critter/pennant/service boundaries (2026-10-17)
+
+457 test/spec1ce4b65a0 adds Path of the Naaru206195/412555 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now16 hearthstones. Its sibling200630 Ohn'ir must remain blocked by the spent one-charge/1800000ms recovery. Format/manual readability/diffcheck pass, new behavioral proof requires a later covering head than4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|455 Flamin' Ring of Flashiness206038/411794 | Instant self dummy4 plus three target18 area-trigger179 slots→29001/29008/29009 and self trigger64→411846/target0 script3 for2000ms; inherited3600000ms recovery. Complete flashy show/explosive conclusion/three-area geometry/timing/lifecycle remain gaps, not one visual flare, collapsed area multiplicity or ignored child script. |
+|456 Fyrakk's Frenzy206043/411812 | Instant target48 area-trigger179→29003 for5000ms; spell600000ms/start1500ms recovery. Source explicitly devastates critters caught in the deep breath. Actual critter eligibility/flame area/action/cleanup remain unresolved; no cosmetic-only breath, general player damage or invented instant kill radius. |
+|457 Path of the Naaru206195/412555 | Source10000ms252/targets1/9, shared charge2309/max1/recharge1800000ms. Own saved-bind/actual learned-use/source-cast/charge/sibling refusal test committed, behavioral proof pending. No fabricated destination, map-discovery action, native travel art or natural half-hour recharge certificate. |
+|458 Obsidian Legend's Pennant206267/412530 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Exact seasonal pennant/back attachment/eligibility/cleanup remains unaudited; no zero-dummy admission, guessed season entitlement or base1 actor/child count. |
+|459 Ethereal Transmogrifier206268/412643 | Instant target32 summon205879/property2906/base1 for600000ms; Control1/faction0/Title0/flags2056, item600000ms recovery. Runtime creature/model absent. Authentic Warpweaver/transmog service/owner/placement/distance/lifecycle remain gaps; no inert service NPC, generic merchant substitution or invented transmog selection/UI. |
+
+Evidence: private `rows455-459-{readonly-source,action-source,charge-source,runtime-source,active-goal}.json`, `hearth457-{active-goal,proof-ledger}.json`, exact2309 source join.149865 Tea Set remains untouched.
+
 ## Source450–454: pending Claw/Nightmare-banner acceptance and wisdom/audio/attraction boundaries (2026-10-17)
 
 Test/spec1c5afda02 adds exact Claw to the unchanged disguise fixture, now11 rows plus separate Oomgut12 identities, and exact Nightmare Banner to the transmitted-object fixture, now10 rows. Old10 disguise/nine object identities remain unchanged. Format/manual readability/diffcheck pass; new behavior requires a later covering head, not4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.

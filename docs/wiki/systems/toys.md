@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Naaru return-home acceptance and explosive-show/critter/pennant/service boundaries (2026-10-17)
+
+[Source455–459 matrix](../../toy-effects14-coverage.md#source455459-pending-naaru-return-home-acceptance-and-explosive-showcritterpennantservice-boundaries-2026-10-17) adds acceptance-only1ce4b65a0: Path of the Naaru206195/412555/source10s/shared2309 in unchanged actual saved-bind helper, now16 hearthstones; exact one-charge/1800000ms and Ohn'ir refusal, pending newer head beyond4920c77. Flamin' Ring preserves three distinct area edges plus child script; Fyrakk's actual critter action, permanent nonzero pennant and missing Warpweaver/transmog service remain gaps. Format/manual readability/diffcheck pass; no runtime/data/native/service or cosmetic-only critter admission, no own heavy duplicate.
+
 ## Pending Claw/Nightmare-banner acceptance and wisdom/audio/attraction boundaries (2026-10-17)
 
 [Source450–454 matrix](../../toy-effects14-coverage.md#source450454-pending-clawnightmare-banner-acceptance-and-wisdomaudioattraction-boundaries-2026-10-17) adds acceptance-only1c5afda02: Claw205904/410931/205296/four valid models/source600s/category2177 one-hour recovery as11th disguise; Nightmare206008/411653→402852/type5/82612/size1/180s as tenth cursor object. Existing helper assertions retained; new behavioral head beyond4920c77 required. Senegos yes/no body/action, week-long listener-specific sniff audio suppression and friend-attraction area trigger remain gaps, not inert bodies/generic visual auras/teleport guesses. Local format/manual readability/diffcheck pass; no runtime/data/native/pool-sampling/full-recovery or own heavy duplicate.
