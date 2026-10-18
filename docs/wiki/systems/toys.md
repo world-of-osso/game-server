@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Dastardly Banner and crate/juggling/scaled-banner-podium boundaries (2026-10-17)
+
+[Source600–604 matrix](../../toy-effects14-coverage.md#source600604-pending-dastardly-banner-and-cratejugglingretained-scaled-banner-podium-boundaries-2026-10-17) adds acceptance-only3eabc6183:239007/1227030/527088/type5/display102616/size1/cursor/180s as13th object, old12/helper unchanged; behavior awaits head AFTER507. Distinct carried crate3185 and exact juggling removal203/reapplication64/mixed293/406 remain gaps. Existing Flame's Radiance scale0.75 case and authentic grounded static Podium20min CPU/historical native-source receipts retained, not new wall-duration/recharge/qualification proof. No runtime/data/new native or own heavy duplicate.
+
 ## Flarendo/fountain and paired bobber overrides (2026-10-17)
 
 [Source595–599 matrix](../../toy-effects14-coverage.md#source595599-flarendofountain-and-paired-fishing-bobber-override-boundaries-2026-10-17) retains exact Flarendo pose/fountain36404 and three paired258 fishing overrides: Rocket520304/520305, Goblet520306/520311, Wellington520308/520309 against35591, each referencing131474. Only replacement520305 exists at runtime, type17/display101984/size2; no generic35591 art substitute, deduplicated pair or two immediate Fishing casts. Actual bobber selection/fishing/cleanup remains gap; no catch bonus from flavor.507 queued, no new proof/runtime/data/native change or own heavy duplicate.

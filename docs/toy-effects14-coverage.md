@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source600–604: pending Dastardly Banner and crate/juggling/retained scaled-banner-podium boundaries (2026-10-17)
+
+Acceptance-only3eabc6183 appends239007/1227030/527088/type5/display102616/scale1/cursor/180s as13th transmitted-object identity; old12/helper unchanged. Format/manual changed-line readability/diffcheck pass; behavior needs a head AFTER50776a8426bf.507 covers earlier12 objects/16 disguises/18 casters, no result/landing observed. No production/data/new native proof or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|600 Undermine Supply Crate237382/1221382 | Instant self293/misc3185/1/900000ms, inherited10000ms recovery/start1500ms. Actual Undermine crate/pose/cleanup remains unverified, distinct from Hallowfall3118/Dornogal3141. No generic sibling art, inventory knick-knacks or spawned supply cache. |
+|601 Arathi Entertainer's Flame238850/465887 | Instant self dummy4/3000ms plus trigger64→465888, source15000ms recovery. Child465888 has script3, remove-aura203→466386, trigger64/misc1500→466386 and self dummy4/1000ms; child recovery1000ms/speed0.774999976.466386 has293/misc3029/50 and406/misc264/50 for750ms. Actual rhythm/juggle-count/input/airborne flame/removal and reapplication lifecycle remains gap;203 is removal, not another cast; no stripped cosmetic or invented guaranteed rhythm. |
+|602 Flame's Radiance Banner238852/1227383 | Instant target47/base1 summon241494/property64/60000ms, inherited600000ms recovery; display127931/NPC display scale0.75/weight1. Existing exact scaled-scenery learned-use fixture retains authentic actor scale/body placement scope. No new native/reputation/achievement qualification or natural ten-minute recovery certificate. |
+|603 Dastardly Banner239007/1227030 | Instant target87 transmitted50→existing527088/type5/display102616/size1/180000ms; explicit item shared category1246/recovery180000ms, normal override-1. Own learned-use/exact cursor identity-placement/ordinary removal acceptance committed; behavior pending AFTER507. Shared-category sibling refusal/native art/eligibility remain separate, not an independent normal timer or cartel-banner substitute. |
+|604 Winner's Podium239018/1227063 | Source1000ms target47/138 summon240220/property64/1200000ms, item1200000ms recovery; display127527/scale1. Existing `toyfx54` real bag/use/grounded1.5yd front/map-owner/static-not-pet/ordinary20min expiry/unchanged health-model fixture and historical scoped native source-frame receipts retained. This inspection adds no new pass, twenty-minute wall-clock/native-life or full recharge proof; do not replace source grounded placement with a display-only actor. |
+
+Evidence: private `rows600-604-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `dastardly603-{active-goal,proof-ledger}.json`; prior `podium54-proof-ledger.json` retains revision-specific CPU/native boundaries. Explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6;149865 Tea Set untouched,498 remains last confirmed landed/master8707ac0ea.
+
 ## Source595–599: Flarendo/fountain and paired fishing-bobber override boundaries (2026-10-17)
 
 No new acceptance/runtime/data/native proof or own heavy duplicate. Lead507 remains queued76a8426bf with no log result observed;498 last confirmed landed/master8707ac0ea.
