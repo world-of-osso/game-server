@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::combat::{CorpseDelay, RespawnDelay};
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
+use crate::grid_activity::GridDormant;
 use crate::interest::NetworkVisibility;
 use crate::level_scaling::{CreatureArmor, ScaledStats};
 use crate::spawn_pools::{MapPools, PoolSpawns, PooledSpawn};
@@ -642,10 +643,10 @@ pub(crate) fn notify_group_depletion(world: &mut World, creature: Entity) {
 #[derive(Component, Debug)]
 pub(crate) struct AddonAuras(pub Vec<u32>);
 
-/// Self-cast addon auras once the creature exists (Creature::LoadCreaturesAddon `AddAura`).
+/// Self-cast addon auras when the creature is active (Creature::LoadCreaturesAddon `AddAura`).
 pub(crate) fn apply_addon_auras(world: &mut World) {
     let pending: Vec<(Entity, Vec<u32>)> = world
-        .query::<(Entity, &AddonAuras)>()
+        .query_filtered::<(Entity, &AddonAuras), Without<GridDormant>>()
         .iter(world)
         .map(|(entity, auras)| (entity, auras.0.clone()))
         .collect();
