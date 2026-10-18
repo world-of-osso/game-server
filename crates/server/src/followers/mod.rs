@@ -2,6 +2,9 @@
 mod ai;
 mod catalog;
 mod hazards;
+mod kit;
+mod kit_ai;
+mod kit_area;
 mod party;
 #[cfg(test)]
 mod pull_budget;
@@ -132,6 +135,10 @@ mod cc_tests;
 mod defensive_tests;
 #[cfg(test)]
 mod hazard_tests;
+#[cfg(test)]
+mod kit_source_tests;
+#[cfg(test)]
+mod kit_tests;
 #[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]
