@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Naaru hearthstone and skip-rock, mixed mushroom, retained catch, periodic voidwalker boundaries (2026-10-18)
+
+[Source655–659 matrix](../../toy-effects14-coverage.md#source655659-pending-naaru-hearthstone-and-skip-rock-mixed-mushroom-retained-catch-periodic-voidwalker-boundaries-2026-10-18) adds acceptance-only8ead527f5:263489/1270583/source10s/shared2309 blocks Lightcalled257736 through unchanged persisted-bind helper, now23 hearthstones/old22 retained; behavior awaits lead successor. Skip-rock nonzero trigger/base1, qualified50+179 mushroom with missing404325/40621, retained3300ms Valdekar fixture and100ms/trigger0/three-voidwalker contract remain distinct. No guessed count/impulse/body or inert periodic aura substitute; no runtime/data/native change or own heavy work.
+
 ## Mixed parachute, cycle-script, retained wine, photo and ash boundaries (2026-10-18)
 
 [Source650–654 matrix](../../toy-effects14-coverage.md#source650654-mixed-parachute-cycle-script-retained-wine-photo-and-ash-boundaries-2026-10-18) preserves parachute's five root effects/negative98 payload/area8537/category1470, three distinct Cycle script base points, existing Wine fixture, nonzero-trigger proc Photo Finisher and both Ashen Horn140 edges including35/395 child. No global slow-fall, fabricated spirit, screenshot substitute or normal64 flattening. Metadata only; no new acceptance/runtime/data/native proof or own heavy work, lead successor pending after cancelled509.

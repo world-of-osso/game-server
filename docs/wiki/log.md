@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source655–659 pending Naaru acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source655659-pending-naaru-hearthstone-and-skip-rock-mixed-mushroom-retained-catch-periodic-voidwalker-boundaries-2026-10-18):8ead527f5 appends263489/1270583/source10s/shared2309 to unchanged saved-bind helper, now23 hearthstones/old22 retained; format/manual readability/diffcheck pass, behavior awaits lead successor. Preserve skip-rock nonzero trigger/base1, qualified50+179 mushroom/missing404325/40621, retained3300ms Valdekar fixture and periodic100ms/trigger0/three-voidwalker multiplicity. No guessed mechanics, runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy source650–654 mixed effect and recipient boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source650654-mixed-parachute-cycle-script-retained-wine-photo-and-ash-boundaries-2026-10-18): parachute preserves five root slots/two139/negative98/area8537/category1470; Cycle preserves three script base points; Wine's existing19-caster identity retained. Photo preserves nonzero trigger→250 and proc101/mask0/8; Ashen Horn preserves both140 edges including35/395 child. No new acceptance, runtime/data/native proof or own heavy jobs; successor pending after cancelled509.
