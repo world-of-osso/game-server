@@ -12,6 +12,7 @@ const MIN_HEALTH_FRACTION: f32 = 0.80;
 
 #[derive(Debug)]
 pub(super) struct Snapshot {
+    pub observation_seconds: f64,
     pub group_dps: Option<f64>,
     pub healer_hps: Option<f64>,
     pub completed_fights: u32,
@@ -168,6 +169,7 @@ pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
     let now = read_time(world);
     let rates = history.rates(now);
     Some(Snapshot {
+        observation_seconds: now - history.started,
         group_dps: rates.map(|rates| rates.0),
         healer_hps: rates.map(|rates| rates.1),
         completed_fights: history.completed_fights,

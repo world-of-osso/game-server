@@ -321,6 +321,12 @@ fn tank_pull_admission_native_pure_hot_lifetime_does_not_blanket_block() {
         .unwrap();
     f.h.advance(3);
     pull_history::sample_all(f.h.app.world_mut());
+    let estimate =
+        crate::combat::forecast::read_generic_creature(f.h.app.world(), f.second, f.tank).unwrap();
+    assert_eq!(
+        estimate.valid_until, None,
+        "actual full-kit Rejuvenation must remain a pure-HoT control"
+    );
     assert!(matches!(
         f.read(&[f.second]).unwrap(),
         Decision::Allow {
