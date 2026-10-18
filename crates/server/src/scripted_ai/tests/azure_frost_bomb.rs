@@ -9,7 +9,11 @@ const BOMB_DAMAGE: u32 = 386910;
 const FROZEN_GROUND: u32 = 387149;
 
 pub(super) fn fixture() -> (Harness, Entity) {
-    let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, 205, None);
+    fixture_at_difficulty(205)
+}
+
+pub(super) fn fixture_at_difficulty(difficulty: u32) -> (Harness, Entity) {
+    let (mut h, telash, _) = bound_boss_at_difficulty(186737, 2515, 2, difficulty, None);
     // Native138 projects the destination onto authored map geometry.
     let wdt = h
         .app

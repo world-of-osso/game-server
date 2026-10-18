@@ -4,6 +4,40 @@ Requirements and data gaps: [inventory spec](../../specs/inventory.md).
 
 Item-use scaling and regression evidence: [[item-healing-scaling]].
 
+## Post-guild protocol integration target proof (2026-10-18)
+
+[Authoritative merged-code proof matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18) records requested masters, both append-only wire variants, unchanged prior discriminants and current17-case server/one-case client CPU proof. The mechanism below is unchanged; lead's combined gate/landing remains pending, not certified by codec or CPU subsets.
+
+## mc548b regression recovery — targeted only (2026-10-18)
+
+Lead mc548b server2644c24f2 is RED771/5/13ignored816.87s; protocol stage passed. Exact requested later-master reproduction mergedcfdfc3ee6 into the feature as356d4493a with protocol999b52e: all five named cases failed,0/5. Repairs6ac4b2afc/3a6b3ea7c/f97c118e4 pass the unchanged five tests5/0/25.95s. This is targeted recovery, not a broad-gate or landing certificate.
+
+| Root | Repair/proof boundary |
+|---|---|
+| Three item-use error-count failures | Shared spell Harness inbox is the one InventoryError drain; Eater's per-frame adapter consumes that inbox instead of draining the receiver a second time. Toy diagnostics use the same capture. All manual drains were audited; separate map/group harnesses keep their own collectors. Bread/combat, companion fourth-item refusal and duplicate mount-learning expected counts are unchanged. This was introduced test plumbing, not proof production stopped refusing. |
+| Valid later quest references | QuestDb keeps authentic `content_item` metadata instead of pruning to the initial reference list. Source2947/2512/2101 all have MaxCount0; no default metadata, unknown-definition success or ownership-limit bypass was added. Existing source-qualified progress/turn-in/abandon test is unchanged. |
+| XP-only turn-in | Empty creation batches return their input without item/catalog/model work; empty rewards also skip capacity validation. Actual92460 has no item rewards, so its captured XP turn-in no longer depends on unrelated inventory templates. Real item batches retain all ownership/storage checks. |
+
+Current five-case proof is atf97c118e4, after the last source change; later documentation changes do not invalidate it. No own broad rerun; lead reruns coordinated server/protocol/client integration. [Quest contract](../../specs/quests.md).
+
+## Ownership MaxCount — implementation and targeted proof (2026-10-18)
+
+`ItemTemplate.max_count` reads signed `content_item.MaxCount` in both source namespaces; non-positive values are unlimited, independently of `max_stack` and equipped-only limits. `inventory::load_model`/`load_model_from_record` load a passive personal-bank ownership snapshot. `InventoryModel.bank` stays unattached unless the existing authorized bank-move path attaches it; ownership visibility never enables bank moves. `owned_count` now includes source-qualified equipment, bags, overflow and personal bank. Same-GUID moves exclude their incoming instance, and a bank snapshot does not double-count a GUID already moved into carried storage.
+
+All three creation/storage entries (`store_item`, `store_item_at`, `store_new_item_in_best_slots`) check MaxCount before mutation. Existing loot/static-merchant/economic-merchant/charter prechecks remain and gain bank-aware counts. Quest starters/rewards now stage their entire grant through this model instead of pushing into `InventoryData.items`; a cap failure preserves inventory, gold, bank and quest-log state and sends only the typed owner inventory error. Missing item definitions are explicit errors, not fabricated quest metadata.
+
+Profession `Bags::store` preserves the typed error. CheckItems maps only `ItemMaxCount` to `CastFailure::Inventory`; all other store failures keep their existing `InventoryFull` mapping, and missing metadata/reagents/tools keep their existing codes. The cast-reporting boundary selects owner `InventoryChannel` errors versus ordinary `CombatChannel` cast failures. Normal create-item preflight therefore sends `ItemMaxCount` without fabricated `CastFailed::InventoryFull`; a true full bag retains that old spell error. Full-mask triggered creation still reaches the shared effect/storage cap. The appended shared error uses Retail GlobalStrings10918 `ERR_ITEM_MAX_COUNT`; native account dispatch forwards that text. This is CPU dispatch, not native pixels.
+
+Source: pinned TC `Player.cpp:9490–9512,9928–9954` (personal-bank ownership, non-positive unlimited, moving-item exclusion), `Spell.cpp:7648–7656` (SendEquipError/SPELL_FAILED_DONT_REPORT), `SpellEffects.cpp:1426–1440` (effect-path storage bound). [Contract](../../specs/inventory.md), [quest contract](../../specs/quests.md), [Doomsday acceptance](../../specs/toys.md).
+
+| Targeted scope | Proof and limit |
+|---|---|
+| Shared model at1a811a183 | RED0/2→GREEN5/0: bags/closed bank, correct error/original GUID/atomic record, non-positive unlimited, targeted/starter storage, owned-bank move. |
+| Quest requests at23749fa05 | RED0/2→GREEN3/0: starter/turn-in cap rejection, bank/inventory/gold/log retention, initial-grant positives. Synthetic references hydrate real product metadata; no canonical data edit. |
+| Create-item atc67ea2596 | Production ProfessionData RED2/1→GREEN4/0: direct refusal/typed owner error, true full-bag error unchanged, first-product positive, triggered-effect cap. One intermediate compile failure exposed the former string-erasing Bags adapter; fixed rather than parsed. |
+| Shared/client | Protocol2a5307c wire1/0; engined73fa72e6 account dispatch1/0. Append-only enum, source wording; no native presentation certificate. |
+| Integration | Lead owns the broad toys/inventory/item/loot/mail/vendor/quest_reward/profession/bank/check/fmt gate across all three repos. No broad/final-green or landing claim; the three-item2513 batch individually passed mc548b, whose aggregate remains RED. |
+
 ## Storage
 
 `InventoryData.items` (table `inventories`) remains the owned bag-item list that trade, auction, mail and profession code edit. Two tables added beside it:
@@ -35,7 +69,7 @@ Contract: [item definition source](../../specs/item-definition-source.md). The a
 
 `InventoryModel::from_record` builds a grid (backpack 16 slots, bags 1-4 size 0). Items with a valid placement keep it; unplaced items (new loot, trade, mail) take the first free slot; a guid duplicated within one character (trade/auction partial stacks keep the source guid) gets a fresh guid; items with no free slot go to `overflow` so saving never drops them. Bind-on-pickup and quest items are marked soulbound on load; bind-on-equip items when equipped. Same-source, same-ID stacks merge up to the selected `Stackable`.
 
-`bag_count`, `bag_item_ids`, `destroy_bag_items` and `owned_count` require an explicit source. Removal prechecks only that source and preserves bag order; insufficient selected-source counts leave every stack unchanged. `owned_count` includes bags, equipment and overflow. Retail profession reagents/tools (including categories), static/economic merchant purchases and loot limits select Retail, matching their existing producer. Quest views and removal read each matching GUID's persisted source, counting/removing Retail only; snapshot, progress, giver markers, turn-in and abandon share these predicates. No numeric-ID remap or recipient-race lookup is involved. Unowned reward provenance remains a [contract gap](../../specs/item-definition-source.md#known-gaps-current-cycle).
+`bag_count`, `bag_item_ids`, `destroy_bag_items` and `owned_count` require an explicit source. Removal prechecks only that source and preserves bag order; insufficient selected-source counts leave every stack unchanged. `owned_count` includes bags, equipment, overflow and personal bank; [ownership-cap mechanism and current proof](#ownership-maxcount--implementation-and-targeted-proof-2026-10-18). Retail profession reagents/tools (including categories), static/economic merchant purchases and loot limits select Retail, matching their existing producer. Quest views and removal read each matching GUID's persisted source, counting/removing Retail only; snapshot, progress, giver markers, turn-in and abandon share these predicates. No numeric-ID remap or recipient-race lookup is involved. Unowned reward provenance remains a [contract gap](../../specs/item-definition-source.md#known-gaps-current-cycle).
 
 Off-hand weapons follow TC `Player::CanEquipItem` (Player.cpp:10866-10886): one-hand (13) and off-hand (22) weapons need `Player::CanDualWield`, i.e. a learned SPELL_EFFECT_DUAL_WIELD spell (`stats::knows_effect`, set per request by the inventory systems). One-hand polearms never fit the off hand, and auto-equip offers the off hand only to dual wielders. No content off-hand weapon has ITEM_FLAG3_ALWAYS_ALLOW_DUAL_WIELD; TC's unlearn-time off-hand removal (`AutoUnequipOffhandIfNeed`) is not modelled ([spec](../../specs/class-completeness.md#dual-wield-and-parry-knowledge)).
 

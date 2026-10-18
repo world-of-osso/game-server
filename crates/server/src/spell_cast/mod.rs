@@ -414,6 +414,8 @@ pub enum CastFailure {
     Totems(String),
     /// A created item does not fit in the bags.
     InventoryFull,
+    /// Native equip error; reported to the owner instead of a spell cast error.
+    Inventory(shared::protocol::InventoryError),
     LowCastLevel,
     CantBeDisenchanted,
     CantBeDisenchantedSkill,
@@ -424,9 +426,11 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
+    pub(crate) fn to_contract(
+        &self,
+    ) -> Result<(CastFailReason, Option<String>), shared::protocol::InventoryError> {
         use CastFailReason as R;
-        match self {
+        let contract = match self {
             Self::IncorrectArea(group) => (
                 R::IncorrectArea,
                 Some(format!("Requires area group{group}")),
@@ -482,13 +486,15 @@ impl CastFailure {
             Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
             Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
             Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
+            Self::Inventory(error) => return Err(error.clone()),
             // Existing wire contract has no LOW_CASTLEVEL variant.
             Self::LowCastLevel => (R::InvalidTarget, Some("SPELL_FAILED_LOW_CASTLEVEL".into())),
             Self::CantBeDisenchanted => (R::CantBeDisenchanted, None),
             Self::CantBeDisenchantedSkill => (R::CantBeDisenchantedSkill, None),
             Self::Pet(failure) => failure.to_contract(),
             Self::Unsupported(detail) => (R::NotSupported, Some(detail.clone())),
-        }
+        };
+        Ok(contract)
     }
 }
 
@@ -978,6 +984,45 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
     }
 }
 
+/// TC Spell.cpp:7648–7656 reports item-cap checks as equip errors, not CastFailed.
+pub(crate) fn send_cast_rejection(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    failure: &CastFailure,
+) {
+    match failure.to_contract() {
+        Ok((reason, detail)) => send_to_owner(
+            world,
+            caster,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        ),
+        Err(error) => send_inventory_rejection(world, caster, error),
+    }
+}
+
+fn send_inventory_rejection(
+    world: &mut World,
+    caster: Entity,
+    error: shared::protocol::InventoryError,
+) {
+    let Some(connection) = owner_connection(world, caster) else {
+        debug!(?caster, "Inventory rejection has no connected owner");
+        return;
+    };
+    match world.get_mut::<MessageSender<shared::protocol::InventoryError>>(connection) {
+        Some(mut sender) => sender.send::<shared::protocol::InventoryChannel>(error),
+        None => warn!(
+            ?connection,
+            "Inventory rejection has no owner message sender"
+        ),
+    }
+}
+
 /// Send to the owners of the event's source and target (once each), including
 /// guardian ancestry (`GetCharmerOrOwnerPlayerOrPlayerItself`), stamped with the server's
 /// wall clock; damage also counts on the damage meters.
@@ -1150,16 +1195,7 @@ pub(crate) fn receive_cast_requests(world: &mut World) {
         debug!(caster = ?owner, request = ?request, "SpellCastRequest received (SpellCastIntent)");
         if let Err((spell_id, failure)) = request_cast(world, owner, &request) {
             debug!("Cast of {spell_id} by {owner} failed: {failure:?}");
-            let (reason, detail) = failure.to_contract();
-            send_to_owner(
-                world,
-                owner,
-                CastFailed {
-                    spell_id,
-                    reason,
-                    detail,
-                },
-            );
+            send_cast_rejection(world, owner, spell_id, &failure);
         }
     }
 }
@@ -1180,16 +1216,7 @@ pub(crate) fn cast_for_player(
         witness: None,
     };
     request_cast(world, player, &request).map_err(|(spell_id, failure)| {
-        let (reason, detail) = failure.to_contract();
-        send_to_owner(
-            world,
-            player,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, player, spell_id, &failure);
         failure
     })
 }
@@ -1239,16 +1266,7 @@ fn cast_granted_with_item_context(
         });
     debug!(caster = ?caster, spell_id, result = ?result, "Granted cast acceptance result");
     if let Err(failure) = &result {
-        let (reason, detail) = failure.to_contract();
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, caster, spell_id, failure);
     }
     result
 }
@@ -1290,16 +1308,7 @@ pub(crate) fn cast_item_spell(
                 .is_some_and(|&ready| ready > now)
         });
     if cooling {
-        let (reason, detail) = CastFailure::OnCooldown.to_contract();
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, caster, spell_id, &CastFailure::OnCooldown);
         return Err(CastFailure::OnCooldown);
     }
     cast_granted_with_item_context(
@@ -1351,16 +1360,7 @@ pub(crate) fn cast_toy_spell(
     }
     let result = start_cast(world, caster, &spell, target);
     if let Err(failure) = &result {
-        let (reason, detail) = failure.to_contract();
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, caster, spell_id, failure);
     }
     result
 }
@@ -1520,16 +1520,7 @@ fn start_queued_casts(world: &mut World) {
         effective_spell.cast_destination = queued.spell.cast_destination;
         effective_spell.cast_target_item_guid = queued.spell.cast_target_item_guid;
         if let Err(failure) = start_cast(world, caster, &effective_spell, queued.explicit) {
-            let (reason, detail) = failure.to_contract();
-            send_to_owner(
-                world,
-                caster,
-                CastFailed {
-                    spell_id: queued.spell.id,
-                    reason,
-                    detail,
-                },
-            );
+            send_cast_rejection(world, caster, queued.spell.id, &failure);
         }
     }
 }
@@ -3444,18 +3435,11 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         crate::crafting_orders::interrupt(world, caster);
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
-        let (reason, detail) = failure.to_contract();
-        // `Spell::cast` cleanup: SendCastResult to the caster, SendInterrupted to its set.
-        send_spell_failure(world, caster, spell_id, reason, None);
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        // Equip errors use SPELL_FAILED_DONT_REPORT, never a fabricated spell failure.
+        if let Ok((reason, _)) = failure.to_contract() {
+            send_spell_failure(world, caster, spell_id, reason, None);
+        }
+        send_cast_rejection(world, caster, spell_id, &failure);
     }
 }
 

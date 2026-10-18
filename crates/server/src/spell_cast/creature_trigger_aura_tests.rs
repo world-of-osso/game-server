@@ -79,7 +79,8 @@ fn stun_npc(h: &mut Harness) {
 fn assert_source_failure(result: Result<(), super::CastFailure>, expected: &str) {
     let (reason, detail) = result
         .expect_err("native aura metadata must refuse")
-        .to_contract();
+        .to_contract()
+        .unwrap();
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some(expected));
 }

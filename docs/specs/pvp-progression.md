@@ -12,6 +12,8 @@ Retail Mainline behavior applies to both client art skins. Extend existing PvP/r
 
 A grouped character's QueueForBattleground request is leader-only. Resolve its GroupRegistry roster, validate all members are online, available for PvP and in the same source bracket, then enqueue the whole roster through existing join_group atomically. Reject groups larger than one battleground team. Every queued member receives the normal queue projection; existing matchmaking keeps the party together without changing minimums or capacity.
 
+Solo and whole-party ordinary battleground admission refuses an existing active Deserter aura26013 before any roster is enqueued. One deserter in a party enqueues nobody; clearing the aura permits the otherwise eligible request. Other auras, including Dungeon Deserter71041, are not this BG check. Source: TC a352b1fa Player.h2594 (`IsDeserter` is `HasAura(26013)`), BattleGroundHandler.cpp147–153 and Group.cpp1243–1245. No deserter grant, duration/reset, reward or arena policy is introduced.
+
 Accepted roster members completing transfer after match start receive exactly one zeroed scoreboard entry on their assigned team, following pinned TC Battleground::AddPlayer/PlayerScores. Preserve every existing score entry and keep start thresholds unchanged; sequential WorldPortAck arrivals must not truncate the final roster.
 
 Pinned TC BattleGroundHandler.cpp189–226 supplies the leader/group admission and per-member queued notification contract. Four ordinary five-player parties must enter one Arathi match with20 players,10 per assigned team, through normal invite/accept, queue and battleground invitation/accept messages. WSG's lower minimum can form earlier; this contract does not delay its queue to force20.
