@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use shared::components::{Level, UnitLevel};
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 
-use crate::spell_cast::test_harness::{Harness, harness, load_native_creature_world};
+use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const ICE_TOMB: u32 = 36_980;
 const GRANDMASTER_DUMMY: u32 = 31_144;
@@ -17,7 +17,9 @@ fn native_target(entry: u32) -> (Harness, Entity) {
         .world_mut()
         .entity_mut(h.caster)
         .insert((Level(80), UnitLevel(80)));
-    h.app.insert_resource(load_native_creature_world(&[entry]));
+    h.app.insert_resource(crate::world_data::load_world_data(
+        &world_db().unwrap().powers_db,
+    ));
     let caster = h.caster;
     let target =
         crate::zones::summon_creature(h.app.world_mut(), caster, entry, [3.0, 0.0, 0.0, 0.0])
