@@ -146,6 +146,50 @@ fn candidate_budget(f: &mut Fixture) -> Decision {
         route.spawns,
         f.h.app.world().get::<Health>(f.tank)
     );
+    if !matches!(decision, Decision::Allow { .. }) {
+        let map = *f.h.app.world().get::<InMap>(f.tank).unwrap();
+        let sources = super::pull_sources::read_present_sources(
+            f.h.app.world_mut(),
+            map,
+            1,
+            &history.cleared_spawns,
+        )
+        .unwrap();
+        let mut diagnostics = Vec::new();
+        for source in sources.values() {
+            if source
+                .actor
+                .is_none_or(|actor| actor == f.engaged || actor == f.candidate)
+            {
+                continue;
+            }
+            let Ok(route) = pull_route::read_route(
+                f.h.app.world_mut(),
+                &pull_route::Request {
+                    tank: f.tank,
+                    target_guid: source.guid,
+                    difficulty: 1,
+                    cleared: &history.cleared_spawns,
+                },
+            ) else {
+                continue;
+            };
+            let candidate =
+                pull_admission::read_pull_budget(f.h.app.world_mut(), f.tank, &route.spawns, 1);
+            if matches!(candidate, Ok(Decision::Allow { .. })) {
+                eprintln!(
+                    "AFFORDABLE authored candidate={} packs={} decision={candidate:?}",
+                    source.guid, route.pack_count
+                );
+            }
+            diagnostics.push((route.pack_count, source.guid, format!("{candidate:?}")));
+        }
+        diagnostics.sort();
+        eprintln!(
+            "SMALLEST authored route candidates={:?}",
+            &diagnostics[..diagnostics.len().min(5)]
+        );
+    }
     decision
 }
 
