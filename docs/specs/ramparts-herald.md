@@ -21,10 +21,10 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ### Same-actor projection prerequisite
 
-- [ ] Initial spawning and living same-actor entry updates consume one template projection; preserve the caller-selected initial template, RNG order, spawn overrides, deferred addon application and ordinary spawn controls.
-- [ ] Retain ordinary origin GUID/original entry independently of current `Npc.template_id`. Updating to17536 keeps the entity, current position/map, live AI/event progress, home/waypoint cursor and threat/combat references; source contextual target stats reset health to the new maximum.
-- [ ] Preserve original spawn-addon priority: Herald content GUID20202693 supplies sheath0/path36215440 instead of Nazan template sheath1/path0. Nonzero mount/emote/path fields act; zero does not erase prior runtime state. Missing default equipment retains it; explicit equipment0 clears it. Addon auras are additive and existing instances are not refreshed.
-- [ ] Missing target/context/origin refuses before actor mutation with an actionable diagnostic. No legacy level/tuning substitution or actor recreation.
+- [x] Initial spawning and living same-actor entry updates consume one template projection; preserve the caller-selected initial template, RNG order, spawn overrides, deferred addon application and ordinary spawn controls.
+- [x] Retain ordinary origin GUID/original entry independently of current `Npc.template_id`. Updating to17536 keeps the entity, current position/map, live AI/event progress, home/waypoint cursor and threat/combat references; source contextual target stats reset health to the new maximum.
+- [x] Preserve original spawn-addon priority: Herald content GUID20202693 supplies sheath0/path36215440 instead of Nazan template sheath1/path0. Nonzero mount/emote/path fields act; zero does not erase prior runtime state. Missing default equipment retains it; explicit equipment0 clears it. Addon auras are additive and existing instances are not refreshed.
+- [x] Missing target/context/origin refuses before actor mutation with an actionable diagnostic. No legacy level/tuning substitution or actor recreation.
 
 ### Lifecycle and phases
 
@@ -49,14 +49,14 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 - `crates/server/src/scripted_ai/hellfire_ramparts.rs` — currently registers Gargolmar and Omor, not Herald/Vazruden.
 - `crates/server/src/scripted_ai/instance_script.rs` — existing copy-local boss/data state; Herald source lifecycle is not implemented.
-- `crates/server/src/zones/entry.rs` — `EntryProjection` reads/rolls represented target fields and applies them to a new or existing entity; `CreatureOrigin` retains ordinary source identity, `AddonPathId` is addon data rather than a running movement cursor. Implementation verification pending; not a Herald AI registration.
+- `crates/server/src/zones/entry.rs` — `EntryProjection` reads/rolls represented target fields and applies them to a new or existing entity; `CreatureOrigin` retains ordinary source identity, `AddonPathId` is addon data rather than a running movement cursor. Bounded entry/spawn proof is GREEN; not a Herald AI registration or ordinary-respawn restoration.
 - `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
 - `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows; the separate `herald-nazan` profile selects17536 base0/Heroic2 CT0 with source models/addon, without changing `herald`. Real-copy producer/refusal/idempotence/preservation controls are GREEN; ordinary context resolution is proved separately and runtime use/morph remain open.
 
 ## Tests asserting this spec
 
-- `zones_entry_tests.rs`, `zones_entry_controls_tests.rs` — source Normal/Heroic same-actor stats/origin/addon, real living-player threat/combat references, optional runtime state/equipment, real EventMap/dispatch probe and actual TDB30/100 addon auras11959/3417. Current eight genuine REDs at1e10b0a51 (27.94s) precede implementation. Earlier missing-addon/clock/master-caller setup failures are excluded. GREEN/spawn-regression proof pending.
+- `zones_entry_tests.rs`, `zones_entry_controls_tests.rs` — source Normal/Heroic same-actor stats/origin/addon, real living-player threat/combat references, optional runtime state/equipment, real EventMap/dispatch probe and actual TDB30/100 addon auras11959/3417. Current eight genuine REDs at1e10b0a51 (27.94s) precede implementation. Earlier missing-addon/clock/master-caller setup failures are excluded. Focused11/11 at5f25cf953 (18.56s), then final affected68/68 at9e83421de (233.18s,55 pre-existing ignored). Supplemental actual Morna/Drudge nonzero addon mount/emote1/1 at65e035a2a (10.14s), with no production changes after the affected batch. Required package check pending; fmt0. Neither source fixture setup nor these primitive cases certify encounter choreography/native behavior.
 - `scripts/tests/test_nazan_templates.py` — actual read-only world snapshot and real `herald-nazan` CLI; exact represented CT0 base/Heroic fields/models/addon, idempotence, unrelated-data preservation and byte-identical drift refusal. Genuine real-copy missing-profile REDb4a524732 becomes new/Herald/Omor GREEN3/3 at0a3ab4b24 (27.783s), followed by Nazan-only GREEN1/1 at7fe38b45e (26.460s) after read/write naming cleanup; ResourceWarning escalated, warning-free. This is data-only, not morph acceptance.
 - `crates/server/src/zones_context_tuning_tests.rs` — sourced17536 ordinary Normal/Heroic map stats, actual MCNK area ancestry, explicit-template/critter/known-zero/missing-context controls, authored-source stats and real PostStartup publication ordering. Seven enabled cases pass within affected54/54 at33dcb7b6 (177.24s); no canonical Nazan spawn or morph acceptance.
 
