@@ -180,8 +180,8 @@ fn affliction_agony_native_refresh_preserves_low_high_and_capped_stacks_and_tick
     let after = owned(&h, h.npc, caster, AGONY);
     assert_eq!(after.stacks, 1, "recast is not a damage-stack tick");
     assert_eq!(
-        after.effects[0].next_tick_at,
-        before.effects[0].next_tick_at
+        after.effects[0].next_tick_at(),
+        before.effects[0].next_tick_at()
     );
     h.advance(140);
     let high = owned(&h, h.npc, caster, AGONY);
@@ -189,7 +189,10 @@ fn affliction_agony_native_refresh_preserves_low_high_and_capped_stacks_and_tick
     cast_agony(&mut h);
     let after = owned(&h, h.npc, caster, AGONY);
     assert_eq!(after.stacks, high.stacks);
-    assert_eq!(after.effects[0].next_tick_at, high.effects[0].next_tick_at);
+    assert_eq!(
+        after.effects[0].next_tick_at(),
+        high.effects[0].next_tick_at()
+    );
     h.advance(240);
     assert_eq!(owned(&h, h.npc, caster, AGONY).stacks, 8);
     cast_agony(&mut h);
@@ -214,8 +217,8 @@ fn affliction_agony_native_learning_sudden_onset_applies_only_a_minimum_refresh_
     let after = owned(&h, h.npc, caster, AGONY);
     assert_eq!(after.stacks, 3);
     assert_eq!(
-        after.effects[0].next_tick_at,
-        before.effects[0].next_tick_at
+        after.effects[0].next_tick_at(),
+        before.effects[0].next_tick_at()
     );
     h.advance(160);
     let high = owned(&h, h.npc, caster, AGONY);

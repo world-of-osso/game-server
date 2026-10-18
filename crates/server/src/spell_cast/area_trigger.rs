@@ -5,6 +5,7 @@
 //! Missing or unsupported source definitions never acquire guessed geometry.
 mod aura_owned;
 mod catalog;
+mod vault_rune;
 
 pub(crate) use aura_owned::{on_applied as on_aura_applied, on_removed as on_aura_removed};
 pub(crate) use catalog::load_catalog as load_aura_field_catalog;

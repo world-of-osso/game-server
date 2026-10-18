@@ -60,8 +60,8 @@ fn roll_remaining_damage(world: &mut World, target: Entity, new: &mut AuraInstan
         else {
             continue;
         };
-        let unpaid = remaining_ticks(prior.next_tick_at, old_expiry, prior.period_ms);
-        let future = remaining_ticks(prior.next_tick_at, new_expiry, prior.period_ms);
+        let unpaid = remaining_ticks(prior.next_tick_at(), old_expiry, prior.period_ms);
+        let future = remaining_ticks(prior.next_tick_at(), new_expiry, prior.period_ms);
         if future > 0 {
             fresh.amount += prior.amount * old.stack_multiplier() * unpaid as f32 / future as f32;
         }
@@ -86,7 +86,7 @@ fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance)
     let (next, old_budget) = old
         .as_ref()
         .and_then(|aura| unpaid_barbed_damage(aura, fresh.index))
-        .unwrap_or((fresh.next_tick_at, 0.0));
+        .unwrap_or((fresh.next_tick_at(), 0.0));
     let future = remaining_ticks(next, expiry, fresh.period_ms);
     if future > 0 {
         fresh.amount = (new_budget + old_budget) / future as f32;
@@ -95,9 +95,9 @@ fn roll_barbed_damage(world: &mut World, target: Entity, new: &mut AuraInstance)
 
 fn unpaid_barbed_damage(aura: &AuraInstance, index: u8) -> Option<(f64, f32)> {
     let effect = aura.effects.iter().find(|effect| effect.index == index)?;
-    let unpaid = remaining_ticks(effect.next_tick_at, aura.expires_at?, effect.period_ms);
+    let unpaid = remaining_ticks(effect.next_tick_at(), aura.expires_at?, effect.period_ms);
     let budget = effect.amount * aura.stack_multiplier() * unpaid as f32;
-    Some((effect.next_tick_at, budget))
+    Some((effect.next_tick_at(), budget))
 }
 
 ///190456 c3/s4: remaining shields accumulate to the native percent-health cap.
