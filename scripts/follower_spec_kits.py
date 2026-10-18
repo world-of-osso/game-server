@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+import re
 import sqlite3
 import subprocess
 
@@ -60,7 +61,10 @@ def combat_policy(spec, name, spell):
     if name in {'Hand of Reckoning', 'Taunt'} and spec in {66, 73}:
         return policy('taunt', 35, lost_threat=True)
     if name in {'Shield of the Righteous', 'Shield Block', 'Ignore Pain', 'Demoralizing Shout'}:
-        return policy('mitigation', 40, 'enemy' if name == 'Shield of the Righteous' else 'self', attacked=True, missing_aura=spell)
+        return policy('mitigation', 40, 'enemy' if name == 'Shield of the Righteous' else 'self',
+                      attacked=True, missing_aura=spell,
+                      min_enemies=1 if name == 'Shield of the Righteous' else 0,
+                      source_center=name == 'Shield of the Righteous')
     if spec in {105, 257}:
         if name == 'Lifebloom':
             return policy('hot', 45, 'tank', health_below=0.95, missing_aura=spell, exclusive_aura=True)
@@ -112,6 +116,35 @@ def read_sources(db2, db):
     return evidence
 
 
+def selected_source_rows(db2, source):
+    """Literal DB2 rows behind selected loadouts, currencies and definitions."""
+    def read(name):
+        with (db2 / (name + '.csv')).open() as stream:
+            return list(csv.DictReader(stream))
+    specs = {str(row['spec_id']) for row in source['loadouts']}
+    configs = [entry for row in source['loadouts'] for entry in row['config']]
+    nodes = {str(entry['node_id']) for entry in configs}
+    entries = {str(entry['entry_id']) for entry in configs}
+    spells = {spell for row in source['loadouts'] for spell in row['known']}
+    currencies = {str(currency['id']) for tree in source['trees'] for currency in tree['tree']['currencies']}
+    loadouts = [row for row in read('TraitTreeLoadout') if row['ChrSpecializationID'] in specs]
+    loadout_ids = {row['ID'] for row in loadouts}
+    node_entries = [row for row in read('TraitNodeEntry') if row['ID'] in entries]
+    definitions = {row['TraitDefinitionID'] for row in node_entries}
+    return {
+        'TraitTreeLoadout': loadouts,
+        'TraitTreeLoadoutEntry': [row for row in read('TraitTreeLoadoutEntry') if row['TraitTreeLoadoutID'] in loadout_ids],
+        'TraitNode': [row for row in read('TraitNode') if row['ID'] in nodes],
+        'TraitNodeEntry': node_entries,
+        'TraitDefinition': [row for row in read('TraitDefinition') if row['ID'] in definitions],
+        'TraitCurrency': [row for row in read('TraitCurrency') if row['ID'] in currencies],
+        'TraitCurrencySource': [row for row in read('TraitCurrencySource') if row['TraitCurrencyID'] in currencies],
+        'SpecializationSpells': [row for row in read('SpecializationSpells') if row['SpecID'] in specs],
+        'SkillLineAbility': [row for row in read('SkillLineAbility') if row['Spell'] in spells],
+        'SpellLevels': [row for row in read('SpellLevels') if row['SpellID'] in spells],
+    }
+
+
 def kit_rows(db, source):
     availability = defaultdict(list)
     slots = {}
@@ -127,11 +160,24 @@ def kit_rows(db, source):
             if level < required:
                 continue
             rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell)
-            # Aura-producing child of SoTR is native effect64, not a guessed aura ID.
+            # SoTR's armor aura is named literally by its source tooltip; the
+            # native effect64 children are NOT that armor aura.
             if name == 'Shield of the Righteous' and not passive:
-                child = db.execute('SELECT EffectTriggerSpell FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND Effect=64 AND EffectTriggerSpell!=0 ORDER BY EffectIndex', (spell,)).fetchone()
-                if child:
-                    rule[2]['missing_aura'] = child[0]
+                description = db.execute('SELECT Description_lang FROM spell WHERE ID=?', (spell,)).fetchone()[0]
+                references = {int(value) for value in re.findall(r'\$(\d+)[sd]', description)}
+                armor = [value for value in references if db.execute(
+                    'SELECT 1 FROM spell_name n JOIN spell_effect e ON e.SpellID=n.ID WHERE n.ID=? AND n.Name_lang=? AND e.EffectAura=268', (value, name)).fetchone()]
+                if len(armor) != 1:
+                    raise ValueError('SoTR tooltip must name exactly one native armor aura')
+                rule[2]['missing_aura'] = armor[0]
+            elif rule[2].get('missing_aura') == spell and not db.execute(
+                    'SELECT 1 FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND Effect=6', (spell,)).fetchone():
+                children = db.execute('''SELECT DISTINCT e.EffectTriggerSpell FROM spell_effect e
+                    JOIN spell_effect child ON child.SpellID=e.EffectTriggerSpell AND child.DifficultyID=0 AND child.Effect=6
+                    JOIN spell_name n ON n.ID=e.EffectTriggerSpell
+                    WHERE e.SpellID=? AND e.DifficultyID=0 AND e.Effect=64 AND n.Name_lang=?''', (spell, name)).fetchall()
+                if len(children) == 1:
+                    rule[2]['missing_aura'] = children[0][0]
             key = spec, spell
             availability[key].append(level)
             slots[key] = rule
@@ -181,6 +227,7 @@ def prepare(args):
                    output_database_sha256=digest(args.output_db), source_json_sha256=digest(args.source_json),
                    changed_tables=['follower_spec_kit'], rows=len(rows), sources=evidence,
                    chosen_loadouts=source['loadouts'], trait_source_trees=source['trees'], level32_inventory=inventory,
+                   selected_source_rows=selected_source_rows(args.db2_root, source),
                    sqldiff=str(args.sqldiff.resolve()), sqldiff_sha256=digest(args.sqldiff))
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
     print(f'Prepared {len(rows)} kit intervals in COPY {args.output_db}; canonical unchanged')

@@ -64,7 +64,15 @@ fn spell_radius(world: &World, caster: Entity, entry: &Entry) -> Option<f32> {
             spell
                 .effects
                 .iter()
-                .map(targets::effect_radius)
+                .flat_map(|effect| {
+                    effect.radius.iter().flatten().map(|radius| {
+                        if radius.radius > 0.0 {
+                            radius.radius
+                        } else {
+                            radius.radius_max
+                        }
+                    })
+                })
                 .filter(|radius| *radius > 0.0)
                 .max_by(f32::total_cmp)
         });
