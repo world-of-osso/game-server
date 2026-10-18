@@ -1,11 +1,11 @@
 {
   "build": "12.1.5.70448",
   "build_key": "88d5e8ef05ec5a8446cdec93d142d7c6",
-  "validator_revision": "5cd78051b4f8377812110fc417fb29da0e945929",
+  "validator_revision": "5ee64433fb810f919316c100ca47bb53bca3218a",
   "boundary": "Graph admission only; supported property ID is not full semantic or Retail proof. Fresh validator census over fixture tables reconciled content-identical against all ten active70448 CSVs; historical70391 remains separate.",
-  "admitted_effect_rows": 1823,
+  "admitted_effect_rows": 1828,
   "effect_rows": 2829,
-  "admitted_abilities": 1027,
+  "admitted_abilities": 1028,
   "abilities": 1404,
   "properties": [
     {
@@ -70,7 +70,7 @@
       ]
     },
     {
-      "admitted_rows": 591,
+      "admitted_rows": 594,
       "handler": true,
       "property": 24,
       "rows": 945,
@@ -87,9 +87,6 @@
         384,
         454,
         489,
-        537,
-        538,
-        539,
         551,
         552,
         553,
@@ -1033,15 +1030,13 @@
       ]
     },
     {
-      "admitted_rows": 13,
+      "admitted_rows": 15,
       "handler": true,
       "property": 85,
       "rows": 29,
       "rejected_graph_effect_ids": [
         336,
         422,
-        540,
-        541,
         647,
         1597,
         1615,
@@ -2626,7 +2621,7 @@
     },
     {
       "ability": 319,
-      "error": "ability 319: undetermined team target routing"
+      "error": null
     },
     {
       "ability": 320,
