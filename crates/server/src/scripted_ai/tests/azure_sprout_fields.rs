@@ -5,7 +5,6 @@ use crate::spell_cast::area_trigger::SpellAreaTrigger;
 const SPROUT_AURA: u32 = 374161;
 
 #[test]
-#[ignore = "RED: native aura395 fields missing; awaiting Curve publication"]
 fn azure_leymor_native_sprout_self_auras_create_fourteen_same_copy_fields() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let children = h.creatures_of(190509);
@@ -67,7 +66,6 @@ fn find_sprout_aura_instance(h: &Harness, target: Entity) -> u32 {
 }
 
 #[test]
-#[ignore = "RED: aura395 exact removal, refresh and death field lifecycle missing"]
 fn azure_aura395_native_fields_preserve_other_instances_through_removal_refresh_and_death() {
     let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let children = h.creatures_of(190509);
@@ -171,7 +169,6 @@ fn find_sprout_field_at_target(h: &mut Harness, caster: Entity, target: Entity) 
 }
 
 #[test]
-#[ignore = "RED: aura395 same-caster different-target field ownership missing"]
 fn azure_aura395_same_caster_keeps_different_target_instances_independent() {
     let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let children = h.creatures_of(190509);
@@ -219,5 +216,49 @@ fn azure_aura395_same_caster_keeps_different_target_instances_independent() {
             remaining.contains(&binding),
             "unrelated exact field retained"
         );
+    }
+}
+
+#[test]
+fn azure_aura395_attachment_follows_its_target_and_copy_departure_retires_only_its_field() {
+    let (mut h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
+    let children = h.creatures_of(190509);
+    assert_eq!(children.len(), 14);
+    let target = children[0];
+    let original = *h.app.world().get::<Position>(target).unwrap();
+    let destination = children
+        .iter()
+        .filter_map(|&child| h.app.world().get::<Position>(child).copied())
+        .find(|position| {
+            (position.x, position.y, position.z) != (original.x, original.y, original.z)
+        })
+        .expect("another actual native attachment position");
+    let field = replace_self_aura_from_caster(&mut h, leymor, target);
+    let initial = find_sprout_fields(&mut h);
+    assert_eq!(initial.len(), 14);
+    h.app.world_mut().entity_mut(target).insert(destination);
+    h.advance(0.05);
+    let at = h.app.world().get::<Position>(field).unwrap();
+    assert_eq!(
+        (at.x, at.y, at.z),
+        (destination.x, destination.y, destination.z)
+    );
+    assert_eq!(
+        h.app.world().get::<SpellAreaTrigger>(field).unwrap().caster,
+        leymor
+    );
+    let map = *h.app.world().get::<InMap>(target).unwrap();
+    h.app.world_mut().entity_mut(target).insert(InMap {
+        instance_id: map.instance_id + 1,
+        ..map
+    });
+    h.advance(0.05);
+    // Generic summon ownership cleanup may despawn the departing child; its field
+    // must retire either way. Do not assert that a cross-copy probe survives it.
+    assert!(h.app.world().get_entity(field).is_err());
+    let remaining = find_sprout_fields(&mut h);
+    assert_eq!(remaining.len(), 13);
+    for binding in initial.into_iter().filter(|(entity, _)| *entity != field) {
+        assert!(remaining.contains(&binding));
     }
 }
