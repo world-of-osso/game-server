@@ -6,7 +6,7 @@ use shared::protocol::CombatLogKind;
 use super::*;
 use crate::class_progression::{ActiveSpec, KnownSpells};
 use crate::spell_cast::test_harness::{
-    Harness, harness_with, spawn_connection, spawn_player, varied, world_db,
+    Harness, harness_with, spawn_connection, spawn_player, world_db,
 };
 use crate::stats::CharacterStats;
 
@@ -334,5 +334,5 @@ fn augmentation_ebon_native_self_damage_and_eruption_extend_naturally_created_ow
         .find(|event| event.spell_id == Some(ERUPTION) && event.kind == CombatLogKind::Damage)
         .unwrap();
     let crit = if hit.crit { 2.0 } else { 1.0 };
-    assert!(varied(power * 3.22 * 1.20 * crit).contains(&(hit.amount as f32)));
+    assert_eq!(hit.amount as f32, (power * 3.22 * 1.20 * crit).round());
 }

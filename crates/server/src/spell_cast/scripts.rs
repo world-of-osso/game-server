@@ -389,6 +389,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        crate::auras::ebon_might::EBON => Some(crate::auras::ebon_might::cast_self_buff),
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
         }
@@ -456,6 +457,7 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        crate::auras::ebon_might::EBON => Some((Relation::Any, ebon_target_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),
         batch16::HEALING_WAVE => Some((Relation::Ally, batch16::healing_wave_plan)),
         batch12::SHIELD_RIGHTEOUS => Some((Relation::Ally, batch12::shield_plan)),
@@ -472,6 +474,29 @@ pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
         batch7::RADIANCE => Some((Relation::Ally, batch7::radiance_plan)),
         _ => None,
     }
+}
+
+fn ebon_target_plan(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+) -> super::TargetPlan {
+    let units = crate::auras::ebon_might::select_allies(world, caster, spell, explicit);
+    spell
+        .effects
+        .iter()
+        .enumerate()
+        .filter(|(_, effect)| matches!(effect.index, 0 | 1))
+        .map(|(index, _)| super::PlannedEffect {
+            index,
+            units: units.clone(),
+            dest: None,
+            chain_multipliers: Vec::new(),
+            blocked_units: Vec::new(),
+            prevent_hit_script: false,
+        })
+        .collect()
 }
 
 /// TC124491 OnEffectHitTarget casts124492 normally, retaining its authored3s cast.

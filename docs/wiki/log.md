@@ -1,3 +1,7 @@
+## 2026-10-17 — Ebon Might baseline
+
+[Ebon Might](systems/auras.md#ebon-might-baseline-2026-10-17): approved395152/self395296 baseline, native primary support/2-N split/owned1000ms updates and foreign-grant exclusion; native16114cc3 RED6 before implementation, GREEN pending. Source amounts/radius500/MaxTargets30 preserved; Eruption/passive flat extension retained, no generic540/party-only/optional/whole-ability policy. Prior Prescience/Sands slice landed after lead gate482 passed1053/fmt.
+
 ## 2026-10-17 — Bounded Augmentation support stats
 
 [Augmentation](systems/auras.md#augmentation-support-stats-2026-10-17): active70448 Prescience409311→410089 recipient crit and Shifting Sands413984 caster-mastery Versatility; exact spell-specific SimC76f8118 semantics, no generic540. Genuine native RED4→merged5ed1b656 GREEN4/4 in5.52s; initial functional observer mismatch corrected test-only, native zero-variance damage assertion tightened to exact. Docs-only0114bbf7 retains native timer control1/1, scoped server-bin check91s and fmt check pass warning-free; independent lead gate pending. Automatic targeting, E202/dummies, empower grants, Ebon and full-ability/legal/UDP acceptance remain open.

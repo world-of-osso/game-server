@@ -8,7 +8,14 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - Explicit-friendly Prescience409311 effect1 grants native410089; its effect0 contributes the native3 critical-strike percentage points to that recipient, not the caster. Reapplication must not accumulate another contribution; removal/expiry ends it.
 - Shifting Sands413984 effect0 contributes the aura caster's actual mastery percentage to recipient Versatility on application. Its native effect1/226 clock updates that contribution every1000ms without refreshing expiry or another caster's aura. Normal damage/healing and damage reduction consume the recipient's resulting stat.
-- These are spell-specific bindings sourced from SimC76f8118, not a generic aura540 algorithm (TC a352b1fa has HandleNULL). Prescience automatic prioritization, effect0, child202/other dummy fields, mastery empower dispatch, Ebon Might, hero/proc talents and full legal-loadout/rotation/UDP proof remain separate gaps.
+- These are spell-specific bindings sourced from SimC76f8118, not a generic aura540 algorithm (TC a352b1fa has HandleNULL). Prescience automatic prioritization, effect0, child202/other dummy fields, mastery empower dispatch, hero/proc talents and full legal-loadout/rotation/UDP proof remain separate gaps. Ebon's baseline is specified separately below.
+
+### Ebon Might baseline (active70448)
+
+- Ordinary395152 casts grant the caster native395296, not self395152. Preserve allied-area native500yd/rules, exclude caster, use authenticated damage-player specialization roles, and apply MaxTargets30 after role filtering; do not invent a party-only restriction.
+- Other recipients gain their native Strength/Agility/Intellect primary stat from source caster Intellect × native8% × min(1, native2/owned-recipient-count). Two is a split threshold, not a hard cap. Caster Intellect excludes the effective contribution of foreign Ebon grants after existing primary-stat multipliers, preventing mutual amplification.
+- Self395296's native1000ms update clock refreshes owned support amounts, including changed caster Intellect and surviving recipient counts, without changing aura expiry/stacks. Removal/expiry removes only the relevant support. Its native masked damage fields remain unchanged; existing395160/395153 flat1000ms owned-duration extension must work on naturally created buffs.
+- This is a named spell binding, not generic540. Empower/Breath/critical extensions, optional hero/set/PvP behavior, unknown spec/affiliation, hot specialization swaps, independent self cancellation/disconnect, full ability/legal-loadout/rotation/UDP parity remain unproved.
 
 ### Shared native boundaries
 
