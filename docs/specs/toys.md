@@ -10,6 +10,13 @@ The shared census oracle preserves the named Full1166 baseline and adds only the
 
 CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Remaining eight toys are later batches.
 
+## Expanded build70448 stationary Loa cosmetics
+
+- [ ] Loa-Blessed Victory280820/1309827, Nalorakk's Strength Charm280822/1309830 and Feathers of Akil'zon280823/1309831 must use authentic Toy membership and real bag learning/UseToy, not fabricated aura injection.
+- [ ] Successful use applies the source1800000ms owner cosmetic aura and3600000ms recovery. Real CancelAura removes the replicated aura without clearing recovery, changing health/body model/position or permitting an extra SpellGo.
+
+This batch does not authorize generic dummy4 support, alter source weights or implement the remaining scripted toys. Natural thirty-minute expiry, one-hour reuse and native cosmetic/audio presentation require separate proof.
+
 ## Runtime generated casting requirements
 
 - [x] Server startup loads `data/toy_required_areas.json` and `data/toy_facing_requirements.json`; neither is compiled into production code. Missing, malformed or incomplete required data fails startup loudly.
