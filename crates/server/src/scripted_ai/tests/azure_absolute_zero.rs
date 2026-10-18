@@ -58,7 +58,6 @@ fn advance_until_phase_or_ready_deadline(h: &mut Harness, telash: Entity) {
 }
 
 #[test]
-#[ignore = "RED: Telash natural100-energy phase polling is not ported"]
 fn azure_telash_natural_energy_phase_waits_for_casting_and_uses_native_cost_once() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();
     assert_eq!(
