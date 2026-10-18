@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mycomancer664 triggered hearthstone acceptance pending (2026-10-18)
+
+[Exact acceptance and limits](../../toy-effects14-coverage.md#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18): test/spec37a6c0598 learns264367 and uses actual ten-second root1299014→64→instant1286909/252, checking saved-bind return, root charge2309, unchanged health/model and Corewarden refusal. Separate fixture leaves25 direct-hearth cases/helper untouched. Format/manual readability only; uncompiled/unexecuted, lead successor afterst526 required. No missing-bind/cross-map/native/natural-recharge certificate or runtime/data edit.
+
 ## st526 Toy landing (2026-10-18)
 
 [Landing and limits](../../toy-effects14-coverage.md#st526-toy-scope-landed-2026-10-18): lead-confirmed server master `ce0fec81c1caeaa20ff8d47b572cde1e49afbd65` contains feature38d087230 and docsfaab75f7e, independently confirmed by ancestry. Covered successor scope complete with194 Toy CPU passes/0 failures; eight server failures belong to other heads. Earlier pending labels below are historical for covered tests. Native/all1166 gameplay acceptance and whole-workspace green remain unclaimed.

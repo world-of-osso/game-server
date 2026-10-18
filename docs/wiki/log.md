@@ -1,3 +1,7 @@
+## 2026-10-18 — Mycomancer664 triggered hearthstone acceptance pending
+
+[Exact acceptance and limits](../toy-effects14-coverage.md#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18): test/spec37a6c0598 adds learned264367/actual1299014 ten-second root→1286909/252 saved-bind, shared2309/1800000ms charge and Corewarden refusal. No child-direct substitute or change to25 direct cases/helper. Format/manual readability only; no own compilation/test job, behavior pending lead gate afterst526. No runtime/data/native or missing-bind/cross-map/natural-recharge claim.
+
 ## 2026-10-18 — st526 Toy scope landed
 
 [Landing and limits](../toy-effects14-coverage.md#st526-toy-scope-landed-2026-10-18): lead confirms server masterce0fec81c contains feature38d087230/docsfaab75f7e; both ancestry checks pass. Toy successor scope complete with194/0; eight server failures belong to other heads. No native/all1166 gameplay or whole-workspace green claim. No own runtime/data/test jobs.

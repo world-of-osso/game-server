@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Mycomancer664 triggered hearthstone acceptance pending after st526 (2026-10-18)
+
+Test/spec `37a6c0598` adds `toyfx664_mycomancer_learned_root_triggers_homebind_after_cast_and_blocks_corewarden` for Full1166 item264367. Active70448/key88d5e8ef05ec5a8446cdec93d142d7c6 ItemEffect228781/slot0/TriggerType0 selects root1299014, sourceCastTime7=10000ms; its self/homebind-target64 triggers1286909, instant252. Root category2309 retains one charge/1800000ms recharge. The test learns the real item, uses its root, checks no early return or root completion, then one root completion/saved-bind return, unchanged health/model, root charge report and learned Corewarden265100 refusal without another cast. It does not directly invoke child1286909 or change the25 direct-hearth cases/helper.
+
+Format/manual readability only; compilation and behavior UNEXECUTED here. Lead covering gate after37a6c0598 required; st526 predates this test. No missing-bind, cross-map/native, natural30-minute recharge or full1166 certificate; no runtime/data change. [Contract](specs/toys.md), [test](../crates/server/src/toys_hearthstone_tests.rs).
+
 ## st526 Toy scope landed (2026-10-18)
 
 Lead confirms server master merge `ce0fec81c1caeaa20ff8d47b572cde1e49afbd65` contains feature `38d087230` and proof docs `faab75f7e`; Git ancestry independently confirms both. The successor gate for this Toy scope is complete: `toys::tests`194 passed/0 failed. The eight server failures belong to other heads; the full server result remains RED, not whole-workspace success. This supersedes pending/absence-of-landing statements below for these covered tests only. No native or all1166 gameplay certificate follows; all per-test limits in the [CPU matrix](#st526-server-result-toy-cpu-acceptance-passes-full-workspace-remains-red-2026-10-18) remain.
