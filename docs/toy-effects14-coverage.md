@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source575–579: pending Cold Ones rack acceptance and mixed chair/device/crate/homebind boundaries (2026-10-17)
+
+Acceptance-only0e4c5ed9b appends234951/1215364/505415/type22/display97591/scale0.75/cursor/180s to the unchanged transmitted-object helper and cursor alternative list, now12 identities with old11 retained. Format/manual changed-line readability/diffcheck pass; behavior requires a head AFTER queued50536909d8f3.505 includes through Golem573/16 disguises,18 casters and11 objects; no result or landing observed. No runtime/data/native proof/own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|575 Soweezi's Comfy Lawn Chair234473/468291 | Source1500ms target18 summon232549/property61/Control1/Title2/flags2 plus self dummy4,600000ms lifetime/120000ms recovery. Runtime232549/model absent. Actual seating/control/relaxing aura and linked cleanup remain gap; not an ordinary target47 transmitted GO chair or inert creature prop. |
+|576 Atomic Regoblinator234950/1215362 | Source1500ms target47 area-trigger179/base1/misc36000 for180000ms, inherited43200000ms recovery. Actual deployed device/step-on eligibility/temporary goblination/recipient restoration remain gaps; no caster transform or generic visual-only device admission. |
+|577 Uncracked Cold Ones234951/1215364 | Source2000ms target87 transmitted50→existing505415/type22/display97591/size0.75 for180000ms, inherited600000ms recovery. Own learned-use/exact cursor object identity-placement/ordinary-expiry case committed, behavior pending head AFTER505. Rack Data0=1215373 is a separate audited self dummy4/can aura, not an automatic trigger edge or inventory drink. Real interaction/recipient aura/native rack-and-can/full recharge remain separate; existing classifier test's empty unsupported reasons are not learned-use execution proof. |
+|578 Awakened Supply Crate235015/1215461 | Instant self aura293/misc3141/1 for900000ms, inherited10000ms recovery/start1500ms. Authored carried Dornogal crate/pose/cleanup remains gap, distinct from Hallowfall3118; no spawned cache, item yield or copied sibling presentation. |
+|579 Redeployment Module235016/1217281 | Source10000ms homebind252/targets1/9 plus effect298 (`CANCEL_ALL_PRIVATE_CONVERSATIONS`), shared charge2309/start1500ms, normal recovery0. Actual saved-bind/charge and private-conversation cancellation mixed lifecycle remains unverified together. Do not silently drop298, append to ordinary homebind-only19-ID fixture or claim a20th complete hearthstone; no guessed affected conversation set or mass teleport. |
+
+Evidence: private `rows575-579-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `coldones577-{active-goal,object-spell-source,proof-ledger}.json`; local70448/key88d5e8ef05ec5a8446cdec93d142d7c6.149865 Tea Set untouched;498 remains last confirmed landed gate/master8707ac0ea.
+
 ## Source570–574: pending Golem self-transform and retained banners/unnamed-season/carried-crate boundaries (2026-10-17)
 
 Acceptance-only06d44ef20 adds233202/473407/234479/six valid displays/instant1800s/3600s recovery to the unchanged disguise registry/helper, now16 rows plus separate Oomgut17 identities. Old15 literals/order unchanged. Format/manual changed-line readability/diffcheck pass; behavior needs a lead covering head AFTER498c013, not the older11-row certificate. No production/data/engine/protocol/new native proof or own heavy duplicate.

@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source575–579 pending Cold Ones rack acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source575579-pending-cold-ones-rack-acceptance-and-mixed-chairdevicecratehomebind-boundaries-2026-10-17):0e4c5ed9b adds234951/1215364/505415/type22/display97591/scale0.75/cursor/180s as12th transmitted object; old11/helper retained, format/manual readability/diffcheck pass, behavior pending head AFTER50536909d8f3. ChairControl1+mixed aura, area36000 step-on goblination, carried crate3141 and homebind252+private-conversation-cancellation298 remain exact gaps, not generic source substitutes. Rack object spell1215373 is audited can aura, not trigger edge/inventory item.505 queued through Golem573, no result/landing inferred; no runtime/data/native proof/own heavy duplicate.
+
 ## 2026-10-17 — Toy source570–574 pending Golem acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source570574-pending-golem-self-transform-and-retained-bannersunnamed-seasoncarried-crate-boundaries-2026-10-17):06d44ef20 appends233202/473407/234479/six valid models/instant1800s/3600s as16th disguise plus Oomgut17IDs; old15/helper unchanged, format/manual readability/diffcheck pass, behavior pending lead covering head. Existing Prized/Astral source-banner cases retained.232308/233151 missing metadata/model and Hallowfall self293/3118/1 carried-crate appearance remain gaps; no invented season, possession actor or inventory supplies. No runtime/data/new native proof/own heavy duplicate;498 landed remains scoped older11 disguises.
