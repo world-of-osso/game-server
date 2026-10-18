@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source340–344 and inspected477 proof
+
+[Exact source matrix](../toy-effects14-coverage.md#source340344-mailboxwhelpsholidayfeast-boundaries-and-retained-sign-proof-2026-10-17): Ohuna Control1/Title5 mail/recall, mixed five-whelp movement, Murglasses holiday recovery and four-model appreciative-critter feast remain gaps;341 retains exact historical sign CPU proof, not native certification. No runtime/data/inert imports or own heavy duplicate. [Gate477 receipt](../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) now independently inspected: server280passed/0failed/1ignored445.11s, client9passed, EXIT0/FMT0,2m58s compile/no warning lines; caster14/all13hearthstones/nine-disguise+Oomgut explicit ok. Ignored case is named invisible-stalker test.478 expanded cases remain queued, not passed.
+
 ## 2026-10-17 — Toy lead477 landed /478 queued
 
 [Current receipt](../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) supersedes earlier pending477 entries below: lead reports477 LANDED/“280 passed”/master15bef300d throughd4a4a716c (14caster/13hearthstone/nine-disguise+Oomgut10-ID revision). Per-fixture details requested, not independently inspected here. Expanded three-tent/14-hearthstone/ten-disguise+Oomgut11-ID head28f1ce365 is explicitly queued in478, not yet passed; no own heavy duplicate or new native/full-recovery claim.

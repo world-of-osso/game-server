@@ -2,9 +2,13 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mailbox/whelps/holiday/feast boundaries and retained sign proof (2026-10-17)
+
+[Source340–344 matrix](../../toy-effects14-coverage.md#source340344-mailboxwhelpsholidayfeast-boundaries-and-retained-sign-proof-2026-10-17) keeps Ohuna Control1/Title5 mail/recall, five-whelp mixed106/105/104/506 movement/presentation, Murglasses233/misc6379/169 holiday recovery and four-model appreciative-critter feast actions unresolved. Source341 retains exact earlier sign193182/108105/2s/5min/ground-placement/owner/map/expiry CPU scope, not a new native certificate. Ohuna/critter TDB identities exist but runtime templates do not; no inert admission or guessed service/physics/holiday/product behavior.
+
 ## Lead integration receipt (2026-10-17)
 
-[Current coverage receipt](../../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) records lead477 LANDED/“280 passed”/master15bef300d and queued478 through28f1ce365. Expanded three-tent/14-hearthstone/ten-disguise+Oomgut11-ID results remain pending; aggregate477 status does not extend its older fixture revision or certify native/full-recovery behavior.
+[Current coverage receipt](../../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) records inspected lead477 server280passed/0failed/1ignored, client9passed, EXIT0/FMT0/master15bef300d and queued478 through28f1ce365. Exact caster14/all13hearthstones/nine-disguise+Oomgut fixtures have explicit ok lines; the ignored case is the named non-toy invisible-stalker test. Expanded three-tent/14-hearthstone/ten-disguise+Oomgut11-ID results remain pending; aggregate477 status does not extend its older fixture revision or certify native/full-recovery behavior.
 
 ## Pending linked-tent acceptance and nap/seat boundaries (2026-10-17)
 
@@ -24,7 +28,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Pending Cube acceptance and cache/song/mines/specimen boundaries (2026-10-17)
 
-[Source315–319 matrix](../../toy-effects14-coverage.md#source315319-pending-cube-acceptance-and-cachesongminesspecimen-gaps-2026-10-17) adds317 test/spec d4a4a716c: existing185567/105515 with source15-minute expiry and1h item recovery, so duration is per-case while old eight10-minute values/windows stay unchanged. Nine disguises plus Oomgut make10IDs; format/readability/diffcheck pass, covering lead477 is reported landed; per-fixture detail remains uninspected here. The handler writes only `ModelDisplay { display_id }`, matching pinned TC's selected-ID handoff; NPC model scale1.25/probability0 is retained metadata, not an invented player-scale requirement. Chest/trap, mixed Jiro song, six step-trigger mines and specimen placement remain gaps; no runtime/data/native admission or own heavy duplicate.
+[Source315–319 matrix](../../toy-effects14-coverage.md#source315319-pending-cube-acceptance-and-cachesongminesspecimen-gaps-2026-10-17) adds317 test/spec d4a4a716c: existing185567/105515 with source15-minute expiry and1h item recovery, so duration is per-case while old eight10-minute values/windows stay unchanged. Nine disguises plus Oomgut make10IDs; format/readability/diffcheck pass, covering lead477 is landed; exact fixture ok lines are inspected in the linked integration receipt. The handler writes only `ModelDisplay { display_id }`, matching pinned TC's selected-ID handoff; NPC model scale1.25/probability0 is retained metadata, not an invented player-scale requirement. Chest/trap, mixed Jiro song, six step-trigger mines and specimen placement remain gaps; no runtime/data/native admission or own heavy duplicate.
 
 ## Pending Batons/return-home acceptance and seated-orb boundary (2026-10-17)
 
@@ -32,7 +36,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Seasonal/flower/cooking boundaries and pending Insoles acceptance (2026-10-17)
 
-[Source305–309 matrix](../../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17) retains Winter Veil/285-child music, observed Wild Flower legacy8.82-versus-Retail1 model state plus scripted Grow, and mixed caster-hosted cooking gaps.308 keeps [earlier actual-area/native scope](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13) without a new calendar certificate.309 test/spec8a986da00 adds exact permanent188699/45416 to the existing caster fixture (13IDs at8a986da00;14 after01de71c2e,309 unchanged); local format/readability/diffcheck pass, exact fixture included in lead477 throughd4a4a716c, reported landed; per-fixture detail remains uninspected here. Separate RequiredTransmogHoliday341 is not an invented use-time rule; no fresh native/recovery/calendar proof or runtime/data admission.
+[Source305–309 matrix](../../toy-effects14-coverage.md#source305309-seasonalflowercooking-boundaries-and-pending-insoles-acceptance-2026-10-17) retains Winter Veil/285-child music, observed Wild Flower legacy8.82-versus-Retail1 model state plus scripted Grow, and mixed caster-hosted cooking gaps.308 keeps [earlier actual-area/native scope](../../toy-effects14-coverage.md#source-requiredareasid-lifecycle-2026-10-13) without a new calendar certificate.309 test/spec8a986da00 adds exact permanent188699/45416 to the existing caster fixture (13IDs at8a986da00;14 after01de71c2e,309 unchanged); local format/readability/diffcheck pass, exact fixture included in lead477 throughd4a4a716c, landed with the exact caster fixture ok line inspected in the integration receipt. Separate RequiredTransmogHoliday341 is not an invented use-time rule; no fresh native/recovery/calendar proof or runtime/data admission.
 
 ## Source scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
 
