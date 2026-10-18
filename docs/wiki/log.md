@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source555–559 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source555559-trialblingobserver-spidersqualified-return-homescreen-boundaries-2026-10-17): missing avoid-hit Trial229693, permanent Coldflame attachment, observer233/base550/7825/240 spiders, qualified Threads252/9 homebind and permanent screen2243/7 retain action/eligibility/presentation gaps. Threads item faction/reputation/PlayerCondition0 does not establish qualification authority or account/character/per-use scope; no guessed renown threshold or unrestricted Human-helper certificate. No global body/screen mutation, inert trial, new runtime/data/native proof or own heavy duplicate.498 landed/master8707ac0ea.
+
 ## 2026-10-17 — Toy source550–554 pending Arachnoserum acceptance
 
 [Exact source/current scope](../toy-effects14-coverage.md#source550554-pending-arachnoserum-acceptance-and-pennantlinked-carrystone-metadata-boundaries-2026-10-17):c3fe0958c adds228705/462934/229772/sixteen valid models/instant10min/1h as15th disguise plus Oomgut16IDs; old14 data/cast phase unchanged.119763 NPC scale0.4 retained, not player-scale instruction. Format/manual readability/diffcheck pass, newer head required. Nonzero Strategist pennant, outdoors linked Lil Wick/Control4 carry and stone slow90/periodic action remain gaps;70391 root462924 lacks SpellMisc, no default cast/all-profile claim. Lampyridae six-attachment CPU witness retained.498 landed/master8707ac0ea; no further runtime/data/own heavy duplicate.

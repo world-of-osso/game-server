@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source555–559: trial/bling/observer-spiders/qualified-return-home/screen boundaries (2026-10-17)
+
+No new acceptance/runtime/data/native proof or own heavy duplicate. Existing generic return-home, aura or screen transport does not settle the actual qualification/observer/presentation contracts.498 remains landed/master8707ac0ea; newer expansions await covering proof.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|555 Trial of Burning Light228707/462768 | Instant target47 summon229693/property6046/flags4104 for180000ms, inherited7200000ms recovery. Runtime creature/model absent. Actual trial/avoid-getting-hit pattern/eligibility/contact/lifecycle remains gap; no inert trial actor, guessed score/damage or ordinary combat companion. |
+|556 Coldflame Ring228789/465642 | Instant self dummy4/permanent-1, item120000ms recovery. Exact Blizzard Bling attachment/appearance/conditions/removal remains unaudited, absent maintained visual-only list; no generic zero-dummy success or veteran-age/per-use rule invented from flavor. |
+|557 Arachnophile Spectacles228914/462576 | Instant self perception233/base550/misc7825/240 for600000ms, item1800000ms recovery. Exact observer-specific spider replacement/type eligibility/presentation/restoration remains unverified; no global NPC body mutation, guessed replacement set or base550 radius/count. |
+|558 Notorious Thread's Hearthstone228940/463481 | Source10000ms252/targets1/9, shared2309/max1/recharge1800000ms. Description requires proven Severed Threads standing, but source item MinFactionID/MinReputation and on-use PlayerCondition are0. Qualification authority/account-versus-character scope and actual qualified saved-bind/charge behavior remain unresolved; no guessed renown threshold/per-use gate or unrestricted Human-helper full certificate. |
+|559 Starry-Eyed Goggles228966/463749 | Instant self screen-effect260/misc2243/7/permanent-1; normal recovery0/start1500ms. Exact authored screen/selection/conditions/cleanup remains unaudited; generic ScreenEffect transport is not native2243 proof, global visual mutation or a character transform. |
+
+Evidence: private `rows555-559-{readonly-source,action-source,runtime-action-source,active-goal}.json`, exact Threads source/item fields and missing trial actor boundary.149865 Tea Set remains untouched.
+
 ## Source550–554: pending Arachnoserum acceptance and pennant/linked-carry/stone-metadata boundaries (2026-10-17)
 
 553 test/specc3fe0958c appends228705/462934/229772/sixteen valid displays/instant600s/3600s recovery to the unchanged count-free registry/cast phase, now15 disguise rows plus separate Oomgut16 identities; old14 data unchanged. Format/manual readability/diffcheck pass, behavior needs a head AFTER498c013. Lead498 remains landed/master8707ac0ea; no borrowed larger-scope proof, further runtime/data or own heavy duplicate.
