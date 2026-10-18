@@ -12,6 +12,10 @@
 ## 2026-10-17 — Ebon Might baseline
 
 [Ebon Might](systems/auras.md#ebon-might-baseline-2026-10-17): approved395152/self395296 baseline, native primary support/2-N split/owned1000ms updates and foreign-grant exclusion; native16114cc3 RED6 before implementation, GREEN pending. Source amounts/radius500/MaxTargets30 preserved; Eruption/passive flat extension retained, no generic540/party-only/optional/whole-ability policy. Prior Prescience/Sands slice landed after lead gate482 passed1053/fmt.
+## 2026-10-18 — Queued effect64 captured destination
+
+[Captured targets](systems/spell-casting.md#queued-effect64-captured-destinations--2026-10-18): gate513 Akunda regression reproduced by unchanged native learned-use/cursor/cooking fixture,0PASS/1FAIL40.11s/209208ms: child fire at casterx−8949.95 instead of parent cursorx−8947.95. Pinned TC copies destination and captures targets/itemLevel by value; server queued payload omitted its modeled destination. Minimal optional-point capture and fresh-child restoration added before validation/planning, with existing selected entity/item-level/order/cost/depth retained. No position fallback or clamp change. Corrected Akunda/queued controls/power_drain/toys:: proof pending.
+
 ## 2026-10-17 — Omor repeat measurement boundary
 
 [Dispatch versus completion](systems/boss-scripts.md#omor-dispatch-clocks-and-pushback--2026-10-17): gate4851694PASS/1FAIL5.75s Go gap; instrumented native damage adds500ms pushback. Pre-queued master A/B independently shows the same completion-gap compression, so this is a pre-existing measurement flaw, not established queued-specific timer regression. Fixture uses actual dispatch observations with identical repeat bounds; first-Go/hound/shield/credit checks unchanged, deterministic native-pushback control added. Corrected targeted proof pending; no production/RNG/clock/tolerance changes.
