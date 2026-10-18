@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source480–484: pending Flame return-home acceptance and unnamed hat/ride/private-weather boundaries (2026-10-17)
+
+482 test/spec2302a9e1b adds209035/422284 to the unchanged actual saved-bind/refusal/source10s/shared2309 helper, now18 hearthstones, with Deepdweller208704 sibling refusal. Format/manual readability/diffcheck pass; new behavior requires a newer covering head, not failed4920c77bfdaa. Cursor87 runtime proposal remains awaiting approval; no production/data/native changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|480 Unnamed toy208880/421645 | Local ItemSparse has no208880 row. Instant self periodic-dummy226/every2000ms for900000ms, inherited3600000ms recovery; description equips Dragon Isles drake with a hat and reduces cooldown during Brewfest. Actual drake eligibility/periodic appearance/holiday recovery/cleanup remain unresolved; no invented item name, generic hat aura or guessed reduction factor. |
+|481 Sandbox Storm Gryphon208883/421692 | Source1500ms target47 summon210171/property5730 for180000ms; Control5/faction35/flags2304, spell180000ms recovery. Runtime creature/model absent. Actual bouncing/weapon-raised thunder ride/control/lifecycle remain gaps, not inert gryphon scenery or borrowed sandbox model. |
+|482 Hearthstone of the Flame209035/422284 | Source10000ms252/targets1/9, shared2309/max1/recharge1800000ms. Own actual learned/saved-bind/cast/charge/Deepdweller-refusal acceptance committed, behavioral proof pending. No invented flame travel destination, native art or full half-hour recharge certificate. |
+|483 Brew Barrel209052/422465 | Source1333ms target18 summon210526/property5110 for30000ms; Control0/flags1181704, item600000ms recovery. Runtime creature/model absent. Actual summon-and-ride/rolling movement/control/cleanup remain gaps despite Control0; no static barrel or inferred absence of riding from that one field. |
+|484 Dreamsurge Remnant209858/423721 | Source2000ms self forced-weather331/misc488 plus screen-effect260/misc2078/7 for1800000ms, spell1800000ms recovery. Pinned331 sends weather488/density1 only to the target player and restores zone weather on removal; it is not a phase aura. Full private weather/screen/conditions/restoration remains unverified; no screen-only substitute or global weather mutation. |
+
+Evidence: private `rows480-484-{readonly-source,action-source,runtime-source,active-goal}.json`, `hearth482-{active-goal,proof-ledger}.json`, pinned331 handler and exact missing ItemSparse boundary.149865 Tea Set remains untouched.
+
 ## Gate492 cursor-flight RED; runtime proposal awaiting approval (2026-10-17)
 
 Inspected492 through0c77bfdaa: server286passed/1failed/1ignored544.23s, client9passed, EXIT101/FMT0, compile2m14s/no warnings. Exact failure at3460: Maiev201931 actor exists before source flight, actual1/expected0. This is now a reproduced runtime boundary, not the earlier invalid child-SpellGo expectation. Lead authorized honest ignorede2724abe, preserving every actor-phase assertion and all16 identities. The entire fixture is skipped by default; an ignored failure is NOT fixed, a new covering pass or landing. Earlier queued/running statements below are historical.
