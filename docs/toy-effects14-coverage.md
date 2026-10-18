@@ -1,8 +1,22 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source410–414: riches-trail/ally-storm/enemy-corpse-flag/kite/shades boundaries (2026-10-17)
+
+All five retain distinct mixed/action/recipient or unaudited visual contracts. [Inspected484 proof](#lead-integration-receipt-2026-10-17) covers earlier15-caster/nine-object code throughafad56176 and is landed/masterec0863223. Later387/393/402/408 are explicitly queued in489 throughc043f0f8c, result pending. This block changes no code/runtime/data or admissions and starts no heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|410 Golden Dragon Goblet202019/396172 | Instant self periodic23/period0→396210/self script3, plus312/set1072 and437/base3 for5000ms; inherited30000ms recovery. Pinned437 is minimum-speed-rate. Actual riches-in-wake trail/child action, animation/movement and cleanup remain gaps; no guessed cadence, currency/loot spending or ignored mixed payload. |
+|411 Chasing Storm202020/396219 | Instant friendly-target21 dummy4 for300000ms, inherited300000ms recovery. Actual allied-target chase/presentation/recipient lifecycle remains unverified; not in the audited visual-only list. No caster-only cloud, passive attachment substitute or invented damage/weather effect. |
+|412 Breaker's Flag of Victory202021/396058 | Instant script3/targets22/93, item60000ms recovery. Pinned93 is source-centered enemy-corpse area selection; description additionally requires an enemy player's corpse in front. Exact corpse/player/enemy/frontal selection, flag identity/placement/lifecycle remain gaps; no living target, arbitrary corpse or generic banner substitution. |
+|413 Yennu's Kite202022/396236 | Instant self dummy4/300000ms, inherited3600000ms recovery. Authored kite-flying pose/attachment/presentation/lifecycle remains unaudited; no generic zero-dummy admission, ordinary stationary prop or invented flight/travel mechanics. |
+|414 Aquatic Shades202042/396358 | Instant self dummy4/3600000ms, source normal recovery0 and1500ms start recovery. Black sunglasses/recipient attachment/model conditions/cleanup remain unaudited. No global character transform, name-derived aquatic gameplay or borrowed cosmetic certificate. |
+
+Evidence: private `rows410-414-{readonly-source,action-source,active-goal}.json`, pinned aura437/selector93 and maintained visual-only list.149865 Tea Set remains untouched.
+
 ## Source405–409: pending Maiev missile-child acceptance and cloak/crystal/BG-flare/challenge-dummy boundaries (2026-10-17)
 
-408 test/spec58a5fabd1 adds Maiev as tenth stationary-source case, leaving old nine identity rows unchanged. Actual201931/398485 uses a valid12yd cursor with source speed12: parent cast event must exist while child395720 is not yet emitted, then exactly one199047/112284/scale1 non-pet/non-following actor must appear at the requested horizontal point, retain owner/map, remain after caster movement and expire under the existing compressed CPU clock. Source ranges20/20–40yd admit12yd; the older two cursor roots are verified87/0 and now also assert horizontal equality. Format/manual readability/diffcheck pass; future covering head required, not484afad. No runtime/data/producer change, native/full-height/tier/wall-lifetime certificate or own heavy duplicate.
+408 test/spec58a5fabd1 adds Maiev as tenth stationary-source case, leaving old nine identity rows unchanged. Actual201931/398485 uses a valid12yd cursor with source speed12: parent cast event must exist while child395720 is not yet emitted, then exactly one199047/112284/scale1 non-pet/non-following actor must appear at the requested horizontal point, retain owner/map, remain after caster movement and expire under the existing compressed CPU clock. Source ranges20/20–40yd admit12yd; the older two cursor roots are verified87/0 and now also assert horizontal equality. Format/manual readability/diffcheck pass; explicitly covering489 throughc043f0f8c is queued, result pending. No runtime/data/producer change, native/full-height/tier/wall-lifetime certificate or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -16,7 +30,7 @@ Evidence: private `rows405-409-{readonly-source,action-source,active-goal}.json`
 
 ## Source400–404: pending Soulshape recovery/refresh acceptance and control/music/gang/holiday boundaries (2026-10-17)
 
-402 test/spec1f028916a adds a separate actual learned-use case because its300000ms recovery is shorter than its600000ms appearance. It asserts immediate and near-five-minute refusal, natural five-minute reuse while still100634, refreshed source lifetime, ordinary expiry/native-display/health restoration and exactly two published recoveries/two intentional refusal events. No timer/cooldown reset or failure suppression. Source Attributes1=1024 lacks AURA_UNIQUE0x800; existing same-caster/source stacking refreshes duration. Format/manual readability/diffcheck pass; behavioral proof requires a future covering head beyond484afad, as do387/393. No runtime/data/producer changes or own heavy duplicate.
+402 test/spec1f028916a adds a separate actual learned-use case because its300000ms recovery is shorter than its600000ms appearance. It asserts immediate and near-five-minute refusal, natural five-minute reuse while still100634, refreshed source lifetime, ordinary expiry/native-display/health restoration and exactly two published recoveries/two intentional refusal events. No timer/cooldown reset or failure suppression. Source Attributes1=1024 lacks AURA_UNIQUE0x800; existing same-caster/source stacking refreshes duration. Format/manual readability/diffcheck pass; behavioral proof is queued in489 throughc043f0f8c, as are387/393. No runtime/data/producer changes or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -44,7 +58,7 @@ Evidence: private `rows395-399-{readonly-source,action-source,active-goal}.json`
 
 ## Source390–394: pending Ohn'ir return-home acceptance and pelt/catch/orb/eight-trigger boundaries (2026-10-17)
 
-393 test/spec00ee4d3e3 adds200630/391042 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now15hearthstone variants. One charge/1800000ms recharge and Timewalker193588 shared refusal remain exact. Format/manual readability/diffcheck pass; new15-variant behavioral proof requires a covering future head, not484afad. New387 mixed-control Wand is likewise beyond484. No runtime/data/producer change or own heavy duplicate.
+393 test/spec00ee4d3e3 adds200630/391042 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now15hearthstone variants. One charge/1800000ms recharge and Timewalker193588 shared refusal remain exact. Format/manual readability/diffcheck pass; new15-variant behavioral proof is queued in489 throughc043f0f8c. New387 mixed-control Wand is likewise covered by that queued head, not484. No runtime/data/producer change or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -58,7 +72,7 @@ Evidence: private `rows390-394-{readonly-source,action-source,active-goal}.json`
 
 ## Source385–389: pending mixed Chewed Wand acceptance and zombie/cage/rod/pelt boundaries (2026-10-17)
 
-387 test/spec27772d6ad adds a separate actual learned-use test for both source self transform56 and confusion5, not a simple-disguise tuple that ignores control. It asserts source1700ms cast remains pending, valid sheep display, damaged37 health unchanged, ordinary casting blocked while confused, ordinary10000ms expiry/restored display/casting/replicated aura removal, and1800000ms recovery/refusal. Format/manual readability/diffcheck pass; behavioral proof requires a later covering head, not484 throughafad56176. Runtime16372 display weights1:1/build12340 versus pinned Retail2:1/build69497 remain an explicit profile gap; no producer fix or weighted-pool certificate. No runtime/data change or own heavy duplicate.
+387 test/spec27772d6ad adds a separate actual learned-use test for both source self transform56 and confusion5, not a simple-disguise tuple that ignores control. It asserts source1700ms cast remains pending, valid sheep display, damaged37 health unchanged, ordinary casting blocked while confused, ordinary10000ms expiry/restored display/casting/replicated aura removal, and1800000ms recovery/refusal. Format/manual readability/diffcheck pass; behavioral proof is queued in489 throughc043f0f8c, not484 throughafad56176. Runtime16372 display weights1:1/build12340 versus pinned Retail2:1/build69497 remain an explicit profile gap; no producer fix or weighted-pool certificate. No runtime/data change or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -72,7 +86,7 @@ Evidence: private `rows385-389-{readonly-source,action-source,active-goal}.json`
 
 ## Source380–384: compass/lava/unnamed-money/speech/leap boundaries (2026-10-17)
 
-These five preserve functional/scripted actions, not generic zero-dummy admission. Local70391 ItemSparse has no200142 row, despite Toy/Item/on-use metadata; do not invent its item name. Lead484 throughafad56176 remains the owner of pending15-caster/nine-object proof; this metadata-only block changes no tested code or runtime/data.
+These five preserve functional/scripted actions, not generic zero-dummy admission. Local70391 ItemSparse has no200142 row, despite Toy/Item/on-use metadata; do not invent its item name. Lead484 throughafad56176 has inspected15-caster/nine-object PASS evidence; this metadata-only block changes no tested code or runtime/data.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -86,7 +100,7 @@ Evidence: private `rows380-384-{readonly-source,action-source,active-goal}.json`
 
 ## Source375–379: pending Survey Tools acceptance and folly/dummy/seat/sled boundaries (2026-10-17)
 
-379 test/specafad56176 adds exact Secondhand Survey Tools as ninth transmitted-object case, preserving previous eight rows. It uses existing206590/type5/display10103/scale1, actual cursor87, owner/map/facing and ordinary300s expiry. Format/manual readability/diffcheck pass. Lead484 is explicitly queued throughafad56176; nine-object plus15-caster proof remains pending, not borrowed from older fixture counts. Local receipts retain exact revisions. No runtime/data/producer change or own heavy duplicate.
+379 test/specafad56176 adds exact Secondhand Survey Tools as ninth transmitted-object case, preserving previous eight rows. It uses existing206590/type5/display10103/scale1, actual cursor87, owner/map/facing and ordinary300s expiry. Format/manual readability/diffcheck pass. Lead484 explicitly coversafad56176; exact nine-object plus15-caster fixture ok lines are inspected, not borrowed from older counts. Local receipts retain exact revisions. No runtime/data/producer change or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -94,19 +108,19 @@ Evidence: private `rows380-384-{readonly-source,action-source,active-goal}.json`
 |376 Rubbery Fish Head199896/388261 | Instant cursor87 summon196406/property2910 for300000ms, Control0/Title0/flags256, item3600000ms recovery/category override0. Source explicitly promises outdoor target-dummy behavior; runtime creature content/model absent. Combat/qualification/placement/cleanup remain gaps, not inert head scenery or a copied Tuskarr dummy. |
 |377 Blue-Covered Beanbag199897/388262 | Source3000ms effect50→381363/target78/radius1yd for300000ms; item300000ms recovery. Actual runtime type7/display74615/size1/seat fields1/1/1 exists. Destination initialization/placement/seating/access/lifecycle acceptance remains unverified; “at your feet” is not source authority for zero offset or decorative-only admission. |
 |378 Iskaara Tug Sled199899/392311 | Source1500ms self linked428/600000ms→392313 plus effect160→392328. Permanent summon child392313 uses197947/property5500 (Control1/Title0/flags67250184), targets18/86/radius2yd and literal base173426; existing108434/model-row scale0.25 is preserved. Child392328 is permanent dummy4 on selector120/self-and-summons/radius50yd. Actual pull/rider access/control/link cleanup remains gaps; no interpreted base-point summon count, invented vehicle role or dropped child/passenger action. |
-|379 Secondhand Survey Tools199900/388267 | Instant cursor87 effect50/base1→existing206590/type5/display10103/size1 for300000ms; inherited1800000ms recovery. New exact actual-use/object/owner/map/facing/ordinary-expiry case is committed and pending covering proof. No guessed survey interaction/stat/extra object, native pixels or natural30-minute reuse certificate. |
+|379 Secondhand Survey Tools199900/388267 | Instant cursor87 effect50/base1→existing206590/type5/display10103/size1 for300000ms; inherited1800000ms recovery. Exact actual-use/object/owner/map/facing/ordinary-expiry case passes in covering484. No guessed survey interaction/stat/extra object, native pixels or natural30-minute reuse certificate. |
 
 Evidence: private `rows375-379-{readonly-source,action-source,active-goal}.json`, `survey379-proof-ledger.json`, exact existing group-private source case and runtime TDB profiles.149865 Tea Set remains untouched.
 
 ## Source370–374: pending Blue/Bronze/Green acceptance, training gap and retained soup proof (2026-10-17)
 
-370–372 test/spec73494c432 adds three exact existing type5 cursor banners to the transmitted-object fixture, now eight IDs. Prior five source rows, including361/369, stay unchanged. Each new case uses its own model/scale and actual target87 cursor, owner/map/facing and ordinary180s expiry assertions. Format/manual readability/diffcheck pass; updated eight-object plus15-caster successor coverage after478 is requested, not passed. No runtime/data/admission change or own heavy duplicate.
+370–372 test/spec73494c432 adds three exact existing type5 cursor banners to the transmitted-object fixture, now eight IDs. Prior five source rows, including361/369, stay unchanged. Each new case uses its own model/scale and actual target87 cursor, owner/map/facing and ordinary180s expiry assertions. Format/manual readability/diffcheck pass; those eight rows plus15-caster code are contained in the inspected nine-object484 PASS throughafad56176. No runtime/data/admission change or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
-|370 Blue Dragon Banner199769/388090 | Instant cursor87 effect50→381321 for180000ms; category1246/180000ms recovery. Existing type5/display77021/size0.5 and display bounds are used by its new actual-use case, pending covering proof. No borrowed Black-banner pass, Red-template closure or new native/category-reuse certificate. |
-|371 Bronze Dragon Banner199770/388091 | Same source cursor/lifetime/category, distinct381319/type5/display76419/size0.5. Its own exact actual-use/owner/map/facing/ordinary-expiry case is committed, pending a covering gate, not identity substitution with Blue or Green. |
-|372 Green Dragon Banner199771/388092 | Same source cursor/lifetime/category, distinct381320/type5/display77020/size0.5. Its exact actual-use/expiry case is committed and pending covering proof; no new native or whole-banner-family certificate. |
+|370 Blue Dragon Banner199769/388090 | Instant cursor87 effect50→381321 for180000ms; category1246/180000ms recovery. Existing type5/display77021/size0.5 and display bounds are used by its exact actual-use case, now passing in covering484. No borrowed Black-banner pass, Red-template closure or new native/category-reuse certificate. |
+|371 Bronze Dragon Banner199770/388091 | Same source cursor/lifetime/category, distinct381319/type5/display76419/size0.5. Its own exact actual-use/owner/map/facing/ordinary-expiry case passes in covering484, not identity substitution with Blue or Green. |
+|372 Green Dragon Banner199771/388092 | Same source cursor/lifetime/category, distinct381320/type5/display77020/size0.5. Its exact actual-use/expiry case passes in covering484; no new native or whole-banner-family certificate. |
 |373 Tuskarr Training Dummy199830/388229 | Instant cursor87 summon196394/property2910 for300000ms; Control0/Title0/flags256, item3600000ms recovery. Source says outdoors-only; runtime creature content/model absent. Actual authored dummy combat/target behavior/placement/cleanup and outdoors qualification remain gaps; no inert scenery, invented training flags or copied dummy model. |
 |374 Tuskarr Traveling Soup Pot199892/388258 | Source2000ms cursor87 effect50/base1→381360/type8/display75335/size0.7 for300000ms; item/category recovery300000ms. Source focus4/radius10 links31442/CozyFire7353. Retain [exact seven-item linked-cooking actor/buff1/60s restoration and trigger/audience/cooking CPU scope](#linked-cooking-traps-2026-10-12). Representative both-skin native fire was Little Wickerman, not per-toy Soup pixels; no new positive/native result or guessed Versatility coefficient. |
 
@@ -114,7 +128,7 @@ Evidence: private `rows370-374-{readonly-source,action-source}.json`, `banners37
 
 ## Source365–369: pending Black Dragon acceptance and seat/tea/Red-banner boundaries (2026-10-17)
 
-369 test/specb53bd5e5b adds the exact existing Black Dragon banner as fifth transmitted-object case. Prior four rows, including361, stay unchanged; cursor selection now names all three actual cursor banners. Format/manual readability/diffcheck pass. Expanded five-object plus15-caster successor coverage after478 is requested, not passed;478's older head contains neither361/369 nor335. No runtime/data/producer change or own heavy duplicate.
+369 test/specb53bd5e5b adds the exact existing Black Dragon banner as fifth transmitted-object case. Prior four rows, including361, stay unchanged; cursor selection now names all three actual cursor banners. Format/manual readability/diffcheck pass. Those five rows and15-caster code are contained in inspected nine-object484 PASS;478's older head contained neither361/369 nor335. No runtime/data/producer change or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
@@ -122,18 +136,18 @@ Evidence: private `rows370-374-{readonly-source,action-source}.json`, `banners37
 |366 Dragon Tea Set199649/394318 | Instant cursor87 effect50→384309 for180000ms, inherited3600000ms recovery. Runtime type10/display78093/size0.5, Data3=3000/Data10=394316/Data23=1. Data10 action394316 has self85/226 and source seated drinking/mana description. Actual serve/use/recipient/drinking/mana/cleanup remains unresolved; no inert prop, guessed refill/mana coefficient or ignoring the action. |
 |367 Whale Bone Tea Set199650/394317 | Same authored cursor/lifetime/recovery, distinct384308/type10/display78092/size0.6/Data10=394315, with Data3=3000/Data23=1 and self85/226 seated-drinking action. Its own service/recipient/effect/lifecycle gap remains; do not substitute Dragon Tea's identity or infer a new149865 Tea Set producer contract. |
 |368 Red Dragon Banner199767/388088 | Instant cursor87 effect50→381317 for180000ms; item-1 and category1246/180000ms recovery. Runtime summoned-object TDB lacks381317. Existing actual learned negative fixture requests [2,0,0], requires gameobject-template refusal and no388088 cast event. Retain that refusal scope, not positive placement/native proof or a copied Black banner template. |
-|369 Black Dragon Banner199768/388089 | Same authored cursor/lifetime/category, distinct existing381318/type5/display71263/size0.5 with display bounds. New exact actual [4,0,-3] cursor/model/scale/owner/map/facing/ordinary180s expiry case is committed and pending a covering successor gate. No new native/art/category-reuse certificate or Red-template closure. |
+|369 Black Dragon Banner199768/388089 | Same authored cursor/lifetime/category, distinct existing381318/type5/display71263/size0.5 with display bounds. Exact actual [4,0,-3] cursor/model/scale/owner/map/facing/ordinary180s expiry case passes in covering484. No new native/art/category-reuse certificate or Red-template closure. |
 
 Evidence: private `rows365-369-{readonly-source,action-source,active-goal}.json`, `banner369-proof-ledger.json`, actual runtime `tdb_gameobject_template` and pinned selector62.149865 Tea Set remains the lead-required untouched gap.
 
 ## Source360–364: pending Reliquary/Duck acceptance and banner/sled/vacuum gaps (2026-10-17)
 
-361 test/spec431949735 adds the exact already-loaded Reliquary banner to `toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire`: four IDs now assert actual learning, source cursor/offset destination, type/display/scale/owner/map/facing and ordinary expiry. Real SpellStore loading includes the new root; old three identity rows are unchanged. During this review, existing `cosmetic.rs` already-audited383065 was confirmed:335 test/spec49e9c2d95 adds194056/permanent0 to the caster fixture, now15IDs. Format/manual readability/diffcheck pass for both. Lead accepts335 plus current tip into the gate after478; explicit four-object scope has been requested. Neither new fixture is covered by477/478 or newly passed yet. No production/runtime/data change or own heavy duplicate.
+361 test/spec431949735 adds the exact already-loaded Reliquary banner to `toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire`: four IDs now assert actual learning, source cursor/offset destination, type/display/scale/owner/map/facing and ordinary expiry. Real SpellStore loading includes the new root; old three identity rows are unchanged. During this review, existing `cosmetic.rs` already-audited383065 was confirmed:335 test/spec49e9c2d95 adds194056/permanent0 to the caster fixture, now15IDs. Format/manual readability/diffcheck pass for both. Lead484 throughafad56176 covers the expanded nine-object fixture and15casterIDs with explicit ok lines inspected. These additions were not covered by477/478. No production/runtime/data change or own heavy duplicate.
 
 | Source row | Exact retained source boundary |
 |---|---|
 |360 Explorers' League Banner198728/384875 | Instant effect50→380638/cursor87 for180000ms; item-1 and category1246/180000ms recovery. Runtime summoned-object TDB table lacks380638. Source template/display and actual placement/lifecycle remain gaps; do not copy Reliquary's76510/0.6 identity or a generic banner by name. |
-|361 Reliquary Banner198729/384876 | Same authored cursor/lifetime/category, distinct existing380639/type5/display76510/size0.6, display bounds present. New actual cursor [4,0,-3]/owner/map/facing/model/ordinary180s expiry acceptance committed, pending a covering successor gate. No native pixels, commerce, sibling identity or full category-reuse certificate. |
+|361 Reliquary Banner198729/384876 | Same authored cursor/lifetime/category, distinct existing380639/type5/display76510/size0.6, display bounds present. Exact actual cursor [4,0,-3]/owner/map/facing/model/ordinary180s expiry case passes in covering484. No native pixels, commerce, sibling identity or full category-reuse certificate. |
 |362 Magical Snow Sled198827/385297 | Source1500ms target18 summon195145/property5456/base1/permanent; Control4/faction35/flags256, inherited300000ms recovery. Runtime creature content absent. Actual sled entry/control/motion/dismount/cleanup remains unresolved; no inert actor, normal pet or forced driver behavior. |
 |363 Lucky Duck198857/385941 | Instant self dummy4 for600000ms, item1800000ms recovery. Source promises escort/careful plush-duck carrying;385941 is not the already-audited335 Duck Lovie383065 route. Actual carry/escort presentation and lifecycle remain gaps; no blanket zero-dummy admission, invented separate duck actor or borrowed nap acceptance. |
 |364 Bag of Furious Winds199337/387068 | Self periodic23/period0→388239 plus aura33/base75 for10000ms; child dummy3/target130, item1800000ms recovery/category override0. Pinned130 is caster-referenced frontal rectangular unit selection. Actual critter eligibility/vacuum child action/direction/control/cleanup remain unresolved; no guessed tick cadence, all-unit suction, damage or ignored slow payload. |
@@ -200,7 +214,7 @@ Evidence: private `rows340-344-{readonly-source,action-source,active-goal}.json`
 
 ## Lead integration receipt (2026-10-17)
 
-Lead gate477 throughd4a4a716c LANDED/master15bef300d. Inspected `gate-ty477-srv.log`: server280passed/0failed/1ignored in445.11s, client9passed/0failed/0ignored, EXIT0/FMT0,2m58s compile/no warning lines. Exact14-ID caster, all13hearthstones, nine-disguise fixture and Oomgut each have explicit ok lines. Ignored test is `zones::world_db_tests::summon_enabler_stalker_spawns_invisible_and_not_selectable`, not a new toy acceptance. Gate478 through28f1ce365 is now behaviorally PASS: inspected `gate-ty478-srv.log` has server283passed/0failed/1ignored672.55s, client9passed/0failed/0ignored, EXIT0/FMT0,1m24s compile/no warning lines. All three tent tests,14hearthstones and ten-disguise+Oomgut11-ID fixtures have explicit ok lines; ignored case is the same named invisible-stalker test. Lead confirms478 LANDED/mastera2ddee2cb. New33515caster and361/369/370–372/379 nine-object fixture additions are not covered by that older head; lead484 is queued throughafad56176 for all nine object IDs and15casterIDs, result pending. Neither result is a native/full-recovery/full-toy certificate. Private receipts: `lead-gates477-478-ack.json`, `lead-gate478-inspected.json`; no own heavy duplicate.
+Lead gate477 throughd4a4a716c LANDED/master15bef300d. Inspected `gate-ty477-srv.log`: server280passed/0failed/1ignored in445.11s, client9passed/0failed/0ignored, EXIT0/FMT0,2m58s compile/no warning lines. Exact14-ID caster, all13hearthstones, nine-disguise fixture and Oomgut each have explicit ok lines. Ignored test is `zones::world_db_tests::summon_enabler_stalker_spawns_invisible_and_not_selectable`, not a new toy acceptance. Gate478 through28f1ce365 is now behaviorally PASS: inspected `gate-ty478-srv.log` has server283passed/0failed/1ignored672.55s, client9passed/0failed/0ignored, EXIT0/FMT0,1m24s compile/no warning lines. All three tent tests,14hearthstones and ten-disguise+Oomgut11-ID fixtures have explicit ok lines; ignored case is the same named invisible-stalker test. Lead confirms478 LANDED/mastera2ddee2cb. New33515caster and361/369/370–372/379 nine-object fixture additions are not covered by that older head; lead484 throughafad56176 is PASS and LANDED/masterec0863223: inspected `gate-ty484-srv.log` has283passed/0failed/1ignored408.90s, client9passed, EXIT0/FMT0,4m12s compile/no warnings and explicit15-caster/nine-object fixture ok lines. Later387/393/402/408 are queued in489 throughc043f0f8c, result pending. Neither result is a native/full-recovery/full-toy certificate. Private receipts: `lead-gates477-478-ack.json`, `lead-gate478-inspected.json`; no own heavy duplicate.
 
 ## Source335–339: pending linked-tent acceptance and nap/seat boundaries (2026-10-17)
 
@@ -208,7 +222,7 @@ Lead gate477 throughd4a4a716c LANDED/master15bef300d. Inspected `gate-ty477-srv.
 
 | Source row | Exact retained source boundary |
 |---|---|
-|335 Duck-Stuffed Duck Lovie194056/383065 | Instant self dummy aura4/permanent, source visual118994 and600000ms item recovery. Existing `cosmetic.rs` explicitly audits383065; acceptance-only49e9c2d95 now adds actual learned194056/permanent0/cancellation/unchanged health-model/no-actor to the15-ID caster fixture, pending the lead gate after478. Native nap/duck attachment/pose/audio and recovery remain separate unverified scopes, not automatic closure from a dummy shape. |
+|335 Duck-Stuffed Duck Lovie194056/383065 | Instant self dummy aura4/permanent, source visual118994 and600000ms item recovery. Existing `cosmetic.rs` explicitly audits383065; acceptance-only49e9c2d95 now adds actual learned194056/permanent0/cancellation/unchanged health-model/no-actor to the15-ID caster fixture, now covered by inspected484 PASS. Exact15-ID caster fixture passes in covering484. Native nap/duck attachment/pose/audio and recovery remain separate unverified scopes, not automatic closure from a dummy shape. |
 |336 Cushion of Time Travel194057/387288 | Instant target47 summon195980/properties64/base1 for300000ms, inherited21600000ms recovery. TDB195980/display109046 exists, runtime content template/model absent. Actual seat interaction/access/cleanup remains a gap; description's slow forward time is not authority for teleport/time-control mechanics or decorative-only admission. |
 |337 Cold Cushion194058/387381 | Instant target47 summon196013/properties64/base1 for300000ms, inherited21600000ms recovery. TDB196013/display109053 exists, runtime content template/model absent. Cooling-cushion presentation, interaction (if any) and lifecycle remain unverified; no invented seating/healing/buff or inert admission. |
 |338 Market Tent194059/398329 | Source3000ms self linked428 for900000ms→398328/permanent200404/property3911 (Control0/Title0/flags67241992), targets18/79, item120000ms recovery. Runtime111097 exists. Exact actual2yd-back/rotation/model/owner/refresh/cancel/death case passes in covering478. Natural15-minute linked expiry/native/rest remain outside this witness; no invented commerce service. |
@@ -232,7 +246,7 @@ Evidence: private `rows330-334-{readonly-source,action-source}.json`, `timewalke
 
 ## Source325–329: audio/launch/wisdom/animation/offering boundaries (2026-10-17)
 
-Read-only70391 source inspection establishes the following exact contracts, not new positive acceptance or generic cosmetic admission. No runtime/data changes or own heavy gates; Harpy/Cube/caster/hearthstone fixtures retain their exact477/478 proof scopes; newer15-caster/nine-object coverage remains pending484.
+Read-only70391 source inspection establishes the following exact contracts, not new positive acceptance or generic cosmetic admission. No runtime/data changes or own heavy gates; Harpy/Cube/caster/hearthstone fixtures retain their exact477/478 proof scopes; newer15-caster/nine-object coverage passes in484; later387/393/402/408 await489.
 
 | Source row | Exact retained source boundary |
 |---|---|
