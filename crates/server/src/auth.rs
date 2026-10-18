@@ -180,7 +180,7 @@ pub fn process_login_requests(
     }
 }
 
-struct PendingLoginToken {
+pub(crate) struct PendingLoginToken {
     account_id: u64,
     receipt: crate::persistence_writer::CommitReceipt<String>,
 }

@@ -112,3 +112,92 @@ fn password_login_returns_while_writer_is_held_and_publishes_only_a_durable_toke
         persistence_accounts::login_with_credentials(&reopened, Some(&token), "", "").unwrap();
     assert_eq!(authenticated, (account, token));
 }
+
+#[test]
+fn abandoned_password_token_receipt_cannot_authenticate_another_connection() {
+    for disconnect in [false, true] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let raw = redb::Database::create(file.path()).unwrap();
+        persistence::create_tables(&raw);
+        persistence_accounts::register_account(&raw, "coldpassword", "fixture-password").unwrap();
+        let db = GameDatabase::new(raw);
+        let held = db.db.begin_write().unwrap();
+        let (release, blocked) = std::sync::mpsc::channel();
+        let holder = std::thread::spawn(move || {
+            let signal = blocked.recv_timeout(Duration::from_secs(5));
+            held.abort().unwrap();
+            signal.expect("explicit writer release");
+        });
+        let (mut app, old) = password_login_app(db);
+        app.update();
+        app.update();
+        assert!(!holder.is_finished());
+        if disconnect {
+            app.world_mut().entity_mut(old).remove::<Connected>();
+        } else {
+            app.world_mut().despawn(old);
+        }
+        let replacement = app
+            .world_mut()
+            .spawn((
+                PendingAuth,
+                MessageReceiver::<LoginRequest>::default(),
+                MessageSender::<LoginResponse>::default(),
+            ))
+            .id();
+        release.send(()).unwrap();
+        holder.join().unwrap();
+        crate::test_data::drain_persistence(app.world().resource::<GameDatabase>());
+        for _ in 0..4 {
+            app.update();
+        }
+        assert!(app.world().get::<Authenticated>(replacement).is_none());
+        if disconnect {
+            assert!(app.world().get::<Authenticated>(old).is_none());
+        }
+        assert!(app.world().resource::<ConnectedAccounts>().0.is_empty());
+        assert!(app.world().resource::<LoginReplies>().0.is_empty());
+    }
+}
+
+#[test]
+fn password_token_receipt_reports_a_preceding_account_ban_without_authenticating() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let raw = redb::Database::create(file.path()).unwrap();
+    persistence::create_tables(&raw);
+    persistence_accounts::register_account(&raw, "coldpassword", "fixture-password").unwrap();
+    let db = GameDatabase::new(raw);
+    let held = db.db.begin_write().unwrap();
+    let (release, blocked) = std::sync::mpsc::channel();
+    let holder = std::thread::spawn(move || {
+        let signal = blocked.recv_timeout(Duration::from_secs(5));
+        held.abort().unwrap();
+        signal.expect("explicit writer release");
+    });
+    db.writer.enqueue("fixture account ban", |raw| {
+        persistence_accounts::ban_account(raw, "coldpassword", "fixture ban").map(|_| ())
+    });
+    let (mut app, connection) = password_login_app(db);
+    app.update();
+    app.update();
+    assert!(!holder.is_finished());
+    assert!(app.world().resource::<LoginReplies>().0.is_empty());
+    release.send(()).unwrap();
+    holder.join().unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while app.world().resource::<LoginReplies>().0.is_empty() {
+        assert!(Instant::now() < deadline);
+        app.update();
+        std::thread::yield_now();
+    }
+    let replies = &app.world().resource::<LoginReplies>().0;
+    assert_eq!(replies.len(), 1);
+    assert!(!replies[0].success);
+    assert_eq!(
+        replies[0].error.as_deref(),
+        Some("Account banned: fixture ban")
+    );
+    assert!(replies[0].token.is_empty());
+    assert!(app.world().get::<Authenticated>(connection).is_none());
+    assert!(app.world().resource::<ConnectedAccounts>().0.is_empty());
+}
