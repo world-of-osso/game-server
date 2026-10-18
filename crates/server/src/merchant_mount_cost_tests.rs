@@ -188,7 +188,7 @@ fn mount_costs_currency_payment_and_inventory_survive_database_reopen() {
     persistence::create_tables(&db);
     let (id, _) = persistence::create_character_with_test_bags(&db, 1, "Shopper", 8, 1).unwrap();
     assert_eq!(id, h.character_id);
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     wallet(&mut h, 241, 13);
     h.set_gold(10_000_007);
     h.app

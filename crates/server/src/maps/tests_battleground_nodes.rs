@@ -2,6 +2,9 @@ use super::*;
 use shared::battleground::{BgOutcome, BgPhase, BgTeam, BgTemplate, node_rules};
 use shared::protocol::BattlegroundSnapshot;
 
+#[path = "tests_battleground_backfill.rs"]
+mod backfill;
+
 struct EnteredMatch {
     h: Harness,
     players: Vec<Traveler>,
@@ -9,6 +12,237 @@ struct EnteredMatch {
     match_id: u64,
     copy: InMap,
     origin: Vec3,
+}
+
+#[test]
+fn random_queue_normal_party_projects_original32_to_every_member() {
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(database_file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let mut h = harness_with(|app| {
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
+        app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[]));
+        app.add_plugins((crate::group::GroupPlugin, crate::pvp::PvpPlugin));
+    })
+    .unwrap();
+    let players: Vec<_> = (1..=5)
+        .map(|id| h.spawn(id, STORMWIND, STOCKADE_ENTRANCE_TRIGGER))
+        .collect();
+    for who in &players {
+        h.app.world_mut().entity_mut(who.player).insert((
+            crate::pvp::PlayerPvpState::default(),
+            shared::components::Level(25),
+        ));
+        h.app
+            .world_mut()
+            .entity_mut(who.connection)
+            .insert((pair::<QueueForBattleground>(), pair::<PvpStateUpdate>()));
+    }
+    form_source_five_player_parties(&mut h, &players, 25);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<QueueForBattleground>>(players[0].connection)
+        .unwrap()
+        .send::<PvpChannel>(QueueForBattleground {
+            battleground_id: 32,
+        });
+    let updates = h.receive_pvp_updates(5);
+    for who in &players {
+        let state = h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap();
+        assert!(
+            matches!(
+                state.queue,
+                Some(crate::pvp::PlayerPvpQueue::Battleground {
+                    battleground_id: 32,
+                    ..
+                })
+            ),
+            "ordinary party member retains original queue32; receipts={:?}",
+            updates.get(&who.connection)
+        );
+        assert!(
+            state.battleground.is_none(),
+            "five total players cannot start a parent5v5 match"
+        );
+    }
+}
+
+#[test]
+fn random_queue_parties_enter_selected_map_keep_original32_and_source_start_minimum() {
+    let template = shared::battleground::arathi_basin();
+    let mut entered = enter_source_match_queued(
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |app| {
+            app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
+        },
+        SourceQueueFixture::RandomPartiesOfFive,
+    );
+    assert_eq!(entered.players.len(), 10);
+    for who in &entered.players {
+        let snapshot = battleground(&entered.h, who);
+        assert_eq!(snapshot.battleground_id, 1018);
+        assert_eq!(
+            snapshot.phase,
+            BgPhase::Waiting,
+            "parent5/team does not lower Arathi's8/team start minimum"
+        );
+        assert_eq!(entered.h.map_of(who), Some(entered.copy));
+        let character = entered.h.app.world().get::<ClientId>(who.player).unwrap().0;
+        assert_eq!(
+            crate::pvp::random_bg::tests::original_queue(
+                entered.h.app.world(),
+                entered.match_id,
+                character
+            ),
+            Some(32)
+        );
+        let pvp = &entered
+            .h
+            .app
+            .world()
+            .get::<crate::pvp::PlayerPvpState>(who.player)
+            .unwrap()
+            .progress;
+        assert_eq!((pvp.lifetime_honor_xp, pvp.honor), (0, 0));
+    }
+    leave_and_return(&mut entered);
+}
+
+#[test]
+fn arathi_four_normal_five_player_parties_enter_one_twenty_player_match() {
+    let template = shared::battleground::arathi_basin();
+    let mut entered = enter_source_match_queued(
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |_| {},
+        SourceQueueFixture::FourPartiesOfFive,
+    );
+    assert_eq!(entered.players.len(), 20);
+    assert_eq!(
+        entered
+            .teams
+            .iter()
+            .filter(|team| **team == BgTeam::A)
+            .count(),
+        10
+    );
+    assert_eq!(
+        entered
+            .teams
+            .iter()
+            .filter(|team| **team == BgTeam::B)
+            .count(),
+        10
+    );
+    for (party, teams) in entered.players.chunks(5).zip(entered.teams.chunks(5)) {
+        assert!(
+            teams.iter().all(|team| *team == teams[0]),
+            "ordinary party is not split"
+        );
+        for member in party {
+            let snapshot = battleground(&entered.h, member);
+            assert_eq!(snapshot.match_id, entered.match_id);
+            assert_eq!(snapshot.phase, BgPhase::InProgress);
+            assert_eq!(snapshot.players.len(), 20);
+            assert_eq!(entered.h.map_of(member), Some(entered.copy));
+        }
+    }
+    leave_and_return(&mut entered);
+}
+
+#[test]
+fn arathi_late_party_arrival_gets_one_score_row_without_resetting_existing_scores() {
+    let template = shared::battleground::arathi_basin();
+    let mut previous = Vec::new();
+    let mut entered = enter_source_match_with_arrival(
+        &template,
+        node_rules(template.map_id).unwrap().starts,
+        |_| {},
+        SourceQueueFixture::FourPartiesOfFive,
+        |h, players, index| {
+            if index != players.len() - 1 {
+                return;
+            }
+            let snapshot = battleground(h, &players[0]);
+            assert_eq!(snapshot.phase, BgPhase::InProgress);
+            let point = source_battleground_objects(template.map_id).0.remove(0);
+            let copy = h.map_of(&players[0]).unwrap();
+            let (object, _) = objects_in(h, copy, point.info.entry)[0];
+            h.walk_to(&players[0], point.position);
+            use_object(h, &players[0], object);
+            previous = battleground(h, &players[0]).players.clone();
+            let actor_id = h.app.world().get::<ClientId>(players[0].player).unwrap().0;
+            assert_eq!(
+                previous
+                    .iter()
+                    .find(|row| row.character_id == actor_id)
+                    .unwrap()
+                    .objective_scores
+                    .iter()
+                    .find(|(stat, _)| *stat == node_rules(template.map_id).unwrap().assault_stat)
+                    .unwrap()
+                    .1,
+                1
+            );
+            let late_id = h
+                .app
+                .world()
+                .get::<ClientId>(players[index].player)
+                .unwrap()
+                .0;
+            assert!(previous.iter().all(|row| row.character_id != late_id));
+        },
+    );
+    let late = entered.players.last().unwrap();
+    let late_id = entered
+        .h
+        .app
+        .world()
+        .get::<ClientId>(late.player)
+        .unwrap()
+        .0;
+    for _ in 0..3 {
+        entered.h.receive_pvp_updates(5);
+        let snapshot = battleground(&entered.h, late);
+        assert_eq!(snapshot.players.len(), 20);
+        for row in &previous {
+            assert_eq!(
+                snapshot
+                    .players
+                    .iter()
+                    .find(|score| score.character_id == row.character_id),
+                Some(row)
+            );
+        }
+        let rows: Vec<_> = snapshot
+            .players
+            .iter()
+            .filter(|row| row.character_id == late_id)
+            .collect();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].team, snapshot.team);
+        assert_eq!(
+            (
+                rows[0].damage_done,
+                rows[0].healing_done,
+                rows[0].deaths,
+                rows[0].killing_blows
+            ),
+            (0, 0, 0, 0)
+        );
+        assert!(
+            rows[0]
+                .objective_scores
+                .iter()
+                .all(|(_, value)| *value == 0)
+        );
+    }
+    leave_and_return(&mut entered);
 }
 
 #[test]
@@ -2523,7 +2757,7 @@ fn seething_channel_refuses_missing_authored_transport_catalog() {
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::faction::FactionTemplates::default());
         app.insert_resource(crate::game_objects::GameObjectSpawns::default());
         app.add_plugins(crate::pvp::PvpPlugin);
@@ -2602,6 +2836,33 @@ fn enter_source_match_with(
     starts: [u32; 2],
     setup: impl FnOnce(&mut App),
 ) -> EnteredMatch {
+    enter_source_match_queued(template, starts, setup, SourceQueueFixture::SoloMinimum)
+}
+
+#[derive(Clone, Copy)]
+enum SourceQueueFixture {
+    SoloMinimum,
+    FourPartiesOfFive,
+    FourPartiesOfFiveAt25,
+    RandomPartiesOfFive,
+}
+
+fn enter_source_match_queued(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+) -> EnteredMatch {
+    enter_source_match_with_arrival(template, starts, setup, queue_fixture, |_, _, _| {})
+}
+
+fn enter_source_match_with_arrival(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+    mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
@@ -2613,8 +2874,16 @@ fn enter_source_match_with(
     let db = redb::Database::create(database_file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let mut h = harness_with(|app| {
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(objects);
+        if matches!(
+            queue_fixture,
+            SourceQueueFixture::FourPartiesOfFive
+                | SourceQueueFixture::FourPartiesOfFiveAt25
+                | SourceQueueFixture::RandomPartiesOfFive
+        ) {
+            app.add_plugins(crate::group::GroupPlugin);
+        }
         if template.map_id == 727 {
             let (world_data, spellclick) = silvershard_source_world();
             app.insert_resource(world_data);
@@ -2681,12 +2950,24 @@ fn enter_source_match_with(
     })
     .unwrap();
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
-    let count = u64::from(template.min_players_per_team) * 2;
+    let count = match queue_fixture {
+        SourceQueueFixture::SoloMinimum => u64::from(template.min_players_per_team) * 2,
+        SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::FourPartiesOfFiveAt25 => 20,
+        SourceQueueFixture::RandomPartiesOfFive => 10,
+    };
     // BattlemasterList's broad admission minimum need not have a PVPDifficulty row
     // (Deephaul allows19–90 there, but its first authored match bracket is80).
     let level = (template.bracket.min_level..=template.bracket.max_level)
         .find(|&level| shared::battleground::source_level_bracket(template.map_id, level).is_some())
         .expect("source fixture needs an authored PVPDifficulty level");
+    let level = if matches!(
+        queue_fixture,
+        SourceQueueFixture::RandomPartiesOfFive | SourceQueueFixture::FourPartiesOfFiveAt25
+    ) {
+        25
+    } else {
+        level
+    };
     let players: Vec<_> = (1..=count)
         .map(|id| h.spawn(id, STORMWIND, origin))
         .collect();
@@ -2707,15 +2988,47 @@ fn enter_source_match_with(
             pair::<shared::protocol::InteractionFailed>(),
             pair::<PvpStateUpdate>(),
         ));
+    }
+    let queue_members: Vec<_> = match queue_fixture {
+        SourceQueueFixture::SoloMinimum => players.iter().collect(),
+        SourceQueueFixture::FourPartiesOfFive
+        | SourceQueueFixture::FourPartiesOfFiveAt25
+        | SourceQueueFixture::RandomPartiesOfFive => {
+            form_source_five_player_parties(&mut h, &players, level);
+            players.iter().step_by(5).collect()
+        }
+    };
+    for who in queue_members {
         h.app
             .world_mut()
             .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
             .unwrap()
             .send::<PvpChannel>(QueueForBattleground {
-                battleground_id: template.id,
+                battleground_id: if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive)
+                {
+                    32
+                } else {
+                    template.id
+                },
             });
     }
     h.receive_pvp_updates(5);
+    let invited = players
+        .iter()
+        .filter(|who| {
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_some()
+        })
+        .count();
+    assert_eq!(
+        invited,
+        players.len(),
+        "all ordinary party members receive one normal queue invitation"
+    );
     let invitations: Vec<_> = players
         .iter()
         .map(|who| battleground(&h, who).clone())
@@ -2741,7 +3054,7 @@ fn enter_source_match_with(
             });
     }
     let updates = h.receive_pvp_updates(5);
-    for (who, invitation) in players.iter().zip(&invitations) {
+    for (index, (who, invitation)) in players.iter().zip(&invitations).enumerate() {
         assert!(
             updates[&who.connection]
                 .iter()
@@ -2777,6 +3090,7 @@ fn enter_source_match_with(
             }),
             source.position
         ));
+        before_arrival(&mut h, &players, index);
         h.ack(who);
     }
     h.receive_pvp_updates(5);
@@ -2792,6 +3106,90 @@ fn enter_source_match_with(
         match_id,
         copy,
         origin,
+    }
+}
+
+fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level: u8) {
+    use shared::protocol::{
+        GroupChannel, GroupCommandResponse, GroupInviteCancelled, GroupInviteIntent,
+        GroupInvitePrompt, GroupRosterSnapshot, RespondGroupInvite,
+    };
+    for who in players {
+        h.app
+            .world_mut()
+            .entity_mut(who.player)
+            .insert(shared::components::UnitLevel(level));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<GroupInviteIntent>(),
+            pair::<RespondGroupInvite>(),
+            pair::<GroupInvitePrompt>(),
+            pair::<GroupRosterSnapshot>(),
+            pair::<GroupCommandResponse>(),
+            pair::<GroupInviteCancelled>(),
+        ));
+    }
+    for party in players.chunks(5) {
+        let leader = &party[0];
+        let leader_name = h
+            .app
+            .world()
+            .get::<Player>(leader.player)
+            .unwrap()
+            .name
+            .clone();
+        for member in &party[1..] {
+            let name = h
+                .app
+                .world()
+                .get::<Player>(member.player)
+                .unwrap()
+                .name
+                .clone();
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<GroupInviteIntent>>(leader.connection)
+                .unwrap()
+                .send::<GroupChannel>(GroupInviteIntent { name });
+            let mut invited = false;
+            let mut notices = Vec::new();
+            for _ in 0..5 {
+                h.advance(1);
+                let mut receiver = h
+                    .app
+                    .world_mut()
+                    .get_mut::<MessageReceiver<GroupInvitePrompt>>(member.connection)
+                    .unwrap();
+                for invite in receiver.receive() {
+                    assert_eq!(invite.inviter_name, leader_name);
+                    invited = true;
+                }
+                drop(receiver);
+                notices.extend(
+                    h.app
+                        .world_mut()
+                        .get_mut::<MessageReceiver<GroupCommandResponse>>(leader.connection)
+                        .unwrap()
+                        .receive(),
+                );
+            }
+            assert!(
+                invited,
+                "normal invitation delivered before answer: {notices:?}"
+            );
+            h.app
+                .world_mut()
+                .get_mut::<MessageSender<RespondGroupInvite>>(member.connection)
+                .unwrap()
+                .send::<GroupChannel>(RespondGroupInvite { accept: true });
+            h.advance(5);
+        }
+        let groups = h.app.world().resource::<crate::group::GroupRegistry>();
+        let leader_id = h.app.world().get::<ClientId>(leader.player).unwrap().0;
+        for member in party {
+            let id = h.app.world().get::<ClientId>(member.player).unwrap().0;
+            assert_eq!(groups.group_members(id).len(), 5);
+            assert_eq!(groups.leader_of(id), Some(leader_id));
+        }
     }
 }
 
@@ -3075,7 +3473,7 @@ fn enter_achievement_node_match(path: &std::path::Path, template: &BgTemplate) -
     let database = redb::Database::open(path).unwrap();
     let rules = node_rules(template.map_id).unwrap();
     let mut entered = enter_source_match_with(template, rules.starts, |app| {
-        app.insert_resource(crate::persistence::GameDatabase { db: database });
+        app.insert_resource(crate::persistence::GameDatabase::new(database));
         app.insert_resource(crate::test_data::achievement_catalog());
         app.add_plugins(crate::achievement::AchievementPlugin);
     });

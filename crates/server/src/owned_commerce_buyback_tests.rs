@@ -14,7 +14,7 @@ fn owned_commerce_sources_buyback_keeps_both_catalogs_across_vendor_and_storage_
     h.app.world_mut().entity_mut(h.connection).insert(InWorld {
         character_id: h.character_id,
     });
-    h.app.insert_resource(GameDatabase { db });
+    h.app.insert_resource(GameDatabase::new(db));
     h.app.insert_resource(catalog.templates.clone());
     let guids = catalog.seed(
         &h.app.world().resource::<GameDatabase>().db,
@@ -63,9 +63,9 @@ fn owned_commerce_sources_buyback_keeps_both_catalogs_across_vendor_and_storage_
     );
     // Buyback lives on the connection, not disk. Keep that production session alive.
     drop(h.app.world_mut().remove_resource::<GameDatabase>().unwrap());
-    h.app.insert_resource(GameDatabase {
-        db: redb::Database::open(file.path()).unwrap(),
-    });
+    h.app.insert_resource(GameDatabase::new(
+        redb::Database::open(file.path()).unwrap(),
+    ));
     h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
     assert_eq!(h.take::<BuybackList>(), vec![listed]);
     for slot in 0..2 {

@@ -5,7 +5,9 @@
 //! Stacking rule (TrinityCore `Aura::CanStackWith`, simplified):
 //! - same spell and caster: refresh duration, +1 stack up to `CumulativeAura`
 //!   (`SPELL_ATTR1_AURA_UNIQUE` auras are not refreshed);
-//! - same spell, other caster: coexist when the aura is harmful, has a
+//! - native stackable, non-channel/non-DOT/non-multislot spells share their stack
+//!   slot across casters, preserving the existing aura caster;
+//! - otherwise same spell, other caster: coexist when the aura is harmful, has a
 //!   periodic effect, vehicle-control ownership or `SPELL_ATTR3_DOT_STACKING_RULE`; otherwise the new
 //!   aura replaces the old one.
 //!
@@ -15,12 +17,14 @@
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 pub(crate) mod area_avoidance;
+pub(crate) mod augmentation;
 pub(crate) mod base_armor;
 mod charred_warblades;
 pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
 pub(crate) mod damage_transfer;
+pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fixate;
@@ -382,11 +386,19 @@ impl ActiveAuras {
     }
 
     /// Apply the stacking rule (module docs) to a new instance.
-    fn stack_or_add(&mut self, new: AuraInstance, coexist: bool, unique: bool) -> Stacking {
-        let same_caster = |aura: &AuraInstance| {
-            aura.spell_id == new.spell_id && aura.caster == new.caster && aura.source == new.source
+    fn stack_or_add(
+        &mut self,
+        new: AuraInstance,
+        coexist: bool,
+        unique: bool,
+        shared_slot: bool,
+    ) -> Stacking {
+        let same_slot = |aura: &AuraInstance| {
+            aura.spell_id == new.spell_id
+                && aura.source == new.source
+                && (shared_slot || aura.caster == new.caster)
         };
-        if let Some(existing) = self.auras.iter_mut().find(|aura| same_caster(aura)) {
+        if let Some(existing) = self.auras.iter_mut().find(|aura| same_slot(aura)) {
             if unique {
                 return Stacking::Ignored;
             }
@@ -429,6 +441,19 @@ pub(crate) fn take_unhandled_auras(world: &mut World) -> Vec<(u32, u32)> {
 
 fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
+}
+
+/// TC SpellInfo.cpp:1807–1815 and Unit.cpp:3403–3465 share these stack slots.
+fn shares_stack_slot_between_casters(spell: &SpellInfo) -> bool {
+    let stackable = spell
+        .aura_options
+        .as_ref()
+        .is_some_and(|options| options.cumulative_aura > 1);
+    let per_caster = crate::spell_cast::is_channeled(spell)
+        || attributes(spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
+    // Native IsMultiSlotAura: passive plus Power Spark/Flak Fire/Incanter's Absorption.
+    let multi_slot = is_passive(spell) || matches!(spell.id, 55849 | 40075 | 44413);
+    stackable && !per_caster && !multi_slot
 }
 
 pub fn is_passive(spell: &SpellInfo) -> bool {
@@ -539,6 +564,7 @@ fn build_effect(
         crate::spell_cast::effects::modded_base_points(world, caster, spell, effect)
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
+    let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
     let period_ms = if effect.aura_period_ms > 0 {
         spell_mods::modify(
             world,
@@ -923,12 +949,13 @@ pub(crate) fn apply_aura_with_spell(
         })
         || attributes(&spell, 3) & ATTR3_DOT_STACKING_RULE != 0;
     let unique = attributes(&spell, 1) & ATTR1_AURA_UNIQUE != 0;
+    let shared_slot = shares_stack_slot_between_casters(spell);
     let previous_rate =
         crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
-        .stack_or_add(instance, coexist, unique);
+        .stack_or_add(instance, coexist, unique, shared_slot);
     let (id, kind) = match stacking {
         Stacking::Ignored => return,
         Stacking::Applied(id) => (id, CombatLogKind::AuraApplied),
@@ -952,6 +979,7 @@ pub(crate) fn apply_aura_with_spell(
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
+        crate::spell_cast::area_trigger::on_aura_applied(world, target, &aura);
         fixate::on_applied(world, target, &aura);
         crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
@@ -1079,7 +1107,7 @@ pub enum RemoveReason {
     Interrupted,
     Death,
     ChannelEnded,
-    /// Charges or absorb points used up.
+    /// Stacks, charges or absorb points used up.
     Consumed,
     /// The passive spell is no longer known.
     Unlearned,
@@ -1130,6 +1158,7 @@ fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
+    crate::spell_cast::area_trigger::on_aura_removed(world, unit, aura);
     fixate::on_removed(world, aura);
     crate::spell_cast::recovery_rate::on_removed(world, unit, aura);
     mount::on_removed(world, unit, aura);
@@ -1254,6 +1283,22 @@ pub fn spend_charge(world: &mut World, unit: Entity, instance_id: u32) {
     }
 }
 
+/// TC Aura::ModStackAmount(-1), SpellAuras.cpp:1093–1128: no timer refresh on loss.
+pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
+    let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
+        return;
+    };
+    let Some(aura) = auras.get_mut(instance_id) else {
+        return;
+    };
+    if aura.stacks <= 1 {
+        remove_instance(world, unit, instance_id, RemoveReason::Consumed);
+    } else {
+        aura.stacks -= 1;
+        auras_changed(world, unit);
+    }
+}
+
 pub fn remove_instance(world: &mut World, unit: Entity, instance_id: u32, reason: RemoveReason) {
     remove_auras(world, unit, reason, |aura| aura.instance_id == instance_id);
 }
@@ -1269,6 +1314,8 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     let (mut stats, mut combat) = stat_mods::compute(&auras);
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
+    let primary_support = ebon_might::primary_bonus(&auras);
+    ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
@@ -2039,6 +2086,8 @@ mod tests;
 mod toy_effects_tests;
 
 #[cfg(test)]
+mod augmentation_tests;
+#[cfg(test)]
 mod autoattack_crit_tests;
 #[cfg(test)]
 mod bloodsurge_tests;
@@ -2050,6 +2099,8 @@ mod crit_damage_bonus_tests;
 mod critical_chaos_tests;
 #[cfg(test)]
 mod defensives_tests;
+#[cfg(test)]
+mod ebon_might_tests;
 #[cfg(test)]
 mod enduring_torment_tests;
 #[cfg(test)]

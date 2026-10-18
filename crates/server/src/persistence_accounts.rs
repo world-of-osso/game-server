@@ -27,19 +27,34 @@ pub struct AccountInspection {
     pub ban_reason: Option<String>,
 }
 
-/// Authenticate via token or username+password. Returns (account_id, token) or error.
+/// Synchronous fixture API; runtime password tokens use the FIFO receipt.
+#[cfg(test)]
 pub fn login_with_credentials(
     db: &Database,
     token: Option<&str>,
     username: &str,
     password: &str,
 ) -> Result<(u64, String), String> {
+    let (account, token) = validate_login_credentials(db, token, username, password)?;
+    Ok((
+        account,
+        token.unwrap_or_else(|| generate_token_for_account(db, account)),
+    ))
+}
+
+/// Read-only credential validation. None means a password login needs a durable token.
+pub(crate) fn validate_login_credentials(
+    db: &Database,
+    token: Option<&str>,
+    username: &str,
+    password: &str,
+) -> Result<(u64, Option<String>), String> {
     if let Some(tok) = token
         && !tok.is_empty()
         && let Some(account_id) = find_account_by_token(db, tok)
     {
         ensure_account_not_banned(db, account_id)?;
-        return Ok((account_id, tok.to_string()));
+        return Ok((account_id, Some(tok.to_string())));
     }
     let account_id = find_account_by_username(db, username).ok_or_else(|| {
         if is_username_pending(db, username) {
@@ -50,11 +65,10 @@ pub fn login_with_credentials(
     })?;
     ensure_account_not_banned(db, account_id)?;
     verify_account_password(db, account_id, password)?;
-    let token = generate_token_for_account(db, account_id);
-    Ok((account_id, token))
+    Ok((account_id, None))
 }
 
-fn ensure_account_not_banned(db: &Database, account_id: u64) -> Result<(), String> {
+pub(crate) fn ensure_account_not_banned(db: &Database, account_id: u64) -> Result<(), String> {
     if let Some(reason) = ban_reason_for_account(db, account_id) {
         Err(format!("Account banned: {reason}"))
     } else {
@@ -102,7 +116,7 @@ pub fn check_password(db: &Database, username: &str, password: &str) -> Result<b
 }
 
 /// Generate and store a new token for an existing account.
-fn generate_token_for_account(db: &Database, account_id: u64) -> String {
+pub(crate) fn generate_token_for_account(db: &Database, account_id: u64) -> String {
     let token = uuid::Uuid::new_v4().to_string();
     let txn = db.begin_write().expect("Failed to begin write txn");
     {

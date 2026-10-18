@@ -2210,6 +2210,7 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
+    effects::check_power_drain_inputs(world, caster, spell)?;
     if open_lock::is_item_cast(spell) {
         return Ok(spell
             .effects
@@ -2248,7 +2249,13 @@ fn plan_targets(
         hit::remove_defended_targets(world, caster, spell, &mut plan);
         return Ok(plan);
     }
-    let cap = max_targets(spell);
+    // Ebon's source damage-role filter owns its native cap after filtering;
+    // retain implicit area admission instead of requiring an explicit target.
+    let cap = if spell.id == crate::auras::ebon_might::EBON {
+        0
+    } else {
+        max_targets(spell)
+    };
     let mut plan = Vec::new();
     // Units per leading effect (`processedEffectsMaskForSpell`).
     let mut selected: Vec<(usize, Vec<Entity>)> = Vec::new();
@@ -3149,6 +3156,8 @@ mod new_class_tests;
 mod optional_flat_cost_tests;
 #[cfg(test)]
 mod override_queue_tests;
+#[cfg(test)]
+mod power_drain_tests;
 #[cfg(test)]
 mod queue_tests;
 #[cfg(test)]

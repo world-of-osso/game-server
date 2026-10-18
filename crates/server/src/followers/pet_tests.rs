@@ -27,7 +27,7 @@ fn fixture() -> PetFixture {
     crate::persistence::create_tables(&db);
     let (mut h, unit, _) = spawn_profile_fixture_with_plugins(230861, |app| {
         app.insert_resource(data);
-        app.insert_resource(crate::persistence::GameDatabase { db });
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.add_plugins((
             crate::hunter_pet::HunterPetPlugin,
             crate::pet_control::PetControlPlugin,

@@ -24,9 +24,8 @@ fn setup() -> Harness {
     )
     .unwrap();
     h.app.insert_resource(load(&conn).unwrap());
-    h.app.insert_resource(GameDatabase {
-        db: crate::persistence::temp_database(),
-    });
+    h.app
+        .insert_resource(GameDatabase::new(crate::persistence::temp_database()));
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -295,9 +294,7 @@ fn mount_journal_spell_learning_and_favourites_publish_only_to_same_account() {
 fn relog_crash_retires_old_world_link_before_mount_journal_next_frame() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
-    app.insert_resource(GameDatabase {
-        db: crate::persistence::temp_database(),
-    });
+    app.insert_resource(GameDatabase::new(crate::persistence::temp_database()));
     app.init_resource::<MountCatalog>();
     let old_player = app.world_mut().spawn(crate::persistence::ClientId(32)).id();
     let new_player = app.world_mut().spawn(crate::persistence::ClientId(32)).id();

@@ -34,6 +34,7 @@ pub enum Step {
     Blocked,
 }
 
+#[derive(Debug)]
 struct Route {
     map_id: u32,
     goal: Goal,
@@ -42,6 +43,7 @@ struct Route {
     path: Result<Corners, String>,
 }
 
+#[derive(Debug)]
 pub(crate) struct Corners {
     points: Vec<Vec3>,
     next: usize,
@@ -156,6 +158,18 @@ impl Navigation {
             .get(&entity)
             .filter(|route| route.goal == goal)
             .map(|route| route.destination)
+    }
+
+    /// Log the borrowed pre-step cache without changing route progress.
+    pub(crate) fn trace_cached_route(&self, entity: Entity, simulation_secs: f64) {
+        debug!(target: "game_server::chase_trace",
+            actor = entity.to_bits(), simulation_secs,
+            route = ?self.routes.get(&entity), "tank cached chase route");
+    }
+
+    /// Drop an interrupted chase corridor before it can resume from stale corners.
+    pub(crate) fn cancel_route(&mut self, entity: Entity) {
+        self.routes.remove(&entity);
     }
 
     pub fn advance(&mut self, entity: Entity, request: MoveRequest) -> Step {

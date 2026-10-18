@@ -38,7 +38,7 @@ fn create_login_app(db: redb::Database, conn: &Connection) -> App {
 }
 
 fn insert_login_resources(app: &mut App, db: redb::Database, conn: &Connection) {
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.insert_resource(load_achievement_catalog(conn).unwrap());
     app.insert_resource(crate::spell_info::load_class_spells(conn).unwrap());
     app.insert_resource(crate::mount_journal::load(conn).unwrap());
@@ -73,10 +73,7 @@ fn select_login_character(app: &mut App, account: u64, character: u64) -> Entity
         .send::<AuthChannel>(SelectCharacter {
             character_id: character,
         });
-    for _ in 0..4 {
-        app.update();
-    }
-    app.world().get::<PlayerLink>(connection).unwrap().0
+    crate::test_data::wait_for_selected_player(app, connection)
 }
 
 #[test]

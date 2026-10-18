@@ -4,6 +4,24 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+### Bounded Augmentation support stats (active70448)
+
+- Explicit-friendly Prescience409311 effect1 grants native410089; its effect0 contributes the native3 critical-strike percentage points to that recipient, not the caster. Reapplication must not accumulate another contribution; removal/expiry ends it.
+- Shifting Sands413984 effect0 contributes the aura caster's actual mastery percentage to recipient Versatility on application. Its native effect1/226 clock updates that contribution every1000ms without refreshing expiry or another caster's aura. Normal damage/healing and damage reduction consume the recipient's resulting stat.
+- These are spell-specific bindings sourced from SimC76f8118, not a generic aura540 algorithm (TC a352b1fa has HandleNULL). Prescience automatic prioritization, effect0, child202/other dummy fields, mastery empower dispatch, hero/proc talents and full legal-loadout/rotation/UDP proof remain separate gaps. Ebon's baseline is specified separately below.
+
+### Ebon Might baseline (active70448)
+
+- Ordinary395152 casts grant the caster native395296, not self395152. Preserve allied-area native500yd/rules, exclude caster, use authenticated damage-player specialization roles, and apply MaxTargets30 after role filtering; do not invent a party-only restriction.
+- Other recipients gain their native Strength/Agility/Intellect primary stat from source caster Intellect × native8% × min(1, native2/owned-recipient-count). Two is a split threshold, not a hard cap. Caster Intellect excludes the effective contribution of foreign Ebon grants after existing primary-stat multipliers, preventing mutual amplification.
+- Simultaneous native Ebon casts must evaluate current computed source stats before the first periodic tick; pending aura modifiers must not cause borrowed Intellect to be subtracted from a stale source total.
+- Self395296's native1000ms update clock refreshes owned support amounts, including changed caster Intellect and surviving recipient counts, without changing aura expiry/stacks. Removal/expiry removes only the relevant support. Its native masked damage fields remain unchanged; existing395160/395153 flat1000ms owned-duration extension must work on naturally created buffs.
+- This is a named spell binding, not generic540. Empower/Breath/critical extensions, optional hero/set/PvP behavior, unknown spec/affiliation, hot specialization swaps, independent self cancellation/disconnect, full ability/legal-loadout/rotation/UDP parity remain unproved.
+
+### Shared native boundaries
+
+- [x] Native effect8 drains the living target's primary power matching `EffectMiscValue_0`, floors removal at zero, and credits only the actually removed power to a different caster through native Amplitude and caster spell modifiers. Preserve CalcValue base-variance/point-modifier/rounding order, then integer done/same-variance/taken boundaries and existing supported damage bonuses, without health damage, crits, armor or absorbs on the drain itself. Keep every imported effect, including Frost Breath16094's separate health damage. Missing/nonprimary pools receive no drain or caster credit. For zero-coefficient effect8, evaluate native ExpectedStat PlayerMana × BasePoints/100 at the caster's real UnitLevel; native ScalesWithCreatureLevel instead selects CreatureAutoAttackDps. No silent level1/raw-base fallback: missing UnitLevel or expected-stat resource refuses explicitly. At fixture UnitLevel10 native3405 drains100,46453 drains278 with100SP (floor remainder80 after39 casts), and16094 base rounds284 before the same variance roll is reused in both stages. Distinct power-drain execute-log packets and unimplemented damage modifiers remain separate gaps; this does not certify whole spells or legal loadouts.
+
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.

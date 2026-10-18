@@ -149,7 +149,7 @@ fn achievements_criteria_honor_area31_full_fifty_actual_recipient_areas_and_reop
     let reopened = crate::persistence::load_achievements(&db, players[0].0);
     assert_eq!(reopened.criteria_progress, saved.criteria_progress);
     world.entity_mut(killer).insert(reopened);
-    world.insert_resource(GameDatabase { db });
+    world.insert_resource(GameDatabase::new(db));
     crate::achievement::record_player_event(
         &mut world,
         killer,
