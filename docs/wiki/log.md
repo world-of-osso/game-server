@@ -34,33 +34,57 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 ## 2026-10-17 — Starfall/Moon Tears recipient routing
 
 [Bounded258/979](../pet-battle-effect-coverage.md#starfall-and-moon-tears--implementation2026-10-17): exact active70448 seven-row graphs, source-school distinction and existing Moonlight reuse. Actual routing RED4 plus legal Cosmos owned RED1 precede9b958668 slot/cap/dead/miss/owned GREEN; first weather case exposed only a fixture9-versus-existing8 remaining assumption, corrected test-only9c88c925. Corrected focused weather1/1 passes ataf89ac7c; retain unchanged core4+owned1 GREEN at9b958668. Integrated5d23a60d lib145/main33/check1m36/no warnings/fmt pass; fresh reconciled70448 census1811/2829=64.02%/1025 graphs (+14/+2, no removals). Only subsequent docs/census changes; no redundant broad rerun. Lead gate438 lands145+55 before both-skin native Cosmos1972/1:9 damage/9 healing×3/increased reserve bars/Moonlight8. Four individually inspected fullHD originals under `/syncthing/AgentShared/2026-10-17/petbattle-effects/`; all phases two framed models/strict tripwire0, geometry91/110 only HP fills/timed floats. Existing7 canonical assets/3-mesh strict loader pass, no publication. Both physical forfeits close, owned processes stop/window clears.979 native and independent Retail timing/VFX remain unproved. No other ambiguous selectors admitted.
+## 2026-10-17 — Toy source300–304 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source300304-scoutingslime-trail-boundaries-and-retained-seasonal-banners-2026-10-17): Outland/two-island scouting mutations and Boots'180s/10ms-period→1s persistent child/moving-trail/pledge-OR-renown80 remain gaps.303/304 retain exact source9 actor103372/103384,2yd placement/owner/map/expiry CPU rows; no new current/native certificate, invented discovery set/unconditional trail timing, runtime/data change or generic script admission.
+
+## 2026-10-17 — Toy source295–299 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source295299-exact-scouting-map-discovery-boundaries-2026-10-17): five source2s/self-script3 scouting maps retain distinct flight-point AND map-reveal contracts for Broken Isles, Draenor, Pandaria, Cataclysm-established maps and Northrend. Exact authored nodes/fog/eligibility/persistence remain unresolved; no name-to-all-nodes guess, generic cosmetic/no-op admission, player-progress mutation or positive certificate.
+
+## 2026-10-17 — Toy source290–294 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source290294-retained-banner-proof-and-wingsridemetadatascouting-gaps-2026-10-17):290 retains source9 actual banner/destination/owner/map/expiry CPU scope;291 covenant-OR-renown wings,292 outdoor Control4 sphere,293 unresolved187861 metadata/seed action and294 real flight/map discovery remain gaps.293 Toy/Item/on-use rows exist without current ItemSparse/runtime item, so no synthetic name/template or guessed Flags2 policy. No runtime/data change, new admission or fresh positive certificate.
+
+## 2026-10-17 — Toy source285–289 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source285289-crittercooldownstagefriendscontainment-boundaries-2026-10-17):285 covenant OR renown80/critter action,286 racial recovery,287 Control4 stage,288 three repeated child casts and289 Control4 imprisonment remain unproved. Preserve literal359469/173426 base fields rather than inventing child/count semantics, and do not collapse repeated triggers or source model scales. Existing103058 is not action acceptance; no runtime/data admission or new positive proof.
+
+## 2026-10-17 — Toy source280–284 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source280284-controlled-cagestewardrealmcustomizer-boundaries-2026-10-17): Control4 personal/deluxe cages, pledged steward-companion transform, linked shadow realm and complete Racer customization graph remain unproved. Existing101685/101682/98480/source-selected11686 bodies do not establish control/recipient/child cleanup; no zero-weight visible realm substitute. No runtime/data admission or new positive certificate.
+
+## 2026-10-17 — Toy source275–279 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17): Harmony/Clarity/Faith retain distinct missing-runtime actors/scales plus caster dummy slots; Whistle retains fast/tired transport/area script gaps.279 source creates exactly one existing187342 after2s with30s item recovery; actual-use/inventory/reuse test/spec04a47a43 and fixture fix62db4212 committed/pushed; corrected targeted run pending. Initial end assertion incorrectly rejected the two intended OnCooldown replies, now asserted exactly without clearing/suppression. No wrapping/gifting assumption, source actor substitution, runtime/data admission or new positive proof.
+
 ## 2026-10-17 — Toy source270–274 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17): mirror vehicle7544/periodic-zero-child copying, rune fate, Changeling transform/-45/312, player-target shadow child and fresh-dead party35 judgment remain unproved. Existing176673/101182/101766 is not complete mixed-graph acceptance; shadow child source33559 has weight0 versus39810 weight1. No generic actor/transform/corpse-output substitute, runtime/data admission or new positive proof;240 sole native dependency compile continues.
+[Exact source matrix](../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17): mirror vehicle7544/periodic-zero-child copying, rune fate, Changeling transform/-45/312, player-target shadow child and fresh-dead party35 judgment remain unproved. Existing176673/101182/101766 is not complete mixed-graph acceptance; shadow child source33559 has weight0 versus39810 weight1. No generic actor/transform/corpse-output substitute, runtime/data admission or new positive proof.
 
 ## 2026-10-17 — Toy source265–269 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source265269-pet-chaseflightdestructiondragmixed-shade-boundaries-2026-10-17): mixed pet chase, permanent minipet payload, Minigrue toy destruction, controlled linked dragging and shade transform/screen/periodic children remain gaps. Runtime179941/39353 and180048/97411 exist; child180054 source repeats display101526 at distinct1.8/3 scales with3/1 weights. No payload/scale discard, actor/transform shortcut, runtime/data admission or new positive proof.240 single owned test job continues separately.
+[Exact source matrix](../toy-effects14-coverage.md#source265269-pet-chaseflightdestructiondragmixed-shade-boundaries-2026-10-17): mixed pet chase, permanent minipet payload, Minigrue toy destruction, controlled linked dragging and shade transform/screen/periodic children remain gaps. Runtime179941/39353 and180048/97411 exist; child180054 source repeats display101526 at distinct1.8/3 scales with3/1 weights. No payload/scale discard, actor/transform shortcut, runtime/data admission or new positive proof.
 
 ## 2026-10-17 — Toy source260–264 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source260264-paired-trophyoracledanceleashanima-service-boundaries-2026-10-17):260 requires both same-difficulty trophy actors,261 authored future consultation,262 nearby melody/dance,263 permanent minipet linking and264 outside-Torghast service.264 TDBvisible52318 has probability0 versus invisible11686/scale2 probability1; neither runtime publication nor service is proved. No one-slot/visible-body/no-op substitute, new runtime/data admission or positive certificate;240 single owned proof continues separately.
+[Exact source matrix](../toy-effects14-coverage.md#source260264-paired-trophyoracledanceleashanima-service-boundaries-2026-10-17):260 requires both same-difficulty trophy actors,261 authored future consultation,262 nearby melody/dance,263 permanent minipet linking and264 outside-Torghast service.264 TDBvisible52318 has probability0 versus invisible11686/scale2 probability1; neither runtime publication nor service is proved. No one-slot/visible-body/no-op substitute, new runtime/data admission or positive certificate.
 
 ## 2026-10-17 — Toy source255–259 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17):255 cursor missile→ten-second gormling/run-back,256 ten-minute rooted harp music,257 pipe script/sound,258 casing disturbance and259 permanent minipet leash remain gaps. TDB94221/100008 are not runtime-published or action-proved. No static actor/caster attachment/silent-script substitute, new runtime/data admission or positive certificate;240 single owned job stays separate.
+[Exact source matrix](../toy-effects14-coverage.md#source255259-returnmusicdisturbanceminipet-leash-boundaries-2026-10-17):255 cursor missile→ten-second gormling/run-back,256 ten-minute rooted harp music,257 pipe script/sound,258 casing disturbance and259 permanent minipet leash remain gaps. TDB94221/100008 are not runtime-published or action-proved. No static actor/caster attachment/silent-script substitute, new runtime/data admission or positive certificate.
 
 ## 2026-10-17 — Toy source250–254 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17): coordinated steward stacking, seven-day viewer233 spirit-healer replacement, slime-minipet party appearance, mixed script/dynamic-ground laser chasing and exact count4/five-model slime lifecycle remain gaps. No caster/global-model/single-actor substitute, runtime/data admission or new positive certificate.240 single owned capacity-gated job remains separate; no repeated gate.
+[Exact source matrix](../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17): coordinated steward stacking, seven-day viewer233 spirit-healer replacement, slime-minipet party appearance, mixed script/dynamic-ground laser chasing and exact count4/five-model slime lifecycle remain gaps. No caster/global-model/single-actor substitute, runtime/data admission or new positive certificate.No repeated gate.
 
 ## 2026-10-17 — Toy source245–249 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17):245 half-critter destruction,247 Control0 wounded-ally carrying and248 missile→reflection-summon lifecycle remain gaps.246 Hearth cooking/versatility and249 Vesper stationary actor retain earlier exact CPU scopes, not fresh native/audio certificates. Stretcher/reflection TDB models are absent runtime; no invented outcome/vehicle/model or inert admission.240 owned job remains separately pending; no runtime/data change or repeated gate.
+[Exact source matrix](../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17):245 half-critter destruction,247 Control0 wounded-ally carrying and248 missile→reflection-summon lifecycle remain gaps.246 Hearth cooking/versatility and249 Vesper stationary actor retain earlier exact CPU scopes, not fresh native/audio certificates. Stretcher/reflection TDB models are absent runtime; no invented outcome/vehicle/model or inert admission.No runtime/data change or repeated gate.
 
 ## 2026-10-17 — Toy source240–244 boundaries
 
-[Exact source matrix](../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17):240 test/spec c8feec2e adds existing175221/nine-display transform/expiry/recovery acceptance; tests/check remain pending under capacity admission. Coin target action, combined health sacrifice/self-launch/geography, linked Krexus child and Kyrian pledge remain gaps. Existing175442/display99668 is not linked lifecycle proof. No runtime/data or new native admission.
+[Exact source matrix](../toy-effects14-coverage.md#source240244-dominated-helm-targeted-acceptance-and-coinlaunchlinkedcovenant-gaps-2026-10-17):240 test/spec c8feec2e adds existing175221/nine-display transform/expiry/recovery acceptance; two disguise/Oomgut tests/nine IDs pass91.61s after21m25s compile, no compiler warnings, fmt/readability/diffcheck pass. Package check is lead gate472-owned and queued, not a confirmed pass or second own run. Coin target action, combined health sacrifice/self-launch/geography, linked Krexus child and Kyrian pledge remain gaps. Existing175442/display99668 is not linked lifecycle proof. No runtime/data or new native admission.
 
 ## 2026-10-17 — Toy source235–239 boundaries
 

@@ -2,6 +2,30 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
+
+[Source300–304 matrix](../../toy-effects14-coverage.md#source300304-scoutingslime-trail-boundaries-and-retained-seasonal-banners-2026-10-17) keeps Outland/two-island flight-map discovery and source10ms-period/one-second slime-child moving-trail/pledge-OR-renown80 gaps distinct. Encrypted/Shrouded retain their exact [historical source9 banner CPU rows](#toy-effects9-stationary-banners-and-sign-2026-10-10), source models/2yd placement/expiry, not fresh native certificates. No invented discovery set, unconditional trail schedule, caster visual shortcut or new runtime/data admission.
+
+## Source scouting-map discovery boundaries (2026-10-17)
+
+[Source295–299 matrix](../../toy-effects14-coverage.md#source295299-exact-scouting-map-discovery-boundaries-2026-10-17) retains five distinct source flight-point/map-reveal contracts: Broken Isles, Draenor, Pandaria, Cataclysm-established maps and Northrend. Shared zero-payload self script3/source2s cast does not authorize cosmetic success, broad geography-to-node guesses or copied eligibility/progress. Actual authored discovery/fog/persistence remains unproved for each; no player-progress/data admission or new positive proof.
+
+## Source banner/wings/ride/metadata/scouting boundaries (2026-10-17)
+
+[Source290–294 matrix](../../toy-effects14-coverage.md#source290294-retained-banner-proof-and-wingsridemetadatascouting-gaps-2026-10-17) retains290's [earlier exact banner CPU proof](#toy-effects9-stationary-banners-and-sign-2026-10-10), not new native certification. Night Fae-OR-renown80 wings, outdoor Control4 rolling ride, unresolved187861 item metadata/seed action and flight-node/map-reveal script remain gaps.187861 has Toy/Item/on-use rows but no current ItemSparse/runtime item; no invented name, fallback definition or Flags2 meaning. No runtime/data admission or new positive proof.
+
+## Source critter/cooldown/stage/friends/containment boundaries (2026-10-17)
+
+[Source285–289 matrix](../../toy-effects14-coverage.md#source285289-crittercooldownstagefriendscontainment-boundaries-2026-10-17) retains Venthyr-OR-renown80 critter atonement, Nightborne-specific reduced recovery, controlled dance stage, three separate fuzzy-friend child triggers and Control4 self imprisonment gaps. Large base359469/173426 fields are not executable trigger records or guessed counts; existing containment103058 is not control/cleanup proof. No qualification/cooldown/payload substitution, runtime/data admission or new positive certificate.
+
+## Source controlled-cage/steward/realm/customizer boundaries (2026-10-17)
+
+[Source280–284 matrix](../../toy-effects14-coverage.md#source280284-controlled-cagestewardrealmcustomizer-boundaries-2026-10-17) keeps Control4 cage entry/link cleanup, pledged steward-companion transformation, invisible-body linked realm and complete Racer customization/control restoration gaps. Existing cage/steward/realm bodies are not new admission; source-selected invisible11686 must not be replaced with zero-weight15092. No ordinary self costume, inert racer or dropped child/control payload, runtime/data write or new positive proof. Lead472 owns240's package gate.
+
+## Source vesper/transport boundaries and pending offering-kit acceptance (2026-10-17)
+
+[Source275–279 matrix](../../toy-effects14-coverage.md#source275279-vespertransport-boundaries-and-pending-offering-kit-acceptance-2026-10-17) records three distinct mixed actor/caster Vesper identities/scales and Whistle fast/tired transport/area gaps.279 has an exact existing create-item product187342/count1/source2s/item30s contract; Test/spec04a47a43 and fixture fix62db4212 now assert actual learned use, persisted quantity, cast and ordinary recovery/reuse. Corrected targeted run remains pending, with no279 pass claimed; initial fixture mistakenly treated its two intended cooldown refusals as unexpected failures. Source naming differs from runtime item name, so retain the exact ID. No shared Vesper/transport shortcut, wrapping/gifting claim, new runtime/data admission or positive proof.
+
 ## Source mirror/fate/mixed-guise/shadow/dead-party boundaries (2026-10-17)
 
 [Source270–274 matrix](../../toy-effects14-coverage.md#source270274-mirrorfatemixed-guiseshadowdead-party-boundaries-2026-10-17) retains action-copy mirror/movement removal, authentic rune fate output, mixed Changeling transform/-45/312 payload, selected-player shadow child and recently-deceased party judgment gaps. Existing176673/two-model appearance is not ordinary-disguise acceptance for a mixed graph; target35 is party, not a generic enemy corpse. No actor/model/payload substitution, runtime/data admission or new positive proof.
@@ -20,15 +44,15 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Source stacking/death-view/minipet/chase/multi-slime boundaries (2026-10-17)
 
-[Source250–254 matrix](../../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17) retains coordinated steward stacking, death-only viewer spirit-healer replacement, slime-minipet party appearance, ground-laser chasing and exact four-slime source-pool lifecycle gaps. Authentic source models and generic aura/summon support do not establish these combined contracts. No actor/viewer/minipet/script admission, runtime/data write or new positive proof;240 remains the single tracked pending job.
+[Source250–254 matrix](../../toy-effects14-coverage.md#source250254-stackingdeath-viewminipetchasemulti-slime-boundaries-2026-10-17) retains coordinated steward stacking, death-only viewer spirit-healer replacement, slime-minipet party appearance, ground-laser chasing and exact four-slime source-pool lifecycle gaps. Authentic source models and generic aura/summon support do not establish these combined contracts. No actor/viewer/minipet/script admission, runtime/data write or new positive proof.
 
 ## Source critter/passenger/reflection boundaries and retained hearth/vesper proof (2026-10-17)
 
 [Source245–249 matrix](../../toy-effects14-coverage.md#source245249-critterpassengerreflection-gaps-and-retained-hearthvesper-proof-2026-10-17) retains authentic half-critter destruction, wounded-ally carrying and chained reflection-summon gaps. Stretcher properties5075 is Control0, with one zero-probability source model; no fabricated vehicle or arbitrary visible selection.246 linked cooking and249 stationary Vesper retain earlier exact CPU witnesses, not new per-toy native/audio proof. No runtime/data admission or repeated unchanged gate.
 
-## Pending Dominated helm and coin/launch/linked/covenant boundaries (2026-10-17)
+## Dominated helm targeted acceptance and coin/launch/linked/covenant boundaries (2026-10-17)
 
-[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-pending-dominated-helm-and-coinlaunchlinkedcovenant-gaps-2026-10-17) adds240 test/spec c8feec2e for existing175221/nine-display actual learning/ten-minute restoration/inherited recovery; tests/check remain pending under the capacity-gated job. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
+[Source240–244 matrix](../../toy-effects14-coverage.md#source240244-dominated-helm-targeted-acceptance-and-coinlaunchlinkedcovenant-gaps-2026-10-17) records240 test/spec c8feec2e actual175221/nine-display learning/ten-minute restoration/inherited recovery: two disguise/Oomgut tests/nine IDs pass91.61s after21m25s compile, with no compiler warnings and fmt/readability/diffcheck pass. Lead gate472 owns its separate package check and remains queued, not a confirmed pass; no own repeat. Selected-target coin action, Maw-advertised health-sacrifice/self-launch, linked Krexus child/cleanup and Kyrian pledge acceptance remain gaps. Existing175442/display99668 does not prove linked child behavior. No runtime/data admission or new native certificate.
 
 ## Source advice/riding/sentry/atonement boundaries (2026-10-17)
 

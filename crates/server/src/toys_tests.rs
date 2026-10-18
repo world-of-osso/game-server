@@ -32,6 +32,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_offering_kit_tests.rs"]
+mod offering_kit;
 #[path = "toys_oomgut_tests.rs"]
 mod oomgut;
 #[path = "toys_owner_flags_tests.rs"]
