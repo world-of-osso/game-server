@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Flame return-home acceptance and unnamed hat/ride/private-weather boundaries (2026-10-17)
+
+[Source480–484 matrix](../../toy-effects14-coverage.md#source480484-pending-flame-return-home-acceptance-and-unnamed-hatrideprivate-weather-boundaries-2026-10-17) adds acceptance-only2302a9e1b:209035/422284/source10s/shared2309 as18th saved-bind case, with Deepdweller sibling refusal; newer head beyond492 required. Missing ItemSparse208880 stays unnamed despite periodic drake-hat/Brewfest description. Gryphon Control5 and rolling Barrel Control0 still require actual ride/control, not scenery; actors absent. Dreamsurge331 is target-only weather488/density1 plus screen2078/7 and zone-weather restoration, not phase or screen-only behavior. Format/manual readability/diffcheck pass; runtime cursor87 proposal awaits approval, no production/data/native/own heavy duplicate.
+
 ## Gate492 cursor-flight RED; runtime proposal awaiting approval (2026-10-17)
 
 [Current RED/proposal matrix](../../toy-effects14-coverage.md#gate492-cursor-flight-red-runtime-proposal-awaiting-approval-2026-10-17) supersedes earlier492 queued/running entries:286passed/1failed/1ignored544.23s/client9/EXIT101/FMT0,2m14s/no warnings. Maiev actually appears before source flight,1/expected0. Lead-approvedde2724abe honestly ignores the whole16-row fixture with every assertion retained; later mini rows were not reached, no fix/aggregate/landing certificate.387 corrected regen,393Ohn'ir,402Soulshape and419Doomsday individually pass. Proposal awaiting approval adds87 to existing destination whitelist, backed by70448 effect32/87 roots/speeds and pinnedTCa352b1fa destination distance/speed/HasDst logic. New445/450/454/457/473/477 tests remain after492 and unverified; no production/data/new native change or own heavy duplicate.
