@@ -103,7 +103,20 @@ fn navigation_old_route_continues_pending_and_new_path_starts_at_latest_feet() {
 fn navigation_completion_sets_apply_in_entity_request_order() {
     let (mut nav, _dir) = fixture();
     for actor in [43, 41, 42] {
-        let _ = nav.advance(Entity::from_bits(actor), movement(start(), 140.0, 100.0));
+        let entity = Entity::from_bits(actor);
+        if actor == 42 {
+            let _ = nav.query_deferred(
+                entity,
+                0,
+                Goal::Approach(99),
+                ::navigation::worker::Query::Path {
+                    from: point(start()),
+                    to: Vec3::new(140.0, 0.2, 100.0),
+                },
+            );
+        } else {
+            let _ = nav.advance(entity, movement(start(), 140.0, 100.0));
+        }
     }
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut count = 0;
@@ -119,6 +132,103 @@ fn navigation_completion_sets_apply_in_entity_request_order() {
         std::thread::yield_now();
     }
     assert_eq!(count, 3);
+}
+
+#[test]
+fn navigation_probe_and_route_share_entity_without_starving_or_replacing_progress() {
+    let (mut nav, _dir) = fixture();
+    let entity = Entity::from_bits(41);
+    let _ = nav.advance(entity, movement(start(), 140.0, 100.0));
+    nav.drain_until_idle();
+    let probe = ::navigation::worker::Query::Path {
+        from: point(start()),
+        to: Vec3::new(120.0, 0.2, 100.0),
+    };
+    assert!(
+        nav.query_deferred(entity, 0, Goal::Approach(99), probe.clone())
+            .is_none()
+    );
+    let Step::Moved {
+        position: at,
+        reached,
+    } = nav.advance(entity, movement(start(), 100.0, 140.0))
+    else {
+        panic!("raw probe must retain published route progress");
+    };
+    assert!(at.x > 100.0);
+    assert!(!reached);
+    nav.drain_until_idle();
+    assert!(
+        matches!(
+            nav.query_deferred(entity, 0, Goal::Approach(99), probe),
+            Some(Ok(Some(::navigation::worker::Output::Path(_))))
+        ),
+        "route resubmission must not replace the probe"
+    );
+    let Step::Moved { position: at, .. } = nav.advance(entity, movement(at, 100.0, 140.0)) else {
+        panic!("old route continues during the new route request");
+    };
+    nav.drain_until_idle();
+    let Step::Moved { position, .. } = nav.advance(entity, movement(at, 100.0, 140.0)) else {
+        panic!("route must resume after probe");
+    };
+    assert!(position.z > at.z);
+}
+
+#[test]
+fn navigation_chase_cancel_does_not_strand_an_unrelated_probe() {
+    let (mut nav, _dir) = fixture();
+    let entity = Entity::from_bits(41);
+    let query = ::navigation::worker::Query::Collision {
+        from: point(start()),
+        to: Vec3::new(120.0, 0.2, 100.0),
+    };
+    assert!(
+        nav.query_deferred(entity, 0, Goal::FearCollision, query.clone())
+            .is_none()
+    );
+    nav.cancel_route(entity);
+    nav.drain_until_idle();
+    assert!(matches!(
+        nav.query_deferred(entity, 0, Goal::FearCollision, query),
+        Some(Ok(Some(::navigation::worker::Output::Collision(_))))
+    ));
+}
+
+#[test]
+fn navigation_player_probe_old_map_is_invalidated_before_publication() {
+    let (nav, _dir) = fixture();
+    let mut app = App::new();
+    app.add_plugins((MinimalPlugins, NavigationPlugin));
+    app.insert_resource(Time::<Fixed>::from_duration(Duration::from_millis(50)));
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        Duration::from_millis(50),
+    ));
+    app.update();
+    app.insert_resource(nav);
+    let actor = app
+        .world_mut()
+        .spawn((start(), crate::maps::InMap::continent(0)))
+        .id();
+    let _ = app.world_mut().resource_mut::<Navigation>().query_deferred(
+        actor,
+        0,
+        Goal::FearCollision,
+        ::navigation::worker::Query::Collision {
+            from: point(start()),
+            to: Vec3::new(120.0, 0.2, 100.0),
+        },
+    );
+    app.world_mut()
+        .entity_mut(actor)
+        .insert(crate::maps::InMap::continent(1));
+    app.update();
+    let nav = app.world().resource::<Navigation>();
+    assert!(!nav.route_pending(actor));
+    assert!(
+        nav.applied.is_empty(),
+        "non-creature old-map result must not publish"
+    );
 }
 
 #[test]
