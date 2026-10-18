@@ -1,4 +1,5 @@
 use super::*;
+use crate::persistence;
 use chrono::{TimeZone, Utc};
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use rusqlite::{Connection, OpenFlags};
@@ -63,6 +64,93 @@ fn prepare_real_catalog(h: &mut crate::bank_test_harness::Harness, now: i64) {
         .world_mut()
         .entity_mut(h.player)
         .insert(shared::components::Level(80));
+}
+
+#[test]
+fn adventure_guide_missing_component_keeps_queued_character_progress() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Guidepending").unwrap();
+    prepare_real_catalog(&mut h, 1790812900);
+    crate::persistence::load_achievements(h.db(), h.character_id);
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .remove::<PlayerAchievementState>();
+    let mut pending = PlayerAchievementState::default();
+    pending.earned_ids.insert(14782);
+    pending.earned_at.insert(14782, 100);
+    pending.criteria_progress.insert(162, 41);
+    let held = h.db().begin_write().unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    crate::achievement::save_monthly_contribution(
+        h.app.world().resource::<GameDatabase>(),
+        1,
+        h.character_id,
+        &pending,
+    );
+    let connection = h.connection;
+    let started = std::time::Instant::now();
+    settle_month_for_connection(h.app.world_mut(), connection).unwrap();
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
+    let loaded = h
+        .app
+        .world()
+        .get::<PlayerAchievementState>(h.player)
+        .unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "Guide reader waited: {elapsed:?}"
+    );
+    assert!(
+        loaded.earned_ids.contains(&14782),
+        "Guide replaced pending character progress with stale redb rows"
+    );
+    assert_eq!(loaded.criteria_progress[&162], 41);
+    let character = h.character_id;
+    drop(h);
+    let reopened = redb::Database::open(file.path()).unwrap();
+    let saved = persistence::load_achievements(&reopened, character);
+    assert!(saved.earned_ids.contains(&14782));
+    assert_eq!(saved.criteria_progress[&162], 41);
+}
+
+#[test]
+fn adventure_guide_month_refresh_never_waits_for_a_busy_durable_writer() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let now = Utc
+        .with_ymd_and_hms(2026, 10, 15, 16, 0, 0)
+        .single()
+        .unwrap()
+        .timestamp();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Guidesave").unwrap();
+    prepare_real_catalog(&mut h, now);
+    let connection = h.connection;
+    let baseline = settle_month_for_connection(h.app.world_mut(), connection).unwrap();
+    let held = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .db
+        .begin_write()
+        .unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        held.abort().unwrap();
+    });
+    let started = std::time::Instant::now();
+    let refreshed = settle_month_for_connection(h.app.world_mut(), connection).unwrap();
+    let elapsed = started.elapsed();
+    release.join().unwrap();
+    assert!(
+        elapsed < std::time::Duration::from_millis(50),
+        "Guide month settlement tick waited for writer: {elapsed:?}"
+    );
+    assert_eq!(refreshed, baseline);
 }
 
 #[test]

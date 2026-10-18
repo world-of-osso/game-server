@@ -220,9 +220,7 @@ fn entering_world_rescales_persisted_health_and_follows_spec_and_admin_level() {
     let Some((spells, classes)) = world_spell_data() else {
         return;
     };
-    let db = GameDatabase {
-        db: persistence::temp_database(),
-    };
+    let db = GameDatabase::new(persistence::temp_database());
     let (character_id, _) = persistence::create_character(&db.db, 3, "Uther", HUMAN, PALADIN)
         .expect("create character");
     // An existing character saved with the old 100-health placeholder, at half health.

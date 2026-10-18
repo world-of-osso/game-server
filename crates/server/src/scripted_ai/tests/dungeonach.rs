@@ -18,7 +18,7 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
-    app.insert_resource(crate::persistence::GameDatabase { db });
+    app.insert_resource(crate::persistence::GameDatabase::new(db));
     let (mut player, mut connection) =
         spawn_player(&mut app, COPY, [158.0, 116.0, -35.1, 0.0], 1001);
     let (other, other_connection) =

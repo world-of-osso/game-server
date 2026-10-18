@@ -695,7 +695,7 @@ fn wild_pet_battle_production_start_round_capture_and_account_persistence_bounda
     app.add_plugins(shared::ProtocolPlugin);
     app.finish();
     app.cleanup();
-    app.insert_resource(GameDatabase { db: database });
+    app.insert_resource(GameDatabase::new(database));
     app.insert_resource(crate::battle_pets::load_test_catalog());
     app.insert_resource(catalog());
     app.init_resource::<BattleIds>();
