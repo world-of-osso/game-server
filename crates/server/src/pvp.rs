@@ -13,6 +13,7 @@ use self::pvp_support::{
     connection_for_character, current_seconds, default_brackets, format_bg_queue_error,
     queue_label, send_pvp_error, send_pvp_update,
 };
+use crate::auras::ActiveAuras;
 use crate::auth::{Authenticated, InWorld};
 use crate::networking::PlayerLink;
 
@@ -561,7 +562,12 @@ fn process_battleground_queue_requests(
         ),
         With<Authenticated>,
     >,
-    mut players: Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
+    mut players: Query<(
+        &Level,
+        &shared::components::Player,
+        &mut PlayerPvpState,
+        Option<&ActiveAuras>,
+    )>,
     connections: Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     state: ResMut<PvpServerState>,
     groups: Res<crate::group::GroupRegistry>,
@@ -585,7 +591,7 @@ fn process_battleground_queue_requests(
                     &random_catalog,
                 )
             } else {
-                let Ok((level, _player, mut player_state)) = players.get_mut(link.0) else {
+                let Ok((level, _player, mut player_state, auras)) = players.get_mut(link.0) else {
                     send_pvp_error(conn_entity, &mut senders, "pvp unavailable for player");
                     continue;
                 };
@@ -595,6 +601,7 @@ fn process_battleground_queue_requests(
                     &[level.0],
                 );
                 eligibility
+                    .and_then(|()| validate_no_deserter(auras))
                     .and_then(|()| {
                         queue_for_battleground(
                             &mut player_state,
@@ -611,7 +618,7 @@ fn process_battleground_queue_requests(
             match result {
                 Ok((members, message)) => {
                     for (connection, player) in members {
-                        if let Ok((_level, _player, player_state)) = players.get(player) {
+                        if let Ok((_level, _player, player_state, _)) = players.get(player) {
                             send_pvp_update(
                                 connection,
                                 player_state,
@@ -624,7 +631,7 @@ fn process_battleground_queue_requests(
                     state.battleground_refill_pending = true;
                 }
                 Err(error) => {
-                    if let Ok((_level, _player, player_state)) = players.get(link.0) {
+                    if let Ok((_level, _player, player_state, _)) = players.get(link.0) {
                         send_pvp_update(conn_entity, player_state, None, Some(error), &mut senders);
                     } else {
                         send_pvp_error(conn_entity, &mut senders, "pvp unavailable for player");
@@ -672,6 +679,17 @@ fn process_pvp_dequeue_requests(
     }
 }
 
+/// TC a352b1fa Player.h2594; Handler147–153 and Group1243–1245.
+fn validate_no_deserter(auras: Option<&ActiveAuras>) -> Result<(), String> {
+    const DESERTER_SPELL_ID: u32 = 26013;
+    if auras.is_some_and(|auras| auras.has_spell(DESERTER_SPELL_ID)) {
+        return Err(format_bg_queue_error(
+            shared::battleground::BgQueueError::Deserter,
+        ));
+    }
+    Ok(())
+}
+
 fn queue_for_battleground(
     player_state: &mut PlayerPvpState,
     state: &mut PvpServerState,
@@ -702,7 +720,12 @@ fn queue_for_battleground(
 /// TC BattleGroundHandler.cpp189–226: only the leader queues the whole group.
 fn queue_battleground_party(
     groups: &crate::group::GroupRegistry,
-    players: &mut Query<(&Level, &shared::components::Player, &mut PlayerPvpState)>,
+    players: &mut Query<(
+        &Level,
+        &shared::components::Player,
+        &mut PlayerPvpState,
+        Option<&ActiveAuras>,
+    )>,
     connections: &Query<(Entity, &PlayerLink, &InWorld), With<Authenticated>>,
     state: &mut PvpServerState,
     leader: u64,
@@ -726,7 +749,7 @@ fn queue_battleground_party(
     for &character in &members {
         let (connection, player) = connection_for_character(connections, character)
             .ok_or_else(|| format!("group member {character} is not in world"))?;
-        let (level, _, player_state) = players
+        let (level, _, player_state, auras) = players
             .get(player)
             .map_err(|_| format!("pvp unavailable for group member {character}"))?;
         if player_state.battleground.is_some() || player_state.queue.is_some() {
@@ -734,6 +757,7 @@ fn queue_battleground_party(
                 "group member {character} is already queued or invited to PvP"
             ));
         }
+        validate_no_deserter(auras)?;
         levels.push(level.0);
         online.push((connection, player));
     }
@@ -743,7 +767,7 @@ fn queue_battleground_party(
         .join_group(leader, members, levels, battleground_id, now)
         .map_err(format_bg_queue_error)?;
     for &(_, player) in &online {
-        let (_, _, mut player_state) = players
+        let (_, _, mut player_state, _) = players
             .get_mut(player)
             .expect("validated online party member");
         player_state.queue = Some(PlayerPvpQueue::Battleground {
