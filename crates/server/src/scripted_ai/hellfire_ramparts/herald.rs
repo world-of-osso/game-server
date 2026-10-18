@@ -103,6 +103,7 @@ enum IntroPhase {
 pub(super) struct HeraldIntro {
     phase: IntroPhase,
     special_events: EventMap,
+    special_tick: std::time::Duration,
     boss: BossAi,
     last_fly_spell: u32,
 }
@@ -112,6 +113,7 @@ impl Default for HeraldIntro {
         Self {
             phase: IntroPhase::Waiting,
             special_events: EventMap::default(),
+            special_tick: std::time::Duration::ZERO,
             boss: BossAi::new(1),
             last_fly_spell: FLY_WEST,
         }
@@ -119,6 +121,13 @@ impl Default for HeraldIntro {
 }
 
 impl HeraldIntro {
+    fn advance_special_clock(&mut self, ctx: &Ctx) {
+        let now = ctx.world.resource::<Time>().elapsed();
+        self.special_events
+            .update((now - self.special_tick).as_millis() as u64);
+        self.special_tick = now;
+    }
+
     fn start_intro(&mut self, ctx: &mut Ctx) {
         ctx.talk(0);
         ctx.set_react_state(ReactState::Passive);
@@ -195,6 +204,9 @@ impl CreatureAi for HeraldIntro {
         match id {
             0 if self.phase == IntroPhase::MovingToCenter => {
                 self.phase = IntroPhase::AtCenter;
+                // Point movement precedes UpdateAI in this tick. Anchor to arrival,
+                // not the previous AI tick; never shorten the source1s by one frame.
+                self.advance_special_clock(ctx);
                 self.special_events.schedule(INTRO_2, 1_000);
             }
             1..=3 if self.phase == IntroPhase::Finished => {
@@ -217,7 +229,7 @@ impl CreatureAi for HeraldIntro {
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
-        self.special_events.update(u64::from(diff_ms));
+        self.advance_special_clock(ctx);
         while let Some(event) = self.special_events.execute_event() {
             match event {
                 INTRO_1 => self.start_intro(ctx),
