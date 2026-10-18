@@ -2,11 +2,12 @@ use super::effects2_tests::use_ability;
 use super::*;
 
 const TEAM_WAVES: &[(u32, i32)] = &[(319, 42), (2309, 84)];
+const TEAM_DAMAGE: &[(u32, i32)] = &[(319, 42), (2309, 84), (2523, 90)];
 
 #[test]
-fn pet_battle_team_wave_hits_each_enemy_for_all_active_slots() {
+fn pet_battle_team_damage_hits_each_enemy_for_all_active_slots() {
     let catalog = catalog();
-    for &(ability, amount) in TEAM_WAVES {
+    for &(ability, amount) in TEAM_DAMAGE {
         for ally_active in 0..3 {
             for enemy_active in 0..3 {
                 let mut initial = battle(&catalog, 7, 7, [ability, 110, 123]);
@@ -28,9 +29,9 @@ fn pet_battle_team_wave_hits_each_enemy_for_all_active_slots() {
 }
 
 #[test]
-fn pet_battle_team_wave_individual_misses_preserve_other_enemy_hits() {
+fn pet_battle_team_damage_individual_misses_preserve_other_enemy_hits() {
     let catalog = catalog();
-    for &(ability, amount) in TEAM_WAVES {
+    for &(ability, amount) in TEAM_DAMAGE {
         for active in 0..3 {
             for missed in 0..3 {
                 let mut initial = battle(&catalog, 7, 7, [ability, 110, 123]);
@@ -57,9 +58,9 @@ fn pet_battle_team_wave_individual_misses_preserve_other_enemy_hits() {
 }
 
 #[test]
-fn pet_battle_team_wave_dead_reserve_stays_dead_without_retargeting() {
+fn pet_battle_team_damage_dead_reserve_stays_dead_without_retargeting() {
     let catalog = catalog();
-    for &(ability, amount) in TEAM_WAVES {
+    for &(ability, amount) in TEAM_DAMAGE {
         let mut initial = battle(&catalog, 7, 7, [ability, 110, 123]);
         initial.teams[1].active = 1;
         initial.teams[1].pets[0].health = 0;
@@ -76,6 +77,34 @@ fn pet_battle_team_wave_dead_reserve_stays_dead_without_retargeting() {
             !events
                 .iter()
                 .any(|event| matches!(event, Event::Revived(_)))
+        );
+    }
+}
+
+#[test]
+fn pet_battle_team_damage_shadow_bolt_volley_uses_authored_thirty_percent_variance() {
+    let catalog = catalog();
+    for (draw, amount) in [(0, 76), (999_999, 103)] {
+        let mut initial = battle(&catalog, 7, 7, [2523, 110, 123]);
+        initial.teams[0].pets[0]
+            .states
+            .insert(catalog.state_id("Stat_CritChance").unwrap(), 0);
+        let (state, events) = initial
+            .step(
+                &catalog,
+                [Action::Ability(2523), Action::Pass],
+                &mut Fixed(draw),
+            )
+            .unwrap();
+        // Base90 with width30 spans76..103; default width20 would give81..98.
+        assert_eq!(damage(&events), [amount; 3]);
+        assert_eq!(
+            state.teams[1].pets.each_ref().map(|pet| pet.health),
+            [10000 - amount; 3]
+        );
+        assert_eq!(
+            state.teams[0].pets.each_ref().map(|pet| pet.health),
+            [10000; 3]
         );
     }
 }
