@@ -1,3 +1,7 @@
+## 2026-10-18 — MaxCount landed; expanded70448 hearthstone RED
+
+[Current landing/batch1 matrix](../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-red-2026-10-18): explicit lead mc548c receipt lands MaxCount and retained three-item family proof; earlier pending labels are historical. Two newly scoped hearthstones have real source dependencies but no Toy membership: actual learned-use RED0/2/56.76s. Selected producer3808fe58f preserves unrelated rows, RED0/2→GREEN2/0; copied-world diff is twoToy INSERTs,16 local-CASC audio files authenticated. Lead canonical world/audio publication precedes CPU GREEN; no native/full1166 claim.
+
 ## 2026-10-18 — Post-guild merge codec and MaxCount targets GREEN
 
 [Exact current matrix](../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): after explicit gr567 landing, protocol029a927/server41856b72b/enginef26cc691e merged; protocola2b07a6 wire2/0+combined-discriminants2/0, server33c9d2eb2 five+MaxCount17/0/47.77s, engine6c00abbf4 dispatch1/0. Old tags preserved/new ItemMaxCount21 and SetMemberRank13 bincode+JSON round-trip; both wiki-index sides retained. No source data/weights/oracle change or broad/landing/native/full1166 claim; lead mc548b rerun pending.

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## mc548c landing and expanded70448 hearthstone admission (2026-10-18)
+
+[Current landing and batch1 matrix](../../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-red-2026-10-18): lead confirms coordinated MaxCount landing and merged-engine1604/0; earlier pending labels below are historical. Expanded scope starts with two70448 hearthstones whose dependencies already exist but Toy membership is missing. Selected producer3808fe58f preserves unrelated rows; authentic copied-world diff has only twoToy INSERTs. Producer RED0/2→GREEN2/0; actual learned-use CPU RED0/2 before lead publication. Sixteen source-authenticated local audio files prepared; canonical world/audio publication, CPU GREEN and native proof pending. Historical Full1166 denominator and5efec9c6f families preserved.
+
 ## Post-guild coordinated merge target proof (2026-10-18)
 
 [Current exact merge/codec/behavior matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): landed guild masters merged into MaxCount; protocola2b07a6 passes2 wire+2 discriminant targets, stable prior tags/new21+13; server33c9d2eb2 passes17/0 including all five regressions and MaxCount controls; engine6c00abbf4 dispatch1/0. Both engine wiki-index entries retained. Final broad mc548b/check/fmt, coordinated landing/native/full1166 remain lead-owned/pending.

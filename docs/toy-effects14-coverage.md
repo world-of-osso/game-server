@@ -1,5 +1,20 @@
 # Toy effects14 — active whole-goal coverage
 
+## mc548c MaxCount landed; expanded70448 hearthstone batch RED (2026-10-18)
+
+Lead explicitly reports every mc548c stage passed and coordinated landing: protocola2b07a6, server4531b5842, enginedf9adafca; merged-engine whole ui-model/network1604 passed/0 failed. The Doomsday MaxCount repair and retained three-item5efec9c6f Saptor/Idol/Badge families are landed, not merely candidate merges. Earlier pending labels below are historical. Native error pixels and all1166 gameplay acceptance remain unproved.
+
+User-approved expanded scope adds ten build70448 source-only toys outside the historical Full1166 denominator. Batch1 is only Hiveborne281136/1310234 and Shadeweaver281615/1311934. Their authentic Item/ItemEffect/Spell/content dependencies already exist; missing Toy membership is the actual admission boundary. No new runtime handler, source weights or other eight Toy memberships are changed.
+
+| Batch1 capability | Current proof |
+|---|---|
+| Selected Toy producer |3808fe58f adds repeatable `--item-id` selection; real source rows, idempotence/unrelated-row preservation and missing-source no-mutation controls: RED0/2→GREEN2/0. [Command/publication boundary](toy-runtime-data.md#selected-toy-membership-additions). |
+| Real learned hearth use |6f24d100e adds two identities using unchanged persisted-bind/ten-second-cast/shared2309 helper. Canonical missing-membership RED0/2 in56.76s; GREEN waits for lead publication. |
+| Private copied world |Source-exact import resolves2/2 with zero unresolved; sqldiff contains only Toy1767/281615 and1780/281136 INSERTs. Canonical publication is lead-owned. |
+| Missing audio |16 local-CASC wow70448/key88d5e8ef05ec5a8446cdec93d142d7c6 files extracted; resolution content-key MD5/Ogg headers verified,505864bytes. Private fragment prepared; publication/native playback pending. |
+
+Evidence: continuation artifacts `extras-hearth-{active-goal,fragment,producer-red-result,producer-green-result,cpu-red-result,audio-fragment}.json`; private `data/extras-hearth70448-proof/{fragment.sql,audio-fragment.json}` under game-engine-s12. GREEN must use canonical after the lead's world/audio publication receipt; no private pointer substitution. Native visuals/audio, cross-map travel and natural thirty-minute recharge remain separate. [Contract](specs/toys.md#expanded-build70448-hearthstones).
+
 ## Post-guild merge: codec and bounded MaxCount proof GREEN (2026-10-18)
 
 After the explicit gr567 landing announcement, merged protocol029a927, server41856b72b and enginef26cc691e into the three MaxCount branches. Engine's sole wiki-index conflict keeps both sides' entries; no enum/runtime conflict was resolved by dropping either feature.
