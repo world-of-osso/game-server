@@ -281,7 +281,8 @@ fn dummy18_obliterate_selects_native_physical_and_frost_weapon_children() {
         assert_eq!(
             ids,
             if dual {
-                vec![222024, 66198, 1264082, 1264083]
+                // Native effect64 delays group10ms children before20ms children.
+                vec![222024, 1264082, 66198, 1264083]
             } else {
                 vec![325461, 1264084]
             }

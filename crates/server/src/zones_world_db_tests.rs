@@ -82,6 +82,7 @@ fn patrol_app_with(guids: &'static [u32], extra: impl FnOnce(&mut App)) -> App {
                 0,
                 false,
                 spawns,
+                Some(&mut crate::test_data::ground_map()),
             );
             commands.insert_resource(Spawned(spawned));
         },
@@ -100,8 +101,13 @@ fn zephras_startup_spawns_imported_givers_on_the_hosted_continent() {
     app.add_systems(
         PostStartup,
         |mut commands: Commands, data: Res<WorldData>| {
-            let count =
-                spawn_map_creatures(&mut commands, &data, MapContent::continent(2991), false);
+            let count = spawn_map_creatures(
+                &mut commands,
+                &data,
+                MapContent::continent(2991),
+                false,
+                Some(&mut crate::test_data::ground_map()),
+            );
             assert_eq!(count, 1662, "hosted Zephras must not open empty");
         },
     );
@@ -728,6 +734,7 @@ fn spawn_scaling_entries(entries: &[u32]) -> (World, HashMap<u32, Entity>) {
             0,
             false,
             spawns.iter().copied(),
+            Some(&mut crate::test_data::ground_map()),
         );
         for spawn in spawns {
             entities.insert(spawn.template_entry, spawned[&spawn.guid]);

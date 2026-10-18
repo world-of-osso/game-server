@@ -24,6 +24,7 @@ pub(crate) struct LoginMaps<'w> {
     time: Res<'w, Time>,
     clock: Option<Res<'w, super::ServerClock>>,
     world_data: Option<Res<'w, WorldData>>,
+    ground: Option<ResMut<'w, crate::ground::GroundMap>>,
     objects: Option<Res<'w, GameObjectSpawns>>,
     housing: Option<Res<'w, crate::housing::HousingAvailability>>,
     database: Option<Res<'w, crate::persistence::GameDatabase>>,
@@ -209,7 +210,7 @@ impl LoginMaps<'_> {
             .then_some(resolved)
     }
 
-    fn spawn_if_created(&self, commands: &mut Commands, resolved: ResolvedMap) {
+    fn spawn_if_created(&mut self, commands: &mut Commands, resolved: ResolvedMap) {
         if !resolved.created {
             return;
         }
@@ -219,6 +220,7 @@ impl LoginMaps<'_> {
             self.world_data.as_deref(),
             self.objects.as_deref(),
             content,
+            self.ground.as_deref_mut(),
         );
         if let Some(housing) = &self.housing {
             crate::housing::spawn_neighborhood_objects(commands, housing, resolved.map);
