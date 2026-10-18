@@ -5,12 +5,12 @@ use crate::spell_cast::test_harness::{Harness, harness};
 use shared::casting::CastState;
 use shared::protocol::CombatLogKind;
 
-const GUARDIAN_SPIRIT: u32 = 47_788;
-const GUARDIAN_HEAL: u32 = 48_153;
+pub(super) const GUARDIAN_SPIRIT: u32 = 47_788;
+pub(super) const GUARDIAN_HEAL: u32 = 48_153;
 /// Native single-effect Fire damage800, no coefficient/variance/power cost.
-const ANNIHILATION: u32 = 209_140;
+pub(super) const ANNIHILATION: u32 = 209_140;
 /// Native single-effect Shadow damage1000, instant/no coefficient/variance/cost.
-const DEATH_BY_DARKNESS: u32 = 314_616;
+pub(super) const DEATH_BY_DARKNESS: u32 = 314_616;
 
 #[test]
 fn guardian_spirit_native_shared_ardent_reports_actual_post_rescue_damage() {
@@ -19,21 +19,21 @@ fn guardian_spirit_native_shared_ardent_reports_actual_post_rescue_damage() {
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(has_aura(h.app.world(), h.caster, 31_850));
-    cast_native_attack(&mut h, ANNIHILATION);
-    // Ardent's native30% damage reduction:800→560, leaving440.
-    assert_eq!(h.health(h.caster), 440.0);
+    // Unlike Annihilation's native attr4 0x100, this spell respects damage-taken modifiers.
+    cast_native_attack(&mut h, DEATH_BY_DARKNESS);
+    assert_eq!(h.health(h.caster), 300.0);
     cast_native_attack(&mut h, DEATH_BY_DARKNESS);
     assert_eq!(h.health(h.caster), 200.0);
-    // Native target floor20%: the700 hit loses240 health, absorbing460.
+    // Native target floor20%: the second700 hit loses100 health, absorbing600.
     let hit = h
         .inbox
         .log
         .iter()
-        .find(|event| {
+        .rfind(|event| {
             event.kind == CombatLogKind::Damage && event.spell_id == Some(DEATH_BY_DARKNESS)
         })
         .unwrap();
-    assert_eq!((hit.amount, hit.absorbed, hit.overflow), (240, 460, 0));
+    assert_eq!((hit.amount, hit.absorbed, hit.overflow), (100, 600, 0));
     assert!(!has_aura(h.app.world(), h.caster, 31_850));
     assert!(
         !h.inbox
@@ -43,7 +43,7 @@ fn guardian_spirit_native_shared_ardent_reports_actual_post_rescue_damage() {
     );
 }
 
-fn fixture() -> Harness {
+pub(super) fn fixture() -> Harness {
     harness(
         Vec::new(),
         &[
@@ -57,7 +57,7 @@ fn fixture() -> Harness {
     .unwrap()
 }
 
-fn cast_native_attack(h: &mut Harness, spell: u32) {
+pub(super) fn cast_native_attack(h: &mut Harness, spell: u32) {
     crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, spell, Some(h.caster), false)
         .unwrap();
     let frame_seconds = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
@@ -67,7 +67,7 @@ fn cast_native_attack(h: &mut Harness, spell: u32) {
     h.advance(frames + 3);
 }
 
-fn cast_guardian(h: &mut Harness) {
+pub(super) fn cast_guardian(h: &mut Harness) {
     h.cast_and_deliver(GUARDIAN_SPIRIT, Some(h.caster));
     h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
