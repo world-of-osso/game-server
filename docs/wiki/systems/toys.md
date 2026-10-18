@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Maiev missile-child acceptance and cloak/crystal/BG-flare/challenge-dummy boundaries (2026-10-17)
+
+[Source405–409 matrix](../../toy-effects14-coverage.md#source405409-pending-maiev-missile-child-acceptance-and-cloakcrystalbg-flarechallenge-dummy-boundaries-2026-10-17) adds acceptance-only58a5fabd1:201931/398485 speed12 to valid12yd cursor, parent-before-child395720 event, one199047/112284/scale1 actor, horizontal destination/owner/map/non-pet/non-following/stationary/compressed300s expiry. Ten stationary-source cases now await future covering head; format/manual readability/diffcheck pass, no full-height/native-tier/wall-lifetime claim. Targeted fading cloak and unaudited crystal, BG-only faction/area180s flare lock versus120s ordinary recovery, and outdoor opposing-role damage/heal dummy remain exact gaps; no generic script/costume/dummy substitutes or runtime/data admission.
+
 ## Pending Soulshape recovery/refresh acceptance and control/music/gang/holiday boundaries (2026-10-17)
 
 [Source400–404 matrix](../../toy-effects14-coverage.md#source400404-pending-soulshape-recoveryrefresh-acceptance-and-controlmusicgangholiday-boundaries-2026-10-17) adds acceptance-only1f028916a: actual200960/392700/100634/source10-minute aura with five-minute recovery, near-threshold refusal/natural reuse while active/refresh/ordinary restoration and exact intentional replies. AURA_UNIQUE is clear and existing stacking refreshes duration; no manual reset. Format/manual readability/diffcheck pass, future covering head required beyond484. Personal Soulshape selection/native behavior stays separate. Control3 boat plus player restrictions, mixed song/no-actions/mount state, linked gang follow/attack and holiday-specific dance recovery remain gaps; no scenery, music-only or static-actor substitutes/runtime/data/new admission.
