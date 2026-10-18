@@ -46,7 +46,8 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - [x] Minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import integrated with master b8b6c2f9d and landed netdelta;13 core controls pass within28 affected controls.
 - [x] Periodic/account/Guide/Tender and Trading Post request ordering, crash/reopen and migration controls pass; corrected20-ACK same-frame/due-save/reopen control passes separately.
 - [ ] Gate441 found one real timing failure (news fixture0vs1) and prompted a production-reader audit. Four runtime ordering REDs prove stale guild request, lost subscriber notification, blocked raw login initialization and stale Guide overwrite; all four now GREEN. Reader coverage22 controls plus the corrected original atomic-news control passes with0ignored; independent targeted re-gate/check/fmt pending.
-- [ ] Post-landing11-peer plain-release acceptance.
+- [x] Post-landing11-peer plain-release90s bounded dummy acceptance:20.0Hz,15.575ms mean/69.9ms maximum, not controlled FIFO-only A/B or hostile-AI/cold-tail proof. See [receipt summary](../wiki/investigations/server-tick-lag.md#cold-selection-hydration-and-password-tokens).
+- [ ] Cold-hydration/password-token follow-up:93 distinct targeted controls covered82+11 with0ignored; current lead gate/check pending.
 - [ ] Exact PvP release20 stall attribution; ACK handler has no direct character save. Other synchronous callers are not inferred to be its cause.
 
 ## Out of scope
