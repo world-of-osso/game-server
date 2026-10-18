@@ -1,3 +1,7 @@
+## 2026-10-18 — Pursuit proof corrected at new-pack boundary
+
+[Native diagnostic and correction](investigations/follower-data.md#run-local-tank-observations--2026-10-18): c547 movement4 gives3PASS1FAIL;79aef first-drift route7 is wholly inside14 already-engaged sources, so freezing it would wrongly block defense. Lead-approved50f035 checks an actual unengaged-route tick and next fixed movement instead; corrected case and pacing3 remain unexecuted/capacity-blocked.
+
 ## 2026-10-18 — Production pursuit admission seam; owner-paced policy
 
 [Exact boundary/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): accepted admission10 remains aae/P029; production no-injected-position7a258 RED moves at tick2. Production route/source/budget refusal0e9 plus defense control and owner-paced idle/active policy fixtures are committed, targeted execution capacity-blocked. No goal-generation, positioning, interrupt activation or clear acceptance.
