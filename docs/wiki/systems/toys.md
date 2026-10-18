@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Festive friend/growth/racial-homebind boundaries and retained interactive banner (2026-10-17)
+
+[Source485–489 matrix](../../toy-effects14-coverage.md#source485489-festive-friendgrowthracial-homebind-boundaries-and-retained-interactive-banner-2026-10-17) preserves linked Festive Pepe114425/scale0.2/probability0, unaudited three-friend and rapid-growth presentation, and explicitly Draenei-only Hologem despite source ItemSparse race halves-1/on-use condition0. Human homebind acceptance cannot close racial qualification. Chilling Banner is type22/Data0→424023, with retained actual object-use/3600s caster aura/unchanged-health/model CPU witness, not inert type5 or native/access/expiry proof. No further runtime/data/own heavy duplicate;4964df7af2e6 queued with missile filters/fmt.
+
 ## Approved cursor-flight fix; complete16-row local GREEN (2026-10-17)
 
 [Current approved fix/proof matrix](../../toy-effects14-coverage.md#approved-cursor-flight-fix-complete16-row-local-green-2026-10-17) supersedes pending approval/ignored492 state below. Lead-approved8687f84c5 adds only87 to the existing destination whitelist/comment and removes honest ignore; every assertion/16 identities retained. Authorized native helper PASS1/0failed/0ignored47.72s, compile3m43s/no warnings: all seven minis preserve source flight/pre-actor-zero/post-actor-one plus existing actor/placement/state/expiry semantics, alongside old nine scenery rows. Format/fmtcheck/manual readability/diffcheck and exact pushed readback pass. Other new tests compiled but filtered, not behaviorally certified. Successor492 aggregate/landing remain lead-owned/pending; no deployment/native/full-height/wall-time/recovery certificate or further own heavy duplicate. Only explicitly approved runtime exception; data/producer/engine/protocol unchanged.
