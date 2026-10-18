@@ -827,7 +827,12 @@ fn threat_current_victim_lazy_clear_returns_none_before_periodic_deadline() {
     run(&mut app, 1);
     assert!(
         app.world().get::<CurrentVictim>(creature).is_none(),
-        "evade clears the reference and deadline"
+        "evade clears the reference and deadline; state={:?}, current={:?}, entries={:?}",
+        state(&app, creature),
+        app.world()
+            .get::<CurrentVictim>(creature)
+            .map(|reference| reference.target),
+        app.world().get::<ThreatTable>(creature).unwrap().entries()
     );
 }
 
