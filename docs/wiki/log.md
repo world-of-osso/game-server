@@ -1,3 +1,7 @@
+## 2026-10-18 — Rewritten tank checkpoint and native facing integration
+
+[Exact proof/limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6c0aa→4df7 reset/masterac365 merge140879; pre-merge12PASS133.49s,99endpoint rows with only20375689 lower-bound allowance. Upstream melee facing requires shared chances-helper/forecast front-arc plumbing; numeric proof stays historical. Full authored-point routes20375689 only and current native/pacing verification pending; no policy/stat/kit changes.
+
 ## 2026-10-18 — Endpoint affordability proof prepared
 
 [Proof and limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18): lead approves origin-independent endpoint bounds only at measuredHPS0; explicit positive-HPS refusal, same native arithmetic and complete target table. Only passing endpoints require full authored-point routes. Inline pacing diagnostics removed; native execution/report and eligibility GREEN pending. No budget/stat/kit changes or global affordability claim.

@@ -77,6 +77,43 @@ pub(super) fn spawn_source_actor(
 }
 
 #[test]
+fn tank_pull_forecast_uses_native_front_arc_after_master_facing_integration() {
+    let (mut h, tank, enemy) = source_fixture(46249);
+    let target = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(tank)
+        .unwrap();
+    let source = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(enemy)
+        .unwrap();
+    let towards_source = (target.z - source.z).atan2(source.x - target.x);
+    let rotation = shared::components::Rotation {
+        x: 0.0,
+        y: towards_source + std::f32::consts::FRAC_PI_2,
+        z: 0.0,
+    };
+    h.app.world_mut().entity_mut(tank).insert(rotation);
+    let front = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(shared::components::Rotation {
+            y: rotation.y + std::f32::consts::PI,
+            ..rotation
+        });
+    let behind = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    assert!(
+        behind.expected_hit > front.expected_hit,
+        "native NPC behind avoidance must lose front-only parry/block: front={front:?}, behind={behind:?}"
+    );
+    assert_eq!(front.largest_hit, behind.largest_hit);
+    assert_eq!(front.interval_secs, behind.interval_secs);
+}
+
+#[test]
 fn tank_pull_forecast_reads_generic_source_stats_and_actual_swing_timer_without_mutation() {
     let (mut h, tank, enemy) = source_fixture(46249);
     let mut attack = AutoAttack::new(tank);

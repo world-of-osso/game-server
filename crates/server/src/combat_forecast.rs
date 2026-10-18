@@ -185,7 +185,19 @@ fn read_swing_projection(
         target_auras,
     ));
     let flags = world.get::<crate::zones::CreatureFlagsExtra>(tank);
-    let chances = read_outcome_chances(&attacker, victim, flags, avoids, target_auras);
+    let target_position = crate::spell_cast::targets::position(world, tank)
+        .ok_or("forecast tank lacks native position")?;
+    let source_position = Vec3::new(
+        attacker.position.x,
+        attacker.position.y,
+        attacker.position.z,
+    );
+    let in_front = crate::spell_cast::targets::in_front_arc(
+        target_position,
+        source_position,
+        crate::spell_cast::targets::orientation(world, tank),
+    );
+    let chances = read_outcome_chances(&attacker, victim, flags, avoids, in_front, target_auras);
     let armor = read_armor(world, tank, &source_scaling, &target_scaling);
     let blocked_pct = blocked_pct(
         victim,

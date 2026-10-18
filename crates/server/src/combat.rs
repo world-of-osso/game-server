@@ -956,7 +956,7 @@ fn roll_outcome(
     in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> MeleeOutcome {
-    let chances = read_outcome_chances(attacker, victim, flags, can_avoid, target_auras);
+    let chances = read_outcome_chances(attacker, victim, flags, can_avoid, in_front, target_auras);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -968,6 +968,7 @@ fn read_outcome_chances(
     victim: Victim,
     flags: Option<&crate::zones::CreatureFlagsExtra>,
     can_avoid: bool,
+    in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> melee::MeleeChances {
     let swinger = match (attacker.creature, attacker.stats) {
