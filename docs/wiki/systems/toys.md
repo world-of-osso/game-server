@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Seasonal banners and unnamed season-four metadata gap (2026-10-17)
+
+[Source565–569 matrix](../../toy-effects14-coverage.md#source565569-existing-seasonal-banners-and-unnamed-season-four-metadata-gap-2026-10-17) retains existing Tempered/Prized/Unbound/Forged exact display/owner/map/faction0/front2yd/stationary60s behavior cases.232304 remains a Toy identity with literal `[Season]` description but missing70448 ItemSparse/runtime item/233147 creature-model; no guessed seasonal name or sibling art. All source roots use property64/600s recovery. No new pass/native/reward-eligibility/recharge certificate, runtime/data or own heavy duplicate.
+
 ## Retained balloons/victory and random-delve/recipient-spotlight/local-disguise boundaries (2026-10-17)
 
 [Source560–564 matrix](../../toy-effects14-coverage.md#source560564-retained-balloonsvictory-and-random-delverecipient-spotlightlocal-disguise-boundaries-2026-10-17) records exact local70448 metadata. Balloon source actor and Explosive Victory caster cases already exist; no duplicate fixture or expanded caster count. Random Bountiful Delve travel/completion reset, actual target57 party-member Spotlight and Undermine-only aura243/misc35 consequences remain gaps, not static bot/self aura/body transform. Source232267 model absent;231372 retains both model weights/scales.498 remains landed; no new behavioral/native proof, runtime/data or own heavy duplicate.

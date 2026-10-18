@@ -1,5 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source565–569: existing seasonal banners and unnamed season-four metadata gap (2026-10-17)
+
+All five are authorized runtime Toy identities. Local70448/key88d5e8ef05ec5a8446cdec93d142d7c6 gives each instant target47 summon28/base1/property64/Control0/Title0/flags0, radius7=2yd,60000ms lifetime and inherited600000ms recovery. No new code/proof, source import or own heavy duplicate.
+
+| Source row | Exact identity and retained boundary |
+|---|---|
+|565 Tempered Banner of the Algari |232301/469612→233144/display123650. Existing source-destination/expiry fixture retained. |
+|566 Prized Banner of the Algari |232302/469613→233145/display123654. Existing source-destination/expiry fixture retained. |
+|567 Unbound Banner of the Algari |232303/469614→233146/display123655. Existing source-destination/expiry fixture retained. |
+|568 unnamed232304 |469615→233147; Toy source labels Season4 and spell description literally `[Season]`.70448 ItemSparse row, runtime content_item and creature/model233147 are absent. No invented display/name/reward, substitution from adjacent banner or removal from1166; exact missing metadata/actor contract remains open. |
+|569 Forged Champion's Prestigious Banner |232305/469616→233148/display123656. Existing source-destination/expiry fixture retained. |
+
+Existing `toyfx9_banners_and_sign_learn_spawn_at_source_destinations_and_expire` includes565–567/569: real bag learning/UseToy, exactly one actor with exact display/owner/map/faction0,2yd front placement, no FollowOwner, stationary after caster moves and ordinary60s removal. Those four runtime models have scale1/weight1, empty AI/script/MovementType0. This inspection adds no behavioral pass, native seasonal art/eligibility certificate or natural ten-minute recovery proof; wrong-faction controls in the shared fixture belong only to163986/163987, not these four.498 remains landed/master8707ac0ea; newer acceptance scopes still await covering gate.
+
+Evidence: private `rows565-569-{readonly-source,action-source,runtime-action-source,active-goal}.json`; literal source radius7 join.149865 Tea Set untouched.
+
 ## Source560–564: retained balloons/victory and random-delve/recipient-spotlight/local-disguise boundaries (2026-10-17)
 
 Read-only block uses local70448/key88d5e8ef05ec5a8446cdec93d142d7c6, not a relabelled70391 receipt. All five are existing runtime Toy identities. No new acceptance/runtime/data/native proof or own heavy duplicate;498 remains landed/master8707ac0ea and post498 expansions remain pending.
