@@ -50,6 +50,18 @@ fn assert_native_jump(spell_id: u32, parameter: u32, wow_destination: Vec3) {
     let (x, y, z) =
         crate::terrain_height::wow_to_bevy(wow_destination.x, wow_destination.y, wow_destination.z);
     let destination = Vec3::new(x, y, z);
+    let planned = crate::spell_cast::targets::effect_dest(
+        h.app.world(),
+        telash,
+        None,
+        effect,
+        Some(destination.to_array()),
+    );
+    assert_eq!(
+        planned.map(|dest| dest.position),
+        Some(destination),
+        "source SpellMgr387981/388082 exact-destination prerequisite, not a motion RED"
+    );
     let from = position(&h, telash);
     let distance = from.distance(destination);
     assert!(
