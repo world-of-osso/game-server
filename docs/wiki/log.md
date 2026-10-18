@@ -1,6 +1,6 @@
 ## 2026-10-17 — Omor repeat measurement boundary
 
-[Dispatch versus completion](systems/boss-scripts.md#omor-dispatch-clocks-and-pushback--2026-10-17): gate4851694PASS/1FAIL5.75s Go gap; instrumented native damage adds500ms pushback. Pre-queued master A/B independently shows the same completion-gap compression, so this is a pre-existing measurement flaw, not established queued-specific timer regression. Fixture uses actual dispatch observations with identical repeat bounds; first-Go/hound/shield/credit checks unchanged, deterministic native-pushback control added. Corrected targeted proof pending; no production/RNG/clock/tolerance changes.
+[Dispatch versus completion](systems/boss-scripts.md#omor-dispatch-clocks-and-pushback--2026-10-17): gate4851694PASS/1FAIL5.75s Go gap; instrumented native damage adds500ms pushback. Pre-queued master A/B independently shows the same completion-gap compression, so this is a pre-existing measurement flaw, not established queued-specific timer regression. Fixture uses actual dispatch observations with identical repeat bounds; first-Go/hound/credit and shield once/aura/threshold checks retained. Explicitly approved Shield0.2s allowance is anchored after its actual blocking cast completes, not an un-pushed3s maximum; deterministic native-pushback/shield-release control added. Corrected targeted proof pending; no production/RNG/clock/tolerance changes.
 
 ## 2026-10-17 — Queued64 source publication and Execute override
 

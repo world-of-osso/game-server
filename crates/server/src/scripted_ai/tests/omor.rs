@@ -836,6 +836,7 @@ fn encounter_coverage_omor_native_pushback_delays_completion_not_dispatch() {
             break;
         }
     }
+    h.advance(0.2); // Let the zero-delay shield event dispatch after the blocked cast.
     let observation = h
         .app
         .world()
@@ -857,6 +858,26 @@ fn encounter_coverage_omor_native_pushback_delays_completion_not_dispatch() {
         (3.5..=3.7).contains(&latency),
         "native3s cast plus500ms pushback: latency={latency}"
     );
+    let shield = observation
+        .entries
+        .iter()
+        .find(|cast| cast.spell == 31901)
+        .unwrap();
+    assert_eq!(shield.result, Ok(()));
+    assert!(shield.time >= 1.0, "shield follows actual threshold damage");
+    assert!(
+        (0.0..=0.2).contains(&(shield.time - completion)),
+        "shield dispatch follows actual pushed-back completion"
+    );
+    assert!(h.has_aura(boss, 31901));
+    assert_eq!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .filter(|go| go.caster == boss.to_bits() && go.spell_id == 31901)
+            .count(),
+        1
+    );
 }
 
 #[test]
@@ -875,8 +896,27 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
     let mut casts = Vec::new();
     let mut shield_seen = false;
     let mut treacherous_seen = false;
+    let mut shield_blocker = None;
     for tick in 1..=1400 {
         if tick == 801 {
+            let blocking_spell = h
+                .app
+                .world()
+                .get::<shared::components::CastState>(boss)
+                .map(|cast| cast.spell_id);
+            shield_blocker = blocking_spell.map(|spell| {
+                let observation = h
+                    .app
+                    .world()
+                    .resource::<super::super::cast_admission::CastAdmissions>();
+                let dispatch = observation
+                    .entries
+                    .iter()
+                    .rev()
+                    .find(|cast| cast.spell == spell)
+                    .expect("actual blocking cast admission");
+                (spell, dispatch.time)
+            });
             h.hit_pct(boss, 81.0);
         }
         if tick == 901 {
@@ -950,7 +990,23 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
         1,
         "incoming threshold once despite second hit"
     );
-    assert!((40.0..=43.2).contains(&shields[0].1));
+    assert!(shields[0].1 >= 40.0, "shield follows the actual threshold");
+    // A zero-delay event waits for the actual blocking cast, including pushback.
+    // Keep the0.2s dispatch allowance; do not assume an un-pushed3s maximum.
+    let shield_release = match shield_blocker {
+        Some((spell, dispatch)) => {
+            casts
+                .iter()
+                .find(|(id, time, _)| *id == spell && *time > dispatch)
+                .expect("actual blocking cast completion")
+                .1
+        }
+        None => 40.0,
+    };
+    assert!(
+        (0.0..=0.2).contains(&(shields[0].1 - shield_release)),
+        "shield dispatch: release={shield_release}, shield={shields:?}"
+    );
     assert!(shield_seen, "actual Demonic Shield aura");
     assert!(treacherous_seen, "actual Treacherous Aura");
     assert!(
