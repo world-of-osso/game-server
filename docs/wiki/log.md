@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source355–359 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source355359-taivan-buffpillow-boundaries-and-retained-statue-proof-2026-10-17): Taivan195387/nearby scaled384543 remains an action/stat/recipient gap; description reference is not a root trigger or flat percentage. Ornate statue194793/108683/0.7/CDI0.3 retains earlier CPU/both-skin proof without a fresh native certificate. Three pillow roots keep target78/radius1yd/3s/5min:Purple376979/type7/74543/size3 exists in runtimeTDB,380634/380635 do not. Placement initialization/seat/identity gaps stay explicit; no zero-foot guess, copied geometry, inert import, runtime/data/new positive claim or own heavy duplicate.
+
 ## 2026-10-17 — Toy source350–354 and329 runtime-table correction
 
 [Exact source matrix](../toy-effects14-coverage.md#source350354-private-weathershellrafteasel-boundaries-and-retained-cooking-proof-2026-10-17): private outdoor weather, mixed shell/action/animation, water/jump-paddle raft and easel movement/pose remain gaps; Maruuk retains exact source16 cooking CPU scope without per-toy native pixels. **Correction to earlier325–329 entry:** summoned-object loader reads runtime `tdb_gameobject_template`, which contains offering377204/type3/display74995 and cooking379147/type8/display75339; earlier offering absence inference from base/content tables was wrong and is withdrawn. Offering interaction gap unchanged. No runtime/data/new admission or own heavy duplicate.

@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Taivan buff/pillow boundaries and retained statue proof (2026-10-17)
+
+[Source355–359 matrix](../../toy-effects14-coverage.md#source355359-taivan-buffpillow-boundaries-and-retained-statue-proof-2026-10-17) preserves Taivan195387/description-only384543/scaled189 nearby Versatility action gap, exact retained [Ornate statue CPU/both-skin pixels](../../toy-effects14-coverage.md#placed-statues-and-the-missing-template-audit-2026-10-12), and three distinct pillow placement/interaction identities. Source78/radius1yd is not zero “at feet”; Purple376979/type7/74543/size3 exists in actual runtime TDB loading, while380634/380635 do not. No copied geometry, invented buff amount or decorative-only seating admission; no new runtime/data/native certificate or own heavy duplicate.
+
 ## Private weather/shell/raft/easel boundaries and retained cooking proof (2026-10-17)
 
 [Source350–354 matrix](../../toy-effects14-coverage.md#source350354-private-weathershellrafteasel-boundaries-and-retained-cooking-proof-2026-10-17) keeps Title55 outdoor/party-private weather, mixed shell105964/action26/set1048, water/jump-paddle Dinghy104/226 and Easel373/191/base2.5 action/movement gaps.351 retains exact [source16 cooking CPU scope](../../toy-effects14-coverage.md#cooking-focus-batch16-2026-10-12); shared Grim native fire is not Maruuk per-toy pixels. **329 correction:** runtime `tdb_gameobject_template` is authoritative for summoned objects and contains offering377204/74995; earlier absence inference from empty base/content GO tables is withdrawn, interaction gap unchanged. No runtime/data/new admission or own heavy duplicate.
