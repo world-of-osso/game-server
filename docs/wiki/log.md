@@ -1,3 +1,7 @@
+## 2026-10-18 — Post-guild merge codec and MaxCount targets GREEN
+
+[Exact current matrix](../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): after explicit gr567 landing, protocol029a927/server41856b72b/enginef26cc691e merged; protocola2b07a6 wire2/0+combined-discriminants2/0, server33c9d2eb2 five+MaxCount17/0/47.77s, engine6c00abbf4 dispatch1/0. Old tags preserved/new ItemMaxCount21 and SetMemberRank13 bincode+JSON round-trip; both wiki-index sides retained. No source data/weights/oracle change or broad/landing/native/full1166 claim; lead mc548b rerun pending.
+
 ## 2026-10-18 — mc548b five-regression recovery targeted GREEN
 
 [Current proof/limits](../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [roots/repairs](systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): mc548b771/5/13ignored, exact requestedcfdf merge356d4493a/protocol999b52e reproduces0/5; f97c118e4 passes5/0/25.95s. One shared Inbox consumer repairs three item-use helper double-drains; production retains real metadata and makes empty grants/capacity checks no-ops. Original expected counts and real MaxCount/source/typed-error guards unchanged. The three-item2513 test individually passed REDmc548b; no aggregate-green inference. No own broad rerun or combined landing/native/full1166 claim; lead rerun pending.

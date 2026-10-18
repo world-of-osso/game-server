@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Post-guild coordinated merge target proof (2026-10-18)
+
+[Current exact merge/codec/behavior matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): landed guild masters merged into MaxCount; protocola2b07a6 passes2 wire+2 discriminant targets, stable prior tags/new21+13; server33c9d2eb2 passes17/0 including all five regressions and MaxCount controls; engine6c00abbf4 dispatch1/0. Both engine wiki-index entries retained. Final broad mc548b/check/fmt, coordinated landing/native/full1166 remain lead-owned/pending.
+
 ## mc548b five-regression recovery targeted GREEN (2026-10-18)
 
 [Current five-case proof/limits](../../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [root-cause matrix](inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): exactcfdfc3ee6/protocol999b52e reproduction0/5→f97c118e4 GREEN5/0/25.95s. Three failures were competing test-harness error consumers; two production fixes retain authentic quest metadata and avoid inventory work for empty grants. All original expected outcomes remain unchanged; real creation caps/typed errors/source identity remain enforced. The exact three-item Saptor/Idol/Badge cancellation/recovery test individually passed mc548b; this does not make that RED aggregate green. Lead combined rerun/landing/native/full1166 proof remains pending; no own broad rerun.

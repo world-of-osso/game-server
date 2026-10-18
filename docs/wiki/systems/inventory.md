@@ -4,6 +4,10 @@ Requirements and data gaps: [inventory spec](../../specs/inventory.md).
 
 Item-use scaling and regression evidence: [[item-healing-scaling]].
 
+## Post-guild protocol integration target proof (2026-10-18)
+
+[Authoritative merged-code proof matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18) records requested masters, both append-only wire variants, unchanged prior discriminants and current17-case server/one-case client CPU proof. The mechanism below is unchanged; lead's combined gate/landing remains pending, not certified by codec or CPU subsets.
+
 ## mc548b regression recovery — targeted only (2026-10-18)
 
 Lead mc548b server2644c24f2 is RED771/5/13ignored816.87s; protocol stage passed. Exact requested later-master reproduction mergedcfdfc3ee6 into the feature as356d4493a with protocol999b52e: all five named cases failed,0/5. Repairs6ac4b2afc/3a6b3ea7c/f97c118e4 pass the unchanged five tests5/0/25.95s. This is targeted recovery, not a broad-gate or landing certificate.

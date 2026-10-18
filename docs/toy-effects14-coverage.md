@@ -1,5 +1,18 @@
 # Toy effects14 — active whole-goal coverage
 
+## Post-guild merge: codec and bounded MaxCount proof GREEN (2026-10-18)
+
+After the explicit gr567 landing announcement, merged protocol029a927, server41856b72b and enginef26cc691e into the three MaxCount branches. Engine's sole wiki-index conflict keeps both sides' entries; no enum/runtime conflict was resolved by dropping either feature.
+
+| Current code scope | Executed proof |
+|---|---|
+| Protocola2b07a6 | Existing new-variant wire targets2/0 plus combined codec/discriminant targets2/0. All prior inventory/guild request tags remain pinned; appended ItemMaxCount21 and SetMemberRank13 each round-trip through bincode and JSON. |
+| Server33c9d2eb2 | Five original regressions plus MaxCount model/quest/Doomsday targets17/0 in47.77s, no ignored cases. |
+| Engine6c00abbf4 | Exact typed owner-error account-dispatch target1/0, no native-pixel claim. |
+| Remaining gate | Lead owns combined mc548b rerun/check/fmt and coordinated landing; no whole-suite/landing/full1166 certificate from these bounded targets. |
+
+Final pushed revisions after this proof contain documentation-only additions. Source weights/data and existing test oracles remain unchanged; toy batch5efec9c6f remains stacked with its earlier individual mc548b PASS. [Mechanism/limits](wiki/systems/inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18).
+
 ## mc548b five-regression recovery targeted GREEN; rerun pending (2026-10-18)
 
 Lead mc548b server2644c24f2 was RED771/5/13ignored816.87s, protocol stage passed. Exact requested cfdfc3ee6 merge356d4493a/protocol999b52e reproduced0/5; final repairf97c118e4 passes all unchanged five cases5/0/25.95s. [Authoritative roots/repairs/proof](wiki/systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): one InventoryError inbox consumer fixes three item-use fixture adapters; authentic quest metadata is retained for valid references; empty item batches/capacity checks are no-ops for XP-only rewards. No oracle counts, source data, MaxCount checks, source qualification or typed full-bag distinction were weakened.
