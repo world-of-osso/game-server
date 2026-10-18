@@ -29,10 +29,11 @@ const IDS: &[u32] = &[
 ];
 
 fn fixture(rank: bool) -> Harness {
+    // Store-only environmental immunity must not be learned as the caster's passive.
     let known: Vec<_> = IDS
         .iter()
         .copied()
-        .filter(|id| rank || *id != RANK)
+        .filter(|id| *id != FIRE_IMMUNITY && (rank || *id != RANK))
         .collect();
     let mut h = harness_with(Vec::new(), &known, 12, true).unwrap();
     let data = world_db().unwrap();
