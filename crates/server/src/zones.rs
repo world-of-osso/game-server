@@ -355,10 +355,30 @@ pub(crate) fn spawn_creature(
     let map = context.map;
     let projection =
         read_entry_projection(world_data, Some(template), context, spawn, Some(spawn), rng)?;
+    let mut entity = commands.spawn((creature_position_bundle(spawn), map));
+    entity.queue(move |actor: EntityWorldMut| {
+        projection.apply(actor, true);
+    });
+    let source_guid = spawn.guid;
+    entity.queue(move |actor: EntityWorldMut| {
+        crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
+    });
+    insert_spawn_visibility(&mut entity, world_data, template.entry, replicate);
+    let addon = world_data.addon_for(spawn);
+    insert_ai_components(&mut entity, spawn, template, addon, world_data);
+    crate::pvp::insert_track_switch(&mut entity, spawn);
+    crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
+    crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
+    crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
+    insert_spawn_identity(&mut entity, world_data, template, spawn);
+    Some(entity.id())
+}
+
+fn creature_position_bundle(spawn: &CreatureSpawn) -> impl Bundle {
     let (x, y, z) =
         crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
     let orientation = spawn.orientation + std::f32::consts::FRAC_PI_2;
-    let mut entity = commands.spawn((
+    (
         Position { x, y, z },
         Rotation {
             x: 0.0,
@@ -368,20 +388,20 @@ pub(crate) fn spawn_creature(
         Zone {
             id: u32::from(spawn.zone_id),
         },
-        map,
         crate::creature_ai::HomeOrientation(orientation),
         shared::components::CreatureMotion::Still,
         shared::components::MovementSpeed(0.0),
-    ));
-    entity.queue(move |actor: EntityWorldMut| {
-        projection.apply(actor, true);
-    });
-    let source_guid = spawn.guid;
-    entity.queue(move |actor: EntityWorldMut| {
-        crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
-    });
-    if let Some(&vignette) = world_data.vignettes.get(&template.entry) {
-        crate::vignettes::show(&mut entity, vignette);
+    )
+}
+
+fn insert_spawn_visibility(
+    entity: &mut EntityCommands,
+    data: &WorldData,
+    entry: u32,
+    replicate: bool,
+) {
+    if let Some(&vignette) = data.vignettes.get(&entry) {
+        crate::vignettes::show(entity, vignette);
     }
     if replicate {
         entity.insert((
@@ -389,12 +409,14 @@ pub(crate) fn spawn_creature(
             NetworkVisibility::default(),
         ));
     }
-    let addon = world_data.addon_for(spawn);
-    insert_ai_components(&mut entity, spawn, template, addon, world_data);
-    crate::pvp::insert_track_switch(&mut entity, spawn);
-    crate::creature_aggro::insert_aggro_components(&mut entity, template.aggro_mode);
-    crate::creature_scripts::insert_script_components(&mut entity, &template.script_name);
-    crate::scripted_ai::insert_script_name(&mut entity, &template.script_name, template.entry);
+}
+
+fn insert_spawn_identity(
+    entity: &mut EntityCommands,
+    world_data: &WorldData,
+    template: &CreatureTemplate,
+    spawn: &CreatureSpawn,
+) {
     let string_ids = CreatureStringIds {
         template: world_data.template_string_ids.get(&template.entry).cloned(),
         spawn: world_data.spawn_string_ids.get(&spawn.guid).cloned(),
@@ -406,7 +428,6 @@ pub(crate) fn spawn_creature(
     if string_ids != CreatureStringIds::default() {
         entity.insert(string_ids);
     }
-    Some(entity.id())
 }
 
 /// A creature summoned by `summoner` (`TempSummon`, `TEMPSUMMON_MANUAL_DESPAWN`):
