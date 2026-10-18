@@ -3425,6 +3425,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (202859, 399250, 200969, 112322, 300000),
         (202862, 399253, 200972, 112325, 300000),
         (202865, 399257, 200975, 112328, 300000),
+        (245942, 1240082, 246037, 129958, 180000),
         (272339, 1290957, 263908, 143906, 60000),
         (279590, 1306978, 270689, 146432, 60000),
     ] {
@@ -3448,7 +3449,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             202865 => (Some(399268), 18.0), // Whelp Egg: speed 30, 0.6-second flight.
             _ => (None, 2.0),
         };
-        let destination = if matches!(item, 89869 | 184415) || missile_root.is_some() {
+        let destination = if matches!(item, 89869 | 184415 | 245942) || missile_root.is_some() {
             let origin = h.app.world().get::<Position>(h.caster).unwrap();
             Some([origin.x + cursor_distance, origin.y, origin.z])
         } else {
