@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source560–564 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source560564-retained-balloonsvictory-and-random-delverecipient-spotlightlocal-disguise-boundaries-2026-10-17): existing Balloon source actor and Explosive Victory caster cases retained without duplicate tests/count expansion. Delve-O-Bot mixed179/trigger/root with missing232267, random Bountiful selection/travel/completion reset, actual target57 Spotlight and Undermine8306/aura243/misc35 consequences remain gaps. Block metadata explicitly70448/key88d5e8ef05ec5a8446cdec93d142d7c6; no retroactive70391 proof.498 landed/master8707ac0ea; no new runtime/data/behavioral/native proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source555–559 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source555559-trialblingobserver-spidersqualified-return-homescreen-boundaries-2026-10-17): missing avoid-hit Trial229693, permanent Coldflame attachment, observer233/base550/7825/240 spiders, qualified Threads252/9 homebind and permanent screen2243/7 retain action/eligibility/presentation gaps. Threads item faction/reputation/PlayerCondition0 does not establish qualification authority or account/character/per-use scope; no guessed renown threshold or unrestricted Human-helper certificate. No global body/screen mutation, inert trial, new runtime/data/native proof or own heavy duplicate.498 landed/master8707ac0ea.

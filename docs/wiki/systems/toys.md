@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Retained balloons/victory and random-delve/recipient-spotlight/local-disguise boundaries (2026-10-17)
+
+[Source560–564 matrix](../../toy-effects14-coverage.md#source560564-retained-balloonsvictory-and-random-delverecipient-spotlightlocal-disguise-boundaries-2026-10-17) records exact local70448 metadata. Balloon source actor and Explosive Victory caster cases already exist; no duplicate fixture or expanded caster count. Random Bountiful Delve travel/completion reset, actual target57 party-member Spotlight and Undermine-only aura243/misc35 consequences remain gaps, not static bot/self aura/body transform. Source232267 model absent;231372 retains both model weights/scales.498 remains landed; no new behavioral/native proof, runtime/data or own heavy duplicate.
+
 ## Trial/bling/observer-spiders/qualified-return-home/screen boundaries (2026-10-17)
 
 [Source555–559 matrix](../../toy-effects14-coverage.md#source555559-trialblingobserver-spidersqualified-return-homescreen-boundaries-2026-10-17) preserves missing avoid-hit Trial actor, unaudited permanent Coldflame attachment, observer-only233/7825/240 spider perception, qualified Threads homebind and actual2243 screen presentation. Threads description requires qualification while item faction/reputation/on-use condition fields are0; no invented threshold/account scope/per-use gate or generic Human-helper full certificate. No global NPC/screen mutation, inert trial or flavor-derived veteran rule.498 landed/master8707ac0ea; no further runtime/data/new native/own heavy duplicate.
