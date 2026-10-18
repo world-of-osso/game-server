@@ -4,6 +4,14 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 ## What it must do
 
+### Bounded Augmentation support stats (active70448)
+
+- Explicit-friendly Prescience409311 effect1 grants native410089; its effect0 contributes the native3 critical-strike percentage points to that recipient, not the caster. Reapplication must not accumulate another contribution; removal/expiry ends it.
+- Shifting Sands413984 effect0 contributes the aura caster's actual mastery percentage to recipient Versatility on application. Its native effect1/226 clock updates that contribution every1000ms without refreshing expiry or another caster's aura. Normal damage/healing and damage reduction consume the recipient's resulting stat.
+- These are spell-specific bindings sourced from SimC76f8118, not a generic aura540 algorithm (TC a352b1fa has HandleNULL). Prescience automatic prioritization, effect0, child202/other dummy fields, mastery empower dispatch, Ebon Might, hero/proc talents and full legal-loadout/rotation/UDP proof remain separate gaps.
+
+### Shared native boundaries
+
 - [x] Native effect8 drains the living target's primary power matching `EffectMiscValue_0`, floors removal at zero, and credits only the actually removed power to a different caster through native Amplitude and caster spell modifiers. Preserve CalcValue base-variance/point-modifier/rounding order, then integer done/same-variance/taken boundaries and existing supported damage bonuses, without health damage, crits, armor or absorbs on the drain itself. Keep every imported effect, including Frost Breath16094's separate health damage. Missing/nonprimary pools receive no drain or caster credit. For zero-coefficient effect8, evaluate native ExpectedStat PlayerMana × BasePoints/100 at the caster's real UnitLevel; native ScalesWithCreatureLevel instead selects CreatureAutoAttackDps. No silent level1/raw-base fallback: missing UnitLevel or expected-stat resource refuses explicitly. At fixture UnitLevel10 native3405 drains100,46453 drains278 with100SP (floor remainder80 after39 casts), and16094 base rounds284 before the same variance roll is reused in both stages. Distinct power-drain execute-log packets and unimplemented damage modifiers remain separate gaps; this does not certify whole spells or legal loadouts.
 
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
