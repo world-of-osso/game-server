@@ -28,6 +28,7 @@ pub(crate) mod damage_transfer;
 pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
+mod fel_devastation;
 mod fixate;
 mod fleeing;
 pub(crate) mod handlers;
