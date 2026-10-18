@@ -142,6 +142,7 @@ fn read_native_radius(
     let creature_level = level_for_viewer(level, world.get::<LevelScaling>(actor), target_level);
     geometry
         .get(world)
+        .map_err(|error| format!("Native aggro geometry inputs are unavailable: {error:?}"))?
         .center_radius(actor, tank, creature_level, target_level)
         .ok_or_else(|| "Source actor lacks native aggro radius".into())
 }
