@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pennant/mannequin/grain/relative-coordinate/pocketwatch boundaries (2026-10-17)
+
+[Source460–464 matrix](../../toy-effects14-coverage.md#source460464-pennantmannequingrainrelative-coordinatepocketwatch-boundaries-2026-10-17) preserves nonzero permanent Crimson pennant, script-driven mannequin selection, missing403749 grain crate, permanent1500ms periodic Thinking Cap and nonzero hour-long Pocketwatch. Source cap swaps w2/w1 with50000 offsets and re-equips to reset its coordinate origin; actual projection/thought behavior remains gap, not cosmetic or guessed map axes. No infection from grain's name or server-clock shift from pocketwatch. No runtime/data/new proof or own heavy duplicate;4920c77 compiling.
+
 ## Pending Naaru return-home acceptance and explosive-show/critter/pennant/service boundaries (2026-10-17)
 
 [Source455–459 matrix](../../toy-effects14-coverage.md#source455459-pending-naaru-return-home-acceptance-and-explosive-showcritterpennantservice-boundaries-2026-10-17) adds acceptance-only1ce4b65a0: Path of the Naaru206195/412555/source10s/shared2309 in unchanged actual saved-bind helper, now16 hearthstones; exact one-charge/1800000ms and Ohn'ir refusal, pending newer head beyond4920c77. Flamin' Ring preserves three distinct area edges plus child script; Fyrakk's actual critter action, permanent nonzero pennant and missing Warpweaver/transmog service remain gaps. Format/manual readability/diffcheck pass; no runtime/data/native/service or cosmetic-only critter admission, no own heavy duplicate.

@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source460–464 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source460464-pennantmannequingrainrelative-coordinatepocketwatch-boundaries-2026-10-17): permanent nonzero Crimson pennant, mannequin script/model selection, missing403749 grain crate, permanent Thinking Cap periodic226/1500ms plus relative-coordinate/re-equip/thought contract and nonzero hour Pocketwatch remain gaps. Literal w2/w1-minus50000 display retained; no guessed map axes, decorative-only cap, grain infection or server-clock shift. No runtime/data/new proof or own heavy duplicate; saved4920c77 log is compiling without behavioral result.
+
 ## 2026-10-17 — Toy source455–459 pending Naaru acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source455459-pending-naaru-return-home-acceptance-and-explosive-showcritterpennantservice-boundaries-2026-10-17):1ce4b65a0 adds206195/412555/source10s saved-bind/shared2309 with one1800000ms charge and Ohn'ir sibling refusal to unchanged helper, now16 hearthstones. Format/manual readability/diffcheck pass; newer covering head beyond4920c77 required. Three-area explosive show plus child411846, real Fyrakk critter action, permanent nonzero seasonal pennant and missing205879 Warpweaver/transmog service remain exact gaps; no multiplicity collapse, cosmetic critter shortcut or inert service admission. No runtime/data/native changes or own heavy duplicate.

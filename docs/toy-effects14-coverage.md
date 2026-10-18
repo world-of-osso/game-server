@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source460–464: pennant/mannequin/grain/relative-coordinate/pocketwatch boundaries (2026-10-17)
+
+Distinct nonzero/script/periodic or missing-object contracts remain unaccepted. No runtime/data/producer/new proof or own heavy duplicate. Lead4920c77bfdaa is now compiling in the saved log; no behavioral result yet.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|460 Crimson Legend's Pennant206343/412912 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Exact seasonal back-pennant/eligibility/cleanup remains unaudited; no base1 actor/child, generic zero-dummy admission or borrowed Obsidian pennant certificate. |
+|461 Mannequin Charm206347/413025 | Instant self script3/zero payload, item600000ms recovery. Trading Post mannequin transformation/model selection/restoration remains unresolved; no script-only visual success, guessed race/gender models or player freeze inferred from 'Hold still'. |
+|462 Plagued Grain206565/413824 | Source3000ms cursor87 effect50→403749 for180000ms, inherited7200000ms recovery/start1500ms. Runtime tdb_gameobject_template has no403749. Source crate identity/placement/lifecycle remain gaps; no substitute crate or infection/damage mechanic invented from the item name. |
+|463 Tricked-Out Thinking Cap206696/414103 | Instant self periodic-dummy226/period1500ms plus dummy4, permanent-1; normal recovery0/start1500ms. Source relative Cogs-Bolts display is `(${$w2-50000}, ${$w1-50000})`, re-equip recalibrates origin and listens for stray thoughts. Actual anchor/projection/recalibration/thought eligibility/display lifecycle remain unresolved, not decorative cap, guessed world-coordinate axes or ignored periodic payload. |
+|464 Investi-gator's Pocketwatch206993/415089 | Source1500ms self dummy4/base1/3600000ms; no source cooldown row. Exact clock-hand/sand/temporal presentation and cleanup remain unaudited; no global time shift, generic zero-dummy admission or assumed recovery from aura lifetime. |
+
+Evidence: private `rows460-464-{readonly-source,action-source,runtime-source,active-goal}.json`, exact source descriptions and maintained visual-only audit absence.149865 Tea Set remains untouched.
+
 ## Source455–459: pending Naaru return-home acceptance and explosive-show/critter/pennant/service boundaries (2026-10-17)
 
 457 test/spec1ce4b65a0 adds Path of the Naaru206195/412555 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now16 hearthstones. Its sibling200630 Ohn'ir must remain blocked by the spent one-charge/1800000ms recovery. Format/manual readability/diffcheck pass, new behavioral proof requires a later covering head than4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.
