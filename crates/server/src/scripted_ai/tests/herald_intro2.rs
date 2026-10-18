@@ -452,36 +452,48 @@ fn encounter_coverage_herald_target32_30717_uses_source_reach_and_ground_before_
 #[test]
 #[ignore = "RED: flying target32 must preserve altitude above floor but raise it from below"]
 fn encounter_coverage_herald_target32_gravity_disabled_preserves_above_and_raises_below() {
-    let (mut h, map, herald) = elevated_nazan_for_target32();
-    h.app
-        .world_mut()
-        .entity_mut(herald)
-        .insert(crate::scripted_ai::waypoint_path::GravityDisabled);
-    crate::spell_cast::creature_cast(h.app.world_mut(), herald, 30717, Some(herald), false)
-        .expect("normal30717 with source gravity disabled");
-    let first = actors_in_copy(&mut h, VAZRUDEN, map)[0];
-    let position = *h.app.world().get::<Position>(first).unwrap();
-    assert_eq!(
-        position.y, WEST.y,
-        "CanFly must not be forced down to ground"
-    );
-    let feet = Vec3::new(position.x, position.y, position.z);
-    let crate::ground::GroundProbe::Supported(floor) = h
-        .app
-        .world_mut()
-        .resource_mut::<crate::ground::GroundMap>()
-        .creature_ground_in(map, feet)
-    else {
-        panic!("real source destination floor");
-    };
-    h.app.world_mut().entity_mut(herald).insert(Position {
-        y: floor - 0.5,
-        ..WEST
-    });
-    crate::spell_cast::creature_cast(h.app.world_mut(), herald, 30717, Some(herald), false)
-        .expect("normal30717 when flying caster is below the surface");
-    let summoned = actors_in_copy(&mut h, VAZRUDEN, map);
-    assert_eq!(summoned.len(), 2);
-    let second = summoned.into_iter().find(|actor| *actor != first).unwrap();
-    assert_grounded(h.app.world_mut(), map, second);
+    for below_floor in [false, true] {
+        //30717 has a real cooldown: independent casters isolate each geometry case.
+        let (mut h, map, herald) = elevated_nazan_for_target32();
+        h.app
+            .world_mut()
+            .entity_mut(herald)
+            .insert(crate::scripted_ai::waypoint_path::GravityDisabled);
+        let spell = h.app.world().resource::<SpellStore>().get(30717).unwrap();
+        let destination = crate::spell_cast::targets::effect_dest(
+            h.app.world(),
+            herald,
+            Some(herald),
+            &spell.effects[0],
+            None,
+        )
+        .unwrap();
+        let crate::ground::GroundProbe::Supported(floor) = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::ground::GroundMap>()
+            .creature_ground_in(map, destination.position)
+        else {
+            panic!("real source destination floor");
+        };
+        if below_floor {
+            h.app.world_mut().entity_mut(herald).insert(Position {
+                y: floor - 0.5,
+                ..WEST
+            });
+        }
+        crate::spell_cast::creature_cast(h.app.world_mut(), herald, 30717, Some(herald), false)
+            .expect("normal30717 with source gravity disabled");
+        let summoned = actors_in_copy(&mut h, VAZRUDEN, map);
+        assert_eq!(summoned.len(), 1);
+        if below_floor {
+            assert_grounded(h.app.world_mut(), map, summoned[0]);
+        } else {
+            assert_eq!(
+                h.app.world().get::<Position>(summoned[0]).unwrap().y,
+                WEST.y,
+                "CanFly must not be forced down to ground"
+            );
+        }
+    }
 }
