@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Black-hole game, key inventory, rainbow chain, retained pillow and dual hologram boundaries (2026-10-18)
+
+[Source675–679 matrix](../../toy-effects14-coverage.md#source675679-black-hole-game-key-inventory-rainbow-chain-retained-pillow-and-dual-hologram-boundaries-2026-10-18) preserves actual430 feeding game, all-shard inventory conversion, mixed rainbow241/56misc12/42/409 with proc2000ms and both164 removals, retained11-second Pillow fixture and both missing hologram259655/259656/base0/stacking contracts. No automatic win/free key, pure disguise, recast parachute, one static gnome or guessed holiday recovery. Metadata only; no runtime/data/native change or own heavy work, lead successor pending.
+
 ## Pending Corewarden hearthstone and corpse ritual, mail, viewer, current-location travel boundaries (2026-10-18)
 
 [Source670–674 matrix](../../toy-effects14-coverage.md#source670674-pending-corewarden-hearthstone-and-corpse-ritual-mail-viewer-current-location-travel-boundaries-2026-10-18) adds acceptance-onlyf30ff0f2c:actual slot1 265100/1273401/source10s/shared2309 blocks Preyseeker263933 through unchanged helper, now25 hearthstones/old24 retained; behavior awaits lead successor. Corpse25 ritual/-100 scale/two9000 payloads, missing mailbox257683/base0/shared2066, Brann viewer233/base550/9049/251 and qualified current-Abundant3+77 travel remain gaps. No self-disguise, inert rift, stat buff or guessed destination substitute; no runtime/data/native change or own heavy work.

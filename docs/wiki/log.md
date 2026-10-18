@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source675–679 game, inventory, mixed rainbow and hologram boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source675679-black-hole-game-key-inventory-rainbow-chain-retained-pillow-and-dual-hologram-boundaries-2026-10-18): actual430 feeding game and all-shard conversion remain gaps; rainbow retains241/56misc12/42/409/proc2000ms, child launch and both164 removals. Existing11-second Pillow fixture retained; both259655/259656/base0 stacking holograms missing, holiday recovery unresolved. No generic success/free key/pure disguise/static gnome, runtime/data/native change or own heavy jobs; lead successor pending.
+
 ## 2026-10-18 — Toy source670–674 pending Corewarden acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source670674-pending-corewarden-hearthstone-and-corpse-ritual-mail-viewer-current-location-travel-boundaries-2026-10-18):f30ff0f2c appends actual slot1 265100/1273401/source10s/shared2309 to unchanged saved-bind helper, now25 hearthstones/old24 retained; format/manual readability/diffcheck pass, behavior awaits lead successor. Preserve corpse25 ritual/-100/two9000 payloads, missing257683 mail/base0/shared2066, Brann233/base550 and qualified current-Abundant3+77 travel. No guessed bodies/destinations or runtime/data/native change; no own heavy jobs.

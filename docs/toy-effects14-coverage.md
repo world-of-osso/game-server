@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source675–679: black-hole game, key inventory, rainbow chain, retained pillow and dual hologram boundaries (2026-10-18)
+
+Metadata only; no new acceptance, runtime/data/native change or own heavy jobs. Existing Pillow learned-use/expiry fixture retained; later acceptances still await lead successor after cancelled509.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|675 Hungry Black Hole267139/1279511 | Instant permanent self430/misc3891/0, explicit item10000ms recovery. Actual feeding game/state/interaction/cleanup remains gap; no inert minigame aura, automatic score or guessed food inventory consumption. |
+|676 Coffer Key Glue267291/1280020 | Source5000ms self dummy3/zero payload, no duration or source SpellCooldowns row. Actual all-shard consumption/restored-key creation/count/eligibility remains unresolved; no generic dummy success, free key grant or guessed conversion ratio. Inventory effects are not optional flavor. |
+|677 Troll Scroll of Rainbow Roll267323/1280169 | Instant self241,56→existing259197/misc12,42→1280170 and409 for30000ms; inherited900000ms recovery with described Darkspear Dash reduction unresolved. ProcChance101/mask33554432/0/proc recovery2000ms. Child60000ms carries144/base250/misc250/targets1/48, dummy4, two distinct164 removals→45472/44795 and64→246137/144/base9999; RequiredAreas5530. Existing26 Supporter models each scale1/weight1 do not certify the mixed roll/launch/proc/removal/landing contract. Preserve both removal edges and misc12; no pure misc8 disguise, generic speed buff, positive-trigger parachute cast or invented holiday timer. |
+|678 Lil' Scoots' Pillow267456/1280563 | Instant self audited dummy4/zero payload for11000ms, explicit item60000ms recovery. Existing exact learned-use and11-second expiry fixture retained; not new native held-creature/full-minute reuse proof or an actual pet summon. |
+|679 Gnomatic Projector267472/1280448 | Instant two distinct target87/base0 summons259655 and259656/property6624/Control0/Title27/flags537012224 for120000ms, explicit item600000ms recovery/category recovery0. Both runtime actors/models absent. Actual self hologram identity/nearby stacking/instability/lifecycle and Great Gnomeregan Run recovery reduction remain gaps; neither summon may be dropped or defaulted to one static gnome. |
+
+Evidence: private `rows675-679-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source670–674: pending Corewarden hearthstone and corpse ritual, mail, viewer, current-location travel boundaries (2026-10-18)
 
 Acceptance-onlyf30ff0f2c appends actual slot1 Corewarden265100/1273401 to unchanged saved-bind/shared2309 helper, now25 hearthstones/old24 retained; sibling Preyseeker263933 is blocked after spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after cancelled509. No runtime/data/native change or own heavy jobs.
