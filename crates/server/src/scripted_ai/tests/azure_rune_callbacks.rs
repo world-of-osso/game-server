@@ -346,10 +346,18 @@ fn azure_rune_native_removal_uses_original_membership_and_only_mythic_modes_deac
             h.has_aura(rune, SHIELD),
             "native entry prerequisite at difficulty{difficulty}"
         );
+        assert!(
+            h.has_aura(player, 388072),
+            "real template action prerequisite"
+        );
         let fields = owned_fields(&mut h, rune);
         assert_eq!(fields.len(), 1, "actual owned field prerequisite");
         remove_rune_aura(&mut h, rune);
         assert!(h.app.world().get_entity(fields[0]).is_err());
+        assert!(
+            !h.has_aura(player, 388072),
+            "removal undoes template action"
+        );
         assert!(
             !h.has_aura(rune, SHIELD),
             "removal exits players after OnRemove"
@@ -420,10 +428,17 @@ fn azure_rune_native_fields_keep_owner_isolation_and_survive_missing_caster_clea
     h.advance(0.05);
     assert!(h.has_aura(first, SHIELD));
     assert!(h.has_aura(second, SHIELD));
+    assert!(h.has_aura(first_player, 388072));
+    assert!(h.has_aura(second_player, 388072));
     let second_fields = owned_fields(&mut h, second);
     assert_eq!(second_fields.len(), 1);
     remove_rune_aura(&mut h, first);
     assert!(h.has_aura(first, INACTIVE));
+    assert!(!h.has_aura(first_player, 388072));
+    assert!(
+        h.has_aura(second_player, 388072),
+        "another Rune's action survives"
+    );
     assert!(h.has_aura(second, RUNE_AURA));
     assert!(h.has_aura(second, SHIELD));
     assert!(!h.has_aura(second, INACTIVE));
@@ -431,6 +446,10 @@ fn azure_rune_native_fields_keep_owner_isolation_and_survive_missing_caster_clea
     h.app.world_mut().entity_mut(second).despawn();
     h.advance(0.05);
     assert!(h.app.world().get_entity(second_fields[0]).is_err());
+    assert!(
+        !h.has_aura(second_player, 388072),
+        "missing caster retires its action"
+    );
     assert_eq!(
         casts(&h, second, INACTIVE).len(),
         0,
