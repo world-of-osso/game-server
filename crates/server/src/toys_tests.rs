@@ -1306,7 +1306,12 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
             item,
             45011 | 198729 | 199768 | 199769 | 199770 | 199771 | 199900 | 206008 | 234951 | 239007
         );
-        let destination = cursor_object.then_some([4.0, 0.0, -3.0]);
+        // Cold Ones1215364 uses SpellRange169: three yards, not the banners' five-yard point.
+        let destination = if item == 234951 {
+            Some([2.0, 0.0, -1.0])
+        } else {
+            cursor_object.then_some([4.0, 0.0, -3.0])
+        };
         assert_eq!(
             activate_at(&mut h, item, destination)[0].error,
             None,
