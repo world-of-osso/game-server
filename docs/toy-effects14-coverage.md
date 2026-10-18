@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source355–359: Taivan buff/pillow boundaries and retained statue proof (2026-10-17)
+
+356 retains [source18 Ornate Dragon Statue actual CPU/both-skin native scope](#placed-statues-and-the-missing-template-audit-2026-10-12), not a fresh certificate. Other rows retain unresolved action/placement/seat boundaries. No runtime/data change, new positive/native admission or own heavy duplicate;478 remains the owner of expanded acceptance verification.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|355 Taivan's Trumpet198537/384539 | Instant target32 summon195387/property3622 (Control0/Title0/flags75639048) for120000ms, item300000ms recovery. Runtime creature content absent. Nearby Versatility buff source is description reference384543, not a root trigger record:189/base0/scalingclass-3/targets22/30 is preserved. Actual Taivan action/recipient eligibility/scaled stat/cleanup remain gaps; no inert companion or guessed flat percentage, radius or descriptive-reference execution. |
+|356 Ornate Dragon Statue198646/384614 | Source1500ms self trigger64/misc10→384618, child target47 summon194793/property64 for300000ms; item900000ms recovery. Existing108683/model-row scale0.7/CDI0.3 and earlier actual learning/source actor/model/scale/stationary/expiry CPU plus both-skin statue pixels are retained. No new current-master/native or full15-minute reuse certificate. |
+|357 Soft Purple Pillow198720/384870 | Source3000ms effect50→376979/target78/radius16=1yd for300000ms, item300000ms recovery. Runtime `tdb_gameobject_template` contains type7/display74543/size3, seat fields1/1/1; display bounds/FDID4382562 exist. Actual source-destination initialization/placement/seating/access/expiry acceptance remains unverified; descriptive “at your feet” does not justify a zero offset or decorative-only acceptance. |
+|358 Skinny Reliquary Pillow198721/384871 | Source3000ms effect50→380634/target78/radius16=1yd for300000ms, item300000ms recovery. Runtime summoned-object TDB table lacks380634. Exact source template/model and actual placement/interaction/lifecycle remain gaps; no copied purple-pillow identity or guessed seat fields/scale. |
+|359 Small Triangular Pillow198722/384872 | Same authored cast/target/radius/lifetime/recovery, distinct380635 absent from runtime summoned-object TDB table. Its own source identity/placement/interaction/lifecycle remains unresolved, not a deduplicated pillow, zero-foot placement or guessed geometry. |
+
+Evidence: private `rows355-359-{readonly-source,action-source,active-goal}.json`, actual runtime summoned-object table, pinned `SpellInfo.cpp` selector78 and exact `SpellRadius`16. Taivan's descriptive stat reference stays distinct from the root graph. Tea Set149865 remains untouched.
+
 ## Source350–354: private weather/shell/raft/easel boundaries and retained cooking proof (2026-10-17)
 
 351 retains [source16 cooking-focus CPU proof](#cooking-focus-batch16-2026-10-12); its per-toy Maruuk native pixels remain unclaimed. Other rows retain exact mixed/private/movement gaps. No runtime/data changes, new positive/native certificate or own heavy duplicate.
