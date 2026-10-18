@@ -171,6 +171,8 @@ Toy Box UI, search/filter/pagination, action-bar persistence, scripted toy actio
 
 - Vibrant Clacking Claw205904/410931 uses its existing205296 four-display pool112407/112523/112524/112525 for600000ms, with inherited category2177 recovery3600000ms. Actual learned use must choose a valid display, preserve unchanged full health, expire naturally/restoring the native appearance and refuse while recovery remains. Single-use model validity does not certify weighted sampling, all three authored clacks or native presentation.
 
+- Toxic Victory225547/443689 uses its existing audited self dummy4 for1800000ms. Actual learned use must preserve replicated aura/cancellation, unchanged full health/model and no spawned server actors. Native victory presentation, natural thirty-minute expiry and3600000ms recovery remain separate proof scopes; do not invent per-use achievement qualification from its flavor text.
+
 - Cherry Blossom Trail220777/447446 uses its existing audited self dummy4 for600000ms. Actual learned use must preserve replicated aura/cancellation, unchanged full health/model and no spawned server actors. Native moving blossom presentation, natural ten-minute expiry and600000ms recovery remain separate proof scopes; no gameplay ground-field or invented plants.
 
 - Colorful Beach Chair218112/441839 transmits existing434317/type7/display89277/size1.5 after its3000ms cast, at target47's authored2yd forward destination for300000ms. Preserve owner/map/facing and ordinary expiry; seated interaction, native presentation and natural300000ms item recovery remain separate proof scopes. Do not substitute a cursor87 target, fishing-chair model or scale1.
