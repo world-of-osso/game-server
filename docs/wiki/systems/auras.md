@@ -69,6 +69,14 @@ Post-break/expiry attack resumption is proved by a new ordinary melee combat-log
 - **From player:** the caster has `Player` at application.
 - **Dispel type:** `spell_categories.DispelType`.
 
+### Native signed haste positivity — 2026-10-18
+
+Native70448 Curse of Weakness702 has aura342=−20 on effect0 and aura290=0 on effect1. The positivity classifier lacked342, so both effects were positive and ordinary friendly Remove Curse475 left the actual curse in place. Add342 to the existing signed-stat rule (negative base/per-level points), preserving passive/attribute precedence and the generic dispel/picker predicates. No spell-ID exception or stored aura flag override.
+
+Pinned TC a352b1fa `SpellInfo.cpp4833–4859` covers counterpart192 but also omits342. Applying the same signed rule to342 is a native70448 counterpart extension, not an exact TC342 positivity port: `SpellAuraEffects.cpp264/414` maps both to `HandleModMeleeRangedSpeedPct`. Native Curse of the Satyr442804 is negative, Slice and Dice5171 stays positive and passive Crusading Strikes404542 stays positive.
+
+Behavioral RED0/3 includes a normal creature702 application followed by a real Mage player475 cast: SpellGo succeeds but the curse remains with `harmful=false`. Generic fix makes all three pass, including the previously ignored [follower classification regression](../investigations/follower-data.md#native-dispel-and-caster-control-conditions--2026-10-18). Targeted49/49 GREEN includes retained utility, polymorph/positive-buff, cancel and ordinary Purify controls. This proves the player dispel boundary and metadata polarity, not a complete positivity port, follower702 targeting/full kit, legal loadout or fresh-UDP/rendered behavior. [Contract](../../specs/auras.md).
+
 ## Typed invisibility and spell-area eligibility (2026-10-11)
 
 Aura18 and19 now reconcile an `Invisibility` component: maps from authored MiscValue0 types to summed integer invisibility/detection values, plus aura335's reciprocal-detection exception for unit targets. Reciprocal flags do not apply to game objects (TC Object.cpp:1003); their own hidden types still require matching detection. Both type presence and value matter; zero does not remove a type. Interest checks this per observer on both observer and target updates, including stationary detectors and late arrivals. Spell relation checks, melee swings and creature sight use typed detection rather than treating every invisible unit as universally hidden. The old `Invisible` boolean marker is removed; the boss vanish regression asserts player detection instead. Applying reciprocity to every entity hid all arena gates during32727/type4 preparation, despite correct positions and map copy; the real-channel Cage preparation fixture reproduces that boundary.
