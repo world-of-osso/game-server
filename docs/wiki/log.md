@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source600–604 pending Dastardly Banner acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source600604-pending-dastardly-banner-and-cratejugglingretained-scaled-banner-podium-boundaries-2026-10-17):3eabc6183 adds239007/1227030/527088/type5/display102616/size1/cursor/180s as13th transmitted object; old12/helper unchanged, format/manual readability/diffcheck pass, behavior AFTER507. Distinct carried crate3185 and actual juggling/count/remove203/reapply64/mixed293406 gaps retained. Existing scaled Flame banner and exact grounded static Podium20min CPU/historical native source-frame proof not relabelled as new native wall-duration/recharge certificate.507 queued, no runtime/data/new native or own heavy duplicate.
+
 ## 2026-10-17 — Toy source595–599 pose/fountain/paired-bobber gaps
 
 [Exact source matrix](../toy-effects14-coverage.md#source595599-flarendofountain-and-paired-fishing-bobber-override-boundaries-2026-10-17): Flarendo's own5000ms pose, fountain36404 and Rocket520304/520305/Goblet520306/520311/Wellington520308/520309 paired258 overrides remain exact gaps. Runtime only520305 replacement exists, type17/display101984/size2;35591 generic bobber is not replacement art. Preserve both records/131474 references without immediate Fishing casts, guessed pair selection/cast conversion or flavor catch bonus.507 queued76a8426bf, no result/new acceptance/runtime/data/native proof or own heavy duplicate.
