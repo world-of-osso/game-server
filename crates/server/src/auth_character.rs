@@ -350,7 +350,13 @@ fn handle_select(
     {
         data.health = 0.0;
     }
-    let state = load_selected_character_state(db, character_id, data.race, data.class);
+    let state = load_selected_character_state(
+        db,
+        selection.account_id,
+        character_id,
+        data.race,
+        data.class,
+    );
     let guild = state.guild.clone();
     let player_entity = spawn_player_entity(
         commands,
@@ -454,6 +460,7 @@ struct SelectedCharacterState {
 
 fn load_selected_character_state(
     db: &GameDatabase,
+    account_id: u64,
     character_id: u64,
     race: u8,
     class: u8,
@@ -466,7 +473,7 @@ fn load_selected_character_state(
         gold: persistence::load_inventory(&db.db, character_id).gold,
         guild: persistence::load_character_guild(&db.db, character_id),
         professions: persistence::load_professions(&db.db, character_id),
-        achievements: persistence::load_achievements(&db.db, character_id),
+        achievements: crate::achievement::load_character_progress(db, account_id, character_id),
         pvp: crate::pvp::PlayerPvpState::from_progress(pvp),
         world_map: persistence::load_world_map(&db.db, character_id),
         friends: persistence::load_friends(&db.db, character_id),

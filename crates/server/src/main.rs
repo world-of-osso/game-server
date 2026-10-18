@@ -95,6 +95,7 @@ mod persistence_accounts;
 mod persistence_character;
 mod persistence_progression;
 mod persistence_types;
+mod persistence_writer;
 mod pet_control;
 mod pet_journal_state;
 #[cfg(test)]
