@@ -511,8 +511,7 @@ fn can_deflect_from(
         return false;
     };
     let angle = targets::orientation(world, unit);
-    let forward = Vec3::new(angle.cos(), 0.0, -angle.sin());
-    forward.dot(to - from) >= 0.0
+    targets::in_front_arc(from, to, angle)
 }
 
 fn roll_percent(chance: f32) -> bool {
