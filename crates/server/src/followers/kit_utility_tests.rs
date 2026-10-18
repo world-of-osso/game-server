@@ -2,9 +2,26 @@
 use super::kit_tests::{level32, uses_spell};
 use super::{update_ai, utility_tests};
 use crate::spell_cast::test_harness::Harness;
-use bevy::prelude::*;
+use bevy::time::TimeUpdateStrategy;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
+
+fn wait_for_native_school_unlock(h: &mut Harness, interrupt: u32) {
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(interrupt)
+        .unwrap();
+    let duration = spell.misc.as_ref().unwrap().duration.unwrap().duration_ms;
+    let cooldown = spell.cooldowns.as_ref().unwrap().recovery_ms;
+    assert!(duration > 0 && (duration as u32) < cooldown);
+    let frame_ms = match h.app.world().resource::<TimeUpdateStrategy>() {
+        TimeUpdateStrategy::ManualDuration(step) => step.as_millis(),
+        _ => panic!("native harness must use a known manual frame step"),
+    };
+    h.advance((duration as u128).div_ceil(frame_ms) as usize + 1);
+}
 
 fn cast_debuff(h: &mut Harness, spell: u32, spec: u32) {
     let enemy = h.npc;
@@ -95,7 +112,7 @@ fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
     let (mut h, unit) = level32(209059);
     utility_tests::start_enemy_fireball(&mut h, unit);
     update_ai(h.app.world_mut());
-    h.advance(80);
+    wait_for_native_school_unlock(&mut h, 2139);
     assert!(
         h.inbox
             .log
