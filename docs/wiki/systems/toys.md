@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending POST/Cosmic hearthstones and balloon/scaled-spire/phase-guise boundaries (2026-10-17)
+
+[Source620–624 matrix](../../toy-effects14-coverage.md#source620624-pending-postcosmic-hearthstones-and-balloonscaled-spirephase-guise-boundaries-2026-10-17) adds acceptance-onlyd981a866d:POST245970/1240219 and actual slot1 Cosmic246565/1242509 via unchanged source10s/saved-bind/shared2309 helper, now21 identities/old19 retained; behavior AFTER507. Missing controlled slot6 Brewer balloon246042 and actual Phase Diver state remain gaps; existing Lightning Spire display131280/scale0.5 fixture retained. No mail service from Title5, shortened POST cast, substituted Cosmic slot0, invented phase immunity or native/recharge certificate. No runtime/data/new native or own heavy duplicate.
+
 ## Pending Sea-Blessed Shrine and kill-proc/memory/rolling/Royal Visage boundaries (2026-10-17)
 
 [Source615–619 matrix](../../toy-effects14-coverage.md#source615619-pending-sea-blessed-shrine-and-kill-procscripted-memoryrolling-snowballroyal-visage-boundaries-2026-10-17) adds acceptance-only4a0133a68:245942/1240082/246037/display129958/cursor/180s as17th stationary actor, old16/helper unchanged; behavior AFTER507. Existing explicit time-leap expiry is not ordinary50ms/wall proof. Kill-proc42/trigger0 voice, script-only K'areshi appearance, missing controlled snowball245763/holiday recovery and actual Royal Visage misc0/display121918 remain gaps; no inert proc, guessed appearance, stationary rolling prop or borrowed misc8 certificate. No runtime/data/new native or own heavy duplicate.

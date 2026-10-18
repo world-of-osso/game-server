@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source620–624 pending POST/Cosmic hearthstones
+
+[Exact source matrix](../toy-effects14-coverage.md#source620624-pending-postcosmic-hearthstones-and-balloonscaled-spirephase-guise-boundaries-2026-10-17):d981a866d adds245970/1240219 and actual slot1 246565/1242509 to unchanged10s/saved-bind/shared2309 helper, now21 hearthstones/old19 retained; format/manual readability/diffcheck pass, behavior AFTER507. Missing controlled slot6 Brewer balloon246042 and actual Phase Diver state remain gaps; scaled Spire131280/0.5 fixture retained. No inferred mail service, shortened cast, slot0 substitute, independent timer or phase immunity.507 prior19 scope pending final; no runtime/data/new native or own heavy duplicate.
+
 ## 2026-10-17 — Toy source615–619 pending Sea-Blessed Shrine acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source615619-pending-sea-blessed-shrine-and-kill-procscripted-memoryrolling-snowballroyal-visage-boundaries-2026-10-17):4a0133a68 adds245942/1240082/246037/display129958/cursor/180s as17th stationary actor; old16/helper retained, format/manual readability/diffcheck pass, behavior AFTER507. Explicit time-leap expiry not relabelled ordinary50ms/wall proof. Exact kill-proc42/trigger0 voice, script-only K'areshi appearance, missing controlled rolling snowball/holiday recovery and Royal Visage misc0 remain gaps.507 earlier16/18/12 scopes pending final; newer17stationary/19caster/13object unverified. No runtime/data/new native or own heavy duplicate.
