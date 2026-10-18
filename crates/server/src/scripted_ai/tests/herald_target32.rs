@@ -163,7 +163,6 @@ fn elevated_nazan_for_target32() -> (Harness, InMap, Entity) {
 }
 
 #[test]
-#[ignore = "RED: target32 must ignore radius, clamp to reach and ground before AI movement"]
 fn encounter_coverage_herald_target32_30717_uses_source_reach_and_ground_before_ai_moves() {
     let (mut h, map, herald) = elevated_nazan_for_target32();
     let spell = h.app.world().resource::<SpellStore>().get(30717).unwrap();
@@ -203,7 +202,6 @@ fn encounter_coverage_herald_target32_30717_uses_source_reach_and_ground_before_
 }
 
 #[test]
-#[ignore = "RED: flying target32 must preserve altitude above floor but raise it from below"]
 fn encounter_coverage_herald_target32_gravity_disabled_preserves_above_and_raises_below() {
     for below_floor in [false, true] {
         //30717 has a real cooldown: independent casters isolate each geometry case.
@@ -252,7 +250,6 @@ fn encounter_coverage_herald_target32_gravity_disabled_preserves_above_and_raise
 }
 
 #[test]
-#[ignore = "RED: FORCE_DEST_LOCATION takes MovePosition height backoff, not flyer allowed-Z"]
 fn encounter_coverage_herald_target32_force_uses_height_backoff_and_ground_position() {
     let (mut h, map, herald) = elevated_nazan_for_target32();
     h.app
