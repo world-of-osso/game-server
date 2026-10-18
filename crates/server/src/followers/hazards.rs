@@ -12,6 +12,21 @@ struct Field {
     radius: f32,
 }
 
+#[derive(Component)]
+struct EscapeProbe {
+    map: u32,
+    goal: Goal,
+    targets: Vec<Vec3>,
+}
+
+fn clear_escape_probe(world: &mut World, unit: Entity) {
+    if let Some(probe) = world.entity_mut(unit).take::<EscapeProbe>()
+        && let Some(mut nav) = world.get_resource_mut::<Navigation>()
+    {
+        nav.cancel_query(unit, probe.goal);
+    }
+}
+
 fn point(position: Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }
@@ -149,6 +164,7 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
     };
     let fields = hostile_fields(world, unit);
     let Some(field) = fields.iter().find(|field| contains(field, point(from))) else {
+        clear_escape_probe(world, unit);
         return false;
     };
     crate::spell_cast::cancel_cast(world, unit);
@@ -203,16 +219,22 @@ fn escape_destination(
     {
         return EscapeDestination::Ready(to);
     }
-    let radius = field.radius + shared::los::body::BODY_RADIUS * 2.0;
-    // Ground/field policy stays on the tick; all eight Detour paths are one job.
-    let targets: Vec<_> = (0..8)
-        .filter_map(|index| {
-            let angle = index as f32 * std::f32::consts::FRAC_PI_4;
-            let mut to = field.center + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
-            to.y = from.y;
-            supported_candidate(world, map, to, fields)
-        })
-        .collect();
+    // A growing native field must not replace its batch every tick. Capture the
+    // decision once, then validate its returned endpoints against current fields.
+    let targets = if let Some(probe) = world.get::<EscapeProbe>(unit)
+        && probe.map == map
+        && probe.goal == goal
+    {
+        probe.targets.clone()
+    } else {
+        let targets = sample_escape_targets(world, map, from, field, fields);
+        world.entity_mut(unit).insert(EscapeProbe {
+            map,
+            goal,
+            targets: targets.clone(),
+        });
+        targets
+    };
     let result = world.resource_mut::<Navigation>().query_deferred(
         unit,
         map,
@@ -227,21 +249,44 @@ fn escape_destination(
     };
     let routes = match result {
         Ok(Some(Output::Candidates(routes))) => routes,
-        Ok(None) => return EscapeDestination::Blocked,
+        Ok(None) => return blocked_escape(world, unit),
         Ok(Some(_)) => {
             error!("Follower {unit} escape batch returned a non-candidate result");
-            return EscapeDestination::Blocked;
+            return blocked_escape(world, unit);
         }
         Err(error) => {
             debug!("Follower {unit} escape candidates: {error}");
-            return EscapeDestination::Blocked;
+            return blocked_escape(world, unit);
         }
     };
     let destination = choose_escape_route(unit, targets, routes, fields);
     if matches!(destination, EscapeDestination::Blocked) {
-        world.resource_mut::<Navigation>().cancel_query(unit, goal);
+        clear_escape_probe(world, unit);
     }
     destination
+}
+
+fn blocked_escape(world: &mut World, unit: Entity) -> EscapeDestination {
+    clear_escape_probe(world, unit);
+    EscapeDestination::Blocked
+}
+
+fn sample_escape_targets(
+    world: &mut World,
+    map: u32,
+    from: Position,
+    field: &Field,
+    fields: &[Field],
+) -> Vec<Vec3> {
+    let radius = field.radius + shared::los::body::BODY_RADIUS * 2.0;
+    (0..8)
+        .filter_map(|index| {
+            let angle = index as f32 * std::f32::consts::FRAC_PI_4;
+            let mut to = field.center + Vec3::new(angle.cos() * radius, 0.0, angle.sin() * radius);
+            to.y = from.y;
+            supported_candidate(world, map, to, fields)
+        })
+        .collect()
 }
 
 fn choose_escape_route(
@@ -259,7 +304,7 @@ fn choose_escape_route(
                 continue;
             }
         };
-        if !route_leaves_fields(&route, fields) {
+        if fields.iter().any(|field| contains(field, to)) || !route_leaves_fields(&route, fields) {
             continue;
         }
         let length = route.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
