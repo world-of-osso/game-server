@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Derive the Retail-first content_* tables the server reads from AzerothCore + Retail DB2 tables.
 
-  content_policy.py [--db data/world.db] [--csv-root DIR] [--overrides CSV] [--report CSV] [--check]
+  content_policy.py --source-dir DIR [--db data/world.db] [--csv-root DIR] [--overrides CSV] [--report CSV] [--check]
 
 --check only verifies the inputs exist (import-azerothcore.sh preflight).
 
@@ -457,6 +457,9 @@ def main():
     )
     parser.add_argument("--db", type=Path, default=PROJECT_DIR / "data/world.db")
     parser.add_argument("--csv-root", type=Path, default=db2.DEFAULT_CSV_ROOT)
+    parser.add_argument(
+        "--source-dir", type=Path, help="Forever DB2 directory; required for rebuild"
+    )
     parser.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES)
     parser.add_argument(
         "--derived-merchants", type=Path, default=DEFAULT_DERIVED_MERCHANTS
@@ -474,6 +477,8 @@ def main():
     parser.add_argument("--mode", choices=("rebuild", "items-refresh", "world-promote", "world-census"), default="rebuild")
     parser.add_argument("--maps", help="comma-separated explicit open-world map IDs; world-promote only")
     args = parser.parse_args()
+    if args.mode == "rebuild" and args.source_dir is None:
+        parser.error("--source-dir is required for rebuild")
     if args.mode == "world-census":
         import world_population
 
@@ -517,7 +522,7 @@ def main():
     if missing:
         raise SystemExit(f"Missing content policy inputs: {', '.join(missing)}")
     merchants = derived_merchants.load_manifest(args.derived_merchants)
-    zephras = zephras_content.load_input(args.zephras_content)
+    zephras = zephras_content.load_input(args.zephras_content, source_dir=args.source_dir)
     if args.check:
         return
     wrath_spell_names = read_wrath_spell_names(wrath_path)

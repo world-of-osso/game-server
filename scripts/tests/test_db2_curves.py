@@ -2,6 +2,7 @@
 
 import csv
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -13,7 +14,8 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2
 
-SOURCE = SCRIPTS / "reference/forever-1.60.1.70205"
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+REFERENCE = SCRIPTS / "reference/forever-1.60.1.70205"
 FIXTURE_BUILD = "fixture-curve-publication"
 # Actual70448 Curve.csv rows: Type0 is linear; retain flags independently.
 NATIVE_CURVES = [(8, 0, 2), (33927, 0, 0)]
@@ -26,7 +28,7 @@ def write_csv_fixture(root):
     with sqlite3.connect(path) as connection:
         connection.executescript((SCRIPTS / "db2_schema.sql").read_text())
         connection.execute("INSERT INTO map (ID, Directory) VALUES (0, 'Azeroth')")
-        retail = json.loads((SOURCE / "retail-kit-runtime-rows.json").read_text())
+        retail = json.loads((REFERENCE / "retail-kit-runtime-rows.json").read_text())
         for table, records in retail.items():
             for row in records:
                 columns = ",".join(row)
@@ -60,6 +62,8 @@ class CurvePublicationTest(unittest.TestCase):
                         sys.executable,
                         str(SCRIPTS / "db2.py"),
                         "import",
+                        "--source-dir",
+                        str(SOURCE),
                         "--build",
                         FIXTURE_BUILD,
                         "--csv-root",

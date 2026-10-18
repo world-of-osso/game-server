@@ -2,6 +2,7 @@
 
 import copy
 import json
+import os
 import sqlite3
 import sys
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
 FIXTURE = SCRIPTS / "tests/fixtures/zephras-content.json"
 TABLES = [
     "creature_template",
@@ -52,7 +54,7 @@ class ContentOverlayTest(unittest.TestCase):
         import zephras_content
         import zephras_creatures
 
-        catalog, decoded = zephras_creatures.load_catalog()
+        catalog, decoded = zephras_creatures.load_catalog(SOURCE)
         return zephras_content.apply_overlay(
             self.db, content or self.content, catalog, decoded
         )
@@ -187,7 +189,7 @@ class ContentOverlayTest(unittest.TestCase):
         import zephras_content
         import zephras_creatures
 
-        catalog, decoded = zephras_creatures.load_catalog()
+        catalog, decoded = zephras_creatures.load_catalog(SOURCE)
         record = catalog[2671]
         self.assertNotEqual(record["type"], 0)
         catalog[251362] = record
@@ -300,7 +302,7 @@ class ContentOverlayTest(unittest.TestCase):
         npc = next(n for n in content["npcs"] if n["id"] == 251487)
         npc["coords"][0]["world"]["z"] = None
         npc["coords"][0]["world"]["z_status"] = "missing-root"
-        catalog, decoded = zephras_creatures.load_catalog()
+        catalog, decoded = zephras_creatures.load_catalog(SOURCE)
         # Actual decoded pet appearance must not replace a captured NPC-page appearance.
         catalog[251362] = catalog[2671]
         report = zephras_content.apply_overlay(self.db, content, catalog, decoded)
@@ -428,6 +430,8 @@ class ContentOverlayTest(unittest.TestCase):
                 [
                     sys.executable,
                     str(SCRIPTS / "zephras_content.py"),
+                    "--source-dir",
+                    str(SOURCE),
                     "--content",
                     str(source),
                     "--db",

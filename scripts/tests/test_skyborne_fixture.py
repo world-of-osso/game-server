@@ -2,6 +2,7 @@
 
 from contextlib import closing
 from pathlib import Path
+import os
 import sqlite3
 import sys
 import unittest
@@ -9,6 +10,8 @@ import unittest
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import skyborne_kit_fixture
+
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
 
 
 class PortableFixtureTest(unittest.TestCase):
@@ -18,7 +21,7 @@ class PortableFixtureTest(unittest.TestCase):
         sql = path.read_text().split('r#"', 1)[1].rsplit('"#;', 1)[0]
         with (
             closing(sqlite3.connect(":memory:")) as portable,
-            closing(skyborne_kit_fixture.fixture_database()) as current,
+            closing(skyborne_kit_fixture.fixture_database(SOURCE)) as current,
         ):
             portable.executescript(sql)
             tables = {
