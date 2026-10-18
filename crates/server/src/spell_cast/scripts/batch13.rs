@@ -59,13 +59,14 @@ fn cast_execute_damage(
     effect: &crate::spell_info::SpellEffect,
     target: Entity,
 ) {
-    spell_cast::cast_queued_trigger_with_item_level(
+    spell_cast::cast_costed_trigger_with_context(
         world,
         ctx.caster,
         effect.trigger_spell,
         Some(target),
         ctx.depth + 1,
         ctx.spell.cast_item_level,
+        ctx.spell.cast_destination,
     );
 }
 
