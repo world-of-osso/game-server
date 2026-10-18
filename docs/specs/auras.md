@@ -34,7 +34,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 - [x] MOD_BLOCK_PERCENT 51: add to a player's block chance when it can block and holds a shield (StatSystem.cpp:496-501); creatures' block ignores it.
 - [x] MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN 417: divide the GCD of a spell its class mask affects by 1 + haste, within 750-1500 ms (Spell.cpp:9220-9224).
 
-- [ ] Cold dormant creatures defer aura-state initialization and authored addon effects until activity resumes. A real player-grid wake applies the addon exactly once in that same fixed step; another sleep/wake does not reset or reapply it. Active spawns retain first-step application, health, clocks and population.
+- [x] Cold dormant creatures defer aura-state initialization and authored addon effects until activity resumes. A real player-grid wake applies the addon exactly once in that same fixed step; another sleep/wake does not reset or reapply it. Active spawns retain first-step application, health, clocks and population.
 - [ ] Native CPU timings are diagnostic only; performance acceptance uses frozen matching release baseline/after artifacts in an allocated window.
 
 ## How it works
