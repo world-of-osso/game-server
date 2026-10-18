@@ -137,7 +137,7 @@ Only774 repeats active/other-enemy recipient order for its second authored three
 
 ### Tidal Wave X — 2026-10-18
 
-Only2309 joins the existing enemy-team registry. Three14-point Aquatic rows reuse ordinary damage, followed by existing global property85 state69 object reset; no handler/math/general routing change. [Exact source/proof](../../pet-battle-effect-coverage.md#tidal-wave-x--implementation2026-10-18) records genuine core4/owned1RED→GREEN, parameterized319controls for nine active pairs/misses/dead reserves/both-team Rocket294 purge despite all misses/Healthy577 preservation, plus legalSwoggy3570/4power60/max321/56damage. All10sourcefixturesreconcile; finalintegration/census/check/fmt/native-after-landing pending.
+Only2309 joins the existing enemy-team registry. Three14-point Aquatic rows reuse ordinary damage, followed by existing global property85 state69 object reset; no handler/math/general routing change. [Exact source/proof](../../pet-battle-effect-coverage.md#tidal-wave-x--implementation2026-10-18) records genuine core4/owned1RED→GREEN, parameterized319controls for nine active pairs/misses/dead reserves/both-team Rocket294 purge despite all misses/Healthy577 preservation, plus legalSwoggy3570/4power60/max321/56damage. All10sourcefixturesreconcile. Final741b4c231lib+maincompilationhits14upstreamE0308stalespawn_creatureOption<Entity>callersinauras/tests.rs/smart_escort_tests.rs; no petbattle patch to those tests. Independentlib163/fresh70448census1841/2829=65.08%/1031graphsPASS/shared11acleanbeforeafter (+5/+1/no removals),otherrejections/70391retained. Mainintegrationstillrequired/notreplaced; check/fmt/native-after-landing pending.
 
 ### BONESTORM!1761 — 2026-10-17
 
