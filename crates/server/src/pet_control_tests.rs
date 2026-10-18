@@ -293,6 +293,26 @@ impl PetHarness {
             .count()
     }
 
+    fn assert_melee_attempts(&self, target: Entity) {
+        assert!(self.melee_swings(target) > 0, "the wolf never swung");
+        let damage: i32 = self
+            .h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.source == Some(self.pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            })
+            .map(|event| {
+                assert!(event.amount > 0, "{event:?}");
+                event.amount
+            })
+            .sum();
+        assert_eq!(5_000.0 - self.h.health(target), damage as f32);
+    }
+
     /// The pet's completed casts of `spell` at `target`, landed or missed.
     fn spell_casts(&self, spell: u32, target: Entity) -> usize {
         self.h
@@ -496,7 +516,7 @@ fn attack_sends_the_wolf_at_the_target_and_follow_brings_it_back() {
         p.gap(p.pet, kobold)
     );
     let hurt = p.h.health(kobold);
-    assert!(hurt < 5_000.0, "the kobold took no swing");
+    p.assert_melee_attempts(kobold);
 
     p.command(COMMAND_FOLLOW);
     assert_eq!(p.last_bar().command_state, COMMAND_FOLLOW);
@@ -645,10 +665,7 @@ fn attack_sends_the_wolf_at_a_neutral_beast() {
     p.advance(100);
     assert_eq!(p.pet_victim(), Some(kobold));
     assert!(p.pet_in_combat());
-    assert!(
-        p.h.health(kobold) < 5_000.0,
-        "the neutral beast took no bite"
-    );
+    p.assert_melee_attempts(kobold);
 }
 
 #[test]

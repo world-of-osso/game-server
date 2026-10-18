@@ -132,6 +132,45 @@ fn dead(app: &App, unit: Entity) -> bool {
     app.world().get::<DeathState>(unit).is_some()
 }
 
+fn assert_melee_attempts(app: &App, attacker: Entity, target: Entity) {
+    use shared::protocol::CombatEventType;
+    let log = app.world().resource::<crate::combat::CombatLog>();
+    let attempts: Vec<_> = log
+        .range(0.0, f64::MAX)
+        .into_iter()
+        .filter(|entry| {
+            entry.event.attacker == attacker.to_bits()
+                && entry.event.target == target.to_bits()
+                && entry.event.spell_id == 0
+                && matches!(
+                    entry.event.event_type,
+                    CombatEventType::MeleeDamage
+                        | CombatEventType::CriticalHit
+                        | CombatEventType::Block
+                        | CombatEventType::Miss
+                        | CombatEventType::Dodge
+                        | CombatEventType::Parry
+                )
+        })
+        .collect();
+    assert!(
+        !attempts.is_empty(),
+        "{attacker:?} never swung at {target:?}"
+    );
+    for entry in attempts {
+        let event = &entry.event;
+        match event.event_type {
+            CombatEventType::Miss | CombatEventType::Dodge | CombatEventType::Parry => {
+                assert_eq!(event.amount, 0.0, "{event:?}");
+            }
+            _ => {
+                assert!(event.amount > 0.0 && event.amount.is_finite(), "{event:?}");
+                assert!(health(app, target).0 < health(app, target).1, "{event:?}");
+            }
+        }
+    }
+}
+
 #[test]
 #[ignore]
 fn northshire_infantry_and_the_worg_beside_it_are_neutral_and_never_fight() {
@@ -184,14 +223,8 @@ fn northshire_infantry_and_a_blackrock_invader_fight_until_one_dies_or_evades() 
     );
 
     run(&mut app, 100);
-    assert!(
-        health(&app, soldier).0 < health(&app, soldier).1,
-        "the invader hits"
-    );
-    assert!(
-        health(&app, invader).0 < health(&app, invader).1,
-        "the soldier hits"
-    );
+    assert_melee_attempts(&app, invader, soldier);
+    assert_melee_attempts(&app, soldier, invader);
 
     let mut ticks = 0;
     while !dead(&app, soldier) && !dead(&app, invader) {
