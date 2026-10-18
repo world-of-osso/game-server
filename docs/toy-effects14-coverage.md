@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source305–309: seasonal/flower/cooking boundaries and pending Insoles acceptance (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|305 Winter Veil Chorus Book188680/100343 | Permanent self dummy4 plus aura285→100348's permanent128/129 dummy-aura slots,10000ms item recovery. Source explicitly limits singing to Winter Veil, while ItemSparse RequiredHoliday0 alone is not the complete rule. Seasonal/linked audience/music action remains unproved, not simple singing art or ignored child slots. |
+|306 Spring Florist's Pouch188694/61818 | Target47 summons27870/Wild Flower for60000ms,60000ms item recovery; four model IDs24890/24895/24897/24898. Observed runtime content model rows have DisplayScale8.82/build12340 versus Retail TDB source1.0/build69497. Source SmartAI OnSpawn action80→timed list2787000 casts49801/Grow. Exact content/profile reconciliation, actual planting/growth/lifecycle/native proof remain open; no scalar compensation or ordinary-static-flower admission. |
+|307 Summer Cranial Skillet188695/103977 | Source300000ms self dummy4 has literal base103997/trigger0, plus target18 effect50→209653. TDB209653 is type8/display192, cooking focus4/radius10. Actual kneeling/caster-hosted cooking/placement/link cleanup remains unproved as this mixed root; do not execute a guessed base-point child, ignore the nonzero payload or borrow generic fire-focus acceptance. |
+|308 Eagger Basket188698/61810 | Source self speed31/base60 for10000ms, RequiredAreasID1103 and category1203/10000ms recovery. Retain [Source21's actual-terrain/Goldshire activation/Northshire refusal/area-exit removal/category-history CPU and both-skin area/native witnesses](#source-requiredareasid-lifecycle-2026-10-13). This revisit adds no new advertised Noblegarden-window certificate or full calendar proof; RequiredHoliday0 does not settle that complete rule. |
+|309 Insulated Dancing Insoles188699/45416 | Already-audited self complete-zero dummy4, source permanent duration-1,1000ms item recovery; RequiredHoliday0 and separate RequiredTransmogHoliday341. Test/spec8a986da00 adds the exact item/root/permanent-duration0 row to existing actual learning/use/aura/cancel/unchanged-health/model/no-actor fixture, now13IDs. Format/manual readability/diffcheck pass; changed-fixture acceptance remains pending the explicitly lead-owned next gate after476, ID/result not yet confirmed. No borrowed12-ID pass, native Hot Feet/audio, ordinary1000ms reuse or calendar/transmog certificate. |
+
+`rows305-309-{readonly-source,action-source}.json` retains70391 root/child/cast/duration/recovery/item restriction rows plus observed runtime/TDB creature-model, SmartAI and cooking-focus profiles. `insoles309-proof-ledger.json` tracks the new test-only case separately from metadata and historical Source21 proof. No production/data/canonical mutation, false RED, new renderer/actor admission or own duplicate heavy gate;149865 Tea Set stays lead-required.
+
 ## Source300–304: scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
 
 | Source row | Exact retained source boundary and proof level |
