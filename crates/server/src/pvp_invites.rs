@@ -50,8 +50,15 @@ fn apply_invitation_response(
         .battleground_matches
         .get(&request.match_id)
         .and_then(|matched| matched.map);
-    respond_to_battleground_invitation(state, request.match_id, character_id, request.accepted)?;
-    if request.accepted {
+    // TC BattleGroundHandler.cpp347–358 turns a late BG Deserter accept into a decline.
+    let deserter_error = if request.accepted && invitation.arena.is_none() {
+        super::validate_no_deserter(world.get::<crate::auras::ActiveAuras>(player)).err()
+    } else {
+        None
+    };
+    let accepted = request.accepted && deserter_error.is_none();
+    respond_to_battleground_invitation(state, request.match_id, character_id, accepted)?;
+    if accepted {
         return accept_and_teleport(
             world,
             state,
@@ -72,6 +79,9 @@ fn apply_invitation_response(
         if !state.battleground_matches.contains_key(&request.match_id) {
             close_match_map(world, map)?;
         }
+    }
+    if let Some(error) = deserter_error {
+        return Err(error);
     }
     Ok(format!("declined {} invitation", invitation.name))
 }
