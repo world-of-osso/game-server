@@ -1,3 +1,7 @@
+## 2026-10-17 — Native Sprout initial periodic tick correction
+
+[Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): first5d4e3f6d packet5PASS/1FAIL121.30s, exact published inputs/source/HEAD guards stable. Failure was the fixture's zero-initial-tick expectation: actual70448 SpellMisc374523 Attributes5=524800/0x80200 includes TC `EXTRA_INITIAL_PERIOD`0x200. Production periodic behavior is correct and unchanged; corrected fixture pins the flag and expects1initial/1beforeperiod/2afterperiod/2afterexit, preserving no-reapplication and caster-filtered cleanup checks. Only failed case is rerun; five passing field/lifecycle/scale/curve cases are retained, not relabeled fresh6/6.
+
 ## 2026-10-17 — Published Curve and native aura395 field implementation
 
 [Native fields](systems/spell-casting.md#aura-owned-native-fields--2026-10-17): lead gate462 landed the maintained Curve publisher and published62817 readable rows; IDs121405/121406 remain unauthenticated/absent. Versioned private backup preserves143 Stockade/225 Azure actors. Four new native fixtures21f3045a compile and reach genuine shared missing-field ROOT failures87.99s; downstream scale/action/lifecycle assertions were not reached. Source-defined generic field implementation is committed before targeted GREEN/check/fmt/independent proof; no acceptance or native-pixel claim yet. This supersedes the earlier publication-pending state, without relabeling historical8f27/318 evidence.

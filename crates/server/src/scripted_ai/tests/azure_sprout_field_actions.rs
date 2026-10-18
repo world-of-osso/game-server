@@ -5,6 +5,7 @@ use std::time::Duration;
 
 const SPROUT_AURA: u32 = 374161;
 const SPROUT_DAMAGE: u32 = 374523;
+const EXTRA_INITIAL_PERIOD: u32 = 0x200;
 
 fn isolate_native_sprout(h: &mut Harness) -> (Entity, Entity) {
     let children = h.creatures_of(190509);
@@ -99,6 +100,21 @@ fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other
     let (child, other_caster) = isolate_native_sprout(&mut h);
     let field = find_field(&mut h, child);
     let player = h.player();
+    let native_flags = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(SPROUT_DAMAGE)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .attributes[5];
+    assert_ne!(
+        native_flags & EXTRA_INITIAL_PERIOD,
+        0,
+        "native374523 ticks on apply"
+    );
     let center = *h.app.world().get::<Position>(field).unwrap();
     let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
     let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), player)
@@ -122,17 +138,17 @@ fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other
     );
     assert_eq!(
         count_field_ticks(&h, child, player),
-        0,
-        "entry is aura application, not instant damage"
+        1,
+        "native ExtraInitialPeriod supplies one initial periodic tick, not an extra hit"
     );
     h.advance(0.9);
     assert_eq!(
         count_field_ticks(&h, child, player),
-        0,
-        "native1000ms period not yet due"
+        1,
+        "native1000ms period not yet due; entry must not reapply the aura"
     );
     h.advance(0.15);
-    assert_eq!(count_field_ticks(&h, child, player), 1);
+    assert_eq!(count_field_ticks(&h, child, player), 2);
     crate::spell_cast::cast_triggered(
         h.app.world_mut(),
         other_caster,
@@ -162,7 +178,7 @@ fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other
     h.advance(1.1);
     assert_eq!(
         count_field_ticks(&h, child, player),
-        1,
+        2,
         "removed aura produces no future ticks"
     );
     assert!(count_field_ticks(&h, other_caster, player) > 0);
