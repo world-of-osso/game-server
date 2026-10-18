@@ -11,6 +11,8 @@ mod azure_explosive_brand;
 mod azure_frost_bomb;
 #[path = "azure_intro.rs"]
 mod azure_intro;
+#[path = "azure_jump_charge.rs"]
+mod azure_jump_charge;
 #[path = "azure_leymor_children.rs"]
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
