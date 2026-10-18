@@ -1,5 +1,13 @@
 # Toy effects14 — active whole-goal coverage
 
+## Gate548 MaxCount defect: coordinated repair targeted GREEN; integration pending (2026-10-18)
+
+548 is genuine RED319/1/1ignored749.69s/EXIT101/FMT0/CHECK0: real Doomsday repeat persisted a second202310 GUID. Authorized repair now propagates source MaxCount and enforces it at all shared store entries, includes passive personal-bank ownership, removes the quest starter/reward direct-push bypass and reports typed owner ItemMaxCount without mislabeling a true full bag. [Mechanism, caller scope, source citations and exact proof matrix](wiki/systems/inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18) are authoritative.
+
+Targeted proof: shared-model RED0/2→5/0 at1a811a183; quest RED0/2→3/0 at23749fa05; production-profession Doomsday RED2/1→4/0 atc67ea2596, including genuine-full and triggered-effect controls. Protocol2a5307c wire1/0 and engined73fa72e6 account-dispatch1/0 preserve Retail GlobalStrings10918/ERR_ITEM_MAX_COUNT. Source clarification supersedes the earlier two-SpellGo assumption: regular preflight (`Spell.cpp:7648–7656`) refuses the second use with equip error/DONT_REPORT; triggered effects separately test the lower storage bound (`SpellEffects.cpp:1426–1440`). Original GUID/count, inventory/gold/log and closed-bank access guards are asserted.
+
+Lead owns one combined three-repo broad gate; no own broad rerun, no final integration/landing/native/full1166 claim. Toy batch5efec9c6f is retained: all three cancellation/recovery cases compile in the current unit binary but remain behavior-unexecuted pending that gate. Earlier pending labels below are source-stage history; no source weights/data were changed. [Contracts](specs/inventory.md), [quest scope](specs/quests.md), [toy scope](specs/toys.md).
+
 ## Three-item batch: Saptor685, Idol702, Badge710 cancellation/recovery pending after548 (2026-10-18)
 
 Test/spec604c35311 adds `toyfx_shared_saptor_idol_badge_cancel_and_recover_without_bypassing_category`, extending three existing Full1166 identities in one future gate tip:268728/1283502/misc260346,276925/1301489/misc268496,280419/1308693/misc271558. Each uses actual learned use/source display pool/self56/misc8/3600000ms aura, reports shared2513/600000ms recovery, then real CancelAura must restore the prior model/remove the replicated aura. Both own item and learned Pango refuse immediately; Pango still refuses near580 ordinary simulated seconds, then succeeds once after600 seconds with its own source pool/misc260345,8/one-hour aura and unchanged health. No source weights or deadline/category state are rewritten; Saptor's0.1 row and Badge4/2/1/2/1 weights remain untouched.

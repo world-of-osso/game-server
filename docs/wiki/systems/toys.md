@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate548 MaxCount repair targeted GREEN; coordinated gate pending (2026-10-18)
+
+[Current Toy proof/limits](../../toy-effects14-coverage.md#gate548-maxcount-defect-coordinated-repair-targeted-green-integration-pending-2026-10-18), [inventory mechanism/source/proof](inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18): genuine548 duplicate-product defect now has sourceMaxCount/shared-store/passive-bank/quest-bypass/typed-cast repair. Targeted model5/0, quest3/0, Doomsday4/0, shared-wire1/0 and native-account CPU-dispatch1/0. Real ProfessionData requires regular second-use refusal/typed ItemMaxCount; separate triggered-effect and genuine-full controls retain their distinct semantics. Three-item2513 batch retained/compiled but behavior-unexecuted. Lead combined three-repo gate, landing/native/full1166 remain pending; no source data/weights edit or own broad rerun.
+
 ## Three-item shared2513 cancellation/recovery batch pending (2026-10-18)
 
 [Exact batch/limits](../../toy-effects14-coverage.md#three-item-batch-saptor685-idol702-badge710-cancellationrecovery-pending-after548-2026-10-18):604c35311 adds actual Saptor685/Idol702/Badge710 learned cancellation/restoration/no2513 bypass/ordinary600s Pango reuse. Source pools and weights untouched; prior fixtures unchanged. One future gate for three identities, uncompiled/unexecuted AFTER548 with format/manual evidence only. No Masquerade cancellation/hour-expiry/exact-wall/native/distribution certificate or runtime/data edit.

@@ -1,3 +1,7 @@
+## 2026-10-18 — Gate548 MaxCount repair targeted GREEN; combined gate pending
+
+[Current Toy proof/limits](../toy-effects14-coverage.md#gate548-maxcount-defect-coordinated-repair-targeted-green-integration-pending-2026-10-18), [authoritative mechanism/source matrix](systems/inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18): sourceMaxCount/shared stores/passive personal-bank count, quest direct-push migration and typed regular-cast owner error implemented. Targeted model5/0, quest3/0, Doomsday4/0, protocol1/0/client-dispatch1/0. Source Spell.cpp7648–7656 corrects regular second-use semantics; triggered-effect cap and genuine-full error controls pass separately. Three-item2513 batch retained/compiled but behavior-unexecuted. No data/weights or native presentation changes, no own broad rerun; lead combined three-repo gate/landing pending.
+
 ## 2026-10-18 — Three-item2513 cancellation/recovery batch pending
 
 [Exact batch/limits](../toy-effects14-coverage.md#three-item-batch-saptor685-idol702-badge710-cancellationrecovery-pending-after548-2026-10-18):604c35311 batches Saptor685/Idol702/Badge710 learned-use/source-model/one-hour aura, real cancellation/restoration/no2513 bypass and ordinary600s Pango reuse. Original fixtures and weights unchanged. Format/manual only, uncompiled/unexecuted AFTER548; no Masquerade cancellation/hour-expiry/exact-wall/native/distribution or runtime/data claim, no own jobs.
