@@ -696,6 +696,8 @@ External resources, tooling, data sources, development workflow.
 - [Generic toy aura effects](systems/toys.md#generic-scale-fall-effect-immunity-and-override-sets-2026-10-10) — additive61, feather105, effect37 and OverrideSpellData293; census and authentic-data preparation.
 - [Pet battle engine](systems/pet-battle-engine.md) — deterministic turn library, strict SQLite boundary, grounded effect/team targeting, Cyclone/Stench, bounded Leech Life and wearer-owned ability/slot lockdown; fixed-RNG CPU tests; [current105-ID census and bounded Fade/wall proof](../pet-battle-effect-coverage.md#current70391-continuation--2026-10-16) separates row references/admission from Retail proof.
 
+- [Navigation worker design](design/navigation-worker.md) — approved ownership/message/call-site inventory, pending/latest-request/fixed-order publication, bounded queue and worker-death contract; blocked-read RED/implementation pending.
+- [SIGHT_FACTION_MAIN_THREAD_CPU](investigations/server-tick-lag.md#sight_faction_main_thread_cpu) — separate sampled CPU contributor,9of12 B stacks and exact A/B limits; next candidate after navigation.
 - [Creature navigation](systems/navigation.md) — shared LOS/ground collision collector, tiled Recast bake and creature paths; [stationary arch/leash](systems/navigation.md#stationary-arch-and-leash-acceptance) records Retail5s no-path grace and bounded live acceptance; [contract](../specs/navigation.md).
 
 - [Class defensives audit](../defensives-audit.md) — 13 catalog candidates; melee immunity/absorb, dodge and Brew fixes, proof ledger and remaining Blur/Turtle limits.
