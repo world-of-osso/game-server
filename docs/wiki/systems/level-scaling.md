@@ -8,8 +8,14 @@ Tuned creatures (`ContentTuningID` != 0, 4,563 of the 4,824 templates spawned on
 
 - `shared::level_scaling::LevelScaling` (replicated) holds the ContentTuningID, the range and the per-spawn delta. `level_for_target(L)` is `clamp(L, min, max) + delta`. `native_level()` is `max + delta`.
 - `UnitLevel` of a tuned creature is its native level, so the combat log, `/who`-style reads and untuned code see the top of the range.
-- `ScaledStats(Arc<LevelStats>)` (server-only) holds max health and base DPS per level from 0 to 126 for the template. It is built once per template in `world_data.rs` and shared by every spawn.
+- `ScaledStats(Arc<LevelStats>)` (server-only) holds max health and base DPS per level from 0 to 126. Explicit template tuning is built once in `world_data.rs` and shared; regional ordinary CT0 stats are built at spawn from the selected tuning and source difficulty modifiers.
 - `UnitScaling` (`level_scaling.rs`) combines a unit's `UnitLevel`, `LevelScaling` and `ScaledStats`. `damage_dealt` and `health_loss` take an attacker and a victim.
+
+### Ordinary source context — 2026-10-17
+
+`CreatureSpawnContext` carries the actual map copy, difficulty and terrain cache. `read_spawn_tuning` first honors [authored template source selection](world-data.md#template-source-selection), then explicit template tuning. Ordinary non-critter CT0 uses existing `SummonLevels` map/area ancestry and source deltas; `read_spawn_area` probes actual MCNK data rather than trusting the spawn's zone field. Known zero tuning remains fixed; missing input fails with `CREATURE_LEVEL_CONTEXT_GAP`, including actor/spawn/map/copy/difficulty. Temporary/script summons keep their existing separate initialization; no new owner-level policy is introduced.
+
+Continent population waits for `ground::open_ground_map` and its deferred resource publication in PostStartup. Real production-order startup reaches missing-context RED before this dependency and strict GREEN1/1 at1050147f after it; the fixture uses sourced17536 at an actual imported continent position, not a canonical Nazan placement. Seven enabled context/source/startup cases plus affected controls pass54/54 in177.24s at33dcb7b6; 55 existing ignored cases are not acceptance evidence. [Herald boundary and remaining morph gap](../../specs/ramparts-herald.md).
 
 ### Damage path
 
