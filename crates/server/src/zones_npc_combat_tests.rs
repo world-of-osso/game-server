@@ -201,7 +201,6 @@ fn northshire_infantry_and_the_worg_beside_it_are_neutral_and_never_fight() {
 }
 
 #[test]
-#[ignore]
 fn northshire_infantry_and_a_blackrock_invader_fight_until_one_dies_or_evades() {
     let infantry = spawn_of(INFANTRY);
     assert_eq!(spawn_of(INVADER).template_entry, 42_937);
