@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source360–364: pending Reliquary/Duck acceptance and banner/sled/vacuum gaps (2026-10-17)
+
+361 test/spec431949735 adds the exact already-loaded Reliquary banner to `toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire`: four IDs now assert actual learning, source cursor/offset destination, type/display/scale/owner/map/facing and ordinary expiry. Real SpellStore loading includes the new root; old three identity rows are unchanged. During this review, existing `cosmetic.rs` already-audited383065 was confirmed:335 test/spec49e9c2d95 adds194056/permanent0 to the caster fixture, now15IDs. Format/manual readability/diffcheck pass for both. Lead accepts335 plus current tip into the gate after478; explicit four-object scope has been requested. Neither new fixture is covered by477/478 or newly passed yet. No production/runtime/data change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|360 Explorers' League Banner198728/384875 | Instant effect50→380638/cursor87 for180000ms; item-1 and category1246/180000ms recovery. Runtime summoned-object TDB table lacks380638. Source template/display and actual placement/lifecycle remain gaps; do not copy Reliquary's76510/0.6 identity or a generic banner by name. |
+|361 Reliquary Banner198729/384876 | Same authored cursor/lifetime/category, distinct existing380639/type5/display76510/size0.6, display bounds present. New actual cursor [4,0,-3]/owner/map/facing/model/ordinary180s expiry acceptance committed, pending a covering successor gate. No native pixels, commerce, sibling identity or full category-reuse certificate. |
+|362 Magical Snow Sled198827/385297 | Source1500ms target18 summon195145/property5456/base1/permanent; Control4/faction35/flags256, inherited300000ms recovery. Runtime creature content absent. Actual sled entry/control/motion/dismount/cleanup remains unresolved; no inert actor, normal pet or forced driver behavior. |
+|363 Lucky Duck198857/385941 | Instant self dummy4 for600000ms, item1800000ms recovery. Source promises escort/careful plush-duck carrying;385941 is not the already-audited335 Duck Lovie383065 route. Actual carry/escort presentation and lifecycle remain gaps; no blanket zero-dummy admission, invented separate duck actor or borrowed nap acceptance. |
+|364 Bag of Furious Winds199337/387068 | Self periodic23/period0→388239 plus aura33/base75 for10000ms; child dummy3/target130, item1800000ms recovery/category override0. Pinned130 is caster-referenced frontal rectangular unit selection. Actual critter eligibility/vacuum child action/direction/control/cleanup remain unresolved; no guessed tick cadence, all-unit suction, damage or ignored slow payload. |
+
+Evidence: private `rows360-364-{readonly-source,action-source,active-goal}.json`, `duck335-proof-ledger.json`, `banner361-proof-ledger.json`. Tea Set149865 remains untouched.
+
 ## Source355–359: Taivan buff/pillow boundaries and retained statue proof (2026-10-17)
 
 356 retains [source18 Ornate Dragon Statue actual CPU/both-skin native scope](#placed-statues-and-the-missing-template-audit-2026-10-12), not a fresh certificate. Other rows retain unresolved action/placement/seat boundaries. No runtime/data change, new positive/native admission or own heavy duplicate;478 remains the owner of expanded acceptance verification.
@@ -68,7 +82,7 @@ Lead gate477 throughd4a4a716c LANDED/master15bef300d. Inspected `gate-ty477-srv.
 
 | Source row | Exact retained source boundary |
 |---|---|
-|335 Duck-Stuffed Duck Lovie194056/383065 | Instant self dummy aura4/permanent, source visual118994 and600000ms item recovery. Actual nap/duck attachment/pose and exit lifecycle remain unverified. A dummy aura/visual row alone does not prove sleeping behavior or authorize a generic no-op. |
+|335 Duck-Stuffed Duck Lovie194056/383065 | Instant self dummy aura4/permanent, source visual118994 and600000ms item recovery. Existing `cosmetic.rs` explicitly audits383065; acceptance-only49e9c2d95 now adds actual learned194056/permanent0/cancellation/unchanged health-model/no-actor to the15-ID caster fixture, pending the lead gate after478. Native nap/duck attachment/pose/audio and recovery remain separate unverified scopes, not automatic closure from a dummy shape. |
 |336 Cushion of Time Travel194057/387288 | Instant target47 summon195980/properties64/base1 for300000ms, inherited21600000ms recovery. TDB195980/display109046 exists, runtime content template/model absent. Actual seat interaction/access/cleanup remains a gap; description's slow forward time is not authority for teleport/time-control mechanics or decorative-only admission. |
 |337 Cold Cushion194058/387381 | Instant target47 summon196013/properties64/base1 for300000ms, inherited21600000ms recovery. TDB196013/display109053 exists, runtime content template/model absent. Cooling-cushion presentation, interaction (if any) and lifecycle remain unverified; no invented seating/healing/buff or inert admission. |
 |338 Market Tent194059/398329 | Source3000ms self linked428 for900000ms→398328/permanent200404/property3911 (Control0/Title0/flags67241992), targets18/79, item120000ms recovery. Runtime111097 exists. Exact actual2yd-back/rotation/model/owner/refresh/cancel/death acceptance is committed, behavioral proof pending. Natural15-minute linked expiry/native/rest remain outside this witness; no invented commerce service. |

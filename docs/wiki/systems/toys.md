@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Reliquary/Duck acceptance and banner/sled/vacuum boundaries (2026-10-17)
+
+[Source360–364 matrix](../../toy-effects14-coverage.md#source360364-pending-reliquaryduck-acceptance-and-bannersledvacuum-gaps-2026-10-17) adds361 acceptance-only431949735: existing Reliquary380639/type5/76510/0.6/cursor87/180s becomes fourth transmitted-object case, including concrete owner assertions. Existing audited335 Duck Lovie383065 also gains actual194056/permanent0/cancel acceptance49e9c2d95, now15casterIDs. Format/manual readability/diffcheck pass; lead gate after478 owns current-tip verification, not yet a pass. Missing Explorers'380638, Control4 sled, distinct Lucky Duck385941 and frontal rectangular critter-vacuum child remain gaps; no blanket dummy/banner/control admission. [Contract](../../specs/toys.md).
+
 ## Taivan buff/pillow boundaries and retained statue proof (2026-10-17)
 
 [Source355–359 matrix](../../toy-effects14-coverage.md#source355359-taivan-buffpillow-boundaries-and-retained-statue-proof-2026-10-17) preserves Taivan195387/description-only384543/scaled189 nearby Versatility action gap, exact retained [Ornate statue CPU/both-skin pixels](../../toy-effects14-coverage.md#placed-statues-and-the-missing-template-audit-2026-10-12), and three distinct pillow placement/interaction identities. Source78/radius1yd is not zero “at feet”; Purple376979/type7/74543/size3 exists in actual runtime TDB loading, while380634/380635 do not. No copied geometry, invented buff amount or decorative-only seating admission; no new runtime/data/native certificate or own heavy duplicate.
@@ -24,7 +28,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Pending linked-tent acceptance and nap/seat boundaries (2026-10-17)
 
-[Source335–339 matrix](../../toy-effects14-coverage.md#source335339-pending-linked-tent-acceptance-and-napseat-boundaries-2026-10-17) adds acceptance-only28f1ce365: distinct Market194059/398329→398328/111097 and Expedition194060/398334→398333/111099 through the existing Gnoll source-cast/placement/rotation/refresh/owner/cancel/death fixture. Three tests now await explicitly covering lead478 through28f1ce365; format/manual readability/diffcheck pass. No native/rest/natural15-minute-expiry or commerce certificate. Permanent Duck Lovie nap/pose and cushions195980/109046,196013/109053 remain exact presentation/interaction gaps; runtime cushion templates absent, no inert imports or invented mechanics. [Contract](../../specs/toys.md).
+[Source335–339 matrix](../../toy-effects14-coverage.md#source335339-pending-linked-tent-acceptance-and-napseat-boundaries-2026-10-17) adds acceptance-only28f1ce365: distinct Market194059/398329→398328/111097 and Expedition194060/398334→398333/111099 through the existing Gnoll source-cast/placement/rotation/refresh/owner/cancel/death fixture. Three tests now await explicitly covering lead478 through28f1ce365; format/manual readability/diffcheck pass. No native/rest/natural15-minute-expiry or commerce certificate. Duck Lovie's existing audited383065 route now has pending15-ID caster acceptance49e9c2d95; native nap/pose remains separate. Cushions195980/109046,196013/109053 retain exact presentation/interaction gaps; runtime cushion templates absent, no inert imports or invented mechanics. [Contract](../../specs/toys.md).
 
 ## Pending Timewalker acceptance and prism/tent/seat/pall boundaries (2026-10-17)
 
