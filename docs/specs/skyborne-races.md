@@ -25,7 +25,7 @@ Server support for Forever races 95/96, grounded in local build 1.60.1.70205 Chr
 ## Implementation inventory
 
 - `crates/server/src/race_class.rs`, `faction.rs` — allowed pairs, masks and faction identity.
-- `scripts/skyborne_data.py`, `db2_casc.py` — pinned local source decode and selected-row import.
+- `scripts/skyborne_data.py`, `db2_casc.py` — pinned local source decode and selected-row import. Raw DB2s stay outside the tracked tree; CLI consumers require `--source-dir`, tests require `FOREVER_DB2_SOURCE` ([cache paths and provenance](../../scripts/reference/forever-1.60.1.70205/README.md#local-data-paths)).
 - `scripts/db2.py` — atomic Retail regeneration with overlay.
 - `scripts/skyborne_scaling_data.py`, `scripts/reference/forever-scaling-70205.json` — isolated source-pinned scaling publication.
 - `crates/server/src/skyborne_faction_fixture.rs` — decoder-generated SQLite reaction fixture; no live overlay required.

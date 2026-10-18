@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "tests_battleground_bracket_port.rs"]
+mod bracket_port;
+
 #[test]
 fn bg_deserter_port_concrete_refuses_late_aura_and_releases_reservation() {
     assert_late_deserter_port_refusal(1018, 19, shared::battleground::BgPhase::InProgress);
@@ -17,31 +20,7 @@ fn bg_deserter_port_waiting_copy_refuses_late_aura_and_releases_reservation() {
 
 #[test]
 fn bg_deserter_port_arena_accepts_with_late_deserter_unchanged() {
-    use shared::protocol::{ArenaQueueMode, QueueForArena};
-    let (mut h, players, _database) = deserter_harness(4);
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    let arenas = crate::pvp::arena::Catalog::load(&db).unwrap();
-    h.app.insert_resource(arenas);
-    h.app
-        .insert_resource(crate::game_objects::GameObjectSpawns::default());
-    for who in &players {
-        h.app.world_mut().entity_mut(who.connection).insert((
-            pair::<QueueForArena>(),
-            pair::<RespondToBattlegroundInvite>(),
-        ));
-        h.app
-            .world_mut()
-            .get_mut::<MessageSender<QueueForArena>>(who.connection)
-            .unwrap()
-            .send::<PvpChannel>(QueueForArena {
-                mode: ArenaQueueMode::Skirmish2v2,
-            });
-    }
-    h.receive_pvp_updates(5);
+    let (mut h, players, _database) = pending_arena(25);
     let held = &players[0];
     let invitation = battleground(&h, held).clone();
     assert!(invitation.arena.is_some() && !invitation.accepted);
@@ -57,7 +36,52 @@ fn bg_deserter_port_arena_accepts_with_late_deserter_unchanged() {
     assert_eq!(destinations[0].map_id, invitation.map_id);
 }
 
+fn pending_arena(level: u8) -> (Harness, Vec<Traveler>, tempfile::NamedTempFile) {
+    use shared::protocol::{ArenaQueueMode, QueueForArena};
+    let (mut h, players, database) = deserter_harness(4);
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let arenas = crate::pvp::arena::Catalog::load(&db).unwrap();
+    h.app.insert_resource(arenas);
+    h.app
+        .insert_resource(crate::game_objects::GameObjectSpawns::default());
+    for who in &players {
+        h.app
+            .world_mut()
+            .entity_mut(who.player)
+            .insert(shared::components::Level(level));
+        h.app.world_mut().entity_mut(who.connection).insert((
+            pair::<QueueForArena>(),
+            pair::<RespondToBattlegroundInvite>(),
+        ));
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<QueueForArena>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(QueueForArena {
+                mode: ArenaQueueMode::Skirmish2v2,
+            });
+    }
+    h.receive_pvp_updates(5);
+    assert!(
+        players
+            .iter()
+            .all(|who| battleground(&h, who).arena.is_some())
+    );
+    (h, players, database)
+}
+
 fn pending_battleground(queue_id: u32) -> (Harness, Vec<Traveler>, tempfile::NamedTempFile) {
+    pending_battleground_at_level(queue_id, 25)
+}
+
+fn pending_battleground_at_level(
+    queue_id: u32,
+    level: u8,
+) -> (Harness, Vec<Traveler>, tempfile::NamedTempFile) {
     let (mut h, players, database) = deserter_harness(20);
     h.app.insert_resource(source_battleground_objects(2107));
     h.app
@@ -66,6 +90,7 @@ fn pending_battleground(queue_id: u32) -> (Harness, Vec<Traveler>, tempfile::Nam
         h.app.world_mut().entity_mut(who.player).insert((
             shared::components::UnitFactionTemplate(crate::faction::faction_template_for_race(1)),
             shared::components::CurrentPvpFaction(2),
+            shared::components::Level(level),
         ));
         h.app
             .world_mut()

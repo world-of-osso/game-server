@@ -51,8 +51,6 @@ mod group_criteria;
 mod herald_intro;
 #[path = "herald_intro2.rs"]
 mod herald_intro2;
-#[path = "herald_target32.rs"]
-mod herald_target32;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]

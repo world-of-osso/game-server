@@ -2,6 +2,7 @@
 
 from contextlib import closing
 from pathlib import Path
+import os
 import sqlite3
 import sys
 import unittest
@@ -12,6 +13,8 @@ import content_policy
 import retail_content
 import skyborne_data
 from content_common import Report
+
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
 
 # Concrete battleground gear absent from the old reference-filtered projection.
 ITEM_IDS = (
@@ -41,7 +44,7 @@ class InstalledContentItemsTest(unittest.TestCase):
     def test_item_only_refresh_preserves_isolated_overlay_and_provenance(self):
         import skyborne_kit_fixture
 
-        with closing(skyborne_kit_fixture.fixture_database()) as db:
+        with closing(skyborne_kit_fixture.fixture_database(SOURCE)) as db:
             # Keep authentic extra provenance after the overlay rows, as in world.db.
             with closing(sqlite3.connect(f"file:{ROOT / 'data/world.db'}?mode=ro", uri=True)) as source:
                 existing = set(db.execute("SELECT table_name,row_id FROM db2_row_source"))

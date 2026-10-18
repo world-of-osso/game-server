@@ -6,11 +6,9 @@ Encrypted sections are reported, never presented as decoded or complete data.
 
 import hashlib
 import struct
-from pathlib import Path
 
 import db2_casc
 
-DEFAULT_SOURCE = Path(__file__).resolve().parent / "reference/forever-1.60.1.70205"
 SOURCES = {
     841631: (
         0x6E14C900,
@@ -81,7 +79,7 @@ def creature_row(values):
     }
 
 
-def load_catalog(source=DEFAULT_SOURCE):
+def load_catalog(source):
     creatures, encrypted_creatures = decode_file(
         source, 841631, frozenset({1, 2, 3, 4})
     )

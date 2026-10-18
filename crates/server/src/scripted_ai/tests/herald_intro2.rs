@@ -1,6 +1,5 @@
 //! Natural center-arrival INTRO2 transition through the first real West arrival.
-use super::herald_intro::{actors_in_copy, spawn_second_copy};
-use super::herald_target32::{prepared_ramparts as prepared_target32, reach_center};
+use super::herald_intro::{actors_in_copy, kill_actor, ordinary_ramparts_at, spawn_second_copy};
 use super::*;
 use shared::components::UnitPose;
 const HERALD: u32 = 17_307;
@@ -17,8 +16,100 @@ const WEST: Position = Position {
     z: -1710.4010,
 };
 
+fn prepare_intro2_copy() -> (tempfile::TempDir, PathBuf) {
+    let (directory, path) = prepare_encounter_database("herald");
+    run_preparation_script(
+        "encounter_summons.py",
+        &[
+            "--encounter".as_ref(),
+            "herald-nazan".as_ref(),
+            "--db".as_ref(),
+            path.as_os_str(),
+        ],
+    );
+    import_intro_spells(&path);
+    (directory, path)
+}
+
+fn import_intro_spells(path: &std::path::Path) {
+    let dump = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../data/reference/tdb1210/TDB_full_world_1210.26091_2026_09_09.sql");
+    run_preparation_script(
+        "encounter_serverside_spells.py",
+        &[
+            "--encounter".as_ref(),
+            "herald".as_ref(),
+            "--db".as_ref(),
+            path.as_os_str(),
+            "--source-dump".as_ref(),
+            dump.as_os_str(),
+        ],
+    );
+}
+
+fn load_prepared_templates(h: &mut Harness, conn: &Connection) {
+    let mut data = h.app.world().resource::<WorldData>().clone();
+    let selected: std::collections::HashSet<_> = data
+        .templates
+        .keys()
+        .copied()
+        .chain([NAZAN, VAZRUDEN])
+        .collect();
+    let mut templates = crate::world_data::load_templates(conn, &data.expected_stats);
+    templates.retain(|entry, _| selected.contains(entry));
+    crate::world_data::load_template_models(conn, &mut templates);
+    data.difficulty_templates =
+        crate::world_data::load_difficulty_templates(conn, &data.expected_stats, &templates);
+    data.templates = templates;
+    data.addons = crate::world_data::load_spawn_addons(conn);
+    data.template_addons = crate::world_data::load_template_addons(conn);
+    data.equipment = crate::test_data::world_data().equipment.clone();
+    data.summon_levels = crate::world_data::summon_levels::SummonLevels::load(conn).unwrap();
+    h.app.insert_resource(data);
+    let mut spells = h.app.world().resource::<SpellStore>().clone();
+    spells.append_serverside(conn).unwrap();
+    h.app.insert_resource(spells);
+}
+
+fn prepared_source_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
+    let (_directory, path) = prepare_intro2_copy();
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (mut h, map, herald, sentries) = ordinary_ramparts_at(difficulty);
+    load_prepared_templates(&mut h, &conn);
+    h.app.insert_resource(crate::test_data::ground_map());
+    (h, map, herald, sentries)
+}
+
+fn reach_center(h: &mut Harness, herald: Entity, sentries: &[Entity]) -> Duration {
+    let listener = *h.app.world().get::<Position>(sentries[0]).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(listener);
+    for sentry in sentries {
+        kill_actor(h, *sentry);
+    }
+    h.advance(0.05);
+    let position = *h.app.world().get::<Position>(herald).unwrap();
+    let speed = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(herald)
+        .unwrap()
+        .speed_run
+        * 7.0;
+    let distance = Vec3::new(position.x, position.y, position.z)
+        .distance(Vec3::new(CENTER.x, CENTER.y, CENTER.z));
+    let ticks = (distance / (speed * 0.05)).ceil() as usize;
+    for _ in 0..=ticks {
+        if h.app.world().get::<Position>(herald) == Some(&CENTER) {
+            return h.app.world().resource::<Time<Fixed>>().elapsed();
+        }
+        h.advance(0.05);
+    }
+    panic!("source center must be reached by real point movement");
+}
+
 fn prepared_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
-    let (mut h, map, herald, sentries) = prepared_target32(difficulty);
+    let (mut h, map, herald, sentries) = prepared_source_ramparts(difficulty);
     for (_, connection, _) in &h.players {
         h.app.world_mut().entity_mut(*connection).insert((
             MessageSender::<shared::protocol::EmoteEvent>::default(),
@@ -44,13 +135,9 @@ fn assert_summon_at_floor(world: &mut World, map: InMap, actor: Entity) {
     let crate::ground::GroundProbe::Supported(floor) = probe else {
         panic!("actual Ramparts source floor required: {probe:?}");
     };
-    // Re-probing the same f32 triangle at the grounded Y changes ray arithmetic
-    // by3ULPs here. This is numeric roundoff, not a gameplay placement allowance.
-    let roundoff = 4.0 * (floor.next_up() - floor);
-    assert!(
-        (position.y - floor).abs() <= roundoff,
-        "30717 source floor: position={} floor={floor} fourULPs={roundoff}",
-        position.y
+    assert_eq!(
+        position.y, floor,
+        "30717 must land on the source floor re-probed at its actual final XYZ"
     );
 }
 

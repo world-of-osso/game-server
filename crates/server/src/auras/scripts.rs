@@ -232,6 +232,7 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
         || (spell_id == 31850 && effect_index == 1)
+        || (spell_id == 47788 && effect_index == 2)
         || (spell_id == 288733 && effect_index == 1)
 }
 

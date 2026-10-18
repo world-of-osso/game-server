@@ -2,6 +2,7 @@
 
 import csv
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -16,7 +17,8 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2_casc
 
-SOURCE = SCRIPTS / "reference/forever-1.60.1.70205"
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+REFERENCE = SCRIPTS / "reference/forever-1.60.1.70205"
 
 
 class SkyborneDecodeTest(unittest.TestCase):
@@ -200,7 +202,7 @@ class SkyborneImportTest(unittest.TestCase):
             conn = sqlite3.connect(root / "scratch.db")
             conn.executescript((SCRIPTS / "db2_schema.sql").read_text())
             conn.execute("INSERT INTO map (ID, Directory) VALUES (0, 'Azeroth')")
-            retail = json.loads((SOURCE / "retail-kit-runtime-rows.json").read_text())
+            retail = json.loads((REFERENCE / "retail-kit-runtime-rows.json").read_text())
             for table, records in retail.items():
                 for row in records:
                     conn.execute(
@@ -226,6 +228,8 @@ class SkyborneImportTest(unittest.TestCase):
                         sys.executable,
                         str(SCRIPTS / "db2.py"),
                         "import",
+                        "--source-dir",
+                        str(SOURCE),
                         "--build",
                         db2.DEFAULT_BUILD,
                         "--csv-root",

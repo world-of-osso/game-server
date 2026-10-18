@@ -62,7 +62,11 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
         app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
         app.insert_resource(spells);
-        app.add_plugins((crate::group::GroupPlugin, crate::pvp::PvpPlugin));
+        app.add_plugins((
+            crate::group::GroupPlugin,
+            crate::pvp::PvpPlugin,
+            crate::experience::ExperiencePlugin,
+        ));
     })
     .expect("real map/channel fixture");
     let players: Vec<_> = (1..=count)

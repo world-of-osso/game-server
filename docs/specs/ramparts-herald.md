@@ -80,7 +80,8 @@ Shared entry projection has bounded runtime-fixture GREEN. No registered Herald 
 - [ ] Establish source-data prerequisites and behavioral RED before implementing each bounded slice.
 - [ ] Implement and verify real actor/movement/spell/death ordering, both-dead credit and reset.
 - [ ] Native rendering/audio, obstacle paths, Heroic encounter behavior, loot and persistence remain unproved.
-- [ ] `HERALD_INTRO2_UNIMPLEMENTED`: arrival→+1s→morph/summon/flight is not scheduled or stubbed by the bounded INTRO1 slice.
+- [ ] `SUMMON_TARGET32_GRAVITY_GROUNDING_UNIMPLEMENTED`: target32 TC placement was reverted after the broader follower-pet suite exposed sixteen Felguard regressions. Grounded source30717 placement blocks INTRO2 acceptance; no manual summon adjustment or substitute selector.
+- [ ] `LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT`: canonical and full local TDB1210 model-info omit Lantha230861/display122612. This BLOCKS returning the target32 TC port until a sourced reach row exists or the user explicitly decides otherwise; not an accepted production-runtime gap. Do not invent reach, broaden ignores or restore the port as an INTRO2 workaround.
 - [ ] `CREATURE_ENTRY_RESPAWN_RESTORE_UNIMPLEMENTED`: ordinary respawn does not yet restore the retained original entry. Living projection proof is not until-respawn parity.
 - [ ] `SMARTAI_ACTION36_UPDATE_ENTRY_UNIMPLEMENTED`: SmartAI36 remains excluded; the shared projection is not an action36 port.
 - [ ] Full TC attack-time/resistance/immunity/static-flag/movement-capability projection remains outside the currently represented template fields; no generic TC UpdateEntry parity claim.
