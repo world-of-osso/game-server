@@ -5,6 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# Static seat offsets only; activation tracks and rendering data are not needed by vehicles.
+wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "c06b8e20cb12e42154bbb72eedffb92eb063cd0c", default-features = false, features = ["attachments"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
 # Read-only packet iteration and exact send-stage ordering for diagnostic census only.
 lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }
