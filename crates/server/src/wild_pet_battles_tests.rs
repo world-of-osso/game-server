@@ -67,8 +67,9 @@ fn wild_pet_battles_magma_wave_uses_legal_molten_hatchling_level_four_option() {
             _ => None,
         })
         .collect();
-    assert_eq!(amounts, [23]);
-    assert_eq!(state.teams[1].pets[0].health, 124);
+    // Elemental319 is weak against Critter Rabbit: floor(23 * .67) = 15.
+    assert_eq!(amounts, [15]);
+    assert_eq!(state.teams[1].pets[0].health, 132);
     for slot in 0..3 {
         assert_eq!(
             state.teams[0].pets[slot].health,
