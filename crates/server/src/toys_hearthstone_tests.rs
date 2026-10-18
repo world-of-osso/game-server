@@ -170,3 +170,13 @@ fn toyfx482_flame_hearthstone_learned_use_returns_to_bind_and_blocks_deepdweller
 fn toyfx503_stone_of_hearth_learned_use_returns_to_bind_and_blocks_flame() {
     assert_toy_hearthstone_bind_and_shared_charge(212337, 401802, 209035);
 }
+
+#[test]
+fn toyfx621_post_express_hearthstone_learned_use_returns_to_bind_and_blocks_stone() {
+    assert_toy_hearthstone_bind_and_shared_charge(245970, 1240219, 212337);
+}
+
+#[test]
+fn toyfx623_cosmic_hearthstone_learned_use_returns_to_bind_and_blocks_post_express() {
+    assert_toy_hearthstone_bind_and_shared_charge(246565, 1242509, 245970);
+}
