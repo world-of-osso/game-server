@@ -84,7 +84,7 @@ fn assert_rune_activation_source(h: &Harness) {
     );
 }
 
-fn complete_ordinary_rune_activation_phase(h: &mut Harness, telash: Entity) {
+pub(super) fn complete_ordinary_rune_activation_phase(h: &mut Harness, telash: Entity) {
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(telash).insert(visibility);

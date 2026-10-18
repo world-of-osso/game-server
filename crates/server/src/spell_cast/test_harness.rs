@@ -276,6 +276,9 @@ pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
                 template_id: 6,
                 name: "Kobold Vermin".into(),
             },
+            crate::zones::CreatureFlagsExtra(
+                crate::test_data::world_data().templates[&6].flags_extra,
+            ),
             // Kobold Vermin: hostile to the Human caster.
             UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
