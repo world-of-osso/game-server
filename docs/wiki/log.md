@@ -1,3 +1,7 @@
+## 2026-10-18 — Full1166 toy metadata availability, not runtime proof
+
+[Exact availability matrix](../toy-effects14-coverage.md#full1166-metadata-availability-exact-absences-not-failure-verdicts-2026-10-18): all1166 runtime IDs inventoried, ten extras excluded.29 source ItemSparse/runtime-content absence sets match;15 lack TriggerType0; Rezan272071/Stone462924 lack SpellMisc, unnamed1271857 lacks name/misc/effects; zero dangling ItemEffect links. No invented mechanics, automatic importer/code failure inference or revoked existing behavior proof. No runtime/data/native change or own heavy jobs;513 remains integration RED.
+
 ## 2026-10-18 — Toy gate513 remains RED at queued destination boundary
 
 [Exact gate matrix](../toy-effects14-coverage.md#gate513-acceptance-helpers-pass-queued-trigger-destination-regression-keeps-integration-red-2026-10-18):311 passed/1 failed/1 ignored914.05s/EXIT101, client9/FMT0. Current19-disguise-plus-Oomgut/21-caster/13-object/17-stationary/25-hearthstone acceptance helpers completed OK; integration failed because Akunda child fire used caster instead of explicit parent cursor. New queued64 payload/fresh-child reconstruction drops parent `cast_destination` while keeping item level. Existing assertion not weakened; runtime fix proposed to lead, not implemented here. No new toy landing/native/full1166 certificate or own heavy rerun.
