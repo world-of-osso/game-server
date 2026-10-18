@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Tail reconciliation and source-only names715–720: metadata proof, not runtime completion (2026-10-18)
+
+All remaining active-source IDs after the final Full1166 ID280541 are excluded extras. Raw715–720 name ledger: Feathers of Akil'zon280823; Rite of Jan'alai's Flame280825; Hiveborne Hearthstone281136; Shadeweaver's Hearthstone281615; Libram of the Matriarch284159; Kinduru's Spiriting Quill286643. Each remains SOURCE-ONLY/OUTSIDE Full1166: no new mechanics requirement, import, admission or acceptance. Together with earlier named275039/280820/280821/280822 these are the same ten extras recorded at checkpoint559.
+
+| Proof scope | Exact result and limit |
+|---|---|
+| Active source provenance |12.1.5.70448/key88d5e8ef05ec5a8446cdec93d142d7c6; active symlink resolves70448; Toy SHA-256 `1d3f17983a1f4b3c51230c94e753a1cd12af499aaa1866367151058112bbbaf0`, unchanged from checkpoint559. |
+| Universe membership |1176 distinct source IDs versus1166 runtime Toy IDs; same ten source-only extras, runtime-only empty. Read-only reconciliation, not an import or behavioral census. |
+| Checkpoint559 tail metadata |After228966, all151 authorized runtime IDs are represented in31 source capsules560–714. Raw155 captured IDs include four excluded extras. Missing/unexpected authorized IDs and capsule provenance/order mismatches are all empty. This proves the tail's metadata accounting, not whole1166 review completeness or behavior. |
+| Current acceptance revision |Lead513 queued at7099f3a38 covers Cold Ones range-fixture correction and19 disguise rows plus Oomgut20 identities,21 casters,13 transmitted objects,17 stationary actors and25 hearthstones. Stationary expiry retains explicit simulation-time-leap scope. No result/new toy landing observed; no own heavy duplicate. |
+| Remaining behavioral scope |Documented mixed effects, recipients, eligibility, interactions, model selection, movement and native presentation gaps remain open. Source-order tail exhaustion does not turn those gaps into success. Last confirmed toy landing remains498 at then-master8707ac0ea; separate master compile repair efd627da1 is not toy proof. |
+
+Evidence: private `source-only-tail715-720-names.json`, `source-tail-active70448-reconciliation.json`, `source-tail-reconciliation-active-goal.json`, `lead-gate513-owner.json`. Earlier70391 receipts remain historical; no relabelled provenance. No runtime/data/native change, source-only admission or149865 Tea Set edit.
+
 ## Source710–714: last Full1166 IDs, weighted badge, Windwell and three excluded source-only names (2026-10-18)
 
 Raw inspection slots710/711 are the last Full1166 IDs in active70448 source order:280419 and280541. Slots712–714 are three named source-only extras, explicitly outside1166. This is metadata-tail inspection, not1166 behavioral completion or landing. Lead513 queued at7099f3a38 covers the fixture correction and all later acceptance:19 disguises plus Oomgut20 IDs,21 casters,13 objects,17 stationary actors with explicit time-leap expiry,25 hearthstones. No513 result or new toy landing observed. No new acceptance, runtime/data/native change or own heavy jobs.

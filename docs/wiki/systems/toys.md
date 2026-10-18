@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Tail metadata reconciliation and unchanged Full1166 boundary (2026-10-18)
+
+[Exact proof matrix and excluded names](../../toy-effects14-coverage.md#tail-reconciliation-and-source-only-names715720-metadata-proof-not-runtime-completion-2026-10-18) reconciles all151 authorized IDs after checkpoint559/228966 across31 active70448 source capsules, with no missing/unexpected IDs or provenance/order mismatches. Source1176/runtime1166 difference remains the same ten named extras, none admitted/imported/accepted; final six names are boundary-only. Toy hash and active symlink agree with checkpoint559. This establishes tail metadata accounting, not whole1166 review completeness or runtime behavior. Lead513 queued7099f3a38 covers all current acceptance/fixture correction; no result/new toy landing or own heavy duplicate. Mixed/native gaps remain open.
+
 ## Last Full1166 IDs, weighted badge, Windwell and excluded source-only names (2026-10-18)
 
 [Raw source710–714 matrix](../../toy-effects14-coverage.md#source710714-last-full1166-ids-weighted-badge-windwell-and-three-excluded-source-only-names-2026-10-18) reaches the last two Full1166 IDs280419/280541: Badge retains weights4/2/1/2/1 and one-hour appearance/shared2513 ten-minute recovery; missing Windwell271783 retains base0/both87 targets. Later Loa-Blessed Victory280820, Trail of Halazzi280821 and Nalorakk's Strength Charm280822 are named SOURCE-ONLY/OUTSIDE1166, with no import/admission/acceptance. Metadata-tail inspection is not runtime completion or landing. Lead513 queued7099f3a38 covers all current acceptance/fixture correction after separate master compile repair efd627da1; no result or new toy landing observed. No new acceptance/runtime/data/native change or own heavy work.
