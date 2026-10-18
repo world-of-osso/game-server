@@ -20,6 +20,14 @@ fn actors_in_copy(h: &mut Harness, entry: u32, map: InMap) -> Vec<Entity> {
 fn ordinary_ramparts() -> (Harness, InMap, Entity, Vec<Entity>) {
     let (mut h, _, map) =
         encounter_fixture(HERALD, 543, 1, 1, None, EncounterState::NotStarted, true);
+    // Shared encounter fixtures omit ordinary patrol data. Recreate only this
+    // source Herald after loading its real path, before any death is exercised.
+    h.app.world_mut().resource_mut::<WorldData>().waypoints =
+        crate::test_data::world_data().waypoints.clone();
+    let incomplete_herald = actors_in_copy(&mut h, HERALD, map)[0];
+    h.app.world_mut().entity_mut(incomplete_herald).despawn();
+    spawn_source_herald(&mut h, map);
+    h.advance(0.05);
     let heralds = actors_in_copy(&mut h, HERALD, map);
     let sentries = actors_in_copy(&mut h, SENTRY, map);
     assert_eq!(heralds.len(), 1, "ordinary Herald population");
@@ -50,6 +58,32 @@ fn ordinary_ramparts() -> (Harness, InMap, Entity, Vec<Entity>) {
             .is_some()
     );
     (h, map, herald, sentries)
+}
+
+fn spawn_source_herald(h: &mut Harness, map: InMap) {
+    let data = h.app.world().resource::<WorldData>();
+    let spawn = data
+        .spawns
+        .iter()
+        .find(|spawn| spawn.guid == 20_202_693)
+        .unwrap();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    crate::zones::spawn_creature(
+        &mut Commands::new(&mut queue, h.app.world()),
+        data,
+        data.template_for(HERALD, 1).unwrap(),
+        &mut crate::zones::CreatureSpawnContext {
+            map,
+            difficulty_id: 1,
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
+        false,
+        spawn,
+        &mut rand::thread_rng(),
+    )
+    .expect("source Herald with authored patrol");
+    queue.apply(h.app.world_mut());
 }
 
 fn kill_actor(h: &mut Harness, actor: Entity) {
