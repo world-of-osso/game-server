@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy tail metadata reconciliation, not runtime completion
+
+[Exact proof matrix](../toy-effects14-coverage.md#tail-reconciliation-and-source-only-names715720-metadata-proof-not-runtime-completion-2026-10-18): all151 authorized IDs after checkpoint559/228966 accounted for in31 active70448 source capsules, no missing/unexpected/provenance/order gaps. Source1176/runtime1166 and same ten excluded extras unchanged; final six named boundary-only, no import/admission/acceptance. Toy hash matches checkpoint559. Lead513 queued7099f3a38 covers current acceptance/fixture correction; no result/new toy landing. Metadata accounting does not certify whole1166 review/behavior/native presentation; no own heavy jobs or runtime/data/native change.
+
 ## 2026-10-18 — Toy raw source710–714 last Full1166 IDs, not runtime completion
 
 [Exact source matrix](../toy-effects14-coverage.md#source710714-last-full1166-ids-weighted-badge-windwell-and-three-excluded-source-only-names-2026-10-18): last Full1166 IDs280419/280541 preserve Badge weights4/2/1/2/1/shared2513 and missing Windwell271783/base0/both87 targets. Three following names280820/280821/280822 explicitly SOURCE-ONLY/OUTSIDE1166, no import/admission/acceptance. Metadata-tail inspection does not certify1166 behavior/landing. Lead513 queued7099f3a38 after separate master compile repair efd627da1 covers all current acceptance and fixture correction; no result/new toy landing observed. No runtime/data/native change or own heavy jobs.
