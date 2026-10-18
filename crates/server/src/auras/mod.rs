@@ -1201,60 +1201,81 @@ fn death_prevention(aura: &AuraInstance, loss: f32, max: f32, school: u32) -> Op
         .then_some(pct)
 }
 
+struct DeathPrevention {
+    instance: u32,
+    guardian: bool,
+    healing: f32,
+    before: f32,
+}
+
+fn find_death_prevention(
+    world: &World,
+    unit: Entity,
+    loss: f32,
+    school: u32,
+) -> Option<DeathPrevention> {
+    let health = world.get::<shared::components::Health>(unit)?;
+    if health.current <= 0.0 || loss < health.current {
+        return None;
+    }
+    let auras = world.get::<ActiveAuras>(unit)?;
+    auras.iter().find_map(|aura| {
+        let pct = death_prevention(aura, loss, health.max, school)?;
+        Some(DeathPrevention {
+            instance: aura.instance_id,
+            guardian: aura.spell_id == 47_788,
+            healing: health.max * pct / 100.0,
+            before: health.current,
+        })
+    })
+}
+
+fn commit_death_prevention(
+    world: &mut World,
+    unit: Entity,
+    rescue: DeathPrevention,
+    loss: f32,
+) -> DamageCommit {
+    if rescue.guardian {
+        // Remove the +60% healing-taken modifier before executing the real child.
+        remove_instance(world, unit, rescue.instance, RemoveReason::Consumed);
+        crate::spell_cast::cast_triggered_with_effect0_amount(
+            world,
+            unit,
+            48_153,
+            Some(unit),
+            1,
+            rescue.healing,
+        );
+    } else {
+        if let Some(mut health) = world.get_mut::<shared::components::Health>(unit) {
+            health.current = rescue.healing;
+        }
+        remove_instance(world, unit, rescue.instance, RemoveReason::Consumed);
+    }
+    // Ardent absorbs only enough to leave its native health floor; below that
+    // floor it absorbs everything and restores health. Guardian absorbs the hit.
+    let absorbed_loss = if rescue.guardian {
+        loss
+    } else {
+        loss - (rescue.before - rescue.healing).max(0.0)
+    };
+    DamageCommit {
+        lethal: world
+            .get::<shared::components::Health>(unit)
+            .is_some_and(|health| health.current <= 0.0),
+        absorbed_loss,
+    }
+}
+
 pub(crate) fn apply_attack_damage(
     world: &mut World,
     unit: Entity,
     loss: f32,
     school: u32,
 ) -> DamageCommit {
-    let health = world.get::<shared::components::Health>(unit);
-    let rescue = health
-        .filter(|health| health.current > 0.0 && loss >= health.current)
-        .and_then(|health| {
-            world.get::<ActiveAuras>(unit).and_then(|auras| {
-                auras.iter().find_map(|aura| {
-                    death_prevention(aura, loss, health.max, school).map(|pct| {
-                        (
-                            aura.instance_id,
-                            aura.spell_id,
-                            health.max * pct / 100.0,
-                            health.current,
-                        )
-                    })
-                })
-            })
-        });
-    if let Some((instance, spell, heal, before)) = rescue {
-        // Removing the parent before48153 prevents its +60% healing-taken modifier.
-        // Exclusive World access commits this actual child before the next hit.
-        if spell == 47_788 {
-            remove_instance(world, unit, instance, RemoveReason::Consumed);
-            crate::spell_cast::cast_triggered_with_effect0_amount(
-                world,
-                unit,
-                48_153,
-                Some(unit),
-                1,
-                heal,
-            );
-        } else {
-            if let Some(mut health) = world.get_mut::<shared::components::Health>(unit) {
-                health.current = heal;
-            }
-            remove_instance(world, unit, instance, RemoveReason::Consumed);
-        }
-        return DamageCommit {
-            lethal: world
-                .get::<shared::components::Health>(unit)
-                .is_some_and(|health| health.current <= 0.0),
-            // Ardent absorbs only enough to leave its native health floor;
-            // below that floor it absorbs everything and restores health.
-            absorbed_loss: if spell == 47_788 {
-                loss
-            } else {
-                loss - (before - heal).max(0.0)
-            },
-        };
+    if let Some(rescue) = find_death_prevention(world, unit, loss, school) {
+        return commit_death_prevention(world, unit, rescue, loss);
     }
     DamageCommit {
         lethal: world
