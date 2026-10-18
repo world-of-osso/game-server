@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Ally-return/paddle/outdoor-stall/mixed-homebind/Torq-pose boundaries (2026-10-17)
+
+[Source590–594 matrix](../../toy-effects14-coverage.md#source590594-ally-returnpaddleoutdoor-stallmixed-homebindtorq-pose-boundaries-2026-10-17) preserves friendly-player sawblade return, raft waterwalk plus250ms periodic/jump paddling, missing controlled outdoor stall237883, homebind252 plus unaudited explosive child1220867 and Torq's5000ms pose. No caster projectile substitute, fixed130% buff, generic vendor, child-dropping twentieth hearthstone or invented photo-file output.507 queued at76a8426bf; no new proof/runtime/data/native change or own heavy duplicate.
+
 ## Prized pennant and four missing cartel banners (2026-10-17)
 
 [Source585–589 matrix](../../toy-effects14-coverage.md#source585589-nonzero-prized-pennant-and-four-missing-cartel-banners-2026-10-17) retains nonzero permanent Prized pennant and exact Steamwheedle508828/Bilgewater508826/Blackwater508827/VentureCo508830 cursor-banner gaps. All four runtime objects absent; explicit shared item category1246/180s is not four independent timers. No guessed object art/type/scale, per-use cartel eligibility or sibling substitution.507 queued at76a8426bf; no result, runtime/data/native change or own heavy duplicate.
