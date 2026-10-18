@@ -338,6 +338,44 @@ fn augmentation_ebon_native_foreign_intellect_is_excluded_after_its_stat_multipl
 }
 
 #[test]
+fn augmentation_ebon_native_simultaneous_casts_use_current_source_stats_before_first_tick() {
+    let mut h = fixture();
+    let first = h.caster;
+    let second = player(&mut h, 13, 1473, 3.0);
+    let mage = player(&mut h, 8, 63, 4.0);
+    let peer = spawn_connection(&mut h.app, second);
+    h.advance(3);
+    apply_intellect(&mut h, second);
+    let first_base = stats(&h, first).primary.intellect;
+    let second_base = stats(&h, second).primary.intellect;
+    let mage_base = stats(&h, mage).primary.intellect;
+    // Both real HostClient intents arrive before advancing the native cast clock.
+    h.cast(EBON, None);
+    let connection = std::mem::replace(&mut h.connection, peer);
+    h.cast(EBON, None);
+    h.connection = connection;
+    h.advance(38); // Native1500ms preparation completes before either1000ms tick.
+    let first_bonus = owned(&h, mage, first, EBON)
+        .effects
+        .into_iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    let second_bonus = owned(&h, mage, second, EBON)
+        .effects
+        .into_iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    assert_stat(first_bonus, first_base * 0.08);
+    assert_stat(second_bonus, second_base * 0.08);
+    assert_stat(
+        stats(&h, mage).primary.intellect,
+        mage_base + first_bonus + second_bonus,
+    );
+}
+
+#[test]
 fn augmentation_ebon_native_self_damage_and_eruption_extend_naturally_created_owned_buffs() {
     let mut h = fixture();
     let owner = h.caster;
