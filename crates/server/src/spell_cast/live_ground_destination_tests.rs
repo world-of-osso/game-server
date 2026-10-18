@@ -67,17 +67,11 @@ fn arena_live_caster_ground_destination_lands_on_enabled_trapdoor() {
         position: Vec3::new(443.2981, -20.0, -323.9937),
         orientation: 0.0,
     };
-    let closed = ground_destination(
-        app.world_mut(),
-        caster,
-        &crate::spell_info::SpellInfo::default(),
-        &effect,
-        Some(requested),
-    )
-    .unwrap()
-    .unwrap()
-    .position
-    .y;
+    let closed = ground_destination(app.world_mut(), caster, &effect, Some(requested))
+        .unwrap()
+        .unwrap()
+        .position
+        .y;
     assert!(
         (closed + 24.38845).abs() < 0.05,
         "closed trapdoor must be the caster-ground floor, got {closed}"
@@ -86,17 +80,11 @@ fn arena_live_caster_ground_destination_lands_on_enabled_trapdoor() {
         .entity_mut(door)
         .insert(GameObjectCollision(false));
     app.world_mut().run_schedule(FixedUpdate);
-    let opened = ground_destination(
-        app.world_mut(),
-        caster,
-        &crate::spell_info::SpellInfo::default(),
-        &effect,
-        Some(requested),
-    )
-    .unwrap()
-    .unwrap()
-    .position
-    .y;
+    let opened = ground_destination(app.world_mut(), caster, &effect, Some(requested))
+        .unwrap()
+        .unwrap()
+        .position
+        .y;
     assert!(
         opened < -30.0,
         "opened trapdoor must leave only static ground, got {opened}"
