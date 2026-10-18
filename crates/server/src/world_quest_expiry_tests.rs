@@ -13,9 +13,7 @@ use bevy::prelude::*;
 fn expiry_app(path: &std::path::Path, now: i64) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
-    app.insert_resource(GameDatabase {
-        db: redb::Database::create(path).unwrap(),
-    });
+    app.insert_resource(GameDatabase::new(redb::Database::create(path).unwrap()));
     app.insert_resource(ServerClock {
         fixed_unix: Some(now),
         ..Default::default()

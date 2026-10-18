@@ -579,3 +579,52 @@ fn dungeon2_legacy_earned_dates_are_unknown() {
     assert!(stockade.earned);
     assert_eq!(stockade.earned_at, None);
 }
+
+#[test]
+fn achievements_presentation_catalog_retains_authored_flags_without_changing_quantities() {
+    let catalog = catalog();
+    let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+    let mut state = PlayerAchievementState::default();
+    state.account = Some(Box::new(PlayerAchievementState::default()));
+    for (achievement, tree, flags, required) in [(1017, 22151, 1, 1), (155, 4716, 0, 100)] {
+        let source: (u32, u64) = conn
+            .query_row(
+                "SELECT Flags,Amount FROM criteria_tree WHERE ID=?1",
+                [tree],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(source, (flags, required));
+        let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+            &state,
+            QueryAchievementCatalog::Criteria {
+                achievement_id: achievement,
+                after_id: 0,
+            },
+            1,
+        ) else {
+            panic!("criteria page");
+        };
+        let line = criteria.iter().find(|line| line.tree_id == tree).unwrap();
+        assert_eq!(
+            (line.flags, line.current, line.required, line.completed),
+            (flags, 0, required, false)
+        );
+    }
+    let AchievementCatalogPage::Criteria { criteria, .. } = catalog.page(
+        &state,
+        QueryAchievementCatalog::Criteria {
+            achievement_id: 155,
+            after_id: 4716,
+        },
+        1,
+    ) else {
+        panic!("criteria continuation");
+    };
+    assert!(!criteria.iter().any(|line| line.tree_id == 4716));
+    let continued = criteria.iter().find(|line| line.tree_id == 79890).unwrap();
+    assert_eq!(
+        (continued.flags, continued.current, continued.required),
+        (0, 0, 100)
+    );
+}

@@ -46,7 +46,7 @@ fn achievements_criteria_native_malygos_uses_full_roster_not_nearby_or_online_ta
         let (character, _) =
             crate::persistence::create_character(&db, 1, "Rosterproof", 1, 1).unwrap();
         h.app
-            .insert_resource(crate::persistence::GameDatabase { db });
+            .insert_resource(crate::persistence::GameDatabase::new(db));
         let player = h.player();
         h.app.world_mut().entity_mut(player).insert((
             crate::persistence::ClientId(character),

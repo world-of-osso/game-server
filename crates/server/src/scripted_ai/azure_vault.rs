@@ -37,7 +37,8 @@ const EVENT_AWAKEN: u32 = 1;
 const ARCANE_ERUPTION: u32 = 375749;
 const INFUSED_STRIKE: u32 = 374789;
 const EVENT_INFUSED_STRIKE: u32 = 5;
-const ERUPTING_FISSURE: u32 = 386660;
+pub(crate) const ERUPTING_FISSURE: u32 = 386660;
+const FISSURE_SPROUT_SELECTOR: u32 = 394154;
 const EVENT_ERUPTING_FISSURE: u32 = 4;
 const EVENT_EXPLOSIVE_BRAND: u32 = 6;
 const CONSUMING_STOMP: u32 = 374720;
@@ -122,6 +123,13 @@ impl super::CreatureAi for LeyLineSprout {
     fn just_appeared(&mut self, ctx: &mut super::Ctx) {
         ctx.do_cast_self(LEY_LINE_SPROUT_AURA);
         ctx.do_cast_at(None, ARCANE_POWER, true);
+    }
+
+    fn spell_hit(&mut self, ctx: &mut super::Ctx, _caster: Entity, spell_id: u32) {
+        // TC boss_leymor.cpp:303–310: death owns stack consumption, not this hit.
+        if matches!(spell_id, FISSURE_SPROUT_SELECTOR | EXPLOSIVE_BRAND_DAMAGE) {
+            crate::combat::kill_unit(ctx.world, ctx.me, ctx.me);
+        }
     }
 
     fn just_died(&mut self, ctx: &mut super::Ctx, _killer: Option<Entity>) {
@@ -362,6 +370,25 @@ pub(crate) fn cast_brand_child(
         ctx.caster,
         EXPLOSIVE_BRAND_CHILD,
         None,
+        ctx.depth + 1,
+    );
+}
+
+/// TC boss_leymor.cpp:495–513: once-effect HIT preserves the actual destination.
+pub(crate) fn cast_fissure_selector(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+) {
+    let Some(destination) = ctx.dest else {
+        warn!("Erupting Fissure386660 cannot cast394154 without its hit destination");
+        return;
+    };
+    crate::spell_cast::cast_triggered_at_destination(
+        world,
+        ctx.caster,
+        FISSURE_SPROUT_SELECTOR,
+        destination.position,
         ctx.depth + 1,
     );
 }

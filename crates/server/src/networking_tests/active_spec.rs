@@ -63,9 +63,7 @@ fn another_client_sees_a_players_spec_and_its_change() {
     )
     .unwrap();
     server.insert_resource(crate::spell_info::load_class_spells(&conn).unwrap());
-    server.insert_resource(GameDatabase {
-        db: temp_database(),
-    });
+    server.insert_resource(GameDatabase::new(temp_database()));
     server.add_plugins(ClassProgressionPlugin);
     let (alice_client, alice_entity) = network_client(address, 931);
     let (bob_client, bob_entity) = network_client(address, 932);
