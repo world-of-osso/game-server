@@ -963,7 +963,7 @@ fn roll_outcome(
     can_avoid: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> MeleeOutcome {
-    let chances = read_outcome_chances(attacker, victim, can_avoid, target_auras);
+    let chances = read_outcome_chances(attacker, victim, flags, can_avoid, target_auras);
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -973,6 +973,7 @@ fn roll_outcome(
 fn read_outcome_chances(
     attacker: &Attacker,
     victim: Victim,
+    flags: Option<&crate::zones::CreatureFlagsExtra>,
     can_avoid: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
 ) -> melee::MeleeChances {

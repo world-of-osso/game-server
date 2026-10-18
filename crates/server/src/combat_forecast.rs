@@ -184,7 +184,8 @@ fn read_swing_projection(
         world.get::<shared::casting::CastState>(tank).is_some(),
         target_auras,
     ));
-    let chances = read_outcome_chances(&attacker, victim, avoids, target_auras);
+    let flags = world.get::<crate::zones::CreatureFlagsExtra>(tank);
+    let chances = read_outcome_chances(&attacker, victim, flags, avoids, target_auras);
     let armor = read_armor(world, tank, &source_scaling, &target_scaling);
     let blocked_pct = blocked_pct(
         victim,
