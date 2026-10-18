@@ -403,7 +403,8 @@ fn damage_meter_melee_damage_delays_frostbolt_launch_by_ten_ticks() {
     assert_eq!(melee_hits, 1);
     let cast = h.app.world().get::<CastState>(caster).unwrap();
     assert_eq!(cast.pushback_count, 1);
-    assert_eq!(cast.duration, original_duration + 0.5);
+    // Native duration stays fixed; rewound progress postpones the real launch.
+    assert_eq!(cast.duration, original_duration);
 
     // Without pushback it launches at frame 38. A damaging melee swing adds
     // 500 ms (TrinityCore a352b1fa Spell::Delayed): ten 50 ms simulation ticks.
