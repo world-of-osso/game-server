@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Flarendo/fountain and paired bobber overrides (2026-10-17)
+
+[Source595–599 matrix](../../toy-effects14-coverage.md#source595599-flarendofountain-and-paired-fishing-bobber-override-boundaries-2026-10-17) retains exact Flarendo pose/fountain36404 and three paired258 fishing overrides: Rocket520304/520305, Goblet520306/520311, Wellington520308/520309 against35591, each referencing131474. Only replacement520305 exists at runtime, type17/display101984/size2; no generic35591 art substitute, deduplicated pair or two immediate Fishing casts. Actual bobber selection/fishing/cleanup remains gap; no catch bonus from flavor.507 queued, no new proof/runtime/data/native change or own heavy duplicate.
+
 ## Ally-return/paddle/outdoor-stall/mixed-homebind/Torq-pose boundaries (2026-10-17)
 
 [Source590–594 matrix](../../toy-effects14-coverage.md#source590594-ally-returnpaddleoutdoor-stallmixed-homebindtorq-pose-boundaries-2026-10-17) preserves friendly-player sawblade return, raft waterwalk plus250ms periodic/jump paddling, missing controlled outdoor stall237883, homebind252 plus unaudited explosive child1220867 and Torq's5000ms pose. No caster projectile substitute, fixed130% buff, generic vendor, child-dropping twentieth hearthstone or invented photo-file output.507 queued at76a8426bf; no new proof/runtime/data/native change or own heavy duplicate.
