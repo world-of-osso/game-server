@@ -729,6 +729,131 @@ fn threat_current_victim_lower_melee_challenger_beats_highest_ranged() {
 }
 
 #[test]
+fn threat_current_victim_passive_periodic_selection_does_not_project_attacks() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    assert_eq!(current_victim(app.world_mut(), creature), Some(tank));
+    let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
+    let origin = *app.world().get::<Position>(creature).unwrap();
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::scripted_ai::ReactState::Passive);
+    crate::combat::attack_stop(app.world_mut(), creature);
+    add_threat(app.world_mut(), creature, melee, 1110.0);
+    run(&mut app, 6);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(tank),
+        "valid reference waits for1000ms periodic update"
+    );
+    run(&mut app, 20);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(melee),
+        "passive threat reference must still update"
+    );
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "passive reference is not active chase projection"
+    );
+    assert_eq!(
+        app.world().get::<CombatTarget>(creature).unwrap().0,
+        Some(tank)
+    );
+    assert!(app.world().get::<AutoAttack>(creature).is_none());
+    assert_eq!(*app.world().get::<Position>(creature).unwrap(), origin);
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::scripted_ai::ReactState::Aggressive);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "aggression projects the already selected reference"
+    );
+}
+
+#[test]
+fn threat_current_victim_lazy_refresh_skips_offline_without_erasing_membership() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let other = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, other, 100.0);
+    app.world_mut()
+        .entity_mut(tank)
+        .insert(crate::maps::InMap::continent(1));
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(other),
+        "lazy refresh precedes the periodic deadline"
+    );
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "query does not issue an attack"
+    );
+    assert_eq!(
+        app.world()
+            .get::<ThreatTable>(creature)
+            .unwrap()
+            .threat_for(tank.to_bits()),
+        1000.0
+    );
+    run(&mut app, 1);
+    assert_eq!(state(&app, creature), pursuing(other));
+}
+
+#[test]
+fn threat_current_victim_lazy_clear_returns_none_before_periodic_deadline() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    assert_eq!(current_victim(app.world_mut(), creature), Some(tank));
+    app.world_mut()
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .reset();
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        None,
+        "cleared membership cannot retain a cached victim"
+    );
+    run(&mut app, 1);
+    assert!(
+        app.world().get::<CurrentVictim>(creature).is_none(),
+        "evade clears the reference and deadline"
+    );
+}
+
+#[test]
+fn threat_current_victim_removed_fixate_does_not_reappear_on_new_membership() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let other = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, other, 1.0);
+    app.world_mut().entity_mut(creature).insert(Fixate(other));
+    run(&mut app, 21);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(other),
+        "available fixate outranks numeric threat"
+    );
+    app.world_mut()
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .remove(other.to_bits());
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(tank),
+        "removed fixate requires immediate reselection"
+    );
+    assert!(app.world().get::<Fixate>(creature).is_none());
+    add_threat(app.world_mut(), creature, other, 1.0);
+    run(&mut app, 21);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(tank),
+        "new membership cannot resurrect the removed fixate"
+    );
+}
+
+#[test]
 fn killing_the_only_target_makes_the_creature_evade_home_and_restores_its_health_there() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
