@@ -219,6 +219,45 @@ fn unholy_scourge_native_source_versatility_once_and_nonbug_target_multiplier_tw
 }
 
 #[test]
+fn unholy_scourge_native_owned_amount_ignores_foreign_owner_and_other_target() {
+    let mut h = fixture(80);
+    let (caster, target) = (h.caster, h.npc);
+    let foreign = spawn_player(&mut h.app, 6, 0.0);
+    let other = spawn_npc(&mut h.app, 4.0);
+    for spell in [VIRULENT, DREAD] {
+        apply(&mut h, foreign, target, spell, 1);
+        apply(&mut h, caster, target, spell, 1);
+        apply(&mut h, caster, other, spell, 1);
+    }
+    let foreign_before = plague(&h, foreign, VIRULENT);
+    let other_health = h.health(other);
+    strike(&mut h);
+    assert_eruption(&h, VIRULENT_ERUPT, VIRULENT_AP, 1.0);
+    assert_eruption(&h, DREAD_ERUPT, DREAD_AP, 1.0);
+    assert_eq!(
+        plague(&h, foreign, VIRULENT).expires_at,
+        foreign_before.expires_at
+    );
+    assert_eq!(h.health(other), other_health);
+    assert!(damage(&h.inbox.log, foreign, VIRULENT_ERUPT).is_empty());
+}
+
+#[test]
+fn unholy_scourge_native_expired_plague_stops_eruption_without_replaying_its_ticks() {
+    let mut h = fixture(80);
+    let (caster, target) = (h.caster, h.npc);
+    apply(&mut h, caster, target, VIRULENT, 1);
+    let duration = plague(&h, caster, VIRULENT).duration_ms;
+    h.advance(duration as usize / 50 + 4);
+    assert!(!auras::has_aura(h.app.world(), target, VIRULENT));
+    let ticks = damage(&h.inbox.log, caster, VIRULENT).len();
+    assert!(ticks > 1);
+    strike(&mut h);
+    assert!(damage(&h.inbox.log, caster, VIRULENT_ERUPT).is_empty());
+    assert_eq!(damage(&h.inbox.log, caster, VIRULENT).len(), ticks);
+}
+
+#[test]
 fn unholy_scourge_native_removed_plague_cannot_erupt_after_fresh_application() {
     let mut h = fixture(80);
     let (caster, target) = (h.caster, h.npc);
