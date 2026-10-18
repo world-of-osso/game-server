@@ -4,7 +4,7 @@ use shared::components::{
     CreatureClassification, EquipmentAppearance, EquipmentVisualSlot, EquippedAppearanceEntry,
     SheathState, StandState,
 };
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -190,6 +190,8 @@ pub const GROUP_AI_FLAG_FOLLOW_LEADER: u32 = 0x200;
 #[derive(Resource, Clone, Default)]
 pub struct WorldData {
     pub templates: HashMap<u32, CreatureTemplate>,
+    /// Actual zephras_row_source reconstructed template markers select authored fixed stats.
+    pub(crate) authored_templates: HashSet<u32>,
     pub(crate) summon_levels: summon_levels::SummonLevels,
     /// `content_creature_template_difficulty`: the template of an entry in a dungeon copy
     /// at that difficulty (`CreatureTemplate::GetDifficulty`), keyed (entry, difficulty).
@@ -265,6 +267,8 @@ pub fn load_world_data(path: &Path) -> WorldData {
         .expect("Failed to open world.db");
 
     let expected_stats = load_expected_stats(&conn);
+    let authored_templates = load_authored_template_ids(&conn)
+        .expect("Failed to load authored template provenance from zephras_row_source");
     let summon_levels = summon_levels::SummonLevels::load(&conn)
         .expect("Failed to load temporary guardian level inputs");
     let mut templates = load_templates(&conn, &expected_stats);
@@ -305,6 +309,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
 
     WorldData {
         templates,
+        authored_templates,
         summon_levels,
         difficulty_templates,
         spawns,
@@ -325,6 +330,16 @@ pub fn load_world_data(path: &Path) -> WorldData {
         spawn_string_ids,
         script_spawn_groups,
     }
+}
+
+/// Authored source selection is recorded by the overlay importer, never inferred from stats.
+pub(crate) fn load_authored_template_ids(conn: &Connection) -> rusqlite::Result<HashSet<u32>> {
+    conn.prepare(
+        "SELECT json_extract(row_key, '$.entry') FROM zephras_row_source
+        WHERE table_name='content_creature_template' AND kind='reconstructed'",
+    )?
+    .query_map([], |row| row.get(0))?
+    .collect()
 }
 
 /// `import_instance_population.OFFSET`: content guid of a TDB creature row.
