@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source435–439: linked-hologram/stone-smash/holiday-basket boundaries and retained Bear (2026-10-17)
+
+Metadata-only continuation; no new acceptance/runtime/data admission or own heavy duplicate. Lead492 through0c77bfdaa remains queued, not a covering pass. Existing Bear CPU/historical native evidence and basket aura witness stay bounded to their actual scopes, not the full toy descriptions.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|435 Holoviewer: The Lady of Dreams204257/403733 | Source1500ms self linked-summon428→403732 for360000ms; item1800000ms versus root3600000ms recovery. Child source2000ms target47 summon202741/property64/base1 plus self dummy4/permanent-1; existing Visage Stand/display111698/model-scale0.35. Root Ysera versus child King Mechagon text discrepancy retained. Complete hologram/linked recipient/child aura cleanup remains unaudited; no six-to-five-minute normalization, inert stand admission or model-by-name substitution. |
+|436 Holoviewer: The Timeless One204262/403770 | Distinct source1500ms self linked428→403773 for300000ms; item1800000ms versus root3600000ms recovery. Child source2000ms target47 summon202753/property64/base1 plus self dummy4/permanent-1; same existing stand display111698/scale0.35 is not proof of Nozdormu hologram art. Full mixed visual/linked lifecycle contract remains gap. |
+|437 Stone Breaker204389/405075 | Source1000ms self trigger64 twice→405225/misc0 and405219/misc1300. First has self191/2700ms/speed40; second has self dummy4/1000ms, trigger64/misc700→405286 and ground62 area179→28357.405286 has self script3 plus another ground62 area179→28357 for1500ms. Item600000ms recovery. Preserve both area edges and literal misc values; actual smashing/pose/movement/timing/area action remains unresolved, not a zero-script cosmetic, guessed two stones or collapsed duplicate trigger. |
+|438 Stuffed Bear204405/405203 | Source1500ms self trigger64/misc10→405204, instant target47 summon existing203158/display111821/scale1/property64 for300000ms; item900000ms recovery. Retained exact `toyfx18_placed_statues_spawn_source_models_stationary_for_authored_lifetime` row covers actual learned actor/model/position/owner/stationary/expiry; earlier both-skin screenshots remain historical source-model witnesses. No new pixels, geometry closure or natural15-minute reuse certificate. |
+|439 A Drake's Big Basket of Eggs204675/405634 | Instant self audited dummy4/900000ms, inherited3600000ms recovery; description equips Dragonriding drake and reduces recovery during Noblegarden. Retained exact `toyfx7_drake_basket_preserves_aura_identity_and_cancellation` checks caster aura identity/cancel. Actual mounted-drake presentation/eligibility, natural duration and event-specific recovery remain gaps; no aura-only full-toy certificate or invented holiday divisor. |
+
+Evidence: private `rows435-439-{readonly-source,action-source,runtime-source,active-goal}.json`, maintained Bear/basket fixtures and historical statue references.149865 Tea Set remains untouched.
+
 ## Source430–434: cooking/forced-form/clan/linked-hologram boundaries and retained Will (2026-10-17)
 
 No new acceptance/runtime/data admission. Existing433 is already one of the15 caster identities covered by484; its metadata does not certify siblings. Lead492 through0c77bfdaa is queued for the corrected regen/actor-phase tests, result pending.489 remains failed as recorded below; no own heavy duplicate.

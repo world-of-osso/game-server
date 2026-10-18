@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Linked-hologram/stone-smash/holiday-basket boundaries and retained Bear (2026-10-17)
+
+[Source435–439 matrix](../../toy-effects14-coverage.md#source435439-linked-hologramstone-smashholiday-basket-boundaries-and-retained-bear-2026-10-17) preserves Lady of Dreams360s versus Timeless One300s linked428 roots, distinct stand identities and mixed permanent child aura; shared111698/scale0.35 does not certify either hologram. Stone Breaker's two root children, literal misc1300/700 and repeated28357 area edges remain distinct unresolved actions. Bear204405 retains exact CPU/earlier both-skin model evidence, not fresh pixels/recovery. Drake Basket retains caster aura/cancel proof, with mounted-drake and Noblegarden recovery gaps explicit. No runtime/data/admission/new proof or own heavy duplicate;492 queued0c77bfdaa.
+
 ## Cooking/forced-form/clan/linked-hologram boundaries and retained Will (2026-10-17)
 
 [Source430–434 matrix](../../toy-effects14-coverage.md#source430434-cookingforced-formclanlinked-hologram-boundaries-and-retained-will-2026-10-17) preserves missing runtime386682 cooking-service scope, self ForceCast2→402636/202340 form, chosen-clan nonzero dummy and linked hologram428→403712 with mixed self aura/Visage Stand. Root Alexstrasza versus child King Mechagon text does not authorize model substitution; exact cast and item-recovery overrides retained. Hraxian204220 is already an exact15-caster484 row, not new native/natural-expiry/reuse proof. No runtime/data/admission changes or own heavy duplicate. Lead492 queued0c77bfdaa owns corrected regen/actor-phase proof;489 failure remains explicit.
