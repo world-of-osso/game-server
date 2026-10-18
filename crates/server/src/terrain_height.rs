@@ -330,11 +330,21 @@ pub mod test_helpers {
 
     /// Create a flat terrain chunk at the given corner with uniform height.
     pub fn flat_terrain(corner_x: f32, corner_y: f32, height: f32) -> TerrainHeightMap {
+        flat_terrain_in_area(corner_x, corner_y, height, 0)
+    }
+
+    /// Explicit MCNK area fixture, consumed through GroundMap::area_at.
+    pub fn flat_terrain_in_area(
+        corner_x: f32,
+        corner_y: f32,
+        height: f32,
+        area_id: u32,
+    ) -> TerrainHeightMap {
         TerrainHeightMap {
             chunks: vec![ChunkHeight {
                 corner_x,
                 corner_y,
-                area_id: 0,
+                area_id,
                 base_z: height,
                 heights: [0.0; MCVT_COUNT],
                 holes: 0,

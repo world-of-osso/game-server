@@ -74,6 +74,124 @@ fn sourced_nazan_fixture() -> WorldData {
     }
 }
 
+fn area_fixture(area_id: u32) -> crate::ground::GroundMap {
+    let terrain = crate::terrain_height::test_helpers::flat_terrain_in_area(0.0, 0.0, 0.0, area_id);
+    let tile = crate::ground::bevy_to_tile(-1.0, 1.0);
+    crate::ground::GroundMap::with_terrain(tile, terrain)
+}
+
+fn spawn_continent_fixture(mut data: WorldData, ground: crate::ground::GroundMap) -> App {
+    data.spawns[0].map = 0;
+    data.spawns[0].position_x = -1.0;
+    data.spawns[0].position_y = -1.0;
+    data.spawns[0].position_z = 0.0;
+    data.spawns[0].zone_id = 9; // Source area9 has CT73; it must not replace actual terrain area1221.
+    data.spawns[0].spawn_difficulties = vec![0];
+    data.spawns_by_map = HashMap::from([(0, vec![0])]);
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins).insert_resource(ground);
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, app.world());
+    assert_eq!(
+        spawn_map_creatures(&mut commands, &data, MapContent::continent(0), false),
+        1
+    );
+    queue.apply(app.world_mut());
+    app
+}
+
+fn fixture_actor(world: &mut World) -> Entity {
+    world
+        .query_filtered::<Entity, With<Npc>>()
+        .single(world)
+        .unwrap()
+}
+
+#[test]
+#[ignore = "RED: ordinary spawn ignores actual terrain area ancestry"]
+fn herald_context_ordinary_spawn_reads_actual_terrain_parent_not_spawn_zone() {
+    // Installed source area1221 has CT0, parent16 has CT2; zone9 instead has CT73.
+    let mut app = spawn_continent_fixture(sourced_nazan_fixture(), area_fixture(1221));
+    let world = app.world_mut();
+    let actor = fixture_actor(world);
+    let scaling = world
+        .get::<LevelScaling>(actor)
+        .expect("actual terrain parent supplies CT2");
+    assert_eq!(scaling.content_tuning_id, 2);
+    assert_eq!(scaling.delta, 0, "source17536 delta survives parent tuning");
+    assert_eq!(
+        world.get::<UnitLevel>(actor).unwrap().0,
+        scaling.native_level()
+    );
+    assert!(world.get::<ScaledStats>(actor).is_some());
+}
+
+#[test]
+#[ignore = "RED: missing ordinary terrain context is silently treated as fixed level"]
+fn herald_context_missing_ordinary_area_is_explicit_not_legacy_level() {
+    let result = std::panic::catch_unwind(|| {
+        spawn_continent_fixture(sourced_nazan_fixture(), crate::ground::GroundMap::default());
+    });
+    let panic = result
+        .err()
+        .expect("unknown context must not silently become fixed level1");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or_default();
+    assert!(message.contains("CREATURE_LEVEL_CONTEXT_GAP"), "{message}");
+    assert!(
+        message.contains("17536") && message.contains("map0"),
+        "{message}"
+    );
+}
+
+#[test]
+#[ignore = "Control: source critter and known untuned area remain fixed"]
+fn herald_context_critter_and_known_zero_area_do_not_inherit_region() {
+    let mut known_zero = spawn_continent_fixture(sourced_nazan_fixture(), area_fixture(0));
+    let world = known_zero.world_mut();
+    let actor = fixture_actor(world);
+    assert!(world.get::<LevelScaling>(actor).is_none());
+    assert!(world.get::<ScaledStats>(actor).is_none());
+    assert_eq!(world.get::<UnitLevel>(actor).unwrap().0, 1);
+
+    let mut data = sourced_nazan_fixture();
+    let critter = crate::test_data::world_data().templates[&1932].clone(); // Source Black Sheep.
+    assert_eq!(critter.creature_type, 8);
+    assert!(critter.tuning.is_none());
+    let level = critter.min_level;
+    data.templates.insert(1932, critter);
+    data.spawns[0].template_entry = 1932;
+    let mut app = spawn_continent_fixture(data, area_fixture(1221));
+    let world = app.world_mut();
+    let actor = fixture_actor(world);
+    assert!(
+        world.get::<LevelScaling>(actor).is_none(),
+        "critters do not take CT2"
+    );
+    assert_eq!(world.get::<UnitLevel>(actor).unwrap().0, level);
+}
+
+#[test]
+#[ignore = "Control: explicit template tuning wins over map and terrain"]
+fn herald_context_explicit_template_precedes_actual_area_tuning() {
+    let mut data = sourced_nazan_fixture();
+    let hogger = crate::test_data::world_data().templates[&448].clone();
+    assert_eq!(hogger.tuning.as_ref().unwrap().content_tuning_id, 73);
+    data.templates.insert(448, hogger);
+    data.spawns[0].template_entry = 448;
+    let mut app = spawn_continent_fixture(data, area_fixture(1221));
+    let world = app.world_mut();
+    let actor = fixture_actor(world);
+    assert_eq!(
+        world.get::<LevelScaling>(actor).unwrap().content_tuning_id,
+        73,
+        "source Hogger CT73 precedes terrain parent CT2"
+    );
+}
+
 #[test]
 #[ignore = "RED: ordinary CT0 spawn has no map context tuning"]
 fn herald_context_ordinary_nazan_spawn_uses_authored_normal_and_heroic_map_tuning() {
