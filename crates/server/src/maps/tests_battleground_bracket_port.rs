@@ -36,7 +36,7 @@ fn bg_bracket_port_arena_xp_level_up_still_enters() {
 }
 
 fn award_one_level(h: &mut Harness, who: &Traveler, previous_level: u8) {
-    use crate::experience::{ExperiencePlugin, XpAward, XpAwards, xp_to_next_level};
+    use crate::experience::{XpAward, XpAwards, xp_to_next_level};
     let character_id = h.app.world().get::<ClientId>(who.player).unwrap().0;
     assert_eq!(
         h.app.world().get::<Level>(who.player).unwrap().0,
@@ -46,7 +46,6 @@ fn award_one_level(h: &mut Harness, who: &Traveler, previous_level: u8) {
         .world_mut()
         .entity_mut(who.player)
         .insert(UnitLevel(previous_level));
-    h.app.add_plugins(ExperiencePlugin);
     h.app
         .world_mut()
         .resource_mut::<XpAwards>()
