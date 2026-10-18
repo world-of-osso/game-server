@@ -196,6 +196,14 @@ fn follower_kit_utility_crenna_does_not_dispel_an_empty_patient() {
 #[ignore = "RED: Polymorph is inventoried but never selected when the real kick is cooling down"]
 fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
     let (mut h, unit) = level32(209059);
+    // Polymorph admits native creature types. The generic Kobold actor has no
+    // template authority until this fixture loads its real row; never guess7.
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
     utility_tests::start_enemy_fireball(&mut h, unit);
     update_ai(h.app.world_mut());
     wait_for_native_school_unlock(&mut h, 2139);
