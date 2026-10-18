@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Sea-Blessed Shrine and kill-proc/memory/rolling/Royal Visage boundaries (2026-10-17)
+
+[Source615–619 matrix](../../toy-effects14-coverage.md#source615619-pending-sea-blessed-shrine-and-kill-procscripted-memoryrolling-snowballroyal-visage-boundaries-2026-10-17) adds acceptance-only4a0133a68:245942/1240082/246037/display129958/cursor/180s as17th stationary actor, old16/helper unchanged; behavior AFTER507. Existing explicit time-leap expiry is not ordinary50ms/wall proof. Kill-proc42/trigger0 voice, script-only K'areshi appearance, missing controlled snowball245763/holiday recovery and actual Royal Visage misc0/display121918 remain gaps; no inert proc, guessed appearance, stationary rolling prop or borrowed misc8 certificate. No runtime/data/new native or own heavy duplicate.
+
 ## Pending Etheric Victory and portal/void/snowman/transmorpher boundaries (2026-10-17)
 
 [Source610–614 matrix](../../toy-effects14-coverage.md#source610614-pending-etheric-victory-and-portalvoidsnowmanmixed-transmorpher-boundaries-2026-10-17) adds acceptance-onlyb7df42b22:244470/1237584/1800s as19th audited caster identity, old18/helper unchanged; behavior AFTER507. Missing any-player Dornogal portal244139, unaudited Void pose, mixed snowman293/321/27/56/holiday timer and mixed Brann245374/65/77 service remain gaps. NPC scale2.2 is not player scale; description-reference1237986 is not a root trigger. No runtime/data/new native or own heavy duplicate.

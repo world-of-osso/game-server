@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source615–619 pending Sea-Blessed Shrine acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source615619-pending-sea-blessed-shrine-and-kill-procscripted-memoryrolling-snowballroyal-visage-boundaries-2026-10-17):4a0133a68 adds245942/1240082/246037/display129958/cursor/180s as17th stationary actor; old16/helper retained, format/manual readability/diffcheck pass, behavior AFTER507. Explicit time-leap expiry not relabelled ordinary50ms/wall proof. Exact kill-proc42/trigger0 voice, script-only K'areshi appearance, missing controlled rolling snowball/holiday recovery and Royal Visage misc0 remain gaps.507 earlier16/18/12 scopes pending final; newer17stationary/19caster/13object unverified. No runtime/data/new native or own heavy duplicate.
+
 ## 2026-10-17 — Toy source610–614 pending Etheric Victory acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source610614-pending-etheric-victory-and-portalvoidsnowmanmixed-transmorpher-boundaries-2026-10-17):b7df42b22 adds244470/1237584/1800000ms as19th audited caster identity; old18/helper unchanged, format/manual readability/diffcheck pass, behavior AFTER507. Missing shared Dornogal portal244139, actual Void presentation, mixed2933212756 snowman with holiday recovery and Brann245374/65/77 service remain exact gaps. Preserve NPC2.2 metadata and description-only1237986 reference without player-scale/root-trigger invention.507 earlier scope still pending final; no runtime/data/new native or own heavy duplicate.
