@@ -4,6 +4,12 @@ Audit scope: all 13 classes / 40 Mainline 12.1.0.69933 specs, including Devourer
 
 Durable per-spec/per-spell results and proof ledger: `/home/osso/.worktrees/handoff-class-completeness.md`. Regenerator, manifest, source receipts and command logs: engine `data/diagnostics/class-completeness-2026-10-11/`. Previous [Dummy23 census](spell-dummy23-coverage.md) reviewed all 157 roots, but explicitly excludes full talent trees and level-80 membership.
 
+## Augmentation read-only selection and bounded support stats (2026-10-17)
+
+Active12.1.5.70448/key88d5e8ef05ec5a8446cdec93d142d7c6 candidate membership was refreshed for all40 specs using native level80 SkillLineAbility/spec/mastery/trait conditions. Counts equal the prior census; historical69933 working/partial/broken and core A/B/C/D counts remain explicitly historical, not fresh70448 functional results. Augmentation1473 has the largest historical core unresolved count5/9 and independently confirmed current missing support540 consumer; selected candidate union159IDs. Source/40-spec table/full exact rows: engine `data/diagnostics/class-coverage-b-2026-10-17/{per-spec-table.md,membership70448.json,aug-source70448.json,proposal.md}`. Selected imported SpellEffect fields compare equal to authenticated installed70448 rows in read-only world.db.
+
+Approved first slice: Prescience409311 explicit-friendly→410089 crit, plus Shifting Sands413984 caster-mastery→recipient Versatility on apply and native1000ms updates. [Implementation/source](wiki/systems/auras.md#augmentation-support-stats-2026-10-17), [contract](specs/class-completeness.md#bounded-augmentation-support-stats-active70448). Genuine native e9f5cded RED4/4: no410089 after ordinary friendly cast, Sands0 versus2.176/2.992 caster mastery. Earlier three dependency/compile attempts are not behavior REDs. GREEN/integration pending. No coefficients, random rolls, native clocks, resource pools or shared protocol changed; no generic540 or full-ability/census promotion. E202 and other dummy fields, automatic prioritization, empower/mastery grant, Ebon and hero/proc/legal/full-rotation/nativeUDP remain open.
+
 ## Shared native label vulnerability (aura537)
 
 `MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL` now multiplies incoming spell damage only for the aura caster and native `SpellLabel` in `EffectMiscValue_0`. This is TrinityCore a352b1fa `Unit.cpp:7066–7069`, not a new per-spell coefficient. Percent amounts and stack counts come from the live aura. Existing aura271 behavior is unchanged.
