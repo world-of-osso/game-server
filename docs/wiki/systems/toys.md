@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Etheric Victory and portal/void/snowman/transmorpher boundaries (2026-10-17)
+
+[Source610–614 matrix](../../toy-effects14-coverage.md#source610614-pending-etheric-victory-and-portalvoidsnowmanmixed-transmorpher-boundaries-2026-10-17) adds acceptance-onlyb7df42b22:244470/1237584/1800s as19th audited caster identity, old18/helper unchanged; behavior AFTER507. Missing any-player Dornogal portal244139, unaudited Void pose, mixed snowman293/321/27/56/holiday timer and mixed Brann245374/65/77 service remain gaps. NPC scale2.2 is not player scale; description-reference1237986 is not a root trigger. No runtime/data/new native or own heavy duplicate.
+
 ## Courier-mail/finger-ribbon/outdoor-balloon/skiff/pennant boundaries (2026-10-17)
 
 [Source605–609 matrix](../../toy-effects14-coverage.md#source605609-courier-mailfinger-ribbonoutdoor-balloonskiffpennant-boundaries-2026-10-17) preserves missing actual Courier Lynx242136 mail/category2066, finger-ribbon art, outdoor riding balloon243246, one-hour skiff104+250ms226/jump paddling and nonzero Astral pennant gaps. No inert courier/balloon, gameplay ring, flat130% speed or copied sibling art.507 runtime still lacks final result/landing;603 thirteenth object remains newer. No runtime/data/native proof or own heavy duplicate.
