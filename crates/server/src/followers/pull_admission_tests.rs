@@ -1,7 +1,9 @@
 //! Native budget composition over a supplied route footprint; full route exposure has
 //! separate real-map coverage. Effects, deaths, resources and timing stay native.
 use super::pull_budget::{Decision, Reason};
-use super::pull_forecast_tests::{add_native_healer, source_fixture, spawn_source_actor};
+use super::pull_forecast_tests::{
+    add_native_healer, source_fixture_with_plugins, spawn_source_actor,
+};
 use super::{Follower, FollowerCatalog, pull_admission, pull_history};
 use crate::maps::InMap;
 use crate::spell_cast::test_harness::Harness;
@@ -74,8 +76,9 @@ fn add_native_dps(h: &mut Harness, map: InMap) -> Vec<Entity> {
 }
 
 fn fixture() -> Fixture {
-    let (mut h, tank, first) = source_fixture(46249);
-    h.app.add_plugins(crate::stats::StatsPlugin);
+    let (mut h, tank, first) = source_fixture_with_plugins(46249, |app| {
+        app.add_plugins(crate::stats::StatsPlugin);
+    });
     let owner = h.caster;
     h.app
         .world_mut()

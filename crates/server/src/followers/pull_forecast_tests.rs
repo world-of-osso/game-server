@@ -8,7 +8,14 @@ use bevy::prelude::*;
 use shared::components::{Health, Npc, UnitLevel, UnitPowers};
 
 pub(super) fn source_fixture(entry: u32) -> (Harness, Entity, Entity) {
-    let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
+    source_fixture_with_plugins(entry, |_| {})
+}
+
+pub(super) fn source_fixture_with_plugins(
+    entry: u32,
+    configure: impl FnOnce(&mut App),
+) -> (Harness, Entity, Entity) {
+    let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, configure);
     h.advance(3);
     let map = InMap {
         map_id: 34,
