@@ -302,7 +302,13 @@ fn process_release_spirit_requests(
                     player.race,
                     &state.graveyards,
                 )
-                .inspect(|_| teleported(dirty_queue.as_deref(), link.0, &mut control)),
+                .inspect(|_| {
+                    teleported(dirty_queue.as_deref(), link.0, &mut control);
+                    let player = link.0;
+                    commands.queue(move |world: &mut World| {
+                        crate::spell_cast::cancel_cast(world, player);
+                    });
+                }),
             };
             send_release_spirit_result(
                 conn_entity,
@@ -343,6 +349,8 @@ pub(crate) fn release_spirit_in_dungeon(
     death_state.corpse = None;
     death_state.graveyard = None;
     commands.queue(move |world: &mut World| {
+        // BuildPlayerRepop sets DEAD before the graveyard teleport/revival.
+        crate::spell_cast::cancel_cast(world, player);
         crate::maps::teleport_to(
             world,
             player,

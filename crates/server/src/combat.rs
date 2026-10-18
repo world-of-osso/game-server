@@ -1567,6 +1567,9 @@ fn insert_npc_death(mut entity: EntityWorldMut) {
     let npc = entity.id();
     entity.world_scope(|world| {
         combat_stop(world, npc);
+        // TC Unit::setDeathState (Unit.cpp:9187-9190): interrupt after CombatStop,
+        // before death hooks can observe or replace the old cast.
+        crate::spell_cast::cancel_cast(world, npc);
         if let Some(attacker) = killing_blow {
             notify_killed_unit(world, attacker, npc);
         }
@@ -1603,6 +1606,7 @@ pub(crate) fn despawn_creature(world: &mut World, creature: Entity) {
     }
     crate::creature_aggro::forget_combat(&mut entity);
     combat_stop(world, creature);
+    crate::spell_cast::cancel_cast(world, creature);
     crate::interest::set_hidden(world, creature, true);
 }
 
@@ -1777,7 +1781,10 @@ pub(crate) fn corpse_decay_system(
             commands.queue(move |world: &mut World| crate::zones::unsummon(world, entity));
         } else {
             commands.entity(entity).remove::<Corpse>();
+            // TC Creature::RemoveCorpse (Creature.cpp:438): setDeathState(DEAD)
+            // interrupts the current casts again.
             commands.queue(move |world: &mut World| {
+                crate::spell_cast::cancel_cast(world, entity);
                 crate::interest::set_hidden(world, entity, true);
             });
         }

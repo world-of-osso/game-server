@@ -162,6 +162,7 @@ fn encounter_coverage_wailing_eight_controlled_deaths_reopen_normal_run() {
             dead_bosses,
         },
         false,
+        Some(&mut crate::test_data::ground_map()),
     );
     queue.apply(h.app.world_mut());
     let population: Vec<_> = h
