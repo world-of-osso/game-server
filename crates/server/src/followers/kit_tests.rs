@@ -166,8 +166,48 @@ fn follower_kit_lantha32_dreadstalkers() {
 #[ignore = "RED: Garrick previously lacked Word of Glory"]
 fn follower_kit_garrick32_word_of_glory() {
     let (mut h, unit) = level32(209057);
+    let power = shared::components::PowerType::HolyPower;
+    let cost = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(85673)
+        .unwrap()
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == power as i32)
+        .unwrap()
+        .mana_cost as f32;
+    for _ in 0..600 {
+        if crate::spell_cast::powers::power_value(h.app.world(), unit, power)
+            .unwrap()
+            .0
+            >= cost
+        {
+            break;
+        }
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        crate::spell_cast::powers::power_value(h.app.world(), unit, power)
+            .unwrap()
+            .0
+            >= cost,
+        "native attacks must earn WoG's sourced cost, never a fixture power grant"
+    );
     wounded(&mut h, unit, 0.3);
     uses_spell(&mut h, unit, 85673);
+}
+
+#[test]
+#[ignore = "RED: urgent cast restarts every AI tick instead of completing"]
+fn follower_kit_garrick32_finishes_flash_of_light() {
+    let (mut h, unit) = level32(209057);
+    wounded(&mut h, unit, 0.3);
+    let before = h.health(unit);
+    uses_spell(&mut h, unit, 19750);
+    assert!(h.health(unit) > before);
 }
 
 #[test]
