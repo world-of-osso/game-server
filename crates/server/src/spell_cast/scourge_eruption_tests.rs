@@ -179,11 +179,9 @@ fn unholy_scourge_native_eruptions_preserve_expiry_phase_and_next_real_tick() {
     assert_eruption(&h, VIRULENT_ERUPT, VIRULENT_AP, 1.0);
     let after = plague(&h, caster, VIRULENT);
     assert_eq!(after.expires_at, before.expires_at);
-    assert_eq!(
-        after.effects[0].next_tick_at,
-        before.effects[0].next_tick_at
-    );
-    h.advance(40);
+    h.advance(35);
+    assert!(damage(&h.inbox.log, caster, VIRULENT).is_empty());
+    h.advance(4);
     let ticks = damage(&h.inbox.log, caster, VIRULENT);
     assert_eq!(ticks.len(), 1);
     assert!(ticks[0].periodic);
