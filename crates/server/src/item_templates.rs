@@ -19,6 +19,8 @@ pub struct ItemTemplate {
     pub inventory_type: u8,
     /// `Stackable`: maximum stack size.
     pub max_stack: u32,
+    /// `MaxCount`: maximum owned quantity; non-positive means unlimited.
+    pub max_count: i32,
     /// `Bonding`: 0 none, 1 on pickup, 2 on equip, 3 on use, 4 quest.
     pub bonding: u8,
     pub required_level: u16,
@@ -172,7 +174,7 @@ const ITEM_QUERY: &str = "SELECT c.ID, c.InventoryType, c.Stackable, c.Bonding, 
      (SELECT m.ItemAppearanceID FROM item_modified_appearance m WHERE m.ItemID = c.ID \
       AND m.ItemAppearanceID != 0 ORDER BY m.ItemAppearanceModifierID, m.OrderIndex LIMIT 1), \
      u.SpellID, u.Charges, u.SpellCategoryID, u.CategoryCoolDownMSec, \
-     s.ContainerSlots, s.BagFamily, s.Flags_0, s.LimitCategory \
+     s.ContainerSlots, s.BagFamily, s.Flags_0, s.LimitCategory, c.MaxCount \
      FROM content_item c JOIN item_sparse s ON s.ID = c.ID \
      LEFT JOIN (SELECT x.ItemID, e.SpellID, e.Charges, e.SpellCategoryID, e.CategoryCoolDownMSec, \
       ROW_NUMBER() OVER (PARTITION BY x.ItemID ORDER BY CASE WHEN e.TriggerType = 6 THEN 0 ELSE 1 END, e.LegacySlotIndex, e.ID) AS slot \
@@ -237,6 +239,7 @@ fn template_from_row(row: &Row) -> rusqlite::Result<(u32, ItemTemplate)> {
     let template = ItemTemplate {
         inventory_type: row.get(1)?,
         max_stack: row.get::<_, i64>(2)?.clamp(1, i64::from(u32::MAX)) as u32,
+        max_count: row.get(APPEARANCE_COLUMN + 9)?,
         bonding: row.get(3)?,
         required_level: row.get(4)?,
         allowable_class: row.get(5)?,

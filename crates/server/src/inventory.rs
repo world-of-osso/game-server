@@ -22,7 +22,9 @@ use crate::auth::{Authenticated, InWorld};
 use crate::gold::GoldUpdateQueue;
 use crate::item_templates::ItemTemplates;
 use crate::networking::PlayerLink;
-use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
+use crate::persistence::inventory_store::{
+    InventoryRecord, load_inventory_record, save_inventory_record,
+};
 use crate::persistence::{self, GameDatabase};
 use crate::stats::EquippedItems;
 
@@ -108,6 +110,15 @@ pub(crate) fn load_model(
             format!("character {character_id} has no record"),
         )
     })?;
+    load_model_from_record(db, templates, character_id, record)
+}
+
+pub(crate) fn load_model_from_record(
+    db: &Database,
+    templates: &ItemTemplates,
+    character_id: u64,
+    record: InventoryRecord,
+) -> Result<InventoryModel, InventoryError> {
     for item in record
         .inventory
         .items
@@ -128,7 +139,9 @@ pub(crate) fn load_model(
         }
     }
     let mut mint = || persistence::next_id(db, "item_instance");
-    Ok(InventoryModel::from_record(record, templates, &mut mint))
+    let mut model = InventoryModel::from_record(record, templates, &mut mint);
+    model.load_bank_ownership(db, character_id);
+    Ok(model)
 }
 
 /// Store `count` of `item_id` in the character's bags (AzerothCore `StoreNewItem`),
