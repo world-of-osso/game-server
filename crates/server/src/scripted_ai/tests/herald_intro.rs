@@ -1,0 +1,208 @@
+//! Ordinary Ramparts actors and real lethal transitions; INTRO2 remains excluded.
+use super::*;
+
+const HERALD: u32 = 17_307;
+const SENTRY: u32 = 17_517;
+const START_ENCOUNTER: i32 = 1_730_700;
+const CENTER: Position = Position {
+    x: -1410.5204,
+    y: 89.05998,
+    z: -1740.5852,
+};
+
+fn actors_in_copy(h: &mut Harness, entry: u32, map: InMap) -> Vec<Entity> {
+    h.creatures_of(entry)
+        .into_iter()
+        .filter(|actor| h.app.world().get::<InMap>(*actor) == Some(&map))
+        .collect()
+}
+
+fn ordinary_ramparts() -> (Harness, InMap, Entity, Vec<Entity>) {
+    let (mut h, _, map) =
+        encounter_fixture(HERALD, 543, 1, 1, None, EncounterState::NotStarted, true);
+    let heralds = actors_in_copy(&mut h, HERALD, map);
+    let sentries = actors_in_copy(&mut h, SENTRY, map);
+    assert_eq!(heralds.len(), 1, "ordinary Herald population");
+    assert_eq!(sentries.len(), 2, "ordinary pair of Sentries");
+    let herald = heralds[0];
+    let origin = h
+        .app
+        .world()
+        .get::<crate::zones::CreatureOrigin>(herald)
+        .unwrap();
+    assert_eq!(origin.guid, 20_202_693);
+    let mut guids: Vec<_> = sentries
+        .iter()
+        .map(|actor| {
+            h.app
+                .world()
+                .get::<crate::zones::CreatureOrigin>(*actor)
+                .unwrap()
+                .guid
+        })
+        .collect();
+    guids.sort_unstable();
+    assert_eq!(guids, [20_202_705, 20_202_706]);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::WaypointState>(herald)
+            .is_some()
+    );
+    (h, map, herald, sentries)
+}
+
+fn kill_actor(h: &mut Harness, actor: Entity) {
+    let damage = h.health(actor).max * 2.0;
+    let map = h.app.world().get::<InMap>(actor).unwrap();
+    let player = h
+        .players
+        .iter()
+        .find_map(|(player, _, _)| {
+            (h.app.world().get::<InMap>(*player) == Some(map)).then_some(*player)
+        })
+        .expect("living player in the actor's allocated copy");
+    crate::combat::deal_direct_damage(h.app.world_mut(), player, actor, damage);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(actor)
+            .is_some()
+    );
+}
+
+fn is_passive(h: &Harness, actor: Entity) -> bool {
+    h.app.world().get::<ReactState>(actor) == Some(&ReactState::Passive)
+}
+
+fn spawn_second_copy(h: &mut Harness) -> InMap {
+    let map = h.app.world_mut().resource_scope(
+        |world, mut instances: Mut<crate::maps::InstanceManager>| {
+            instances
+                .create_map(
+                    world.resource::<MapStore>(),
+                    543,
+                    crate::maps::instances::InstanceEntrant {
+                        character_id: 3001,
+                        leader: 3001,
+                        difficulty_id: 1,
+                        ..Default::default()
+                    },
+                    crate::maps::instances::Now {
+                        elapsed: world.resource::<Time<Fixed>>().elapsed_secs_f64(),
+                        unix: 0,
+                    },
+                )
+                .expect("second independently allocated Normal copy")
+                .map
+        },
+    );
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, h.app.world());
+    crate::zones::spawn_map_creatures(
+        &mut commands,
+        h.app.world().resource::<WorldData>(),
+        crate::zones::MapContent {
+            map,
+            difficulty_id: 1,
+            dead_bosses: Vec::new(),
+        },
+        false,
+        Some(&mut crate::test_data::ground_map()),
+    );
+    queue.apply(h.app.world_mut());
+    h.advance(0.05);
+    map
+}
+
+#[test]
+#[ignore = "RED: real Sentry deaths do not start the Herald INTRO1"]
+fn encounter_coverage_herald_intro_two_sentry_deaths_move_once_to_actual_center() {
+    let (mut h, map, herald, sentries) = ordinary_ramparts();
+    kill_actor(&mut h, sentries[0]);
+    h.advance(0.05);
+    assert!(!is_passive(&h, herald), "one death cannot start the intro");
+    kill_actor(&mut h, sentries[1]);
+    h.advance(0.05);
+    assert!(
+        is_passive(&h, herald),
+        "second real Sentry death starts INTRO1"
+    );
+    let current = *h.app.world().get::<Position>(herald).unwrap();
+    let speed = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(herald)
+        .unwrap()
+        .speed_run
+        * 7.0;
+    let distance = Vec3::new(current.x, current.y, current.z)
+        .distance(Vec3::new(CENTER.x, CENTER.y, CENTER.z));
+    let travel_ticks = (distance / (speed * 0.05)).ceil() as usize;
+    for _ in 0..=travel_ticks {
+        h.advance(0.05);
+    }
+    assert_eq!(*h.app.world().get::<Position>(herald).unwrap(), CENTER);
+    assert_eq!(
+        h.app.world().get::<CreatureMotion>(herald),
+        Some(&CreatureMotion::Still)
+    );
+    // Source MoveIdle must prevent the original patrol resuming after arrival.
+    h.advance(1.0);
+    assert_eq!(*h.app.world().get::<Position>(herald).unwrap(), CENTER);
+    // Exercise duplicate action delivery only after proving real death ingress.
+    dispatch(h.app.world_mut(), herald, Hook::DoAction(START_ENCOUNTER));
+    dispatch(h.app.world_mut(), herald, Hook::DoAction(START_ENCOUNTER));
+    h.advance(0.1);
+    assert_eq!(*h.app.world().get::<Position>(herald).unwrap(), CENTER);
+    assert_eq!(
+        h.app.world().get::<CreatureMotion>(herald),
+        Some(&CreatureMotion::Still)
+    );
+    assert_eq!(h.app.world().get::<InMap>(herald), Some(&map));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Npc>(herald)
+            .unwrap()
+            .template_id,
+        HERALD
+    );
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 1),
+        Some(EncounterState::NotStarted)
+    );
+}
+
+#[test]
+#[ignore = "RED: missing copy-local Sentry death ingress"]
+fn encounter_coverage_herald_intro_split_copies_unrelated_and_corpse_deaths_do_not_count() {
+    let (mut h, first_map, first_herald, first_sentries) = ordinary_ramparts();
+    let second_map = spawn_second_copy(&mut h);
+    assert_ne!(first_map, second_map);
+    let second_herald = actors_in_copy(&mut h, HERALD, second_map)[0];
+    let second_sentries = actors_in_copy(&mut h, SENTRY, second_map);
+    assert_eq!(second_sentries.len(), 2);
+    kill_actor(&mut h, first_sentries[0]);
+    kill_actor(&mut h, second_sentries[0]);
+    let unrelated = actors_in_copy(&mut h, 17_306, first_map)[0];
+    kill_actor(&mut h, unrelated);
+    // Real damage ingress refuses an already-dead actor; it must not count twice.
+    kill_actor(&mut h, first_sentries[0]);
+    h.advance(0.1);
+    assert!(!is_passive(&h, first_herald));
+    assert!(!is_passive(&h, second_herald));
+    kill_actor(&mut h, first_sentries[1]);
+    h.advance(0.05);
+    assert!(is_passive(&h, first_herald), "two deaths in the first copy");
+    assert!(
+        !is_passive(&h, second_herald),
+        "one death in the second copy"
+    );
+    kill_actor(&mut h, second_sentries[1]);
+    h.advance(0.05);
+    assert!(
+        is_passive(&h, second_herald),
+        "independent second-copy start"
+    );
+}
