@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Doomsday419 ordinary recovery and unique-product repeat pending after543 (2026-10-18)
+
+Test/speccb46a33f9 adds `toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product`, extending Full1166 toy202309/root398572 rather than substituting same-name product202310. Source/runtime202310 has stack1/MaxCount1/LimitCategory0; root source3000ms CreateItem24/base1 and300000ms recovery remain unchanged. The fixture learns/creates the first persisted product, keeps its real GUID in bags, checks refusal near295 ordinary simulated seconds, then completes a second actual learned root after300 seconds. Persisted inventory must still contain exactly the original GUID/one unit, never a duplicate/replacement or new toy202309. It does not force a cast failure merely for a product cap: pinned TC `SpellEffects.cpp:1426–1440` reduces creatable quantity through CanStoreNewItem/ITEM_MAX_COUNT.
+
+Format/manual readability only; UNCOMPILED/UNEXECUTED AFTER543, lead covering gate required. No clock/cooldown/bag mutation, runtime/data change or own jobs; original first-product and Offering Kit fixtures unchanged. Product use/gameplay/native presentation and bank/account cap coverage remain gaps, not certified by this bag-held repeat. [Contract](specs/toys.md), [test](../crates/server/src/toys_offering_kit_tests.rs).
+
 ## Gate543 GREEN and landed: Masquerade697 cast boundary (2026-10-18)
 
 Lead explicit receipt confirmsa8b96f8d9 on server master3accdf1a1f4236b1fecc5696d9b713ece99bfbf6; ancestry independently passes. Gate543server318 passed/0 failed/1 ignored in635.32s, EXIT0/FMT0/CHECK0, with exact Masquerade697 learned pre/post-cast test OK. Its [bounded contract](#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18) now has executed/landed CPU proof. Earlier pending labels below are historical; no exact millisecond scheduling/interruption/hour-expiry/native/all-five/full1166 certificate follows. No own duplicate jobs.

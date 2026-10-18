@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Doomsday419 ordinary recovery/product cap acceptance pending (2026-10-18)
+
+[Exact acceptance/limits](../../toy-effects14-coverage.md#doomsday419-ordinary-recovery-and-unique-product-repeat-pending-after543-2026-10-18):cb46a33f9 keeps the real first202310 product while learned202309 refuses near295s and completes again after300 ordinary seconds; source MaxCount1 must preserve original GUID/quantity rather than duplicate/replace. TC `SpellEffects.cpp:1426–1440` bounds created quantity, not necessarily root-cast admission. Old first-product/Offering fixtures unchanged. Format/manual only, uncompiled/unexecuted AFTER543; no product-use/native/bank/account-cap certificate or runtime/data/clock/inventory mutation.
+
 ## Gate543 Masquerade697 landed (2026-10-18)
 
 [Exact proof/landing](../../toy-effects14-coverage.md#gate543-green-and-landed-masquerade697-cast-boundary-2026-10-18): lead receipt/ancestry confirmsa8b96f8d9 on master3accdf1a1;543server318/0/1ignored635.32s/EXIT0/FMT0/CHECK0 with exact697 test OK. Prior pending labels are historical; exact timing/interruption/hour-expiry/native/all-five/full1166 limits persist.

@@ -1,3 +1,7 @@
+## 2026-10-18 — Doomsday419 ordinary recovery/product cap pending
+
+[Exact acceptance/limits](../toy-effects14-coverage.md#doomsday419-ordinary-recovery-and-unique-product-repeat-pending-after543-2026-10-18):cb46a33f9 extends learned202309/398572 with first persisted202310 held across ordinary300s recovery, early refusal and completed second root while preserving original GUID/one unit. TC `SpellEffects.cpp:1426–1440` stores only allowed quantity, no invented cast rejection. Original first-product/Offering tests unchanged. Format/manual only, uncompiled/unexecuted AFTER543; no runtime/data/clock/inventory mutation or product-use/native/bank/account-cap claim.
+
 ## 2026-10-18 — Gate543 GREEN/landed Masquerade697
 
 [Exact proof/landing](../toy-effects14-coverage.md#gate543-green-and-landed-masquerade697-cast-boundary-2026-10-18): lead receipt/ancestry confirmsa8b96f8d9 on master3accdf1a1;543server318/0/1ignored635.32s/EXIT0/FMT0/CHECK0, exact697 learned pre/post-cast test OK. No exact timing/interruption/hour-expiry/native/all-five/full1166 certificate or duplicate jobs.
