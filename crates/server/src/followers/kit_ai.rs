@@ -86,6 +86,15 @@ fn select_target(
             .copied()
             .filter(|target| world.get::<InMap>(*target) == world.get::<InMap>(unit))
             .filter(|target| {
+                entry.slot != Slot::Dispel
+                    || crate::auras::has_dispellable_aura(
+                        world,
+                        unit,
+                        *target,
+                        &entry.conditions.dispel_types,
+                    )
+            })
+            .filter(|target| {
                 entry
                     .conditions
                     .missing_aura
@@ -155,6 +164,11 @@ fn health_and_auras_allow(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    if entry.slot == Slot::Dispel
+        && !crate::auras::has_dispellable_aura(world, unit, target, &condition.dispel_types)
+    {
+        return false;
+    }
     if condition.health_below.is_some_and(|threshold| {
         health_fraction(world, target).is_none_or(|health| health >= threshold)
     }) {

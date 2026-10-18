@@ -46,8 +46,10 @@ def policy(slot, priority, target='enemy', **conditions):
     return slot, priority, dict(target=target, **conditions)
 
 
-def combat_policy(spec, name, spell):
+def combat_policy(spec, name, spell, dispel_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
+    if dispel_effects and name in {'Cleanse Toxins', "Nature's Cure", 'Remove Corruption', 'Purify', 'Purify Disease', 'Remove Curse', 'Expunge', 'Cauterizing Flame', 'Dispel Magic', 'Purge', 'Soothe'}:
+        return policy('dispel', 42, 'party')
     emergency = {'Lay on Hands', 'Guardian Spirit'}
     if name in emergency:
         return policy('heal', 10, 'party', health_below=0.20)
@@ -149,6 +151,9 @@ def kit_rows(db, source):
     availability = defaultdict(list)
     slots = {}
     inventory = []
+    dispels = defaultdict(list)
+    for spell, dispel_type, target in db.execute('SELECT SpellID,EffectMiscValue_0,ImplicitTarget_0 FROM spell_effect WHERE DifficultyID=0 AND Effect=38'):
+        dispels[spell].append((dispel_type, target))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
         for spell_text, passive in loadout['known'].items():
@@ -159,7 +164,11 @@ def kit_rows(db, source):
             name, required = native
             if level < required:
                 continue
-            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell)
+            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell, dispels[spell])
+            if rule[0] == 'dispel':
+                effects = dispels[spell]
+                rule[2]['dispel_types'] = sorted({row[0] for row in effects})
+                rule[2]['target'] = 'enemy' if all(row[1] == 6 for row in effects) else 'party'
             # SoTR's armor aura is named literally by its source tooltip; the
             # native effect64 children are NOT that armor aura.
             if name == 'Shield of the Righteous' and not passive:
