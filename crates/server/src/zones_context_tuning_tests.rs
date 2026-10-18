@@ -6,7 +6,6 @@ const NAZAN: u32 = 17_536;
 const RAMPARTS: u32 = 543;
 
 #[test]
-#[ignore = "RED: PostStartup ordinary spawn must wait for actual ground publication"]
 fn herald_context_startup_publishes_ground_before_ordinary_continent_stats() {
     let mut data = sourced_nazan_fixture();
     // A sourced17536 fixture at an actual imported continent spawn, not a canonical Nazan placement.

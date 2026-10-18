@@ -884,18 +884,7 @@ fn read_regional_spawn_range(
     };
     // Do not load terrain when template/critter/map data already selects the source range.
     resolve(None)
-        .or_else(|| {
-            let (x, y, z) = crate::terrain_height::wow_to_bevy(
-                spawn.position_x,
-                spawn.position_y,
-                spawn.position_z,
-            );
-            let area = context
-                .ground
-                .as_deref_mut()?
-                .area_at(context.map.map_id, Vec3::new(x, y, z));
-            resolve(area)
-        })
+        .or_else(|| resolve(read_spawn_area(context, spawn)))
         .unwrap_or_else(|| {
             panic!(
                 "CREATURE_LEVEL_CONTEXT_GAP: creature{} spawn{} map{} copy{} difficulty{}",
@@ -906,6 +895,13 @@ fn read_regional_spawn_range(
                 context.difficulty_id,
             )
         })
+}
+
+fn read_spawn_area(context: &mut CreatureSpawnContext<'_>, spawn: &CreatureSpawn) -> Option<u32> {
+    let ground = context.ground.as_deref_mut()?;
+    let (x, y, z) =
+        crate::terrain_height::wow_to_bevy(spawn.position_x, spawn.position_y, spawn.position_z);
+    ground.area_at(context.map.map_id, Vec3::new(x, y, z))
 }
 
 /// Creature::ApplyLevelScaling: roll the selected source delta exactly once per spawn.
