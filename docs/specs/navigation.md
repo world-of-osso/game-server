@@ -17,14 +17,14 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 ## Nonblocking server queries
 
-- [ ] Server fixed systems never perform navigation directory/tile reads, decoding or Detour queries; a worker exclusively owns its NavigationMaps.
-- [ ] Pending requests retain the current route/movement, or hold position without a route; Pending is neither Blocked nor Unbaked and never permits invented/direct movement.
-- [ ] Latest request per entity wins; discard stale IDs, publish a completion set in `(entity bits, request ID)` order at the start of the next fixed tick.
-- [ ] Bound queued work and retained completions to one live request/result per entity plus one executing worker job; no unbounded wake channel.
-- [ ] Preserve ordinary query success/unbaked/error results. Log worker panic/exit, explicitly fail outstanding and future requests, and never leave them Pending forever or restart silently.
-- [ ] A test-only drain supports synchronous fixtures; production never drains or joins the worker during ticks. A held actual tile read cannot stop ticks; after release the real path publishes.
+- [x] Server fixed systems never perform navigation directory/tile reads, decoding or Detour queries; a worker exclusively owns its NavigationMaps.
+- [x] Pending requests retain the current route/movement, or hold position without a route; Pending is neither Blocked nor Unbaked and never permits invented/direct movement.
+- [x] Latest request per entity wins; discard stale IDs, publish a completion set in `(entity bits, request ID)` order at the start of the next fixed tick.
+- [x] Bound queued work and retained completions to one live request/result per entity plus one executing worker job; no unbounded wake channel.
+- [x] Preserve ordinary query success/unbaked/error results. Log worker panic/exit, explicitly fail outstanding and future requests, and never leave them Pending forever or restart silently.
+- [x] A test-only drain supports synchronous fixtures; production never drains or joins the worker during ticks. A held actual tile read cannot stop ticks; after release the real path publishes.
 
-Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Worker/types and Navigation::advance have held-read/route GREEN proof. Follower approach probes and eight-candidate escape batches use deferred queries; a pending probe retains prior actor state and cannot become a clear approach or replace a current route. Capture escape candidates until completion, then revalidate against current fields so a growing aura395 cannot starve its batch. Fear captures one random intent, awaits collision, runs existing main-thread clipping/LOS, then awaits its path; interruption/removal invalidates that continuation and retries keep the existing timing. Normal ground script waypoints defer smooth-path controls and commit node/start state only after controls are ready; preemption/replacement cancels their pending identity. Exact/flying paths remain query-free. No production synchronous NavigationMap access remains. Test-only direct-query inspections submit to the same worker and explicitly drain. Raw-query GREEN proof remains pending.
+Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Worker/types and Navigation::advance have held-read/route GREEN proof. Follower approach probes and eight-candidate escape batches use deferred queries; a pending probe retains prior actor state and cannot become a clear approach or replace a current route. Capture escape candidates until completion, then revalidate against current fields so a growing aura395 cannot starve its batch. Fear captures one random intent, awaits collision, runs existing main-thread clipping/LOS, then awaits its path; interruption/removal invalidates that continuation and retries keep the existing timing. Normal ground script waypoints defer smooth-path controls and commit node/start state only after controls are ready; preemption/replacement cancels their pending identity. Exact/flying paths remain query-free. No production synchronous NavigationMap access remains. Test-only direct-query inspections submit to the same worker and explicitly drain. [Scoped GREEN proof and lead-owned gate](../wiki/systems/navigation.md#navigation-worker-migration--2026-10-18).
 
 ## C++ script ground waypoints
 
@@ -59,8 +59,8 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 ## Tests asserting this spec
 
-- `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; integration pending.
-- `crates/server/src/navigation_blocking_io_tests.rs` — actual FIFO tile-read boundary; synchronous RED observed before worker integration.
+- `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; current dispatch recheck passes all six controls.
+- `crates/server/src/navigation_blocking_io_tests.rs` — actual FIFO tile-read boundary; synchronous tick-stall RED and production-worker GREEN.
 - `crates/server/src/navigation_request_tests.rs` — pending hold/continuation, latest pose/ID, completion-set ordering and old-map invalidation controls.
 - `crates/navigation/src/bake.rs` — deterministic walkable floor and steep-slope rejection.
 - `crates/navigation/src/query.rs` — real Stockade obstacle detours with LOS-clear path segments (opt-in); actual Ruby WMO4391189/MODD753 metalplate4496145 doorway re-collected and baked from local assets, then crossed without LOS obstruction (opt-in).
