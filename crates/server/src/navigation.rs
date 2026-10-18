@@ -2,14 +2,15 @@
 use bevy::ecs::entity::EntityHashMap;
 use bevy::prelude::*;
 use shared::components::Position;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 const REPATH_DISTANCE: f32 = 1.0;
 const TELEPORT_DISTANCE: f32 = 2.0;
 
 mod deferred;
+#[cfg(test)]
+mod fixture_queries;
 mod requests;
 use deferred::PendingQuery;
 use requests::{PendingRoute, publish_navigation_results};
@@ -76,7 +77,6 @@ impl Corners {
 #[derive(Resource)]
 pub struct Navigation {
     dir: PathBuf,
-    maps: Mutex<HashMap<u32, Option<navigation::NavigationMap>>>,
     routes: EntityHashMap<Route>,
     worker: navigation::worker::Worker,
     pending: EntityHashMap<PendingRoute>,
@@ -91,7 +91,6 @@ impl Navigation {
     pub fn new(dir: &Path) -> Self {
         Self {
             dir: dir.to_path_buf(),
-            maps: Mutex::new(HashMap::new()),
             routes: EntityHashMap::default(),
             worker: navigation::worker::Worker::new(dir.to_path_buf()),
             pending: EntityHashMap::default(),
@@ -101,82 +100,6 @@ impl Navigation {
             #[cfg(test)]
             applied: Vec::new(),
         }
-    }
-
-    /// None means an entirely unbaked map, never a missing tile on a baked map.
-    pub(crate) fn query_path(
-        &self,
-        map_id: u32,
-        from: Vec3,
-        to: Vec3,
-    ) -> Result<Option<Vec<Vec3>>, String> {
-        self.query_map(map_id, |map| map.path(from, to))
-    }
-
-    /// Only normal ground C++ script waypoints select TC smooth-surface controls.
-    pub(crate) fn query_waypoint_path(
-        &self,
-        map_id: u32,
-        from: Vec3,
-        to: Vec3,
-    ) -> Result<Option<Vec<Vec3>>, String> {
-        self.query_map(map_id, |map| map.smooth_waypoint_path(from, to))
-    }
-
-    fn query_map<T>(
-        &self,
-        map_id: u32,
-        query: impl FnOnce(&mut navigation::NavigationMap) -> Result<T, String>,
-    ) -> Result<Option<T>, String> {
-        let mut maps = self.maps.lock().unwrap();
-        if !maps.contains_key(&map_id) {
-            let dir = self.dir.join(map_id.to_string());
-            let baked = match std::fs::read_dir(&dir) {
-                Ok(entries) => {
-                    let mut found = false;
-                    for entry in entries {
-                        let entry = entry.map_err(|err| format!("{}: {err}", dir.display()))?;
-                        found |= entry.path().extension().is_some_and(|ext| ext == "nav");
-                    }
-                    found
-                }
-                Err(err) if err.kind() == std::io::ErrorKind::NotFound => false,
-                Err(err) => return Err(format!("{}: {err}", dir.display())),
-            };
-            let map = if baked {
-                Some(navigation::NavigationMap::open(&dir)?)
-            } else {
-                error!(
-                    "Map {map_id} has no navigation bake in {}; no baked route available",
-                    dir.display()
-                );
-                None
-            };
-            maps.insert(map_id, map);
-        }
-        match maps.get_mut(&map_id).unwrap() {
-            Some(map) => query(map).map(Some),
-            None => Ok(None),
-        }
-    }
-
-    pub(crate) fn first_collision(
-        &self,
-        map_id: u32,
-        from: Vec3,
-        to: Vec3,
-    ) -> Result<Option<Vec3>, String> {
-        // query_path initializes the same lazy map and never creates a direct route.
-        if self.query_path(map_id, from, from)?.is_none() {
-            return Ok(None);
-        }
-        let mut maps = self.maps.lock().unwrap();
-        maps.get_mut(&map_id)
-            .unwrap()
-            .as_mut()
-            .unwrap()
-            .first_collision(from, to)
-            .map(Some)
     }
 
     pub(crate) fn route_destination(&self, entity: Entity, goal: Goal) -> Option<Vec3> {

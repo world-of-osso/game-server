@@ -1,5 +1,6 @@
 use super::*;
 use crate::ground::{GroundMap, GroundProbe};
+use std::collections::HashMap;
 
 fn ground_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground")
