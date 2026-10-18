@@ -337,24 +337,28 @@ pub(crate) fn update_victim_system(world: &mut World) {
     for creature in creatures {
         // ThreatManager updates independently of AI/react state (TC:216–230).
         victim::update_reference_when_due(world, creature);
-        if world
-            .get::<crate::scripted_ai::ScriptedVictimUpdatePaused>(creature)
-            .is_some()
-            || world.get::<crate::scripted_ai::ReactState>(creature)
-                == Some(&crate::scripted_ai::ReactState::Passive)
-        {
-            continue;
-        }
-        let Some(target) = (crate::scripted_ai::Ctx {
-            world,
-            me: creature,
-        })
-        .select_target_max_threat() else {
-            enter_evade_mode(world, creature);
-            continue;
-        };
-        project_victim(world, creature, target);
+        update_active_projection(world, creature);
     }
+}
+
+fn update_active_projection(world: &mut World, creature: Entity) {
+    let paused = world
+        .get::<crate::scripted_ai::ScriptedVictimUpdatePaused>(creature)
+        .is_some();
+    let passive = world.get::<crate::scripted_ai::ReactState>(creature)
+        == Some(&crate::scripted_ai::ReactState::Passive);
+    if paused || passive {
+        return;
+    }
+    let Some(target) = (crate::scripted_ai::Ctx {
+        world,
+        me: creature,
+    })
+    .select_target_max_threat() else {
+        enter_evade_mode(world, creature);
+        return;
+    };
+    project_victim(world, creature, target);
 }
 
 fn project_victim(world: &mut World, creature: Entity, target: Entity) {

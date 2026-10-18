@@ -12,6 +12,8 @@ pub(crate) struct CurrentVictim {
 const UPDATE_SECONDS: f64 = 1.0;
 const MELEE_THRESHOLD: f32 = 1.1;
 const RANGED_THRESHOLD: f32 = 1.3;
+const MELEE_REACH_OFFSET: f32 = 4.0 / 3.0;
+const NOMINAL_MELEE_RANGE: f32 = 5.0;
 
 struct Candidate {
     unit: Entity,
@@ -133,6 +135,10 @@ fn select_victim(
     if taunted.is_some() {
         return taunted;
     }
+    select_ranked_challenger(candidates, incumbent)
+}
+
+fn select_ranked_challenger(candidates: &[Candidate], incumbent: Option<Entity>) -> Option<Entity> {
     let highest = candidates.first()?;
     let Some(current) = candidates
         .iter()
@@ -160,32 +166,39 @@ pub(super) fn available(world: &World, creature: Entity, unit: Entity) -> bool {
     let Some(map) = world.get::<InMap>(creature) else {
         return false;
     };
-    let alive = crate::spell_cast::targets::is_alive(world, unit)
-        && world.get::<DeathState>(unit).is_none()
-        && world
-            .get::<PlayerDeathState>(unit)
-            .is_none_or(|death| death.state == shared::death::DeathState::Alive);
+    let alive = living_target(world, unit);
     let attackable = world
         .get::<UnitFlags>(unit)
         .is_none_or(|flags| flags.can_be_attacked_by(false));
-    let faction = |entity| UnitFaction {
-        template: world
-            .get::<UnitFactionTemplate>(entity)
-            .map_or(0, |faction| faction.0),
-        is_player: crate::faction::player_affected(
-            world.get::<Player>(entity).is_some(),
-            world.get::<UnitFlags>(entity),
-        ),
-    };
     alive
         && world.get::<InMap>(unit) == Some(map)
         && world.get::<TaxiFlight>(unit).is_none()
         && attackable
         && world
             .resource::<FactionTemplates>()
-            .can_attack(faction(creature), faction(unit))
+            .can_attack(unit_faction(world, creature), unit_faction(world, unit))
         && crate::auras::stealth::can_detect(world, creature, unit)
         && within_home_reach(world, creature, unit)
+}
+
+fn living_target(world: &World, unit: Entity) -> bool {
+    crate::spell_cast::targets::is_alive(world, unit)
+        && world.get::<DeathState>(unit).is_none()
+        && world
+            .get::<PlayerDeathState>(unit)
+            .is_none_or(|death| death.state == shared::death::DeathState::Alive)
+}
+
+fn unit_faction(world: &World, unit: Entity) -> UnitFaction {
+    UnitFaction {
+        template: world
+            .get::<UnitFactionTemplate>(unit)
+            .map_or(0, |faction| faction.0),
+        is_player: crate::faction::player_affected(
+            world.get::<Player>(unit).is_some(),
+            world.get::<UnitFlags>(unit),
+        ),
+    }
 }
 
 fn within_home_reach(world: &World, creature: Entity, unit: Entity) -> bool {
@@ -223,7 +236,7 @@ fn in_melee_range(world: &World, creature: Entity, unit: Entity) -> bool {
         return false;
     };
     // Unit.cpp:691–710: IsWithinMeleeRangeAt/GetMeleeRange, inclusive distance.
-    let base_range = (own + victim + 4.0 / 3.0).max(5.0);
+    let base_range = (own + victim + MELEE_REACH_OFFSET).max(NOMINAL_MELEE_RANGE);
     let bonus = world
         .get::<crate::auras::AuraStatMods>(creature)
         .map_or(0.0, |mods| mods.autoattack_range_bonus);

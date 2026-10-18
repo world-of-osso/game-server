@@ -873,6 +873,53 @@ fn threat_current_victim_removed_fixate_does_not_reappear_on_new_membership() {
 }
 
 #[test]
+fn threat_current_victim_lazy_refresh_preserves_the_periodic_deadline() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let other = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, other, 1000.0);
+    run(&mut app, 14);
+    app.world_mut()
+        .entity_mut(tank)
+        .insert(crate::maps::InMap::continent(1));
+    assert_eq!(current_victim(app.world_mut(), creature), Some(other));
+    let melee = spawn_player(&mut app, at(2.5, 0.0), 5);
+    add_threat(app.world_mut(), creature, melee, 1110.0);
+    run(&mut app, 7);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(melee),
+        "lazy selection must not postpone the original1000ms periodic deadline"
+    );
+}
+
+#[test]
+fn threat_current_victim_scaled_source_reach_extends_the_melee_threshold() {
+    let (mut app, creature, _tank) = current_victim_fixture();
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(shared::components::UnitScale(4.0));
+    let own_reach = crate::scripted_ai::model_reach::combat_reach(app.world(), creature).unwrap();
+    let melee = spawn_player(&mut app, at(1.0, 0.0), 5);
+    let other_reach = crate::scripted_ai::model_reach::combat_reach(app.world(), melee).unwrap();
+    let native_range = own_reach + other_reach + 4.0 / 3.0;
+    assert!(
+        native_range > 5.0,
+        "actual authored model/scale prerequisite"
+    );
+    let center_distance = (5.0 + native_range) / 2.0;
+    app.world_mut()
+        .entity_mut(melee)
+        .insert(at(center_distance, 0.0));
+    add_threat(app.world_mut(), creature, melee, 1110.0);
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "candidate inside sourced melee reach needs110%, not the ranged130%"
+    );
+}
+
+#[test]
 fn killing_the_only_target_makes_the_creature_evade_home_and_restores_its_health_there() {
     let mut app = aggro_app();
     let spider = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
