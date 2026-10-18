@@ -23,6 +23,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 - [x] Auto-apply passive known spells; remove them when unlearned.
 - [x] Fold aura stat changes into `stats::StatModifiers` (applied once, in `CharacterStats`); keep combat multipliers in `AuraStatMods`.
 - [x] Replicate `UnitAuras` on every player and NPC only when the aura set changes, with `remaining_ms` at send time; log `AuraApplied`/`AuraRefreshed`/`AuraRemoved`/`Dispel` to source and target owners.
+- [x] Classify native MOD_MELEE_RANGED_HASTE_2 342 by the signed-stat positivity rule: negative base/per-level points are harmful, preserving prior passive/buff/debuff attribute precedence. Ordinary friendly Curse dispels must remove eligible native curses without adding spell-ID positivity overrides.
 - [x] Track unhandled aura types (logged once per spell) so they still show in the UI.
 - [x] Fail casts under stun, silence and pacify with `CastFailReason::Stunned`/`Silenced`/`Pacified`, and under confuse with `NotSupported` ("Can't do that while confused": shared-protocol has no `Confused` reason).
 - [x] Apply talent passives (talent spells are in `KnownSpells`).
