@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source625–629: goggles, distinct carried crates, wormhole and strategy-game boundaries (2026-10-18)
+
+Gate507 finished: server305 passed/1 failed/1 ignored in728.00s, EXIT101/FMT0. Cold Ones234951 correctly refused the fixture's five-yard cursor: source and runtime SpellRange169 both permit0–3 yards. Test-only172cb1782 selects `[2,0,-1]` for that row, preserving the other12 rows, all assertions and runtime validation. Format/manual readability/diffcheck pass; lead509 queued at172cb1782 covers this correction and all post507 acceptances. No509 result or landing inferred;498 remains last confirmed landed/master8707ac0ea.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|625 Overtuned K'areshi Goggles246905/1244099 | Instant self aura233/misc3569/247 for600000ms; explicit item1800000ms recovery overrides spell0. Actual viewer-specific fashionable-friends presentation, recipient selection and restoration remain unresolved; no caster-only body transform or arbitrary creature replacement from flavor. |
+|626 Broker Supply Crate246907/1244065 | Instant self aura293/misc3393/1 for900000ms, inherited10000ms recovery/start1500ms. Actual carried Tazaveshi crate/pose/cleanup remains gap; not another crate's3392 appearance or inert generic aura success. |
+|627 K'areshi Supply Crate246908/1244013 | Instant self aura293/misc3392/1 for900000ms, inherited10000ms recovery/start1500ms. Actual carried K'areshi supplies/pose/cleanup remains gap; preserve distinction from Broker3393 and earlier carried crates. |
+|628 Wormhole Generator: Quel'Thalas248485/1247149 | Source5000ms target47/base1 summon248783/property3539/Control0/flags16779280 for120000ms, inherited1800000ms recovery/start1000ms; runtime actor/model absent. Actual user wormhole interaction/random Midnight destination/eligibility/lifecycle remains gap; no static portal prop, homebind substitution or guessed destination. |
+|629 Twilight's Blade Top Secret Strategy Training Guide249468/1249102 | Instant self permanent aura430/misc3707/0 plus self trigger64→298624/dummy4 for2000ms, inherited300000ms recovery. Actual interactive O/X board, three-in-row win, state and cleanup remain gap. Preserve both effects and their different durations; no generic book aura, automatic win or invented two-second game duration. |
+
+Evidence: private `rows625-629-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `gate507-coldones-range-{active-goal,proof-ledger}.json`, `lead-gate509-owner.json`. Source12.1.5.70448/key88d5e8ef05ec5a8446cdec93d142d7c6; metadata only for these five identities. No data import, runtime/native change or own heavy duplicate; Full1166 admission unchanged and149865 Tea Set untouched.
+
 ## Source620–624: pending POST/Cosmic hearthstones and balloon/scaled-spire/phase-guise boundaries (2026-10-17)
 
 Acceptance-onlyd981a866d appends two real learned-use identities to unchanged saved-bind/shared2309 helper, now21 hearthstones/old19 retained. POST245970/1240219 blocks Stone212337; Cosmic246565/1242509 blocks POST245970. Format/manual two-one-call-test readability/diffcheck pass; behavior needs a head AFTER50776a8426bf. No runtime/data/new native proof or own heavy duplicate.

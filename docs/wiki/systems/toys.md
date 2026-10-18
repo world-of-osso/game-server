@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Goggles, distinct crates, wormhole and strategy-game boundaries (2026-10-18)
+
+[Source625–629 matrix](../../toy-effects14-coverage.md#source625629-goggles-distinct-carried-crates-wormhole-and-strategy-game-boundaries-2026-10-18) preserves goggles233/3569/247 viewer presentation, distinct carried-crate3393/3392 poses, missing wormhole actor248783 with actual random Midnight travel, and permanent strategy-game430/3707 plus separate two-second298624 trigger. Metadata only; no generic aura, static portal or automatic-win substitute. Gate507 failed only Cold Ones234951 at the five-yard fixture cursor; source/runtime range169 is0–3 yards. Test-only172cb1782 uses a nonzero in-range cursor, other12 rows/assertions unchanged. Lead509 queued at that revision; no behavioral success or landing inferred.
+
 ## Pending POST/Cosmic hearthstones and balloon/scaled-spire/phase-guise boundaries (2026-10-17)
 
 [Source620–624 matrix](../../toy-effects14-coverage.md#source620624-pending-postcosmic-hearthstones-and-balloonscaled-spirephase-guise-boundaries-2026-10-17) adds acceptance-onlyd981a866d:POST245970/1240219 and actual slot1 Cosmic246565/1242509 via unchanged source10s/saved-bind/shared2309 helper, now21 identities/old19 retained; behavior AFTER507. Missing controlled slot6 Brewer balloon246042 and actual Phase Diver state remain gaps; existing Lightning Spire display131280/scale0.5 fixture retained. No mail service from Title5, shortened POST cast, substituted Cosmic slot0, invented phase immunity or native/recharge certificate. No runtime/data/new native or own heavy duplicate.
