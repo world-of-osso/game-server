@@ -69,8 +69,21 @@ fn spawn_authored_guard(h: &mut Harness) -> (Entity, Position, crate::maps::InMa
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, h.app.world());
     let mut rng = rand::rngs::StdRng::seed_from_u64(1);
-    let creature =
-        crate::zones::spawn_creature(&mut commands, data, template, map, false, spawn, &mut rng);
+    let creature = crate::zones::spawn_creature(
+        &mut commands,
+        data,
+        template,
+        &mut crate::zones::CreatureSpawnContext {
+            map,
+            difficulty_id: crate::zones::map_difficulty_id(h.app.world(), map),
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
+        false,
+        spawn,
+        &mut rng,
+    )
+    .expect("authored guard native spawn level context");
     queue.apply(h.app.world_mut());
     let home = *h.app.world().get::<Position>(creature).unwrap();
     assert!(
