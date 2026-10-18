@@ -641,6 +641,10 @@ fn changes_bag_slot(change: &InventorySlotChange) -> bool {
 }
 
 #[cfg(test)]
+#[path = "inventory_max_count_tests.rs"]
+mod max_count_tests;
+
+#[cfg(test)]
 #[path = "item_use_tests.rs"]
 mod item_use_tests;
 
