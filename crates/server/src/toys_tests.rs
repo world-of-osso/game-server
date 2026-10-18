@@ -3408,6 +3408,7 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
         (89869, 131171, 66768, 45436, 150000),
         (141299, 225824, 114846, 73493, 60000),
         (184415, 345799, 175582, 99948, 180000),
+        (201931, 395720, 199047, 112284, 300000),
         (272339, 1290957, 263908, 143906, 60000),
         (279590, 1306978, 270689, 146432, 60000),
     ] {
@@ -3420,9 +3421,11 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             .insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
         h.app.insert_resource(store.clone());
         learn_effect_toy(&mut h, character, item);
-        let destination = if matches!(item, 89869 | 184415) {
+        // Maiev's 12-yard destination keeps its speed-12 missile in flight during pump.
+        let cursor_distance = if item == 201931 { 12.0 } else { 2.0 };
+        let destination = if matches!(item, 89869 | 184415 | 201931) {
             let origin = h.app.world().get::<Position>(h.caster).unwrap();
-            Some([origin.x + 2.0, origin.y, origin.z])
+            Some([origin.x + cursor_distance, origin.y, origin.z])
         } else {
             None
         };
@@ -3431,6 +3434,10 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
             None,
             "item {item}"
         );
+        if item == 201931 {
+            assert!(h.inbox.go.iter().any(|go| go.spell_id == 398485));
+            assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+        }
         h.advance(60); // Includes the globe's authored 3000ms cast.
         assert!(
             h.inbox.failed.is_empty(),
@@ -3478,7 +3485,15 @@ fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
                 .get::<crate::creature_ai::FollowOwner>(actor)
                 .is_none()
         );
+        let is_pet = world
+            .get::<shared::components::UnitIsPet>(actor)
+            .is_some_and(|pet| pet.0);
+        assert!(!is_pet, "item {item}");
         let placed = *world.get::<Position>(actor).unwrap();
+        if let Some(destination) = destination {
+            assert!((placed.x - destination[0]).abs() < 0.001, "item {item}");
+            assert!((placed.z - destination[2]).abs() < 0.001, "item {item}");
+        }
         world.get_mut::<Position>(h.caster).unwrap().x += 5.0;
         let expires = world
             .get::<SummonedCreature>(actor)
