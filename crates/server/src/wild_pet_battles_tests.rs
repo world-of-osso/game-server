@@ -39,6 +39,47 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_bonestorm30_uses_legal_whirly_level_four_and_own_maximum_cost() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 2986), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let states = owned_states(&catalog, &journal);
+    assert_eq!(states[&41].selected_abilities[2], 1761);
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 2986);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 60);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.health, 399);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(1761), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [52, 119]);
+    assert_eq!(state.teams[1].pets[0].health, 95);
+    assert_eq!(state.teams[0].pets[0].health, 280);
+    for slot in 1..3 {
+        assert_eq!(
+            state.teams[0].pets[slot].health,
+            encounter.battle.teams[0].pets[slot].health
+        );
+    }
+}
+
+#[test]
 fn wild_pet_battles_bonestorm_uses_legal_graves_level_two_and_own_maximum_cost() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
