@@ -74,6 +74,34 @@
 ## 2026-10-17 — FIFO persistence core restoration
 
 [Bounded restoration](investigations/server-tick-lag.md#fifo-persistence-core-restoration-2026-10-17): current runtime lacked earlier FIFO lineage; monthly/account/periodic/real-Guide held-writer controls reproduce250–253ms against50ms bound. Import only writer/cache ownership and required migration plumbing, retain current guild-news atomicity/evaluation cache and landed delta/clock publishers. Same-writer Guide/Tender settlement and Trading Post commit-gated requests now pass13 core/28 affected controls on integrated master b8b6c2f9d; corrected20-ACK same-frame/due-save/reopen control passes separately. Fury22's43 degraded windows are a second retained reproduction, not controlled A/B evidence. Broad lead gate, exact PvP stall attribution and post-landing release acceptance remain open; no other unlanded performance topics imported.
+## 2026-10-17 — Natural first-center landing GREEN
+
+[First center landing](investigations/follower-data.md#telash-first-center-landing--2026-10-17):0d000bd4 actual natural landing plus affected original phase2PASS44.03s after genuine1RED40.09s; self388008 normal8s/no airborne cast/no instantGo/retained shield-passive-gravity/barcontinuation verified. Exact70source/HEAD/protocol/published-input guards stable. Case enabled afterward; scoped1ae8e179 server check0/1m00s/zero warnings and fmt0, focused primary-source/readability proof pass; lead integration pending. Return/AfterCast/runes/counters/budgets/pixels remain separate; no gravity restoration invented.
+
+## 2026-10-17 — Natural first-center landing RED
+
+[First center landing](investigations/follower-data.md#telash-first-center-landing--2026-10-17):dcd7fefe actual natural phase/outbound/airborne/no-cast/exact-center prerequisites pass, then missing native3880088-second self CastState1FAIL40.09s. Exactsource/HEAD/protocol/published-input guards stable. Only TC133–144 first-center branch/source boolean added; EVENT_JUMP1004 shared without value/math change. GREEN pending; return actions/AfterCast/runes/counters remain separate and no gravity restoration invented.
+
+## 2026-10-17 — Natural phase-hit outbound jump GREEN
+
+[Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17): source387928effect0→fullmask387981 exact-center bridge d622ea9b passes actual natural callback and original Energyphase controls2/2 in57.23s; exact70source/HEADclean/protocol11a058cf/published5f/private62403 guards stable. Test enabled afterward; no primitive/class reruns. Scoped051a5432 server check0/5.12s/zero warnings and fmt0, focused direct primary-source/readability verification pass; lead independent integration pending. Natural landing/return/runes/counters/budgets/pixels remain separate.
+
+## 2026-10-17 — Natural phase-hit outbound jump RED
+
+[Telash natural phase hit](investigations/follower-data.md#telash-natural-phase-hit--2026-10-17):9937b8dd actual60→100Energy/Icy/channel/ordinary phase/cost/shield/gravity prerequisites pass, then missing outbound motion1FAIL27.52s (unchangedpose/progress0). Exact source/HEAD/protocol/published-input guards stable. Only sourced387928effect0→triggered387981 exact-center hit bridge added; GREEN pending. No manual jump/spell/hook or new stats/HP/resource priming; landing/return/runes/counters remain separate. Primitiveb72 gate head unchanged remotely.
+
+## 2026-10-17 — Finite jump integration proof
+
+[Jump source/runtime](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): nativepair2 retained5aa, affected22 seven passes plus corrected Feral740 one pass (native Mana accessor), unsupported-source17 one retained pass =11 distinct cases, not a fresh11-case execution. Parent191427/196884/189110 effects, cast success/clocks/native zero-cost resources remain while only unsupported254 displacement refuses; old placeholders named/flipped, Harpoon41/Gordoth3 preserved. Scoped server check0/38.20s/zero warnings and fmt0; exact70source/HEAD/clean/protocol11a058cf/5f/private62403 guards stable. Independent source/wiring/artifact PASS with explicit limitations. Full Telash callbacks/runes/ordinary Azure/pixels remain open.
+
+## 2026-10-17 — Native jump GREEN and player displacement boundaries
+
+[Jump source/runtime](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17):5aa9f58a native713/714 launch/midarc/source-time/exact endpoints plus missing-input3PASS138.15s, retained actual-source unsupported1PASS. WorldData connection replaces failed relative startup reopening; initial fixture/compiler failures remain separate. Lead approves named displacement-only refusals191427/189110 progress curves and196884 parabolic/arrival trigger; preserve parent transform/damage/CC/bite/cooldowns/resources. Grepped1539 installed254 IDs against tracked test literals and flipped explicit placeholders, retained Harpoon41 and class effect assertions; regression/check/fmt pending, full Azure/pixels open.
+
+## 2026-10-17 — Native jump planning and launch boundaries
+
+[Jump source and runtime](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): producer510 published exact5f225535/SQL49b238f5; repair511 integrated. Native destination planning2RED60.53s precedes exactly approved TC SpellMgr4940–4956 effect0TargetA87 corrections for387981/388082. After correction, actual native2RED58.95s proves launch teleport after source/floor/LOS prerequisites; no synthetic movement/hook. Dedicated254 source-table handler and asynchronous motion options implemented, GREEN pending;41/Gordoth preserved. Initial test field-access compilation failure is not behavioral RED. Full Azure/pixels/callbacks/runes remain open.
+
 ## 2026-10-17 — Telash server jump-charge producer
 
 [Server-source projection](investigations/follower-data.md#telash-jump-charge-source-producer--2026-10-17): genuine real-copy CLI mode RED→fba6fb2b7PASS10.725s including six legacy controls; exact34 source rows/ten fields/NULLs, duplicate-source atomic refusal and fresh-schema/excerpt-loader proof. COPY367→5f225535 with full sqldiff49b238f5 (one CREATE+34INSERTs only), quick_check=ok; canonical publication lead-owned/pending. Independent artifact PASS; full fresh import, native254 motion/callbacks and ordinary Azure/pixels remain open. Lead separately reports first Energy phase4105 gate504 landed1443/fmtOK, master950d25c7f.
