@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source565–569 seasonal banner boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source565569-existing-seasonal-banners-and-unnamed-season-four-metadata-gap-2026-10-17): four existing Tempered/Prized/Unbound/Forged actor cases retained, property64/front2yd/60s/source600s recovery.232304 exists in Toy with literal `[Season]` source description but no70448 ItemSparse/runtime content_item or233147 creature-model; no invented name/display or dropped catalog row. Shared fixture's faction-refusal controls are only war banners, not these seasonal identities. No new behavior/native/eligibility/recharge certificate, runtime/data or heavy gate;498 remains landed.
+
 ## 2026-10-17 — Toy source560–564 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source560564-retained-balloonsvictory-and-random-delverecipient-spotlightlocal-disguise-boundaries-2026-10-17): existing Balloon source actor and Explosive Victory caster cases retained without duplicate tests/count expansion. Delve-O-Bot mixed179/trigger/root with missing232267, random Bountiful selection/travel/completion reset, actual target57 Spotlight and Undermine8306/aura243/misc35 consequences remain gaps. Block metadata explicitly70448/key88d5e8ef05ec5a8446cdec93d142d7c6; no retroactive70391 proof.498 landed/master8707ac0ea; no new runtime/data/behavioral/native proof or own heavy duplicate.
