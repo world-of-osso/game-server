@@ -1595,7 +1595,7 @@ mod tests {
                 let spawned = spawn_creatures(
                     &mut commands,
                     data,
-                    crate::maps::InMap::continent(spawn.map),
+                    crate::maps::InMap::continent(u32::from(spawn.map)),
                     0,
                     false,
                     std::iter::once(&spawn),
