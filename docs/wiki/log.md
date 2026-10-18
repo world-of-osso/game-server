@@ -1,6 +1,6 @@
 ## 2026-10-18 — Native melee facing and actual direction override
 
-[Melee facing](systems/player-damage.md#melee-front-arc-and-direction-override--2026-10-18): ordered ignoredREDdeb2168f0 pushed first; actual31144/equal80/256behind9Parry+11Block and actual5277/200/10s/fivebehindDodge give genuine2RED31.66s, front+native97574/288 controls4PASS. Existing shared front-dot/rotation conversion now feeds melee: behind noParry/Block, player-only noDodge, NPCdodge retained. Source masks/CC/RNG/order/clocks unchanged; GREEN/un-ignore/checks pending. Prior NPC flags nf570 EXIT/check/fmt0 LANDEDcb55b98c6; no fullhit-table/UDP/class claim.
+[Melee facing](systems/player-damage.md#melee-front-arc-and-direction-override--2026-10-18): ordered ignoredREDdeb2168f0 pushed first; actual31144/equal80/256behind9Parry+11Block and actual5277/200/10s/fivebehindDodge give genuine2RED31.66s, front+native97574/288 controls4PASS. Existing shared front-dot/rotation conversion now feeds melee: behind noParry/Block, player-only noDodge, NPCdodge retained. Source masks/CC/RNG/order/clocks unchanged; at64483bb3a native6/6PASS37.81s,0warnings in explicit ignored execution, then allsix ignores removed. Ordinary-discovery/affected controls/checks pending. Prior NPC flags nf570 EXIT/check/fmt0 LANDEDcb55b98c6; no fullhit-table/UDP/class claim.
 
 ## 2026-10-18 — Post-guild merge codec and MaxCount targets GREEN
 

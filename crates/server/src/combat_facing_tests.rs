@@ -154,7 +154,6 @@ fn assert_evasion_live(h: &Harness) {
 }
 
 #[test]
-#[ignore]
 fn native_melee_facing_npc_behind_rejects_parry_block_but_retains_dodge() {
     let (mut h, victim) = dummy_fixture(true, false);
     let caster = h.caster;
@@ -171,7 +170,6 @@ fn native_melee_facing_npc_behind_rejects_parry_block_but_retains_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_facing_npc_front_retains_parry_or_block() {
     let (mut h, victim) = dummy_fixture(false, false);
     let caster = h.caster;
@@ -180,7 +178,6 @@ fn native_melee_facing_npc_front_retains_parry_or_block() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_facing_npc_288_restores_parry_or_block_from_behind() {
     let (mut h, victim) = dummy_fixture(true, true);
     let caster = h.caster;
@@ -189,7 +186,6 @@ fn native_melee_facing_npc_288_restores_parry_or_block_from_behind() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_facing_player_behind_rejects_actual_evasion_dodge() {
     let mut h = rogue_fixture(true, false);
     let (attacker, victim) = (h.npc, h.caster);
@@ -211,7 +207,6 @@ fn native_melee_facing_player_behind_rejects_actual_evasion_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_facing_player_front_retains_actual_evasion_dodge() {
     let mut h = rogue_fixture(false, false);
     let (attacker, victim) = (h.npc, h.caster);
@@ -226,7 +221,6 @@ fn native_melee_facing_player_front_retains_actual_evasion_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_facing_player_288_restores_evasion_dodge_from_behind() {
     let mut h = rogue_fixture(true, true);
     let (attacker, victim) = (h.npc, h.caster);
