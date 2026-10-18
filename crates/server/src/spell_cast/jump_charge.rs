@@ -139,11 +139,33 @@ mod tests {
         data.jump_charge_params.0.remove(&713);
         h.app.insert_resource(data);
         let before = *h.app.world().get::<Position>(h.caster).unwrap();
+        let destination = Vec3::new(-5336.8003, 344.32678, -1066.6493);
+        let spell = h
+            .app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(387981)
+            .unwrap()
+            .clone();
+        let context = EffectCtx {
+            caster: h.caster,
+            spell: &spell,
+            depth: 1,
+            dest: Some(super::super::targets::Dest {
+                position: destination,
+                orientation: 0.0,
+            }),
+            chain_multiplier: 1.0,
+        };
+        assert!(matches!(
+            prepare_jump(h.app.world(), &context, &spell.effects[0]),
+            Err("missing referenced jump-charge parameters")
+        ));
         super::super::cast_triggered_at_destination(
             h.app.world_mut(),
             h.caster,
             387981,
-            Vec3::new(-5336.8003, 344.32678, -1066.6493),
+            destination,
             1,
         );
         h.advance(20);

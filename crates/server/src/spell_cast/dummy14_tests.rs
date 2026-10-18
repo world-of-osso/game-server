@@ -237,13 +237,17 @@ fn dummy14_eye_beam_native_initial_plus_ten_primary_hits_with_ranked_guaranteed_
 }
 
 #[test]
-fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
+fn dummy14_metamorphosis_keeps_transform_damage_cc_but_refuses_jump254_progress_curve() {
     let mut h = harness_with_native_enemy_dodge_reduction(
         Vec::new(),
         &[191427, 200166, 247121, 162264, 201453],
         12,
     )
     .unwrap();
+    h.app
+        .insert_resource(crate::test_data::world_data().clone());
+    let before = *h.app.world().get::<Position>(h.caster).unwrap();
+    let fury_before = h.power(PowerType::Fury);
     let target = h.npc;
     h.app.world_mut().get_mut::<Position>(target).unwrap().x = 20.0;
     let hostile = spawn_npc(&mut h.app, 27.9);
@@ -265,6 +269,24 @@ fn dummy14_metamorphosis_landing_hits_at_destination_and_splits_player_cc() {
     assert!(crate::auras::has_aura(h.app.world(), target, 200166));
     assert!(crate::auras::has_aura(h.app.world(), player, 247121));
     assert!(!crate::auras::has_aura(h.app.world(), player, 200166));
+    h.advance(4);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.caster).unwrap(),
+        before,
+        "JUMP254_PROGRESS_CURVE: Meta displacement refuses, not its other effects"
+    );
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 162264));
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, 201453));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == 191427));
+    assert!(h.inbox.cooldowns.iter().any(|update| {
+        update.spell_id == 191427 && !update.is_gcd && update.duration_ms == 120_000
+    }));
+    assert_eq!(
+        h.power(PowerType::Fury),
+        fury_before,
+        "native spell has no power cost"
+    );
 }
 
 #[test]
