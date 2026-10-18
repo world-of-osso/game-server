@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Courier-mail/finger-ribbon/outdoor-balloon/skiff/pennant boundaries (2026-10-17)
+
+[Source605–609 matrix](../../toy-effects14-coverage.md#source605609-courier-mailfinger-ribbonoutdoor-balloonskiffpennant-boundaries-2026-10-17) preserves missing actual Courier Lynx242136 mail/category2066, finger-ribbon art, outdoor riding balloon243246, one-hour skiff104+250ms226/jump paddling and nonzero Astral pennant gaps. No inert courier/balloon, gameplay ring, flat130% speed or copied sibling art.507 runtime still lacks final result/landing;603 thirteenth object remains newer. No runtime/data/native proof or own heavy duplicate.
+
 ## Pending Dastardly Banner and crate/juggling/scaled-banner-podium boundaries (2026-10-17)
 
 [Source600–604 matrix](../../toy-effects14-coverage.md#source600604-pending-dastardly-banner-and-cratejugglingretained-scaled-banner-podium-boundaries-2026-10-17) adds acceptance-only3eabc6183:239007/1227030/527088/type5/display102616/size1/cursor/180s as13th object, old12/helper unchanged; behavior awaits head AFTER507. Distinct carried crate3185 and exact juggling removal203/reapplication64/mixed293/406 remain gaps. Existing Flame's Radiance scale0.75 case and authentic grounded static Podium20min CPU/historical native-source receipts retained, not new wall-duration/recharge/qualification proof. No runtime/data/new native or own heavy duplicate.

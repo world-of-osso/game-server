@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source605–609 service/appearance/ride/paddle/pennant gaps
+
+[Exact source matrix](../toy-effects14-coverage.md#source605609-courier-mailfinger-ribbonoutdoor-balloonskiffpennant-boundaries-2026-10-17): missing242136 Courier mail/category2066 and243246 outdoor balloon ride, finger-ribbon art, one-hour skiff104+250ms226/jump paddling and nonzero Astral pennant remain gaps. No inert actors, ring stats, flat130% buff or sibling presentation reuse.507 running without final aggregate/EXIT/FMT/landing;603 thirteenth object remains AFTER507. No new acceptance/runtime/data/native proof or own heavy duplicate.
+
 ## 2026-10-17 — Toy source600–604 pending Dastardly Banner acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source600604-pending-dastardly-banner-and-cratejugglingretained-scaled-banner-podium-boundaries-2026-10-17):3eabc6183 adds239007/1227030/527088/type5/display102616/size1/cursor/180s as13th transmitted object; old12/helper unchanged, format/manual readability/diffcheck pass, behavior AFTER507. Distinct carried crate3185 and actual juggling/count/remove203/reapply64/mixed293406 gaps retained. Existing scaled Flame banner and exact grounded static Podium20min CPU/historical native source-frame proof not relabelled as new native wall-duration/recharge certificate.507 queued, no runtime/data/new native or own heavy duplicate.
