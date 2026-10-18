@@ -143,6 +143,15 @@ fn follower_kit_ralia32_ferocious_bite() {
 #[test]
 #[ignore = "RED: Lantha previously lacked Dreadstalkers priority"]
 fn follower_kit_lantha32_dreadstalkers() {
+    let (mut h, unit, _prepared) = lantha32();
+    uses_spell(&mut h, unit, 104316);
+}
+
+fn lantha32() -> (
+    Harness,
+    Entity,
+    crate::spell_cast::test_harness::PreparedClassWorld,
+) {
     let prepared = crate::spell_cast::test_harness::prepare_class_world();
     let data = prepared.world_data();
     let db = rusqlite::Connection::open_with_flags(
@@ -151,7 +160,7 @@ fn follower_kit_lantha32_dreadstalkers() {
     )
     .unwrap();
     let pets = crate::pet_control::load_pet_levelup_spells(&db).unwrap();
-    let (mut h, unit) = level32_with_plugins(230861, |app| {
+    let (h, unit) = level32_with_plugins(230861, |app| {
         app.insert_resource(data)
             .insert_resource(pets)
             .add_plugins((
@@ -159,7 +168,31 @@ fn follower_kit_lantha32_dreadstalkers() {
                 crate::pet_control::PetControlPlugin,
             ));
     });
+    (h, unit, prepared)
+}
+
+#[test]
+#[ignore = "RED: follower lacks native spec identity for Shadow Bolt generation"]
+fn follower_kit_lantha32_shadow_bolt_regenerates_spent_shards() {
+    let (mut h, unit, _prepared) = lantha32();
     uses_spell(&mut h, unit, 104316);
+    h.advance(40);
+    let power = shared::components::PowerType::SoulShards;
+    let (before, max) = crate::spell_cast::powers::power_value(h.app.world(), unit, power).unwrap();
+    assert!(
+        before < max,
+        "ordinary Dreadstalkers must spend native shards"
+    );
+    let enemy = h.npc;
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 686, Some(enemy), false).unwrap();
+    h.advance(80);
+    let after = crate::spell_cast::powers::power_value(h.app.world(), unit, power)
+        .unwrap()
+        .0;
+    assert!(
+        after > before,
+        "Demonology Shadow Bolt must replenish spent shards: {before} -> {after}"
+    );
 }
 
 #[test]
