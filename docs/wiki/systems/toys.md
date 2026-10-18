@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Stasis acceptance and torch/ritual/follower/random-wolf boundaries (2026-10-17)
+
+[Source470–474 matrix](../../toy-effects14-coverage.md#source470474-pending-stasis-acceptance-and-torchritualfollowerrandom-wolf-boundaries-2026-10-17) adds acceptance-only52e9f7c80: actual Stasis208415/419271 self-stun60s/300s recovery, real Frostbolt Stunned refusal, ordinary expiry/removal/restored cast and retained cooldown; exact intentional replies preserved. Retail item comes from content_item/item_sparse joins, not legacy item_template. Torch's mixed kill-credit229063/device actions, seven-second incomplete ritual, Boffins actual follower and random-volume giant wolf remain gaps. Format/manual readability/diffcheck pass; future covering head beyond4920c77 required, no native movement/time-freeze/runtime/data admission or own heavy duplicate.
+
 ## Platter/tiny-rocks/vehicle-detection/hourglass-action boundaries and retained banner (2026-10-17)
 
 [Source465–469 matrix](../../toy-effects14-coverage.md#source465469-plattertiny-rocksvehicle-detectionhourglass-action-boundaries-and-retained-banner-2026-10-17) preserves mixed platter/script/service and base4/special-flag rock multiplicity with missing bodies. Idol296 sets vehicle8196 and500ms periodic child retains all four ordered repeated script recipients; not decorative tracking. Minute Glass override2600 grants six distinct60/120/300/600/1800/3600s mixed aura/area actions, not one root timer. Smoldering Banner208057 retains exact seasonal-fixture CPU witness. No runtime/data/new proof/native/own heavy duplicate;492 running.

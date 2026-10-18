@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source470–474: pending Stasis acceptance and torch/ritual/follower/random-wolf boundaries (2026-10-17)
+
+473 test/spec52e9f7c80 adds actual208415/419271 learned self-stun use,60s duration/300s recovery, a real Frostbolt request refused as Stunned, ordinary expiry/replicated removal and a restored real cast while item recovery still refuses. Both intentional failed replies remain asserted, never cleared. Retail item authority is content_item/item_sparse plus effect joins, not empty legacy item_template. Format/manual readability/diffcheck pass; new behavior requires a later covering head than4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|470 Torch of Pyrreth208092/419127 | Instant self dummy4/permanent-1 plus effect90/credit229063, normal recovery0/start1500ms. Pinned90 is kill credit. Actual ancient-device empowerment/braziers/locks/artifact reveal and qualified credit/lifecycle remain gaps; no decorative torch, automatic unqualified quest credit or ignored nonvisual sibling. |
+|471 Familiar Journal208096/417799 | Source7000ms self script3/zero payload, inherited1800000ms recovery. Exact incomplete ritual/presentation/lifecycle remains unaudited; no generic script success, guessed complete ritual or invented summoned creature. |
+|472 Boffins208186/418357 | Instant self dummy4 plus target0 trigger64/misc5→418416/self script3 for300000ms, inherited3600000ms recovery. Actual Boffins follow actor/selection/owner/cleanup remains unresolved; no caster-only aura, arbitrary follower substitute or misc5 actor count. |
+|473 Stasis Sand208415/419271 | Instant self stun12/60000ms, item/spell300000ms recovery. New actual learned-use/stun/real cast refusal/ordinary expiry/restored cast/full-health-model/recovery acceptance committed, behavioral proof pending. Native frozen-time art, movement-input rejection and natural five-minute reuse remain separate; no global server-clock freeze or cosmetic-only stun surrogate. |
+|474 Compendium of the New Moon208421/419393 | Source2000ms self script3/zero payload, item and category102 both600000ms recovery. Random volume/giant-wolf model selection/eligibility/lifecycle remain unresolved; no zero-script visual success, guessed volume/model distribution or direct ordinary wolf transformation. |
+
+Evidence: private `rows470-474-{readonly-source,action-source,runtime-source,active-goal}.json`, `stasis473-{active-goal,proof-ledger}.json`, exact Retail item join and pinned90/12 handlers.149865 Tea Set remains untouched.
+
 ## Source465–469: platter/tiny-rocks/vehicle-detection/hourglass-action boundaries and retained banner (2026-10-17)
 
 No new acceptance/runtime/data changes or own heavy duplicate. Smoldering Banner retains its exact existing seasonal fixture; the other four retain functional/mixed contracts.4920c77bfdaa is running, no final result yet.
