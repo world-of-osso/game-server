@@ -170,3 +170,33 @@ fn toyfx482_flame_hearthstone_learned_use_returns_to_bind_and_blocks_deepdweller
 fn toyfx503_stone_of_hearth_learned_use_returns_to_bind_and_blocks_flame() {
     assert_toy_hearthstone_bind_and_shared_charge(212337, 401802, 209035);
 }
+
+#[test]
+fn toyfx621_post_express_hearthstone_learned_use_returns_to_bind_and_blocks_stone() {
+    assert_toy_hearthstone_bind_and_shared_charge(245970, 1240219, 212337);
+}
+
+#[test]
+fn toyfx623_cosmic_hearthstone_learned_use_returns_to_bind_and_blocks_post_express() {
+    assert_toy_hearthstone_bind_and_shared_charge(246565, 1242509, 245970);
+}
+
+#[test]
+fn toyfx645_lightcalled_hearthstone_learned_use_returns_to_bind_and_blocks_cosmic() {
+    assert_toy_hearthstone_bind_and_shared_charge(257736, 1261979, 246565);
+}
+
+#[test]
+fn toyfx659_naaru_enfold_learned_use_returns_to_bind_and_blocks_lightcalled() {
+    assert_toy_hearthstone_bind_and_shared_charge(263489, 1270583, 257736);
+}
+
+#[test]
+fn toyfx661_preyseeker_hearthstone_learned_use_returns_to_bind_and_blocks_naaru() {
+    assert_toy_hearthstone_bind_and_shared_charge(263933, 1270814, 263489);
+}
+
+#[test]
+fn toyfx673_corewarden_hearthstone_learned_use_returns_to_bind_and_blocks_preyseeker() {
+    assert_toy_hearthstone_bind_and_shared_charge(265100, 1273401, 263933);
+}

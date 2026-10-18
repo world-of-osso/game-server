@@ -1,10 +1,211 @@
-//! Source111–113,178–179,201,234,240,317,322,387,402 and450: real transforms and source recovery.
+//! Source111–113,178–179,201,234,240,317,322,387,402,450,540,542,548,553,573,638,644 and690: transforms and recovery.
+//! Source618: misc0 Royal Visage;684/685/697/702/710: bounded shared2513 use/refusal.
 use super::*;
+
+const TEN_MINUTES_MS: u32 = 600_000;
+// Item, spell, creature, displays, recovery ms, aura duration ms, cast ms.
+const SOURCE_DISGUISES: &[(u32, u32, i32, &[u32], u32, u32, u32)] = &[
+    (
+        164373,
+        281298,
+        121865,
+        [11611, 976, 765, 4905].as_slice(),
+        7_200_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        164374,
+        281302,
+        144261,
+        [41083, 78767, 76947, 41724].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        164375,
+        281303,
+        144262,
+        [88011, 88009, 88016, 88012].as_slice(),
+        7_200_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        170154,
+        303994,
+        155896,
+        [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        170155,
+        303995,
+        155897,
+        [
+            92514, 92515, 92516, 92517, 92518, 92519, 92520, 92521, 92522, 92523, 92524, 92525,
+            92526, 92527, 92528, 92529,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        174873,
+        305123,
+        156286,
+        [92868, 92880, 92874, 92871].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        183903,
+        343827,
+        174859,
+        [96239, 96240, 96241, 96242, 96243].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        184223,
+        344795,
+        175221,
+        [
+            92410, 92411, 92412, 92413, 92414, 92415, 92416, 92417, 92418,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        190457,
+        367568,
+        185567,
+        [105515].as_slice(),
+        3_600_000,
+        900_000,
+        0,
+    ),
+    (
+        191891,
+        371470,
+        187854,
+        [104851].as_slice(),
+        1_800_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        205904,
+        410931,
+        205296,
+        [112407, 112523, 112524, 112525].as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        225641,
+        455426,
+        226283,
+        [
+            115492, 115491, 115488, 115487, 115483, 115482, 115479, 115478, 115473, 115472, 115469,
+            115468, 115465, 115464, 115461, 115460, 115459, 115458, 115455, 115454, 115451, 115450,
+            115447, 115446, 115443, 115442, 115439, 115438, 115435, 115434, 115431, 115430, 115428,
+            115426, 115424, 115419, 115417, 115415, 115413, 115411, 115410,
+        ]
+        .as_slice(),
+        3_600_000,
+        1_800_000,
+        1_500,
+    ),
+    (
+        225910,
+        456572,
+        226964,
+        [
+            119251, 115218, 115217, 115216, 115215, 115214, 115213, 115212, 115211, 115210, 115209,
+            115208, 115207, 115206, 115205, 115204, 115202, 115201, 115200, 115199, 115198, 115197,
+            115196, 115195, 115194, 115192, 115190, 114563, 114562,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        226810,
+        459531,
+        228081,
+        [124738, 123949, 125914].as_slice(),
+        3_600_000,
+        1_200_000,
+        1_500,
+    ),
+    (
+        228705,
+        462934,
+        229772,
+        [
+            118286, 118292, 118293, 118283, 118276, 118290, 118295, 118284, 118289, 118278, 118291,
+            118281, 118285, 118287, 119763, 118294,
+        ]
+        .as_slice(),
+        3_600_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        233202,
+        473407,
+        234479,
+        [124464, 124467, 124468, 124471, 124470, 124469].as_slice(),
+        3_600_000,
+        1_800_000,
+        0,
+    ),
+    (
+        252265,
+        1254376,
+        251887,
+        [128024, 128022, 128026, 128025, 128023].as_slice(),
+        1_200_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        256893,
+        1260864,
+        254071,
+        [100712, 93612, 98057, 93614].as_slice(),
+        900_000,
+        TEN_MINUTES_MS,
+        0,
+    ),
+    (
+        274921,
+        1295623,
+        265732,
+        [
+            103316, 103317, 103857, 103318, 103319, 103320, 103321, 103324, 103325, 103860,
+        ]
+        .as_slice(),
+        3_600_000,
+        300_000,
+        0,
+    ),
+];
 
 #[test]
 fn toyfx_source_disguises_learning_expiry_and_recovery() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
-    const TEN_MINUTES_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
@@ -12,103 +213,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for (item, spell, entry, displays, recovery_ms, duration_ms) in [
-        (
-            164373,
-            281298,
-            121865,
-            [11611, 976, 765, 4905].as_slice(),
-            7_200_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            164374,
-            281302,
-            144261,
-            [41083, 78767, 76947, 41724].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            164375,
-            281303,
-            144262,
-            [88011, 88009, 88016, 88012].as_slice(),
-            7_200_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            170154,
-            303994,
-            155896,
-            [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            170155,
-            303995,
-            155897,
-            [
-                92514, 92515, 92516, 92517, 92518, 92519, 92520, 92521, 92522, 92523, 92524, 92525,
-                92526, 92527, 92528, 92529,
-            ]
-            .as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            174873,
-            305123,
-            156286,
-            [92868, 92880, 92874, 92871].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            183903,
-            343827,
-            174859,
-            [96239, 96240, 96241, 96242, 96243].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            184223,
-            344795,
-            175221,
-            [
-                92410, 92411, 92412, 92413, 92414, 92415, 92416, 92417, 92418,
-            ]
-            .as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            190457,
-            367568,
-            185567,
-            [105515].as_slice(),
-            3_600_000,
-            900_000,
-        ),
-        (
-            191891,
-            371470,
-            187854,
-            [104851].as_slice(),
-            1_800_000,
-            TEN_MINUTES_MS,
-        ),
-        (
-            205904,
-            410931,
-            205296,
-            [112407, 112523, 112524, 112525].as_slice(),
-            3_600_000,
-            TEN_MINUTES_MS,
-        ),
-    ] {
+    for &(item, spell, entry, displays, recovery_ms, duration_ms, cast_ms) in SOURCE_DISGUISES {
         let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
         h.app.insert_resource(toy_catalog::load(&conn).unwrap());
         h.app.insert_resource(shared_item_templates(&path));
@@ -120,6 +225,20 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
         let health = *h.app.world().get::<Health>(caster).unwrap();
         learn_effect_toy(&mut h, character, item);
         assert_eq!(activate(&mut h, item)[0].error, None, "item{item}");
+        let cast_frames = (f64::from(cast_ms) / 1000.0 / FRAME_SECONDS).ceil() as usize;
+        if cast_frames > 0 {
+            let first_half = cast_frames / 2;
+            h.advance(first_half);
+            assert!(
+                !h.inbox.go.iter().any(|go| go.spell_id == spell),
+                "item{item}"
+            );
+            assert_eq!(
+                h.app.world().get::<ModelDisplay>(caster).copied(),
+                native_display
+            );
+            h.advance(cast_frames - first_half);
+        }
         h.advance(5);
         assert!(
             h.inbox.failed.is_empty(),
@@ -194,6 +313,231 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             activate(&mut h, item)[0].error.as_deref(),
             Some("OnCooldown"),
             "item{item} recovery outlives its appearance"
+        );
+    }
+}
+
+#[test]
+fn toyfx618_royal_visage_learned_misc0_expiry_and_recovery_restore_model() {
+    use shared::components::{Health, ModelDisplay, UnitAuras};
+    const ITEM: u32 = 245631;
+    const SPELL: u32 = 1239480;
+    const CREATURE: i32 = 236348;
+    const DISPLAY: u32 = 121918;
+    const DURATION_MS: u32 = 600_000;
+    const RECOVERY_MS: u32 = 1_800_000;
+    const FRAME_SECONDS: f64 = 0.05;
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let (mut h, character) = setup(&directory.path().join("royal-visage.redb"));
+    h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+    h.app.insert_resource(shared_item_templates(&path));
+    h.app.insert_resource(shared_world_data(&path));
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    let caster = h.caster;
+    let native = h.app.world().get::<ModelDisplay>(caster).copied();
+    let health = *h.app.world().get::<Health>(caster).unwrap();
+    learn_effect_toy(&mut h, character, ITEM);
+    assert_eq!(activate(&mut h, ITEM)[0].error, None);
+    h.advance(5);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|event| event.spell_id == SPELL));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(caster)
+            .unwrap()
+            .display_id,
+        DISPLAY
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert!(
+        h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SPELL)
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == SPELL)
+        .unwrap();
+    assert_eq!(aura.duration_ms, DURATION_MS);
+    assert_eq!(aura.effects[0].misc_values, [CREATURE, 0]);
+    let expiry = aura.expires_at.unwrap();
+    let expected_seconds = f64::from(DURATION_MS) / 1000.0;
+    let remaining = expiry - crate::auras::aura_now(h.app.world());
+    assert!(((expected_seconds - 1.0)..=expected_seconds).contains(&remaining));
+    let recovery = h
+        .inbox
+        .cooldowns
+        .iter()
+        .find(|update| update.spell_id == SPELL && !update.is_gcd)
+        .unwrap();
+    assert_eq!(recovery.duration_ms, RECOVERY_MS);
+    h.advance(30);
+    assert_eq!(
+        activate(&mut h, ITEM)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    let remaining = expiry - crate::auras::aura_now(h.app.world());
+    h.advance((remaining / FRAME_SECONDS).floor() as usize - 2);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ModelDisplay>(caster)
+            .unwrap()
+            .display_id,
+        DISPLAY
+    );
+    h.advance(6);
+    assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), native);
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(caster)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|aura| aura.spell_id == SPELL)
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(
+        activate(&mut h, ITEM)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|event| event.spell_id == SPELL)
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn toyfx_shared_transform_category_learned_use_preserves_hour_aura_and_blocks_sibling() {
+    use shared::components::{Health, ModelDisplay};
+    const AURA_DURATION_MS: u32 = 3_600_000;
+    const CATEGORY_RECOVERY_MS: u32 = 600_000;
+    const CATEGORY: u32 = 2513;
+    // Item, spell, creature, display pool, learned sibling sharing category2513.
+    const CASES: &[(u32, u32, i32, &[u32], u32)] = &[
+        (
+            268717,
+            1283490,
+            260345,
+            [143136, 143137, 143138, 143139, 143140].as_slice(),
+            268728,
+        ),
+        (
+            268728,
+            1283502,
+            260346,
+            [136118, 122805, 122804, 122803, 122802, 122801].as_slice(),
+            276207,
+        ),
+        (276207, 1298957, 267626, [145134].as_slice(), 276925),
+        (
+            276925,
+            1301489,
+            268496,
+            [145498, 145499, 145500, 145503, 145504].as_slice(),
+            280419,
+        ),
+        (
+            280419,
+            1308693,
+            271558,
+            [145838, 145885, 146680, 145886, 142345].as_slice(),
+            268717,
+        ),
+    ];
+    let directory = tempfile::tempdir().unwrap();
+    let path = toyfx8_world();
+    let conn =
+        rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
+    for &(item, spell, entry, displays, sibling) in CASES {
+        let (mut h, character) = setup(&directory.path().join(format!("category2513-{item}.redb")));
+        h.app.insert_resource(toy_catalog::load(&conn).unwrap());
+        h.app.insert_resource(shared_item_templates(&path));
+        h.app.insert_resource(shared_world_data(&path));
+        h.app.insert_resource(spells.clone());
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+        let caster = h.caster;
+        let health = *h.app.world().get::<Health>(caster).unwrap();
+        learn_effect_toy(&mut h, character, item);
+        learn_effect_toy(&mut h, character, sibling);
+        assert_eq!(activate(&mut h, item)[0].error, None, "item{item}");
+        h.advance(20); // Includes Masquerade's authored600ms cast, not its one-hour expiry.
+        assert!(
+            h.inbox.failed.is_empty(),
+            "item{item}: {:?}",
+            h.inbox.failed
+        );
+        assert!(
+            h.inbox.go.iter().any(|go| go.spell_id == spell),
+            "item{item}"
+        );
+        let transformed = *h.app.world().get::<ModelDisplay>(caster).unwrap();
+        assert!(displays.contains(&transformed.display_id), "item{item}");
+        let aura = h
+            .app
+            .world()
+            .get::<crate::auras::ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == spell)
+            .unwrap();
+        assert_eq!(aura.duration_ms, AURA_DURATION_MS, "item{item}");
+        assert_eq!(aura.effects[0].misc_values, [entry, 8], "item{item}");
+        let expiry = aura.expires_at.unwrap();
+        let recovery = h
+            .inbox
+            .cooldowns
+            .iter()
+            .find(|update| {
+                update.spell_id == spell && update.category == CATEGORY && !update.is_gcd
+            })
+            .unwrap();
+        assert_eq!(recovery.duration_ms, CATEGORY_RECOVERY_MS, "item{item}");
+        let cast_count = h.inbox.go.len();
+        assert_eq!(
+            activate(&mut h, sibling)[0].error.as_deref(),
+            Some("OnCooldown"),
+            "item{item} blocks learned sibling{sibling}"
+        );
+        assert_eq!(h.inbox.go.len(), cast_count, "sibling{sibling}");
+        assert_eq!(
+            h.app.world().get::<ModelDisplay>(caster),
+            Some(&transformed)
+        );
+        assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::auras::ActiveAuras>(caster)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == spell)
+                .unwrap()
+                .expires_at,
+            Some(expiry),
+            "sibling rejection does not refresh item{item}"
         );
     }
 }
