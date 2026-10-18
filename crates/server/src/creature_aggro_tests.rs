@@ -654,6 +654,79 @@ fn highest_threat_attacker_takes_aggro_past_the_threshold() {
     );
 }
 
+fn current_victim_fixture() -> (App, Entity, Entity) {
+    let mut app = aggro_app();
+    let creature = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let tank = spawn_player(&mut app, at(1.0, 0.0), 5);
+    run(&mut app, 1);
+    assert_eq!(state(&app, creature), pursuing(tank));
+    app.world_mut()
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .reset();
+    add_threat(app.world_mut(), creature, tank, 1000.0);
+    (app, creature, tank)
+}
+
+#[test]
+fn threat_current_victim_exact_melee_threshold_retains_incumbent() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, melee, 1100.0);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "TC strict110% boundary"
+    );
+    add_threat(app.world_mut(), creature, melee, 10.0);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "111% melee switches"
+    );
+}
+
+#[test]
+fn threat_current_victim_exact_ranged_threshold_retains_incumbent() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let ranged = spawn_player(&mut app, at(0.0, 30.0), 5);
+    add_threat(app.world_mut(), creature, ranged, 1300.0);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "TC strict130% boundary"
+    );
+    add_threat(app.world_mut(), creature, ranged, 10.0);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(ranged),
+        "131% ranged switches"
+    );
+}
+
+#[test]
+fn threat_current_victim_lower_melee_challenger_beats_highest_ranged() {
+    let (mut app, creature, _tank) = current_victim_fixture();
+    let ranged = spawn_player(&mut app, at(0.0, 30.0), 5);
+    let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, ranged, 1200.0);
+    add_threat(app.world_mut(), creature, melee, 1150.0);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "TC scans eligible melee below ranged top"
+    );
+    assert_eq!(
+        app.world().get::<CombatTarget>(creature).unwrap().0,
+        Some(melee)
+    );
+}
+
 #[test]
 fn killing_the_only_target_makes_the_creature_evade_home_and_restores_its_health_there() {
     let mut app = aggro_app();
