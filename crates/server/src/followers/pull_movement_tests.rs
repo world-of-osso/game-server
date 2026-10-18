@@ -141,6 +141,74 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
 }
 
 #[test]
+fn production_tank_goal_allows_existing_fight_defense_without_a_healer() {
+    let (mut h, tank, from, attacks) = kit_fixture();
+    let target = h
+        .app
+        .world()
+        .get::<crate::combat::AutoAttack>(h.caster)
+        .unwrap()
+        .victim;
+    let guid = h
+        .app
+        .world()
+        .get::<crate::zones::CreatureOrigin>(target)
+        .unwrap()
+        .guid;
+    let route = super::pull_route::read_route(
+        h.app.world_mut(),
+        &super::pull_route::Request {
+            tank,
+            target_guid: guid,
+            difficulty: 1,
+            cleared: &BTreeSet::new(),
+        },
+    )
+    .unwrap();
+    let actors: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin, &InMap)>()
+        .iter(h.app.world())
+        .filter(|(_, origin, map)| {
+            route.spawns.contains(&origin.guid) && Some(*map) == h.app.world().get::<InMap>(tank)
+        })
+        .map(|(actor, _, _)| actor)
+        .collect();
+    assert_eq!(actors.len(), route.spawns.len());
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    for actor in actors {
+        let context = crate::spell_cast::effects::EffectCtx {
+            caster: h.caster,
+            spell: &spell,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        };
+        // Native damage/threat starts these actual source engagements, not injected victims.
+        crate::spell_cast::effects::deal_damage(
+            h.app.world_mut(),
+            &context,
+            actor,
+            1.0,
+            false,
+            false,
+        );
+    }
+    let positions = sample_kit_positions(&mut h, tank, &attacks);
+    assert!(
+        positions.iter().any(|at| *at != from),
+        "existing-fight defense must still move without new-pull healer readiness"
+    );
+}
+
+#[test]
 fn production_tank_goal_refuses_unbudgeted_pursuit_without_injected_position() {
     let (mut h, tank, from, attacks) = kit_fixture();
     // No healer, no calibrated fight, and real off-target source aggro in this route.
