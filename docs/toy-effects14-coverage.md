@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source655–659: pending Naaru hearthstone and skip-rock, mixed mushroom, retained catch, periodic voidwalker boundaries (2026-10-18)
+
+Acceptance-only8ead527f5 appends Naaru's Enfold263489/1270583 to unchanged saved-bind/shared2309 helper, now23 hearthstones/old22 retained; sibling Lightcalled257736 is blocked after charge spending. Format/manual one-call-test readability/diffcheck pass; behavior awaits lead successor after509 cancellation-before-start. No runtime/data/native changes or own heavy jobs.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|655 Oathstone Fragment260170/1265476 | Source1000ms self dummy3/nonzero trigger1265494, explicit item5000ms recovery. Child self dummy4/base1 for5000ms carries skip-count text. Actual water-skip trajectory/count/presentation remains gap; not ordinary zero-trigger cosmetic, guaranteed one skip or arbitrary random counter. |
+|656 Bouncy Mushroom262431/1268773 | Instant two target87 effects:50→GO404325 and179/misc40621 for180000ms, inherited180000ms recovery. RequiredAreas9057 joins15947/15968/15355/16648/15969; description limits outdoor Midnight. Runtime content GO404325 and area-trigger40621 absent. Actual qualified placement/bounce/height/area lifecycle remains gap; no inert mushroom, deleted179 edge or guessed jump impulse. |
+|657 Valdekar's Special263198/1269949 | Instant self audited dummy4/zero payload for3300ms, explicit item60000ms recovery. Existing learned-use and3300ms expiry fixture retained; no fresh native catch presentation or full-minute reuse proof from source inspection. No fish inventory/reward or arbitrary summoned catch. |
+|658 Enigmatic Fountain263244/1270149 | Instant self periodic aura23/100ms/trigger0/misc3/3 for100ms, explicit item300000ms recovery. Description promises3 Baby Voidwalkers. Actual three-actor selection/creation/lifecycle remains unresolved; preserve multiplicity and literal periodic boundary, not inert aura success, one generic actor or guessed creature IDs/extended duration. |
+|659 Naaru's Enfold263489/1270583 | Source10000ms252/targets1/9, normal recovery0/start1500ms/shared2309/max1/recharge1800000ms. Own absent-bind refusal/no charge spending, persisted-bind pending return, health/model preservation and sibling charge refusal acceptance committed, behavior pending successor. No native/cross-map/natural-recharge certificate or destination inferred from light flavor. |
+
+Evidence: private `rows655-659-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `hearth659-{active-goal,proof-ledger}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6, exact9057 area and2309 charge joins. Full1166 admission unchanged;149865 Tea Set untouched.507 failure/fixture correction and later acceptance remain without covering success;498 last confirmed landed/master8707ac0ea.
+
 ## Source650–654: mixed parachute, cycle-script, retained wine, photo and ash boundaries (2026-10-18)
 
 No new acceptance or runtime/data/native change. Existing Wine identity remains in the19-caster fixture, not a fresh proof. Lead successor remains unassigned after509 cancellation-before-start;507 failure and later unverified acceptances are not relabelled green.
