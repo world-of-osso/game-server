@@ -10,6 +10,7 @@ pub(crate) struct AddonPathId(pub u32);
 const UNIT_FLAG_IN_COMBAT: u32 = 0x0008_0000;
 /// Existing native mana initialization: paladin and mage class-level rows.
 const MANA_CLASSES: [u8; 2] = [2, 8];
+const CREATURE_TYPE_CRITTER: u8 = 8;
 
 struct EntryStats {
     level: u8,
@@ -226,12 +227,7 @@ impl EntryProjection {
         } else {
             self.template.entry
         };
-        let flags = if initial_spawn {
-            self.unit_flags
-        } else {
-            let combat = actor.get::<CombatStatus>().is_some_and(|status| status.0);
-            (self.unit_flags & !UNIT_FLAG_IN_COMBAT) | if combat { UNIT_FLAG_IN_COMBAT } else { 0 }
-        };
+        let flags = self.unit_flags_for(actor, initial_spawn);
         actor.insert((
             Npc {
                 template_id: entry,
@@ -254,6 +250,15 @@ impl EntryProjection {
             NpcFlags(self.template.npc_flags),
             UnitPowers::default(),
         ));
+    }
+
+    fn unit_flags_for(&self, actor: &EntityWorldMut<'_>, initial_spawn: bool) -> u32 {
+        if initial_spawn {
+            return self.unit_flags;
+        }
+        let combat = actor.get::<CombatStatus>().is_some_and(|status| status.0);
+        let combat_flag = if combat { UNIT_FLAG_IN_COMBAT } else { 0 };
+        (self.unit_flags & !UNIT_FLAG_IN_COMBAT) | combat_flag
     }
 
     fn apply_scaling(&self, actor: &mut EntityWorldMut<'_>) {
@@ -361,7 +366,8 @@ impl EntryProjection {
     }
 
     fn update_react_state(&self, actor: &mut EntityWorldMut<'_>) {
-        let state = if self.template.trigger || self.template.creature_type == 8 {
+        let state = if self.template.trigger || self.template.creature_type == CREATURE_TYPE_CRITTER
+        {
             crate::scripted_ai::ReactState::Passive
         } else {
             crate::scripted_ai::ReactState::Aggressive
