@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Compass/lava/unnamed-money/speech/leap boundaries (2026-10-17)
+
+[Source380–384 matrix](../../toy-effects14-coverage.md#source380384-compasslavaunnamed-moneyspeechleap-boundaries-2026-10-17) preserves north-pointing compass guidance, Dragon-Isles/outdoors lava immunity, unnamed200142's20g/payment and once-plus-three missile graph, mixed base7/script/aura speech, and caster-back leap/area-trigger odor actions.200142 has Toy/Item/on-use rows but no ItemSparse; coin GO identities absent from runtime TDB, no invented name or dropped cost/duplicate child. No audited-cosmetic shortcut, runtime/data/new positive proof or own heavy duplicate;484's exact older-head scope stays pending.
+
 ## Pending Survey Tools acceptance and folly/dummy/seat/sled boundaries (2026-10-17)
 
 [Source375–379 matrix](../../toy-effects14-coverage.md#source375379-pending-survey-tools-acceptance-and-follydummyseatsled-boundaries-2026-10-17) adds acceptance-onlyafad56176: existing Survey206590/type5/10103/1/cursor87/300s is ninth transmitted-object case; format/manual readability/diffcheck pass, lead484 queued through this exact head with15casterIDs. Folly retains bounded group-private actor/visibility/expiry proof, not its friends' challenge result. Rubbery Fish Head outdoors/combat, Blue Beanbag78/radius1yd seating and linked Tug Sled's392313/392328 rider/control/cleanup remain gaps; base173426 is not a guessed count. No runtime/data/new native or producer admission.

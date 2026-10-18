@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source380–384: compass/lava/unnamed-money/speech/leap boundaries (2026-10-17)
+
+These five preserve functional/scripted actions, not generic zero-dummy admission. Local70391 ItemSparse has no200142 row, despite Toy/Item/on-use metadata; do not invent its item name. Lead484 throughafad56176 remains the owner of pending15-caster/nine-object proof; this metadata-only block changes no tested code or runtime/data.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|380 Wayfinder's Compass199902/388275 | Source2000ms self dummy4 for1800000ms, item1800000ms recovery. Actual north-pointing guidance/orientation and cleanup remain unproved; no borrowed Unusual Compass random-facing behavior, generic attachment or fabricated navigation rule. |
+|381 Everlasting Horn of Lavaswimming200116/388966 | Instant self dummy4 for600000ms, item1800000ms recovery. Source explicitly promises lava immunity outdoors in the Dragon Isles. Actual environmental-damage protection/region/outdoor eligibility/expiry remain gaps; do not reduce a functional immunity contract to cosmetic success or invent blanket fire immunity. |
+|382 Unnamed Toy200142/389074 | Instant cursor87 has four separate missile32 effects: once→389111/cursor87/381637 and three distinct slots→389083/target91/381644, each child30000ms. Item charges-1 and inherited3000ms recovery retained; runtime summoned-object TDB lacks both GO identities. Source description says20g/use and possible lost coins; no SpellReagents row settles that full monetary contract. Actual payment/refusal/persistence/placement/results/cleanup and missing item metadata remain gaps; no child deduplication, guessed name/loot or skipped cost. |
+|383 A Collection of Me200148/389072 | Instant effect3/target0, second effect3/self with literal base7, plus self dummy4/20000ms; inherited300000ms recovery and1500ms start recovery. Past/future-self words and actual speech/script/lifecycle remain unproved. Base7 is not a guessed actor count or dialogue index, and no dropped script slots/blanket cosmetic aura are admitted. |
+|384 Notfar's Favorite Food200160/389090 | Instant effect138/base100/misc5 with targets48/1 plus effect179→26673 at48 for60000ms, item300000ms recovery. Pinned48 is caster-back destination. Actual odor/area-trigger/leap movement/recipient and cleanup remain gaps; no invented velocity/radius/damage, caster-only smell visual or ignored mixed payload. |
+
+Evidence: private `rows380-384-{readonly-source,action-source,active-goal}.json`, raw item/SpellReagents absence and pinned selector48. None of these roots is on the existing audited visual-only list.149865 Tea Set remains untouched.
+
 ## Source375–379: pending Survey Tools acceptance and folly/dummy/seat/sled boundaries (2026-10-17)
 
 379 test/specafad56176 adds exact Secondhand Survey Tools as ninth transmitted-object case, preserving previous eight rows. It uses existing206590/type5/display10103/scale1, actual cursor87, owner/map/facing and ordinary300s expiry. Format/manual readability/diffcheck pass. Lead484 is explicitly queued throughafad56176; nine-object plus15-caster proof remains pending, not borrowed from older fixture counts. Local receipts retain exact revisions. No runtime/data/producer change or own heavy duplicate.
