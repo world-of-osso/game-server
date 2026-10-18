@@ -44,7 +44,7 @@ fn native_excluded_caster_type_has_source_priority_before_generic_stun_refusal()
         false,
     )
     .expect_err("native caster type exclusion");
-    let (reason, detail) = error.to_contract();
+    let (reason, detail) = error.to_contract().unwrap();
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some("SPELL_FAILED_CASTER_AURASTATE"));
 }

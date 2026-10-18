@@ -463,8 +463,7 @@ fn use_slot(eater: &mut Eater, index: u8) {
         });
     for _ in 0..6 {
         eater.h.advance(1);
-        let errors = drain::<InventoryError>(&mut eater.h.app, connection);
-        eater.errors.extend(errors);
+        eater.errors.append(&mut eater.h.inbox.inventory_errors);
     }
 }
 
