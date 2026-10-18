@@ -75,7 +75,7 @@ fn spawn_authored_guard(h: &mut Harness) -> (Entity, Position, crate::maps::InMa
         template,
         &mut crate::zones::CreatureSpawnContext {
             map,
-            difficulty_id: crate::zones::map_difficulty_id(h.app.world(), map),
+            difficulty_id: 0,
             ground: Some(&mut crate::test_data::ground_map()),
             temporary: false,
         },
@@ -83,7 +83,7 @@ fn spawn_authored_guard(h: &mut Harness) -> (Entity, Position, crate::maps::InMa
         spawn,
         &mut rng,
     )
-    .expect("authored guard native spawn level context");
+    .expect("native guard level context");
     queue.apply(h.app.world_mut());
     let home = *h.app.world().get::<Position>(creature).unwrap();
     assert!(
