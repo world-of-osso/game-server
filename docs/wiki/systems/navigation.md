@@ -36,6 +36,12 @@ Run24 cached victim9461 at(107.716,−26.124,3.109) while Garrick stood at(109.7
 
 `navigation::within_reach` is shared by current-victim admission and route arrival. `distance_to_reach` solves the full3Dsegment/sphere intersection and converts the fraction back to horizontal travel; grounded speed/floor correction stay unchanged. Existing unbaked ordinary-creature stepping uses the same geometry without flying toward the target. No reach inflation, LOS exemption, nav/ground override or kit change. The exact live pose regression checks real LOS, per-step support/collision, progress to the unchanged sphere and stopped no-jitter behavior; post-commit GREEN and broader gate are separate.
 
+### Gate527 expectation and fixture correction
+
+The old Riverpaw test measured only XZ separation and expected2yd even when feet/target heights differ. Pinned TC a352b1fa `ChaseMovementGenerator.cpp:44–53` uses `Position::IsInDist` plus LOS; `Position.h:121–127,155–157` includes the vertical squared term, and `PathGenerator.cpp:982–1010` shortens against3Ddistance. The corrected reach assertions retain their original2yd value and original0.01/0.05/0.1yd tolerances; they check3Ddistance, not a widened tolerance. Ground/motion/facing assertions remain.
+
+The separate Stormwind stair fixture originally created its target with Position but no InMap. Current-victim map validation therefore stopped motion before navigation. With identical assets/env, both premerge master692cd5862 and feature79aee679f fail at the identical unchanged start(−8737,79.5,−993); this failure predates corridor visibility. Add the actual map0 identity to the test target before comparing real stair movement. Original LOS, floor, upper-rise and reach assertions remain active. Matrix receipts are `gate527-stairs-{premerge-master,nav-reach-head}.log`; corrected-fixture comparison and re-gate are separate proof.
+
 ## Dungeon follower extension — 2026-10-13
 
 The explicit follower-dungeon goal extends phase1 follow/chase for units carrying `followers::Follower`, not every pet/formation consumer. Existing `Goal::Follow` route progress now drives their real follow point; repeated idle AI ticks retain `FollowOwner.moving` until arrival. Missing/blocked navigation never substitutes direct follower movement. Existing ordinary unbaked compatibility remains unchanged. [Exact real Stockade RED/GREEN and private Ruby package](../investigations/follower-data.md#native-class-level-and-follow-navigation--2026-10-13) owns proof; whole-dungeon/live acceptance remains open.

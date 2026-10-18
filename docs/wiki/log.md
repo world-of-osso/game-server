@@ -38,6 +38,10 @@
 ## 2026-10-17 — Bounded Augmentation support stats
 
 [Augmentation](systems/auras.md#augmentation-support-stats-2026-10-17): active70448 Prescience409311→410089 recipient crit and Shifting Sands413984 caster-mastery Versatility; exact spell-specific SimC76f8118 semantics, no generic540. Genuine native RED4→merged5ed1b656 GREEN4/4 in5.52s; initial functional observer mismatch corrected test-only, native zero-variance damage assertion tightened to exact. Docs-only0114bbf7 retains native timer control1/1, scoped server-bin check91s and fmt check pass warning-free; independent lead gate pending. Automatic targeting, E202/dummies, empower grants, Ebon and full-ability/legal/UDP acceptance remain open.
+## 2026-10-18 — TC-backed reach expectations and stair map identity
+
+[Gate527 correction](systems/navigation.md#gate527-expectation-and-fixture-correction): pinned a352b1fa uses3Dchase/shortening; legacy XZ-only reach expectations now measure3Dwith unchanged2yd and existing tolerances. Original stair test fails identically on692cd5862/79aee679f because target lacks InMap; test target receives actual map0 identity so subsequent comparison exercises navigation rather than lost-target stop. No production movement change or canonical asset edits.
+
 ## 2026-10-18 — Grounded3Dmelee reach
 
 [Actual run24 regression](systems/navigation.md#grounded-melee-reach-agreement--2026-10-18) reproduces stationary pursuing across40 real-nav/ground/LOS steps: XZ2 but3D2.066. Shared reach predicate and3Dsegment/sphere ground-travel calculation retain2yd/smaller reach, real LOS and support/speed constraints; post-commit targeted GREEN and lead gate remain separate.
