@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Harpy acceptance and fruit/core/star-mode boundaries (2026-10-17)
+
+[Source320–324 matrix](../../toy-effects14-coverage.md#source320324-pending-harpy-acceptance-and-fruitcorestar-mode-gaps-2026-10-17) records acceptance-only eb02827f3:191891/371470→existing187854/104851/source10-minute transform/30-minute item recovery. Ten disguises plus Oomgut make11IDs; format/manual readability/diffcheck pass, new-head behavioral proof requested. Lead477 throughd4 contains the older nine-disguise fixture, not Harpy. NPC model1.5/probability1 stays metadata, not an automatic player-scale requirement. Fruit periodic child, living-core back attachment/positioner and paired star-flinger/catcher modes/actions remain explicit gaps; no runtime/data/native admission.
+
 ## Pending Cube acceptance and cache/song/mines/specimen boundaries (2026-10-17)
 
 [Source315–319 matrix](../../toy-effects14-coverage.md#source315319-pending-cube-acceptance-and-cachesongminesspecimen-gaps-2026-10-17) adds317 test/spec d4a4a716c: existing185567/105515 with source15-minute expiry and1h item recovery, so duration is per-case while old eight10-minute values/windows stay unchanged. Nine disguises plus Oomgut make10IDs; format/readability/diffcheck pass, behavioral result pending explicit lead477. The handler writes only `ModelDisplay { display_id }`, matching pinned TC's selected-ID handoff; NPC model scale1.25/probability0 is retained metadata, not an invented player-scale requirement. Chest/trap, mixed Jiro song, six step-trigger mines and specimen placement remain gaps; no runtime/data/native admission or own heavy duplicate.

@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source320–324: pending Harpy acceptance and fruit/core/star-mode gaps (2026-10-17)
+
+322 test/spec eb02827f3 adds191891/371470→existing187854/display104851, source600000ms transform56/misc8 and1800000ms item recovery to the actual learned-use/ordinary expiry/restoration/health/recovery fixture. Ten disguise IDs plus Oomgut now make11IDs. Format/manual readability/diffcheck pass; new-head covering behavioral verification is requested, not passed. Lead477 throughd4a4a716c contains the earlier nine-disguise/Cube,14-caster and13-hearthstone fixtures, not this new Harpy tuple.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|320 Bushel of Mysterious Fruit190853/368278 | Self periodic-trigger23 for2000ms, amplitude0, child368291/self dummy effect3; source30000ms recovery. Fruit creation/selection and actual periodic child action remain unresolved. Do not invent a tick cadence, item IDs, count or successful no-op. |
+|321 Infested Automa Core190926/368316 | Self dummy aura4 for300000ms, source600000ms recovery. Visual114187/state/event kit155443 has four model attachments455692–455695, positioner18, attachment-1, plus three effect-type5 entries192944/192946/192947. Actual living back attachment/positioner and lifecycle presentation remain unverified; source visual rows alone do not prove native rendering or complete eligibility. |
+|322 Professor Chirpsnide's Im-PECK-able Harpy Disguise191891/371470 | Existing Chef Fry-Aerie187854/display104851 supplies the exact10-minute source transform. Runtime/TDB model DisplayScale1.5/probability1 are preserved metadata; selected-display transform handoff does not automatically impose NPC scale on the player. Acceptance is pending a new-head covering gate; no native geometry/scale or full30-minute reuse certificate. |
+|323 Falling Star Flinger191925/44012 | Cursor87 dummy effect3; description distinguishes becoming a flinger from subsequent throws to starcatchers. Shared category2017/3000ms category recovery with324 is retained. Mode transitions, recipient selection, projectile/catch action and cleanup remain unresolved; no generic cursor cosmetic success. |
+|324 Falling Star Catcher191937/372282 | Script effect77/base30 with targets47/60; description distinguishes becoming a catcher from subsequent nearby-catcher knockback. Shared category2017/3000ms recovery is not a complete mode/catch/knockback contract. Exact mode authority, recipients, force/action and lifecycle remain gaps; no guessed radius or unconditional knockback. |
+
+Evidence: private `rows320-324-{readonly-source,action-source}.json`, `harpy322-{active-goal,proof-ledger}.json`. No production/runtime/data/UnitScale changes, fake RED or own heavy duplicate. Tea Set149865 remains the lead-required named gap, untouched.
+
 ## Source315–319: pending Cube acceptance and cache/song/mines/specimen gaps (2026-10-17)
 
 317 Protopological Cube190457/367568 has existing185567/display105515 and source900000ms self transform56/misc8 with3600000ms item recovery. Test/spec d4a4a716c adds the exact actual-learning/model/ordinary15-minute expiry/restoration/health/recovery case. Expected duration is now per-row because the prior eight cases remain600000ms; their values and599–600s initial window remain unchanged. Nine disguises plus Oomgut now cover10IDs when run. Format/manual readability/diffcheck pass; behavioral proof is queued in explicitly covering lead gate477 throughd4a4a716c, not yet a passing result or own repeat.

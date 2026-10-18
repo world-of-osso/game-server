@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source320–324 pending Harpy acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source320324-pending-harpy-acceptance-and-fruitcorestar-mode-gaps-2026-10-17): eb02827f3 adds actual learned191891/371470→existing187854/display104851/source600000ms/item1800000ms to10disguises+Oomgut11IDs. Format/manual readability/diffcheck pass; new-head covering behavioral gate requested,477 throughd4 does not contain322. Fruit periodic child, four living-core model attachments/positioner and paired star mode/catch/knockback contracts remain gaps. NPC model1.5 is retained without inventing player-scale responsibility; no runtime/data/native admission or own heavy duplicate.
+
 ## 2026-10-17 — Toy source315–319 pending Cube acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source315319-pending-cube-acceptance-and-cachesongminesspecimen-gaps-2026-10-17): d4a4a716c adds Cube185567/105515/source900000ms/3600000ms recovery to now9disguises+Oomgut10IDs; old eight duration values/windows preserved via per-case duration. Format/manual readability/diffcheck pass; explicit lead477 queued, no new behavioral pass claimed. NPC model1.25/probability0 is preserved without inventing player-scale responsibility: source/repo transforms hand off the chosen display ID. Cache/trap, mixed Jiro song, six mine steps and specimen placement remain gaps; no runtime/data/native admission or own heavy duplicate.
