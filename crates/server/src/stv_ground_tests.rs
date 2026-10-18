@@ -35,7 +35,7 @@ fn stv_audit_teleport_requires_retail_ground_height() {
     for (destination, supported) in [(11.0223, false), (16.23857, true)] {
         let db = persistence::temp_database();
         let (id, _) = persistence::create_character(&db, 1, "Stvprobe", 1, 1).unwrap();
-        let game_db = persistence::GameDatabase { db };
+        let game_db = persistence::GameDatabase::new(db);
         let mut app = App::new();
         app.add_plugins(bevy::MinimalPlugins)
             .add_message::<crate::death::PlayerDeathTransition>()
