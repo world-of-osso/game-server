@@ -1,8 +1,9 @@
-//! Real kit AI → pursue → native fixed chase must retain one admitted movement point.
+//! Actual kit AI → pursue → native fixed chase, with and without an injected plan.
 use super::pull_route_tests::route_fixture;
 use super::tank_planner::AdmittedPosition;
 use super::{Follower, catalog, kit};
 use crate::maps::InMap;
+use crate::spell_cast::test_harness::Harness;
 use bevy::prelude::*;
 use shared::components::Position;
 use shared::protocol::CombatLogKind;
@@ -31,16 +32,14 @@ fn tank_pull_movement_regroup_cannot_replace_the_admitted_position() {
     }
 }
 
-#[test]
-fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
-    let (mut h, tank) = route_fixture();
+fn load_native_kit(h: &mut Harness, tank: Entity) -> BTreeSet<u32> {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
     let catalog = catalog::load_catalog(&db).unwrap();
-    let kit_attacks: BTreeSet<_> = catalog
+    let attacks = catalog
         .kits
         .iter()
         .filter(|entry| {
@@ -52,7 +51,11 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
     let owner = h.caster;
     let profile = h.app.world().get::<Follower>(tank).unwrap().profile.clone();
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile).unwrap();
-    // Existing native Riverpaw floor oracle: inside Shield range, outside melee reach.
+    attacks
+}
+
+fn place_on_source_floor(h: &mut Harness, tank: Entity) -> Position {
+    // Existing Riverpaw floor oracle: inside native Shield range, outside melee reach.
     let (x, y, z) = crate::terrain_height::wow_to_bevy(128.5, 52.0, -33.86);
     let from = Position { x, y, z };
     h.app.world_mut().entity_mut(tank).insert(from);
@@ -66,11 +69,18 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
         home.y = from.y;
         home.z = from.z;
     }
-    h.app.world_mut().entity_mut(owner).insert(from);
+    h.app.world_mut().entity_mut(h.caster).insert(from);
+    from
+}
+
+fn kit_fixture() -> (Harness, Entity, Position, BTreeSet<u32>) {
+    let (mut h, tank) = route_fixture();
+    let attacks = load_native_kit(&mut h, tank);
+    let from = place_on_source_floor(&mut h, tank);
     let map = *h.app.world().get::<InMap>(tank).unwrap();
     h.app
         .world_mut()
-        .entity_mut(owner)
+        .entity_mut(h.caster)
         .insert(super::stockade_diagnostic::DiagnosticParty {
             copy: map,
             members: vec![tank],
@@ -86,10 +96,12 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
         .0;
     h.attack(enemy);
     h.advance(3);
-    let admitted = AdmittedPosition(Vec3::new(from.x, from.y, from.z));
-    h.app.world_mut().entity_mut(tank).insert(admitted);
+    (h, tank, from, attacks)
+}
+
+fn sample_kit_positions(h: &mut Harness, tank: Entity, attacks: &BTreeSet<u32>) -> Vec<Position> {
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
-    let positions: Vec<_> = (0..90)
+    let positions = (0..90)
         .map(|_| {
             h.advance(1);
             *h.app.world().get::<Position>(tank).unwrap()
@@ -101,16 +113,42 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
             .iter()
             .any(|event| event.source == Some(tank.to_bits())
                 && event.kind == CombatLogKind::CastSuccess
-                && event
-                    .spell_id
-                    .is_some_and(|spell| kit_attacks.contains(&spell))),
-        "real sourced kit attacks must remain available from the admitted point"
+                && event.spell_id.is_some_and(|spell| attacks.contains(&spell))),
+        "real sourced kit attacks must remain available from the safe point"
     );
+    positions
+}
+
+fn assert_stationary(positions: &[Position], from: Position, context: &str) {
     for (tick, at) in positions.iter().enumerate() {
         assert_eq!(
             Vec3::new(at.x, at.y, at.z),
-            admitted.0,
-            "kit pursuit overwrote the planner point at tick{tick}"
+            Vec3::new(from.x, from.y, from.z),
+            "{context} at tick{tick}"
         );
     }
+}
+
+#[test]
+fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
+    let (mut h, tank, from, attacks) = kit_fixture();
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(AdmittedPosition(Vec3::new(from.x, from.y, from.z)));
+    let positions = sample_kit_positions(&mut h, tank, &attacks);
+    assert_stationary(&positions, from, "kit pursuit overwrote the admitted point");
+}
+
+#[test]
+fn production_tank_goal_refuses_unbudgeted_pursuit_without_injected_position() {
+    let (mut h, tank, from, attacks) = kit_fixture();
+    // No healer, no calibrated fight, and real off-target source aggro in this route.
+    // Only actual AI runs: no caller inserts an AdmittedPosition or a forced victim.
+    let positions = sample_kit_positions(&mut h, tank, &attacks);
+    assert_stationary(
+        &positions,
+        from,
+        "production planner let kit pursuit start an unbudgeted route",
+    );
 }
