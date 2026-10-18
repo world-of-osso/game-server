@@ -1,6 +1,13 @@
 ## 2026-10-17 — Autoattack attacker251
 
 [Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): TC Unit.cpp2389/2775 signed caster modifier. Ordered ignored d5587d263 native2RED/4PASS87.19s (negative20Dodge; positive20Damage/0Dodge); minimal transient snapshot/roll consumer preserves gates/clocks/RNG. At1dbe19063 explicit ignored6/6GREEN110.87s,0warnings before enabling allsix. Lead gate pending; expertise/248/Totem/flags not certified.
+## 2026-10-18 — Published70448 extras census oracle correction
+
+[Current regression/correction](../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg57812 and st57413 census failures come from one stale1166 assertion after twoToy-row publication. Shared oracle now retains Full1166 plus the two explicitly published item/name/spell triples; future batches append the list after publication. Exact748a5ad78 merge, no runtime/data change, batch2 RED isolated; requested13census+3batch1 targets pending.
+
+## 2026-10-18 — MaxCount landed; expanded70448 hearthstone RED to GREEN
+
+[Current landing/batch1 matrix](../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-green-2026-10-18): explicit lead mc548c receipt lands MaxCount and retained three-item family proof; earlier pending labels are historical. Two newly scoped hearthstones have real source dependencies but no Toy membership: actual learned-use RED0/2/56.76s. Selected producer3808fe58f preserves unrelated rows, RED0/2→GREEN2/0; copied-world diff is twoToy INSERTs,16 local-CASC audio files authenticated. After lead's byte-identical diff/fresh-CASC publication, canonical GREEN3/0/71.90s covers both hearthstones and retained5efec9c6f case. Direct canonical row/audio hashes agree; broad tg/toy gate/source landing/native/full1166 still unclaimed.
 
 ## 2026-10-18 — Native melee facing and actual direction override
 
@@ -70,6 +77,10 @@ Gate tg571 exposed eight missing-height summon regressions. Merged serverf0f9b31
 ## 2026-10-18 — Native attack restriction264
 
 [Native264](systems/auras.md#native-attack-restriction264--2026-10-18): actual Turtle producer yields wrong Pacified priority; native Phalanx NPC with264/no25 still swings. Genuinebc5a0c05e RED2→312234334 consumer; native/retained22GREEN, fresh-master4457dcfe9 expanded24/24 GREEN7.06s/146566ms. Eight new cases exercise real attack predicates, Cheetah/Fireball, midcast gain, natural expiry, full-trigger damage and NPC swing removal; real263 family controls retained. No row/clock/RNG/budget/producer/wire changes; no264 positive offensive-family input qualified or whole-ability claim. All-target check107.438s/0warnings and fmt/manual Rust readability pass.
+## 2026-10-18 — Poison Protocol1954 CPU
+
+[Poison Protocol](systems/pet-battle-engine.md#poison-protocol--cpu-2026-10-18): only registry+bounded54 per-victim current-action positive direct damage qualification; named source-row project policy, existing379 math/clock unchanged. Actual core7+owned1 unsupported RED and favorable-after-miss RED→c7abb9d35 core8+owned1 GREEN/no fixture correction. Nine active pairs/misses/block/zero/dead/faint/prior-periodic exclusion/swap/refresh/expiry; legal Anomalus2842/4 slot3/power50 direct26+periodic11, Rabbit147→110→99. Retained lib209/main48/shareda2b clean, all ten typed70448 tables, census1885/2829=66.63%/1040graphs (+6/+1 only1954), fmt/manual readability. Lead final gate/native pending; historical70391/1051/1762 preserved, Retail timing/rounding/VFX unproven. Prior Blood engage failure unresolved; recurrence requires investigation.
+
 ## 2026-10-18 — Mega Discharge2365 CPU-only
 
 [Mega Discharge](systems/pet-battle-engine.md#mega-discharge--cpu-only-2026-10-18): ONLYregistry+50casterguard/existingmath-clock; actual471ebcore5+NPC1unsupportedRED→273382core5GREEN/fixture-onlyd91equippedMetalFist384correction/NPCGREEN1. Nineactive/180primary90back/onlycasterself542/misses+allmiss/deadreserves/terminalpolicy. `PET_BATTLE_DURATION_ONE_SAME_ROUND_POLICY`: duration1 counts application round, queuedafterBite180 versusbefore120/next120;Retailtimingunproven. NPC2814ONLYguidNoneenemy1/NEVERjournal/source491HP-10power-7speed;fasterlegalplayerMetalFist30 then45/22/22→player114/137/137/NPC461. Boss1runtime0/unnamed1832363/compositionmissing/NPCserviceabsent namedgaps,CPU-only/no native/privatehook/fullNPCparity. Integratedf84lib201/main47/check25.36s/no warnings/fmt/shareda2b07a6clean;fresh10typed70448tables/census1879/2829=66.42%/1039graphs,+4/+1ONLY2365/historical70391+1051/1762retained. NoRetailtiming/rounding/VFXclaim.

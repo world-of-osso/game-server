@@ -4,6 +4,7 @@ import copy
 import csv
 import tempfile
 import json
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -16,8 +17,9 @@ import skyborne_data
 import content_policy
 from content_common import Report
 
-SOURCE = SCRIPTS / "reference/forever-1.60.1.70205"
-DECODED = json.loads((SOURCE / "starter-kit-rows.json").read_text())
+SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+REFERENCE = SCRIPTS / "reference/forever-1.60.1.70205"
+DECODED = json.loads((REFERENCE / "starter-kit-rows.json").read_text())
 
 
 class LoadoutPublicationTest(unittest.TestCase):
@@ -116,7 +118,7 @@ class IsolatedItemPublicationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rows = skyborne_data.load_rows(SOURCE)
-        cls.retail = json.loads((SOURCE / "retail-common-items.json").read_text())
+        cls.retail = json.loads((REFERENCE / "retail-common-items.json").read_text())
 
     def setUp(self):
         self.db = sqlite3.connect(":memory:")
@@ -263,7 +265,7 @@ class IsolatedItemPublicationTest(unittest.TestCase):
         self.db.executescript((SCRIPTS / "world_schema.sql").read_text())
         self.db.executescript((SCRIPTS / "tdb_schema.sql").read_text())
         self.db.execute("CREATE TABLE wowhead_creature_drop (item INTEGER)")
-        retail = json.loads((SOURCE / "retail-kit-runtime-rows.json").read_text())
+        retail = json.loads((REFERENCE / "retail-kit-runtime-rows.json").read_text())
         with self.db:
             skyborne_data.import_rows(self.db, self.rows)
             skyborne_data.project_items(self.db)
@@ -283,7 +285,7 @@ class IsolatedItemPublicationTest(unittest.TestCase):
                         [row[column] for column in columns] for row in retail[table]
                     )
             with self.db:
-                add_player_create_info.add_player_create_info(self.db, csv_dir)
+                add_player_create_info.add_player_create_info(self.db, csv_dir, SOURCE)
         self.assertEqual(self.snapshot_retail(), expected_retail)
         self.assertEqual(
             self.db.execute(
@@ -312,7 +314,10 @@ class IsolatedItemPublicationTest(unittest.TestCase):
             db.commit()
             db.close()
             result = subprocess.run(
-                [sys.executable, str(SCRIPTS / "skyborne_data.py"), "--db", str(path)],
+                [
+                    sys.executable, str(SCRIPTS / "skyborne_data.py"),
+                    "--source-dir", str(SOURCE), "--db", str(path),
+                ],
                 capture_output=True,
                 text=True,
                 check=False,

@@ -7,6 +7,14 @@ Product `wow_classic_beta`, build `1.60.1.70205`, build key `842b2e5d11f8d6fe257
 
 Map's inline Corpse[2] and global record/string offsets are decoded, OceanLiquidTypeID has no destination column and is discarded, NavigationMaxDistance is converted from its source int32 to SQLite REAL numerically. Remaining columns retain their source types and order. No coordinates are inferred from Corpse[2].
 
+## Local data paths
+
+Raw `.db2` files are not tracked. The complete reference directory (DB2 bytes plus text) lives in the untracked cache `/home/osso/Projects/world-of-osso/game-engine/data/db2/forever-1.60.1.70205/`. This repository retains the decoded JSON, WoWDBDefs definitions and provenance only. Tests continue reading those text files here.
+
+Set `FOREVER_DB2_SOURCE` to that cache directory for Python tests and `scripts/import-azerothcore.sh`; an unset variable fails explicitly. Pass `--source-dir "$FOREVER_DB2_SOURCE"` to `skyborne_data.py`, `zephras_content.py`, `skyborne_kit_fixture.py`, `add_player_create_info.py`, `db2.py import`, and `content_policy.py` rebuild/check. None defaults to an in-repository DB2 source. CSV-only `db2.py check` and non-rebuild content-policy modes do not require raw DB2s.
+
+The selected sparse fixture lives at `/home/osso/Projects/world-of-osso/game-engine/data/db2/fixtures/item_sparse_6fcc3191_selected.db2`; tests require `ITEM_SPARSE_SELECTED_FIXTURE` pointing to it. See [sparse decoding tests](../../../docs/db2-casc-sparse.md).
+
 ## Starting kit sources
 
 The eight additional original DB2 snapshots come from engine `data/forever-1.60.1.70205/starter-kit-probe/` in the same local product/build. Their exact FDIDs, layout hashes and SHA-256 hashes are pinned in `skyborne_data.py::SOURCES`. `definitions/` preserves the matching official WoWDBDefs and `schema-provenance.json` records their supplied source URLs/hashes.
@@ -21,7 +29,7 @@ Shared IDs have concrete creation/count conflicts with Retail (2947 throwing wea
 
 `retail-kit-runtime-rows.json` contains read-only Retail rows for actual loadouts 1277 (Human Mage) and 1486 (the old race-95 Warrior kit), memberships and their item/appearance/effect dependencies from the same main-owned scratch DB. `scripts/skyborne_kit_fixture.py` imports those rows, applies the pinned Forever importer, regenerates content twice, checks original Retail values/masks, and emits SQL inside `crates/server/src/skyborne_kit_fixture.rs`. Desktop snapshots already admit Rust fixture modules. No database assembly or extraction is performed.
 
-Produce with `python3 scripts/skyborne_kit_fixture.py --output crates/server/src/skyborne_kit_fixture.rs`. Native `player_create_info::skyborne_tests` consumes this fixture through OwnedKit and actual redb creation/reopen, asserting all ten authored lists/counts and concrete gear. Runtime source-marker propagation remains a separate main-owned boundary.
+Produce with `python3 scripts/skyborne_kit_fixture.py --source-dir "$FOREVER_DB2_SOURCE" --output crates/server/src/skyborne_kit_fixture.rs`. Native `player_create_info::skyborne_tests` consumes this fixture through OwnedKit and actual redb creation/reopen, asserting all ten authored lists/counts and concrete gear. Runtime source-marker propagation remains a separate main-owned boundary.
 
 ## Creature display probe
 
