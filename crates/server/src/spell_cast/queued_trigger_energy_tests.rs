@@ -109,7 +109,12 @@ fn native_energy_trigger64_child_refuses_after_siphon_impact_without_charging() 
     let after_dispatch = h.power(PowerType::Energy);
     assert_eq!(after_dispatch, energy(&h, control));
     assert!((0.0..NATIVE_CHILD_COST).contains(&after_dispatch));
-    assert_eq!(h.health(h.caster), caster_health);
+    assert_eq!(
+        h.health(h.caster),
+        caster_health,
+        "post-dispatch health attribution: {:?}",
+        h.inbox.log
+    );
     assert_eq!(h.health(h.npc), target_health);
     assert_eq!(h.health(drainer), drainer_health);
     assert!(
