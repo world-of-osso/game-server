@@ -157,6 +157,7 @@ mod tests {
                     boss_creatures: vec![],
                     handled_area_triggers: Default::default(),
                     data: Default::default(),
+                    ramparts_sentry_deaths: 0,
                 },
             )])));
         assert!(set_boss_state(
