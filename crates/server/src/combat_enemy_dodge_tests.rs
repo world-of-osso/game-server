@@ -168,7 +168,6 @@ fn assert_landed(events: &[CombatLogEvent]) {
 }
 
 #[test]
-#[ignore]
 fn native_melee_attacker_251_sunwell_removes_dodge_until_cancelled() {
     let (mut h, target) = dummy_duel();
     let caster = h.caster;
@@ -193,7 +192,6 @@ fn native_melee_attacker_251_sunwell_removes_dodge_until_cancelled() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_attacker_251_positive_covers_remaining_table_until_cancelled() {
     let mut h = player_duel(false);
     let (attacker, victim) = (h.npc, h.caster);
@@ -234,7 +232,6 @@ fn native_melee_attacker_251_positive_covers_remaining_table_until_cancelled() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_attacker_251_sums_signed_native_effects_before_clamp() {
     let mut h = player_duel(false);
     let (attacker, victim) = (h.npc, h.caster);
@@ -255,7 +252,6 @@ fn native_melee_attacker_251_sums_signed_native_effects_before_clamp() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_attacker_251_on_recipient_does_not_reduce_attacker_dodge() {
     let (mut h, target) = dummy_duel();
     let caster = h.caster;
@@ -272,7 +268,6 @@ fn native_melee_attacker_251_on_recipient_does_not_reduce_attacker_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_attacker_251_positive_cannot_restore_behind_player_dodge() {
     let mut h = player_duel(true);
     let (attacker, victim) = (h.npc, h.caster);
@@ -289,7 +284,6 @@ fn native_melee_attacker_251_positive_cannot_restore_behind_player_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_attacker_251_positive_cannot_restore_stunned_player_dodge() {
     let mut h = player_duel(false);
     let (attacker, victim) = (h.npc, h.caster);
