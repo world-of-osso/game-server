@@ -1,5 +1,21 @@
 # Toy effects14 — active whole-goal coverage
 
+## Shared2513 five-identity baseline: new acceptance pending after513 (2026-10-18)
+
+Acceptance-only1c143bea6 adds a separate bounded learned-use test for the five pure transforms below, without changing the19-row long-recovery registry/helper or separate Oomgut test. Each fixture learns both actual bag items, uses its root, checks source display membership/self56 misc8/3600000ms duration/finite deadline/unchanged health and category2513 recovery600000ms, then rejects the learned sibling without another cast, model replacement or deadline refresh.
+
+| Exact identity | Source creature | Learned sibling blocked |
+|---|---|---|
+|Pango Plating268717/1283490 |260345 |Saptor268728 |
+|Saptor Salve268728/1283502 |260346 |Masquerade276207 |
+|Preyhunter's Masquerade276207/1298957 |267626 |Idol276925 |
+|Idol of Ula'tek276925/1301489 |268496 |Badge280419 |
+|Cursed Badge of the Soulcoilers280419/1308693 |271558 |Pango268717 |
+
+Format/manual changed-test readability/diffcheck pass; no local compilation or execution. This new five-identity baseline is AFTER513 and needs a covering successor. It does not certify cancellation, ordinary one-hour expiry, natural ten-minute reuse, weighted selection frequencies or native presentation. Saptor0.1 and Badge4/2/1/2/1 source weights remain untouched; mixed Memento56+370 remains outside the pure-transform fixture. No runtime/data change, source-only admission,149865 edit or own heavy job; queued64 regression repair remains with its assigned owner.
+
+Evidence: private `shared2513-five-{active-goal,proof-ledger}.json`; exact source/model/category capsules already linked in source684/685/697/702/710 matrices. Earlier metadata-only boundaries remain valid for deeper lifecycle/native gaps; they are not relabelled passing by writing a test.
+
 ## Full1166 metadata availability: exact absences, not failure verdicts (2026-10-18)
 
 Read-only source70448/key88d5e8ef05ec5a8446cdec93d142d7c6 inventory covers all1166 runtime Toy IDs, excluding all ten source-only extras. It checks identity/root metadata availability, not semantic review, runtime admission, native behavior or a repair requirement.
@@ -16,13 +32,13 @@ Evidence: private `full1166-metadata-availability-{inventory,active-goal}.json`.
 
 ## Gate513: acceptance helpers pass, queued-trigger destination regression keeps integration RED (2026-10-18)
 
-Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed; current feature changes after7099 are documentation only. No passing integration or new toy landing claim.
+Lead-owned integrated gate513 at feature7099f3a38/observed stacke5e43194d failed. The separate shared2513 baseline1c143bea6 was added afterward and is not covered by this result. No passing integration or new toy landing claim.
 
 | Proof scope | Exact result and limit |
 |---|---|
 | Compilation/client/format | Server compiled; client9 passed; FMT0. These do not override the server failure. |
 | Server integration |311 passed/1 failed/1 ignored in914.05s; EXIT101. Sole failure: `toyfx84_akunda_real_learning_child_destination_visible_trap_cooking_and_expiry`, line112. |
-| Current acceptance helpers |19-disguise registry plus separate Oomgut identity,21-caster helper,13-transmitted-object helper,17-stationary helper and all25 hearthstone cases completed OK. Stationary expiry remains explicit simulation-time leap; helper success is not overall integration/native/landing proof. Cold Ones' source-range fixture correction is covered. |
+| Gate513-covered acceptance helpers |19-disguise registry plus separate Oomgut identity,21-caster helper,13-transmitted-object helper,17-stationary helper and all25 hearthstone cases completed OK. Stationary expiry remains explicit simulation-time leap; helper success is not overall integration/native/landing proof. Cold Ones' source-range fixture correction is covered. |
 | Exact regression boundary |Akunda279076 triggers child279077/target87. Child fire appeared at caster `[-8949.95,82.63029,132.493]` instead of requested parent cursor `[-8947.95,82.63029,132.493]`; original learned-use assertion remains intact. Not cooking failure, fixture range error or permission to weaken destination. |
 | Root cause and authority |Integrated Effect64 now routes to `queued_triggers::schedule`, bypassing the old destination-preserving handler. Queue payload and fresh-child reconstruction retain item level but omit parent `cast_destination`. Preserve that explicit field through queue/delivery; do not substitute caster/self destination. Runtime fix proposed to lead, not implemented under this thread's87-only runtime limit; successor proof required. |
 
