@@ -25,6 +25,13 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - Refresh preserves the current stack and native tick phase, raising only to a newly applicable initial floor; removal/expiry ends that instance and a fresh cast starts over. Sudden Onset's native10% masked spellmod applies once; Corruption172→146739 remains unchanged.
 - Soul Shard RNG/A226 resource behavior, Shared Agony twin, Absolute Corruption/PvP predicate, legacy Writhe, Wither/hero/sets, general Pandemic/hit/crit parity, full legal talent/loadout/rotation/nativeUDP remain separate gaps. No class6 Energy/queued-trigger/E64/power-drain changes.
 
+### Mistweaver Expel Harm consequence (active70448)
+
+- Native322101 retains its self-heal, variance/crit and Mistweaver137024-qualified1.39999998%mana cost. After resolving that heal, real115129 deals native10% of the literal total heal, including overheal, not capped health gained or a new coefficient/RNG roll.
+- The named322101-only nonperiodic callback uses existing resolved amount and native dynamic-child dispatch, without new state/extraction/trigger APIs. Preserve native child Nature immunity/absorbs, CANT_CRIT and caster-percent exclusion; root heal crit/modifiers are already included. Ordinary Vivify/Enveloping and effective-heal Beacon transfers stay independent.
+- Preserve child caster-destination18/enemy-area16, slot-B Radius9=20yd, MaxTargets1 and separate Range7=10yd metadata. No explicit-target/range override or guessed tie policy. Existing caster-destination timing uses zero distance, not invented flight to the enemy despite native Speed20.
+- Spheres/Stagger/Chi/Strength of Spirit/Combat Wisdom/guardians, multi-eligible selection parity, Energy/power selection/queue/E64/dead-caster/channel/power-drain changes and full ability/legal-loadout/spec/UDP/census claims remain excluded.
+
 ### Unholy Scourge Strike eruption (active70448)
 
 - Scourge Strike55090 erupts each existing caster-owned Virulent Plague191587 and Dread Plague1240996 for native35% of one periodic tick through actual children1241167/1241171, before applying missing Virulent Plague. Absent/foreign auras do not erupt; newly applied Virulent does not erupt on that first hit.
