@@ -193,8 +193,9 @@ fn augmentation_support_native_sands_changes_actual_recipient_damage_and_healing
         .unwrap();
     let crit = if damage.crit { 2.0 } else { 1.0 };
     let multiplier = 1.0 + recipient.versatility_pct / 100.0;
-    assert!(
-        varied(recipient.spell_power * 0.59 * multiplier * crit).contains(&(damage.amount as f32))
+    assert_eq!(
+        damage.amount as f32,
+        (recipient.spell_power * 0.59 * multiplier * crit).round()
     );
     h.app.world_mut().get_mut::<Health>(owner).unwrap().current = 1.0;
     crate::spell_cast::cast_triggered(h.app.world_mut(), ally, HEAL, Some(owner), 1);
