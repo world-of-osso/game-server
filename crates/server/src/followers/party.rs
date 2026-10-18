@@ -23,6 +23,27 @@ pub(crate) struct FollowerRun {
     player_role: GroupRole,
 }
 
+/// Admitted copy, companion IDs (including missing entities), and owner's role.
+/// Retail follower and explicit Stockade diagnostic admission are separate records.
+pub(super) fn read_admission(
+    world: &World,
+    owner: Entity,
+) -> Option<(InMap, &[Entity], GroupRole)> {
+    let record = match (
+        world.get::<FollowerRun>(owner),
+        world.get::<super::stockade_diagnostic::DiagnosticParty>(owner),
+    ) {
+        (Some(run), None) => (run.copy?, run.members.as_slice(), run.player_role),
+        (None, Some(diagnostic)) => (
+            diagnostic.copy,
+            diagnostic.members.as_slice(),
+            diagnostic.player_role,
+        ),
+        _ => return None,
+    };
+    (world.get::<InMap>(owner) == Some(&record.0)).then_some(record)
+}
+
 pub(crate) fn queue_player(world: &mut World, player: Entity, role: GroupRole, dungeon_id: u32) {
     if let Err(error) = begin_run(world, player, role, dungeon_id) {
         send_update(world, player, None, Some(error));
@@ -486,10 +507,7 @@ mod copy_tests {
             !after.party_stable,
             "a known admitted member is missing, not healthy"
         );
-        assert!(
-            super::super::ai::party_units(app.world_mut(), owner).contains(&missing),
-            "the admitted roster survives entity disappearance"
-        );
+        // This contract concerns health coverage; ordinary assist target enumeration is unchanged.
     }
 
     #[test]

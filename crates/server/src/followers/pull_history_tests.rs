@@ -19,6 +19,14 @@ fn fixture() -> (Harness, Entity) {
     for unit in [h.caster, tank, h.npc] {
         h.app.world_mut().entity_mut(unit).insert(COPY);
     }
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(super::stockade_diagnostic::DiagnosticParty {
+            copy: COPY,
+            members: vec![tank],
+            player_role: shared::group::GroupRole::Dps,
+        });
     let spawn = crate::test_data::world_data()
         .spawns
         .iter()
@@ -228,6 +236,11 @@ fn tank_pull_history_new_copy_does_not_reuse_previous_run_measurements_or_deaths
     for unit in [owner, tank] {
         h.app.world_mut().entity_mut(unit).insert(next);
     }
+    h.app
+        .world_mut()
+        .get_mut::<super::stockade_diagnostic::DiagnosticParty>(owner)
+        .unwrap()
+        .copy = next;
     advance_samples(&mut h, 1);
     let fresh = pull_history::snapshot(h.app.world(), owner).unwrap();
     assert_eq!(fresh.completed_fights, 0);

@@ -135,10 +135,14 @@ pub(super) fn sample_all(world: &mut World) {
 }
 
 fn sample_party(world: &mut World, owner: Entity) {
-    let Some(map) = world.get::<InMap>(owner).copied() else {
+    let Some((map, admitted, _)) = super::party::read_admission(world, owner) else {
+        if let Ok(mut owner) = world.get_entity_mut(owner) {
+            owner.remove::<PullHistory>();
+        }
         return;
     };
-    let mut members = super::ai::party_units(world, owner);
+    let mut members = admitted.to_vec();
+    members.push(owner);
     members.sort_by_key(|member| member.to_bits());
     let now = read_time(world);
     let healthy = party_healthy(world, &members, map);
