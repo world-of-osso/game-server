@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Blue/Bronze/Green acceptance, training gap and retained soup proof (2026-10-17)
+
+[Source370–374 matrix](../../toy-effects14-coverage.md#source370374-pending-bluebronzegreen-acceptance-training-gap-and-retained-soup-proof-2026-10-17) adds acceptance-only73494c432: distinct Blue381321/77021, Bronze381319/76419, Green381320/77020, alltype5/scale0.5/cursor87/180s. Eight actual transmitted-object IDs now await updated covering successor gate after478 with15caster; format/manual readability/diffcheck pass. Training196394/outdoors/combat behavior remains a gap, while [Soup's exact linked-cooking CPU witness](../../toy-effects14-coverage.md#linked-cooking-traps-2026-10-12) is retained without Soup-native certification or a guessed stat coefficient. No runtime/data/new admission or own heavy duplicate.
+
 ## Pending Black Dragon acceptance and seat/tea/Red-banner boundaries (2026-10-17)
 
 [Source365–369 matrix](../../toy-effects14-coverage.md#source365369-pending-black-dragon-acceptance-and-seatteared-banner-boundaries-2026-10-17) adds acceptance-onlyb53bd5e5b: Black199768/388089→existing381318/type5/71263/0.5/cursor87/180s as fifth transmitted-object case, preserving previous four rows. Format/manual readability/diffcheck pass; five-object plus15-caster successor coverage requested after478, not passed. Actual Red381317 refusal remains distinct. S.E.A.T. caster-ground/type7 seating and two type10 tea props with separate394315/394316 seated-drinking85/226 actions retain full interaction/effect/lifecycle gaps. No inert tea, copied banner, guessed mana/seat rule, runtime/data/new native certificate or149865 producer change.
