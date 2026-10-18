@@ -183,7 +183,6 @@ fn azure_aura395_native_enemy_fringe_ticks_periodically_and_exit_preserves_other
 }
 
 #[test]
-#[ignore = "native aura395 self/ally/other-copy acceptance pending"]
 fn azure_aura395_native_field_excludes_self_ally_and_other_copy_with_a_real_enemy_control() {
     let (mut h, _leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
     let (child, ally) = isolate_native_sprout(&mut h);
