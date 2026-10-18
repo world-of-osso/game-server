@@ -73,10 +73,7 @@ fn select_login_character(app: &mut App, account: u64, character: u64) -> Entity
         .send::<AuthChannel>(SelectCharacter {
             character_id: character,
         });
-    for _ in 0..4 {
-        app.update();
-    }
-    app.world().get::<PlayerLink>(connection).unwrap().0
+    crate::test_data::wait_for_selected_player(app, connection)
 }
 
 #[test]
