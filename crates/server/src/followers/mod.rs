@@ -2,6 +2,9 @@
 mod ai;
 mod catalog;
 mod hazards;
+mod kit;
+mod kit_ai;
+mod kit_area;
 mod party;
 mod spawning;
 mod stockade_diagnostic;

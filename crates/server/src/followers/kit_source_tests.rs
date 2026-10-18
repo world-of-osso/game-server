@@ -47,6 +47,9 @@ fn follower_kit_export_native_source() {
                     known.insert(spell.spell_id, spell.passive);
                 }
             }
+            for spell in crate::class_progression::default_skill_spells(class, 0, level) {
+                known.insert(spell.spell_id, spell.passive);
+            }
             for spell in &spec.spells {
                 if spell.required_level <= u32::from(level) {
                     known.insert(spell.spell_id, spell.passive);
