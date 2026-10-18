@@ -1,6 +1,8 @@
 //! Ramparts bosses, TC a352b1fa. EventMap repeats anchor to dispatch.
+mod herald;
 mod omor;
 use bevy::prelude::*;
+pub(crate) use herald::on_unit_death;
 use shared::components::ThreatTable;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
@@ -14,7 +16,7 @@ const REQUEST_HEAL: u32 = 30642;
 const RETALIATION: u32 = 22857;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, SCRIPT | "boss_omor_the_unscarred")
+    matches!(name, SCRIPT | "boss_omor_the_unscarred") || name == herald::SCRIPT
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -26,7 +28,11 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     if instance != "instance_ramparts" {
         return None;
     }
-    if world.get::<super::CreatureScriptName>(actor)?.0 == "boss_omor_the_unscarred" {
+    let script = &world.get::<super::CreatureScriptName>(actor)?.0;
+    if script == herald::SCRIPT {
+        return Some(Box::new(herald::HeraldIntro::default()));
+    }
+    if script == "boss_omor_the_unscarred" {
         return Some(omor::creature_ai());
     }
     Some(Box::new(Gargolmar {

@@ -25,11 +25,15 @@ pub(crate) fn character_has_right(
     }
     let guild = load_guild(db, guild_id);
     let rank = load_guild_member_rank(db, &guild, character);
+    rank_has_right(&guild, rank, right)
+}
+
+fn rank_has_right(guild: &GuildData, rank: u8, right: u32) -> bool {
     rank == 0
         || guild
             .ranks
             .get(usize::from(rank))
-            .is_some_and(|r| r.rights & right == right)
+            .is_some_and(|rank| rank.rights & right == right)
 }
 
 pub(super) fn apply_rank_request(
@@ -70,7 +74,21 @@ pub(super) fn apply_rank_request(
             (m.character_id, m.name, rank)
         })
         .collect();
-    let event = if let GuildRankRequest::Promote { character_name }
+    let event = if let GuildRankRequest::SetMemberRank {
+        character_name,
+        rank,
+    } = &request
+    {
+        assign_member_rank(
+            &guild,
+            &mut members,
+            (actor, actor_rank),
+            character_name,
+            *rank,
+        )?;
+        // TC direct assignment broadcasts/persists once, without step-event log entries.
+        None
+    } else if let GuildRankRequest::Promote { character_name }
     | GuildRankRequest::Demote { character_name } = &request
     {
         let promote = matches!(request, GuildRankRequest::Promote { .. });
@@ -195,12 +213,7 @@ fn change_member_rank(
     } else {
         GUILD_RIGHT_DEMOTE
     };
-    if actor_rank != 0
-        && !guild
-            .ranks
-            .get(usize::from(actor_rank))
-            .is_some_and(|rank| rank.rights & right != 0)
-    {
+    if !rank_has_right(guild, actor_rank, right) {
         return Err(GuildRankError::Permissions);
     }
     let target = members
@@ -221,6 +234,38 @@ fn change_member_rank(
         target.1.clone(),
         guild.ranks[usize::from(target.2)].name.clone(),
     ))
+}
+
+fn assign_member_rank(
+    guild: &GuildData,
+    members: &mut [(u64, String, u8)],
+    (actor, actor_rank): (u64, u8),
+    name: &str,
+    rank: u8,
+) -> Result<(), GuildRankError> {
+    let target = members
+        .iter_mut()
+        .find(|(_, name_in_guild, _)| name_in_guild.eq_ignore_ascii_case(name))
+        .ok_or(GuildRankError::MemberNotFound)?;
+    let right = if rank > target.2 {
+        GUILD_RIGHT_DEMOTE
+    } else {
+        GUILD_RIGHT_PROMOTE
+    };
+    if !rank_has_right(guild, actor_rank, right) {
+        return Err(GuildRankError::Permissions);
+    }
+    if target.0 == actor {
+        return Err(GuildRankError::InvalidName);
+    }
+    if target.2 <= actor_rank || rank <= actor_rank {
+        return Err(GuildRankError::RankTooHigh);
+    }
+    if rank > guild.lowest_rank() {
+        return Err(GuildRankError::RankTooLow);
+    }
+    target.2 = rank;
+    Ok(())
 }
 
 fn mutable_rank(guild: &mut GuildData, rank: u8) -> Result<&mut GuildRankData, GuildRankError> {
@@ -316,7 +361,8 @@ fn edit_rank(
         GuildRankRequest::Query | GuildRankRequest::QueryEventLog => {}
         GuildRankRequest::Promote { .. }
         | GuildRankRequest::Demote { .. }
-        | GuildRankRequest::SetMemberNote { .. } => {
+        | GuildRankRequest::SetMemberNote { .. }
+        | GuildRankRequest::SetMemberRank { .. } => {
             unreachable!("handled before rank editing")
         }
     }

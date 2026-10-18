@@ -326,6 +326,13 @@ pub(super) fn effect_enabled(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        super::fel_devastation::FEL_DEVASTATION,
+        AuraScript {
+            on_periodic: Some(super::fel_devastation::cast_periodic_heal),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         crate::spell_cast::blooming_infusion::BLOOMING_INFUSION,
         AuraScript {
             on_apply: Some(crate::spell_cast::blooming_infusion::start_cast_count),

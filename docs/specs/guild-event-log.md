@@ -4,7 +4,7 @@ Authoritative Mainline invite/join/promote/demote/remove/quit history, separate 
 
 ## What it must do
 
-- [x] Record only successful actual invitations, joins, promotions, demotions, removals and quits; commit each event with its corresponding durable mutation. Refused/repeated-invalid actions and administrative setup create no historical rows.
+- [x] Record only successful actual invitations, joins, explicit step Promote/Demote requests, removals and quits; commit each event with its corresponding durable mutation. Direct SetMemberRank follows its separately qualified no-step-log [contract](guild-ranks.md#direct-member-rank-assignment). Refused/repeated-invalid actions and administrative setup create no historical rows.
 - [x] Retain the latest100 actual events in insertion order, including tied timestamps, with event-time actor/member/rank names and Unix seconds. History and current membership/rank state survive database reopen together.
 - [x] Query only the authenticated in-world actor's current guild. Members need no elevated rank; nonmembers receive NotInGuild and no history. Never accept a packet-supplied actor/guild ID.
 - [x] Empty real history stays empty. Do not backfill from the present roster or substitute guild bank/news history.

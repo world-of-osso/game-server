@@ -39,6 +39,57 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_blood_harvest_uses_legal_hemospore_and_actual_damage_for_its_injured_caster() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 4507), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 15, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 2, 2457)
+        .unwrap();
+    for (guid, health) in [(41, 100), (42, 200), (43, 300)] {
+        states.get_mut(&guid).unwrap().health = health;
+    }
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 4507);
+    assert_eq!(caller.abilities[1], 2457);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 4507, 3, 3, 15).unwrap()
+    );
+    assert_eq!(caller.stats.power, 185);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2457), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [102]);
+    assert_eq!(state.teams[1].pets[0].health, 45);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [202, 200, 300]
+    );
+    assert_eq!(state.teams[0].pets[0].cooldowns.get(&2457), Some(&2));
+}
+
+#[test]
 fn wild_pet_battles_sunshell_uses_nonowned_crystalsnap_only_as_enemy_npc() {
     let catalog = catalog();
     //70448 NPCTeamMember is empty: level1/Common/breed3 and these benches are
