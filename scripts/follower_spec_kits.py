@@ -214,6 +214,7 @@ def prepare(args):
         rows, inventory = kit_rows(db, source)
         with closing(sqlite3.connect(args.output_db)) as output:
             db.backup(output)
+            output.execute('DROP TABLE IF EXISTS follower_spec_kit')
             output.execute(SCHEMA)
             output.executemany('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', rows)
             output.commit()
@@ -225,7 +226,7 @@ def prepare(args):
                    producer_sha256=digest(__file__), source_database=str(args.world_db.resolve()),
                    source_database_sha256=before, output_database=str(args.output_db.resolve()),
                    output_database_sha256=digest(args.output_db), source_json_sha256=digest(args.source_json),
-                   changed_tables=['follower_spec_kit'], rows=len(rows), sources=evidence,
+                   changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), sources=evidence,
                    chosen_loadouts=source['loadouts'], trait_source_trees=source['trees'], level32_inventory=inventory,
                    selected_source_rows=selected_source_rows(args.db2_root, source),
                    sqldiff=str(args.sqldiff.resolve()), sqldiff_sha256=digest(args.sqldiff))
