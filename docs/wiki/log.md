@@ -1,3 +1,7 @@
+## 2026-10-18 — Native melee facing and actual direction override
+
+[Melee facing](systems/player-damage.md#melee-front-arc-and-direction-override--2026-10-18): ordered ignoredREDdeb2168f0 pushed first; actual31144/equal80/256behind9Parry+11Block and actual5277/200/10s/fivebehindDodge give genuine2RED31.66s, front+native97574/288 controls4PASS. Existing shared front-dot/rotation conversion now feeds melee: behind noParry/Block, player-only noDodge, NPCdodge retained. Source masks/CC/RNG/order/clocks unchanged; GREEN/un-ignore/checks pending. Prior NPC flags nf570 EXIT/check/fmt0 LANDEDcb55b98c6; no fullhit-table/UDP/class claim.
+
 ## 2026-10-18 — Post-guild merge codec and MaxCount targets GREEN
 
 [Exact current matrix](../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): after explicit gr567 landing, protocol029a927/server41856b72b/enginef26cc691e merged; protocola2b07a6 wire2/0+combined-discriminants2/0, server33c9d2eb2 five+MaxCount17/0/47.77s, engine6c00abbf4 dispatch1/0. Old tags preserved/new ItemMaxCount21 and SetMemberRank13 bincode+JSON round-trip; both wiki-index sides retained. No source data/weights/oracle change or broad/landing/native/full1166 claim; lead mc548b rerun pending.
