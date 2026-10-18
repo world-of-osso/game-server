@@ -2038,5 +2038,9 @@ fn broadcast_events(
 }
 
 #[cfg(test)]
+#[path = "combat_forecast.rs"]
+pub(crate) mod forecast;
+
+#[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
