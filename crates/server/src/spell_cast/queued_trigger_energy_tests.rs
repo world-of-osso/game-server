@@ -82,6 +82,7 @@ fn native_energy_trigger64_child_refuses_after_siphon_impact_without_charging() 
     // Gymer's native area is12yd;7yd excludes unrelated5yd melee retaliation.
     let (mut h, control, drainer) = fixture(4, 7.0);
     assert_eq!(energy(&h, control), NATIVE_ROGUE_ENERGY);
+    let control_health = h.health(control);
     let caster_health = h.health(h.caster);
     let target_health = h.health(h.npc);
     let drainer_health = h.health(drainer);
@@ -120,6 +121,7 @@ fn native_energy_trigger64_child_refuses_after_siphon_impact_without_charging() 
     );
     assert_eq!(h.health(h.npc), target_health);
     assert_eq!(h.health(drainer), drainer_health);
+    assert_eq!(h.health(control), control_health);
     assert!(
         h.inbox
             .failed
