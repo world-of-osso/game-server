@@ -594,26 +594,10 @@ fn select_character_with_maps(
 }
 
 fn finish_character_selection(app: &mut App, connection: Entity) -> Entity {
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while app
-        .world()
-        .get::<crate::auth::InWorld>(connection)
-        .is_none()
-    {
-        assert!(
-            std::time::Instant::now() < deadline,
-            "selection never completed"
-        );
-        app.update();
-        std::thread::yield_now();
-    }
-    app.update();
+    let player = crate::test_data::wait_for_selected_player(app, connection);
     app.world_mut().run_schedule(FixedUpdate);
     app.world_mut().run_schedule(Last);
-    app.world()
-        .get::<crate::networking::PlayerLink>(connection)
-        .unwrap()
-        .0
+    player
 }
 
 #[test]
@@ -824,8 +808,14 @@ fn selecting_character_with_invalid_race_class_is_rejected() {
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..3 {
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while app.world().resource::<EnterWorldReplies>().0.is_empty() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "selection rejection missing"
+        );
         app.update();
+        std::thread::yield_now();
     }
 
     let responses = &app.world().resource::<EnterWorldReplies>().0;
@@ -909,9 +899,7 @@ fn entering_world_sends_one_system_motd_message() {
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..4 {
-        app.update();
-    }
+    crate::test_data::wait_for_selected_player(&mut app, connection);
 
     let messages = &app.world().resource::<ChatReplies>().0;
     assert_eq!(messages.len(), 1);
@@ -985,9 +973,7 @@ fn initial_terrain_on_enter_map(map_id: u32, wow_position: (f32, f32, f32)) -> L
         .get_mut::<MessageSender<SelectCharacter>>(connection)
         .unwrap()
         .send::<AuthChannel>(SelectCharacter { character_id });
-    for _ in 0..4 {
-        app.update();
-    }
+    crate::test_data::wait_for_selected_player(&mut app, connection);
     app.world()
         .resource::<TerrainReplies>()
         .0
@@ -1078,9 +1064,7 @@ fn character_saved_in_wailing_caverns_logs_in_after_server_restart_with_gatherin
             .get_mut::<MessageSender<SelectCharacter>>(connection)
             .unwrap()
             .send::<AuthChannel>(SelectCharacter { character_id });
-        for _ in 0..4 {
-            app.update();
-        }
+        crate::test_data::wait_for_selected_player(&mut app, connection);
         let map = app
             .world_mut()
             .query::<(&ClientId, &crate::maps::InMap)>()

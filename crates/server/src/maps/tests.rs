@@ -1671,7 +1671,11 @@ fn relog_saved_character(h: &mut Harness, character_id: u64) -> Entity {
         .get_mut::<MessageSender<shared::protocol::SelectCharacter>>(connection)
         .unwrap()
         .send::<shared::protocol::AuthChannel>(shared::protocol::SelectCharacter { character_id });
-    h.advance(10);
+    h.advance(2);
+    crate::test_data::drain_persistence(
+        h.app.world().resource::<crate::persistence::GameDatabase>(),
+    );
+    h.advance(8);
     h.app
         .world()
         .get::<PlayerLink>(connection)
