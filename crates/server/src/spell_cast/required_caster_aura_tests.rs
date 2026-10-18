@@ -197,7 +197,7 @@ fn native_required_caster_aura_applies_to_ordinary_npc_casts() {
         false,
     )
     .expect_err("ordinary NPC needs its own native caster aura");
-    let (reason, detail) = failure.to_contract();
+    let (reason, detail) = failure.to_contract().unwrap();
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some("SPELL_FAILED_CASTER_AURASTATE"));
 }

@@ -189,6 +189,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (crate::scripted_ai::azure_vault::ACTIVATE_VAULT_RUNE, 0) => {
             Some(crate::scripted_ai::azure_vault::activate_vault_rune)
         }
+        (crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE, 1) => {
+            Some(crate::scripted_ai::azure_vault::strip_vault_rune)
+        }
         (crate::seething_parachute::PARACHUTE, 1) => {
             Some(crate::seething_parachute::reset_fall_information)
         }

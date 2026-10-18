@@ -760,7 +760,7 @@ fn spawn_pet(
         // Pet::LoadPetFromDB: SUMMON_PET always takes the owner's level.
         stored.level = world.get::<Level>(owner).expect("summoning player level").0;
     }
-    let (health, classification, mana) = {
+    let (health, classification, mana, flags_extra) = {
         let data = world.get_resource::<WorldData>()?;
         let Some(template) = data.template_for(stored.creature_entry, 0) else {
             error!(
@@ -775,6 +775,7 @@ fn spawn_pet(
                 .expect("creature_template.rank is validated when loaded"),
             (owner_class(world, owner) == Some(CLASS_MAGE))
                 .then(|| authored_pet_mana(data, template, stored.level)),
+            template.flags_extra,
         )
     };
     let map = *world.get::<InMap>(owner)?;
@@ -809,6 +810,7 @@ fn spawn_pet(
                 template_id: stored.creature_entry,
                 name: stored.name.clone(),
             },
+            crate::zones::CreatureFlagsExtra(flags_extra),
             Health {
                 current: current_health,
                 max: health,

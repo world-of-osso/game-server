@@ -16,7 +16,8 @@ Quest givers, the quest log and objective tracking for the Retail-style quest di
 - [x] `AbandonQuest` removes the quest and its provided start item; `SetQuestWatched` toggles tracking.
 - [x] Enter world sends `QuestLogSnapshot` (entries with objectives and counts, completion, level, sort id, texts, watched flag, POI polygons); later changes send `QuestLogUpdate{changed, removed, watched_quest_ids}`. Owned entries include full story, current player-scaled money/fixed/choice rewards and pushability (`Flags` shareable bit and not failed), including after database reopen without an NPC dialog. Client Share additionally requires current group membership.
 - [x] Quest log, progress, turned-in quests and watch list persist per character (redb `quest_logs`).
-- [x] Rejections answer `QuestFailed{quest_id, reason}`; NPCs must be alive and within 10 yards.
+- [x] Rejections answer `QuestFailed{quest_id, reason}`; NPCs must be alive and within 10 yards. Item-ownership-cap rejection instead sends the owner `InventoryError::ItemMaxCount`, not a misleading full-inventory quest failure.
+- [x] Starter and reward creation use the shared inventory storage boundary, including same-source personal-bank ownership limits. Cap refusal leaves original GUID/quantity, gold, bank and quest-log/reward state unchanged; no direct inventory-vector push bypass remains. Genuine full-bag failures retain `QuestFailedReason::InventoryFull`. Existing Retail quest item authority remains explicit, without fabricated definitions. Retain authentic source item metadata rather than pruning it to the original reference list; valid later starter/reward references must not become missing-definition failures. An empty item-grant batch is a no-op: XP/money-only turn-ins must not validate unrelated inventory templates or require item creation metadata.
 
 ## Tests asserting this spec
 

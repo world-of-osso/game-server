@@ -82,6 +82,33 @@ fn dummy12_feral_spirit_summons_two_authentic_wolves_and_expires() {
 }
 
 #[test]
+fn native_feral_spirit_summon_carries_source_creature_flags_extra() {
+    let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
+    actor_data(&mut h);
+    let expected = h
+        .app
+        .world()
+        .resource::<crate::world_data::WorldData>()
+        .templates[&29264]
+        .flags_extra;
+    h.cast_and_deliver(51533, Some(h.npc));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let wolves = actors(&mut h, 29264);
+    assert_eq!(wolves.len(), 2);
+    for wolf in wolves {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::zones::CreatureFlagsExtra>(wolf)
+                .map(|flags| flags.0),
+            Some(expected),
+            "native Spirit Wolf spawn caches its authored template flags"
+        );
+    }
+}
+
+#[test]
 fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits() {
     let mut h = harness(Vec::new(), &[51533, 228562, 58867, 58875, 58876], 7).unwrap();
     actor_data(&mut h);
