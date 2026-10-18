@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source365–369: pending Black Dragon acceptance and seat/tea/Red-banner boundaries (2026-10-17)
+
+369 test/specb53bd5e5b adds the exact existing Black Dragon banner as fifth transmitted-object case. Prior four rows, including361, stay unchanged; cursor selection now names all three actual cursor banners. Format/manual readability/diffcheck pass. Expanded five-object plus15-caster successor coverage after478 is requested, not passed;478's older head contains neither361/369 nor335. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|365 S.E.A.T.199554/387447 | Instant effect50→381218/target62 for300000ms, item300000ms recovery. Actual runtime TDB type7/display51446/size1.5/seat fields1/2/0 exists; pinned62 is caster-ground destination. Actual placement/seating/access/release/lifecycle acceptance remains unverified; no decorative-only success or guessed seat height/recipient rules. |
+|366 Dragon Tea Set199649/394318 | Instant cursor87 effect50→384309 for180000ms, inherited3600000ms recovery. Runtime type10/display78093/size0.5, Data3=3000/Data10=394316/Data23=1. Data10 action394316 has self85/226 and source seated drinking/mana description. Actual serve/use/recipient/drinking/mana/cleanup remains unresolved; no inert prop, guessed refill/mana coefficient or ignoring the action. |
+|367 Whale Bone Tea Set199650/394317 | Same authored cursor/lifetime/recovery, distinct384308/type10/display78092/size0.6/Data10=394315, with Data3=3000/Data23=1 and self85/226 seated-drinking action. Its own service/recipient/effect/lifecycle gap remains; do not substitute Dragon Tea's identity or infer a new149865 Tea Set producer contract. |
+|368 Red Dragon Banner199767/388088 | Instant cursor87 effect50→381317 for180000ms; item-1 and category1246/180000ms recovery. Runtime summoned-object TDB lacks381317. Existing actual learned negative fixture requests [2,0,0], requires gameobject-template refusal and no388088 cast event. Retain that refusal scope, not positive placement/native proof or a copied Black banner template. |
+|369 Black Dragon Banner199768/388089 | Same authored cursor/lifetime/category, distinct existing381318/type5/display71263/size0.5 with display bounds. New exact actual [4,0,-3] cursor/model/scale/owner/map/facing/ordinary180s expiry case is committed and pending a covering successor gate. No new native/art/category-reuse certificate or Red-template closure. |
+
+Evidence: private `rows365-369-{readonly-source,action-source,active-goal}.json`, `banner369-proof-ledger.json`, actual runtime `tdb_gameobject_template` and pinned selector62.149865 Tea Set remains the lead-required untouched gap.
+
 ## Source360–364: pending Reliquary/Duck acceptance and banner/sled/vacuum gaps (2026-10-17)
 
 361 test/spec431949735 adds the exact already-loaded Reliquary banner to `toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire`: four IDs now assert actual learning, source cursor/offset destination, type/display/scale/owner/map/facing and ordinary expiry. Real SpellStore loading includes the new root; old three identity rows are unchanged. During this review, existing `cosmetic.rs` already-audited383065 was confirmed:335 test/spec49e9c2d95 adds194056/permanent0 to the caster fixture, now15IDs. Format/manual readability/diffcheck pass for both. Lead accepts335 plus current tip into the gate after478; explicit four-object scope has been requested. Neither new fixture is covered by477/478 or newly passed yet. No production/runtime/data change or own heavy duplicate.
