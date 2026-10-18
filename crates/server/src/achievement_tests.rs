@@ -1652,7 +1652,8 @@ fn achievements_criteria_native_target_class_uses_actual_player_hit_and_race() {
             .contains_key(&11158),
         "turkey hit on Death Knight cannot credit Rogue"
     );
-    h.app.world_mut().get_mut::<Player>(target).unwrap().class = 4;
+    // Native61781 excludes recipients already carrying61781; use an eligible Rogue.
+    let target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 4, 3.0);
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
     h.advance(10);
     assert_eq!(
@@ -2513,6 +2514,20 @@ fn achievements_criteria_targeted_spell_credits_caster_after_native_hit_only() {
     );
     crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(target), 0);
     h.advance(20);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<PlayerAchievementState>(h.caster)
+            .unwrap()
+            .criteria_progress
+            .get(&61577),
+        Some(&1),
+        "native target-aura exclusion rejects a repeated transformation"
+    );
+    let fresh_target = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 2.0);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), h.caster, 61781, Some(fresh_target), 0);
+    h.advance(20);
+    assert!(crate::auras::has_aura(h.app.world(), fresh_target, 61781));
     assert_eq!(
         h.app
             .world()
