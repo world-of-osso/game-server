@@ -410,7 +410,7 @@ fn eater_with_spells(items: &[u32], count: u32, spells: &[u32], class: u8) -> Op
         .collect();
     persistence::save_inventory(&db, character_id, &InventoryData { gold: 0, items });
     let app = &mut h.app;
-    app.insert_resource(crate::persistence::GameDatabase { db });
+    app.insert_resource(crate::persistence::GameDatabase::new(db));
     app.insert_resource(templates);
     let conn = rusqlite::Connection::open_with_flags(
         world_db(),

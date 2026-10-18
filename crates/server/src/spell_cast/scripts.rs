@@ -265,6 +265,9 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (PENANCE, 0) => Some(penance),
         (COBRA_SHOT, 1) => Some(cobra_shot),
         (BLACKOUT_KICK, 0) => Some(blackout_kick),
+        (crate::auras::augmentation::PRESCIENCE, 1) => {
+            Some(crate::auras::augmentation::grant_prescience)
+        }
         (PYRE_IMPACT, 0) => Some(pyre),
         (DEATH_COIL, 0) => Some(death_coil),
         (DEMON_SPIKES, 0) => Some(demon_spikes),

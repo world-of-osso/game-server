@@ -23,7 +23,7 @@ fn emote_app() -> (tempfile::NamedTempFile, App, Entity, Entity, u64) {
     app.add_plugins(shared::protocol::ProtocolPlugin);
     app.add_plugins(AchievementPlugin);
     app.insert_resource(crate::achievement::load_achievement_catalog(&conn).unwrap());
-    app.insert_resource(GameDatabase { db });
+    app.insert_resource(GameDatabase::new(db));
     app.init_resource::<ChatHistoryBuffer>();
     app.init_resource::<GroupRegistry>();
     app.init_resource::<crate::friends::AutoAfkScheduler>();

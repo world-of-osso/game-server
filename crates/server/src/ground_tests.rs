@@ -409,7 +409,7 @@ fn settle_after_set_position(start_y: f32, wow_z: f32) -> (f32, f32) {
     let db = persistence::temp_database();
     let (character_id, _) =
         persistence::create_character(&db, 1, "Mover", 1, 1).expect("character");
-    let game_db = persistence::GameDatabase { db };
+    let game_db = persistence::GameDatabase::new(db);
     let mut app = App::new();
     app.add_plugins(bevy::MinimalPlugins)
         .add_message::<crate::death::PlayerDeathTransition>()
@@ -701,7 +701,7 @@ fn achievements_criteria_native_fall_death_distinguishes_ground_from_void() {
         let db = redb::Database::create(file.path()).unwrap();
         persistence::create_tables(&db);
         let (character, _) = persistence::create_character(&db, 1, "Fallproof", 1, 1).unwrap();
-        app.insert_resource(GameDatabase { db });
+        app.insert_resource(GameDatabase::new(db));
         app.update();
         let (x, y, z) =
             crate::terrain_height::wow_to_bevy(coordinates.0, coordinates.1, coordinates.2);

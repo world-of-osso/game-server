@@ -1997,6 +1997,7 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
     let db = redb::Database::create(file.path()).unwrap();
     crate::persistence::create_tables(&db);
     let (character, _) = crate::persistence::create_character(&db, 17, "Indexed", 1, 1).unwrap();
+    let db = crate::persistence::GameDatabase::new(db);
     let boundary = AccountUpdate {
         account: 17,
         character,
@@ -2029,8 +2030,9 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
         snapshot.progress.len() > 5000,
         "full account+character snapshot required"
     );
+    crate::test_data::drain_persistence(&db);
     assert_eq!(
-        crate::persistence::load_achievements(&db, character).earned_at[&6],
+        crate::persistence::load_achievements(&db.db, character).earned_at[&6],
         boundary.now
     );
     EVALUATION_WORK.with(|work| work.set((0, 0)));
@@ -2042,7 +2044,8 @@ fn achievements_incremental_account_sync_reuses_aggregate_evaluation_and_keeps_p
     assert!(sync_account_progress(&db, &mut state, &catalog, boundary).is_empty());
     assert_eq!(catalog.snapshot(&state, 1), snapshot);
     assert_eq!(EVALUATION_WORK.with(|work| work.get()), (0, 0));
-    let mut reopened = crate::persistence::load_achievements(&db, character);
+    crate::test_data::drain_persistence(&db);
+    let mut reopened = crate::persistence::load_achievements(&db.db, character);
     assert!(sync_account_progress(&db, &mut reopened, &catalog, boundary).is_empty());
     assert_eq!(catalog.snapshot(&reopened, 1), snapshot);
 }

@@ -29,7 +29,7 @@ fn test_db() -> GameDatabase {
     let db = redb::Database::create(&path).expect("db");
     persistence::create_tables(&db);
     std::mem::forget(dir);
-    GameDatabase { db }
+    GameDatabase::new(db)
 }
 
 #[test]
@@ -152,6 +152,71 @@ fn source_start_facing_is_used_on_login_without_repositioning_saved_characters()
 }
 
 #[test]
+fn character_relogin_reads_owned_achievements_while_default_or_migration_write_is_pending() {
+    for legacy_row in [false, true] {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let raw = redb::Database::create(file.path()).unwrap();
+        persistence::create_tables(&raw);
+        let db = GameDatabase::new(raw);
+        let (character, _) =
+            persistence::create_character(&db.db, 1, "Relogpending", 1, 1).unwrap();
+        // Initialize unrelated login tables before isolating the achievement reader.
+        load_selected_character_state(&db, 1, character, 1, 1);
+        let txn = db.db.begin_write().unwrap();
+        {
+            let mut rows = txn.open_table(persistence::ACHIEVEMENTS).unwrap();
+            if legacy_row {
+                rows.insert(
+                    character,
+                    br#"{"earned_ids":[10],"earned_at":{"10":90}}"#.as_slice(),
+                )
+                .unwrap();
+            } else {
+                rows.remove(character).unwrap();
+            }
+        }
+        txn.commit().unwrap();
+        let mut pending = crate::achievement::PlayerAchievementState::default();
+        pending.earned_ids.extend([10, 14782]);
+        pending.earned_at.insert(14782, 100);
+        pending.criteria_progress.insert(162, 41);
+        let held = db.db.begin_write().unwrap();
+        let (release, blocked) = std::sync::mpsc::channel();
+        let holder = std::thread::spawn(move || {
+            let signal = blocked.recv_timeout(Duration::from_secs(5));
+            held.abort().unwrap();
+            signal.expect("fixture explicitly releases the held writer");
+        });
+        crate::achievement::save_monthly_contribution(&db, 1, character, &pending);
+        let (app, player) = select_character_in_world(db, 1, character);
+        assert!(
+            !holder.is_finished(),
+            "selection must return while the writer is held; legacy={legacy_row}"
+        );
+        let loaded = app
+            .world()
+            .get::<crate::achievement::PlayerAchievementState>(player)
+            .unwrap();
+        assert!(
+            loaded.earned_ids.contains(&14782),
+            "login lost queued achievement; legacy={legacy_row}"
+        );
+        assert_eq!(loaded.earned_at[&14782], 100);
+        assert_eq!(loaded.criteria_progress[&162], 41);
+        release.send(()).unwrap();
+        holder.join().unwrap();
+        drop(app);
+        let reopened = redb::Database::open(file.path()).unwrap();
+        let saved = persistence::load_achievements(&reopened, character);
+        assert!(
+            saved.earned_ids.contains(&14782),
+            "stale default/migration must not overwrite pending progress"
+        );
+        assert_eq!(saved.criteria_progress[&162], 41);
+    }
+}
+
+#[test]
 fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     let db = test_db();
     let character_id = 55;
@@ -169,7 +234,7 @@ fn load_selected_character_state_syncs_pvp_currencies_from_wallet() {
     };
     persistence::save_pvp(&db.db, character_id, &pvp);
 
-    let state = load_selected_character_state(&db, character_id, 1, 1);
+    let state = load_selected_character_state(&db, 1, character_id, 1, 1);
 
     assert_eq!(state.currencies.get(1792), 420);
     assert_eq!(state.currencies.get(1602), 80);
@@ -330,7 +395,7 @@ fn skyborne_real_kits_create_persist_and_select_all_authored_classes() {
             let conn = rusqlite::Connection::open(crate::test_data::world_db_path()).unwrap();
             let maps = crate::maps::store::load_map_store(&conn).expect("scratch map overlay");
             let (app, player) =
-                select_character_with_maps(GameDatabase { db }, 1, character_id, maps);
+                select_character_with_maps(GameDatabase::new(db), 1, character_id, maps);
             let entity = app.world().entity(player);
             assert_eq!(entity.get::<UnitLevel>(), Some(&UnitLevel(1)));
             assert_eq!(entity.get::<Player>().unwrap().race, race);
@@ -728,9 +793,7 @@ fn character_saved_in_wailing_caverns_logs_in_after_server_restart_with_gatherin
         app.insert_resource(world_data);
         app.insert_resource(objects);
         app.insert_resource(crate::gathering::load_data(&conn).unwrap());
-        app.insert_resource(GameDatabase {
-            db: redb::Database::open(&db_path).unwrap(),
-        });
+        app.insert_resource(GameDatabase::new(redb::Database::open(&db_path).unwrap()));
         app.init_resource::<TerrainReplies>();
         app.add_systems(Update, process_select_character);
         app.add_systems(Last, collect_terrain_replies);
@@ -880,9 +943,7 @@ fn log_out(db: &GameDatabase, character_id: u64, health: f32, death: Option<&Pla
 fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("death-login.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 11;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Spirit", 1, 1)
@@ -890,9 +951,7 @@ fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
     let ghost = ghost_at_graveyard(character_id);
     log_out(&db, character_id, 0.0, Some(&ghost));
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
@@ -924,9 +983,7 @@ fn relogged_ghost_comes_back_a_ghost_with_its_corpse() {
 fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("dead-login.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 12;
     let (character_id, _) =
@@ -947,9 +1004,7 @@ fn relogged_dead_player_keeps_death_position_without_another_durability_loss() {
     dead.state = DeathState::Dead;
     log_out(&db, character_id, 0.0, Some(&dead));
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
 
     let (app, player) = select_character_in_world(db, account_id, character_id);
@@ -976,9 +1031,7 @@ struct PreDeathStateCorpse {
 fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("legacy-death.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 13;
     let (character_id, mut data) =
@@ -1005,9 +1058,7 @@ fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
         .unwrap();
     txn.commit().unwrap();
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
     for _ in 0..3 {
@@ -1035,9 +1086,7 @@ fn pre_death_state_record_loads_ghost_and_corpse_on_first_snapshot() {
 fn character_saved_after_resurrection_logs_in_alive() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("alive-login.redb");
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
     let account_id = 12;
     let (character_id, _) = persistence::create_character(&db.db, account_id, "Risen", 1, 1)
@@ -1050,9 +1099,7 @@ fn character_saved_after_resurrection_logs_in_alive() {
     );
     log_out(&db, character_id, 50.0, Some(&PlayerDeathState::default()));
     drop(db);
-    let db = GameDatabase {
-        db: redb::Database::create(&path).unwrap(),
-    };
+    let db = GameDatabase::new(redb::Database::create(&path).unwrap());
     persistence::create_tables(&db.db);
 
     let (mut app, player) = select_character_in_world(db, account_id, character_id);
