@@ -27,7 +27,7 @@ fn source(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
         .0
 }
 
-fn place_at_authored_entrance(h: &mut Harness, tank: Entity) -> Position {
+pub(super) fn place_at_authored_entrance(h: &mut Harness, tank: Entity) -> Position {
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
