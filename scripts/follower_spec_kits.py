@@ -46,10 +46,14 @@ def policy(slot, priority, target='enemy', **conditions):
     return slot, priority, dict(target=target, **conditions)
 
 
-def combat_policy(spec, name, spell, dispel_effects):
+def combat_policy(spec, name, spell, dispel_effects, control_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
     if dispel_effects and name in {'Cleanse Toxins', "Nature's Cure", 'Remove Corruption', 'Purify', 'Purify Disease', 'Remove Curse', 'Expunge', 'Cauterizing Flame', 'Dispel Magic', 'Purge', 'Soothe'}:
         return policy('dispel', 42, 'party')
+    if control_effects and name in {'Polymorph', 'Hammer of Justice', 'Leg Sweep', 'Paralysis', 'Fear', 'Hex'}:
+        area = any(15 in targets or 16 in targets for targets in control_effects)
+        source = any(15 in targets for targets in control_effects)
+        return policy('control', 43, requires_cast=True, min_enemies=1 if area else 0, source_center=source)
     emergency = {'Lay on Hands', 'Guardian Spirit'}
     if name in emergency:
         return policy('heal', 10, 'party', health_below=0.20)
@@ -154,6 +158,9 @@ def kit_rows(db, source):
     dispels = defaultdict(list)
     for spell, dispel_type, target in db.execute('SELECT SpellID,EffectMiscValue_0,ImplicitTarget_0 FROM spell_effect WHERE DifficultyID=0 AND Effect=38'):
         dispels[spell].append((dispel_type, target))
+    controls = defaultdict(list)
+    for spell, target_a, target_b in db.execute('SELECT SpellID,ImplicitTarget_0,ImplicitTarget_1 FROM spell_effect WHERE DifficultyID=0 AND Effect=6 AND EffectAura IN(5,7,12,27,60)'):
+        controls[spell].append((target_a, target_b))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
         for spell_text, passive in loadout['known'].items():
@@ -164,7 +171,7 @@ def kit_rows(db, source):
             name, required = native
             if level < required:
                 continue
-            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell, dispels[spell])
+            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell, dispels[spell], controls[spell])
             if rule[0] == 'dispel':
                 effects = dispels[spell]
                 rule[2]['dispel_types'] = sorted({row[0] for row in effects})
