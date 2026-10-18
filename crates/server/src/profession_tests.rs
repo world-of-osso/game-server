@@ -985,7 +985,7 @@ fn learning_tailoring_takes_gold_and_learns_classic_tailoring_with_bolt_of_linen
     }
     assert_eq!(
         h.take::<ProfessionSnapshot>().last(),
-        Some(&profs.snapshot())
+        Some(&profs.snapshot(h.app.world().resource::<ProfessionData>()))
     );
     let lists = h.take::<TrainerList>();
     let list = lists.last().expect("list re-sent after the purchase");
@@ -1119,6 +1119,38 @@ fn modern_crafting_unlearned_recipe_refuses_cast_until_real_trainer_purchase() {
     let inventory = persistence::load_inventory(h.db(), h.character_id);
     let professions = h.professions();
     assert!(!professions.knows(2153));
+    let snapshot = h.take::<ProfessionSnapshot>().pop().unwrap();
+    assert!(
+        snapshot
+            .recipe_sources
+            .iter()
+            .all(|source| professions.rank(source.req_skill_line) > 0)
+    );
+    assert_eq!(
+        snapshot
+            .recipe_sources
+            .iter()
+            .find(|source| source.spell_id == 2153 && source.trainer_id == 56),
+        Some(&shared::protocol::ProfessionTrainerSource {
+            trainer_id: 56,
+            spell_id: 2153,
+            cost: 50,
+            req_skill_line: 2532,
+            req_skill_rank: 15,
+            req_abilities: vec![],
+            req_level: 0,
+        })
+    );
+    assert!(
+        !snapshot
+            .recipe_sources
+            .iter()
+            .any(|source| source.req_skill_line == 2540)
+    );
+    assert_eq!(
+        persistence::load_inventory(h.db(), h.character_id),
+        inventory
+    );
     h.craft(2153, 1);
     assert!(!h.casting());
     assert!(!h.take::<CastFailed>().is_empty());
@@ -1141,7 +1173,10 @@ fn modern_crafting_unlearned_recipe_refuses_cast_until_real_trainer_purchase() {
     assert_eq!(h.bag_count(2303), 0);
     assert_eq!(
         h.take::<ProfessionSnapshot>().last(),
-        Some(&h.professions().snapshot())
+        Some(
+            &h.professions()
+                .snapshot(h.app.world().resource::<ProfessionData>())
+        )
     );
 }
 
@@ -1187,7 +1222,10 @@ fn modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence(
     );
     assert_eq!(
         h.take::<ProfessionSnapshot>().last(),
-        Some(&h.professions().snapshot())
+        Some(
+            &h.professions()
+                .snapshot(h.app.world().resource::<ProfessionData>())
+        )
     );
 }
 
@@ -1248,7 +1286,13 @@ fn crafting_two_bolts_consumes_four_linen_and_raises_classic_tailoring_twice() {
     assert_eq!(h.line(CLASSIC_TAILORING).unwrap().rank, 3);
     assert!(h.take::<CastFailed>().is_empty());
     let snapshots = h.take::<ProfessionSnapshot>();
-    assert_eq!(snapshots.last(), Some(&h.professions().snapshot()));
+    assert_eq!(
+        snapshots.last(),
+        Some(
+            &h.professions()
+                .snapshot(h.app.world().resource::<ProfessionData>())
+        )
+    );
 }
 
 #[test]
