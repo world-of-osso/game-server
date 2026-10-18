@@ -96,7 +96,7 @@ Bounded low-count batch only: offspec Crusader's Might cooldown variants, Judgme
 ### Thirteenth-batch locally authored hit, rank and channel contracts
 
 - [x] Mortal Strike12294 applies named115804 healing reduction; Rend772 applies named388539 bleed with native ticks and lifetime.
-- [x] Execute163201 with316405 refunds s2 percent of actual raw Rage paid, including OptionalCost, only if its instant260798 target survives. Damage interpolation remains uncertified.
+- [x] Execute163201 with316405 refunds s2 percent of actual raw Rage paid, including OptionalCost, only if its instant260798 target survives. Its native effect0 script overrides generic effect64 scheduling, resolving260798 before that survivor check; unrelated effect64 children remain queued. Damage interpolation remains uncertified.
 - [x] Shadow Word: Death32379 resolves its tooltip's s2 damage variant once; s3/s4 define strict execute threshold/bonus, extended by active364675s1/s2. Native backlash remains once; legacy s1 variant stays uncertified.
 - [x] Rapid Fire257044's native333ms period/2000ms duration/initial-period attribute cast named257045 shots and263585 Focus gains; cancellation removes later ticks.
 - [x] Bestial Wrath19574 casts named344572 from the actual persistent pet at its own target, without substituting a guardian or owner selection. Owner a108 is not applied as a pet buff: pet a79 binding, CC removal, charge grants and pet damage inheritance remain gaps.

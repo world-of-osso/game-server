@@ -71,6 +71,9 @@ fn chaos_strike(chance: u32) {
     h.set_power(PowerType::Fury, 50.0);
     h.cast_and_deliver(162794, Some(h.npc));
     h.advance(4);
+    assert!(damage(&h, 222031, h.npc) > 0);
+    assert_eq!(damage(&h, 199547, h.npc), 0, "native delay is300ms");
+    h.advance(3);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert_eq!(
         h.power(PowerType::Fury),
