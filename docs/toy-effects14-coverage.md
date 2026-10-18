@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source425–429: pending Murloc/egg acceptance and retained banner/caber/snow boundaries (2026-10-17)
+
+425–426 test/spec10e8faaad adds independent Murloc and Whelp Egg speed30/18yd cursor roots to the stationary-source fixture, now16 exact identities with original14 unchanged. Local format/manual readability/diffcheck pass; current expanded fixture is unverified. Inspected489 throughc043f0f8c is FAILED:284passed/2failed/1ignored577.08s, EXIT101/FMT0.387 expected37 health but ordinary regeneration produced52;408 incorrectly expected a triggered-child SpellGo event.393Ohnir and402Soulshape have explicit ok lines, not an aggregate gate pass. Actor-phase/source-flight diagnosis and health-test correction remain open; no runtime change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|425 Warcraft Rumble Toy: Murloc202862/399265 | Cursor87 missile32/speed30→399253→existing200972/display112325/scale1/property5515 for300000ms; item60000ms recovery. Own learned-use identity assertions committed, pending corrected fixture and newer covering proof. No name-derived combat behavior or native/tier claim. |
+|426 Warcraft Rumble Toy: Whelp Egg202865/399268 | Distinct cursor87 missile32/speed30→399257→existing200975/display112328/scale1/property5515 for300000ms; item60000ms recovery. Own exact identity assertions pending corrected fixture/newer proof. No invented hatchlings, hatching mechanics or actor substitution. |
+|427 Thundering Banner of the Aspects203716/401253 | Instant target47 summon201798/display111503/scale1/property64/base1 for60000ms; inherited600000ms recovery. Retained exact row in existing16-case seasonal banner/sign fixture checks source2yd forward, owner/map/faction/stationary/ordinary expiry; explicit fixture ok in489. No new native/state-kit/ten-minute-reuse certificate. |
+|428 Display of Strength203725/400788 | Instant speed20 missile32/target138→400796: cursor87 area-trigger179→27867 for30000ms plus script3/target0→381484 with self dummy4 slots0/1/2 and bases0/0/5. Inherited120000ms recovery. Actual caber launch/area action/recipient and mixed child state remain gaps; no executable base5/count, scenery-only toss or ignored child payload. |
+|429 Snow Blanket203734/401751 | Script3/target18 plus trigger64/misc495→401540: self transform56→existing201907/display111384/model-scale0.2, aura191, ground62 area-trigger179→27968 and aura370/misc214 for300000ms; item600000ms recovery. Full mixed snow/ground/control/animation/lifecycle contract remains unresolved. No disguise-only admission, player-scale inference from NPC scale, dropped area payload or invented snow mechanics. |
+
+Evidence: private `rows425-429-{readonly-source,action-source,runtime-source,active-goal}.json`, `minis425-426-{active-goal,proof-ledger}.json`, inspected489 log and exact banner fixture.149865 Tea Set remains untouched.
+
 ## Source420–424: pending three-mini acceptance and fishing/compass boundaries (2026-10-17)
 
 422–424 test/spec53f4ae444 expands the existing stationary-source fixture from11 to14 exact identities. Each new root has its own source speed30/valid18yd cursor, parent-before-child event assertions and one authentic actor/model, owner/map/non-pet/non-following/stationary/compressed300s expiry checks. Original11 identities remain unchanged. Format/manual readability/diffcheck pass; behavioral proof requires a newer lead-owned covering head, not489c043. Live489 currently marks387Wand FAILED and393Ohnir/402Soulshape ok; final details/result remain pending. No runtime/data/producer changes or own heavy duplicate.
