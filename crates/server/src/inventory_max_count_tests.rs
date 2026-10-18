@@ -1,6 +1,6 @@
 //! Source MaxCount is ownership, not stack size or an equipped-only limit.
+use super::inventory_model::InventoryModel;
 use crate::bank_test_harness::harness;
-use crate::inventory_model::InventoryModel;
 use crate::item_templates::{ItemTemplate, ItemTemplates};
 use crate::persistence::{self, InventoryItemData};
 use shared::item_data::ItemDefinitionSource::Retail;
