@@ -13,7 +13,7 @@ const EVENT_JUMP: u32 = 1004;
 const SPECIAL_FACING_ATTRIBUTES: u32 = 0x0000_1000 | 0x0080_0000;
 
 #[derive(Clone, Copy)]
-struct JumpChargeParam {
+pub(crate) struct JumpChargeParam {
     speed: f32,
     time_mode: bool,
     unlimited_speed: bool,
@@ -25,8 +25,8 @@ struct JumpChargeParam {
     trigger: Option<u32>,
 }
 
-#[derive(Resource)]
-pub(crate) struct JumpChargeParams(HashMap<u32, JumpChargeParam>);
+#[derive(Clone, Default)]
+pub(crate) struct JumpChargeParams(pub(crate) HashMap<u32, JumpChargeParam>);
 
 pub(crate) fn load_params(conn: &rusqlite::Connection) -> rusqlite::Result<JumpChargeParams> {
     let mut statement = conn.prepare(
@@ -50,15 +50,6 @@ pub(crate) fn load_params(conn: &rusqlite::Connection) -> rusqlite::Result<JumpC
         ))
     })?;
     Ok(JumpChargeParams(rows.collect::<rusqlite::Result<_>>()?))
-}
-
-pub(crate) fn load_startup(mut commands: Commands) {
-    let connection = rusqlite::Connection::open_with_flags(
-        crate::spell_info::WORLD_DB_PATH,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .expect("open world.db for server jump-charge parameters");
-    commands.insert_resource(load_params(&connection).expect("load tdb_jump_charge_params"));
 }
 
 impl JumpChargeParam {
@@ -99,9 +90,10 @@ fn prepare_jump(
     if misc.attributes[9] & SPECIAL_FACING_ATTRIBUTES != 0 || effect.trigger_spell != 0 {
         return Err("unsupported jump facing or effect arrival-spell options");
     }
-    let parameters = world
-        .get_resource::<JumpChargeParams>()
-        .ok_or("missing jump-charge catalog")?;
+    let parameters = &world
+        .get_resource::<crate::world_data::WorldData>()
+        .ok_or("missing world data for jump-charge catalog")?
+        .jump_charge_params;
     let parameter = parameters
         .0
         .get(&(effect.misc_values[0] as u32))
@@ -143,11 +135,9 @@ mod tests {
     #[test]
     fn jump_charge_missing_native_parameters_does_not_teleport() {
         let mut h = super::super::test_harness::harness(Vec::new(), &[387981], 12).unwrap();
-        h.app
-            .world_mut()
-            .resource_mut::<JumpChargeParams>()
-            .0
-            .remove(&713);
+        let mut data = super::super::test_harness::world_db().unwrap().world_data();
+        data.jump_charge_params.0.remove(&713);
+        h.app.insert_resource(data);
         let before = *h.app.world().get::<Position>(h.caster).unwrap();
         super::super::cast_triggered_at_destination(
             h.app.world_mut(),

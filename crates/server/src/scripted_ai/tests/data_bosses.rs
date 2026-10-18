@@ -375,6 +375,7 @@ fn encounter_fixture(
         class_level_base_mana: data.base_mana.clone(),
         expected_stats: expected,
         summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
+        jump_charge_params: crate::spell_cast::jump_charge::load_params(&conn).unwrap(),
         ..Default::default()
     });
     let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
