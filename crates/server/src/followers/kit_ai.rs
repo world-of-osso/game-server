@@ -81,30 +81,32 @@ fn select_target(
     match entry.conditions.target {
         Target::Enemy => enemy,
         Target::SelfUnit => Some(unit),
-        Target::Party | Target::Tank => party
-            .iter()
-            .copied()
-            .filter(|target| world.get::<InMap>(*target) == world.get::<InMap>(unit))
-            .filter(|target| {
-                entry.slot != Slot::Dispel
-                    || crate::auras::has_dispellable_aura(
-                        world,
-                        unit,
-                        *target,
-                        &entry.conditions.dispel_types,
-                    )
-            })
-            .filter(|target| {
-                entry
-                    .conditions
-                    .missing_aura
-                    .is_none_or(|aura| !crate::auras::has_aura(world, *target, aura))
-            })
-            .filter(|target| entry.conditions.target != Target::Tank || is_tank(world, *target))
-            .filter_map(|target| health_fraction(world, target).map(|fraction| (target, fraction)))
-            .min_by(|left, right| left.1.total_cmp(&right.1))
-            .map(|(target, _)| target),
+        Target::Party | Target::Tank => choose_patient(world, unit, party, entry),
     }
+}
+
+fn choose_patient(world: &World, unit: Entity, party: &[Entity], entry: &Entry) -> Option<Entity> {
+    let eligible = party
+        .iter()
+        .copied()
+        .filter(|target| patient_is_eligible(world, unit, *target, entry));
+    let by_health = eligible
+        .filter_map(|target| health_fraction(world, target).map(|fraction| (target, fraction)));
+    by_health
+        .min_by(|left, right| left.1.total_cmp(&right.1))
+        .map(|(target, _)| target)
+}
+
+fn patient_is_eligible(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
+    let same_map = world.get::<InMap>(target) == world.get::<InMap>(unit);
+    let missing_requested_aura = entry
+        .conditions
+        .missing_aura
+        .is_none_or(|aura| !crate::auras::has_aura(world, target, aura));
+    let correct_role = entry.conditions.target != Target::Tank || is_tank(world, target);
+    let can_remove_aura = entry.slot != Slot::Dispel
+        || crate::auras::has_dispellable_aura(world, unit, target, &entry.conditions.dispel_types);
+    same_map && missing_requested_aura && correct_role && can_remove_aura
 }
 
 fn is_tank(world: &World, unit: Entity) -> bool {
