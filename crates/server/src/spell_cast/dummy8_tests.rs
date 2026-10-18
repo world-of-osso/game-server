@@ -76,7 +76,9 @@ fn dummy8_provoke_changes_victim_equalizes_threat_and_holds_until_expiry() {
     let caster = h.caster;
     engage(&mut h, npc, rival);
     h.cast_and_deliver(115546, Some(npc));
-    h.advance(4);
+    // TC ThreatManager.h:86 / ThreatManager.cpp:216–230: selection is periodic.
+    // EffectTaunt (SpellEffects.cpp:2772–2810) equalizes threat, not an instant victim refresh.
+    h.advance(24);
     landed(&h);
     assert_eq!(
         h.app
