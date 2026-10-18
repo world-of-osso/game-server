@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source300–304: scouting/slime-trail boundaries and retained seasonal banners (2026-10-17)
+
+| Source row | Exact retained source boundary and proof level |
+|---|---|
+|300 Scouting Map: The Many Curiosities of Outland187899/360583 | Source2000ms self script3 promises flight-point discovery AND map reveal around Outland. Exact authored discovery/fog/eligibility/persistence remains unproved; no generic cosmetic script or all-Outland node guess. |
+|301 Scouting Map: The Wonders of Kul Tiras and Zandalar187900/360593 | Source2000ms self script3 names both islands' flight points/maps. Exact authored subsets and persistent map/flight state remain unproved; do not borrow another scouting-map certificate or invent a region/faction mapping. |
+|302 Apprentice Slimemancer's Boots187913/360686 | Source180000ms self periodic-trigger23/period10ms→360685's1000ms persistent-area27/dummy4 at target18,300000ms item recovery. Advertised tracking slime while moving and Necrolord pledge OR Renown80 eligibility remain unproved together; retain literal timing/child data without assuming an unconditional spawn schedule, caster-only art or invented pledge gate. |
+|303 Encrypted Banner of the Opportune187957/361085 | Existing182459/display103372/scale1, target47/source2yd seasonal position,60000ms lifetime and inherited600000ms spell recovery. Retain [source9's exact historical actual-learning/use/actor/destination/owner/map/stationary/expiry CPU scope](wiki/systems/toys.md#toy-effects9-stationary-banners-and-sign-2026-10-10), not a fresh per-banner native certificate. |
+|304 Shrouded Banner of the Opportune187958/361090 | Distinct existing182461/display103384/scale1 with the same source2yd/60000ms and inherited600000ms recovery shape. Retain its own row in the same historical source9 CPU fixture; not a substitute Encrypted actor, new current gate or native pixel/audio proof. |
+
+`rows300-304-{readonly-source,action-source}.json` preserves exact70391 roots/on-use ordering, descriptions/casts/period/child/durations/recovery and current runtime banner models. Historical banner proof remains revision-scoped. No player-progress/data/canonical write, generic script/trail admission or positive new simulation/native result;149865 Tea Set stays lead-required.
+
 ## Source295–299: exact scouting-map discovery boundaries (2026-10-17)
 
 All five roots are source2000ms self script3 with zero base/misc/trigger payload, item cooldown-1 and spell RecoveryTime0/StartRecoveryTime1500. Matching shape is not a cosmetic contract: each source promises flight-point discovery AND map reveal in its own geography.
