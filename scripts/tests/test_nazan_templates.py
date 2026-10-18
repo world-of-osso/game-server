@@ -108,6 +108,17 @@ class NazanTemplateTests(unittest.TestCase):
         self.assert_atomic_refusal('Nazan17536 source model')
         with closing(sqlite3.connect(self.db)) as connection, connection:
             connection.execute('INSERT INTO tdb_creature_template_model VALUES (' + ','.join('?' for _ in model) + ')', model)
+            addon = connection.execute('SELECT * FROM tdb_creature_template_addon WHERE entry=17536').fetchone()
+            connection.execute('DELETE FROM tdb_creature_template_addon WHERE entry=17536')
+        self.assert_atomic_refusal('Nazan17536 missing source addon')
+        with closing(sqlite3.connect(self.db)) as connection, connection:
+            connection.execute('INSERT INTO tdb_creature_template_addon VALUES (' + ','.join('?' for _ in addon) + ')', addon)
+            heroic = connection.execute('SELECT * FROM tdb_creature_template_difficulty '
+                                        'WHERE Entry=17536 AND DifficultyID=2').fetchone()
+            connection.execute('DELETE FROM tdb_creature_template_difficulty WHERE Entry=17536 AND DifficultyID=2')
+        self.assert_atomic_refusal('Nazan17536 source difficulties')
+        with closing(sqlite3.connect(self.db)) as connection, connection:
+            connection.execute('INSERT INTO tdb_creature_template_difficulty VALUES (' + ','.join('?' for _ in heroic) + ')', heroic)
         with closing(sqlite3.connect(self.db)) as connection:
             self.assert_source_nazan(connection)
             self.assertEqual(preserved_rows(connection), before)
