@@ -1,6 +1,6 @@
 //! Native Energy drain flight and queued-child NoPower; unchanged imported effects.
 use bevy::prelude::*;
-use shared::components::{Mana, PowerType, UnitLevel};
+use shared::components::{Mana, Position, PowerType, UnitLevel};
 
 use super::test_harness::*;
 
@@ -11,7 +11,7 @@ const SKUL: u32 = 10393;
 const NATIVE_ROGUE_ENERGY: f32 = 100.0;
 const NATIVE_CHILD_COST: f32 = 30.0;
 
-fn fixture(control_class: u8) -> (Harness, Entity, Entity) {
+fn fixture(control_class: u8, enemy_x: f32) -> (Harness, Entity, Entity) {
     let mut h = harness(Vec::new(), &[SIPHON_ANIMA, GYMER_PARENT, GYMER_CHILD], 4).unwrap();
     let db_path = &world_db().unwrap().powers_db;
     let source =
@@ -23,8 +23,9 @@ fn fixture(control_class: u8) -> (Harness, Entity, Entity) {
         .insert_resource(crate::world_data::load_world_data(db_path));
     let caster = h.caster;
     let drainer =
-        crate::zones::summon_creature(h.app.world_mut(), caster, SKUL, [3.0, 0.0, 0.0, 0.0])
+        crate::zones::summon_creature(h.app.world_mut(), caster, SKUL, [enemy_x, 0.0, 0.0, 0.0])
             .unwrap();
+    h.app.world_mut().get_mut::<Position>(h.npc).unwrap().x = enemy_x;
     assert_eq!(h.app.world().get::<UnitLevel>(drainer).unwrap().0, 58);
     let control = spawn_player(&mut h.app, control_class, 0.0);
     h.advance(1);
@@ -50,7 +51,7 @@ fn mana(h: &Harness, unit: Entity) -> f32 {
 
 #[test]
 fn native_energy_siphon_keeps_missile_flight_and_does_not_drain_mage_mana_or_health() {
-    let (mut h, mage, drainer) = fixture(8);
+    let (mut h, mage, drainer) = fixture(8, 3.0);
     let energy_before = h.power(PowerType::Energy);
     let mage_mana = mana(&h, mage);
     let rogue_mana = mana(&h, h.caster);
@@ -78,13 +79,14 @@ fn native_energy_siphon_keeps_missile_flight_and_does_not_drain_mage_mana_or_hea
 
 #[test]
 fn native_energy_trigger64_child_refuses_after_siphon_impact_without_charging() {
-    let (mut h, control, drainer) = fixture(4);
+    // Gymer's native area is12yd;7yd excludes unrelated5yd melee retaliation.
+    let (mut h, control, drainer) = fixture(4, 7.0);
     assert_eq!(energy(&h, control), NATIVE_ROGUE_ENERGY);
     let caster_health = h.health(h.caster);
     let target_health = h.health(h.npc);
     let drainer_health = h.health(drainer);
     launch_siphon(&mut h, drainer);
-    h.advance(6); // Retain the real250ms flight and ordinary Energy regeneration.
+    h.advance(8); // Native7yd/20yd-per-second flight is350ms; normal regen stays enabled.
     let remaining = h.power(PowerType::Energy);
     assert!((0.0..NATIVE_CHILD_COST).contains(&remaining));
     assert_eq!(remaining, energy(&h, control));
@@ -112,7 +114,8 @@ fn native_energy_trigger64_child_refuses_after_siphon_impact_without_charging() 
     assert_eq!(
         h.health(h.caster),
         caster_health,
-        "post-dispatch health attribution: {:?}",
+        "post-dispatch health attribution: roles={:?}, log={:?}",
+        [h.caster, h.npc, drainer, control],
         h.inbox.log
     );
     assert_eq!(h.health(h.npc), target_health);
