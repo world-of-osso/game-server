@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
@@ -221,7 +222,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch10::HAND_OF_GULDAN, 0) => Some(batch10::launch_guldan_meteor),
         (batch10::LIGHTNING_BOLT, 0) => Some(batch10::energize_lightning_bolt),
         (batch9::WINTER_DAMAGE, 0) => Some(batch9::slow_winter_hit),
-        (batch9::SCOURGE_STRIKE, 0) => Some(batch9::apply_missing_plague),
+        (batch9::SCOURGE_STRIKE, 0) => Some(scourge_strike::erupt_and_apply_missing),
         (batch9::RADIANCE, 1) => Some(batch9::apply_radiance_atonement),
         (batch8::REAP, 0) => Some(batch8::reap),
         (batch8::PROVOKE, 0) => Some(batch8::provoke),
