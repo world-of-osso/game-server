@@ -1,3 +1,7 @@
+## 2026-10-18 — Native attack restriction264
+
+[Native264](systems/auras.md#native-attack-restriction264--2026-10-18): actual Turtle producer yields wrong Pacified priority; native Phalanx NPC with264/no25 still swings. Genuinebc5a0c05e RED2→312234334 consumer; native/retained22GREEN, fresh-master4457dcfe9 expanded24/24 GREEN7.06s/146566ms. Eight new cases exercise real attack predicates, Cheetah/Fireball, midcast gain, natural expiry, full-trigger damage and NPC swing removal; real263 family controls retained. No row/clock/RNG/budget/producer/wire changes; no264 positive offensive-family input qualified or whole-ability claim. Check/fmt pending.
+
 ## 2026-10-18 — Skyriding native-child fixture regression
 
 [Skyriding fixture](systems/mounts.md#skyriding-native-prerequisite-fixture--2026-10-18): exact landing-parent8707ac0ea21/21 versusae9a7a53c11/21 proves required-aura checks exposed omitted372773 Dragonrider Energy, not dormantfc03721/21 or later cursor capture. Loading native child lets normal406095 LINKED285 produce it; setup now asserts that aura, no direct insertion or production relaxation. At1342a9fb0 skyriding21+unchangedAkunda1 pass22/22,0ignored24.84s/176192ms; all-target check12.123s/0warnings and fmt pass. Existing gameplay assertions unchanged; no live/full-class claim.
