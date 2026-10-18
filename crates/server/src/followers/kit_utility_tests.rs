@@ -124,19 +124,16 @@ fn assert_party_dispel(entry: u32, spell: u32, debuff: u32, enemy_spec: u32) {
 }
 
 #[test]
-#[ignore = "RED: Crenna's Nature's Cure is inventoried but never selected"]
 fn follower_kit_utility_crenna_dispels_party_magic() {
     assert_party_dispel(209072, 88423, 589, 257);
 }
 
 #[test]
-#[ignore = "RED: Henry's Purify is inventoried but never selected"]
 fn follower_kit_utility_henry_dispels_party_magic() {
     assert_party_dispel(215011, 527, 589, 257);
 }
 
 #[test]
-#[ignore = "RED: native Curse of Exhaustion does not drive Remove Curse"]
 fn follower_kit_utility_meredy_dispels_curse_on_healthier_member() {
     assert_party_dispel(209059, 475, 334275, 266);
 }
@@ -193,7 +190,6 @@ fn follower_kit_utility_crenna_does_not_dispel_an_empty_patient() {
 }
 
 #[test]
-#[ignore = "RED: Polymorph is inventoried but never selected when the real kick is cooling down"]
 fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
     let (mut h, unit) = level32(209059);
     // Polymorph admits native creature types. The generic Kobold actor has no
@@ -246,7 +242,6 @@ fn follower_kit_utility_meredy_does_not_control_an_idle_attacker() {
 }
 
 #[test]
-#[ignore = "RED: Bo never uses source Leg Sweep as a caster-control fallback"]
 fn follower_kit_utility_bo_controls_caster_after_spent_spear_hand() {
     let (mut h, unit) = level32(227734);
     utility_tests::start_enemy_fireball(&mut h, unit);
