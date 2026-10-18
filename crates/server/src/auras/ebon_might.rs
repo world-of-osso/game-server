@@ -159,6 +159,11 @@ fn update_owned_support(world: &mut World, caster: Entity) {
     if recipients.is_empty() {
         return;
     }
+    // Two native casts can finish in one FixedUpdate, before the normal Update
+    // stat producer. Consume current modifiers before excluding borrowed Intellect.
+    world
+        .run_system_cached(crate::stats::update_character_stats)
+        .expect("synchronize native computed stats before Ebon source snapshot");
     let percent = crate::spell_cast::scripts::script_effect_value(world, caster, EBON, 0);
     let threshold = crate::spell_cast::scripts::script_effect_value(world, caster, EBON, 2);
     let split = if recipients.len() as f32 > threshold {

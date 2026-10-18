@@ -14,6 +14,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 
 - Ordinary395152 casts grant the caster native395296, not self395152. Preserve allied-area native500yd/rules, exclude caster, use authenticated damage-player specialization roles, and apply MaxTargets30 after role filtering; do not invent a party-only restriction.
 - Other recipients gain their native Strength/Agility/Intellect primary stat from source caster Intellect × native8% × min(1, native2/owned-recipient-count). Two is a split threshold, not a hard cap. Caster Intellect excludes the effective contribution of foreign Ebon grants after existing primary-stat multipliers, preventing mutual amplification.
+- Simultaneous native Ebon casts must evaluate current computed source stats before the first periodic tick; pending aura modifiers must not cause borrowed Intellect to be subtracted from a stale source total.
 - Self395296's native1000ms update clock refreshes owned support amounts, including changed caster Intellect and surviving recipient counts, without changing aura expiry/stacks. Removal/expiry removes only the relevant support. Its native masked damage fields remain unchanged; existing395160/395153 flat1000ms owned-duration extension must work on naturally created buffs.
 - This is a named spell binding, not generic540. Empower/Breath/critical extensions, optional hero/set/PvP behavior, unknown spec/affiliation, hot specialization swaps, independent self cancellation/disconnect, full ability/legal-loadout/rotation/UDP parity remain unproved.
 
