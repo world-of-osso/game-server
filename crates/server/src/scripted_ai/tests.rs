@@ -188,6 +188,7 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
         crate::auras::AuraPlugin,
         crate::creature_ai::CreatureAiPlugin,
         crate::creature_aggro::CreatureAggroPlugin,
+        crate::navigation::NavigationPlugin,
         ScriptedAiPlugin,
         crate::achievement::AchievementPlugin,
     ));
