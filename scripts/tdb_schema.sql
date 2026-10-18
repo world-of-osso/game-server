@@ -5,6 +5,21 @@
 -- world content of maps 0 and 1 (creature and game object spawns and templates, quests,
 -- vendors, gossip, loot) that content_policy.py resolves into the content_* tables.
 
+-- Server jump-charge metadata; NULL options remain NULL, not runtime defaults.
+DROP TABLE IF EXISTS tdb_jump_charge_params;
+CREATE TABLE tdb_jump_charge_params (
+  id INTEGER PRIMARY KEY,
+  speed REAL NOT NULL DEFAULT 42,
+  treatSpeedAsMoveTimeSeconds INTEGER NOT NULL DEFAULT 0,
+  unlimitedSpeed INTEGER NOT NULL DEFAULT 0,
+  minHeight REAL DEFAULT NULL,
+  maxHeight REAL DEFAULT NULL,
+  spellVisualId INTEGER DEFAULT NULL,
+  progressCurveId INTEGER DEFAULT NULL,
+  parabolicCurveId INTEGER DEFAULT NULL,
+  triggerSpellId INTEGER DEFAULT NULL
+);
+
 -- Authored fixed destinations, not a client DB2. Preserve all ordered points.
 DROP TABLE IF EXISTS tdb_spell_target_position;
 CREATE TABLE tdb_spell_target_position (
