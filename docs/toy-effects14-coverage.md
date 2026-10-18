@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source580–584: mixed shard/permanent poses/repeated jump-proc/interactive tea boundaries (2026-10-17)
+
+Lead505 failed compilation E0277/EXIT101 before runtime: typed disguise creature columnu32 conflicted with authored aura.misc_values i32. Test-only76a8426bf changes that column to i32, preserving all16 rows/literals/helper/assertions; format/manual readability/diffcheck pass. No runtime RED/GREEN or new-scope certificate. Current tip also includes577 twelfth object AFTER505; next covering gate must include it.498 remains last confirmed landed/master8707ac0ea; no own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|580 Glittering Vault Shard235017/1215470 | Instant mixed self transform56/misc0/8 plus scale61/base30/misc0/2 for900000ms; inherited900000ms recovery/start1500ms. No creature entry is encoded in transform misc0. Actual Hymosul form/scale/pose/cleanup remains unresolved; no invented template0, guessed display/scale conversion or bare scale-only success. |
+|581 Cyrce's Circlet235041/1215495 | Instant self dummy4/permanent-1; no source SpellCooldowns row, item overrides-1. Actual authored circlet presentation/conditions/cleanup remains unaudited; not a gameplay ring-stat/item-equipment implementation or generic dummy admission. Source says display mastery, not an invented per-use quest/rank requirement. |
+|582 Desk-in-a-Box235050/1214519 | Instant self dummy4/permanent-1/inherited30000ms recovery; source action is reading. Exact desk/chair/book/pose presentation and cleanup remain unaudited; not inventory desk yield, spawned seating furniture or copied Arathi reading certificate. |
+|583 Fireworks Hat235220/1216099 | Instant self two distinct aura42 effects at indexes0/1, each→1216102/self script3,15000ms hat lifetime/600000ms recovery. Proc mask33554432/chance101/charges0 retained literally; description specifies jump fireworks. Actual jump event, repeated-effect multiplicity/action/hat attachment/cleanup remain gaps; do not deduplicate two edges, turn chance101 into count101 or substitute attack-triggered fireworks. |
+|584 Sha-Warped Tea Set235288/1216435 | Instant target87 transmitted50→506612 for180000ms, inherited3600000ms recovery. Runtime GO506612 absent; actual serving interaction/tea recipient/product/lifecycle/native art remains gap, not an inert tea prop or copied Tea Set149865 behavior.149865 remains untouched. |
+
+Evidence: private `rows580-584-{readonly-source,action-source,runtime-action-source,active-goal}.json`, `lead-gate505-inspected.json`, `gate505-fixture-type-{active-goal,proof-ledger}.json`; explicit70448/key88d5e8ef05ec5a8446cdec93d142d7c6. No runtime/data/import/native change or fabricated proof.
+
 ## Source575–579: pending Cold Ones rack acceptance and mixed chair/device/crate/homebind boundaries (2026-10-17)
 
 Acceptance-only0e4c5ed9b appends234951/1215364/505415/type22/display97591/scale0.75/cursor/180s to the unchanged transmitted-object helper and cursor alternative list, now12 identities with old11 retained. Format/manual changed-line readability/diffcheck pass; behavior requires a head AFTER queued50536909d8f3.505 includes through Golem573/16 disguises,18 casters and11 objects; no result or landing observed. No runtime/data/native proof/own heavy duplicate.
