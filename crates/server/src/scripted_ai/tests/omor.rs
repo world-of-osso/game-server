@@ -834,6 +834,21 @@ fn encounter_coverage_omor_source_clocks_shield_hounds_and_credit() {
             eprintln!("OMOR native hit tick={tick} cast before={before:?} after={after:?}");
         }
         h.advance(0.05);
+        if tick == 801 || tick == 901 {
+            let after_events = h
+                .app
+                .world()
+                .get::<shared::components::CastState>(boss)
+                .map(|cast| {
+                    (
+                        cast.spell_id,
+                        cast.duration,
+                        cast.elapsed,
+                        cast.pushback_count,
+                    )
+                });
+            eprintln!("OMOR after damage events tick={tick} cast={after_events:?}");
+        }
         shield_seen |= h.has_aura(boss, 31901);
         treacherous_seen |= h.has_aura(player, 30695);
         let gos = &h.inbox(0).spell_gos;
