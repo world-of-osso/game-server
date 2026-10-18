@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Stone-of-Hearth acceptance and pennant/table/conditional-parasol boundaries (2026-10-17)
+
+[Source500–504 matrix](../../toy-effects14-coverage.md#source500504-pending-stone-of-hearth-acceptance-and-pennanttableconditional-parasol-boundaries-2026-10-17) adds acceptance-onlyd68256325:212337/401802/source10s/shared2309 as19th saved-bind case with Flame refusal, pending a head after4964df7af2e6. Permanent nonzero pennant, missing interactive Hearthstone table and next-fall Parasol remain gaps. Parasol child mixes featherfall/can-turn409/animation1133/removal164 plus dummy child; parent removal is not recursive recast or always-on slow fall. Abyss Horn existing visual-only/no gameplay water/actor CPU scope retained. Format/manual readability/diffcheck pass; no further runtime/data/new native/own heavy duplicate.
+
 ## Observer/party-private perspective/fixed-Gilneas/water-boat boundaries and retained banner (2026-10-17)
 
 [Source495–499 matrix](../../toy-effects14-coverage.md#source495499-observerparty-private-perspectivefixed-gilneaswater-boat-boundaries-and-retained-banner-2026-10-17) retains Eyes' caster-and-summons/periodic/two perception payloads, outdoors party-or-raid-private Date Modulator, fixed Gilneas252+77 travel and permanent controlled four-seat water cruise/radius20yd with literal base430489. No global/owner-only audience swap, saved-bind substitution or executable base/count guess. Dreaming Banner211424 retains exact seasonal fixture CPU scope, not new pixels/recharge. No further runtime/data/new proof/own heavy duplicate;496 missile-expanded gate running.

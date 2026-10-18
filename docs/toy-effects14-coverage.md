@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source500–504: pending Stone-of-Hearth acceptance and pennant/table/conditional-parasol boundaries (2026-10-17)
+
+503 test/specd68256325 adds212337/401802 to the unchanged actual learned-use/saved-bind/refusal/source10s/shared2309 helper, now19 hearthstones with Flame209035 sibling refusal. Format/manual readability/diffcheck pass; new behavior is AFTER4964df7af2e6 and requires a newer covering head. No further runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|500 Draconic Legend's Pennant211869/430508 | Instant self dummy4/base1/permanent-1, item120000ms recovery. Seasonal pennant/eligibility/appearance cleanup remains unaudited; no zero-dummy or sibling art certificate. |
+|501 Abyss Caller Horn211931/430760 | Source2500ms self audited script3/zero payload, inherited3600000ms recovery. Retained exact CPU witness covers cast visual/no created gameplay water/no actor/no movement mutation; no new native sound/pixels or natural-hour reuse proof. Do not reinterpret the authored visual as swimming terrain/liquid simulation. |
+|502 Hearthstone Game Table211946/430884 | Source1000ms targets47/138 summon214993/property64 for1200000ms; item1200000ms recovery. Runtime creature/model absent. Actual table/opponent/usable game interaction/lifecycle remain gaps; no inert furniture, invented game rules or static-table full certificate. |
+|503 Stone of the Hearth212337/401802 | Source10000ms252/targets1/9, shared2309/max1/recharge1800000ms. Own actual learned/saved-bind/cast/charge/Flame refusal test committed, behavioral proof pending newer head. No fabricated destination/native art/full half-hour recharge certificate. |
+|504 Delicate Silk Parasol212500/431949 | Source1500ms self periodic-dummy226/every1000ms→431962 for900000ms; spell300000ms/category1470 recovery180000ms. Child15000ms has feather-fall105/misc917504→431982, can-turn-while-falling409/base100, animation312/set1133 and remove-aura164 referencing parent431949.431982 is self dummy4/30000ms. Actual next-fall qualification/one-use transition/turning/descent/presentation/restoration remain unresolved. Remove-aura is not a parent recast; no always-on featherfall, recursive cycle or dropped child payload. |
+
+Evidence: private `rows500-504-{readonly-source,action-source,runtime-source,active-goal}.json`, `hearth503-{active-goal,proof-ledger}.json`, retained horn fixture and pinned409/164 semantics.149865 Tea Set remains untouched.
+
 ## Source495–499: observer/party-private perspective/fixed-Gilneas/water-boat boundaries and retained banner (2026-10-17)
 
 Exact recipient/private/control/travel contracts remain distinct from cosmetics or scenery. No further runtime/data/new acceptance/native proof or own heavy duplicate;4964df7af2e6 is running with expanded missile filters.
