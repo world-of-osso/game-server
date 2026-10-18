@@ -4,6 +4,18 @@ Requirements and data gaps: [inventory spec](../../specs/inventory.md).
 
 Item-use scaling and regression evidence: [[item-healing-scaling]].
 
+## mc548b regression recovery — targeted only (2026-10-18)
+
+Lead mc548b server2644c24f2 is RED771/5/13ignored816.87s; protocol stage passed. Exact requested later-master reproduction mergedcfdfc3ee6 into the feature as356d4493a with protocol999b52e: all five named cases failed,0/5. Repairs6ac4b2afc/3a6b3ea7c/f97c118e4 pass the unchanged five tests5/0/25.95s. This is targeted recovery, not a broad-gate or landing certificate.
+
+| Root | Repair/proof boundary |
+|---|---|
+| Three item-use error-count failures | Shared spell Harness inbox is the one InventoryError drain; Eater's per-frame adapter consumes that inbox instead of draining the receiver a second time. Toy diagnostics use the same capture. All manual drains were audited; separate map/group harnesses keep their own collectors. Bread/combat, companion fourth-item refusal and duplicate mount-learning expected counts are unchanged. This was introduced test plumbing, not proof production stopped refusing. |
+| Valid later quest references | QuestDb keeps authentic `content_item` metadata instead of pruning to the initial reference list. Source2947/2512/2101 all have MaxCount0; no default metadata, unknown-definition success or ownership-limit bypass was added. Existing source-qualified progress/turn-in/abandon test is unchanged. |
+| XP-only turn-in | Empty creation batches return their input without item/catalog/model work; empty rewards also skip capacity validation. Actual92460 has no item rewards, so its captured XP turn-in no longer depends on unrelated inventory templates. Real item batches retain all ownership/storage checks. |
+
+Current five-case proof is atf97c118e4, after the last source change; later documentation changes do not invalidate it. No own broad rerun; lead reruns coordinated server/protocol/client integration. [Quest contract](../../specs/quests.md).
+
 ## Ownership MaxCount — implementation and targeted proof (2026-10-18)
 
 `ItemTemplate.max_count` reads signed `content_item.MaxCount` in both source namespaces; non-positive values are unlimited, independently of `max_stack` and equipped-only limits. `inventory::load_model`/`load_model_from_record` load a passive personal-bank ownership snapshot. `InventoryModel.bank` stays unattached unless the existing authorized bank-move path attaches it; ownership visibility never enables bank moves. `owned_count` now includes source-qualified equipment, bags, overflow and personal bank. Same-GUID moves exclude their incoming instance, and a bank snapshot does not double-count a GUID already moved into carried storage.

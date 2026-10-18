@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## mc548b five-regression recovery targeted GREEN (2026-10-18)
+
+[Current five-case proof/limits](../../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [root-cause matrix](inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): exactcfdfc3ee6/protocol999b52e reproduction0/5→f97c118e4 GREEN5/0/25.95s. Three failures were competing test-harness error consumers; two production fixes retain authentic quest metadata and avoid inventory work for empty grants. All original expected outcomes remain unchanged; real creation caps/typed errors/source identity remain enforced. Lead combined rerun/landing/native/full1166 proof remains pending; no own broad rerun.
+
 ## Gate548 MaxCount repair targeted GREEN; coordinated gate pending (2026-10-18)
 
 [Current Toy proof/limits](../../toy-effects14-coverage.md#gate548-maxcount-defect-coordinated-repair-targeted-green-integration-pending-2026-10-18), [inventory mechanism/source/proof](inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18): genuine548 duplicate-product defect now has sourceMaxCount/shared-store/passive-bank/quest-bypass/typed-cast repair. Targeted model5/0, quest3/0, Doomsday4/0, shared-wire1/0 and native-account CPU-dispatch1/0. Real ProfessionData requires regular second-use refusal/typed ItemMaxCount; separate triggered-effect and genuine-full controls retain their distinct semantics. Three-item2513 batch retained/compiled but behavior-unexecuted. Lead combined three-repo gate, landing/native/full1166 remain pending; no source data/weights edit or own broad rerun.

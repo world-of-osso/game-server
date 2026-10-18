@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## mc548b five-regression recovery targeted GREEN; rerun pending (2026-10-18)
+
+Lead mc548b server2644c24f2 was RED771/5/13ignored816.87s, protocol stage passed. Exact requested cfdfc3ee6 merge356d4493a/protocol999b52e reproduced0/5; final repairf97c118e4 passes all unchanged five cases5/0/25.95s. [Authoritative roots/repairs/proof](wiki/systems/inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): one InventoryError inbox consumer fixes three item-use fixture adapters; authentic quest metadata is retained for valid references; empty item batches/capacity checks are no-ops for XP-only rewards. No oracle counts, source data, MaxCount checks, source qualification or typed full-bag distinction were weakened.
+
+This is not a broad mc548b success or landing. Lead owns the combined rerun; server changes are protocol999b52e-aligned, engine error-dispatch implementation remains unchanged. Toy batch5efec9c6f stays stacked; whole1166/native completion remains unclaimed.
+
 ## Gate548 MaxCount defect: coordinated repair targeted GREEN; integration pending (2026-10-18)
 
 548 is genuine RED319/1/1ignored749.69s/EXIT101/FMT0/CHECK0: real Doomsday repeat persisted a second202310 GUID. Authorized repair now propagates source MaxCount and enforces it at all shared store entries, includes passive personal-bank ownership, removes the quest starter/reward direct-push bypass and reports typed owner ItemMaxCount without mislabeling a true full bag. [Mechanism, caller scope, source citations and exact proof matrix](wiki/systems/inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18) are authoritative.
