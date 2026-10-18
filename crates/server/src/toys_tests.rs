@@ -3323,6 +3323,7 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
         (194056, 383065, 0), // Source duration-1: permanent until cancelled.
         (204220, 403491, 300000),
         (205418, 409891, 600000),
+        (220777, 447446, 600000),
         (230727, 467285, 1800000),
         (259240, 1264653, 300000),
     ] {
