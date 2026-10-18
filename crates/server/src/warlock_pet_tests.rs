@@ -479,6 +479,38 @@ fn class_completeness_native_water_elemental_recall_dismiss_and_record_reopen() 
 }
 
 #[test]
+#[ignore = "RED: target32 must keep computed height when ground data is unavailable"]
+fn warlock_summon_imp_without_ground_data_keeps_height_and_succeeds() {
+    for empty_ground_resource in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut h = ImpHarness::login(&dir.path().join("pets.redb"));
+        h.h.app
+            .world_mut()
+            .remove_resource::<crate::ground::GroundMap>();
+        if empty_ground_resource {
+            h.h.app.insert_resource(crate::ground::GroundMap::new(
+                dir.path(),
+                Default::default(),
+            ));
+        }
+        let height = 123.25;
+        h.h.app
+            .world_mut()
+            .get_mut::<Position>(h.h.caster)
+            .unwrap()
+            .y = height;
+        let pet = h.summon();
+        let world = h.h.app.world();
+        assert_eq!(world.get::<Npc>(pet).unwrap().template_id, IMP);
+        assert_eq!(world.get::<Position>(pet).unwrap().y, height);
+        assert_eq!(
+            world.get::<UnitSummonedBy>(pet).unwrap().0,
+            h.h.caster.to_bits()
+        );
+    }
+}
+
+#[test]
 fn warlock_summon_imp_spawns_owned_pet_and_firebolt_bar() {
     let dir = tempfile::tempdir().unwrap();
     let mut h = ImpHarness::login(&dir.path().join("pets.redb"));
