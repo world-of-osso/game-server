@@ -22,6 +22,8 @@ const FROSTBOLT: u32 = 116;
 const FROSTBOLT_DAMAGE: u32 = 228597;
 /// Chilled, cast on each Frostbolt hit by `spell_mage_frostbolt`: MOD_DECREASE_SPEED 50% for 8 s.
 const CHILLED: u32 = 205708;
+/// Native50240: −200 attacker melee hit chance for30s, no power cost.
+const EVASIVE_MANEUVERS: u32 = 50240;
 const KOBOLD_VERMIN: u32 = 6;
 /// Kobold Vermin's only `creature_template_model` display.
 const KOBOLD_DISPLAY: u32 = 10913;
@@ -58,7 +60,13 @@ fn world_data() -> WorldData {
 fn polymorph_harness(max_health: f32) -> Option<Harness> {
     let mut h = harness_with_plugins(
         Vec::new(),
-        &[POLYMORPH, FROSTBOLT, FROSTBOLT_DAMAGE, CHILLED],
+        &[
+            POLYMORPH,
+            FROSTBOLT,
+            FROSTBOLT_DAMAGE,
+            CHILLED,
+            EVASIVE_MANEUVERS,
+        ],
         MAGE,
         false,
         |app| {
@@ -222,9 +230,7 @@ fn frostbolt_damage_past_a_tenth_of_its_health_breaks_polymorph_and_the_kobold_f
     assert!(!polymorphed(&h), "the second Frostbolt breaks it");
     assert_eq!(display(&h), KOBOLD_DISPLAY);
     assert!(h.app.world().get::<Confused>(h.npc).is_none());
-    let health = h.health(h.caster);
-    h.advance(100);
-    assert!(h.health(h.caster) < health, "the kobold attacks again");
+    assert_kobold_attacks_again(&mut h);
     assert_eq!(
         h.app.world().get::<UnitTarget>(h.npc),
         Some(&UnitTarget(Some(h.caster.to_bits())))
@@ -256,9 +262,59 @@ fn polymorph_expires_after_60_seconds_and_restores_the_kobold() {
     h.advance(80);
     assert!(!polymorphed(&h));
     assert_eq!(display(&h), KOBOLD_DISPLAY);
-    let health = h.health(h.caster);
+    assert_kobold_attacks_again(&mut h);
+}
+
+fn assert_kobold_attacks_again(h: &mut Harness) {
+    let first_event = h.inbox.log.len();
     h.advance(100);
-    assert!(h.health(h.caster) < health, "the kobold attacks again");
+    let swings: Vec<_> = h.inbox.log[first_event..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(h.npc.to_bits())
+                && event.target == Some(h.caster.to_bits())
+                && event.spell_id.is_none()
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Damage
+                        | shared::protocol::CombatLogKind::Miss(_)
+                )
+        })
+        .collect();
+    assert!(
+        !swings.is_empty(),
+        "the kobold must resume an actual melee swing at the mage"
+    );
+}
+
+#[test]
+fn polymorph_expiry_with_native_evasive_maneuvers_still_resumes_swing_attempts() {
+    let mut h = polymorph_harness(5000.0).unwrap();
+    kobold_attacks(&mut h);
+    cast_polymorph(&mut h);
+    h.advance(POLYMORPH_DURATION_FRAMES - 60);
+    assert!(polymorphed(&h));
+    h.advance(80);
+    assert!(!polymorphed(&h));
+    assert_eq!(display(&h), KOBOLD_DISPLAY);
+    h.cast_and_deliver(EVASIVE_MANEUVERS, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has_aura(h.app.world(), h.caster, EVASIVE_MANEUVERS));
+    let health = h.health(h.caster);
+    let first_event = h.inbox.log.len();
+    assert_kobold_attacks_again(&mut h);
+    assert_eq!(
+        h.health(h.caster),
+        health,
+        "native guaranteed misses deal no damage"
+    );
+    assert!(h.inbox.log[first_event..].iter().any(|event| {
+        event.source == Some(h.npc.to_bits())
+            && event.target == Some(h.caster.to_bits())
+            && event.spell_id.is_none()
+            && event.kind == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Miss)
+    }));
 }
 
 /// The user's Retail observation: a sheep regains 5% of its max health every second.

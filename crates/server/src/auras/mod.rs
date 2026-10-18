@@ -342,7 +342,11 @@ impl ActiveAuras {
     /// `UNIT_STATE_CANNOT_AUTOATTACK`: stunned, confused or fleeing (charges are not
     /// modelled).
     pub fn cannot_auto_attack(&self) -> bool {
-        self.is_stunned() || self.is_confused() || self.is_feared() || self.is_pacified()
+        self.is_stunned()
+            || self.is_confused()
+            || self.is_feared()
+            || self.is_pacified()
+            || self.has_type(handlers::DISABLE_ATTACKING_EXCEPT_ABILITIES)
     }
 
     pub fn is_pacified(&self) -> bool {
