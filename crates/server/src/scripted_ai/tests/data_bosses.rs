@@ -2741,11 +2741,11 @@ fn slagmaw_missile_hits(h: &Harness, boss: Entity, target: Entity) -> usize {
         .log
         .iter()
         .filter(|event| {
-            event.kind == CombatLogKind::Damage
-                && event.spell_id == Some(119433)
-                && event.source == Some(boss.to_bits())
-                && event.target == Some(target.to_bits())
-                && event.amount > 0
+            let missile_damage =
+                event.kind == CombatLogKind::Damage && event.spell_id == Some(119433);
+            let owned_target =
+                event.source == Some(boss.to_bits()) && event.target == Some(target.to_bits());
+            missile_damage && owned_target && event.amount > 0
         })
         .count()
 }
