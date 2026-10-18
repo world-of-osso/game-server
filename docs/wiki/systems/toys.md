@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Black Dragon acceptance and seat/tea/Red-banner boundaries (2026-10-17)
+
+[Source365–369 matrix](../../toy-effects14-coverage.md#source365369-pending-black-dragon-acceptance-and-seatteared-banner-boundaries-2026-10-17) adds acceptance-onlyb53bd5e5b: Black199768/388089→existing381318/type5/71263/0.5/cursor87/180s as fifth transmitted-object case, preserving previous four rows. Format/manual readability/diffcheck pass; five-object plus15-caster successor coverage requested after478, not passed. Actual Red381317 refusal remains distinct. S.E.A.T. caster-ground/type7 seating and two type10 tea props with separate394315/394316 seated-drinking85/226 actions retain full interaction/effect/lifecycle gaps. No inert tea, copied banner, guessed mana/seat rule, runtime/data/new native certificate or149865 producer change.
+
 ## Pending Reliquary/Duck acceptance and banner/sled/vacuum boundaries (2026-10-17)
 
 [Source360–364 matrix](../../toy-effects14-coverage.md#source360364-pending-reliquaryduck-acceptance-and-bannersledvacuum-gaps-2026-10-17) adds361 acceptance-only431949735: existing Reliquary380639/type5/76510/0.6/cursor87/180s becomes fourth transmitted-object case, including concrete owner assertions. Existing audited335 Duck Lovie383065 also gains actual194056/permanent0/cancel acceptance49e9c2d95, now15casterIDs. Format/manual readability/diffcheck pass; lead gate after478 owns current-tip verification, not yet a pass. Missing Explorers'380638, Control4 sled, distinct Lucky Duck385941 and frontal rectangular critter-vacuum child remain gaps; no blanket dummy/banner/control admission. [Contract](../../specs/toys.md).
