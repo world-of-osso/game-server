@@ -20,8 +20,8 @@ Spell effect254 must use the actual server `jump_charge_params` referenced by it
 - [Spell processing](../wiki/systems/spell-casting.md)
 
 ## Implementation inventory
-- `scripts/encounter_serverside_spells.py` — existing independent-copy server-source producer; jump-table mode pending.
-- `scripts/tdb_schema.sql`, `scripts/import-azerothcore.sh` — existing fresh-import schema/table registry; jump registration pending.
+- `scripts/encounter_serverside_spells.py --encounter telash-jumps` — independent-copy server-source producer for all source jump rows, retaining nullable options and rejecting duplicate identities before writes.
+- `scripts/tdb_schema.sql`, `scripts/import-azerothcore.sh` — fresh-import schema and required `jump_charge_params.sql` excerpt registration.
 - `crates/server/src/spell_cast/effects.rs`, `teleport.rs` — current254 dispatch still uses teleport; replacement is gated on producer publication.
 - `crates/server/src/scripted_ai/jump_movement.rs` — existing speed-based server motion/arrival path; sourced254 subset pending.
 
