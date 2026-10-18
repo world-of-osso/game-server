@@ -4,6 +4,22 @@
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
+/// Independent lazy terrain cache backed by the same read-only source maps as the fixture.
+pub(crate) fn ground_map() -> crate::ground::GroundMap {
+    let connection = rusqlite::Connection::open_with_flags(
+        world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("read-only terrain map metadata");
+    let store = crate::maps::store::load_map_store(&connection).expect("source map metadata");
+    let wdts = store
+        .maps
+        .into_iter()
+        .map(|(id, map)| (id, map.wdt_file_data_id))
+        .collect();
+    crate::ground::GroundMap::new(&crate::ground::ground_data_dir(), wdts)
+}
+
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.
 /// Prepared/mutable database copies must use their own loaders, never this cache.
 pub(crate) fn world_data() -> &'static crate::world_data::WorldData {

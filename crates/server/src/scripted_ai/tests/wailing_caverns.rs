@@ -100,7 +100,12 @@ fn cobrahn_with_events(extra_events: Vec<smart_ai::SmartEvent>) -> (Harness, Ent
         &mut commands,
         wd,
         &wd.templates[&COBRAHN],
-        WC,
+        &mut crate::zones::CreatureSpawnContext {
+            map: WC,
+            difficulty_id: crate::zones::map_difficulty_id(app.world(), WC),
+            ground: Some(&mut crate::test_data::ground_map()),
+            temporary: false,
+        },
         false,
         &spawn,
         &mut rand::thread_rng(),

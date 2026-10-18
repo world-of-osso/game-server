@@ -6,15 +6,17 @@ use shared::components::{
 };
 use shared::protocol::NpcFlags;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use crate::combat::{CorpseDelay, RespawnDelay};
 use crate::creature_ai::{FormationMember, SpawnPoint, WanderPhase, WanderState, WaypointState};
 use crate::interest::NetworkVisibility;
-use crate::level_scaling::{CreatureArmor, ScaledStats};
+use crate::level_scaling::{CreatureArmor, LevelStats, ScaledStats, TuningInputs};
 use crate::spawn_pools::{MapPools, PoolSpawns, PooledSpawn};
+use crate::world_data::summon_levels::GuardianLevelRange;
 use crate::world_data::{
     CreatureAddon, CreatureModelInfo, CreatureSpawn, CreatureTemplate, GROUP_AI_FLAG_FOLLOW_LEADER,
-    TemplateTuning, WorldData,
+    WorldData,
 };
 use shared::level_scaling::LevelScaling;
 
@@ -28,13 +30,18 @@ impl Plugin for ZonePlugin {
 }
 
 /// The hosted continents are created at startup with all their creatures.
-pub(crate) fn spawn_continent_creatures(mut commands: Commands, world_data: Res<WorldData>) {
+pub(crate) fn spawn_continent_creatures(
+    mut commands: Commands,
+    world_data: Res<WorldData>,
+    mut ground: Option<ResMut<crate::ground::GroundMap>>,
+) {
     for map_id in crate::maps::HOSTED_CONTINENTS {
         let count = spawn_map_creatures(
             &mut commands,
             &world_data,
             MapContent::continent(map_id),
             true,
+            ground.as_deref_mut(),
         );
         info!("Spawned {count} creatures on map {map_id}");
     }
@@ -104,7 +111,9 @@ pub(crate) fn spawn_group_spawn(
     group: u32,
 ) -> Vec<Entity> {
     let mut queue = bevy::ecs::world::CommandQueue::default();
-    let entities = world.resource_scope(|world, world_data: Mut<WorldData>| {
+    world.init_resource::<crate::ground::GroundMap>();
+    let entities = world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
+        let world_data = world.resource::<WorldData>();
         let Some(guids) = world_data.script_spawn_groups.get(&group) else {
             error!("SpawnGroupSpawn: group {group} is not a loaded script spawn group");
             return Vec::new();
@@ -116,11 +125,12 @@ pub(crate) fn spawn_group_spawn(
         let mut commands = Commands::new(&mut queue, world);
         spawn_creatures(
             &mut commands,
-            &world_data,
+            world_data,
             map,
             difficulty_id,
             replicate,
             spawns,
+            Some(&mut ground),
         )
         .into_values()
         .collect()
@@ -143,6 +153,7 @@ pub(crate) fn spawn_map_creatures(
     world_data: &WorldData,
     content: MapContent,
     replicate: bool,
+    ground: Option<&mut crate::ground::GroundMap>,
 ) -> u32 {
     let map = content.map;
     let indices = world_data.spawns_by_map.get(&(map.map_id as u16));
@@ -174,6 +185,7 @@ pub(crate) fn spawn_map_creatures(
         content.difficulty_id,
         replicate,
         spawns,
+        ground,
     );
     let mut map_pools = MapPools {
         spawns: pool_spawns,
@@ -205,6 +217,7 @@ pub(crate) fn spawn_pooled_creatures(
     map: crate::maps::InMap,
     map_pools: &MapPools,
     guids: &[u32],
+    ground: Option<&mut crate::ground::GroundMap>,
 ) -> HashMap<u32, Entity> {
     let indices = &world_data.spawns_by_map[&(map.map_id as u16)];
     let spawns = indices
@@ -218,6 +231,7 @@ pub(crate) fn spawn_pooled_creatures(
         map_pools.difficulty_id,
         map_pools.replicate,
         spawns,
+        ground,
     );
     for (&guid, &entity) in &entities {
         commands.entity(entity).insert(PooledSpawn(guid));
@@ -233,12 +247,21 @@ pub(crate) fn spawn_grouped_creatures(
     map: crate::maps::InMap,
     difficulty_id: u32,
     guids: &std::collections::BTreeSet<u32>,
+    ground: Option<&mut crate::ground::GroundMap>,
 ) {
     let spawns = world_data.spawns_by_map[&(map.map_id as u16)]
         .iter()
         .map(|&idx| &world_data.spawns[idx])
         .filter(|spawn| guids.contains(&spawn.guid) && spawn.spawns_at(difficulty_id));
-    let entities = spawn_creatures(commands, world_data, map, difficulty_id, true, spawns);
+    let entities = spawn_creatures(
+        commands,
+        world_data,
+        map,
+        difficulty_id,
+        true,
+        spawns,
+        ground,
+    );
     for (&guid, &entity) in &entities {
         commands
             .entity(entity)
@@ -255,7 +278,14 @@ fn spawn_creatures<'a>(
     difficulty_id: u32,
     replicate: bool,
     spawns: impl Iterator<Item = &'a CreatureSpawn>,
+    ground: Option<&mut crate::ground::GroundMap>,
 ) -> HashMap<u32, Entity> {
+    let mut context = CreatureSpawnContext {
+        map,
+        difficulty_id,
+        ground,
+        temporary: false,
+    };
     let mut entities = HashMap::new();
     let mut rng = rand::thread_rng();
     for spawn in spawns {
@@ -268,7 +298,13 @@ fn spawn_creatures<'a>(
                 )
             });
         let entity = spawn_creature(
-            commands, world_data, template, map, replicate, spawn, &mut rng,
+            commands,
+            world_data,
+            template,
+            &mut context,
+            replicate,
+            spawn,
+            &mut rng,
         );
         if difficulty_id != 0 {
             commands
@@ -281,29 +317,33 @@ fn spawn_creatures<'a>(
     entities
 }
 
+/// Map difficulty and actual terrain used before selecting a creature's native stats.
+pub(crate) struct CreatureSpawnContext<'a> {
+    pub map: crate::maps::InMap,
+    pub difficulty_id: u32,
+    pub ground: Option<&'a mut crate::ground::GroundMap>,
+    /// TempSummon initialization/owner-level selection is outside ordinary population spawning.
+    pub temporary: bool,
+}
+
 /// Spawn one creature of `template` with its AI, addon and script components.
 pub(crate) fn spawn_creature(
     commands: &mut Commands,
     world_data: &WorldData,
     template: &CreatureTemplate,
-    map: crate::maps::InMap,
+    context: &mut CreatureSpawnContext<'_>,
     replicate: bool,
     spawn: &CreatureSpawn,
     rng: &mut impl rand::Rng,
 ) -> Entity {
+    let map = context.map;
     {
-        let scaling = template
-            .tuning
-            .as_ref()
-            .map(|tuning| (spawn_level_scaling(template, tuning), tuning));
+        let scaling = read_spawn_tuning(world_data, template, spawn, context)
+            .map(|(range, stats)| (roll_spawn_scaling(range, rng), stats));
         let (level, health, armor) = match &scaling {
             Some((scaling, tuning)) => {
                 let level = scaling.native_level();
-                (
-                    level,
-                    tuning.stats.max_health(level),
-                    tuning.stats.armor(level),
-                )
+                (level, tuning.max_health(level), tuning.armor(level))
             }
             None => (
                 template.min_level,
@@ -326,7 +366,7 @@ pub(crate) fn spawn_creature(
             crate::pvp::arena_dalaran::tag_spout(actor, source_guid)
         });
         if let Some((scaling, tuning)) = scaling {
-            entity.insert((scaling, ScaledStats(tuning.stats.clone())));
+            entity.insert((scaling, ScaledStats(tuning)));
         }
         // NPC power pools need creature class/level stats, which are not imported.
         entity.insert((
@@ -467,7 +507,12 @@ pub(crate) fn summon_creature(
             &mut commands,
             &world_data,
             template,
-            map,
+            &mut CreatureSpawnContext {
+                map,
+                difficulty_id,
+                ground: None,
+                temporary: true,
+            },
             replicate,
             &spawn,
             &mut rand::thread_rng(),
@@ -777,21 +822,100 @@ fn random_valid_model<'a>(
     models.get(index)
 }
 
-/// Creature::ApplyLevelScaling (Creature.cpp:3122-3159): the ContentTuning
-/// range and a delta rolled once per spawn.
-fn spawn_level_scaling(template: &CreatureTemplate, tuning: &TemplateTuning) -> LevelScaling {
+/// Creature::ApplyLevelScaling: template, map difficulty, then actual terrain ancestry.
+fn read_spawn_tuning(
+    data: &WorldData,
+    template: &CreatureTemplate,
+    spawn: &CreatureSpawn,
+    context: &mut CreatureSpawnContext<'_>,
+) -> Option<(GuardianLevelRange, Arc<LevelStats>)> {
+    if let Some(tuning) = &template.tuning {
+        let range = GuardianLevelRange {
+            content_tuning_id: tuning.content_tuning_id,
+            range: (template.min_level, template.max_level),
+            delta: tuning.delta,
+        };
+        return Some((range, tuning.stats.clone()));
+    }
+    if context.temporary {
+        return None;
+    }
+    let range = read_regional_spawn_range(data, template, spawn, context);
+    if range.content_tuning_id == 0 {
+        return None;
+    }
+    let stats = build_regional_spawn_stats(data, template, range.content_tuning_id);
+    Some((range, Arc::new(stats)))
+}
+
+fn build_regional_spawn_stats(
+    data: &WorldData,
+    template: &CreatureTemplate,
+    content_tuning_id: u32,
+) -> LevelStats {
+    let inputs = TuningInputs {
+        content_tuning_id,
+        health_scaling_expansion: template.health_scaling_expansion,
+        unit_class: template.unit_class,
+        health_modifier: template.health_modifier,
+        damage_modifier: template.damage_modifier,
+        armor_modifier: template.armor_modifier,
+    };
+    LevelStats::build(&data.expected_stats, &inputs)
+}
+
+fn read_regional_spawn_range(
+    data: &WorldData,
+    template: &CreatureTemplate,
+    spawn: &CreatureSpawn,
+    context: &mut CreatureSpawnContext<'_>,
+) -> GuardianLevelRange {
+    let map = context.map;
+    let difficulty_id = context.difficulty_id;
+    let resolve = |area| {
+        data.summon_levels
+            .guardian_range(template, map.map_id, difficulty_id, area)
+    };
+    // Do not load terrain when template/critter/map data already selects the source range.
+    resolve(None)
+        .or_else(|| {
+            let (x, y, z) = crate::terrain_height::wow_to_bevy(
+                spawn.position_x,
+                spawn.position_y,
+                spawn.position_z,
+            );
+            let area = context
+                .ground
+                .as_deref_mut()?
+                .area_at(context.map.map_id, Vec3::new(x, y, z));
+            resolve(area)
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "CREATURE_LEVEL_CONTEXT_GAP: creature{} spawn{} map{} copy{} difficulty{}",
+                template.entry,
+                spawn.guid,
+                context.map.map_id,
+                context.map.instance_id,
+                context.difficulty_id,
+            )
+        })
+}
+
+/// Creature::ApplyLevelScaling: roll the selected source delta exactly once per spawn.
+fn roll_spawn_scaling(range: GuardianLevelRange, rng: &mut impl rand::Rng) -> LevelScaling {
     let (low, high) = (
-        tuning.delta.0.min(tuning.delta.1),
-        tuning.delta.0.max(tuning.delta.1),
+        range.delta.0.min(range.delta.1),
+        range.delta.0.max(range.delta.1),
     );
     LevelScaling {
-        content_tuning_id: tuning.content_tuning_id,
-        min_level: template.min_level,
-        max_level: template.max_level,
+        content_tuning_id: range.content_tuning_id,
+        min_level: range.range.0,
+        max_level: range.range.1,
         delta: if low == high {
             low
         } else {
-            rand::Rng::gen_range(&mut rand::thread_rng(), low..=high)
+            rng.gen_range(low..=high)
         },
     }
 }
@@ -943,6 +1067,22 @@ mod tests {
             class_level_base_hp: HashMap::from([((1, 1), [100; 3]), ((7, 1), [100; 3])]),
             ..Default::default()
         }
+    }
+
+    fn known_untuned_ground(data: &WorldData) -> crate::ground::GroundMap {
+        let samples: Vec<_> = data
+            .spawns
+            .iter()
+            .map(|spawn| {
+                let (x, y, z) = crate::terrain_height::wow_to_bevy(
+                    spawn.position_x,
+                    spawn.position_y,
+                    spawn.position_z,
+                );
+                (u32::from(spawn.map), Vec3::new(x, y, z), 0)
+            })
+            .collect();
+        crate::ground::GroundMap::with_area_samples(&samples)
     }
 
     /// ObjectMgr::GetEquipmentInfo: equipment_id 2 picks ID 2, -1 one of the entry's IDs
@@ -1231,7 +1371,13 @@ mod tests {
 
     /// Test-only system: spawns creatures without `Replicate` (which requires lightyear plugins).
     fn spawn_test(mut commands: Commands, world_data: Res<WorldData>) {
-        spawn_map_creatures(&mut commands, &world_data, MapContent::continent(0), false);
+        spawn_map_creatures(
+            &mut commands,
+            &world_data,
+            MapContent::continent(0),
+            false,
+            Some(&mut known_untuned_ground(&world_data)),
+        );
     }
 
     #[test]
@@ -1258,7 +1404,16 @@ mod tests {
             difficulty_id: 205,
             dead_bosses: Vec::new(),
         };
-        assert_eq!(spawn_map_creatures(&mut commands, &data, content, false), 1);
+        assert_eq!(
+            spawn_map_creatures(
+                &mut commands,
+                &data,
+                content,
+                false,
+                Some(&mut known_untuned_ground(&data))
+            ),
+            1
+        );
         queue.apply(&mut world);
         let units: Vec<_> = world
             .query::<(&Npc, &CreatureDifficulty, &crate::maps::InMap)>()
@@ -1288,7 +1443,16 @@ mod tests {
                 difficulty_id: 1,
                 dead_bosses: Vec::new(),
             };
-            assert_eq!(spawn_map_creatures(&mut commands, &data, content, false), 1);
+            assert_eq!(
+                spawn_map_creatures(
+                    &mut commands,
+                    &data,
+                    content,
+                    false,
+                    Some(&mut known_untuned_ground(&data))
+                ),
+                1
+            );
             queue.apply(&mut world);
             assert_eq!(world.query::<&Npc>().iter(&world).count(), 1);
         }
@@ -1304,7 +1468,13 @@ mod tests {
         let mut world = World::new();
         let mut queue = bevy::ecs::world::CommandQueue::default();
         let mut commands = Commands::new(&mut queue, &world);
-        spawn_map_creatures(&mut commands, &data, MapContent::continent(1643), false);
+        spawn_map_creatures(
+            &mut commands,
+            &data,
+            MapContent::continent(1643),
+            false,
+            Some(&mut crate::test_data::ground_map()),
+        );
         queue.apply(&mut world);
         let mut query = world.query::<(&Npc, &UnitFlags)>();
         let (_, flags) = query
@@ -1331,8 +1501,13 @@ mod tests {
             let mut world = World::new();
             let mut queue = bevy::ecs::world::CommandQueue::default();
             let mut commands = Commands::new(&mut queue, &world);
-            let count =
-                spawn_map_creatures(&mut commands, &data, MapContent::continent(map_id), false);
+            let count = spawn_map_creatures(
+                &mut commands,
+                &data,
+                MapContent::continent(map_id),
+                false,
+                Some(&mut crate::test_data::ground_map()),
+            );
             assert!(count > 0, "empty promoted map {map_id}");
             queue.apply(&mut world);
             let mut npcs = world.query::<(&Npc, &Health, &crate::maps::InMap)>();
@@ -1390,7 +1565,13 @@ mod tests {
                 .iter()
                 .filter(|&&i| data.spawns[i].spawns_at(1))
                 .count();
-            let count = spawn_map_creatures(&mut commands, &data, content, false);
+            let count = spawn_map_creatures(
+                &mut commands,
+                &data,
+                content,
+                false,
+                Some(&mut crate::test_data::ground_map()),
+            );
             assert_eq!(count as usize, expected, "map {map_id}");
             queue.apply(&mut world);
             let npcs = world.query::<(&Npc, &Health, &ModelDisplay)>();

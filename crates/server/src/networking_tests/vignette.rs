@@ -62,7 +62,12 @@ fn spawn_doomwalker(server: &mut App) -> Entity {
                 &mut commands,
                 &data,
                 template,
-                crate::maps::InMap::continent(1),
+                &mut crate::zones::CreatureSpawnContext {
+                    map: crate::maps::InMap::continent(1),
+                    difficulty_id: 0,
+                    ground: Some(&mut crate::test_data::ground_map()),
+                    temporary: false,
+                },
                 true,
                 &spawn,
                 &mut rand::thread_rng(),

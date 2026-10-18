@@ -61,12 +61,14 @@ Client
 - `shared-protocol src/level_scaling.rs` — `LevelScaling`, `level_for_viewer`, `gray_level`, `LevelDifficulty`
 - `crates/server/src/level_scaling.rs` — `ExpectedStats`, `LevelStats`, `ScaledStats`, `UnitScaling`, `damage_dealt`, `health_loss`
 - `crates/server/src/world_data.rs` — `load_expected_stats`, `TemplateTuning`
-- `crates/server/src/zones.rs` — `spawn_level_scaling`, spawn level and health
+- `crates/server/src/zones.rs` — ordinary `CreatureSpawnContext`, template/map/actual-area `read_spawn_tuning`, source range/delta roll, native level/health/armor/scaled stats; explicit `CREATURE_LEVEL_CONTEXT_GAP` for unresolved ordinary input. Temporary spawn initialization remains separate and unchanged.
 - `crates/server/src/combat.rs` `try_swing`/`swing_damage`, `spell_cast/effects.rs` `deal_damage` — damage scaling
 - `crates/server/src/experience.rs` `KillVictim::level_for`, `creature_aggro.rs` `aggro_on_sight_system`
 - `game-engine src/rendering/ui/unit_frames.rs` `build_target_state`, `src/network_runtime/replication.rs`
 
 ## Tests asserting this spec
+
+- `zones_context_tuning_tests.rs`: actual sourced17536 base0/Heroic2 fixture through ordinary spawning (not canonical placements), actual MCNK1221→parent16→CT2 instead of spawn zone9, explicit HoggerCT73, Black Sheep critter, known zero-area and missing-context controls. Genuine missing ordinary map/terrain/error behavior RED3 with2 controls passing at5f894225; source implementation pending targeted GREEN.
 
 - `scripts/tests/test_import_azerothcore.py`:
   - `LocalExpectedStatExtractTests`;
