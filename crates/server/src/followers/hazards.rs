@@ -58,10 +58,22 @@ fn hostile_fields(world: &mut World, unit: Entity) -> Vec<Field> {
                         field.relation,
                     )
             })
-            .map(|(entity, field, anchor, _)| Field {
-                entity,
-                center: point(*anchor),
-                radius: field.radius,
+            .filter_map(|(entity, _, anchor, _)| {
+                let Some(radius) =
+                    crate::spell_cast::area_trigger::avoidance_radius(world, entity, unit)
+                else {
+                    warn!(
+                        ?unit,
+                        ?entity,
+                        "Follower native field avoidance requires source combat reach"
+                    );
+                    return None;
+                };
+                Some(Field {
+                    entity,
+                    center: point(*anchor),
+                    radius,
+                })
             }),
     );
     fields
