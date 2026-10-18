@@ -1,5 +1,11 @@
 # Spell Casting
 
+## Scourge Strike owned-plague eruption — 2026-10-17
+
+Native55090 effect1 supplies35%; a named effect0 consumer erupts pre-existing owned191587/1240996 through actual1241167/1241171, then retains the existing missing-Virulent application. Stored aura amount contains AP/base snapshot but not periodic damage modifiers. Shared read-only `damage_before_mitigation` applies the unchanged ordinary periodic numeric stages before rounding/crit/mitigation; native children exclude caster percent-done via Attr6=0x20000000 while retaining their own target-taken stage. This intentionally retains the non-bug source target multiplier, never SimC's optional division. No periodic clock/tick execution, consumption, refresh, generic trigger or hit-policy change.
+
+Source: authenticated70448/read-only world.db25 effect rows; SimC76f8118 `sc_death_knight.cpp12502–12661/15372–15373`, `dot.cpp875`, `action.cpp1450`, `action_state.hpp96`. Evidence is engine `data/diagnostics/class-coverage-b-2026-10-17/unholy-*`; [contract](../../specs/class-completeness.md#unholy-scourge-strike-eruption-active70448), [coverage/proof](../../class-completeness.md#unholy-scourge-eruption-preparation-2026-10-17). Before named eruption implementation, shared extraction34 existing damage/absorb/crit/versatility controls pass; native ten-case RED is6FAIL/4PASS. Native9cacd3193 ten-case GREEN35.62s/0ignored/0warnings follows genuine six-failure RED. Integrated59c68472e check/fmt pass. The unrelated master spawn-fixture compile break is repaired by ownerefd627da1/lead511; integrated24b98c2ac native10+Scourge/Epidemic2 pass12/12 in53.31s,0ignored/0warnings,fmtPASS8.83s. Retain32 disjoint extraction controls and unchanged production bin-check proof; no broad replay. Lead integration gate remains OPEN. Spread/tie rules, Scourging/hero/set, Dread death/single-host, ghoul readiness/ownership and full legal/UDP/spec parity remain open.
+
 [Health aura-state qualification](../investigations/health-aura-state-admission.md) preserves the exact source update/check boundary and open passive/ownership seams. The implemented aura-spell checks below are not health-state admission or full-trigger target validation.
 
 ## Dead-caster native channel coverage — 2026-10-17

@@ -161,6 +161,8 @@ mod readiness_lifetime_tests;
 #[cfg(test)]
 mod required_caster_aura_tests;
 #[cfg(test)]
+mod scourge_eruption_tests;
+#[cfg(test)]
 mod summon_lifetime_tests;
 #[cfg(test)]
 mod target_aura_type_tests;
