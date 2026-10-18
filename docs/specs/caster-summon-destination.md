@@ -28,7 +28,7 @@ Spell target32 follows pinned TC `a352b1fa` `TARGET_DEST_CASTER_SUMMON`, indepen
 
 ## Known gaps (current cycle)
 
-- [ ] Lantha fixture source-state repair GREEN pending: production follower spawn supplies the source display and loaded source combat reaches. Runtime missing-display refusal remains unchanged; no default reach or changed assertions.
+- [ ] `LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT`: actual Lantha230861 uses TDB display122612, absent from both canonical model-info data and the full local TDB1210 model-info source. Its target32 Felguard cast retains explicit Unsupported refusal; no reach is invented. The single existing summon case and new production-source control are ignored with this gap, without changing assertions. Shared follower setup remains unchanged.
 
 - [ ] `TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED`: existing live-GO ray1yd/clearance0.5yd is not TC nav/static/unit-halfheight tracing. Helper reuse is intentional; no new collision system.
 - [ ] `TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED`: no HOVER/HoverHeight or UnitFlags2 swim projection; wet/hover parity is not certified.

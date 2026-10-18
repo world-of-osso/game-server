@@ -2,7 +2,7 @@
 //! real spell/aura/cost executor. No invented follower identities or spell rows.
 use super::*;
 use crate::spell_cast::test_harness::{Harness, harness_with_plugins, spawn_npc, world_db};
-use shared::components::{Health, UnitPowers};
+use shared::components::{Health, Npc, UnitPowers};
 
 pub(super) fn spawn_profile_fixture(entry: u32) -> (Harness, Entity, Profile) {
     let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, |_| {});
@@ -42,12 +42,15 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     } else {
         h.app.insert_resource(native);
     }
-    h.app.insert_resource(
-        crate::scripted_ai::model_reach::load_model_reaches(&db)
-            .expect("authenticated source model combat reaches"),
-    );
-    let unit = spawning::spawn(h.app.world_mut(), h.caster, profile.clone())
-        .expect("production source-projected follower spawn");
+    let unit = spawn_npc(&mut h.app, 0.0);
+    h.app.world_mut().entity_mut(unit).insert((
+        Npc {
+            template_id: profile.entry,
+            name: profile.name.clone(),
+        },
+        UnitPowers::default(),
+    ));
+    spawning::initialize(h.app.world_mut(), h.caster, unit, profile.clone()).unwrap();
     h.app
         .world_mut()
         .get_mut::<crate::networking::CombatTarget>(h.caster)
