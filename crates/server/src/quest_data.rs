@@ -5,7 +5,7 @@
 //! `PrevQuestID` plus every quest naming it as `NextQuestID` (sign kept: positive
 //! = must be turned in, negative = must be in the log), and `RewardNextQuest`
 //! links form the chain checked by `SatisfyQuestPrevChain`/`NextChain`.
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 
 use bevy::prelude::*;
@@ -226,7 +226,7 @@ pub(crate) struct QuestDb {
     /// Quests whose `RewardNextQuest` is the key.
     pub prev_chain_quests: HashMap<u32, Vec<u32>>,
     pub exclusive_groups: HashMap<i32, Vec<u32>>,
-    /// Items quests reward, require or provide.
+    /// Authentic item metadata for quest creation, including later quest references.
     pub items: HashMap<u32, QuestItemInfo>,
     pub pois: HashMap<u32, Vec<QuestPoiSnapshot>>,
     /// `quest_money_reward`: copper by quest level (ID) and RewardMoneyDifficulty.
@@ -448,21 +448,6 @@ fn load_relations(conn: &Connection, table: &str) -> rusqlite::Result<HashMap<u3
     Ok(relations)
 }
 
-fn referenced_item_ids(quest: &QuestTemplate) -> impl Iterator<Item = u32> + '_ {
-    let objective_items = quest
-        .objectives
-        .iter()
-        .filter(|objective| objective.kind == ObjectiveKind::Item)
-        .map(|objective| objective.object_id);
-    quest
-        .reward_items
-        .iter()
-        .chain(&quest.choice_items)
-        .map(|&(item_id, _)| item_id)
-        .chain(objective_items)
-        .chain((quest.start_item != 0).then_some(quest.start_item))
-}
-
 fn load_all_items(conn: &Connection) -> rusqlite::Result<HashMap<u32, QuestItemInfo>> {
     let mut statement =
         conn.prepare("SELECT ID, Name, Quality, RequiredLevel, SellPrice FROM content_item")?;
@@ -598,7 +583,7 @@ fn zone_population_real_copy_loads_quests_givers_and_objectives() {
 
 pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    let mut names = ContentNames {
+    let names = ContentNames {
         creatures: load_creature_names(&conn)?,
         items: load_all_items(&conn)?,
     };
@@ -624,10 +609,6 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
     link_quests(&mut db, &links);
     db.starters = load_relations(&conn, "content_creature_queststarter")?;
     db.enders = load_relations(&conn, "content_creature_questender")?;
-    let referenced: HashSet<u32> = db.quests.values().flat_map(referenced_item_ids).collect();
-    names
-        .items
-        .retain(|item_id, _| referenced.contains(item_id));
     db.items = names.items;
     db.pois = load_pois(&conn)?;
     db.money_rewards = load_money_rewards(&conn)?;

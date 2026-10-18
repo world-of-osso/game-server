@@ -221,6 +221,7 @@ pub(crate) struct Harness {
 #[derive(Default)]
 pub(crate) struct Inbox {
     pub(crate) failed: Vec<CastFailed>,
+    pub(crate) inventory_errors: Vec<shared::protocol::InventoryError>,
     pub(crate) go: Vec<SpellGo>,
     pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
     pub(crate) charges: Vec<SpellChargesUpdate>,
@@ -320,6 +321,8 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
             (
                 MessageSender::<CastFailed>::default(),
                 MessageReceiver::<CastFailed>::default(),
+                MessageSender::<shared::protocol::InventoryError>::default(),
+                MessageReceiver::<shared::protocol::InventoryError>::default(),
                 MessageSender::<SpellCooldownUpdate>::default(),
                 MessageReceiver::<SpellCooldownUpdate>::default(),
                 MessageSender::<SpellChargesUpdate>::default(),
@@ -588,6 +591,12 @@ impl Harness {
             inbox
                 .failed
                 .extend(drain::<CastFailed>(&mut self.app, self.connection));
+            inbox
+                .inventory_errors
+                .extend(drain::<shared::protocol::InventoryError>(
+                    &mut self.app,
+                    self.connection,
+                ));
             inbox
                 .go
                 .extend(drain::<SpellGo>(&mut self.app, self.connection));

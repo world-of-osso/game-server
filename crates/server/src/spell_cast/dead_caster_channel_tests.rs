@@ -86,7 +86,7 @@ fn start_native_channel(h: &mut Harness) {
     let failure =
         super::creature::creature_cast(h.app.world_mut(), h.npc, FROSTBOLT, Some(h.caster), false)
             .expect_err("the native channel's stun must block an ordinary target cast");
-    assert_eq!(failure.to_contract().0, CastFailReason::Stunned);
+    assert_eq!(failure.to_contract().unwrap().0, CastFailReason::Stunned);
 }
 
 #[test]

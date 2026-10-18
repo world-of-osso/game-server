@@ -2,6 +2,30 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Post-guild coordinated merge target proof (2026-10-18)
+
+[Current exact merge/codec/behavior matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): landed guild masters merged into MaxCount; protocola2b07a6 passes2 wire+2 discriminant targets, stable prior tags/new21+13; server33c9d2eb2 passes17/0 including all five regressions and MaxCount controls; engine6c00abbf4 dispatch1/0. Both engine wiki-index entries retained. Final broad mc548b/check/fmt, coordinated landing/native/full1166 remain lead-owned/pending.
+
+## mc548b five-regression recovery targeted GREEN (2026-10-18)
+
+[Current five-case proof/limits](../../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [root-cause matrix](inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): exactcfdfc3ee6/protocol999b52e reproduction0/5→f97c118e4 GREEN5/0/25.95s. Three failures were competing test-harness error consumers; two production fixes retain authentic quest metadata and avoid inventory work for empty grants. All original expected outcomes remain unchanged; real creation caps/typed errors/source identity remain enforced. The exact three-item Saptor/Idol/Badge cancellation/recovery test individually passed mc548b; this does not make that RED aggregate green. Lead combined rerun/landing/native/full1166 proof remains pending; no own broad rerun.
+
+## Gate548 MaxCount repair targeted GREEN; coordinated gate pending (2026-10-18)
+
+[Current Toy proof/limits](../../toy-effects14-coverage.md#gate548-maxcount-defect-coordinated-repair-targeted-green-integration-pending-2026-10-18), [inventory mechanism/source/proof](inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18): genuine548 duplicate-product defect now has sourceMaxCount/shared-store/passive-bank/quest-bypass/typed-cast repair. Targeted model5/0, quest3/0, Doomsday4/0, shared-wire1/0 and native-account CPU-dispatch1/0. Real ProfessionData requires regular second-use refusal/typed ItemMaxCount; separate triggered-effect and genuine-full controls retain their distinct semantics. Three-item2513 batch retained/compiled but behavior-unexecuted. Lead combined three-repo gate, landing/native/full1166 remain pending; no source data/weights edit or own broad rerun.
+
+## Three-item shared2513 cancellation/recovery batch pending (2026-10-18)
+
+[Exact batch/limits](../../toy-effects14-coverage.md#three-item-batch-saptor685-idol702-badge710-cancellationrecovery-pending-after548-2026-10-18):604c35311 adds actual Saptor685/Idol702/Badge710 learned cancellation/restoration/no2513 bypass/ordinary600s Pango reuse. Source pools and weights untouched; prior fixtures unchanged. One future gate for three identities, uncompiled/unexecuted AFTER548 with format/manual evidence only. No Masquerade cancellation/hour-expiry/exact-wall/native/distribution certificate or runtime/data edit.
+
+## Doomsday419 ordinary recovery/product cap acceptance pending (2026-10-18)
+
+[Exact acceptance/limits](../../toy-effects14-coverage.md#doomsday419-ordinary-recovery-and-unique-product-repeat-pending-after543-2026-10-18):cb46a33f9 keeps the real first202310 product while learned202309 refuses near295s and completes again after300 ordinary seconds; source MaxCount1 must preserve original GUID/quantity rather than duplicate/replace. TC `SpellEffects.cpp:1426–1440` bounds created quantity, not necessarily root-cast admission. Old first-product/Offering fixtures unchanged. Format/manual only, uncompiled/unexecuted AFTER543; no product-use/native/bank/account-cap certificate or runtime/data/clock/inventory mutation.
+
+## Gate543 Masquerade697 landed (2026-10-18)
+
+[Exact proof/landing](../../toy-effects14-coverage.md#gate543-green-and-landed-masquerade697-cast-boundary-2026-10-18): lead receipt/ancestry confirmsa8b96f8d9 on master3accdf1a1;543server318/0/1ignored635.32s/EXIT0/FMT0/CHECK0 with exact697 test OK. Prior pending labels are historical; exact timing/interruption/hour-expiry/native/all-five/full1166 limits persist.
+
 ## Masquerade697 authored cast timing acceptance pending (2026-10-18)
 
 [Exact acceptance/limits](../../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 with learned-use pre/post source600ms cast boundary: no early SpellGo/appearance/category recovery, then145134/misc267626,8/one-hour aura/shared2513 and Idol refusal. Prior fixtures unchanged. Format/manual only; uncompiled/unexecuted AFTER541. No new CancelCast/runtime/data/protocol or native/exact-timing/hour-expiry/all-five claim.

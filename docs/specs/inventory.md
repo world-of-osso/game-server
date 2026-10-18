@@ -4,6 +4,8 @@ Owner-only bag and equipment state for the in-game bag and character frames (gam
 
 ## What it must do
 
+- [x] Source item-template `MaxCount` limits ownership independently of `Stackable` and unique-equipped limits. Non-positive values are unlimited. All shared storage entry points reject an excess with `InventoryErrorReason::ItemMaxCount`, preserving the original GUID/quantity and leaving the inventory unchanged; same-GUID owned moves exclude that moving instance. Count same-source equipment, bags, overflow and personal bank, including while the bank is closed. Read a passive ownership snapshot without granting bank-location access; account/guild banks are not personal ownership. Existing vendor/loot/charter prechecks use the same bank-aware owned count. Source: pinned TC `Player.cpp:9490–9512,9928–9954`, `SpellEffects.cpp:1426–1440`. Runtime/consumer verification is recorded separately from this contract.
+
 - [x] On enter world send the owner `InventorySnapshot` (containers 0-4 with size and occupied slots: item id, count, durability, soulbound, instance guid) and `EquipmentSnapshot` (occupied Retail equipment slots).
 - [x] After every persisted change send the owner an `InventoryDelta` listing each changed bag or equipment location.
 - [x] `SwapItem{from, to}` moves, equips, unequips or swaps by slot validity; `EquipItem{from}` auto-equips into the first allowed slot (or unequips into the first free bag slot).
