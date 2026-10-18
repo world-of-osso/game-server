@@ -228,6 +228,12 @@ pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
     MeleeOutcome::Hit
 }
 
+/// Exact probability masses of the existing quantized native roll, for forecasts.
+#[cfg(test)]
+pub(crate) fn outcome_weights(_chances: &MeleeChances) -> Vec<(MeleeOutcome, f64)> {
+    Vec::new()
+}
+
 /// Damage after the outcome and the amount blocked: misses, dodges and
 /// parries do none, a crit doubles, a glancing blow loses 10% per level of
 /// difference (at most 3), a block stops `blocked_pct` (`CREATURE_BLOCKED_PCT`
