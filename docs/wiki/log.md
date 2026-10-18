@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source445–449 pending Cinder acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source445449-pending-cinder-acceptance-and-drumritualglitterlava-pack-boundaries-2026-10-17):184f9874d adds205418/409891/source600s to caster fixture, now16 exact identities; old15 and assertions unchanged. Format/manual readability/diffcheck pass, newer behavioral head beyond4920c77 required. Mixed45s drum/special flags and10s ritual/Control1 faction35 retain missing actors and actual action gaps; friendly glitter395/create-properties28856 is not a visual-only dummy. Lava Pack override2525 grants410609→410641 via actionbar metadata, with missing PowerDisplay127 and actual toss/restore gaps. No runtime/data/producer/native admission, guessed power/damage or own heavy duplicate.
+
 ## 2026-10-17 — Toy source440–444 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source440444-mixed-prisonhornloamm-travel-boundaries-and-retained-friend-effects-2026-10-17): Titan prison full mixed control and unaudited Obsidian horn remain gaps; Mortar's existing selected-friendly cast/delivery and Fist's recipient/compressed-day aura proof retained without hostile/facing/native/recharge extrapolation. Mitts409147 preserves10s252/1/17 plus script77, source RequiredAreas7894→Loamm14520/Zaralek14022/map2454, not Area7894; actual qualified tunnel destination/transfer/persistence unverified. No invented coordinates, saved-bind substitute or description-only Loamm exclusion. No runtime/data/new acceptance/own heavy duplicate;492 remains pending.

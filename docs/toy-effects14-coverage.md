@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source445–449: pending Cinder acceptance and drum/ritual/glitter/lava-pack boundaries (2026-10-17)
+
+445 test/spec184f9874d adds Blazing Shadowflame Cinder to the unchanged actual learned-use/replicated-aura/cancel/full-health/model/no-actors caster fixture, now16 identities; original15 unchanged. Format/manual readability/diffcheck pass, exact push/readback retained. New behavior needs a later covering head, not4920c77bfdaa. No runtime/data/producer change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|445 Blazing Shadowflame Cinder205418/409891 | Instant self audited dummy4/600000ms, item900000ms recovery. Own exact aura/replication/cancel/body-health/no-actors acceptance committed, behavioral proof pending. Native shadowflame art, natural ten-minute expiry and fifteen-minute recovery remain separate; no damage/creature or sibling admission. |
+|446 Dinn's Drum205419/410127 | Instant target47 summon204974/property3911/flags67241992 plus self dummy4 for45000ms; spell300000ms/category1500ms/start1500ms recovery. Runtime creature/model absent. Exact mixed drum/owner/placement/action/aura cleanup remains unresolved; no inert prop, flag erasure or invented rhythm service. |
+|447 Molten Lava Ball205463/410172 | Instant self dummy4 plus target47 summon205398/property5664/base1 for10000ms; Control1/faction35/Title0, spell120000ms/start1500ms recovery. Runtime creature/model absent. Complete molten ritual/summon/recipient/lifecycle remains gap, not decorative ball, guessed ritual participant count or named assistant/pet reinterpretation. |
+|448 Glutinous Glitterscale Glob205688/410322 | Instant friendly21 missile32/speed20→410323/friendly21 aura395/create-properties28856 for60000ms; inherited600000ms recovery. Pinned395 is area-trigger creation, not a harmless visual dummy. Actual glitter recipient/area geometry/spread/action/expiry remain unresolved; no caster substitution, omitted area payload or invented contagious radius. |
+|449 Molten Lava Pack205796/410610 | Source1000ms self override293/misc2525/1 plus power-display60/misc127 for300000ms, inherited1800000ms recovery. OverrideSpellData2525 grants actual410609 Lava Toss→cursor87 missile32/speed30→410641/script3/target31; this is an actionbar join, not a literal root trigger. Local PowerDisplay has no127 row. Actual grant/input/toss/recipient/pack/power presentation/restoration remain gaps; no aura-only success, invented mana conversion, damage or guessed extra actions. |
+
+Evidence: private `rows445-449-{readonly-source,action-source,action-extra-source,active-goal}.json`, `cinder445-{active-goal,proof-ledger}.json`, exact override join and pinned395 handler.149865 Tea Set remains untouched.
+
 ## Source440–444: mixed prison/horn/Loamm-travel boundaries and retained friend effects (2026-10-17)
 
 Metadata-only continuation; no runtime/data/new acceptance or own heavy duplicate. Existing Mortar and Fist individual CPU witnesses do not certify opposite target classes, native presentation or full recovery passage. Lead492 corrected-test gate remains pending.
