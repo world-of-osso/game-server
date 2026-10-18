@@ -79,7 +79,6 @@ fn follower_kit_crenna32_rejuvenation() {
 }
 
 #[test]
-#[ignore = "DOT_CHILD_AURA_MAINTENANCE: reproduce on published kit before COPY fix"]
 fn follower_kit_crenna32_maintains_child_dots_then_casts_wrath() {
     let (mut h, unit) = level32(209072);
     uses_spell(&mut h, unit, 93402);

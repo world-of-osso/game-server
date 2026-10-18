@@ -9,22 +9,22 @@ import sys
 import tempfile
 import unittest
 
+from scripts.follower_spec_kits import read_periodic_description_child
+
 ROOT = Path(__file__).resolve().parents[1]
 DB2 = Path('/home/osso/Projects/world-of-osso/game-engine/data/db2/active')
 SOURCE = Path(os.environ['FOLLOWER_KIT_SOURCE_OUTPUT'])
 
-from scripts.follower_spec_kits import read_periodic_description_child
-
 
 class DescriptionReferenceTests(unittest.TestCase):
     def setUp(self):
-        self.db = sqlite3.connect(':memory:')
+        self.db = sqlite3.connect(':memory:', uri=True)
+        self.addCleanup(self.db.close)
         native = (ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro'
         self.db.execute('ATTACH DATABASE ? AS native', (native,))
         self.db.execute('CREATE TABLE spell AS SELECT ID,Description_lang FROM native.spell WHERE ID=8921')
         self.db.execute('CREATE TABLE spell_name AS SELECT ID,Name_lang FROM native.spell_name WHERE ID IN(8921,164812,155625)')
         self.db.execute('CREATE TABLE spell_effect AS SELECT ID,SpellID,DifficultyID,Effect,EffectAura,EffectTriggerSpell FROM native.spell_effect WHERE SpellID IN(8921,164812,155625)')
-        self.addCleanup(self.db.close)
 
     def test_native_reference_selects_periodic_child(self):
         link = read_periodic_description_child(self.db, 8921, 'Moonfire')
