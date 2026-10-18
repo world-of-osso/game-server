@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Sneed/product acceptance and bobber/Furbolg/screen-effect boundaries (2026-10-17)
+
+[Source415–419 matrix](../../toy-effects14-coverage.md#source415419-pending-sneedproduct-acceptance-and-bobberfurbolgscreen-effect-boundaries-2026-10-17) adds acceptance-onlyd3bed536f: Sneed's own speed30/18yd→398246→200350/114420 as eleventh stationary-source case, with Maiev12yd preserved via one root/distance choice.50f7b11fc adds learned202309/398572/source3s→one persisted202310,300000ms recovery/exact immediate refusal; old279 assertions retain187342 through an item-ID counter. Format/manual readability/diffcheck pass, later head beyond489c043 required for11-row and two-creator fixtures. Bobber compatibility258, nonzero Furbolg dummy, screen-effect260 and product MaxCount1/repeat/use remain gaps; no runtime/data/producer/native/full-height/tier/cap certificate or wrong two-product expectation.
+
 ## Riches-trail/ally-storm/enemy-corpse-flag/kite/shades boundaries (2026-10-17)
 
 [Source410–414 matrix](../../toy-effects14-coverage.md#source410414-riches-trailally-stormenemy-corpse-flagkiteshades-boundaries-2026-10-17) preserves periodic riches trail plus minimum-speed437/base3/set1072, selected-friendly chasing storm, source-centered enemy-player corpse/front flag, unaudited kite and shades attachments. No guessed cadence/currency/flag identity, caster-only substitution or zero-dummy admission. [Current integration receipt](../../toy-effects14-coverage.md#lead-integration-receipt-2026-10-17) has inspected484 PASS283/0failed/1ignored408.90s/client9/EXIT0/FMT0,4m12s/no warnings, landed/masterec0863223;15caster/nineobjects covered. New387/393/402/408 are queued489 throughc043f0f8c, not passed. No runtime/data/producer/new native proof or own heavy duplicate.

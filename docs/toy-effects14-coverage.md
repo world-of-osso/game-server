@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source415–419: pending Sneed/product acceptance and bobber/Furbolg/screen-effect boundaries (2026-10-17)
+
+417 test/specd3bed536f adds Sneed as eleventh stationary-source row. A single root/distance match preserves Maiev's speed12/12yd witness and gives Sneed its own speed30/18yd witness within source20yd range; both retain parent-before-child, horizontal cursor, owner/map/non-pet/stationary/compressed300s expiry assertions.419 test/spec50f7b11fc adds actual learned202309/398572/source3s CreateItem24→one persisted202310, published300000ms recovery and exact immediate refusal preserving quantity. Existing279 counter is parameterized only by item ID; its187342/source timing/quantity/recovery assertions remain unchanged. Format/manual readability/diffcheck pass; new11-row fixture and both create-item tests require a later covering head, not489c043. No runtime/data/producer changes or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|415 Reusable Oversized Bobber202207/397827 | Source2000ms self258/misc35591→245190/trigger131474 for3600000ms; item900000ms and category11/1000ms recovery. Referenced207700 says ordinary bobber size increase, while this toy also promises compatibility with collected bobbers. Actual fishing owner/effective-bobber selection/size/compatibility/restoration remains gaps; no generic aura, free fishing cast or ignored replacement mapping. |
+|416 Primal Stave of Claw and Fur202253/398168 | Source2000ms self dummy4 in two slots, bases0 and4, for300000ms; item600000ms recovery. Winterpelt Furbolg transformation/selection/eligibility and cleanup remain unresolved; no zero-dummy costume shortcut, guessed four bears/child spell or unproven language/rank rule. |
+|417 Warcraft Rumble Toy: Sneed202261/398491 | Instant cursor87 missile32/speed30→398246, child cursor87 summons existing200350/display114420/scale1/property5515 for300000ms; item60000ms recovery. New actual parent/child/actor/placement/state/expiry case is committed and pending a newer covering head. No borrowed Maiev speed12 or old489 ten-row proof, full-height/native-tier/wall-time/minute-reuse certificate. |
+|418 Reading Glasses202283/398404 | Instant self260/misc2088/7 for300000ms; item180000ms and1500ms start recovery. Pinned260 is a ScreenEffect reference, not an ordinary eyewear-only aura. Actual screen effect/attachment/conditions/lifecycle remain unverified; no ignored screen payload or invented stats/vision bonuses. |
+|419 Defective Doomsday Device202309/398572 | Source3000ms self CreateItem24/base1/EffectItemType202310, inherited300000ms recovery. Source/runtime202310 exists with stack1/MaxCount1/LimitCategory0 and the same displayed name as the distinct toy202309. Exact first creation/cast/persisted quantity/recovery/refusal acceptance committed, behavioral proof pending. Later five-minute reuse, cap enforcement and using the product remain separate gaps; no wrong two-product expectation copied from279, world destruction or producer/profile mutation. |
+
+Evidence: private `rows415-419-{readonly-source,action-source,active-goal}.json`, `sneed417-proof-ledger.json`, `doomsday419-proof-ledger.json`, exact runtime item join and pinned aura260.149865 Tea Set remains untouched.
+
 ## Source410–414: riches-trail/ally-storm/enemy-corpse-flag/kite/shades boundaries (2026-10-17)
 
 All five retain distinct mixed/action/recipient or unaudited visual contracts. [Inspected484 proof](#lead-integration-receipt-2026-10-17) covers earlier15-caster/nine-object code throughafad56176 and is landed/masterec0863223. Later387/393/402/408 are explicitly queued in489 throughc043f0f8c, result pending. This block changes no code/runtime/data or admissions and starts no heavy duplicate.
