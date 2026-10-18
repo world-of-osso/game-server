@@ -12,6 +12,9 @@ use shared::casting::CastState;
 use shared::components::{Health, Level, Mana, UnitLevel};
 use std::collections::{BTreeSet, HashMap};
 
+// Native class2/level32 stamina980, Aegis30% + Plate5%, gtHpPerSta32=8.
+const NATIVE_GARRICK_MAX_HEALTH: f32 = 10584.0;
+
 struct Fixture {
     h: Harness,
     tank: Entity,
@@ -72,6 +75,7 @@ fn add_native_dps(h: &mut Harness, map: InMap) -> Vec<Entity> {
 
 fn fixture() -> Fixture {
     let (mut h, tank, first) = source_fixture(46249);
+    h.app.add_plugins(crate::stats::StatsPlugin);
     let owner = h.caster;
     h.app
         .world_mut()
@@ -138,6 +142,11 @@ fn fixture() -> Fixture {
             player_role: shared::group::GroupRole::Dps,
         });
     h.advance(3);
+    assert_eq!(
+        h.app.world().get::<Health>(tank).unwrap().max,
+        NATIVE_GARRICK_MAX_HEALTH,
+        "native production stat recomputation must apply sourced passives before budget observations"
+    );
     pull_history::sample_all(h.app.world_mut());
     Fixture {
         h,
@@ -339,7 +348,13 @@ fn tank_pull_admission_native_pure_hot_lifetime_does_not_blanket_block() {
 #[test]
 fn tank_pull_admission_native_overlap_requires_complete_stable_admitted_health() {
     let mut f = measured_fixture();
-    f.damage(f.second, 1.0);
+    let engaged =
+        crate::combat::forecast::read_generic_creature(f.h.app.world(), f.second, f.tank).unwrap();
+    f.damage(f.second, engaged.remaining_health as f32 * 0.5);
+    assert!(
+        f.h.health(f.second) > 0.0,
+        "actual progressing fight remains engaged, not a completed replacement fight"
+    );
     let native = crate::test_data::world_data();
     let first_guid = f.first_guid;
     let second_guid =
