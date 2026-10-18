@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Shard/permanent poses/repeated jump proc/tea boundaries and505 type correction (2026-10-17)
+
+[Source580–584 matrix](../../toy-effects14-coverage.md#source580584-mixed-shardpermanent-posesrepeated-jump-procinteractive-tea-boundaries-2026-10-17) preserves no-template transform plus scale, permanent circlet/reading presentation, both Hat42→1216102 jump edges and missing interactive tea506612. No guessed model/scale, ring stats, spawned desk, deduplicated proc or Tea149865 copy.505 stopped at compile E0277/EXIT101;76a8426bf fixes only registry creature typeu32→i32, all16 rows/assertions unchanged, format/manual readability/diffcheck pass. Next lead proof must include577 twelfth object; no runtime result, data/native change or own heavy duplicate.
+
 ## Pending Cold Ones rack and mixed chair/device/crate/homebind boundaries (2026-10-17)
 
 [Source575–579 matrix](../../toy-effects14-coverage.md#source575579-pending-cold-ones-rack-acceptance-and-mixed-chairdevicecratehomebind-boundaries-2026-10-17) adds acceptance-only0e4c5ed9b:234951/1215364/505415/type22/display97591/scale0.75/actual cursor/180s as12th object, old11/helper unchanged; format/manual readability/diffcheck pass, behavior needs head AFTER505. Rack's Data0 can aura is not automatic trigger/item yield. Missing controlled chair232549/mixed aura, step-on goblination area36000, distinct carried crate3141 and homebind252 plus cancellation298 remain gaps; no ordinary chair/self transform/20th simple hearthstone substitution. Lead505 queued through Golem573; no result/landing inferred or own heavy duplicate.

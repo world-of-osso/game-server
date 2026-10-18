@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source580–584 boundaries;505 compile correction
+
+[Exact source matrix](../toy-effects14-coverage.md#source580584-mixed-shardpermanent-posesrepeated-jump-procinteractive-tea-boundaries-2026-10-17): no-template mixed transform/scale, permanent circlet/reading, two distinct jump-proc edges and missing interactive tea506612 remain gaps.505 compiled no runtime tests: E0277/EXIT101 from registryu32 creature versus aurai32 misc.76a8426bf changes only that column type, preserving16 rows/literals/helper/assertions; format/manual readability/diffcheck pass, next lead gate pending including577 twelfth object. No manufactured runtimeRED/GREEN, deduplication, copied Tea149865, runtime/data/native change or own heavy duplicate.
+
 ## 2026-10-17 — Toy source575–579 pending Cold Ones rack acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source575579-pending-cold-ones-rack-acceptance-and-mixed-chairdevicecratehomebind-boundaries-2026-10-17):0e4c5ed9b adds234951/1215364/505415/type22/display97591/scale0.75/cursor/180s as12th transmitted object; old11/helper retained, format/manual readability/diffcheck pass, behavior pending head AFTER50536909d8f3. ChairControl1+mixed aura, area36000 step-on goblination, carried crate3141 and homebind252+private-conversation-cancellation298 remain exact gaps, not generic source substitutes. Rack object spell1215373 is audited can aura, not trigger edge/inventory item.505 queued through Golem573, no result/landing inferred; no runtime/data/native proof/own heavy duplicate.
