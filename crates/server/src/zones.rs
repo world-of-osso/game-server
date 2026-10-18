@@ -829,6 +829,9 @@ fn read_spawn_tuning(
     spawn: &CreatureSpawn,
     context: &mut CreatureSpawnContext<'_>,
 ) -> Option<(GuardianLevelRange, Arc<LevelStats>)> {
+    if data.authored_templates.contains(&template.entry) {
+        return None;
+    }
     if let Some(tuning) = &template.tuning {
         let range = GuardianLevelRange {
             content_tuning_id: tuning.content_tuning_id,
@@ -1155,7 +1158,8 @@ mod tests {
         let path = dir.path().join("world.db");
         let conn = rusqlite::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "CREATE TABLE content_tuning_level (ID INTEGER, minlevel INTEGER, maxlevel INTEGER);
+            "CREATE TABLE zephras_row_source (table_name TEXT, row_key TEXT, kind TEXT);
+             CREATE TABLE content_tuning_level (ID INTEGER, minlevel INTEGER, maxlevel INTEGER);
              CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
              CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContentTuningID INTEGER);
              CREATE TABLE content_creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,

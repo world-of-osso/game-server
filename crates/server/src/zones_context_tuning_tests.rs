@@ -13,7 +13,7 @@ fn herald_context_startup_publishes_ground_before_ordinary_continent_stats() {
     let source_spawn = crate::test_data::world_data()
         .spawns
         .iter()
-        .find(|spawn| spawn.template_entry == 60 && spawn.map == 0)
+        .find(|spawn| spawn.template_entry == 448 && spawn.map == 0)
         .unwrap()
         .clone();
     data.spawns = vec![CreatureSpawn {

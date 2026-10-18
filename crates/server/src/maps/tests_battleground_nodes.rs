@@ -2918,6 +2918,7 @@ fn enter_source_match_with_arrival(
         }
         if matches!(template.map_id, 30 | 628) {
             app.insert_resource(promoted_source_world(template.map_id));
+            app.insert_resource(crate::test_data::ground_map());
             if template.map_id == 628 {
                 app.insert_resource(
                     crate::pvp::isle_siege::Catalog::load(
