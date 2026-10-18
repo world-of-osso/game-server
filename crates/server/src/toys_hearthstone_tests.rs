@@ -140,3 +140,8 @@ fn toyfx313_enlightened_hearthstone_learned_use_returns_to_bind_and_blocks_domin
 fn toyfx314_broker_matrix_learned_use_returns_to_bind_and_blocks_enlightened() {
     assert_toy_hearthstone_bind_and_shared_charge(190237, 367013, 190196);
 }
+
+#[test]
+fn toyfx333_timewalker_hearthstone_learned_use_returns_to_bind_and_blocks_broker_matrix() {
+    assert_toy_hearthstone_bind_and_shared_charge(193588, 375357, 190237);
+}
