@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source695–699 pending Corrosive acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source695699-pending-corrosive-victory-and-mixed-effigy-short-category-mask-stand-companion-command-boundaries-2026-10-18):ad2f092f7 appends275988/1298433/1800000ms to unchanged caster helper, now21 identities/old20 retained; format/manual readability/diffcheck pass, behavior pending successor. Preserve Effigy1250/transform/200ms area chain and NPC0.6, Mask shared2513 shorter recovery, Stand47/138/base0 and Companion150 critter authority. No source-only admission, runtime/data/native change or own heavy jobs.
+
 ## 2026-10-18 — Toy raw source690–694 pending Pearl acceptance and explicit exclusion
 
 [Exact source matrix](../toy-effects14-coverage.md#source690694-pending-pearl-disguise-throne-loot-bot-kill-rain-and-one-excluded-source-only-identity-2026-10-18):83c3de3d2 appends Full1166 Pearl274921/1295623/265732/ten displays/5min/1hr to unchanged disguise helper, now19 rows plus separate Oomgut20 identities; format/manual readability/diffcheck pass, behavior pending successor. Raw block has four runtime identities plus275039 Curse of the Aqir, named SOURCE-ONLY/OUTSIDE Full1166 without import/admission/acceptance. Throne/base0, resource/corpse loot bot and player-kill rain remain gaps. No runtime/data/native change or own heavy jobs.
