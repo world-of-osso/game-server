@@ -15,6 +15,10 @@ pub(crate) mod pull_history;
 mod pull_history_tests;
 mod spawning;
 mod stockade_diagnostic;
+#[cfg(test)]
+mod tank_planner;
+#[cfg(test)]
+mod tank_planner_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
