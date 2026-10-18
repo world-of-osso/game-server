@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Mycomancer664 landed after532; Explosive593 queued535 (2026-10-18)
+
+[Current proof and landing](../../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): feature8af454985 landed server masterd0e0d7fc3 per lead receipt and ancestry.532 server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test; native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd is separately queued535, not covered by532. Earlier pending labels below are source-stage history.
+
 ## Explosive593 mixed hearthstone and Singed acceptance pending (2026-10-18)
 
 [Exact acceptance and limits](../../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second252 plus queued self64→1220867/Singed dummy4/5000ms, real learned bind/shared2309 and ordinary child expiry. Native explosion/Singed art remains unverified; no invented damage or simple-hearth substitution.25 direct cases/helper and Mycomancer unchanged. Format/manual only; uncompiled/unexecuted after532; candidatefb2bd5a88 is not landing. No runtime/data/native edit or own heavy job.
