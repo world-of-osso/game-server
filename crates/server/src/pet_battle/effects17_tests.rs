@@ -167,8 +167,8 @@ fn pet_battle_blood_harvest_healing_tracks_critical_and_type_modified_actual_dam
             &mut Fixed(0),
         )
         .unwrap();
-    //Undead2 versus Flying8: strong1.5, critical1.5, variance0.8 =>108.
-    assert_eq!(damage(&events), [108; 3]);
+    //Undead2 versus Flying8: strong1.5, critical1.5, variance0.9 =>floor121.
+    assert_eq!(damage(&events), [121; 3]);
     assert!(
         events
             .iter()
@@ -177,7 +177,26 @@ fn pet_battle_blood_harvest_healing_tracks_critical_and_type_modified_actual_dam
     );
     assert_eq!(
         state.teams[0].pets.each_ref().map(|pet| pet.health),
-        [208, 308, 408]
+        [221, 321, 421]
+    );
+}
+
+#[test]
+fn pet_battle_blood_harvest_uses_caster_healing_done_and_each_allies_healing_taken() {
+    let catalog = catalog();
+    let mut initial = harvest_battle(&catalog);
+    let dealt = catalog.state_id("Mod_HealingDealtPercent").unwrap();
+    initial.teams[0].pets[0].states.insert(dealt, 25);
+    initial.teams[0].pets[1].states.insert(dealt, 200);
+    initial.teams[0].pets[2].states.insert(dealt, 200);
+    initial.teams[0].pets[2]
+        .states
+        .insert(catalog.state_id("Mod_HealingTakenPercent").unwrap(), -50);
+    let (state, events) = use_ability(&initial, &catalog, 2457);
+    assert_eq!(damage(&events), [60; 3]);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [175, 275, 337]
     );
 }
 
