@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source525–529 boundaries
+
+[Exact source matrix](../toy-effects14-coverage.md#source525529-permanent-podrandom-wormholeseedrecipient-gift-boundaries-and-retained-camera-2026-10-17): permanent224771 Pod/three models, RequiredSkill2875/rank1 random Khaz Algar wormhole/missing223342, mixed seed/33467 area and friendly missile1.5 Hat→60s aura plus recipient223316 item remain gaps. Same-name physical223316 is distinct from toy223312, DurationInInventory60/stack1/MaxCount1; no caster-only creation/count2 assumption. Existing Filmless Camera actual attachment/cancel CPU scope retained without native photography proof. No further runtime/data/new proof/own heavy duplicate;498c013 in progress.
+
 ## 2026-10-17 — Toy source520–524 pending Cherry Trail acceptance
 
 [Exact source matrix](../toy-effects14-coverage.md#source520524-pending-cherry-trail-acceptance-and-puntablesopt-in-fireworkscookingwater-blaster-boundaries-2026-10-17):4b21ddb7e adds220777/447446/source600s to unchanged caster helper, now17 identities; format/manual readability/diffcheck pass, newer head AFTER498c013 required. Missing puntable-box creature237586 cannot use same-number Bonfire GO; fireworks preserve attack-opt-in viewer audience/event recovery, missing Lantern452051 preserves actual cooking, wild type22 water display retains unimplemented445930 refusal. No inert substitutes, new native/runtime/data proof or own heavy duplicate.
