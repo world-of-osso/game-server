@@ -279,7 +279,7 @@ mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
 pub(crate) mod homebind;
-mod jump_charge;
+pub(crate) mod jump_charge;
 mod knockback;
 #[cfg(test)]
 mod knockback_tests;
@@ -308,7 +308,6 @@ impl Plugin for SpellCastPlugin {
             .init_resource::<ResolvingHits>()
             .init_resource::<teleport_positions::SpellTargetPositions>()
             .add_systems(Startup, teleport_positions::load_positions_startup)
-            .add_systems(Startup, jump_charge::load_startup)
             .init_resource::<missiles::PendingSpellHits>()
             .init_resource::<queued_triggers::PendingTriggers>()
             .init_resource::<guardian::GuardianSpells>()
