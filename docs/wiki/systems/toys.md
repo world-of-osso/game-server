@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Last Full1166 IDs, weighted badge, Windwell and excluded source-only names (2026-10-18)
+
+[Raw source710–714 matrix](../../toy-effects14-coverage.md#source710714-last-full1166-ids-weighted-badge-windwell-and-three-excluded-source-only-names-2026-10-18) reaches the last two Full1166 IDs280419/280541: Badge retains weights4/2/1/2/1 and one-hour appearance/shared2513 ten-minute recovery; missing Windwell271783 retains base0/both87 targets. Later Loa-Blessed Victory280820, Trail of Halazzi280821 and Nalorakk's Strength Charm280822 are named SOURCE-ONLY/OUTSIDE1166, with no import/admission/acceptance. Metadata-tail inspection is not runtime completion or landing. Lead513 queued7099f3a38 covers all current acceptance/fixture correction after separate master compile repair efd627da1; no result or new toy landing observed. No new acceptance/runtime/data/native change or own heavy work.
+
 ## Mixed Memento, mask, qualified swim, retained Venomous banner and story-view boundaries (2026-10-18)
 
 [Source705–709 matrix](../../toy-effects14-coverage.md#source705709-mixed-memento-mask-qualified-swim-retained-venomous-banner-and-story-view-boundaries-2026-10-18) preserves Memento56+370/shared2513, unaudited Amani Mask, water/8993-qualified swim241+58/base1200+56 alongside descriptive300%, existing Venomous Banner146432/60s fixture and Storytime260/2565/7. No dropped370, invented curse, normalized speed formula, native banner or generic story attachment certificate. Metadata only; no runtime/data/native change or own heavy jobs, lead successor pending.
