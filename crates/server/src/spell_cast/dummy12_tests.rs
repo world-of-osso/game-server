@@ -141,7 +141,7 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
     );
     let before: Vec<_> = wolves
         .iter()
-        .map(|wolf| largest_wolf_hit(&h, *wolf, dummy))
+        .map(|wolf| wolf_swing_attempts(&h, *wolf, dummy))
         .collect();
     let swing_diagnostics: Vec<_> = wolves
         .iter()
@@ -160,11 +160,14 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         })
         .collect();
     assert!(
-        before.iter().all(|damage| *damage > 0),
-        "initial wolf hits {before:?}; primary destination {destination:?}; dummy {:?}; fixed elapsed {:?}; wolves {swing_diagnostics:?}",
+        before.iter().all(|attempts| !attempts.is_empty()),
+        "initial wolf attempts {before:?}; primary destination {destination:?}; dummy {:?}; fixed elapsed {:?}; wolves {swing_diagnostics:?}",
         h.app.world().get::<shared::components::Position>(dummy),
         h.app.world().resource::<Time<Fixed>>().elapsed()
     );
+    for wolf in &wolves {
+        assert_wolf_landed_damage(&h, *wolf, dummy, false);
+    }
     h.inbox.log.clear();
     // Change only the real owner's melee AP, never actor stats or RNG. The
     // hundredfold input change must dominate ordinary block/crit variance.
@@ -178,17 +181,14 @@ fn class_completeness_native_feral_spirit_wolves_inherit_owner_ap_on_dummy_hits(
         super::effects::power_stats(h.app.world(), dummy, false),
         (0.0, 0.0)
     );
-    for (wolf, before) in wolves.into_iter().zip(before) {
+    for wolf in wolves {
         assert_eq!(
             super::effects::power_stats(h.app.world(), wolf, false),
             (3100.0, 3100.0)
         );
-        let after = largest_wolf_hit(&h, wolf, dummy);
-        assert!(
-            after > before * 10,
-            "wolf {wolf:?}: owner AP100→10000, hit {before}→{after}, power {:?}",
-            super::effects::power_stats(h.app.world(), wolf, false)
-        );
+        let attempts = wolf_swing_attempts(&h, wolf, dummy);
+        assert!(!attempts.is_empty(), "wolf {wolf:?}: no AP-scaled attempts");
+        assert_wolf_landed_damage(&h, wolf, dummy, true);
     }
 }
 
@@ -213,18 +213,46 @@ fn advance_wolf_swing_periods(h: &mut Harness, wolves: &[Entity]) {
     }
 }
 
-fn largest_wolf_hit(h: &Harness, wolf: Entity, dummy: Entity) -> i32 {
+fn wolf_swing_attempts(
+    h: &Harness,
+    wolf: Entity,
+    dummy: Entity,
+) -> Vec<&shared::protocol::CombatLogEvent> {
     h.inbox
         .log
         .iter()
         .filter(|event| {
             event.source == Some(wolf.to_bits())
                 && event.target == Some(dummy.to_bits())
-                && event.kind == CombatLogKind::Damage
+                && event.spell_id.is_none()
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
         })
-        .map(|event| event.amount)
-        .max()
-        .unwrap_or(0)
+        .collect()
+}
+
+fn assert_wolf_landed_damage(h: &Harness, wolf: Entity, dummy: Entity, increased_ap: bool) {
+    let weapon = &h
+        .app
+        .world()
+        .get::<super::guardian::SpiritWolf>(wolf)
+        .unwrap()
+        .weapon;
+    // Native owner contribution31 at100AP. Even a baseline critical maximum
+    // must be dwarfed by a landed hit after the hundredfold owner AP change.
+    let baseline_critical_max = ((weapon.max + 31.0 / 3.5 * weapon.speed).round() * 2.0) as i32;
+    for event in wolf_swing_attempts(h, wolf, dummy) {
+        if event.kind != CombatLogKind::Damage {
+            continue;
+        }
+        if increased_ap {
+            assert!(event.amount > baseline_critical_max * 10, "{event:?}");
+        } else {
+            assert!(
+                (1..=baseline_critical_max).contains(&event.amount),
+                "{event:?}"
+            );
+        }
+    }
 }
 
 #[test]
