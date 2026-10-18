@@ -1,3 +1,7 @@
+## 2026-10-17 — Toy source385–389 pending mixed Wand acceptance
+
+[Exact source matrix](../toy-effects14-coverage.md#source385389-pending-mixed-chewed-wand-acceptance-and-zombiecagerodpelt-boundaries-2026-10-17):27772d6ad adds actual learned200249/389324 source1700ms self56+confusion5/10000ms test with damaged37 health, cast blocking, ordinary expiry/native-display and casting restoration/replicated-aura removal/1800000ms recovery refusal. Format/manual readability/diffcheck pass; not covered by484afad, future behavioral proof pending. Runtime16372 weights1:1/build12340 versus pinned2:1/build69497 preserved as named profile gap, no producer fix/native probability claim. Zombie406 keybound/speed, Control4 cage, selected-player Dust Pile/misc9 and absent-runtime pelt remain gaps; no simple-disguise/target substitution or runtime/data/new native admission.
+
 ## 2026-10-17 — Toy source380–384 boundaries
 
 [Exact source matrix](../toy-effects14-coverage.md#source380384-compasslavaunnamed-moneyspeechleap-boundaries-2026-10-17): north-pointing compass, outdoors Dragon-Isles lava immunity, unnamed200142/20g and once-plus-three missile children, mixed base7 speech and caster-back leap/area-trigger odor retain named gaps.200142 lacks ItemSparse despite Toy/Item/on-use rows;381637/381644 absent runtimeTDB, no guessed name, payment bypass or child deduplication. No generic cosmetic/runtime/data/new positive/native certificate or own heavy duplicate.484 throughafad56176 still owns pending15-caster/nine-object proof, unchanged code in this block.

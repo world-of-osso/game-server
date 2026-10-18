@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source385–389: pending mixed Chewed Wand acceptance and zombie/cage/rod/pelt boundaries (2026-10-17)
+
+387 test/spec27772d6ad adds a separate actual learned-use test for both source self transform56 and confusion5, not a simple-disguise tuple that ignores control. It asserts source1700ms cast remains pending, valid sheep display, damaged37 health unchanged, ordinary casting blocked while confused, ordinary10000ms expiry/restored display/casting/replicated aura removal, and1800000ms recovery/refusal. Format/manual readability/diffcheck pass; behavioral proof requires a later covering head, not484 throughafad56176. Runtime16372 display weights1:1/build12340 versus pinned Retail2:1/build69497 remain an explicit profile gap; no producer fix or weighted-pool certificate. No runtime/data change or own heavy duplicate.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|385 Infected Ichor200178/389075 | Instant self transform56→existing196769/misc8 plus33/base-64.3000031 and406/misc20 for300000ms, item3600000ms recovery. Fourteen source/runtime zombie choices exist. Pinned406 is keybound override, not an ignorable costume slot. Exact speed/keybound action/control restoration and full mixed-root acceptance remain gaps; no plain-disguise admission or guessed key ability. |
+|386 Primalist Prison200198/389140 | Self linked428/600000ms→389142, child600000ms target18 summon196803/property5487, literal base173426, Control4/flags8. Source outdoors-only; item600000ms recovery overrides root5000ms, child5000ms remains separate. Existing cage displays108197/109305–109307 have scales1/0.75/0.75/0.75. Actual imprisonment/control/link/outdoor cleanup remains unresolved; no guessed count from173426, inert cage or copied ordinary minion semantics. |
+|387 Mage's Chewed Wand200249/389324 | Source1700ms self56→16372/misc8 plus confusion5 for10000ms; item1800000ms recovery. Existing display856/857 are valid, but runtime1:1 legacy versus pinned2:1 weights are not reconciled here. New exact mixed-control/appearance/health/ordinary-expiry acceptance is committed and pending future covering proof. Native movement/pixels, pool probabilities and natural30-minute reuse remain separate gaps. |
+|388 Khadgar's Disenchanting Rod200469/389769 | Source3000ms target25 transform56→existing197065/display109414/misc9 for600000ms, inherited300000ms recovery. Actual selected-player eligibility/application/restore and source presentation remain unverified; do not substitute the caster or misc8, destroy inventory, or reinterpret playful player disenchanting as item disenchanting. |
+|389 Very Comfortable Pelt200550/390444 | Instant target47 summon197280/property64/base1 for600000ms, inherited1200000ms recovery. Pinned TDB197280/display109489/scale0.5 exists; runtime creature content/model absent. Actual lounging/interaction/placement/lifecycle remains a gap, not decorative-only body admission or an invented seat profile. |
+
+Evidence: private `rows385-389-{readonly-source,action-source,active-goal}.json`, `wand387-{active-goal,proof-ledger}.json`, pinned `SpellAuraEffects.cpp`406 and source/runtime16372 model-row comparison.149865 Tea Set remains untouched.
+
 ## Source380–384: compass/lava/unnamed-money/speech/leap boundaries (2026-10-17)
 
 These five preserve functional/scripted actions, not generic zero-dummy admission. Local70391 ItemSparse has no200142 row, despite Toy/Item/on-use metadata; do not invent its item name. Lead484 throughafad56176 remains the owner of pending15-caster/nine-object proof; this metadata-only block changes no tested code or runtime/data.
