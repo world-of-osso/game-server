@@ -292,6 +292,15 @@ fn achievements_criteria_native_demon_level21_uses_killed_level_and_reopens() {
             .entity_mut(h.caster)
             .insert(shared::components::Level(level));
         let target = spawn_controlled_native_target(&mut h, 418);
+        let scaling = h
+            .app
+            .world()
+            .get::<crate::level_scaling::LevelScaling>(target);
+        let area = crate::test_data::ground_map().area_at(0, bevy::math::Vec3::new(0.0, 0.0, -3.0));
+        eprintln!(
+            "GATE486 LesserVoidwalker scaling={:?} actual_area={area:?}",
+            scaling.map(|s| (s.content_tuning_id, s.min_level, s.max_level, s.delta))
+        );
         assert_eq!(
             h.app
                 .world()
