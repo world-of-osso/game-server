@@ -124,7 +124,7 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
         };
         let projection = read_entry_projection(
             &data,
-            NAZAN,
+            data.template_for(NAZAN, difficulty),
             &mut CreatureSpawnContext {
                 map,
                 difficulty_id: difficulty,
@@ -136,7 +136,7 @@ fn herald_entry_same_actor_uses_target_normal_and_heroic_stats_and_original_addo
             &mut rand::thread_rng(),
         )
         .expect("target CT0 resolves source Ramparts map context");
-        projection.apply(world.entity_mut(actor), false);
+        assert!(projection.apply(world.entity_mut(actor), false));
         assert_eq!(world.get::<Npc>(actor).unwrap().template_id, NAZAN);
         assert_eq!(world.get::<Npc>(actor).unwrap().name, "Nazan");
         // Pinned UnitDefines.h186; UpdateEntry clears template flags but retains real combat.
@@ -201,7 +201,7 @@ fn herald_entry_unresolved_target_context_refuses_without_mutating_actor() {
         .insert(crate::maps::InMap::continent(0));
     let projection = read_entry_projection(
         &data,
-        NAZAN,
+        data.template_for(NAZAN, 0),
         &mut CreatureSpawnContext {
             map: crate::maps::InMap::continent(0),
             difficulty_id: 0,

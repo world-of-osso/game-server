@@ -14,7 +14,9 @@ fn update_target(
 ) -> bool {
     let position = *world.get::<Position>(actor).unwrap();
     let map = *world.get::<crate::maps::InMap>(actor).unwrap();
+    let difficulty = if map.map_id == 543 { 1 } else { 0 };
     let placement = CreatureSpawn {
+        template_entry: entry,
         position_x: position.x,
         position_y: -position.z,
         position_z: position.y,
@@ -22,10 +24,10 @@ fn update_target(
     };
     let Some(projection) = read_entry_projection(
         data,
-        entry,
+        data.template_for(entry, difficulty),
         &mut CreatureSpawnContext {
             map,
-            difficulty_id: if map.map_id == 543 { 1 } else { 0 },
+            difficulty_id: difficulty,
             ground: None,
             temporary: false,
         },
@@ -35,8 +37,7 @@ fn update_target(
     ) else {
         return false;
     };
-    projection.apply(world.entity_mut(actor), false);
-    true
+    projection.apply(world.entity_mut(actor), false)
 }
 
 #[test]
