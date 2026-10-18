@@ -3395,7 +3395,6 @@ fn toyfx14_authored_caster_attachments_learn_use_replicate_and_cancel_without_ga
 }
 
 #[test]
-#[ignore = "RED: cursor-87 actor appears before source flight; gate492, runtime approval pending"]
 fn toyfx14_stationary_source_summons_learn_spawn_and_expire() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{ModelDisplay, Npc, Position, UnitSummonedBy};

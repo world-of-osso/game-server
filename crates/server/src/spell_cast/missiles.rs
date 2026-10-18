@@ -26,9 +26,9 @@ use crate::spell_info::SpellInfo;
 const SPELL_ATTR9_MISSILE_SPEED_IS_DELAY_IN_SEC: u32 = 0x0000_0010;
 /// `Spell::AddUnitTarget`: distances under 5 yd count as 5 ("@todo this is a hack").
 const MIN_MISSILE_DISTANCE: f32 = 5.0;
-/// Audited destination targets: caster18/front47, enemy53/any63/back65/ally132.
+/// Audited destination targets: caster18/front47, enemy53/any63/back65/cursor87/ally132.
 /// `TARGET_SRC_CASTER`22 is a source, not `SpellCastTargets::HasDst`.
-const DEST_TARGETS: &[u32] = &[18, 47, 53, 63, 65, 132];
+const DEST_TARGETS: &[u32] = &[18, 47, 53, 63, 65, 87, 132];
 
 /// `SPELL_ATTR4_BOUNCY_CHAIN_MISSILES` (SharedDefines.h:602): "Hits area targets over
 /// time instead of all at once".
