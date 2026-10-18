@@ -199,12 +199,12 @@ fn dummy19_ardent_defender_exclusive_commit_is_consumed_before_next_hit() {
     apply(&mut h, caster, caster, 31850);
     let before = h.health(caster);
     let first = crate::auras::apply_attack_damage(h.app.world_mut(), caster, before, 1);
-    assert!(first.prevented);
+    assert_eq!(first.absorbed_loss, 200.0);
     assert!(!first.lethal);
     assert_eq!(h.health(caster), 200.0);
     assert!(!crate::auras::has_aura(h.app.world(), caster, 31850));
     let second = crate::auras::apply_attack_damage(h.app.world_mut(), caster, 1000.0, 1);
-    assert!(!second.prevented);
+    assert_eq!(second.absorbed_loss, 0.0);
     assert!(second.lethal);
     assert_eq!(h.health(caster), 0.0);
 }

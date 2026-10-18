@@ -1160,7 +1160,20 @@ pub enum RemoveReason {
 /// Result after the real removal/heal, shared by melee, spells and periodic ticks.
 pub(crate) struct DamageCommit {
     pub lethal: bool,
-    pub prevented: bool,
+    pub absorbed_loss: f32,
+}
+
+impl DamageCommit {
+    /// Convert committed absorption from target health units to logged damage.
+    pub fn absorbed_damage(&self, damage: f32, loss: f32) -> f32 {
+        if loss <= 0.0 {
+            0.0
+        } else if self.absorbed_loss >= loss {
+            damage
+        } else {
+            damage * self.absorbed_loss / loss
+        }
+    }
 }
 
 /// TC Unit.cpp1003–1031: overkill absorption matches school and only covers
@@ -1200,16 +1213,22 @@ pub(crate) fn apply_attack_damage(
         .and_then(|health| {
             world.get::<ActiveAuras>(unit).and_then(|auras| {
                 auras.iter().find_map(|aura| {
-                    death_prevention(aura, loss, health.max, school)
-                        .map(|pct| (aura.instance_id, aura.spell_id, health.max * pct / 100.0))
+                    death_prevention(aura, loss, health.max, school).map(|pct| {
+                        (
+                            aura.instance_id,
+                            aura.spell_id,
+                            health.max * pct / 100.0,
+                            health.current,
+                        )
+                    })
                 })
             })
         });
-    if let Some((instance, spell, heal)) = rescue {
+    if let Some((instance, spell, heal, before)) = rescue {
         // Removing the parent before48153 prevents its +60% healing-taken modifier.
         // Exclusive World access commits this actual child before the next hit.
-        remove_instance(world, unit, instance, RemoveReason::Consumed);
         if spell == 47_788 {
+            remove_instance(world, unit, instance, RemoveReason::Consumed);
             crate::spell_cast::cast_triggered_with_effect0_amount(
                 world,
                 unit,
@@ -1218,21 +1237,30 @@ pub(crate) fn apply_attack_damage(
                 1,
                 heal,
             );
-        } else if let Some(mut health) = world.get_mut::<shared::components::Health>(unit) {
-            health.current = heal;
+        } else {
+            if let Some(mut health) = world.get_mut::<shared::components::Health>(unit) {
+                health.current = heal;
+            }
+            remove_instance(world, unit, instance, RemoveReason::Consumed);
         }
         return DamageCommit {
             lethal: world
                 .get::<shared::components::Health>(unit)
                 .is_some_and(|health| health.current <= 0.0),
-            prevented: true,
+            // Ardent absorbs only enough to leave its native health floor;
+            // below that floor it absorbs everything and restores health.
+            absorbed_loss: if spell == 47_788 {
+                loss
+            } else {
+                loss - (before - heal).max(0.0)
+            },
         };
     }
     DamageCommit {
         lethal: world
             .get_mut::<shared::components::Health>(unit)
             .is_some_and(|mut health| crate::death::apply_health_damage(&mut health, loss)),
-        prevented: false,
+        absorbed_loss: 0.0,
     }
 }
 

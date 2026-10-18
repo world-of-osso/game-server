@@ -1463,11 +1463,7 @@ fn mark_replication_changed(queue: Option<&ReplicationDirtyQueue>, entity: Entit
     }
 }
 
-fn mark_npc_dead(commands: &mut Commands, entity: Entity) {
-    commands.entity(entity).queue(insert_npc_death);
-}
-
-/// World-access `mark_npc_dead` for exclusive systems (spell effects).
+/// Commit NPC death with exclusive World access.
 pub(crate) fn mark_npc_dead_world(world: &mut World, entity: Entity) {
     insert_npc_death(world.entity_mut(entity));
 }
@@ -1592,14 +1588,11 @@ fn commit_melee_loss(
         );
     }
     let commit = crate::auras::apply_attack_damage(world, victim, loss, 1);
-    let loss = if commit.prevented {
-        outcome.absorbed += outcome.damage;
-        outcome.damage = 0.0;
-        outcome.scaled_loss = 0.0;
-        0.0
-    } else {
-        loss
-    };
+    let prevented = commit.absorbed_damage(outcome.damage, loss);
+    outcome.absorbed += prevented;
+    outcome.damage -= prevented;
+    outcome.scaled_loss = (outcome.scaled_loss - commit.absorbed_loss).max(0.0);
+    let loss = (loss - commit.absorbed_loss).max(0.0);
     outcome.overkill =
         crate::level_scaling::damage_overkill(outcome.damage, outcome.scaled_loss, before);
     outcome.npc_died = is_npc && commit.lethal;
@@ -1647,11 +1640,9 @@ pub(crate) fn deal_health_damage(
         crate::scripted_ai::damage_taken(world, victim, Some(attacker), before, incoming_loss);
     }
     let commit = crate::auras::apply_attack_damage(world, victim, loss, school);
-    let (damage, loss, absorbed) = if commit.prevented {
-        (0.0, 0.0, absorbed + damage)
-    } else {
-        (damage, loss, absorbed)
-    };
+    let prevented = commit.absorbed_damage(damage, loss);
+    let (damage, absorbed) = (damage - prevented, absorbed + prevented);
+    let loss = (loss - commit.absorbed_loss).max(0.0);
     crate::achievement::record_damage(world, attacker, victim, before, damage, loss);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));

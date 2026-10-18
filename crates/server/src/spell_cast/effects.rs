@@ -1237,11 +1237,10 @@ fn deal_damage_and_report(
         crate::scripted_ai::damage_taken(world, target, Some(ctx.caster), before, incoming_loss);
     }
     let commit = crate::auras::apply_attack_damage(world, target, loss, school);
-    let (amount, scaled_loss, loss, absorbed) = if commit.prevented {
-        (0.0, 0.0, 0.0, absorbed + amount)
-    } else {
-        (amount, scaled_loss, loss, absorbed)
-    };
+    let prevented = commit.absorbed_damage(amount, loss);
+    let (amount, absorbed) = (amount - prevented, absorbed + prevented);
+    let scaled_loss = (scaled_loss - commit.absorbed_loss).max(0.0);
+    let loss = (loss - commit.absorbed_loss).max(0.0);
     crate::achievement::record_damage(world, ctx.caster, target, before, amount, loss);
     if loss > 0.0 {
         crate::creature_tap::record_damage(world, target, ctx.caster, before, loss);
