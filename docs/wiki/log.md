@@ -1,3 +1,7 @@
+## 2026-10-17 — Ebon simultaneous source snapshot
+
+[Ebon](systems/auras.md#ebon-might-baseline-2026-10-17): original native6 GREEN at224e0300; two same-frame ordinary HostClient casts additionally reproduce11.671872 versus12.72 before the first tick. FixedUpdate aura modifiers preceded normal Update CharacterStats production. Reuse the existing cached native producer before the Ebon snapshot; no formula duplication, fallback, timer or global schedule change. Expanded/source-order GREEN and final controls pending.
+
 ## 2026-10-17 — Ebon Might baseline
 
 [Ebon Might](systems/auras.md#ebon-might-baseline-2026-10-17): approved395152/self395296 baseline, native primary support/2-N split/owned1000ms updates and foreign-grant exclusion; native16114cc3 RED6 before implementation, GREEN pending. Source amounts/radius500/MaxTargets30 preserved; Eruption/passive flat extension retained, no generic540/party-only/optional/whole-ability policy. Prior Prescience/Sands slice landed after lead gate482 passed1053/fmt.
