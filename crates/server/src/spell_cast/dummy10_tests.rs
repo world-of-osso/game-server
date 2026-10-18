@@ -149,7 +149,8 @@ fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() 
     h.app
         .insert_resource(crate::test_data::world_data().clone());
     let before = *h.app.world().get::<Position>(h.caster).unwrap();
-    let mana_before = h.power(PowerType::Mana);
+    let mana_before = super::powers::power_value(h.app.world(), h.caster, PowerType::Mana)
+        .expect("native Mana component prerequisite");
     h.app.world_mut().entity_mut(h.npc).insert(Position {
         x: 10.0,
         y: 0.0,
@@ -171,8 +172,8 @@ fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() 
         update.spell_id == 196884 && !update.is_gcd && update.duration_ms == 30_000
     }));
     assert_eq!(
-        h.power(PowerType::Mana),
-        mana_before,
+        super::powers::power_value(h.app.world(), h.caster, PowerType::Mana),
+        Some(mana_before),
         "native spell has no power cost"
     );
 }
