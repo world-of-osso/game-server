@@ -9,6 +9,29 @@ use shared::protocol::CombatLogKind;
 use std::collections::BTreeSet;
 
 #[test]
+fn tank_pull_movement_regroup_cannot_replace_the_admitted_position() {
+    let (mut h, tank) = route_fixture();
+    let from = *h.app.world().get::<Position>(tank).unwrap();
+    let (x, y, z) = crate::terrain_height::wow_to_bevy(128.5, 52.0, -33.86);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(Position { x, y, z });
+    let admitted = AdmittedPosition(Vec3::new(from.x, from.y, from.z));
+    h.app.world_mut().entity_mut(tank).insert(admitted);
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    for tick in 0..90 {
+        h.advance(1);
+        let at = h.app.world().get::<Position>(tank).unwrap();
+        assert_eq!(
+            Vec3::new(at.x, at.y, at.z),
+            admitted.0,
+            "regroup replaced the admitted point at tick{tick}"
+        );
+    }
+}
+
+#[test]
 fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
     let (mut h, tank) = route_fixture();
     let db = rusqlite::Connection::open_with_flags(
