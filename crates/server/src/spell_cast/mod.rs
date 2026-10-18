@@ -157,6 +157,8 @@ pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod ordinary_dead_caster_tests;
 #[cfg(test)]
+mod prayer_of_mending_tests;
+#[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
 mod queued_trigger_target_tests;
