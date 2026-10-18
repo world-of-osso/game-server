@@ -10,7 +10,7 @@ const CENTER: Position = Position {
     z: -1740.5852,
 };
 
-fn actors_in_copy(h: &mut Harness, entry: u32, map: InMap) -> Vec<Entity> {
+pub(super) fn actors_in_copy(h: &mut Harness, entry: u32, map: InMap) -> Vec<Entity> {
     h.creatures_of(entry)
         .into_iter()
         .filter(|actor| h.app.world().get::<InMap>(*actor) == Some(&map))
@@ -18,8 +18,19 @@ fn actors_in_copy(h: &mut Harness, entry: u32, map: InMap) -> Vec<Entity> {
 }
 
 fn ordinary_ramparts() -> (Harness, InMap, Entity, Vec<Entity>) {
-    let (mut h, _, map) =
-        encounter_fixture(HERALD, 543, 1, 1, None, EncounterState::NotStarted, true);
+    ordinary_ramparts_at(1)
+}
+
+pub(super) fn ordinary_ramparts_at(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
+    let (mut h, _, map) = encounter_fixture(
+        HERALD,
+        543,
+        1,
+        difficulty,
+        None,
+        EncounterState::NotStarted,
+        true,
+    );
     // Shared encounter fixtures omit ordinary patrol data. Recreate only this
     // source Herald after loading its real path, before any death is exercised.
     h.app.world_mut().resource_mut::<WorldData>().waypoints =
@@ -65,16 +76,17 @@ fn assert_source_origins(h: &Harness, herald: Entity, sentries: &[Entity]) {
 }
 
 fn spawn_source_actor(h: &mut Harness, map: InMap, guid: u32) -> Entity {
+    let difficulty = crate::zones::map_difficulty_id(h.app.world(), map);
     let data = h.app.world().resource::<WorldData>();
     let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let actor = crate::zones::spawn_creature(
         &mut Commands::new(&mut queue, h.app.world()),
         data,
-        data.template_for(spawn.template_entry, 1).unwrap(),
+        data.template_for(spawn.template_entry, difficulty).unwrap(),
         &mut crate::zones::CreatureSpawnContext {
             map,
-            difficulty_id: 1,
+            difficulty_id: difficulty,
             ground: Some(&mut crate::test_data::ground_map()),
             temporary: false,
         },
@@ -87,7 +99,7 @@ fn spawn_source_actor(h: &mut Harness, map: InMap, guid: u32) -> Entity {
     actor
 }
 
-fn kill_actor(h: &mut Harness, actor: Entity) {
+pub(super) fn kill_actor(h: &mut Harness, actor: Entity) {
     let damage = h.health(actor).max * 2.0;
     let map = h.app.world().get::<InMap>(actor).unwrap();
     let player = h
@@ -110,7 +122,7 @@ fn is_passive(h: &Harness, actor: Entity) -> bool {
     h.app.world().get::<ReactState>(actor) == Some(&ReactState::Passive)
 }
 
-fn spawn_second_copy(h: &mut Harness) -> InMap {
+pub(super) fn spawn_second_copy(h: &mut Harness) -> InMap {
     let map = h.app.world_mut().resource_scope(
         |world, mut instances: Mut<crate::maps::InstanceManager>| {
             instances
