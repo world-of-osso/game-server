@@ -43,6 +43,8 @@ mod gizlock;
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "herald_intro.rs"]
+mod herald_intro;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
