@@ -148,17 +148,10 @@ fn mistweaver_expel_native_child_selector_qualification_uses_radius_twenty_not_r
 }
 
 #[test]
-fn mistweaver_expel_native_full_overheal_still_damages_and_pays_only_native_mana() {
+fn mistweaver_expel_native_full_overheal_still_damages_after_the_same_heal() {
     let mut h = fixture(15.0);
     let before_health = h.health(h.caster);
     let enemy_health = h.health(h.npc);
-    let before_mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
-    let base_mana = h
-        .app
-        .world()
-        .get::<CharacterStats>(h.caster)
-        .unwrap()
-        .base_mana;
     let heal = expel(&mut h);
     assert_eq!(
         heal.overflow, heal.amount,
@@ -169,10 +162,6 @@ fn mistweaver_expel_native_full_overheal_still_damages_and_pays_only_native_mana
     assert_eq!(
         enemy_health - h.health(h.npc),
         (heal.amount as f32 * 0.10).round()
-    );
-    assert_eq!(
-        h.app.world().get::<Mana>(h.caster).unwrap().current,
-        before_mana - base_mana * (1.399_999_98 / 100.0)
     );
     let root = h
         .inbox
@@ -190,6 +179,30 @@ fn mistweaver_expel_native_full_overheal_still_damages_and_pays_only_native_mana
         root < child,
         "heal resolves before zero-distance caster-destination child"
     );
+}
+
+#[test]
+fn mistweaver_expel_native_mana_cost_is_paid_at_completion_before_regeneration() {
+    let mut h = fixture(15.0);
+    let caster = h.caster;
+    let before = h.app.world().get::<Mana>(caster).unwrap().current;
+    let base = h
+        .app
+        .world()
+        .get::<CharacterStats>(caster)
+        .unwrap()
+        .base_mana;
+    let spell = world_db().unwrap().store.get(EXPEL_HARM).unwrap();
+    // Completion pays the actual native cost. HostClient loopback would
+    // advance a normal regeneration tick after payment before observation.
+    super::execute_cast(h.app.world_mut(), caster, spell, None).unwrap();
+    assert_eq!(
+        h.app.world().get::<Mana>(caster).unwrap().current,
+        before - base * (1.399_999_98 / 100.0)
+    );
+    h.advance(3);
+    assert_eq!(events(&h, EXPEL_HARM, CombatLogKind::Heal).len(), 1);
+    assert_eq!(events(&h, DAMAGE, CombatLogKind::Damage).len(), 1);
 }
 
 #[test]
