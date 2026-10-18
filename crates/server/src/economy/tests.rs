@@ -78,7 +78,7 @@ fn economy_status_reports_missing_initialization() {
     );
 }
 
-fn fixture() -> (Config, EconomyState) {
+pub(super) fn fixture() -> (Config, EconomyState) {
     let recipe = Recipe {
         spell_id: 2152,
         expansion: 0,
