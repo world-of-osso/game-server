@@ -75,6 +75,82 @@ fn toyfx279_offering_kit_maker_creates_one_persisted_kit_and_preserves_recovery(
 }
 
 #[test]
+fn toyfx419_doomsday_repeat_after_ordinary_recovery_preserves_unique_product() {
+    const TOY: u32 = 202309;
+    const SPELL: u32 = 398572;
+    const PRODUCT: u32 = 202310;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("doomsday-repeat.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app
+        .insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::persistence::ClientId(character));
+    learn_effect_toy(&mut h, character, TOY);
+    assert_eq!(load_created_item_count(&h, character, PRODUCT), 0);
+    assert_eq!(activate(&mut h, TOY)[0].error, None);
+    h.advance(70);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert_eq!(load_created_item_count(&h, character, PRODUCT), 1);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let first_inventory = persistence::load_inventory(db, character);
+    let first_product = first_inventory
+        .items
+        .iter()
+        .find(|item| item.item_id == PRODUCT)
+        .unwrap();
+    let first_guid = first_product.item_guid;
+    let first_completed = crate::auras::aura_now(h.app.world());
+
+    // Keep the real first product. Do not clear bags or alter the300s cooldown.
+    h.advance(5900);
+    assert!(crate::auras::aura_now(h.app.world()) - first_completed < 300.0);
+    assert_eq!(
+        activate(&mut h, TOY)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        1
+    );
+    assert_eq!(load_created_item_count(&h, character, PRODUCT), 1);
+    h.advance(120);
+    assert!(crate::auras::aura_now(h.app.world()) - first_completed > 300.0);
+    assert_eq!(activate(&mut h, TOY)[0].error, None);
+    h.advance(70);
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == SPELL).count(),
+        2
+    );
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    let final_inventory = persistence::load_inventory(db, character);
+    let products: Vec<_> = final_inventory
+        .items
+        .iter()
+        .filter(|item| item.item_id == PRODUCT)
+        .map(|item| (item.item_guid, item.stack_count))
+        .collect();
+    assert_eq!(
+        products,
+        vec![(first_guid, 1)],
+        "source product202310 MaxCount1 must not duplicate or replace the first instance"
+    );
+    assert_eq!(
+        load_created_item_count(&h, character, TOY),
+        0,
+        "learning consumed toy202309; creation must not mint the same-name toy"
+    );
+}
+
+#[test]
 fn toyfx419_defective_doomsday_creates_one_persisted_product_after_source_cast() {
     const TOY: u32 = 202309;
     const SPELL: u32 = 398572;
