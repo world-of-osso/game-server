@@ -53,9 +53,8 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
             .iter_mut()
             .filter(|effect| effect.period_ms > 0)
         {
-            let period = f64::from(effect.period_ms) / 1000.0;
-            while effect.next_tick_at <= now && effect.next_tick_at <= expiry {
-                effect.next_tick_at += period;
+            while effect.next_tick_at() <= now && effect.next_tick_at() <= expiry {
+                effect.next_tick_index += 1;
                 ticks.push(Tick {
                     instance_id: aura.instance_id,
                     caster: aura.caster,
