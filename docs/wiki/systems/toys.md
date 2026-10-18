@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Gate489 assertion corrections; behavioral proof pending (2026-10-17)
+
+[Current correction/proof matrix](../../toy-effects14-coverage.md#gate489-assertion-corrections-behavioral-proof-pending-2026-10-17) supersedes queued/live489 statements below. Saved489c043 FAILED284/2/1ignored577.08s/EXIT101/FMT0.0c77bfdaa replaces387's frozen-health expectation with a same-clock untargeted health/level/combat/regen-phase control, requiring positive natural regen; destination-child SpellGo expectations become actual pre/post-flight actor assertions in the16-row mini fixture. Source `DEST_TARGETS` lacks87, an unverified immediate-flight hypothesis, not an excuse to weaken ordering or claim production GREEN.393/402 individually ok;419 remains after the gate. Format/manual readability/diffcheck pass; corrected behavior/newer lead gate pending, no runtime/data change or own heavy duplicate.
+
 ## Pending Murloc/egg acceptance and retained banner/caber/snow boundaries (2026-10-17)
 
 [Source425–429 matrix](../../toy-effects14-coverage.md#source425429-pending-murlocegg-acceptance-and-retained-bannercabersnow-boundaries-2026-10-17) adds acceptance-only10e8faaad: Murloc202862→200972/112325 and Whelp Egg202865→200975/112328 through independent speed30/18yd cursor roots; stationary-source fixture now16 exact identities. Local format/manual readability/diffcheck pass, expanded behavior pending corrected fixture/newer head. Exact Thundering Banner row retained in seasonal fixture; caber area-trigger/script/nonzero dummy and snow transform/191/ground area/370 contracts remain gaps. Inspected489c043 FAILED284/2/1ignored577.08s/EXIT101/FMT0:387 ordinary regeneration52 versus37 assertion,408 nonexistent child SpellGo expectation;393/402 individual ok, no whole-gate pass. No runtime/data/producer/native/tier/hatching/full-height/recovery certificate or own heavy duplicate.
