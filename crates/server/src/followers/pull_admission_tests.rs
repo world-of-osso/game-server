@@ -362,13 +362,23 @@ fn tank_pull_admission_native_overlap_requires_complete_stable_admitted_health()
         .guid;
     let map = *f.h.app.world().get::<InMap>(f.tank).unwrap();
     let third = spawn_source(&mut f.h, third_guid, map);
-    assert!(matches!(
-        f.read(&[third]).unwrap(),
-        Decision::Allow {
-            bootstrap: false,
-            ..
-        }
-    ));
+    let decision = f.read(&[third]).unwrap();
+    let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
+    let held =
+        crate::combat::forecast::read_generic_creature(f.h.app.world(), f.second, f.tank).unwrap();
+    let extra =
+        crate::combat::forecast::read_generic_creature(f.h.app.world(), third, f.tank).unwrap();
+    assert!(
+        matches!(
+            decision,
+            Decision::Allow {
+                bootstrap: false,
+                ..
+            }
+        ),
+        "native overlap decision={decision:?}, history={history:?}, tank={:?}, held={held:?}, extra={extra:?}",
+        f.h.app.world().get::<Health>(f.tank)
+    );
     let injured = f.members[2];
     let maximum = f.h.app.world().get::<Health>(injured).unwrap().max;
     f.h.app

@@ -135,16 +135,21 @@ pub(super) fn sample_all(world: &mut World) {
     }
 }
 
+fn read_current_party(world: &World, owner: Entity) -> Option<(InMap, Vec<Entity>)> {
+    let (map, admitted, _) = super::party::read_admission(world, owner)?;
+    let mut members = admitted.to_vec();
+    members.push(owner);
+    members.sort_by_key(|member| member.to_bits());
+    Some((map, members))
+}
+
 fn sample_party(world: &mut World, owner: Entity) {
-    let Some((map, admitted, _)) = super::party::read_admission(world, owner) else {
+    let Some((map, members)) = read_current_party(world, owner) else {
         if let Ok(mut owner) = world.get_entity_mut(owner) {
             owner.remove::<PullHistory>();
         }
         return;
     };
-    let mut members = admitted.to_vec();
-    members.push(owner);
-    members.sort_by_key(|member| member.to_bits());
     let now = read_time(world);
     let healthy = party_healthy(world, &members, map);
     let same_run = world
@@ -163,7 +168,8 @@ fn sample_party(world: &mut World, owner: Entity) {
 
 pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
     let history = world.get::<PullHistory>(owner)?;
-    if world.get::<InMap>(owner) != Some(&history.map) {
+    let (map, members) = read_current_party(world, owner)?;
+    if history.map != map || history.members != members {
         return None;
     }
     let now = read_time(world);
