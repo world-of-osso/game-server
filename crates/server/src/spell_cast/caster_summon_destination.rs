@@ -29,13 +29,18 @@ pub(super) fn read_destination(
     let origin = super::position(world, caster).ok_or(CastFailure::InvalidTarget)?;
     let flying = caster_can_fly(world, caster);
     let force = attributes(spell, 9) & FORCE_DEST_LOCATION != 0;
-    let mut ground = world
-        .get_resource_mut::<GroundMap>()
-        .ok_or_else(|| CastFailure::Unsupported("target32 requires ground geometry".into()))?;
+    let Some(mut ground) = world.get_resource_mut::<GroundMap>() else {
+        // TC Object.cpp2808–2829: invalid heights reject every FORCE candidate;
+        // UpdateGroundPositionZ701–706 then leaves the original position unchanged.
+        if force {
+            destination.position = origin;
+        }
+        return Ok(Some(destination));
+    };
     destination.position = if force {
-        read_forced_position(&mut ground, map, origin, destination.position)?
+        read_forced_position(&mut ground, map, origin, destination.position)
     } else {
-        read_collision_position(&mut ground, map, origin, destination.position, flying)?
+        read_collision_position(&mut ground, map, origin, destination.position, flying)
     };
     Ok(Some(destination))
 }
@@ -56,28 +61,26 @@ fn read_collision_position(
     origin: Vec3,
     wanted: Vec3,
     flying: bool,
-) -> Result<Vec3, CastFailure> {
+) -> Vec3 {
     // TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED: this helper clips live GO
     // hulls at its 1yd ray/0.5yd clearance, not TC nav/static/half-height traces.
     let mut position = ground.clamp_live_movement(map, origin, wanted);
-    let floor = read_floor(ground, map, position)?;
-    // TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED: no invented offset or new projection.
-    position.y = if flying { position.y.max(floor) } else { floor };
-    Ok(position)
+    // TC Object.cpp732–748/761–762: INVALID_HEIGHT does not replace computed Z.
+    if let Some(floor) = read_floor(ground, map, position) {
+        // TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED: no invented offset or new projection.
+        position.y = if flying { position.y.max(floor) } else { floor };
+    }
+    position
 }
 
-fn read_forced_position(
-    ground: &mut GroundMap,
-    map: InMap,
-    origin: Vec3,
-    wanted: Vec3,
-) -> Result<Vec3, CastFailure> {
+fn read_forced_position(ground: &mut GroundMap, map: InMap, origin: Vec3, wanted: Vec3) -> Vec3 {
     let step = (wanted - origin) / FORCE_BACKOFF_STEPS as f32;
     let mut candidate = wanted;
     let mut position = origin;
     for _ in 0..FORCE_BACKOFF_STEPS {
-        let floor = read_floor(ground, map, candidate)?;
-        if (origin.y - floor).abs() <= FORCE_HEIGHT_CHANGE {
+        let acceptable_height = read_floor(ground, map, candidate)
+            .is_some_and(|floor| (origin.y - floor).abs() <= FORCE_HEIGHT_CHANGE);
+        if acceptable_height {
             position = candidate;
             break;
         }
@@ -85,13 +88,16 @@ fn read_forced_position(
     }
     // TARGET32_HEIGHT_PROBE_PARITY_UNIMPLEMENTED: existing sampling is not TC's
     // MAX_HEIGHT-versus-near-height choice. No alternate geometry reader.
-    position.y = read_floor(ground, map, position)?;
-    Ok(position)
+    // TC Object.cpp701–706: an invalid final probe preserves the current Z.
+    if let Some(floor) = read_floor(ground, map, position) {
+        position.y = floor;
+    }
+    position
 }
 
-fn read_floor(ground: &mut GroundMap, map: InMap, position: Vec3) -> Result<f32, CastFailure> {
+fn read_floor(ground: &mut GroundMap, map: InMap, position: Vec3) -> Option<f32> {
     match ground.creature_ground_in(map, position) {
-        GroundProbe::Supported(height) => Ok(height),
-        GroundProbe::Unloaded | GroundProbe::Unsupported => Err(CastFailure::InvalidTarget),
+        GroundProbe::Supported(height) => Some(height),
+        GroundProbe::Unloaded | GroundProbe::Unsupported => None,
     }
 }

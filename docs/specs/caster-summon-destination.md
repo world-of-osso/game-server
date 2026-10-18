@@ -8,6 +8,7 @@ Spell target32 follows pinned TC `a352b1fa` `TARGET_DEST_CASTER_SUMMON`, indepen
 - [x] For represented gravity-enabled non-flyers on dry ground, clamp to floor. GravityDisabled makes the caster flight-capable: preserve above-floor altitude and raise below-floor altitude.
 - [x] Attr9 FORCE_DEST_LOCATION uses a separate ten-step distance backoff with6yd floor-height-change limit, then ground placement; flight does not select ordinary allowed-Z behavior in this mode.
 - [x] Preserve selector18 caster altitude and selector62/138 ground behavior, including existing enabled live-floor behavior.
+- [ ] Missing/invalid height never rejects the cast: ordinary selection retains computed Z; FORCE rejects invalid-height offset candidates and preserves original Z if the final probe is also invalid. Actual688 unavailable-ground regression proof is pending.
 
 ## How it works
 
