@@ -140,7 +140,12 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
         .expect("periodic effect belongs to its spell");
     match tick.aura_type {
         PERIODIC_DAMAGE => {
+            let agony_tick = spell.id == super::agony::AGONY && tick.effect_index == 0;
+            let advance_agony = agony_tick && !super::is_immune(world, unit, spell.school_mask());
             effects::deal_effect_damage(world, &ctx, effect, unit, tick.amount, false, true);
+            if advance_agony {
+                super::agony::advance_stack(world, unit, tick.instance_id);
+            }
             if spell.id == crate::spell_cast::scripts::DEATHMARK && tick.effect_index == 0 {
                 crate::spell_cast::scripts::deathmark_energy(world, tick.caster, spell);
             }
