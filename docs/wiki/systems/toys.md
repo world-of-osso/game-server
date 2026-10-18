@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Shroud acceptance;498 landed and selected-pet/paid-elixir/guard-radius boundaries (2026-10-17)
+
+[Source545–549 matrix](../../toy-effects14-coverage.md#source545549-pending-shroud-acceptance-and-selected-petpaid-elixirguard-radiuspennant-boundaries-2026-10-17) adds acceptance-only7463a1090:226810/459531/228081/three models/source1.5s/20min/1h recovery as14th disguise plus Oomgut15IDs; existing cast_ms phase/old13 data unchanged. Format/manual readability/diffcheck pass, newer head required. Selected minipet90 leash, actual50silver Noggenfogger outcomes, City-of-Threads guard-radius visualization and nonzero pennant remain gaps, not caster/own-critter substitution/free aura/guessed overlay/stealth. Lead confirms498 LANDED/master8707ac0ea; local c013 ancestry exits0. Its older11disguise/10object/16caster scope does not certify new14/11/18 expansions; no further runtime/data/own heavy duplicate.
+
 ## Lead498 PASS and pending Kobyss/Pileus acceptance (2026-10-17)
 
 [Current498 scope and source540–544 matrix](../../toy-effects14-coverage.md#lead498-scoped-passnewer-expansions-still-pending-2026-10-17):498c013 PASS306/0failed/1ignored545.19s/client9/EXIT0/FMT0,5m37s/no warnings, landing pending lead confirmation. Corrected11-disguise/473Stasis,19 hearthstones,16 stationary/16 caster/10 object scopes pass—not newer13/18/11 expansions.
