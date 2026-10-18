@@ -139,7 +139,14 @@ fn candidate_budget(f: &mut Fixture) -> Decision {
     )
     .unwrap();
     assert!(route.spawns.contains(&20375682));
-    pull_admission::read_pull_budget(f.h.app.world_mut(), f.tank, &route.spawns, 1).unwrap()
+    let decision =
+        pull_admission::read_pull_budget(f.h.app.world_mut(), f.tank, &route.spawns, 1).unwrap();
+    eprintln!(
+        "CANDIDATE budget={decision:?} history={history:?} route_spawns={:?} native_tank_health={:?}",
+        route.spawns,
+        f.h.app.world().get::<Health>(f.tank)
+    );
+    decision
 }
 
 fn tank_acquired(f: &Fixture) -> bool {
