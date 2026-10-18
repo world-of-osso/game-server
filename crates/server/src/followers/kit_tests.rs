@@ -7,6 +7,18 @@ use shared::components::{Health, Level};
 fn level32(entry: u32) -> (Harness, Entity) {
     let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, |_| {});
     h.app.world_mut().get_mut::<Level>(h.caster).unwrap().0 = 32;
+    let kit_db = std::env::var_os("FOLLOWER_KIT_DB")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(crate::test_data::world_db_path);
+    let db =
+        rusqlite::Connection::open_with_flags(kit_db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    let catalog = catalog::load_catalog(&db).unwrap();
+    assert!(
+        !catalog.kits.is_empty(),
+        "publish follower_spec_kit or supply FOLLOWER_KIT_DB copy"
+    );
+    h.app.insert_resource(catalog);
     spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
     h.attack(h.npc);
     h.advance(3);
@@ -68,12 +80,12 @@ fn follower_kit_breka32_area_attack() {
 }
 
 #[test]
-#[ignore = "RED: Henry never maintains Renew"]
-fn follower_kit_henry32_renew() {
+#[ignore = "RED: Henry never prioritizes Holy Word Serenity"]
+fn follower_kit_henry32_serenity() {
     let (mut h, unit) = level32(215011);
     let patient = h.caster;
-    wounded(&mut h, patient, 0.7);
-    uses_spell(&mut h, unit, 139);
+    wounded(&mut h, patient, 0.3);
+    uses_spell(&mut h, unit, 2050);
 }
 
 #[test]
