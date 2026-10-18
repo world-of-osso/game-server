@@ -1,10 +1,10 @@
-//! Source111–113,178–179,201,234 and240: real transforms and source recovery.
+//! Source111–113,178–179,201,234,240 and317: real transforms and source recovery.
 use super::*;
 
 #[test]
 fn toyfx_source_disguises_learning_expiry_and_recovery() {
     use shared::components::{Health, ModelDisplay, UnitAuras};
-    const DURATION_MS: u32 = 600_000;
+    const TEN_MINUTES_MS: u32 = 600_000;
     const FRAME_SECONDS: f64 = 0.05;
     let directory = tempfile::tempdir().unwrap();
     let path = toyfx8_world();
@@ -12,13 +12,14 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let spells = crate::spell_info::load_spell_data(&conn).unwrap().0;
-    for (item, spell, entry, displays, recovery_ms) in [
+    for (item, spell, entry, displays, recovery_ms, duration_ms) in [
         (
             164373,
             281298,
             121865,
             [11611, 976, 765, 4905].as_slice(),
             7_200_000,
+            TEN_MINUTES_MS,
         ),
         (
             164374,
@@ -26,6 +27,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             144261,
             [41083, 78767, 76947, 41724].as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
         ),
         (
             164375,
@@ -33,6 +35,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             144262,
             [88011, 88009, 88016, 88012].as_slice(),
             7_200_000,
+            TEN_MINUTES_MS,
         ),
         (
             170154,
@@ -40,6 +43,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             155896,
             [92513, 92512, 92511, 91369, 32123, 32122, 32121, 31982].as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
         ),
         (
             170155,
@@ -51,6 +55,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             ]
             .as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
         ),
         (
             174873,
@@ -58,6 +63,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             156286,
             [92868, 92880, 92874, 92871].as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
         ),
         (
             183903,
@@ -65,6 +71,7 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             174859,
             [96239, 96240, 96241, 96242, 96243].as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
         ),
         (
             184223,
@@ -75,6 +82,15 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             ]
             .as_slice(),
             3_600_000,
+            TEN_MINUTES_MS,
+        ),
+        (
+            190457,
+            367568,
+            185567,
+            [105515].as_slice(),
+            3_600_000,
+            900_000,
         ),
     ] {
         let (mut h, character) = setup(&directory.path().join(format!("disguise-{item}.redb")));
@@ -108,11 +124,15 @@ fn toyfx_source_disguises_learning_expiry_and_recovery() {
             .iter()
             .find(|aura| aura.spell_id == spell)
             .unwrap();
-        assert_eq!(aura.duration_ms, DURATION_MS, "item{item}");
+        assert_eq!(aura.duration_ms, duration_ms, "item{item}");
         assert_eq!(aura.effects[0].misc_values, [entry, 8], "item{item}");
         let expiry = aura.expires_at.unwrap();
         let remaining = expiry - crate::auras::aura_now(h.app.world());
-        assert!((599.0..=600.0).contains(&remaining), "item{item}");
+        let expected_seconds = f64::from(duration_ms) / 1000.0;
+        assert!(
+            ((expected_seconds - 1.0)..=expected_seconds).contains(&remaining),
+            "item{item}"
+        );
         let cooldown = h
             .inbox
             .cooldowns
