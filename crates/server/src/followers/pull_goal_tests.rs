@@ -151,10 +151,7 @@ fn tank_acquired(f: &Fixture) -> bool {
         || f.h.inbox.log.iter().any(|event| {
             event.source == Some(f.tank.to_bits())
                 && event.target == Some(bits)
-                && matches!(
-                    event.kind,
-                    CombatLogKind::CastSuccess | CombatLogKind::Damage
-                )
+                && event.kind == CombatLogKind::CastSuccess
         })
 }
 
@@ -229,8 +226,9 @@ fn tank_owner_pacing_active_affordable_sourced_pack_can_be_selected() {
         ),
         "all budget checks must pass at the positive selection boundary"
     );
-    crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
-    f.h.advance(30);
+    // The first actual AI decision must not be replaced by incidental area aggro
+    // making the candidate an already-engaged target on a later tick.
+    super::update_ai(f.h.app.world_mut());
     assert!(
         tank_acquired(&f),
         "production planner cannot select an affordable sourced new pack during active engagement"
