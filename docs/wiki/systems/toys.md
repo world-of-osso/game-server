@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Pending Ohn'ir return-home acceptance and pelt/catch/orb/eight-trigger boundaries (2026-10-17)
+
+[Source390–394 matrix](../../toy-effects14-coverage.md#source390394-pending-ohnir-return-home-acceptance-and-peltcatchorbeight-trigger-boundaries-2026-10-17) adds acceptance-only00ee4d3e3:200630/391042/source10s252/savedbind/shared2309one1800000mscharge, now15hearthstone variants. Format/manual readability/diffcheck pass; future covering head required, not484afad. Missing pile/orb runtime identities, bouquet missile→cursor-centered1yd friendly catch and eight distinct Palooza area-trigger children remain exact action/lifecycle gaps. Orb availability outside Cobalt Assembly is not a new must-be-outside gate; preserve both distinct misc300 children and index order without guessed timing. No runtime/data/new native or full-recharge certificate.
+
 ## Pending mixed Chewed Wand acceptance and zombie/cage/rod/pelt boundaries (2026-10-17)
 
 [Source385–389 matrix](../../toy-effects14-coverage.md#source385389-pending-mixed-chewed-wand-acceptance-and-zombiecagerodpelt-boundaries-2026-10-17) adds acceptance-only27772d6ad: learned200249/389324/source1700ms self56+confusion5/10000ms, damaged37 health, cast blocking, ordinary expiry/restoration and1800000ms recovery refusal. Format/manual readability/diffcheck pass; future covering head required, not484afad. Runtime sheep weights1:1/build12340 versus pinned2:1/build69497 remain an explicit profile gap, no producer fix or sampling certificate. Mixed zombie speed/keybound406, Control4 prison, selected-player Dust Pile/misc9 and absent-runtime lounging pelt remain separate action/eligibility/lifecycle gaps. No plain-disguise shortcut, runtime/data/new native proof or own heavy duplicate.
