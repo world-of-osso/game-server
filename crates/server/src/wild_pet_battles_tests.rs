@@ -39,6 +39,89 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_player() {
+    let catalog = catalog();
+    let journal = journal();
+    assert!(journal.pets.iter().all(|pet| pet.species_id == 39));
+    let mut states = owned_states(&catalog, &journal);
+    states.get_mut(&42).unwrap().health = 100;
+    states.get_mut(&43).unwrap().health = 120;
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    //Controlled1/Common/breed3/benches are NOT authored NPC composition.
+    //No live NPC encounter service or native proof is claimed.
+    let enemies = build_team(
+        &catalog,
+        &[
+            Identity {
+                guid: None,
+                species: 2803,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+        ],
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let npc = &enemies.pets[0];
+    assert_eq!(npc.species, 2803);
+    assert_eq!(npc.abilities, [2351, 0, 0]);
+    assert_eq!(
+        npc.stats,
+        ::server::pet_battle::Stats {
+            health: 156,
+            power: 7,
+            speed: 10
+        }
+    );
+    let elite = catalog.turns.state_id("Passive_Elite").unwrap();
+    assert_eq!(catalog.turns.species_states[&2803].get(&elite), Some(&1));
+    assert_eq!(npc.state(elite), 0);
+    //Raw source state183=2235 is unnamed/unmodeled; retain that fidelity gap.
+    assert_eq!(npc.state(183), 0);
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let (state, events) = initial
+        .step(
+            &catalog.turns,
+            [Action::Pass, Action::Ability(2351)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [16; 3]);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [131, 84, 104]
+    );
+    assert_eq!(state.teams[0].active, 1);
+    assert_eq!(state.teams[1].active, 0);
+    assert_eq!(state.teams[1].pets[0].health, 156);
+    assert_eq!(state.teams[1].pets[0].cooldowns.get(&2351), Some(&5));
+    assert!(journal.pets.iter().all(|pet| pet.species_id != 2803));
+}
+
+#[test]
 fn wild_pet_battles_blood_harvest_uses_legal_hemospore_and_actual_damage_for_its_injured_caster() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
