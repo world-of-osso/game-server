@@ -573,87 +573,95 @@ pub(crate) struct AutoAttackParams<'w, 's> {
 }
 
 /// Process auto-attacks: tick timers, deal damage when in range and timer ready.
-pub(crate) fn auto_attack_system(time: Res<Time>, mut params: AutoAttackParams) {
+pub(crate) fn auto_attack_system(world: &mut World) {
+    let attackers: Vec<Entity> = world
+        .query_filtered::<Entity, With<AutoAttack>>()
+        .iter(world)
+        .collect();
+    for attacker in attackers {
+        // Apply this attacker's commands before the next attacker reads mitigation.
+        // In particular, consuming Ardent also removes its30% damage reduction now.
+        world
+            .run_system_cached_with(auto_attack_unit, attacker)
+            .expect("auto-attack unit system must have its registered resources");
+    }
+}
+
+fn auto_attack_unit(
+    In(attacker_entity): In<Entity>,
+    time: Res<Time>,
+    mut params: AutoAttackParams,
+) {
     let dt = time.delta_secs();
     let mut swings = Vec::new();
-    // Recipient health not yet mutated by this batch's deferred split deliveries.
     let mut redirect_health = HashMap::new();
-
-    let attackers: Vec<Entity> = params.units.p0().iter().map(|item| item.0).collect();
-    for attacker_entity in attackers {
-        // Release the attacker's read of ActiveAuras before mutating the victim's
-        // absorb capacity. A player can be both an attacker and a victim.
-        let Some(mut snapshot) = snapshot_attacker(&mut params.units.p0(), attacker_entity, dt)
-        else {
-            continue;
-        };
-        let target_entity = snapshot.auto_attack.victim;
-        let observer = params
-            .invisibility
-            .get(attacker_entity)
-            .cloned()
-            .unwrap_or_default();
-        let target = params
-            .invisibility
-            .get(target_entity)
-            .cloned()
-            .unwrap_or_default();
-        if !observer.detects(&target, true)
-            || !crate::auras::stealth::query_can_detect(
-                &params.stealth,
-                attacker_entity,
-                target_entity,
+    // Release the attacker's read of ActiveAuras before mutating the victim's
+    // absorb capacity. A player can be both an attacker and a victim.
+    let Some(mut snapshot) = snapshot_attacker(&mut params.units.p0(), attacker_entity, dt) else {
+        return;
+    };
+    let target_entity = snapshot.auto_attack.victim;
+    let observer = params
+        .invisibility
+        .get(attacker_entity)
+        .cloned()
+        .unwrap_or_default();
+    let target = params
+        .invisibility
+        .get(target_entity)
+        .cloned()
+        .unwrap_or_default();
+    if !observer.detects(&target, true)
+        || !crate::auras::stealth::query_can_detect(&params.stealth, attacker_entity, target_entity)
+    {
+        return;
+    }
+    let attacker = Attacker {
+        entity: attacker_entity,
+        position: &snapshot.position,
+        mods: snapshot.mods.as_ref(),
+        stats: snapshot.stats.as_ref(),
+        haste_pct: snapshot.haste_pct,
+        creature: snapshot.creature,
+        spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
+            let owner = params
+                .owner_stats
+                .get(wolf.owner)
+                .expect("Spirit Wolf owner requires CharacterStats for inherited power");
+            (
+                wolf,
+                crate::spell_cast::guardian::SpiritWolf::owner_power(owner.attack_power),
             )
-        {
-            continue;
-        }
-        let attacker = Attacker {
-            entity: attacker_entity,
-            position: &snapshot.position,
-            mods: snapshot.mods.as_ref(),
-            stats: snapshot.stats.as_ref(),
-            haste_pct: snapshot.haste_pct,
-            creature: snapshot.creature,
-            spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
-                let owner = params
-                    .owner_stats
-                    .get(wolf.owner)
-                    .expect("Spirit Wolf owner requires CharacterStats for inherited power");
-                (
-                    wolf,
-                    crate::spell_cast::guardian::SpiritWolf::owner_power(owner.attack_power),
-                )
-            }),
-        };
-        for hand in [Hand::Main, Hand::Off] {
-            let Some(outcome) = try_swing(
-                &attacker,
-                hand,
-                &mut params.units.p1(),
-                &SwingContext {
-                    scaling: &params.scaling,
-                    summon_modifiers: &params.summon_modifiers,
-                    sight: &params.sight,
-                    armor_constants: params.armor_constants.as_deref(),
-                    spells: params.spells.as_deref(),
-                    creature_types: crate::unit_creature_type::CreatureTypes {
-                        races: params.race_types.as_deref(),
-                        forms: params.forms.as_deref(),
-                        data: params.world_data.as_deref(),
-                    },
+        }),
+    };
+    for hand in [Hand::Main, Hand::Off] {
+        let Some(outcome) = try_swing(
+            &attacker,
+            hand,
+            &mut params.units.p1(),
+            &SwingContext {
+                scaling: &params.scaling,
+                summon_modifiers: &params.summon_modifiers,
+                sight: &params.sight,
+                armor_constants: params.armor_constants.as_deref(),
+                spells: params.spells.as_deref(),
+                creature_types: crate::unit_creature_type::CreatureTypes {
+                    races: params.race_types.as_deref(),
+                    forms: params.forms.as_deref(),
+                    data: params.world_data.as_deref(),
                 },
-                target_entity,
-                &mut snapshot.auto_attack,
-                &mut params.commands,
-                &mut redirect_health,
-            ) else {
-                continue;
-            };
-            swings.push((attacker_entity, target_entity, outcome));
-        }
-        if let Ok((_, mut auto_attack, ..)) = params.units.p0().get_mut(attacker_entity) {
-            *auto_attack = snapshot.auto_attack;
-        }
+            },
+            target_entity,
+            &mut snapshot.auto_attack,
+            &mut params.commands,
+            &mut redirect_health,
+        ) else {
+            continue;
+        };
+        swings.push((attacker_entity, target_entity, outcome));
+    }
+    if let Ok((_, mut auto_attack, ..)) = params.units.p0().get_mut(attacker_entity) {
+        *auto_attack = snapshot.auto_attack;
     }
     for (attacker, target, outcome) in swings {
         params.commands.queue(move |world: &mut World| {
