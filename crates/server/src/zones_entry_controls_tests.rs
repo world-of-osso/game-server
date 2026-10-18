@@ -171,6 +171,21 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
         data.templates
             .insert(entry, canonical.templates[&entry].clone());
     }
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    // These actual TDB addons are not yet projected by the canonical content view.
+    source
+        .execute_batch(
+            "CREATE TEMP VIEW content_creature_template_addon AS
+        SELECT entry, PathId path_id, mount, auras, StandState bytes1, SheathState bytes2, emote
+        FROM tdb_creature_template_addon WHERE entry IN(30,100)",
+        )
+        .unwrap();
+    data.template_addons
+        .extend(crate::world_data::load_template_addons(&source));
     let spawn = canonical
         .spawns
         .iter()
@@ -185,6 +200,7 @@ fn herald_entry_real_addon_auras_are_additive_and_existing_instances_are_not_ref
     assert_eq!(data.template_addons[&100].auras, vec![3417]);
     let mut world = World::new();
     world.insert_resource(Time::<bevy::time::Virtual>::default());
+    world.init_resource::<crate::auras::UnhandledAuras>();
     world.insert_resource(
         crate::spell_cast::test_harness::world_db()
             .unwrap()
