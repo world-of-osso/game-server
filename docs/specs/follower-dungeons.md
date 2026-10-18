@@ -39,6 +39,8 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 Kit pursuit must project the complete authored route before starting native chase. Exposure outside already-engaged formations requires current-run source, history, healer and budget admission; missing inputs or refusal holds movement while leaving native in-range attacks available. Movement exposing only already-engaged formations is defense and must not require new-pull healer readiness. This pursuit gate is not acceptance of production goal generation, stacking or frontal positioning.
 
+Pull candidates must pass native `relation_matches(Enemy)` selection/attackability and must not have the source template's native `AggroMode::Passive`. Proximity exposure includes only native aggressive sources, not passive triggers or reactive civilians; deliberately attacking an eligible reactive target still includes its authored formation. Keep passive source GUIDs in the presence inventory: excluding noncombatants from aggro is not recording their death. Actual Stockade template53488 trigger GUIDs20375809/20375810 must never become cheap pull candidates or proximity damage debt.
+
 `TANK_PULL_BUDGET` USER-approved values (verbatim):
 - observation window for measured group DPS and healing: 10 s
 - HP reserve: the forecast must leave ≥ 30% of tank max HP untouched

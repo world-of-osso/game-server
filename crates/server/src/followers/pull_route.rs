@@ -35,9 +35,15 @@ pub(super) fn read_route(world: &mut World, request: &Request<'_>) -> Result<Pul
         .ok_or("Pull target is not a present source spawn")?;
     let actor = read_source_actor(target)?;
     if !crate::spell_cast::targets::is_alive(world, actor)
-        || !crate::spell_cast::targets::is_hostile(world, request.tank, actor)
+        || !crate::spell_cast::targets::relation_matches(
+            world,
+            request.tank,
+            actor,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
+        || read_source_aggro_mode(world, actor)? == crate::creature_aggro::AggroMode::Passive
     {
-        return Err("Pull target must be a living hostile source actor".into());
+        return Err("Pull target must be a living attackable non-passive source actor".into());
     }
     let points = read_complete_route(world, request.tank, actor, map)?;
     let packs = read_exposed_packs(world, request.tank, &sources, &points, target.pack_guid)?;
@@ -51,6 +57,28 @@ pub(super) fn read_route(world: &mut World, request: &Request<'_>) -> Result<Pul
         spawns,
         pack_count: packs.len(),
     })
+}
+
+fn read_source_aggro_mode(
+    world: &World,
+    actor: Entity,
+) -> Result<crate::creature_aggro::AggroMode, String> {
+    let entry = world
+        .get::<shared::components::Npc>(actor)
+        .ok_or("Source actor lacks native template identity")?
+        .template_id;
+    // Difficulty0 is represented by the absence of CreatureDifficulty at native spawn.
+    let difficulty = world
+        .get::<crate::zones::CreatureDifficulty>(actor)
+        .map_or(0, |difficulty| difficulty.0);
+    let data = world
+        .get_resource::<crate::world_data::WorldData>()
+        .ok_or("Source actor lacks native world catalog")?;
+    let template = data
+        .template_for(entry, difficulty)
+        .ok_or("Source actor lacks its native difficulty template")?;
+    // Cached by the ordinary loader using the shared AggroMode::for_template rule.
+    Ok(template.aggro_mode)
 }
 
 fn read_source_actor(source: &Source) -> Result<Entity, String> {
@@ -108,7 +136,15 @@ fn route_enters_source(
     route: &[Vec3],
 ) -> Result<bool, String> {
     let actor = read_source_actor(source)?;
-    if !crate::spell_cast::targets::is_hostile(world, tank, actor) {
+    if !crate::spell_cast::targets::relation_matches(
+        world,
+        tank,
+        actor,
+        crate::spell_cast::targets::Relation::Enemy,
+    ) || read_source_aggro_mode(world, actor)? != crate::creature_aggro::AggroMode::Aggressive
+    {
+        // Passive and reactive sources do not acquire proximity victims. A deliberately
+        // attacked reactive target's whole formation is still included by target_pack.
         return Ok(false);
     }
     let radius = read_native_radius(world, geometry, tank, actor)
