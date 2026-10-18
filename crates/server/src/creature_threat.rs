@@ -19,8 +19,23 @@ struct Candidate {
     in_melee: bool,
 }
 
-/// Read the threat-manager reference, not CombatTarget or the numeric top.
+/// TC ThreatManager.cpp:242–248: refresh an absent/offline reference lazily.
+/// A query changes selection, never the creature's active attack/chase projection.
 pub(crate) fn current_victim(world: &mut World, creature: Entity) -> Option<Entity> {
+    let threat = world.get::<ThreatTable>(creature)?;
+    let current = world
+        .get::<CurrentVictim>(creature)
+        .and_then(|reference| reference.target);
+    let valid = current.is_some_and(|unit| {
+        threat
+            .entries()
+            .iter()
+            .any(|entry| entry.entity == unit.to_bits())
+            && available(world, creature, unit)
+    });
+    if !valid {
+        refresh_reference(world, creature);
+    }
     world.get::<CurrentVictim>(creature)?.target
 }
 
@@ -32,17 +47,36 @@ pub(super) fn update_reference_when_due(world: &mut World, creature: Entity) {
     {
         return;
     }
-    let incumbent = world
+    refresh_reference(world, creature);
+    world
+        .get_mut::<CurrentVictim>(creature)
+        .unwrap()
+        .next_update = now + UPDATE_SECONDS;
+}
+
+fn refresh_reference(world: &mut World, creature: Entity) {
+    let previous = world
         .get::<CurrentVictim>(creature)
-        .and_then(|reference| reference.target);
+        .copied()
+        .unwrap_or_default();
     let candidates = collect_candidates(world, creature);
     let fixate = world.get::<Fixate>(creature).map(|fixate| fixate.0);
-    let taunted = latest_available_taunt(world, creature, &candidates);
-    let target = select_victim(&candidates, incumbent, fixate, taunted);
-    world.entity_mut(creature).insert(CurrentVictim {
-        target,
-        next_update: now + UPDATE_SECONDS,
+    let fixate_listed = fixate.is_none_or(|unit| {
+        world.get::<ThreatTable>(creature).is_some_and(|threat| {
+            threat
+                .entries()
+                .iter()
+                .any(|entry| entry.entity == unit.to_bits())
+        })
     });
+    if !fixate_listed {
+        world.entity_mut(creature).remove::<Fixate>();
+    }
+    let taunted = latest_available_taunt(world, creature, &candidates);
+    let target = select_victim(&candidates, previous.target, fixate, taunted);
+    world
+        .entity_mut(creature)
+        .insert(CurrentVictim { target, ..previous });
 }
 
 fn collect_candidates(world: &World, creature: Entity) -> Vec<Candidate> {

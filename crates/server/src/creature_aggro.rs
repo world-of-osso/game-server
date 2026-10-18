@@ -335,6 +335,8 @@ pub(crate) fn update_victim_system(world: &mut World) {
         .map(|(creature, _)| creature)
         .collect();
     for creature in creatures {
+        // ThreatManager updates independently of AI/react state (TC:216–230).
+        victim::update_reference_when_due(world, creature);
         if world
             .get::<crate::scripted_ai::ScriptedVictimUpdatePaused>(creature)
             .is_some()
@@ -343,8 +345,11 @@ pub(crate) fn update_victim_system(world: &mut World) {
         {
             continue;
         }
-        victim::update_reference_when_due(world, creature);
-        let Some(target) = current_victim(world, creature) else {
+        let Some(target) = (crate::scripted_ai::Ctx {
+            world,
+            me: creature,
+        })
+        .select_target_max_threat() else {
             enter_evade_mode(world, creature);
             continue;
         };
@@ -551,7 +556,13 @@ pub(crate) fn add_school_threat(
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {
         threat.add_threat(attacker.to_bits(), amount);
     }
-    victim::update_reference_when_due(world, creature);
+    // AddThreat only forces initial selection while no current reference exists.
+    if world
+        .get::<CurrentVictim>(creature)
+        .is_none_or(|reference| reference.target.is_none())
+    {
+        let _ = current_victim(world, creature);
+    }
     let engages = world.get::<CreatureState>(creature) == Some(&CreatureState::Idle);
     if engages {
         let mut entity = world.entity_mut(creature);

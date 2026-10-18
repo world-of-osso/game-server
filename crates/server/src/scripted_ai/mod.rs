@@ -744,6 +744,12 @@ impl Ctx<'_> {
         }
     }
 
+    /// `UnitAI::SelectTarget(MaxThreat)` with default offset/predicate:
+    /// current threat-manager reference first, not numeric top or attack target.
+    pub fn select_target_max_threat(&mut self) -> Option<Entity> {
+        crate::creature_aggro::current_victim(self.world, self.me)
+    }
+
     /// `UnitAI::SelectTarget(SelectTargetMethod::Random, 0, dist, playerOnly)`: a
     /// random threat-list unit (`DefaultTargetSelector`: within `dist` yards when
     /// `dist` > 0, a player when `player_only`, the current victim included).

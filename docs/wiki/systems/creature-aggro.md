@@ -42,7 +42,11 @@ It does nothing for a creature without a threat list, dead, at 0 health, or `Ret
 
 ## Victim update
 
-`update_victim_system` (`CreatureAI::UpdateVictim` / `Creature::SelectVictim`), each tick for pursuing creatures: drops the current target if invalid, pops invalid entries off the top of the threat list, then `ThreatTable::aggro_target(current, top_in_melee)` (110% in melee, 130% beyond, `ThreatMgr::getHostileTarget`). A new victim rewrites `CreatureState::Pursuing` and the creature's `CombatTarget` together. An empty list evades. `ThreatTable` (shared-protocol) exposes no iterator, so invalid entries below the top stay until they reach the top.
+`creature_threat.rs` stores a server-owned `CurrentVictim { target, next_update }`, separate from `CreatureState::Pursuing`/`CombatTarget`. One selector filters unavailable candidates, prefers available fixate and the existing taunt recipient, then applies strict110% melee/130% ranged hysteresis. At exact thresholds the incumbent stays. When the highest ranged candidate is below130%, another melee candidate above110% can win. Melee membership uses authored combat reaches and the actor's native autoattack-range modifier, not a universal5yd center cutoff.
+
+`update_victim_system` refreshes the reference on its1000ms deadline, including passive or scripted-update-paused creatures. Active creatures project the reference to existing chase and attack fields; passive/paused updates do not project attacks or change movement. `current_victim` and `Ctx::select_target_max_threat` refresh absent/offline/unlisted references lazily without issuing attacks; valid references wait for the periodic update. Lazy refresh preserves the periodic deadline. Unavailable entries retain their numeric threat; removing a fixated membership clears the stale fixate. Evade and death remove the reference/deadline alongside clearing threat. Ordinary active no-victim evade remains in the projection path.
+
+Source: pinned TC a352b1fa `ThreatManager.h:86`, `ThreatManager.cpp:216–248,469–474,539–545,581–657,674–681`, `UnitAI.cpp:319–348`, `Unit.cpp:691–710`. Regression status and exact proof scope are in the branch gate packet; this description is not a full threat-manager parity claim.
 
 ## Evade and death
 

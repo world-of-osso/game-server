@@ -752,6 +752,15 @@ fn threat_current_victim_passive_periodic_selection_does_not_project_attacks() {
         "passive threat reference must still update"
     );
     assert_eq!(
+        crate::scripted_ai::Ctx {
+            world: app.world_mut(),
+            me: creature
+        }
+        .select_target_max_threat(),
+        Some(melee),
+        "MaxThreat follows the threat reference while active victim remains the tank"
+    );
+    assert_eq!(
         state(&app, creature),
         pursuing(tank),
         "passive reference is not active chase projection"
