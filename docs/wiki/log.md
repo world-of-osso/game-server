@@ -1,3 +1,7 @@
+## 2026-10-17 — Queued64 source publication and Execute override
+
+[Native script boundary](systems/spell-casting.md#execute-effect64-script-override--2026-10-17): missing mandatory aura-table reproduction passes after lead-owned source publication; full stack redone on current master. First wide1584PASS/18FAIL/14ignored separates nine missing prepared-copy environment inputs, two native61781 exclusion fixtures, six native-delay/application/order fixtures and one real Execute script override. Pinned TC prevents Execute's default64 and directly casts260798 before the survivor refund; all original strict assertions remain. Recovery29/29 passes34.22s at71c0be65/protocola56688e, including queued0/1ms/order/payment/recipient controls; final wide/check/fmt remain pending.
+
 ## 2026-10-17 — Stomp stack expectation timing
 
 [Native phase boundary](investigations/follower-data.md#stomp-expected-stack-timing--2026-10-17): unchanged current-master repro matches451; log-only diagnostic proves9 actual live stacks/5 corpses versus stale14 expectation. Test now samples Stomp-time stacks and independently accounts for all native Sprouts. Focused matching/nonmatching2PASS72.31s/check0 2m51s/fmt0, strict8f27/twenty-seven-source/HEAD/clean guards stable; original tolerance and production mechanics unchanged.
