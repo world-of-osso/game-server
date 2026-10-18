@@ -1,3 +1,7 @@
+## 2026-10-17 — Agony ramp and native Sudden Onset
+
+[Affliction](systems/auras.md#agony-ramp-and-sudden-onset-2026-10-17): active70448 Agony980 cap8, Sudden1260209 starts3/+10%; legacyWrithe196102 absentcurrentmembership. Genuine nativeeff2f2115 RED8/9 (timed/deadline15vs30,recast2vs1,initial1vs3) plus unchanged CorruptioncontrolPASS before named live-stack/post-hit/refresh-floor implementation. No source coefficients/clocks/RNG/generic resource/trigger change; A226 shard RNG and full-ability gaps stay open. Native9/9 GREEN8.95s at5b0ee370f plus retained controls10/10 GREEN8.87s at557fc91df; scoped check20.53s/fmt PASS warning-free (19/19,0ignored), manual changed-Rust readability inspected. Later master/comment/docs leave native9 logic unchanged; no redundant cohort replay. Independent gate pending. Prior Ebonbaa9b0124 landed with lead4931061/fmtPASS.
+
 ## 2026-10-17 — Ebon simultaneous source snapshot
 
 [Ebon](systems/auras.md#ebon-might-baseline-2026-10-17): original native6 GREEN at224e0300; two same-frame ordinary HostClient casts additionally reproduce11.671872 versus12.72 before the first tick. FixedUpdate aura modifiers preceded normal Update CharacterStats production. Reuse the existing cached native producer before the Ebon snapshot; no formula duplication, fallback, timer or global schedule change. At06b2d6cd7 expanded Ebon8/8 passes12.93s, prior support4/4 +legacy Eruption2/2 +native timer1/1 pass (15/15,0 ignored); source coefficient/variance unchanged. Scoped server-bin check28.73s/fmt pass warning-free; independent lead gate pending.
