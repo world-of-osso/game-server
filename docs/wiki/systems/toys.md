@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Broker disguise, shared grafts, mixed stall and updraft boundaries (2026-10-18)
+
+[Source630–634 matrix](../../toy-effects14-coverage.md#source630634-broker-disguise-shared-grafts-mixed-stall-and-updraft-boundaries-2026-10-18) preserves Cartel Xy transform56/misc0 without invented creature, distinct Void/Light marks sharing category2433/50-minute recovery, missing outdoor stall249056 plus effect164→carried-crate removal, and full updraft105/104/106/506 movement contract. No zero-dummy cosmetic admission, independent graft timer, static stall or flight substitute. Metadata only; lead509 queued without result/landing, no own heavy work.
+
 ## Goggles, distinct crates, wormhole and strategy-game boundaries (2026-10-18)
 
 [Source625–629 matrix](../../toy-effects14-coverage.md#source625629-goggles-distinct-carried-crates-wormhole-and-strategy-game-boundaries-2026-10-18) preserves goggles233/3569/247 viewer presentation, distinct carried-crate3393/3392 poses, missing wormhole actor248783 with actual random Midnight travel, and permanent strategy-game430/3707 plus separate two-second298624 trigger. Metadata only; no generic aura, static portal or automatic-win substitute. Gate507 failed only Cold Ones234951 at the five-yard fixture cursor; source/runtime range169 is0–3 yards. Test-only172cb1782 uses a nonzero in-range cursor, other12 rows/assertions unchanged. Lead509 queued at that revision; no behavioral success or landing inferred.

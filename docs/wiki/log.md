@@ -1,3 +1,7 @@
+## 2026-10-18 — Toy source630–634 exact mixed contracts
+
+[Exact source matrix](../toy-effects14-coverage.md#source630634-broker-disguise-shared-grafts-mixed-stall-and-updraft-boundaries-2026-10-18): Cartel Xy misc0 transform has no encoded creature; unaudited Void/Light marks share category2433/3000000ms recovery. Missing249056 outdoor stall retains effect164→1221382 removal edge; updraft retains105/104/106/506. Metadata only, no fabricated actor, ordinary trigger substitution, independent graft timer or cosmetic movement success.509 queued; no new acceptance/runtime/data/native proof or own heavy jobs.
+
 ## 2026-10-18 — Toy source625–629 boundaries and Cold Ones range correction
 
 [Exact source matrix](../toy-effects14-coverage.md#source625629-goggles-distinct-carried-crates-wormhole-and-strategy-game-boundaries-2026-10-18): metadata preserves viewer goggles233/3569/247, distinct crate3393/3392 poses, missing248783 random-travel wormhole and permanent430 strategy game with separate two-second298624 trigger.507 failed234951 because a five-yard fixture point exceeds authored range169/max3. Test-only172cb1782 corrects that point, not runtime authority; format/manual readability/diffcheck pass. Lead509 queued covering all post507 acceptance; no result/landing/native proof or own heavy jobs.

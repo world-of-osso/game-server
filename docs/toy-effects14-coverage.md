@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Source630–634: broker disguise, shared grafts, mixed stall and updraft boundaries (2026-10-18)
+
+Metadata inspection only; lead509 remains queued at172cb1782 without observed result. No new acceptance, runtime/data/native changes or own heavy jobs.
+
+| Source row | Exact retained source boundary |
+|---|---|
+|630 Cartel Transmorpher249713/1249473 | Instant self transform56/misc0/8 for1200000ms; inherited3600000ms recovery and explicit item category recovery0. Actual Cartel Xy Broker selection/appearance/restoration remains unresolved because no creature template is encoded. No guessed Broker entry or ordinary misc8 disguise acceptance with a fabricated nonzero target. |
+|631 Researcher's Shadowgraft250319/1250729 | Instant self dummy4/zero payload for3600000ms, normal recovery0/category2433 recovery3000000ms. Exact Void mark and shared50-minute graft recovery remain unaccepted; absent maintained visual-only list. Description's Predaxas-brood research does not establish a usable creature target or generic buff success. |
+|632 Lightgraft250320/1250731 | Instant self dummy4/zero payload for3600000ms, normal recovery0/category2433 recovery3000000ms, same source category as Shadowgraft. Actual Light mark/cleanup and sibling reuse refusal remain unaccepted; no independent50-minute timer or copied Void visual certificate. |
+|633 Ethereal Stall250722/1244085 | Source3000ms target47/base1 summon249056/property4563/Control1/flags133120 for900000ms plus self effect164→1221382/carried-crate293/misc3185/1 for900000ms; inherited900000ms recovery. Runtime actor/model absent. Actual outdoor stall/linked aura removal/placement/lifecycle remains gap; preserve effect164 rather than treating it as ordinary64 or dropping the removal edge. No static booth or active carried-crate substitute. |
+|634 Akil'zon's Updraft250974/1251827 | Instant self mixed auras105/104/106/506, each zero payload, for30000ms; explicit item600000ms recovery. Actual gust levitation/movement/landing/cleanup remains gap; no caster-only cosmetic aura or unbounded flight inferred from flavor. All four slots remain part of the contract. |
+
+Evidence: private `rows630-634-{readonly-source,action-source,runtime-action-source,active-goal}.json`; source70448/key88d5e8ef05ec5a8446cdec93d142d7c6 and category2433 join. Full1166 admission unchanged;149865 Tea Set untouched.507 remains failed, fixture correction172cb1782 awaits509;498 last confirmed landed/master8707ac0ea.
+
 ## Source625–629: goggles, distinct carried crates, wormhole and strategy-game boundaries (2026-10-18)
 
 Gate507 finished: server305 passed/1 failed/1 ignored in728.00s, EXIT101/FMT0. Cold Ones234951 correctly refused the fixture's five-yard cursor: source and runtime SpellRange169 both permit0–3 yards. Test-only172cb1782 selects `[2,0,-1]` for that row, preserving the other12 rows, all assertions and runtime validation. Format/manual readability/diffcheck pass; lead509 queued at172cb1782 covers this correction and all post507 acceptances. No509 result or landing inferred;498 remains last confirmed landed/master8707ac0ea.
