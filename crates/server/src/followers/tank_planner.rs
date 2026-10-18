@@ -75,7 +75,13 @@ fn read_pursuit_admission(
         .ok_or("Tank pursuit lacks a map copy")?;
     let sources =
         super::pull_sources::read_present_sources(world, map, difficulty, &history.cleared_spawns)?;
-    let party = super::ai::party_units(world, follower.owner);
+    let (admitted_map, members, _) = super::party::read_admission(world, follower.owner)
+        .ok_or("Tank pursuit lacks an authoritative admitted party")?;
+    if admitted_map != map || !members.contains(&tank) {
+        return Err("Tank pursuit is outside its admitted copy or roster".into());
+    }
+    let mut party = members.to_vec();
+    party.push(follower.owner);
     let engaged = super::ai::engaged_enemies(world, follower, tank, &party);
     let mut engaged_packs = std::collections::BTreeSet::new();
     for (enemy, _) in engaged {
