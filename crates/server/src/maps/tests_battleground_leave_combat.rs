@@ -2,6 +2,9 @@ use super::*;
 use shared::battleground::BgPhase;
 use shared::components::CombatStatus;
 
+#[path = "tests_battleground_dead_exit.rs"]
+mod dead_exit;
+
 #[test]
 fn pvp_leave_combat_concrete_refuses_until_combat_stops() {
     let (mut h, players, _database) = pending_battleground(1018);
