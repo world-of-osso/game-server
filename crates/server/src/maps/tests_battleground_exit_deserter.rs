@@ -69,7 +69,7 @@ fn assert_authored_deserter(h: &Harness, who: &Traveler) -> u32 {
         .app
         .world()
         .get::<ActiveAuras>(who.player)
-        .unwrap()
+        .expect("successful early ordinary BG return must create native aura26013")
         .iter()
         .find(|aura| aura.spell_id == DESERTER_SPELL_ID)
         .expect("successful early ordinary BG return must grant native aura26013");
@@ -82,11 +82,10 @@ fn assert_authored_deserter(h: &Harness, who: &Traveler) -> u32 {
 
 fn assert_no_deserter(h: &Harness, who: &Traveler) {
     assert!(
-        !h.app
+        h.app
             .world()
             .get::<ActiveAuras>(who.player)
-            .unwrap()
-            .has_spell(DESERTER_SPELL_ID)
+            .is_none_or(|auras| !auras.has_spell(DESERTER_SPELL_ID))
     );
 }
 
