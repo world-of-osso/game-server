@@ -30,6 +30,7 @@ fn source_spell(id: u32) -> SpellInfo {
 
 fn caster_world() -> (World, Entity) {
     let mut world = World::new();
+    world.insert_resource(super::test_harness::world_db().unwrap().store.clone());
     // No ModelDisplay, Player, ModelReaches or invented creature statistics.
     let caster = world
         .spawn((
