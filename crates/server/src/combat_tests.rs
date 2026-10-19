@@ -130,6 +130,7 @@ fn run_attack_tick(app: &mut App) {
                     npc_expertise_pct: 0.0,
                     creature: false,
                     creature_flags: None,
+                    temp_summoner: None,
                     spirit_wolf: None,
                 };
                 for hand in [Hand::Main, Hand::Off] {

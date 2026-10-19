@@ -161,6 +161,9 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             / EXPERTISE_PER_AVOIDANCE_PERCENT,
         creature: true,
         creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(enemy),
+        temp_summoner: world
+            .get::<crate::zones::TempSummon>(enemy)
+            .map(|summon| summon.summoner),
         spirit_wolf: None,
     })
 }
