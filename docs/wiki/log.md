@@ -17,6 +17,9 @@
 ## 2026-10-18 — Navigation worker design and sight CPU gap
 
 [Design](design/navigation-worker.md) records approved pending movement/latest-request/fixed-order/error/test-drain behavior, exclusive map ownership, complete synchronous caller inventory, per-entity queue bound and explicit worker-death failure. Base83a8ce176/protocol029a927; no Rust implementation or RED yet. [SIGHT_FACTION_MAIN_THREAD_CPU](investigations/server-tick-lag.md#sight_faction_main_thread_cpu) records9of12 B partial stacks and sampled A/B CPU counts, with uncaptured maximum-gap stack and load/observer limitations. Navigation reads are a confirmed contributor, not sufficient evidence alone for historical ten-second stalls.
+## 2026-10-18 — Scarab target32 first-destination oracle
+
+[Scarab oracle](systems/toys.md#scarab-target32-grounded-oracle-2026-10-18): native92146 SUMMON28/32/noFORCE correctly grounds; pre-grounding oracle REDbe5cd97ae39.32s. Corrected identical pre-clampY ray/strict floor bits, retained count/scatter/follow/lifetime; strict oracle+retained controls17/17 GREEN144.23s at206b095ed, independent LEAD full-Toy gate pending. Production unchanged.
 ## 2026-10-17 — NPC victim parry47
 
 [Parry47](systems/player-damage.md#npc-victim-parry-aura47--2026-10-17): ignored49f20 pushed first;23547/64651 signed0live8s andactualSunwellhit5/dodge-20 qualified1PASS41.59s. Front+100→5Damage/0Parry andnegative-100→1Parry/4Damage give genuine2RED/6PASS47.04s. Existingtarget_auras/NPCguard consumer before240/clamp; masks/direction/playerStats/block/Guardian/RNG/clocks unchanged; Consumeraa2ee70c1 fresh ignored8nativeGREEN34.40s0warnings+retainedqualification1PASS41.59s (9composite,notone9batch), onlythen allnine enabled/pushed; lead gate pending.
