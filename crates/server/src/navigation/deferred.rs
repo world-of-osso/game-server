@@ -57,6 +57,10 @@ impl Navigation {
         None
     }
 
+    pub(crate) fn query_owner(&self, entity: Entity) -> Option<Goal> {
+        self.queries.get(&entity).map(|query| query.goal)
+    }
+
     pub(super) fn query_pending(&self, entity: Entity) -> bool {
         self.queries
             .get(&entity)
