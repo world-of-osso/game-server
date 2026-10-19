@@ -12,6 +12,12 @@ use crate::maps::{InMap, MapStore};
 use crate::zones::CreatureOrigin;
 
 pub(super) const SCRIPT: &str = "boss_vazruden_the_herald";
+
+/// TC166 _isUnkillable=true, preserved through UpdateEntry and descent ingress.
+/// Unlike Creature::SetUnkillable this DamageTaken guard also includes self-loss.
+/// DESCEND4 must remove it when the separate arrival/fall/release slice is ported.
+#[derive(Component)]
+pub(crate) struct HeraldUnkillable;
 const MAP: u32 = 543;
 const HERALD: u32 = 17_307;
 const SENTRY: u32 = 17_517;
@@ -203,7 +209,9 @@ impl HeraldIntro {
 
 impl CreatureAi for HeraldIntro {
     fn just_appeared(&mut self, ctx: &mut Ctx) {
-        ctx.world.entity_mut(ctx.me).insert(GravityDisabled);
+        ctx.world
+            .entity_mut(ctx.me)
+            .insert((GravityDisabled, HeraldUnkillable));
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
@@ -230,7 +238,7 @@ impl CreatureAi for HeraldIntro {
     }
 
     // TC217–220: Finished is !_isPerformingIntro; action0 owns the once latch.
-    // The separate lethal min1 interception (TC214–215) is not implemented here.
+    // TC214–215's preceding min1 adjustment runs at the precommit boundary.
     fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
         if self.phase == IntroPhase::Finished && damage.health_below_pct_damaged(30.0) {
             self.do_action(ctx, 0);
