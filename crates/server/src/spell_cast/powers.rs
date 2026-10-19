@@ -482,7 +482,12 @@ pub(crate) fn regenerate_powers(
             && mana.current < mana.max
         {
             let base_mana = stats.map_or(0.0, |stats| stats.base_mana);
-            mana_rate = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * regen_mult(PowerType::Mana);
+            // TC StatSystem.cpp874-908: flat aura85 is added after the
+            // base-mana percentage multipliers, in raw units per five seconds.
+            let flat_mana_regen =
+                mods.map_or(0.0, |mods| mods.power_regen_flat(PowerType::Mana as i32));
+            mana_rate = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * regen_mult(PowerType::Mana)
+                + flat_mana_regen / 5.0;
             mana.current = (mana.current + mana_rate * dt).min(mana.max);
             if mana.current == mana.max {
                 mana_rate = 0.0;

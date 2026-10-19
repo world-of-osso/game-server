@@ -1,3 +1,7 @@
+## 2026-10-18 — Water Shield flat Mana
+
+[Native79949](systems/auras.md#water-shield-flat-mana--2026-10-18): TC base-mana multipliers then85/5; actual8004/137039 spend and ordinaryShield RED125vs127 in two cases,3controlsPASS25.33s atf4c17e35b. Initial harness-only failure excluded. Minimal Mana consumer; sibling79508→79950 unchanged; GREEN pending, no Retail52127/legal-build/full-proc claim.
+
 ## 2026-10-18 — Energizing Elixir flat Energy
 
 [Native115288](systems/auras.md#energizing-elixir-flat-energy--2026-10-18): source75Energy/5s AFTER percentage modifiers, real Tiger Palm deficit and ordinary Elixir RED10vs25, native13750 RED17.5vs32.5; sibling2Chi preserved. Tests-only ignored3993b7fe8 pushed first;3controlPASS/2genuineFAIL26.42s. Minimal continuous non-mana85 aggregation/consumer atc62d61e9b: native5GREEN14.48s +retained regen/resource30GREEN14.31s,0warnings; independent lead gate pending, no legal-loadout or generic85 certification.

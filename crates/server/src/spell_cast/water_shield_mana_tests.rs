@@ -85,7 +85,6 @@ fn water_shield_native_unbuffed_mana_deficit_keeps_restoration_base_multiplier()
 }
 
 #[test]
-#[ignore = "missing native flat Mana85 consumer"]
 fn water_shield_native_flat_mana_is_added_after_base_multipliers_and_removed() {
     let mut h = fixture();
     spend_mana(&mut h);
@@ -113,7 +112,6 @@ fn water_shield_native_flat_mana_is_added_after_base_multipliers_and_removed() {
 }
 
 #[test]
-#[ignore = "missing native flat Mana85 consumer"]
 fn water_shield_native_regeneration_clamps_and_stops_replication_prediction_at_full() {
     let mut h = fixture();
     spend_mana(&mut h);
@@ -126,7 +124,6 @@ fn water_shield_native_regeneration_clamps_and_stops_replication_prediction_at_f
 }
 
 #[test]
-#[ignore = "missing native flat Mana85 consumer"]
 fn water_shield_native_six_hundred_second_expiry_restores_base_mana_rate() {
     let mut h = fixture();
     cast_shield(&mut h);
@@ -139,7 +136,6 @@ fn water_shield_native_six_hundred_second_expiry_restores_base_mana_rate() {
 }
 
 #[test]
-#[ignore = "missing native flat Mana85 consumer"]
 fn water_shield_native_foreign_self_cast_does_not_change_owner_mana_regeneration() {
     let mut h = fixture();
     spend_mana(&mut h);
