@@ -47,26 +47,39 @@ fn deal_native_tank_damage(f: &mut Fixture, enemy: Entity) {
     );
 }
 
-fn engage_complete_route(f: &mut Fixture, target_guid: u32) -> Vec<u32> {
+fn engage_caster_fixture_sources(f: &mut Fixture, whole_route: bool) -> Vec<u32> {
     let route = pull_route::read_route(
         f.h.app.world_mut(),
         &pull_route::Request {
             tank: f.tank,
-            target_guid,
+            target_guid: OVERHEAT_GUID,
             difficulty: 1,
             cleared: &BTreeSet::new(),
         },
     )
     .unwrap();
-    for &guid in &route.spawns {
+    let engaged_guids = if whole_route {
+        route.spawns.clone()
+    } else {
+        BTreeSet::from([OVERHEAT_GUID, SELECTED_TRASH_GUID])
+    };
+    for guid in engaged_guids {
         let actor = source(&mut f.h, f.tank, guid);
         deal_native_tank_damage(f, actor);
     }
     route.spawns.into_iter().collect()
 }
 
-#[test]
-fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachable() {
+struct CasterFixture {
+    f: Fixture,
+    main: Entity,
+    caster: Entity,
+    from: Vec3,
+    caster_point: Vec3,
+    footprint: Vec<u32>,
+}
+
+fn overheat_fixture(whole_route: bool) -> CasterFixture {
     let mut f = physical_fixture();
     let main = source(&mut f.h, f.tank, SELECTED_TRASH_GUID);
     let caster = source(&mut f.h, f.tank, OVERHEAT_GUID);
@@ -88,17 +101,23 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         crate::spell_cast::targets::position(f.h.app.world(), f.tank),
         Some(from)
     );
-    let footprint = engage_complete_route(&mut f, OVERHEAT_GUID);
+    let footprint = engage_caster_fixture_sources(&mut f, whole_route);
     assert!(footprint.contains(&OVERHEAT_GUID));
     assert!(footprint.contains(&SELECTED_TRASH_GUID));
     let follower = f.h.app.world().get::<Follower>(f.tank).unwrap().clone();
     let engaged = ai::engaged_enemies(f.h.app.world_mut(), &follower, f.tank, &party);
-    for &guid in &footprint {
+    for guid in [OVERHEAT_GUID, SELECTED_TRASH_GUID] {
         let actor = source(&mut f.h, f.tank, guid);
         assert!(engaged.iter().any(|(enemy, _)| *enemy == actor));
     }
+    if whole_route {
+        for &guid in &footprint {
+            let actor = source(&mut f.h, f.tank, guid);
+            assert!(engaged.iter().any(|(enemy, _)| *enemy == actor));
+        }
+    }
     f.h.select(Some(main));
-    // Owner selection only prioritizes an existing fight: all sources are already engaged.
+    // Owner selection only prioritizes an existing fight: main and caster are already engaged.
     // Observe real kit selection after any sourced mitigation/ground attack, with no chase yet.
     let mut selected = false;
     for _ in 0..90 {
@@ -155,6 +174,26 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
     );
     pull_history::sample_all(f.h.app.world_mut());
     let caster_point = crate::spell_cast::targets::position(f.h.app.world(), caster).unwrap();
+    CasterFixture {
+        f,
+        main,
+        caster,
+        from,
+        caster_point,
+        footprint,
+    }
+}
+
+#[test]
+fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachable() {
+    let CasterFixture {
+        mut f,
+        main,
+        caster,
+        from,
+        caster_point,
+        ..
+    } = overheat_fixture(true);
     let before_distance = from.distance(caster_point);
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let mut nearest = before_distance;
@@ -195,4 +234,60 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         after.distance(caster_point) >= at.distance(caster_point),
         "ended source cast left a stale caster approach instead of the reachable selected fight"
     );
+}
+
+#[test]
+fn production_tank_caster_collection_refuses_unengaged_route_exposure() {
+    let CasterFixture {
+        mut f,
+        from,
+        footprint,
+        ..
+    } = overheat_fixture(false);
+    let follower = f.h.app.world().get::<Follower>(f.tank).unwrap().clone();
+    let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
+    let (map, members, _) = super::party::read_admission(f.h.app.world(), f.h.caster).unwrap();
+    let mut party = members.to_vec();
+    party.push(f.h.caster);
+    let sources = super::pull_sources::read_present_sources(
+        f.h.app.world_mut(),
+        map,
+        1,
+        &history.cleared_spawns,
+    )
+    .unwrap();
+    let packs: BTreeSet<_> = ai::engaged_enemies(f.h.app.world_mut(), &follower, f.tank, &party)
+        .into_iter()
+        .map(|(enemy, _)| {
+            let guid =
+                f.h.app
+                    .world()
+                    .get::<crate::zones::CreatureOrigin>(enemy)
+                    .unwrap()
+                    .guid;
+            sources[&guid].pack_guid
+        })
+        .collect();
+    assert!(
+        footprint
+            .iter()
+            .any(|guid| !packs.contains(&sources[guid].pack_guid)),
+        "negative control must actually expose an unengaged formation, not existing defense"
+    );
+    let footprint = footprint.into_iter().collect();
+    let admission =
+        super::pull_admission::read_pull_budget(f.h.app.world_mut(), f.tank, &footprint, 1);
+    assert!(
+        !matches!(admission, Ok(super::pull_budget::Decision::Allow { .. })),
+        "negative control requires an actual native admission refusal"
+    );
+    crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
+    for _ in 0..10 {
+        f.h.advance(1);
+        let at = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
+        assert_eq!(
+            at, from,
+            "caster collection bypassed refusal for an unengaged route formation"
+        );
+    }
 }
