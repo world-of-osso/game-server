@@ -66,7 +66,8 @@ enum Landing {
     ReflectProc { reflector: Entity },
 }
 
-/// Resolve `plan` now if the spell has no travel time, else schedule each hit.
+/// Resolve launch-mode effects, then `plan` now if the spell has no travel time,
+/// else schedule each hit.
 pub(super) fn launch(
     world: &mut World,
     caster: Entity,
@@ -109,6 +110,10 @@ pub(super) fn launch(
     }
     let launched = now(world);
     let (plan, reflected) = split_reflected(plan, &reflections, caster);
+    super::resolve_launch_effects(world, caster, spell, &plan, depth);
+    for (_, reflected) in &reflected {
+        super::resolve_launch_effects(world, caster, spell, reflected, depth);
+    }
     let mut snapshot = None;
     for (delay, landing) in landings(world, plan, reflected, &delays, destination_delay) {
         if delay == 0 {

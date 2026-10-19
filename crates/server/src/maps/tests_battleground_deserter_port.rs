@@ -9,6 +9,9 @@ mod dead_port;
 #[path = "tests_battleground_leave_combat.rs"]
 mod leave_combat;
 
+#[path = "tests_battleground_arrival_mount.rs"]
+mod arrival_mount;
+
 #[test]
 fn bg_deserter_port_concrete_refuses_late_aura_and_releases_reservation() {
     assert_late_deserter_port_refusal(1018, 19, shared::battleground::BgPhase::InProgress);

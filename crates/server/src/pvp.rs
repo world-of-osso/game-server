@@ -207,6 +207,25 @@ fn read_player_battleground(world: &World, player: Entity) -> Option<&InvitedBat
     Some(matched)
 }
 
+/// TC Battleground.cpp1038 AddPlayer runs only after successful WorldPortAck.
+pub(crate) fn dismount_battleground_arrival(world: &mut World, player: Entity) {
+    let ordinary_battleground =
+        read_player_battleground(world, player).is_some_and(|matched| matched.arena.is_none());
+    if !ordinary_battleground {
+        return;
+    }
+    crate::auras::remove_auras(
+        world,
+        player,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| {
+            aura.effects
+                .iter()
+                .any(|effect| effect.aura_type == crate::auras::handlers::MOUNTED)
+        },
+    );
+}
+
 pub(crate) fn player_arena_conditions(world: &World, player: Entity) -> Option<(u8, bool)> {
     let arena = read_player_battleground(world, player)?.arena.as_ref()?;
     Some((arena::team_size(arena.mode)?, arena.rated.is_some()))
