@@ -1,7 +1,7 @@
 //! TC166/214–215: the source guard acts before real health/death commits.
 use super::herald_call::{damage_to_percent, descent_emotes, first_west, reach_first_west};
 use super::herald_damage::assert_source_step;
-use super::herald_intro::{actors_in_copy, spawn_source_copy};
+use super::herald_intro::{actors_in_copy, kill_actor, spawn_source_copy};
 use super::herald_intro2::{prepared_ramparts, received_casts};
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -117,13 +117,16 @@ fn assert_airborne_commits(spell: bool) {
 #[ignore = "RED: Herald source min1 guard missing before direct/self commit"]
 fn encounter_coverage_herald_min1_intro_direct_self_nonlethal_and_copy_isolation() {
     for difficulty in [1, 2] {
-        let (mut h, map, herald, _) = prepared_ramparts(difficulty);
+        let (mut h, map, herald, sentries) = prepared_ramparts(difficulty);
         h.app.init_resource::<ObservedCombatEvents>();
         let other_map = spawn_source_copy(&mut h, 8001, difficulty);
         let other = actors_in_copy(&mut h, 17307, other_map)[0];
         let other_health = h.health(other);
         damage_to_percent(&mut h, herald, 80.0);
-        h.advance(0.05); // Actual engagement starts INTRO1 and stops its patrol.
+        for sentry in sentries {
+            kill_actor(&mut h, sentry);
+        }
+        h.advance(0.05); // Actual Sentry deaths start INTRO1 and stop its patrol.
         let before = *h.app.world().get::<Position>(herald).unwrap();
         let player = h.player();
         deal_lethal(&mut h, herald, player, false);
