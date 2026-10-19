@@ -155,6 +155,8 @@ Ordinary difficulty205 Frozen Ground387149 must bind native create-properties265
 
 ## Full-spec follower kits (user decision, 2026-10-18)
 
+`FOLLOWER_OWNER_TARGET_AURA_STATE_EXEMPTION_VIA_SUMMONED_BY`: followers use the project's existing `UnitSummonedBy(owner)` representation. Consequently the shared backend's source owner-target aura-state exemption applies when healing that owner; this follower modelling choice is project policy, not Retail follower-dungeon parity. The source relation is TC a352b1fa `SpellInfo.cpp:2497` `!unitCaster->IsVehicle() && !(unitCaster->GetCharmerOrOwner() == target)`; `Unit.h:1208,1233–1238` derives owner from SummonedBy and prefers charmer. Charmer ownership is currently unmodelled.
+
 Interrupt provider runs once per kit update, at the first available native interrupt-capable entry, retaining higher-priority actions. Explicit kicks have priority5; below Rebuke's native availability, Avenger's Shield retains its attack-priority position after emergency healing. Demonology retains its existing pre-action learned-pet kick. The kit hands off only its already-selected enemy, preserving the former embedded-slot target scope; the provider's ordered multi-candidate API is reserved for explicit callers. No planner/navigation/retarget change. Eligibility uses the shared live `spell_cast::can_interrupt_cast` with the actual casting unit, never the pushback flag. Ordinary native spell execution retains costs, motion and hit authority.
 
 Delivery is sliced: core rotations/heals/defensives/emergencies first; sourced dispel/interrupt/CC conditions follow separately. Full-kit completion remains open, including immunities, movement and pet selection. Inventory or existing narrow interrupt behavior does not close those gaps.
