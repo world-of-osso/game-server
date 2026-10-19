@@ -66,7 +66,6 @@ fn energizing_elixir_native_unbuffed_tiger_palm_deficit_regenerates_ten_energy_p
 }
 
 #[test]
-#[ignore = "missing native flat power regeneration aura85 consumer"]
 fn energizing_elixir_native_cast_regenerates_energy_preserves_chi_and_stops_on_removal() {
     let mut h = fixture();
     spend_energy(&mut h);
@@ -86,7 +85,6 @@ fn energizing_elixir_native_cast_regenerates_energy_preserves_chi_and_stops_on_r
 }
 
 #[test]
-#[ignore = "missing native flat power regeneration aura85 consumer"]
 fn energizing_elixir_native_flat_energy_is_added_after_percentage_regeneration() {
     let mut h = fixture();
     spend_energy(&mut h);
@@ -103,7 +101,6 @@ fn energizing_elixir_native_flat_energy_is_added_after_percentage_regeneration()
 }
 
 #[test]
-#[ignore = "missing native flat power regeneration aura85 consumer"]
 fn energizing_elixir_native_five_second_expiry_restores_unbuffed_energy() {
     let mut h = fixture();
     cast_elixir(&mut h);
@@ -115,7 +112,6 @@ fn energizing_elixir_native_five_second_expiry_restores_unbuffed_energy() {
 }
 
 #[test]
-#[ignore = "missing native flat power regeneration aura85 consumer"]
 fn energizing_elixir_native_foreign_recipient_does_not_regenerate_caster_energy() {
     let mut h = fixture();
     let foreign = spawn_player(&mut h.app, MONK, 1.0);
