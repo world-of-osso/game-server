@@ -3,7 +3,7 @@ mod herald;
 mod omor;
 mod vazruden;
 use bevy::prelude::*;
-pub(crate) use herald::on_unit_death;
+pub(crate) use herald::{HeraldUnkillable, on_unit_death};
 use shared::components::ThreatTable;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
