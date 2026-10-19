@@ -1,6 +1,6 @@
 //! Definition-level native115288; not a legal talent/loadout certificate.
 //! TC a352b1fa StatSystem.cpp901-908 adds aura85/5 after percentage modifiers.
-use super::test_harness::{Harness, harness, spawn_player};
+use super::test_harness::{Harness, harness, spawn_peer_connection, spawn_player};
 use crate::auras::{RemoveReason, has_aura, remove_auras};
 use shared::components::PowerType;
 use shared::protocol::CombatLogKind;
@@ -119,18 +119,22 @@ fn energizing_elixir_native_five_second_expiry_restores_unbuffed_energy() {
 fn energizing_elixir_native_foreign_recipient_does_not_regenerate_caster_energy() {
     let mut h = fixture();
     let foreign = spawn_player(&mut h.app, MONK, 1.0);
+    h.app
+        .world_mut()
+        .entity_mut(foreign)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![
+            ENERGIZING_ELIXIR,
+        ]));
+    let foreign_connection = spawn_peer_connection(&mut h.app, foreign, 2);
     h.advance(1);
-    // Authenticated native effect on another recipient, without an invented aura.
-    crate::auras::apply_aura(
-        h.app.world_mut(),
-        &crate::auras::AuraApplication {
-            caster: h.caster,
-            target: foreign,
-            spell_id: ENERGIZING_ELIXIR,
-            effect_mask: 1,
-            source: crate::auras::AuraSource::Cast,
-        },
-    );
+    // Actual foreign self-cast through its own authenticated loopback connection.
+    let original_caster = h.caster;
+    let original_connection = h.connection;
+    h.caster = foreign;
+    h.connection = foreign_connection;
+    cast_elixir(&mut h);
+    h.caster = original_caster;
+    h.connection = original_connection;
     assert!(has_aura(h.app.world(), foreign, ENERGIZING_ELIXIR));
     assert!(!has_aura(h.app.world(), h.caster, ENERGIZING_ELIXIR));
     spend_energy(&mut h);
