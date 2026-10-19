@@ -359,6 +359,14 @@ Examples:
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
 
+## Independent primary-stat137 composition — 2026-10-18
+
+`StatModifiers.primary_pct` stores a percentage, not a separate factor type. Aura137 previously added20+15=35, then stats.rs multiplied by1.35. It now composes each selected independent percentage as `old + amount*(1+old/100)`;20 then15 becomes38, so the unchanged consumer applies1.38. The shared selected-stat iterator retains flat29 addition and the existing four-field mask order; no stat model or source data changes.
+
+Source gate precedes the oracle: owned world.db has no group tables, which was NOT treated as proof of independence. The existing TC TDB1210.26091 SQL baseline (SHA256608534d1dc97535c92d756914a02fe36264e484b519f6e54f6d10cf56c6f4d96) has297 memberships,13rules(all1), no nested references, and neither51271 nor53365 in any group. All32 active world updates at exacta352b1fa9017138cc2f1dcfc0a51afaa17391ecf were Git-blob-verified and contain no group/candidate references. Native SkillLineAbility has no Spell/SupercedesSpell links for either ID. SpellMgr364-367/413-445/823+ therefore gives no SAME_EFFECT exclusion; Unit5026-5050 multiplies, and SpellAuraEffects3894-3933 selects the MiscValueB stat mask. Native70448 effects43590/46012 supply Strength20%/15%.
+
+Ignored tests-only8aef2fabb on requestedba74ef1df reproduced actual computed Human DK Strength33→44.55 rather than45.54 in both orders and the removal case. Singles, Stamina selection and foreign self-cast with independently computed native stats passed3; genuine3RED took18.87s,0warnings. No stats/gear/HP/row/RNG/clock edits. At853447542/protocolf9a9175, native137six plus existing native Intellect/Stamina controls, corestats11, itemstats8 and framestats2 pass29/29 in46.49s with zero warnings/ignored. `stats::tests::` is a substring filter and includes those existing item/frame families; no whole-class claim is made. Fullcargo fmt0 before pushes; current master integratedc54d2b888, independent lead gate pending. A subsequent authentic follower-fixture audit reproduced three affected old additive oracles: native Aegis35336730% plus Plate861025% are independently grouped, so36.5% replaces35%. Native level32 base980 yields1337.7 stamina and floor1337×8=10696HP, not10584; the no-Aegis8232HP control stays unchanged. Only source-proven test/spec expectations change; follower code/budgets/stats/health remain untouched. [Follower source boundary](../investigations/follower-data.md#passive-derived-stat-refresh--2026-10-15); targeted follower GREEN pending. Scope is independent137 primary-stat composition, not legal DK kit, the runeforge proc producer, full Pillar/PvP or a general stack-group engine. [Requirement](../../specs/class-completeness.md); family `auras::total_stat_percent_tests::`; assigneds6 source gate/RED receipts `data/class-completeness6-2026-10-12/total-stat137-*`.
+
 ## Native power prevention294 — 2026-10-18
 
 TC a352b1fa StatSystem.cpp863-869 tests recipient aura294 `MiscValue & (1 << power)` and returns zero regeneration before base, percentage and flat terms. Amount is not consulted. Native70448 SpellEffect351520 supplies232865 mask8/amount0;623229 supplies262173 mask1/amount0, with623258's real379 −100% sibling. Both spells are permanent; tests do not invent expiry.
@@ -385,13 +393,12 @@ The modifier now stores raw five-second amounts by recipient/power; continuous n
 
 Every aura change recomputes two components, each written only when its value changed:
 
-- **`stats::StatModifiers`** (additive percentages, [[character-stats]]): `update_character_stats` folds it into `CharacterStats`, so each stat below is applied exactly once, there.
-  Percentages add across auras: two +10% stamina auras give +20%. TrinityCore multiplies them (`GetTotalAuraMultiplier`), which gives +21%. The results differ only when several auras modify the same stat.
+- **`stats::StatModifiers`** ([[character-stats]]): `update_character_stats` folds it into `CharacterStats`, so each stat below is applied exactly once there. Aura137's percentage fields encode independent factor composition; see [source qualification and native proof](#independent-primary-stat137-composition--2026-10-18). Flat modifiers remain additive.
 
 | Field | Aura types |
 |---|---|
 | `primary_flat` | MOD_STAT 29 (MiscValue stat index 0 Str, 1 Agi, 2 Sta, 3 Int; negative = all) |
-| `primary_pct` | MOD_TOTAL_STAT_PERCENTAGE 137 (MiscValueB stat bitmask; 0 = all, TrinityCore `HandleModTotalPercentStat`) |
+| `primary_pct` | MOD_TOTAL_STAT_PERCENTAGE 137 composed independent percentages (MiscValueB stat bitmask; 0 = all, TrinityCore `HandleModTotalPercentStat`) |
 | `crit_pct` | MOD_CRIT_PCT 290 |
 | `haste_pct` | 138, 140, 192, 342, 193, 216, plus the strongest MOD_CASTING_SPEED_NOT_STACK 65 (retail haste is one stat) |
 | `mastery_points` | MASTERY 318 |
