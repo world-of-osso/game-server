@@ -257,6 +257,8 @@ fn fixture() -> Fixture {
         .insert_resource(crate::scripted_ai::creature_text::load_creature_texts(&db).unwrap());
     h.app
         .insert_resource(crate::scripted_ai::smart_ai::load_smart_scripts(&prepared).unwrap());
+    h.app
+        .insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&db).unwrap());
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
@@ -472,6 +474,15 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
     assert!(
         crate::navigation::within_reach(point(&f.h, f.tank), point(&f.h, f.boss), ai::MELEE_REACH),
         "actual native tank approach must reach the living boss before frontal proof"
+    );
+    assert_eq!(
+        (crate::scripted_ai::Ctx {
+            world: f.h.app.world_mut(),
+            me: f.boss
+        })
+        .victim(),
+        Some(f.tank),
+        "real source Fissure must target its actual native current victim"
     );
     let mut started = false;
     for _ in 0..100 {

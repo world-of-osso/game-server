@@ -1,3 +1,7 @@
+## Actual destination-cone frontal RED and admitted point positioning
+
+[Native proof/implementation](investigations/follower-data.md#run-local-tank-observations--2026-10-18): a3ea7ae49/P_a2b actual386660/104 pose1RED38.01s/0warnings exposes all4living other party members despite successful native70/205 intro/body/LOS/approach/cast and clear-pose controls. First104 goal now records before legitimate follower kicks, validates native recipient geometry/actual-body mutual LOS/ground, and projects full point-route exposure through unchanged admission. No eye defaults, stat/kit/budget changes or interrupt-provider activation. Native GREEN and broader frontals/stacking remain open.
+
 ## Azure frontal fixture and owned Leymor body input
 
 [Source/proof/limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18): native70/205 fixture reuses authenticated private2515 geometry read-only;512inputs/14outputs match. Startup relative-world setup failure is not frontal RED. Canonical eyes lack Leymor107127; existing algorithm4890aa236 produces10actual head-bone poses from model4279060/skin4279083, native1PASS0.06s/0warnings. Only owned fixture eye view changes, with algorithm/dependency/output hashes retained; no canonical writes/tile rebake or new eye defaults. Actual386660/104 pose RED still pending, native kicks enabled.

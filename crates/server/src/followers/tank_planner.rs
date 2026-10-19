@@ -45,7 +45,7 @@ fn read_admitted_caster(
         {
             continue;
         }
-        match read_pursuit_admission(world, tank, caster, follower) {
+        match read_movement_admission(world, tank, caster, follower, None) {
             Ok(true) => return Some(caster),
             Ok(false) => debug!(?tank, ?caster, "Caster collection held by pull budget"),
             Err(error) => debug!(?tank, ?caster, %error, "Caster collection admission unavailable"),
@@ -100,7 +100,7 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
     {
         return false;
     }
-    match read_pursuit_admission(world, tank, target, &follower) {
+    match read_movement_admission(world, tank, target, &follower, None) {
         Ok(true) => return false,
         Ok(false) => debug!(?tank, ?target, "Tank pursuit held by pull budget"),
         Err(error) => debug!(?tank, ?target, %error, "Tank pursuit admission unavailable"),
@@ -118,47 +118,49 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
     true
 }
 
-fn read_pursuit_admission(
+pub(super) fn read_movement_admission(
     world: &mut World,
     tank: Entity,
     target: Entity,
     follower: &Follower,
+    destination: Option<Vec3>,
 ) -> Result<bool, String> {
     let history = super::pull_history::snapshot(world, follower.owner)
-        .ok_or("Tank pursuit lacks current authoritative run history")?;
+        .ok_or("Tank movement lacks current authoritative run history")?;
     let difficulty = world
         .get::<crate::zones::CreatureDifficulty>(target)
-        .ok_or("Tank pursuit target lacks native creature difficulty")?
+        .ok_or("Tank movement target lacks native creature difficulty")?
         .0;
     let difficulty = super::population_difficulty(difficulty);
     let target_guid = world
         .get::<crate::zones::CreatureOrigin>(target)
-        .ok_or("Tank pursuit target lacks authored source identity")?
+        .ok_or("Tank movement target lacks authored source identity")?
         .guid;
-    let route = super::pull_route::read_route(
-        world,
-        &super::pull_route::Request {
-            tank,
-            target_guid,
-            difficulty,
-            cleared: &history.cleared_spawns,
-        },
-    )?;
+    let request = super::pull_route::Request {
+        tank,
+        target_guid,
+        difficulty,
+        cleared: &history.cleared_spawns,
+    };
+    let route = match destination {
+        Some(point) => super::pull_route::read_point_route(world, &request, point)?,
+        None => super::pull_route::read_route(world, &request)?,
+    };
     debug!(
         ?tank,
         corners = route.points.len(),
         packs = route.pack_count,
-        "Tank pursuit route projected"
+        "Tank movement route projected"
     );
     let map = *world
         .get::<crate::maps::InMap>(tank)
-        .ok_or("Tank pursuit lacks a map copy")?;
+        .ok_or("Tank movement lacks a map copy")?;
     let sources =
         super::pull_sources::read_present_sources(world, map, difficulty, &history.cleared_spawns)?;
     let (admitted_map, members, _) = super::party::read_admission(world, follower.owner)
-        .ok_or("Tank pursuit lacks an authoritative admitted party")?;
+        .ok_or("Tank movement lacks an authoritative admitted party")?;
     if admitted_map != map || !members.contains(&tank) {
-        return Err("Tank pursuit is outside its admitted copy or roster".into());
+        return Err("Tank movement is outside its admitted copy or roster".into());
     }
     let mut party = members.to_vec();
     party.push(follower.owner);

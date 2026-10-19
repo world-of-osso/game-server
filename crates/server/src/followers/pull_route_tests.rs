@@ -98,6 +98,48 @@ fn read_route(h: &mut Harness, tank: Entity) -> Result<pull_route::PullRoute, St
 }
 
 #[test]
+fn tank_pull_point_route_accounts_for_sources_beyond_the_enemy_endpoint() {
+    let (mut h, tank) = route_fixture();
+    let original = *h.app.world().get::<Position>(tank).unwrap();
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    let point_actor = h
+        .app
+        .world_mut()
+        .query::<(Entity, &crate::zones::CreatureOrigin, &InMap)>()
+        .iter(h.app.world())
+        .find(|(_, origin, copy)| origin.guid == 20375719 && **copy == map)
+        .unwrap()
+        .0;
+    let point = crate::spell_cast::targets::position(h.app.world(), point_actor).unwrap();
+    let cleared = BTreeSet::new();
+    let request = Request {
+        tank,
+        target_guid: TARGET_GUID,
+        difficulty: 1,
+        cleared: &cleared,
+    };
+    let actor_route = pull_route::read_route(h.app.world_mut(), &request).unwrap();
+    assert!(
+        !actor_route.spawns.contains(&20375719),
+        "the original enemy endpoint must not already expose the point-only source"
+    );
+    let point_route = pull_route::read_point_route(h.app.world_mut(), &request, point).unwrap();
+    assert!(
+        point_route.spawns.contains(&20375719),
+        "a movement point must account for its actual native exposure beyond the enemy endpoint"
+    );
+    assert!(
+        point_route.spawns.contains(&TARGET_GUID),
+        "keep the deliberately engaged enemy's whole source formation"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(tank).unwrap(),
+        original,
+        "projection itself must not move the tank"
+    );
+}
+
+#[test]
 fn tank_pull_route_includes_intervening_native_aggro_on_a_complete_stockade_corridor() {
     let (mut h, tank) = route_fixture();
     let before = *h.app.world().get::<Position>(tank).unwrap();

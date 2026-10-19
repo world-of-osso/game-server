@@ -21,6 +21,14 @@ pub(super) fn update(world: &mut World) {
         .iter(world)
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
+    for (unit, follower) in &followers {
+        if follower.profile.role == GroupRole::Tank
+            && crate::spell_cast::targets::is_alive(world, *unit)
+        {
+            let party = party_units(world, follower.owner);
+            super::tank_frontal::record_observed_frontal(world, *unit, follower, &party);
+        }
+    }
     for (unit, follower) in followers {
         if crate::spell_cast::targets::is_alive(world, unit) {
             update_follower(world, unit, &follower);
@@ -35,6 +43,7 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
+    super::tank_frontal::update_goal(world, unit, follower, &party);
     let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
     let selection = collection_target.map_or_else(
         || select_enemy(world, follower, unit, &party),

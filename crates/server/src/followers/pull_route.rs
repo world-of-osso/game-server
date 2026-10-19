@@ -25,6 +25,22 @@ pub(super) struct PullRoute {
 }
 
 pub(super) fn read_route(world: &mut World, request: &Request<'_>) -> Result<PullRoute, String> {
+    read_route_with_destination(world, request, None)
+}
+
+pub(super) fn read_point_route(
+    world: &mut World,
+    request: &Request<'_>,
+    destination: Vec3,
+) -> Result<PullRoute, String> {
+    read_route_with_destination(world, request, Some(destination))
+}
+
+fn read_route_with_destination(
+    world: &mut World,
+    request: &Request<'_>,
+    destination: Option<Vec3>,
+) -> Result<PullRoute, String> {
     let map = *world
         .get::<InMap>(request.tank)
         .ok_or("Tank route lacks a map copy")?;
@@ -45,7 +61,12 @@ pub(super) fn read_route(world: &mut World, request: &Request<'_>) -> Result<Pul
     {
         return Err("Pull target must be a living attackable non-passive source actor".into());
     }
-    let points = read_complete_route(world, request.tank, actor, map)?;
+    let destination = match destination {
+        Some(point) => point,
+        None => crate::spell_cast::targets::position(world, actor)
+            .ok_or("Source route target lacks a position")?,
+    };
+    let points = read_complete_route(world, request.tank, destination, map)?;
     let packs = read_exposed_packs(world, request.tank, &sources, &points, target.pack_guid)?;
     let spawns = sources
         .values()
@@ -105,13 +126,11 @@ fn read_exposed_packs(
 fn read_complete_route(
     world: &World,
     tank: Entity,
-    target: Entity,
+    to: Vec3,
     map: InMap,
 ) -> Result<Vec<Vec3>, String> {
     let from =
         crate::spell_cast::targets::position(world, tank).ok_or("Tank route lacks a position")?;
-    let to = crate::spell_cast::targets::position(world, target)
-        .ok_or("Source route target lacks a position")?;
     if !from.is_finite() || !to.is_finite() {
         return Err("Pull route endpoints must be finite".into());
     }
