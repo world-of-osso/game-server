@@ -29,7 +29,7 @@ The authenticated current Guild Master may transfer to another stored same-guild
 
 ## Known gaps (current cycle)
 
-- [ ] Coordinated consumer gate and real two-member native authority readback remain pending. Actual authority RED4 precedes focused GREEN4/4 (six-rank/nonzero bank fixture, reopen/leave, auth/foreign/self, participant refresh and at least1000 real reader snapshots, continuing until the31-transfer writer finishes).
+None within this slice. gz709 passed all four leadership tests, including at least1000 real snapshots continuing until the31-transfer writer finishes, and landed the coordinated cohort. Two authenticated members then proved both-skin typed transfer and fresh-server/client new-master authority; see [native acceptance](../wiki/systems/guild-lifecycle.md#leadership-native-acceptance-2026-10-19). Offline/refusal/bank/history/leave boundaries retain automated proof, not an all-cases native claim.
 
 ## Out of scope
 

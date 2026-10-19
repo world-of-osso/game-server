@@ -3190,3 +3190,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Follower kick candidate-scope regression repair
 
 [Exact root/proof](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): fk702 two genuine Overheat regressions despite prior50GREEN; bounded diagnostic2RED identifies spec63 off-selectedkick from widened all-engaged handoff. fb4edd4b7 restores selectedenemy-only runtime envelope, providermultiAPIunchanged; fourfamilies+bothunchangedOverheat52PASS96.87s/ZEROwarnings, check8.43s/fmtPASS. Pushed; successor gatepending. No assertion/planner/ai.rs edits, no weakened collection/budget checks.
+
+## 2026-10-19 — Leadership transfer native proof
+
+gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
