@@ -370,3 +370,7 @@ pub mod test_helpers {
 #[cfg(test)]
 #[path = "terrain_height_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "terrain_height/format_receipts_tests.rs"]
+mod format_receipts_tests;
