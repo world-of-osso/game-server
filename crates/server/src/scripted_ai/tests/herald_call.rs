@@ -11,7 +11,17 @@ const DESCEND: Position = Position {
 
 pub(super) fn first_west(difficulty: u32) -> (Harness, InMap, Entity, Entity) {
     let (mut h, map, nazan, sentries) = prepared_ramparts(difficulty);
-    reach_center(&mut h, nazan, &sentries);
+    let vazruden = reach_first_west(&mut h, map, nazan, &sentries);
+    (h, map, nazan, vazruden)
+}
+
+pub(super) fn reach_first_west(
+    h: &mut Harness,
+    map: InMap,
+    nazan: Entity,
+    sentries: &[Entity],
+) -> Entity {
+    reach_center(h, nazan, sentries);
     h.advance(1.0);
     let start = *h.app.world().get::<Position>(nazan).unwrap();
     let speed = h
@@ -30,9 +40,9 @@ pub(super) fn first_west(difficulty: u32) -> (Harness, InMap, Entity, Entity) {
     }
     assert_eq!(h.app.world().get::<Position>(nazan), Some(&WEST));
     assert!(h.has_aura(nazan, 18430));
-    let vazruden = actors_in_copy(&mut h, 17537, map);
+    let vazruden = actors_in_copy(h, 17537, map);
     assert_eq!(vazruden.len(), 1);
-    (h, map, nazan, vazruden[0])
+    vazruden[0]
 }
 
 fn distance(left: Position, right: Position) -> f32 {
