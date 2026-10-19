@@ -1,6 +1,6 @@
 ## 2026-10-17 — Victim caster-specific crit306
 
-[Actual caster filter](systems/player-damage.md#victim-caster-specific-crit306--2026-10-17): qualification73953d911 FIRST4PASS74.56s/native1259256 identity/+100/lifetime768s and source52/197/334/player0/NO_CRIT pairs; THEN ignored2fae8312c PUSHED. Genuine4RED/8PASS77.77s0warnings includes matchingNPC/player, source52 preclamp andNO_CRITsource+306; foreign/placement/cancel/197/334/summonowner controls pass. Pure existing victim-aura caster==actualattacker filter before received clamp, shared forecast/no new state/query/wire/RNG/HP/clocks/Guardian change. Fresh GREEN/lead gate pending; no invented negative306/multicaster coexistence certificate,248 deferred.
+[Actual caster filter](systems/player-damage.md#victim-caster-specific-crit306--2026-10-17): qualification73953d911 FIRST4PASS74.56s/native1259256 identity/+100/lifetime768s and source52/197/334/player0/NO_CRIT pairs; THEN ignored2fae8312c PUSHED. Genuine4RED/8PASS77.77s0warnings includes matchingNPC/player, source52 preclamp andNO_CRITsource+306; foreign/placement/cancel/197/334/summonowner controls pass. Pure existing victim-aura caster==actualattacker filter before received clamp, shared forecast/no new state/query/wire/RNG/HP/clocks/Guardian change. Consumerfcf19ae71 fresh ignored12GREEN87.79s/0warnings plus retained qualification4PASS74.56s (sixteen-case composite), only then twelve behavioral ignores removed; lead gate pending. No invented negative306/multicaster coexistence certificate,248 deferred.
 
 ## 2026-10-17 — Victim general crit197
 

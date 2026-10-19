@@ -285,7 +285,6 @@ fn native_melee_victim_caster_crit_no_crit_source_is_runtime_qualified() {
 }
 
 #[test]
-#[ignore = "behavioral RED before actual-caster victim306 consumer"]
 fn native_melee_victim_caster_crit_matching_npc_saturates_received_chance() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -296,7 +295,6 @@ fn native_melee_victim_caster_crit_matching_npc_saturates_received_chance() {
 }
 
 #[test]
-#[ignore = "behavioral RED before actual-caster victim306 consumer"]
 fn native_melee_victim_caster_crit_matching_player_uses_victim_aura() {
     let (mut h, victim) = fixture();
     let player = h.caster;
@@ -307,7 +305,6 @@ fn native_melee_victim_caster_crit_matching_player_uses_victim_aura() {
 }
 
 #[test]
-#[ignore = "behavioral control: victim306 must filter actual caster"]
 fn native_melee_victim_caster_crit_foreign_caster_does_not_change_npc_source() {
     let (mut h, victim) = fixture();
     let foreign = h.caster;
@@ -318,7 +315,6 @@ fn native_melee_victim_caster_crit_foreign_caster_does_not_change_npc_source() {
 }
 
 #[test]
-#[ignore = "behavioral control: victim306 must filter actual caster"]
 fn native_melee_victim_caster_crit_foreign_caster_does_not_grant_player_crit() {
     let (mut h, victim) = fixture();
     let foreign = h.npc;
@@ -328,7 +324,6 @@ fn native_melee_victim_caster_crit_foreign_caster_does_not_grant_player_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control for actual victim placement"]
 fn native_melee_victim_caster_crit_attacker_only_does_not_modify_actual_victim() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -339,7 +334,6 @@ fn native_melee_victim_caster_crit_attacker_only_does_not_modify_actual_victim()
 }
 
 #[test]
-#[ignore = "behavioral control for actual victim placement"]
 fn native_melee_victim_caster_crit_foreign_target_does_not_modify_actual_victim() {
     let (mut h, victim) = fixture();
     let (npc, foreign) = (h.npc, h.caster);
@@ -350,7 +344,6 @@ fn native_melee_victim_caster_crit_foreign_target_does_not_modify_actual_victim(
 }
 
 #[test]
-#[ignore = "behavioral control for native aura cancellation"]
 fn native_melee_victim_caster_crit_cancelled_matching_aura_restores_baseline() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -365,7 +358,6 @@ fn native_melee_victim_caster_crit_cancelled_matching_aura_restores_baseline() {
 }
 
 #[test]
-#[ignore = "behavioral RED before source and matching victim306 pre-clamp sum"]
 fn native_melee_victim_caster_crit_meets_negative_source_before_zero_clamp() {
     let (mut h, victim) = fixture();
     apply_full_source(&mut h);
@@ -377,7 +369,6 @@ fn native_melee_victim_caster_crit_meets_negative_source_before_zero_clamp() {
 }
 
 #[test]
-#[ignore = "behavioral control for received197 and matching306 raw sum"]
 fn native_melee_victim_caster_crit_combines_with_negative_197_before_clamp() {
     let (mut h, victim) = fixture();
     apply_full_source(&mut h);
@@ -390,7 +381,6 @@ fn native_melee_victim_caster_crit_combines_with_negative_197_before_clamp() {
 }
 
 #[test]
-#[ignore = "behavioral control for received clamp before attacker334"]
 fn native_melee_victim_caster_crit_received_sum_clamps_before_attacker_334() {
     let (mut h, victim) = fixture();
     apply_full_source(&mut h);
@@ -403,7 +393,6 @@ fn native_melee_victim_caster_crit_received_sum_clamps_before_attacker_334() {
 }
 
 #[test]
-#[ignore = "behavioral RED: source NO_CRIT must not mask matching306"]
 fn native_melee_victim_caster_crit_applies_after_native_source_no_crit() {
     let (mut h, victim) = fixture();
     let darion = spawn_darion(&mut h);
@@ -414,7 +403,6 @@ fn native_melee_victim_caster_crit_applies_after_native_source_no_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control: summon owner is not the actual attacker caster"]
 fn native_melee_victim_caster_crit_summon_owner_caster_is_not_attacker() {
     let (mut h, victim) = fixture();
     let darion = spawn_darion(&mut h);
