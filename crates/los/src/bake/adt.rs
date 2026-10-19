@@ -1,106 +1,57 @@
-//! WDT tile files, ADT terrain triangles and `_obj0` placements, read as the server's
-//! ground does (game-server `crates/server/src/ground.rs`, `terrain_height.rs`).
-
-use glam::{EulerRot, Quat, Vec3};
-
-use super::chunks::{Result, f32_at, f32x3_at, find_reversed, u16_at, u32_at, u32s};
+//! Server placement and terrain-mesh policy over shared ADT/WDT readers.
+use super::chunks::Result;
 use crate::TILE_SIZE;
+use glam::{EulerRot, Quat, Vec3};
+use wow_adt::{adt, adt_obj, wdt};
+const UNIT_SIZE: f32 = adt::UNIT_SIZE;
 
-const MAID_ENTRY_SIZE: usize = 32;
-const MAIN_ENTRY_SIZE: usize = 8;
-const MAIN_FLAG_HAS_ADT: u8 = 0x1;
-const MPHD_FLAG_GLOBAL_WMO: u32 = 0x1;
-const MDDF_ENTRY_SIZE: usize = 36;
-/// MDDF flag: `nameId` is a FileDataID, not an MMID index.
-const MDDF_FLAG_FILEDATAID: u16 = 0x40;
-const MODF_ENTRY_SIZE: usize = 64;
-const MODF_FLAG_HAS_SCALE: u16 = 0x4;
-const MODF_FLAG_FILEDATAID: u16 = 0x8;
-/// Yards per MCNK chunk side and per terrain quad.
-const CHUNK_SIZE: f32 = 100.0 / 3.0;
-const UNIT_SIZE: f32 = CHUNK_SIZE / 8.0;
-const MCNK_HEADER_SIZE: usize = 128;
-const MCVT_COUNT: usize = 145;
-const MCNK_FLAG_HIGH_RES_HOLES: u32 = 0x10000;
-
-/// A tile's root and `_obj0` ADT FileDataIDs from the WDT MAID.
 #[derive(Clone, Copy, Default)]
 pub struct TileFiles {
     pub root: u32,
     pub obj0: u32,
 }
 
-/// The WDT's tiles indexed `col * 64 + row`; an error for a global-WMO map.
-pub fn wdt_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
-    let mphd = find_reversed(wdt, b"MPHD").ok_or("WDT has no MPHD")?;
-    if u32_at(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO != 0 {
+pub fn wdt_tiles(data: &[u8]) -> Result<Vec<TileFiles>> {
+    if wdt::parse_wdt_mphd_flags(data)?.raw & 1 != 0 {
         return Err("global-WMO map: no tiles".into());
     }
-    let Some(maid) = find_reversed(wdt, b"MAID") else {
-        return terrainless_legacy_tiles(wdt);
-    };
-    (0..64 * 64)
-        .map(|index| {
-            let base = index * MAID_ENTRY_SIZE;
-            Ok(TileFiles {
-                root: u32_at(maid, base)?,
-                obj0: u32_at(maid, base + 4)?,
+    if let Some(slots) = wdt::parse_wdt_maid_file_ids(data)? {
+        return Ok(slots
+            .into_iter()
+            .map(|slot| TileFiles {
+                root: slot.root,
+                obj0: slot.obj0,
             })
-        })
-        .collect()
-}
-
-fn terrainless_legacy_tiles(wdt: &[u8]) -> Result<Vec<TileFiles>> {
-    let main = find_reversed(wdt, b"MAIN").ok_or("WDT has no MAIN or MAID")?;
-    if main.len() != 64 * 64 * MAIN_ENTRY_SIZE {
-        return Err("WDT MAIN has invalid size".into());
+            .collect());
     }
-    let has_terrain = main
-        .as_chunks::<MAIN_ENTRY_SIZE>()
-        .0
-        .iter()
-        .any(|entry| entry[0] & MAIN_FLAG_HAS_ADT != 0);
-    if has_terrain {
+    let tiles = wdt::parse_wdt_tiles(data)?;
+    if !tiles.active.is_empty() {
         return Err("WDT has active terrain but no MAID".into());
     }
     Ok(vec![TileFiles::default(); 64 * 64])
 }
 
-/// The WDT's global-WMO MODF: either a FileDataID or a legacy MWMO name index.
-pub fn global_wmo(wdt: &[u8]) -> Result<Option<Placement>> {
-    let mphd = find_reversed(wdt, b"MPHD").ok_or("WDT has no MPHD")?;
-    if u32_at(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO == 0 {
-        return Ok(None);
-    }
-    let entry = find_reversed(wdt, b"MODF").ok_or("global WDT has no MODF")?;
-    let flags = u16_at(entry, 56)?;
-    Ok(Some(Placement {
-        model: global_wmo_model(wdt, entry, flags)?,
-        unique_id: u32_at(entry, 4)?,
-        position: f32x3_at(entry, 8)?,
-        rotation: f32x3_at(entry, 20)?,
-        scale: if flags & MODF_FLAG_HAS_SCALE != 0 {
-            f32::from(u16_at(entry, 62)?) / 1024.0
-        } else {
-            1.0
-        },
-        doodad_set: u16_at(entry, 58)?,
-    }))
+pub fn global_wmo(data: &[u8]) -> Result<Option<Placement>> {
+    wdt::parse_wdt_global_wmo(data)?
+        .map(|entry| {
+            Ok(Placement {
+                model: model_ref(entry.fdid, entry.path)?,
+                unique_id: entry.unique_id,
+                position: entry.position,
+                rotation: entry.rotation,
+                scale: entry.scale,
+                doodad_set: entry.doodad_set,
+            })
+        })
+        .transpose()
 }
 
-fn global_wmo_model(wdt: &[u8], entry: &[u8], flags: u16) -> Result<ModelRef> {
-    let name_id = u32_at(entry, 0)?;
-    if flags & MODF_FLAG_FILEDATAID != 0 {
-        return Ok(ModelRef::Fdid(name_id));
+fn model_ref(fdid: Option<u32>, path: Option<String>) -> Result<ModelRef> {
+    if let Some(fdid) = fdid {
+        return Ok(ModelRef::Fdid(fdid));
     }
-    let names = find_reversed(wdt, b"MWMO").ok_or("legacy global WDT has no MWMO")?;
-    let name = names
-        .split(|&byte| byte == 0)
-        .nth(name_id as usize)
-        .filter(|name| !name.is_empty())
-        .ok_or("global WDT MODF name index outside MWMO")?;
-    let path = std::str::from_utf8(name).map_err(|error| format!("MWMO path: {error}"))?;
-    Ok(ModelRef::Path(path.to_lowercase().replace('\\', "/")))
+    path.map(|path| ModelRef::Path(path.to_lowercase().replace('\\', "/")))
+        .ok_or_else(|| "placement has no FDID or model name".into())
 }
 
 /// Bevy world position of an ADT MODF/MDDF placement position
@@ -152,102 +103,49 @@ impl Placement {
     }
 }
 
-/// `_obj0` MDDF doodads and MODF WMOs. MODF entries by path are skipped, as the server's
-/// ground skips them.
-pub fn placements(obj0: &[u8]) -> Result<(Vec<Placement>, Vec<Placement>)> {
-    let names = doodad_names(obj0);
-    let mut doodads = Vec::new();
-    if let Some(mddf) = find_reversed(obj0, b"MDDF") {
-        for entry in mddf.as_chunks::<MDDF_ENTRY_SIZE>().0.iter() {
-            let name_id = u32_at(entry, 0)?;
-            let flags = u16_at(entry, 34)?;
-            let model = if flags & MDDF_FLAG_FILEDATAID != 0 {
-                ModelRef::Fdid(name_id)
-            } else {
-                let name = names.get(name_id as usize).ok_or_else(|| {
-                    format!("MDDF name {name_id} past {} MMID names", names.len())
-                })?;
-                ModelRef::Path(name.clone())
-            };
-            doodads.push(Placement {
-                model,
-                unique_id: u32_at(entry, 4)?,
-                position: f32x3_at(entry, 8)?,
-                rotation: f32x3_at(entry, 20)?,
-                scale: f32::from(u16_at(entry, 32)?) / 1024.0,
+/// Preserve the server's FDID-only WMO placement selection and MDDF name policy.
+pub fn placements(data: &[u8]) -> Result<(Vec<Placement>, Vec<Placement>)> {
+    let parsed = adt_obj::load_adt_obj0(data)?;
+    let doodads = parsed
+        .doodads
+        .into_iter()
+        .map(|entry| {
+            Ok(Placement {
+                model: model_ref(entry.fdid, entry.path)?,
+                unique_id: entry.unique_id,
+                position: entry.position,
+                rotation: entry.rotation,
+                scale: entry.scale,
                 doodad_set: 0,
-            });
-        }
-    }
-    let mut wmos = Vec::new();
-    if let Some(modf) = find_reversed(obj0, b"MODF") {
-        for entry in modf.as_chunks::<MODF_ENTRY_SIZE>().0.iter() {
-            let flags = u16_at(entry, 56)?;
-            if flags & MODF_FLAG_FILEDATAID == 0 {
-                continue;
-            }
-            let scale = if flags & MODF_FLAG_HAS_SCALE != 0 {
-                f32::from(u16_at(entry, 62)?) / 1024.0
-            } else {
-                1.0
-            };
-            wmos.push(Placement {
-                model: ModelRef::Fdid(u32_at(entry, 0)?),
-                unique_id: u32_at(entry, 4)?,
-                position: f32x3_at(entry, 8)?,
-                rotation: f32x3_at(entry, 20)?,
-                scale,
-                doodad_set: u16_at(entry, 58)?,
-            });
-        }
-    }
+            })
+        })
+        .collect::<Result<_>>()?;
+    let wmos = parsed
+        .wmos
+        .into_iter()
+        .filter_map(|entry| {
+            entry.fdid.map(|fdid| Placement {
+                model: ModelRef::Fdid(fdid),
+                unique_id: entry.unique_id,
+                position: entry.position,
+                rotation: entry.rotation,
+                scale: entry.scale,
+                doodad_set: entry.doodad_set,
+            })
+        })
+        .collect();
     Ok((doodads, wmos))
 }
 
-/// MMDX model paths in MMID order.
-fn doodad_names(obj0: &[u8]) -> Vec<String> {
-    let (Some(mmdx), Some(mmid)) = (find_reversed(obj0, b"MMDX"), find_reversed(obj0, b"MMID"))
-    else {
-        return Vec::new();
-    };
-    u32s(mmid)
-        .into_iter()
-        .map(|offset| {
-            let tail = mmdx.get(offset as usize..).unwrap_or_default();
-            let end = tail
-                .iter()
-                .position(|&byte| byte == 0)
-                .unwrap_or(tail.len());
-            String::from_utf8_lossy(&tail[..end])
-                .to_lowercase()
-                .replace('\\', "/")
-        })
-        .collect()
-}
-
-/// The root ADT's terrain triangles in Bevy world space, without hole quads. Each quad is
-/// the four-triangle fan around its inner vertex the server's height lookup interpolates.
+/// Original quad fan, hole selection, winding and floating-point arithmetic.
 pub fn terrain_triangles(root: &[u8]) -> Result<Vec<[Vec3; 3]>> {
     let mut triangles = Vec::new();
-    for (tag, mcnk) in super::chunks::chunks(root) {
-        if &tag != b"KNCM" {
-            continue;
-        }
-        if mcnk.len() < MCNK_HEADER_SIZE {
-            return Err(format!("MCNK too small: {} bytes", mcnk.len()));
-        }
-        let corner_x = f32_at(mcnk, 0x68)?;
-        let corner_y = f32_at(mcnk, 0x6c)?;
-        let base_z = f32_at(mcnk, 0x70)?;
-        let holes = if u32_at(mcnk, 0)? & MCNK_FLAG_HIGH_RES_HOLES != 0 {
-            u64::from(u32_at(mcnk, 0x14)?) | u64::from(u32_at(mcnk, 0x18)?) << 32
-        } else {
-            widen_low_res_holes(u16_at(mcnk, 0x3c)?)
-        };
-        let mcvt = find_reversed(&mcnk[MCNK_HEADER_SIZE..], b"MCVT").ok_or("MCNK has no MCVT")?;
-        let heights: Vec<f32> = (0..MCVT_COUNT)
-            .map(|index| f32_at(mcvt, index * 4))
-            .collect::<Result<_>>()?;
+    for chunk in adt::parse_terrain_height_chunks(root)? {
+        let [corner_x, corner_y, base_z] = chunk.origin;
+        let heights = chunk.heights;
+        let holes = chunk
+            .holes_high_res
+            .unwrap_or_else(|| widen_low_res_holes(chunk.holes_low_res));
         // Row steps along WoW X, column along WoW Y, both away from the corner.
         let vertex = |row: f32, col: f32, height: f32| {
             Vec3::new(
