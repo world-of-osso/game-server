@@ -3190,3 +3190,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Follower kick candidate-scope regression repair
 
 [Exact root/proof](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): fk702 two genuine Overheat regressions despite prior50GREEN; bounded diagnostic2RED identifies spec63 off-selectedkick from widened all-engaged handoff. fb4edd4b7 restores selectedenemy-only runtime envelope, providermultiAPIunchanged; fourfamilies+bothunchangedOverheat52PASS96.87s/ZEROwarnings, check8.43s/fmtPASS. Pushed; successor gatepending. No assertion/planner/ai.rs edits, no weakened collection/budget checks.
+
+## 2026-10-19 — Swiftmend native prerequisite qualification
+
+[Qualification](investigations/follower-data.md#swiftmend-prerequisite-qualification--2026-10-19): test-onlydecf6a597, native18562/noHoT wronglyacceptedRED; real774/actualhealPASS; lowernoHoTversushigherHoTfollowerpatientselectionRED. Explicitignoredrun1PASS/2FAIL22.71s/zero warnings, all3remainignored. Backendboundaryfailsfirst; no follower-onlyworkaround or productionchangeauthorized.
