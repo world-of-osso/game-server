@@ -54,6 +54,10 @@ Rust runtime/geometry consolidation is complete. **`WOW_FORMATS_PYTHON_TOOL_READ
 
 The [ground-files qualification ledger](../../handoffs/wow-formats-ground-files-qualification.md) preserves actual ordered outputs and error outcomes supporting this decision. Asset-resolver treats geometry bytes as opaque and uses existing cascette readers for CASC. Python CASC metadata and WDC5 importer duplication are later separate proposals, not part of completed Rust consolidation or an authorized implementation.
 
+## BLP icon boundary
+
+The [before-only icon ledger](../../handoffs/wow-formats-blp-icon-qualification.md) captures the actual web-icon function without replacing it. Its direct image-blp conversion intentionally remains separate from engine normalization/BC5/Godot upload policy; a fifth crate and icon migration are not approved. The proposed smallest boundary leaves the already-shared third-party parser and both consumer policies unchanged.
+
 ## Sources
 
 - [LOS dependencies/features](../../../crates/los/Cargo.toml)

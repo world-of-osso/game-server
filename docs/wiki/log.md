@@ -5,6 +5,9 @@
 ## 2026-10-18 — Ground metadata tooling qualification
 
 [Before-only boundary ledger](systems/ground-assets.md#before-only-metadata-tooling-qualification): frozen actual walk/CLI outputs, missing ordering and original failures; no deploy/extraction, parser replacement or bridge/API change. Keep permissive script policy separate from strict runtime projections until a raw-field boundary is approved.
+## 2026-10-18 — BLP icon qualification, no migration
+
+[Icon boundary and before-only ledger](systems/wow-formats.md#blp-icon-boundary): actual icon PNG/RGBA/error/panic receipts plus five source-selection edges; no production/pin/asset changes. Engine normalization and BC5 support are not server defaults. Fifth crate/icon migration remain unapproved.
 
 ## 2026-10-19 — Effect64 launch phase
 
