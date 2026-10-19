@@ -51,6 +51,11 @@ pub(super) fn update(
                 &follower.profile,
                 &candidates,
             ) {
+                #[cfg(test)]
+                eprintln!(
+                    "KICK_SCOPE unit={unit:?} spec={} selected={enemy:?} candidates={candidates:?}",
+                    follower.profile.spec_id
+                );
                 return true;
             }
         }
