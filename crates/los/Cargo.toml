@@ -6,10 +6,10 @@ rust-version.workspace = true
 
 [dependencies]
 # Raw ADT/chunk records serve runtime liquid; M2/WMO stay bake-only without presentation features.
-wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false }
-wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false, features = ["animation", "materials"], optional = true }
-wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false, optional = true }
-wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false }
+wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false, features = ["animation", "materials"], optional = true }
+wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false, optional = true }
+wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
 # Bake math: the glam that bevy 0.19 re-exports, so its Vec3 is `shared::los::Vec3`.
 glam = "0.32"
 # The LOS runtime the bake writes for (`shared::los`).

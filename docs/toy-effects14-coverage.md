@@ -1,5 +1,17 @@
 # Toy effects14 — active whole-goal coverage
 
+## Natural shared hearthstone charge coverage: GREEN first execution (2026-10-18)
+
+Lead tt653 passed211/0/check0/fmt0 and landed the stationary ordinary-timer coveragea989c0f3b. Its feature branch was cleaned after ancestry verification. Final approved toy follow-up covers only natural shared2309 charge recovery for Hiveborne281136/1310234 and Shadeweaver281615/1311934 in both directions. Source70448 SpellCategory2309 is named Hearthstone - Charges, MaxCharges1/ChargeRecoveryTime1800000ms; roots retain their authored10s casts.
+
+New learned-use tests observe the completion frame, then run ordinary50ms updates: sibling refused before30min recovery, allowed after30min, no early sibling teleport/SpellGo, then sibling completion spends the only charge and blocks the original. Bind return/health/model stay intact. No charge/deadline/cooldown/time-scale mutation or internal-deadline oracle; no runtime/data/Toy/assets changes. First bounded execution at7adfb7b03 is GREEN4/0/0ignored/78.45s: both new natural-recovery directions plus both retained missing-bind/first-use/shared-refusal controls. Existing charge machinery already works; no behavioral RED or runtime repair was invented. Later changes are documentation only; lead integration/landing remains pending. [Contract](specs/toys.md#natural-shared-hearthstone-charge-coverage). Other identities/native claims and the three accepted unpublished gaps remain separate.
+
+## Ordinary30-minute/hour coverage follow-up: GREEN first execution (2026-10-18)
+
+Boundary docs73eb4c48b explicitly landedec7df3660; merged docs branch cleaned after ancestry verification. Approved follow-up covers only existing Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830. Authoritative70448 duration1800000ms/recovery3600000ms is already admitted; no runtime defect or RED is assumed.
+
+New real-learning/UseToy cases observe cast-time lower/upper bounds, then use only the existing harness's ordinary50ms updates: aura present before30min, naturally absent from authoritative/replicated state after30min, recovery refusal after expiry and near1h, then a second SpellGo/fresh owner aura after1h with unchanged health/body/position. Targets use1799/1801s and3598/3601s around the observed cast interval, not an internal deadline oracle. No cancellation, clock scaling, deadline/cooldown edits, source metadata, Toy rows or assets change. First targeted execution at e10b9562b is GREEN4/0/0ignored/79.19s: both new ordinary-hour lifecycle cases and both existing same-ID cancellation controls. Existing timers already satisfy the tested contract; there was no behavioral RED or runtime repair. Explicit absolute shared-protocol/netcode/udp patches used canonicalf9a91753; later changes are documentation only, with lead integration/landing pending. [Contract](specs/toys.md#ordinary-lifetime-and-reuse-follow-up).
+
 ## Accepted sourced boundary: Full1166 plus seven (2026-10-18)
 
 Lead accepted the batch4 contract matrix: the current sourced boundary is complete at historical Full1166+seven published70448 extras, with the remaining three extras explicitly named gaps and absent from Toy membership. Current server69ed3c682 contains the two hearthstones and five Loa cosmetics; ty639 passed209/0/check0/fmt0 and landed batch3. Feature branches were cleaned after ancestry verification. Earlier pending labels below are historical, not the current acceptance state.

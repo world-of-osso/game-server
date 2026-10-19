@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Natural shared hearthstone charge coverage (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-green-first-execution-2026-10-18), [contract](../../specs/toys.md#natural-shared-hearthstone-charge-coverage): tt653211/0/check/fmt landed stationary timer coveragea989c0f3b. Final toy test/docs slice covers281136/281615 in both directions: ordinary30min shared2309 recovery allows sibling10s cast, spends its only charge and blocks original. Observed completion bounds/normal50ms updates, no private deadline/reset/clock edits. First execution7adfb7b03 GREEN4/0/78.45s covers both new directions and both retained initial/missing-bind controls. Existing machinery works; no runtime repair/fabricated RED. Lead integration/landing pending; accepted sourced boundary/gaps/native exclusions unchanged.
+
+## Ordinary30-minute/hour coverage follow-up (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18), [contract](../../specs/toys.md#ordinary-lifetime-and-reuse-follow-up): accepted boundary docs landedec7df3660. Two existing stationary identities280820/280822 now have ordinary50ms-update tests for natural30min expiry and1h recovery/reuse using observed cast bounds, no deadline/cooldown/time-scale edits. First executione10b9562b GREEN4/0/79.19s includes both new lifecycles and existing same-ID cancellation controls. Timers already work; no behavioral RED/runtime repair was invented. Lead integration/landing pending. Other identities/native visuals and accepted three unpublished gaps remain unchanged.
+
 ## Accepted sourced boundary and three named gaps (2026-10-18)
 
 [Authoritative source/code/asset matrix](../../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../../specs/toys.md#accepted-sourced-boundary): approved current boundary complete at Full1166+seven published70448 extras. Batch3 landed69ed3c682 after ty639209/0/check0/fmt0; feature branch cleaned. Aqir275039 `AQIR_SCRIPT_BINDING`, Libram284159 `LIBRAM_LOOT189_REWARD_BINDING` and Quill286643 `QUILL_LABYRINTH_EXIT_ACTION` remain unpublished named gaps, not false-success cast admissions. Item143823 is not a sourced Glyph reward; Quill's real92 criterion does not establish its party exit/teleport action. Native visuals and full-duration reuse remain separate follow-ups; earlier pending stages below are historical.

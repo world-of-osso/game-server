@@ -12,6 +12,10 @@ use crate::maps::{
 };
 use crate::persistence::ClientId;
 
+#[path = "party_staging.rs"]
+mod staging;
+pub(crate) use staging::stage_follower_party;
+
 #[derive(Component, Clone)]
 pub(crate) struct FollowerRun {
     dungeon: Dungeon,
@@ -21,6 +25,27 @@ pub(crate) struct FollowerRun {
     previous_difficulty: u32,
     origin: WorldLocation,
     player_role: GroupRole,
+}
+
+/// Admitted copy, companion IDs (including missing entities), and owner's role.
+/// Retail follower and explicit Stockade diagnostic admission are separate records.
+pub(super) fn read_admission(
+    world: &World,
+    owner: Entity,
+) -> Option<(InMap, &[Entity], GroupRole)> {
+    let record = match (
+        world.get::<FollowerRun>(owner),
+        world.get::<super::stockade_diagnostic::DiagnosticParty>(owner),
+    ) {
+        (Some(run), None) => (run.copy?, run.members.as_slice(), run.player_role),
+        (None, Some(diagnostic)) => (
+            diagnostic.copy,
+            diagnostic.members.as_slice(),
+            diagnostic.player_role,
+        ),
+        _ => return None,
+    };
+    (world.get::<InMap>(owner) == Some(&record.0)).then_some(record)
 }
 
 pub(crate) fn queue_player(world: &mut World, player: Entity, role: GroupRole, dungeon_id: u32) {
@@ -347,10 +372,18 @@ fn snapshot(world: &World, player: Entity, run: &FollowerRun) -> LfgSnapshot {
 }
 
 #[cfg(test)]
+#[path = "party_staging_tests.rs"]
+mod staging_tests;
+
+#[cfg(test)]
+#[path = "pull_frontal_tests.rs"]
+mod frontal_tests;
+
+#[cfg(test)]
 mod copy_tests {
     use super::*;
 
-    fn fixture() -> (App, Entity, FollowerRun) {
+    pub(super) fn fixture() -> (App, Entity, FollowerRun) {
         let db = rusqlite::Connection::open_with_flags(
             crate::test_data::world_db_path(),
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -450,6 +483,68 @@ mod copy_tests {
             player_role: GroupRole::Dps,
         };
         (app, owner, run)
+    }
+
+    #[test]
+    fn tank_pull_history_keeps_a_missing_admitted_member_in_health_coverage() {
+        let (mut app, owner, run) = fixture();
+        let missing = run.members[0];
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(50),
+        ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            shared::components::Health {
+                current: 1000.0,
+                max: 1000.0,
+            },
+        ));
+        for _ in 0..102 {
+            app.update();
+            super::super::pull_history::sample_all(app.world_mut());
+        }
+        assert!(
+            super::super::pull_history::snapshot(app.world(), owner)
+                .unwrap()
+                .party_stable
+        );
+        app.world_mut().despawn(missing);
+        // Production ordering: remove the entity, then outlive both named history windows.
+        for _ in 0..202 {
+            app.update();
+            super::super::pull_history::sample_all(app.world_mut());
+        }
+        let after = super::super::pull_history::snapshot(app.world(), owner).unwrap();
+        assert!(
+            !after.party_stable,
+            "a known admitted member is missing, not healthy"
+        );
+        // This contract concerns health coverage; ordinary assist target enumeration is unchanged.
+    }
+
+    #[test]
+    fn disconnected_owner_dormant_threat_orphans_unsummon_without_publication_panic() {
+        let (mut app, owner, run) = fixture();
+        app.add_plugins(crate::creature_aggro::CreatureAggroPlugin);
+        for &member in &run.members {
+            let mut threat = shared::components::ThreatTable::default();
+            threat.add_threat(owner.to_bits(), 100.0);
+            app.world_mut()
+                .entity_mut(member)
+                .insert((threat, crate::grid_activity::GridDormant));
+        }
+        app.world_mut().entity_mut(owner).insert(run.clone());
+        // Native disconnect teardown removes the owner before orphan maintenance runs.
+        app.world_mut().despawn(owner);
+        advance_runs(app.world_mut());
+        app.world_mut().flush();
+        crate::creature_aggro::publish_woken_threat_lists(app.world_mut());
+        assert!(
+            run.members
+                .iter()
+                .all(|&member| app.world().get_entity(member).is_err()),
+            "all owned summons must leave the world after their owner disconnects"
+        );
     }
 
     #[test]

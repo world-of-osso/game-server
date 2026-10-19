@@ -31,6 +31,7 @@ mod fear;
 mod fel_devastation;
 mod fixate;
 mod fleeing;
+pub(crate) mod forecast;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;

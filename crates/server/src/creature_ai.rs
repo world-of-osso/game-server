@@ -60,6 +60,7 @@ type Roaming = (
     Without<crate::scripted_ai::movement::ScriptedPath>,
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
+    Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
@@ -69,6 +70,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<Feared>,
     Without<crate::knockback::KnockbackFlight>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
+    Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 
@@ -1233,7 +1235,7 @@ fn advance_companion_route(
     }
 }
 
-/// Follower hazard escape uses the same native movement/interest/replication writer.
+/// Planned follower movement and hazard escape share the native movement/interest/replication writer.
 pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
     let mut state = bevy::ecs::system::SystemState::<(
         MoveQueues,
@@ -1254,7 +1256,11 @@ pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, spe
         debug!("Follower {entity} escape movement held while externally controlled");
         return;
     };
-    let stride = Stride::moving(*position, to, CreatureMotion::Run, speed);
+    let stride = if *position == to {
+        Stride::still(*position)
+    } else {
+        Stride::moving(*position, to, CreatureMotion::Run, speed)
+    };
     queues.apply(
         entity,
         &mut position,
@@ -1607,6 +1613,7 @@ pub(crate) fn return_to_spawn_system(
         (
             Without<GridDormant>,
             Without<crate::scripted_ai::jump_movement::JumpMovement>,
+            Without<crate::scripted_ai::fall_movement::FallMovement>,
             Without<crate::spell_cast::charge::ChargeMovement>,
         ),
     >,

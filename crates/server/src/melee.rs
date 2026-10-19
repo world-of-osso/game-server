@@ -200,6 +200,17 @@ impl MeleeOutcome {
     }
 }
 
+fn build_outcome_table(chances: &MeleeChances) -> [(f32, MeleeOutcome); 6] {
+    [
+        (chances.miss, MeleeOutcome::Miss),
+        (chances.dodge, MeleeOutcome::Dodge),
+        (chances.parry, MeleeOutcome::Parry),
+        (chances.glancing, MeleeOutcome::Glancing),
+        (chances.block, MeleeOutcome::Block),
+        (chances.crit, MeleeOutcome::Crit),
+    ]
+}
+
 /// One roll in 0..10000 against the chances, each truncated to hundredths
 /// of a percent, in the order miss, dodge, parry, glancing, block, crit.
 pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
@@ -207,14 +218,7 @@ pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
     if chances.crit_sitting && (roll as i32) >= miss.max(0) && (chances.crit * 100.0) as i32 > 0 {
         return MeleeOutcome::Crit;
     }
-    let table = [
-        (chances.miss, MeleeOutcome::Miss),
-        (chances.dodge, MeleeOutcome::Dodge),
-        (chances.parry, MeleeOutcome::Parry),
-        (chances.glancing, MeleeOutcome::Glancing),
-        (chances.block, MeleeOutcome::Block),
-        (chances.crit, MeleeOutcome::Crit),
-    ];
+    let table = build_outcome_table(chances);
     let mut sum = 0;
     for (chance, outcome) in table {
         let chance = (chance * 100.0) as i32;
@@ -226,6 +230,29 @@ pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
         }
     }
     MeleeOutcome::Hit
+}
+
+/// Exact probability masses of the existing quantized native roll, for forecasts.
+pub(crate) fn outcome_weights(chances: &MeleeChances) -> Vec<(MeleeOutcome, f64)> {
+    let mut boundaries = vec![0, 10_000];
+    let mut cumulative = 0;
+    for (chance, _) in build_outcome_table(chances) {
+        let quantized = (chance * 100.0) as i32;
+        if quantized > 0 {
+            cumulative += quantized;
+            boundaries.push(cumulative.clamp(0, 10_000) as u32);
+        }
+    }
+    boundaries.sort_unstable();
+    boundaries.dedup();
+    boundaries
+        .windows(2)
+        .map(|interval| {
+            let outcome = roll_melee_outcome(chances, interval[0]);
+            let weight = f64::from(interval[1] - interval[0]) / 10_000.0;
+            (outcome, weight)
+        })
+        .collect()
 }
 
 /// Damage after the outcome and the amount blocked: misses, dodges and
