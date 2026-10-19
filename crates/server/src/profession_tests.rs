@@ -985,7 +985,7 @@ fn learning_tailoring_takes_gold_and_learns_classic_tailoring_with_bolt_of_linen
     }
     assert_eq!(
         h.take::<ProfessionSnapshot>().last(),
-        Some(&profs.snapshot())
+        Some(&profs.snapshot(h.app.world().resource::<ProfessionData>()))
     );
     let lists = h.take::<TrainerList>();
     let list = lists.last().expect("list re-sent after the purchase");
@@ -1102,6 +1102,85 @@ fn third_primary_profession_is_refused_but_cooking_is_not() {
 }
 
 #[test]
+fn modern_crafting_unlearned_recipe_refuses_cast_until_real_trainer_purchase() {
+    let mut h = harness(10).unwrap();
+    h.set_gold(1000);
+    let npc = h.open_trainer(5564);
+    h.buy(npc, 264578);
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    // Rank is an explicit fixture prerequisite, not evidence of acquiring skill points.
+    with_learner(h.app.world_mut(), h.player, |learner, profs| {
+        learner.set_skill(profs, 2532, 1, 15, 300);
+    });
+    h.advance(3);
+    h.give(2318, "Light Leather", 4);
+    h.give(2320, "Coarse Thread", 1);
+    h.take::<CastFailed>();
+    let inventory = persistence::load_inventory(h.db(), h.character_id);
+    let professions = h.professions();
+    assert!(!professions.knows(2153));
+    let snapshot = h.take::<ProfessionSnapshot>().pop().unwrap();
+    assert!(
+        snapshot
+            .recipe_sources
+            .iter()
+            .all(|source| professions.rank(source.req_skill_line) > 0)
+    );
+    assert_eq!(
+        snapshot
+            .recipe_sources
+            .iter()
+            .find(|source| source.spell_id == 2153 && source.trainer_id == 56),
+        Some(&shared::protocol::ProfessionTrainerSource {
+            trainer_id: 56,
+            spell_id: 2153,
+            cost: 50,
+            req_skill_line: 2532,
+            req_skill_rank: 15,
+            req_abilities: vec![],
+            req_level: 0,
+        })
+    );
+    assert!(
+        !snapshot
+            .recipe_sources
+            .iter()
+            .any(|source| source.req_skill_line == 2540)
+    );
+    assert_eq!(
+        persistence::load_inventory(h.db(), h.character_id),
+        inventory
+    );
+    h.craft(2153, 1);
+    assert!(!h.casting());
+    assert!(!h.take::<CastFailed>().is_empty());
+    assert_eq!(
+        persistence::load_inventory(h.db(), h.character_id),
+        inventory
+    );
+    assert_eq!(h.professions(), professions);
+    assert_eq!(
+        persistence::load_professions(h.db(), h.character_id),
+        professions
+    );
+    h.buy(npc, 2153);
+    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    assert!(h.professions().knows(2153));
+    assert_eq!(h.gold(), inventory.gold - 50);
+    assert_eq!(h.line(2532).unwrap().rank, 15);
+    assert_eq!(h.bag_count(2318), 4);
+    assert_eq!(h.bag_count(2320), 1);
+    assert_eq!(h.bag_count(2303), 0);
+    assert_eq!(
+        h.take::<ProfessionSnapshot>().last(),
+        Some(
+            &h.professions()
+                .snapshot(h.app.world().resource::<ProfessionData>())
+        )
+    );
+}
+
+#[test]
 fn modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence() {
     let Some(mut h) = harness(10) else { return };
     h.set_gold(1000);
@@ -1143,7 +1222,10 @@ fn modern_crafting_leatherworking_trainer_cast_reagents_skillup_and_persistence(
     );
     assert_eq!(
         h.take::<ProfessionSnapshot>().last(),
-        Some(&h.professions().snapshot())
+        Some(
+            &h.professions()
+                .snapshot(h.app.world().resource::<ProfessionData>())
+        )
     );
 }
 
@@ -1204,7 +1286,13 @@ fn crafting_two_bolts_consumes_four_linen_and_raises_classic_tailoring_twice() {
     assert_eq!(h.line(CLASSIC_TAILORING).unwrap().rank, 3);
     assert!(h.take::<CastFailed>().is_empty());
     let snapshots = h.take::<ProfessionSnapshot>();
-    assert_eq!(snapshots.last(), Some(&h.professions().snapshot()));
+    assert_eq!(
+        snapshots.last(),
+        Some(
+            &h.professions()
+                .snapshot(h.app.world().resource::<ProfessionData>())
+        )
+    );
 }
 
 #[test]
