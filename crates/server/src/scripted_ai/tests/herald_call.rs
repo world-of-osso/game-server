@@ -121,6 +121,17 @@ fn assert_call_ingress(difficulty: u32) {
         1,
         "below40 must produce exactly one actual ordinary30693 SpellGo"
     );
+    let call = h
+        .inbox(0)
+        .spell_gos
+        .iter()
+        .find(|go| go.caster == vazruden.to_bits() && go.spell_id == 30693)
+        .unwrap();
+    assert_eq!(
+        call.target,
+        Some(vazruden.to_bits()),
+        "ordinary source self-cast"
+    );
     assert_eq!(
         h.app.world().get::<ReactState>(nazan),
         Some(&ReactState::Passive)
@@ -141,6 +152,24 @@ fn assert_call_ingress(difficulty: u32) {
         "endpoint is strictly before point4 arrival/fall"
     );
     assert!(distance(step, DESCEND) < distance(WEST, DESCEND));
+    let speed = h
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(nazan)
+        .unwrap()
+        .speed_run
+        * 7.0;
+    let delta = Vec3::new(DESCEND.x - WEST.x, DESCEND.y - WEST.y, DESCEND.z - WEST.z);
+    let travelled = delta / delta.length() * (speed * 0.05);
+    assert_eq!(
+        step,
+        Position {
+            x: WEST.x + travelled.x,
+            y: WEST.y + travelled.y,
+            z: WEST.z + travelled.z,
+        },
+        "first step is exactly one50ms source-speed straight-line step, not teleportation"
+    );
     assert!(
         h.app
             .world()
@@ -185,13 +214,11 @@ fn assert_call_ingress(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "RED: Call Nazan/descent ingress not implemented"]
 fn encounter_coverage_herald_call_nazan_normal_first_physical_descent_step() {
     assert_call_ingress(1);
 }
 
 #[test]
-#[ignore = "RED: Call Nazan/descent ingress not implemented"]
 fn encounter_coverage_herald_call_nazan_heroic_first_physical_descent_step() {
     assert_call_ingress(2);
 }

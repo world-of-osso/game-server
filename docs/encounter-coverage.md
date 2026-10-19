@@ -1,8 +1,12 @@
 # Hosted encounter coverage
 
+## Herald Call Nazan descent ingress — 2026-10-18
+
+Natural firstWest Normal/Heroic now covers real incoming below40 damage, once ordinary30693, actual hit-creature action0, source descent setup and first physical point4 step. Genuine missing-Go RED precedes two-case GREEN; exact movement/self-target refinements and retained gate remain pending. [Contract/proof ledger](specs/ramparts-herald.md#tests-asserting-this-spec) owns details. This does not certify future timer cancellation, point4 arrival/MoveFall, own30 guard, paired credit/reset or native presentation.
+
 ## Target32 grounding-only prerequisite — 2026-10-18
 
-Separately approved Z-only slice follows TC Object.cpp698–762/Spell.cpp9286–9292 without model/reach reads or XY changes. Native30717/688, all follower-pet cases, retained controls and Normal/Heroic natural first-West INTRO2 are targeted GREEN; independent LEAD integration/check/fmt remains pending. The [contract](specs/ramparts-herald.md#grounding-only-target32-prerequisite) owns the exact source-ray oracle (no tolerance), proof ledger and remaining XY/first-collision/hover-swim/FORCE-backoff/other-selector gaps. No full-encounter or full target32 placement-parity claim.
+Separately approved Z-only slice follows TC Object.cpp698–762/Spell.cpp9286–9292 without model/reach reads or XY changes. Native30717/688, all follower-pet cases, retained controls and Normal/Heroic natural first-West INTRO2 are targeted GREEN; LEAD hi609 integration/check/fmt landed in serverf19522c55. The [contract](specs/ramparts-herald.md#grounding-only-target32-prerequisite) owns the exact source-ray oracle (no tolerance), proof ledger and remaining XY/first-collision/hover-swim/FORCE-backoff/other-selector gaps. No full-encounter or full target32 placement-parity claim.
 
 ## Target32 reach-dependent port blocked — 2026-10-18
 
