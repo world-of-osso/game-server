@@ -419,6 +419,50 @@ fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
     })
 }
 
+// Hazard escape retains master's terrain projection; admitted points use creature floors below.
+fn advance_escape(
+    world: &mut World,
+    unit: Entity,
+    map: u32,
+    from: Position,
+    to: Position,
+    goal: Goal,
+) {
+    let scale = world
+        .get::<crate::auras::AuraStatMods>(unit)
+        .map_or(1.0, |mods| mods.movement_speed);
+    let base = world
+        .get::<crate::creature_ai::SpawnPoint>(unit)
+        .map_or(1.0, |spawn| spawn.speed_run);
+    let speed = shared::movement::RUN_SPEED * base * scale;
+    let distance = speed * world.resource::<Time>().delta_secs();
+    if distance <= 0.0 {
+        return;
+    }
+    let step = world.resource_mut::<Navigation>().advance(
+        unit,
+        MoveRequest {
+            map_id: map,
+            goal,
+            from,
+            to,
+            distance,
+            reach: 0.0,
+        },
+    );
+    if let Step::Moved { mut position, .. } = step {
+        let crate::ground::GroundProbe::Supported(height) = world
+            .resource_mut::<crate::ground::GroundMap>()
+            .ground_at(map, point(position))
+        else {
+            error!("Follower {unit} escape route lost ground support");
+            return;
+        };
+        position.y = height;
+        crate::creature_ai::move_follower(world, unit, position, speed);
+    }
+}
+
 pub(super) fn advance_grounded_route(
     world: &mut World,
     unit: Entity,
