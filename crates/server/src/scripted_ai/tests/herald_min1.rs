@@ -530,7 +530,6 @@ fn assert_melee_copies_alive(h: &mut Harness, copies: &[MeleeCopy]) {
 }
 
 #[test]
-#[ignore = "pending six-copy repeated native melee verification"]
 fn encounter_coverage_herald_min1_native_melee_copies_before_point4_arrival() {
     for difficulty in [1, 2] {
         let (mut h, copies, avoid) = create_melee_copies(difficulty);
