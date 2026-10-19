@@ -59,7 +59,7 @@ pub fn render(trace: &Trace, scene: &Scene) -> Result<String, String> {
         let points = polygon.iter().map(point).collect::<Vec<_>>().join(" ");
         svg.push_str(&format!("<polygon points=\"{points}\" fill=\"#344452\" stroke=\"#415565\" stroke-width=\"0.08\"/>"));
     }
-    svg.push_str(&spawns(scene));
+    svg.push_str(&spawns(trace, scene));
     svg.push_str(&paths(trace));
     svg.push_str(&markers(trace));
     svg.push_str(&legend(trace, left, bottom));
@@ -79,11 +79,22 @@ fn heading(trace: &Trace, left: f32, top: f32) -> String {
     )
 }
 
-fn spawns(scene: &Scene) -> String {
+fn spawns(trace: &Trace, scene: &Scene) -> String {
+    let states: BTreeMap<u32, bool> = trace
+        .rows
+        .iter()
+        .filter(|row| row.event == "spawn_state")
+        .filter_map(|row| row.spawn_guid.zip(row.alive))
+        .collect();
     scene.spawns.iter().map(|spawn| {
         let [x, _, y] = spawn.position;
         let color = COLORS[spawn.pack as usize % COLORS.len()];
-        format!("<circle cx=\"{x}\" cy=\"{y}\" r=\"0.8\" fill=\"#889099\" stroke=\"{color}\" stroke-width=\"0.3\"><title>spawn {} entry {} pack {}; end-state UNKNOWN (no source-identity census)</title></circle>", spawn.guid,spawn.entry,spawn.pack)
+        let (status, fill) = match states.get(&spawn.guid) {
+            Some(true) => ("ALIVE", "#06d6a0"),
+            Some(false) => ("DEAD", "#ff6666"),
+            None => ("UNKNOWN", "#889099"),
+        };
+        format!("<circle cx=\"{x}\" cy=\"{y}\" r=\"0.8\" fill=\"{fill}\" stroke=\"{color}\" stroke-width=\"0.3\"><title>spawn {} entry {} pack {}; end-state {status}</title></circle>", spawn.guid,spawn.entry,spawn.pack)
     }).collect()
 }
 
@@ -148,12 +159,13 @@ fn legend(trace: &Trace, left: f32, bottom: f32) -> String {
             escape(name)
         ));
     }
-    output.push_str(&format!("<text x=\"{}\" y=\"{}\" fill=\"#bbbbbb\" font-size=\"2\">Dots: source spawns; ring: formation pack; gray: unknown end-state. X: combat/death marker.</text>",left,bottom+29.0));
+    output.push_str(&format!("<text x=\"{}\" y=\"{}\" fill=\"#bbbbbb\" font-size=\"2\">Dots: source spawns; ring: formation pack. X: combat/death marker.</text>",left,bottom+29.0));
+    output.push_str(&format!("<text x=\"{}\" y=\"{}\" font-size=\"2\"><tspan fill=\"#06d6a0\">ALIVE (observed)</tspan><tspan fill=\"#ff6666\"> · DEAD (observed)</tspan><tspan fill=\"#889099\"> · UNKNOWN (no end-state census)</tspan></text>", left, bottom+32.0));
     if let Some(gaps) = &trace.rows[0].capture_gaps {
         output.push_str(&format!(
             "<text x=\"{}\" y=\"{}\" fill=\"#bbbbbb\" font-size=\"1.5\">Gaps: {}</text>",
             left,
-            bottom + 33.0,
+            bottom + 35.0,
             escape(&gaps.join("; "))
         ));
     }

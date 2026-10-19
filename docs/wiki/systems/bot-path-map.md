@@ -34,3 +34,5 @@ Unknown source-entity identity/end-health is labeled UNKNOWN, never alive from m
 ## See Also
 
 - [Navigation](navigation.md).
+
+`spawn_state` rows identify a source GUID and actual observed alive/dead state. Known boss death rows originate only from the exact native entity death already captured by the harness. Renderer uses red DEAD, green ALIVE and gray UNKNOWN, with explicit legend labels; current producer does not invent ALIVE rows for survivors.
