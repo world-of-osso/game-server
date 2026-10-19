@@ -158,7 +158,7 @@ fn assert_real_periodic_commits(self_source: bool) {
                 .is_none()
         );
         let caster = if self_source { nazan } else { h.player() };
-        let spell_id = if self_source { 24265 } else { 14874 };
+        let spell_id = if self_source { 24265 } else { 17292 };
         let origin = *h.app.world().get::<Position>(nazan).unwrap();
         if !self_source {
             h.app.world_mut().entity_mut(caster).insert(Position {
@@ -172,6 +172,10 @@ fn assert_real_periodic_commits(self_source: bool) {
             .resource::<SpellStore>()
             .get(spell_id)
             .unwrap();
+        // Native Poison17292 is magic (not a forced-hit melee probe).
+        if !self_source {
+            assert_eq!(spell.categories.as_ref().unwrap().defense_type, 1);
+        }
         let effect = &spell.effects[0];
         assert_eq!(
             (effect.effect, effect.aura, effect.aura_period_ms),
