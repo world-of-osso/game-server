@@ -91,7 +91,6 @@ fn assert_xy_and_facing_retained(before: targets::Dest, after: targets::Dest) {
 }
 
 #[test]
-#[ignore = "RED: target32 dry non-flyer must land on source floor without model/reach data"]
 fn target32_grounding_dry_source30717_without_model_reach() {
     let (mut world, caster) = caster_world();
     world.insert_resource(crate::test_data::ground_map());
@@ -104,7 +103,6 @@ fn target32_grounding_dry_source30717_without_model_reach() {
 }
 
 #[test]
-#[ignore = "RED: target32 CanFly must preserve above-floor altitude and raise below-floor altitude"]
 fn target32_grounding_gravity_disabled_above_and_below_floor() {
     for below in [false, true] {
         let (mut world, caster) = caster_world();
@@ -149,7 +147,6 @@ fn target32_grounding_invalid_or_missing_height_keeps_source688_destination() {
 }
 
 #[test]
-#[ignore = "RED: target32 FORCE final-ground-Z branch must not preserve a flyer's altitude"]
 fn target32_grounding_force_grounds_flyer_without_changing_existing_xy() {
     let (mut world, caster) = caster_world();
     world.insert_resource(crate::test_data::ground_map());

@@ -127,17 +127,18 @@ fn received_casts(h: &Harness, caster: Entity, spell_id: u32) -> usize {
         .count()
 }
 
-fn assert_summon_at_floor(world: &mut World, map: InMap, actor: Entity) {
+fn assert_summon_at_floor(world: &mut World, map: InMap, actor: Entity, pre_clamp_y: f32) {
     let position = *world.get::<Position>(actor).unwrap();
     let probe = world
         .resource_mut::<crate::ground::GroundMap>()
-        .creature_ground_in(map, Vec3::new(position.x, position.y, position.z));
+        .creature_ground_in(map, Vec3::new(position.x, pre_clamp_y, position.z));
     let crate::ground::GroundProbe::Supported(floor) = probe else {
         panic!("actual Ramparts source floor required: {probe:?}");
     };
     assert_eq!(
-        position.y, floor,
-        "30717 must land on the source floor re-probed at its actual final XYZ"
+        position.y.to_bits(),
+        floor.to_bits(),
+        "30717 must assign the exact source floor at final XZ with its observed pre-clamp caster Y/ray"
     );
 }
 
@@ -228,6 +229,7 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
         );
         assert!(actors_in_copy(&mut h, VAZRUDEN, map).is_empty());
         assert_no_land_substitute(&mut h, herald, pose);
+        let cast_origin = *h.app.world().get::<Position>(herald).unwrap();
         h.advance(0.05);
         assert_eq!(
             h.app.world().resource::<Time<Fixed>>().elapsed(),
@@ -269,7 +271,12 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
                 .properties_id,
             64
         );
-        assert_summon_at_floor(h.app.world_mut(), map, child);
+        assert_eq!(
+            h.app.world().get::<Position>(herald),
+            Some(&cast_origin),
+            "30717 changes destination Z, not caster position; first-flight movement starts after this cast tick"
+        );
+        assert_summon_at_floor(h.app.world_mut(), map, child, cast_origin.y);
         h.advance(0.05);
         assert!(
             h.has_aura(child, 5301),
