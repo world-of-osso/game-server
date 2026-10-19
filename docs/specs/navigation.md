@@ -34,6 +34,12 @@ Detection immediately submits asynchronous escape planning and starts a250ms sim
 
 If planning is still Pending at the deadline, the follower continues standing, even inside the hazard. It starts on the first tick after publication. No synchronous query, production wait/drain, invented movement or fallback is allowed. Growth may overtake a holding follower during reaction or worker delay; that is accepted, not a navigation failure. Once ready after reaction, it must escape; ordinary follow/combat may not move it back into the field. [Follower contract](follower-dungeons.md#follower_hazard_reaction_policy).
 
+## Follower hazard trace
+
+Existing `RUST_LOG=game_server::follower_hazard_trace=debug` enables diagnostic records prefixed `FOLLOWER_HAZARD_TRACE ` on the existing log subscriber. Default logging produces none. Each JSON record has `schema:1`, `event`, `simulation_s`, process-relative `monotonic_ns`, numeric `actor` and event-specific `data`. No extra flag, geometry query or gameplay decision is introduced.
+
+Events correlate predicted-contact `detected`, current-ID `query_submitted`/`query_published`, selected `corridor_adopted`, actual `hold`/`move`, physical `exit` and cancelled contacts. Field/entity bits and request IDs preserve integer identity; authoritative source expiry/cancellation is not physical escape. Submission/adoption and standalone test publication may have null simulation time rather than fabricated precision; production FixedFirst publication and hazard decisions use the same virtual clock as reaction policy. Payload construction and monotonic-clock reads occur only when the debug target is enabled.
+
 ## C++ script ground waypoints
 
 - [x] Normal ground `MotionMaster::MovePath` uses TC a352b1fa default `PathGenerator::FindSmoothPath` surface stepping (4yd step, 0.3yd steering slop, 74-point/polygon limit), then exact creature collision-height normalization. Generic chase/home/follow/hazard queries retain their existing portal-crossing output.
