@@ -164,7 +164,7 @@ fn follower_swiftmend_qualification_other_casters_rejuvenation_qualifies() {
 fn follower_swiftmend_qualification_native_real_rejuvenation_heals() {
     let (mut h, healer) = level32(CRENNA);
     assert_native_restriction(&h);
-    let patient = h.caster;
+    let patient = healer;
     apply_real_rejuvenation(&mut h, healer, patient);
     wound(&mut h, patient, 0.3);
     let before = h.health(patient);
