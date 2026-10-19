@@ -53,12 +53,23 @@
 ## 2026-10-18 — Run-local tank observations
 
 [Native tank boundaries and proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): history, native forecast/lifetime, sourced healing capability, source/formation presence, full route exposure and admitted-point consumer. Production budget/goal generation and single interrupt-provider integration remain unfinished; no full-clear or gameplay acceptance.
+## 2026-10-17 — NPC general crit290
+
+[Combined raw source](systems/player-damage.md#npc-general-crit290--2026-10-17): qualificationa20fb904d FIRST2PASS48.51s, actual signed290/mask6 and full52+290 live768s; THEN ignored294a0606a PUSHED before genuine4RED/4PASS54.62s. Positive0Crit/5, negative/signed11Crit/256, joint52+290zeroCrit/256 prove missing NPC290. Reuse/rename existing accumulator to npc_crit_pct52+290, retain player StatModifiers fold/NPC-only consume and pre334clamp; no new scalar/query/snapshot/wire or RNG/clocks/HP/Guardian changes. Consumer794157734 fresh ignored8GREEN41.92s/0warnings plus retained qualification2PASS48.51s (ten-case composite), only then eight behavior ignores removed. Lead gate pending; player52/NO_CRIT/NPCspellcrit/mitigation excluded.
+
+## 2026-10-18 — Herald min1 precommit source guard
+
+[Min1 guard](systems/boss-scripts.md#herald-min1-precommit-guard--2026-10-18): real intro/direct/self/spell/native melee and ordinary real1s periodic probes reproduce six lethal commits; exactHP1/no death/credit six-case GREEN146.24s. Source state, unchanged Gold/Nibbles behavior, listener audience and opt-in ownerless event capture are explicit. Approved six synchronized copies/two native cadences prove same-actor repeated melee82.49s at2639aed02; enabled all16 Herald+four grounding+five Gold+two Nibbles27/27 PASS209.65s atcbb9ef32f after master69ed NPCblock51 merge; LEAD gate pending; release/arrival/fall/paired credit/reset/native excluded.
 ## Follower hazard trace implementation proof
 
 [Opt-in trace](systems/navigation.md#follower-hazard-live-trace) joins native contact/reaction/hold/displacement/exit with current-ID worker publication and owned corridor adoption. Missing native events give a genuine RED; native trace/disabled-payload/reaction/FIFO/request14 controls pass, and three-distribution/policy/cancellation/cache/latest-ID analyzer7 controls pass. Owner client068066e6a/F9 native extension+CLI artifacts built without warnings. Bounded real Azure/Telash collection remains pending a granted server_perf/5761 window; no new runtime flags, gameplay changes or stress-capacity claim.
 ## 2026-10-17 — NPC weapon crit52 and shared clamp
 
 [Signed52/clamp](systems/player-damage.md#npc-weapon-crit52-and-shared-clamp-ordering--2026-10-17): ignored00ef37b6d pushed first; native52/334 and separate player187/334 qualification2PASS56.14s survive768s. Fresh6 genuine RED/2PASS56.19s includes explicit player0-60187+50334 zeroCrit/256; source clamps before334. Existing raw AuraStatMods sum/NPC-only consumer plus shared clamp correctionbd3cf7db7 committed after RED; fresh ignored8/8GREEN41.04s/0warnings plus retained qualification2PASS56.14s (ten-case composite), only then all ten enabled. Independent lead gate pending. No RNG/clocks/HP/native-input changes; player52 masks/290/NO_CRIT/mitigation excluded.
+## 2026-10-18 — Ordinary Loa timer coverage GREEN first execution
+
+[Scoped follow-up](../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18): after docs landingec7df3660, two existing280820/280822 cases observe natural30min authoritative/replicated expiry and one-hour recovery/reuse through ordinary50ms updates. Independent cast-time bounds, no internal-deadline oracle or clock/cooldown mutation. First executione10b9562b GREEN4/0/79.19s: two new lifecycles and two retained cancellation cases. Existing timers work; no runtime defect/repair/fabricated RED. Lead integration/landing pending. Accepted sourced boundary/gaps and other native/full-duration scopes unchanged.
+
 ## 2026-10-18 — Accepted toy sourced boundary and three named gaps
 
 [Current accepted matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../specs/toys.md#accepted-sourced-boundary): Full1166+seven published extras complete to current sourced boundary; ty639209/0/check0/fmt0 landed69ed3c682. Read-only batch4 research found no complete action contract for Aqir275039, Libram284159 or Quill286643; all accepted named gaps remain outside Toy membership. Numeric143823 is not a Glyph reward binding, and Quill's real scenario92 criterion is not its full party teleport action. No code/data/import/extraction change; native/full-duration proof remains separate.
@@ -102,6 +113,18 @@
 ## 2026-10-18 — Herald own nonlethal below30 ingress
 
 [Own30](systems/boss-scripts.md#herald-own-nonlethal-below30-ingress--2026-10-18): TC217–220 actual35→29 after intro reuses the descent latch, no30693; natural Normal/Heroic/INTRO1 negative RED1PASS2FAIL→GREEN3/3 62.04s. Real source-speed first step and cast interruption; lethal guard/arrival/fall excluded. Enabled all10 Herald+four grounding14/14 PASS172.99s ataed52b5b6; LEAD gate/check/fmt pending.
+## 2026-10-18 — Player-only native80 base-stat stage
+
+[Native80](systems/auras.md#player-base-stat80-stage--2026-10-18): normal9417 known-passive +10Int producer proved, no fakeflatstat/gear. Ignored989f0a010 gives3controlsPASS/4genuineFAIL34.97s: nativeMage38vs41.8 and48vs51.8; actual controlled NPC bridge stays unchanged. Separatebase-percent field beforebonuses/137 plus actualPlayerguard; GREEN pending, no legal-kit/full13326/global80/NPC-kit certificate.
+
+## 2026-10-18 — Source-qualified follower137 oracle
+
+[Shared137 consequence](systems/auras.md#independent-primary-stat137-composition--2026-10-18): real native Garrick initialization/removal-reapply/evade3FAIL84.42s exposed old35%/10584 expectations. Authenticated independent Aegis30%/Plate5% require36.5%/1337.7stamina/10696HP; unbuffed5%-only8232 unchanged. Test/spec oracle correction only, no follower runtime/health/stat/budget override; targeted GREEN pending. Historical native10584 capture receipts remain unchanged as observations.
+
+## 2026-10-18 — Independent native137 composition
+
+[Source-gated137](systems/auras.md#independent-primary-stat137-composition--2026-10-18): completeTDB1210 groups/rules +all32pinnedworldSQLupdates establish independent51271/53365. Ignored8aef2fabb RED3FAIL/3controlPASS18.87s shows real HumanDK Strength33→44.55vs45.54 bothorders/removal. Minimal percentage-representation fold preserves flat29/182 addition/masks. At853447542 native6 +retained23 GREEN29/29,46.49s,0warnings/ignored; stats substring also covers item/frame families. Fullcargo fmt0, independent lead gate pending. No fake stats/source/clock edits or legal-kit/runeforge-proc/fullPillar/group-engine/PvP certificate.
+
 ## 2026-10-18 — Native continuous power prevention294
 
 [Native masks](systems/auras.md#native-power-prevention294--2026-10-18):232865/262173 amount0/masks8/1; TC prevention before base/%/flat. Actual Elixir/WaterShield RED3FAIL/3controlPASS16.93s,0warnings at3041d69e3 pushed first. Minimal recipient-mask Mana/Energy consumer; Rune/discrete-pet/other/global294/legal-build/full-ability claims excluded. Combined46GREEN21.88s at7e541f03b; tests-only416735d34 explicitEnergy prediction0 assertion has fresh6GREEN19.39s,0warnings. Retained40 unchanged; fullcargo fmt0, independent lead gate pending.
@@ -3079,3 +3102,4 @@ Native fixture RED→GREEN2 at91fa9b74d: concrete points/time/death/title and di
 ## 2026-10-19 — Real five-bot path map
 
 Explicit admitted unit_transform sampling replaces incomplete UnitPick traversal. Actual52.365s failed Stockade capture has all5pose/facing tracks; real143spawns/nav34 SVG+PNG inspected/published with FAILED/no-boss title. Original63s gap/failure record preserved. No clear/retry/server-panic fix claimed; owned5981 cold/windows cleared; independent lead gate pending.
+- 2026-10-18: Shared MH2O raw records; frozen independent client/server layers, errors, queries and navigation water-bound baseline. See [shared formats](systems/wow-formats.md).

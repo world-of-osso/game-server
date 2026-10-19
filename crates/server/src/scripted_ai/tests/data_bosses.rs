@@ -57,6 +57,8 @@ mod herald_damage;
 mod herald_intro;
 #[path = "herald_intro2.rs"]
 mod herald_intro2;
+#[path = "herald_min1.rs"]
+mod herald_min1;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
