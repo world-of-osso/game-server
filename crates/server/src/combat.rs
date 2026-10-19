@@ -464,7 +464,7 @@ type AutoAttackers<'w, 's> = Query<
         Option<&'static AuraStatMods>,
         Option<&'static CharacterStats>,
         SwingState<'static>,
-        Has<Npc>,
+        (Has<Npc>, Option<&'static crate::zones::CreatureFlagsExtra>),
     ),
 >;
 
@@ -631,6 +631,7 @@ fn auto_attack_unit(
         enemy_dodge_pct: snapshot.enemy_dodge_pct,
         npc_expertise_pct: snapshot.npc_expertise_pct,
         creature: snapshot.creature,
+        creature_flags: snapshot.creature_flags.as_ref(),
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let owner = params
                 .owner_stats
@@ -687,6 +688,7 @@ struct SwingSnapshot {
     enemy_dodge_pct: f32,
     npc_expertise_pct: f32,
     creature: bool,
+    creature_flags: Option<crate::zones::CreatureFlagsExtra>,
 }
 
 fn snapshot_attacker(
@@ -694,7 +696,7 @@ fn snapshot_attacker(
     entity: Entity,
     dt: f32,
 ) -> Option<SwingSnapshot> {
-    let (_, mut auto_attack, position, mods, stats, (stat_mods, casting, auras), creature) =
+    let (_, mut auto_attack, position, mods, stats, (stat_mods, casting, auras), (creature, flags)) =
         attackers.get_mut(entity).ok()?;
     auto_attack.timer -= dt;
     auto_attack.off_hand_timer -= dt;
@@ -716,6 +718,7 @@ fn snapshot_attacker(
             0.0
         },
         creature,
+        creature_flags: flags.copied(),
     })
 }
 
@@ -805,6 +808,8 @@ pub(crate) struct Attacker<'a> {
     pub npc_expertise_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
+    /// Actual attacker's already-cached template flags, independent of victim flags.
+    pub creature_flags: Option<&'a crate::zones::CreatureFlagsExtra>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
 }
 
@@ -1072,8 +1077,19 @@ fn read_outcome_chances(
     } else {
         0.0
     };
+    // Unit.cpp2885–2893: NO_CRIT excludes only NPC base5 + source52/290.
+    const NO_CRIT: u32 = 0x20000;
+    let source_crit = if attacker.creature
+        && attacker
+            .creature_flags
+            .is_some_and(|flags| flags.0 & NO_CRIT != 0)
+    {
+        0.0
+    } else {
+        chances.crit + npc_crit_modifier
+    };
     // Unit.cpp2926 clamps source + victim187 BEFORE attacker334 at2387.
-    let crit_taken = (chances.crit + npc_crit_modifier + crit_modifier).max(0.0);
+    let crit_taken = (source_crit + crit_modifier).max(0.0);
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (crit_taken + autoattack_crit_modifier).max(0.0);
     chances
@@ -2138,6 +2154,9 @@ mod npc_flags_tests;
 #[cfg(test)]
 #[path = "combat_npc_general_crit_tests.rs"]
 mod npc_general_crit_tests;
+#[cfg(test)]
+#[path = "combat_npc_no_crit_tests.rs"]
+mod npc_no_crit_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
