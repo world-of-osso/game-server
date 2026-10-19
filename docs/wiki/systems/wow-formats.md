@@ -34,7 +34,7 @@ The [MH2O ledger](../../handoffs/wow-formats-mh2o-records.md) freezes each consu
 
 `ground.rs::load_terrain` reads its nine signed minimum corners through the shared MFBO projection. The client full-bound reader reuses the same grid decoder after its original36-byte precheck. Runtime first-MFBO selection versus client last-MFBO selection, exact short-input errors and failure order, unused-tail acceptance, plane coordinates/arithmetic/defaults and falling policy remain unchanged. No mode flag, dependency or feature was added.
 
-The [MFBO ledger](../../handoffs/wow-formats-mfbo-records.md) freezes each consumer's records and actual min-height query bits on3 required roots/51 synthetic cases, with retained terrain/MH2O and Stockade guards. OLD baseline:376files50,037,281B/120 source hashes plus Map34lookup791060; library882b2fc passes253default/173no-default tests/check/fmt after targeted API RED. Consumer replay and independent lead gate remain pending.
+The [MFBO ledger](../../handoffs/wow-formats-mfbo-records.md) freezes each consumer's records and actual min-height query bits on3 required roots/51 synthetic cases, with retained terrain/MH2O and Stockade guards. OLD baseline:376files50,037,281B/120 source hashes plus Map34lookup791060; library882b2fc passes253default/173no-default tests/check/fmt after targeted API RED. Server after replay:376/376 files50,037,281B byte-identical,120/120 receipt inputs and Map34lookup unchanged; MFBO2/terrain23/MH2O2 and four exact runtime controls pass,check/fmt0. Runtime dependency/feature tree is unchanged apart from four pins. Engine and independent lead gates remain pending.
 
 ## Reference proof
 
