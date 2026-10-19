@@ -19,7 +19,7 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 
 - [x] Server fixed systems never perform navigation directory/tile reads, decoding or Detour queries; a worker exclusively owns its NavigationMaps.
 - [x] Pending requests retain the current route/movement, or hold position without a route; Pending is neither Blocked nor Unbaked and never permits invented/direct movement.
-- [x] Latest request per entity wins; discard stale IDs, publish a completion set in `(entity bits, request ID)` order at the start of the next fixed tick. Request ownership uses the requesting entity's Position and InMap, not an AI-type component; despawn or loss of either owner component cancels its route. Map/teleport invalidation remains unchanged.
+- [x] Latest request per entity wins; discard stale IDs, publish a completion set in `(entity bits, request ID)` order at the start of the next fixed tick. Request ownership uses the requesting entity's Position, not an AI-type component; despawn or loss of that component cancels its route. InMap metadata remains optional, with map/teleport invalidation unchanged.
 - [x] Bound queued work and retained completions to one live request/result per entity plus one executing worker job; no unbounded wake channel.
 - [x] Preserve ordinary query success/unbaked/error results. Log worker panic/exit, explicitly fail outstanding and future requests, and never leave them Pending forever or restart silently.
 - [x] A test-only drain supports synchronous fixtures; production never drains or joins the worker during ticks. A held actual tile read cannot stop ticks; after release the real path publishes.

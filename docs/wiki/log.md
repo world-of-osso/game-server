@@ -1,6 +1,6 @@
 ## 2026-10-18 — Controlled-pet navigation request ownership
 
-[Route pruning](systems/navigation.md#navigation-worker-migration--2026-10-18): real controlled pets lack CreatureState, so filtering on that AI component cancelled their live routes. Pushed ignored real-spawn RED d0b176d52 fails at the live FixedFirst boundary; production a7c548f27 uses the requesting entity's Position/InMap for every owner, preserving map/teleport checks. Live-route/despawn control and both unchanged Stockade finish controls pass3/0fail/0ignored; the new control is enabled afterward. Master b390e37b2/protocolaa6d925 passes these two existing routes; Bite focus76vs75 also fails master and is excluded from this branch. Remaining scripted failures require separate classification.
+[Route pruning](systems/navigation.md#navigation-worker-migration--2026-10-18): real controlled pets lack CreatureState, so filtering on that AI component cancelled their live routes. Pushed ignored real-spawn RED d0b176d52 fails at the live FixedFirst boundary; production pruning uses the requesting entity's Position for every owner, preserving optional InMap metadata and existing map/teleport checks. Live-route/despawn control and both unchanged Stockade finish controls pass3/0fail/0ignored; the new control is enabled afterward. Master b390e37b2/protocolaa6d925 passes these two existing routes; Bite focus76vs75 also fails master and is excluded from this branch. Remaining scripted failures require separate classification.
 
 ## 2026-10-18 — Navigation worker all production callers converted
 

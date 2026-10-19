@@ -346,12 +346,12 @@ fn prune_routes(
         .pending
         .iter()
         .filter_map(|(entity, pending)| {
-            // Every request reads its owner's Position and InMap. CreatureState
-            // describes one AI driver, not navigation ownership (pets lack it).
-            let Ok((Some(map), Some(position))) = actors.get(*entity) else {
+            // Position belongs to every route owner; CreatureState describes one
+            // AI driver, not navigation ownership. Map metadata remains optional.
+            let Ok((map, Some(position))) = actors.get(*entity) else {
                 return Some(*entity);
             };
-            let wrong_map = map.map_id != pending.request.map_id;
+            let wrong_map = map.is_some_and(|map| map.map_id != pending.request.map_id);
             let moved = !pending.done
                 && horizontal(point(*position) - point(pending.request.from)) > TELEPORT_DISTANCE;
             (wrong_map || moved).then_some(*entity)
