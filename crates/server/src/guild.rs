@@ -645,6 +645,10 @@ mod guild_online_zone_tests;
 mod guild_ranks_tests;
 
 #[cfg(test)]
+#[path = "guild_leadership_transfer_tests.rs"]
+mod guild_leadership_transfer_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::persistence_types::GuildProfileData;
