@@ -4,6 +4,10 @@ use recastnavigation_sys::*;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+#[path = "polygons.rs"]
+mod polygons;
+pub use polygons::read_walkable_polygons;
+
 #[path = "smooth.rs"]
 mod smooth;
 #[path = "visibility.rs"]

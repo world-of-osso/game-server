@@ -88,10 +88,12 @@ fn read_source(
     Ok(Source {
         guid: spawn.guid,
         entry: spawn.template_entry,
-        pack_guid: data
-            .formations
-            .get(&spawn.guid)
-            .map_or(spawn.guid, |formation| formation.leader_guid),
+        pack_guid: super::pack_identity::pack_guid(
+            spawn.guid,
+            data.formations
+                .get(&spawn.guid)
+                .map(|formation| formation.leader_guid),
+        ),
         position,
         actor: actor.map(|(unit, _)| unit),
     })
