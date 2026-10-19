@@ -159,6 +159,16 @@ fn encounter_coverage_herald_min1_intro_direct_self_nonlethal_and_copy_isolation
                 .get::<crate::combat::DeathState>(sentry)
                 .is_some()
         );
+        assert!(
+            h.app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| event.target == Some(sentry.to_bits())
+                    && event.kind == CombatLogKind::Death),
+            "unrelated ownerless self-death proves the actual event capture is live"
+        );
         assert_alive_at_one(&mut h, herald, map);
     }
 }
