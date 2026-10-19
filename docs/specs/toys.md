@@ -11,12 +11,12 @@
 |284159/1315208 Libram of the Matriarch|`LIBRAM_LOOT189_REWARD_BINDING`|Effect189's acquisition join, quantity and conditions for Glyph284160. Never interpret misc143823 as the reward item ID without an authoritative binding.|
 |286643/1320854 Kinduru's Spiriting Quill|`QUILL_LABYRINTH_EXIT_ACTION`|Labyrinth-only run transition and party treasure-room teleport/reward action. A generic game-event or partial scenario criterion is not the complete action.|
 
-Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
+Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
 ## Ordinary lifetime and reuse follow-up
 
-- [ ] Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830 naturally retain their own aura before the source30-minute lifetime, then remove it from authoritative and replicated state after expiry, without cancellation or health/body/position changes.
-- [ ] Natural aura expiry does not clear the sourceone-hour recovery: actual UseToy refuses after expiry and near the hour boundary, then ordinary simulation passage permits a second SpellGo and fresh source-duration owner aura.
+- [x] Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830 naturally retain their own aura before the source30-minute lifetime, then remove it from authoritative and replicated state after expiry, without cancellation or health/body/position changes.
+- [x] Natural aura expiry does not clear the sourceone-hour recovery: actual UseToy refuses after expiry and near the hour boundary, then ordinary simulation passage permits a second SpellGo and fresh source-duration owner aura.
 
 Proof must use ordinary50ms fixture updates and independently observed cast-time bounds, not edited deadlines/cooldowns, accelerated clocks or an internal expiry value as its oracle. This is coverage of existing behavior, not an assumed runtime defect; first-run GREEN needs no fabricated RED. Scope is these two identities only. Other toys' full-duration/native presentation remains separate; accepted sourced boundary and all three unpublished gaps stay unchanged.
 
@@ -37,7 +37,7 @@ CPU acceptance does not certify native visuals/audio, cross-map travel or natura
 
 Admission is limited to these three spell IDs through the existing visual-only whitelist and its authored-visual/zero-payload guards. Their published item/name/spell triples join the two hearthstones in the census's named70448 extras list; keep the Full1166 baseline separate. Source Toy rows1763/1765/1766 and34 missing local-CASC files were independently reproduced and published by the lead before canonical admission proof.
 
-This batch does not authorize generic dummy4 support, alter source weights or implement the remaining scripted toys. Natural thirty-minute expiry, one-hour reuse and native cosmetic/audio presentation require separate proof.
+This batch does not authorize generic dummy4 support, alter source weights or implement the remaining scripted toys. [Ordinary thirty-minute expiry/hour reuse](#ordinary-lifetime-and-reuse-follow-up) is covered for280820/280822;280823 and native cosmetic/audio presentation remain separate proof scopes.
 
 ## Expanded build70448 footstep cosmetics
 

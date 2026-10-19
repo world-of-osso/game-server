@@ -4,7 +4,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Ordinary30-minute/hour coverage follow-up (2026-10-18)
 
-[Current proof scope](../../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-pending-2026-10-18), [contract](../../specs/toys.md#ordinary-lifetime-and-reuse-follow-up): accepted boundary docs landedec7df3660. Two existing stationary identities280820/280822 now have ordinary50ms-update tests for natural30min expiry and1h recovery/reuse using observed cast bounds, no deadline/cooldown/time-scale edits. Execution pending; this is coverage-only unless a genuine failure appears, not a manufactured RED/runtime repair. Other identities/native visuals and accepted three unpublished gaps remain unchanged.
+[Current proof scope](../../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18), [contract](../../specs/toys.md#ordinary-lifetime-and-reuse-follow-up): accepted boundary docs landedec7df3660. Two existing stationary identities280820/280822 now have ordinary50ms-update tests for natural30min expiry and1h recovery/reuse using observed cast bounds, no deadline/cooldown/time-scale edits. First executione10b9562b GREEN4/0/79.19s includes both new lifecycles and existing same-ID cancellation controls. Timers already work; no behavioral RED/runtime repair was invented. Lead integration/landing pending. Other identities/native visuals and accepted three unpublished gaps remain unchanged.
 
 ## Accepted sourced boundary and three named gaps (2026-10-18)
 

@@ -1,10 +1,10 @@
 # Toy effects14 — active whole-goal coverage
 
-## Ordinary30-minute/hour coverage follow-up: pending (2026-10-18)
+## Ordinary30-minute/hour coverage follow-up: GREEN first execution (2026-10-18)
 
 Boundary docs73eb4c48b explicitly landedec7df3660; merged docs branch cleaned after ancestry verification. Approved follow-up covers only existing Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830. Authoritative70448 duration1800000ms/recovery3600000ms is already admitted; no runtime defect or RED is assumed.
 
-New real-learning/UseToy cases observe cast-time lower/upper bounds, then use only the existing harness's ordinary50ms updates: aura present before30min, naturally absent from authoritative/replicated state after30min, recovery refusal after expiry and near1h, then a second SpellGo/fresh owner aura after1h with unchanged health/body/position. Targets use1799/1801s and3598/3601s around the observed cast interval, not an internal deadline oracle. No cancellation, clock scaling, deadline/cooldown edits, source metadata, Toy rows or assets change. First targeted execution remains pending; honest first-run GREEN is an allowed coverage result, not a fabricated bug fix. [Contract](specs/toys.md#ordinary-lifetime-and-reuse-follow-up).
+New real-learning/UseToy cases observe cast-time lower/upper bounds, then use only the existing harness's ordinary50ms updates: aura present before30min, naturally absent from authoritative/replicated state after30min, recovery refusal after expiry and near1h, then a second SpellGo/fresh owner aura after1h with unchanged health/body/position. Targets use1799/1801s and3598/3601s around the observed cast interval, not an internal deadline oracle. No cancellation, clock scaling, deadline/cooldown edits, source metadata, Toy rows or assets change. First targeted execution at e10b9562b is GREEN4/0/0ignored/79.19s: both new ordinary-hour lifecycle cases and both existing same-ID cancellation controls. Existing timers already satisfy the tested contract; there was no behavioral RED or runtime repair. Explicit absolute shared-protocol/netcode/udp patches used canonicalf9a91753; later changes are documentation only, with lead integration/landing pending. [Contract](specs/toys.md#ordinary-lifetime-and-reuse-follow-up).
 
 ## Accepted sourced boundary: Full1166 plus seven (2026-10-18)
 
