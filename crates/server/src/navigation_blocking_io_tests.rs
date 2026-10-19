@@ -77,7 +77,7 @@ fn run_probe(root: PathBuf, probe: TickProbe) {
     }
 }
 
-fn write_held_tile(
+pub(crate) fn write_held_tile(
     path: PathBuf,
     bytes: Vec<u8>,
     reached: mpsc::Sender<()>,

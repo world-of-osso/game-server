@@ -343,6 +343,41 @@ fn assert_native_route(h: &mut Harness, unit: Entity, root: &Path) {
 }
 
 #[test]
+#[ignore = "FOLLOWER_HAZARD_REACTION_POLICY RED: enable after implementation"]
+fn follower_hazard_reaction_detects_azure_contact_50ms_before_current_radius() {
+    let (mut h, telash) = source_fixture();
+    let root = private_ground();
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&root.join("navmesh")));
+    let (field, _, _) = expire_first_ordinary_frost(&mut h, telash);
+    let owner = h.player();
+    let unit = crate::followers::native_fixture::spawn(h.app.world_mut(), owner, 209057).unwrap();
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), unit).unwrap();
+    let center = at(&h, field);
+    let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+    // Native26505 grows by 1/3yd/s here: 0.008yd is outside now and inside at +50ms.
+    let position = Position {
+        x: center.x + radius + reach + 0.008,
+        y: center.y,
+        z: center.z,
+    };
+    h.app.world_mut().entity_mut(unit).insert(position);
+    assert!(
+        at(&h, unit).distance(center) > radius + reach,
+        "not current contact"
+    );
+    assert!(
+        crate::followers::fixture_hazard_escape(h.app.world_mut(), unit),
+        "+50ms authored prediction must detect the contact and start planning now"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(unit).unwrap(),
+        position,
+        "prediction detects, but reaction does not move early"
+    );
+}
+
+#[test]
 fn azure_frozen_ground_native_expiry_hazard_is_escaped_by_a_native_follower_on_private_azure_geometry()
  {
     let root = private_ground();

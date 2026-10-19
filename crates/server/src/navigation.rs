@@ -331,7 +331,7 @@ mod tests;
 
 #[cfg(all(test, target_os = "linux"))]
 #[path = "navigation_blocking_io_tests.rs"]
-mod blocking_io_tests;
+pub(crate) mod blocking_io_tests;
 
 #[cfg(all(test, target_os = "linux"))]
 #[path = "navigation_request_tests.rs"]

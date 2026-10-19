@@ -127,7 +127,11 @@ mod cc_tests;
 #[cfg(test)]
 mod defensive_tests;
 #[cfg(test)]
+mod hazard_reaction_tests;
+#[cfg(test)]
 mod hazard_tests;
+#[cfg(test)]
+pub(crate) use hazards::escape as fixture_hazard_escape;
 #[cfg(test)]
 mod kit_interrupt_tests;
 #[cfg(test)]
