@@ -61,9 +61,13 @@ fn cast_foreign_prevention(h: &mut Harness, class: u8, spell: u32) {
 
 #[test]
 fn prevent_regen_native_energy_zero_amount_mask_stops_base_and_flat_but_not_chi() {
-    let mut h = energy_fixture();
-    assert_eq!(h.power(PowerType::Chi), 2.0);
+    let mut h = energy::fixture_with_spells(&[PREVENT_ENERGY, PREVENT_MANA]);
+    energy::spend_energy(&mut h);
     cast_prevention(&mut h, PREVENT_ENERGY);
+    let chi_before = h.power(PowerType::Chi);
+    // The real energize must still execute while Energy regeneration is blocked.
+    energy::cast_elixir(&mut h);
+    assert_eq!(h.power(PowerType::Chi) - chi_before, 2.0);
     assert_eq!(energy::energy_gain_in_one_second(&mut h), 0.0);
     assert_eq!(
         h.power(PowerType::Chi),
