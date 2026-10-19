@@ -246,11 +246,17 @@ fn fixture() -> Fixture {
             .entry,
         209057
     );
+    let bossmod = crate::scripted_ai::bossmod::load_catalog(&db).unwrap();
     let mut h = harness_with_plugins(vec![], &[], 8, true, |app| {
+        app.insert_resource(bossmod);
         app.add_plugins(crate::scripted_ai::ScriptedAiPlugin);
     })
     .unwrap();
     h.app.world_mut().despawn(h.npc);
+    h.app
+        .insert_resource(crate::scripted_ai::creature_text::load_creature_texts(&db).unwrap());
+    h.app
+        .insert_resource(crate::scripted_ai::smart_ai::load_smart_scripts(&prepared).unwrap());
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
         .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
