@@ -84,14 +84,48 @@ fn finish_source_nodes(h: &mut Harness, who: &Traveler) {
 }
 
 fn assert_exit_dismounts(queue_id: u32, phase: BgPhase) {
-    let (mut h, players, _database) = pending_battleground(queue_id);
+    let (mut h, players, _database) = if phase == BgPhase::Ended {
+        let template = shared::battleground::arathi_basin();
+        let queue = if queue_id == 32 {
+            SourceQueueFixture::RandomPartiesOfFive
+        } else {
+            SourceQueueFixture::FourPartiesOfFiveAt25
+        };
+        let entered = enter_source_match_queued(
+            &template,
+            node_rules(template.map_id).unwrap().starts,
+            |app| {
+                app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
+                app.insert_resource(
+                    crate::spell_cast::test_harness::world_db()
+                        .unwrap()
+                        .store
+                        .clone(),
+                );
+                app.insert_resource(
+                    crate::spell_cast::toy_requirements::load(
+                        crate::test_data::world_db_path().parent().unwrap(),
+                    )
+                    .unwrap(),
+                );
+                app.add_plugins(crate::auras::AuraPlugin);
+            },
+            queue,
+        );
+        (entered.h, entered.players, None)
+    } else {
+        let (h, players, database) = pending_battleground(queue_id);
+        (h, players, Some(database))
+    };
     let who = &players[0];
     let entrants = if phase == BgPhase::Waiting {
         &players[..1]
     } else {
         players.as_slice()
     };
-    enter_players(&mut h, entrants);
+    if phase != BgPhase::Ended {
+        enter_players(&mut h, entrants);
+    }
     mount_source_rider(&mut h, who);
     if phase == BgPhase::Ended {
         finish_source_nodes(&mut h, &players[1]);
