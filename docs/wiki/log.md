@@ -19,6 +19,10 @@ The lead gate cs656 failed the Lantha Axe Toss test because [first-stun cast sto
 ## 2026-10-19 — First stun stops the current cast; Bo control oracle
 
 [First-stun cast stop](systems/auras.md): native Paralysis115078/Leg Sweep119381 landed on a casting enemy without stopping it, making Bo's Leg Sweep oracle RNG-dependent ([follower data](investigations/follower-data.md)). RED e3f137f13 3/3 genuine (stun applied, CastState kept); fix3e0e8f09b. GREEN32/0 63.47s,0 warnings: three new/rewritten tests plus warrior stun, creature-trigger stun and follower CC controls. Lead family gate pending.
+## 2026-10-19 — Online guild zones accepted
+
+[Producer authority](systems/guild-lifecycle.md#online-member-zone): names load once with existing AreaTable; no GuildPlugin database open. Retained guild/bank/achievement writer/area/rest140/0/3ignored, coordinated gz689 passed/landed. Actual authenticated two-member both-skin zone/refresh/disconnect native proof accepted; engine wiki owns artifact/PNG provenance and limitations. No new sorting/timestamps/leadership behavior.
+
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
 [Ground parent contract](systems/boss-scripts.md#herald-descend4-ground-parent-boundary--2026-10-18): ignored RED pushed before production; native qualification1PASS/four genuine failures86.63s at9691ff61b. Sourcefall+2000ms release and ordinary parent timers ported354302f74; five native casesGREEN137.57s. Enabled final43/43GREEN374.35s at1799e2743/master717ae67df,0ignored/no warnings; exact lethalbefore/after, source initial/repeats and actual parent damage/fear proven without overrides. Real shared-category OnCooldown preserved; first Roarfall+3950ms reflects source50ms combat advancement at release. LEAD gate/check/fmt pending. Liquid Fire effect77 children/pairedcredit/reset/native excluded.
