@@ -72,6 +72,45 @@ fn follower_swiftmend_qualification_native_without_hot_refuses() {
 }
 
 #[test]
+fn follower_swiftmend_qualification_removed_real_rejuvenation_no_longer_qualifies() {
+    let (mut h, healer) = level32(CRENNA);
+    apply_real_rejuvenation(&mut h, healer, healer);
+    assert_eq!(
+        crate::auras::aura_state::read_computed_state(h.app.world(), healer, 15),
+        Some(true)
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        healer,
+        crate::auras::RemoveReason::Cancel,
+        |aura| aura.spell_id == REJUVENATION,
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), healer, REJUVENATION));
+    wound(&mut h, healer, 0.3);
+    let result = creature_cast(h.app.world_mut(), healer, SWIFTMEND, Some(healer), false);
+    assert!(
+        matches!(result, Err(CastFailure::TargetAuraState)),
+        "removed prerequisite must not remain cached: {result:?}"
+    );
+}
+
+#[test]
+fn follower_swiftmend_qualification_uncomputed_native_state_is_not_false() {
+    let (h, healer) = level32(CRENNA);
+    let execute = h.app.world().resource::<SpellStore>().get(163201).unwrap();
+    let state = execute
+        .aura_restrictions
+        .as_ref()
+        .unwrap()
+        .target_aura_state;
+    assert_eq!(state, 2);
+    assert_eq!(
+        crate::auras::aura_state::read_computed_state(h.app.world(), healer, state),
+        None
+    );
+}
+
+#[test]
 fn follower_swiftmend_qualification_owner_without_hot_is_exempt() {
     let (mut h, healer) = level32(CRENNA);
     assert_native_restriction(&h);
