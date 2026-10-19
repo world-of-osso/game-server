@@ -189,13 +189,14 @@ mod tests {
     #[test]
     fn guild_online_zone_names_use_loaded_parent_rows_without_map_or_missing_parent_fallback() {
         let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
-        let areas = load_area_table(&conn).unwrap();
+        let mut areas = load_area_table(&conn).unwrap();
         assert_eq!(areas.zone_name(12, 0), Some("Elwynn Forest"));
         assert_eq!(areas.zone_name(87, 0), Some("Elwynn Forest"));
         assert_eq!(areas.zone_name(40, 0), Some("Westfall"));
         assert_eq!(areas.zone_name(87, 1), None);
         assert_eq!(areas.zone_name(u32::MAX, 0), None);
-        assert_eq!(areas.zone_name(16328, 2907), None);
+        areas.0.remove(&12);
+        assert_eq!(areas.zone_name(87, 0), None);
     }
 
     /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);
