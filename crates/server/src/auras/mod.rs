@@ -281,7 +281,7 @@ impl AuraInstance {
         }
     }
 
-    /// Refresh duration/amounts/charges; add a stack except Agony's preserved floor.
+    /// Refresh duration/amounts/charges; add requested stacks except Agony's preserved floor.
     fn refresh_from(&mut self, new: AuraInstance) {
         self.duration_ms = new.duration_ms;
         self.expires_at = new.expires_at;

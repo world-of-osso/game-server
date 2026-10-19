@@ -110,12 +110,12 @@ fn land_jump(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: E
 }
 
 pub(super) fn area_filter(spell: u32, index: u8) -> Option<super::AreaTargetFilter> {
-    ((spell, index) == (JUMP, 0)).then_some(select_jump_target)
+    ((spell, index) == (JUMP, 0)).then_some(select_random_jump_target)
 }
 
 /// Spell.cpp9516–9581: injury precedes player priority; full-health units stay
 /// eligible. The native EXCLUDE_CASTER selector already removes the holder.
-fn select_jump_target(
+fn select_random_jump_target(
     world: &World,
     _spell: &SpellInfo,
     _explicit: Option<Entity>,
@@ -126,15 +126,15 @@ fn select_jump_target(
     }
     let best = units
         .iter()
-        .map(|unit| target_priority(world, *unit))
+        .map(|unit| read_target_priority(world, *unit))
         .min()
         .expect("more than one candidate");
-    units.retain(|unit| target_priority(world, *unit) == best);
+    units.retain(|unit| read_target_priority(world, *unit) == best);
     units.shuffle(&mut rand::thread_rng());
     units.truncate(1);
 }
 
-fn target_priority(world: &World, unit: Entity) -> (bool, bool) {
+fn read_target_priority(world: &World, unit: Entity) -> (bool, bool) {
     let full = world
         .get::<Health>(unit)
         .is_none_or(|health| health.current >= health.max);
