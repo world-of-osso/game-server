@@ -1,3 +1,5 @@
+- [NPC autoattack expertise](systems/player-damage.md#npc-autoattack-expertise--2026-10-17) — native240/4 dodge/parry only; ignored RED pushed first,28305 qualified1536s, RogueRED+two corrected NPC broadcast REDs; consumer925224b2a native5GREEN70.24s+retained lifetime1PASS before enabling, lead gate pending.
+- [Ordinary Frozen Ground](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18) — exact387149/26505 action/curve/lifetime; native3 fresh fg602 proof within359PASS/14namedignored, check/fmt0; unrelated3Toy delta qualifies retained3PASS; landed361efa1d2. Mythic/VFX/full-Azure/live dungeon acceptance remain deferred.
 - [Autoattack attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17) — native signed caster251; ignored RED pushed first, actual negative/positive2RED with signed/ownership/CC/behind4 controls; consumer1dbe19063 six native GREEN110.87s before enabling, independent gate pending.
 - [Shared death-prevention commit](systems/auras.md#shared-death-prevention-commit--2026-10-18) — Guardian real48153 after removal; shared Ardent floor/absorption and ordered melee/direct/periodic World commits; genuine missing-rescue/log/same-frame REDs, combined gate pending.
 - [Published70448 census oracle](systems/toys.md#published-extras-and-census-cardinality-2026-10-18) — tg578/st574 expose13 stale1166 census assertions after two-row publication; shared oracle retains named baseline plus exact published item/name/spell triples. Targeted16-case verification pending; batch2 RED remains isolated.
@@ -836,3 +838,5 @@ Debug logs and root cause analyses.
 - [Landslide deterministic admission clock](systems/boss-scripts.md#landslide-deterministic-admission-clock--2026-10-16) — real seed104 RED, source cooldown rejection versus request timing; no timer/tolerance change.
 
 - [SAI protected clock samples](systems/boss-scripts.md#sai-protected-clock-samples--2026-10-16) — actual Vyletongue RED isolates dropped50ms endpoint evidence; no production/tolerance change.
+
+- [Prayer of Mending baseline](systems/auras.md#prayer-of-mending-baseline--2026-10-18) — native ward/heal/delayed original-Priest jump, per-cast stack arguments, player-qualified RNG and named NPC static-flag gap; genuine ward RED→native8/8 GREEN including lifetime/ownership/exhaustion/no-override controls; independent lead gate pending.
