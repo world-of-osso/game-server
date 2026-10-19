@@ -4,6 +4,9 @@ use shared::protocol::{
     QueueForLfg, RespondToLfgRoleCheck,
 };
 
+#[path = "tests_lfg_pvp_join.rs"]
+mod pvp_join;
+
 const DEADMINES: u32 = 100;
 
 #[test]

@@ -7,7 +7,7 @@ mod cases;
 #[path = "receipt_codec.rs"]
 mod codec;
 
-const CORPUS: [u32; 2] = [778027, 778232];
+const CORPUS: [u32; 3] = [778027, 778232, 776382];
 
 #[derive(Clone, Copy)]
 enum Mode {

@@ -569,18 +569,17 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
 /// execute before committing health so lethal interception cannot produce death.
 pub(crate) fn limit_scripted_loss(
     name: Option<&CreatureScriptName>,
+    herald_unkillable: bool,
     health: f32,
     loss: f32,
 ) -> f32 {
-    if has_damage_interceptor(name) {
-        kings_rest::limit_incoming_loss(health, loss)
+    let animated_gold = name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT);
+    let protected = herald_unkillable || animated_gold;
+    if protected && loss >= health {
+        (health - 1.0).max(0.0)
     } else {
         loss
     }
-}
-
-pub(crate) fn has_damage_interceptor(name: Option<&CreatureScriptName>) -> bool {
-    name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT)
 }
 
 /// `Unit::DealDamage` → `DamageTaken` for a scripted creature.

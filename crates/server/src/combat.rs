@@ -1674,6 +1674,9 @@ fn commit_melee_loss(
     let before = health.current;
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
+        world
+            .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(victim)
+            .is_some(),
         before,
         outcome.incoming_loss,
     );
@@ -1738,6 +1741,9 @@ pub(crate) fn deal_health_damage(
     let incoming_loss = loss;
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
+        world
+            .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(victim)
+            .is_some(),
         before,
         incoming_loss,
     );
