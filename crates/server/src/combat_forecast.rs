@@ -145,6 +145,7 @@ fn validate_script_catalog(
 }
 
 fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
+    let auras = world.get::<crate::auras::ActiveAuras>(enemy);
     Ok(Attacker {
         entity: enemy,
         position: world
@@ -155,6 +156,9 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
         haste_pct: world
             .get::<crate::stats::StatModifiers>(enemy)
             .map_or(0.0, |mods| mods.haste_pct),
+        enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
+        npc_expertise_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_EXPERTISE))
+            / EXPERTISE_PER_AVOIDANCE_PERCENT,
         creature: true,
         spirit_wolf: None,
     })

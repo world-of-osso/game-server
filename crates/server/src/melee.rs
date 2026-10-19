@@ -233,7 +233,6 @@ pub fn roll_melee_outcome(chances: &MeleeChances, roll: u32) -> MeleeOutcome {
 }
 
 /// Exact probability masses of the existing quantized native roll, for forecasts.
-#[cfg(test)]
 pub(crate) fn outcome_weights(chances: &MeleeChances) -> Vec<(MeleeOutcome, f64)> {
     let mut boundaries = vec![0, 10_000];
     let mut cumulative = 0;
