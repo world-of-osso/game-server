@@ -134,7 +134,6 @@ fn assert_live_npc_evasion(front: bool) {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_signed_coexistence_is_runtime_qualified() {
     let (mut h, victim) = fixture(true);
     cast_evasion(&mut h, victim);
@@ -153,19 +152,16 @@ fn native_melee_npc_victim_dodge_signed_coexistence_is_runtime_qualified() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_live_front_evasion_fills_the_table() {
     assert_live_npc_evasion(true);
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_live_behind_evasion_still_dodges() {
     assert_live_npc_evasion(false);
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_cancellation_and_expiry_restore_baseline() {
     for expire in [false, true] {
         let (mut h, victim) = fixture(true);
@@ -197,7 +193,6 @@ fn native_melee_npc_victim_dodge_cancellation_and_expiry_restore_baseline() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_foreign_evasion_does_not_modify_target() {
     let (mut h, victim) = fixture(true);
     let (attacker, foreign) = (h.caster, h.npc);
@@ -209,7 +204,6 @@ fn native_melee_npc_victim_dodge_foreign_evasion_does_not_modify_target() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_signed_native_sum_preserves_baseline() {
     let (mut h, victim) = fixture(true);
     let attacker = h.caster;
@@ -221,7 +215,6 @@ fn native_melee_npc_victim_dodge_signed_native_sum_preserves_baseline() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_dodge_attacker_expertise_still_wins() {
     let (mut h, victim) = fixture(true);
     let attacker = h.npc;
