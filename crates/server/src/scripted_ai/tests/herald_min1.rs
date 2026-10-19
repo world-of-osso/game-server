@@ -158,7 +158,7 @@ fn assert_real_periodic_commits(self_source: bool) {
                 .is_none()
         );
         let caster = if self_source { nazan } else { h.player() };
-        let spell_id = if self_source { 24265 } else { 17292 };
+        let spell_id = if self_source { 28721 } else { 17692 };
         let origin = *h.app.world().get::<Position>(nazan).unwrap();
         if !self_source {
             h.app.world_mut().entity_mut(caster).insert(Position {
@@ -172,14 +172,14 @@ fn assert_real_periodic_commits(self_source: bool) {
             .resource::<SpellStore>()
             .get(spell_id)
             .unwrap();
-        // Native Poison17292 is magic (not a forced-hit melee probe).
+        // Native Marduk's Curse17692 is magic (not a forced-hit melee probe).
         if !self_source {
             assert_eq!(spell.categories.as_ref().unwrap().defense_type, 1);
         }
         let effect = &spell.effects[0];
         assert_eq!(
             (effect.effect, effect.aura, effect.aura_period_ms),
-            (6, 3, 2_000)
+            (6, 3, 1_000)
         );
         assert!(effect.base_points > 1.0);
         assert!(
@@ -205,11 +205,11 @@ fn assert_real_periodic_commits(self_source: bool) {
         .length()
             / speed;
         assert!(
-            travel_time > 4.05,
-            "two native2s ticks must precede point4 arrival"
+            travel_time > 2.05,
+            "two native1s ticks must precede point4 arrival: time={travel_time}, speed={speed}, origin={origin:?}"
         );
         for expected_ticks in 1..=2 {
-            h.advance(2.0);
+            h.advance(1.0);
             assert_alive_at_one(&mut h, nazan, map);
             let ticks = h
                 .inbox(0)
