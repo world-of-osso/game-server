@@ -1222,6 +1222,19 @@ fn a_player_on_another_map_at_the_spiders_coordinates_is_not_attacked() {
 }
 
 #[test]
+fn threat_membership_dormant_despawn_does_not_publish_to_the_dead_entity() {
+    let mut app = App::new();
+    app.add_observer(replicate_woken_threat_list);
+    let victim = app.world_mut().spawn_empty().id();
+    let mut threat = ThreatTable::default();
+    threat.add_threat(victim.to_bits(), 100.0);
+    let npc = app.world_mut().spawn((threat, GridDormant)).id();
+    app.world_mut().despawn(npc);
+    app.world_mut().flush();
+    assert!(app.world().get_entity(npc).is_err());
+}
+
+#[test]
 fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
     let mut app = App::new();
     app.add_observer(replicate_woken_threat_list);
