@@ -16,7 +16,6 @@ fn at(world: &World, unit: Entity) -> Position {
 }
 
 #[test]
-#[ignore = "FOLLOWER_HAZARD_REACTION_POLICY RED: enable after implementation"]
 fn follower_hazard_reaction_holds_until_250ms_then_moves_on_ready_route() {
     let (mut h, unit, _) = stockade_fixture(FROM);
     hostile_field_at(&mut h, unit, FROM);
@@ -51,7 +50,6 @@ fn follower_hazard_reaction_holds_until_250ms_then_moves_on_ready_route() {
 }
 
 #[test]
-#[ignore = "FOLLOWER_HAZARD_REACTION_POLICY RED: enable after implementation"]
 fn follower_hazard_reaction_held_worker_stands_inside_then_moves_at_publication() {
     let (mut h, unit, _) = stockade_fixture(FROM);
     hostile_field_at(&mut h, unit, FROM);

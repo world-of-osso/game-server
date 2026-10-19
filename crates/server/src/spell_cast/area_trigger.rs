@@ -22,17 +22,7 @@ use std::collections::HashSet;
 
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
-/// Source-bound spheres add native unit reach; other effect179 keeps its spell radius.
-pub(crate) fn avoidance_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
-    if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some()
-        || world.get::<frozen_ground::FrozenGround>(entity).is_some()
-    {
-        return aura_owned::collision_radius(world, entity, unit);
-    }
-    Some(world.get::<SpellAreaTrigger>(entity)?.radius)
-}
-
-/// Project follower prediction; only authored native curves advance in time.
+/// Source-bound spheres add native reach; only authored native curves advance in time.
 pub(crate) fn avoidance_radius_at(
     world: &World,
     entity: Entity,

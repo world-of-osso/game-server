@@ -343,7 +343,6 @@ fn assert_native_route(h: &mut Harness, unit: Entity, root: &Path) {
 }
 
 #[test]
-#[ignore = "FOLLOWER_HAZARD_REACTION_POLICY RED: enable after implementation"]
 fn follower_hazard_reaction_detects_azure_contact_50ms_before_current_radius() {
     let (mut h, telash) = source_fixture();
     let root = private_ground();
@@ -419,8 +418,14 @@ fn azure_frozen_ground_native_expiry_hazard_is_escaped_by_a_native_follower_on_p
                 .expect("actual private2515 LOS tile"),
             "escape tick{tick} crossed native collision"
         );
-        let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
-        if position.distance(center) > radius + reach {
+        let predicted = crate::spell_cast::area_trigger::avoidance_radius_at(
+            h.app.world(),
+            field,
+            unit,
+            crate::auras::aura_now(h.app.world()) + 0.050,
+        )
+        .unwrap();
+        if position.distance(center) > predicted {
             escaped = true;
             break;
         }
