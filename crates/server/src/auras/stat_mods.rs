@@ -353,6 +353,26 @@ fn add_bonus_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount:
     *stat += amount;
 }
 
+/// TC SpellAuraEffects.cpp3804-3838: -1 selects all five stats; no other negative index.
+fn apply_base_stat_percent(stats: &mut UnitStats, spell: u32, index: i32, amount: f32) {
+    if !(-1..=4).contains(&index) {
+        warn!("Aura80 spell{spell} has invalid Stats index{index}");
+        return;
+    }
+    let fields = [
+        &mut stats.strength,
+        &mut stats.agility,
+        &mut stats.stamina,
+        &mut stats.intellect,
+        &mut stats.spirit,
+    ];
+    for (stat_index, value) in fields.into_iter().enumerate() {
+        if index == -1 || index == stat_index as i32 {
+            *value += amount * (1.0 + *value / 100.0);
+        }
+    }
+}
+
 fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
     let stacks = aura.stack_multiplier();
     for effect in &aura.effects {
@@ -375,6 +395,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 |index| misc < 0 || misc as usize == index,
                 |stat| *stat += amount,
             ),
+            MOD_PERCENT_STAT => {
+                apply_base_stat_percent(&mut stats.primary_base_pct, aura.spell_id, misc, amount)
+            }
             MOD_STAT_BONUS_PCT => {
                 add_bonus_stat_percent(&mut stats.primary_bonus_pct, aura.spell_id, misc, amount)
             }

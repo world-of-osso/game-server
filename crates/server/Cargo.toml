@@ -6,11 +6,11 @@ rust-version.workspace = true
 
 [dependencies]
 # Projected runtime ground metadata; renderer-only modules stay disabled.
-wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false }
-wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false }
-wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false }
+wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false }
+wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false }
+wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false }
 # Static seat offsets only; activation tracks and rendering data are not needed by vehicles.
-wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false, features = ["attachments"] }
+wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "2a91b2242dbb1cf0e0217958a973b527b80191f1", default-features = false, features = ["attachments"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
 # Read-only packet iteration and exact send-stage ordering for diagnostic census only.
 lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }

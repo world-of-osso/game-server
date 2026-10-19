@@ -359,6 +359,14 @@ Examples:
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
 
+## Player base-stat80 stage — 2026-10-18
+
+TC a352b1fa SpellAuraEffects.cpp3804-3838 applies80 only to actual Players, selecting a MiscValue stat index or−1all and updating BASE_PCT. Unit.cpp9882-9895 scales create/base stats before flat/gear bonuses, then137 scales the result. `StatModifiers.primary_base_pct` is a separate percentage-valued field; stats.rs applies it to native create values before adding bonus stats and applying the existing total percentage. Recipient aura computation clears only this new field for non-Player entities, including PLAYER_CONTROLLED followers with native class-stat bridge components. No Player identity is synthesized.
+
+Native70448 effect5900/13326 supplies10% Intellect;4009/9417 supplies passive flat10 Intellect without scaling/variance. The normal KnownSpells→passive-sync producer actually applied9417, giving native computed Mage Intellect38→48 before13326; no direct aura or stat/gear override substitutes for that gate. Ignored989f0a010 reproduced base38vs41.8 and flat/foreign/unlearn48vs51.8 in four genuine REDs. Passive-producer/selector/actual controlled non-Player bridge controls passed3; RED7 took34.97s,0warnings. Correct placement is38×1.10+10=51.8, not48×1.10=52.8.
+
+The runtime stat handler validates native indices and registers80 as a stat operation; this is not a global80 or legal-kit certificate. No137 field reuse, changes to native rows, stats, HP, gear or clocks, or full Arcane Intellect/NPC kit/follower-parity claim. GREEN pending. [Requirement](../../specs/class-completeness.md); player family `auras::base_stat_percent_tests::`, non-Player control `followers::passive_stats_tests::follower_passive_stats_native_base_stat80_does_not_change_non_player_bridge`; assigneds6 source/RED/goal receipts `data/class-completeness6-2026-10-12/base-stat80-*`.
+
 ## Independent primary-stat137 composition — 2026-10-18
 
 `StatModifiers.primary_pct` stores a percentage, not a separate factor type. Aura137 previously added20+15=35, then stats.rs multiplied by1.35. It now composes each selected independent percentage as `old + amount*(1+old/100)`;20 then15 becomes38, so the unchanged consumer applies1.38. The shared selected-stat iterator retains flat29 addition and the existing four-field mask order; no stat model or source data changes.
@@ -393,11 +401,12 @@ The modifier now stores raw five-second amounts by recipient/power; continuous n
 
 Every aura change recomputes two components, each written only when its value changed:
 
-- **`stats::StatModifiers`** ([[character-stats]]): `update_character_stats` folds it into `CharacterStats`, so each stat below is applied exactly once there. Aura137's percentage fields encode independent factor composition; see [source qualification and native proof](#independent-primary-stat137-composition--2026-10-18). Flat modifiers remain additive.
+- **`stats::StatModifiers`** ([[character-stats]]): `update_character_stats` folds create/base80 before flat/gear bonuses, bonus467 and total137 into `CharacterStats`, each exactly once. Aura137's percentage fields encode independent factor composition; see [source qualification and native proof](#independent-primary-stat137-composition--2026-10-18). Flat modifiers remain additive.
 
 | Field | Aura types |
 |---|---|
-| `primary_flat` | MOD_STAT 29 (MiscValue stat index 0 Str, 1 Agi, 2 Sta, 3 Int; negative = all) |
+| `primary_base_pct` | Player-only MOD_PERCENT_STAT80, create/base factor before bonuses; MiscValue native stat index or−1all |
+| `primary_flat` | MOD_STAT29 flat bonuses after create/base scaling (MiscValue stat index0 Str,1 Agi,2 Sta,3 Int; negative=all) |
 | `primary_pct` | MOD_TOTAL_STAT_PERCENTAGE 137 composed independent percentages (MiscValueB stat bitmask; 0 = all, TrinityCore `HandleModTotalPercentStat`) |
 | `crit_pct` | MOD_CRIT_PCT 290 |
 | `haste_pct` | 138, 140, 192, 342, 193, 216, plus the strongest MOD_CASTING_SPEED_NOT_STACK 65 (retail haste is one stat) |
