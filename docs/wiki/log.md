@@ -1,3 +1,7 @@
+## 2026-10-19 — Aura248 native-input gap
+
+[Named gap](systems/player-damage.md#aura248-native-input-gap--2026-10-19): AURA_248_NO_NONZERO_NATIVE_INPUT_70448 DEFERRED after fresh all-difficulty canonical scan finds only261912effect4 amount0/Misc0 and no imported server-side248 rows. Synthetic-only implementation declined as speculative; contract/wiki record native-proof boundary, no production/test/data change or coverage promotion.
+
 ## 2026-10-19 — Voluntary leadership authority RED
 
 [Source/policy/implementation](systems/guild-lifecycle.md#voluntary-leadership-transfer): permitted Retail UI/C API signature and full pinned TC self chain qualified before code; native Retail self behavior unproven, approved named Permissions refusal preserves state. Ignored P/E/S regressions pushed first; initial S unsupported-wire failures are not authority proof. Recognized-request baseline then reproduces four actual authority failures before member-rank mutation. Minimal rank0→target/current-lowest→former-master transform uses existing atomic persistence and recipient refresh. Six-rank/nonzero bank fixture, reopen, auth/foreign/self and real concurrent readers; focused GREEN/gate/native pending.
@@ -11,6 +15,10 @@
 ## 2026-10-18 — Herald paired-death credit RED
 
 [Paired death contract](systems/boss-scripts.md#herald-paired-death-credit-boundary--2026-10-18): native ordinary dead30693 qualification passes; six genuine missing1892/bit1 REDs108.35s plus four isolated reverse-order REDs83.24s. Source per-AI other-dead/action1 and last-death completion ported001d76905; fivePASS/sixFAIL identifies temporary17537's absent ordinary origin. Corrected actualNpc+same-copyTempSummon.summoner647169a24→all11/11GREEN187.96s,0ignored/no warnings; both orders/frame/copy/corpse/unrelated/deathspeech/deathCall pass. Enabled tests, independent retained gate pending. Chest/reset/Liquid Fire/native excluded.
+## 2026-10-17 — Victim current-health crit183
+
+[Inclusive current health](systems/player-damage.md#victim-current-health-crit183--2026-10-17): qualificatione5e06d364 FIRST2PASS30.37s0warnings/actual400ordinary10damageevents5000→1000thenbelow/noHPwrites, native18350/MiscB20/permanent800s; THEN ignored13c203c3cPUSHED. Genuine2RED/4PASS55.53s:above20wirezeroCrit20normal, exact1000purechance0vs50. BorrowexistingtargetHealth/sharedreader, inclusive truncated threshold before receivedclamp/334; forecastCURRENTsnapshotONLY/no future-crossing simulation. Numeric boundary on actualstate is not twenty independent wire rolls. Consumer49be5b891 fresh ignored6GREEN65.81s/0warnings +retained qualification2PASS30.37s (eight-case composite), only then six ignores removed; lead gate pending. No new query/state/wire/RNG/HP/clocks/Guardian changes,248 deferred.
+
 ## 2026-10-17 — Victim direct-summoner crit339
 
 [Direct owner filter](systems/player-damage.md#victim-direct-summoner-crit339--2026-10-17): qualification FIRST retained8857544073PASS42.38s +focused817062fd2parent1PASS30.07s,0warnings; actual33950/6000ms,TENnaturalapplications×2ordinaryattempts,naturalexpiryBEFOREnext. THEN ignored79c63a6abPUSHED; genuine2RED/7PASS59.79s, matchingowner/parenteach0Crit20normal. ExistingTempSummon.summoner through tuple→Snapshot→Attacker/sharedforecast;339filtersdirectowner,306actualattacker retained, no new query/component/wire/RNG/HP/clocks/Guardian. Cancellation control waits ORIGINAL6sdeadline after real removal, not claimed natural removal; other windows natural. Consumerbd49764fe fresh durable `ignored-green2`9GREEN50.74s/0warnings plus retained qualification3+1 (thirteen-case composite); first foreground compile interruption is NOT behavior proof. Only then nine ignores removed; lead gate pending,actualTempSummonautoattack-only/248deferred.
@@ -3190,3 +3198,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Follower kick candidate-scope regression repair
 
 [Exact root/proof](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): fk702 two genuine Overheat regressions despite prior50GREEN; bounded diagnostic2RED identifies spec63 off-selectedkick from widened all-engaged handoff. fb4edd4b7 restores selectedenemy-only runtime envelope, providermultiAPIunchanged; fourfamilies+bothunchangedOverheat52PASS96.87s/ZEROwarnings, check8.43s/fmtPASS. Pushed; successor gatepending. No assertion/planner/ai.rs edits, no weakened collection/budget checks.
+
+## 2026-10-19 — Leadership transfer native proof
+
+gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
