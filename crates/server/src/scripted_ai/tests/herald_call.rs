@@ -41,9 +41,12 @@ fn distance(left: Position, right: Position) -> f32 {
 
 fn damage_to_percent(h: &mut Harness, actor: Entity, percent: f32) {
     let health = h.health(actor);
-    let damage = health.current - health.max * percent / 100.0;
-    assert!(damage > 0.0);
     let player = h.player();
+    let multiplier = crate::level_scaling::UnitScaling::of(h.app.world(), actor).health_multiplier(
+        &crate::level_scaling::UnitScaling::of(h.app.world(), player),
+    );
+    let damage = (health.current - health.max * percent / 100.0) * multiplier;
+    assert!(damage > 0.0);
     crate::combat::deal_direct_damage(h.app.world_mut(), player, actor, damage);
     assert!((h.health(actor).current / health.max * 100.0 - percent).abs() < 0.001);
 }
@@ -79,6 +82,18 @@ fn assert_call_ingress(difficulty: u32) {
     assert!(h.has_aura(nazan, 18430));
     assert_eq!(descent_emotes(&h, nazan), 0);
     let fireball = if difficulty == 2 { 32491 } else { 30691 };
+    // The victim repeat remains3.2s; wait for it, never shorten the source clock.
+    for _ in 0..65 {
+        if h.app
+            .world()
+            .get::<shared::casting::CastState>(nazan)
+            .is_some()
+        {
+            break;
+        }
+        h.advance(0.05);
+        assert_eq!(received_casts(&h, vazruden, 30693), 0);
+    }
     let active = h
         .app
         .world()
