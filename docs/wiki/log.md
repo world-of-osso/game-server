@@ -2,6 +2,13 @@
 
 [Icon boundary and before-only ledger](systems/wow-formats.md#blp-icon-boundary): actual icon PNG/RGBA/error/panic receipts plus five source-selection edges; no production/pin/asset changes. Engine normalization and BC5 support are not server defaults. Fifth crate/icon migration remain unapproved.
 
+## 2026-10-19 — Effect64 launch phase
+
+The lead gate cs656 failed the Lantha Axe Toss test because [first-stun cast stop](systems/auras.md) ran before the hit-time effect64 child. [Effect64 launch phase](systems/spell-casting.md): RED cd7e783bd 2/2 genuine, fix ec953eeac. GREEN 44/0 in 118.99s, 0 warnings (control_cast_stop, pet_tests, Bo, queued_trigger families, warrior stuns, missiles).
+
+## 2026-10-19 — First stun stops the current cast; Bo control oracle
+
+[First-stun cast stop](systems/auras.md): native Paralysis115078/Leg Sweep119381 landed on a casting enemy without stopping it, making Bo's Leg Sweep oracle RNG-dependent ([follower data](investigations/follower-data.md)). RED e3f137f13 3/3 genuine (stun applied, CastState kept); fix3e0e8f09b. GREEN32/0 63.47s,0 warnings: three new/rewritten tests plus warrior stun, creature-trigger stun and follower CC controls. Lead family gate pending.
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
 [Ground parent contract](systems/boss-scripts.md#herald-descend4-ground-parent-boundary--2026-10-18): ignored RED pushed before production; native qualification1PASS/four genuine failures86.63s at9691ff61b. Sourcefall+2000ms release and ordinary parent timers ported354302f74; five native casesGREEN137.57s. Enabled final43/43GREEN374.35s at1799e2743/master717ae67df,0ignored/no warnings; exact lethalbefore/after, source initial/repeats and actual parent damage/fear proven without overrides. Real shared-category OnCooldown preserved; first Roarfall+3950ms reflects source50ms combat advancement at release. LEAD gate/check/fmt pending. Liquid Fire effect77 children/pairedcredit/reset/native excluded.
@@ -3136,4 +3143,11 @@ Native fixture RED→GREEN2 at91fa9b74d: concrete points/time/death/title and di
 Explicit admitted unit_transform sampling replaces incomplete UnitPick traversal. Actual52.365s failed Stockade capture has all5pose/facing tracks; real143spawns/nav34 SVG+PNG inspected/published with FAILED/no-boss title. Original63s gap/failure record preserved. No clear/retry/server-panic fix claimed; owned5981 cold/windows cleared; independent lead gate pending.
 - 2026-10-18: Shared MH2O raw records; frozen independent client/server layers, errors, queries and navigation water-bound baseline. See [shared formats](systems/wow-formats.md).
 
+## 2026-10-19 — Online guild zone producer
+
+Existing guild snapshot paths now resolve same-guild online map/position through GroundMap→AreaTable and startup-loaded authentic labels; None for unavailable/offline. Native HostClient behavioral RED precedes implementation; GREEN/coordinated gate/native pending.
+
+## 2026-10-19 — Online guild zone targeted GREEN
+
+Actual protocol1, both-skin UI1 and native HostClient server1 pass after their observed REDs. Tests enabled; production area authority/label semantics unchanged by fixture repairs. Coordinated integration gate and native proof next.
 - 2026-10-18: Share MFBO minimum signed-grid decoding, preserving consumer selection/errors and runtime plane policy. See [shared formats](systems/wow-formats.md).

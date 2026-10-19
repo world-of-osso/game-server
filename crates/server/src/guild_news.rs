@@ -287,6 +287,13 @@ mod tests {
         app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.init_resource::<crate::gold::GoldUpdateQueue>();
         app.init_resource::<Inbox>();
+        let conn = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+        app.insert_resource(crate::test_data::ground_map());
         app.add_plugins(crate::guild::GuildPlugin);
         app.add_systems(First, collect_news);
         app.finish();

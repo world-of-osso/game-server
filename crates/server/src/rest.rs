@@ -682,10 +682,13 @@ mod tests {
         areas
             .execute_batch(
                 "CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER,
-             ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER);
+             ContinentID INTEGER, Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER,
+             AreaName_lang TEXT);
              INSERT INTO area_table VALUES
-             (12,0,0,16448,2,0), (1519,0,0,2113848,2,12288), (1637,0,1,2113848,4,12288),
-             (5148,1519,0,1075855672,0,4096), (5170,1637,1,1075855672,0,4096);",
+             (12,0,0,16448,2,0,'Elwynn Forest'), (1519,0,0,2113848,2,12288,'Stormwind City'),
+             (1637,0,1,2113848,4,12288,'Orgrimmar'),
+             (5148,1519,0,1075855672,0,4096,'Trade District'),
+             (5170,1637,1,1075855672,0,4096,'Valley of Strength');",
             )
             .unwrap();
         app.insert_resource(crate::area_table::load_area_table(&areas).unwrap());
