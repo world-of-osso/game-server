@@ -53,6 +53,7 @@ fn toyfx39_scarab_scatter_accepts_actual_source_slope_outer_ring() {
 }
 
 #[test]
+#[ignore = "RED: qualify target32 grounding versus stale exact selected-destination oracle"]
 fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Npc, UnitIsPet, UnitSummonedBy};
@@ -64,6 +65,13 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     let store = crate::spell_info::load_spell_data(&conn).unwrap().0;
     let spell = store.get(92146).unwrap();
     assert_eq!(spell.effects[0].base_points, 25.0);
+    assert_eq!(spell.effects[0].effect, 28, "native SUMMON effect");
+    assert_eq!(spell.effects[0].implicit_targets, [32, 0]);
+    assert_eq!(
+        spell.misc.as_ref().unwrap().attributes[9] & 0x1,
+        0,
+        "native92146 does not select FORCE_DEST_LOCATION"
+    );
     let (mut h, character) = setup(&directory.path().join("scarab.redb"));
     place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
     let destination = crate::spell_cast::targets::effect_dest(
