@@ -53,6 +53,8 @@ mod group_criteria;
 mod herald_call;
 #[path = "herald_damage.rs"]
 mod herald_damage;
+#[path = "herald_fall.rs"]
+mod herald_fall;
 #[path = "herald_intro.rs"]
 mod herald_intro;
 #[path = "herald_intro2.rs"]
