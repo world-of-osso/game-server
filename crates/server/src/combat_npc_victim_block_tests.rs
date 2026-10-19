@@ -126,7 +126,6 @@ fn assert_baseline_unblocked(events: &[CombatEvent]) {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_signed_coexistence_and_fold_are_qualified() {
     let (mut h, victim) = fixture(DUMMY, true);
     apply_block(&mut h, victim, BLOCK);
@@ -150,7 +149,6 @@ fn native_melee_npc_victim_block_signed_coexistence_and_fold_are_qualified() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_positive_fills_table_despite_expertise() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.npc;
@@ -170,7 +168,6 @@ fn native_melee_npc_victim_block_positive_fills_table_despite_expertise() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_cancelled_aura_restores_baseline() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.npc;
@@ -186,7 +183,6 @@ fn native_melee_npc_victim_block_cancelled_aura_restores_baseline() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_foreign_aura_does_not_modify_target() {
     let (mut h, victim) = fixture(DUMMY, true);
     let (attacker, foreign) = (h.npc, h.caster);
@@ -198,7 +194,6 @@ fn native_melee_npc_victim_block_foreign_aura_does_not_modify_target() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_signed_native_sum_clamps_at_zero() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.npc;
@@ -214,7 +209,6 @@ fn native_melee_npc_victim_block_signed_native_sum_clamps_at_zero() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_negative_native_amount_clamps_at_zero() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.npc;
@@ -226,7 +220,6 @@ fn native_melee_npc_victim_block_negative_native_amount_clamps_at_zero() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_positive_does_not_override_behind_arc() {
     let (mut h, victim) = fixture(DUMMY, false);
     let attacker = h.npc;
@@ -238,7 +231,6 @@ fn native_melee_npc_victim_block_positive_does_not_override_behind_arc() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_block_positive_does_not_override_native_no_block() {
     let (mut h, victim) = fixture(ICE_TOMB, true);
     let attacker = h.npc;
