@@ -36,13 +36,14 @@ fn follower_passive_stats_real_spec66_stamina_recomputes_max_health() {
     let (mut h, unit) = spawn_level32_garrick();
     h.advance(3);
     let modifiers = h.app.world().get::<StatModifiers>(unit).unwrap();
-    // Native70391: Aegis353367 +30%, Plate Specialization86102 +5%,
-    // both aura137 with MiscValueB4 (stamina). Base class2/level32 stamina980;
-    // native gtHpPerSta32=8. No fixture stat or health overrides.
-    assert_eq!(modifiers.primary_pct.stamina, 35.0);
+    // Native70448: independent Aegis353367 +30% and Plate86102 +5%,
+    // both137/mask4, no SAME_EFFECT group: 1.30*1.05=1.365 (TC GetTotalAuraMultiplier).
+    // Base class2/level32 stamina980 ->1337.7; floor1337*gtHpPerSta32=8 ->10696HP.
+    // No fixture stat or health overrides.
+    assert_eq!(modifiers.primary_pct.stamina, 36.5);
     let health = h.app.world().get::<Health>(unit).unwrap();
     assert_eq!(
-        health.max, 10584.0,
+        health.max, 10696.0,
         "native passive modifiers were stored but not applied"
     );
     assert_eq!(health.current, health.max);
@@ -53,7 +54,7 @@ fn follower_passive_stats_real_spec66_stamina_recomputes_max_health() {
             .unwrap()
             .primary
             .stamina,
-        1323.0
+        1337.7
     );
 }
 
@@ -97,7 +98,7 @@ fn follower_passive_stats_real_aegis_removal_and_reapply_refresh_max_health() {
     );
     h.advance(3);
     let health = h.app.world().get::<Health>(unit).unwrap();
-    assert_eq!(health.max, 10584.0);
+    assert_eq!(health.max, 10696.0);
     assert_eq!(health.current, health.max);
 }
 
@@ -122,7 +123,7 @@ fn follower_passive_stats_owned_evade_preserves_native_spec_and_threat_auras() {
     // Production no-path/leash lifecycle entry, followed by real aura/stat systems.
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), unit);
     h.advance(3);
-    assert_eq!(h.app.world().get::<Health>(unit).unwrap().max, 10584.0);
+    assert_eq!(h.app.world().get::<Health>(unit).unwrap().max, 10696.0);
     assert!(crate::auras::has_aura(h.app.world(), unit, AEGIS_OF_LIGHT));
     assert!(crate::auras::has_aura(h.app.world(), unit, RIGHTEOUS_FURY));
     assert_eq!(
