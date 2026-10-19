@@ -84,7 +84,6 @@ fn query(app: &mut App, connection: Entity) -> GuildSnapshot {
 }
 
 #[test]
-#[ignore = "behavioral RED: native guild query does not carry authoritative online zones"]
 fn guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_privacy() {
     let mut app = App::new();
     app.add_plugins((

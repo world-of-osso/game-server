@@ -18,7 +18,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [ ] Guild member snapshots carry an optional actual zone label only for online members, resolved through existing GroundMap area and AreaTable zone authority and real `area_table.AreaName_lang` data. Missing position/map/area/name and offline members produce None; no map-name or ZoneN substitute.
 - [ ] New guild queries and existing state refresh paths recompute online labels, preserve guild membership/note privacy, and never persist the presentation label as player position authority.
 - Source: TC a352b1fa `Guild.cpp:1331–1352` AreaID; Mainline `CommunitiesMemberList.lua:115–120,1285–1297`, `GuildRoster.lua:115`.
-- Test: `guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_privacy`, actual HostClient query/reply consumed during Update. Behavioral RED preceded implementation; GREEN/joint gate/native proof pending.
+- Test: `guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_privacy`, actual HostClient query/reply consumed during Update. Behavioral RED preceded implementation; Targeted GREEN passed; joint gate/native proof pending.
 - Protocol/server/engine land together. Zone sorting, offline timestamps and Club/mobile presence are excluded.
 
 ### Direct member-rank assignment

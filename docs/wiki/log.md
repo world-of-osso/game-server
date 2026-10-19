@@ -3115,3 +3115,7 @@ Explicit admitted unit_transform sampling replaces incomplete UnitPick traversal
 ## 2026-10-19 — Online guild zone producer
 
 Existing guild snapshot paths now resolve same-guild online map/position through GroundMap→AreaTable and startup-loaded authentic labels; None for unavailable/offline. Native HostClient behavioral RED precedes implementation; GREEN/coordinated gate/native pending.
+
+## 2026-10-19 — Online guild zone targeted GREEN
+
+Actual protocol1, both-skin UI1 and native HostClient server1 pass after their observed REDs. Tests enabled; production area authority/label semantics unchanged by fixture repairs. Coordinated integration gate and native proof next.
