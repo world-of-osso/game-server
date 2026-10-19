@@ -40,6 +40,9 @@ pub(crate) const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 /// Signed attacker dodge modifier (`Unit::GetUnitDodgeChance`, Unit.cpp2775).
 const MOD_ENEMY_DODGE: u32 = 251;
+/// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
+const MOD_EXPERTISE: u32 = 240;
+const EXPERTISE_PER_AVOIDANCE_PERCENT: f32 = 4.0;
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
 const ATTACK_DISPLAY_DELAY: f32 = 0.2;
@@ -626,6 +629,7 @@ fn auto_attack_unit(
         stats: snapshot.stats.as_ref(),
         haste_pct: snapshot.haste_pct,
         enemy_dodge_pct: snapshot.enemy_dodge_pct,
+        npc_expertise_pct: snapshot.npc_expertise_pct,
         creature: snapshot.creature,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let owner = params
@@ -681,6 +685,7 @@ struct SwingSnapshot {
     stats: Option<CharacterStats>,
     haste_pct: f32,
     enemy_dodge_pct: f32,
+    npc_expertise_pct: f32,
     creature: bool,
 }
 
@@ -704,6 +709,12 @@ fn snapshot_attacker(
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
+        npc_expertise_pct: if creature {
+            auras.map_or(0.0, |auras| auras.modifier(MOD_EXPERTISE))
+                / EXPERTISE_PER_AVOIDANCE_PERCENT
+        } else {
+            0.0
+        },
         creature,
     })
 }
@@ -790,6 +801,8 @@ pub(crate) struct Attacker<'a> {
     pub haste_pct: f32,
     /// Signed attacker aura251 sum, snapshotted before mutating victim auras.
     pub enemy_dodge_pct: f32,
+    /// Signed NPC aura240/4 reduction; players do not use this expertise path.
+    pub npc_expertise_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
@@ -972,10 +985,12 @@ fn roll_outcome(
     } else {
         melee::swing_chances(swinger, victim, can_avoid)
     };
-    // Unit.cpp2775: signed attacker251, then clamp. Never restore avoidance
-    // disabled by CC/casting or the existing missing-player-stats hit path.
+    // Unit.cpp2775–2782/2817–2822: signed attacker251, NPC240/4, then clamp.
+    // Never restore CC/casting or missing-player-stats prohibited avoidance.
     if can_avoid && (attacker.creature || attacker.stats.is_some()) {
-        chances.dodge = (chances.dodge + attacker.enemy_dodge_pct).max(0.0);
+        chances.dodge =
+            (chances.dodge + attacker.enemy_dodge_pct - attacker.npc_expertise_pct).max(0.0);
+        chances.parry = (chances.parry - attacker.npc_expertise_pct).max(0.0);
     }
     if let (Victim::Creature { .. }, Some(flags)) = (victim, flags) {
         const NO_PARRY: u32 = 0x4;
