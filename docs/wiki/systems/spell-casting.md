@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Live source interrupt eligibility
+
+`spell_cast/interruptibility.rs` ports pinned TC `SpellInfo.cpp:1618–1628` (`CanBeInterrupted`). Follower fallback, pet, full-kit and tank-caster selection read the active cast's native spell and current aura state; hostile effect68 rechecks at execution. Attr7, channel Damage/EnteringCombat, DamageCancels/player-only and the interrupter's exact484 aura are positive branches that bypass target protection. The final SILENCE-prevention branch checks mechanic26 immunity and matching203 aura; ignore-immunity bypasses only mechanic immunity. Missing categories means PreventionType0.
+
+The existing `CastState.interruptible` field remains damage-pushback state, not kick authority. Forced stops, death, movement and pushback are unchanged. Native Frost Bomb386781, Sprouts374364 and Fissure386660 refuse ordinary kicks; Fireball133 remains eligible. At ce431b54c, focused14/14 pass in47.85s without warnings: nine native rule/channel/live-aura cases, four refused-kick fixtures with real104773 mechanic immunity, and the unchanged Azure facing assertions. Correct source eligibility exposes ordinary1.5s Sprouts followed by6s Hammer of Justice; the old100×50ms setup allowance cannot contain both. The approved fixture-only bound adds maximum observed cast/stun remaining durations to those original100ticks, never resets a sliding deadline, and fails explicitly on exhaustion. Actual bound250ticks/12.5s; Fissure admitted tick147/7.35s. No CC suppression, immunity invention, native timer/data changes or geometry assertion removal. Lead integration gate and landed-master live Sprout timing remain pending; earlier Telash observation has zero hazard samples.
+
+Sources: [contract](../../specs/cast-presentation.md#source-interrupt-eligibility), `crates/server/src/spell_cast/interruptibility{,_tests,_rule_tests}.rs`, pinned TC `SpellInfo.cpp:1618–1628`; engine diagnostics `server-live-frame-cost-2026-10-16/azure-hazard-live1/interruptibility-proof-ledger.json`.
+
 ## Ordinary Frozen Ground — 2026-10-18
 
 Exact387149/26505 dispatch creates a destination-owned field using existing source catalog30679/CAST387150/ENEMY, curve53094 and native duration. Only this effect179 binding is added. It reuses source-reach membership and caster-scoped action undo from aura-owned fields; the destination does not follow the bomb target. Aura387150 owns periodic damage and slow; the field has no damage tick clock. Caster/map loss and natural expiry retire its membership actions.

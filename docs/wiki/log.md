@@ -1,3 +1,6 @@
+## Source interrupt eligibility
+
+[Live predicate](systems/spell-casting.md#live-source-interrupt-eligibility): full pinned TC OR/bypass ordering at selection and effect68; damage pushback unchanged. Current ce431b54c focused14/14 pass47.85s/0warnings, including native9, four real104773 protection negatives and unchanged Azure facing. Approved source-duration setup bound250ticks derives1.5s cast+6s stun+100 original50ms ticks; Fissure admitted147. Fissure source0 assertion corrected without altering geometry, native data, CC or timers. No live hazard timing or whole-branch GREEN claim.
 ## 2026-10-18 — Herald paired-death credit RED
 
 [Paired death contract](systems/boss-scripts.md#herald-paired-death-credit-boundary--2026-10-18): native ordinary dead30693 qualification passes; six genuine missing1892/bit1 REDs108.35s plus four isolated reverse-order REDs83.24s. Source per-AI other-dead/action1 and last-death completion ported001d76905; fivePASS/sixFAIL identifies temporary17537's absent ordinary origin. Corrected actualNpc+same-copyTempSummon.summoner647169a24→all11/11GREEN187.96s,0ignored/no warnings; both orders/frame/copy/corpse/unrelated/deathspeech/deathCall pass. Enabled tests, independent retained gate pending. Chest/reset/Liquid Fire/native excluded.

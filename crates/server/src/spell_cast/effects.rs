@@ -1783,7 +1783,7 @@ fn interrupt_cast(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, tar
     let Some(cast) = world.get::<CastState>(target).cloned() else {
         return;
     };
-    if !cast.interruptible {
+    if !super::can_interrupt_cast(world, ctx.caster, target) {
         return;
     }
     let school_mask = world

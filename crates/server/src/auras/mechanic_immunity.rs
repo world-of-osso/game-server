@@ -36,6 +36,26 @@ fn effect_matches(spell: &SpellInfo, mechanic: u32, immunity: &AuraEffectState) 
     }
 }
 
+/// The unit's actual mechanic-immunity registrations, independent of an incoming spell.
+pub(crate) fn has_mechanic_immunity(world: &World, target: Entity, mechanic: u32) -> bool {
+    if mechanic == 0 || mechanic >= u64::BITS {
+        return false;
+    }
+    world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .any(|effect| match effect.aura_type {
+                handlers::MECHANIC_IMMUNITY => u32::try_from(effect.misc_values[0]) == Ok(mechanic),
+                handlers::MECHANIC_IMMUNITY_MASK => effect
+                    .immunity
+                    .as_ref()
+                    .is_some_and(|definition| definition.mechanics_mask & (1u64 << mechanic) != 0),
+                _ => false,
+            })
+    })
+}
+
 /// Pass zero for category-only hit rejection; effect hits also supply their mechanic.
 pub(crate) fn blocks_mechanic(
     world: &World,
