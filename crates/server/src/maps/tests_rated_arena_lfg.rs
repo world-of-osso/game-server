@@ -2,25 +2,21 @@ use super::*;
 use shared::protocol::{PvpBracketSnapshot, QueueForRatedPvp};
 
 #[test]
-#[ignore = "RED: rated arena team currently admits active LFG members"]
 fn rated_lfg_2v2_refuses_queued_member_until_native_dequeue() {
     assert_rated_lfg_refusal(2, false);
 }
 
 #[test]
-#[ignore = "RED: rated arena team currently admits active LFG members"]
 fn rated_lfg_3v3_refuses_queued_member_until_native_dequeue() {
     assert_rated_lfg_refusal(3, false);
 }
 
 #[test]
-#[ignore = "RED: rated arena team currently admits active LFG members"]
 fn rated_lfg_2v2_refuses_role_check_member_until_native_decline() {
     assert_rated_lfg_refusal(2, true);
 }
 
 #[test]
-#[ignore = "RED: rated arena team currently admits active LFG members"]
 fn rated_lfg_3v3_refuses_role_check_member_until_native_decline() {
     assert_rated_lfg_refusal(3, true);
 }
