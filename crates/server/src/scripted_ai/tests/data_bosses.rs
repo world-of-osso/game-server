@@ -49,12 +49,12 @@ mod gizlock;
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "herald_call.rs"]
+mod herald_call;
 #[path = "herald_intro.rs"]
 mod herald_intro;
 #[path = "herald_intro2.rs"]
 mod herald_intro2;
-#[path = "herald_call.rs"]
-mod herald_call;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
