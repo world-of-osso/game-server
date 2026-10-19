@@ -357,8 +357,17 @@ struct MeleeCopy {
 }
 
 fn create_melee_copies(difficulty: u32) -> (Harness, Vec<MeleeCopy>, f64) {
-    let (mut h, map, actor, sentries) = prepared_ramparts(difficulty);
-    h.app.init_resource::<ObservedCombatEvents>();
+    // Derive the budget from the actual morphed Nazan, not Herald's different avoidance.
+    let (mut h, map, actor, _) = observe_first_west(difficulty);
+    let sentries = actors_in_copy(&mut h, 17517, map)
+        .into_iter()
+        .filter(|sentry| {
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(*sentry)
+                .is_none()
+        })
+        .collect();
     let attacker = h.player();
     let avoid = native_avoidance_upper(&h, attacker, actor);
     let no_double_hit = 1.0 - (1.0 - avoid).powi(2);
@@ -426,11 +435,22 @@ fn reach_synchronized_west(h: &mut Harness, copies: &[MeleeCopy], difficulty: u3
     // dispatch, final patrol step, morph/launch and arrival callback ordering.
     let budget = center_frames + 20 + point_travel_frames(CENTER, WEST, nazan_speed) + 4;
     for copy in copies {
-        let listener = *h.app.world().get::<Position>(copy.sentries[0]).unwrap();
-        h.app.world_mut().entity_mut(copy.attacker).insert(listener);
+        if let Some(sentry) = copy.sentries.first() {
+            let listener = *h.app.world().get::<Position>(*sentry).unwrap();
+            h.app.world_mut().entity_mut(copy.attacker).insert(listener);
+        }
         for sentry in &copy.sentries {
             kill_actor(h, *sentry);
         }
+        // Only the player fixture is placed at the endpoint. Earlier natural
+        // arrivals keep a nearby victim; no NPC position or motion is changed.
+        h.app
+            .world_mut()
+            .entity_mut(copy.attacker)
+            .insert(Position {
+                x: WEST.x + 3.0,
+                ..WEST
+            });
     }
     for _ in 0..=budget {
         if copies.iter().all(|copy| {
