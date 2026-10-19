@@ -13,6 +13,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::time::Duration;
 
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
@@ -329,6 +330,59 @@ pub(super) fn update_max_powers(
     }
 }
 
+/// TC CreatureData.h423 / Pet.cpp64,671-687: hunter Focus ticks from spawn,
+/// including while full. Player Focus and other pet powers use their existing path.
+#[derive(Component)]
+pub(crate) struct PetFocusRegen {
+    remaining: Duration,
+}
+
+impl Default for PetFocusRegen {
+    fn default() -> Self {
+        Self {
+            remaining: Self::INTERVAL,
+        }
+    }
+}
+
+impl PetFocusRegen {
+    const INTERVAL: Duration = Duration::from_secs(4);
+    /// Creature.cpp964-969, normal RATE_POWER_FOCUS=1.
+    const FOCUS_PER_TICK: f32 = 24.0;
+
+    fn advance(&mut self, delta: Duration) -> bool {
+        if self.remaining > delta {
+            self.remaining -= delta;
+            return false;
+        }
+        // Carry the phase, but do not replay missed ticks after a large lag.
+        self.remaining = match (self.remaining + Self::INTERVAL).checked_sub(delta) {
+            Some(remaining) if remaining.is_zero() => Duration::from_millis(1),
+            Some(remaining) => remaining,
+            None => Self::INTERVAL,
+        };
+        true
+    }
+}
+
+fn regenerate_pet_focus(
+    pools: &mut PowerPools,
+    timer: &mut PetFocusRegen,
+    delta: Duration,
+    multiplier: f32,
+) {
+    let tick = timer.advance(delta);
+    let Some(pool) = pools.get_mut(PowerType::Focus) else {
+        return;
+    };
+    // Discrete authoritative updates, not continuous client prediction.
+    pool.regen_per_sec = 0.0;
+    if tick {
+        let amount = (PetFocusRegen::FOCUS_PER_TICK * multiplier).trunc();
+        pool.current = (pool.current + amount).clamp(0.0, pool.max);
+    }
+}
+
 type RegenQuery<'w, 's> = Query<
     'w,
     's,
@@ -341,6 +395,7 @@ type RegenQuery<'w, 's> = Query<
         Option<&'static crate::death::PlayerDeathState>,
         Option<&'static Npc>,
         Option<&'static UnitFlags>,
+        Option<&'static mut PetFocusRegen>,
     ),
     Without<GridDormant>,
 >;
@@ -364,7 +419,7 @@ pub(crate) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (mut pools, mana, combat, mods, stats, death, npc, flags) in &mut units {
+    for (mut pools, mana, combat, mods, stats, death, npc, flags, pet_focus) in &mut units {
         if !read_creature_power_regeneration(npc, flags, world_data.as_deref()) {
             continue;
         }
@@ -372,6 +427,15 @@ pub(crate) fn regenerate_powers(
             continue;
         }
         let regen_mult = |power: PowerType| mods.map_or(1.0, |mods| mods.power_regen(power as i32));
+        let has_pet_focus = pet_focus.is_some();
+        if let Some(mut timer) = pet_focus {
+            regenerate_pet_focus(
+                &mut pools,
+                &mut timer,
+                time.delta(),
+                regen_mult(PowerType::Focus),
+            );
+        }
         let in_combat = combat.is_some_and(|status| status.0);
         if in_combat {
             pools.out_of_combat_since = now;
@@ -382,17 +446,29 @@ pub(crate) fn regenerate_powers(
             .bypass_change_detection()
             .pools
             .iter_mut()
-            .filter(|pool| pool.power != PowerType::Runes)
+            .filter(|pool| {
+                pool.power != PowerType::Runes && !(has_pet_focus && pool.power == PowerType::Focus)
+            })
         {
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let step = regen_step(pool.current, pool.max, info, in_combat, out_of_combat_ms);
+            // TC StatSystem.cpp901-908: aura85 is units per five seconds,
+            // added AFTER percentage modifiers. Select direction/limit using
+            // the modified rate, including powers whose base rate is zero.
+            let multiplier = regen_mult(pool.power);
+            let flat_per_sec =
+                mods.map_or(0.0, |mods| mods.power_regen_flat(pool.power as i32) / 5.0);
+            let rates = PowerTypeInfo {
+                regen_combat: info.regen_combat * multiplier + flat_per_sec,
+                regen_peace: info.regen_peace * multiplier + flat_per_sec,
+                ..*info
+            };
+            let step = regen_step(pool.current, pool.max, &rates, in_combat, out_of_combat_ms);
             let Some((rate, limit)) = step else {
                 pool.regen_per_sec = 0.0;
                 continue;
             };
-            let rate = rate * regen_mult(pool.power);
             let next = pool.current + rate * dt;
             pool.current = if rate > 0.0 {
                 next.min(limit)

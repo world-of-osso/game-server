@@ -1,12 +1,20 @@
 //! Ramparts bosses, TC a352b1fa. EventMap repeats anchor to dispatch.
 mod herald;
 mod omor;
+mod vazruden;
 use bevy::prelude::*;
 pub(crate) use herald::on_unit_death;
 use shared::components::ThreatTable;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx, DamageTaken};
+
+/// TC557–568: effect0 SCRIPT_EFFECT sends action0 to the actual hit creature.
+pub(crate) fn call_nazan(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    if world.get::<shared::components::Npc>(target).is_some() {
+        super::dispatch(world, target, super::Hook::DoAction(0));
+    }
+}
 
 const SCRIPT: &str = "boss_watchkeeper_gargolmar";
 const TAUNT: u32 = 1;
@@ -16,7 +24,9 @@ const REQUEST_HEAL: u32 = 30642;
 const RETALIATION: u32 = 22857;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, SCRIPT | "boss_omor_the_unscarred") || name == herald::SCRIPT
+    matches!(name, SCRIPT | "boss_omor_the_unscarred")
+        || name == herald::SCRIPT
+        || name == vazruden::SCRIPT
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -31,6 +41,9 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     let script = &world.get::<super::CreatureScriptName>(actor)?.0;
     if script == herald::SCRIPT {
         return Some(Box::new(herald::HeraldIntro::default()));
+    }
+    if script == vazruden::SCRIPT {
+        return Some(vazruden::creature_ai());
     }
     if script == "boss_omor_the_unscarred" {
         return Some(omor::creature_ai());
