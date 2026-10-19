@@ -1,6 +1,9 @@
 use super::*;
 use shared::protocol::{PvpBracketSnapshot, QueueForRatedPvp};
 
+#[path = "tests_lfg_rated_arena.rs"]
+mod converse;
+
 #[test]
 fn rated_lfg_2v2_refuses_queued_member_until_native_dequeue() {
     assert_rated_lfg_refusal(2, false);
