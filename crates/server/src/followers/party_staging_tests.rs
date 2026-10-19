@@ -94,6 +94,37 @@ fn admin_follower_staging_refuses_owner_in_combat_without_moving_any_member() {
 
 #[test]
 #[ignore = "RED: admin whole-party staging not implemented"]
+fn admin_follower_staging_refuses_active_encounter_without_moving_members() {
+    use crate::scripted_ai::instance_script::{
+        BossInfo, EncounterState, InstanceScript, InstanceScripts,
+    };
+    let (mut app, owner, _) = fixture();
+    let copy = *app.world().get::<InMap>(owner).unwrap();
+    let before = *app.world().get::<Position>(owner).unwrap();
+    app.world_mut()
+        .insert_resource(InstanceScripts(std::collections::HashMap::from([(
+            copy,
+            InstanceScript {
+                name: "staging encounter fixture",
+                bosses: vec![BossInfo {
+                    state: EncounterState::InProgress,
+                    encounter_id: 2583,
+                }],
+                boss_creatures: Vec::new(),
+                handled_area_triggers: Default::default(),
+                data: Default::default(),
+                ramparts_sentry_deaths: 0,
+            },
+        )])));
+    assert!(
+        matches!(stage(app.world_mut()), crate::admin_types::AdminResponse::Error(error) if error.contains("encounter"))
+    );
+    let after = app.world().get::<Position>(owner).unwrap();
+    assert_eq!((after.x, after.y, after.z), (before.x, before.y, before.z));
+}
+
+#[test]
+#[ignore = "RED: admin whole-party staging not implemented"]
 fn admin_follower_staging_refuses_foreign_owned_party_without_moving_members() {
     let (mut app, owner, members) = fixture();
     let stranger = app.world_mut().spawn_empty().id();

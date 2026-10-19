@@ -537,6 +537,34 @@ fn dispatch(
     interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
     replication_dirty: Option<&lightyear::prelude::ReplicationDirtyQueue>,
 ) {
+    if let AdminRequest::StageFollowerParty {
+        character_name,
+        map_id,
+        x,
+        y,
+        z,
+    } = &cmd.request
+    {
+        let name = character_name.clone();
+        let destination = crate::maps::WorldLocation {
+            map_id: *map_id,
+            position: Vec3::new(*x, *y, *z),
+            orientation: 0.0,
+        };
+        queries.commands.queue(move |world: &mut World| {
+            let response = match crate::followers::stage_follower_party(world, &name, destination) {
+                Ok(followers) => AdminResponse::FollowerPartyStaged {
+                    character_name: name,
+                    followers,
+                },
+                Err(error) => AdminResponse::Error(error),
+            };
+            if cmd.respond.send(response).is_err() {
+                warn!("admin staging response receiver disconnected");
+            }
+        });
+        return;
+    }
     let commands = &mut queries.commands;
     let players = &mut queries.players;
     let equipment_query = &mut queries.equipment;
@@ -544,6 +572,7 @@ fn dispatch(
     let roster_update_senders = &mut queries.roster_senders;
 
     let response = match cmd.request {
+        AdminRequest::StageFollowerParty { .. } => unreachable!("queued world operation above"),
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. }
         | AdminRequest::GrantItem { .. }

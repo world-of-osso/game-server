@@ -173,6 +173,14 @@ enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// Admin-only harness staging, not gameplay traversal.
+    StageFollowerParty {
+        character_name: String,
+        map_id: u32,
+        x: f32,
+        y: f32,
+        z: f32,
+    },
     /// TrinityCore `.die`: the online character dies (`Unit::Kill`).
     Kill {
         character_name: String,
@@ -401,6 +409,10 @@ enum AdminResponse {
         account_id: u64,
         username: String,
     },
+    FollowerPartyStaged {
+        character_name: String,
+        followers: usize,
+    },
     PositionSet {
         character_name: String,
         x: f32,
@@ -574,6 +586,7 @@ fn print_usage() {
     eprintln!("  game-server-admin set-rested <character_name> <amount>");
     eprintln!("  game-server-admin set-credentials <token> <username> <password>");
     eprintln!("  game-server-admin set-position <character_name> <x> <y> <z>");
+    eprintln!("  game-server-admin stage-follower-party <owner> <map> <x> <y> <z> (harness only)");
     eprintln!("  game-server-admin set-gold <character_name> <copper>");
     eprintln!("  game-server-admin trading-post-grant-tender <username> <amount>");
     eprintln!("  game-server-admin trading-post-refund-window <seconds>");
@@ -635,6 +648,16 @@ fn parse_request(args: &[String]) -> AdminRequest {
         "set-credentials" => parse_set_credentials(args),
         "set-position" => parse_set_position(args),
         "teleport" => parse_teleport(args),
+        "stage-follower-party" => {
+            require_args(args, 7, "stage-follower-party <owner> <map> <x> <y> <z>");
+            AdminRequest::StageFollowerParty {
+                character_name: args[2].clone(),
+                map_id: args[3].parse().expect("map must be a number"),
+                x: args[4].parse().expect("x must be a number"),
+                y: args[5].parse().expect("y must be a number"),
+                z: args[6].parse().expect("z must be a number"),
+            }
+        }
         "revive" => {
             require_args(args, 3, "revive <character_name>");
             AdminRequest::Revive {

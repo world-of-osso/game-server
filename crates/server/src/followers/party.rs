@@ -12,6 +12,10 @@ use crate::maps::{
 };
 use crate::persistence::ClientId;
 
+#[path = "party_staging.rs"]
+mod staging;
+pub(crate) use staging::stage_follower_party;
+
 #[derive(Component, Clone)]
 pub(crate) struct FollowerRun {
     dungeon: Dungeon,
