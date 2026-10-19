@@ -1,6 +1,6 @@
 ## 2026-10-17 — NPC victim parry47
 
-[Parry47](systems/player-damage.md#npc-victim-parry-aura47--2026-10-17): ignored49f20 pushed first;23547/64651 signed0live8s andactualSunwellhit5/dodge-20 qualified1PASS41.59s. Front+100→5Damage/0Parry andnegative-100→1Parry/4Damage give genuine2RED/6PASS47.04s. Existingtarget_auras/NPCguard consumer before240/clamp; masks/direction/playerStats/block/Guardian/RNG/clocks unchanged; GREEN/lead gate pending.
+[Parry47](systems/player-damage.md#npc-victim-parry-aura47--2026-10-17): ignored49f20 pushed first;23547/64651 signed0live8s andactualSunwellhit5/dodge-20 qualified1PASS41.59s. Front+100→5Damage/0Parry andnegative-100→1Parry/4Damage give genuine2RED/6PASS47.04s. Existingtarget_auras/NPCguard consumer before240/clamp; masks/direction/playerStats/block/Guardian/RNG/clocks unchanged; Consumeraa2ee70c1 fresh ignored8nativeGREEN34.40s0warnings+retainedqualification1PASS41.59s (9composite,notone9batch), onlythen allnine enabled/pushed; lead gate pending.
 
 ## 2026-10-17 — NPC victim dodge49
 

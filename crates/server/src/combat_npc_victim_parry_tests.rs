@@ -116,7 +116,6 @@ fn assert_all_damage(events: &[CombatLogEvent]) {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_signed_fold_and_lifetime_are_qualified() {
     let (mut h, victim) = fixture(DUMMY, true);
     cast_parry(&mut h, victim);
@@ -139,7 +138,6 @@ fn native_melee_npc_victim_parry_signed_fold_and_lifetime_are_qualified() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_front_positive_fills_the_table() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.caster;
@@ -159,7 +157,6 @@ fn native_melee_npc_victim_parry_front_positive_fills_the_table() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_cancelled_aura_restores_baseline() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.caster;
@@ -174,7 +171,6 @@ fn native_melee_npc_victim_parry_cancelled_aura_restores_baseline() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_foreign_aura_does_not_modify_target() {
     let (mut h, victim) = fixture(DUMMY, true);
     let (attacker, foreign) = (h.caster, h.npc);
@@ -186,7 +182,6 @@ fn native_melee_npc_victim_parry_foreign_aura_does_not_modify_target() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_signed_native_sum_preserves_baseline() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.caster;
@@ -201,7 +196,6 @@ fn native_melee_npc_victim_parry_signed_native_sum_preserves_baseline() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_negative_native_amount_clamps_at_zero() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.caster;
@@ -212,7 +206,6 @@ fn native_melee_npc_victim_parry_negative_native_amount_clamps_at_zero() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_positive_does_not_override_behind_arc() {
     let (mut h, victim) = fixture(DUMMY, false);
     let attacker = h.caster;
@@ -223,7 +216,6 @@ fn native_melee_npc_victim_parry_positive_does_not_override_behind_arc() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_positive_does_not_override_native_no_parry() {
     let (mut h, victim) = fixture(ICE_TOMB, true);
     let attacker = h.caster;
@@ -243,7 +235,6 @@ fn native_melee_npc_victim_parry_positive_does_not_override_native_no_parry() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_victim_parry_attacker_expertise_still_wins() {
     let (mut h, victim) = fixture(DUMMY, true);
     let attacker = h.npc;
