@@ -11,7 +11,11 @@ fn prepare_monthly(h: &mut Harness, now: i64) {
 
 fn october_ids() -> Vec<u32> {
     let document: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string("data/trading-post-monthly-catalog.json").unwrap(),
+        &std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../data/trading-post-monthly-catalog.json"),
+        )
+        .unwrap(),
     )
     .unwrap();
     document["months"]
@@ -117,7 +121,7 @@ fn trading_post_monthly_frozen_oldmonth_reopen_purchase_and_receipt_refund() {
         // account state inside the FIFO, not an empty tick-thread placeholder.
         store::freeze(h.db(), ACCOUNT, Some(OLD_OFFER));
     }
-    let mut h = crate::bank_test_harness::harness_at(file.path(), "Monthfrozen").unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Monthreopen").unwrap();
     prepare_monthly(&mut h, NOVEMBER_START + 10);
     h.app.insert_resource(RefundWindow(600));
     open_tawny(&mut h);
