@@ -141,50 +141,76 @@ fn gathering_missing_skill_and_movement_interrupt_do_not_roll_or_raise_skill() {
 
 #[test]
 fn gathering_skinning_requires_looted_dead_corpse_and_uses_authored_loot() {
-    let (mut h, _directory) = setup(2564);
-    h.app.world_mut().entity_mut(h.npc).insert((
-        Npc {
-            template_id: 525,
-            name: "Mangy Wolf".into(),
-        },
-        Health {
-            current: 0.0,
-            max: 100.0,
-        },
-        crate::combat::Corpse { remaining: 60.0 },
-        crate::loot::CorpseLoot::default(),
-        GatherableResource {
-            parent_skill: data::SKINNING,
-        },
-    ));
-    let position = *h.app.world().get::<Position>(h.npc).unwrap();
-    *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position;
-    use_resource(h.app.world_mut(), h.caster, h.npc);
-    assert!(h.app.world().get::<CastState>(h.caster).is_some());
-    h.advance(200);
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
-    assert_eq!(
-        h.app
+    const GATHERS: i32 = 2;
+    let mut found_material = false;
+    for _ in 0..GATHERS {
+        // A fresh fixture supplies a fresh corpse and no pending loot from another roll.
+        let (mut h, _directory) = setup(2564);
+        h.app.world_mut().entity_mut(h.npc).insert((
+            Npc {
+                template_id: 525,
+                name: "Mangy Wolf".into(),
+            },
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            crate::combat::Corpse { remaining: 60.0 },
+            crate::loot::CorpseLoot::default(),
+            GatherableResource {
+                parent_skill: data::SKINNING,
+            },
+        ));
+        let position = *h.app.world().get::<Position>(h.npc).unwrap();
+        *h.app.world_mut().get_mut::<Position>(h.caster).unwrap() = position;
+        use_resource(h.app.world_mut(), h.caster, h.npc);
+        assert!(h.app.world().get::<CastState>(h.caster).is_some());
+        h.advance(200);
+        assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<PlayerProfessions>(h.caster)
+                .unwrap()
+                .rank(2564),
+            2
+        );
+        assert!(h.app.world().get::<Skinned>(h.npc).is_some());
+        assert!(h.app.world().get::<GatherableResource>(h.npc).is_none());
+        let loot = h
+            .app
             .world()
-            .get::<PlayerProfessions>(h.caster)
-            .unwrap()
-            .rank(2564),
-        2
+            .get::<crate::loot::CorpseLoot>(h.caster)
+            .unwrap();
+        for slot in loot.looters.values().flatten() {
+            match slot {
+                None => {}
+                Some(LootContent::Item {
+                    item_id: 2318 | 2934,
+                    ..
+                }) => found_material = true,
+                other => panic!("unexpected source skinning output: {other:?}"),
+            }
+        }
+        // Derive the false-failure bound from the loaded explicit source group.
+        let skin = skin_template(h.app.world(), h.npc).unwrap();
+        let tables = h.app.world().resource::<crate::loot::LootTables>();
+        let material_probability = tables.skinning[&skin.loot].groups[0]
+            .iter()
+            .filter(|row| matches!(row.item, 2318 | 2934))
+            .map(|row| f64::from(row.chance) / 100.0)
+            .sum::<f64>();
+        assert!((0.0..=1.0).contains(&material_probability));
+        let false_failure = (1.0 - material_probability).powi(GATHERS);
+        assert!(
+            false_failure < 1.0 / 1000.0,
+            "{GATHERS} real gathers have source-derived false-failure probability {false_failure}"
+        );
+    }
+    assert!(
+        found_material,
+        "independent fresh corpses must yield at least one authored material"
     );
-    assert!(h.app.world().get::<Skinned>(h.npc).is_some());
-    assert!(h.app.world().get::<GatherableResource>(h.npc).is_none());
-    let loot = h
-        .app
-        .world()
-        .get::<crate::loot::CorpseLoot>(h.caster)
-        .unwrap();
-    assert!(loot.looters.values().flatten().any(|slot| matches!(
-        slot,
-        Some(LootContent::Item {
-            item_id: 2318 | 2934,
-            ..
-        })
-    )));
 }
 
 #[test]

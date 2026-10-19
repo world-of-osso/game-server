@@ -49,7 +49,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory
     // Build70448 stationary Loa victory/hand-glow/feathers: source30min cosmetics.
-    1309827, 1309830, 1309831,
+    1309827, 1309830, 1309831, 1309828,
+    1309844, // Halazzi / Jan'alai source30min footstep cosmetics.
     // Complete ordinary-model caster kits; no procedural/positioner/conditional payload.
     // Exact source contracts and exclusions: docs/toy-effects14-coverage.md.
     160093, 160688, 170869, // Mysterious Flower, smoldering boots, Blazing Wings

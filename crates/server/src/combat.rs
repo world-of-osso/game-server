@@ -985,7 +985,7 @@ fn roll_outcome(
     } else {
         melee::swing_chances(swinger, victim, can_avoid)
     };
-    // Unit.cpp2761–2782/2805–2822: NPC victim49/47 before attacker modifiers/clamps.
+    // Unit.cpp2761–2861: NPC victim49/47/51; only dodge/parry meet attacker modifiers.
     // Never restore CC/casting or missing-player-stats prohibited avoidance.
     if can_avoid && (attacker.creature || attacker.stats.is_some()) {
         if matches!(victim, Victim::Creature { .. }) {
@@ -995,6 +995,10 @@ fn roll_outcome(
             chances.parry += target_auras.map_or(0.0, |auras| {
                 auras.modifier(crate::auras::handlers::MOD_PARRY_PERCENT)
             });
+            chances.block += target_auras.map_or(0.0, |auras| {
+                auras.modifier(crate::auras::handlers::MOD_BLOCK_PERCENT)
+            });
+            chances.block = chances.block.max(0.0);
         }
         chances.dodge =
             (chances.dodge + attacker.enemy_dodge_pct - attacker.npc_expertise_pct).max(0.0);
@@ -2100,6 +2104,9 @@ mod npc_expertise_tests;
 #[cfg(test)]
 #[path = "combat_npc_flags_tests.rs"]
 mod npc_flags_tests;
+#[cfg(test)]
+#[path = "combat_npc_victim_block_tests.rs"]
+mod npc_victim_block_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_dodge_tests.rs"]
 mod npc_victim_dodge_tests;
