@@ -51,8 +51,10 @@ TC Object.cpp709–748 calls GetMapHeight with pre-clamp Z once, then assigns th
 
 ### Bounded fall through DESCEND3
 
-- [ ] Natural point4 arrival launches source MoveFall(5); retain XZ, sample the original map floor once, use TC falling acceleration/terminal velocity and integer-ms spline completion. Final position is the analytic curve sampled at truncated duration, clamped only against the original floor; do not force a raw-floor snap. No fabricated callback, teleport, run-speed interpolation or substitute deadline.
-- [ ] Actual EFFECT5 completion enables gravity and ordinary20538 exactly once. Its native DUMMY0 actual hits reduce caster threat by100%, retaining references; respect ordinary targets/admission and copy isolation. Stay Passive and min1-protected through this endpoint. DESCEND4/release, ground casts, paired credit/reset and native presentation remain excluded.
+- [x] Natural point4 arrival launches source MoveFall(5); retain XZ, sample the original map floor once, use TC falling acceleration/terminal velocity and integer-ms spline completion. Final position is the analytic curve sampled at truncated duration, clamped only against the original floor; do not force a raw-floor snap. No fabricated callback, teleport, run-speed interpolation or substitute deadline.
+- [x] Actual EFFECT5 completion enables gravity and ordinary20538 exactly once. Its native DUMMY0 actual hits reduce caster threat by100%, retaining references; respect ordinary targets/admission and copy isolation. Stay Passive and min1-protected through this endpoint. DESCEND4/release, ground casts, paired credit/reset and native presentation remain excluded.
+
+Development proof: ignored native RED first1PASS/3FAIL51.19s; source-correct endpoint2RED55.69s before deleting forced-floor snap. Final enabled38/38PASS314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings:20Herald/four grounding/five Gold/two Nibbles/six Gordoth/one lower-point control. Actual post-fall self-lethal leaves1HP; no next-frame20538 replay. Independent LEAD gate pending; this is not a DESCEND4/full encounter/native completion claim.
 
 ### Completion and reset
 
