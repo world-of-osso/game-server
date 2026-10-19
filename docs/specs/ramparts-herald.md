@@ -58,9 +58,11 @@ Development proof: ignored native RED first1PASS/3FAIL51.19s; source-correct end
 
 ### DESCEND4 and native ground parents
 
-- [ ] Anchor DESCEND4 exactly2000ms after actual EFFECT5/DESCEND3 completion. Remain Passive/min1-protected through1950ms; at2000ms become Aggressive, ordinary30694 and release protection. Prove real lethal damage before/after the deadline, without HP/stat writes or fabricated callbacks.
-- [ ] Preserve source Fireball34653/36920 random-threat initial0–5s/repeat5–15s; Cone30926/36921 victim initial0–10s/repeat10–15s; Heroic-only39427 self initial2s/repeat40–50s. Observe actual ordinary requests/results, not invented successful casts; keep UpdateVictim, EventMap and active-cast ordering/admission unchanged.
-- [ ] Prove native parent damage and actual aura7 fear with Normal/Heroic/copy controls. Existing encounter fixture health buffers are unchanged and do not certify native balance. `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED` names the separate77 child/object behavior; paired credit, reset and native remain separate.
+- [x] Anchor DESCEND4 exactly2000ms after actual EFFECT5/DESCEND3 completion. Remain Passive/min1-protected through1950ms; at2000ms become Aggressive, ordinary30694 and release protection. Prove real lethal damage before/after the deadline, without HP/stat writes or fabricated callbacks.
+- [x] Preserve source Fireball34653/36920 random-threat initial0–5s/repeat5–15s; Cone30926/36921 victim initial0–10s/repeat10–15s; Heroic-only39427 self initial2s/repeat40–50s. Observe actual ordinary requests/results, not invented successful casts; keep UpdateVictim, EventMap and active-cast ordering/admission unchanged.
+- [x] Prove native parent damage and actual aura7 fear with Normal/Heroic/copy controls. Existing encounter fixture health buffers are unchanged and do not certify native balance. `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED` names the separate77 child/object behavior; paired credit, reset and native remain separate.
+
+Proof: ignoredRED pushed first; native qualification1PASS/four genuineFAIL86.63s at9691ff61b→fiveGREEN137.57s at354302f74. Enabled final43/43PASS374.35s at1799e2743/master717ae67df,0ignored/no warnings:25Herald+four grounding+five unchanged Gold+two Nibbles+six Gordoth+lower-point suspension. Admission trace records real OnCooldown rejections and admitted parent damage/fear; no forced successes. Special release is exactlyfall+2000ms; first Heroic Roar request isfall+3950ms because source combat EventMap consumes50ms on the release tick. Repeat upper bounds expand only for an actual accepted1.5s Roar spanning the source latest deadline. Independent LEAD gate/check/fmt pending.
 
 ### Completion and reset
 

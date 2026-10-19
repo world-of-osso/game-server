@@ -2,7 +2,7 @@
 
 ## Herald DESCEND4 native parent boundary — 2026-10-18
 
-Ignored native qualification+four genuineRED86.63s at9691ff61b→fiveGREEN137.57s at354302f74: exact actualfall+2000ms Aggressive/ordinary30694/release; real lethalHP1 before andHP0 after; source ground initial/repeat requests and actual Normal/Heroic parent damage/fear. Existing fixture buffers unchanged, not native balance. Enabled retained/LEAD gate pending. [Contract](specs/ramparts-herald.md#descend4-and-native-ground-parents). `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED`; paired credit/reset/native remain separate.
+Ignored native qualification+four genuineRED86.63s at9691ff61b→fiveGREEN137.57s at354302f74: exact actualfall+2000ms Aggressive/ordinary30694/release; real lethalHP1 before andHP0 after; source ground initial/repeat requests and actual Normal/Heroic parent damage/fear. Existing fixture buffers unchanged, not native balance. Enabled final43/43PASS374.35s at1799e2743/master717ae67df,0ignored/no warnings:25Herald+4grounding+5Gold+2Nibbles+6Gordoth+lower-point. Admission traces preserve real OnCooldown and source same-tick combat-clock advancement; actual parent damage/fear and exact before/after release pass. LEAD gate/check/fmt pending. [Contract](specs/ramparts-herald.md#descend4-and-native-ground-parents). `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED`; paired credit/reset/native remain separate.
 
 ## Herald point4 fall through DESCEND3 — 2026-10-18
 
