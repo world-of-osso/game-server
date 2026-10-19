@@ -1,5 +1,5 @@
-//! TC a352b1fa Herald startup through the first real West arrival.
-//! Descent ingress stops before point4 arrival/fall; later phases/credit remain unverified.
+//! TC a352b1fa Herald startup through first West and real fall/DESCEND3.
+//! DESCEND4, ground combat, paired credit and reset remain unverified.
 use bevy::prelude::*;
 use shared::components::{Npc, Position, Rotation};
 

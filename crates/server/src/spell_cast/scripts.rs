@@ -459,8 +459,6 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     }
 }
 
-/// TC a352b1fa spell_dh.cpp:1035-1055 bridges203720 to203819;
-/// spell_dh_deflecting_spikes:891-910 excludes parry effect0 without321028.
 /// TC spell_generic.cpp2015–2034: each actual20538 hit loses100% caster threat.
 fn hate_to_zero(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     if let Some(mut threat) = world.get_mut::<shared::components::ThreatTable>(caster) {
@@ -469,6 +467,8 @@ fn hate_to_zero(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     }
 }
 
+/// TC a352b1fa spell_dh.cpp:1035-1055 bridges203720 to203819;
+/// spell_dh_deflecting_spikes:891-910 excludes parry effect0 without321028.
 fn demon_spikes(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     let mut effect_mask = u32::MAX;
     if !crate::auras::has_aura(world, caster, DEFLECTING_SPIKES) {
