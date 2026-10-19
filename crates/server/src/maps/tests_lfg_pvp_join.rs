@@ -9,55 +9,46 @@ enum Activity {
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_concrete_queued_refuses_until_native_dequeue() {
     assert_pvp_refuses_lfg(Some(1018), Activity::Queued);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_random_queued_refuses_until_native_dequeue() {
     assert_pvp_refuses_lfg(Some(32), Activity::Queued);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_arena_queued_refuses_until_native_dequeue() {
     assert_pvp_refuses_lfg(None, Activity::Queued);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_concrete_invited_refuses_until_native_decline() {
     assert_pvp_refuses_lfg(Some(1018), Activity::Invited);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_random_invited_refuses_until_native_decline() {
     assert_pvp_refuses_lfg(Some(32), Activity::Invited);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_arena_invited_refuses_until_native_decline() {
     assert_pvp_refuses_lfg(None, Activity::Invited);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_concrete_entered_refuses_until_native_leave() {
     assert_pvp_refuses_lfg(Some(1018), Activity::Entered);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_random_entered_refuses_until_native_leave() {
     assert_pvp_refuses_lfg(Some(32), Activity::Entered);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits PvP participants"]
 fn lfg_pvp_arena_entered_refuses_until_native_leave() {
     assert_pvp_refuses_lfg(None, Activity::Entered);
 }
