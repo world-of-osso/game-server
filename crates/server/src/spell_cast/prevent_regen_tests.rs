@@ -4,7 +4,7 @@ use super::energizing_elixir_tests as energy;
 use super::test_harness::{Harness, spawn_peer_connection, spawn_player};
 use super::water_shield_mana_tests as mana;
 use crate::auras::{RemoveReason, has_aura, remove_auras};
-use shared::components::PowerType;
+use shared::components::{PowerType, UnitPowers};
 
 /// Native351520: zero amount, power bitmask8, permanent.
 const PREVENT_ENERGY: u32 = 232_865;
@@ -68,6 +68,17 @@ fn prevent_regen_native_energy_zero_amount_mask_stops_base_and_flat_but_not_chi(
     // The real energize must still execute while Energy regeneration is blocked.
     energy::cast_elixir(&mut h);
     assert_eq!(h.power(PowerType::Chi) - chi_before, 2.0);
+    let prediction = h
+        .app
+        .world()
+        .get::<UnitPowers>(h.caster)
+        .unwrap()
+        .entries
+        .iter()
+        .find(|entry| entry.power == PowerType::Energy)
+        .unwrap()
+        .regen_per_sec;
+    assert_eq!(prediction, 0.0, "client must not predict frozen Energy");
     assert_eq!(energy::energy_gain_in_one_second(&mut h), 0.0);
     assert_eq!(
         h.power(PowerType::Chi),
