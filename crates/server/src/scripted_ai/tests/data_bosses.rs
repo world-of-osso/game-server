@@ -104,7 +104,9 @@ fn bound_boss_with_catalog(
 
 /// Use the production importer on a consistent isolated snapshot, never
 /// canonical data. The TempDir stays alive until all fixture resources are loaded.
-fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+pub(crate) fn prepare_encounter_database(
+    encounter: &str,
+) -> (tempfile::TempDir, std::path::PathBuf) {
     // Concurrent full-world snapshots must not consume the shared /tmp tmpfs.
     let fixture_root =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/encounter-fixtures");

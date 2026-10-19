@@ -368,6 +368,10 @@ fn snapshot(world: &World, player: Entity, run: &FollowerRun) -> LfgSnapshot {
 }
 
 #[cfg(test)]
+#[path = "pull_frontal_tests.rs"]
+mod frontal_tests;
+
+#[cfg(test)]
 mod copy_tests {
     use super::*;
 
