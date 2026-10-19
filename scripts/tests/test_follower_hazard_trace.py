@@ -63,6 +63,31 @@ class FollowerHazardTraceTests(unittest.TestCase):
         self.assertEqual(result["distributions"]["physical_exit"]["simulation_ms"]["n"], 0)
         self.assertIsNone(result["episodes"][0]["physical_exit"])
 
+    def test_growth_recontact_reuses_prior_publication_without_fabricating_zero_latency(self):
+        records = timeline() + [
+            event("detected", 11.0, 2_100_000_000, react_at=11.25, position=[6, 0, 0], center=[0, 0, 0], radius_current=6.0),
+            event("hold", 11.05, 2_150_000_000, reason="reaction", position=[6, 0, 0]),
+            event("move", 11.25, 2_400_000_000, position=[7, 0, 0], **{"from": [6, 0, 0], "to": [7, 0, 0]}),
+            event("exit", 11.5, 2_600_000_000, physical_clear=True, position=[8, 0, 0]),
+        ]
+        result = TRACE.analyze(records)
+        self.assertEqual(result["policy_violations"], [])
+        self.assertEqual(result["worker_correlated_escapes"], 2)
+        self.assertEqual(result["prepublished_routes"], 1)
+        self.assertEqual(result["distributions"]["publication"]["wall_ms"]["n"], 1)
+        self.assertEqual(result["recontacts"][0]["kind"], "growth_recontact")
+
+    def test_only_latest_submitted_request_can_supply_a_ready_corridor(self):
+        records = timeline()
+        records.insert(2, event("query_submitted", None, 1_015_000_000, request_id=12))
+        records[4]["data"]["request_id"] = 12
+        records[5]["data"]["request_id"] = 12
+        records.insert(4, event("query_published", 10.09, 1_110_000_000, request_id=11, status="ready"))
+        result = TRACE.analyze(records)
+        self.assertEqual(result["stale_publications"], 1)
+        self.assertEqual(result["policy_violations"], [])
+        self.assertEqual(result["episodes"][0]["publication"]["data"]["request_id"], 12)
+
     def test_malformed_opt_in_record_and_unknown_schema_fail_explicitly(self):
         with self.assertRaisesRegex(ValueError, "line 2"):
             TRACE.read_records(["normal log", "FOLLOWER_HAZARD_TRACE {broken"])
