@@ -1,5 +1,14 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Prayer of Mending baseline (active70448)
+
+- Ordinary33076 must cast real41635 with native effect0 jump count plus the initial recipient, using source per-cast aura-stack arguments before initial stack/log/view publication.
+- Damage on the ward holder must cast real33110 from the original Priest, launch real155793 with the remaining stacks and original-caster context, then consume that holder's ward. Native missile flight, heal amount/variance and ordinary RNG remain authoritative.
+- Jump selection retains native candidates/EXCLUDE_CASTER and random choice within injury/player-priority buckets; full-health candidates remain eligible when no higher-priority candidate exists. **PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT**: the runtime has no producer for NPC static-flag4 treat-as-raid priority. That classification remains unqualified; no flag/default/importer extension is invented. Baseline recipient tests use players only.
+- Expiry, last-stack exhaustion, foreign ownership and no-eligible-recipient cases must preserve ownership and consume at most one ward per damage event. With no per-cast stack override, ordinary stacking and Agony's native1/3 initial floor/refresh behavior stay unchanged.
+- This baseline excludes talent custom arguments/bonuses, ward tooltip-point/visual projection, AI policy changes and generic aura4/original-caster completeness. Runtime proof and remaining boundaries live in [auras](../wiki/systems/auras.md).
+
+
 Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class-completeness.md), [spell-casting system](../wiki/systems/spell-casting.md#level80-class-completeness).
 
 ## What it must do
@@ -87,6 +96,8 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Native aura63 contributes its signed caster-owned sum only to optional resource cost, matching both power type and spell family/mask before existing cost modifiers. Deeper/Devious Stratagem's native extra cap permits six/seven-point finishers to spend those available points; smaller pools remain admissible and unrelated base Energy costs stay unchanged. Unlearning removes only that talent's contribution. Native OptionalCostPct fields and full talent/finisher acceptance remain separate.
 
 - [x] Optional resource spend ignores flat spell modifiers while retaining percentage modifiers for the native cost order, family/mask and caster. Practiced Strikes429647 discounts only Protection Execute's base cost; native Sudden Death52437 effect5 still makes order1 base/optional spend free without changing Arms order0. Existing available-resource clamping remains unchanged.
+
+- [x] Native115288 Energizing Elixir's aura85 contributes its recipient-owned75 Energy per five seconds after percentage regeneration modifiers; preserve the native two-Chi sibling energize. With native Energy10/s, regeneration is25/s, or32.5/s with native13750's75% multiplier. Removal/5000ms expiry ends only the flat contribution, and a foreign self-cast does not change another player's regeneration. Definition-level coverage only: no legal talent/loadout claim or generic mana/pet aura85 certification.
 
 - [x] Native aura334 adds signed attacker-owned percentage points only to autoattack critical chance, summing applied amounts/stacks before the nonnegative clamp. Removal ends its contribution; victim-only auras and magic/weapon spell crit remain independent. Avenging Wrath31884 also has aura290, which continues through normal stat computation; this consumer does not replace or double-count it. Full talent amount bindings, legal gear and fresh native acceptance remain separate.
 

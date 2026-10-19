@@ -9,6 +9,8 @@ mod azure_combat;
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
 mod azure_frost_bomb;
+#[path = "azure_frozen_ground.rs"]
+mod azure_frozen_ground;
 #[path = "azure_intro.rs"]
 mod azure_intro;
 #[path = "azure_jump_charge.rs"]
@@ -47,8 +49,12 @@ mod gizlock;
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "herald_call.rs"]
+mod herald_call;
 #[path = "herald_intro.rs"]
 mod herald_intro;
+#[path = "herald_intro2.rs"]
+mod herald_intro2;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]

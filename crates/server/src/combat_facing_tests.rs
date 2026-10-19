@@ -13,7 +13,7 @@ const ALL_DIRECTIONS: u32 = 97_574;
 const NPC_SWINGS: usize = 256;
 const PLAYER_SWINGS: usize = 5;
 
-fn collect_swings(
+pub(super) fn collect_swings(
     h: &mut Harness,
     attacker: Entity,
     victim: Entity,

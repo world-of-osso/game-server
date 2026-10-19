@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use shared::battleground::BgPhase;
+use shared::components::CombatStatus;
 use shared::protocol::LeaveBattleground;
 
 use super::{PlayerPvpState, PvpServerState};
@@ -44,6 +46,13 @@ fn return_to_origin(
         .get::<shared::components::Player>(player)
         .ok_or("battleground player race missing")?
         .race;
+    // TC Battleground.cpp846–849: resurrect dead participants fully before exit.
+    let dead_participant = world
+        .get::<shared::components::Health>(player)
+        .is_some_and(|health| health.current <= 0.0);
+    if dead_participant {
+        crate::death::resurrect_player_fully(world, player);
+    }
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
     }
@@ -104,6 +113,13 @@ fn return_destination(
     let map = matched.map.ok_or("battleground map missing")?;
     if world.get::<InMap>(player) != Some(&map) {
         return Err("battleground map transfer is still pending".into());
+    }
+    // TC BattleGroundHandler.cpp431–439: combat blocks leave except STATUS_WAIT_LEAVE.
+    let in_combat = world
+        .get::<CombatStatus>(player)
+        .is_some_and(|status| status.0);
+    if in_combat && matched.instance.phase != BgPhase::Ended {
+        return Err("cannot leave a battlefield while in combat".into());
     }
     let origin = matched
         .origins

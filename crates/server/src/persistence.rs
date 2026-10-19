@@ -344,6 +344,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(taxi_store::KNOWN_TAXI_NODES);
     let _ = txn.open_table(pet_store::PET_STABLES);
     let _ = txn.open_table(PROFESSIONS);
+    crate::profession::favorites::initialize_store(&txn);
     crate::profession::specializations::initialize_store(&txn);
     txn.delete_table(LEGACY_PROFESSIONS)
         .expect("Failed to delete legacy professions table");

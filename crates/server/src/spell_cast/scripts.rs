@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+pub(crate) mod prayer_of_mending;
 mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
@@ -62,7 +63,8 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
-    batch13::effect_handler(spell, index)
+    prayer_of_mending::effect_handler(spell, index)
+        .or_else(|| batch13::effect_handler(spell, index))
 }
 
 pub(super) use batch12::empower_gargoyles;
@@ -179,6 +181,7 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
@@ -443,6 +446,9 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
 pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
 
 pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
+    if let Some(filter) = prayer_of_mending::area_filter(spell_id, effect_index) {
+        return Some(filter);
+    }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (145_110, 0) => Some(pick_yseras_gift_group_target),

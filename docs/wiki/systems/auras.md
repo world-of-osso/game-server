@@ -1,5 +1,15 @@
 # Auras
 
+## Prayer of Mending baseline — 2026-10-18
+
+`spell_cast/scripts/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.
+
+`SpellInfo` stores two private, non-serialized per-cast arguments: `cast_aura_stacks` and `cast_original_caster`. Aura construction consumes the stack argument before stacking/log/view publication; no post-hoc mutation of a published one-stack ward. Normal applications still request one, and Agony retains its special initial1/3 floor and refresh behavior. The triggered helper carries these arguments through existing planning and missile snapshots; old effect0-amount callers use the same helper with the two new arguments absent.
+
+Source: pinned TC a352b1fa `spell_priest.cpp3636–3806`, `Spell.cpp3247/9516–9581`, `Unit.cpp3403–3458`; unchanged native70448 rows. Random selection follows injury/player priority buckets, retaining full-health targets when no higher-priority candidate exists and excluding the holder through the native selector. **PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT** is a named producer gap: NPC static-flag4 raid-unit equivalence is not represented. Tests qualify player recipients, not that NPC classification; no flags/importers are invented. [Contract](../../specs/class-completeness.md#prayer-of-mending-baseline-active70448).
+
+Ignored tests-only cbf816aee RED passes the native800-damage/no-heal control and fails ordinary33076→41635: the cast succeeds with no failure packet but creates no ward (1PASS/1FAIL19.15s). The delayed-jump/original-owner and no-override Agony controls were added before implementation. Atb94cd697a (runtime3ce692202 plus naming-only5d9895d5e), `prayer_of_mending_native` passes8/8 in37.08s,0ignored/0warnings: initial/logged5 stacks, real heal/delayed4-stack jump, healthy decoy, natural expiry, five-hit exhaustion/full-health eligible ally, foreign ward/original ownership, no-recipient consumption, no-override Agony floor/refresh and unprotected damage. Initial exhaustion setup attempted Fireball9053 before its authored4000ms recovery (7PASS/1setupFAIL); the fixture now advances actual spell/category/GCD readiness without resetting clocks or changing any assertion, row, amount or cooldown. Independent lead integration gate remains pending. Receipts: `data/class-completeness6-2026-10-12/prayer-of-mending-{source,proof-ledger}.json`. No generic aura4/original-caster, talent, AI-policy, legal/full-Holy, follower execution, fresh-UDP or rendered certificate.
+
 ## Shared death-prevention commit — 2026-10-18
 
 `apply_attack_damage` commits Ardent Defender31850 and Guardian Spirit47788 with exclusive World access for melee, direct and periodic hits. Guardian stores native non-aura effect1's healing percentage on its aura instance (including refresh), checks its actual316 school/overkill limit, removes the parent, then casts real48153 on the rescued unit. Removing the parent first prevents its separate +60% healing-taken effect inflating the native40%-maximum-health heal. Ardent retains its existing20% health-floor behavior, restoring health before removal; committed absorption is only damage beyond that floor, or the whole hit when already below it. This is named-ability support, not a generic316 certificate or new Ardent heal-child implementation.
@@ -343,11 +353,17 @@ Examples:
 - **Costs:** a `SpellPower` row with `RequiredAuraSpellID` applies only while the caster has that aura. Priest costs are gated on the spec passives 137031/137032/137033/417191, so a priest pays the row of whichever spec passive it knows; with none known the spell is free.
 - **Cast time:** ChangeCastTime mods, then ÷ `1 + CharacterStats.haste_pct/100`.
 - **Charges:** max charges and recharge follow MOD_MAX_CHARGES 411, CHARGE_RECOVERY_MOD 453 and CHARGE_RECOVERY_MULTIPLIER 454 on the charge category (`EffectMiscValue_0`). Double Time 103827 gives Charge 100 2 charges and a 17 s recharge.
-- **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates.
+- **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates. Non-mana continuous pools add recipient/power-matched aura85 raw amount/5 afterward; mana and discrete pet aura85 remain separate unproved consumers.
 - **Max power:** MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 add their amount to the MiscValue power's max (`AuraStatMods.max_power_flat`; mana is not covered, its max comes from `stats.rs`).
 - **Charged combo points:** SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore) marks its MiscValue (1-based point index) charged: `AuraStatMods.charged_power_points`, ascending (Echoing Reprimand 354835 → 2-5, Supercharge 470398-470416 → 1-7). The finisher bonus of a charged point is not modelled.
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
+
+## Energizing Elixir flat Energy — 2026-10-18
+
+Native70448 SpellEffect129038 supplies115288 aura85, power3, amount75; SpellMisc88282/Duration28 supplies5000ms, and effect288813 energizes2Chi independently. TC a352b1fa StatSystem.cpp901-908 adds flat aura85/5 AFTER percentage modifiers. Existing ActiveAuras retained85, but AuraStatMods had no flat collection and power regeneration only multiplied native rates. Ordinary Tiger Palm's real50-Energy spend followed by ordinary115288 reproduced10vs25/s; actual13750 composition reproduced17.5vs32.5/s. Baseline/expiry/actual foreign self-cast controls passed3; two genuine REDs at3993b7fe8 took26.42s.
+
+The modifier now stores raw five-second amounts by recipient/power; continuous non-mana pool rates add that sum/5 after multiplying native rates and before selecting refill/decay limits. Source metadata is not mutated. Atc62d61e9b/protocolf9a9175, native5/5 GREEN14.48s includes actual two-Chi preservation, removal, expiry, percentage order and foreign self-cast. Retained regeneration/class-resource30/30 GREEN14.31s covers existing mana/Focus/runes/Chi/caps/replication. Both have zero warnings; independent lead auras/check/format gate pending. Native spells/rows/powers/clocks remain unchanged. Legal talent/loadout acceptance, generic mana/pet85 and global aura85 census certification are not claimed. [Requirement](../../specs/class-completeness.md); tests: `spell_cast::energizing_elixir_tests::`; source and RED receipts: assigneds6 `data/class-completeness6-2026-10-12/energizing-elixir-*`.
 
 ## Stat modifiers
 
@@ -376,6 +392,7 @@ Every aura change recomputes two components, each written only when its value ch
 | `autoattack_range_bonus` | 153 signed additive yards | attacker-only main/off-hand swing distance |
 | `rage_from_damage_dealt_pct` | 213 | rage per melee swing dealt (summed percent) |
 | `power_regen_mult` | 110 (by power), 379 (mana) | regen |
+| `power_regen_flat` | 85 raw units/5s, summed by power | continuous non-mana pool regen after percent; mana/discrete-pet85 unproved |
 | `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
 | `water_breathing` / `water_breathing_mult` | WATER_BREATHING 82 / MOD_WATER_BREATHING 155 | breath timer ([[swimming-and-breath]]) |
 
