@@ -123,6 +123,10 @@ fn is_passive(h: &Harness, actor: Entity) -> bool {
 }
 
 pub(super) fn spawn_second_copy(h: &mut Harness) -> InMap {
+    spawn_source_copy(h, 3001, 1)
+}
+
+pub(super) fn spawn_source_copy(h: &mut Harness, character_id: u64, difficulty: u32) -> InMap {
     let map = h.app.world_mut().resource_scope(
         |world, mut instances: Mut<crate::maps::InstanceManager>| {
             instances
@@ -130,9 +134,9 @@ pub(super) fn spawn_second_copy(h: &mut Harness) -> InMap {
                     world.resource::<MapStore>(),
                     543,
                     crate::maps::instances::InstanceEntrant {
-                        character_id: 3001,
-                        leader: 3001,
-                        difficulty_id: 1,
+                        character_id,
+                        leader: character_id,
+                        difficulty_id: difficulty,
                         ..Default::default()
                     },
                     crate::maps::instances::Now {
@@ -140,7 +144,7 @@ pub(super) fn spawn_second_copy(h: &mut Harness) -> InMap {
                         unix: 0,
                     },
                 )
-                .expect("second independently allocated Normal copy")
+                .expect("independently allocated source copy")
                 .map
         },
     );
@@ -156,7 +160,7 @@ fn fill_ramparts_copy(h: &mut Harness, map: InMap) {
         h.app.world().resource::<WorldData>(),
         crate::zones::MapContent {
             map,
-            difficulty_id: 1,
+            difficulty_id: crate::zones::map_difficulty_id(h.app.world(), map),
             dead_bosses: Vec::new(),
         },
         false,

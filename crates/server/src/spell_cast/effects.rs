@@ -1220,6 +1220,9 @@ fn deal_damage_and_report(
     let incoming_loss = health_loss(training_dummy, scaled_loss);
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(target),
+        world
+            .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(target)
+            .is_some(),
         before,
         incoming_loss,
     );

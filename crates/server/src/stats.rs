@@ -38,11 +38,13 @@ pub struct EquippedItems {
     pub items: Vec<(EquipmentSlot, shared::item_data::ItemDefinitionSource, u32)>,
 }
 
-/// Aura stat changes, folded in after base + gear. Absent means none.
-/// Percent fields are additive with each other (10.0 = +10%).
+/// Aura stat changes across create/base, bonus and total stages. Absent means none.
+/// Percent fields store 10.0 for +10%; aura handlers compose their modifiers.
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
 pub struct StatModifiers {
-    /// Added to base + gear primary stats.
+    /// Player-only aura80: create/base percentage, before flat/gear bonuses and137.
+    pub primary_base_pct: UnitStats,
+    /// Flat primary bonuses, added alongside gear after create/base scaling.
     pub primary_flat: UnitStats,
     /// Percent increase per primary stat, applied after `primary_flat`.
     pub primary_pct: UnitStats,
@@ -345,7 +347,10 @@ pub fn compute_character_stats(
 ) -> Option<CharacterStats> {
     let level = level_index(input.level)?;
     let mods = mods.copied().unwrap_or_default();
-    let mut primary = base_primary_stats(input.class, input.race, input.level)?;
+    let mut primary = apply_primary_pct(
+        base_primary_stats(input.class, input.race, input.level)?,
+        mods.primary_base_pct,
+    );
     let mut bonus = usable_gear_primary(input.gear_primary, input.primary_stat);
     bonus += mods.primary_flat;
     primary += apply_primary_pct(bonus, mods.primary_bonus_pct);
