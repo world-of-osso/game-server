@@ -27,6 +27,27 @@ pub(crate) struct FollowerRun {
     player_role: GroupRole,
 }
 
+/// Admitted copy, companion IDs (including missing entities), and owner's role.
+/// Retail follower and explicit Stockade diagnostic admission are separate records.
+pub(super) fn read_admission(
+    world: &World,
+    owner: Entity,
+) -> Option<(InMap, &[Entity], GroupRole)> {
+    let record = match (
+        world.get::<FollowerRun>(owner),
+        world.get::<super::stockade_diagnostic::DiagnosticParty>(owner),
+    ) {
+        (Some(run), None) => (run.copy?, run.members.as_slice(), run.player_role),
+        (None, Some(diagnostic)) => (
+            diagnostic.copy,
+            diagnostic.members.as_slice(),
+            diagnostic.player_role,
+        ),
+        _ => return None,
+    };
+    (world.get::<InMap>(owner) == Some(&record.0)).then_some(record)
+}
+
 pub(crate) fn queue_player(world: &mut World, player: Entity, role: GroupRole, dungeon_id: u32) {
     if let Err(error) = begin_run(world, player, role, dungeon_id) {
         send_update(world, player, None, Some(error));
@@ -355,6 +376,10 @@ fn snapshot(world: &World, player: Entity, run: &FollowerRun) -> LfgSnapshot {
 mod staging_tests;
 
 #[cfg(test)]
+#[path = "pull_frontal_tests.rs"]
+mod frontal_tests;
+
+#[cfg(test)]
 mod copy_tests {
     use super::*;
 
@@ -458,6 +483,43 @@ mod copy_tests {
             player_role: GroupRole::Dps,
         };
         (app, owner, run)
+    }
+
+    #[test]
+    fn tank_pull_history_keeps_a_missing_admitted_member_in_health_coverage() {
+        let (mut app, owner, run) = fixture();
+        let missing = run.members[0];
+        app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+            std::time::Duration::from_millis(50),
+        ));
+        app.world_mut().entity_mut(owner).insert((
+            run,
+            shared::components::Health {
+                current: 1000.0,
+                max: 1000.0,
+            },
+        ));
+        for _ in 0..102 {
+            app.update();
+            super::super::pull_history::sample_all(app.world_mut());
+        }
+        assert!(
+            super::super::pull_history::snapshot(app.world(), owner)
+                .unwrap()
+                .party_stable
+        );
+        app.world_mut().despawn(missing);
+        // Production ordering: remove the entity, then outlive both named history windows.
+        for _ in 0..202 {
+            app.update();
+            super::super::pull_history::sample_all(app.world_mut());
+        }
+        let after = super::super::pull_history::snapshot(app.world(), owner).unwrap();
+        assert!(
+            !after.party_stable,
+            "a known admitted member is missing, not healthy"
+        );
+        // This contract concerns health coverage; ordinary assist target enumeration is unchanged.
     }
 
     #[test]

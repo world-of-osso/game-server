@@ -135,6 +135,8 @@ pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
 /// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
 pub const MOD_BLOCK_PERCENT: u32 = 51;
+/// TC Unit.cpp2889: NPC autoattack source crit; player weapon masks remain unsupported.
+pub const MOD_WEAPON_CRIT_PERCENT: u32 = 52;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
 /// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
@@ -149,6 +151,8 @@ pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
+/// TC HandleModPercentStat: Player-only create/base percentage, stat index or -1.
+pub const MOD_PERCENT_STAT: u32 = 80;
 /// TC Unit.cpp:6962/8110: percentage done versus creature-type mask, not school.
 pub const MOD_DAMAGE_DONE_VERSUS: u32 = 168;
 pub const WATER_BREATHING: u32 = 82;
@@ -311,6 +315,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_ROOT
         | MOD_ROOT_2
         | MOD_STAT
+        | MOD_PERCENT_STAT
         | MOD_ARMOR_PCT_FROM_STAT
         | MOD_INCREASE_SPEED
         | MOD_DECREASE_SPEED
@@ -336,6 +341,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
         | MOD_CRIT_PCT
+        | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING
         | MASTERY
         | MOD_STAT_BONUS_PCT

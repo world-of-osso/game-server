@@ -572,10 +572,12 @@ fn process_battleground_queue_requests(
     state: ResMut<PvpServerState>,
     groups: Res<crate::group::GroupRegistry>,
     random_catalog: Res<random_bg::Catalog>,
+    lfg: Option<Res<crate::lfg::LfgServerState>>,
     time: Res<Time>,
     mut senders: Query<&mut MessageSender<PvpStateUpdate>>,
 ) {
     let state = state.into_inner();
+    let lfg = lfg.as_deref();
     let now = current_seconds(&time);
     for (conn_entity, link, in_world, mut receiver) in &mut receivers {
         for request in receiver.receive() {
@@ -589,6 +591,7 @@ fn process_battleground_queue_requests(
                     request.battleground_id,
                     now,
                     &random_catalog,
+                    lfg,
                 )
             } else {
                 let Ok((level, _player, mut player_state, auras)) = players.get_mut(link.0) else {
@@ -601,6 +604,7 @@ fn process_battleground_queue_requests(
                     &[level.0],
                 );
                 eligibility
+                    .and_then(|()| validate_no_active_lfg(lfg, link.0))
                     .and_then(|()| validate_no_deserter(auras))
                     .and_then(|()| {
                         queue_for_battleground(
@@ -679,6 +683,19 @@ fn process_pvp_dequeue_requests(
     }
 }
 
+/// TC Handler130–136 / Group1250–1253; matched-dungeon/session state is deferred.
+fn validate_no_active_lfg(
+    lfg: Option<&crate::lfg::LfgServerState>,
+    player: Entity,
+) -> Result<(), String> {
+    if lfg.is_some_and(|state| state.is_queued_or_checking_roles(player)) {
+        return Err(
+            "cannot join battleground while dungeon finder queue or role check is active".into(),
+        );
+    }
+    Ok(())
+}
+
 /// TC a352b1fa Player.h2594; Handler147–153 and Group1243–1245.
 fn validate_no_deserter(auras: Option<&ActiveAuras>) -> Result<(), String> {
     const DESERTER_SPELL_ID: u32 = 26013;
@@ -732,6 +749,7 @@ fn queue_battleground_party(
     battleground_id: u32,
     now: u64,
     random_catalog: &random_bg::Catalog,
+    lfg: Option<&crate::lfg::LfgServerState>,
 ) -> Result<(Vec<(Entity, Entity)>, String), String> {
     if groups.leader_of(leader) != Some(leader) {
         return Err("only the group leader can queue the party".into());
@@ -758,6 +776,7 @@ fn queue_battleground_party(
             ));
         }
         validate_no_deserter(auras)?;
+        validate_no_active_lfg(lfg, player)?;
         levels.push(level.0);
         online.push((connection, player));
     }

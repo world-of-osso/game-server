@@ -26,6 +26,11 @@ use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spell_data};
 use crate::stats::CharacterStats;
 
+/// Opt-in actual server combat events, including ownerless NPC self-events.
+/// Captured before owner routing; never changes production delivery or ownership.
+#[derive(Resource, Default)]
+pub(crate) struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
+
 pub(crate) struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,

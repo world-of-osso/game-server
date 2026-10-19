@@ -5,6 +5,10 @@
 //!
 //! WMO liquid (MLIQ) is not read: the client swims in terrain water only.
 
+use wow_adt::adt_tex::{
+    parse_water_attributes, read_liquid_instance_header, read_mh2o_chunk_header,
+};
+
 /// One MH2O liquid instance of one MCNK.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WaterLayer {
@@ -55,7 +59,7 @@ pub fn parse_mh2o(payload: &[u8]) -> Result<Vec<ChunkLiquid>, String> {
     }
     let boundaries = liquid_boundaries(payload)?;
     (0..CHUNK_COUNT)
-        .map(|index| parse_chunk(payload, index * CHUNK_HEADER_SIZE, &boundaries))
+        .map(|index| parse_chunk(payload, index, &boundaries))
         .collect()
 }
 
@@ -65,10 +69,10 @@ pub fn parse_mh2o(payload: &[u8]) -> Result<Vec<ChunkLiquid>, String> {
 fn liquid_boundaries(payload: &[u8]) -> Result<std::collections::BTreeSet<usize>, String> {
     let mut boundaries = std::collections::BTreeSet::from([payload.len()]);
     for index in 0..CHUNK_COUNT {
-        let header = index * CHUNK_HEADER_SIZE;
-        let instances = read_u32(payload, header)? as usize;
-        let count = read_u32(payload, header + 4)? as usize;
-        let attributes = read_u32(payload, header + 8)? as usize;
+        let header = read_mh2o_chunk_header(payload, index)?;
+        let instances = header.instance_offset as usize;
+        let count = header.layer_count as usize;
+        let attributes = header.attributes_offset as usize;
         if attributes != 0 {
             boundaries.insert(attributes);
         }
@@ -95,10 +99,10 @@ fn add_instance_boundaries(
     offset: usize,
     boundaries: &mut std::collections::BTreeSet<usize>,
 ) -> Result<(), String> {
-    for field in [16, 20] {
-        let start = read_u32(payload, offset + field)? as usize;
+    let instance = read_liquid_instance_header(payload, offset)?;
+    for start in [instance.exists_offset, instance.vertex_offset] {
         if start != 0 {
-            boundaries.insert(start);
+            boundaries.insert(start as usize);
         }
     }
     Ok(())
@@ -106,16 +110,19 @@ fn add_instance_boundaries(
 
 fn parse_chunk(
     payload: &[u8],
-    header: usize,
+    chunk_index: usize,
     boundaries: &std::collections::BTreeSet<usize>,
 ) -> Result<ChunkLiquid, String> {
-    let instances = read_u32(payload, header)? as usize;
-    let layer_count = read_u32(payload, header + 4)? as usize;
-    let attributes = read_u32(payload, header + 8)? as usize;
+    let header = read_mh2o_chunk_header(payload, chunk_index)?;
+    let instances = header.instance_offset as usize;
+    let layer_count = header.layer_count as usize;
+    let attributes = header.attributes_offset as usize;
     let deep = if attributes == 0 {
         0
     } else {
-        read_u64(payload, attributes + 8)?
+        parse_water_attributes(payload, attributes)
+            .map_err(|_| format!("MH2O u64 out of bounds at {:#x}", attributes + 8))?
+            .deep
     };
     let layers = if instances == 0 {
         Vec::new()
@@ -132,15 +139,19 @@ fn parse_instance(
     offset: usize,
     boundaries: &std::collections::BTreeSet<usize>,
 ) -> Result<WaterLayer, String> {
-    let bytes = payload
-        .get(offset..offset + INSTANCE_SIZE)
-        .ok_or_else(|| format!("MH2O instance out of bounds at {offset:#x}"))?;
-    let liquid_type = u16::from_le_bytes([bytes[0], bytes[1]]);
-    let vertex_format = u16::from_le_bytes([bytes[2], bytes[3]]);
-    let min_height = f32::from_le_bytes(bytes[4..8].try_into().unwrap());
-    let (x_offset, y_offset, width, height) = (bytes[12], bytes[13], bytes[14], bytes[15]);
-    let exists_offset = u32::from_le_bytes(bytes[16..20].try_into().unwrap()) as usize;
-    let vertex_offset = u32::from_le_bytes(bytes[20..24].try_into().unwrap()) as usize;
+    let instance = read_liquid_instance_header(payload, offset)
+        .map_err(|_| format!("MH2O instance out of bounds at {offset:#x}"))?;
+    let liquid_type = instance.liquid_type;
+    let vertex_format = instance.liquid_object;
+    let min_height = instance.min_height;
+    let (x_offset, y_offset, width, height) = (
+        instance.x_offset,
+        instance.y_offset,
+        instance.width,
+        instance.height,
+    );
+    let exists_offset = instance.exists_offset as usize;
+    let vertex_offset = instance.vertex_offset as usize;
     let vertex_format =
         resolve_vertex_format(vertex_format, vertex_offset, width, height, boundaries)?;
     Ok(WaterLayer {
@@ -324,20 +335,8 @@ pub fn liquid_status(level: f32, ground: f32, feet: f32, collision_height: f32) 
     }
 }
 
-fn read_u32(data: &[u8], offset: usize) -> Result<u32, String> {
-    data.get(offset..offset + 4)
-        .map(|bytes| u32::from_le_bytes(bytes.try_into().unwrap()))
-        .ok_or_else(|| format!("MH2O u32 out of bounds at {offset:#x}"))
-}
-
-fn read_u64(data: &[u8], offset: usize) -> Result<u64, String> {
-    data.get(offset..offset + 8)
-        .map(|bytes| u64::from_le_bytes(bytes.try_into().unwrap()))
-        .ok_or_else(|| format!("MH2O u64 out of bounds at {offset:#x}"))
-}
-
 fn read_f32(data: &[u8], offset: usize) -> Result<f32, String> {
-    read_u32(data, offset).map(f32::from_bits)
+    wow_chunk::read_f32(data, offset).map_err(|_| format!("MH2O u32 out of bounds at {offset:#x}"))
 }
 
 #[cfg(all(test, feature = "bake"))]

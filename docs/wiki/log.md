@@ -2,9 +2,93 @@
 
 [Investigation](investigations/follower-data.md#azure-live-prerequisites--2026-10-19): native admission works; exact owned navigation disconnects entrance/Telash despite local coverage. Book/spell destination bindings remain explicitly unsourced; no blind rebake or gameplay traversal claim. Existing eye producer reloads134 displays/1340 poses, native1PASS; missing-row fragment awaits independent lead publication preserving existing rows/scales/mappings. Natural hazard latency n=0.
 
+## Worker-backed tank admission integration
+
+[Route continuation and proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):57d6dd748/P_f9a merges worker master2e4dfb596; complete route publication gates movement, pending holds retain victims, native work keeps priority, and source/budget/field projection remains current. No synchronous runtime fallback or invented tolerance. Actual18planner/death +eight worker-request +nine hazard/reaction controls35GREEN245.77s; owned-eye Azure actual-kick/1041GREEN30.03s; check/fmt pass,0warnings. Initial merge compilation failure is not behavioral RED. Wide gate/provider remain open.
+
+## Master-native forecast integration
+
+[Forecast and targeted proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):8ed245c42 merges72ee66aa4/P_f9a9175 and repairs tb622 compile failures using actual source aura251/240 and production expertise divisor. Existing quantized native roll weights are available outside tests; no substitute roll or zeroed fields. Native12Stockade GREEN155.18s, owned-eye Azure actual-kick/104 GREEN34.67s, both0warnings; non-testcheck/fmt PASS. Lead gate and broader planner/provider remain open.
+
+## Measured Overheat refusal origins
+
+[Native origin/boundary proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):88b0309ac/P_a2b enumerates144authored origins, eight native-valid disposable kit/chase fixtures; four retain refusal/unengaged exposure/live12466 through ten50ms boundaries, zero movement violations. Native1PASS402.99s/0warnings, no input/prerequisite failures. Focused control uses measured20375694; positive20375738 remains existing defense. No runtime change/tuning; focused regression and stronger actual-kick frontal assertion pending.
+
+## Actual destination-cone frontal RED and admitted point positioning
+
+[Native proof/implementation](investigations/follower-data.md#run-local-tank-observations--2026-10-18): a3ea7ae49/P_a2b actual386660/104 pose1RED38.01s/0warnings exposes all4living other party members despite successful native70/205 intro/body/LOS/approach/cast and clear-pose controls. First104 goal now records before legitimate follower kicks, validates native recipient geometry/actual-body mutual LOS/ground, and projects full point-route exposure through unchanged admission. No eye defaults, stat/kit/budget changes or interrupt-provider activation. Native GREEN and broader frontals/stacking remain open.
+
+## Azure frontal fixture and owned Leymor body input
+
+[Source/proof/limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18): native70/205 fixture reuses authenticated private2515 geometry read-only;512inputs/14outputs match. Startup relative-world setup failure is not frontal RED. Canonical eyes lack Leymor107127; existing algorithm4890aa236 produces10actual head-bone poses from model4279060/skin4279083, native1PASS0.06s/0warnings. Only owned fixture eye view changes, with algorithm/dependency/output hashes retained; no canonical writes/tile rebake or new eye defaults. Actual386660/104 pose RED still pending, native kicks enabled.
+
+## Admitted caster pickup and native victim consistency GREEN
+
+[Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6d0f1cf62/P_a2b native7PASS126.47s/0warnings: Overheat12466 pickup/ended-cast retirement, unchanged owner selection and matching actual tank victim, collector2 and pursuit safety/defense/injected4. Firstfb6 attempt preserved incompatible trash CombatTarget and correctly failed native chase; planner selection now matches its admitted caster instead of weakening that guard. Broader positioning/frontals and single-provider activation remain open.
+
+## Native Overheat caster pickup RED and admitted chase
+
+[Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6cc8a02c2/P_a2b actual12466/20375719 versus reachable20375738 gives genuine1RED55.53s/0warnings,14.209645yd unchanged. Complete native engagement/body/LOS/Rebuke controls pass; earlier exact floor-height assertion was a setup failure. One admitted caster entity goal now survives selected-trash kit pursuit through ordinary native chase; ended casts retire its chase. Targeted GREEN pending; no provider activation, budget or stat/kit changes.
+
+## Tank baked-corner acquisition and corrected pursuit proof
+
+[Exact proof/limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18):36d7f43bc/P_a2b native5PASS160.19s/0warnings. All1353distinct interior native route points to20375689:35target-proximity refusals; remaining1235Reserve/83script refusals, no qualified corner. Native bodies/real LOS/stats and bounded other-source acquisition preserved. Corrected actual-tick pursuit4allPASS; Stockade policy3 geometry blocked, not behavioral RED. No budget/stat/kit tuning or full planner/gameplay acceptance.
+
+## 2026-10-18 — Rewritten tank checkpoint and native facing integration
+
+[Exact proof/limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6c0aa→4df7 reset/masterac365 merge140879; pre-merge12PASS133.49s,99endpoint rows with only20375689 lower-bound allowance. Upstream melee facing requires shared chances-helper/forecast front-arc plumbing; numeric proof stays historical. Full authored-point routes20375689 only and current native/pacing verification pending; no policy/stat/kit changes.
+
+## 2026-10-18 — Endpoint affordability proof prepared
+
+[Proof and limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18): lead approves origin-independent endpoint bounds only at measuredHPS0; explicit positive-HPS refusal, same native arithmetic and complete target table. Only passing endpoints require full authored-point routes. Inline pacing diagnostics removed; native execution/report and eligibility GREEN pending. No budget/stat/kit changes or global affordability claim.
+
+## 2026-10-18 — Native trigger pull eligibility RED and repair
+
+[Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): real Stockade53488/20375809+20375810 candidate/proximity2RED44.05s. Route now uses native relation selection and cached template aggression, not faction hostility alone. Policy3 failed only positive-capacity prerequisites; no budget/stat/kit tuning or pacing acceptance. Eligibility GREEN and real-combat enumeration pending.
+
+## 2026-10-18 — Pursuit proof corrected at new-pack boundary
+
+[Native diagnostic and correction](investigations/follower-data.md#run-local-tank-observations--2026-10-18): c547 movement4 gives3PASS1FAIL;79aef first-drift route7 is wholly inside14 already-engaged sources, so freezing it would wrongly block defense. Lead-approved50f035 checks an actual unengaged-route tick and next fixed movement instead; corrected case and pacing3 remain unexecuted/capacity-blocked.
+
+## 2026-10-18 — Production pursuit admission seam; owner-paced policy
+
+[Exact boundary/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): accepted admission10 remains aae/P029; production no-injected-position7a258 RED moves at tick2. Production route/source/budget refusal0e9 plus defense control and owner-paced idle/active policy fixtures are committed, targeted execution capacity-blocked. No goal-generation, positioning, interrupt activation or clear acceptance.
+
+## 2026-10-18 — Run-local tank observations
+
+[Native tank boundaries and proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): history, native forecast/lifetime, sourced healing capability, source/formation presence, full route exposure and admitted-point consumer. Production budget/goal generation and single interrupt-provider integration remain unfinished; no full-clear or gameplay acceptance.
+## 2026-10-17 — NPC general crit290
+
+[Combined raw source](systems/player-damage.md#npc-general-crit290--2026-10-17): qualificationa20fb904d FIRST2PASS48.51s, actual signed290/mask6 and full52+290 live768s; THEN ignored294a0606a PUSHED before genuine4RED/4PASS54.62s. Positive0Crit/5, negative/signed11Crit/256, joint52+290zeroCrit/256 prove missing NPC290. Reuse/rename existing accumulator to npc_crit_pct52+290, retain player StatModifiers fold/NPC-only consume and pre334clamp; no new scalar/query/snapshot/wire or RNG/clocks/HP/Guardian changes. Consumer794157734 fresh ignored8GREEN41.92s/0warnings plus retained qualification2PASS48.51s (ten-case composite), only then eight behavior ignores removed. Lead gate pending; player52/NO_CRIT/NPCspellcrit/mitigation excluded.
+
+## 2026-10-18 — Herald min1 precommit source guard
+
+[Min1 guard](systems/boss-scripts.md#herald-min1-precommit-guard--2026-10-18): real intro/direct/self/spell/native melee and ordinary real1s periodic probes reproduce six lethal commits; exactHP1/no death/credit six-case GREEN146.24s. Source state, unchanged Gold/Nibbles behavior, listener audience and opt-in ownerless event capture are explicit. Approved six synchronized copies/two native cadences prove same-actor repeated melee82.49s at2639aed02; enabled all16 Herald+four grounding+five Gold+two Nibbles27/27 PASS209.65s atcbb9ef32f after master69ed NPCblock51 merge; LEAD gate pending; release/arrival/fall/paired credit/reset/native excluded.
 ## Follower hazard trace implementation proof
 
 [Opt-in trace](systems/navigation.md#follower-hazard-live-trace) joins native contact/reaction/hold/displacement/exit with current-ID worker publication and owned corridor adoption. Missing native events give a genuine RED; native trace/disabled-payload/reaction/FIFO/request14 controls pass, and three-distribution/policy/cancellation/cache/latest-ID analyzer7 controls pass. Owner client068066e6a/F9 native extension+CLI artifacts built without warnings. Bounded real Azure/Telash collection remains pending a granted server_perf/5761 window; no new runtime flags, gameplay changes or stress-capacity claim.
+## 2026-10-17 — NPC weapon crit52 and shared clamp
+
+[Signed52/clamp](systems/player-damage.md#npc-weapon-crit52-and-shared-clamp-ordering--2026-10-17): ignored00ef37b6d pushed first; native52/334 and separate player187/334 qualification2PASS56.14s survive768s. Fresh6 genuine RED/2PASS56.19s includes explicit player0-60187+50334 zeroCrit/256; source clamps before334. Existing raw AuraStatMods sum/NPC-only consumer plus shared clamp correctionbd3cf7db7 committed after RED; fresh ignored8/8GREEN41.04s/0warnings plus retained qualification2PASS56.14s (ten-case composite), only then all ten enabled. Independent lead gate pending. No RNG/clocks/HP/native-input changes; player52 masks/290/NO_CRIT/mitigation excluded.
+## 2026-10-18 — Natural shared hearthstone charge coverage GREEN first execution
+
+[Scoped final toy follow-up](../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-green-first-execution-2026-10-18): tt653211/0/check/fmt landeda989c0f3b; timer branch cleaned. Source2309 MaxCharges1/recovery1800000ms drives two-direction real learned281136/281615 tests: before30min refusal, ordinary recovery, full sibling10s cast/spend/original refusal. First execution7adfb7b03 GREEN4/0/78.45s(new2+retained2); existing machinery works, no behavioral RED/runtime repair. Normal50ms updates/observed completion bounds only; no runtime/data/clock/reset or native claim. Lead integration/landing pending.
+
+## 2026-10-18 — Ordinary Loa timer coverage GREEN first execution
+
+[Scoped follow-up](../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18): after docs landingec7df3660, two existing280820/280822 cases observe natural30min authoritative/replicated expiry and one-hour recovery/reuse through ordinary50ms updates. Independent cast-time bounds, no internal-deadline oracle or clock/cooldown mutation. First executione10b9562b GREEN4/0/79.19s: two new lifecycles and two retained cancellation cases. Existing timers work; no runtime defect/repair/fabricated RED. Lead integration/landing pending. Accepted sourced boundary/gaps and other native/full-duration scopes unchanged.
+
+## 2026-10-18 — Accepted toy sourced boundary and three named gaps
+
+[Current accepted matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../specs/toys.md#accepted-sourced-boundary): Full1166+seven published extras complete to current sourced boundary; ty639209/0/check0/fmt0 landed69ed3c682. Read-only batch4 research found no complete action contract for Aqir275039, Libram284159 or Quill286643; all accepted named gaps remain outside Toy membership. Numeric143823 is not a Glyph reward binding, and Quill's real scenario92 criterion is not its full party teleport action. No code/data/import/extraction change; native/full-duration proof remains separate.
+
+## 2026-10-18 — Batch2 landed; footstep70448 pair admission RED
+
+[Current matrix](../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): explicit tb625 stationary landing641cb2460, ancestry verified/feature branch deleted. New Halazzi/Jan'alai real-learning RED0/2/54.36s; lead exact twoToy-row and40file/57path publication; canonical aura4 RED0/2/30.71s. Two strict named admissions and same-branch census triples retain Full1166+seven; canonical1e5e55ae0 pair/all13 census/previous-family/absent-visual GREEN22/0/76.90s; lead broad gate/source landing pending. Absolute canonical shared-protocol patch resolves stale native-root interface without protocol/cache mutation; no native footstep/particle claim.
+
+## 2026-10-17 — NPC victim block51
+
+[Block51](systems/player-damage.md#npc-victim-block-aura51--2026-10-17): ignoredcd95 pushed first;10021+62356effect0 sum-100live8s/49=0 and62627fold qualified1PASS26.18s. Live+100→0Block4Melee1Crit andsigned-100→1Block4Melee give genuine2RED/5PASS64.12s. ExistingNPCguard/target_auras consumer+max0 without240subtraction; masks/direction/playerStats/blockedamount253/Guardian/RNG/clocks unchanged. Consumer28638df38 fresh ignored7nativeGREEN40.77s0warnings+retainedqualification1PASS26.18s (8composite,notone8batch), onlythen alleight enabled/pushed; lead gate pending.
 
 ## 2026-10-18 — Follower hazard reaction project policy
 
@@ -37,6 +121,18 @@
 ## 2026-10-18 — Herald own nonlethal below30 ingress
 
 [Own30](systems/boss-scripts.md#herald-own-nonlethal-below30-ingress--2026-10-18): TC217–220 actual35→29 after intro reuses the descent latch, no30693; natural Normal/Heroic/INTRO1 negative RED1PASS2FAIL→GREEN3/3 62.04s. Real source-speed first step and cast interruption; lethal guard/arrival/fall excluded. Enabled all10 Herald+four grounding14/14 PASS172.99s ataed52b5b6; LEAD gate/check/fmt pending.
+## 2026-10-18 — Player-only native80 base-stat stage
+
+[Native80](systems/auras.md#player-base-stat80-stage--2026-10-18): normal9417 known-passive +10Int producer proved, no fakeflatstat/gear. Ignored989f0a010 gives3controlsPASS/4genuineFAIL34.97s: nativeMage38vs41.8 and48vs51.8; actual controlled NPC bridge stays unchanged. Separatebase-percent field beforebonuses/137 plus actualPlayerguard; GREEN pending, no legal-kit/full13326/global80/NPC-kit certificate.
+
+## 2026-10-18 — Source-qualified follower137 oracle
+
+[Shared137 consequence](systems/auras.md#independent-primary-stat137-composition--2026-10-18): real native Garrick initialization/removal-reapply/evade3FAIL84.42s exposed old35%/10584 expectations. Authenticated independent Aegis30%/Plate5% require36.5%/1337.7stamina/10696HP; unbuffed5%-only8232 unchanged. Test/spec oracle correction only, no follower runtime/health/stat/budget override; targeted GREEN pending. Historical native10584 capture receipts remain unchanged as observations.
+
+## 2026-10-18 — Independent native137 composition
+
+[Source-gated137](systems/auras.md#independent-primary-stat137-composition--2026-10-18): completeTDB1210 groups/rules +all32pinnedworldSQLupdates establish independent51271/53365. Ignored8aef2fabb RED3FAIL/3controlPASS18.87s shows real HumanDK Strength33→44.55vs45.54 bothorders/removal. Minimal percentage-representation fold preserves flat29/182 addition/masks. At853447542 native6 +retained23 GREEN29/29,46.49s,0warnings/ignored; stats substring also covers item/frame families. Fullcargo fmt0, independent lead gate pending. No fake stats/source/clock edits or legal-kit/runeforge-proc/fullPillar/group-engine/PvP certificate.
+
 ## 2026-10-18 — Native continuous power prevention294
 
 [Native masks](systems/auras.md#native-power-prevention294--2026-10-18):232865/262173 amount0/masks8/1; TC prevention before base/%/flat. Actual Elixir/WaterShield RED3FAIL/3controlPASS16.93s,0warnings at3041d69e3 pushed first. Minimal recipient-mask Mana/Energy consumer; Rune/discrete-pet/other/global294/legal-build/full-ability claims excluded. Combined46GREEN21.88s at7e541f03b; tests-only416735d34 explicitEnergy prediction0 assertion has fresh6GREEN19.39s,0warnings. Retained40 unchanged; fullcargo fmt0, independent lead gate pending.
@@ -3002,3 +3098,5 @@ Recorded real33076 ward RED, approved per-cast stack/original-caster API and nat
 - 2026-10-18 — Pin projected runtime-ground metadata APIs in wow-formats; preserve selected-field/FDID/error policy and frozen metadata/bake receipt boundaries. [Shared readers](systems/wow-formats.md).
 
 - 2026-10-18: Runtime height projection; frozen old-reader receipts, shared decoder pin and local policy boundary. See [shared formats](systems/wow-formats.md).
+
+- 2026-10-18: Shared MH2O raw records; frozen independent client/server layers, errors, queries and navigation water-bound baseline. See [shared formats](systems/wow-formats.md).

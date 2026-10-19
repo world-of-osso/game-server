@@ -6,8 +6,46 @@ mod kit;
 mod kit_ai;
 mod kit_area;
 mod party;
+mod pull_admission;
+#[cfg(test)]
+mod pull_admission_tests;
+mod pull_budget;
+#[cfg(test)]
+mod pull_budget_tests;
+#[cfg(test)]
+mod pull_corner_tests;
+#[cfg(test)]
+mod pull_eligibility_tests;
+#[cfg(test)]
+mod pull_endpoint_tests;
+#[cfg(test)]
+mod pull_forecast_tests;
+#[cfg(test)]
+mod pull_goal_tests;
+pub(crate) mod pull_history;
+#[cfg(test)]
+mod pull_history_tests;
+#[cfg(test)]
+mod pull_movement_tests;
+#[cfg(test)]
+mod pull_position_tests;
+mod pull_readiness;
+#[cfg(test)]
+mod pull_readiness_tests;
+mod pull_route;
+#[cfg(test)]
+mod pull_route_tests;
+mod pull_sources;
+#[cfg(test)]
+mod pull_sources_tests;
+#[cfg(test)]
+mod pull_stat_provenance_tests;
 mod spawning;
 mod stockade_diagnostic;
+mod tank_frontal;
+mod tank_planner;
+#[cfg(test)]
+mod tank_planner_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;

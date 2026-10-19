@@ -55,9 +55,20 @@ pub struct PlayerMatchMemberState {
 }
 
 #[derive(Resource, Default)]
-struct LfgServerState {
+pub(crate) struct LfgServerState {
     queue: DungeonQueue,
     role_checks: Vec<RoleCheckState>,
+}
+
+impl LfgServerState {
+    /// Current queue/role-check activity, not retained player selection history.
+    pub(crate) fn is_queued_or_checking_roles(&self, player: Entity) -> bool {
+        self.queue.is_queued(player.to_bits())
+            || self
+                .role_checks
+                .iter()
+                .any(|check| check.has_player(player))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -132,6 +143,7 @@ fn process_lfg_queue_requests(
     connections: Query<(Entity, &PlayerLink), With<Authenticated>>,
     mut senders: Query<&mut MessageSender<LfgStateUpdate>>,
     followers: Res<crate::followers::FollowerCatalog>,
+    pvp_states: Query<&crate::pvp::PlayerPvpState>,
     mut commands: Commands,
 ) {
     process_player_lfg_requests(
@@ -147,6 +159,20 @@ fn process_lfg_queue_requests(
                 .iter()
                 .any(|id| followers.follower_ids.contains(id));
             if !follower_queue {
+                // TC a352b1fa LFGMgr.cpp437–438: no dungeon join during PvP activity.
+                let battlefield_active = pvp_states.get(player).is_ok_and(|pvp| {
+                    pvp.battleground.is_some()
+                        || matches!(
+                            pvp.queue,
+                            Some(crate::pvp::PlayerPvpQueue::Battleground { .. })
+                                | Some(crate::pvp::PlayerPvpQueue::Arena { .. })
+                        )
+                });
+                if battlefield_active {
+                    return SnapshotUpdate::error(
+                        "cannot join dungeon finder during battlefield activity",
+                    );
+                }
                 return handle_queue_request(player, player_state, state, request, now);
             }
             if request.dungeon_ids.len() != 1 {

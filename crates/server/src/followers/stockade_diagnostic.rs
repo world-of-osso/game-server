@@ -16,8 +16,9 @@ struct DiagnosticRequest {
 
 #[derive(Component, Clone)]
 pub(super) struct DiagnosticParty {
-    copy: InMap,
-    members: Vec<Entity>,
+    pub(super) copy: InMap,
+    pub(super) members: Vec<Entity>,
+    pub(super) player_role: GroupRole,
 }
 
 pub(super) fn load_request(mut commands: Commands) {
@@ -190,6 +191,7 @@ pub(super) fn spawn_party(
     world.entity_mut(owner).insert(DiagnosticParty {
         copy,
         members: members.clone(),
+        player_role: role,
     });
     Ok(members)
 }

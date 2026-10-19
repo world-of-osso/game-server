@@ -195,78 +195,110 @@ type Watchers<'w, 's> = Query<
 /// inside its level-scaled aggro radius and in its line of sight
 /// (`Creature::CanStartAttack` → `IsWithinLOSInMap`; `crate::line_of_sight`). There is
 /// no Z-difference test.
-fn aggro_on_sight_system(
-    watchers: Watchers,
-    players: Query<(Entity, &Position, &InMap), With<Player>>,
-    victims: Victims,
-    templates: Res<FactionTemplates>,
-    attack_distance: AggroDistance,
-    bodies: Query<crate::line_of_sight::BodyParts>,
-    los: Option<Res<crate::line_of_sight::LineOfSight>>,
-    time: Res<Time>,
-    mut commands: Commands,
-) {
-    let players: Vec<(Entity, Position, InMap)> = players
+#[derive(bevy::ecs::system::SystemParam)]
+struct PlayerSight<'w, 's> {
+    watchers: Watchers<'w, 's>,
+    players: Query<'w, 's, (Entity, &'static Position, &'static InMap), With<Player>>,
+    victims: Victims<'w, 's>,
+    templates: Res<'w, FactionTemplates>,
+    attack_distance: AggroDistance<'w, 's>,
+    bodies: Query<'w, 's, crate::line_of_sight::BodyParts<'static>>,
+    los: Option<Res<'w, crate::line_of_sight::LineOfSight>>,
+}
+
+impl PlayerSight<'_, '_> {
+    fn candidate_distance(&self, creature: Entity, player: Entity) -> Option<f32> {
+        let (_, position, level, scaling, faction, state, map, react) =
+            self.watchers.get(creature).ok()?;
+        if !state.is_idle()
+            || react.is_some_and(|react| *react != crate::scripted_ai::ReactState::Aggressive)
+        {
+            return None;
+        }
+        let (_, player_pos, player_map) = self.players.get(player).ok()?;
+        if player_map != map {
+            return None;
+        }
+        let (_, _, player_faction, player_level, ..) = self.victims.get(player).ok()?;
+        let player_level = player_level.map_or(1, |level| level.0);
+        let creature_level = level_for_viewer(*level, scaling, player_level);
+        // Both native model reaches are added after TC's45yd clamp.
+        let radius =
+            self.attack_distance
+                .center_radius(creature, player, creature_level, player_level)?;
+        let distance = distance(position, player_pos);
+        let hostile = self
+            .templates
+            .reaction(faction.0, player_faction.map_or(0, |faction| faction.0))
+            == Reaction::Hostile;
+        (distance < radius
+            && hostile
+            && valid_victim(&self.victims, &self.templates, faction.0, map, player))
+        .then_some(distance)
+    }
+
+    fn sees(&self, creature: Entity, player: Entity) -> bool {
+        let Ok((_, _, _, _, _, _, map, _)) = self.watchers.get(creature) else {
+            return false;
+        };
+        match (self.bodies.get(creature), self.bodies.get(player)) {
+            (Ok(me), Ok(them)) => {
+                crate::line_of_sight::unit_sees(self.los.as_deref(), *map, me, them)
+            }
+            _ => false,
+        }
+    }
+}
+
+/// Read the actual production player-acquisition predicate without adding threat.
+#[cfg(test)]
+pub(crate) fn read_player_proximity_acquisition(
+    world: &mut World,
+    creature: Entity,
+    player: Entity,
+) -> Result<bool, String> {
+    if world
+        .get_resource::<crate::line_of_sight::LineOfSight>()
+        .is_none()
+    {
+        return Err("Native acquisition proof requires actual LOS data".into());
+    }
+    let mut state = bevy::ecs::system::SystemState::<PlayerSight>::new(world);
+    let params = state
+        .get(world)
+        .map_err(|error| format!("Native player acquisition inputs unavailable: {error:?}"))?;
+    Ok(params.candidate_distance(creature, player).is_some() && params.sees(creature, player))
+}
+
+fn aggro_on_sight_system(params: PlayerSight, time: Res<Time>, mut commands: Commands) {
+    let players: Vec<(Entity, Position, InMap)> = params
+        .players
         .iter()
         .map(|(player, position, map)| (player, *position, *map))
         .collect();
     if players.is_empty() {
         return;
     }
-    for (creature, position, level, scaling, faction, state, map, react) in &watchers {
-        let aggressive =
-            react.is_none_or(|react| *react == crate::scripted_ai::ReactState::Aggressive);
-        if !state.is_idle() || !aggressive {
-            continue;
-        }
-        // Model reaches are added after TC's45yd clamp; do not truncate the
-        // center-distance candidates at the unclothed attack-distance limit.
-        let in_reach = players
+    for (creature, position, _, _, _, _, map, _) in &params.watchers {
+        let mut candidates: Vec<(Entity, f32)> = players
             .iter()
-            .filter_map(|(player, player_pos, player_map)| {
-                let distance = distance(position, player_pos);
-                (player_map == map).then_some((*player, distance))
-            });
-        let mut candidates: Vec<(Entity, f32)> = in_reach
-            .filter(|&(player, distance)| {
-                let Ok((_, _, player_faction, player_level, ..)) = victims.get(player) else {
-                    return false;
-                };
-                let player_level = player_level.map_or(1, |l| l.0);
-                // Creature::GetAttackDistance: both levels against each other.
-                let creature_level = level_for_viewer(*level, scaling, player_level);
-                let Some(radius) =
-                    attack_distance.center_radius(creature, player, creature_level, player_level)
-                else {
-                    return false;
-                };
-                let hostile = templates.reaction(faction.0, player_faction.map_or(0, |f| f.0))
-                    == Reaction::Hostile;
-                distance < radius
-                    && hostile
-                    && valid_victim(&victims, &templates, faction.0, map, player)
+            .filter_map(|(player, ..)| {
+                params
+                    .candidate_distance(creature, *player)
+                    .map(|distance| (*player, distance))
             })
             .collect();
-        // The nearest one it sees: rays only until one is seen.
+        // Preserve nearest-first LOS evaluation: stop after the first visible player.
         candidates.sort_by(|a, b| a.1.total_cmp(&b.1));
-        let seen = candidates.into_iter().find(|&(player, _)| {
-            match (bodies.get(creature), bodies.get(player)) {
-                (Ok(me), Ok(them)) => {
-                    crate::line_of_sight::unit_sees(los.as_deref(), *map, me, them)
-                }
-                _ => false,
-            }
-        });
+        let seen = candidates
+            .into_iter()
+            .find(|&(player, _)| params.sees(creature, player));
         if let Some((player, center_distance)) = seen {
             debug!(
-                creature = creature.to_bits(),
-                target = player.to_bits(),
-                map = ?map,
+                creature = creature.to_bits(), target = player.to_bits(), map = ?map,
                 creature_position = ?position,
                 target_position = ?players.iter().find(|(unit, ..)| *unit == player).map(|(_, position, _)| position),
-                center_distance,
-                simulation_secs = time.elapsed_secs_f64(),
-                "player proximity acquisition"
+                center_distance, simulation_secs = time.elapsed_secs_f64(), "player proximity acquisition"
             );
             commands.queue(move |world: &mut World| attack_start(world, creature, player));
         }

@@ -2,6 +2,22 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Natural shared hearthstone charge coverage (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-green-first-execution-2026-10-18), [contract](../../specs/toys.md#natural-shared-hearthstone-charge-coverage): tt653211/0/check/fmt landed stationary timer coveragea989c0f3b. Final toy test/docs slice covers281136/281615 in both directions: ordinary30min shared2309 recovery allows sibling10s cast, spends its only charge and blocks original. Observed completion bounds/normal50ms updates, no private deadline/reset/clock edits. First execution7adfb7b03 GREEN4/0/78.45s covers both new directions and both retained initial/missing-bind controls. Existing machinery works; no runtime repair/fabricated RED. Lead integration/landing pending; accepted sourced boundary/gaps/native exclusions unchanged.
+
+## Ordinary30-minute/hour coverage follow-up (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18), [contract](../../specs/toys.md#ordinary-lifetime-and-reuse-follow-up): accepted boundary docs landedec7df3660. Two existing stationary identities280820/280822 now have ordinary50ms-update tests for natural30min expiry and1h recovery/reuse using observed cast bounds, no deadline/cooldown/time-scale edits. First executione10b9562b GREEN4/0/79.19s includes both new lifecycles and existing same-ID cancellation controls. Timers already work; no behavioral RED/runtime repair was invented. Lead integration/landing pending. Other identities/native visuals and accepted three unpublished gaps remain unchanged.
+
+## Accepted sourced boundary and three named gaps (2026-10-18)
+
+[Authoritative source/code/asset matrix](../../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../../specs/toys.md#accepted-sourced-boundary): approved current boundary complete at Full1166+seven published70448 extras. Batch3 landed69ed3c682 after ty639209/0/check0/fmt0; feature branch cleaned. Aqir275039 `AQIR_SCRIPT_BINDING`, Libram284159 `LIBRAM_LOOT189_REWARD_BINDING` and Quill286643 `QUILL_LABYRINTH_EXIT_ACTION` remain unpublished named gaps, not false-success cast admissions. Item143823 is not a sourced Glyph reward; Quill's real92 criterion does not establish its party exit/teleport action. Native visuals and full-duration reuse remain separate follow-ups; earlier pending stages below are historical.
+
+## Expanded70448 footstep cosmetics (2026-10-18)
+
+[Current source/publication/RED matrix](../../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): batch2 landed641cb2460 and its feature branch was deleted. Trail of Halazzi280821 and Jan'alai's Flame280825 actual learning RED0/2/54.36s precedes lead's exact twoToy-row/40file publication; canonical aura4 admission RED0/2/30.71s. Only two named IDs enter existing strict visual-only machinery, with their census triples appended beside five published extras. Canonical1e5e55ae0 GREEN22/0/76.90s covers pair/all13 census/five prior toys/retained2513 case/absent-visual negative. Lead broad gate/source landing pending; no inferred native footsteps/particles, generic dummy or scripted-gap change.
+
 ## Expanded70448 stationary Loa cosmetics (2026-10-18)
 
 [Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Canonical81c554bb1 targeted20/0/151.90s covers three new cosmetics/all13 census/three batch1 cases/absent-visual negative. Broad toy/check/fmt gate and source landing remain lead-owned; no generic dummy admission or other-five change.
