@@ -1,5 +1,5 @@
-//! TC a352b1fa Herald startup through the first real West arrival.
-//! Descent ingress stops before point4 arrival/fall; later phases/credit remain unverified.
+//! TC a352b1fa Herald startup through first West and real fall/DESCEND3.
+//! DESCEND4, ground combat, paired credit and reset remain unverified.
 use bevy::prelude::*;
 use shared::components::{Npc, Position, Rotation};
 
@@ -25,6 +25,8 @@ const ACTION_START_ENCOUNTER: i32 = 1_730_700;
 const INTRO_1: u32 = 1;
 const INTRO_2: u32 = 2;
 const DESCEND_1: u32 = 3;
+const DESCEND_2: u32 = 4;
+const DESCEND_3: u32 = 5;
 const FLY_TO_LOC: u32 = 7;
 const FIREBALL_VICTIM: u32 = 8;
 const FIREBALL_RANDOM: u32 = 9;
@@ -185,7 +187,7 @@ impl HeraldIntro {
         ctx.move_point(ctx.me, 4, DESCEND);
         crate::spell_cast::cancel_cast(ctx.world, ctx.me);
         self.boss.events.reset();
-        // HERALD_POINT4_ARRIVAL_MOVE_FALL_UNIMPLEMENTED: no substitute fall/arrival.
+        // Point4's real completion owns the next descent event.
     }
 
     fn choose_next_flight(&mut self, ctx: &mut Ctx) {
@@ -257,6 +259,14 @@ impl CreatureAi for HeraldIntro {
                 self.advance_special_clock(ctx);
                 self.special_events.schedule(INTRO_2, 1_000);
             }
+            4 if self.started_descending => {
+                self.advance_special_clock(ctx);
+                self.special_events.schedule(DESCEND_2, 0);
+            }
+            5 if self.started_descending => {
+                self.advance_special_clock(ctx);
+                self.special_events.schedule(DESCEND_3, 0);
+            }
             1..=3 if self.phase == IntroPhase::Finished => {
                 ctx.do_cast_self(FACE_HIGHEST_THREAT);
                 ctx.do_cast_self(DRAGON_HOVER);
@@ -283,6 +293,12 @@ impl CreatureAi for HeraldIntro {
                 INTRO_1 => self.start_intro(ctx),
                 INTRO_2 => self.continue_intro(ctx),
                 DESCEND_1 => self.start_descent(ctx),
+                DESCEND_2 => super::super::fall_movement::move_fall(ctx.world, ctx.me, 5),
+                DESCEND_3 => {
+                    ctx.world.entity_mut(ctx.me).remove::<GravityDisabled>();
+                    ctx.do_cast_self(20_538);
+                    // HERALD_DESCEND4_UNIMPLEMENTED: no release/ground phase timer substitute.
+                }
                 _ => unreachable!("unknown Herald intro event{event}"),
             }
         }

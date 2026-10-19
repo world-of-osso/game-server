@@ -1222,9 +1222,57 @@ fn a_player_on_another_map_at_the_spiders_coordinates_is_not_attacked() {
 }
 
 #[test]
+fn threat_membership_dormant_despawn_does_not_publish_to_the_dead_entity() {
+    let mut app = App::new();
+    app.init_resource::<PendingThreatWakes>()
+        .add_observer(replicate_woken_threat_list)
+        .add_systems(Update, publish_woken_threat_lists);
+    let victim = app.world_mut().spawn_empty().id();
+    let mut threat = ThreatTable::default();
+    threat.add_threat(victim.to_bits(), 100.0);
+    let npc = app.world_mut().spawn((threat, GridDormant)).id();
+    app.world_mut().despawn(npc);
+    app.world_mut().flush();
+    app.update();
+    assert!(app.world().get_entity(npc).is_err());
+}
+
+#[test]
+fn threat_membership_removed_then_reslept_never_publishes_a_wake() {
+    let mut app = App::new();
+    app.init_resource::<PendingThreatWakes>()
+        .add_observer(replicate_woken_threat_list)
+        .add_systems(Update, publish_woken_threat_lists);
+    let victim = app.world_mut().spawn_empty().id();
+    let mut threat = ThreatTable::default();
+    threat.add_threat(victim.to_bits(), 100.0);
+    let npc = app.world_mut().spawn((threat, GridDormant)).id();
+    app.world_mut().commands().queue(move |world: &mut World| {
+        world.entity_mut(npc).remove::<GridDormant>();
+        world.entity_mut(npc).insert(GridDormant);
+    });
+    app.world_mut().flush();
+    app.update();
+    assert!(app.world().get::<GridDormant>(npc).is_some());
+    assert!(
+        app.world().get::<UnitThreatList>(npc).is_none(),
+        "a re-slept creature must not publish an intermediate wake"
+    );
+    app.world_mut().entity_mut(npc).remove::<GridDormant>();
+    app.world_mut().flush();
+    app.update();
+    assert_eq!(
+        app.world().get::<UnitThreatList>(npc).unwrap().0,
+        vec![victim.to_bits()]
+    );
+}
+
+#[test]
 fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
     let mut app = App::new();
-    app.add_observer(replicate_woken_threat_list);
+    app.init_resource::<PendingThreatWakes>()
+        .add_observer(replicate_woken_threat_list)
+        .add_systems(Update, publish_woken_threat_lists);
     app.add_systems(Update, replicate_threat_list_system);
     let victim = app.world_mut().spawn_empty().id();
     let npc = app

@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Herald point4 fall through DESCEND3 — 2026-10-18
+
+Natural point4→same-XZ analytic falling spline→actual EFFECT5→gravity enable/ordinary20538 now has genuine3RED→targeted4GREEN70.06s at3a96703c4. Exact native Normal/Heroic50ms samples/original-ray floor and actual hit threat-zero/reference retention pass. Source review additionally caught forced-floor completion: exact truncated-time endpoint2RED55.69s precedes deletion of snap. Final enabled38/38PASS314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings:20Herald+4grounding+5Gold+2Nibbles+6Gordoth+lower-point suspension. Includes actual post-fall self-lethal→HP1/no replay next frame. Independent LEAD gate/check/fmt pending. [Bounded contract](specs/ramparts-herald.md#bounded-fall-through-descend3). No DESCEND4/release/groundcasts/pairedcredit/reset/native proof.
+
 ## Herald lethal min1 guard — 2026-10-18
 
 Actual source protection now acts at the existing precommit melee/direct/spell/periodic boundaries, including self-source, preserving exactHP1 before death/log/credit. Six initial native cases pass; six-copy/two-native-cadence same-actor repeated melee additionally passes82.49s in Normal/Heroic, with actual firstWest budget and per-frameHP1/no death before arrival. Enabled all16 Herald/four grounding/five unchanged Gold/both unchanged Nibbles controls pass27/27 209.65s atcbb9ef32f/master69ed3c682/protocolf9a9175,0ignored/no warnings. Independent LEAD gate/check/fmt pending. No HP/stat writes, forced hits, timer/NPC overrides or generic SetUnkillable substitution. [Contract/proof](specs/ramparts-herald.md#tests-asserting-this-spec). Marker release after fall, arrival/fall, paired credit/reset/native remain excluded.

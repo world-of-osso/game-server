@@ -60,6 +60,7 @@ type Roaming = (
     Without<crate::scripted_ai::movement::ScriptedPath>,
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
+    Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
@@ -69,6 +70,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<Feared>,
     Without<crate::knockback::KnockbackFlight>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
+    Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 
@@ -1611,6 +1613,7 @@ pub(crate) fn return_to_spawn_system(
         (
             Without<GridDormant>,
             Without<crate::scripted_ai::jump_movement::JumpMovement>,
+            Without<crate::scripted_ai::fall_movement::FallMovement>,
             Without<crate::spell_cast::charge::ChargeMovement>,
         ),
     >,
