@@ -1,3 +1,7 @@
+## 2026-10-18 — Ground metadata tooling qualification
+
+[Before-only boundary ledger](systems/ground-assets.md#before-only-metadata-tooling-qualification): frozen actual walk/CLI outputs, missing ordering and original failures; no deploy/extraction, parser replacement or bridge/API change. Keep permissive script policy separate from strict runtime projections until a raw-field boundary is approved.
+
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
 [Ground parent contract](systems/boss-scripts.md#herald-descend4-ground-parent-boundary--2026-10-18): ignored RED pushed before production; native qualification1PASS/four genuine failures86.63s at9691ff61b. Sourcefall+2000ms release and ordinary parent timers ported354302f74; five native casesGREEN137.57s. Enabled final43/43GREEN374.35s at1799e2743/master717ae67df,0ignored/no warnings; exact lethalbefore/after, source initial/repeats and actual parent damage/fear proven without overrides. Real shared-category OnCooldown preserved; first Roarfall+3950ms reflects source50ms combat advancement at release. LEAD gate/check/fmt pending. Liquid Fire effect77 children/pairedcredit/reset/native excluded.

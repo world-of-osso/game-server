@@ -24,4 +24,24 @@ Synthetic fixtures cover partial/oversized frames, arbitrary tags/tails, short M
 
 `chunks()` keeps first tags and slices truncated payloads permissively; incomplete final headers are ignored. MODF iterates complete64-byte entries. `add_wmo()` uses available GFID entries up to MOHD count rather than requiring all entries. Global WMO mode accepts the first nonzero MODF identity regardless of its FDID flag; obj0 mode requires flag0x8. Per-map `seen` and cumulative `present`/`missing` ordering belong to the script. Current strict runtime projections must not silently replace these behaviors.
 
-Capture/check results and a proposed reuse boundary are pending. No production change follows qualification without separate approval.
+## Captured before-only proof
+
+Observer at commitdaff59c6f passes1/0 in5.817s. It executes91direct walks and182real standalone CLI processes. Raw walks:79success/12struct.error. Each CLI mode:77exit0/14exit1; the two extra failures are explicit unknown-map/build selection.92complete JSON receipts total1,027,362B, with full count/size/SHA-256 inventory. All655 input paths/size/hash/symlink targets remain unchanged. The audit also asserts all77successful normal/missing outputs equal the direct ordered lists exactly, including empty-list newlines; raw errors appear verbatim in standalone stderr.
+
+| Real view | Present | Missing | CLI |
+| --- | ---: | ---: | ---: |
+| Map0 partial |12|2387|0|
+| Map34 existing closure |29|0|0|
+| Map2991 partial |5|145|0|
+| Combined partial |46|2532|0|
+| All parents absent |0|3|0|
+
+Full evidence is `/home/osso/.worktrees/logs/wow_formats-phase8/{inputs,before-receipt}.json` and `before/*.json`; capture log `wow_formats-phase8-capture.log`. Generator/audit scripts are `wow_formats-phase8-{inputs,audit}.py`. Those receipts preserve original failures, not a parser-correctness or old/new equivalence claim. No deployment/extraction command was run. Production source and both SQL files are byte-identical to the frozen input hashes.
+
+## Proposed boundary, not approved replacement
+
+Do not substitute current runtime parsers. Observed permissive short chunk/tail behavior, MAID floor(len/32), MODF complete64-byte iteration, missing-MOHD count0 and count-limited availableGFID differ from stricter full-runtime prerequisites. For example, count2/oneGFID accepts group30 without inventing missinggroup31;8GFID bytes then report group31missing.
+
+The smallest safe common layer would decode raw chunk headers, oneMAID root/obj0 pair, MODFidentity/flags and MOHDcount/availableGFID words only. Keep selection/defaults/validation timing/error class+message, cache/map/build traversal/dedup/output policy in Python. Existing `parse_gfid`, `modf_flags`, `parse_mphd_flags` and word readers cover much of that layer; a per-record MAID/header projection and cross-language transport need separate approval.
+
+Keep the script unchanged for now. A batched raw-record entry point in an existing Rust package could avoid a fifth format crate, but its invocation/deployment contract is a real new dependency decision, not a free parser refactor. Do not invent it for one caller, opportunistically discover binaries, add fallback parsing or normalize existing refusal behavior. CASC/WDC5 and BLP panics remain separate. Detailed proposal: `/home/osso/.worktrees/logs/wow_formats-phase8-boundary-proposal.md`. No production/API/CLI-bridge change follows without approval.
