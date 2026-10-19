@@ -1,3 +1,7 @@
+## 2026-10-18 — Herald min1 precommit source guard
+
+[Min1 guard](systems/boss-scripts.md#herald-min1-precommit-guard--2026-10-18): real intro/direct/self/spell/native melee and ordinary real1s periodic probes reproduce six lethal commits; exactHP1/no death/credit six-case GREEN146.24s. Source state, unchanged Gold/Nibbles behavior, listener audience and opt-in ownerless event capture are explicit. Approved six synchronized copies/two native cadences and retained proof pending; release/arrival/fall/paired credit/reset/native excluded.
+
 ## 2026-10-18 — Follower hazard reaction project policy
 
 [Policy and root cause](systems/navigation.md#follower-hazard-reaction-policy): master10PASS/0FAIL versus worker0PASS/10FAIL exposes field growth overtaking an exhausted corridor while the next batch is Pending. User accepts late-worker standing and defines50ms authored-radius prediction, immediate async request,250ms reaction and first-ready-tick movement. Three pushed behavioral REDs become GREEN; selected published candidate corridors eliminate a second worker roundtrip. Existing Azure oracle now observes predicted escape before actual aura cleanup. At6b374c251/protocolf9a91753, requested Azure4/hazard-approach7/reaction2/pet11/FIFO1/Gold8 passes33/0fail/0ignored in72.51s with no compiler warnings; lead merged-master wide/check/fmt/worker gate remains pending. This is project policy, not sourced Retail timing.

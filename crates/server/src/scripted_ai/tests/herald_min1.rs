@@ -1,8 +1,8 @@
 //! TC166/214–215: the source guard acts before real health/death commits.
-use super::herald_call::{damage_to_percent, descent_emotes, first_west, reach_first_west};
+use super::herald_call::{damage_to_percent, descent_emotes, first_west};
 use super::herald_damage::assert_source_step;
 use super::herald_intro::{actors_in_copy, kill_actor, spawn_source_copy};
-use super::herald_intro2::{prepared_ramparts, received_casts};
+use super::herald_intro2::{WEST, prepared_ramparts, received_casts};
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 
@@ -114,7 +114,6 @@ fn assert_airborne_commits(spell: bool) {
 }
 
 #[test]
-#[ignore = "RED: Herald source min1 guard missing before direct/self commit"]
 fn encounter_coverage_herald_min1_intro_direct_self_nonlethal_and_copy_isolation() {
     for difficulty in [1, 2] {
         let (mut h, map, herald, sentries) = prepared_ramparts(difficulty);
@@ -174,13 +173,11 @@ fn encounter_coverage_herald_min1_intro_direct_self_nonlethal_and_copy_isolation
 }
 
 #[test]
-#[ignore = "RED: Nazan direct health commit still kills"]
 fn encounter_coverage_herald_min1_airborne_direct_and_repeated_self() {
     assert_airborne_commits(false);
 }
 
 #[test]
-#[ignore = "RED: Nazan spell health commit still kills"]
 fn encounter_coverage_herald_min1_airborne_spell_and_repeated_self() {
     assert_airborne_commits(true);
 }
@@ -286,13 +283,11 @@ fn assert_real_periodic_commits(self_source: bool) {
 }
 
 #[test]
-#[ignore = "RED: periodic damage must use the same precommit guard"]
 fn encounter_coverage_herald_min1_real_periodic_external() {
     assert_real_periodic_commits(false);
 }
 
 #[test]
-#[ignore = "RED: source guard includes self-cast periodic loss"]
 fn encounter_coverage_herald_min1_real_periodic_self() {
     assert_real_periodic_commits(true);
 }
@@ -354,66 +349,227 @@ fn native_avoidance_upper(h: &Harness, player: Entity, target: Entity) -> f64 {
     f64::from(chances.miss + chances.dodge + chances.parry) / 100.0
 }
 
+struct MeleeCopy {
+    map: InMap,
+    actor: Entity,
+    attacker: Entity,
+    sentries: Vec<Entity>,
+}
+
+fn create_melee_copies(difficulty: u32) -> (Harness, Vec<MeleeCopy>, f64) {
+    let (mut h, map, actor, sentries) = prepared_ramparts(difficulty);
+    h.app.init_resource::<ObservedCombatEvents>();
+    let attacker = h.player();
+    let avoid = native_avoidance_upper(&h, attacker, actor);
+    let no_double_hit = 1.0 - (1.0 - avoid).powi(2);
+    let count = (0.001_f64.ln() / no_double_hit.ln()).floor() as usize + 1;
+    // Native miss5+dodge3+parry6 gives p(avoid)<=.14. Per copy the
+    // chance of not landing BOTH native swings is <=1-.86^2=.2604.
+    // Six independent ordinary copies: .2604^6<1/1000; no forced hits.
+    assert_eq!(count, 6);
+    assert!(no_double_hit.powi(count as i32) < 0.001);
+    let mut copies = vec![MeleeCopy {
+        map,
+        actor,
+        attacker,
+        sentries,
+    }];
+    for index in 1..count {
+        let id = 9000 + index as u64;
+        let map = spawn_source_copy(&mut h, id, difficulty);
+        let actor = actors_in_copy(&mut h, 17307, map)[0];
+        let sentries = actors_in_copy(&mut h, 17517, map);
+        let point = *h.app.world().get::<Position>(sentries[0]).unwrap();
+        let (x, y, z) = crate::terrain_height::bevy_to_wow(point.x, point.y, point.z);
+        let (attacker, connection) = spawn_player(&mut h.app, map, [x, y, z, 0.0], id);
+        h.players.push((attacker, connection, Inbox::default()));
+        copies.push(MeleeCopy {
+            map,
+            actor,
+            attacker,
+            sentries,
+        });
+    }
+    (h, copies, avoid)
+}
+
+fn point_travel_frames(from: Position, target: Position, speed: f32) -> usize {
+    let delta = Vec3::new(target.x - from.x, target.y - from.y, target.z - from.z);
+    (delta.length() / (speed * 0.05)).ceil() as usize
+}
+
+fn reach_synchronized_west(h: &mut Harness, copies: &[MeleeCopy], difficulty: u32) {
+    let nazan_speed = h
+        .app
+        .world()
+        .resource::<WorldData>()
+        .template_for(17536, difficulty)
+        .unwrap()
+        .speed_run
+        * 7.0;
+    let center_frames = copies
+        .iter()
+        .map(|copy| {
+            let from = *h.app.world().get::<Position>(copy.actor).unwrap();
+            let speed = h
+                .app
+                .world()
+                .get::<crate::creature_ai::SpawnPoint>(copy.actor)
+                .unwrap()
+                .speed_run
+                * 7.0;
+            point_travel_frames(from, CENTER, speed)
+        })
+        .max()
+        .unwrap();
+    // Exact source1s plus authored point distances. Four frame boundaries cover
+    // dispatch, final patrol step, morph/launch and arrival callback ordering.
+    let budget = center_frames + 20 + point_travel_frames(CENTER, WEST, nazan_speed) + 4;
+    for copy in copies {
+        let listener = *h.app.world().get::<Position>(copy.sentries[0]).unwrap();
+        h.app.world_mut().entity_mut(copy.attacker).insert(listener);
+        for sentry in &copy.sentries {
+            kill_actor(h, *sentry);
+        }
+    }
+    for _ in 0..=budget {
+        if copies
+            .iter()
+            .all(|copy| h.app.world().get::<Position>(copy.actor) == Some(&WEST))
+        {
+            break;
+        }
+        h.advance(0.05);
+    }
+    for copy in copies {
+        assert_eq!(
+            h.app.world().get::<Position>(copy.actor),
+            Some(&WEST),
+            "natural first West arrival for every independently allocated copy"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::Npc>(copy.actor)
+                .unwrap()
+                .template_id,
+            17536
+        );
+    }
+}
+
+fn native_cadence(h: &Harness, attacker: Entity) -> f32 {
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(attacker)
+            .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(attacker)
+            .is_some_and(|auras| auras.cannot_auto_attack())
+    );
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(attacker)
+        .unwrap();
+    let slow = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(attacker)
+        .map_or(1.0, |mods| {
+            mods.attack_cast_time_mult * mods.attack_time_mult
+        });
+    crate::melee::swing_time(stats.main_hand.speed, stats.haste_pct) * slow
+}
+
+fn place_melee_attackers(h: &mut Harness, copies: &[MeleeCopy]) {
+    for copy in copies {
+        let origin = *h.app.world().get::<Position>(copy.actor).unwrap();
+        h.app
+            .world_mut()
+            .entity_mut(copy.attacker)
+            .insert(Position {
+                x: origin.x + 3.0,
+                ..origin
+            });
+    }
+}
+
+fn assert_melee_copies_alive(h: &mut Harness, copies: &[MeleeCopy]) {
+    for copy in copies {
+        assert_alive_at_one(h, copy.actor, copy.map);
+        assert_ne!(h.app.world().get::<Position>(copy.actor), Some(&DESCEND));
+    }
+}
+
 #[test]
-#[ignore = "RED: real queued native melee commits still kill Nazan"]
+#[ignore = "pending six-copy repeated native melee verification"]
 fn encounter_coverage_herald_min1_native_melee_copies_before_point4_arrival() {
     for difficulty in [1, 2] {
-        let (mut h, map, nazan, _) = observe_first_west(difficulty);
-        let player = h.player();
-        let avoid = native_avoidance_upper(&h, player, nazan);
-        let copies = (1..=16).find(|count| avoid.powi(*count) < 0.001).unwrap();
-        // Native miss5%, dodge3%, parry6% => P(no landed main-hand hit) <=
-        // 0.14^4 =0.00038416 <1/1000, with one independent ordinary copy each.
-        assert_eq!(copies, 4);
-        let mut pairs = vec![(map, nazan, player)];
-        for index in 1..copies {
-            let id = 9000 + index as u64;
-            let copy = spawn_source_copy(&mut h, id, difficulty);
-            let herald = actors_in_copy(&mut h, 17307, copy)[0];
-            let sentries = actors_in_copy(&mut h, 17517, copy);
-            let point = *h.app.world().get::<Position>(sentries[0]).unwrap();
-            let (x, y, z) = crate::terrain_height::bevy_to_wow(point.x, point.y, point.z);
-            let (attacker, connection) = spawn_player(&mut h.app, copy, [x, y, z, 0.0], id);
-            h.players.push((attacker, connection, Inbox::default()));
-            reach_first_west(&mut h, copy, herald, &sentries);
-            assert_eq!(native_avoidance_upper(&h, attacker, herald), avoid);
-            pairs.push((copy, herald, attacker));
+        let (mut h, copies, avoid) = create_melee_copies(difficulty);
+        reach_synchronized_west(&mut h, &copies, difficulty);
+        for copy in &copies {
+            assert_eq!(native_avoidance_upper(&h, copy.attacker, copy.actor), avoid);
+            assert_eq!(native_cadence(&h, copy.attacker), 2.0);
+            reduce_to_one(&mut h, copy.actor);
+            h.app
+                .world_mut()
+                .entity_mut(copy.attacker)
+                .insert(crate::combat::AutoAttack::new(copy.actor));
         }
-        for (_, actor, attacker) in &pairs {
-            reduce_to_one(&mut h, *actor);
-            let position = *h.app.world().get::<Position>(*actor).unwrap();
-            h.app.world_mut().entity_mut(*attacker).insert((
-                Position {
-                    x: position.x + 3.0,
-                    ..position
-                },
-                crate::combat::AutoAttack::new(*actor),
-            ));
+        place_melee_attackers(&mut h, &copies);
+        h.advance(0.05); // First real native swing; no timer writes.
+        assert_melee_copies_alive(&mut h, &copies);
+        let cadence = native_cadence(&h, copies[0].attacker);
+        assert_eq!(cadence, 2.0);
+        // Include one frame for the ordinary f32 timer's quantization, not a
+        // shortened cadence. Every frame must still precede point4 arrival.
+        let frames = (cadence / 0.05).ceil() as usize + 1;
+        for copy in &copies {
+            let speed = h
+                .app
+                .world()
+                .get::<crate::creature_ai::SpawnPoint>(copy.actor)
+                .unwrap()
+                .speed_run
+                * 7.0;
+            assert!(point_travel_frames(WEST, DESCEND, speed) > frames + 1);
         }
-        // One real frame, native swing timers and stats. No retry clock can run
-        // any actor to point4 arrival; each landed hit must commit to exactly1HP.
-        h.advance(0.05);
-        let mut landed = 0;
-        for (copy, actor, attacker) in pairs {
-            assert_alive_at_one(&mut h, actor, copy);
-            assert_ne!(h.app.world().get::<Position>(actor), Some(&DESCEND));
-            for (_, _, inbox) in &h.players {
-                landed += inbox
-                    .log
+        for _ in 0..frames {
+            // Only player fixture positions change between real frames. NPCs,
+            // native stats, hit tables and swing timers remain untouched.
+            place_melee_attackers(&mut h, &copies);
+            h.advance(0.05);
+            assert_melee_copies_alive(&mut h, &copies);
+        }
+        let events = &h.app.world().resource::<ObservedCombatEvents>().0;
+        let repeated = copies
+            .iter()
+            .filter(|copy| {
+                let hits = events
                     .iter()
                     .filter(|event| {
-                        event.source == Some(attacker.to_bits())
-                            && event.target == Some(actor.to_bits())
+                        event.source == Some(copy.attacker.to_bits())
+                            && event.target == Some(copy.actor.to_bits())
                             && event.spell_id.is_none()
                             && event.kind == CombatLogKind::Damage
                             && event.amount > 0
                     })
                     .count();
-            }
-        }
+                assert!(
+                    hits <= 2,
+                    "only two native cadences, not forced extra swings"
+                );
+                hits == 2
+            })
+            .count();
         assert!(
-            landed > 0,
-            "native no-hit probability is bounded below1/1000, never forced"
+            repeated > 0,
+            "same-actor repeated landed melee proof; native no-double-hit bound<1/1000"
         );
     }
 }
