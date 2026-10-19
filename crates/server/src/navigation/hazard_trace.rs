@@ -28,3 +28,27 @@ pub(crate) fn emit(
     });
     debug!(target: TARGET, "FOLLOWER_HAZARD_TRACE {record}");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn follower_hazard_trace_disabled_leaves_payload_unevaluated() {
+        let subscriber = bevy::log::tracing_subscriber::fmt()
+            .with_max_level(bevy::log::tracing::Level::INFO)
+            .with_writer(std::io::sink)
+            .finish();
+        let evaluated = std::cell::Cell::new(false);
+        bevy::log::tracing::subscriber::with_default(subscriber, || {
+            emit("detected", Some(1.0), Entity::from_bits(41), || {
+                evaluated.set(true);
+                Value::Null
+            });
+        });
+        assert!(
+            !evaluated.get(),
+            "disabled trace cannot evaluate event payloads"
+        );
+    }
+}
