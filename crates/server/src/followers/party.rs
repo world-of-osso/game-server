@@ -523,6 +523,31 @@ mod copy_tests {
     }
 
     #[test]
+    fn disconnected_owner_dormant_threat_orphans_unsummon_without_publication_panic() {
+        let (mut app, owner, run) = fixture();
+        app.add_plugins(crate::creature_aggro::CreatureAggroPlugin);
+        for &member in &run.members {
+            let mut threat = shared::components::ThreatTable::default();
+            threat.add_threat(owner.to_bits(), 100.0);
+            app.world_mut()
+                .entity_mut(member)
+                .insert((threat, crate::grid_activity::GridDormant));
+        }
+        app.world_mut().entity_mut(owner).insert(run.clone());
+        // Native disconnect teardown removes the owner before orphan maintenance runs.
+        app.world_mut().despawn(owner);
+        advance_runs(app.world_mut());
+        app.world_mut().flush();
+        crate::creature_aggro::publish_woken_threat_lists(app.world_mut());
+        assert!(
+            run.members
+                .iter()
+                .all(|&member| app.world().get_entity(member).is_err()),
+            "all owned summons must leave the world after their owner disconnects"
+        );
+    }
+
+    #[test]
     fn follower_copy_group_formation_keeps_same_map_teleport_in_the_admitted_copy() {
         let (mut app, owner, run) = fixture();
         let admitted = *app.world().get::<InMap>(owner).unwrap();
