@@ -5,7 +5,7 @@ use shared::components::{Health, Level, UnitLevel};
 use shared::protocol::{CombatEvent, CombatEventType};
 
 use super::npc_expertise_tests::collect_broadcast_swings;
-use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const HEALTH_CRIT: u32 = 372_261;
@@ -123,6 +123,47 @@ fn reach_native_boundary(h: &mut Harness, attacker: Entity, victim: Entity) {
     );
 }
 
+fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32 {
+    let world = h.app.world();
+    let source = super::Attacker {
+        entity: attacker,
+        position: world.get::<shared::components::Position>(attacker).unwrap(),
+        mods: world.get::<crate::auras::AuraStatMods>(attacker),
+        stats: world.get::<crate::stats::CharacterStats>(attacker),
+        haste_pct: world
+            .get::<crate::stats::StatModifiers>(attacker)
+            .map_or(0.0, |m| m.haste_pct),
+        enemy_dodge_pct: modifier(h, attacker, 251),
+        npc_expertise_pct: modifier(h, attacker, 240) / 4.0,
+        creature: world.get::<shared::components::Npc>(attacker).is_some(),
+        creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(attacker),
+        temp_summoner: world
+            .get::<crate::zones::TempSummon>(attacker)
+            .map(|s| s.summoner),
+        spirit_wolf: None,
+    };
+    let level_difference = i32::from(world.get::<UnitLevel>(victim).unwrap().0)
+        - i32::from(world.get::<UnitLevel>(attacker).unwrap().0);
+    super::read_outcome_chances(
+        &source,
+        crate::melee::Victim::Creature { level_difference },
+        world.get::<crate::zones::CreatureFlagsExtra>(victim),
+        true,
+        false,
+        world.get::<ActiveAuras>(victim),
+    )
+    .crit
+}
+
+fn assert_no_crit(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .all(|e| e.event_type == CombatEventType::MeleeDamage && e.amount == 10.0),
+        "{events:?}"
+    );
+}
+
 #[test]
 fn native_melee_victim_health_crit_above_window_and_native_lifetime_are_qualified() {
     let (mut h, attacker, victim) = fixture();
@@ -154,4 +195,87 @@ fn native_melee_victim_health_crit_actual_damage_boundary_is_qualified() {
     eprintln!(
         "native5000→1000 by400ordinary10damage events, then realdamage BELOW20%; no HP writes"
     );
+}
+
+#[test]
+#[ignore = "behavioral RED before current-victim-health183 consumer"]
+fn native_melee_victim_health_crit_above_twenty_percent_grants_crit() {
+    let (mut h, attacker, victim) = fixture();
+    apply(&mut h, victim, HEALTH_CRIT, 1);
+    let events = swings(&mut h, attacker, victim, WINDOW_SWINGS);
+    assert!(health(&h, victim).0 >= 4600.0);
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::CriticalHit),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::MeleeDamage),
+        "{events:?}"
+    );
+}
+
+#[test]
+#[ignore = "numeric RED for inclusive sourced boundary on actual damage-driven state"]
+fn native_melee_victim_health_crit_inclusive_boundary_chance_uses_actual_health() {
+    let (mut h, attacker, victim) = fixture();
+    reach_native_boundary(&mut h, attacker, victim);
+    apply(&mut h, victim, HEALTH_CRIT, 1);
+    assert_eq!(health(&h, victim), (1000.0, 5000.0));
+    // Pure numeric chance proof, paired with wire above/below tests, NOT twenty boundary rolls.
+    assert_eq!(read_native_crit_chance(&h, attacker, victim), 50.0);
+    let _ = swings(&mut h, attacker, victim, 1);
+    assert!(health(&h, victim).0 < 1000.0);
+    assert_eq!(read_native_crit_chance(&h, attacker, victim), 0.0);
+}
+
+#[test]
+#[ignore = "behavioral control against inverted health predicate"]
+fn native_melee_victim_health_crit_below_twenty_percent_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    reach_native_boundary(&mut h, attacker, victim);
+    let _ = swings(&mut h, attacker, victim, 1);
+    assert_eq!(health(&h, victim), (990.0, 5000.0));
+    apply(&mut h, victim, HEALTH_CRIT, 1);
+    let events = swings(&mut h, attacker, victim, WINDOW_SWINGS);
+    assert!(health(&h, victim).0 < 1000.0);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for victim-owned183"]
+fn native_melee_victim_health_crit_attacker_only_aura_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    apply(&mut h, attacker, HEALTH_CRIT, 1);
+    assert_eq!(modifier(&h, victim, 183), 0.0);
+    let events = swings(&mut h, attacker, victim, WINDOW_SWINGS);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for actual victim aura placement"]
+fn native_melee_victim_health_crit_foreign_recipient_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    let foreign = h.caster;
+    apply(&mut h, foreign, HEALTH_CRIT, 1);
+    assert_eq!(modifier(&h, victim, 183), 0.0);
+    let events = swings(&mut h, attacker, victim, WINDOW_SWINGS);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for native aura cancellation"]
+fn native_melee_victim_health_crit_cancelled_aura_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    apply(&mut h, victim, HEALTH_CRIT, 1);
+    crate::auras::remove_auras(h.app.world_mut(), victim, RemoveReason::Cancelled, |a| {
+        a.spell_id == HEALTH_CRIT
+    });
+    h.advance(3);
+    assert_eq!(modifier(&h, victim, 183), 0.0);
+    let events = swings(&mut h, attacker, victim, WINDOW_SWINGS);
+    assert_no_crit(&events);
 }
