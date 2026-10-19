@@ -204,6 +204,14 @@ fn print_character_response(response: &AdminResponse) -> bool {
         AdminResponse::Killed { character_name } => {
             println!("Killed: {character_name}");
         }
+        AdminResponse::FollowerPartyStaged {
+            character_name,
+            followers,
+        } => {
+            println!(
+                "HARNESS staged: {character_name} and {followers} existing followers; not gameplay traversal"
+            );
+        }
         AdminResponse::Teleported {
             character_name,
             map_id,

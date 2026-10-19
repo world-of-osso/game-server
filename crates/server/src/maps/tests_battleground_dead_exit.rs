@@ -3,6 +3,9 @@ use crate::death::PlayerDeathState;
 use shared::components::Mana;
 use shared::death::DeathState;
 
+#[path = "tests_battleground_exit_deserter.rs"]
+mod voluntary_deserter;
+
 #[test]
 fn pvp_dead_exit_concrete_resurrects_and_clears_corpse_before_return() {
     let (mut h, players, _database) = pending_battleground(1018);

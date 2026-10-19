@@ -71,6 +71,8 @@ pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object
     }
 }
 
+pub(crate) mod fall_movement;
+
 pub struct ScriptedAiPlugin;
 
 impl Plugin for ScriptedAiPlugin {
@@ -87,6 +89,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
+            .add_systems(FixedPreUpdate, fall_movement::release_finished_falls)
             .add_systems(
                 FixedUpdate,
                 (
@@ -107,6 +110,11 @@ impl Plugin for ScriptedAiPlugin {
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
                     waypoint_path::path_movement_system.before(crate::creature_ai::chase_system),
                     jump_movement::advance_jumps
+                        .after(movement::point_movement_system)
+                        .after(waypoint_path::path_movement_system)
+                        .before(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
+                    fall_movement::advance_falls
                         .after(movement::point_movement_system)
                         .after(waypoint_path::path_movement_system)
                         .before(update_creature_ai)

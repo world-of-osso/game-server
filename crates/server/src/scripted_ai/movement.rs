@@ -92,6 +92,7 @@ pub(crate) fn point_movement_system(world: &mut World) {
     ), (
         Without<DeathState>,
         Without<super::jump_movement::JumpMovement>,
+        Without<crate::scripted_ai::fall_movement::FallMovement>,
         Without<crate::spell_cast::charge::ChargeMovement>,
     )>();
     for (
