@@ -32,7 +32,7 @@ pub(super) fn update(
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }
-    let candidates: Vec<_> = enemies.iter().map(|(enemy, _)| *enemy).collect();
+    let candidates: Vec<_> = enemy.into_iter().collect();
     let mut interrupt_attempted = false;
     for entry in entries
         .iter()
@@ -51,11 +51,6 @@ pub(super) fn update(
                 &follower.profile,
                 &candidates,
             ) {
-                #[cfg(test)]
-                eprintln!(
-                    "KICK_SCOPE unit={unit:?} spec={} selected={enemy:?} candidates={candidates:?}",
-                    follower.profile.spec_id
-                );
                 return true;
             }
         }
