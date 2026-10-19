@@ -1,3 +1,4 @@
+- [Autoattack attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17) — native signed caster251; ignored RED pushed first, actual negative/positive2RED with signed/ownership/CC/behind4 controls; consumer1dbe19063 six native GREEN110.87s before enabling, independent gate pending.
 - [Shared death-prevention commit](systems/auras.md#shared-death-prevention-commit--2026-10-18) — Guardian real48153 after removal; shared Ardent floor/absorption and ordered melee/direct/periodic World commits; genuine missing-rescue/log/same-frame REDs, combined gate pending.
 - [Published70448 census oracle](systems/toys.md#published-extras-and-census-cardinality-2026-10-18) — tg578/st574 expose13 stale1166 census assertions after two-row publication; shared oracle retains named baseline plus exact published item/name/spell triples. Targeted16-case verification pending; batch2 RED remains isolated.
 

@@ -1,3 +1,10 @@
+## 2026-10-17 — Attacker251 / Guardian merge
+
+[Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): rewrite maps old035ae5cfb to de08aab30, identical tree; original proof labels retained. Merge masterac36572bb preserves Guardian same-tick try_swing one-shot health commit and251 scalar/roll consumer; requested original9 plus Guardian/Ardent integration proof pending.
+
+## 2026-10-17 — Autoattack attacker251
+
+[Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): TC Unit.cpp2389/2775 signed caster modifier. Ordered ignored d5587d263 native2RED/4PASS87.19s (negative20Dodge; positive20Damage/0Dodge); minimal transient snapshot/roll consumer preserves gates/clocks/RNG. At1dbe19063 explicit ignored6/6GREEN110.87s,0warnings before enabling allsix. Master7a0f00fc0 integrated e4d9c1efd: ordinary affected cohort122PASS/3legacyLOSignored154.21s,0warnings, all6newnative enabled. Lead gate pending; expertise/248/Totem/flags not certified.
 ## 2026-10-18 — Published70448 extras census oracle correction
 
 [Current regression/correction](../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg57812 and st57413 census failures come from one stale1166 assertion after twoToy-row publication. Shared oracle now retains Full1166 plus the two explicitly published item/name/spell triples; future batches append the list after publication. Exact748a5ad78 merge, no runtime/data change, batch2 RED isolated; requested13census+3batch1 targets pending.
