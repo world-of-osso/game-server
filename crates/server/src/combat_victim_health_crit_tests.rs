@@ -199,7 +199,6 @@ fn native_melee_victim_health_crit_actual_damage_boundary_is_qualified() {
 }
 
 #[test]
-#[ignore = "behavioral RED before current-victim-health183 consumer"]
 fn native_melee_victim_health_crit_above_twenty_percent_grants_crit() {
     let (mut h, attacker, victim) = fixture();
     apply(&mut h, victim, HEALTH_CRIT, 1);
@@ -220,7 +219,6 @@ fn native_melee_victim_health_crit_above_twenty_percent_grants_crit() {
 }
 
 #[test]
-#[ignore = "numeric RED for inclusive sourced boundary on actual damage-driven state"]
 fn native_melee_victim_health_crit_inclusive_boundary_chance_uses_actual_health() {
     let (mut h, attacker, victim) = fixture();
     reach_native_boundary(&mut h, attacker, victim);
@@ -234,7 +232,6 @@ fn native_melee_victim_health_crit_inclusive_boundary_chance_uses_actual_health(
 }
 
 #[test]
-#[ignore = "behavioral control against inverted health predicate"]
 fn native_melee_victim_health_crit_below_twenty_percent_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     reach_native_boundary(&mut h, attacker, victim);
@@ -247,7 +244,6 @@ fn native_melee_victim_health_crit_below_twenty_percent_does_not_grant_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control for victim-owned183"]
 fn native_melee_victim_health_crit_attacker_only_aura_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     apply(&mut h, attacker, HEALTH_CRIT, 1);
@@ -257,7 +253,6 @@ fn native_melee_victim_health_crit_attacker_only_aura_does_not_grant_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control for actual victim aura placement"]
 fn native_melee_victim_health_crit_foreign_recipient_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     let foreign = h.caster;
@@ -268,7 +263,6 @@ fn native_melee_victim_health_crit_foreign_recipient_does_not_grant_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control for native aura cancellation"]
 fn native_melee_victim_health_crit_cancelled_aura_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     apply(&mut h, victim, HEALTH_CRIT, 1);
