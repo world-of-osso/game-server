@@ -13,14 +13,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use wow_adt::adt::parse_mfbo_min_heights;
 #[cfg(test)]
 use wow_adt::adt_obj::MODF_FLAG_HAS_SCALE;
 use wow_adt::adt_obj::{MODF_ENTRY_SIZE, MODF_FLAG_FILEDATAID};
 use wow_adt::wdt::MPHD_FLAG_GLOBAL_WMO;
 use wow_adt::{adt_obj, wdt};
+use wow_chunk::find_reversed_chunk as find_chunk;
 #[cfg(test)]
 use wow_chunk::read_u32;
-use wow_chunk::{find_reversed_chunk as find_chunk, read_u16};
 use wow_wmo::parser::parse_root_group_file_ids as group_file_data_ids;
 
 use bevy::math::{Affine3A, Vec3};
@@ -636,13 +637,7 @@ fn load_terrain(
 ) -> Result<(TerrainHeightMap, Option<[i16; 9]>), String> {
     let data = read_client_file(data_dir, "terrain", fdid, "adt")?;
     let flight_min = find_chunk(&data, b"MFBO")?
-        .map(|mfbo| -> Result<[i16; 9], String> {
-            let mut mins = [0; 9];
-            for (index, min) in mins.iter_mut().enumerate() {
-                *min = read_u16(mfbo, 18 + index * 2)? as i16;
-            }
-            Ok(mins)
-        })
+        .map(parse_mfbo_min_heights)
         .transpose()?;
     Ok((parse_adt_heights(&data)?, flight_min))
 }
@@ -890,3 +885,7 @@ mod zephras_tests;
 #[cfg(test)]
 #[path = "housing_ground_tests.rs"]
 mod housing_tests;
+
+#[cfg(test)]
+#[path = "ground/mfbo_receipts_tests.rs"]
+mod mfbo_receipts_tests;
