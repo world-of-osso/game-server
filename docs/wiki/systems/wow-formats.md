@@ -30,6 +30,12 @@ The client and server share12B chunk,24B instance and16B attribute projections. 
 
 The [MH2O ledger](../../handoffs/wow-formats-mh2o-records.md) freezes each consumer independently on three required real roots and25 synthetic payloads, plus water-bound and terrain-query outputs. Shared library2a91b224 exposes the existing raw record readers; default250/no-default170 tests and check/fmt pass. Before/after180/180 receipt/bake files28,034,481B match exactly,116/116 source inputs unchanged. Server height23, MH2O2, scoped swim10/real ground4/ocean1/navigation-bake1 controls pass; runtime server tree stays320 package/version pairs with no added crates/features. Engine water20/terrain45/ground18 and all checks/fmt pass. Independent lead integration remains pending.
 
+## MFBO signed grids
+
+`ground.rs::load_terrain` reads its nine signed minimum corners through the shared MFBO projection. The client full-bound reader reuses the same grid decoder after its original36-byte precheck. Runtime first-MFBO selection versus client last-MFBO selection, exact short-input errors and failure order, unused-tail acceptance, plane coordinates/arithmetic/defaults and falling policy remain unchanged. No mode flag, dependency or feature was added.
+
+The [MFBO ledger](../../handoffs/wow-formats-mfbo-records.md) freezes each consumer's records and actual min-height query bits on3 required roots/51 synthetic cases, with retained terrain/MH2O and Stockade guards. OLD baseline:376files50,037,281B/120 source hashes plus Map34lookup791060; library882b2fc passes253default/173no-default tests/check/fmt after targeted API RED. Consumer replay and independent lead gate remain pending.
+
 ## Reference proof
 
 Reference captured with the pre-migration readers at rewritten server revision `ac36572bb`: existing LOS tests **16 passed / 0 failed / 4 ignored**. Stockade map34 reference `nav-bake` produced **4 LOS + 4 navigation tiles**, **7,196,988 bytes**; navigation collection contained39,791 triangles. SHA-256 inventory and an input superset of104 local asset files are recorded under `/home/osso/.worktrees/logs/wow_formats-phase2-*`. The after-reader gate must preserve those bytes and existing test outcomes; timing-bearing `report.txt` is not a binary-bake contract.
