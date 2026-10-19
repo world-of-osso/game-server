@@ -74,7 +74,6 @@ fn assert_native_stun_stops_enemy_cast(stun: u32, explicit: bool) {
 /// SpellEffects.cpp594–598): effect64 triggers at launch, before the missile's
 /// stun lands and stops the cast.
 #[test]
-#[ignore = "RED: effect64 child triggers at hit, after the stun stops the cast"]
 fn native_axe_toss_interrupts_at_launch_before_its_stun_lands() {
     const AXE_TOSS: u32 = 89766;
     const AXE_TOSS_INTERRUPT: u32 = 347008;
