@@ -53,11 +53,11 @@ fn apply_real_rejuvenation(h: &mut Harness, healer: Entity, patient: Entity) {
 }
 
 #[test]
-#[ignore = "SWIFTMEND_NATIVE_PREREQUISITE_15: qualify backend before any follower fix"]
 fn follower_swiftmend_qualification_native_without_hot_refuses() {
     let (mut h, healer) = level32(CRENNA);
     assert_native_restriction(&h);
-    let patient = h.caster;
+    // TC SpellInfo::CheckTarget exempts a controlled caster healing its owner.
+    let patient = healer;
     assert!(!crate::auras::has_aura(
         h.app.world(),
         patient,
@@ -72,7 +72,56 @@ fn follower_swiftmend_qualification_native_without_hot_refuses() {
 }
 
 #[test]
-#[ignore = "SWIFTMEND_NATIVE_PREREQUISITE_15: retained positive native control"]
+fn follower_swiftmend_qualification_owner_without_hot_is_exempt() {
+    let (mut h, healer) = level32(CRENNA);
+    assert_native_restriction(&h);
+    let owner = h.caster;
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitSummonedBy>(healer)
+            .unwrap()
+            .0,
+        owner.to_bits()
+    );
+    wound(&mut h, owner, 0.3);
+    let before = h.health(owner);
+    creature_cast(h.app.world_mut(), healer, SWIFTMEND, Some(owner), false).unwrap();
+    h.advance(3);
+    assert!(h.health(owner) > before);
+}
+
+#[test]
+fn follower_swiftmend_qualification_other_casters_rejuvenation_qualifies() {
+    let (mut h, healer) = level32(CRENNA);
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(healer)
+        .unwrap()
+        .profile
+        .clone();
+    let other = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let owner = h.caster;
+    super::spawning::initialize(h.app.world_mut(), owner, other, profile).unwrap();
+    apply_real_rejuvenation(&mut h, other, healer);
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(healer)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == REJUVENATION)
+        .unwrap();
+    assert_eq!(aura.caster, other);
+    wound(&mut h, healer, 0.3);
+    let before = h.health(healer);
+    creature_cast(h.app.world_mut(), healer, SWIFTMEND, Some(healer), false).unwrap();
+    h.advance(3);
+    assert!(h.health(healer) > before);
+}
+
+#[test]
 fn follower_swiftmend_qualification_native_real_rejuvenation_heals() {
     let (mut h, healer) = level32(CRENNA);
     assert_native_restriction(&h);
@@ -92,20 +141,24 @@ fn follower_swiftmend_qualification_native_real_rejuvenation_heals() {
 }
 
 #[test]
-#[ignore = "SWIFTMEND_PATIENT_ELIGIBILITY: backend prerequisite must qualify first"]
 fn follower_swiftmend_qualification_two_injured_patients_prefer_eligible_hot() {
     let (mut h, healer) = level32(CRENNA);
     assert_native_restriction(&h);
-    let lower_without_hot = h.caster;
-    apply_real_rejuvenation(&mut h, healer, healer);
+    let lower_without_hot = healer;
+    let higher_with_hot = h.caster;
+    apply_real_rejuvenation(&mut h, healer, higher_with_hot);
     wound(&mut h, lower_without_hot, 0.1);
-    wound(&mut h, healer, 0.3);
+    wound(&mut h, higher_with_hot, 0.3);
     assert!(!crate::auras::has_aura(
         h.app.world(),
         lower_without_hot,
         REJUVENATION
     ));
-    assert!(crate::auras::has_aura(h.app.world(), healer, REJUVENATION));
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        higher_with_hot,
+        REJUVENATION
+    ));
     super::update_ai(h.app.world_mut());
     h.advance(3);
     let swiftmend_targets: Vec<_> = h
@@ -121,7 +174,7 @@ fn follower_swiftmend_qualification_two_injured_patients_prefer_eligible_hot() {
         .collect();
     assert_eq!(
         swiftmend_targets,
-        vec![Some(healer.to_bits())],
+        vec![Some(higher_with_hot.to_bits())],
         "actual follower must heal the eligible HoT patient, not lower no-HoT patient {lower_without_hot:?}"
     );
 }
