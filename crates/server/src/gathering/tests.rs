@@ -140,9 +140,8 @@ fn gathering_missing_skill_and_movement_interrupt_do_not_roll_or_raise_skill() {
 }
 
 #[test]
-#[ignore = "RED: one source roll exceeds the 1/1000 false-failure budget"]
 fn gathering_skinning_requires_looted_dead_corpse_and_uses_authored_loot() {
-    const GATHERS: i32 = 1;
+    const GATHERS: i32 = 2;
     let mut found_material = false;
     for _ in 0..GATHERS {
         // A fresh fixture supplies a fresh corpse and no pending loot from another roll.
