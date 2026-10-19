@@ -890,3 +890,7 @@ mod zephras_tests;
 #[cfg(test)]
 #[path = "housing_ground_tests.rs"]
 mod housing_tests;
+
+#[cfg(test)]
+#[path = "ground/mfbo_receipts_tests.rs"]
+mod mfbo_receipts_tests;
