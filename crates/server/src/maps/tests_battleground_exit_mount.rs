@@ -3,37 +3,31 @@ use shared::battleground::BgPhase;
 use shared::protocol::LeaveBattleground;
 
 #[test]
-#[ignore = "RED: ordinary BG exit retains mount acquired inside the match"]
 fn bg_exit_mount_concrete_waiting_removes_mount() {
     assert_exit_dismounts(1018, BgPhase::Waiting);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG exit retains mount acquired inside the match"]
 fn bg_exit_mount_random_waiting_removes_mount() {
     assert_exit_dismounts(32, BgPhase::Waiting);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG exit retains mount acquired inside the match"]
 fn bg_exit_mount_concrete_in_progress_removes_mount() {
     assert_exit_dismounts(1018, BgPhase::InProgress);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG exit retains mount acquired inside the match"]
 fn bg_exit_mount_random_in_progress_removes_mount() {
     assert_exit_dismounts(32, BgPhase::InProgress);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG exit retains mount acquired inside the match"]
 fn bg_exit_mount_concrete_completed_removes_mount() {
     assert_exit_dismounts(1018, BgPhase::Ended);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG exit retains mount acquired inside the match"]
 fn bg_exit_mount_random_completed_removes_mount() {
     assert_exit_dismounts(32, BgPhase::Ended);
 }
