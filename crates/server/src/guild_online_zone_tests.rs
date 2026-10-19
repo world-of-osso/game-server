@@ -1,6 +1,5 @@
 //! Real host-client QueryGuild delivery over authoritative terrain-area samples.
 use super::*;
-use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
 use shared::components::{CharacterAppearance, Position};
