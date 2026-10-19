@@ -151,6 +151,7 @@ fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32
         true,
         false,
         world.get::<ActiveAuras>(victim),
+        world.get::<Health>(victim).unwrap(),
     )
     .crit
 }
