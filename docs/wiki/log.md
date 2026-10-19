@@ -7,9 +7,9 @@
 ## 2026-10-17 — NPC weapon crit52 and shared clamp
 
 [Signed52/clamp](systems/player-damage.md#npc-weapon-crit52-and-shared-clamp-ordering--2026-10-17): ignored00ef37b6d pushed first; native52/334 and separate player187/334 qualification2PASS56.14s survive768s. Fresh6 genuine RED/2PASS56.19s includes explicit player0-60187+50334 zeroCrit/256; source clamps before334. Existing raw AuraStatMods sum/NPC-only consumer plus shared clamp correctionbd3cf7db7 committed after RED; fresh ignored8/8GREEN41.04s/0warnings plus retained qualification2PASS56.14s (ten-case composite), only then all ten enabled. Independent lead gate pending. No RNG/clocks/HP/native-input changes; player52 masks/290/NO_CRIT/mitigation excluded.
-## 2026-10-18 — Natural shared hearthstone charge coverage pending
+## 2026-10-18 — Natural shared hearthstone charge coverage GREEN first execution
 
-[Scoped final toy follow-up](../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-pending-2026-10-18): tt653211/0/check/fmt landeda989c0f3b; timer branch cleaned. Source2309 MaxCharges1/recovery1800000ms drives two-direction real learned281136/281615 tests: before30min refusal, ordinary recovery, full sibling10s cast/spend/original refusal. First execution pending; normal50ms updates/observed completion bounds only, no runtime/data/clock/reset or native claim.
+[Scoped final toy follow-up](../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-green-first-execution-2026-10-18): tt653211/0/check/fmt landeda989c0f3b; timer branch cleaned. Source2309 MaxCharges1/recovery1800000ms drives two-direction real learned281136/281615 tests: before30min refusal, ordinary recovery, full sibling10s cast/spend/original refusal. First execution7adfb7b03 GREEN4/0/78.45s(new2+retained2); existing machinery works, no behavioral RED/runtime repair. Normal50ms updates/observed completion bounds only; no runtime/data/clock/reset or native claim. Lead integration/landing pending.
 
 ## 2026-10-18 — Ordinary Loa timer coverage GREEN first execution
 
