@@ -78,6 +78,7 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
             crate::death::DeathPlugin,
             crate::auras::AuraPlugin,
         ));
+        app.add_plugins(crate::npc_interaction::NpcInteractionPlugin);
     })
     .expect("real map/channel fixture");
     let players: Vec<_> = (1..=count)
