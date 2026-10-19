@@ -82,7 +82,7 @@ fn follower_swiftmend_qualification_removed_real_rejuvenation_no_longer_qualifie
     crate::auras::remove_auras(
         h.app.world_mut(),
         healer,
-        crate::auras::RemoveReason::Cancel,
+        crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == REJUVENATION,
     );
     assert!(!crate::auras::has_aura(h.app.world(), healer, REJUVENATION));
