@@ -18,6 +18,8 @@ use wow_adt::adt_obj::MODF_FLAG_HAS_SCALE;
 use wow_adt::adt_obj::{MODF_ENTRY_SIZE, MODF_FLAG_FILEDATAID};
 use wow_adt::wdt::MPHD_FLAG_GLOBAL_WMO;
 use wow_adt::{adt_obj, wdt};
+#[cfg(test)]
+use wow_chunk::read_u32;
 use wow_chunk::{find_reversed_chunk as find_chunk, read_u16};
 use wow_wmo::parser::parse_root_group_file_ids as group_file_data_ids;
 
