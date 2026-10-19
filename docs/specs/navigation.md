@@ -67,6 +67,8 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 ## Tests asserting this spec
 
+- `crates/server/src/followers/hazard_reaction_tests.rs` and native Azure prediction/escape controls — +50ms source-curve contact, no early movement before250ms, first-ready-tick movement, actual held-worker standing inside, predicted escape and actual aura cleanup. Requested policy cohort passes33/0fail/0ignored; merged-master acceptance remains lead-owned.
+
 - `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; current dispatch recheck passes all six controls.
 - `crates/server/src/navigation_blocking_io_tests.rs` — actual FIFO tile-read boundary; synchronous tick-stall RED and production-worker GREEN.
 - `crates/server/src/navigation_request_tests.rs` — pending hold/continuation, latest pose/ID, completion-set ordering and old-map invalidation controls.
