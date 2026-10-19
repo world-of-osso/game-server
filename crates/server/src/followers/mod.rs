@@ -27,6 +27,8 @@ pub(crate) mod pull_history;
 mod pull_history_tests;
 #[cfg(test)]
 mod pull_movement_tests;
+#[cfg(test)]
+mod pull_position_tests;
 mod pull_readiness;
 #[cfg(test)]
 mod pull_readiness_tests;

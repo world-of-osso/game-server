@@ -16,7 +16,7 @@ pub(super) struct Fixture {
     pub(super) engaged: Entity,
 }
 
-fn source(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
+pub(super) fn source(h: &mut Harness, tank: Entity, guid: u32) -> Entity {
     let map = *h.app.world().get::<InMap>(tank).unwrap();
     h.app
         .world_mut()
@@ -143,7 +143,7 @@ fn sample(f: &mut Fixture, frames: usize) {
     }
 }
 
-fn physical_fixture() -> Fixture {
+pub(super) fn physical_fixture() -> Fixture {
     let mut f = fixture();
     let owner = f.h.caster;
     let old_members =
