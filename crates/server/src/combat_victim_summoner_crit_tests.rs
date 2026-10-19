@@ -5,7 +5,7 @@ use shared::components::{Level, UnitLevel};
 use shared::protocol::{CombatEvent, CombatEventType};
 
 use super::npc_expertise_tests::collect_broadcast_swings;
-use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const SUMMONER_CRIT: u32 = 344_021;
@@ -153,6 +153,47 @@ fn sample_native_applications(
     events
 }
 
+fn assert_both(events: &[CombatEvent]) {
+    assert!(
+        events.iter().all(|e| matches!(
+            e.event_type,
+            CombatEventType::MeleeDamage | CombatEventType::CriticalHit
+        ) && e.amount > 0.0),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::CriticalHit),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::MeleeDamage),
+        "{events:?}"
+    );
+}
+
+fn assert_no_crit(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .all(|e| e.event_type == CombatEventType::MeleeDamage && e.amount > 0.0),
+        "{events:?}"
+    );
+}
+
+fn wait_for_original_deadline(h: &mut Harness, expiry: f64) {
+    for _ in 0..160 {
+        if h.app.world().resource::<Time>().elapsed_secs_f64() >= expiry {
+            return;
+        }
+        h.advance(1);
+    }
+    panic!("original native6s cancellation window never elapsed");
+}
+
 #[test]
 fn native_melee_victim_summoner_crit_ten_short_owner_windows_are_runtime_qualified() {
     let (mut h, attacker, victim) = fixture();
@@ -237,4 +278,136 @@ fn native_melee_victim_summoner_crit_player_is_not_temp_summon_is_runtime_qualif
         )),
         "{events:?}"
     );
+}
+
+#[test]
+#[ignore = "behavioral RED before direct-summoner victim339 consumer"]
+fn native_melee_victim_summoner_crit_actual_owner_grants_received_crit() {
+    let (mut h, attacker, victim) = fixture();
+    let owner = h.caster;
+    let events = sample_native_applications(&mut h, attacker, victim, owner, victim);
+    assert_hit(&h, attacker);
+    // Native50%,20ordinarydraws: P(noCrit OR noNormal)=2*.5^20.
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral control: attacker identity is not direct summoner"]
+fn native_melee_victim_summoner_crit_attacker_caster_is_not_owner() {
+    let (mut h, attacker, victim) = fixture();
+    let events = sample_native_applications(&mut h, attacker, victim, attacker, victim);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control: foreign caster is not direct summoner"]
+fn native_melee_victim_summoner_crit_foreign_caster_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    let foreign = h.npc;
+    let events = sample_native_applications(&mut h, attacker, victim, foreign, victim);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control: caster player is not a TempSummon attacker"]
+fn native_melee_victim_summoner_crit_player_source_cannot_use_own_339() {
+    let (mut h, _, victim) = fixture();
+    let player = h.caster;
+    assert!(
+        h.app
+            .world()
+            .get::<crate::zones::TempSummon>(player)
+            .is_none()
+    );
+    let events = sample_native_applications(&mut h, player, victim, player, victim);
+    assert!(
+        events.iter().all(|e| matches!(
+            e.event_type,
+            CombatEventType::MeleeDamage | CombatEventType::Miss | CombatEventType::Dodge
+        )),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::MeleeDamage && e.amount > 0.0)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::stats::CharacterStats>(player)
+            .unwrap()
+            .crit_pct,
+        0.0
+    );
+}
+
+#[test]
+#[ignore = "behavioral control: 339 must be on actual victim"]
+fn native_melee_victim_summoner_crit_attacker_only_aura_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    let owner = h.caster;
+    let events = sample_native_applications(&mut h, attacker, victim, owner, attacker);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control: 339 must be on actual victim"]
+fn native_melee_victim_summoner_crit_foreign_recipient_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    let (owner, foreign) = (h.caster, h.npc);
+    let events = sample_native_applications(&mut h, attacker, victim, owner, foreign);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for native cancellation"]
+fn native_melee_victim_summoner_crit_cancelled_owner_aura_does_not_grant_crit() {
+    let (mut h, attacker, victim) = fixture();
+    let owner = h.caster;
+    let mut events = Vec::new();
+    for _ in 0..APPLICATIONS {
+        assert!(!crate::auras::has_aura(
+            h.app.world(),
+            victim,
+            SUMMONER_CRIT
+        ));
+        apply(&mut h, owner, victim, SUMMONER_CRIT, 1 << 1);
+        let expiry = assert_native_window(&h, victim, owner);
+        crate::auras::remove_auras(h.app.world_mut(), victim, RemoveReason::Cancelled, |a| {
+            a.spell_id == SUMMONER_CRIT
+        });
+        h.advance(3);
+        assert_eq!(modifier(&h, victim, 339), 0.0);
+        events.extend(collect_broadcast_swings(
+            &mut h,
+            attacker,
+            victim,
+            SWINGS_PER_APPLICATION,
+        ));
+        // This negative control cancels; still let the original6s elapse BEFORE reapplication.
+        wait_for_original_deadline(&mut h, expiry);
+    }
+    assert_eq!(events.len(), APPLICATIONS * SWINGS_PER_APPLICATION);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral RED before actual direct-parent339 match"]
+fn native_melee_victim_summoner_crit_nested_actual_parent_grants_crit() {
+    let (mut h, parent, victim) = fixture();
+    let attacker = spawn_darion(&mut h, parent);
+    let events = sample_native_applications(&mut h, attacker, victim, parent, victim);
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral control: grandparent is not actual direct summoner"]
+fn native_melee_victim_summoner_crit_grandparent_caster_does_not_grant_crit() {
+    let (mut h, parent, victim) = fixture();
+    let grandparent = h.caster;
+    let attacker = spawn_darion(&mut h, parent);
+    assert_ne!(parent, grandparent);
+    let events = sample_native_applications(&mut h, attacker, victim, grandparent, victim);
+    assert_no_crit(&events);
 }
