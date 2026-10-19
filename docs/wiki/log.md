@@ -1,3 +1,7 @@
+## 2026-10-18 — Scarab target32 first-destination oracle
+
+[Scarab oracle](systems/toys.md#scarab-target32-grounded-oracle-2026-10-18): native92146 SUMMON28/32/noFORCE correctly grounds; pre-grounding oracle REDbe5cd97ae39.32s. Corrected identical pre-clampY ray/strict floor bits, retained count/scatter/follow/lifetime; GREEN pending, production unchanged.
+
 ## 2026-10-18 — Energizing Elixir flat Energy
 
 [Native115288](systems/auras.md#energizing-elixir-flat-energy--2026-10-18): source75Energy/5s AFTER percentage modifiers, real Tiger Palm deficit and ordinary Elixir RED10vs25, native13750 RED17.5vs32.5; sibling2Chi preserved. Tests-only ignored3993b7fe8 pushed first;3controlPASS/2genuineFAIL26.42s. Minimal continuous non-mana85 aggregation/consumer atc62d61e9b: native5GREEN14.48s +retained regen/resource30GREEN14.31s,0warnings; independent lead gate pending, no legal-loadout or generic85 certification.

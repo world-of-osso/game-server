@@ -53,7 +53,6 @@ fn toyfx39_scarab_scatter_accepts_actual_source_slope_outer_ring() {
 }
 
 #[test]
-#[ignore = "RED: qualify target32 grounding versus stale exact selected-destination oracle"]
 fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     use crate::spell_cast::summon::SummonedCreature;
     use shared::components::{Npc, UnitIsPet, UnitSummonedBy};
@@ -83,6 +82,25 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
     )
     .unwrap()
     .position;
+    // TC Spell1614/1640–1641 and9286–9292: native32/noFORCE selects
+    // MovePositionToFirstCollision; Object2902–2906 calls allowed-Z.
+    // Object709–748 samples once from pre-clampY, then assigns that floor.
+    let selected_destination = destination;
+    let map = *h.app.world().get::<crate::maps::InMap>(h.caster).unwrap();
+    let probe = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .creature_ground_in(map, selected_destination);
+    let crate::ground::GroundProbe::Supported(floor) = probe else {
+        panic!("source32/noFORCE destination requires actual source floor: {probe:?}");
+    };
+    let destination = Vec3::new(selected_destination.x, floor, selected_destination.z);
+    assert_ne!(
+        destination.y.to_bits(),
+        selected_destination.y.to_bits(),
+        "this actual slope must expose the stale pre-grounding oracle"
+    );
     h.app.insert_resource(store);
     h.app.insert_resource(toy_catalog::load(&conn).unwrap());
     h.app.insert_resource(shared_item_templates(&path));
@@ -142,16 +160,25 @@ fn toyfx39_scarab_storm_preserves_source_count_scatter_follow_and_lifetime() {
             Vec3::new(position.x, position.y, position.z)
         })
         .collect();
+    let first_destination = points
+        .iter()
+        .find(|point| point.x == destination.x && point.z == destination.z)
+        .expect("one guardian retains the exact selected horizontal destination");
+    assert_eq!(
+        first_destination.y.to_bits(),
+        destination.y.to_bits(),
+        "first guardian must retain the bit-exact allowed-Z floor from the same pre-clampY ray"
+    );
     assert!(
         points.contains(&destination),
-        "the first guardian retains the exact selected destination"
+        "first guardian retains exact grounded destination"
     );
     {
         let map = *world.get::<crate::maps::InMap>(caster).unwrap();
         let mut ground = world.resource_mut::<crate::ground::GroundMap>();
         for point in &points {
-            // SummonGuardian retains the first selected destination; only secondary
-            // GetRandomPoint placements project elevation onto the map.
+            // SummonGuardian retains the first already-grounded target32 destination;
+            // secondary GetRandomPoint placements independently project their elevation.
             if *point == destination {
                 continue;
             }

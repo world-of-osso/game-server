@@ -586,9 +586,15 @@ Source135's maintained import and actual-use omissions were reproduced before ad
 
 Noble Gardener125 now has the actual saved-bind/shared2309 contract alongside four prior holiday roots. Citizens126 remains refused at the source child's permanent Personal Anchor dummy; its new actual-learning refusal test proves no partial actor/effect or recovery spending, not a successful summon. [Exact source124–129 matrix and retained proof scopes](../../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17) distinguish these from native garment/surfing/zero-entry/script appearance gaps. No production admission.
 
+## Scarab target32 grounded oracle (2026-10-18)
+
+Native92146 is SUMMON28, implicit32+0 and Attr9=0. TC Spell1614/1640–1641/9286–9292 selects MovePositionToFirstCollision, whose Object2904 calls UpdateAllowedPositionZ. Object709–748 samples height once from the computed pre-clamp elevation. Therefore the first Scarab retains the post-grounding destination, not raw `effect_dest` Y. After hi609, the old pre-grounding oracle became stale; production grounding is correctly scoped.
+
+The corrected test independently samples the same selectedXZ/pre-clampY ray, requires this actual slope to distinguish old/new height, retains exact horizontal coordinates and strict floor bits, and leaves count/scatter/follow/lifetime checks unchanged. Ignored REDbe5cd97ae reproduces the original first-destination failure39.32s; corrected GREEN is pending. No production code changes. [Contract](../../specs/toys.md), [target32 grounding](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite).
+
 ## Scarab source scatter metric (2026-10-17)
 
-The first guardian retains the exact selected destination; secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
+The first guardian retains the exact selected destination after target32 grounding (see above); secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
 
 ## Dragon costume simulation lifecycle (2026-10-17)
 
