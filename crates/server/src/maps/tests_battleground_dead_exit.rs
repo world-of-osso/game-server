@@ -4,7 +4,6 @@ use shared::components::Mana;
 use shared::death::DeathState;
 
 #[test]
-#[ignore = "RED: ordinary battlefield exit does not fully resurrect"]
 fn pvp_dead_exit_concrete_resurrects_and_clears_corpse_before_return() {
     let (mut h, players, _database) = pending_battleground(1018);
     enter_all(&mut h, &players);
@@ -12,7 +11,6 @@ fn pvp_dead_exit_concrete_resurrects_and_clears_corpse_before_return() {
 }
 
 #[test]
-#[ignore = "RED: ordinary battlefield exit does not fully resurrect"]
 fn pvp_dead_exit_random_resurrects_and_clears_corpse_before_return() {
     let (mut h, players, _database) = pending_battleground(32);
     enter_all(&mut h, &players);
@@ -20,7 +18,6 @@ fn pvp_dead_exit_random_resurrects_and_clears_corpse_before_return() {
 }
 
 #[test]
-#[ignore = "RED: ordinary battlefield exit does not fully resurrect"]
 fn pvp_dead_exit_surviving_arena_resurrects_and_clears_corpse_before_return() {
     let (mut h, players, _database) = pending_arena(25);
     enter_all(&mut h, &players);
