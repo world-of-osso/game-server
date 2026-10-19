@@ -6,7 +6,7 @@
 - [x] Actual bag learning and UseToy must preserve the existing persisted-homebind requirement, source10000ms cast and shared charge2309 (one charge/1800000ms recharge). No early teleport/SpellGo, no charge spent for absent bind, and successful use blocks its sibling while preserving health/model.
 - [x] Selected Toy import must preserve unrelated catalog rows, remain idempotent and reject a requested missing source identity before mutation. Existing full-catalog import remains available explicitly without selection.
 
-The shared census oracle preserves the named Full1166 baseline and adds only explicitly published build70448 identities from these hearthstones and the [stationary cosmetics](#expanded-build70448-stationary-loa-cosmetics). Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare total must not replace the historical baseline or silently admit other source-only toys.
+The shared census oracle preserves the named Full1166 baseline and adds only explicitly published build70448 identities from these hearthstones, the [stationary cosmetics](#expanded-build70448-stationary-loa-cosmetics) and the [footstep cosmetics](#expanded-build70448-footstep-cosmetics). Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare total must not replace the historical baseline or silently admit other source-only toys.
 
 CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Other newly approved toys are separate batches.
 
@@ -24,6 +24,8 @@ This batch does not authorize generic dummy4 support, alter source weights or im
 - [ ] Trail of Halazzi280821/1309828 (Toy1764) and Rite of Jan'alai's Flame280825/1309844 (Toy1768) use source-exact Toy membership and actual bag learning/UseToy.
 - [ ] Apply the authored1800000ms owner cosmetic aura and3600000ms recovery. Real cancellation removes the aura without resetting recovery or changing health/body model/position; denied reuse produces no extra SpellGo.
 - [ ] Only these two named visual-only admissions and their published census item/name/spell triples may join this batch. Preserve Full1166 plus the five previously published extras; no bare total or generic dummy4 admission.
+
+The lead independently published the exact Toy1764/1768 source rows and40 local-CASC files/57 target paths before canonical admission proof. Only1309828 and1309844 enter the existing strict visual-only whitelist; append their item/name/spell triples to the five published census extras in the same branch.
 
 Footstep placement, movement-driven visual/particle events, audio playback and native rendering remain separate from CPU aura acceptance. World/asset publication is lead-owned after source-exact copied-world/CASC proof. Natural thirty-minute expiry/hour reuse and the three remaining scripted gaps are not inferred.
 

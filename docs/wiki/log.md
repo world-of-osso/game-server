@@ -1,3 +1,7 @@
+## 2026-10-18 — Batch2 landed; footstep70448 pair admission RED
+
+[Current matrix](../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-admission-red-2026-10-18): explicit tb625 stationary landing641cb2460, ancestry verified/feature branch deleted. New Halazzi/Jan'alai real-learning RED0/2/54.36s; lead exact twoToy-row and40file/57path publication; canonical aura4 RED0/2/30.71s. Two strict named admissions and same-branch census triples retain Full1166+seven; pair/all13 census/previous-family GREEN pending. Absolute canonical shared-protocol patch resolves stale native-root interface without protocol/cache mutation; no native footstep/particle claim.
+
 ## 2026-10-18 — Stationary70448 cosmetics admission RED and scoped repair
 
 [Source/RED/publication matrix](../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): rebase761→3ded411f0 onto rewrittenac36572bb with verified new ancestry. New-master learned-use RED0/3/78.01s; lead's exact threeToy INSERTs/34fresh-CASC files published; canonical aura4 admission RED0/3/59.41s. Minimal three-ID strict cosmetic admission plus same-branch published-census triples; canonical81c554bb1 GREEN20/0/151.90s includes all13census, prior3batch1 and absent-visual negative. Broad lead gate/source landing pending. Source30min/1h/cancel contract only; no genericdummy/native/full-duration/other-five claim.
