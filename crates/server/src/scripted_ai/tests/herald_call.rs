@@ -82,7 +82,7 @@ fn assert_call_ingress(difficulty: u32) {
     let active = h
         .app
         .world()
-        .get::<crate::spell_cast::CastState>(nazan)
+        .get::<shared::casting::CastState>(nazan)
         .expect("actual scheduled ordinary Fireball is active before descent");
     assert_eq!(active.spell_id, fireball);
     assert_eq!(h.app.world().get::<Position>(nazan), Some(&WEST));
@@ -107,7 +107,7 @@ fn assert_call_ingress(difficulty: u32) {
     assert!(
         h.app
             .world()
-            .get::<crate::spell_cast::CastState>(nazan)
+            .get::<shared::casting::CastState>(nazan)
             .is_none(),
         "DESCEND1 interrupts the real non-melee cast"
     );
