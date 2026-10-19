@@ -54,7 +54,10 @@ pub(super) fn can_be_interrupted(
         .categories
         .as_ref()
         .map_or(0, |category| category.prevention_type);
-    (ignore_immunity || !immune) && !protected && prevention & PREVENTION_SILENCE != 0
+    let immunity_allows = ignore_immunity || !immune;
+    let aura_allows = !protected;
+    let prevention_allows = prevention & PREVENTION_SILENCE != 0;
+    immunity_allows && aura_allows && prevention_allows
 }
 
 fn intrinsic_override(world: &World, spell: &SpellInfo, target: Entity) -> bool {
@@ -62,10 +65,12 @@ fn intrinsic_override(world: &World, spell: &SpellInfo, target: Entity) -> bool 
         return true;
     }
     spell.interrupts.as_ref().is_some_and(|flags| {
-        flags.channel_interrupt_flags[0] & CHANNEL_DAMAGE_OR_ENTERING_COMBAT != 0
-            || flags.interrupt_flags & DAMAGE_CANCELS != 0
-            || world.get::<Player>(target).is_some()
-                && flags.interrupt_flags & DAMAGE_CANCELS_PLAYER_ONLY != 0
+        let channel_allows =
+            flags.channel_interrupt_flags[0] & CHANNEL_DAMAGE_OR_ENTERING_COMBAT != 0;
+        let damage_cancels = flags.interrupt_flags & DAMAGE_CANCELS != 0;
+        let player_damage_cancels = flags.interrupt_flags & DAMAGE_CANCELS_PLAYER_ONLY != 0;
+        let player_override = world.get::<Player>(target).is_some() && player_damage_cancels;
+        channel_allows || damage_cancels || player_override
     })
 }
 
