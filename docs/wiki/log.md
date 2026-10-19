@@ -3198,3 +3198,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Swiftmend native prerequisite qualification
 
 [Qualification](investigations/follower-data.md#swiftmend-prerequisite-qualification--2026-10-19): test-onlydecf6a597, native18562/noHoT wronglyacceptedRED; real774/actualhealPASS; lowernoHoTversushigherHoTfollowerpatientselectionRED. Explicitignoredrun1PASS/2FAIL22.71s/zero warnings, all3remainignored. Backendboundaryfailsfirst; no follower-onlyworkaround or productionchangeauthorized.
+
+## 2026-10-19 — Swiftmend computed-state backend and generic patient eligibility
+
+[Source/capabilities/proof](investigations/follower-data.md#computed-target-state-and-eligible-patient-ranking--2026-10-19): onlystate15computed, ANYcasterHoT, exactownerrelation/namedfollowerpolicy; originalownernegativecorrectedtoself. SourceRED3/2→backend4/1→separatelyapprovedsharedtargetpredicatebeforehealthrank7GREEN; final278PASS/8existingignored535.73s, privateAzurefrontalexplicitLOCALskip, check43.07s/fmtPASS. Uncomputedstatesnotfalse; no18562override orpriority/timer/movement/pet/planner change. Pushed7938b558d; leadgatepending.
