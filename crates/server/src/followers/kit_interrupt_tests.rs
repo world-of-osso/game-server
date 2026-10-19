@@ -11,11 +11,8 @@ use shared::protocol::CombatLogKind;
 fn follower_kit_interrupt_does_not_spend_on_noninterruptible_cast() {
     let (mut h, unit) = level32(209059);
     utility_tests::start_enemy_fireball(&mut h, unit);
-    h.app
-        .world_mut()
-        .get_mut::<CastState>(h.npc)
-        .unwrap()
-        .interruptible = false;
+    let enemy = h.npc;
+    utility_tests::protect_enemy_cast_with_native_interrupt_immunity(&mut h, enemy);
     update_ai(h.app.world_mut());
     h.advance(3);
     assert!(h.app.world().get::<CastState>(h.npc).is_some());

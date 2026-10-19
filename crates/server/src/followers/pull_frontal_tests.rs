@@ -516,24 +516,31 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
         f.h.app.world().get::<CastState>(f.boss).unwrap().spell_id,
         FISSURE
     );
-    // Native kicks may interrupt this cast; no cooldown, kit or interruptibility override.
+    // Native386660 has PreventionType0/Attributes7=0: ordinary kicks cannot interrupt it.
+    let mut fissure_proceeded = false;
     for _ in 0..80 {
         f.h.advance(1);
+        fissure_proceeded |=
+            f.h.app
+                .world()
+                .get::<CastState>(f.boss)
+                .is_some_and(|cast| cast.spell_id == FISSURE && cast.elapsed > 0.0);
     }
     assert!(
         crate::spell_cast::targets::is_alive(f.h.app.world(), f.boss),
         "native boss must remain alive for pose proof"
     );
     assert!(
-        f.h.inbox.log.iter().any(
+        !f.h.inbox.log.iter().any(
             |event| event.kind == shared::protocol::CombatLogKind::Interrupt
                 && event.target == Some(f.boss.to_bits())
                 && event.extra_spell_id == Some(FISSURE)
-                && event
-                    .source
-                    .is_some_and(|source| f.party.iter().any(|unit| unit.to_bits() == source))
         ),
-        "retained frontal knowledge must be observed after an actual native party kick, not a disabled interrupt or naturally completed cast"
+        "source PreventionType0/Attributes7=0 forbids an invented Fissure interrupt"
+    );
+    assert!(
+        fissure_proceeded,
+        "the actual sourced Fissure cast must proceed while facing remains protective"
     );
     assert!(
         f.party

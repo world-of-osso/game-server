@@ -53,6 +53,41 @@ pub(super) fn prepare_enemy_spec(
     );
 }
 
+pub(super) fn protect_enemy_cast_with_native_interrupt_immunity(
+    h: &mut crate::spell_cast::test_harness::Harness,
+    target: bevy::prelude::Entity,
+) {
+    const UNENDING_RESOLVE: u32 = 104773;
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(UNENDING_RESOLVE)
+        .unwrap();
+    assert!(
+        spell
+            .effects
+            .iter()
+            .any(|effect| effect.aura == 77 && effect.misc_values[0] == 26)
+    );
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: target,
+            target,
+            spell_id: UNENDING_RESOLVE,
+            effect_mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        target,
+        UNENDING_RESOLVE
+    ));
+}
+
 fn assert_follower_interrupt(entry: u32, interrupt: u32) {
     let (mut h, unit, _) = spawn_profile_fixture(entry);
     start_enemy_fireball(&mut h, unit);
@@ -161,11 +196,8 @@ fn follower_unready_interrupt_does_not_cancel_her_current_cast() {
 fn follower_does_not_waste_counterspell_on_non_interruptible_cast() {
     let (mut h, unit, _) = spawn_profile_fixture(209059);
     start_enemy_fireball(&mut h, unit);
-    h.app
-        .world_mut()
-        .get_mut::<CastState>(h.npc)
-        .unwrap()
-        .interruptible = false;
+    let enemy = h.npc;
+    protect_enemy_cast_with_native_interrupt_immunity(&mut h, enemy);
     update_ai(h.app.world_mut());
     h.advance(3);
     assert!(h.app.world().get::<CastState>(h.npc).is_some());
