@@ -33,6 +33,8 @@ mod azure_sprout_field_actions;
 mod azure_sprout_fields;
 #[path = "azure_sprouts.rs"]
 mod azure_sprouts;
+#[path = "azure_stomp_removal.rs"]
+mod azure_stomp_removal;
 #[path = "azure_telash.rs"]
 mod azure_telash;
 #[path = "azure_telash_return.rs"]

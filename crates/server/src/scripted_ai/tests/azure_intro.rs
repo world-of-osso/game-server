@@ -62,7 +62,7 @@ fn source_azure_copy() -> (Harness, Entity, InMap) {
     (h, leymor, map)
 }
 
-fn spawn_second_copy(h: &mut Harness) -> (Entity, InMap) {
+pub(super) fn spawn_second_copy(h: &mut Harness) -> (Entity, InMap) {
     let maps = h.app.world().resource::<MapStore>().clone();
     let map = h
         .app
