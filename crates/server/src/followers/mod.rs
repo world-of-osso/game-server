@@ -5,6 +5,7 @@ mod hazards;
 mod kit;
 mod kit_ai;
 mod kit_area;
+mod kit_interrupt;
 mod pack_identity;
 mod party;
 mod pull_admission;
