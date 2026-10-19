@@ -1,3 +1,7 @@
+## 2026-10-18 — Accepted toy sourced boundary and three named gaps
+
+[Current accepted matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../specs/toys.md#accepted-sourced-boundary): Full1166+seven published extras complete to current sourced boundary; ty639209/0/check0/fmt0 landed69ed3c682. Read-only batch4 research found no complete action contract for Aqir275039, Libram284159 or Quill286643; all accepted named gaps remain outside Toy membership. Numeric143823 is not a Glyph reward binding, and Quill's real scenario92 criterion is not its full party teleport action. No code/data/import/extraction change; native/full-duration proof remains separate.
+
 ## 2026-10-18 — Batch2 landed; footstep70448 pair admission RED
 
 [Current matrix](../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): explicit tb625 stationary landing641cb2460, ancestry verified/feature branch deleted. New Halazzi/Jan'alai real-learning RED0/2/54.36s; lead exact twoToy-row and40file/57path publication; canonical aura4 RED0/2/30.71s. Two strict named admissions and same-branch census triples retain Full1166+seven; canonical1e5e55ae0 pair/all13 census/previous-family/absent-visual GREEN22/0/76.90s; lead broad gate/source landing pending. Absolute canonical shared-protocol patch resolves stale native-root interface without protocol/cache mutation; no native footstep/particle claim.
