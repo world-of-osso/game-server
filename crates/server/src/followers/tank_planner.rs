@@ -100,6 +100,16 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
     {
         return false;
     }
+    let owns_run = world
+        .get::<super::party::FollowerRun>(follower.owner)
+        .is_some()
+        || world
+            .get::<super::stockade_diagnostic::DiagnosticParty>(follower.owner)
+            .is_some();
+    if !owns_run {
+        return false;
+    }
+    // Existing but incomplete run records still go through fail-closed admission.
     match read_movement_admission(world, tank, target, &follower, None) {
         Ok(true) => return false,
         Ok(false) => debug!(?tank, ?target, "Tank pursuit held by pull budget"),
