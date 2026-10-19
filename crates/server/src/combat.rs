@@ -1072,6 +1072,7 @@ fn read_outcome_chances(
     let crit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
             + auras.modifier(crate::auras::handlers::MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE)
+            + caster_crit_modifier(auras, attacker.entity)
     });
     let npc_crit_modifier = if attacker.creature {
         attacker.mods.map_or(0.0, |mods| mods.npc_crit_pct)
@@ -1089,11 +1090,29 @@ fn read_outcome_chances(
     } else {
         chances.crit + npc_crit_modifier
     };
-    // Unit.cpp2924–2926 clamps source + victim187/197 BEFORE attacker334 at2387.
+    // Unit.cpp2911–2926 clamps source + victim187/197/matching306 BEFORE334 at2387.
     let crit_taken = (source_crit + crit_modifier).max(0.0);
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (crit_taken + autoattack_crit_modifier).max(0.0);
     chances
+}
+
+/// TC Unit.cpp2911–2914: recipient306 belongs only to its actual aura caster.
+fn caster_crit_modifier(auras: &crate::auras::ActiveAuras, attacker: Entity) -> f32 {
+    auras
+        .iter()
+        .filter(|aura| aura.caster == attacker)
+        .map(|aura| {
+            let stacks = aura.stack_multiplier();
+            aura.effects
+                .iter()
+                .filter(|effect| {
+                    effect.aura_type == crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER
+                })
+                .map(|effect| effect.amount * stacks)
+                .sum::<f32>()
+        })
+        .sum()
 }
 
 #[derive(Component)]
@@ -2173,6 +2192,9 @@ mod npc_weapon_crit_tests;
 #[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "combat_victim_caster_crit_tests.rs"]
+mod victim_caster_crit_tests;
 #[cfg(test)]
 #[path = "combat_victim_general_crit_tests.rs"]
 mod victim_general_crit_tests;

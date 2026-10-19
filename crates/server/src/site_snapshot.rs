@@ -592,6 +592,7 @@ fn query_saved_progression(
 #[cfg(test)]
 mod tests {
     use super::*;
+    include!("site_snapshot_blp_qualification.rs");
     fn run(args: Vec<String>) -> Result<()> {
         super::run_at(args, 100)
     }
