@@ -1,3 +1,7 @@
+## Master-native forecast integration
+
+[Forecast and targeted proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):8ed245c42 merges72ee66aa4/P_f9a9175 and repairs tb622 compile failures using actual source aura251/240 and production expertise divisor. Existing quantized native roll weights are available outside tests; no substitute roll or zeroed fields. Native12Stockade GREEN155.18s, owned-eye Azure actual-kick/104 GREEN34.67s, both0warnings; non-testcheck/fmt PASS. Lead gate and broader planner/provider remain open.
+
 ## Measured Overheat refusal origins
 
 [Native origin/boundary proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):88b0309ac/P_a2b enumerates144authored origins, eight native-valid disposable kit/chase fixtures; four retain refusal/unengaged exposure/live12466 through ten50ms boundaries, zero movement violations. Native1PASS402.99s/0warnings, no input/prerequisite failures. Focused control uses measured20375694; positive20375738 remains existing defense. No runtime change/tuning; focused regression and stronger actual-kick frontal assertion pending.
