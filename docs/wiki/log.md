@@ -1,3 +1,7 @@
+## 2026-10-19 — Bounded Telash live combat, no natural-field latency sample
+
+[Live result](investigations/follower-data.md#bounded-telash-live-observation--2026-10-19): landed e27/sharedF9, published eyes and whole-party harness staging;360.47s/286samples, ten natural Frost Bomb attempts interrupted by genuine follower kicks, zero fields/trace. All three distributions n=0; reaction policy not exercised. Main thread near one-core saturation/retained1.4–14.9Hz, no stress/realtime claim.429-file SHA archive, owned runtime/window cleaned. No disabled kicks, fabricated fields or retry.
+
 ## 2026-10-19 — Azure live prerequisites and eye receipt
 
 [Investigation](investigations/follower-data.md#azure-live-prerequisites--2026-10-19): native admission works; exact owned navigation disconnects entrance/Telash despite local coverage. Book/spell destination bindings remain explicitly unsourced; no blind rebake or gameplay traversal claim. Existing eye producer reloads134 displays/1340 poses, native1PASS; missing-row fragment awaits independent lead publication preserving existing rows/scales/mappings. Natural hazard latency n=0.
