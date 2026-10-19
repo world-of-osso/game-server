@@ -1108,8 +1108,14 @@ fn professions_favorites_require_known_recipe_and_reopen_per_character_without_c
     let path = directory.path().join("recipe-favorites.redb");
     let db = redb::Database::create(&path).unwrap();
     persistence::create_tables(&db);
-    let mut h = harness_with(10, |app| { app.insert_resource(GameDatabase::new(db)); }).unwrap();
-    h.app.world_mut().entity_mut(h.connection).insert(pair::<SetRecipeFavorite>());
+    let mut h = harness_with(10, |app| {
+        app.insert_resource(GameDatabase::new(db));
+    })
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .insert(pair::<SetRecipeFavorite>());
     h.set_gold(1000);
     let npc = h.open_trainer(5564);
     h.buy(npc, 264578);
@@ -1128,11 +1134,24 @@ fn professions_favorites_require_known_recipe_and_reopen_per_character_without_c
     let professions = h.professions();
     let currencies = persistence::load_currencies(h.db(), h.character_id);
     for favorite in [true, false] {
-        h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite { spell_id: 2153, favorite });
-        assert_eq!(h.take::<ProfessionSnapshot>().last(), Some(&initial), "unlearned favorite must return unchanged owner state");
-        assert_eq!(persistence::load_inventory(h.db(), h.character_id), inventory);
+        h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite {
+            spell_id: 2153,
+            favorite,
+        });
+        assert_eq!(
+            h.take::<ProfessionSnapshot>().last(),
+            Some(&initial),
+            "unlearned favorite must return unchanged owner state"
+        );
+        assert_eq!(
+            persistence::load_inventory(h.db(), h.character_id),
+            inventory
+        );
         assert_eq!(h.professions(), professions);
-        assert_eq!(persistence::load_currencies(h.db(), h.character_id), currencies);
+        assert_eq!(
+            persistence::load_currencies(h.db(), h.character_id),
+            currencies
+        );
         assert!(!h.casting());
     }
     h.buy(npc, 2153);
@@ -1143,45 +1162,109 @@ fn professions_favorites_require_known_recipe_and_reopen_per_character_without_c
     let learned = h.professions();
     let inventory = persistence::load_inventory(h.db(), h.character_id);
     for favorite in [true, false, true] {
-        h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite { spell_id: 2153, favorite });
-        let reply = h.take::<ProfessionSnapshot>().pop().expect("favorite owner update");
+        h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite {
+            spell_id: 2153,
+            favorite,
+        });
+        let reply = h
+            .take::<ProfessionSnapshot>()
+            .pop()
+            .expect("favorite owner update");
         assert_eq!(reply.favorites, if favorite { vec![2153] } else { vec![] });
         assert_eq!(h.professions(), learned);
-        assert_eq!(persistence::load_professions(h.db(), h.character_id), learned);
-        assert_eq!(persistence::load_inventory(h.db(), h.character_id), inventory);
-        assert_eq!(persistence::load_currencies(h.db(), h.character_id), currencies);
+        assert_eq!(
+            persistence::load_professions(h.db(), h.character_id),
+            learned
+        );
+        assert_eq!(
+            persistence::load_inventory(h.db(), h.character_id),
+            inventory
+        );
+        assert_eq!(
+            persistence::load_currencies(h.db(), h.character_id),
+            currencies
+        );
         assert!(!h.casting());
     }
     // Close the actual database, discard the old owner/connection, then open fresh state.
     let owner = h.character_id;
     assert!(h.app.world_mut().despawn(h.connection));
     assert!(h.app.world_mut().despawn(h.player));
-    drop(h.app.world_mut().remove_resource::<GameDatabase>().unwrap().into_database());
+    drop(
+        h.app
+            .world_mut()
+            .remove_resource::<GameDatabase>()
+            .unwrap()
+            .into_database(),
+    );
     let reopened = redb::Database::open(&path).unwrap();
     let saved = persistence::load_professions(&reopened, owner);
     h.app.insert_resource(GameDatabase::new(reopened));
     h.player = h.app.world_mut().spawn((ClientId(owner), saved)).id();
-    h.connection = h.app.world_mut().spawn((
-        RemoteId(PeerId::Local(1)), Connected, HostClient { buffer: Vec::new() },
-        Authenticated { account_id: 1 }, InWorld { character_id: owner }, PlayerLink(h.player),
-        pair::<ProfessionSnapshot>(), pair::<SetRecipeFavorite>(),
-    )).id();
+    h.connection = h
+        .app
+        .world_mut()
+        .spawn((
+            RemoteId(PeerId::Local(1)),
+            Connected,
+            HostClient { buffer: Vec::new() },
+            Authenticated { account_id: 1 },
+            InWorld {
+                character_id: owner,
+            },
+            PlayerLink(h.player),
+            pair::<ProfessionSnapshot>(),
+            pair::<SetRecipeFavorite>(),
+        ))
+        .id();
     h.advance(4);
-    let reopened = h.take::<ProfessionSnapshot>().pop().expect("fresh owner snapshot after reopen");
+    let reopened = h
+        .take::<ProfessionSnapshot>()
+        .pop()
+        .expect("fresh owner snapshot after reopen");
     assert_eq!(reopened.favorites, [2153]);
     assert_eq!(reopened.spells, learned.spells);
     assert_eq!(persistence::load_inventory(h.db(), owner), inventory);
     let (other, _) = persistence::create_character(h.db(), 1, "Othercrafter", 1, 1).unwrap();
     // Same-account isolation fixture; copied knowledge is not acquisition evidence.
-    let other_player = h.app.world_mut().spawn((ClientId(other), learned.clone())).id();
-    h.app.world_mut().entity_mut(h.connection).insert((PlayerLink(other_player), InWorld { character_id: other }));
-    h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite { spell_id: 2153, favorite: false });
-    assert!(h.take::<ProfessionSnapshot>().last().unwrap().favorites.is_empty());
-    h.app.world_mut().entity_mut(h.connection).insert((PlayerLink(h.player), InWorld { character_id: owner }));
+    let other_player = h
+        .app
+        .world_mut()
+        .spawn((ClientId(other), learned.clone()))
+        .id();
+    h.app.world_mut().entity_mut(h.connection).insert((
+        PlayerLink(other_player),
+        InWorld {
+            character_id: other,
+        },
+    ));
+    h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite {
+        spell_id: 2153,
+        favorite: false,
+    });
+    assert!(
+        h.take::<ProfessionSnapshot>()
+            .last()
+            .unwrap()
+            .favorites
+            .is_empty()
+    );
+    h.app.world_mut().entity_mut(h.connection).insert((
+        PlayerLink(h.player),
+        InWorld {
+            character_id: owner,
+        },
+    ));
     // Fresh owner projection reads persistence without re-favoriting and masking an account-key bug.
-    h.app.world_mut().entity_mut(h.player).insert(learned.clone());
+    h.app
+        .world_mut()
+        .entity_mut(h.player)
+        .insert(learned.clone());
     h.advance(4);
-    assert_eq!(h.take::<ProfessionSnapshot>().last().unwrap().favorites, [2153]);
+    assert_eq!(
+        h.take::<ProfessionSnapshot>().last().unwrap().favorites,
+        [2153]
+    );
     assert_eq!(persistence::load_inventory(h.db(), owner), inventory);
     assert_eq!(persistence::load_professions(h.db(), owner), learned);
 }

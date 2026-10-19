@@ -743,7 +743,12 @@ pub(crate) fn save_and_send_professions(
     for (player, character_id, profs) in &changed {
         persistence::save_professions(&db.db, character_id.0, profs);
         if let Some((_, mut sender)) = connections.iter_mut().find(|(link, _)| link.0 == player) {
-            sender.send::<ProfessionChannel>(favorites::load_snapshot(&db.db, character_id.0, profs, &data));
+            sender.send::<ProfessionChannel>(favorites::load_snapshot(
+                &db.db,
+                character_id.0,
+                profs,
+                &data,
+            ));
         }
     }
 }
