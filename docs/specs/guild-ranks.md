@@ -14,6 +14,13 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Promote/demote requires its flag and a lower-ranked target in the same guild. Promotion never reaches the actor's rank; rank 0 never changes.
 - [ ] Names are nonempty, at most 15 characters, without control characters.
 
+### Online member zone
+- [ ] Guild member snapshots carry an optional actual zone label only for online members, resolved through existing GroundMap area and AreaTable zone authority and real `area_table.AreaName_lang` data. Missing position/map/area/name and offline members produce None; no map-name or ZoneN substitute.
+- [ ] New guild queries and existing state refresh paths recompute online labels, preserve guild membership/note privacy, and never persist the presentation label as player position authority.
+- Source: TC a352b1fa `Guild.cpp:1331–1352` AreaID; Mainline `CommunitiesMemberList.lua:115–120,1285–1297`, `GuildRoster.lua:115`.
+- Test: `guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_privacy`, actual HostClient query/reply consumed during Update. Behavioral RED preceded implementation; GREEN/joint gate/native proof pending.
+- Protocol/server/engine land together. Zone sorting, offline timestamps and Club/mobile presence are excluded.
+
 ### Direct member-rank assignment
 - [x] One authenticated `SetMemberRank { character_name, rank }` assigns the target directly to an existing zero-based rank in one rank/member transaction; no chained step requests. The actor/guild come from the connection and persisted membership, never the packet.
 - [x] Choose Demote when destination>current, Promote otherwise, matching pinned TC `Guild.cpp:1894–1930`. Recheck the corresponding right, reject self with the existing InvalidName refusal, and retain strict hierarchy: target and destination must both be below actor; rank0/out-of-range/cross-guild targets refuse without writes. Authorized unchanged destination leaves state unchanged; the source UI does not send current selection.

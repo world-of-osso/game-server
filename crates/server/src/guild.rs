@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
-use shared::components::{GuildMembership, Player};
+use shared::components::GuildMembership;
 use shared::protocol::{
     GuildChannel, GuildMemberSnapshot, GuildSnapshot, GuildStateUpdate, QueryGuild, SetGuildInfo,
     SetGuildMotd, SetGuildOfficerNote,
@@ -16,7 +16,6 @@ use crate::persistence_character::{
     load_guild_profile, save_guild_member_note, save_guild_profile,
 };
 use crate::persistence_types::{GuildMemberNoteData, GuildProfileData};
-use shared::components::Level;
 
 type NewConnections<'w, 's> = Query<
     'w,
@@ -31,15 +30,9 @@ type ActiveConnections<'w, 's> = Query<
     (With<Authenticated>, With<InWorld>),
 >;
 type GuildMemberships<'w, 's> = Query<'w, 's, &'static GuildMembership>;
-type OnlinePlayers<'w, 's> = Query<
-    'w,
-    's,
-    (
-        &'static Player,
-        &'static Level,
-        Option<&'static GuildMembership>,
-    ),
->;
+#[path = "guild_online_zone.rs"]
+mod online_zone;
+use online_zone::OnlinePlayers;
 type GuildSenders<'w, 's> = Query<'w, 's, &'static mut MessageSender<GuildStateUpdate>>;
 type GuildQueryReceivers<'w, 's> = Query<
     'w,
@@ -111,7 +104,8 @@ pub struct GuildPlugin;
 
 impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<crate::gold::GoldUpdateQueue>()
+        app.add_systems(Startup, online_zone::load_startup)
+            .init_resource::<crate::gold::GoldUpdateQueue>()
             .init_resource::<crate::guild_news_network::Subscribers>()
             .add_systems(
                 PostUpdate,
@@ -140,7 +134,7 @@ fn send_initial_guild_state(
     db: Res<GameDatabase>,
     connections: NewConnections,
     guilds: GuildMemberships,
-    online_players: OnlinePlayers,
+    mut online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
     for (conn_entity, link, world) in &connections {
@@ -152,7 +146,7 @@ fn send_initial_guild_state(
             Some(visible_guild_snapshot(
                 &db.db,
                 guild,
-                &online_players,
+                &mut online_players,
                 world.character_id,
             )),
             Some("guild loaded".into()),
@@ -166,7 +160,7 @@ fn process_query_requests(
     db: Res<GameDatabase>,
     mut receivers: GuildQueryReceivers,
     guilds: GuildMemberships,
-    online_players: OnlinePlayers,
+    mut online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
     for (conn_entity, link, mut receiver, world) in &mut receivers {
@@ -192,7 +186,7 @@ fn process_query_requests(
             Some(visible_guild_snapshot(
                 &db.db,
                 guild,
-                &online_players,
+                &mut online_players,
                 world.character_id,
             )),
             Some("guild refreshed".into()),
@@ -208,7 +202,7 @@ fn process_profile_text_updates(
     mut info_receivers: GuildInfoReceivers,
     connections: ActiveConnections,
     guilds: GuildMemberships,
-    online_players: OnlinePlayers,
+    mut online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
     process_profile_text_requests(
@@ -216,7 +210,7 @@ fn process_profile_text_updates(
         &mut motd_receivers,
         &connections,
         &guilds,
-        &online_players,
+        &mut online_players,
         &mut senders,
         |profile, text| {
             profile.motd = text;
@@ -228,7 +222,7 @@ fn process_profile_text_updates(
         &mut info_receivers,
         &connections,
         &guilds,
-        &online_players,
+        &mut online_players,
         &mut senders,
         |profile, text| {
             profile.info_text = text;
@@ -242,7 +236,7 @@ fn process_profile_text_requests<Request, Apply>(
     receivers: &mut GuildProfileReceivers<Request>,
     connections: &ActiveConnections,
     guilds: &GuildMemberships,
-    online_players: &OnlinePlayers,
+    online_players: &mut OnlinePlayers,
     senders: &mut GuildSenders,
     apply: Apply,
 ) where
@@ -305,7 +299,7 @@ fn process_set_officer_note_requests(
     mut receivers: GuildOfficerNoteReceivers,
     connections: ActiveConnections,
     guilds: GuildMemberships,
-    online_players: OnlinePlayers,
+    mut online_players: OnlinePlayers,
     mut senders: GuildSenders,
 ) {
     for (conn_entity, link, mut receiver, world) in &mut receivers {
@@ -342,14 +336,14 @@ fn process_set_officer_note_requests(
                     &db.db,
                     &connections,
                     &guilds,
-                    &online_players,
+                    &mut online_players,
                     guild,
                     message,
                     &mut senders,
                 ),
                 Err(error) => send_officer_note_error(
                     &db.db,
-                    &online_players,
+                    &mut online_players,
                     guild,
                     conn_entity,
                     world.character_id,
@@ -375,7 +369,7 @@ fn broadcast_officer_note_update(
     db: &redb::Database,
     connections: &ActiveConnections,
     guilds: &GuildMemberships,
-    online_players: &OnlinePlayers,
+    online_players: &mut OnlinePlayers,
     guild: &GuildMembership,
     message: String,
     senders: &mut GuildSenders,
@@ -396,7 +390,7 @@ fn broadcast_officer_note_update(
 
 fn send_officer_note_error(
     db: &redb::Database,
-    online_players: &OnlinePlayers,
+    online_players: &mut OnlinePlayers,
     guild: &GuildMembership,
     conn_entity: Entity,
     viewer: u64,
@@ -450,7 +444,7 @@ fn broadcast_guild_update(
     db: &redb::Database,
     connections: &ActiveConnections,
     guilds: &GuildMemberships,
-    online_players: &OnlinePlayers,
+    online_players: &mut OnlinePlayers,
     guild: &GuildMembership,
     meta: GuildUpdateMeta,
     senders: &mut GuildSenders,
@@ -502,14 +496,14 @@ pub(crate) fn broadcast_registered_tabard(
         OnlinePlayers,
         GuildSenders,
     )> = bevy::ecs::system::SystemState::new(world);
-    let (db, connections, guilds, players, mut senders) = state
+    let (db, connections, guilds, mut players, mut senders) = state
         .get_mut(world)
         .expect("load guild tabard broadcast system parameters");
     broadcast_guild_update(
         &db.db,
         &connections,
         &guilds,
-        &players,
+        &mut players,
         guild,
         GuildUpdateMeta {
             message: Some("Guild Emblem saved.".into()),
@@ -522,7 +516,7 @@ pub(crate) fn broadcast_registered_tabard(
 fn visible_guild_snapshot(
     db: &redb::Database,
     guild: &GuildMembership,
-    online: &OnlinePlayers,
+    online: &mut OnlinePlayers,
     viewer: u64,
 ) -> GuildSnapshot {
     let mut snapshot = build_guild_snapshot(db, guild, online, viewer);
@@ -542,11 +536,11 @@ fn visible_guild_snapshot(
 fn build_guild_snapshot(
     db: &redb::Database,
     guild: &GuildMembership,
-    online_players: &OnlinePlayers,
+    online_players: &mut OnlinePlayers,
     viewer: u64,
 ) -> GuildSnapshot {
     let profile = load_guild_profile(db, guild.guild_id);
-    let online = online_member_map(online_players, guild.guild_id);
+    let online = online_players.member_map(guild.guild_id);
     let ranks = crate::persistence::banks::load_guild(db, guild.guild_id);
     let members = list_guild_members(db, guild.guild_id)
         .into_iter()
@@ -590,6 +584,7 @@ fn build_member_snapshot(
         officer_note,
         public_note: crate::persistence_character::load_guild_public_note(db, member.character_id),
         is_self: false,
+        online_zone: online_state.and_then(|state| state.online_zone.clone()),
         last_online: if online_state.is_some() {
             "Online".into()
         } else {
@@ -602,27 +597,7 @@ fn build_member_snapshot(
 struct OnlineMemberState {
     level: u16,
     class_name: String,
-}
-
-fn online_member_map(
-    players: &OnlinePlayers,
-    guild_id: u32,
-) -> BTreeMap<String, OnlineMemberState> {
-    players
-        .iter()
-        .filter_map(|(player, level, guild)| {
-            let guild = guild?;
-            (guild.guild_id == guild_id).then(|| {
-                (
-                    player.name.clone(),
-                    OnlineMemberState {
-                        level: level.0 as u16,
-                        class_name: class_name_from_id(player.class),
-                    },
-                )
-            })
-        })
-        .collect()
+    online_zone: Option<String>,
 }
 
 fn send_guild_update(
@@ -738,6 +713,7 @@ mod tests {
                 OnlineMemberState {
                     level: 60,
                     class_name: "Priest".into(),
+                    online_zone: None,
                 },
             )]),
             &crate::persistence::banks::GuildData::default(),

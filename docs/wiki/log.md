@@ -3111,3 +3111,7 @@ Native fixture RED→GREEN2 at91fa9b74d: concrete points/time/death/title and di
 
 Explicit admitted unit_transform sampling replaces incomplete UnitPick traversal. Actual52.365s failed Stockade capture has all5pose/facing tracks; real143spawns/nav34 SVG+PNG inspected/published with FAILED/no-boss title. Original63s gap/failure record preserved. No clear/retry/server-panic fix claimed; owned5981 cold/windows cleared; independent lead gate pending.
 - 2026-10-18: Shared MH2O raw records; frozen independent client/server layers, errors, queries and navigation water-bound baseline. See [shared formats](systems/wow-formats.md).
+
+## 2026-10-19 — Online guild zone producer
+
+Existing guild snapshot paths now resolve same-guild online map/position through GroundMap→AreaTable and startup-loaded authentic labels; None for unavailable/offline. Native HostClient behavioral RED precedes implementation; GREEN/coordinated gate/native pending.

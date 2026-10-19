@@ -36,3 +36,7 @@ Four inspected1920×1080 originals are under `/syncthing/AgentShared/2026-10-15/
 ## See Also
 
 - [Banks](banks.md) — separate per-tab item/money history and guild authority.
+
+## Online member zone
+
+`guild_online_zone.rs` extends the existing online-member query parameter with the existing GroundMap/AreaTable resources and a startup-loaded read-only zone-name catalog. Each existing guild snapshot path resolves only same-guild online actors' actual map/position to area, then the existing flagged immediate-parent zone, then its real AreaName_lang. Missing authority yields None. The label is not persisted or used as movement authority; offline state and recipient-filtered officer notes stay unchanged. No new per-frame mirror, sort, map-name substitute or network request. Protocol/consumer land together. Actual HostClient fixture delivers its reply into an Update observer before Lightyear's Last cleanup; earlier out-of-frame receiver inspection was a fixture error, not product RED. See [contract](../../specs/guild-ranks.md#online-member-zone). GREEN/gate/native pending.

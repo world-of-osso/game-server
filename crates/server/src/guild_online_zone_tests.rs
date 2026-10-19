@@ -2,7 +2,7 @@
 use super::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
-use shared::components::{CharacterAppearance, Position};
+use shared::components::{CharacterAppearance, Level, Player, Position};
 use shared::protocol::ProtocolPlugin;
 use std::time::Duration;
 
@@ -100,6 +100,7 @@ fn guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_priva
     });
     app.add_plugins(ProtocolPlugin);
     let catalog = catalog();
+    app.insert_resource(online_zone::load_names(&catalog).unwrap());
     app.insert_resource(crate::area_table::load_area_table(&catalog).unwrap());
     let goldshire = Vec3::new(-9465.0, 63.0, 43.0);
     let westfall = Vec3::new(-10542.0, 40.0, -1069.0);
