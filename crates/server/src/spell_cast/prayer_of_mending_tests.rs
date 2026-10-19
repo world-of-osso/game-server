@@ -39,6 +39,7 @@ fn ordinary_damage_to(h: &mut Harness, target: Entity) {
 
 /// Only the authored zero-delay Annihilation and24yd/s Fireball9053 are used.
 fn native_damage_to(h: &mut Harness, spell: u32, target: Entity) {
+    wait_for_native_spell_ready(h, spell);
     crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, spell, Some(target), false).unwrap();
     let dt = h.app.world().resource::<bevy::prelude::Time>().delta_secs();
     let cast_frames = h.app.world().get::<CastState>(h.npc).map_or(0, |cast| {
@@ -61,6 +62,33 @@ fn native_damage_to(h: &mut Harness, spell: u32, target: Entity) {
         0.0
     };
     h.advance(cast_frames + (flight / dt).ceil() as usize + 3);
+}
+
+/// Advance the real clock to the NPC's authored spell/category/GCD readiness.
+/// Fireball9053 has native4000ms recovery; no histories or cooldowns are reset.
+fn wait_for_native_spell_ready(h: &mut Harness, spell_id: u32) {
+    let world = h.app.world();
+    let Some(history) = world.get::<super::SpellHistory>(h.npc) else {
+        return;
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .unwrap();
+    let category = spell.categories.as_ref().map_or(0, |row| row.category);
+    let now = super::history_now(world);
+    let ready = [
+        history.spell_ready_at.get(&spell_id),
+        history.category_ready_at.get(&category),
+        history.gcd_ready_at.get(&super::gcd_category(spell)),
+    ]
+    .into_iter()
+    .flatten()
+    .fold(now, |ready, at| ready.max(*at));
+    if ready > now {
+        let dt = world.resource::<bevy::prelude::Time>().delta_secs_f64();
+        h.advance(((ready - now) / dt).ceil() as usize + 1);
+    }
 }
 
 fn unit_distance(h: &Harness, from: Entity, to: Entity) -> f32 {
