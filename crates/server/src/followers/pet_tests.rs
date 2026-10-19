@@ -234,11 +234,8 @@ fn follower_lantha_felguard_cooldown_preserves_damage_priority() {
 fn follower_lantha_felguard_does_not_waste_axe_toss_on_non_interruptible_fireball() {
     let (mut f, pet) = felguard_at_level(17);
     super::utility_tests::start_enemy_fireball(&mut f.h, pet);
-    f.h.app
-        .world_mut()
-        .get_mut::<shared::casting::CastState>(f.h.npc)
-        .unwrap()
-        .interruptible = false;
+    let enemy = f.h.npc;
+    super::utility_tests::protect_enemy_cast_with_native_interrupt_immunity(&mut f.h, enemy);
     super::update_ai(f.h.app.world_mut());
     f.h.advance(8);
     assert!(

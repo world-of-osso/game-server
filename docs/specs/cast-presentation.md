@@ -19,6 +19,18 @@ Server-side spell casting in `crates/server/src/spell_cast/`: validation, cast b
 - [x] Replicate indexed rune ready times and full recharge duration, including queued runes' wait. Resend on spend, completion, duration or rune-count changes, not countdown ticks.
 - [x] Use contract `CastFailReason` variants directly; `NotSupported` names the cause in `detail`.
 
+## Source interrupt eligibility
+
+Normal and channeled casts use the full TrinityCore `SpellInfo::CanBeInterrupted` rule rather
+than unconditional eligibility: attr7 `NO_UI_NOT_INTERRUPTIBLE`, channel Damage/EnteringCombat
+flags, player-only DamageCancels, DamageCancels0x400, the interrupter's exact-spell
+ALLOW_INTERRUPT_SPELL aura, or SILENCE PreventionType with target MECHANIC_INTERRUPT immunity
+and matching PREVENT_INTERRUPT checks. Missing SpellCategories means PreventionType0. Early
+positive terms retain TC's bypass precedence; ignore-immunity bypasses only mechanic immunity.
+Followers keep ordinary kicks and native spell data. An ineligible cast produces no interrupt
+log or school lockout. Source eligibility is distinct from damage pushback and forced CastStop.
+Existing kit/test conflicts must be reported before GREEN, not weakened to fit the fix.
+
 ## Spell queue window
 
 - [x] Hold one player spell request when a cast or the requested spell's GCD is still active and **both** have at most 750 ms remaining (the hasted-GCD floor; Retail and TrinityCore use 400 ms, widened by user decision 2026-10-15). A newer admitted request replaces the held spell and its target/witness. A newer immediately executable player request supersedes it too; rejected requests do not replace it.
