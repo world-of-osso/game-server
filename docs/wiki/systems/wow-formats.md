@@ -18,6 +18,12 @@ No assets are downloaded, copied or committed. No decompiled or leaked client so
 
 Projected views preserve the old runtime field boundary rather than adopting unrelated rendering validation: a58-byte FDID MODF without scale,8-byte MOHD prefix and MAID without unused trailing companion fields remain sufficient. Scale-bearing MODF still requires its scale bytes; missing/short GFID and path MODF still fail. Unvisited malformed render tails remain unvisited. Before/after both pass5 runtime/metadata tests; all11 metadata bins33288bytes and fresh4LOS+4NAV bins7196988bytes match byte-for-byte with identical inventories/sizes/SHA-256,113 input hashes unchanged. See the [runtime metadata proof ledger](../../handoffs/wow-formats-ground-metadata.md).
 
+## Runtime terrain heights
+
+`terrain_height.rs` reads fixed MCNK header fields and MCVT floats through shared projections. Root collection still validates the whole file before MH2O and individual MCNK parsing; first-MCVT selection, exact errors, low-hole widening, file-order liquid association, seam rounding, coordinates and four-triangle interpolation stay local. MH2O is unchanged. Raw header parsing does not require optional rendering payloads.
+
+The [height proof ledger](../../handoffs/wow-formats-runtime-heights.md) specifies frozen old-reader XY bits, full decoded-height/query bytes, malformed-input outcomes and the required Northshire/Jasperlode corpus. Before/after:23 height/harness tests and4 real ground controls pass;35/35 frozen receipt/bake files19,169,465B match exactly,115/115 real input hashes unchanged. Each required ADT has256 chunks and135428 frozen queries;17 synthetic cases preserve failure/selection boundaries. Server check/fmt pass; independent lead integration remains pending.
+
 ## Reference proof
 
 Reference captured with the pre-migration readers at rewritten server revision `ac36572bb`: existing LOS tests **16 passed / 0 failed / 4 ignored**. Stockade map34 reference `nav-bake` produced **4 LOS + 4 navigation tiles**, **7,196,988 bytes**; navigation collection contained39,791 triangles. SHA-256 inventory and an input superset of104 local asset files are recorded under `/home/osso/.worktrees/logs/wow_formats-phase2-*`. The after-reader gate must preserve those bytes and existing test outcomes; timing-bearing `report.txt` is not a binary-bake contract.
