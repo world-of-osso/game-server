@@ -132,6 +132,8 @@ pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 pub const MOD_ATTACKER_MELEE_CRIT_CHANCE: u32 = 187;
 /// TC Unit.cpp2924: victim-owned, included before the received-crit zero clamp.
 pub const MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: u32 = 197;
+/// TC Unit.cpp2911–2914: victim aura caster must equal the actual attacker.
+pub const MOD_CRIT_CHANCE_FOR_CASTER: u32 = 306;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
