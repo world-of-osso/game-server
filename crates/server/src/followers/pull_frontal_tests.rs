@@ -489,7 +489,19 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
         "real source Fissure must target its actual native current victim"
     );
     let mut started = false;
-    for _ in 0..100 {
+    for tick in 0..100 {
+        if tick % 20 == 0 {
+            let cast = f.h.app.world().get::<CastState>(f.boss);
+            let auras: Vec<_> =
+                f.h.app
+                    .world()
+                    .get::<crate::auras::ActiveAuras>(f.boss)
+                    .into_iter()
+                    .flat_map(|auras| auras.iter())
+                    .map(|aura| (aura.spell_id, aura.expires_at))
+                    .collect();
+            println!("FISSURE_SETUP tick={tick} cast={cast:?} auras={auras:?}");
+        }
         match crate::spell_cast::creature_cast(
             f.h.app.world_mut(),
             f.boss,
