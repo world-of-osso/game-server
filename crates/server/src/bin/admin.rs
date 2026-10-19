@@ -1301,6 +1301,27 @@ mod tests {
     }
 
     #[test]
+    fn parse_stage_follower_party_preserves_owner_map_and_wow_coordinates() {
+        let request = parse_request(&args(&[
+            "game-server-admin",
+            "stage-follower-party",
+            "Perfhazard",
+            "2515",
+            "-5358.65",
+            "1106.47",
+            "339.632",
+        ]));
+        let encoded = serde_json::to_value(request).unwrap();
+        assert_eq!(
+            encoded,
+            serde_json::json!({"StageFollowerParty":{
+                "character_name":"Perfhazard", "map_id":2515,
+                "x":-5358.65_f32, "y":1106.47_f32, "z":339.632_f32,
+            }})
+        );
+    }
+
+    #[test]
     fn parse_quest_complete_request() {
         let request = parse_request(&args(&[
             "game-server-admin",
