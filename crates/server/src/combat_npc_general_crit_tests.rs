@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::components::{Level, Position, UnitLevel};
 
-use crate::auras::{ActiveAuras, AuraApplication, AuraSource};
+use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+use shared::protocol::{CombatEvent, CombatEventType};
+
+use super::npc_expertise_tests::collect_broadcast_swings;
 use crate::spell_cast::test_harness::{Harness, harness, world_db};
 
 const NPC_BUFFS: u32 = 62_627;
@@ -94,6 +97,53 @@ fn assert_hit(h: &Harness) {
     assert_eq!(super::creature_miss_chance(Some(mods)), 0.0);
 }
 
+fn cancel(h: &mut Harness, actor: Entity, spell_id: u32) {
+    crate::auras::remove_auras(h.app.world_mut(), actor, RemoveReason::Cancelled, |a| {
+        a.spell_id == spell_id
+    });
+    h.advance(3);
+    assert!(!crate::auras::has_aura(h.app.world(), actor, spell_id));
+}
+
+fn swings(h: &mut Harness, victim: Entity, count: usize) -> Vec<CombatEvent> {
+    let npc = h.npc;
+    let events = collect_broadcast_swings(h, npc, victim, count);
+    assert_hit(h);
+    assert_eq!(modifier(h, victim, 187), 0.0);
+    assert!(
+        events.iter().all(|e| matches!(
+            e.event_type,
+            CombatEventType::MeleeDamage | CombatEventType::CriticalHit
+        ) && e.amount > 0.0),
+        "{events:?}"
+    );
+    events
+}
+
+fn assert_no_crit(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .all(|e| e.event_type == CombatEventType::MeleeDamage),
+        "{events:?}"
+    );
+}
+
+fn assert_both(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::CriticalHit),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::MeleeDamage),
+        "{events:?}"
+    );
+}
+
 fn qualify_lifetime(h: &mut Harness, spells: &[u32]) {
     let start = h.app.world().resource::<Time>().elapsed();
     h.advance(SWINGS * 60);
@@ -159,4 +209,105 @@ fn native_melee_npc_general_crit_weapon_combination_inputs_are_runtime_qualified
             .crit_pct,
         100.0
     );
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC290 consumer"]
+fn native_melee_npc_general_crit_positive_saturates_table() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    let npc = h.npc;
+    apply(&mut h, npc, POSITIVE, 1);
+    assert_eq!(modifier(&h, npc, 52), 0.0);
+    assert_eq!(modifier(&h, npc, 290), 100.0);
+    let events = swings(&mut h, victim, 5);
+    // Source105 saturates; old5% escapes only .05^5=3.125e-7.
+    assert!(
+        events
+            .iter()
+            .all(|e| e.event_type == CombatEventType::CriticalHit),
+        "{events:?}"
+    );
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC290 consumer"]
+fn native_melee_npc_general_crit_negative_prevents_crit() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    let npc = h.npc;
+    apply(&mut h, npc, NEGATIVE, 1 << 1);
+    assert_eq!(modifier(&h, npc, 290), -200.0);
+    let events = swings(&mut h, victim, SWINGS);
+    // Old5% table's all-normal escape is .95^256≈1.983e-6.
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC290 consumer"]
+fn native_melee_npc_general_crit_signed_sum_not_last_effect_or_clipped_effects() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    let npc = h.npc;
+    apply(&mut h, npc, NEGATIVE, 1 << 1);
+    apply(&mut h, npc, POSITIVE, 1);
+    assert_eq!(modifier(&h, npc, 290), -100.0);
+    let events = swings(&mut h, victim, SWINGS);
+    assert_eq!(modifier(&h, npc, 290), -100.0);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control before NPC290 consumer"]
+fn native_melee_npc_general_crit_cancelled_positive_restores_baseline() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    let npc = h.npc;
+    apply(&mut h, npc, POSITIVE, 1);
+    cancel(&mut h, npc, POSITIVE);
+    assert_eq!(modifier(&h, npc, 290), 0.0);
+    let events = swings(&mut h, victim, SWINGS);
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral control before NPC290 consumer"]
+fn native_melee_npc_general_crit_foreign_positive_does_not_change_attacker() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    apply(&mut h, victim, POSITIVE, 1);
+    assert_eq!(modifier(&h, victim, 290), 100.0);
+    assert_eq!(modifier(&h, h.npc, 290), 0.0);
+    let events = swings(&mut h, victim, SWINGS);
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral control before NPC290 consumer"]
+fn native_melee_npc_general_crit_without_aura_keeps_five_percent_baseline() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    assert_eq!(modifier(&h, h.npc, 290), 0.0);
+    let events = swings(&mut h, victim, SWINGS);
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral RED before joint NPC52 and290 source sum"]
+fn native_melee_npc_general_crit_meets_weapon_52_before_source_clamp() {
+    let (mut h, victim) = fixture(7);
+    let npc = h.npc;
+    apply(&mut h, npc, POSITIVE, 1);
+    assert_eq!(modifier(&h, npc, 52), -100.0);
+    assert_eq!(modifier(&h, npc, 290), 100.0);
+    let events = swings(&mut h, victim, SWINGS);
+    // Correct raw5-100+100 gives5%; old52-only gives0 and early52clamp gives100%.
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for landed pre334 source clamp"]
+fn native_melee_npc_general_crit_clamps_source_before_autoattack_334() {
+    let (mut h, victim) = fixture(HIT_EXPERTISE_MASK);
+    let npc = h.npc;
+    apply(&mut h, npc, NEGATIVE, 1 << 1);
+    apply(&mut h, npc, AUTO_CRIT, 1);
+    assert_eq!(modifier(&h, npc, 290), -200.0);
+    assert_eq!(modifier(&h, npc, 334), 50.0);
+    let events = swings(&mut h, victim, SWINGS);
+    assert_both(&events);
 }
