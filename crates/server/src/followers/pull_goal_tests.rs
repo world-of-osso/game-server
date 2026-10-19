@@ -143,8 +143,112 @@ fn sample(f: &mut Fixture, frames: usize) {
     }
 }
 
-pub(super) fn measured_fixture() -> Fixture {
+fn physical_fixture() -> Fixture {
     let mut f = fixture();
+    let owner = f.h.caster;
+    let old_members =
+        f.h.app
+            .world()
+            .get::<super::stockade_diagnostic::DiagnosticParty>(owner)
+            .unwrap()
+            .members
+            .clone();
+    let expected: Vec<_> = old_members
+        .iter()
+        .map(|&unit| {
+            let world = f.h.app.world();
+            (
+                world.get::<super::Follower>(unit).unwrap().profile.clone(),
+                *world.get::<crate::stats::CharacterStats>(unit).unwrap(),
+                world
+                    .get::<crate::level_scaling::CreatureArmor>(unit)
+                    .unwrap()
+                    .0,
+            )
+        })
+        .collect();
+    let los_dir = crate::ground::ground_data_dir().join("los");
+    assert!(
+        los_dir.join("34").is_dir(),
+        "physical fixture requires actual Stockade LOS bake"
+    );
+    f.h.app
+        .insert_resource(crate::line_of_sight::LineOfSight::load(&los_dir).unwrap());
+    super::spawning::unsummon_members(f.h.app.world_mut(), &old_members);
+    let mut members = Vec::new();
+    for (profile, _, _) in &expected {
+        let unit = super::spawning::spawn(f.h.app.world_mut(), owner, profile.clone()).unwrap();
+        if profile.role == shared::group::GroupRole::Tank {
+            f.tank = unit;
+        }
+        members.push(unit);
+    }
+    f.h.app
+        .world_mut()
+        .get_mut::<super::stockade_diagnostic::DiagnosticParty>(owner)
+        .unwrap()
+        .members = members.clone();
+    f.h.advance(3);
+    f.candidate = source(&mut f.h, f.tank, 20375689);
+    for (&unit, (profile, stats, armor)) in members.iter().zip(&expected) {
+        assert!(
+            f.h.app
+                .world()
+                .get::<shared::components::ModelDisplay>(unit)
+                .is_some_and(|display| display.display_id != 0),
+            "native profile {} requires its actual display",
+            profile.entry
+        );
+        assert_eq!(
+            f.h.app
+                .world()
+                .get::<crate::stats::CharacterStats>(unit)
+                .unwrap(),
+            stats,
+            "production spawning must retain every native combat stat for {}",
+            profile.entry
+        );
+        assert_eq!(
+            f.h.app
+                .world()
+                .get::<crate::level_scaling::CreatureArmor>(unit)
+                .unwrap()
+                .0,
+            *armor,
+            "production spawning must retain native armor for {}",
+            profile.entry
+        );
+        let health = f.h.app.world().get::<Health>(unit).unwrap();
+        assert_eq!(
+            health.current, health.max,
+            "native spawning must begin at full health"
+        );
+    }
+    {
+        let mut state = bevy::ecs::system::SystemState::<(
+            Query<crate::line_of_sight::BodyParts<'static>>,
+            Res<crate::line_of_sight::LineOfSight>,
+        )>::new(f.h.app.world_mut());
+        let (bodies, los) = state.get(f.h.app.world()).unwrap();
+        for unit in members.into_iter().chain([owner, f.candidate]) {
+            assert!(
+                los.body(bodies.get(unit).unwrap()).is_some(),
+                "physical fixture cannot use missing/default eye geometry for {unit:?}"
+            );
+        }
+    }
+    f
+}
+
+pub(super) fn physical_measured_fixture() -> Fixture {
+    measure_native_fight(physical_fixture())
+}
+
+pub(super) fn measured_fixture() -> Fixture {
+    measure_native_fight(fixture())
+}
+
+fn measure_native_fight(mut f: Fixture) -> Fixture {
     sample(&mut f, 100);
     let map = *f.h.app.world().get::<InMap>(f.tank).unwrap();
     let actors: Vec<_> =

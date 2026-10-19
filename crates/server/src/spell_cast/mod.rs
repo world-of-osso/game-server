@@ -1615,6 +1615,17 @@ fn validate_start(
     validate_start_with_policy(world, caster, spell, explicit, check)
 }
 
+/// Read ordinary native cast eligibility without casting, retargeting or spending.
+#[cfg(test)]
+pub(crate) fn read_native_cast_start(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start(world, caster, spell, Some(target), false)
+}
+
 /// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
 /// All native checks remain except the in-progress veto and a bounded transient GCD.
 pub(crate) fn read_tank_heal_capability(

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use serde_json::{Value, json};
 use shared::components::{Health, Position};
 
-fn require_zero_measured_healing(hps: Option<f64>) {
+pub(super) fn require_zero_measured_healing(hps: Option<f64>) {
     assert_eq!(
         hps,
         Some(0.0),
@@ -33,7 +33,7 @@ fn place_party_at_endpoint(
     place_party_at_authored_point(f, Vec3::new(position.x, position.y, position.z), party)
 }
 
-fn place_party_at_authored_point(
+pub(super) fn place_party_at_authored_point(
     f: &mut Fixture,
     point: Vec3,
     party: &[Entity],
@@ -58,7 +58,7 @@ fn place_party_at_authored_point(
     Ok(Vec3::new(from.x, from.y, from.z))
 }
 
-fn eligible_target(f: &Fixture, actor: Entity) -> bool {
+pub(super) fn eligible_target(f: &Fixture, actor: Entity) -> bool {
     let world = f.h.app.world();
     if !crate::spell_cast::targets::is_alive(world, actor)
         || !crate::spell_cast::targets::relation_matches(
@@ -82,7 +82,7 @@ fn eligible_target(f: &Fixture, actor: Entity) -> bool {
         != crate::creature_aggro::AggroMode::Passive
 }
 
-fn read_route_budget_row(
+pub(super) fn read_route_budget_row(
     f: &mut Fixture,
     guid: u32,
     cleared: &std::collections::BTreeSet<u32>,
@@ -99,9 +99,21 @@ fn read_route_budget_row(
         Ok(route) => route,
         Err(error) => return json!({"error": error, "allowed": false}),
     };
+    let horizontal_length: f32 = route
+        .points
+        .windows(2)
+        .map(|leg| Vec2::new(leg[1].x - leg[0].x, leg[1].z - leg[0].z).length())
+        .sum();
+    let points: Vec<_> = route
+        .points
+        .iter()
+        .map(|point| [point.x, point.y, point.z])
+        .collect();
     let mut row = json!({
         "footprint_pack_count": route.pack_count,
         "spawns": route.spawns,
+        "route_points": points,
+        "horizontal_route_length": horizontal_length,
         "allowed": false,
     });
     let decision =
