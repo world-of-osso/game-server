@@ -40,6 +40,10 @@ The [MFBO ledger](../../handoffs/wow-formats-mfbo-records.md) freezes each consu
 
 Reference captured with the pre-migration readers at rewritten server revision `ac36572bb`: existing LOS tests **16 passed / 0 failed / 4 ignored**. Stockade map34 reference `nav-bake` produced **4 LOS + 4 navigation tiles**, **7,196,988 bytes**; navigation collection contained39,791 triangles. SHA-256 inventory and an input superset of104 local asset files are recorded under `/home/osso/.worktrees/logs/wow_formats-phase2-*`. The after-reader gate must preserve those bytes and existing test outcomes; timing-bearing `report.txt` is not a binary-bake contract.
 
+## BLP icon boundary
+
+The [before-only icon ledger](../../handoffs/wow-formats-blp-icon-qualification.md) captures the actual web-icon function without replacing it. Its direct image-blp conversion intentionally remains separate from engine normalization/BC5/Godot upload policy; a fifth crate and icon migration are not approved. The proposed smallest boundary leaves the already-shared third-party parser and both consumer policies unchanged.
+
 ## Sources
 
 - [LOS dependencies/features](../../../crates/los/Cargo.toml)
