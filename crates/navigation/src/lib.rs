@@ -3,6 +3,7 @@
 pub mod bake;
 mod query;
 pub use query::NavigationMap;
+pub use query::read_walkable_polygons;
 pub mod worker;
 
 pub const TILE_SIZE: f32 = 1600.0 / 3.0;
