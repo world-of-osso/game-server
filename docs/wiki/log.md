@@ -1,3 +1,7 @@
+## Admitted caster pickup and native victim consistency GREEN
+
+[Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6d0f1cf62/P_a2b native7PASS126.47s/0warnings: Overheat12466 pickup/ended-cast retirement, unchanged owner selection and matching actual tank victim, collector2 and pursuit safety/defense/injected4. Firstfb6 attempt preserved incompatible trash CombatTarget and correctly failed native chase; planner selection now matches its admitted caster instead of weakening that guard. Broader positioning/frontals and single-provider activation remain open.
+
 ## Native Overheat caster pickup RED and admitted chase
 
 [Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6cc8a02c2/P_a2b actual12466/20375719 versus reachable20375738 gives genuine1RED55.53s/0warnings,14.209645yd unchanged. Complete native engagement/body/LOS/Rebuke controls pass; earlier exact floor-height assertion was a setup failure. One admitted caster entity goal now survives selected-trash kit pursuit through ordinary native chase; ended casts retire its chase. Targeted GREEN pending; no provider activation, budget or stat/kit changes.
