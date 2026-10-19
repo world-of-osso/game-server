@@ -14,10 +14,10 @@ use shared::casting::CastState;
 use shared::components::{Health, Level, Mana, UnitLevel};
 use std::collections::{BTreeSet, HashMap};
 
-// Full native kit: Aegis30% + Plate5% + Sanctified Plates402964 7.5%.
-// Protection137028 effect30 modifies label2602/PointsIndex0 by50% (base5→7.5).
-// Native floor(980×1.425)×8=11168; this is an assertion, never an HP grant.
-pub(super) const NATIVE_GARRICK_MAX_HEALTH: f32 = 11168.0;
+// Independent aura137 factors: Aegis1.30 × Plate1.05 × Sanctified Plates1.075.
+// Protection137028 effect30 modifies402964 label2602/PointsIndex0 by50% (base5→7.5).
+// Native floor(980×1.30×1.05×1.075)×8=11504; assertion, never an HP grant.
+pub(super) const NATIVE_GARRICK_MAX_HEALTH: f32 = 11504.0;
 
 struct Fixture {
     h: Harness,

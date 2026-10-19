@@ -66,7 +66,7 @@ fn native_tank_stat_provenance_partial_and_full_kit() {
     super::spawning::initialize(h.app.world_mut(), owner, tank, profile.clone()).unwrap();
     h.advance(3);
     print_passive_contributions(h.app.world(), tank, "partial");
-    assert_native_health(h.app.world(), tank, 10584.0);
+    assert_native_health(h.app.world(), tank, 10696.0);
     assert!(!crate::auras::has_aura(h.app.world(), tank, 402964));
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),

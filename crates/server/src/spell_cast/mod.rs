@@ -1031,6 +1031,10 @@ fn send_inventory_rejection(
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
     crate::followers::pull_history::record_event(world, &event);
+    #[cfg(test)]
+    if let Some(mut observed) = world.get_resource_mut::<test_harness::ObservedCombatEvents>() {
+        observed.0.push(event.clone());
+    }
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
     crate::pvp::record_arena_event(world, &event);

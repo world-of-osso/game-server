@@ -1,6 +1,6 @@
 //! Real spec66 passive application must update the NPC's derived class stats.
 use bevy::prelude::*;
-use shared::components::{Health, Level, UnitLevel};
+use shared::components::{CombatRatings, DerivedStats, Health, Level, UnitLevel, UnitStats};
 
 use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
 use crate::auras::{AuraApplication, AuraSource, RemoveReason};
@@ -36,13 +36,14 @@ fn follower_passive_stats_real_spec66_stamina_recomputes_max_health() {
     let (mut h, unit) = spawn_level32_garrick();
     h.advance(3);
     let modifiers = h.app.world().get::<StatModifiers>(unit).unwrap();
-    // Native70391: Aegis353367 +30%, Plate Specialization86102 +5%,
-    // both aura137 with MiscValueB4 (stamina). Base class2/level32 stamina980;
-    // native gtHpPerSta32=8. No fixture stat or health overrides.
-    assert_eq!(modifiers.primary_pct.stamina, 35.0);
+    // Native70448: independent Aegis353367 +30% and Plate86102 +5%,
+    // both137/mask4, no SAME_EFFECT group: 1.30*1.05=1.365 (TC GetTotalAuraMultiplier).
+    // Base class2/level32 stamina980 ->1337.7; floor1337*gtHpPerSta32=8 ->10696HP.
+    // No fixture stat or health overrides.
+    assert_eq!(modifiers.primary_pct.stamina, 36.5);
     let health = h.app.world().get::<Health>(unit).unwrap();
     assert_eq!(
-        health.max, 10584.0,
+        health.max, 10696.0,
         "native passive modifiers were stored but not applied"
     );
     assert_eq!(health.current, health.max);
@@ -53,7 +54,7 @@ fn follower_passive_stats_real_spec66_stamina_recomputes_max_health() {
             .unwrap()
             .primary
             .stamina,
-        1323.0
+        1337.7
     );
 }
 
@@ -97,7 +98,7 @@ fn follower_passive_stats_real_aegis_removal_and_reapply_refresh_max_health() {
     );
     h.advance(3);
     let health = h.app.world().get::<Health>(unit).unwrap();
-    assert_eq!(health.max, 10584.0);
+    assert_eq!(health.max, 10696.0);
     assert_eq!(health.current, health.max);
 }
 
@@ -122,7 +123,7 @@ fn follower_passive_stats_owned_evade_preserves_native_spec_and_threat_auras() {
     // Production no-path/leash lifecycle entry, followed by real aura/stat systems.
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), unit);
     h.advance(3);
-    assert_eq!(h.app.world().get::<Health>(unit).unwrap().max, 10584.0);
+    assert_eq!(h.app.world().get::<Health>(unit).unwrap().max, 10696.0);
     assert!(crate::auras::has_aura(h.app.world(), unit, AEGIS_OF_LIGHT));
     assert!(crate::auras::has_aura(h.app.world(), unit, RIGHTEOUS_FURY));
     assert_eq!(
@@ -132,5 +133,59 @@ fn follower_passive_stats_owned_evade_preserves_native_spec_and_threat_auras() {
             .unwrap()
             .spell_power,
         spell_power
+    );
+}
+
+#[test]
+fn follower_passive_stats_native_base_stat80_does_not_change_non_player_bridge() {
+    const BASE_INTELLECT: u32 = 13326;
+    let (mut h, unit) = spawn_level32_garrick();
+    // Normal player stat-query components: StatsPlugin derives the Mage owner's
+    // actual native values; no caster or recipient stat fields are overwritten.
+    {
+        let mut owner = h.app.world_mut().entity_mut(h.caster);
+        owner.entry::<UnitStats>().or_default();
+        owner.entry::<CombatRatings>().or_default();
+        owner.entry::<DerivedStats>().or_default();
+        owner.insert(crate::class_progression::KnownSpells::fixture(vec![
+            BASE_INTELLECT,
+        ]));
+    }
+    h.advance(3);
+    let before = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .primary
+        .intellect;
+    assert!(before > 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .primary
+            .intellect
+            > 0.0
+    );
+    h.cast_and_deliver(BASE_INTELLECT, Some(unit));
+    h.advance(2);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), unit, BASE_INTELLECT));
+    assert!(!crate::auras::has_aura(
+        h.app.world(),
+        h.caster,
+        BASE_INTELLECT
+    ));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(unit)
+            .unwrap()
+            .primary
+            .intellect,
+        before,
+        "TC HandleModPercentStat returns before BASE_PCT for non-Player recipients"
     );
 }
