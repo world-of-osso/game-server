@@ -20,7 +20,10 @@ mod blp_qualification {
         let mut bundle = Bundle::new();
         match catch_unwind(AssertUnwindSafe(|| catalog::icon(&mut bundle, input, id))) {
             Ok(Ok(path)) => {
-                let bytes = path.as_ref().map(|path| bundle[path].clone()).unwrap_or_default();
+                let bytes = path
+                    .as_ref()
+                    .map(|path| bundle[path].clone())
+                    .unwrap_or_default();
                 if path.is_some() {
                     fs::write(output.join(format!("{name}.png")), &bytes).unwrap();
                     let rgba = image::load_from_memory(&bytes).unwrap().to_rgba8();
@@ -42,7 +45,10 @@ mod blp_qualification {
         let mut bundle = Bundle::new();
         let path = format!("icons/{id}.png");
         bundle.insert(path.clone(), png.clone());
-        assert_eq!(catalog::icon(&mut bundle, input, Some(id)).unwrap(), Some(path.clone()));
+        assert_eq!(
+            catalog::icon(&mut bundle, input, Some(id)).unwrap(),
+            Some(path.clone())
+        );
         assert_eq!(bundle[&path], png);
         fs::write(output.join("cached_icon.png"), &png).unwrap();
         fs::write(input.join(format!("{id}.png")), &png).unwrap();
@@ -87,7 +93,11 @@ mod blp_qualification {
         receipts.push(json!({"name": "missing_file", "icon": missing}));
         receipts.extend(capture_icon_edges(output, scratch.path(), 999_999_998));
         assert_eq!(receipts.len(), cases.len() + 5);
-        fs::write(output.join("outcomes.json"), serde_json::to_vec_pretty(&receipts).unwrap()).unwrap();
+        fs::write(
+            output.join("outcomes.json"),
+            serde_json::to_vec_pretty(&receipts).unwrap(),
+        )
+        .unwrap();
         println!("Captured {} independent icon outcomes", receipts.len());
     }
 }
