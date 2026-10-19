@@ -4,9 +4,9 @@ use crate::spell_cast::test_harness::{Harness, PreparedClassWorld};
 use bevy::prelude::*;
 use redb::{ReadableDatabase, ReadableTableMetadata};
 
-struct PetFixture {
-    h: Harness,
-    unit: Entity,
+pub(super) struct PetFixture {
+    pub(super) h: Harness,
+    pub(super) unit: Entity,
     _source: PreparedClassWorld,
     _database: tempfile::TempDir,
 }
@@ -86,7 +86,7 @@ fn follower_lantha_summons_authored_felguard_without_persisting_a_character() {
     );
 }
 
-fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
+pub(super) fn felguard_at_level(level: u8) -> (PetFixture, Entity) {
     let mut f = fixture();
     f.h.app.world_mut().entity_mut(f.h.caster).insert((
         shared::components::Level(level),
