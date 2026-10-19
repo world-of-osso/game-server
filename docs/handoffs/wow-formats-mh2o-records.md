@@ -12,4 +12,4 @@ The existing terrain-height receipt harness also includes776382 for actual terra
 
 ## Ledger
 
-Baseline pending. Server baseba74ef1df; engine basecc4858b97; protocolf9a91753bbbc15ad7ff7392955b52c4da989d22e; libraryed180ce. Test-only fixtures precede all production edits.
+Baseline test-only source7064701bb: MH2O receipts2/0 (both consumers,25 synthetic cases), terrain_height23/0 and fresh Stockade4LOS+4NAV0. Complete180-file inventory28,034,481B/116 source hashes at `/home/osso/.worktrees/logs/wow_formats-phase5-reference-receipt.json`. Real server layers42/39/256; water queries6427/5968/39169; actual water bounds1181/1470/16384 records. Each ADT256 height chunks154636B and135428 frozen terrain/liquid queries4739992B. No production edits preceded capture. Server baseba74ef1df; engine basecc4858b97; protocolf9a91753bbbc15ad7ff7392955b52c4da989d22e; libraryed180ce. Test-only fixtures precede all production edits.
