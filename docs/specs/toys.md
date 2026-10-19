@@ -12,8 +12,8 @@ CPU acceptance does not certify native visuals/audio, cross-map travel or natura
 
 ## Expanded build70448 stationary Loa cosmetics
 
-- [ ] Loa-Blessed Victory280820/1309827, Nalorakk's Strength Charm280822/1309830 and Feathers of Akil'zon280823/1309831 must use authentic Toy membership and real bag learning/UseToy, not fabricated aura injection.
-- [ ] Successful use applies the source1800000ms owner cosmetic aura and3600000ms recovery. Real CancelAura removes the replicated aura without clearing recovery, changing health/body model/position or permitting an extra SpellGo.
+- [x] Loa-Blessed Victory280820/1309827, Nalorakk's Strength Charm280822/1309830 and Feathers of Akil'zon280823/1309831 must use authentic Toy membership and real bag learning/UseToy, not fabricated aura injection.
+- [x] Successful use applies the source1800000ms owner cosmetic aura and3600000ms recovery. Real CancelAura removes the replicated aura without clearing recovery, changing health/body model/position or permitting an extra SpellGo.
 
 Admission is limited to these three spell IDs through the existing visual-only whitelist and its authored-visual/zero-payload guards. Their published item/name/spell triples join the two hearthstones in the census's named70448 extras list; keep the Full1166 baseline separate. Source Toy rows1763/1765/1766 and34 missing local-CASC files were independently reproduced and published by the lead before canonical admission proof.
 

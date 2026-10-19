@@ -4,7 +4,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Expanded70448 stationary Loa cosmetics (2026-10-18)
 
-[Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-membership-and-admission-red-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Targeted three-case GREEN and all13 census callers pending; no generic dummy admission or other-five change.
+[Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Canonical81c554bb1 targeted20/0/151.90s covers three new cosmetics/all13 census/three batch1 cases/absent-visual negative. Broad toy/check/fmt gate and source landing remain lead-owned; no generic dummy admission or other-five change.
 
 ## Published extras and census cardinality (2026-10-18)
 
