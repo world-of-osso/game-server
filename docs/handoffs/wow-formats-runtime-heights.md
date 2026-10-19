@@ -14,4 +14,5 @@ Additional acceptance: unchanged `terrain_height::tests::` and real Northshire/s
 
 ## Proof ledger
 
-- Baseline source: server `ff4595fa3`, library `bb989f276`, protocol `f9a91753bbbc15ad7ff7392955b52c4da989d22e`; receipts/tests not run yet.
+- Baseline source: server `ff4595fa3`, library `bb989f276`, protocol `f9a91753bbbc15ad7ff7392955b52c4da989d22e`; old-reader test-only harness `c6fa736cd` passes23/0; four exact real ground controls4/0. Fresh Stockade bake exits0 (requires `navigation/bake`). Baseline receipt: `/home/osso/.worktrees/logs/wow_formats-phase4-reference-receipt.json`,35 outputs19,169,465B,115 real input hashes. Each ADT256 chunks/154636B;135428 frozen XY queries/4739992B outcomes;17 synthetic outcomes5685B.
+- Shared library `ed180cecd7228471944dcdf1d427468e5cc6e7b5`: new public fields API RED on missing imports; four behavioral tests GREEN with default246/0/0, no-default166/0/0, check/fmt0. Published before either consumer pin. After-reader proof pending.
