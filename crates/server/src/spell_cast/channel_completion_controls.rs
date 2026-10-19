@@ -1,6 +1,5 @@
 //! Focused native channel lifecycle controls; no CastState or aura injection.
 use super::test_harness::*;
-use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
 use shared::protocol::CombatLogKind;
 
@@ -80,10 +79,11 @@ fn channel_completion_order_native_hymn_recipient_expires_on_its_own_after_compl
 
 #[test]
 #[ignore = "development channel-lifecycle control"]
-fn channel_completion_order_native_counterspell_interrupt_removes_the_actual_channel_recipient() {
+fn channel_completion_order_native_pummel_interrupt_removes_the_actual_channel_recipient() {
     const DRAIN: u32 = 234153;
-    const COUNTERSPELL: u32 = 2139;
-    let mut h = harness(Vec::new(), &[DRAIN, COUNTERSPELL], 9).unwrap();
+    // Native6552 has no SpellPower row; do not grant the fixture NPC mana.
+    const PUMMEL: u32 = 6552;
+    let mut h = harness(Vec::new(), &[DRAIN, PUMMEL], 9).unwrap();
     let caster = h.caster;
     let npc = h.npc;
     h.cast_and_deliver(DRAIN, Some(npc));
@@ -97,8 +97,8 @@ fn channel_completion_order_native_counterspell_interrupt_removes_the_actual_cha
         CastType::Channel
     );
     assert!(crate::auras::has_aura(h.app.world(), npc, DRAIN));
-    super::creature_cast(h.app.world_mut(), npc, COUNTERSPELL, Some(caster), false)
-        .expect("actual native Counterspell, not an injected interrupt state");
+    super::creature_cast(h.app.world_mut(), npc, PUMMEL, Some(caster), false)
+        .expect("actual native zero-cost Pummel, not an injected interrupt state");
     h.advance(3);
     assert!(h.app.world().get::<CastState>(caster).is_none());
     assert!(!crate::auras::has_aura(h.app.world(), npc, DRAIN));
@@ -107,7 +107,7 @@ fn channel_completion_order_native_counterspell_interrupt_removes_the_actual_cha
             .log
             .iter()
             .any(|event| event.kind == CombatLogKind::Interrupt
-                && event.spell_id == Some(COUNTERSPELL)
+                && event.spell_id == Some(PUMMEL)
                 && event.extra_spell_id == Some(DRAIN))
     );
     let health = h.health(npc);
