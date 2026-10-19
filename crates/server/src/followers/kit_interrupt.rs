@@ -1,7 +1,6 @@
 //! Source-valid interrupt casts only. Candidate ordering and navigation belong
 //! to the shared planner; ordinary spell execution owns any native charge.
 use bevy::prelude::*;
-use shared::casting::CastState;
 use shared::components::Level;
 
 use super::kit::{Entry, Slot};
@@ -21,15 +20,13 @@ pub(super) fn try_interrupt_candidates(
 ) -> bool {
     let spells = read_source_interrupt_spells(world, unit, profile);
     for &target in candidates {
-        let interruptible = world
-            .get::<CastState>(target)
-            .is_some_and(|cast| cast.interruptible);
-        if !interruptible || crate::auras::has_breakable_by_damage_cc(world, target) {
+        if crate::auras::has_breakable_by_damage_cc(world, target) {
             continue;
         }
         let accepted = match spells.as_deref() {
             Some(spells) if profile.spec_id != DEMONOLOGY_SPEC => {
-                try_source_spells(world, unit, target, spells)
+                crate::spell_cast::can_interrupt_cast(world, unit, target)
+                    && try_source_spells(world, unit, target, spells)
             }
             // Explicit core compatibility for absent spec rows. Demonology's
             // interrupt remains its actual learned pet spell, never a player grant.
@@ -122,15 +119,12 @@ fn interrupt_spell(spec: u32) -> Option<u32> {
 }
 
 fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
-    let interruptible = world
-        .get::<CastState>(enemy)
-        .is_some_and(|cast| cast.interruptible);
-    if !interruptible {
-        return false;
-    }
     let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
         return false;
     };
+    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy) {
+        return false;
+    }
     if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
         return false;
     }
