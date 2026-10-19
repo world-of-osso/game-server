@@ -9,7 +9,6 @@ use std::collections::BTreeSet;
 
 const OVERHEAT_GUID: u32 = 20375719;
 const SELECTED_TRASH_GUID: u32 = 20375738;
-const DISTANT_TRASH_GUID: u32 = 20375678;
 // Actual boss_lord_overheat source spell, never granted to the selected trash.
 const OVERHEAT_FIREBALL: u32 = 12466;
 const REBUKE: u32 = 96231;
@@ -107,7 +106,6 @@ fn overheat_fixture(whole_route: bool, selected_guid: u32) -> CasterFixture {
     );
     let footprint = engage_caster_fixture_sources(&mut f, whole_route, selected_guid);
     assert!(footprint.contains(&OVERHEAT_GUID));
-    assert!(footprint.contains(&selected_guid));
     let follower = f.h.app.world().get::<Follower>(f.tank).unwrap().clone();
     let engaged = ai::engaged_enemies(f.h.app.world_mut(), &follower, f.tank, &party);
     for guid in [OVERHEAT_GUID, selected_guid] {
@@ -115,6 +113,7 @@ fn overheat_fixture(whole_route: bool, selected_guid: u32) -> CasterFixture {
         assert!(engaged.iter().any(|(enemy, _)| *enemy == actor));
     }
     if whole_route {
+        assert!(footprint.contains(&selected_guid));
         for &guid in &footprint {
             let actor = source(&mut f.h, f.tank, guid);
             assert!(engaged.iter().any(|(enemy, _)| *enemy == actor));
@@ -305,50 +304,5 @@ fn read_caster_boundary(f: &mut Fixture) -> CasterBoundary {
     }
 }
 
-#[test]
-fn production_tank_caster_collection_refuses_unengaged_route_exposure() {
-    // Use the actual31yd source origin; qualify surviving exposure at each native tick.
-    let CasterFixture { mut f, .. } = overheat_fixture(false, DISTANT_TRASH_GUID);
-    let initial = read_caster_boundary(&mut f);
-    assert!(
-        initial.exposed && initial.refused && initial.casting,
-        "control must begin with actual unengaged route exposure/refusal and native cast: {}",
-        initial.details
-    );
-    crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
-    let mut held_boundaries = 0;
-    for tick in 0..10 {
-        let before_point = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
-        let before = read_caster_boundary(&mut f);
-        f.h.advance(1);
-        let after = read_caster_boundary(&mut f);
-        let at = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
-        if at != before_point || before.exposed != after.exposed || before.casting != after.casting
-        {
-            println!(
-                "CASTER_BOUNDARY tick={tick} moved={} before={} after={}",
-                at != before_point,
-                before.details,
-                after.details
-            );
-        }
-        if before.exposed
-            && after.exposed
-            && before.refused
-            && after.refused
-            && before.casting
-            && after.casting
-        {
-            assert_eq!(
-                at, before_point,
-                "caster collection bypassed actual tick refusal; before={} after={}",
-                before.details, after.details
-            );
-            held_boundaries += 1;
-        }
-    }
-    assert!(
-        held_boundaries > 0,
-        "real kit did not expose an actual new-pack caster refusal boundary; setup is not behavioral evidence"
-    );
-}
+#[path = "pull_cast_origins_tests.rs"]
+mod authored_origins;
