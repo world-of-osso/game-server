@@ -2291,6 +2291,8 @@ mod critical_chaos_tests;
 #[cfg(test)]
 mod defensives_tests;
 #[cfg(test)]
+mod earthen_rage_tests;
+#[cfg(test)]
 mod ebon_might_tests;
 #[cfg(test)]
 mod enduring_torment_tests;
