@@ -2108,5 +2108,8 @@ mod npc_victim_dodge_tests;
 #[path = "combat_npc_victim_parry_tests.rs"]
 mod npc_victim_parry_tests;
 #[cfg(test)]
+#[path = "combat_npc_weapon_crit_tests.rs"]
+mod npc_weapon_crit_tests;
+#[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
