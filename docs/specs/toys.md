@@ -6,9 +6,18 @@
 - [x] Actual bag learning and UseToy must preserve the existing persisted-homebind requirement, source10000ms cast and shared charge2309 (one charge/1800000ms recharge). No early teleport/SpellGo, no charge spent for absent bind, and successful use blocks its sibling while preserving health/model.
 - [x] Selected Toy import must preserve unrelated catalog rows, remain idempotent and reject a requested missing source identity before mutation. Existing full-catalog import remains available explicitly without selection.
 
-The shared census oracle preserves the named Full1166 baseline and adds only the explicitly published build70448 identities, currently281136/Hiveborne/1310234 and281615/Shadeweaver/1311934. Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare1168 total must not replace the historical baseline or silently admit other source-only toys.
+The shared census oracle preserves the named Full1166 baseline and adds only explicitly published build70448 identities from these hearthstones and the [stationary cosmetics](#expanded-build70448-stationary-loa-cosmetics). Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare total must not replace the historical baseline or silently admit other source-only toys.
 
-CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Remaining eight toys are later batches.
+CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Other newly approved toys are separate batches.
+
+## Expanded build70448 stationary Loa cosmetics
+
+- [x] Loa-Blessed Victory280820/1309827, Nalorakk's Strength Charm280822/1309830 and Feathers of Akil'zon280823/1309831 must use authentic Toy membership and real bag learning/UseToy, not fabricated aura injection.
+- [x] Successful use applies the source1800000ms owner cosmetic aura and3600000ms recovery. Real CancelAura removes the replicated aura without clearing recovery, changing health/body model/position or permitting an extra SpellGo.
+
+Admission is limited to these three spell IDs through the existing visual-only whitelist and its authored-visual/zero-payload guards. Their published item/name/spell triples join the two hearthstones in the census's named70448 extras list; keep the Full1166 baseline separate. Source Toy rows1763/1765/1766 and34 missing local-CASC files were independently reproduced and published by the lead before canonical admission proof.
+
+This batch does not authorize generic dummy4 support, alter source weights or implement the remaining scripted toys. Natural thirty-minute expiry, one-hour reuse and native cosmetic/audio presentation require separate proof.
 
 ## Runtime generated casting requirements
 
