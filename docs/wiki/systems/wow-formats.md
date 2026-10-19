@@ -40,6 +40,20 @@ The [MFBO ledger](../../handoffs/wow-formats-mfbo-records.md) freezes each consu
 
 Reference captured with the pre-migration readers at rewritten server revision `ac36572bb`: existing LOS tests **16 passed / 0 failed / 4 ignored**. Stockade map34 reference `nav-bake` produced **4 LOS + 4 navigation tiles**, **7,196,988 bytes**; navigation collection contained39,791 triangles. SHA-256 inventory and an input superset of104 local asset files are recorded under `/home/osso/.worktrees/logs/wow_formats-phase2-*`. The after-reader gate must preserve those bytes and existing test outcomes; timing-bearing `report.txt` is not a binary-bake contract.
 
+## Coverage and named Python tooling gap
+
+Rust runtime/geometry consolidation is complete. **`WOW_FORMATS_PYTHON_TOOL_READERS_NOT_CONSOLIDATED`** remains an explicit gap: Python tools still decode formats independently, and no shared Rust call boundary exists without adding a one-use bridge. The accepted decision keeps `ground_files.py` unchanged. No bridge, fifth format crate or parser replacement is approved.
+
+| Format | Shared owner | Rust consumer coverage | Python tooling gap |
+| --- | --- | --- | --- |
+| Chunk/LE primitives | `wow-chunk` | Engine asset re-export; LOS and runtime ground/terrain reads | `asset_closure`, `ground_files`, `terrain_height`, LOS extraction scans |
+| M2/MD20/MD21/SKIN/SKEL | `wow-m2` | Engine full reader; LOS geometry/first-frame pose; vehicle attachments | Engine dependency closure and server `los-extract-models.py` |
+| WMO root/group | `wow-wmo` | Engine reader; LOS geometry; runtime group metadata | Engine dependency closure/liquid audit and server `ground_files.py` |
+| ADT/WDT/MCNK/MCVT/MH2O/MFBO | `wow-adt` | Engine full readers; server bake/runtime projections; local sampling/layout policies retained | Engine closure and server ground/terrain tooling |
+| BLP | Existing `image-blp`1.2, not a fifth crate | Common parser already shared; engine normalization/BC5/Godot upload and icon policies remain separate | No BLP migration pursued;16 qualified CPU/icon differences prevent sharing the engine wrapper |
+
+The [ground-files qualification ledger](../../handoffs/wow-formats-ground-files-qualification.md) preserves actual ordered outputs and error outcomes supporting this decision. Asset-resolver treats geometry bytes as opaque and uses existing cascette readers for CASC. Python CASC metadata and WDC5 importer duplication are later separate proposals, not part of completed Rust consolidation or an authorized implementation.
+
 ## Sources
 
 - [LOS dependencies/features](../../../crates/los/Cargo.toml)

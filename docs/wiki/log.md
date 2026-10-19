@@ -1,3 +1,7 @@
+## 2026-10-18 — Rust reader consolidation complete; named Python gap
+
+[Coverage matrix and decision](systems/wow-formats.md#coverage-and-named-python-tooling-gap): `WOW_FORMATS_PYTHON_TOOL_READERS_NOT_CONSOLIDATED` records independent Python tools with no approved shared Rust call boundary. Keep ground_files.py unchanged; no one-use bridge or replacement. Rust runtime/geometry consolidation is complete.
+
 ## 2026-10-18 — Ground metadata tooling qualification
 
 [Before-only boundary ledger](systems/ground-assets.md#before-only-metadata-tooling-qualification): frozen actual walk/CLI outputs, missing ordering and original failures; no deploy/extraction, parser replacement or bridge/API change. Keep permissive script policy separate from strict runtime projections until a raw-field boundary is approved.
