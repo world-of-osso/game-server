@@ -141,6 +141,51 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
 }
 
 #[test]
+fn production_tank_incomplete_run_admission_keeps_pursuit_held() {
+    let (mut h, tank, from, _) = kit_fixture();
+    let target = h
+        .app
+        .world()
+        .get::<crate::combat::AutoAttack>(h.caster)
+        .unwrap()
+        .victim;
+    // The admitted run record remains, but its copy no longer matches the owner.
+    h.app
+        .world_mut()
+        .get_mut::<super::stockade_diagnostic::DiagnosticParty>(h.caster)
+        .unwrap()
+        .copy
+        .instance_id += 1;
+    assert!(super::ai::pursue(
+        h.app.world_mut(),
+        tank,
+        target,
+        31935,
+        true
+    ));
+    assert_eq!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(tank),
+        Some(&crate::creature_ai::CreatureState::Idle)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(tank)
+            .unwrap()
+            .0,
+        Some(target),
+        "unavailable run admission must hold movement without losing the living victim"
+    );
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    h.advance(1);
+    assert_eq!(
+        *h.app.world().get::<Position>(tank).unwrap(),
+        from,
+        "incomplete run admission must not permit native kit/chase movement"
+    );
+}
+
+#[test]
 fn production_tank_goal_allows_existing_fight_defense_without_a_healer() {
     let (mut h, tank, from, attacks) = kit_fixture();
     let target = h
