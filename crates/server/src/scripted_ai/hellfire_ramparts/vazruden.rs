@@ -1,5 +1,5 @@
 //! TC a352b1fa boss_vazruden_the_herald.cpp434–450: appearance/engagement.
-//! Ordinary below40 Call Nazan is latched once; death/paired credit are excluded.
+//! Ordinary below40 Call Nazan and source paired-death completion.
 use bevy::prelude::*;
 
 use super::super::boss_ai::{BossAi, BossScript, boss_update_ai};
@@ -14,12 +14,14 @@ pub(super) fn creature_ai() -> Box<dyn CreatureAi> {
     Box::new(Vazruden {
         boss: BossAi::new(1),
         has_called_nazan: false,
+        is_other_dead: false,
     })
 }
 
 struct Vazruden {
     boss: BossAi,
     has_called_nazan: bool,
+    is_other_dead: bool,
 }
 
 impl CreatureAi for Vazruden {
@@ -40,6 +42,22 @@ impl CreatureAi for Vazruden {
             self.has_called_nazan = true;
             self.boss.events.schedule(CALL_NAZAN, 0);
         }
+    }
+
+    fn do_action(&mut self, _ctx: &mut Ctx, action: i32) {
+        if action == super::ACTION_OTHER_IS_DEAD {
+            self.is_other_dead = true;
+        }
+    }
+
+    // TC482–495: completion precedes source speech, ordinary death Call and notification.
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        if self.is_other_dead {
+            self.boss.just_died(ctx);
+        }
+        ctx.talk(3);
+        ctx.do_cast_self(30_693);
+        super::notify_partner_death(ctx, 17_307);
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {

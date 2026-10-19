@@ -1,6 +1,22 @@
 ## Source interrupt eligibility
 
 [Live predicate](systems/spell-casting.md#live-source-interrupt-eligibility): full pinned TC OR/bypass ordering at selection and effect68; damage pushback unchanged. Current ce431b54c focused14/14 pass47.85s/0warnings, including native9, four real104773 protection negatives and unchanged Azure facing. Approved source-duration setup bound250ticks derives1.5s cast+6s stun+100 original50ms ticks; Fissure admitted147. Fissure source0 assertion corrected without altering geometry, native data, CC or timers. No live hazard timing or whole-branch GREEN claim.
+## 2026-10-18 — Herald paired-death credit RED
+
+[Paired death contract](systems/boss-scripts.md#herald-paired-death-credit-boundary--2026-10-18): native ordinary dead30693 qualification passes; six genuine missing1892/bit1 REDs108.35s plus four isolated reverse-order REDs83.24s. Source per-AI other-dead/action1 and last-death completion ported001d76905; fivePASS/sixFAIL identifies temporary17537's absent ordinary origin. Corrected actualNpc+same-copyTempSummon.summoner647169a24→all11/11GREEN187.96s,0ignored/no warnings; both orders/frame/copy/corpse/unrelated/deathspeech/deathCall pass. Enabled tests, independent retained gate pending. Chest/reset/Liquid Fire/native excluded.
+## 2026-10-17 — Victim caster-specific crit306
+
+[Actual caster filter](systems/player-damage.md#victim-caster-specific-crit306--2026-10-17): qualification73953d911 FIRST4PASS74.56s/native1259256 identity/+100/lifetime768s and source52/197/334/player0/NO_CRIT pairs; THEN ignored2fae8312c PUSHED. Genuine4RED/8PASS77.77s0warnings includes matchingNPC/player, source52 preclamp andNO_CRITsource+306; foreign/placement/cancel/197/334/summonowner controls pass. Pure existing victim-aura caster==actualattacker filter before received clamp, shared forecast/no new state/query/wire/RNG/HP/clocks/Guardian change. Consumerfcf19ae71 fresh ignored12GREEN87.79s/0warnings plus retained qualification4PASS74.56s (sixteen-case composite), only then twelve behavioral ignores removed; lead gate pending. No invented negative306/multicaster coexistence certificate,248 deferred.
+## 2026-10-18 — Rust reader consolidation complete; named Python gap
+
+[Coverage matrix and decision](systems/wow-formats.md#coverage-and-named-python-tooling-gap): `WOW_FORMATS_PYTHON_TOOL_READERS_NOT_CONSOLIDATED` records independent Python tools with no approved shared Rust call boundary. Keep ground_files.py unchanged; no one-use bridge or replacement. Rust runtime/geometry consolidation is complete.
+
+## 2026-10-18 — Ground metadata tooling qualification
+
+[Before-only boundary ledger](systems/ground-assets.md#before-only-metadata-tooling-qualification): frozen actual walk/CLI outputs, missing ordering and original failures; no deploy/extraction, parser replacement or bridge/API change. Keep permissive script policy separate from strict runtime projections until a raw-field boundary is approved.
+## 2026-10-18 — BLP icon qualification, no migration
+
+[Icon boundary and before-only ledger](systems/wow-formats.md#blp-icon-boundary): actual icon PNG/RGBA/error/panic receipts plus five source-selection edges; no production/pin/asset changes. Engine normalization and BC5 support are not server defaults. Fifth crate/icon migration remain unapproved.
 
 ## 2026-10-19 — Effect64 launch phase
 
@@ -9,6 +25,10 @@ The lead gate cs656 failed the Lantha Axe Toss test because [first-stun cast sto
 ## 2026-10-19 — First stun stops the current cast; Bo control oracle
 
 [First-stun cast stop](systems/auras.md): native Paralysis115078/Leg Sweep119381 landed on a casting enemy without stopping it, making Bo's Leg Sweep oracle RNG-dependent ([follower data](investigations/follower-data.md)). RED e3f137f13 3/3 genuine (stun applied, CastState kept); fix3e0e8f09b. GREEN32/0 63.47s,0 warnings: three new/rewritten tests plus warrior stun, creature-trigger stun and follower CC controls. Lead family gate pending.
+## 2026-10-19 — Online guild zones accepted
+
+[Producer authority](systems/guild-lifecycle.md#online-member-zone): names load once with existing AreaTable; no GuildPlugin database open. Retained guild/bank/achievement writer/area/rest140/0/3ignored, coordinated gz689 passed/landed. Actual authenticated two-member both-skin zone/refresh/disconnect native proof accepted; engine wiki owns artifact/PNG provenance and limitations. No new sorting/timestamps/leadership behavior.
+
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
 [Ground parent contract](systems/boss-scripts.md#herald-descend4-ground-parent-boundary--2026-10-18): ignored RED pushed before production; native qualification1PASS/four genuine failures86.63s at9691ff61b. Sourcefall+2000ms release and ordinary parent timers ported354302f74; five native casesGREEN137.57s. Enabled final43/43GREEN374.35s at1799e2743/master717ae67df,0ignored/no warnings; exact lethalbefore/after, source initial/repeats and actual parent damage/fear proven without overrides. Real shared-category OnCooldown preserved; first Roarfall+3950ms reflects source50ms combat advancement at release. LEAD gate/check/fmt pending. Liquid Fire effect77 children/pairedcredit/reset/native excluded.
