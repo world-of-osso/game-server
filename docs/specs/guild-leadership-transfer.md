@@ -4,11 +4,11 @@ The authenticated current Guild Master may transfer to another stored same-guild
 
 ## What it must do
 
-- [ ] Recheck authenticated actor/current guild/current master and target membership; reject nonleader, foreign or absent targets without changes.
-- [ ] Atomically make the target the sole rank0 member and move the former master to the current lowest rank. Preserve other members, rank definitions, bank state and existing lifecycle history.
-- [ ] State survives redb reopen. New-master settings authority and former-master restrictions apply immediately; the former master may then leave normally, while the current master still cannot leave.
-- [ ] Existing real request/reply delivery refreshes both participants and does not grant authority to unauthenticated requests.
-- [ ] `GUILD_SELF_LEADER_TRANSFER_REFUSED_UNSOURCED`: refuse self-target with existing Permissions result and unchanged state. This is approved project policy, not Retail self-transfer parity.
+- [x] Recheck authenticated actor/current guild/current master and target membership; reject nonleader, foreign or absent targets without changes.
+- [x] Atomically make the target the sole rank0 member and move the former master to the current lowest rank. Preserve other members, rank definitions, bank state and existing lifecycle history.
+- [x] State survives redb reopen. New-master settings authority and former-master restrictions apply immediately; the former master may then leave normally, while the current master still cannot leave.
+- [x] Existing real request/reply delivery refreshes both participants and does not grant authority to unauthenticated requests.
+- [x] `GUILD_SELF_LEADER_TRANSFER_REFUSED_UNSOURCED`: refuse self-target with existing Permissions result and unchanged state. This is approved project policy, not Retail self-transfer parity.
 
 ## How it works
 
@@ -18,7 +18,7 @@ The authenticated current Guild Master may transfer to another stored same-guild
 
 - `crates/server/src/guild_ranks.rs`: authenticated transfer transform and existing recipient refresh.
 - `crates/server/src/persistence_banks.rs`: existing atomic member-rank persistence.
-- `crates/server/src/guild_leadership_transfer_tests.rs`: ignored real persistence, refusal, HostClient and concurrent-reader regressions.
+- `crates/server/src/guild_leadership_transfer_tests.rs`: real persistence, refusal, HostClient and concurrent-reader regressions, enabled after actual authority RED→GREEN.
 
 ## Tests asserting this spec
 
@@ -29,7 +29,7 @@ The authenticated current Guild Master may transfer to another stored same-guild
 
 ## Known gaps (current cycle)
 
-- [ ] Behavioral RED/GREEN, coordinated consumer gate and real two-member native authority readback remain pending.
+- [ ] Coordinated consumer gate and real two-member native authority readback remain pending. Actual authority RED4 precedes focused GREEN4/4 (six-rank/nonzero bank fixture, reopen/leave, auth/foreign/self, participant refresh and1000 real reader snapshots during31 commits).
 
 ## Out of scope
 

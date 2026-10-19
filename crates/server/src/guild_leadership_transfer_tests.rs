@@ -30,7 +30,6 @@ fn rank(db: &redb::Database, character: u64) -> u8 {
 }
 
 #[test]
-#[ignore = "guild leadership transfer RED before implementation"]
 fn guild_leadership_transfer_moves_authority_and_reopens_before_former_master_leaves() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("leadership.redb");
@@ -107,7 +106,6 @@ fn guild_leadership_transfer_moves_authority_and_reopens_before_former_master_le
 }
 
 #[test]
-#[ignore = "guild leadership transfer RED before implementation"]
 fn guild_leadership_transfer_refuses_nonleader_foreign_missing_and_policy_self_without_writes() {
     let db = temp_database();
     let (master, officer, _) = members(&db);
@@ -136,7 +134,6 @@ fn guild_leadership_transfer_refuses_nonleader_foreign_missing_and_policy_self_w
 }
 
 #[test]
-#[ignore = "guild leadership transfer RED before implementation"]
 fn guild_leadership_transfer_host_replies_to_both_members_and_rechecks_auth_and_new_authority() {
     let mut h = bank_test_harness::harness().unwrap();
     let master = h.character_id;
@@ -209,7 +206,6 @@ fn guild_leadership_transfer_host_replies_to_both_members_and_rechecks_auth_and_
 }
 
 #[test]
-#[ignore = "guild leadership transfer RED before implementation"]
 fn guild_leadership_transfer_readers_never_observe_zero_or_two_masters_during_real_commits() {
     use redb::ReadableDatabase;
     use std::sync::{Arc, Barrier};
