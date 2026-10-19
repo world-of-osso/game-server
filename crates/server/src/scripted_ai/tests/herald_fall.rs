@@ -190,22 +190,38 @@ fn natural_fall(difficulty: u32) {
             "own30 ingress needs no fabricated Call"
         );
     }
+    let lethal = h.health(nazan).max * 2.0;
+    crate::combat::deal_direct_damage(h.app.world_mut(), nazan, nazan, lethal);
+    assert_eq!(
+        h.health(nazan).current,
+        1.0,
+        "DESCEND3 retains actual lethal protection"
+    );
+    h.advance(0.05);
+    assert_eq!(
+        received_casts(&h, nazan, 20538),
+        1,
+        "completed fall cannot replay its callback"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(nazan)
+            .is_none()
+    );
 }
 
 #[test]
-#[ignore = "HERALD_POINT4_ARRIVAL_MOVE_FALL_UNIMPLEMENTED: genuine RED before production"]
 fn encounter_coverage_herald_fall_normal() {
     natural_fall(1);
 }
 
 #[test]
-#[ignore = "HERALD_POINT4_ARRIVAL_MOVE_FALL_UNIMPLEMENTED: genuine RED before production"]
 fn encounter_coverage_herald_fall_heroic() {
     natural_fall(2);
 }
 
 #[test]
-#[ignore = "HERALD_HATE_TO_ZERO_HIT_UNIMPLEMENTED: native20538 DUMMY hook"]
 fn encounter_coverage_herald_fall_hate_to_zero_actual_hit() {
     let (mut h, _, nazan, _) = first_west(1);
     qualify_spell(&h);

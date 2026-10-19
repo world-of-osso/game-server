@@ -36,14 +36,7 @@ pub(crate) fn move_fall(world: &mut World, unit: Entity, id: u32) {
     {
         return;
     }
-    let Some(mut ground) = world.get_resource_mut::<GroundMap>() else {
-        warn!(?unit, "MoveFall requires map collision");
-        return;
-    };
-    let GroundProbe::Supported(floor) =
-        ground.creature_ground_in(map, Vec3::new(position.x, position.y, position.z))
-    else {
-        warn!(?unit, "MoveFall has no supported floor");
+    let Some(floor) = query_fall_floor(world, unit, map, position) else {
         return;
     };
     if (position.y - floor).abs() < 0.1 {
@@ -63,6 +56,25 @@ pub(crate) fn move_fall(world: &mut World, unit: Entity, id: u32) {
         duration_ms,
         started,
     });
+}
+
+fn query_fall_floor(
+    world: &mut World,
+    unit: Entity,
+    map: InMap,
+    position: Position,
+) -> Option<f32> {
+    let Some(mut ground) = world.get_resource_mut::<GroundMap>() else {
+        warn!(?unit, "MoveFall requires map collision");
+        return None;
+    };
+    let GroundProbe::Supported(floor) =
+        ground.creature_ground_in(map, Vec3::new(position.x, position.y, position.z))
+    else {
+        warn!(?unit, "MoveFall has no supported floor");
+        return None;
+    };
+    Some(floor)
 }
 
 fn fall_seconds(drop: f32) -> f32 {
@@ -101,6 +113,25 @@ pub(crate) fn release_finished_falls(
 pub(crate) fn advance_falls(world: &mut World) {
     let now = world.resource::<Time>().elapsed();
     let delta_ms = world.resource::<Time>().delta().as_millis() as u32;
+    for (unit, arrival) in update_fall_positions(world, now, delta_ms) {
+        crate::interest::mark_interest_position_changed(
+            world.get_resource::<crate::interest::InterestDirtyQueue>(),
+            unit,
+        );
+        if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
+            queue.mark(unit);
+        }
+        if let Some(id) = arrival {
+            super::dispatch(world, unit, Hook::MovementInform(MotionType::Effect, id));
+        }
+    }
+}
+
+fn update_fall_positions(
+    world: &mut World,
+    now: std::time::Duration,
+    delta_ms: u32,
+) -> Vec<(Entity, Option<u32>)> {
     let mut updates = Vec::new();
     let mut query =
         world.query_filtered::<(Entity, &mut FallMovement, &mut Position), Without<DeathState>>();
@@ -121,16 +152,5 @@ pub(crate) fn advance_falls(world: &mut World) {
         };
         updates.push((unit, arrived.then_some(fall.id)));
     }
-    for (unit, arrival) in updates {
-        crate::interest::mark_interest_position_changed(
-            world.get_resource::<crate::interest::InterestDirtyQueue>(),
-            unit,
-        );
-        if let Some(queue) = world.get_resource::<lightyear::prelude::ReplicationDirtyQueue>() {
-            queue.mark(unit);
-        }
-        if let Some(id) = arrival {
-            super::dispatch(world, unit, Hook::MovementInform(MotionType::Effect, id));
-        }
-    }
+    updates
 }

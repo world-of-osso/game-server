@@ -6,6 +6,14 @@
 
 Genuine source-plan REDs precede the Z-only implementation. All four grounding cases and the full follower-pet module now pass, with no changed follower assertions or source-reach defaults. Independent oracle queries finalXZ using the same pre-clamp Y/ray and compares bits exactly, matching TC's one-query assignment; it does not impose a second-ray fixed point. No ULP tolerance or WMO-reader change. [Contract, proof ledger and residuals](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite) distinguish setup failures from behavioral REDs and keep the122612 blocker limited to the full reach-dependent XY port. LEAD integration/check/fmt remains pending.
 
+## Herald point4 fall through DESCEND3 — 2026-10-18
+
+Natural point4 completion schedules DESCEND2, which launches a real same-XZ falling spline to the map floor. TC a352b1fa MotionMaster1001–1046, MovementUtil29–85, MoveSpline114–127 and GenericMovementGenerator46–110 define analytic gravity19.291103/terminal60.148003, integer-ms duration and actual EFFECT5 completion. Fall owns motion through its completion tick; launch never consumes the prior point-arrival delta. Current represented subset is dry static creature floor without transport/hover movement; not generic flight or player physics parity.
+
+Actual EFFECT5 schedules DESCEND3: enable gravity and ordinary20538. Native authenticated20538 is DUMMY3/22+15/radius100/instant/no cost. Pinned spell_generic2015–2034 reduces caster threat100% for each actual hit, retaining zero references; no global clear or triggered/admission bypass. DESCEND4, protection release, ground casts, paired credit/reset and native animation remain excluded.
+
+Ignored tests were pushed before production: native qualification passes and three genuine failures expose absent fall and actual20538 threat1vs0. Minimal implementation3a96703c4 passes4/4 targeted70.06s, including exact Normal/Heroic50ms curve/floor and ordinary hit. Enabled retained cohort and independent LEAD gate pending. [Contract](../../specs/ramparts-herald.md#bounded-fall-through-descend3); evidence `herald-fall-{red,green}-command.json/.log` in the encounter diagnostic root.
+
 ## Herald min1 precommit guard — 2026-10-18
 
 TC Initialize166 sets `_isUnkillable=true`; DamageTaken214–215 replaces lethal loss with currentHP−1, including self-source. `HeraldUnkillable` represents that source state at ordinary appearance and survives living entry morph. The existing pure `limit_scripted_loss` reads current protection at queued melee, direct and spell/periodic health commits, before any death/loot/credit transition. Animated Gold retains the same existing floor calculation; generic SetUnkillable/Nibbles and its self-source exclusion are unchanged. Later DESCEND4(line341) must remove this marker; `HERALD_UNKILLABLE_RELEASE_AFTER_FALL_UNIMPLEMENTED` keeps that excluded release explicit.
