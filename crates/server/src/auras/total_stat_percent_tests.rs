@@ -75,7 +75,6 @@ fn total_stat137_native_single_strength_effects_keep_their_authored_factors() {
 }
 
 #[test]
-#[ignore = "native independent137 effects currently add percentages"]
 fn total_stat137_native_pillar_then_unholy_strength_multiplies_instead_of_adding() {
     let mut h = fixture();
     let baseline = stats(&h, h.caster);
@@ -85,7 +84,6 @@ fn total_stat137_native_pillar_then_unholy_strength_multiplies_instead_of_adding
 }
 
 #[test]
-#[ignore = "native independent137 effects currently add percentages"]
 fn total_stat137_native_unholy_strength_then_pillar_has_the_same_product() {
     let mut h = fixture();
     let baseline = stats(&h, h.caster);
@@ -95,7 +93,6 @@ fn total_stat137_native_unholy_strength_then_pillar_has_the_same_product() {
 }
 
 #[test]
-#[ignore = "native independent137 effects currently add percentages"]
 fn total_stat137_native_removal_restores_the_remaining_strength_factor() {
     let mut h = fixture();
     let baseline = stats(&h, h.caster);

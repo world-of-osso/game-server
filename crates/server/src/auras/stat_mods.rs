@@ -227,9 +227,13 @@ fn time_percent_mod(amount: f32) -> f32 {
     }
 }
 
-/// Add `amount` to the stats (index 0 Strength, 1 Agility, 2 Stamina,
+/// Apply to the stats (index 0 Strength, 1 Agility, 2 Stamina,
 /// 3 Intellect) that `selects` picks.
-fn add_to_stats(stats: &mut UnitStats, amount: f32, selects: impl Fn(usize) -> bool) {
+fn each_stat(
+    stats: &mut UnitStats,
+    selects: impl Fn(usize) -> bool,
+    mut apply: impl FnMut(&mut f32),
+) {
     let fields = [
         &mut stats.strength,
         &mut stats.agility,
@@ -238,7 +242,7 @@ fn add_to_stats(stats: &mut UnitStats, amount: f32, selects: impl Fn(usize) -> b
     ];
     for (index, field) in fields.into_iter().enumerate() {
         if selects(index) {
-            *field += amount;
+            apply(field);
         }
     }
 }
@@ -363,9 +367,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 stats.versatility_pct += amount;
             }
             // MiscValue is the stat index; negative is every stat.
-            MOD_STAT => add_to_stats(&mut stats.primary_flat, amount, |index| {
-                misc < 0 || misc as usize == index
-            }),
+            MOD_STAT => each_stat(
+                &mut stats.primary_flat,
+                |index| misc < 0 || misc as usize == index,
+                |stat| *stat += amount,
+            ),
             MOD_STAT_BONUS_PCT => {
                 add_bonus_stat_percent(&mut stats.primary_bonus_pct, aura.spell_id, misc, amount)
             }
@@ -373,9 +379,13 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             // `HandleModTotalPercentStat`).
             MOD_TOTAL_STAT_PERCENTAGE => {
                 let mask = effect.misc_values[1];
-                add_to_stats(&mut stats.primary_pct, amount, |index| {
-                    mask == 0 || mask & (1 << index) != 0
-                })
+                // TC GetTotalAuraMultiplier composes independent factors;
+                // retain the existing percentage representation consumed by stats.rs.
+                each_stat(
+                    &mut stats.primary_pct,
+                    |index| mask == 0 || mask & (1 << index) != 0,
+                    |stat| *stat += amount * (1.0 + *stat / 100.0),
+                )
             }
             MOD_MINIMUM_SPEED => acc.minimum_speed_pct = acc.minimum_speed_pct.max(amount),
             MOD_BONUS_ARMOR_PCT => {
