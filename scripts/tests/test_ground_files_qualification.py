@@ -5,9 +5,9 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import unittest
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import ground_files
@@ -46,13 +46,13 @@ def observe_walk(case):
 
 def observe_main(case, missing):
     arguments = [
-        "ground_files.py", "--world-db", case["world_db"],
+        sys.executable, ground_files.__file__, "--world-db", case["world_db"],
         "--cache", case["cache"], *case["args"],
     ]
     if missing:
         arguments.append("--missing")
-    with patch.object(sys, "argv", arguments):
-        return observe(ground_files.main)
+    result = subprocess.run(arguments, capture_output=True, text=True, check=False)
+    return {"stdout": result.stdout, "stderr": result.stderr, "exit_code": result.returncode}
 
 
 @unittest.skipUnless(os.environ.get("WOW_GROUND_INPUTS"), "explicit qualification manifest required")

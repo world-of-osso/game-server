@@ -4,7 +4,7 @@ Approved scope: freeze actual `scripts/ground_files.py` ordered file/missing/std
 
 ## Observer boundary
 
-`scripts/tests/test_ground_files_qualification.py` imports the actual existing module, observes `GroundFiles` state after each walk (including partial progress on errors), and invokes the actual `main()` twice with argv: normal file listing and `--missing`. Only argv and stdout/stderr streams are redirected; no reader/SQL/filesystem method is replaced. Exception type/message and exact printed text are preserved. Existing receipts cannot be overwritten. New test is skipped unless a frozen manifest is explicitly supplied.
+`scripts/tests/test_ground_files_qualification.py` imports the actual existing module, observes `GroundFiles` state after each walk (including partial progress on errors), and runs the actual standalone CLI twice in fresh subprocesses: normal file listing and `--missing`. No reader/SQL/filesystem method is replaced. Direct-walk exception type/message and complete CLI exit code/stdout/stderr (including actual tracebacks) are preserved. Existing receipts cannot be overwritten. New test is skipped unless a frozen manifest is explicitly supplied.
 
 ```text
 WOW_GROUND_INPUTS=/home/osso/.worktrees/logs/wow_formats-phase8/inputs.json
