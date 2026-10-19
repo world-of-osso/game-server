@@ -44,7 +44,7 @@ pub(super) fn check_caster_exclusion(
     Ok(())
 }
 
-pub(super) fn check_target(
+pub(crate) fn check_target(
     world: &World,
     caster: Entity,
     target: Option<Entity>,

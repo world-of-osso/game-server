@@ -120,7 +120,14 @@ fn patient_is_eligible(world: &World, unit: Entity, target: Entity, entry: &Entr
     let correct_role = entry.conditions.target != Target::Tank || is_tank(world, target);
     let can_remove_aura = entry.slot != Slot::Dispel
         || crate::auras::has_dispellable_aura(world, unit, target, &entry.conditions.dispel_types);
-    same_map && missing_requested_aura && correct_role && can_remove_aura
+    let native_target_eligible = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(entry.spell_id)
+        .is_some_and(|spell| {
+            crate::spell_cast::check_target_aura_restrictions(world, unit, Some(target), spell)
+                .is_ok()
+        });
+    same_map && missing_requested_aura && correct_role && can_remove_aura && native_target_eligible
 }
 
 fn is_tank(world: &World, unit: Entity) -> bool {

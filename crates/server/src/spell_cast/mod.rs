@@ -27,6 +27,7 @@ mod attack_restriction_tests;
 #[cfg(test)]
 mod attack_speed_tests;
 mod aura_spell_restrictions;
+pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
 #[cfg(test)]
