@@ -9,6 +9,13 @@ use shared::components::ThreatTable;
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx, DamageTaken};
 
+/// TC557–568: effect0 SCRIPT_EFFECT sends action0 to the actual hit creature.
+pub(crate) fn call_nazan(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    if world.get::<shared::components::Npc>(target).is_some() {
+        super::dispatch(world, target, super::Hook::DoAction(0));
+    }
+}
+
 const SCRIPT: &str = "boss_watchkeeper_gargolmar";
 const TAUNT: u32 = 1;
 const MORTAL_WOUND: u32 = 30641;
