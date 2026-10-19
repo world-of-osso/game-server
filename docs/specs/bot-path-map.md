@@ -5,11 +5,11 @@ Manual `bot-map` binary renders an explicitly captured Stockade (map 34) harness
 ## What it must do
 
 - [x] Read JSONL and render observed paths with periodic wall-time ticks, combat/death markers, legend, run ID/revision/duration.
-- [ ] Render baked walkability with existing navigation artifact readers; flatten all levels explicitly.
-- [ ] Read map34 creature rows from world.db; share the tank planner's pure formation identity rule, never geometric grouping.
+- [x] Render baked walkability with existing navigation artifact readers; flatten all levels explicitly.
+- [x] Read map34 creature rows from world.db; share the tank planner's pure formation identity rule, never geometric grouping.
 - [x] Mark observed end-state honestly; unknown identity/census data remains unknown.
 - [ ] Preserve existing pull-source/route behavior and tests unchanged.
-- [ ] Produce one real Stockade SVG and inspected PNG.
+- [x] Produce one real Stockade SVG and inspected PNG.
 
 ## How it works
 
@@ -25,11 +25,12 @@ Manual `bot-map` binary renders an explicitly captured Stockade (map 34) harness
 ## Tests asserting this spec
 
 - `crates/server/src/bin/bot-map.rs`: concrete trace points,10s tick, death marker and title fixture.
-- Existing `followers::pull_sources_tests` and `pull_route_tests`: unchanged planner behavior.
+- Existing `followers::pull_sources_tests` and `pull_route_tests`: unchanged planner behavior (lead retained gate pending).
+- Real nav34/world.db/trace renderer acceptance: [wiki receipts](../wiki/systems/bot-path-map.md#real-stockade-proof--2026-10-19).
 
 ## Known gaps (current cycle)
 
-- [ ] Targeted GREEN, native capture and real SVG/PNG acceptance pending.
+- [ ] Lead retained pull-source/route/weapon-crit/check gate pending; no Stockade clear claim.
 - [ ] Source GUID↔combat entity mapping missing for trash; per-spawn end-state unknown, not inferred alive.
 
 ## Out of scope

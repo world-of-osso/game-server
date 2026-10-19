@@ -1,6 +1,6 @@
 # Stockade bot path map
 
-Manual trace renderer, independent of server runtime systems. Implementation in progress; real acceptance pending.
+Manual trace renderer, independent of server runtime systems. Real bounded failed-run capture/render proof recorded below; no Stockade clear claim.
 
 ## Usage
 
@@ -36,3 +36,13 @@ Unknown source-entity identity/end-health is labeled UNKNOWN, never alive from m
 - [Navigation](navigation.md).
 
 `spawn_state` rows identify a source GUID and actual observed alive/dead state. Known boss death rows originate only from the exact native entity death already captured by the harness. Renderer uses red DEAD, green ALIVE and gray UNKNOWN, with explicit legend labels; current producer does not invent ALIVE rows for survivors.
+
+## Real Stockade proof — 2026-10-19
+
+Capture revision `011ef565b`, native extension/CLI Rust `0a960bcf6` (unchanged Rust trees), server/renderer `48538fa49`, protocol `f9a9175`. All own artifacts built successfully; SHA receipts and exact commands in `/home/osso/.worktrees/logs/bot-path-map-2026-10-19/proof-ledger.json`. Native five-identity capture reproducer observed0→5 after the UnitPick omission fix; original pose/combat/wipe/boss and SVG fixtures pass. Default-disabled harness/report controls35 pass; actual private admin/provision subprocess tests2 pass. Independent retained planner/check gate remains lead-owned.
+
+Authentic private5981 refresh captured52.365s, two acknowledged Heroic Throw openings,354 owner samples and290 samples for each of Garrick, Crenna, Shuja and Meredy; all five have facing.37 already-read roster samples,296 combat events, two observed combat starts/one end and one mob death. No boss completed and no party death: controller stopped on existing `Sourced route exhausted before goal; no direct-line fallback`. No retry, alternate route or fabricated completion. Actual walkability uses baked map34 polygons;143 source spawns use the shared formation identity. Unknown trash end-state remains gray UNKNOWN.
+
+Inspected SVG/rsvg PNG pair: `/syncthing/AgentShared/2026-10-19/bot-path-map/stockade-five-bots-failed-52s.{svg,png}`. Visible heading was annotated FAILED52s/no bosses with the exact failure; floor/path geometry unchanged. The earlier63.222s failure pair `stockade-failed-63s-no-bosses.{svg,png}` retains three named missing visual tracks. It ended on a5308 outcome deadline without repeating the request; later server work stalled/disconnected and panicked inserting UnitThreatList into despawned227883v0 in `followers::party::advance_runs`. That server root cause belongs to separate owner work, not this capture fix. Neither record is a clear, death-free dungeon acceptance, clean exit or packet-loss diagnosis.
+
+Private JSONL/logs/hashes/cleanup: `stockade-refresh-1/final-proof.json` and `stockade-real-1/` under the proof root above. All owned controller/client/server processes stopped, UDP5981 empty, both lead windows cleared. Only requested SVG/PNG files were published.
