@@ -42,6 +42,10 @@ Post-sync desktop `--map 2991 --all --no-eyes` exits 0: **72 tiles, 2,171,579 tr
 
 Owned output is `<engine-data>/los/2991/`; desktop scratch output is `/home/osso-test/game-engine-trial/zephras-ground/los/2991/`. Other maps and global eye tables were preserved. Runtime `LosMap` loads the bake and blocks the vertical interior probe `(2934.333,1334.333,900)`→`(2934.333,1334.333,500)` at Z 746.51. An exact-center vertical ray was clear before the ground lookup fix: baked mesh vertices retain independent f32 rounding; sub-milliyard mesh cracks remain unverified. The ground-query fix does not change baked vertices.
 
+## Before-only metadata tooling qualification
+
+The [ground-files qualification ledger](../../handoffs/wow-formats-ground-files-qualification.md) records actual ordered walks plus normal/missing CLI outputs and failures on frozen real/synthetic inputs. It makes no decoder replacement or deploy/extraction claim. Existing permissive chunk/record/group handling is script policy, not permission to substitute stricter runtime projections. A raw-field reuse boundary and any cross-language entry point require separate approval.
+
 ## Sources
 
 - [ground_files.py](../../../scripts/ground_files.py), [extract_ground.py](../../../scripts/extract_ground.py), [selection/extraction fixtures](../../../scripts/tests/test_ground_selection.py)

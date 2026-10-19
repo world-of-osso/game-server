@@ -1,6 +1,16 @@
 ## 2026-10-17 — Victim caster-specific crit306
 
 [Actual caster filter](systems/player-damage.md#victim-caster-specific-crit306--2026-10-17): qualification73953d911 FIRST4PASS74.56s/native1259256 identity/+100/lifetime768s and source52/197/334/player0/NO_CRIT pairs; THEN ignored2fae8312c PUSHED. Genuine4RED/8PASS77.77s0warnings includes matchingNPC/player, source52 preclamp andNO_CRITsource+306; foreign/placement/cancel/197/334/summonowner controls pass. Pure existing victim-aura caster==actualattacker filter before received clamp, shared forecast/no new state/query/wire/RNG/HP/clocks/Guardian change. Consumerfcf19ae71 fresh ignored12GREEN87.79s/0warnings plus retained qualification4PASS74.56s (sixteen-case composite), only then twelve behavioral ignores removed; lead gate pending. No invented negative306/multicaster coexistence certificate,248 deferred.
+## 2026-10-18 — Rust reader consolidation complete; named Python gap
+
+[Coverage matrix and decision](systems/wow-formats.md#coverage-and-named-python-tooling-gap): `WOW_FORMATS_PYTHON_TOOL_READERS_NOT_CONSOLIDATED` records independent Python tools with no approved shared Rust call boundary. Keep ground_files.py unchanged; no one-use bridge or replacement. Rust runtime/geometry consolidation is complete.
+
+## 2026-10-18 — Ground metadata tooling qualification
+
+[Before-only boundary ledger](systems/ground-assets.md#before-only-metadata-tooling-qualification): frozen actual walk/CLI outputs, missing ordering and original failures; no deploy/extraction, parser replacement or bridge/API change. Keep permissive script policy separate from strict runtime projections until a raw-field boundary is approved.
+## 2026-10-18 — BLP icon qualification, no migration
+
+[Icon boundary and before-only ledger](systems/wow-formats.md#blp-icon-boundary): actual icon PNG/RGBA/error/panic receipts plus five source-selection edges; no production/pin/asset changes. Engine normalization and BC5 support are not server defaults. Fifth crate/icon migration remain unapproved.
 
 ## 2026-10-19 — Effect64 launch phase
 
