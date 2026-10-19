@@ -53,6 +53,8 @@ mod group_criteria;
 mod herald_intro;
 #[path = "herald_intro2.rs"]
 mod herald_intro2;
+#[path = "herald_call.rs"]
+mod herald_call;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
