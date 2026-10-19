@@ -443,6 +443,12 @@ fn setup_progression_app(
     app.register_message::<shared::protocol::TraitLoadoutRequest>();
     app.insert_resource(GameDatabase::new(db));
     app.insert_resource(classes);
+    let conn = Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    app.insert_resource(crate::profession::load_profession_data(&conn).unwrap());
     app.add_plugins((ClassProgressionPlugin, crate::profession::ProfessionPlugin));
     app.add_plugins(crate::experience::ExperiencePlugin);
     if achievements {

@@ -166,6 +166,10 @@ fn process_lfg_queue_requests(
                             pvp.queue,
                             Some(crate::pvp::PlayerPvpQueue::Battleground { .. })
                                 | Some(crate::pvp::PlayerPvpQueue::Arena { .. })
+                                | Some(crate::pvp::PlayerPvpQueue::RatedBracket {
+                                    bracket: shared::protocol::PvpBracketSnapshot::Arena2v2
+                                        | shared::protocol::PvpBracketSnapshot::Arena3v3,
+                                })
                         )
                 });
                 if battlefield_active {
