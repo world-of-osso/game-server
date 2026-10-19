@@ -353,11 +353,27 @@ Examples:
 - **Costs:** a `SpellPower` row with `RequiredAuraSpellID` applies only while the caster has that aura. Priest costs are gated on the spec passives 137031/137032/137033/417191, so a priest pays the row of whichever spec passive it knows; with none known the spell is free.
 - **Cast time:** ChangeCastTime mods, then ÷ `1 + CharacterStats.haste_pct/100`.
 - **Charges:** max charges and recharge follow MOD_MAX_CHARGES 411, CHARGE_RECOVERY_MOD 453 and CHARGE_RECOVERY_MULTIPLIER 454 on the charge category (`EffectMiscValue_0`). Double Time 103827 gives Charge 100 2 charges and a 17 s recharge.
-- **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates. Non-mana continuous pools add recipient/power-matched aura85 raw amount/5 afterward; mana and discrete pet aura85 remain separate unproved consumers.
+- **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates. Continuous pools and Mana add recipient/power-matched aura85 raw amount/5 afterward; discrete pet aura85 remains a separate unproved consumer. Native Mana proof: [[auras#Water Shield flat Mana — 2026-10-18]].
 - **Max power:** MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 add their amount to the MiscValue power's max (`AuraStatMods.max_power_flat`; mana is not covered, its max comes from `stats.rs`).
 - **Charged combo points:** SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore) marks its MiscValue (1-based point index) charged: `AuraStatMods.charged_power_points`, ascending (Echoing Reprimand 354835 → 2-5, Supercharge 470398-470416 → 1-7). The finisher bonus of a charged point is not modelled.
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
+
+## Native power prevention294 — 2026-10-18
+
+TC a352b1fa StatSystem.cpp863-869 tests recipient aura294 `MiscValue & (1 << power)` and returns zero regeneration before base, percentage and flat terms. Amount is not consulted. Native70448 SpellEffect351520 supplies232865 mask8/amount0;623229 supplies262173 mask1/amount0, with623258's real379 −100% sibling. Both spells are permanent; tests do not invent expiry.
+
+Tests-only3041d69e3 reproduced Energy25vs0 with actual Tiger Palm/Elixir, Mana2vs0 after actual8004/137039/WaterShield and262173, and Energy25vs0 after removing only the other mask. Foreign authenticated self-casts and nonmatching-mask controls passed3; genuine RED3/6 took16.93s with zero warnings. Existing native fixtures are reused through test-only helpers; definitions, resources, stats and clocks are unchanged.
+
+AuraStatMods now unions recipient masks independent of effect amount. Only the continuous Energy loop and separate Mana path consume the mask before all regeneration terms, setting prediction to zero; source removal recomputes the union. Runes, discrete Focus pets and other continuous powers are unchanged and not certified, as are global294/legal-build/full-ability behavior. Native Elixir2Chi and NoMana379 −100% remain unchanged. At7e541f03b/protocolf9a9175 the combined6+retained40 pass46/46 in21.88s with zero warnings/ignored. Tests-only416735d34 adds explicit replicated Energy prediction0: fresh native6/6 GREEN19.39s, including an actual Elixir cast while already frozen, both active masks, independent removal and recipient controls. Production and retained40 proof scope is unchanged; no redundant broad rerun. Fullcargo fmt returned0 before pushes; independent lead auras/check/format gate pending. [Requirement](../../specs/class-completeness.md); new family `spell_cast::prevent_regen_tests::`; source/proof in assigneds6 `data/class-completeness6-2026-10-12/prevent-regen294-*`.
+
+## Water Shield flat Mana — 2026-10-18
+
+Native70448 SpellEffect79509 supplies79949 effect1 aura85/Mana/10; effect79508's42→79950 sibling remains unchanged. SpellMisc58951/Duration6 supplies600000ms. TC a352b1fa StatSystem.cpp874-908 multiplies base-mana regeneration before adding flat85/5. The Elixir slice already collected recipient/power flat amounts, but separate authoritative Mana regeneration omitted them.
+
+Atf4c17e35b, an ordinary Shaman Healing Surge8004 with native137039 cost eligibility creates a real deficit. Native137039 aura379 gives25% base regeneration:10000/100*1.25=125/s. An ordinary79949 should add10/5 afterward for127/s; rate/order and cap/prediction cases genuinely failed125vs127. Baseline, actual600-second expiry through native50ms frames, and foreign authenticated self-cast controls passed3; two genuine REDs took25.33s. The earlier746a harness error incorrectly read Mana through the non-mana-only `Harness::power`; that run is not regression evidence. Tests now read the unchanged authoritative Mana component.
+
+The Mana consumer now adds the existing raw85 sum/5 after its multipliers; native spells, resources, frame clocks, proc behavior and definitions are unchanged. At merged82f8476d4/protocolf9a9175, combined WaterShield5 +Elixir5 +retained regen/resource30 pass40/40 in26.47s with zero ignored/warnings. This includes real50ms Mana gain, flat-after-percent127/s, cancellation, maximum/prediction, full600s natural expiry and foreign self-cast. Full `cargo fmt --package server` returned0 with clean status after merging current master; independent lead auras/check/format gate pending. This is native79949, not Retail52127/legal-build/full shield-proc certification; discrete pet85/global census claims remain separate. [Requirement](../../specs/class-completeness.md); tests `spell_cast::water_shield_mana_tests::`; assigneds6 evidence `data/class-completeness6-2026-10-12/water-shield-mana85-*`.
 
 ## Energizing Elixir flat Energy — 2026-10-18
 
@@ -392,7 +408,8 @@ Every aura change recomputes two components, each written only when its value ch
 | `autoattack_range_bonus` | 153 signed additive yards | attacker-only main/off-hand swing distance |
 | `rage_from_damage_dealt_pct` | 213 | rage per melee swing dealt (summed percent) |
 | `power_regen_mult` | 110 (by power), 379 (mana) | regen |
-| `power_regen_flat` | 85 raw units/5s, summed by power | continuous non-mana pool regen after percent; mana/discrete-pet85 unproved |
+| `power_regen_flat` | 85 raw units/5s, summed by power | continuous pools and Mana after percent; discrete-pet85 unproved |
+| `power_regen_prevention_mask` | 294 union of MiscValue power bits, amount-independent | Mana/Energy only, before all terms; Rune/discrete-pet/other/global294 unproved |
 | `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
 | `water_breathing` / `water_breathing_mult` | WATER_BREATHING 82 / MOD_WATER_BREATHING 155 | breath timer ([[swimming-and-breath]]) |
 

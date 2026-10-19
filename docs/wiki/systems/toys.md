@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Expanded70448 stationary Loa cosmetics (2026-10-18)
+
+[Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Canonical81c554bb1 targeted20/0/151.90s covers three new cosmetics/all13 census/three batch1 cases/absent-visual negative. Broad toy/check/fmt gate and source landing remain lead-owned; no generic dummy admission or other-five change.
+
 ## Published extras and census cardinality (2026-10-18)
 
 [Current regression/correction](../../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg578's12 census failures and st574's additional `toys_effect_census` share one stale1166 oracle after the two-row publication. Keep Full1166 as the baseline and append only named published70448 item/name/spell triples, asserting both identities and resulting count. Exact748a5ad78 merge preserves batch1; intentionally RED batch2 tests remain isolated. Thirteen census plus three batch1 targets pending; no runtime/data change or gate success claim.
@@ -586,9 +590,15 @@ Source135's maintained import and actual-use omissions were reproduced before ad
 
 Noble Gardener125 now has the actual saved-bind/shared2309 contract alongside four prior holiday roots. Citizens126 remains refused at the source child's permanent Personal Anchor dummy; its new actual-learning refusal test proves no partial actor/effect or recovery spending, not a successful summon. [Exact source124–129 matrix and retained proof scopes](../../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17) distinguish these from native garment/surfing/zero-entry/script appearance gaps. No production admission.
 
+## Scarab target32 grounded oracle (2026-10-18)
+
+Native92146 is SUMMON28, implicit32+0 and Attr9=0. TC Spell1614/1640–1641/9286–9292 selects MovePositionToFirstCollision, whose Object2904 calls UpdateAllowedPositionZ. Object709–748 samples height once from the computed pre-clamp elevation. Therefore the first Scarab retains the post-grounding destination, not raw `effect_dest` Y. After hi609, the old pre-grounding oracle became stale; production grounding is correctly scoped.
+
+The corrected test independently samples the same selectedXZ/pre-clampY ray, requires this actual slope to distinguish old/new height, retains exact horizontal coordinates and strict floor bits, and leaves count/scatter/follow/lifetime checks unchanged. Ignored REDbe5cd97ae reproduces the original first-destination failure39.32s; corrected strict oracle and retained controls pass17/17 144.23s at206b095ed (master641cb2460/protocolf9a9175), including10 Herald, four grounding, two Scarab and the toyfx393 prefix-matched Hearthstone. Independent full-Toy gate remains LEAD-owned. No production code changes. [Contract](../../specs/toys.md), [target32 grounding](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite).
+
 ## Scarab source scatter metric (2026-10-17)
 
-The first guardian retains the exact selected destination; secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
+The first guardian retains the exact selected destination after target32 grounding (see above); secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
 
 ## Dragon costume simulation lifecycle (2026-10-17)
 

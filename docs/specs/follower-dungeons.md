@@ -37,6 +37,8 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 `TANK_IDLE_FOLLOWS_OWNER_PACE` — user decision, relayed by the lead: follow the owner's pace. With the owner idle out of combat, tanks must not autonomously pull. Chaining additional packs is allowed only during an active engagement and within `TANK_PULL_BUDGET`. Owner selection alone remains insufficient to start combat.
 
+Route admission submits to the native navigation worker and holds pursuit until a complete route is published; a pending query is not a clear or admitted route. Preserve the living current victim while held and never evict unfinished hazard/chase work to obtain admission. Native casts and existing outside-run pursuit remain unchanged.
+
 Kit pursuit must project the complete authored route before starting native chase. Exposure outside already-engaged formations requires current-run source, history, healer and budget admission; missing inputs or refusal holds movement while leaving native in-range attacks available. Movement exposing only already-engaged formations is defense and must not require new-pull healer readiness. This pursuit gate is not acceptance of production goal generation, stacking or frontal positioning.
 
 Pull candidates must pass native `relation_matches(Enemy)` selection/attackability and must not have the source template's native `AggroMode::Passive`. Proximity exposure includes only native aggressive sources, not passive triggers or reactive civilians; deliberately attacking an eligible reactive target still includes its authored formation. Keep passive source GUIDs in the presence inventory: excluding noncombatants from aggro is not recording their death. Actual Stockade template53488 trigger GUIDs20375809/20375810 must never become cheap pull candidates or proximity damage debt.
@@ -69,6 +71,9 @@ For an observed hostile destination-directed cone104 aimed at the tank, position
 Collect actual interruptible engaged casters independently of the tank's selected victim, preserving current-victim priority rather than threat-top assumptions. Exclude dead, other-copy, completed/uninterruptible casts and damage-breakable controlled targets. Candidate collection itself must not move, change targets or cast interrupts; the kit consumes the same list for its sourced Rebuke-first interrupt choices.
 
 Pure budget decision controls are separate from runtime planner/caster integration and native clear acceptance; neither CPU estimates nor partial fights certify a dungeon clear.
+## FOLLOWER_HAZARD_REACTION_POLICY
+
+User-approved project behavior, not sourced Retail AI timing: predict hostile contact50ms ahead using the authoritative native radius curve, submit escape planning immediately, and hold position for250ms from detection. Move on the first tick at or after that deadline with a published valid route. If the worker is late, keep standing—even inside the hazard—until publication; no synchronous query, wait, fallback or extra safety margin. Early publication cannot bypass the reaction delay. Growth contact may recur after an escape and begins another reaction; ordinary follow/combat must not move the follower back into the field. Exact timing, continuation and worker constraints: [navigation policy](navigation.md#follower_hazard_reaction_policy).
 
 ## Azure sourced partial
 

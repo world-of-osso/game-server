@@ -550,6 +550,60 @@ fn assert_stockade_pet_route(chase: bool) {
 }
 
 #[test]
+fn follower_live_pet_route_survives_fixed_pruning_and_cancels_after_despawn() {
+    use crate::navigation::{Goal, MoveRequest, Navigation, Step};
+    let (mut f, pet, _) = stockade_pet();
+    let from =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap();
+    let owner =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(f.unit)
+            .unwrap();
+    let request = MoveRequest {
+        map_id: 34,
+        goal: Goal::Follow(f.unit.to_bits()),
+        from,
+        to: owner,
+        distance: 0.25,
+        reach: 4.0,
+    };
+    assert!(matches!(
+        f.h.app
+            .world_mut()
+            .resource_mut::<Navigation>()
+            .advance(pet, request),
+        Step::Pending
+    ));
+    crate::navigation::drain_fixture(&mut f.h.app);
+    f.h.advance(1);
+    let after =
+        *f.h.app
+            .world()
+            .get::<shared::components::Position>(pet)
+            .unwrap();
+    assert_ne!(
+        after, from,
+        "a live controlled pet must retain and consume its published route across fixed pruning"
+    );
+    assert!(f.h.app.world_mut().despawn(pet));
+    f.h.advance(1);
+    assert!(
+        matches!(
+            f.h.app
+                .world_mut()
+                .resource_mut::<Navigation>()
+                .continue_route(pet, 34, after, 0.25),
+            Step::Pending
+        ),
+        "actual despawn must cancel the previously live pet route"
+    );
+}
+
+#[test]
 fn follower_felguard_follow_finishes_real_stockade_route_without_crossing_collision() {
     assert_stockade_pet_route(false);
 }

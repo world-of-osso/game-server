@@ -8,7 +8,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::pull_sources::{self, Source};
 use crate::creature_aggro::AggroDistance;
 use crate::maps::InMap;
+#[cfg(test)]
 use crate::navigation::Navigation;
+#[path = "pull_route_paths.rs"]
+mod paths;
+
+type ReadPath =
+    fn(&mut World, Entity, Vec3, InMap, paths::Key) -> Result<Option<Vec<Vec3>>, String>;
 
 pub(super) struct Request<'a> {
     pub tank: Entity,
@@ -24,23 +30,27 @@ pub(super) struct PullRoute {
     pub pack_count: usize,
 }
 
-pub(super) fn read_route(world: &mut World, request: &Request<'_>) -> Result<PullRoute, String> {
-    read_route_with_destination(world, request, None)
+pub(super) fn read_route(
+    world: &mut World,
+    request: &Request<'_>,
+) -> Result<Option<PullRoute>, String> {
+    read_route_with_destination(world, request, None, read_complete_route)
 }
 
 pub(super) fn read_point_route(
     world: &mut World,
     request: &Request<'_>,
     destination: Vec3,
-) -> Result<PullRoute, String> {
-    read_route_with_destination(world, request, Some(destination))
+) -> Result<Option<PullRoute>, String> {
+    read_route_with_destination(world, request, Some(destination), read_complete_route)
 }
 
 fn read_route_with_destination(
     world: &mut World,
     request: &Request<'_>,
     destination: Option<Vec3>,
-) -> Result<PullRoute, String> {
+    read_path: ReadPath,
+) -> Result<Option<PullRoute>, String> {
     let map = *world
         .get::<InMap>(request.tank)
         .ok_or("Tank route lacks a map copy")?;
@@ -61,23 +71,35 @@ fn read_route_with_destination(
     {
         return Err("Pull target must be a living attackable non-passive source actor".into());
     }
+    let key = destination.map_or(paths::Key::Target(request.target_guid), |_| {
+        paths::Key::Point
+    });
     let destination = match destination {
         Some(point) => point,
         None => crate::spell_cast::targets::position(world, actor)
             .ok_or("Source route target lacks a position")?,
     };
-    let points = read_complete_route(world, request.tank, destination, map)?;
+    let Some(points) = read_path(world, request.tank, destination, map, key)? else {
+        return Ok(None);
+    };
+    if points.is_empty() {
+        return Err("Pull route is empty".into());
+    }
+    let from = crate::spell_cast::targets::position(world, request.tank)
+        .ok_or("Tank route lacks a position")?;
+    let mut points = points;
+    points.insert(0, from);
     let packs = read_exposed_packs(world, request.tank, &sources, &points, target.pack_guid)?;
     let spawns = sources
         .values()
         .filter(|source| packs.contains(&source.pack_guid))
         .map(|source| source.guid)
         .collect();
-    Ok(PullRoute {
+    Ok(Some(PullRoute {
         points,
         spawns,
         pack_count: packs.len(),
-    })
+    }))
 }
 
 fn read_source_aggro_mode(
@@ -124,27 +146,52 @@ fn read_exposed_packs(
 }
 
 fn read_complete_route(
-    world: &World,
+    world: &mut World,
     tank: Entity,
     to: Vec3,
     map: InMap,
-) -> Result<Vec<Vec3>, String> {
+    key: paths::Key,
+) -> Result<Option<Vec<Vec3>>, String> {
     let from =
         crate::spell_cast::targets::position(world, tank).ok_or("Tank route lacks a position")?;
     if !from.is_finite() || !to.is_finite() {
         return Err("Pull route endpoints must be finite".into());
     }
-    let nav = world
-        .get_resource::<Navigation>()
-        .ok_or("Pull route requires authored navigation")?;
-    let mut route = nav
+    paths::read(world, tank, map, key, from, to)
+}
+
+#[cfg(test)]
+pub(super) fn inspect_route(world: &mut World, request: &Request<'_>) -> Result<PullRoute, String> {
+    read_route_with_destination(world, request, None, inspect_complete_route)?
+        .ok_or_else(|| "Fixture route inspection unexpectedly pending".into())
+}
+
+#[cfg(test)]
+pub(super) fn inspect_point_route(
+    world: &mut World,
+    request: &Request<'_>,
+    point: Vec3,
+) -> Result<PullRoute, String> {
+    read_route_with_destination(world, request, Some(point), inspect_complete_route)?
+        .ok_or_else(|| "Fixture point inspection unexpectedly pending".into())
+}
+
+#[cfg(test)]
+fn inspect_complete_route(
+    world: &mut World,
+    tank: Entity,
+    to: Vec3,
+    map: InMap,
+    _: paths::Key,
+) -> Result<Option<Vec<Vec3>>, String> {
+    let from =
+        crate::spell_cast::targets::position(world, tank).ok_or("Tank route lacks a position")?;
+    world
+        .get_resource_mut::<Navigation>()
+        .ok_or("Pull route requires authored navigation")?
         .query_path(map.map_id, from, to)?
-        .ok_or("Pull route has no authored navigation bake")?;
-    if route.is_empty() {
-        return Err("Pull route is empty".into());
-    }
-    route.insert(0, from);
-    Ok(route)
+        .map(Some)
+        .ok_or_else(|| "Pull route has no authored navigation bake".into())
 }
 
 fn route_enters_source(

@@ -153,21 +153,9 @@ fn read_goal(
     let Some(point) = projection.read_safe_pose(world)? else {
         return Ok(None);
     };
-    let position = Position {
-        x: point.x,
-        y: point.y,
-        z: point.z,
-    };
-    if super::hazards::point_route_crosses_hostile_field(world, tank, position) {
-        return Ok(None);
-    }
-    if !tank_planner::read_movement_admission(
-        world,
-        tank,
-        projection.caster,
-        follower,
-        Some(point),
-    )? {
+    if tank_planner::read_movement_admission(world, tank, projection.caster, follower, Some(point))?
+        != Some(true)
+    {
         return Ok(None);
     }
     Ok(Some(point))

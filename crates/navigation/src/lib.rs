@@ -3,6 +3,7 @@
 pub mod bake;
 mod query;
 pub use query::NavigationMap;
+pub mod worker;
 
 pub const TILE_SIZE: f32 = 1600.0 / 3.0;
 pub const SUBDIVISIONS: u32 = 4;

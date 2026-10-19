@@ -55,8 +55,8 @@ pub(super) fn place_at_authored_entrance(h: &mut Harness, tank: Entity) -> Posit
     let point = Vec3::new(x, y, z);
     assert!(
         !h.app
-            .world()
-            .resource::<crate::navigation::Navigation>()
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
             .query_path(map.map_id, point, point)
             .unwrap()
             .unwrap()
@@ -281,7 +281,7 @@ fn measure_native_fight(mut f: Fixture) -> Fixture {
 
 fn candidate_budget(f: &mut Fixture) -> Decision {
     let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
-    let route = pull_route::read_route(
+    let route = pull_route::inspect_route(
         f.h.app.world_mut(),
         &pull_route::Request {
             tank: f.tank,

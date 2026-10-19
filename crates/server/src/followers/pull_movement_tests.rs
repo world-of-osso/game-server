@@ -141,6 +141,60 @@ fn tank_pull_movement_kit_pursuit_cannot_replace_the_admitted_position() {
 }
 
 #[test]
+fn production_tank_pending_admission_holds_native_chase_without_losing_victim() {
+    use bevy::ecs::system::RunSystemOnce;
+    let (mut h, tank, from, _) = kit_fixture();
+    super::pull_history::sample_all(h.app.world_mut());
+    let target = h
+        .app
+        .world()
+        .get::<crate::combat::AutoAttack>(h.caster)
+        .unwrap()
+        .victim;
+    let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
+    assert_eq!(
+        super::tank_planner::read_movement_admission(
+            h.app.world_mut(),
+            tank,
+            target,
+            &follower,
+            None
+        )
+        .unwrap(),
+        None,
+        "first real run route request must await worker publication"
+    );
+    assert!(super::ai::pursue(
+        h.app.world_mut(),
+        tank,
+        target,
+        31935,
+        true
+    ));
+    assert_eq!(
+        h.app.world().get::<crate::creature_ai::CreatureState>(tank),
+        Some(&crate::creature_ai::CreatureState::Idle)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(tank)
+            .unwrap()
+            .0,
+        Some(target)
+    );
+    h.app
+        .world_mut()
+        .run_system_once(crate::creature_ai::chase_system)
+        .unwrap();
+    assert_eq!(
+        *h.app.world().get::<Position>(tank).unwrap(),
+        from,
+        "unpublished admission must hold the actual native chase boundary"
+    );
+}
+
+#[test]
 fn production_tank_incomplete_run_admission_keeps_pursuit_held() {
     let (mut h, tank, from, _) = kit_fixture();
     let target = h
@@ -200,7 +254,7 @@ fn production_tank_goal_allows_existing_fight_defense_without_a_healer() {
         .get::<crate::zones::CreatureOrigin>(target)
         .unwrap()
         .guid;
-    let route = super::pull_route::read_route(
+    let route = super::pull_route::inspect_route(
         h.app.world_mut(),
         &super::pull_route::Request {
             tank,
@@ -257,7 +311,7 @@ fn route_requires_a_new_unhealed_pull(h: &mut Harness, tank: Entity, guid: u32) 
     let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
     let history = super::pull_history::snapshot(h.app.world(), follower.owner).unwrap();
     let map = *h.app.world().get::<InMap>(tank).unwrap();
-    let route = super::pull_route::read_route(
+    let route = super::pull_route::inspect_route(
         h.app.world_mut(),
         &super::pull_route::Request {
             tank,

@@ -87,7 +87,7 @@ pub(super) fn read_route_budget_row(
     guid: u32,
     cleared: &std::collections::BTreeSet<u32>,
 ) -> Value {
-    let route = match pull_route::read_route(
+    let route = match pull_route::inspect_route(
         f.h.app.world_mut(),
         &pull_route::Request {
             tank: f.tank,

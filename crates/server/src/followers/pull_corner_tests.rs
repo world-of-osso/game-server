@@ -48,8 +48,8 @@ fn collect_baked_corners(
         let path = match f
             .h
             .app
-            .world()
-            .resource::<crate::navigation::Navigation>()
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>()
             .query_path(map.map_id, from, target_point)
         {
             Ok(Some(path)) => path,

@@ -4,8 +4,9 @@
 use super::{AuraStatMods, Feared};
 use crate::{
     maps::InMap,
-    navigation::{Corners, Navigation},
+    navigation::{Corners, Goal, Navigation},
 };
+use ::navigation::worker::{Output, Query as NavQuery};
 use bevy::prelude::*;
 use rand::Rng;
 use shared::components::{
@@ -28,9 +29,25 @@ pub(super) struct Fleeing {
     destination: Vec3,
     wait: f32,
     epoch: Option<u32>,
+    query: Option<FleeQuery>,
+}
+
+#[derive(Clone, Copy)]
+enum FleeQuery {
+    Collision {
+        map: InMap,
+        from: Vec3,
+        wanted: Vec3,
+    },
+    Path {
+        map: InMap,
+        from: Vec3,
+        destination: Vec3,
+    },
 }
 
 pub(super) fn start(world: &mut World, unit: Entity) {
+    cancel_queries(world, unit);
     crate::knockback::cancel(world, unit);
     let epoch = if world.get::<Player>(unit).is_some() {
         let mut control = world
@@ -49,11 +66,13 @@ pub(super) fn start(world: &mut World, unit: Entity) {
         destination: Vec3::ZERO,
         wait: 0.0,
         epoch,
+        query: None,
     });
     stop_motion(world, unit);
 }
 
 pub(super) fn stop(world: &mut World, unit: Entity) {
+    cancel_queries(world, unit);
     let epoch = world.get::<Fleeing>(unit).and_then(|state| state.epoch);
     world.entity_mut(unit).remove::<Fleeing>();
     if let Some(epoch) = epoch {
@@ -102,6 +121,8 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
             .get::<MovementControl>(unit)
             .is_none_or(|control| control.epoch != epoch || !control.controlled)
     }) {
+        cancel_queries(world, unit);
+        state.query = None;
         world.entity_mut(unit).insert(state);
         return;
     }
@@ -114,6 +135,8 @@ fn advance(world: &mut World, unit: Entity, dt: f32) {
             .get::<shared::casting::CastState>(unit)
             .is_some_and(|cast| !cast.cast_while_moving);
     if blocked {
+        cancel_queries(world, unit);
+        state.query = None;
         state.path = None;
         stop_motion(world, unit);
     } else {
@@ -177,35 +200,120 @@ fn flee_point(from: Vec3, caster: Option<Vec3>, distance: f32, rng: &mut impl Rn
     from + Vec3::new(angle.cos() * distance, 0.0, angle.sin() * distance)
 }
 
-fn choose_path(world: &World, unit: Entity, state: &mut Fleeing) {
-    state.wait = PATH_RETRY;
-    let Some(nav) = world.get_resource::<Navigation>() else {
+fn choose_path(world: &mut World, unit: Entity, state: &mut Fleeing) {
+    if state.query.is_none() {
+        state.wait = PATH_RETRY;
+        state.query = capture_query(world, unit);
+    }
+    let Some(query) = state.query else {
         return;
     };
-    let Some(map) = world.get::<InMap>(unit).copied() else {
+    let (map, from, goal, request) = match query {
+        FleeQuery::Collision { map, from, wanted } => (
+            map,
+            from,
+            Goal::FearCollision,
+            NavQuery::Collision { from, to: wanted },
+        ),
+        FleeQuery::Path {
+            map,
+            from,
+            destination,
+        } => (
+            map,
+            from,
+            Goal::FearPath,
+            NavQuery::Path {
+                from,
+                to: destination,
+            },
+        ),
+    };
+    let at = point(*world.get::<Position>(unit).expect("fleeing position"));
+    if world.get::<InMap>(unit) != Some(&map) || at != from {
+        retry_path(world, unit, state, PATH_RETRY);
+        return;
+    }
+    let Some(mut nav) = world.get_resource_mut::<Navigation>() else {
+        retry_path(world, unit, state, PATH_RETRY);
         return;
     };
-    let from = point(*world.get::<Position>(unit).expect("fleeing position"));
-    let Some((caster, distance)) = caster_geometry(world, unit, map) else {
+    state.wait = 0.0;
+    let Some(result) = nav.query_deferred(unit, map.map_id, goal, request) else {
         return;
     };
-    let wanted = flee_point(from, caster, distance, &mut rand::thread_rng());
-    let destination = match nav.first_collision(map.map_id, from, wanted) {
-        Ok(Some(destination)) => destination,
-        Ok(None) => return,
-        Err(err) => {
-            debug!("Fear {unit} collision route: {err}");
-            return;
+    drop(nav);
+    match (query, result) {
+        (FleeQuery::Collision { .. }, Ok(Some(Output::Collision(destination)))) => {
+            continue_collision(world, unit, state, map, from, destination)
         }
-    };
+        (FleeQuery::Path { destination, .. }, Ok(Some(Output::Path(points)))) => {
+            retry_path(world, unit, state, PATH_RETRY);
+            start_path(destination, points, state);
+        }
+        (_, result) => {
+            if let Err(error) = result {
+                debug!("Fear {unit} {goal:?}: {error}");
+            } else if result.is_ok_and(|output| output.is_some()) {
+                error!("Fear {unit} {goal:?} returned an unexpected query result");
+            }
+            retry_path(world, unit, state, PATH_RETRY);
+        }
+    }
+}
+
+fn capture_query(world: &World, unit: Entity) -> Option<FleeQuery> {
+    let map = *world.get::<InMap>(unit)?;
+    let from = point(*world.get::<Position>(unit)?);
+    let (caster, distance) = caster_geometry(world, unit, map)?;
+    let wanted = flee_point(from, caster, distance, &mut rand::thread_rng());
+    Some(FleeQuery::Collision { map, from, wanted })
+}
+
+fn cancel_queries(world: &mut World, unit: Entity) {
+    if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
+        nav.cancel_query(unit, Goal::FearCollision);
+        nav.cancel_query(unit, Goal::FearPath);
+    }
+}
+
+fn retry_path(world: &mut World, unit: Entity, state: &mut Fleeing, wait: f32) {
+    cancel_queries(world, unit);
+    state.query = None;
+    state.wait = wait;
+}
+
+fn continue_collision(
+    world: &mut World,
+    unit: Entity,
+    state: &mut Fleeing,
+    map: InMap,
+    from: Vec3,
+    destination: Vec3,
+) {
     let destination = clip_collision(world, map, from, destination);
     if let Some(los) = world.get_resource::<crate::line_of_sight::LineOfSight>()
         && !los.clear(map, from + Vec3::Y, destination + Vec3::Y)
     {
-        state.wait = LOS_RETRY;
+        retry_path(world, unit, state, LOS_RETRY);
         return;
     }
-    start_path(nav, unit, map, from, destination, state);
+    cancel_queries(world, unit);
+    state.query = Some(FleeQuery::Path {
+        map,
+        from,
+        destination,
+    });
+    // Submit this stage now; only the next fixed publication may make it ready.
+    let _ = world.resource_mut::<Navigation>().query_deferred(
+        unit,
+        map.map_id,
+        Goal::FearPath,
+        NavQuery::Path {
+            from,
+            to: destination,
+        },
+    );
 }
 
 fn caster_geometry(world: &World, unit: Entity, map: InMap) -> Option<(Option<Vec3>, f32)> {
@@ -223,22 +331,7 @@ fn caster_geometry(world: &World, unit: Entity, map: InMap) -> Option<(Option<Ve
     distance.map(|distance| (Some(point(*position)), distance))
 }
 
-fn start_path(
-    nav: &Navigation,
-    unit: Entity,
-    map: InMap,
-    from: Vec3,
-    destination: Vec3,
-    state: &mut Fleeing,
-) {
-    let points = match nav.query_path(map.map_id, from, destination) {
-        Ok(Some(points)) => points,
-        Ok(None) => return,
-        Err(err) => {
-            debug!("Fear {unit} path: {err}");
-            return;
-        }
-    };
+fn start_path(destination: Vec3, points: Vec<Vec3>, state: &mut Fleeing) {
     let length: f32 = points.windows(2).map(|p| p[0].distance(p[1])).sum();
     if length > MAX_PATH_LENGTH {
         return;

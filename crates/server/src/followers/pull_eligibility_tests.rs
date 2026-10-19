@@ -53,7 +53,7 @@ fn native_pull_eligibility_stockade_triggers_are_never_candidates() {
                 .get::<crate::creature_aggro::AggroRange>(target)
                 .is_none()
         );
-        results.push(pull_route::read_route(
+        results.push(pull_route::inspect_route(
             h.app.world_mut(),
             &Request {
                 tank,
@@ -80,7 +80,7 @@ fn native_pull_eligibility_passive_triggers_never_cost_a_real_combat_route() {
         target,
         crate::spell_cast::targets::Relation::Enemy
     ));
-    let route = pull_route::read_route(
+    let route = pull_route::inspect_route(
         h.app.world_mut(),
         &Request {
             tank,

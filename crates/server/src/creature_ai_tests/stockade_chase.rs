@@ -69,9 +69,10 @@ fn nav_ground_dir() -> std::path::PathBuf {
 
 fn nav_stockade_app() -> App {
     let mut app = stockade_app();
-    app.insert_resource(crate::navigation::Navigation::new(
-        &nav_ground_dir().join("navmesh"),
-    ));
+    crate::navigation::install_fixture(
+        &mut app,
+        crate::navigation::Navigation::new(&nav_ground_dir().join("navmesh")),
+    );
     app
 }
 

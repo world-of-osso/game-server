@@ -125,8 +125,9 @@ pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
         return;
     };
     let inside_field = super::hazards::target_is_hazardous(world, pet, pet);
-    let unsafe_approach = super::hazards::target_is_hazardous(world, pet, enemy)
-        || super::hazards::path_crosses_hostile_field(world, pet, enemy);
+    let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, pet, enemy) else {
+        return;
+    };
     let hold = inside_field || unsafe_approach;
     let target = (!hold).then_some(enemy);
     crate::pet_control::order_companion_pet(world, unit, target);
@@ -414,8 +415,9 @@ pub(super) fn pursue(
         warn!("Follower {unit} cannot pursue: spell {spell_id} lacks authored range metadata");
         return false;
     };
-    let unsafe_approach = super::hazards::target_is_hazardous(world, unit, target)
-        || super::hazards::path_crosses_hostile_field(world, unit, target);
+    let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, unit, target) else {
+        return true;
+    };
     let state = if unsafe_approach {
         CreatureState::Idle
     } else {
@@ -463,8 +465,9 @@ pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     {
         return;
     }
-    let unsafe_approach = super::hazards::target_is_hazardous(world, unit, owner)
-        || super::hazards::path_crosses_hostile_field(world, unit, owner);
+    let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, unit, owner) else {
+        return;
+    };
     if unsafe_approach {
         world
             .entity_mut(unit)

@@ -564,21 +564,23 @@ fn diagnostic_tank_chase_trace_records_victim_and_pre_stop_cached_route_at_same_
         .world_mut()
         .entity_mut(victim)
         .insert((cached, map, ModelDisplay { display_id: 35076 }));
-    let seed = h
-        .app
-        .world_mut()
-        .resource_mut::<crate::navigation::Navigation>()
-        .advance(
-            tank,
-            MoveRequest {
-                map_id: 34,
-                goal: Goal::Chase(victim.to_bits()),
-                from,
-                to: cached,
-                distance: 0.0,
-                reach: 2.0,
-            },
-        );
+    let request = MoveRequest {
+        map_id: 34,
+        goal: Goal::Chase(victim.to_bits()),
+        from,
+        to: cached,
+        distance: 0.0,
+        reach: 2.0,
+    };
+    let seed = {
+        let mut navigation = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>();
+        let _ = navigation.advance(tank, request);
+        navigation.drain_until_idle();
+        navigation.advance(tank, request)
+    };
     assert!(matches!(seed, Step::Moved { .. }));
     *h.app.world_mut().get_mut::<Position>(victim).unwrap() = Position {
         x: 122.66,

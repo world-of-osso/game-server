@@ -162,6 +162,7 @@ fn apply_path_step(
             replicate_step(world, actor, target, position, speed);
             reached
         }
+        Step::Pending => false,
         Step::Unbaked | Step::Blocked => {
             world.entity_mut(actor).insert(CreatureMotion::Still);
             false

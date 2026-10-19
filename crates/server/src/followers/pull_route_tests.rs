@@ -86,7 +86,7 @@ pub(super) fn route_fixture_with_plugins(configure: impl FnOnce(&mut App)) -> (H
 }
 
 fn read_route(h: &mut Harness, tank: Entity) -> Result<pull_route::PullRoute, String> {
-    pull_route::read_route(
+    pull_route::inspect_route(
         h.app.world_mut(),
         &Request {
             tank,
@@ -95,6 +95,115 @@ fn read_route(h: &mut Harness, tank: Entity) -> Result<pull_route::PullRoute, St
             cleared: &BTreeSet::new(),
         },
     )
+}
+
+#[test]
+fn tank_pull_worker_admission_waits_for_publication_and_serializes_targets() {
+    let (mut h, tank) = route_fixture();
+    let cleared = BTreeSet::new();
+    let first = Request {
+        tank,
+        target_guid: TARGET_GUID,
+        difficulty: 1,
+        cleared: &cleared,
+    };
+    let second = Request {
+        tank,
+        target_guid: INTERVENING_GUID,
+        difficulty: 1,
+        cleared: &cleared,
+    };
+    let expected_first = pull_route::inspect_route(h.app.world_mut(), &first).unwrap();
+    let expected_second = pull_route::inspect_route(h.app.world_mut(), &second).unwrap();
+    let from = *h.app.world().get::<Position>(tank).unwrap();
+    assert!(
+        pull_route::read_route(h.app.world_mut(), &first)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        pull_route::read_route(h.app.world_mut(), &second)
+            .unwrap()
+            .is_none()
+    );
+    crate::navigation::drain_fixture(&mut h.app);
+    assert!(
+        pull_route::read_route(h.app.world_mut(), &second)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        pull_route::read_route(h.app.world_mut(), &first)
+            .unwrap()
+            .is_none()
+    );
+    crate::navigation::drain_fixture(&mut h.app);
+    let actual_first = pull_route::read_route(h.app.world_mut(), &first)
+        .unwrap()
+        .unwrap();
+    let actual_second = pull_route::read_route(h.app.world_mut(), &second)
+        .unwrap()
+        .unwrap();
+    assert_eq!(actual_first.points, expected_first.points);
+    assert_eq!(actual_first.spawns, expected_first.spawns);
+    assert_eq!(actual_second.points, expected_second.points);
+    assert_eq!(actual_second.spawns, expected_second.spawns);
+    assert_eq!(
+        *h.app.world().get::<Position>(tank).unwrap(),
+        from,
+        "route publication must not move or acquire on behalf of the tank"
+    );
+}
+
+#[test]
+fn tank_pull_worker_admission_does_not_evict_native_route_work() {
+    use crate::navigation::{Goal, MoveRequest, Navigation, Step};
+    let (mut h, tank) = route_fixture();
+    let inspected = read_route(&mut h, tank).unwrap();
+    let from = *h.app.world().get::<Position>(tank).unwrap();
+    let to = inspected.points.last().copied().unwrap();
+    let request = MoveRequest {
+        map_id: 34,
+        goal: Goal::Home,
+        from,
+        to: Position {
+            x: to.x,
+            y: to.y,
+            z: to.z,
+        },
+        distance: 0.1,
+        reach: 0.0,
+    };
+    assert!(matches!(
+        h.app
+            .world_mut()
+            .resource_mut::<Navigation>()
+            .advance(tank, request),
+        Step::Pending
+    ));
+    let cleared = BTreeSet::new();
+    let admission = Request {
+        tank,
+        target_guid: TARGET_GUID,
+        difficulty: 1,
+        cleared: &cleared,
+    };
+    assert!(
+        pull_route::read_route(h.app.world_mut(), &admission)
+            .unwrap()
+            .is_none()
+    );
+    crate::navigation::drain_fixture(&mut h.app);
+    assert!(
+        matches!(
+            h.app
+                .world_mut()
+                .resource_mut::<Navigation>()
+                .advance(tank, request),
+            Step::Moved { .. }
+        ),
+        "pending admission evicted the native route instead of waiting for publication"
+    );
 }
 
 #[test]
@@ -118,12 +227,12 @@ fn tank_pull_point_route_accounts_for_sources_beyond_the_enemy_endpoint() {
         difficulty: 1,
         cleared: &cleared,
     };
-    let actor_route = pull_route::read_route(h.app.world_mut(), &request).unwrap();
+    let actor_route = pull_route::inspect_route(h.app.world_mut(), &request).unwrap();
     assert!(
         !actor_route.spawns.contains(&20375719),
         "the original enemy endpoint must not already expose the point-only source"
     );
-    let point_route = pull_route::read_point_route(h.app.world_mut(), &request, point).unwrap();
+    let point_route = pull_route::inspect_point_route(h.app.world_mut(), &request, point).unwrap();
     assert!(
         point_route.spawns.contains(&20375719),
         "a movement point must account for its actual native exposure beyond the enemy endpoint"

@@ -231,6 +231,8 @@ pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
 /// SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT (SpellAuraDefines.h, TrinityCore a352b1fa).
 pub const OVERRIDE_SPELL_POWER_BY_AP_PCT: u32 = 366;
 pub const MOD_MANA_REGEN_PCT: u32 = 379;
+/// TC StatSystem.cpp863-869: MiscValue is a power bitmask, independent of amount.
+pub const PREVENT_REGENERATE_POWER: u32 = 294;
 /// SPELL_AURA_MOD_CHARGE_RECOVERY_RATE (TC a352b1fa SpellHistory.cpp1003-1005).
 pub const MOD_CHARGE_RECOVERY_RATE: u32 = 148;
 pub const MOD_MAX_CHARGES: u32 = 411;

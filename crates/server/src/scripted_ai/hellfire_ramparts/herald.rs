@@ -5,7 +5,9 @@ use shared::components::{Npc, Position, Rotation};
 
 use super::super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::super::waypoint_path::GravityDisabled;
-use super::super::{CreatureAi, Ctx, EventMap, MotionType, ReactState, instance_script};
+use super::super::{
+    CreatureAi, Ctx, DamageTaken, EventMap, MotionType, ReactState, instance_script,
+};
 use crate::maps::{InMap, MapStore};
 use crate::zones::CreatureOrigin;
 
@@ -224,6 +226,14 @@ impl CreatureAi for HeraldIntro {
         if action == 0 && !self.started_descending {
             self.started_descending = true;
             self.special_events.schedule(DESCEND_1, 0);
+        }
+    }
+
+    // TC217–220: Finished is !_isPerformingIntro; action0 owns the once latch.
+    // The separate lethal min1 interception (TC214–215) is not implemented here.
+    fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
+        if self.phase == IntroPhase::Finished && damage.health_below_pct_damaged(30.0) {
+            self.do_action(ctx, 0);
         }
     }
 

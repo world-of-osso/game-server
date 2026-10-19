@@ -340,9 +340,13 @@ fn fixture() -> Fixture {
     let away = Vec3::new(boss_point.x - from.x, 0.0, boss_point.z - from.z).normalize();
     let clean = grounded(&mut h, map, boss_point + away * ai::MELEE_REACH);
     let clean_pose = Vec3::new(clean.x, clean.y, clean.z);
-    let nav = h.app.world().resource::<crate::navigation::Navigation>();
+    let tank_point = point(&h, tank);
+    let mut nav = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::navigation::Navigation>();
     assert!(
-        nav.query_path(MAP, point(&h, tank), clean_pose)
+        nav.query_path(MAP, tank_point, clean_pose)
             .unwrap()
             .is_some_and(|path| !path.is_empty()),
         "actual opposite-party pose needs a complete native route"
@@ -397,7 +401,7 @@ fn engage_native_routes(f: &mut Fixture) {
             y: origin.y,
             z: origin.z,
         });
-        let route = pull_route::read_route(
+        let route = pull_route::inspect_route(
             f.h.app.world_mut(),
             &pull_route::Request {
                 tank: f.tank,

@@ -586,6 +586,7 @@ impl Harness {
 
     pub(crate) fn advance(&mut self, frames: usize) {
         for _ in 0..frames {
+            crate::navigation::drain_fixture(&mut self.app);
             self.app.update();
             let inbox = &mut self.inbox;
             inbox

@@ -52,7 +52,7 @@ fn engage_caster_fixture_sources(
     whole_route: bool,
     selected_guid: u32,
 ) -> Vec<u32> {
-    let route = pull_route::read_route(
+    let route = pull_route::inspect_route(
         f.h.app.world_mut(),
         &pull_route::Request {
             tank: f.tank,
@@ -270,7 +270,7 @@ fn read_caster_boundary(f: &mut Fixture) -> CasterBoundary {
             sources[&guid].pack_guid
         })
         .collect();
-    let route = pull_route::read_route(
+    let route = pull_route::inspect_route(
         f.h.app.world_mut(),
         &pull_route::Request {
             tank: f.tank,

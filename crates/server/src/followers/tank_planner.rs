@@ -40,14 +40,13 @@ fn read_admitted_caster(
         return None;
     }
     for caster in read_engaged_caster_candidates(world, tank, follower, party) {
-        if super::hazards::target_is_hazardous(world, tank, caster)
-            || super::hazards::path_crosses_hostile_field(world, tank, caster)
-        {
+        if super::hazards::target_is_hazardous(world, tank, caster) {
             continue;
         }
         match read_movement_admission(world, tank, caster, follower, None) {
-            Ok(true) => return Some(caster),
-            Ok(false) => debug!(?tank, ?caster, "Caster collection held by pull budget"),
+            Ok(Some(true)) => return Some(caster),
+            Ok(None) => break,
+            Ok(Some(false)) => debug!(?tank, ?caster, "Caster collection held by pull budget"),
             Err(error) => debug!(?tank, ?caster, %error, "Caster collection admission unavailable"),
         }
     }
@@ -111,8 +110,13 @@ pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: E
     }
     // Existing but incomplete run records still go through fail-closed admission.
     match read_movement_admission(world, tank, target, &follower, None) {
-        Ok(true) => return false,
-        Ok(false) => debug!(?tank, ?target, "Tank pursuit held by pull budget"),
+        Ok(Some(true)) => return false,
+        Ok(None) => debug!(
+            ?tank,
+            ?target,
+            "Tank pursuit awaits published admission route"
+        ),
+        Ok(Some(false)) => debug!(?tank, ?target, "Tank pursuit held by pull budget"),
         Err(error) => debug!(?tank, ?target, %error, "Tank pursuit admission unavailable"),
     }
     world
@@ -134,7 +138,17 @@ pub(super) fn read_movement_admission(
     target: Entity,
     follower: &Follower,
     destination: Option<Vec3>,
-) -> Result<bool, String> {
+) -> Result<Option<bool>, String> {
+    let map = *world
+        .get::<crate::maps::InMap>(tank)
+        .ok_or("Tank movement lacks a map copy")?;
+    let (admitted_map, members, _) = super::party::read_admission(world, follower.owner)
+        .ok_or("Tank movement lacks an authoritative admitted party")?;
+    if admitted_map != map || !members.contains(&tank) {
+        return Err("Tank movement is outside its admitted copy or roster".into());
+    }
+    let mut party = members.to_vec();
+    party.push(follower.owner);
     let history = super::pull_history::snapshot(world, follower.owner)
         .ok_or("Tank movement lacks current authoritative run history")?;
     let difficulty = world
@@ -152,28 +166,23 @@ pub(super) fn read_movement_admission(
         difficulty,
         cleared: &history.cleared_spawns,
     };
-    let route = match destination {
+    let Some(route) = (match destination {
         Some(point) => super::pull_route::read_point_route(world, &request, point)?,
         None => super::pull_route::read_route(world, &request)?,
+    }) else {
+        return Ok(None);
     };
+    if super::hazards::route_crosses_hostile_field(world, tank, &route.points) {
+        return Ok(Some(false));
+    }
     debug!(
         ?tank,
         corners = route.points.len(),
         packs = route.pack_count,
         "Tank movement route projected"
     );
-    let map = *world
-        .get::<crate::maps::InMap>(tank)
-        .ok_or("Tank movement lacks a map copy")?;
     let sources =
         super::pull_sources::read_present_sources(world, map, difficulty, &history.cleared_spawns)?;
-    let (admitted_map, members, _) = super::party::read_admission(world, follower.owner)
-        .ok_or("Tank movement lacks an authoritative admitted party")?;
-    if admitted_map != map || !members.contains(&tank) {
-        return Err("Tank movement is outside its admitted copy or roster".into());
-    }
-    let mut party = members.to_vec();
-    party.push(follower.owner);
     let engaged = super::ai::engaged_enemies(world, follower, tank, &party);
     let mut engaged_packs = std::collections::BTreeSet::new();
     for (enemy, _) in engaged {
@@ -191,12 +200,12 @@ pub(super) fn read_movement_admission(
             .get(guid)
             .is_some_and(|source| engaged_packs.contains(&source.pack_guid))
     }) {
-        return Ok(true);
+        return Ok(Some(true));
     }
-    Ok(matches!(
+    Ok(Some(matches!(
         super::pull_admission::read_pull_budget(world, tank, &route.spawns, difficulty)?,
         super::pull_budget::Decision::Allow { .. }
-    ))
+    )))
 }
 
 /// Consume the same admitted point at both kit pursuit and idle regroup boundaries.
@@ -268,8 +277,10 @@ fn advance_admitted_once(
         y: goal.y,
         z: goal.z,
     };
-    if super::hazards::point_route_crosses_hostile_field(world, unit, to) {
-        return Err("admitted route crosses an active hostile field".into());
+    match super::hazards::point_route_crosses_hostile_field(world, unit, to) {
+        Some(true) => return Err("admitted route crosses an active hostile field".into()),
+        None => return Ok(()),
+        Some(false) => {}
     }
     world.entity_mut(unit).insert(AppliedMovementAt(now));
     super::hazards::advance_grounded_route(
