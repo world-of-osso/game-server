@@ -2282,6 +2282,8 @@ mod power_strike_tests;
 #[cfg(test)]
 mod tiger_dash_tests;
 #[cfg(test)]
+mod total_stat_percent_tests;
+#[cfg(test)]
 mod versatility_tests;
 #[cfg(test)]
 mod yseras_gift_tests;
