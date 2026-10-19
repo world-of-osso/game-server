@@ -143,11 +143,9 @@ fn update_fall_positions(
         fall.elapsed_ms = (fall.elapsed_ms + delta_ms).min(fall.duration_ms);
         let arrived = fall.elapsed_ms == fall.duration_ms;
         *position = Position {
-            y: if arrived {
-                fall.floor
-            } else {
-                (fall.from.y - fall_elevation(fall.elapsed_ms as f32 / 1000.0)).max(fall.floor)
-            },
+            // TC computes elevation even when Done; integer-ms truncation can
+            // leave the last sample slightly above the floor. Never force a snap.
+            y: (fall.from.y - fall_elevation(fall.elapsed_ms as f32 / 1000.0)).max(fall.floor),
             ..fall.from
         };
         updates.push((unit, arrived.then_some(fall.id)));

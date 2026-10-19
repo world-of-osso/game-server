@@ -51,7 +51,7 @@ TC Object.cpp709–748 calls GetMapHeight with pre-clamp Z once, then assigns th
 
 ### Bounded fall through DESCEND3
 
-- [ ] Natural point4 arrival launches source MoveFall(5); retain XZ, sample the original map floor once, use TC falling acceleration/terminal velocity and integer-ms spline completion. No fabricated callback, teleport, run-speed interpolation or substitute deadline.
+- [ ] Natural point4 arrival launches source MoveFall(5); retain XZ, sample the original map floor once, use TC falling acceleration/terminal velocity and integer-ms spline completion. Final position is the analytic curve sampled at truncated duration, clamped only against the original floor; do not force a raw-floor snap. No fabricated callback, teleport, run-speed interpolation or substitute deadline.
 - [ ] Actual EFFECT5 completion enables gravity and ordinary20538 exactly once. Its native DUMMY0 actual hits reduce caster threat by100%, retaining references; respect ordinary targets/admission and copy isolation. Stay Passive and min1-protected through this endpoint. DESCEND4/release, ground casts, paired credit/reset and native presentation remain excluded.
 
 ### Completion and reset
