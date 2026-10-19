@@ -6,10 +6,10 @@ rust-version.workspace = true
 
 [dependencies]
 # Shared geometry metadata only; eye posing needs animation, never rendering emitters/composites.
-wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "bb989f276669e5f900e97e985542cc440dcc00a8", default-features = false, optional = true }
-wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "bb989f276669e5f900e97e985542cc440dcc00a8", default-features = false, features = ["animation", "materials"], optional = true }
-wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "bb989f276669e5f900e97e985542cc440dcc00a8", default-features = false, optional = true }
-wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "bb989f276669e5f900e97e985542cc440dcc00a8", default-features = false, optional = true }
+wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false, optional = true }
+wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false, features = ["animation", "materials"], optional = true }
+wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false, optional = true }
+wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "ed180cecd7228471944dcdf1d427468e5cc6e7b5", default-features = false, optional = true }
 # Bake math: the glam that bevy 0.19 re-exports, so its Vec3 is `shared::los::Vec3`.
 glam = "0.32"
 # The LOS runtime the bake writes for (`shared::los`).
