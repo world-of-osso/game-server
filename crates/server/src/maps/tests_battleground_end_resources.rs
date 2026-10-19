@@ -3,37 +3,31 @@ use crate::spell_cast::powers::{PowerPool, PowerPools, power_value};
 use shared::components::PowerType;
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living health and primary resources depleted"]
 fn bg_end_resources_mana_fills_health_and_primary_preserves_secondary() {
     assert_completion_resets_primary(PowerType::Mana, 100.0);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living health and primary resources depleted"]
 fn bg_end_resources_energy_fills_health_and_primary_preserves_secondary() {
     assert_completion_resets_primary(PowerType::Energy, 100.0);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living health and primary resources depleted"]
 fn bg_end_resources_rage_fills_health_and_zeros_primary_preserves_secondary() {
     assert_completion_resets_primary(PowerType::Rage, 0.0);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living health and primary resources depleted"]
 fn bg_end_resources_runic_fills_health_and_zeros_primary_preserves_secondary() {
     assert_completion_resets_primary(PowerType::RunicPower, 0.0);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living health and primary resources depleted"]
 fn bg_end_resources_lunar_fills_health_and_zeros_primary_preserves_secondary() {
     assert_completion_resets_primary(PowerType::LunarPower, 0.0);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living health and primary resources depleted"]
 fn bg_end_resources_focus_fills_health_but_preserves_unlisted_primary() {
     assert_completion_resets_primary(PowerType::Focus, 40.0);
 }
