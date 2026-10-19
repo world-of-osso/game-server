@@ -124,5 +124,11 @@ Retail's LOS errors ("can see it, not in line of sight") are the bugs to avoid.
   --world-db data/world.db --out ../game-engine/data/los --map 0 --all` (per map; `--no-eyes`
   skips the eye table). Map 0 is 1176 tiles, 6.3 GB, under 10 minutes (debug, opt-level 2). `deploy.sh` ships the
   whole `los/` directory beside the ground files and stops when the eye table is missing.
+- Azure population receipts use the ignored `azure_bake` test with `AZURE_WORLD_DB`,
+  `AZURE_ENGINE_DATA` and `AZURE_EYE_OUTPUT`. It requires every Normal2515/follower and playable
+  race/sex display, including Telash109087, to bake and reload all ten runtime poses through the
+  existing eye producer. Canonical publication adds only missing `(display, stand_state)` rows;
+  existing rows/scales stay unchanged. A fragment requires independent producer reproduction before
+  publication; the receipt alone does not certify dungeon traversal or a live encounter.
 - Resolved: the Head attachment (id 20) sits on a static root bone in most models, so the eye point
   comes from the eye geometry instead (see Eye point).
