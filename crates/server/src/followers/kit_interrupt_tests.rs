@@ -45,11 +45,7 @@ fn follower_kit_interrupt_does_not_spend_on_noninterruptible_cast() {
     let (mut h, unit) = level32(209059);
     utility_tests::start_enemy_fireball(&mut h, unit);
     let enemy = h.npc;
-    h.app
-        .world_mut()
-        .get_mut::<CastState>(enemy)
-        .unwrap()
-        .interruptible = false;
+    utility_tests::protect_enemy_cast_with_native_interrupt_immunity(&mut h, enemy);
     assert!(!try_candidates(&mut h, unit, &[enemy]));
     h.advance(3);
     assert!(h.app.world().get::<CastState>(enemy).is_some());
@@ -59,6 +55,26 @@ fn follower_kit_interrupt_does_not_spend_on_noninterruptible_cast() {
             .iter()
             .any(|go| go.caster == unit.to_bits() && go.spell_id == 2139)
     );
+}
+
+#[test]
+fn follower_kit_interrupt_uses_native_eligibility_not_pushback_flag() {
+    let (mut h, unit) = level32(209059);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<CastState>(enemy)
+        .unwrap()
+        .interruptible = false;
+    assert!(crate::spell_cast::interruptibility::can_interrupt_cast(
+        h.app.world(),
+        unit,
+        enemy
+    ));
+    assert!(try_candidates(&mut h, unit, &[enemy]));
+    h.advance(3);
+    assert!(h.app.world().get::<CastState>(enemy).is_none());
 }
 
 #[test]

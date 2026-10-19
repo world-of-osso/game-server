@@ -444,6 +444,76 @@ fn engage_native_routes(f: &mut Fixture) {
     }
 }
 
+fn remaining_stun_seconds(h: &Harness, boss: Entity) -> f64 {
+    let now = h.app.world().resource::<Time>().elapsed_secs_f64();
+    h.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(boss)
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .filter(|aura| {
+            aura.effects
+                .iter()
+                .any(|effect| effect.aura_type == crate::auras::handlers::MOD_STUN)
+        })
+        .map(|aura| {
+            let expiry = aura
+                .expires_at
+                .expect("native frontal setup cannot wait for a permanent stun");
+            (expiry - now).max(0.0)
+        })
+        .fold(0.0, f64::max)
+}
+
+fn start_native_fissure(f: &mut Fixture) {
+    const READY_ALLOWANCE_TICKS: usize = 100;
+    let step = f.h.app.world().resource::<Time>().delta_secs_f64();
+    assert!(step.is_finite() && step > 0.0);
+    let mut observed_cast_seconds = 0.0_f64;
+    let mut observed_stun_seconds = 0.0_f64;
+    let mut tick = 0;
+    loop {
+        let remaining_cast =
+            f.h.app
+                .world()
+                .get::<CastState>(f.boss)
+                .map_or(0.0, |cast| {
+                    f64::from((cast.duration - cast.elapsed).max(0.0))
+                });
+        observed_cast_seconds = observed_cast_seconds.max(remaining_cast);
+        observed_stun_seconds = observed_stun_seconds.max(remaining_stun_seconds(&f.h, f.boss));
+        assert!(observed_cast_seconds.is_finite() && observed_stun_seconds.is_finite());
+        // Max observed durations, not a sliding deadline: repeated CC cannot reset the allowance.
+        let bound = READY_ALLOWANCE_TICKS
+            + ((observed_cast_seconds + observed_stun_seconds) / step).ceil() as usize;
+        assert!(
+            tick < bound,
+            "native Fissure setup exceeded derived {bound} ticks: cast={observed_cast_seconds}s stun={observed_stun_seconds}s ready={READY_ALLOWANCE_TICKS}ticks"
+        );
+        match crate::spell_cast::creature_cast(
+            f.h.app.world_mut(),
+            f.boss,
+            FISSURE,
+            Some(f.tank),
+            false,
+        ) {
+            Ok(()) => {
+                println!(
+                    "FISSURE_SETUP admitted_tick={tick} bound_ticks={bound} cast_seconds={observed_cast_seconds} stun_seconds={observed_stun_seconds} step_seconds={step} ready_ticks={READY_ALLOWANCE_TICKS}"
+                );
+                return;
+            }
+            Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::InProgress
+                | crate::spell_cast::CastFailure::CrowdControlled(crate::auras::CastBlock::Stunned),
+            ) => f.h.advance(1),
+            error => panic!("real source Fissure prerequisite refused: {error:?}"),
+        }
+        tick += 1;
+    }
+}
+
 #[test]
 fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
     let mut f = fixture();
@@ -488,52 +558,36 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
         Some(f.tank),
         "real source Fissure must target its actual native current victim"
     );
-    let mut started = false;
-    for _ in 0..100 {
-        match crate::spell_cast::creature_cast(
-            f.h.app.world_mut(),
-            f.boss,
-            FISSURE,
-            Some(f.tank),
-            false,
-        ) {
-            Ok(()) => {
-                started = true;
-                break;
-            }
-            Err(
-                crate::spell_cast::CastFailure::OnGlobalCooldown
-                | crate::spell_cast::CastFailure::InProgress,
-            ) => f.h.advance(1),
-            error => panic!("real source Fissure prerequisite refused: {error:?}"),
-        }
-    }
-    assert!(
-        started,
-        "native cast/GCD must eventually permit the real source Fissure"
-    );
+    start_native_fissure(&mut f);
     assert_eq!(
         f.h.app.world().get::<CastState>(f.boss).unwrap().spell_id,
         FISSURE
     );
-    // Native kicks may interrupt this cast; no cooldown, kit or interruptibility override.
+    // Native386660 has PreventionType0/Attributes7=0: ordinary kicks cannot interrupt it.
+    let mut fissure_proceeded = false;
     for _ in 0..80 {
         f.h.advance(1);
+        fissure_proceeded |=
+            f.h.app
+                .world()
+                .get::<CastState>(f.boss)
+                .is_some_and(|cast| cast.spell_id == FISSURE && cast.elapsed > 0.0);
     }
     assert!(
         crate::spell_cast::targets::is_alive(f.h.app.world(), f.boss),
         "native boss must remain alive for pose proof"
     );
     assert!(
-        f.h.inbox.log.iter().any(
+        !f.h.inbox.log.iter().any(
             |event| event.kind == shared::protocol::CombatLogKind::Interrupt
                 && event.target == Some(f.boss.to_bits())
                 && event.extra_spell_id == Some(FISSURE)
-                && event
-                    .source
-                    .is_some_and(|source| f.party.iter().any(|unit| unit.to_bits() == source))
         ),
-        "retained frontal knowledge must be observed after an actual native party kick, not a disabled interrupt or naturally completed cast"
+        "source PreventionType0/Attributes7=0 forbids an invented Fissure interrupt"
+    );
+    assert!(
+        fissure_proceeded,
+        "the actual sourced Fissure cast must proceed while facing remains protective"
     );
     assert!(
         f.party

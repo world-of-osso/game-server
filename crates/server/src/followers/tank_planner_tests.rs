@@ -75,17 +75,14 @@ fn tank_planner_excludes_finished_uninterruptible_dead_and_other_copy_casters() 
     let (mut h, tank, loose) = caster_fixture();
     let main = h.npc;
     assert!(candidates(&mut h, tank).contains(&loose));
-    h.app
-        .world_mut()
-        .get_mut::<CastState>(loose)
-        .unwrap()
-        .interruptible = false;
+    super::utility_tests::protect_enemy_cast_with_native_interrupt_immunity(&mut h, loose);
     assert_eq!(candidates(&mut h, tank), vec![main]);
-    h.app
-        .world_mut()
-        .get_mut::<CastState>(loose)
-        .unwrap()
-        .interruptible = true;
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        loose,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 104773,
+    );
     h.app.world_mut().entity_mut(loose).insert(InMap {
         map_id: 0,
         instance_id: 77,

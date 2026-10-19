@@ -303,9 +303,7 @@ pub(super) fn read_engaged_caster_candidates(
     super::ai::engaged_enemies(world, follower, unit, party)
         .into_iter()
         .filter(|(enemy, _)| {
-            let interruptible = world
-                .get::<shared::casting::CastState>(*enemy)
-                .is_some_and(|cast| cast.interruptible);
+            let interruptible = crate::spell_cast::can_interrupt_cast(world, unit, *enemy);
             let protected = crate::auras::has_breakable_by_damage_cc(world, *enemy);
             interruptible && !protected
         })
