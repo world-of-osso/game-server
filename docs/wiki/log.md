@@ -1,3 +1,15 @@
+## 2026-10-18 — Frozen Ground fg602 landing and world-delta qualification
+
+[Qualified proof](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): independent fg602359PASS/0FAIL/14namedignored1998.44s includes fresh3 Frozen Ground cases; check/fmt0. Lead channel671 confirms08e3→b24e is only3Toy INSERTs, so retained3PASS stands without replay; original guard failure preserved. After push-race reconciliation, landed361efa1d2 with post-merge check/fmt0. Deployment started per lead; no live-dungeon/canonical-geometry-publication claim from this slice. Historical2+1/observer and input-provenance boundaries remain recorded below.
+
+## 2026-10-18 — Frozen Ground native2+1 and controls qualification
+
+[Current matrix](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18):13d7 Player periodic/slow/lifecycle+curve/30s2PASS;5730 genuine follower escape/next-membership cleanup1PASS118.14s, no source scheduling change. Retained Rune/Sprout/curve3PASS91.01s but08e3→b24e world guardfailed; source/protocol stable, no automatic rerun or clean-controls/final-gate claim. History rewritten b548→867c, then exactac365 merged; originalRED content proof preserved.
+
+## 2026-10-18 — Ordinary Frozen Ground source field
+
+[Finite387149/26505 binding](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): accepted real Frost-expiry aura/geometry RED;4LOS/4M2-floor/4nav private2515 bake with explicit mixed input provenance. Source action/curve/lifetime implementation committed before GREEN; downstream native follower escape/lifecycle proof pending, no arbitrary179/Mythic/VFX/full-Azure expansion.
+
 ## 2026-10-17 — Attacker251 / Guardian merge
 
 [Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): rewrite maps old035ae5cfb to de08aab30, identical tree; original proof labels retained. Merge masterac36572bb preserves Guardian same-tick try_swing one-shot health commit and251 scalar/roll consumer; requested original9 plus Guardian/Ardent integration proof pending.
@@ -2910,4 +2922,7 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 
 Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame mitigation boundaries in [auras](systems/auras.md#shared-death-prevention-commit--2026-10-18); native rows/clocks/RNG unchanged, final combined gate pending.
 
+## 2026-10-18 — Prayer of Mending source/RED
+
+Recorded real33076 ward RED, approved per-cast stack/original-caster API and native delayed jump in [auras](systems/auras.md#prayer-of-mending-baseline--2026-10-18); player recipient qualification and PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT explicit; Native8/8 GREEN37.08s including actual expiry/exhaustion/foreign/no-recipient and no-override Agony controls; native4000ms Fireball readiness honored, independent lead gate pending.
 - 2026-10-18 — Replace LOS/nav bake and vehicle duplicate binary readers with pinned wow-formats geometry metadata; preserve selection/posing policy and capture old-reader Stockade reference. [Shared formats](systems/wow-formats.md).
