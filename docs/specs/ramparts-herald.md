@@ -26,6 +26,13 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - [x] Preserve original spawn-addon priority: Herald content GUID20202693 supplies sheath0/path36215440 instead of Nazan template sheath1/path0. Nonzero mount/emote/path fields act; zero does not erase prior runtime state. Missing default equipment retains it; explicit equipment0 clears it. Addon auras are additive and existing instances are not refreshed.
 - [x] Missing target/context/origin refuses before actor mutation with an actionable diagnostic. No legacy level/tuning substitution or actor recreation.
 
+### Grounding-only target32 prerequisite
+
+- [ ] Apply TC Object.cpp698–762 Z semantics after existing target32 XY selection, without reading a model/display/reach: valid source floor for represented dry non-hover non-flyers; flyers only rise from below; invalid/missing height preserves Z.
+- [ ] Attr9 FORCE uses its final ground-Z branch regardless of flight; preserve existing XY. Do not claim FORCE distance-backoff parity.
+- [ ] Retain actual688 no-height and all follower Felguard behavior without source-reach defaults, changed assertions or widened ignores. Exact floor oracle re-probes finalXYZ without ULP tolerance.
+- [ ] Keep `TARGET32_CASTER_SUMMON_XY_UNIMPLEMENTED`, `TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED`, `TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED` and `TARGET32_FORCE_XY_BACKOFF_UNIMPLEMENTED` explicit. Selectors42,44,47,49,50,72,55 remain unchanged under `CASTER_RELATIVE_DEST_ALLOWED_Z_UNIMPLEMENTED`.
+
 ### Lifecycle and phases
 
 - [ ] Two actual17517 Sentry deaths in one copy start the Herald once through source action1730700; other copies and unrelated deaths do not contribute.
@@ -81,7 +88,7 @@ Shared entry projection has bounded runtime-fixture GREEN. No registered Herald 
 - [ ] Implement and verify real actor/movement/spell/death ordering, both-dead credit and reset.
 - [ ] Native rendering/audio, obstacle paths, Heroic encounter behavior, loot and persistence remain unproved.
 - [ ] `SUMMON_TARGET32_GRAVITY_GROUNDING_UNIMPLEMENTED`: target32 TC placement was reverted after the broader follower-pet suite exposed sixteen Felguard regressions. Grounded source30717 placement blocks INTRO2 acceptance; no manual summon adjustment or substitute selector.
-- [ ] `LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT`: canonical and full local TDB1210 model-info omit Lantha230861/display122612. This BLOCKS returning the target32 TC port until a sourced reach row exists or the user explicitly decides otherwise; not an accepted production-runtime gap. Do not invent reach, broaden ignores or restore the port as an INTRO2 workaround.
+- [ ] `LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT`: canonical and full local TDB1210 model-info omit Lantha230861/display122612. This BLOCKS returning the reach-dependent target32 TC XY port until a sourced reach row exists or the user explicitly decides otherwise; not an accepted production-runtime gap. The separately approved Z-only slice never reads model/reach and leaves XY unchanged. Do not invent reach or broaden ignores.
 - [ ] `CREATURE_ENTRY_RESPAWN_RESTORE_UNIMPLEMENTED`: ordinary respawn does not yet restore the retained original entry. Living projection proof is not until-respawn parity.
 - [ ] `SMARTAI_ACTION36_UPDATE_ENTRY_UNIMPLEMENTED`: SmartAI36 remains excluded; the shared projection is not an action36 port.
 - [ ] Full TC attack-time/resistance/immunity/static-flag/movement-capability projection remains outside the currently represented template fields; no generic TC UpdateEntry parity claim.

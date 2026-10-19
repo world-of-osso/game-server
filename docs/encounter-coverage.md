@@ -1,6 +1,10 @@
 # Hosted encounter coverage
 
-## Target32 port blocked / INTRO2 prerequisite — 2026-10-18
+## Target32 grounding-only prerequisite — 2026-10-18
+
+Separately approved Z-only slice follows TC Object.cpp698–762/Spell.cpp9286–9292 without model/reach reads or XY changes. Grounding tests use actual30717/688 and Ramparts geometry; corrected source setup reaches genuine3FAIL/1PASS6.01s at a38c17a65 (dry/flyer-below/FORCE remain elevated; no-height already succeeds). Earlier Rotation/SpellStore and server/protocol drift failures are setup-only. Implementation proof pending; full follower-pet and retained gates required. Exact finalXYZ floor oracle has no ULP tolerance. Full XY/first-collision/hover-swim/FORCE XY backoff and other caster-relative selector gaps remain explicit in the [contract](specs/ramparts-herald.md).
+
+## Target32 reach-dependent port blocked — 2026-10-18
 
 `LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT` BLOCKS the target32 TC port: actual Lantha230861/display122612 has no authored model-info/reach row in canonical data or the local full TDB1210 source. The broader follower-pet gate exposed sixteen Felguard regressions, so the port was reverted, not accepted with production failures. It may return only with sourced metadata or an explicit user decision. `SUMMON_TARGET32_GRAVITY_GROUNDING_UNIMPLEMENTED` therefore again blocks authentic grounded30717/17537 and full first-West INTRO2 acceptance. No reach default, widened ignores or manual summon-position workaround. [Contract](specs/ramparts-herald.md#known-gaps-current-cycle).
 

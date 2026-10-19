@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Target32 grounding-only prerequisite — 2026-10-18
+
+`targets::caster_summon_ground_destination` runs only for32 from mutable cast planning. It applies represented dry/non-hover floor/flight Z rules from TC Object.cpp709–762, preserving missing/invalid height rather than refusing. Attr9 FORCE (Spell.cpp9286–9292) uses only final ground-Z semantics Object.cpp698–706. Existing XY/radius selection, other selectors, collision and FORCE XY backoff remain unchanged. No source projection, model lookup or invented combat reach.
+
+Corrected native30717/688 source-plan tests reach genuine3FAIL/1PASS6.01s at a38c17a65 before production changes; dry/flyer-below/FORCE expose missing Z while missing/empty geometry already preserves destination. The three earlier setup failures (Rotation initialization, SpellStore resource, external profession/protocol drift) are excluded. Implementation GREEN pending, including full followers::pet_tests and retained controls. This Z slice is independent of the122612 metadata blocker for the full XY port. [Contract and gaps](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite).
+
 ## Herald INTRO2 first West boundary — 2026-10-18
 
 Pinned TC `boss_vazruden_the_herald.cpp224–241/305–316/260–271` continues actual center point arrival after1s. The existing Herald AI retains its allocation/origin and consumes the shared entry projection for17536;30717 runs while gravity is enabled, then30698/30694 and zone combat run after restoring flight.30698 SpellHit starts actual West2 point movement; arrival casts30700/18430 and changes reaction. `NPC_ONESHOT_EMOTE_UNIMPLEMENTED` means LAND emits nothing, never another pose/emote. Copy-only source templates/spells remain prerequisites, not canonical writes.

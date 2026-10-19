@@ -2409,6 +2409,9 @@ fn plan_targets(
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
         let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        if effect.implicit_targets.contains(&32) {
+            dest = targets::caster_summon_ground_destination(world, caster, spell, dest)?;
+        }
         if let Some(dest) = &mut dest {
             scripts::relocate_destination(spell.id, effect, dest);
         }
