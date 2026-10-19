@@ -9,6 +9,13 @@
 ## 2026-10-18 — Navigation worker design and sight CPU gap
 
 [Design](design/navigation-worker.md) records approved pending movement/latest-request/fixed-order/error/test-drain behavior, exclusive map ownership, complete synchronous caller inventory, per-entity queue bound and explicit worker-death failure. Base83a8ce176/protocol029a927; no Rust implementation or RED yet. [SIGHT_FACTION_MAIN_THREAD_CPU](investigations/server-tick-lag.md#sight_faction_main_thread_cpu) records9of12 B partial stacks and sampled A/B CPU counts, with uncaptured maximum-gap stack and load/observer limitations. Navigation reads are a confirmed contributor, not sufficient evidence alone for historical ten-second stalls.
+## 2026-10-17 — Attacker251 / Guardian merge
+
+[Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): rewrite maps old035ae5cfb to de08aab30, identical tree; original proof labels retained. Merge masterac36572bb preserves Guardian same-tick try_swing one-shot health commit and251 scalar/roll consumer; requested original9 plus Guardian/Ardent integration proof pending.
+
+## 2026-10-17 — Autoattack attacker251
+
+[Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): TC Unit.cpp2389/2775 signed caster modifier. Ordered ignored d5587d263 native2RED/4PASS87.19s (negative20Dodge; positive20Damage/0Dodge); minimal transient snapshot/roll consumer preserves gates/clocks/RNG. At1dbe19063 explicit ignored6/6GREEN110.87s,0warnings before enabling allsix. Master7a0f00fc0 integrated e4d9c1efd: ordinary affected cohort122PASS/3legacyLOSignored154.21s,0warnings, all6newnative enabled. Lead gate pending; expertise/248/Totem/flags not certified.
 ## 2026-10-18 — Published70448 extras census oracle correction
 
 [Current regression/correction](../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg57812 and st57413 census failures come from one stale1166 assertion after twoToy-row publication. Shared oracle now retains Full1166 plus the two explicitly published item/name/spell triples; future batches append the list after publication. Exact748a5ad78 merge, no runtime/data change, batch2 RED isolated; requested13census+3batch1 targets pending.
@@ -88,6 +95,10 @@ Gate tg571 exposed eight missing-height summon regressions. Merged serverf0f9b31
 ## 2026-10-18 — Anvil2483 deferred with Tea Party2064 OverrideIndex1 gap
 
 [Single gap](systems/pet-battle-engine.md#anvil-drop--tea-party--deferred-overrideindex1-2026-10-18) `PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN`: Anvil4816/4817 and Tea Party3729 retain nonzero property24 OverrideIndex; no guessed hit/critical/variance reuse. Actual core5 RED365a1a3d7, owned slot correction1a68de2e6 then genuine owned RED; local unshipped registry-only experiment still fails parameter preflight. Remove experiment from published history/production diff; retain six ignored REDs and coverage1885/1040. No handler/parameter/math/clock/native claim; sourced behavior packet pending.
+
+## 2026-10-18 — Poison1954 native framing blocked
+
+[Bounded evidence](systems/pet-battle-engine.md#poison-protocol--native-framing-blocked-2026-10-18): rewritten4cbc/fresh55e/currenta2b,10 canonical asset hashes/strict6mesh/ExtractedOnlytripwire0. Single Modern engage succeeds but posed-AABB x=-254 fails Anomalus framing; visible body seems inside, actual drawn clipping versus conservative bound remains unknown. PNG explicitly unaccepted/no1954 cast/noForever/no workaround. Physical Forfeit/Confirm/Close/PIDsabsent/sliceinactive/5961unbound/windowcleared/all4artifact hashes retained. Named `PET_BATTLE_ANOMALUS_NATIVE_FRAMING`; actual vertices and sourced placement/scale must be measured before any fix. CPU1885/1040 retained; Blood engage observation unresolved.
 
 ## 2026-10-18 — Poison Protocol1954 CPU
 
