@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Azure live prerequisites — 2026-10-19
+
+`FOLLOWER_AZURE_TRANSLOCATION_BOOK_TRANSITION_UNSOURCED`: native LFG2498 admits the real owner/four followers, but the owned four-tile2515 navigation bake cannot connect entrance to Telash in either direction; both endpoint local routes work. Entrance→Leymor→Book194602 is connected. This does not prove a missing tile or WMO seam. Authored book NPCs span several floors, while the imported spellclick/SmartAI bindings and2515 `spell_target_position` rows are absent. Installed spells385961/393902/389770/389773 have effect252 and target17/DEST_DB; names/facing values are not destination coordinates or book bindings. No transition implementation or invented links are authorized. Whole-party Telash placement is an explicitly approved harness bypass, not walked progression.
+
+Telash display109087 resolves through CreatureDisplayInfo/CreatureModelData to4207724, whose eye geosets and required poses are extracted; the compiled eye table lacks its rows. The [Azure eye receipt](../../specs/line-of-sight.md#bake-and-raycast-crateslos-runtime-in-sharedlos) uses the existing producer and reloads134 required Azure/follower/playable displays in all ten poses. Native receipt1PASS/0FAIL/0ignored at8584d92ef; canonical publication remains lead-owned and must independently reproduce the missing-row fragment without changing existing rows/scales or player mappings. No live hazard latency result follows from startup/admission or this receipt.
+
+Sources: [native producer receipt](../../../crates/los/tests/azure_bake.rs), [eye source/required-display selection](../../../crates/los/src/bake/eye.rs); owned diagnostic ledger `game-engine/data/diagnostics/server-live-frame-cost-2026-10-16/azure-hazard-live1/readonly-prerequisite-findings.md` and its source/route receipts.
+
 ## Dummy-root periodic maintenance — 2026-10-18
 
 Moonfire8921 and Sunfire93402 contain dummy/energize effects with zero `EffectTriggerSpell`; their70448 descriptions reference actual same-name periodic children164812/164815. Testing the roots as `missing_aura` repeatedly casts8921 and starves93402/Wrath. The bounded [producer](../../../scripts/follower_spec_kits.py) reads numeric description references, accepts exactly one existing same-name native periodic-damage aura and fails on missing/multiple matches. Receipt records each affected kit row, literal descriptions/root effects/child periodic effects and named fact `ROOT_CHILD_LINK_DESCRIPTION_ONLY`. Consumed Spell/SpellName/SpellEffect fields are checked against pinned CSV rows; CSV reading preserves embedded CRLF rather than normalizing the description.
