@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Natural shared hearthstone charge coverage (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-pending-2026-10-18), [contract](../../specs/toys.md#natural-shared-hearthstone-charge-coverage): tt653211/0/check/fmt landed stationary timer coveragea989c0f3b. Final toy test/docs slice covers281136/281615 in both directions: ordinary30min shared2309 recovery allows sibling10s cast, spends its only charge and blocks original. Observed completion bounds/normal50ms updates, no private deadline/reset/clock edits. First result pending; accepted sourced boundary/gaps/native exclusions unchanged.
+
 ## Ordinary30-minute/hour coverage follow-up (2026-10-18)
 
 [Current proof scope](../../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18), [contract](../../specs/toys.md#ordinary-lifetime-and-reuse-follow-up): accepted boundary docs landedec7df3660. Two existing stationary identities280820/280822 now have ordinary50ms-update tests for natural30min expiry and1h recovery/reuse using observed cast bounds, no deadline/cooldown/time-scale edits. First executione10b9562b GREEN4/0/79.19s includes both new lifecycles and existing same-ID cancellation controls. Timers already work; no behavioral RED/runtime repair was invented. Lead integration/landing pending. Other identities/native visuals and accepted three unpublished gaps remain unchanged.

@@ -13,6 +13,13 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Natural shared hearthstone charge coverage
+
+- [ ] Hiveborne281136/1310234 and Shadeweaver281615/1311934 naturally recover the shared SpellCategory2309 charge: source MaxCharges1 and ChargeRecoveryTime1800000ms.
+- [ ] In both directions, actual learning/first ten-second cast spends the charge and blocks the sibling before thirty minutes; ordinary passage permits the sibling's full ten-second cast, which spends the one shared charge and blocks the original.
+
+Use ordinary50ms fixture updates, observed completion-frame bounds and actual UseToy/charge messages; never reset charge state, edit deadlines or accelerate clocks. This is coverage-first, not an assumed runtime fix. Bind return and health/model invariance remain intact. No new Toy/data/assets or native proof; the accepted sourced boundary and three named gaps are unchanged.
+
 ## Ordinary lifetime and reuse follow-up
 
 - [x] Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830 naturally retain their own aura before the source30-minute lifetime, then remove it from authoritative and replicated state after expiry, without cancellation or health/body/position changes.

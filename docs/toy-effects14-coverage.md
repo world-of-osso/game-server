@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Natural shared hearthstone charge coverage: pending (2026-10-18)
+
+Lead tt653 passed211/0/check0/fmt0 and landed the stationary ordinary-timer coveragea989c0f3b. Its feature branch was cleaned after ancestry verification. Final approved toy follow-up covers only natural shared2309 charge recovery for Hiveborne281136/1310234 and Shadeweaver281615/1311934 in both directions. Source70448 SpellCategory2309 is named Hearthstone - Charges, MaxCharges1/ChargeRecoveryTime1800000ms; roots retain their authored10s casts.
+
+New learned-use tests observe the completion frame, then run ordinary50ms updates: sibling refused before30min recovery, allowed after30min, no early sibling teleport/SpellGo, then sibling completion spends the only charge and blocks the original. Bind return/health/model stay intact. No charge/deadline/cooldown/time-scale mutation or internal-deadline oracle; no runtime/data/Toy/assets changes. First bounded execution pending; honest first-run GREEN is coverage, not a fabricated RED/repair. [Contract](specs/toys.md#natural-shared-hearthstone-charge-coverage). Other identities/native claims and the three accepted unpublished gaps remain separate.
+
 ## Ordinary30-minute/hour coverage follow-up: GREEN first execution (2026-10-18)
 
 Boundary docs73eb4c48b explicitly landedec7df3660; merged docs branch cleaned after ancestry verification. Approved follow-up covers only existing Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830. Authoritative70448 duration1800000ms/recovery3600000ms is already admitted; no runtime defect or RED is assumed.
