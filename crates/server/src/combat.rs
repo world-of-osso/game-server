@@ -1067,13 +1067,13 @@ fn read_outcome_chances(
     let crit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
     });
-    let npc_weapon_crit_modifier = if attacker.creature {
-        attacker.mods.map_or(0.0, |mods| mods.weapon_crit_pct)
+    let npc_crit_modifier = if attacker.creature {
+        attacker.mods.map_or(0.0, |mods| mods.npc_crit_pct)
     } else {
         0.0
     };
     // Unit.cpp2926 clamps source + victim187 BEFORE attacker334 at2387.
-    let crit_taken = (chances.crit + npc_weapon_crit_modifier + crit_modifier).max(0.0);
+    let crit_taken = (chances.crit + npc_crit_modifier + crit_modifier).max(0.0);
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (crit_taken + autoattack_crit_modifier).max(0.0);
     chances
@@ -2135,6 +2135,9 @@ mod npc_expertise_tests;
 #[cfg(test)]
 #[path = "combat_npc_flags_tests.rs"]
 mod npc_flags_tests;
+#[cfg(test)]
+#[path = "combat_npc_general_crit_tests.rs"]
+mod npc_general_crit_tests;
 #[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
