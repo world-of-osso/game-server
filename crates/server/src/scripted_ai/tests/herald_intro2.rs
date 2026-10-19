@@ -202,7 +202,6 @@ fn assert_no_land_substitute(h: &mut Harness, herald: Entity, pose: UnitPose) {
 }
 
 #[test]
-#[ignore = "RED: natural center arrival has no one-second INTRO2 transition"]
 fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_actor_ai_origin() {
     for difficulty in [1, 2] {
         let (mut h, map, herald, sentries) = prepared_ramparts(difficulty);
@@ -317,6 +316,19 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
             h.has_aura(herald, 18430),
             "source hover on real flight arrival"
         );
+        let threat_target = *h.app.world().get::<Position>(h.player()).unwrap();
+        let facing = (WEST.z - threat_target.z).atan2(threat_target.x - WEST.x)
+            + std::f32::consts::FRAC_PI_2;
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::Rotation>(herald)
+                .unwrap()
+                .y
+                .to_bits(),
+            facing.to_bits(),
+            "30700 faces the sole living same-copy threat target"
+        );
         assert_eq!(
             h.app.world().get::<ReactState>(herald),
             Some(&ReactState::Aggressive)
@@ -338,7 +350,6 @@ fn encounter_coverage_herald_intro2_arrival_deadline_normal_and_heroic_keep_acto
 }
 
 #[test]
-#[ignore = "RED: missing copy-local and duplicate INTRO2 continuation"]
 fn encounter_coverage_herald_intro2_copy_and_duplicate_notifications_do_not_replay() {
     let (mut h, map, herald, sentries) = prepared_ramparts(1);
     let other_map = spawn_second_copy(&mut h);
