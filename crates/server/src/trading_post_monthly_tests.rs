@@ -5,19 +5,25 @@ const NOVEMBER_START: i64 = 1_793_491_200;
 const OCTOBER_OFFER: u32 = 1192;
 const OLD_OFFER: u32 = 4;
 
+fn monthly_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../data/trading-post-monthly-catalog.json")
+}
+
 fn prepare_monthly(h: &mut Harness, now: i64) {
     prepare(h, now);
+    let conn = rusqlite::Connection::open_with_flags(
+        std::env::var_os("TRADING_POST_WORLD_COPY").unwrap(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(catalog::Catalog(catalog::load(&conn, &monthly_path())));
 }
 
 fn october_ids() -> Vec<u32> {
-    let document: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../data/trading-post-monthly-catalog.json"),
-        )
-        .unwrap(),
-    )
-    .unwrap();
+    let document: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(monthly_path()).unwrap()).unwrap();
     document["months"]
         .as_array()
         .unwrap()
@@ -154,6 +160,9 @@ fn trading_post_monthly_frozen_oldmonth_reopen_purchase_and_receipt_refund() {
     assert_eq!(unfrozen.frozen_item_id, None);
     let empty = request(&mut h, TradingPostRequest::Query);
     assert!(empty.items.is_empty());
+    h.app.insert_resource(catalog::Catalog(Err(
+        "TP_MONTHLY_CATALOG_LOAD missing file".into(),
+    )));
     let refund = request(
         &mut h,
         TradingPostRequest::Refund {
@@ -164,6 +173,118 @@ fn trading_post_monthly_frozen_oldmonth_reopen_purchase_and_receipt_refund() {
     assert_eq!(refund.tender, tender + price);
     assert!(
         !store::load(h.db(), ACCOUNT)
+            .purchases
+            .contains_key(&OLD_OFFER)
+    );
+}
+
+#[test]
+fn trading_post_monthly_loader_rejects_missing_malformed_and_inconsistent_data() {
+    let original: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(monthly_path()).unwrap()).unwrap();
+    let build = original["db2_build"].as_str().unwrap();
+    let vendors: std::collections::BTreeSet<u32> = original["months"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|month| month["vendor_item_ids"].as_array().unwrap())
+        .map(|id| id.as_u64().unwrap() as u32)
+        .collect();
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("trading-post-monthly-catalog.json");
+    assert!(super::super::monthly::load(&file, build, &vendors).is_err());
+    std::fs::write(&file, "not JSON").unwrap();
+    assert!(super::super::monthly::load(&file, build, &vendors).is_err());
+    for (pointer, value) in [
+        ("/schema_version", serde_json::json!(9)),
+        ("/policy", serde_json::json!("unapproved")),
+        ("/db2_build", serde_json::json!("0.0.0.1")),
+        ("/month_epoch_policy", serde_json::json!("unknown epoch")),
+        ("/months/0/vendor_item_ids", serde_json::json!([u32::MAX])),
+        ("/months/0/calendar", serde_json::json!("2023-03")),
+        ("/months/0/source/sha256", serde_json::json!("bad hash")),
+        (
+            "/permanent_vendor_item_ids",
+            serde_json::json!([OCTOBER_OFFER]),
+        ),
+    ] {
+        let mut invalid = original.clone();
+        *invalid.pointer_mut(pointer).unwrap() = value;
+        std::fs::write(&file, serde_json::to_vec(&invalid).unwrap()).unwrap();
+        assert!(
+            super::super::monthly::load(&file, build, &vendors).is_err(),
+            "accepted {pointer}"
+        );
+    }
+    std::fs::write(&file, serde_json::to_vec(&original).unwrap()).unwrap();
+    let loaded = super::super::monthly::load(&file, build, &vendors).unwrap();
+    assert!(loaded.at(OCTOBER_START).contains(OCTOBER_OFFER, None));
+    assert!(!loaded.at(NOVEMBER_START).contains(OCTOBER_OFFER, None));
+}
+
+#[test]
+fn trading_post_monthly_fifo_reads_freeze_committed_ahead_of_query_and_buy() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Monthfifo").unwrap();
+    prepare_monthly(&mut h, NOVEMBER_START + 10);
+    store::grant_tender(h.db(), ACCOUNT, 10_000).unwrap();
+    open_tawny(&mut h);
+    let held = h.db().begin_write().unwrap();
+    let receipt = h
+        .app
+        .world()
+        .resource::<GameDatabase>()
+        .writer
+        .enqueue_result("fixture preceding freeze", move |db| {
+            store::freeze(db, ACCOUNT, Some(OLD_OFFER));
+            Ok(())
+        });
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(TradingPostRequest::Query);
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
+        .unwrap()
+        .send::<InstanceChannel>(TradingPostRequest::Purchase {
+            vendor_item_id: OLD_OFFER,
+        });
+    for _ in 0..4 {
+        h.app.update();
+    }
+    assert!(
+        receipt.result().is_none(),
+        "held transaction must fence publication"
+    );
+    held.abort().unwrap();
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let mut replies = Vec::new();
+    while replies.len() < 2 && std::time::Instant::now() < deadline {
+        h.app.update();
+        replies.extend(
+            h.app
+                .world_mut()
+                .get_mut::<MessageReceiver<TradingPostSnapshot>>(h.connection)
+                .unwrap()
+                .receive(),
+        );
+        std::thread::yield_now();
+    }
+    assert_eq!(replies.len(), 2);
+    assert!(
+        replies.iter().all(|reply| reply.error.is_none()),
+        "{replies:?}"
+    );
+    let query = replies.iter().find(|reply| reply.catalog_complete).unwrap();
+    assert_eq!(
+        query.items.iter().map(|row| row.id).collect::<Vec<_>>(),
+        vec![OLD_OFFER]
+    );
+    assert!(
+        store::load(h.db(), ACCOUNT)
             .purchases
             .contains_key(&OLD_OFFER)
     );

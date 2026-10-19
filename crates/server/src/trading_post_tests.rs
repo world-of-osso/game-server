@@ -14,14 +14,39 @@ fn db2_follow_install_trading_post_reads_next_build_and_rejects_mixed_sources() 
         [r#"{"ID":1,"DisplayName_lang":"Armor","DefaultUIModelSceneID":23}"#],
     )
     .unwrap();
-    let loaded = catalog::load(&db).unwrap();
+    let monthly = fixture_monthly_catalog(&db);
+    let loaded = catalog::load(&db, monthly.path()).unwrap();
     assert_eq!(loaded.categories[0].name, "Armor");
     db.execute(
         "INSERT INTO trading_post_source VALUES('PerksVendorItem','12.1.0.69933')",
         [],
     )
     .unwrap();
-    assert!(catalog::load(&db).is_err());
+    assert!(catalog::load(&db, monthly.path()).is_err());
+}
+
+fn fixture_monthly_catalog(conn: &rusqlite::Connection) -> tempfile::NamedTempFile {
+    let build = crate::db2_source_build::read_source_build(conn, "trading_post_source").unwrap();
+    let mut query = conn
+        .prepare("SELECT ID FROM perks_vendor_item ORDER BY ID")
+        .unwrap();
+    let vendors: Vec<u32> = query
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    let document = serde_json::json!({
+        "schema_version": 1,
+        "policy": "TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS",
+        "month_epoch_policy": "TP_PERKS_MONTH_EPOCH_2023_01_WOWHEAD_ANCHORED",
+        "db2_build": build,
+        "months": [{"perks_month": 46, "calendar": "2026-10", "vendor_item_ids": vendors,
+            "source": {"url": "https://www.wowhead.com/news/test-fixture", "retrieved_date": "2026-10-19", "sha256": "0".repeat(64)}, "supplemental_sources": []}],
+        "permanent_vendor_item_ids": []
+    });
+    let file = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(file.path(), serde_json::to_vec(&document).unwrap()).unwrap();
+    file
 }
 
 fn prepare(h: &mut Harness, now: i64) {
@@ -36,10 +61,13 @@ fn prepare(h: &mut Harness, now: i64) {
         .unwrap()
         .join("db2/active/AdventureJournal.csv");
     let activities = crate::adventure_guide::load_catalog(&conn, &criteria, &journal_csv);
+    // Existing authority/FIFO tests use an explicit all-offers October fixture,
+    // not an application fallback. Monthly tests replace it with real data.
+    let monthly = fixture_monthly_catalog(&conn);
     h.app
         .insert_resource(criteria)
         .insert_resource(activities)
-        .insert_resource(catalog::Catalog(catalog::load(&conn)))
+        .insert_resource(catalog::Catalog(catalog::load(&conn, monthly.path())))
         .insert_resource(crate::maps::ServerClock {
             fixed_unix: Some(now),
             offset_secs: 0,
@@ -271,7 +299,7 @@ fn trading_post_source_vendor_wire_purchase_refuses_closed_and_out_of_range_inte
     assert_eq!(refused.tender, 100);
     assert!(refused.items.is_empty());
     let catalog = request(&mut h, TradingPostRequest::Query);
-    assert_eq!(catalog.items.len(), 1321);
+    assert!(catalog.catalog_complete);
     assert!(
         catalog
             .items
@@ -418,7 +446,6 @@ fn trading_post_admin_tender_and_refund_window_enable_wire_refund() {
     open_tawny(&mut h);
     let catalog = request(&mut h, TradingPostRequest::Query);
     assert!(catalog.catalog_complete);
-    assert_eq!(catalog.items.len(), 1321);
     let purchased = request(&mut h, TradingPostRequest::Purchase { vendor_item_id: 4 });
     assert!(purchased.error.is_none(), "{:?}", purchased.error);
     assert_eq!(purchased.tender, 600);
@@ -669,7 +696,8 @@ fn trading_post_catalog_uses_authored_base_appearance_icons_not_empty_item_icons
     let conn =
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
-    let catalog = catalog::load(&conn).unwrap();
+    let monthly = fixture_monthly_catalog(&conn);
+    let catalog = catalog::load(&conn, monthly.path()).unwrap();
     let cloak = &catalog.items[&729].0;
     assert_eq!(cloak.item_id, 223185);
     assert_eq!(

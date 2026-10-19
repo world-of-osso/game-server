@@ -1,6 +1,8 @@
 //! Server-authoritative Mainline Trading Post, using existing monthly gameplay credit.
 #[path = "trading_post_catalog.rs"]
 mod catalog;
+#[path = "trading_post_monthly.rs"]
+mod monthly;
 #[path = "trading_post_persistence.rs"]
 mod persistence;
 #[cfg(test)]
@@ -51,7 +53,9 @@ fn load_catalog(mut commands: Commands) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .expect("open Trading Post world.db");
-    let loaded = catalog::load(&conn);
+    let monthly_path = std::path::Path::new(crate::spell_info::WORLD_DB_PATH)
+        .with_file_name("trading-post-monthly-catalog.json");
+    let loaded = catalog::load(&conn, &monthly_path);
     if let Err(error) = &loaded {
         error!("Trading Post catalog unavailable: {error}");
     }
@@ -182,7 +186,7 @@ fn prepare_snapshot(
             thresholds: Vec::new(),
             catalog_complete: matches!(rows, Rows::Catalog),
             source_gaps: vec![
-            "Monthly featured rotation and seasonal reward binding: no verified calendar epoch."
+            "TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS: news-derived inventory; not Retail parity. Seasonal activity/reward binding remains unresolved."
                 .into(),
             refund_gap(world.get_resource::<RefundWindow>().map_or(0, |window| window.0)),
         ],
@@ -225,6 +229,7 @@ fn prepare_snapshot(
             Some(catalog::CatalogData {
                 categories: Vec::new(),
                 items,
+                monthly: catalog.monthly.clone(),
             })
         }
         Err(error) => {
