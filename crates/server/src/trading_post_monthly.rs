@@ -125,9 +125,12 @@ fn validate_document(
 }
 
 fn validate_month(month: &Month, vendor_ids: &BTreeSet<u32>) -> Result<(), String> {
+    if month.perks_month < 1 {
+        return Err(format!("invalid PerksMonth {}", month.perks_month));
+    }
     let year = 2023 + (month.perks_month - 1).div_euclid(12);
     let calendar_month = (month.perks_month - 1).rem_euclid(12) + 1;
-    if month.perks_month < 1 || month.calendar != format!("{year:04}-{calendar_month:02}") {
+    if month.calendar != format!("{year:04}-{calendar_month:02}") {
         return Err(format!(
             "invalid calendar for PerksMonth {}",
             month.perks_month
@@ -140,19 +143,22 @@ fn validate_month(month: &Month, vendor_ids: &BTreeSet<u32>) -> Result<(), Strin
         ));
     }
     for source in std::iter::once(&month.source).chain(&month.supplemental_sources) {
-        let hash_valid =
-            source.sha256.len() == 64 && source.sha256.bytes().all(|byte| byte.is_ascii_hexdigit());
-        if !source.url.starts_with("https://www.wowhead.com/news/")
-            || !hash_valid
-            || chrono::NaiveDate::parse_from_str(&source.retrieved_date, "%Y-%m-%d").is_err()
-        {
-            return Err(format!(
-                "PerksMonth {} has invalid news provenance",
-                month.perks_month
-            ));
-        }
+        validate_source(source, month.perks_month)?;
     }
     Ok(())
+}
+
+fn validate_source(source: &Source, perks_month: i32) -> Result<(), String> {
+    let hash_valid =
+        source.sha256.len() == 64 && source.sha256.bytes().all(|byte| byte.is_ascii_hexdigit());
+    let date_valid = chrono::NaiveDate::parse_from_str(&source.retrieved_date, "%Y-%m-%d").is_ok();
+    let url_valid = source.url.starts_with("https://www.wowhead.com/news/");
+    if hash_valid && date_valid && url_valid {
+        return Ok(());
+    }
+    Err(format!(
+        "PerksMonth {perks_month} has invalid news provenance"
+    ))
 }
 
 fn validate_permanent(

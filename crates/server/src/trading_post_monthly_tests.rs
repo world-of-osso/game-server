@@ -38,7 +38,6 @@ fn october_ids() -> Vec<u32> {
 }
 
 #[test]
-#[ignore = "TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS RED: runtime membership pending"]
 fn trading_post_monthly_query_exact_october_and_empty_uncovered_utc_rollover() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let mut h = crate::bank_test_harness::harness_at(file.path(), "Monthquery").unwrap();
@@ -69,7 +68,6 @@ fn trading_post_monthly_query_exact_october_and_empty_uncovered_utc_rollover() {
 }
 
 #[test]
-#[ignore = "TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS RED: runtime membership pending"]
 fn trading_post_monthly_rejects_offmonth_buy_freeze_and_mixed_checkout_atomically() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let mut h = crate::bank_test_harness::harness_at(file.path(), "Monthreject").unwrap();
@@ -116,7 +114,6 @@ fn trading_post_monthly_rejects_offmonth_buy_freeze_and_mixed_checkout_atomicall
 }
 
 #[test]
-#[ignore = "TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS RED: runtime membership pending"]
 fn trading_post_monthly_frozen_oldmonth_reopen_purchase_and_receipt_refund() {
     let file = tempfile::NamedTempFile::new().unwrap();
     {
