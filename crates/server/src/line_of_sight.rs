@@ -225,6 +225,35 @@ pub(crate) fn sees_in_world(world: &World, watcher: Entity, target: Entity) -> b
     }
 }
 
+/// Project only a unit's feet; both bodies still use actual native eyes/pose/facing.
+pub(crate) fn mutually_visible_at(
+    world: &World,
+    unit: Entity,
+    position: Position,
+    other: Entity,
+) -> Result<bool, String> {
+    let map = *world
+        .get::<InMap>(unit)
+        .ok_or("Projected LOS unit lacks a map")?;
+    if world.get::<InMap>(other) != Some(&map) {
+        return Err("Projected LOS actors are outside the same copy".into());
+    }
+    let los = world
+        .get_resource::<LineOfSight>()
+        .ok_or("Projected LOS lacks native data")?;
+    let mut parts = parts_in_world(world, unit).ok_or("Projected LOS unit lacks body parts")?;
+    parts.2 = &position;
+    let body = los
+        .body(parts)
+        .ok_or("Projected LOS unit lacks native eye geometry")?;
+    let other_parts =
+        parts_in_world(world, other).ok_or("Projected LOS target lacks body parts")?;
+    let target = los
+        .body(other_parts)
+        .ok_or("Projected LOS target lacks native eye geometry")?;
+    Ok(los.sees(map, &body, &target) && los.sees(map, &target, &body))
+}
+
 /// Area-hit visibility from the recipient to the area center. TC's point LOS
 /// raises the destination by the recipient's collision height; our eye-geometry
 /// contract uses its baked eye height instead (no witness from the caster).

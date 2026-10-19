@@ -1233,7 +1233,7 @@ fn advance_companion_route(
     }
 }
 
-/// Follower hazard escape uses the same native movement/interest/replication writer.
+/// Planned follower movement and hazard escape share the native movement/interest/replication writer.
 pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
     let mut state = bevy::ecs::system::SystemState::<(
         MoveQueues,
@@ -1254,7 +1254,11 @@ pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, spe
         debug!("Follower {entity} escape movement held while externally controlled");
         return;
     };
-    let stride = Stride::moving(*position, to, CreatureMotion::Run, speed);
+    let stride = if *position == to {
+        Stride::still(*position)
+    } else {
+        Stride::moving(*position, to, CreatureMotion::Run, speed)
+    };
     queues.apply(
         entity,
         &mut position,

@@ -22,6 +22,7 @@ pub enum Goal {
     Follow(u64),
     Hazard(u64),
     Approach(u64),
+    PullAdmission,
     FearCollision,
     FearPath,
     Point,
