@@ -252,6 +252,10 @@ impl CreatureAi for HeraldIntro {
         }
     }
 
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        super::evade_encounter(ctx);
+    }
+
     // TC281–288: the first real death only marks the survivor; the second completes.
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         if self.is_other_dead {

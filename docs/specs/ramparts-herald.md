@@ -73,6 +73,14 @@ Development proof: native actual dead30693/installed1892bit1 qualification1PASS 
 - [ ] Activate the authored difficulty-specific chest on completion; preserve loot and persistence boundaries.
 - [ ] Preserve source evade/failure,30s forced group357 reset and unloaded/reloaded instance behavior without stale Sentry counts or surviving summoned Vazruden duplicates.
 
+### Loaded-copy evade and30s reset
+
+- [ ] Real loss of valid targets reaches source evade: Herald despawns and FAIL; Vazruden Talk0/despawns and FAIL. No fake hook, threat clear or health/stat override. FAIL is one transition/no1892success, even when both actors evade.
+- [ ] Independent copy clock runs after actor removal. Preserve source InstanceMap::Update order (Map.cpp2993–3000): unit hooks before instance Events.Update, so the30000ms event consumes its scheduling50ms frame and resets at observedFAIL+29950ms in the fixture. No shortened timer.
+- [ ] Use actual TDB group357 membership/flags0 with ignoreRespawn=true, NOTforce=true: clear timers, replace dead members from their authored placement/difficulty, preserve already-alive member identities and never withhold regular initial population or mutate canonical data. Source Map2360–2446/Creature1856–1884.
+- [ ] Restore source17307/two17517, zero Sentry counter, remove remaining17537, fresh physical patrol/min1 and natural two-Sentry intro; prove Normal/Heroic/copy-isolation/already-alive/counter1 controls. AfterDataLoad/OnPlayerEnter reload/re-entry, persistence acceptance, chest/loot, Liquid Fire and native presentation remain separate.
+- [ ] Label actual native5 player-instakill as wipe HARNESS SETUP, not authored boss rotation/balance. Include bounded ordinary boss-damage death control without modifying the fixture buffer; if unreachable, record its bound and remaining health.
+
 ## How it works
 
 - [Source and identity audit](../wiki/systems/boss-scripts.md#ramparts-herald-identity-policy--2026-10-17).

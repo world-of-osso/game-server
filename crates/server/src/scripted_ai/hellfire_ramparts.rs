@@ -9,6 +9,7 @@ pub(crate) use herald::{HeraldUnkillable, on_unit_death};
 use shared::components::ThreatTable;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
+use super::instance_script::{self, EncounterState};
 use super::{CreatureAi, Ctx, DamageTaken};
 
 /// TC557–568: effect0 SCRIPT_EFFECT sends action0 to the actual hit creature.
@@ -16,6 +17,14 @@ pub(crate) fn call_nazan(world: &mut World, _caster: Entity, target: Entity, _de
     if world.get::<shared::components::Npc>(target).is_some() {
         super::dispatch(world, target, super::Hook::DoAction(0));
     }
+}
+
+/// TC Herald276–280/Vazruden467–474: source despawn, then copy FAIL.
+fn evade_encounter(ctx: &mut Ctx) {
+    let map = ctx.map().expect("registered Ramparts actor map");
+    crate::combat::despawn_creature(ctx.world, ctx.me);
+    instance_script::set_boss_state(ctx.world, map, 1, EncounterState::Fail);
+    // HERALD_LOADED_COPY_RESET_UNIMPLEMENTED: independent30s group reset follows.
 }
 
 const ACTION_OTHER_IS_DEAD: i32 = 1;
