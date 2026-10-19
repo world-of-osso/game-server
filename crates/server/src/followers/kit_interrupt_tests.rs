@@ -1,4 +1,4 @@
-//! Native picker contract. Planner/caller integration remains owned by9468.
+//! Native provider and ordinary follower-update interrupt contract.
 use super::kit_tests::{at_level, level32};
 use super::kit_utility_tests::wait_for_native_school_unlock;
 use super::{Follower, utility_tests};
@@ -75,6 +75,63 @@ fn follower_kit_interrupt_uses_native_eligibility_not_pushback_flag() {
     assert!(try_candidates(&mut h, unit, &[enemy]));
     h.advance(3);
     assert!(h.app.world().get::<CastState>(enemy).is_none());
+}
+
+#[test]
+fn follower_kit_interrupt_runtime_garrick32_uses_native_kick() {
+    let (mut h, unit) = level32(209057);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    let enemy = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<CastState>(enemy)
+        .unwrap()
+        .interruptible = false;
+    super::update_ai(h.app.world_mut());
+    h.advance(3);
+    assert!(h.app.world().get::<CastState>(enemy).is_none());
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt
+                && event.source == Some(unit.to_bits())
+                && event.spell_id == Some(96231))
+    );
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == unit.to_bits() && go.spell_id == 31935)
+    );
+}
+
+#[test]
+fn follower_kit_interrupt_runtime_garrick26_heal_precedes_shield() {
+    let (mut h, unit) = at_level(209057, 26, |_| {});
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    let enemy = h.npc;
+    let mut health = h
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Health>(unit)
+        .unwrap();
+    health.current = health.max * 0.15;
+    super::update_ai(h.app.world_mut());
+    h.advance(3);
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == unit.to_bits() && go.spell_id == 633)
+    );
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == unit.to_bits() && go.spell_id == 31935)
+    );
+    assert!(h.app.world().get::<CastState>(enemy).is_some());
 }
 
 #[test]
