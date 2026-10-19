@@ -996,8 +996,17 @@ fn roll_outcome(
     can_avoid: bool,
     in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
+    target_health: &Health,
 ) -> MeleeOutcome {
-    let chances = read_outcome_chances(attacker, victim, flags, can_avoid, in_front, target_auras);
+    let chances = read_outcome_chances(
+        attacker,
+        victim,
+        flags,
+        can_avoid,
+        in_front,
+        target_auras,
+        target_health,
+    );
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -1011,6 +1020,7 @@ fn read_outcome_chances(
     can_avoid: bool,
     in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
+    target_health: &Health,
 ) -> melee::MeleeChances {
     let swinger = match (attacker.creature, attacker.stats) {
         (true, _) => Swinger::Creature {
@@ -1088,6 +1098,7 @@ fn read_outcome_chances(
     let crit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
             + auras.modifier(crate::auras::handlers::MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE)
+            + health_crit_modifier(auras, target_health)
             + caster_crit_modifier(
                 auras,
                 attacker.entity,
@@ -1117,11 +1128,32 @@ fn read_outcome_chances(
     } else {
         chances.crit + npc_crit_modifier
     };
-    // Unit.cpp2911–2926 clamps source + victim187/197/matching306/339 BEFORE334 at2387.
+    // Unit.cpp2906–2926 clamps source + received183/187/197/306/339 BEFORE334 at2387.
     let crit_taken = (source_crit + crit_modifier).max(0.0);
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (crit_taken + autoattack_crit_modifier).max(0.0);
     chances
+}
+
+/// TC Unit.cpp2906–2909 / Unit.h804,809: !HealthBelowPct includes equality.
+fn health_crit_modifier(auras: &crate::auras::ActiveAuras, health: &Health) -> f32 {
+    auras
+        .iter()
+        .map(|aura| {
+            let stacks = aura.stack_multiplier();
+            aura.effects
+                .iter()
+                .filter(|effect| {
+                    effect.aura_type == crate::auras::handlers::MOD_CRIT_CHANCE_VERSUS_TARGET_HEALTH
+                })
+                .filter(|effect| {
+                    let threshold = (health.max * effect.misc_values[1] as f32 / 100.0).trunc();
+                    health.current >= threshold
+                })
+                .map(|effect| effect.amount * stacks)
+                .sum::<f32>()
+        })
+        .sum()
 }
 
 /// TC Unit.cpp2911–2921: recipient crit306/339 effects match the sourced caster.
@@ -1417,6 +1449,7 @@ fn try_swing(
         can_avoid((avoidance.0, avoidance.1.as_deref())),
         in_front,
         avoidance.1.as_deref(),
+        &health,
     );
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
     // not, stands a player victim up.
@@ -2223,6 +2256,9 @@ mod victim_caster_crit_tests;
 #[cfg(test)]
 #[path = "combat_victim_general_crit_tests.rs"]
 mod victim_general_crit_tests;
+#[cfg(test)]
+#[path = "combat_victim_health_crit_tests.rs"]
+mod victim_health_crit_tests;
 #[cfg(test)]
 #[path = "combat_victim_summoner_crit_tests.rs"]
 mod victim_summoner_crit_tests;
