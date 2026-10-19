@@ -88,6 +88,21 @@ fn target32_grounding_dry_source30717_without_model_reach() {
     assert!(source_floor(&mut world, before.position) < before.position.y - 1.0);
     let after = planned(&mut world, caster, &spell);
     assert_xy_and_facing_retained(before, after);
+    let mut m2 = los::LosMap::new(&crate::ground::ground_data_dir().join("los/543/m2"));
+    for position in [before.position, after.position] {
+        eprintln!(
+            "TARGET32_M2 position={position:?} floor={:?}",
+            m2.floor_height(position)
+        );
+        let first = source_floor(&mut world, position);
+        let repeated = source_floor(&mut world, position);
+        eprintln!(
+            "TARGET32_RAY position={position:?} top={} bottom={} height={first:?} repeated={repeated:?} height_bits={:#x}",
+            position.y + shared::ground::STEP_UP_HEIGHT,
+            position.y - shared::ground::FLOOR_SEARCH_DEPTH,
+            first.to_bits()
+        );
+    }
     assert_eq!(
         after.position.y,
         source_floor(&mut world, after.position),
