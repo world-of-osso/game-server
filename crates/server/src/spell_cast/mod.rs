@@ -157,6 +157,8 @@ pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod ordinary_dead_caster_tests;
 #[cfg(test)]
+mod prayer_of_mending_tests;
+#[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
 mod queued_trigger_target_tests;
@@ -2792,6 +2794,38 @@ pub(super) fn cast_triggered_with_item_level(
     launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
+/// The sourced CastSpellExtraArgs values carried by a real triggered cast.
+#[derive(Default)]
+pub(crate) struct TriggeredSpellOverrides {
+    pub effect0_amount: Option<f32>,
+    pub aura_stacks: Option<u8>,
+    pub original_caster: Option<Entity>,
+}
+
+pub(crate) fn cast_triggered_with_overrides(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    values: TriggeredSpellOverrides,
+) -> bool {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return false;
+    };
+    spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_original_caster = values.original_caster;
+    if let Some(amount) = values.effect0_amount {
+        let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
+            warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
+            return false;
+        };
+        effect.base_points = amount;
+    }
+    // The existing missile snapshot clones the whole per-cast SpellInfo.
+    launch_triggered_spell(world, caster, &spell, explicit, depth)
+}
+
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
 pub(crate) fn cast_triggered_with_effect0_amount(
     world: &mut World,
@@ -2801,15 +2835,17 @@ pub(crate) fn cast_triggered_with_effect0_amount(
     depth: u8,
     amount: f32,
 ) {
-    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
-        return;
-    };
-    let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
-        warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
-        return;
-    };
-    effect.base_points = amount;
-    launch_triggered_spell(world, caster, &spell, explicit, depth);
+    cast_triggered_with_overrides(
+        world,
+        caster,
+        spell_id,
+        explicit,
+        depth,
+        TriggeredSpellOverrides {
+            effect0_amount: Some(amount),
+            ..Default::default()
+        },
+    );
 }
 
 /// Full-mask triggered cast at an authored destination, retaining native selectors and flight.
