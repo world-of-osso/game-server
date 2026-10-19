@@ -28,7 +28,7 @@ The [height proof ledger](../../handoffs/wow-formats-runtime-heights.md) specifi
 
 The client and server share12B chunk,24B instance and16B attribute projections. `los::liquid` uses those records and shared float reads, preserving its all-offset prepass, byte-per-row bitmap, strided LVF1/3 heights and inferred LiquidObject format. The client retains packed masks, sequential vertex arrays and material-deferred object bytes. No mode flag or reconciliation was added; samplers, error labels/precedence, runtime MCNK source-order association and navigation MCNK-index selection remain local.
 
-The [MH2O ledger](../../handoffs/wow-formats-mh2o-records.md) freezes each consumer independently on three required real roots and25 synthetic payloads, plus water-bound and terrain-query outputs. Shared library2a91b224 exposes the existing raw record readers; default250/no-default170 tests and check/fmt pass. After-reader comparison remains pending.
+The [MH2O ledger](../../handoffs/wow-formats-mh2o-records.md) freezes each consumer independently on three required real roots and25 synthetic payloads, plus water-bound and terrain-query outputs. Shared library2a91b224 exposes the existing raw record readers; default250/no-default170 tests and check/fmt pass. Before/after180/180 receipt/bake files28,034,481B match exactly,116/116 source inputs unchanged. Server height23, MH2O2, scoped swim10/real ground4/ocean1/navigation-bake1 controls pass; runtime server tree stays320 package/version pairs with no added crates/features. Engine water20/terrain45/ground18 and all checks/fmt pass. Independent lead integration remains pending.
 
 ## Reference proof
 
