@@ -41,6 +41,8 @@ mod azure_telash;
 mod azure_telash_return;
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "channel_completion_order.rs"]
+mod channel_completion_order;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]

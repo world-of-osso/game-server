@@ -47,6 +47,8 @@ mod casting_restriction;
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
+#[cfg(test)]
+mod channel_completion_controls;
 pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;

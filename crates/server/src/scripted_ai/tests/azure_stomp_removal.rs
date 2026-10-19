@@ -45,7 +45,7 @@ fn damage_count(h: &Harness, leymor: Entity) -> usize {
         .count()
 }
 
-fn fixture() -> (Harness, Entity) {
+pub(super) fn fixture() -> (Harness, Entity) {
     // Reuse the already-proven native intro/Tender-depletion setup. No Sprout is
     // killed or granted an aura here: ordinary374364/missile/summon owns its birth.
     let (h, leymor) = super::azure_sprouts::prepare_arcane_power_prerequisites();
@@ -75,7 +75,7 @@ fn fixture() -> (Harness, Entity) {
     (h, leymor)
 }
 
-fn wait_for_stomp(h: &mut Harness, leymor: Entity) -> Vec<Entity> {
+pub(super) fn wait_for_stomp(h: &mut Harness, leymor: Entity) -> Vec<Entity> {
     for _ in 0..1000 {
         if h.app
             .world()
