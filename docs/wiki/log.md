@@ -1,6 +1,6 @@
 ## Source interrupt eligibility
 
-[Live predicate](systems/spell-casting.md#live-source-interrupt-eligibility): full pinned TC OR/bypass ordering at selection and effect68; damage pushback unchanged. Native9 and four real104773 protection negatives pass. Fissure source0 assertion corrected without altering geometry; ordinary stun/cast setup bound still blocks frontal proof. No live hazard timing or whole-branch GREEN claim.
+[Live predicate](systems/spell-casting.md#live-source-interrupt-eligibility): full pinned TC OR/bypass ordering at selection and effect68; damage pushback unchanged. Current ce431b54c focused14/14 pass47.85s/0warnings, including native9, four real104773 protection negatives and unchanged Azure facing. Approved source-duration setup bound250ticks derives1.5s cast+6s stun+100 original50ms ticks; Fissure admitted147. Fissure source0 assertion corrected without altering geometry, native data, CC or timers. No live hazard timing or whole-branch GREEN claim.
 
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
