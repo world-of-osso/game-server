@@ -1,6 +1,9 @@
 ## 2026-10-18 — Herald point4 fall through DESCEND3
 
 [Bounded fall](systems/boss-scripts.md#herald-point4-fall-through-descend3--2026-10-18): native qualification plus genuine Normal/Heroic missing50msfall and ordinary20538 threat1vs0 RED precede implementation3a96703c4. Targeted4/4GREEN70.06s; actual original-ray floor, TC analytic fall/integer-ms EFFECT completion, gravity enable and per-hit zero-but-retained threat. Retained/LEAD gate pending; DESCEND4 and later lifecycle excluded.
+## 2026-10-17 — NPC general crit290
+
+[Combined raw source](systems/player-damage.md#npc-general-crit290--2026-10-17): qualificationa20fb904d FIRST2PASS48.51s, actual signed290/mask6 and full52+290 live768s; THEN ignored294a0606a PUSHED before genuine4RED/4PASS54.62s. Positive0Crit/5, negative/signed11Crit/256, joint52+290zeroCrit/256 prove missing NPC290. Reuse/rename existing accumulator to npc_crit_pct52+290, retain player StatModifiers fold/NPC-only consume and pre334clamp; no new scalar/query/snapshot/wire or RNG/clocks/HP/Guardian changes. Consumer794157734 fresh ignored8GREEN41.92s/0warnings plus retained qualification2PASS48.51s (ten-case composite), only then eight behavior ignores removed. Lead gate pending; player52/NO_CRIT/NPCspellcrit/mitigation excluded.
 
 ## 2026-10-18 — Herald min1 precommit source guard
 
