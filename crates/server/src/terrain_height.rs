@@ -14,10 +14,9 @@ const CHUNK_SIZE: f32 = 100.0 / 3.0;
 const UNIT_SIZE: f32 = CHUNK_SIZE / 8.0;
 /// Number of height floats per MCNK (9x9 outer + 8x8 inner).
 const MCVT_COUNT: usize = 145;
-/// MCNK flag: the header's 0x14 holds an 8x8 hole mask instead of ofsHeight/ofsNormal.
-const MCNK_FLAG_HIGH_RES_HOLES: u32 = 0x10000;
-
 use crate::liquid::{ChunkLiquid, LiquidSample, parse_mh2o};
+use wow_adt::adt::{parse_mcvt, parse_terrain_height_header};
+use wow_chunk::{ChunkIter, find_reversed_chunk};
 
 pub use shared::movement::GRAVITY;
 /// Small threshold before gravity kicks in (yards). Stricter than client for validation.
@@ -145,7 +144,7 @@ fn interpolate_fan([tl, tr, bl, br]: [f32; 4], center: f32, col: f32, row: f32) 
 /// Parse an ADT file's raw bytes and return a `TerrainHeightMap` resource.
 pub fn parse_adt_heights(data: &[u8]) -> Result<TerrainHeightMap, String> {
     let payloads = collect_mcnk_payloads(data)?;
-    let mut liquids = match find_top_level_chunk(data, b"O2HM")? {
+    let mut liquids = match find_reversed_chunk(data, b"MH2O")? {
         Some(mh2o) => parse_mh2o(mh2o)?,
         None => Vec::new(),
     }
@@ -159,38 +158,16 @@ pub fn parse_adt_heights(data: &[u8]) -> Result<TerrainHeightMap, String> {
     Ok(TerrainHeightMap { chunks })
 }
 
-/// Payload of the first top-level chunk tagged `tag` (as stored, reversed).
-fn find_top_level_chunk<'a>(data: &'a [u8], tag: &[u8; 4]) -> Result<Option<&'a [u8]>, String> {
-    let mut off = 0usize;
-    while off + 8 <= data.len() {
-        let size = read_u32(data, off + 4)? as usize;
-        let payload = data
-            .get(off + 8..off + 8 + size)
-            .ok_or_else(|| format!("Chunk truncated at {off:#x}"))?;
-        if &data[off..off + 4] == tag {
-            return Ok(Some(payload));
-        }
-        off += 8 + size;
-    }
-    Ok(None)
-}
-
 /// Collect all KNCM (reversed MCNK) chunk payloads from the ADT.
 fn collect_mcnk_payloads(data: &[u8]) -> Result<Vec<&[u8]>, String> {
     let mut mcnks = Vec::with_capacity(256);
     let mut off = 0usize;
-    while off + 8 <= data.len() {
-        let tag = &data[off..off + 4];
-        let size = read_u32(data, off + 4)? as usize;
-        let payload_start = off + 8;
-        let payload_end = payload_start + size;
-        if payload_end > data.len() {
-            return Err(format!("Chunk truncated at {off:#x}"));
-        }
+    for chunk in ChunkIter::new(data) {
+        let (tag, payload) = chunk.map_err(|_| format!("Chunk truncated at {off:#x}"))?;
         if tag == b"KNCM" {
-            mcnks.push(&data[payload_start..payload_end]);
+            mcnks.push(payload);
         }
-        off = payload_end;
+        off += 8 + payload.len();
     }
     if mcnks.is_empty() {
         return Err("No KNCM (MCNK) chunks found".to_string());
@@ -200,26 +177,17 @@ fn collect_mcnk_payloads(data: &[u8]) -> Result<Vec<&[u8]>, String> {
 
 /// Parse a single MCNK payload for height data only (position + MCVT).
 fn parse_mcnk_height(payload: &[u8]) -> Result<ChunkHeight, String> {
-    if payload.len() < 128 {
-        return Err(format!("MCNK too small: {} bytes", payload.len()));
-    }
-    // Position at offset 0x68 is [X_wow, Y_wow, Z_wow].
-    let pos_x = read_f32(payload, 0x68)?; // WoW X
-    let pos_y = read_f32(payload, 0x6c)?; // WoW Y
-    let pos_z = read_f32(payload, 0x70)?; // WoW Z (base height)
-
+    let header = parse_terrain_height_header(payload)?;
     let heights = find_mcvt(&payload[128..])?;
-    let holes = if read_u32(payload, 0)? & MCNK_FLAG_HIGH_RES_HOLES != 0 {
-        u64::from(read_u32(payload, 0x14)?) | u64::from(read_u32(payload, 0x18)?) << 32
-    } else {
-        widen_low_res_holes(read_u32(payload, 0x3c)? as u16)
-    };
+    let holes = header
+        .holes_high_res
+        .unwrap_or_else(|| widen_low_res_holes(header.holes_low_res));
 
     Ok(ChunkHeight {
-        corner_x: pos_x,
-        corner_y: pos_y,
-        area_id: read_u32(payload, 0x34)?,
-        base_z: pos_z,
+        corner_x: header.origin[0],
+        corner_y: header.origin[1],
+        area_id: header.area_id,
+        base_z: header.origin[2],
         heights,
         holes,
         liquid: ChunkLiquid::default(),
@@ -236,55 +204,12 @@ fn widen_low_res_holes(low: u16) -> u64 {
 
 /// Scan sub-chunks after the 128-byte MCNK header for TVCM (reversed MCVT).
 fn find_mcvt(sub: &[u8]) -> Result<[f32; MCVT_COUNT], String> {
-    let mut off = 0usize;
-    while off + 8 <= sub.len() {
-        let tag = &sub[off..off + 4];
-        let size = read_u32(sub, off + 4)? as usize;
-        let payload_start = off + 8;
-        let payload_end = payload_start + size;
-        if payload_end > sub.len() {
-            break;
-        }
-        if tag == b"TVCM" {
-            return parse_mcvt(&sub[payload_start..payload_end]);
-        }
-        off = payload_end;
-    }
-    Err("MCNK missing TVCM sub-chunk".to_string())
-}
-
-/// Parse MCVT payload into 145 height floats.
-fn parse_mcvt(payload: &[u8]) -> Result<[f32; MCVT_COUNT], String> {
-    let needed = MCVT_COUNT * 4;
-    if payload.len() < needed {
-        return Err(format!(
-            "MCVT too small: {} bytes (need {needed})",
-            payload.len()
-        ));
-    }
-    let mut heights = [0.0f32; MCVT_COUNT];
-    for (i, h) in heights.iter_mut().enumerate() {
-        *h = read_f32(payload, i * 4)?;
-    }
-    Ok(heights)
-}
-
-fn read_u32(data: &[u8], off: usize) -> Result<u32, String> {
-    let bytes: [u8; 4] = data
-        .get(off..off + 4)
-        .ok_or_else(|| format!("read_u32 OOB at {off:#x}"))?
-        .try_into()
-        .unwrap();
-    Ok(u32::from_le_bytes(bytes))
-}
-
-fn read_f32(data: &[u8], off: usize) -> Result<f32, String> {
-    let bytes: [u8; 4] = data
-        .get(off..off + 4)
-        .ok_or_else(|| format!("read_f32 OOB at {off:#x}"))?
-        .try_into()
-        .unwrap();
-    Ok(f32::from_le_bytes(bytes))
+    // Runtime reports an incomplete scan as missing, including truncated subchunks.
+    let payload = match find_reversed_chunk(sub, b"MCVT") {
+        Ok(Some(payload)) => payload,
+        Ok(None) | Err(_) => return Err("MCNK missing TVCM sub-chunk".to_string()),
+    };
+    parse_mcvt(payload)
 }
 
 /// Test helpers exposed for use by other modules' tests.
@@ -370,3 +295,7 @@ pub mod test_helpers {
 #[cfg(test)]
 #[path = "terrain_height_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "terrain_height/format_receipts_tests.rs"]
+mod format_receipts_tests;

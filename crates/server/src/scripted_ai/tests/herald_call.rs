@@ -9,7 +9,7 @@ const DESCEND: Position = Position {
     z: -1749.1290,
 };
 
-fn first_west(difficulty: u32) -> (Harness, InMap, Entity, Entity) {
+pub(super) fn first_west(difficulty: u32) -> (Harness, InMap, Entity, Entity) {
     let (mut h, map, nazan, sentries) = prepared_ramparts(difficulty);
     reach_center(&mut h, nazan, &sentries);
     h.advance(1.0);
@@ -39,7 +39,7 @@ fn distance(left: Position, right: Position) -> f32 {
     Vec3::new(left.x, left.y, left.z).distance(Vec3::new(right.x, right.y, right.z))
 }
 
-fn damage_to_percent(h: &mut Harness, actor: Entity, percent: f32) {
+pub(super) fn damage_to_percent(h: &mut Harness, actor: Entity, percent: f32) {
     let health = h.health(actor);
     let player = h.player();
     let multiplier = crate::level_scaling::UnitScaling::of(h.app.world(), actor).health_multiplier(
@@ -58,7 +58,7 @@ fn damage_to_percent(h: &mut Harness, actor: Entity, percent: f32) {
     );
 }
 
-fn descent_emotes(h: &Harness, nazan: Entity) -> usize {
+pub(super) fn descent_emotes(h: &Harness, nazan: Entity) -> usize {
     h.inbox(0)
         .chat
         .iter()

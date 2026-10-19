@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Expanded70448 stationary Loa cosmetics (2026-10-18)
+
+[Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Canonical81c554bb1 targeted20/0/151.90s covers three new cosmetics/all13 census/three batch1 cases/absent-visual negative. Broad toy/check/fmt gate and source landing remain lead-owned; no generic dummy admission or other-five change.
+
 ## Published extras and census cardinality (2026-10-18)
 
 [Current regression/correction](../../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg578's12 census failures and st574's additional `toys_effect_census` share one stale1166 oracle after the two-row publication. Keep Full1166 as the baseline and append only named published70448 item/name/spell triples, asserting both identities and resulting count. Exact748a5ad78 merge preserves batch1; intentionally RED batch2 tests remain isolated. Thirteen census plus three batch1 targets pending; no runtime/data change or gate success claim.
