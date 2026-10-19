@@ -168,12 +168,93 @@ fn path_crosses_hostile_field(world: &mut World, unit: Entity, target: Entity) -
     })
 }
 
+fn trace_escape_event(
+    world: &World,
+    unit: Entity,
+    event: &str,
+    payload: impl FnOnce() -> serde_json::Value,
+) {
+    let Some(probe) = world.get::<EscapeProbe>(unit) else {
+        return;
+    };
+    let Goal::Hazard(field) = probe.goal else {
+        return;
+    };
+    crate::navigation::hazard_trace::emit(event, Some(crate::auras::aura_now(world)), unit, || {
+        let map = world.get::<InMap>(unit);
+        let mut data = payload();
+        data["field"] = serde_json::json!(field);
+        data["map_id"] = serde_json::json!(map.map(|map| map.map_id));
+        data["instance_id"] = serde_json::json!(map.map(|map| map.instance_id));
+        data["detected_at"] = serde_json::json!(probe.detected_at);
+        data["react_at"] = serde_json::json!(probe.detected_at + REACTION_SECONDS);
+        data["position"] =
+            serde_json::json!(world.get::<Position>(unit).map(|at| [at.x, at.y, at.z]));
+        data
+    });
+}
+
+fn trace_actual_radius(world: &World, unit: Entity, field: &Field) -> Option<f32> {
+    if world
+        .get::<crate::spell_cast::area_trigger::SpellAreaTrigger>(field.entity)
+        .is_some()
+    {
+        crate::spell_cast::area_trigger::avoidance_radius_at(
+            world,
+            field.entity,
+            unit,
+            crate::auras::aura_now(world),
+        )
+    } else {
+        // Existing script-created ground fields have a constant radius.
+        Some(field.radius)
+    }
+}
+
+fn trace_contact_end(world: &World, unit: Entity, fields: &[Field]) {
+    let Some(probe) = world.get::<EscapeProbe>(unit) else {
+        return;
+    };
+    let Goal::Hazard(id) = probe.goal else { return };
+    if let Some(field) = fields.iter().find(|field| field.entity.to_bits() == id) {
+        trace_escape_event(world, unit, "exit", || {
+            let radius = trace_actual_radius(world, unit, field);
+            let distance = world
+                .get::<Position>(unit)
+                .map(|at| point(*at).distance(field.center));
+            serde_json::json!({
+                "center": field.center.to_array(), "radius_current": radius,
+                "radius_predicted": field.radius, "distance": distance,
+                "physical_clear": distance.zip(radius).map(|(distance, radius)| distance > radius),
+            })
+        });
+    } else {
+        trace_escape_event(
+            world,
+            unit,
+            "cancel",
+            || serde_json::json!({"reason": "field_unavailable_or_expiring"}),
+        );
+    }
+}
+
+fn hold_escape(world: &mut World, unit: Entity, from: Position, reason: &str) {
+    crate::creature_ai::move_follower(world, unit, from, 0.0);
+    trace_escape_event(
+        world,
+        unit,
+        "hold",
+        || serde_json::json!({"reason": reason}),
+    );
+}
+
 pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
     let Some(from) = world.get::<Position>(unit).copied() else {
         return false;
     };
     let fields = hostile_fields_at(world, unit, PREDICTION_SECONDS);
     let Some(field) = fields.iter().find(|field| contains(field, point(from))) else {
+        trace_contact_end(world, unit, &fields);
         clear_escape_probe(world, unit);
         return false;
     };
@@ -192,12 +273,24 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         .get::<EscapeProbe>(unit)
         .is_some_and(|probe| probe.map == map.map_id && probe.goal == goal);
     if !same_detection {
+        trace_escape_event(
+            world,
+            unit,
+            "cancel",
+            || serde_json::json!({"reason": "map_or_field_changed"}),
+        );
         clear_escape_probe(world, unit);
         world.entity_mut(unit).insert(EscapeProbe {
             map: map.map_id,
             goal,
             detected_at: now,
             targets: None,
+        });
+        trace_escape_event(world, unit, "detected", || {
+            serde_json::json!({
+                "center": field.center.to_array(), "radius_current": trace_actual_radius(world, unit, field),
+                "radius_predicted": field.radius, "prediction_s": PREDICTION_SECONDS,
+            })
         });
     }
     // Submit immediately; preparation/publication may finish during human reaction.
@@ -207,20 +300,20 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         .expect("active detection")
         .detected_at;
     if now < detected_at + REACTION_SECONDS {
-        crate::creature_ai::move_follower(world, unit, from, 0.0);
+        hold_escape(world, unit, from, "reaction");
         return true;
     }
     match destination {
         EscapeDestination::Ready(to) => {
             advance_escape(world, unit, map.map_id, from, position(to), goal)
         }
-        EscapeDestination::Pending => crate::creature_ai::move_follower(world, unit, from, 0.0),
+        EscapeDestination::Pending => hold_escape(world, unit, from, "pending"),
         EscapeDestination::Blocked => {
             warn!(
                 "Follower {unit} cannot leave bound field {} through authored navigation",
                 field.entity
             );
-            crate::creature_ai::move_follower(world, unit, from, 0.0);
+            hold_escape(world, unit, from, "blocked");
         }
     }
     true
@@ -418,6 +511,12 @@ fn advance_escape(
     let speed = shared::movement::RUN_SPEED * base * scale;
     let distance = speed * world.resource::<Time>().delta_secs();
     if distance <= 0.0 {
+        trace_escape_event(
+            world,
+            unit,
+            "hold",
+            || serde_json::json!({"reason": "zero_movement_budget"}),
+        );
         return;
     }
     let step = world.resource_mut::<Navigation>().advance(
@@ -437,9 +536,44 @@ fn advance_escape(
             .ground_at(map, point(position))
         else {
             error!("Follower {unit} escape route lost ground support");
+            trace_escape_event(
+                world,
+                unit,
+                "hold",
+                || serde_json::json!({"reason": "ground_missing"}),
+            );
             return;
         };
         position.y = height;
         crate::creature_ai::move_follower(world, unit, position, speed);
+        let after = world.get::<Position>(unit).copied();
+        if after.is_some_and(|at| at != from) {
+            trace_escape_event(world, unit, "move", || {
+                serde_json::json!({
+                    "from": [from.x, from.y, from.z], "to": after.map(|at| [at.x, at.y, at.z]),
+                    "speed": speed,
+                })
+            });
+        } else {
+            trace_escape_event(
+                world,
+                unit,
+                "hold",
+                || serde_json::json!({"reason": "no_displacement"}),
+            );
+        }
+    } else {
+        let reason = match step {
+            Step::Pending => "pending",
+            Step::Unbaked => "unbaked",
+            Step::Blocked => "blocked",
+            Step::Moved { .. } => unreachable!(),
+        };
+        trace_escape_event(
+            world,
+            unit,
+            "hold",
+            || serde_json::json!({"reason": reason}),
+        );
     }
 }
