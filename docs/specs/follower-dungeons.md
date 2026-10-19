@@ -155,6 +155,8 @@ Ordinary difficulty205 Frozen Ground387149 must bind native create-properties265
 
 ## Full-spec follower kits (user decision, 2026-10-18)
 
+Interrupt provider runs once per kit update, at the first available native interrupt-capable entry, retaining higher-priority actions. Explicit kicks have priority5; below Rebuke's native availability, Avenger's Shield retains its attack-priority position after emergency healing. Demonology retains its existing pre-action learned-pet kick. Candidate order uses existing engaged enemies; no planner/navigation/retarget change. Eligibility uses the shared live `spell_cast::can_interrupt_cast` with the actual casting unit, never the pushback flag. Ordinary native spell execution retains costs, motion and hit authority.
+
 Delivery is sliced: core rotations/heals/defensives/emergencies first; sourced dispel/interrupt/CC conditions follow separately. Full-kit completion remains open, including immunities, movement and pet selection. Inventory or existing narrow interrupt behavior does not close those gaps.
 
 Moonfire/Sunfire maintenance must test the native periodic child aura, not the dummy root. With no native trigger edge (`ROOT_CHILD_LINK_DESCRIPTION_ONLY`), the COPY producer parses70448 description `$<spellid>` references and requires exactly one existing same-name periodic-damage aura. Missing or ambiguous matches fail explicitly. Record per-kit-row description/name/effect provenance and verify the consumed fields against pinned CSVs; change only the three maintenance rows, never priorities, timers or coefficients.
