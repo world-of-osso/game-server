@@ -9,6 +9,89 @@ const WORN_SHORTSWORD: WeaponDamage = WeaponDamage {
     kind: WeaponType::OneHand,
 };
 
+const FORECAST_OUTCOMES: &[MeleeOutcome] = &[
+    MeleeOutcome::Miss,
+    MeleeOutcome::Dodge,
+    MeleeOutcome::Parry,
+    MeleeOutcome::Glancing,
+    MeleeOutcome::Block,
+    MeleeOutcome::Crit,
+    MeleeOutcome::Hit,
+];
+
+fn count_native_forecast_outcomes(chances: &MeleeChances) -> Vec<u32> {
+    let mut counts = vec![0; FORECAST_OUTCOMES.len()];
+    // Exhaustive finite-domain oracle, not the production forecasting algorithm.
+    for roll in 0..10_000 {
+        let outcome = roll_melee_outcome(chances, roll);
+        let index = FORECAST_OUTCOMES
+            .iter()
+            .position(|kind| *kind == outcome)
+            .unwrap();
+        counts[index] += 1;
+    }
+    counts
+}
+
+fn assert_forecast_weights_match_all_native_rolls(chances: MeleeChances) {
+    let counts = count_native_forecast_outcomes(&chances);
+    let weights = outcome_weights(&chances);
+    let total: f64 = weights.iter().map(|(_, weight)| weight).sum();
+    assert!((total - 1.0).abs() < 1e-12);
+    for (&kind, count) in FORECAST_OUTCOMES.iter().zip(counts) {
+        let actual: f64 = weights
+            .iter()
+            .filter(|(outcome, _)| *outcome == kind)
+            .map(|(_, weight)| weight)
+            .sum();
+        assert!(
+            (actual - f64::from(count) / 10_000.0).abs() < 1e-12,
+            "{kind:?}"
+        );
+    }
+}
+
+#[test]
+fn creature_forecast_weights_match_native_generic_melee_rolls() {
+    let chances = swing_chances(
+        Swinger::Creature {
+            miss_pct: crate::combat::creature_miss_chance(None),
+        },
+        Victim::Creature {
+            level_difference: 2,
+        },
+        true,
+    );
+    assert_forecast_weights_match_all_native_rolls(chances);
+}
+
+#[test]
+fn creature_forecast_weights_preserve_native_sitting_critical_override() {
+    let chances = swing_chances(
+        Swinger::Creature {
+            miss_pct: crate::combat::creature_miss_chance(None),
+        },
+        Victim::Player(PlayerDefense {
+            sitting: true,
+            ..Default::default()
+        }),
+        true,
+    );
+    assert_forecast_weights_match_all_native_rolls(chances);
+}
+
+#[test]
+fn creature_forecast_weights_preserve_quantization_and_saturated_roll_table() {
+    assert_forecast_weights_match_all_native_rolls(MeleeChances {
+        miss: 90.009,
+        dodge: 3.14159,
+        parry: 2.71828,
+        block: 1.23456,
+        crit: 100.0,
+        ..Default::default()
+    });
+}
+
 #[test]
 fn swing_damage_is_weapon_plus_attack_power_over_six_times_speed() {
     // Level 10 Human Warrior: 33 Str = 33 AP; 33 / 6 × 2.6 = 14.3.
