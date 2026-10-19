@@ -2095,6 +2095,9 @@ mod npc_expertise_tests;
 #[path = "combat_npc_flags_tests.rs"]
 mod npc_flags_tests;
 #[cfg(test)]
+#[path = "combat_npc_victim_block_tests.rs"]
+mod npc_victim_block_tests;
+#[cfg(test)]
 #[path = "combat_npc_victim_dodge_tests.rs"]
 mod npc_victim_dodge_tests;
 #[cfg(test)]
