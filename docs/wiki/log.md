@@ -1,6 +1,10 @@
 ## 2026-10-18 — Herald point4 fall through DESCEND3
 
 [Bounded fall](systems/boss-scripts.md#herald-point4-fall-through-descend3--2026-10-18): native qualification plus genuine Normal/Heroic missing50msfall and ordinary20538 threat1vs0 RED precede implementation3a96703c4. Targeted4/4GREEN70.06s; actual original-ray floor, TC analytic fall/integer-ms EFFECT completion, gravity enable and per-hit zero-but-retained threat. Source audit caught forced-floor endpoint: actual truncated-duration2RED55.69s→delete snap3d0fea7e5. Final enabled38/38GREEN314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings; includes retained Gold/Nibbles/Gordoth/point controls and actual post-fall min1/no replay. LEAD gate pending; DESCEND4 and later lifecycle excluded.
+## 2026-10-17 — NPC source NO_CRIT
+
+[Source flag](systems/player-damage.md#npc-source-no_crit--2026-10-17): qualification04ef1a93f FIRST3PASS43.93s/native30838flags131072 level83→dummy80 HP3→3/3 after256ordinaryswings; positive52/290+334effect1 coexist768s. THEN ignored e9c68e588 PUSHED; genuine4RED/4PASS46.22s (flaggedbase/52/290/joint stillCrit, four controls pass). Minimal cached attacker metadata through existing tuple→snapshot→Attacker; source0 only, later187/334 retained, no query/state/wire/HP/RNG/clocks/Guardian changes. Consumerdf6575f78 fresh ignored8GREEN68.97s/0warnings plus retained qualification3PASS43.93s (eleven-case composite), only then all eight behavior ignores removed; independent lead gate pending. Foreign flagged victim/full tuned actor parity remain named proof boundaries.
+
 ## Worker-backed tank admission integration
 
 [Route continuation and proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):57d6dd748/P_f9a merges worker master2e4dfb596; complete route publication gates movement, pending holds retain victims, native work keeps priority, and source/budget/field projection remains current. No synchronous runtime fallback or invented tolerance. Actual18planner/death +eight worker-request +nine hazard/reaction controls35GREEN245.77s; owned-eye Azure actual-kick/1041GREEN30.03s; check/fmt pass,0warnings. Initial merge compilation failure is not behavioral RED. Wide gate/provider remain open.
@@ -3098,4 +3102,15 @@ Recorded real33076 ward RED, approved per-cast stack/original-caster API and nat
 
 - 2026-10-18: Runtime height projection; frozen old-reader receipts, shared decoder pin and local policy boundary. See [shared formats](systems/wow-formats.md).
 
+## 2026-10-19 — Stockade path-map renderer
+
+Manual SVG renderer with shared pure pull-source pack identity and existing validated navigation artifact codec. Trace clock/capture gaps explicit; real proof pending.
+
+## 2026-10-19 — Path-map fixture proof
+
+Native fixture RED→GREEN2 at91fa9b74d: concrete points/time/death/title and distinct source ALIVE/DEAD/UNKNOWN. Proven tests enabled; real geometry/run and retained planner gate pending.
+
+## 2026-10-19 — Real five-bot path map
+
+Explicit admitted unit_transform sampling replaces incomplete UnitPick traversal. Actual52.365s failed Stockade capture has all5pose/facing tracks; real143spawns/nav34 SVG+PNG inspected/published with FAILED/no-boss title. Original63s gap/failure record preserved. No clear/retry/server-panic fix claimed; owned5981 cold/windows cleared; independent lead gate pending.
 - 2026-10-18: Shared MH2O raw records; frozen independent client/server layers, errors, queries and navigation water-bound baseline. See [shared formats](systems/wow-formats.md).
