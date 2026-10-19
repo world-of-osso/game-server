@@ -426,6 +426,7 @@ impl Harness {
     fn advance(&mut self, secs: f32) {
         let frames = (secs / 0.05).round().max(1.0) as usize;
         for _ in 0..frames {
+            crate::navigation::drain_fixture(&mut self.app);
             self.app.update();
             for (_, connection, inbox) in &mut self.players {
                 let world = self.app.world_mut();

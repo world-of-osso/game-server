@@ -7,6 +7,47 @@ use bevy::prelude::*;
 use shared::components::Position;
 
 #[test]
+fn navigation_deferred_hazard_probe_waits_for_publication_before_pursuit() {
+    let start = Position { x: 103.0, ..FROM };
+    let (mut h, unit, _) = stockade_fixture(start);
+    hostile_field_at(
+        &mut h,
+        unit,
+        Position {
+            z: FROM.z + 25.0,
+            ..FROM
+        },
+    );
+    let target = spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert((Position { x: 108.0, ..FROM }, InMap::continent(34)));
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert(crate::creature_ai::CreatureState::Idle);
+    super::ai::pursue(h.app.world_mut(), unit, target, 0, true);
+    assert!(
+        matches!(
+            h.app.world().get::<crate::creature_ai::CreatureState>(unit),
+            Some(crate::creature_ai::CreatureState::Idle)
+        ),
+        "an unpublished hazard probe must not become a clear approach"
+    );
+    crate::navigation::drain_fixture(&mut h.app);
+    super::ai::pursue(h.app.world_mut(), unit, target, 0, true);
+    assert!(
+        matches!(
+            h.app.world().get::<crate::creature_ai::CreatureState>(unit),
+            Some(crate::creature_ai::CreatureState::Pursuing { .. })
+        ),
+        "completed clear route must retain ordinary pursuit policy"
+    );
+}
+
+#[test]
 fn follower_hostile_field_without_a_bake_never_becomes_direct_escape() {
     let (mut h, unit, _) = stockade_fixture(FROM);
     hostile_field(&mut h, unit);

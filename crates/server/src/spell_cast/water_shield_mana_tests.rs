@@ -15,12 +15,13 @@ const FRAMES_PER_SECOND: usize = 20;
 const NATIVE_MANA_MAX: f32 = 10_000.0;
 
 fn fixture() -> Harness {
-    let mut h = harness(
-        Vec::new(),
-        &[WATER_SHIELD, WATER_SHIELD_PROC, HEALING_SURGE, RESTORATION],
-        SHAMAN,
-    )
-    .expect("native Water Shield/Mana catalog");
+    fixture_with_spells(&[])
+}
+
+pub(super) fn fixture_with_spells(additional: &[u32]) -> Harness {
+    let mut spells = vec![WATER_SHIELD, WATER_SHIELD_PROC, HEALING_SURGE, RESTORATION];
+    spells.extend_from_slice(additional);
+    let mut h = harness(Vec::new(), &spells, SHAMAN).expect("native Water Shield/Mana catalog");
     h.advance(1);
     h
 }
@@ -38,7 +39,7 @@ fn assert_cast(h: &Harness, spell: u32) {
     );
 }
 
-fn spend_mana(h: &mut Harness) {
+pub(super) fn spend_mana(h: &mut Harness) {
     // Real8004 with native137039 cost eligibility; no direct Mana writes.
     h.cast_and_deliver(HEALING_SURGE, Some(h.caster));
     if let Some(cast) = h.app.world().get::<CastState>(h.caster) {
@@ -50,18 +51,18 @@ fn spend_mana(h: &mut Harness) {
     assert!(mana(h) < NATIVE_MANA_MAX);
 }
 
-fn cast_shield(h: &mut Harness) {
+pub(super) fn cast_shield(h: &mut Harness) {
     h.cast_and_deliver(WATER_SHIELD, None);
     assert_cast(h, WATER_SHIELD);
     h.advance(1);
     assert!(has_aura(h.app.world(), h.caster, WATER_SHIELD));
 }
 
-fn mana(h: &Harness) -> f32 {
+pub(super) fn mana(h: &Harness) -> f32 {
     h.app.world().get::<Mana>(h.caster).unwrap().current
 }
 
-fn mana_rate(h: &Harness) -> f32 {
+pub(super) fn mana_rate(h: &Harness) -> f32 {
     h.app
         .world()
         .get::<UnitPowers>(h.caster)
