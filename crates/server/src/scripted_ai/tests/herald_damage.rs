@@ -15,7 +15,7 @@ const CENTER: Position = Position {
     z: -1740.5852,
 };
 
-fn assert_source_step(h: &Harness, actor: Entity, from: Position, target: Position) {
+pub(super) fn assert_source_step(h: &Harness, actor: Entity, from: Position, target: Position) {
     let speed = h
         .app
         .world()

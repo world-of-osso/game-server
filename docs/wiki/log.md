@@ -1,3 +1,6 @@
+## 2026-10-18 — Herald min1 precommit source guard
+
+[Min1 guard](systems/boss-scripts.md#herald-min1-precommit-guard--2026-10-18): real intro/direct/self/spell/native melee and ordinary real1s periodic probes reproduce six lethal commits; exactHP1/no death/credit six-case GREEN146.24s. Source state, unchanged Gold/Nibbles behavior, listener audience and opt-in ownerless event capture are explicit. Approved six synchronized copies/two native cadences prove same-actor repeated melee82.49s at2639aed02; enabled all16 Herald+four grounding+five Gold+two Nibbles27/27 PASS209.65s atcbb9ef32f after master69ed NPCblock51 merge; LEAD gate pending; release/arrival/fall/paired credit/reset/native excluded.
 ## Follower hazard trace implementation proof
 
 [Opt-in trace](systems/navigation.md#follower-hazard-live-trace) joins native contact/reaction/hold/displacement/exit with current-ID worker publication and owned corridor adoption. Missing native events give a genuine RED; native trace/disabled-payload/reaction/FIFO/request14 controls pass, and three-distribution/policy/cancellation/cache/latest-ID analyzer7 controls pass. Owner client068066e6a/F9 native extension+CLI artifacts built without warnings. Bounded real Azure/Telash collection remains pending a granted server_perf/5761 window; no new runtime flags, gameplay changes or stress-capacity claim.
