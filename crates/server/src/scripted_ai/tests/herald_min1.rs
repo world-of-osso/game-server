@@ -433,10 +433,13 @@ fn reach_synchronized_west(h: &mut Harness, copies: &[MeleeCopy], difficulty: u3
         }
     }
     for _ in 0..=budget {
-        if copies
-            .iter()
-            .all(|copy| h.app.world().get::<Position>(copy.actor) == Some(&WEST))
-        {
+        if copies.iter().all(|copy| {
+            h.app.world().get::<Position>(copy.actor) == Some(&WEST)
+                && h.app
+                    .world()
+                    .get::<shared::components::Npc>(copy.actor)
+                    .is_some_and(|npc| npc.template_id == 17536)
+        }) {
             break;
         }
         h.advance(0.05);
