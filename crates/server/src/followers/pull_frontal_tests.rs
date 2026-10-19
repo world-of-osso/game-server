@@ -444,6 +444,76 @@ fn engage_native_routes(f: &mut Fixture) {
     }
 }
 
+fn remaining_stun_seconds(h: &Harness, boss: Entity) -> f64 {
+    let now = h.app.world().resource::<Time>().elapsed_secs_f64();
+    h.app
+        .world()
+        .get::<crate::auras::ActiveAuras>(boss)
+        .into_iter()
+        .flat_map(|auras| auras.iter())
+        .filter(|aura| {
+            aura.effects
+                .iter()
+                .any(|effect| effect.aura_type == crate::auras::handlers::MOD_STUN)
+        })
+        .map(|aura| {
+            let expiry = aura
+                .expires_at
+                .expect("native frontal setup cannot wait for a permanent stun");
+            (expiry - now).max(0.0)
+        })
+        .fold(0.0, f64::max)
+}
+
+fn start_native_fissure(f: &mut Fixture) {
+    const READY_ALLOWANCE_TICKS: usize = 100;
+    let step = f.h.app.world().resource::<Time>().delta_secs_f64();
+    assert!(step.is_finite() && step > 0.0);
+    let mut observed_cast_seconds = 0.0_f64;
+    let mut observed_stun_seconds = 0.0_f64;
+    let mut tick = 0;
+    loop {
+        let remaining_cast =
+            f.h.app
+                .world()
+                .get::<CastState>(f.boss)
+                .map_or(0.0, |cast| {
+                    f64::from((cast.duration - cast.elapsed).max(0.0))
+                });
+        observed_cast_seconds = observed_cast_seconds.max(remaining_cast);
+        observed_stun_seconds = observed_stun_seconds.max(remaining_stun_seconds(&f.h, f.boss));
+        assert!(observed_cast_seconds.is_finite() && observed_stun_seconds.is_finite());
+        // Max observed durations, not a sliding deadline: repeated CC cannot reset the allowance.
+        let bound = READY_ALLOWANCE_TICKS
+            + ((observed_cast_seconds + observed_stun_seconds) / step).ceil() as usize;
+        assert!(
+            tick < bound,
+            "native Fissure setup exceeded derived {bound} ticks: cast={observed_cast_seconds}s stun={observed_stun_seconds}s ready={READY_ALLOWANCE_TICKS}ticks"
+        );
+        match crate::spell_cast::creature_cast(
+            f.h.app.world_mut(),
+            f.boss,
+            FISSURE,
+            Some(f.tank),
+            false,
+        ) {
+            Ok(()) => {
+                println!(
+                    "FISSURE_SETUP admitted_tick={tick} bound_ticks={bound} cast_seconds={observed_cast_seconds} stun_seconds={observed_stun_seconds} step_seconds={step} ready_ticks={READY_ALLOWANCE_TICKS}"
+                );
+                return;
+            }
+            Err(
+                crate::spell_cast::CastFailure::OnGlobalCooldown
+                | crate::spell_cast::CastFailure::InProgress
+                | crate::spell_cast::CastFailure::CrowdControlled(crate::auras::CastBlock::Stunned),
+            ) => f.h.advance(1),
+            error => panic!("real source Fissure prerequisite refused: {error:?}"),
+        }
+        tick += 1;
+    }
+}
+
 #[test]
 fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
     let mut f = fixture();
@@ -488,43 +558,7 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
         Some(f.tank),
         "real source Fissure must target its actual native current victim"
     );
-    let mut started = false;
-    for tick in 0..100 {
-        if tick % 20 == 0 {
-            let cast = f.h.app.world().get::<CastState>(f.boss);
-            let auras: Vec<_> =
-                f.h.app
-                    .world()
-                    .get::<crate::auras::ActiveAuras>(f.boss)
-                    .into_iter()
-                    .flat_map(|auras| auras.iter())
-                    .map(|aura| (aura.spell_id, aura.expires_at))
-                    .collect();
-            println!("FISSURE_SETUP tick={tick} cast={cast:?} auras={auras:?}");
-        }
-        match crate::spell_cast::creature_cast(
-            f.h.app.world_mut(),
-            f.boss,
-            FISSURE,
-            Some(f.tank),
-            false,
-        ) {
-            Ok(()) => {
-                started = true;
-                break;
-            }
-            Err(
-                crate::spell_cast::CastFailure::OnGlobalCooldown
-                | crate::spell_cast::CastFailure::InProgress
-                | crate::spell_cast::CastFailure::CrowdControlled(crate::auras::CastBlock::Stunned),
-            ) => f.h.advance(1),
-            error => panic!("real source Fissure prerequisite refused: {error:?}"),
-        }
-    }
-    assert!(
-        started,
-        "native cast/GCD and ordinary stun expiry must permit the real source Fissure within 100 ticks"
-    );
+    start_native_fissure(&mut f);
     assert_eq!(
         f.h.app.world().get::<CastState>(f.boss).unwrap().spell_id,
         FISSURE
