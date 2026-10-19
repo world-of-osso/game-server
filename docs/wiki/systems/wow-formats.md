@@ -1,6 +1,6 @@
 # Shared WoW Format Readers
 
-Verified: 2026-10-18. `crates/los` and vehicle seat lookup consume the public `world-of-osso/wow-formats` crates, pinned by git revision. The client's [shared format documentation](../../../../game-engine/docs/wiki/systems/wow-formats.md) describes crate ownership and the extraction provenance.
+Verified: 2026-10-18. Runtime ground metadata, `crates/los` and vehicle seat lookup consume the public `world-of-osso/wow-formats` crates, pinned by git revision. The client's [shared format documentation](../../../../game-engine/docs/wiki/systems/wow-formats.md) describes crate ownership and the extraction provenance.
 
 ## Server boundary
 
@@ -11,6 +11,12 @@ Local `bake/{m2,wmo,adt}.rs` retain server policies and public adapter names: ba
 Raw format metadata preserves distinctions needed by existing consumers: authored skin indexStart high bits versus the client's cumulative start; all MAID slots versus MAIN-active slots; file-axis terrain origins/heights/holes without render-only companion payloads; authored M2 face normals; and static attachment positions without activation-track evaluation.
 
 No assets are downloaded, copied or committed. No decompiled or leaked client source was inspected. Runtime state and deployment are outside this extraction.
+
+## Runtime ground metadata
+
+`ground.rs` delegates MPHD/MAID, MODF transform and MOHD/GFID decoding to projected shared views. Mandatory chunks, first-match selection, FDID-only refusal, per-placement skipping, file loading, transforms and shared runtime WMO collision remain server policy. `find_chunk` and integer/vector decoding are no longer duplicate local implementations. MFBO flight-plane interpretation, terrain interpolation and MH2O are unchanged; existing flight-plane reads use the shared byte helper.
+
+Projected views preserve the old runtime field boundary rather than adopting unrelated rendering validation: a58-byte FDID MODF without scale,8-byte MOHD prefix and MAID without unused trailing companion fields remain sufficient. Scale-bearing MODF still requires its scale bytes; missing/short GFID and path MODF still fail. Unvisited malformed render tails remain unvisited. See the [runtime metadata proof ledger](../../handoffs/wow-formats-ground-metadata.md).
 
 ## Reference proof
 
