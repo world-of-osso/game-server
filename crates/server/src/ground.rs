@@ -921,6 +921,10 @@ mod m2_floor_tests;
 mod tests;
 
 #[cfg(test)]
+#[path = "ground/format_metadata_tests.rs"]
+mod format_metadata_tests;
+
+#[cfg(test)]
 #[path = "ground_achievement_fall_tests.rs"]
 mod achievement_fall_tests;
 
