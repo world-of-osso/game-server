@@ -445,10 +445,6 @@ fn load_catalog_ids<T: rusqlite::types::FromSql>(
         .map_err(|error| error.to_string())
 }
 
-fn read_u32(data: &[u8], offset: usize) -> Result<u32, String> {
-    let bytes = data.get(offset..offset + 4).ok_or("Truncated M2 integer")?;
-    Ok(u32::from_le_bytes(bytes.try_into().unwrap()))
-}
 fn read_mount_attachment(data: &[u8], seat_enum: i32) -> Result<Vec3, String> {
     // SolarityClient native A2D3F0: VehicleSeat enum is not the M2 attachment ID.
     const ATTACHMENTS: [u32; 22] = [
@@ -457,40 +453,12 @@ fn read_mount_attachment(data: &[u8], seat_enum: i32) -> Result<Vec3, String> {
     let attachment = *ATTACHMENTS
         .get(usize::try_from(seat_enum).map_err(|_| "Negative seat attachment")?)
         .ok_or("Invalid seat attachment")?;
-    let mut offset = 0;
-    let md20 = if data.get(..4) == Some(b"MD20") {
+    let md20 = if data.starts_with(b"MD20") {
         data
     } else {
-        loop {
-            let size = read_u32(data, offset + 4)? as usize;
-            let body = data
-                .get(offset + 8..offset + 8 + size)
-                .ok_or("Truncated M2 chunk")?;
-            if data.get(offset..offset + 4) == Some(b"MD21") {
-                break body;
-            }
-            offset += 8 + size;
-        }
+        wow_m2::parser::parse_chunks(data)?.md20
     };
-    let count = read_u32(md20, 0xf8)?;
-    if attachment >= count {
-        return Err("M2 seat attachment not in lookup".into());
-    }
-    let lookup = read_u32(md20, 0xfc)? as usize + attachment as usize * 2;
-    let index = i16::from_le_bytes(
-        md20.get(lookup..lookup + 2)
-            .ok_or("Truncated M2 lookup")?
-            .try_into()
-            .unwrap(),
-    );
-    let index = usize::try_from(index).map_err(|_| "M2 seat attachment absent")?;
-    if index >= read_u32(md20, 0xf0)? as usize {
-        return Err("M2 attachment index out of range".into());
-    }
-    let point = read_u32(md20, 0xf4)? as usize + index * 40 + 8;
-    let x = f32::from_bits(read_u32(md20, point)?);
-    let y = f32::from_bits(read_u32(md20, point + 4)?);
-    let z = f32::from_bits(read_u32(md20, point + 8)?);
+    let [x, y, z] = wow_m2::m2_attach::attachment_position(md20, attachment)?;
     Ok(Vec3::new(x, z, -y))
 }
 
