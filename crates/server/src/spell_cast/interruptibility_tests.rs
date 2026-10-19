@@ -10,7 +10,7 @@ const LEY_LINE_SPROUTS: u32 = 374364;
 const ERUPTING_FISSURE: u32 = 386660;
 
 fn native_cast(spell: u32) -> Harness {
-    let mut h = harness(Vec::new(), &[spell, COUNTERSPELL], 8).unwrap();
+    let mut h = harness(Vec::new(), &[spell, COUNTERSPELL, 104773, 387152], 8).unwrap();
     // Reuse the harness Mage's actual class resources for the native Fireball control.
     // The bare target NPC has no mana pool; do not replace native costs or grant amounts.
     let stats = h
@@ -80,6 +80,77 @@ fn assert_native_cast_rejects_kick(spell: u32) {
         }),
         "no invented interrupt log for an ineligible native cast"
     );
+}
+
+#[test]
+fn native_interruptibility_live_immunity_changes_after_normal_cast_starts() {
+    let mut h = native_cast(FIREBALL);
+    let enemy = h.npc;
+    assert!(super::can_interrupt_cast(h.app.world(), h.caster, enemy));
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104773)
+        .unwrap();
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: enemy,
+            target: enemy,
+            spell_id: 104773,
+            effect_mask,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(!super::can_interrupt_cast(h.app.world(), h.caster, enemy));
+    h.cast_and_deliver(COUNTERSPELL, Some(enemy));
+    assert!(h.app.world().get::<CastState>(enemy).is_some());
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt)
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        enemy,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 104773,
+    );
+    assert!(super::can_interrupt_cast(h.app.world(), h.caster, enemy));
+    // Native triggered kick boundary ignores the first kick's cooldown, not eligibility.
+    super::creature::creature_cast(h.app.world_mut(), h.caster, COUNTERSPELL, Some(enemy), true)
+        .unwrap();
+    assert!(h.app.world().get::<CastState>(enemy).is_none());
+    h.advance(3);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt
+                && event.extra_spell_id == Some(FIREBALL))
+    );
+}
+
+#[test]
+fn native_interruptibility_icy_devastator_channel_survives_counterspell() {
+    let mut h = native_cast(387151);
+    h.advance(42);
+    let cast = h
+        .app
+        .world()
+        .get::<CastState>(h.npc)
+        .expect("native Icy channel after cast time");
+    assert_eq!(cast.cast_type, shared::casting::CastType::Channel);
+    h.cast_and_deliver(COUNTERSPELL, Some(h.npc));
+    assert!(h.app.world().get::<CastState>(h.npc).is_some_and(
+        |cast| cast.spell_id == 387151 && cast.cast_type == shared::casting::CastType::Channel
+    ));
+    assert!(!h.inbox.log.iter().any(
+        |event| event.kind == CombatLogKind::Interrupt && event.extra_spell_id == Some(387151)
+    ));
 }
 
 #[test]
