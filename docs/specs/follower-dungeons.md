@@ -33,6 +33,10 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 - [ ] Cover the eleven locally labelled followers: Garrick Protection Paladin, Breka Protection Warrior, Crenna Restoration Druid, Henry Holy Priest, Meredy Fire Mage, Shuja Elemental Shaman, Austin Beast Mastery Hunter, Kybel Devastation Evoker, Bo Windwalker Monk, Lantha Demonology Warlock and Ralia Feral Druid. Rogue, Death Knight and Demon Hunter remain gaps: no local follower identity exists.
 - [x] Prove the party fighting on private UDP5750, with inspected Modern and Forever PNGs. Forever remains an art skin of the same behavior.
 
+## FOLLOWER_HAZARD_REACTION_POLICY
+
+User-approved project behavior, not sourced Retail AI timing: predict hostile contact50ms ahead using the authoritative native radius curve, submit escape planning immediately, and hold position for250ms from detection. Move on the first tick at or after that deadline with a published valid route. If the worker is late, keep standing—even inside the hazard—until publication; no synchronous query, wait, fallback or extra safety margin. Early publication cannot bypass the reaction delay. Growth contact may recur after an escape and begins another reaction; ordinary follow/combat must not move the follower back into the field. Exact timing, continuation and worker constraints: [navigation policy](navigation.md#follower_hazard_reaction_policy).
+
 ## Azure sourced partial
 
 Leymor starts in375729 stasis with PC/NPC attack immunity until its authored `leymor_arcane_tender` formation depletes. Non-following groupAI0 still has group membership, including its leader. Only the last living member in that map copy completes intro key4; it survives boss reset/death for the instance lifetime without DB persistence. After one second Leymor removes stasis/immunities, casts375749 and announces group0 once. Other copies remain locked. NPC immunity0x200 rejects non-player-controlled attackers independently of PC immunity0x100. Final native Azure acceptance uses user-selected build70448; historical70391 evidence is not relabeled.

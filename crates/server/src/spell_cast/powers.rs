@@ -450,6 +450,14 @@ pub(crate) fn regenerate_powers(
                 pool.power != PowerType::Runes && !(has_pet_focus && pool.power == PowerType::Focus)
             })
         {
+            // TC StatSystem.cpp863-869: prevention precedes every regen term.
+            // Only Energy here: Runes, discrete pet Focus and other powers stay unchanged.
+            if pool.power == PowerType::Energy
+                && mods.is_some_and(|mods| mods.prevents_power_regen(pool.power))
+            {
+                pool.regen_per_sec = 0.0;
+                continue;
+            }
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
@@ -480,6 +488,7 @@ pub(crate) fn regenerate_powers(
         let mut mana_rate = 0.0;
         if let Some(mut mana) = mana
             && mana.current < mana.max
+            && !mods.is_some_and(|mods| mods.prevents_power_regen(PowerType::Mana))
         {
             let base_mana = stats.map_or(0.0, |stats| stats.base_mana);
             // TC StatSystem.cpp874-908: flat aura85 is added after the

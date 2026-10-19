@@ -67,8 +67,8 @@ fn assert_physical_ground_step(h: &mut Harness, actor: Entity, map: InMap, step:
     // Corridor admission filters both endpoints and traversed polys by WALK_FLAG
     // under the bake's AGENT_SLOPE/AGENT_CLIMB profile, not placement pullback.
     h.app
-        .world()
-        .resource::<crate::navigation::Navigation>()
+        .world_mut()
+        .resource_mut::<crate::navigation::Navigation>()
         .query_path(map.map_id, nav_point(step.from), nav_point(step.to))
         .unwrap()
         .expect("complete baked walkable corridor");
