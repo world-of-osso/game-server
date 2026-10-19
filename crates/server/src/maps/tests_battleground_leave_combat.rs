@@ -3,7 +3,6 @@ use shared::battleground::BgPhase;
 use shared::components::CombatStatus;
 
 #[test]
-#[ignore = "RED: active battlefield leave ignores combat state"]
 fn pvp_leave_combat_concrete_refuses_until_combat_stops() {
     let (mut h, players, _database) = pending_battleground(1018);
     enter_all(&mut h, &players);
@@ -11,7 +10,6 @@ fn pvp_leave_combat_concrete_refuses_until_combat_stops() {
 }
 
 #[test]
-#[ignore = "RED: active battlefield leave ignores combat state"]
 fn pvp_leave_combat_random_refuses_until_combat_stops() {
     let (mut h, players, _database) = pending_battleground(32);
     enter_all(&mut h, &players);
@@ -19,7 +17,6 @@ fn pvp_leave_combat_random_refuses_until_combat_stops() {
 }
 
 #[test]
-#[ignore = "RED: active battlefield leave ignores combat state"]
 fn pvp_leave_combat_arena_refuses_until_combat_stops() {
     let (mut h, players, _database) = pending_arena(25);
     enter_all(&mut h, &players);
