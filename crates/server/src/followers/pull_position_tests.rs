@@ -9,6 +9,7 @@ use std::collections::BTreeSet;
 
 const OVERHEAT_GUID: u32 = 20375719;
 const SELECTED_TRASH_GUID: u32 = 20375738;
+const DISTANT_TRASH_GUID: u32 = 20375678;
 // Actual boss_lord_overheat source spell, never granted to the selected trash.
 const OVERHEAT_FIREBALL: u32 = 12466;
 const REBUKE: u32 = 96231;
@@ -47,7 +48,11 @@ fn deal_native_tank_damage(f: &mut Fixture, enemy: Entity) {
     );
 }
 
-fn engage_caster_fixture_sources(f: &mut Fixture, whole_route: bool) -> Vec<u32> {
+fn engage_caster_fixture_sources(
+    f: &mut Fixture,
+    whole_route: bool,
+    selected_guid: u32,
+) -> Vec<u32> {
     let route = pull_route::read_route(
         f.h.app.world_mut(),
         &pull_route::Request {
@@ -61,7 +66,7 @@ fn engage_caster_fixture_sources(f: &mut Fixture, whole_route: bool) -> Vec<u32>
     let engaged_guids = if whole_route {
         route.spawns.clone()
     } else {
-        BTreeSet::from([OVERHEAT_GUID, SELECTED_TRASH_GUID])
+        BTreeSet::from([OVERHEAT_GUID, selected_guid])
     };
     for guid in engaged_guids {
         let actor = source(&mut f.h, f.tank, guid);
@@ -78,9 +83,9 @@ struct CasterFixture {
     caster_point: Vec3,
 }
 
-fn overheat_fixture(whole_route: bool) -> CasterFixture {
+fn overheat_fixture(whole_route: bool, selected_guid: u32) -> CasterFixture {
     let mut f = physical_fixture();
-    let main = source(&mut f.h, f.tank, SELECTED_TRASH_GUID);
+    let main = source(&mut f.h, f.tank, selected_guid);
     let caster = source(&mut f.h, f.tank, OVERHEAT_GUID);
     let (_, members, _) = super::party::read_admission(f.h.app.world(), f.h.caster).unwrap();
     let mut party = members.to_vec();
@@ -100,12 +105,12 @@ fn overheat_fixture(whole_route: bool) -> CasterFixture {
         crate::spell_cast::targets::position(f.h.app.world(), f.tank),
         Some(from)
     );
-    let footprint = engage_caster_fixture_sources(&mut f, whole_route);
+    let footprint = engage_caster_fixture_sources(&mut f, whole_route, selected_guid);
     assert!(footprint.contains(&OVERHEAT_GUID));
-    assert!(footprint.contains(&SELECTED_TRASH_GUID));
+    assert!(footprint.contains(&selected_guid));
     let follower = f.h.app.world().get::<Follower>(f.tank).unwrap().clone();
     let engaged = ai::engaged_enemies(f.h.app.world_mut(), &follower, f.tank, &party);
-    for guid in [OVERHEAT_GUID, SELECTED_TRASH_GUID] {
+    for guid in [OVERHEAT_GUID, selected_guid] {
         let actor = source(&mut f.h, f.tank, guid);
         assert!(engaged.iter().any(|(enemy, _)| *enemy == actor));
     }
@@ -191,7 +196,7 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         from,
         caster_point,
         ..
-    } = overheat_fixture(true);
+    } = overheat_fixture(true, SELECTED_TRASH_GUID);
     let before_distance = from.distance(caster_point);
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let mut nearest = before_distance;
@@ -302,7 +307,8 @@ fn read_caster_boundary(f: &mut Fixture) -> CasterBoundary {
 
 #[test]
 fn production_tank_caster_collection_refuses_unengaged_route_exposure() {
-    let CasterFixture { mut f, .. } = overheat_fixture(false);
+    // Use the actual31yd source origin; qualify surviving exposure at each native tick.
+    let CasterFixture { mut f, .. } = overheat_fixture(false, DISTANT_TRASH_GUID);
     let initial = read_caster_boundary(&mut f);
     assert!(
         initial.exposed && initial.refused && initial.casting,
