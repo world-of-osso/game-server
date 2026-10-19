@@ -160,6 +160,79 @@ fn proximity_recipients(
     Ok(recipients)
 }
 
+fn nearby_unengaged_sources(
+    f: &mut Fixture,
+    party: &[Entity],
+    cleared: &BTreeSet<u32>,
+) -> Result<Vec<(u32, Entity)>, String> {
+    let world = f.h.app.world_mut();
+    let follower = world.get::<Follower>(f.tank).unwrap().clone();
+    let engaged: BTreeSet<_> = ai::engaged_enemies(world, &follower, f.tank, party)
+        .into_iter()
+        .map(|(unit, _)| unit)
+        .collect();
+    let map = *world.get::<crate::maps::InMap>(f.tank).unwrap();
+    let sources = pull_sources::read_present_sources(world, map, 1, cleared)?;
+    let origin = crate::spell_cast::targets::position(world, f.tank).unwrap();
+    let mut state =
+        bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(world);
+    let distance = state
+        .get(world)
+        .map_err(|error| format!("Native reaches unavailable: {error:?}"))?;
+    let party_reach = party
+        .iter()
+        .map(|&unit| {
+            distance
+                .combat_reach(unit)
+                .ok_or_else(|| format!("Missing actual party reach for {unit:?}"))
+        })
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .fold(0.0_f32, f32::max);
+    let mut nearby = Vec::new();
+    for source in sources.values() {
+        let actor = source
+            .actor
+            .ok_or_else(|| format!("Missing source actor {}", source.guid))?;
+        if engaged.contains(&actor)
+            || world
+                .get::<crate::creature_aggro::AggroRange>(actor)
+                .is_none()
+        {
+            continue;
+        }
+        let reach = distance
+            .combat_reach(actor)
+            .ok_or_else(|| format!("Missing source reach {}", source.guid))?;
+        let maximum = crate::creature_aggro::MAX_AGGRO_RADIUS + reach + party_reach;
+        let position = crate::spell_cast::targets::position(world, actor)
+            .ok_or_else(|| format!("Missing source position {}", source.guid))?;
+        if position.distance(origin) < maximum {
+            nearby.push((source.guid, actor));
+        }
+    }
+    Ok(nearby)
+}
+
+fn read_other_acquisitions(
+    f: &mut Fixture,
+    party: &[Entity],
+    cleared: &BTreeSet<u32>,
+) -> Result<Vec<Value>, String> {
+    let nearby = nearby_unengaged_sources(f, party, cleared)?;
+    let mut acquisitions = Vec::new();
+    for (guid, actor) in nearby {
+        if guid == TARGET_GUID {
+            continue;
+        }
+        let recipients = proximity_recipients(f, actor, party)?;
+        if !recipients.is_empty() {
+            acquisitions.push(json!({"guid": guid, "recipients": recipients}));
+        }
+    }
+    Ok(acquisitions)
+}
+
 fn read_corner(
     f: &mut Fixture,
     target: Entity,
@@ -207,6 +280,28 @@ fn read_corner(
     row.as_object_mut()
         .unwrap()
         .extend(budget.as_object().unwrap().clone());
+    let acquisitions = match read_other_acquisitions(f, party, cleared) {
+        Ok(acquisitions) => acquisitions,
+        Err(error) => {
+            row["rejection"] = json!(error);
+            return row;
+        }
+    };
+    let footprint: BTreeSet<_> = row["spawns"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_u64)
+        .collect();
+    let uncovered = acquisitions
+        .iter()
+        .any(|source| !footprint.contains(&source["guid"].as_u64().unwrap()));
+    row["other_native_acquisitions"] = json!(acquisitions);
+    if uncovered {
+        row["rejection"] =
+            json!("another unengaged source would acquire outside the forecast footprint");
+        return row;
+    }
     if row["allowed"] == true {
         let length = row["horizontal_route_length"]
             .as_f64()
@@ -230,6 +325,10 @@ fn native_tank_baked_corner_origins_for20375689() {
     pull_history::sample_all(f.h.app.world_mut());
     let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
     require_zero_measured_healing(history.healer_hps);
+    assert!(
+        history.completed_fights > 0,
+        "this is measured active chaining, never a first-pull fixture"
+    );
     let (map, members, _) = super::party::read_admission(f.h.app.world(), f.h.caster).unwrap();
     let mut party = members.to_vec();
     party.push(f.h.caster);
