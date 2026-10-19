@@ -530,6 +530,7 @@ mod copy_tests {
         app.world_mut().despawn(owner);
         advance_runs(app.world_mut());
         app.world_mut().flush();
+        crate::creature_aggro::publish_woken_threat_lists(app.world_mut());
         assert!(
             run.members
                 .iter()

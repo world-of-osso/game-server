@@ -54,12 +54,14 @@ pub struct CreatureAggroPlugin;
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::creature_sight::CreatureSightPlugin);
-        app.add_observer(replicate_woken_threat_list);
+        app.init_resource::<PendingThreatWakes>()
+            .add_observer(replicate_woken_threat_list);
         app.add_systems(
             FixedUpdate,
             (
                 aggro_on_sight_system,
                 update_victim_system,
+                publish_woken_threat_lists,
                 replicate_threat_list_system,
             )
                 .chain()
@@ -434,24 +436,35 @@ fn replicate_threat_list_system(
     }
 }
 
-fn replicate_woken_threat_list(event: On<Remove, GridDormant>, mut commands: Commands) {
-    let creature = event.entity;
-    // Remove also fires during despawn. Resolve the surviving awake state only
-    // after the structural transition, not while the dying entity is queryable.
-    commands.queue(move |world: &mut World| {
-        let mut awake =
-            world.query_filtered::<(&ThreatTable, Option<&UnitThreatList>), Without<GridDormant>>();
+#[derive(Resource, Default)]
+struct PendingThreatWakes(Vec<Entity>);
+
+fn replicate_woken_threat_list(
+    event: On<Remove, GridDormant>,
+    mut pending: ResMut<PendingThreatWakes>,
+) {
+    // Removal also fires during despawn; it only nominates a possible wake.
+    pending.0.push(event.entity);
+}
+
+pub(crate) fn publish_woken_threat_lists(world: &mut World) {
+    let pending = std::mem::take(&mut world.resource_mut::<PendingThreatWakes>().0);
+    if pending.is_empty() {
+        return;
+    }
+    let mut awake =
+        world.query_filtered::<(&ThreatTable, Option<&UnitThreatList>), Without<GridDormant>>();
+    for creature in pending {
         let Ok((threat, replicated)) = awake.get(world, creature) else {
-            return;
+            continue;
         };
-        let units = read_changed_threat_membership(threat, replicated);
-        if let Some(units) = units {
+        if let Some(units) = read_changed_threat_membership(threat, replicated) {
             world.entity_mut(creature).insert(UnitThreatList(units));
             if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
                 dirty.mark(creature);
             }
         }
-    });
+    }
 }
 
 fn publish_threat_membership(
