@@ -2901,4 +2901,4 @@ Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame m
 
 ## 2026-10-18 — Prayer of Mending source/RED
 
-Recorded real33076 ward RED, approved per-cast stack/original-caster API and native delayed jump in [auras](systems/auras.md#prayer-of-mending-baseline--2026-10-18); player recipient qualification and PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT explicit; GREEN/lifetime controls pending.
+Recorded real33076 ward RED, approved per-cast stack/original-caster API and native delayed jump in [auras](systems/auras.md#prayer-of-mending-baseline--2026-10-18); player recipient qualification and PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT explicit; Native8/8 GREEN37.08s including actual expiry/exhaustion/foreign/no-recipient and no-override Agony controls; native4000ms Fireball readiness honored, independent lead gate pending.
