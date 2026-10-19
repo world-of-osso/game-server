@@ -4,7 +4,7 @@ use super::{PlayerProfessions, ProfessionData};
 use crate::{auth::{Authenticated, InWorld}, networking::PlayerLink, persistence::{ClientId, GameDatabase}};
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use redb::{Database, MultimapTableDefinition, ReadableDatabase, ReadableMultimapTable, WriteTransaction};
+use redb::{Database, MultimapTableDefinition, ReadableDatabase, WriteTransaction};
 use shared::protocol::{ProfessionChannel, ProfessionSnapshot, SetRecipeFavorite};
 
 const FAVORITES: MultimapTableDefinition<u64, u32> = MultimapTableDefinition::new("character_recipe_favorites");
