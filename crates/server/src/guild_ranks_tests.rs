@@ -306,11 +306,6 @@ fn guild_member_notes_are_filtered_per_authenticated_snapshot_recipient() {
         },
     );
     let mut world = World::new();
-    let catalog = rusqlite::Connection::open_in_memory().unwrap();
-    catalog
-        .execute_batch("CREATE TABLE area_table(ID INTEGER, AreaName_lang TEXT);")
-        .unwrap();
-    world.insert_resource(online_zone::load_names(&catalog).unwrap());
     world.init_resource::<crate::ground::GroundMap>();
     world.init_resource::<crate::area_table::AreaTable>();
     let mut queries = bevy::ecs::system::SystemState::<OnlinePlayers>::new(&mut world);

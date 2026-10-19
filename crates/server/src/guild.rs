@@ -104,8 +104,7 @@ pub struct GuildPlugin;
 
 impl Plugin for GuildPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, online_zone::load_startup)
-            .init_resource::<crate::gold::GoldUpdateQueue>()
+        app.init_resource::<crate::gold::GoldUpdateQueue>()
             .init_resource::<crate::guild_news_network::Subscribers>()
             .add_systems(
                 PostUpdate,

@@ -23,6 +23,7 @@ struct AreaEntry {
     flags: u32,
     flags2: u32,
     faction_group: u32,
+    name: String,
 }
 
 #[derive(Resource, Default)]
@@ -54,6 +55,12 @@ impl AreaTable {
         }
         let is_subzone = area.flags & IS_SUBZONE != 0 && area.parent != 0;
         Some(if is_subzone { area.parent } else { area_id })
+    }
+
+    pub(crate) fn zone_name(&self, area_id: u32, map_id: u32) -> Option<&str> {
+        let zone_id = self.zone_id(area_id, map_id)?;
+        let name = &self.0.get(&zone_id)?.name;
+        (!name.is_empty()).then_some(name.as_str())
     }
 
     /// Player::CanEnableWarModeInArea: friendly zone, then any ancestor's toggle bit.
@@ -121,7 +128,7 @@ impl AreaTable {
 
 pub(crate) fn load_area_table(conn: &Connection) -> rusqlite::Result<AreaTable> {
     let mut stmt = conn.prepare(
-        "SELECT ID, ParentAreaID, ContinentID, Flags_0, FactionGroupMask, Flags_1 FROM area_table",
+        "SELECT ID, ParentAreaID, ContinentID, Flags_0, FactionGroupMask, Flags_1, AreaName_lang FROM area_table",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((
@@ -133,6 +140,7 @@ pub(crate) fn load_area_table(conn: &Connection) -> rusqlite::Result<AreaTable> 
                 flags: row.get::<_, i64>(3)? as u32,
                 faction_group: row.get(4)?,
                 flags2: row.get::<_, i64>(5)? as u32,
+                name: row.get(6)?,
             },
         ))
     })?;
@@ -178,6 +186,18 @@ mod tests {
         assert!(!areas.permits_war_mode_enable(16328, 2907, 1, &factions));
     }
 
+    #[test]
+    fn guild_online_zone_names_use_loaded_parent_rows_without_map_or_missing_parent_fallback() {
+        let conn = Connection::open(crate::test_data::world_db_path()).unwrap();
+        let areas = load_area_table(&conn).unwrap();
+        assert_eq!(areas.zone_name(12, 0), Some("Elwynn Forest"));
+        assert_eq!(areas.zone_name(87, 0), Some("Elwynn Forest"));
+        assert_eq!(areas.zone_name(40, 0), Some("Westfall"));
+        assert_eq!(areas.zone_name(87, 1), None);
+        assert_eq!(areas.zone_name(u32::MAX, 0), None);
+        assert_eq!(areas.zone_name(16328, 2907), None);
+    }
+
     /// AreaTable flags with the top bit set are stored signed (e.g. -1610530816 = 0xA0014000);
     /// the loader keeps the bit pattern instead of failing at startup.
     #[test]
@@ -185,8 +205,9 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             "CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContinentID INTEGER,
-                                      Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER);
-             INSERT INTO area_table VALUES (1519, 0, 0, -1610530816, 2, 0);",
+                                      Flags_0 INTEGER, FactionGroupMask INTEGER, Flags_1 INTEGER,
+                                      AreaName_lang TEXT);
+             INSERT INTO area_table VALUES (1519, 0, 0, -1610530816, 2, 0, 'Stormwind City');",
         )
         .unwrap();
         let table = load_area_table(&conn).unwrap();

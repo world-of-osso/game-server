@@ -99,7 +99,6 @@ fn guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_priva
     });
     app.add_plugins(ProtocolPlugin);
     let catalog = catalog();
-    app.insert_resource(online_zone::load_names(&catalog).unwrap());
     app.insert_resource(crate::area_table::load_area_table(&catalog).unwrap());
     let goldshire = Vec3::new(-9465.0, 63.0, 43.0);
     let westfall = Vec3::new(-10542.0, 40.0, -1069.0);
@@ -110,7 +109,8 @@ fn guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_priva
     app.insert_resource(GameDatabase::new(crate::persistence::temp_database()));
     app.init_resource::<ReceivedGuildUpdates>();
     // Lightyear clears messages in Last: consume the real response during Update.
-    app.add_systems(Update, (process_query_requests, collect_updates).chain());
+    app.add_plugins(GuildPlugin);
+    app.add_systems(Update, collect_updates.after(process_query_requests));
     app.finish();
     app.cleanup();
     app.update();

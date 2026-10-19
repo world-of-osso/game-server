@@ -5,25 +5,8 @@ use crate::ground::GroundMap;
 use crate::maps::InMap;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use rusqlite::{Connection, OpenFlags};
 use shared::components::{GuildMembership, Level, Player, Position};
-use std::collections::{BTreeMap, HashMap};
-
-#[derive(Resource)]
-pub(super) struct GuildZoneNames(HashMap<u32, String>);
-
-pub(super) fn load_names(conn: &Connection) -> rusqlite::Result<GuildZoneNames> {
-    let mut query = conn.prepare("SELECT ID, AreaName_lang FROM area_table")?;
-    let rows = query.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
-    Ok(GuildZoneNames(rows.collect::<rusqlite::Result<_>>()?))
-}
-
-pub(super) fn load_startup(mut commands: Commands) {
-    let conn = Connection::open_with_flags("data/world.db", OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .expect("Open world.db for authoritative guild zone names");
-    let names = load_names(&conn).expect("Load AreaTable guild zone labels");
-    commands.insert_resource(names);
-}
+use std::collections::BTreeMap;
 
 type MemberQuery<'w, 's> = Query<
     'w,
@@ -42,7 +25,6 @@ pub(super) struct OnlinePlayers<'w, 's> {
     players: MemberQuery<'w, 's>,
     ground: ResMut<'w, GroundMap>,
     areas: Res<'w, AreaTable>,
-    names: Res<'w, GuildZoneNames>,
 }
 
 impl OnlinePlayers<'_, '_> {
@@ -51,7 +33,6 @@ impl OnlinePlayers<'_, '_> {
             players,
             ground,
             areas,
-            names,
         } = self;
         players
             .iter()
@@ -65,7 +46,7 @@ impl OnlinePlayers<'_, '_> {
                     OnlineMemberState {
                         level: level.0 as u16,
                         class_name: class_name_from_id(player.class),
-                        online_zone: read_member_zone(ground, areas, names, position, map),
+                        online_zone: read_member_zone(ground, areas, position, map),
                     },
                 ))
             })
@@ -76,7 +57,6 @@ impl OnlinePlayers<'_, '_> {
 fn read_member_zone(
     ground: &mut GroundMap,
     areas: &AreaTable,
-    names: &GuildZoneNames,
     position: Option<&Position>,
     map: Option<&InMap>,
 ) -> Option<String> {
@@ -84,6 +64,5 @@ fn read_member_zone(
     let map = map?;
     let feet = Vec3::new(position.x, position.y, position.z);
     let area = ground.area_at(map.map_id, feet)?;
-    let zone = areas.zone_id(area, map.map_id)?;
-    names.0.get(&zone).filter(|name| !name.is_empty()).cloned()
+    areas.zone_name(area, map.map_id).map(str::to_owned)
 }
