@@ -2174,5 +2174,8 @@ mod npc_weapon_crit_tests;
 #[path = "combat_tests.rs"]
 mod tests;
 #[cfg(test)]
+#[path = "combat_victim_caster_crit_tests.rs"]
+mod victim_caster_crit_tests;
+#[cfg(test)]
 #[path = "combat_victim_general_crit_tests.rs"]
 mod victim_general_crit_tests;
