@@ -186,6 +186,21 @@ fn native_melee_victim_summoner_crit_nested_direct_owner_windows_are_runtime_qua
 }
 
 #[test]
+fn native_melee_victim_summoner_crit_nested_matching_parent_windows_are_runtime_qualified() {
+    let (mut h, parent, victim) = fixture();
+    let attacker = spawn_darion(&mut h, parent);
+    let events = sample_native_applications(&mut h, attacker, victim, parent, victim);
+    assert_hit(&h, attacker);
+    assert!(
+        events.iter().all(|e| matches!(
+            e.event_type,
+            CombatEventType::MeleeDamage | CombatEventType::CriticalHit
+        ) && e.amount > 0.0),
+        "{events:?}"
+    );
+}
+
+#[test]
 fn native_melee_victim_summoner_crit_player_is_not_temp_summon_is_runtime_qualified() {
     let (mut h, _, victim) = fixture();
     let player = h.caster;
