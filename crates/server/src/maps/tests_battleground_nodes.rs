@@ -6,6 +6,8 @@ use shared::protocol::BattlegroundSnapshot;
 mod backfill;
 #[path = "tests_battleground_deserter.rs"]
 mod deserter;
+#[path = "tests_battleground_end_cleanup.rs"]
+mod end_cleanup;
 
 struct EnteredMatch {
     h: Harness,
