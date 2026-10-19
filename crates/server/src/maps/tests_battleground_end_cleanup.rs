@@ -3,6 +3,9 @@ use crate::death::PlayerDeathState;
 use shared::components::{CombatStatus, Mana};
 use shared::death::DeathState;
 
+#[path = "tests_battleground_end_resources.rs"]
+mod resources;
+
 struct CleanupFixture {
     entered: EnteredMatch,
     unentered: Traveler,
