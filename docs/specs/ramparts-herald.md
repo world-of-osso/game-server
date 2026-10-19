@@ -56,6 +56,12 @@ TC Object.cpp709–748 calls GetMapHeight with pre-clamp Z once, then assigns th
 
 Development proof: ignored native RED first1PASS/3FAIL51.19s; source-correct endpoint2RED55.69s before deleting forced-floor snap. Final enabled38/38PASS314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings:20Herald/four grounding/five Gold/two Nibbles/six Gordoth/one lower-point control. Actual post-fall self-lethal leaves1HP; no next-frame20538 replay. Independent LEAD gate pending; this is not a DESCEND4/full encounter/native completion claim.
 
+### DESCEND4 and native ground parents
+
+- [ ] Anchor DESCEND4 exactly2000ms after actual EFFECT5/DESCEND3 completion. Remain Passive/min1-protected through1950ms; at2000ms become Aggressive, ordinary30694 and release protection. Prove real lethal damage before/after the deadline, without HP/stat writes or fabricated callbacks.
+- [ ] Preserve source Fireball34653/36920 random-threat initial0–5s/repeat5–15s; Cone30926/36921 victim initial0–10s/repeat10–15s; Heroic-only39427 self initial2s/repeat40–50s. Observe actual ordinary requests/results, not invented successful casts; keep UpdateVictim, EventMap and active-cast ordering/admission unchanged.
+- [ ] Prove native parent damage and actual aura7 fear with Normal/Heroic/copy controls. Existing encounter fixture health buffers are unchanged and do not certify native balance. `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED` names the separate77 child/object behavior; paired credit, reset and native remain separate.
+
 ### Completion and reset
 
 - [ ] Credit1892/bit1 only when both Nazan and Vazruden have actually died, in either order, exactly once and only in their copy. Neither individual death, intro nor entry morph completes it.
