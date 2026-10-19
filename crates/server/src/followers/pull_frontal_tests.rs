@@ -521,6 +521,17 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
         "native boss must remain alive for pose proof"
     );
     assert!(
+        f.h.inbox.log.iter().any(
+            |event| event.kind == shared::protocol::CombatLogKind::Interrupt
+                && event.target == Some(f.boss.to_bits())
+                && event.extra_spell_id == Some(FISSURE)
+                && event
+                    .source
+                    .is_some_and(|source| f.party.iter().any(|unit| unit.to_bits() == source))
+        ),
+        "retained frontal knowledge must be observed after an actual native party kick, not a disabled interrupt or naturally completed cast"
+    );
+    assert!(
         f.party
             .iter()
             .all(|&unit| crate::spell_cast::targets::is_alive(f.h.app.world(), unit)),
