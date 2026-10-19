@@ -148,6 +148,8 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+#[cfg(test)]
+mod interruptibility_tests;
 pub(crate) mod mobile_banking;
 #[cfg(test)]
 mod mobile_banking_tests;
