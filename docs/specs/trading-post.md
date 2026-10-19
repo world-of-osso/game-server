@@ -19,9 +19,9 @@ Installed-build local CASC PerksActivity/PerksVendorItem rows and Mainline Blizz
 - [ ] `TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS` permits monthly full-inventory Wowhead news for PerksMonths 2–46, including bonus rewards and outlet inventories. [`data/trading-post-monthly-catalog.json`](../../data/trading-post-monthly-catalog.json) records source URLs, retrieval dates, HTML SHA-256s, literal item-to-vendor joins and unmatched references. Split bonus/outlet news retains separate provenance; news linkage is not proof of exhaustive Retail membership.
 - [ ] NPC-only links remain unconverted. Unmatched component links, including October 2026 collection masks, are not standalone products. No name-based item resolution or invented vendor IDs.
 - [ ] The permanent set requires presence in every sampled month from first appearance through month 46; first-seen46 singletons are recorded separately rather than treated as observed persistence. Returning/outlet appearances alone confer no permanence. The 133 vendor IDs without interval links remain the named open question `TP_133_VENDOR_ITEMS_WITHOUT_INTERVAL_LINKS`, not an assumed permanent set.
-- [ ] Load the server-owned JSON beside `world.db`, validating schema/policy/build/vendor references and provenance. Missing/invalid data disables catalog membership; no all-catalog fallback. An uncovered UTC month has an empty monthly list and `TP_MONTHLY_CATALOG_MONTH_UNCOVERED` source gap.
-- [ ] Full queries expose current-month membership plus the strict permanent set and the account's durable frozen item. Purchase, checkout and freeze validate against that same membership inside the existing FIFO after account-state loading; mixed-cart refusal is atomic. Refunds remain receipt-based even if the catalog is unavailable.
-- [ ] UTC first-of-month 00:00 rollover and the existing `now_unix`/`month_end_unix` wire fields remain authoritative. Frozen membership survives account/database reopen. Activity-month binding is not inferred.
+- [x] Load the server-owned JSON beside `world.db`, validating schema/policy/build/vendor references and provenance. Missing/invalid data disables catalog membership; no all-catalog fallback. An uncovered UTC month has an empty monthly list and `TP_MONTHLY_CATALOG_MONTH_UNCOVERED` source gap.
+- [x] Full queries expose current-month membership plus the strict permanent set and the account's durable frozen item. Purchase, checkout and freeze validate against that same membership inside the existing FIFO after account-state loading; mixed-cart refusal is atomic. Refunds remain receipt-based even if the catalog is unavailable.
+- [x] UTC first-of-month 00:00 rollover and the existing `now_unix`/`month_end_unix` wire fields remain authoritative. Frozen membership survives account/database reopen. Activity-month binding is not inferred.
 
 ## Test/admin tools (lead decision 2026-10-12)
 
@@ -54,6 +54,7 @@ Private-server setup only, on the existing admin socket (`GAME_SERVER_ADMIN_SOCK
 - `trading_post_tests.rs` `trading_post_admin_tender_and_refund_window_enable_wire_refund`: admin grant by username (unknown account refused), administrator window, real wire purchase/refund restoring Tender and revoking the appearance.
 - `bin/admin.rs` `parse_trading_post_setup_requests`.
 - `scripts/tests/test_trading_post_npc.py`: production importer preserves authentic Seabraid flag and source spawn.
+- `trading_post_monthly_tests.rs`: exact October42-offer query and UTC uncovered-month replacement; off-month purchase/freeze and atomic mixed-cart refusal; frozen database-reopen/purchase/receipt-refund; held-writer preceding-freeze→query/purchase FIFO freshness; missing/malformed/policy/build/vendor/provenance/permanent loader refusal. Five monthly cases and ten retained Trading Post controls pass together; both-skin native proof remains separate.
 - Existing Adventure Guide live-event/alt projection tests.
 
 ## Known gaps (current cycle)
