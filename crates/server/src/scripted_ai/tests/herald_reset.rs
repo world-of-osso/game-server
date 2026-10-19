@@ -352,10 +352,32 @@ fn assert_reset(difficulty: u32, keep_one_sentry: bool) {
     );
     kill_actor(&mut h, sentries[0]);
     h.advance(0.05);
+    // Fresh ordinary actors omit the component: Ctx::react_state reads default
+    // Aggressive. The previously morphed actor had explicitly stored that state.
     assert_eq!(
-        h.app.world().get::<ReactState>(herald),
-        Some(&ReactState::Aggressive),
+        h.app
+            .world()
+            .get::<ReactState>(herald)
+            .copied()
+            .unwrap_or_default(),
+        ReactState::Aggressive,
         "old count1 must not leak into new intro"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<instance_script::InstanceScripts>()
+            .0[&map]
+            .ramparts_sentry_deaths,
+        1,
+        "first fresh Sentry death cannot consume stale count1"
+    );
+    assert!(
+        h.inbox(0)
+            .chat
+            .iter()
+            .all(|line| { line.channel != ChatType::MonsterYell(herald.to_bits()) }),
+        "first fresh death must not start INTRO1"
     );
     kill_actor(&mut h, sentries[1]);
     let player = h.player();
