@@ -1,31 +1,26 @@
 use super::*;
 
 #[test]
-#[ignore = "RED: voluntary early ordinary BG exit does not grant Deserter"]
 fn bg_exit_deserter_concrete_waiting_grants_authored_aura_until_expiry() {
     assert_early_exit_deserter(1018, false);
 }
 
 #[test]
-#[ignore = "RED: voluntary early ordinary BG exit does not grant Deserter"]
 fn bg_exit_deserter_random_waiting_grants_authored_aura_until_expiry() {
     assert_early_exit_deserter(32, false);
 }
 
 #[test]
-#[ignore = "RED: voluntary early ordinary BG exit does not grant Deserter"]
 fn bg_exit_deserter_concrete_in_progress_grants_authored_aura_until_expiry() {
     assert_early_exit_deserter(1018, true);
 }
 
 #[test]
-#[ignore = "RED: voluntary early ordinary BG exit does not grant Deserter"]
 fn bg_exit_deserter_random_in_progress_grants_authored_aura_until_expiry() {
     assert_early_exit_deserter(32, true);
 }
 
 #[test]
-#[ignore = "RED: voluntary early ordinary BG exit does not grant Deserter"]
 fn bg_exit_deserter_dead_participant_receives_aura_after_full_resurrection() {
     let (mut h, players, _database) = pending_battleground(1018);
     enter_all(&mut h, &players);
