@@ -37,6 +37,27 @@ impl Plugin for AdminIpcPlugin {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn dispatch_staging_fixture(
+    world: &mut World,
+    request: serde_json::Value,
+) -> AdminResponse {
+    let request: AdminRequest = serde_json::from_value(request).expect("admin request accepted");
+    let database = persistence::GameDatabase::new(persistence::temp_database());
+    let (respond, receive) = mpsc::channel();
+    let mut state = bevy::ecs::system::SystemState::<AdminQueries>::new(world);
+    let mut queries = state.get_mut(world).expect("admin queries");
+    dispatch(
+        AdminCommand { request, respond },
+        &database,
+        &mut queries,
+        None,
+        None,
+    );
+    state.apply(world);
+    receive.try_recv().expect("queued admin response")
+}
+
 /// Resources needed by the admin IPC early-dispatch handlers.
 #[derive(SystemParam)]
 struct AdminResources<'w, 's> {

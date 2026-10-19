@@ -1,4 +1,16 @@
-# Follower dungeons and NPC companions
+# Follower dungeons
+
+## Admin harness party staging
+
+`stage-follower-party <owner> <map> <x> <y> <z>` is admin-socket-only setup, not gameplay
+transport or dungeon traversal. It requires an online, out-of-combat owner in its admitted
+follower copy, exactly the owner's current genuine follower party, and no encounter in progress.
+It refuses foreign members or a destination outside that copy. One queued world operation uses
+the ordinary owner teleport and places those existing followers on the same destination floor;
+health, stats, auras and ownership are preserved. No runtime flag or production follow/teleport
+behavior changes. Azure use explicitly bypasses
+`FOLLOWER_AZURE_TRANSLOCATION_BOOK_TRANSITION_UNSOURCED`; it proves no earlier-boss progression.
+ and NPC companions
 
 Retail follower dungeons must group a solo player with four role-aware NPCs and complete an authored instance. User-approved workaround (2026-10-11): no authored NPC combat kits exist locally; followers use their labelled spec's real player spells through the existing executor. Spell coefficients, templates and displays remain authored. The bridge initializes native class/spec/level stats, supplies the class-script `Level` alongside replicated `UnitLevel`, and keeps replicated health/mana consistent with those stats; it does not claim authenticated Retail NPC gear or stat-budget parity. This is a bridge, not an NPC-kit authenticity claim; retire it when sourced NPC kits become available. [Local data audit and lead-only import](../wiki/investigations/follower-data.md).
 

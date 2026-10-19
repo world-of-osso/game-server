@@ -347,10 +347,14 @@ fn snapshot(world: &World, player: Entity, run: &FollowerRun) -> LfgSnapshot {
 }
 
 #[cfg(test)]
+#[path = "party_staging_tests.rs"]
+mod staging_tests;
+
+#[cfg(test)]
 mod copy_tests {
     use super::*;
 
-    fn fixture() -> (App, Entity, FollowerRun) {
+    pub(super) fn fixture() -> (App, Entity, FollowerRun) {
         let db = rusqlite::Connection::open_with_flags(
             crate::test_data::world_db_path(),
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
