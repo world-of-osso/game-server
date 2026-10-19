@@ -19,6 +19,14 @@ Admission is limited to these three spell IDs through the existing visual-only w
 
 This batch does not authorize generic dummy4 support, alter source weights or implement the remaining scripted toys. Natural thirty-minute expiry, one-hour reuse and native cosmetic/audio presentation require separate proof.
 
+## Expanded build70448 footstep cosmetics
+
+- [ ] Trail of Halazzi280821/1309828 (Toy1764) and Rite of Jan'alai's Flame280825/1309844 (Toy1768) use source-exact Toy membership and actual bag learning/UseToy.
+- [ ] Apply the authored1800000ms owner cosmetic aura and3600000ms recovery. Real cancellation removes the aura without resetting recovery or changing health/body model/position; denied reuse produces no extra SpellGo.
+- [ ] Only these two named visual-only admissions and their published census item/name/spell triples may join this batch. Preserve Full1166 plus the five previously published extras; no bare total or generic dummy4 admission.
+
+Footstep placement, movement-driven visual/particle events, audio playback and native rendering remain separate from CPU aura acceptance. World/asset publication is lead-owned after source-exact copied-world/CASC proof. Natural thirty-minute expiry/hour reuse and the three remaining scripted gaps are not inferred.
+
 ## Runtime generated casting requirements
 
 - [x] Server startup loads `data/toy_required_areas.json` and `data/toy_facing_requirements.json`; neither is compiled into production code. Missing, malformed or incomplete required data fails startup loudly.
