@@ -47,6 +47,8 @@ Spell458324 is not assigned by the follower templates' TDB/runtime addon data. D
 
 ## Shared tank pull project policies
 
+Named proof gap `TANK_PACING_AFFORDABLE_NATIVE_FIXTURE_UNAVAILABLE`: three preserved owner-pacing fixtures were RED from introduction because their full-route admission was never affordable. Current fresh Normal Stockade projection covers100 eligible sourced endpoints, all exposing at least two packs; the authored entrance route to20375682 exposes23 and must retain `Wait(Reserve)`. These are limits of the current conservative endpoint-route projection, not a claim that ordinary ranged first pulls are impossible. Keep the three assertions visibly ignored until a genuinely sourced first-single-pack approach qualifies; do not tune HP, kits, budget or reserve to satisfy them. Runtime owner-pacing and first-single-pack policies below remain requirements.
+
 `TANK_IDLE_FOLLOWS_OWNER_PACE` — user decision, relayed by the lead: follow the owner's pace. With the owner idle out of combat, tanks must not autonomously pull. Chaining additional packs is allowed only during an active engagement and within `TANK_PULL_BUDGET`. Owner selection alone remains insufficient to start combat.
 
 Route admission submits to the native navigation worker and holds pursuit until a complete route is published; a pending query is not a clear or admitted route. Preserve the living current victim while held and never evict unfinished hazard/chase work to obtain admission. Native casts and existing outside-run pursuit remain unchanged.

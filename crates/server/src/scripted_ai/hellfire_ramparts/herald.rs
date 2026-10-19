@@ -1,5 +1,5 @@
 //! TC a352b1fa Herald startup through first West and real fall/DESCEND3.
-//! DESCEND4, ground combat, paired credit and reset remain unverified.
+//! Ground parent spells only; Liquid Fire children, paired credit/reset/native remain gaps.
 use bevy::prelude::*;
 use shared::components::{Npc, Position, Rotation};
 
@@ -15,7 +15,7 @@ pub(super) const SCRIPT: &str = "boss_vazruden_the_herald";
 
 /// TC166 _isUnkillable=true, preserved through UpdateEntry and descent ingress.
 /// Unlike Creature::SetUnkillable this DamageTaken guard also includes self-loss.
-/// DESCEND4 must remove it when the separate arrival/fall/release slice is ported.
+/// DESCEND4 removes it two source seconds after actual fall completion.
 #[derive(Component)]
 pub(crate) struct HeraldUnkillable;
 const MAP: u32 = 543;
@@ -27,9 +27,13 @@ const INTRO_2: u32 = 2;
 const DESCEND_1: u32 = 3;
 const DESCEND_2: u32 = 4;
 const DESCEND_3: u32 = 5;
+const DESCEND_4: u32 = 6;
 const FLY_TO_LOC: u32 = 7;
 const FIREBALL_VICTIM: u32 = 8;
 const FIREBALL_RANDOM: u32 = 9;
+const FIREBALL_GROUND: u32 = 10;
+const CONE_OF_FIRE: u32 = 11;
+const BELLOWING_ROAR: u32 = 12;
 const NAZAN: u32 = 17_536;
 const SUMMON_VAZRUDEN: u32 = 30_717;
 const FLY_WEST: u32 = 30_698;
@@ -190,6 +194,19 @@ impl HeraldIntro {
         // Point4's real completion owns the next descent event.
     }
 
+    // TC336–346: special time runs without a combat victim or cast admission.
+    fn release_ground_phase(&mut self, ctx: &mut Ctx) {
+        ctx.set_react_state(ReactState::Aggressive);
+        ctx.do_cast_self(LOGIC_TIMER);
+        ctx.world.entity_mut(ctx.me).remove::<HeraldUnkillable>();
+        self.boss.events.schedule_range(FIREBALL_GROUND, 0, 5_000);
+        self.boss.events.schedule_range(CONE_OF_FIRE, 0, 10_000);
+        let map = ctx.map().expect("registered Ramparts actor map");
+        if crate::zones::map_difficulty_id(ctx.world, map) == 2 {
+            self.boss.events.schedule(BELLOWING_ROAR, 2_000);
+        }
+    }
+
     fn choose_next_flight(&mut self, ctx: &mut Ctx) {
         use rand::seq::SliceRandom;
         crate::auras::remove_auras(
@@ -297,8 +314,9 @@ impl CreatureAi for HeraldIntro {
                 DESCEND_3 => {
                     ctx.world.entity_mut(ctx.me).remove::<GravityDisabled>();
                     ctx.do_cast_self(20_538);
-                    // HERALD_DESCEND4_UNIMPLEMENTED: no release/ground phase timer substitute.
+                    self.special_events.schedule(DESCEND_4, 2_000);
                 }
+                DESCEND_4 => self.release_ground_phase(ctx),
                 _ => unreachable!("unknown Herald intro event{event}"),
             }
         }
@@ -328,7 +346,22 @@ impl BossScript for HeraldIntro {
                 }
                 self.boss.events.repeat_range(10_000, 15_000);
             }
-            _ => unreachable!("unknown Herald flight event{event}"),
+            FIREBALL_GROUND => {
+                if let Some(target) = ctx.select_target_random(0.0, false) {
+                    ctx.do_cast_at(Some(target), difficulty_spell(ctx, 34_653, 36_920), false);
+                }
+                self.boss.events.repeat_range(5_000, 15_000);
+            }
+            CONE_OF_FIRE => {
+                ctx.do_cast_victim(difficulty_spell(ctx, 30_926, 36_921));
+                self.boss.events.repeat_range(10_000, 15_000);
+            }
+            BELLOWING_ROAR => {
+                ctx.do_cast_self(39_427);
+                self.boss.events.repeat_range(40_000, 50_000);
+            }
+            // NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED: parent77 has no child/object hook.
+            _ => unreachable!("unknown Herald combat event{event}"),
         }
     }
 }
