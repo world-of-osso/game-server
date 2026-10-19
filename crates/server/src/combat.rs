@@ -464,7 +464,11 @@ type AutoAttackers<'w, 's> = Query<
         Option<&'static AuraStatMods>,
         Option<&'static CharacterStats>,
         SwingState<'static>,
-        (Has<Npc>, Option<&'static crate::zones::CreatureFlagsExtra>),
+        (
+            Has<Npc>,
+            Option<&'static crate::zones::CreatureFlagsExtra>,
+            Option<&'static crate::zones::TempSummon>,
+        ),
     ),
 >;
 
@@ -632,6 +636,7 @@ fn auto_attack_unit(
         npc_expertise_pct: snapshot.npc_expertise_pct,
         creature: snapshot.creature,
         creature_flags: snapshot.creature_flags.as_ref(),
+        temp_summoner: snapshot.temp_summoner,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let owner = params
                 .owner_stats
@@ -689,6 +694,7 @@ struct SwingSnapshot {
     npc_expertise_pct: f32,
     creature: bool,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
+    temp_summoner: Option<Entity>,
 }
 
 fn snapshot_attacker(
@@ -696,8 +702,15 @@ fn snapshot_attacker(
     entity: Entity,
     dt: f32,
 ) -> Option<SwingSnapshot> {
-    let (_, mut auto_attack, position, mods, stats, (stat_mods, casting, auras), (creature, flags)) =
-        attackers.get_mut(entity).ok()?;
+    let (
+        _,
+        mut auto_attack,
+        position,
+        mods,
+        stats,
+        (stat_mods, casting, auras),
+        (creature, flags, summon),
+    ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer -= dt;
     auto_attack.off_hand_timer -= dt;
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
@@ -719,6 +732,7 @@ fn snapshot_attacker(
         },
         creature,
         creature_flags: flags.copied(),
+        temp_summoner: summon.map(|summon| summon.summoner),
     })
 }
 
@@ -810,6 +824,8 @@ pub(crate) struct Attacker<'a> {
     pub creature: bool,
     /// Actual attacker's already-cached template flags, independent of victim flags.
     pub creature_flags: Option<&'a crate::zones::CreatureFlagsExtra>,
+    /// Existing TempSummon direct summoner, not player owner or recursive ancestor.
+    pub temp_summoner: Option<Entity>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
 }
 
@@ -1072,7 +1088,18 @@ fn read_outcome_chances(
     let crit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
             + auras.modifier(crate::auras::handlers::MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE)
-            + caster_crit_modifier(auras, attacker.entity)
+            + caster_crit_modifier(
+                auras,
+                attacker.entity,
+                crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER,
+            )
+            + attacker.temp_summoner.map_or(0.0, |summoner| {
+                caster_crit_modifier(
+                    auras,
+                    summoner,
+                    crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER_PET,
+                )
+            })
     });
     let npc_crit_modifier = if attacker.creature {
         attacker.mods.map_or(0.0, |mods| mods.npc_crit_pct)
@@ -1090,25 +1117,23 @@ fn read_outcome_chances(
     } else {
         chances.crit + npc_crit_modifier
     };
-    // Unit.cpp2911–2926 clamps source + victim187/197/matching306 BEFORE334 at2387.
+    // Unit.cpp2911–2926 clamps source + victim187/197/matching306/339 BEFORE334 at2387.
     let crit_taken = (source_crit + crit_modifier).max(0.0);
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (crit_taken + autoattack_crit_modifier).max(0.0);
     chances
 }
 
-/// TC Unit.cpp2911–2914: recipient306 belongs only to its actual aura caster.
-fn caster_crit_modifier(auras: &crate::auras::ActiveAuras, attacker: Entity) -> f32 {
+/// TC Unit.cpp2911–2921: recipient crit306/339 effects match the sourced caster.
+fn caster_crit_modifier(auras: &crate::auras::ActiveAuras, caster: Entity, aura_type: u32) -> f32 {
     auras
         .iter()
-        .filter(|aura| aura.caster == attacker)
+        .filter(|aura| aura.caster == caster)
         .map(|aura| {
             let stacks = aura.stack_multiplier();
             aura.effects
                 .iter()
-                .filter(|effect| {
-                    effect.aura_type == crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER
-                })
+                .filter(|effect| effect.aura_type == aura_type)
                 .map(|effect| effect.amount * stacks)
                 .sum::<f32>()
         })
@@ -2198,3 +2223,6 @@ mod victim_caster_crit_tests;
 #[cfg(test)]
 #[path = "combat_victim_general_crit_tests.rs"]
 mod victim_general_crit_tests;
+#[cfg(test)]
+#[path = "combat_victim_summoner_crit_tests.rs"]
+mod victim_summoner_crit_tests;
