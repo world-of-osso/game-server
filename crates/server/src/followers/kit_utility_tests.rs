@@ -304,7 +304,6 @@ fn follower_kit_utility_meredy_does_not_control_an_idle_attacker() {
 }
 
 #[test]
-#[ignore = "RED: native stun does not stop the target's cast"]
 fn follower_kit_utility_bo_controls_caster_after_spent_spear_hand() {
     use super::control_cast_stop_tests::{FIREBALL, logged, remaining_cast_frames};
     const PARALYSIS: u32 = 115078;

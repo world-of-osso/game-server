@@ -1027,13 +1027,10 @@ pub(crate) fn apply_aura_with_spell(
         fixate::on_applied(world, target, &aura);
         crate::spell_cast::recovery_rate::on_applied(world, target, &aura);
         interrupt_no_actions_cast(world, target, &aura);
+        stop_cast_on_first_stun(world, target, &aura);
         mount::on_applied(world, target, &aura);
         crate::vehicle::isle::on_applied(world, target, &aura);
-        let stuns = aura
-            .effects
-            .iter()
-            .any(|effect| effect.aura_type == handlers::MOD_STUN);
-        crate::stand_state::on_aura_applied(world, target, aura.interrupt_flags, stuns);
+        crate::stand_state::on_aura_applied(world, target, aura.interrupt_flags, stuns(&aura));
     }
     if kind == CombatLogKind::AuraRefreshed {
         linked::on_reapplied(world, target, &aura);
@@ -1046,6 +1043,26 @@ pub(crate) fn apply_aura_with_spell(
     }
     log_event(world, aura_event(&aura, target, kind));
     auras_changed(world, target);
+}
+
+fn stuns(aura: &AuraInstance) -> bool {
+    aura.effects
+        .iter()
+        .any(|effect| effect.aura_type == handlers::MOD_STUN)
+}
+
+/// TC Unit::SetControlled(UNIT_STATE_STUNNED) stops the current cast only when
+/// the unit was not already stunned (Unit.cpp11611–11617). A spell's own
+/// effects apply after its CastState ends, as Spell::IsInterruptable requires.
+fn stop_cast_on_first_stun(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    let already_stunned = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|other| other.instance_id != aura.instance_id && stuns(other))
+    });
+    if stuns(aura) && !already_stunned {
+        crate::spell_cast::cancel_cast(world, unit);
+    }
 }
 
 /// TC HandleAuraModNoActions interrupts only spells with PreventionType bit4.

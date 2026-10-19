@@ -71,13 +71,11 @@ fn assert_native_stun_stops_enemy_cast(stun: u32, explicit: bool) {
 }
 
 #[test]
-#[ignore = "RED: native stun does not stop the target's cast"]
 fn native_paralysis_stops_enemy_cast() {
     assert_native_stun_stops_enemy_cast(PARALYSIS, true);
 }
 
 #[test]
-#[ignore = "RED: native stun does not stop the target's cast"]
 fn native_leg_sweep_stops_enemy_cast() {
     assert_native_stun_stops_enemy_cast(LEG_SWEEP, false);
 }
