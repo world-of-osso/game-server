@@ -87,6 +87,138 @@ fn toyfx70448_shadeweaver_hearthstone_returns_to_bind_and_blocks_hiveborne() {
 }
 
 #[test]
+fn toyfx70448_hiveborne_shared_charge_naturally_recovers_for_shadeweaver() {
+    assert_natural_shared_hearth_charge(281136, 1310234, 281615, 1311934);
+}
+
+#[test]
+fn toyfx70448_shadeweaver_shared_charge_naturally_recovers_for_hiveborne() {
+    assert_natural_shared_hearth_charge(281615, 1311934, 281136, 1310234);
+}
+
+fn assert_natural_shared_hearth_charge(item: u32, spell: u32, sibling: u32, sibling_spell: u32) {
+    use shared::components::{Health, ModelDisplay};
+    const CATEGORY: u32 = 2309;
+    const RECOVERY_MS: u32 = 1_800_000;
+    let directory = tempfile::tempdir().unwrap();
+    let (mut h, character) = setup(&directory.path().join("natural-hearth-charge.redb"));
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    let bind = crate::spell_cast::homebind::load_bind(
+        &h.app.world().resource::<GameDatabase>().db,
+        character,
+    )
+    .unwrap();
+    let caster = h.caster;
+    h.app.world_mut().entity_mut(caster).insert(bind);
+    let health = *h.app.world().get::<Health>(caster).unwrap();
+    let display = h.app.world().get::<ModelDisplay>(caster).copied();
+    learn_effect_toy(&mut h, character, item);
+    learn_effect_toy(&mut h, character, sibling);
+    let mut origin = bind.0.bevy_position();
+    origin.x += 30.0;
+    *h.app.world_mut().get_mut::<Position>(caster).unwrap() = origin;
+    assert_eq!(activate(&mut h, item)[0].error, None);
+    h.advance(100);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == spell));
+    assert_eq!(h.app.world().get::<Position>(caster), Some(&origin));
+    // Observe the actual completion frame, not a private charge deadline.
+    let mut before_completion = crate::spell_cast::history_now(h.app.world());
+    for _ in 0..120 {
+        before_completion = crate::spell_cast::history_now(h.app.world());
+        h.advance(1);
+        if h.inbox.go.iter().any(|go| go.spell_id == spell) {
+            break;
+        }
+    }
+    let after_completion = crate::spell_cast::history_now(h.app.world());
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == spell).count(),
+        1
+    );
+    assert_eq!(
+        h.app.world().get::<Position>(caster),
+        Some(&bind.0.bevy_position())
+    );
+    let spent = h
+        .inbox
+        .charges
+        .iter()
+        .find(|charge| {
+            charge.spell_id == spell && charge.category == CATEGORY && charge.current == 0
+        })
+        .expect("first hearth spends its shared source charge");
+    assert_eq!(spent.max, 1);
+    assert_eq!(spent.recharge_ms, RECOVERY_MS);
+    assert!(activate(&mut h, sibling)[0].error.is_some());
+    advance_ordinary_hearth_clock_to(&mut h, before_completion + 1799.0);
+    assert!(
+        activate(&mut h, sibling)[0].error.is_some(),
+        "shared charge still recharging before thirty minutes"
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == sibling_spell));
+    advance_ordinary_hearth_clock_to(&mut h, after_completion + 1801.0);
+    origin.x += 10.0;
+    *h.app.world_mut().get_mut::<Position>(caster).unwrap() = origin;
+    assert_eq!(
+        activate(&mut h, sibling)[0].error,
+        None,
+        "natural charge recovery permits sibling use"
+    );
+    h.advance(100);
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == sibling_spell));
+    assert_eq!(h.app.world().get::<Position>(caster), Some(&origin));
+    h.advance(110);
+    assert_eq!(
+        h.inbox
+            .go
+            .iter()
+            .filter(|go| go.spell_id == sibling_spell)
+            .count(),
+        1
+    );
+    assert_eq!(
+        h.app.world().get::<Position>(caster),
+        Some(&bind.0.bevy_position())
+    );
+    let spent_again = h
+        .inbox
+        .charges
+        .iter()
+        .rev()
+        .find(|charge| charge.category == CATEGORY)
+        .expect("sibling completion publishes the newly spent charge");
+    assert_eq!(spent_again.spell_id, sibling_spell);
+    assert_eq!(spent_again.current, 0);
+    assert_eq!(spent_again.max, 1);
+    assert_eq!(spent_again.recharge_ms, RECOVERY_MS);
+    assert!(
+        activate(&mut h, item)[0].error.is_some(),
+        "sibling spent the only shared charge"
+    );
+    assert_eq!(
+        h.inbox.go.iter().filter(|go| go.spell_id == spell).count(),
+        1
+    );
+    assert_eq!(h.app.world().get::<Health>(caster), Some(&health));
+    assert_eq!(h.app.world().get::<ModelDisplay>(caster).copied(), display);
+}
+
+fn advance_ordinary_hearth_clock_to(h: &mut Harness, target_seconds: f64) {
+    const FRAME_SECONDS: f64 = 0.05;
+    let before = crate::spell_cast::history_now(h.app.world());
+    assert!(target_seconds > before);
+    h.advance(((target_seconds - before) / FRAME_SECONDS).ceil() as usize);
+    let after = crate::spell_cast::history_now(h.app.world());
+    assert!((target_seconds..target_seconds + 2.0 * FRAME_SECONDS).contains(&after));
+}
+
+#[test]
 fn toyfx78_greatfather_hearthstone_learned_use_returns_to_bind_and_spends_shared_charge() {
     assert_toy_hearthstone_bind_and_shared_charge(162973, 278244, 163045);
 }
