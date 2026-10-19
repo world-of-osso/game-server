@@ -3179,3 +3179,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Priority-preserving follower interrupt provider
 
 [Provider integration](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): shared live source predicate with actual caster, once at first available kick-capable entry; real Garrick32 ordinary-update RED→96231 GREEN, native26 heal633-before31935 preserved. Four requested families50PASS118.50s/zero warnings, non-testcheck2m37s/fmtPASS; rewrittenf383e28c1 pushed, leadgate pending. No planner/navigation/ai.rs redesign or whole-kit/live acceptance.
+
+## 2026-10-19 — Follower kick candidate-scope regression repair
+
+[Exact root/proof](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): fk702 two genuine Overheat regressions despite prior50GREEN; bounded diagnostic2RED identifies spec63 off-selectedkick from widened all-engaged handoff. fb4edd4b7 restores selectedenemy-only runtime envelope, providermultiAPIunchanged; fourfamilies+bothunchangedOverheat52PASS96.87s/ZEROwarnings, check8.43s/fmtPASS. Pushed; successor gatepending. No assertion/planner/ai.rs edits, no weakened collection/budget checks.
