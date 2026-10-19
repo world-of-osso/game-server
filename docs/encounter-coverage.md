@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Herald own nonlethal below30 ingress — 2026-10-18
+
+Nazan's actual own damage35→29 starts the existing descent only after intro, once, without Call30693 or damage to Vazruden. Natural Normal/Heroic RED→GREEN3/3 includes real INTRO1 negative, exact native integer loss, actual Fireball interruption and first one50ms point4 step; enabled retained integration pending. [Contract/proof](specs/ramparts-herald.md#tests-asserting-this-spec). Lethal/min1 guard, point4 arrival/fall, future cancellation, paired credit/reset/native remain excluded.
+
 ## Herald Call Nazan descent ingress — 2026-10-18
 
 Natural firstWest Normal/Heroic now covers real incoming below40 damage, once ordinary30693, actual hit-creature action0, source descent setup and first physical point4 step. Genuine missing-Go RED precedes two-case GREEN, then enabled all7 Herald plus four target32 grounding cases pass11/11 176.19s atd43cd6b04. Independent LEAD gate/check/fmt remain pending. [Contract/proof ledger](specs/ramparts-herald.md#tests-asserting-this-spec) owns details. This does not certify future timer cancellation, point4 arrival/MoveFall, own30 guard, paired credit/reset or native presentation.

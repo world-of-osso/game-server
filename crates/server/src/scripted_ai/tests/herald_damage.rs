@@ -144,13 +144,11 @@ fn assert_own_damage_ingress(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "RED: own nonlethal below30 descent ingress missing"]
 fn encounter_coverage_herald_own_damage_normal_first_descent_step() {
     assert_own_damage_ingress(1);
 }
 
 #[test]
-#[ignore = "RED: own nonlethal below30 descent ingress missing"]
 fn encounter_coverage_herald_own_damage_heroic_first_descent_step() {
     assert_own_damage_ingress(2);
 }

@@ -6,6 +6,12 @@
 
 Genuine source-plan REDs precede the Z-only implementation. All four grounding cases and the full follower-pet module now pass, with no changed follower assertions or source-reach defaults. Independent oracle queries finalXZ using the same pre-clamp Y/ray and compares bits exactly, matching TC's one-query assignment; it does not impose a second-ray fixed point. No ULP tolerance or WMO-reader change. [Contract, proof ledger and residuals](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite) distinguish setup failures from behavioral REDs and keep the122612 blocker limited to the full reach-dependent XY port. LEAD integration/check/fmt remains pending.
 
+## Herald own nonlethal below30 ingress — 2026-10-18
+
+TC217–220 additionally enters the same descent when Nazan's own incoming damage crosses below30, only after intro and before the existing descent latch. `IntroPhase::Finished` represents `!_isPerformingIntro`; existing action0 owns `_startedDescending` and the special DESCEND1 schedule. No30693 is fabricated. The separate pre-commit lethal/min1 source branch214–215 is not implemented by this read-only `DamageTaken` hook.
+
+Natural firstWest Normal/Heroic35→29 tests reuse actual scaled integer direct damage and exact one50ms point4 motion; real INTRO1 below30 must keep authored center motion instead. Genuine missing-descent RED1PASS/2FAIL78.50s at7e76a8ac0 becomes3GREEN62.04s at070701121. Actual Fireball interruption/hover/Passive/emote/once/copy/no-credit/no-Call controls pass; enabled retained integration is pending. [Contract/proof ledger](../../specs/ramparts-herald.md#tests-asserting-this-spec). Arrival/fall, future timer cancellation, lethal guard, paired credit/reset/native remain separate.
+
 ## Herald Call Nazan descent ingress — 2026-10-18
 
 TC452–459/513–516 once-latches Vazruden's incoming-below40 damage and schedules ordinary30693. The native effect0 SCRIPT_EFFECT hook (557–568) dispatches action0 only to the actual hit creature. Herald195–201 schedules special DESCEND1 once;318–327 speaks sourced17536/group0 Type41, becomes Passive, removes18430, clears point motion, starts authored point4, interrupts its real non-melee cast and resets the combat EventMap. No selected-instance shortcut or forced cast admission. Special events run before ordinary combat casting gates.
