@@ -70,6 +70,57 @@ fn assert_native_stun_stops_enemy_cast(stun: u32, explicit: bool) {
     ));
 }
 
+/// TC Spell::HandleLaunchPhase/EffectTriggerSpell (Spell.cpp8493–8527,
+/// SpellEffects.cpp594–598): effect64 triggers at launch, before the missile's
+/// stun lands and stops the cast.
+#[test]
+#[ignore = "RED: effect64 child triggers at hit, after the stun stops the cast"]
+fn native_axe_toss_interrupts_at_launch_before_its_stun_lands() {
+    const AXE_TOSS: u32 = 89766;
+    const AXE_TOSS_INTERRUPT: u32 = 347008;
+    let (mut h, unit) = level32(227734);
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    let enemy = h.npc;
+    let at = *h.app.world().get::<Position>(enemy).unwrap();
+    h.app.world_mut().entity_mut(h.caster).insert(Position {
+        x: at.x - 10.0,
+        ..at
+    });
+    let from = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.caster, AXE_TOSS, Some(enemy), true)
+        .unwrap();
+    h.advance(1);
+    let owner = h.caster.to_bits();
+    // SpellMisc89766 Speed30: the 10yd flight lasts 333ms.
+    assert!(!logged(
+        &h,
+        from,
+        owner,
+        AXE_TOSS,
+        CombatLogKind::AuraApplied
+    ));
+    assert!(
+        h.inbox.log[from..].iter().any(|event| {
+            event.kind == CombatLogKind::Interrupt
+                && event.source == Some(owner)
+                && event.target == Some(enemy.to_bits())
+                && event.spell_id == Some(AXE_TOSS_INTERRUPT)
+                && event.extra_spell_id == Some(FIREBALL)
+                && event.school_mask == 4
+        }),
+        "launch-phase 347008 must interrupt and lock Fireball's Fire school: {:?}",
+        &h.inbox.log[from..]
+    );
+    h.advance(10);
+    assert!(logged(
+        &h,
+        from,
+        owner,
+        AXE_TOSS,
+        CombatLogKind::AuraApplied
+    ));
+}
+
 #[test]
 fn native_paralysis_stops_enemy_cast() {
     assert_native_stun_stops_enemy_cast(PARALYSIS, true);
