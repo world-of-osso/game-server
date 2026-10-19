@@ -40,6 +40,18 @@ fn install_pet_inputs(h: &mut Harness) {
 }
 
 fn create_native_pet(h: &mut Harness, owner: &Traveler, class: u8) -> Entity {
+    if h.app
+        .world()
+        .get::<shared::components::UnitFactionTemplate>(owner.player)
+        .is_none()
+    {
+        h.app
+            .world_mut()
+            .entity_mut(owner.player)
+            .insert(shared::components::UnitFactionTemplate(
+                crate::faction::faction_template_for_race(1),
+            ));
+    }
     h.app
         .world_mut()
         .get_mut::<Player>(owner.player)
@@ -87,9 +99,13 @@ fn create_native_pet(h: &mut Harness, owner: &Traveler, class: u8) -> Entity {
             .find(|effect| effect.effect == crate::hunter_pet::EFFECT_TAME_CREATURE)
             .unwrap();
         crate::hunter_pet::effect_tame_creature(h.app.world_mut(), &context, effect, target);
+        assert_eq!(h.app.world().get::<Health>(target).unwrap().current, 0.0);
         assert!(
-            h.app.world().get_entity(target).is_err(),
-            "native tame consumes original creature"
+            h.app
+                .world()
+                .get::<crate::combat::DeathState>(target)
+                .is_some(),
+            "native tame despawns original spawn without deleting its respawn entity"
         );
     } else {
         let effect = spell
