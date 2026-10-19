@@ -2917,3 +2917,5 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 ## 2026-10-18 — Shared death-prevention commit
 
 Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame mitigation boundaries in [auras](systems/auras.md#shared-death-prevention-commit--2026-10-18); native rows/clocks/RNG unchanged, final combined gate pending.
+
+- 2026-10-18 — Replace LOS/nav bake and vehicle duplicate binary readers with pinned wow-formats geometry metadata; preserve selection/posing policy and capture old-reader Stockade reference. [Shared formats](systems/wow-formats.md).
