@@ -5,6 +5,13 @@
 ## 2026-10-18 — INTRO2 rewritten integration / target32 grounding blocked
 
 [Source transition](systems/boss-scripts.md#herald-intro2-first-west-boundary--2026-10-18): reset rewritten870659102, merge exact masterac36572bb including target32 revert; no port resurrection. Standalone copy-only prep and shared test visibility/difficulty API preserved without changing defaults. After excluding compiler/setup failure, ff1502383 gives4PASS/1genuineFAIL50.82s: exact actual-finalXYZ source floor89.05998 versus80.80767, no ULP tolerance. Normal initial transition/child and copy/duplicate/INTRO1 checks pass; Heroic/first-West assertions not reached. LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT blocks returning target32 port, not an accepted runtime gap. No summon-position/admission workaround, no ready/full-encounter claim.
+## 2026-10-17 — NPC autoattack expertise
+
+[NPC240](systems/player-damage.md#npc-autoattack-expertise--2026-10-17): ignored2abb pushed first; native28305 singleapplication qualified14 across1536s,1PASS32.88s (post-command wrapper error, no invented exitcode). Genuine Rogue5DodgeRED plus cancelled/foreign2PASS; two owner-log fixture failures corrected to actual CombatEvent broadcasts without gameplay changes. Ignoredb1c2 native14/10000 give genuine2RED66.39s; minimal NPC-only240/4 dodge/parry consumer, block/Guardian/RNG/clocks unchanged. Consumer925224b2a fresh behavior5/5GREEN70.24s0warnings+retained lifetime1PASS32.88s (composite6,notone6batch), then allsix ignores removed; lead gate pending.
+## 2026-10-18 — Frozen Ground fg602 landing and world-delta qualification
+
+[Qualified proof](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): independent fg602359PASS/0FAIL/14namedignored1998.44s includes fresh3 Frozen Ground cases; check/fmt0. Lead channel671 confirms08e3→b24e is only3Toy INSERTs, so retained3PASS stands without replay; original guard failure preserved. After push-race reconciliation, landed361efa1d2 with post-merge check/fmt0. Deployment started per lead; no live-dungeon/canonical-geometry-publication claim from this slice. Historical2+1/observer and input-provenance boundaries remain recorded below.
+
 ## 2026-10-18 — Frozen Ground native2+1 and controls qualification
 
 [Current matrix](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18):13d7 Player periodic/slow/lifecycle+curve/30s2PASS;5730 genuine follower escape/next-membership cleanup1PASS118.14s, no source scheduling change. Retained Rune/Sprout/curve3PASS91.01s but08e3→b24e world guardfailed; source/protocol stable, no automatic rerun or clean-controls/final-gate claim. History rewritten b548→867c, then exactac365 merged; originalRED content proof preserved.
