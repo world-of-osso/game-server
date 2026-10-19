@@ -3115,6 +3115,10 @@ fn enter_source_match_with_arrival(
 }
 
 fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level: u8) {
+    form_source_parties(h, players, level, 5);
+}
+
+fn form_source_parties(h: &mut Harness, players: &[Traveler], level: u8, party_size: usize) {
     use shared::protocol::{
         GroupChannel, GroupCommandResponse, GroupInviteCancelled, GroupInviteIntent,
         GroupInvitePrompt, GroupRosterSnapshot, RespondGroupInvite,
@@ -3133,7 +3137,7 @@ fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level:
             pair::<GroupInviteCancelled>(),
         ));
     }
-    for party in players.chunks(5) {
+    for party in players.chunks(party_size) {
         let leader = &party[0];
         let leader_name = h
             .app
@@ -3192,7 +3196,7 @@ fn form_source_five_player_parties(h: &mut Harness, players: &[Traveler], level:
         let leader_id = h.app.world().get::<ClientId>(leader.player).unwrap().0;
         for member in party {
             let id = h.app.world().get::<ClientId>(member.player).unwrap().0;
-            assert_eq!(groups.group_members(id).len(), 5);
+            assert_eq!(groups.group_members(id).len(), party_size);
             assert_eq!(groups.leader_of(id), Some(leader_id));
         }
     }
