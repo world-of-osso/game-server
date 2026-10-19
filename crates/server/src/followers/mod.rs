@@ -5,7 +5,6 @@ mod hazards;
 mod kit;
 mod kit_ai;
 mod kit_area;
-// Joint activation: requires the shared-planner caller in the same gate.
 mod kit_interrupt;
 mod pack_identity;
 mod party;

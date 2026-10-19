@@ -70,7 +70,7 @@ fn read_source_interrupt_spells(
     Some(spells.into_iter().map(|(_, spell)| spell).collect())
 }
 
-fn is_interrupt_entry(entry: &Entry, store: &SpellStore) -> bool {
+pub(super) fn is_interrupt_entry(entry: &Entry, store: &SpellStore) -> bool {
     match entry.slot {
         Slot::Interrupt => true,
         Slot::Attack => store.get(entry.spell_id).is_some_and(|spell| {
@@ -99,7 +99,7 @@ fn try_source_spells(world: &mut World, unit: Entity, target: Entity, spells: &[
     false
 }
 
-// Exact legacy bridge relocation, staged test-only until the shared caller lands.
+// Compatibility for callers with no specialization kit rows.
 /// Approved player-spec bridge, not authored NPC kits. IDs/names and effect68
 /// are verified in local SpellName/SpellEffect12.1.5.70448 (Skull Bash's
 /// effect68 child93985 is referenced by its source description). Holy/Restoration
