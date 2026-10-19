@@ -15,6 +15,7 @@
 
 mod concentration;
 mod data;
+pub(crate) mod favorites;
 mod gathering;
 #[cfg(test)]
 mod modern_crafting_fixture;
@@ -307,6 +308,7 @@ impl Plugin for ProfessionPlugin {
                 continue_craft_queues.after(crate::spell_cast::advance_casts),
             )
             .add_systems(Update, concentration::receive_queries)
+            .add_systems(Update, favorites::receive_requests)
             .add_systems(PostUpdate, save_and_send_professions);
     }
 }
@@ -735,15 +737,13 @@ fn continue_craft_queues(world: &mut World) {
 pub(crate) fn save_and_send_professions(
     changed: Query<(Entity, &ClientId, &PlayerProfessions), Changed<PlayerProfessions>>,
     mut connections: Query<(&PlayerLink, &mut MessageSender<ProfessionSnapshot>)>,
-    db: Option<Res<GameDatabase>>,
+    db: Res<GameDatabase>,
     data: Res<ProfessionData>,
 ) {
     for (player, character_id, profs) in &changed {
-        if let Some(db) = db.as_deref() {
-            persistence::save_professions(&db.db, character_id.0, profs);
-        }
+        persistence::save_professions(&db.db, character_id.0, profs);
         if let Some((_, mut sender)) = connections.iter_mut().find(|(link, _)| link.0 == player) {
-            sender.send::<ProfessionChannel>(profs.snapshot(&data));
+            sender.send::<ProfessionChannel>(favorites::load_snapshot(&db.db, character_id.0, profs, &data));
         }
     }
 }

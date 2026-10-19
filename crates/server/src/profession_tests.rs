@@ -1102,7 +1102,6 @@ fn third_primary_profession_is_refused_but_cooking_is_not() {
 }
 
 #[test]
-#[ignore = "recipe Favorites authority RED; run explicitly until the atomic handler exists"]
 fn professions_favorites_require_known_recipe_and_reopen_per_character_without_craft_mutation() {
     use shared::protocol::SetRecipeFavorite;
     let directory = tempfile::tempdir().unwrap();
@@ -1155,8 +1154,8 @@ fn professions_favorites_require_known_recipe_and_reopen_per_character_without_c
     }
     // Close the actual database, discard the old owner/connection, then open fresh state.
     let owner = h.character_id;
-    h.app.world_mut().despawn(h.connection);
-    h.app.world_mut().despawn(h.player);
+    assert!(h.app.world_mut().despawn(h.connection));
+    assert!(h.app.world_mut().despawn(h.player));
     drop(h.app.world_mut().remove_resource::<GameDatabase>().unwrap().into_database());
     let reopened = redb::Database::open(&path).unwrap();
     let saved = persistence::load_professions(&reopened, owner);
@@ -1179,7 +1178,9 @@ fn professions_favorites_require_known_recipe_and_reopen_per_character_without_c
     h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite { spell_id: 2153, favorite: false });
     assert!(h.take::<ProfessionSnapshot>().last().unwrap().favorites.is_empty());
     h.app.world_mut().entity_mut(h.connection).insert((PlayerLink(h.player), InWorld { character_id: owner }));
-    h.send::<SetRecipeFavorite, ProfessionChannel>(SetRecipeFavorite { spell_id: 2153, favorite: true });
+    // Fresh owner projection reads persistence without re-favoriting and masking an account-key bug.
+    h.app.world_mut().entity_mut(h.player).insert(learned.clone());
+    h.advance(4);
     assert_eq!(h.take::<ProfessionSnapshot>().last().unwrap().favorites, [2153]);
     assert_eq!(persistence::load_inventory(h.db(), owner), inventory);
     assert_eq!(persistence::load_professions(h.db(), owner), learned);
