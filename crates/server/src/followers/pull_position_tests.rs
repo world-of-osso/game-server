@@ -117,9 +117,19 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         selected,
         "actual kit must select the already reachable trash before the caster starts"
     );
-    assert_eq!(
-        crate::spell_cast::targets::position(f.h.app.world(), main),
-        Some(from)
+    let rebuke =
+        f.h.app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(REBUKE)
+            .unwrap()
+            .clone();
+    assert!(
+        matches!(
+            crate::spell_cast::read_native_cast_start(f.h.app.world_mut(), f.tank, &rebuke, main),
+            Ok(Some(target)) if target == main
+        ),
+        "selected trash must pass actual native melee-range/LOS/cost/GCD validation"
     );
     crate::spell_cast::creature_cast(
         f.h.app.world_mut(),
@@ -136,13 +146,6 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
             .expect("actual sourced Fireball cast bar");
     assert_eq!(cast.spell_id, OVERHEAT_FIREBALL);
     assert!(cast.interruptible && !cast.cast_while_moving && cast.duration > 0.5);
-    let rebuke =
-        f.h.app
-            .world()
-            .resource::<crate::spell_info::SpellStore>()
-            .get(REBUKE)
-            .unwrap()
-            .clone();
     assert!(
         matches!(
             crate::spell_cast::read_native_cast_start(f.h.app.world_mut(), f.tank, &rebuke, caster),
