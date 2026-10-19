@@ -4,19 +4,16 @@ use crate::spell_cast::powers::{PowerPools, power_value};
 use shared::components::{ModelDisplay, Npc, Position, UnitLevel};
 
 #[test]
-#[ignore = "RED: ordinary BG completion stops owner combat but not its summoned pet"]
 fn bg_end_pets_hunter_living_owner_stops_owned_pet_without_reset() {
     assert_owner_pet_stopped(3, false);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion stops owner combat but not its summoned pet"]
 fn bg_end_pets_warlock_living_owner_stops_owned_pet_without_reset() {
     assert_owner_pet_stopped(9, false);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion stops owner combat but not its summoned pet"]
 fn bg_end_pets_warlock_dead_owner_resurrects_then_stops_owned_pet_without_reset() {
     assert_owner_pet_stopped(9, true);
 }
