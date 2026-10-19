@@ -14,6 +14,14 @@ Native BM character47/Bhunbeastm repeatedly received883 CastSuccess without a pe
 
 Starting-pet gap: pinned TDB1210.26091 creation-cast table31 rows has no Human-race-bit1/Hunter-class-bit4 match. The importer has no separate starter-pet mapping; `new-character-kit.md` already lists creation-cast pets as unmodelled. **HUMAN_HUNTER_STARTING_PET_SOURCE** remains explicit: no arbitrary pet grant, invented race mapping or changed bot kit. `bm-starter-pet-source-proof.json` retains the extracted SQL/hash and actual storage probe.
 
+## Hunter Focus timing — 2026-10-18
+
+The called wolf previously used the player `PowerType` Focus rate (native70448: 5/s), yielding 76 after a genuine 25-Focus Bite during several 50ms delivery frames. The unchanged Bite assertion reproduced on c67f8c863 (0PASS/1FAIL); a separate native called-wolf boundary regression reproduced raw76.25 instead of75 on bdd448d45. The cost is unchanged: native `SpellPower` row706, spell17253, Focus cost25.
+
+Pinned TC a352b1fa separates pets: `CreatureData.h423` defines4000ms, `Pet.cpp64,671-687` starts/advances the timer even while full, and `Creature.cpp964-998` adds24 times the Focus multiplier then converts to integer. Native spawn now attaches `PetFocusRegen` only to Focus pets. The generic regeneration system advances that timer instead of applying continuous player Focus; authoritative discrete updates advertise zero continuous prediction. The timer carries phase and does not replay missed ticks after large lag. Player and demon paths remain unchanged. The normal world rate is1; configurable world rates and flat aura85 are not added by this bounded fix.
+
+`pet_control_tests::called_wolf_focus_regenerates_in_four_second_steps_without_resetting_at_full` covers no fractional early refill, first24 tick, second tick clamping, and spending after a full-pool interval without resetting its phase. At merged3cc539edd (includes master8d88013ed), exact unchanged Bite75, the new interval fixture and existing playerFocus5/s control pass3/3 in62.27s with no warnings. At224bc898b (docs-only since that GREEN), retained native dismiss/re-call, autocast, autocast-off/on and Imp summon/bar controls pass4/4 in172.48s with no warnings. Independent lead gate owns check/format and combined families; no UDP/rendered/full-class claim. Source/log receipts: `data/class-completeness6-2026-10-12/bite-focus-*` and `tc-a352b1fa/CreatureData.h.receipt.json` in the assigned s6 evidence tree. Requirements: [pet control](../../specs/pet-control.md).
+
 ## Stable operations
 
 `PetStableRequest` runs after NPC hello/gossip/close validation. Only an in-world Hunter connection with the matching StableMaster role can list or mutate its own stable. Reliable ordered replies carry actual records, family/name/icon metadata, imported non-override specs and unlocked Call Pet slots.

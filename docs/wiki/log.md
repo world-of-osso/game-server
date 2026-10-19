@@ -1,3 +1,7 @@
+## 2026-10-18 — Hunter-pet Focus interval
+
+[Focus timing](systems/combat-pet-lifecycle.md#hunter-focus-timing--2026-10-18): exact unchanged Bite RED76vs75 and native boundary RED76.25vs75; cost25 authenticated, pinnedTC24/4000ms spawn/full-pool phase consumer added only for Focus pets. Player/demon paths unchanged; merged3cc539edd exact originalBite/new interval/player5/s3GREEN62.27s + retained lifecycle/autocast/Imp4GREEN172.48s,0warnings; lead combined/check/format gate pending.
+
 ## 2026-10-17 — Character-owned recipe Favorites
 
 [Professions](systems/professions.md#character-owned-recipe-favorites) adds known-spell-only preference requests and a character-keyed redb multimap without changing existing profession record encoding. Existing owner snapshots carry current favorites; request/refusal and reopen/isolation proof is pending targeted GREEN and the coordinated consumer gate.
@@ -2939,3 +2943,5 @@ Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame m
 
 Recorded real33076 ward RED, approved per-cast stack/original-caster API and native delayed jump in [auras](systems/auras.md#prayer-of-mending-baseline--2026-10-18); player recipient qualification and PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT explicit; Native8/8 GREEN37.08s including actual expiry/exhaustion/foreign/no-recipient and no-override Agony controls; native4000ms Fireball readiness honored, independent lead gate pending.
 - 2026-10-18 — Replace LOS/nav bake and vehicle duplicate binary readers with pinned wow-formats geometry metadata; preserve selection/posing policy and capture old-reader Stockade reference. [Shared formats](systems/wow-formats.md).
+
+- 2026-10-18 — Pin projected runtime-ground metadata APIs in wow-formats; preserve selected-field/FDID/error policy and frozen metadata/bake receipt boundaries. [Shared readers](systems/wow-formats.md).

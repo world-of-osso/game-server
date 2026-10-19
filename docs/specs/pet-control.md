@@ -7,6 +7,7 @@ References: TrinityCore a352b1fa `WorldSession::HandlePetAction`/`HandlePetActio
 ## What it must do
 
 - [x] A pet out carries `UnitSummonedBy` (its owner), full Focus (`power_type` 100/100) and a `PetCharm`: Follow, Passive (`CharmInfo`'s constructor), and its bar.
+- [x] Hunter-pet Focus regenerates in spawn-anchored four-second ticks of 24, multiplied by its Focus regeneration aura multiplier and truncated to whole units, clamped to maximum. The timer keeps advancing while full; spending does not reset it. This is the hunter-pet path, not the player's `PowerType` continuous rate. Player and demon regeneration remain unchanged (TC a352b1fa `CreatureData.h:423`, `Pet.cpp:64,671-687`, `Creature.cpp:964-998`; normal world Focus rate 1).
 - [x] The bar: Attack, Follow, Move To, four spell slots, Assist, Defensive, Passive. Spell slots take the family's level-up spells (CreatureFamily `SkillLine_0/1`, `AutomaticCharLevel`, spell level up to the pet's), highest level first; non-passive only; `ACT_ENABLED`/`ACT_DISABLED`/`ACT_PASSIVE` by `NO_AUTOCAST_AI`/`AUTOCAST_OFF_BY_DEFAULT`. A level 10 wolf: Dash, Bite, Growl.
 - [x] The owner gets `PetSpells` (bar, command and react state) when the pet comes out and after every order; `PetClearSpells` when it is dismissed.
 - [x] `PetAction` from a mounted owner, for another unit or a dead pet is ignored.
