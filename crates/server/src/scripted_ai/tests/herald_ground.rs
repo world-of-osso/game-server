@@ -270,10 +270,12 @@ fn assert_ground_parents(difficulty: u32) {
     let events = &h.app.world().resource::<ObservedCombatEvents>().0;
     for spell in [fireball, cone] {
         assert!(
-            events.iter().any(|event| event.caster == nazan.to_bits()
-                && event.spell_id == Some(spell)
-                && event.kind == CombatLogKind::Damage
-                && event.amount > 0),
+            events
+                .iter()
+                .any(|event| event.source == Some(nazan.to_bits())
+                    && event.spell_id == Some(spell)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0),
             "actual native parent{spell} damage"
         );
     }
