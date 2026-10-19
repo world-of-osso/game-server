@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Bounded Telash live observation — 2026-10-19
+
+Exact landed servere27b023df/sharedF9 and owned native client068/F9 admitted the genuine level70 owner/four followers through ordinary LFG2498. Published eyes71d4 and the explicit whole-party admin harness staging worked. The360.47s bounded run produced no Frozen Ground387149 and no hazard trace: ten natural Frost Bomb386781 attempts were interrupted by normal followers (Counterspell6/Rebuke3/Wind Shear1).286 retained samples/4,292 unique observed combat lines overlap across every adjacent ring snapshot. Boss and owner remained alive; seven Icy Devastator cast-start records were observed. No stats, RNG, timers, radii or follower actions were altered.
+
+All detection→publication/first movement/physical exit distributions have n=0 with undefined quantiles for both clocks. Prediction/submission/250ms reaction/ready-tick/late-worker-hold/escape checks are **not exercised**, not PASS; empty analyzer violations do not establish compliance. Real five-member combat is not stress capacity: sampled main-thread355.48CPU-seconds/356.72wall, navigation0.108CPU-seconds; retained edge-inclusive frame windows1.4–14.9Hz, not realtime20Hz acceptance. ClientFPS min7/median28/max33. Client/server/slice stopped, window cleared and UDP5761 absent. No speculative retry or kick suppression followed.
+
+Evidence: engine `data/diagnostics/server-live-frame-cost-2026-10-16/azure-hazard-live1/live1-measurement-report.md`; `live1-natural-frost-interrupted/` contains429 archived files and SHA receipts. Hazard latency acceptance remains open; [policy](../systems/navigation.md#follower-hazard-reaction-policy) is unchanged. Earlier-boss traversal remains bypassed/unproven.
+
 ## Azure live prerequisites — 2026-10-19
 
 `FOLLOWER_AZURE_TRANSLOCATION_BOOK_TRANSITION_UNSOURCED`: native LFG2498 admits the real owner/four followers, but the owned four-tile2515 navigation bake cannot connect entrance to Telash in either direction; both endpoint local routes work. Entrance→Leymor→Book194602 is connected. This does not prove a missing tile or WMO seam. Authored book NPCs span several floors, while the imported spellclick/SmartAI bindings and2515 `spell_target_position` rows are absent. Installed spells385961/393902/389770/389773 have effect252 and target17/DEST_DB; names/facing values are not destination coordinates or book bindings. No transition implementation or invented links are authorized. Whole-party Telash placement is an explicitly approved harness bypass, not walked progression.

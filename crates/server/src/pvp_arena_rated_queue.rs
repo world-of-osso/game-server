@@ -115,6 +115,13 @@ fn queue_party(
         if player.queue.is_some() || player.battleground.is_some() {
             return Err("group member is already queued or invited".into());
         }
+        // TC Group.cpp1250–1253 applies the LFG exclusion to rated arena rosters too.
+        let using_lfg = world
+            .get_resource::<crate::lfg::LfgServerState>()
+            .is_some_and(|lfg| lfg.is_queued_or_checking_roles(*entity));
+        if using_lfg {
+            return Err("group member is using dungeon finder".into());
+        }
         let progress = player
             .progress
             .brackets

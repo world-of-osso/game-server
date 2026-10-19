@@ -1,3 +1,10 @@
+## 2026-10-17 — Victim general crit197
+
+[Received crit](systems/player-damage.md#victim-general-crit197--2026-10-17): qualificationc6da45e6d FIRST3PASS39.63s/native197+100/-101/raw-1/coexist768s plus187/52/player0/334/actualNO_CRIT joint inputs; THEN ignoredb48621910 PUSHED. Genuine6RED/6PASS76.80s0warnings includes positive/negative197, source52/187 preclamp, explicitplayer andNO_CRITsource+197. Minimal existingtarget_auras197+187 sum in sharedchance reader beforeclamp/334; no scalar/query/state/wire/RNG/HP/clocks/Guardian changes. Consumerd3a6b734e fresh ignored12GREEN70.07s/0warnings plus retained qualification3PASS39.63s (fifteen-case composite), only then twelve behavioral ignores removed; lead gate pending. Autoattack-only, not spell/ranged/generic197census/fullclass certification.
+## 2026-10-19 — Bounded Telash live combat, no natural-field latency sample
+
+[Live result](investigations/follower-data.md#bounded-telash-live-observation--2026-10-19): landed e27/sharedF9, published eyes and whole-party harness staging;360.47s/286samples, ten natural Frost Bomb attempts interrupted by genuine follower kicks, zero fields/trace. All three distributions n=0; reaction policy not exercised. Main thread near one-core saturation/retained1.4–14.9Hz, no stress/realtime claim.429-file SHA archive, owned runtime/window cleaned. No disabled kicks, fabricated fields or retry.
+
 ## 2026-10-19 — Azure live prerequisites and eye receipt
 
 [Investigation](investigations/follower-data.md#azure-live-prerequisites--2026-10-19): native admission works; exact owned navigation disconnects entrance/Telash despite local coverage. Book/spell destination bindings remain explicitly unsourced; no blind rebake or gameplay traversal claim. Existing eye producer reloads134 displays/1340 poses, native1PASS; missing-row fragment awaits independent lead publication preserving existing rows/scales/mappings. Natural hazard latency n=0.
@@ -3121,3 +3128,5 @@ Native fixture RED→GREEN2 at91fa9b74d: concrete points/time/death/title and di
 
 Explicit admitted unit_transform sampling replaces incomplete UnitPick traversal. Actual52.365s failed Stockade capture has all5pose/facing tracks; real143spawns/nav34 SVG+PNG inspected/published with FAILED/no-boss title. Original63s gap/failure record preserved. No clear/retry/server-panic fix claimed; owned5981 cold/windows cleared; independent lead gate pending.
 - 2026-10-18: Shared MH2O raw records; frozen independent client/server layers, errors, queries and navigation water-bound baseline. See [shared formats](systems/wow-formats.md).
+
+- 2026-10-18: Share MFBO minimum signed-grid decoding, preserving consumer selection/errors and runtime plane policy. See [shared formats](systems/wow-formats.md).
