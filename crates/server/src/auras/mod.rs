@@ -2256,6 +2256,8 @@ mod augmentation_tests;
 #[cfg(test)]
 mod autoattack_crit_tests;
 #[cfg(test)]
+mod base_stat_percent_tests;
+#[cfg(test)]
 mod bloodsurge_tests;
 #[cfg(test)]
 mod charred_warblades_tests;
