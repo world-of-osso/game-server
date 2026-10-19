@@ -9,6 +9,8 @@ mod azure_combat;
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
 mod azure_frost_bomb;
+#[path = "azure_frozen_ground.rs"]
+mod azure_frozen_ground;
 #[path = "azure_intro.rs"]
 mod azure_intro;
 #[path = "azure_jump_charge.rs"]

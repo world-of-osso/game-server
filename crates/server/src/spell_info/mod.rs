@@ -67,6 +67,12 @@ pub struct SpellInfo {
     /// Kept on the per-cast clone through cast bars, missiles, and aura snapshots.
     #[serde(skip)]
     pub(crate) cast_item_level: Option<u16>,
+    /// Source SPELLVALUE_AURA_STACK on this cast, retained through missile snapshots.
+    #[serde(skip)]
+    pub(crate) cast_aura_stacks: Option<u8>,
+    /// Source CastSpellExtraArgs::OriginalCaster, not the actual casting unit.
+    #[serde(skip)]
+    pub(crate) cast_original_caster: Option<Entity>,
     /// Retail item actually used by this cast; delayed casts credit only on execution.
     #[serde(skip)]
     pub(crate) cast_retail_item_id: Option<u32>,
