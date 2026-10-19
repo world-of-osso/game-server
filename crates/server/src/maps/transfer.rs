@@ -270,6 +270,7 @@ fn complete_transfer(world: &mut World, player: Entity) {
         .insert((resolved.map, ArrivalPending));
     place_player(world, player, &transfer.destination);
     crate::transport::finish_entry(world, player, resolved.map);
+    crate::pvp::dismount_battleground_arrival(world, player);
     reset_sent_tiles(world, player);
     let corpse_here = world
         .get::<crate::death::PlayerDeathState>(player)
