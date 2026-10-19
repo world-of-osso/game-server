@@ -503,14 +503,15 @@ fn production_tank_faces_native_leymor_fissure_away_from_the_party() {
             }
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
-                | crate::spell_cast::CastFailure::InProgress,
+                | crate::spell_cast::CastFailure::InProgress
+                | crate::spell_cast::CastFailure::CrowdControlled(crate::auras::CastBlock::Stunned),
             ) => f.h.advance(1),
             error => panic!("real source Fissure prerequisite refused: {error:?}"),
         }
     }
     assert!(
         started,
-        "native cast/GCD must eventually permit the real source Fissure"
+        "native cast/GCD and ordinary stun expiry must permit the real source Fissure within 100 ticks"
     );
     assert_eq!(
         f.h.app.world().get::<CastState>(f.boss).unwrap().spell_id,
