@@ -453,12 +453,22 @@ pub(crate) fn regenerate_powers(
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let step = regen_step(pool.current, pool.max, info, in_combat, out_of_combat_ms);
+            // TC StatSystem.cpp901-908: aura85 is units per five seconds,
+            // added AFTER percentage modifiers. Select direction/limit using
+            // the modified rate, including powers whose base rate is zero.
+            let multiplier = regen_mult(pool.power);
+            let flat_per_sec =
+                mods.map_or(0.0, |mods| mods.power_regen_flat(pool.power as i32) / 5.0);
+            let rates = PowerTypeInfo {
+                regen_combat: info.regen_combat * multiplier + flat_per_sec,
+                regen_peace: info.regen_peace * multiplier + flat_per_sec,
+                ..*info
+            };
+            let step = regen_step(pool.current, pool.max, &rates, in_combat, out_of_combat_ms);
             let Some((rate, limit)) = step else {
                 pool.regen_per_sec = 0.0;
                 continue;
             };
-            let rate = rate * regen_mult(pool.power);
             let next = pool.current + rate * dt;
             pool.current = if rate > 0.0 {
                 next.min(limit)

@@ -1,3 +1,6 @@
+## 2026-10-18 — Energizing Elixir flat Energy
+
+[Native115288](systems/auras.md#energizing-elixir-flat-energy--2026-10-18): source75Energy/5s AFTER percentage modifiers, real Tiger Palm deficit and ordinary Elixir RED10vs25, native13750 RED17.5vs32.5; sibling2Chi preserved. Tests-only ignored3993b7fe8 pushed first;3controlPASS/2genuineFAIL26.42s. Minimal continuous non-mana85 aggregation/consumer atc62d61e9b: native5GREEN14.48s +retained regen/resource30GREEN14.31s,0warnings; independent lead gate pending, no legal-loadout or generic85 certification.
 ## 2026-10-17 — NPC victim dodge49
 
 [NPC49](systems/player-damage.md#npc-victim-dodge-aura49--2026-10-17): ignoreddf529 pushed first; actual5277+62356effect1 sum0 across8s/block51=0, qualification1PASS33.62s. Nativefront/behind each5Damage despite live200, genuine2RED/4PASS35.27s. Existingtarget_auras consumer onlyNPC/allowedhit path before251/240/clamp; no playerdoublecount/otherdefense/Guardian/query/wire/RNG/clock change. Consumere6e99fb6e fresh nativebehavior6/6GREEN57.40s0warnings +retained qualification1PASS33.62s (7composite,notone7batch), onlythen allseven enabled/pushed; lead gate pending.

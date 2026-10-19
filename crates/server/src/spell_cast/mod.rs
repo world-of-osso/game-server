@@ -3361,6 +3361,8 @@ mod additional_optional_power_tests;
 #[cfg(test)]
 mod class_resource_tests;
 #[cfg(test)]
+mod energizing_elixir_tests;
+#[cfg(test)]
 mod line_of_sight_tests;
 #[cfg(test)]
 mod live_ground_destination_tests;
