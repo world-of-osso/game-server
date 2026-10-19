@@ -55,9 +55,20 @@ pub struct PlayerMatchMemberState {
 }
 
 #[derive(Resource, Default)]
-struct LfgServerState {
+pub(crate) struct LfgServerState {
     queue: DungeonQueue,
     role_checks: Vec<RoleCheckState>,
+}
+
+impl LfgServerState {
+    /// Current queue/role-check activity, not retained player selection history.
+    pub(crate) fn is_queued_or_checking_roles(&self, player: Entity) -> bool {
+        self.queue.is_queued(player.to_bits())
+            || self
+                .role_checks
+                .iter()
+                .any(|check| check.has_player(player))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

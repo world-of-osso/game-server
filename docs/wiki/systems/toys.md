@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Accepted sourced boundary and three named gaps (2026-10-18)
+
+[Authoritative source/code/asset matrix](../../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../../specs/toys.md#accepted-sourced-boundary): approved current boundary complete at Full1166+seven published70448 extras. Batch3 landed69ed3c682 after ty639209/0/check0/fmt0; feature branch cleaned. Aqir275039 `AQIR_SCRIPT_BINDING`, Libram284159 `LIBRAM_LOOT189_REWARD_BINDING` and Quill286643 `QUILL_LABYRINTH_EXIT_ACTION` remain unpublished named gaps, not false-success cast admissions. Item143823 is not a sourced Glyph reward; Quill's real92 criterion does not establish its party exit/teleport action. Native visuals and full-duration reuse remain separate follow-ups; earlier pending stages below are historical.
+
 ## Expanded70448 footstep cosmetics (2026-10-18)
 
 [Current source/publication/RED matrix](../../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): batch2 landed641cb2460 and its feature branch was deleted. Trail of Halazzi280821 and Jan'alai's Flame280825 actual learning RED0/2/54.36s precedes lead's exact twoToy-row/40file publication; canonical aura4 admission RED0/2/30.71s. Only two named IDs enter existing strict visual-only machinery, with their census triples appended beside five published extras. Canonical1e5e55ae0 GREEN22/0/76.90s covers pair/all13 census/five prior toys/retained2513 case/absent-visual negative. Lead broad gate/source landing pending; no inferred native footsteps/particles, generic dummy or scripted-gap change.

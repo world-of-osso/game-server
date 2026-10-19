@@ -1,3 +1,13 @@
+## Follower hazard trace implementation proof
+
+[Opt-in trace](systems/navigation.md#follower-hazard-live-trace) joins native contact/reaction/hold/displacement/exit with current-ID worker publication and owned corridor adoption. Missing native events give a genuine RED; native trace/disabled-payload/reaction/FIFO/request14 controls pass, and three-distribution/policy/cancellation/cache/latest-ID analyzer7 controls pass. Owner client068066e6a/F9 native extension+CLI artifacts built without warnings. Bounded real Azure/Telash collection remains pending a granted server_perf/5761 window; no new runtime flags, gameplay changes or stress-capacity claim.
+## 2026-10-17 — NPC weapon crit52 and shared clamp
+
+[Signed52/clamp](systems/player-damage.md#npc-weapon-crit52-and-shared-clamp-ordering--2026-10-17): ignored00ef37b6d pushed first; native52/334 and separate player187/334 qualification2PASS56.14s survive768s. Fresh6 genuine RED/2PASS56.19s includes explicit player0-60187+50334 zeroCrit/256; source clamps before334. Existing raw AuraStatMods sum/NPC-only consumer plus shared clamp correctionbd3cf7db7 committed after RED; fresh ignored8/8GREEN41.04s/0warnings plus retained qualification2PASS56.14s (ten-case composite), only then all ten enabled. Independent lead gate pending. No RNG/clocks/HP/native-input changes; player52 masks/290/NO_CRIT/mitigation excluded.
+## 2026-10-18 — Accepted toy sourced boundary and three named gaps
+
+[Current accepted matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../specs/toys.md#accepted-sourced-boundary): Full1166+seven published extras complete to current sourced boundary; ty639209/0/check0/fmt0 landed69ed3c682. Read-only batch4 research found no complete action contract for Aqir275039, Libram284159 or Quill286643; all accepted named gaps remain outside Toy membership. Numeric143823 is not a Glyph reward binding, and Quill's real scenario92 criterion is not its full party teleport action. No code/data/import/extraction change; native/full-duration proof remains separate.
+
 ## 2026-10-18 — Batch2 landed; footstep70448 pair admission RED
 
 [Current matrix](../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): explicit tb625 stationary landing641cb2460, ancestry verified/feature branch deleted. New Halazzi/Jan'alai real-learning RED0/2/54.36s; lead exact twoToy-row and40file/57path publication; canonical aura4 RED0/2/30.71s. Two strict named admissions and same-branch census triples retain Full1166+seven; canonical1e5e55ae0 pair/all13 census/previous-family/absent-visual GREEN22/0/76.90s; lead broad gate/source landing pending. Absolute canonical shared-protocol patch resolves stale native-root interface without protocol/cache mutation; no native footstep/particle claim.
@@ -37,6 +47,14 @@
 ## 2026-10-18 — Herald own nonlethal below30 ingress
 
 [Own30](systems/boss-scripts.md#herald-own-nonlethal-below30-ingress--2026-10-18): TC217–220 actual35→29 after intro reuses the descent latch, no30693; natural Normal/Heroic/INTRO1 negative RED1PASS2FAIL→GREEN3/3 62.04s. Real source-speed first step and cast interruption; lethal guard/arrival/fall excluded. Enabled all10 Herald+four grounding14/14 PASS172.99s ataed52b5b6; LEAD gate/check/fmt pending.
+## 2026-10-18 — Source-qualified follower137 oracle
+
+[Shared137 consequence](systems/auras.md#independent-primary-stat137-composition--2026-10-18): real native Garrick initialization/removal-reapply/evade3FAIL84.42s exposed old35%/10584 expectations. Authenticated independent Aegis30%/Plate5% require36.5%/1337.7stamina/10696HP; unbuffed5%-only8232 unchanged. Test/spec oracle correction only, no follower runtime/health/stat/budget override; targeted GREEN pending. Historical native10584 capture receipts remain unchanged as observations.
+
+## 2026-10-18 — Independent native137 composition
+
+[Source-gated137](systems/auras.md#independent-primary-stat137-composition--2026-10-18): completeTDB1210 groups/rules +all32pinnedworldSQLupdates establish independent51271/53365. Ignored8aef2fabb RED3FAIL/3controlPASS18.87s shows real HumanDK Strength33→44.55vs45.54 bothorders/removal. Minimal percentage-representation fold preserves flat29/182 addition/masks. At853447542 native6 +retained23 GREEN29/29,46.49s,0warnings/ignored; stats substring also covers item/frame families. Fullcargo fmt0, independent lead gate pending. No fake stats/source/clock edits or legal-kit/runeforge-proc/fullPillar/group-engine/PvP certificate.
+
 ## 2026-10-18 — Native continuous power prevention294
 
 [Native masks](systems/auras.md#native-power-prevention294--2026-10-18):232865/262173 amount0/masks8/1; TC prevention before base/%/flat. Actual Elixir/WaterShield RED3FAIL/3controlPASS16.93s,0warnings at3041d69e3 pushed first. Minimal recipient-mask Mana/Energy consumer; Rune/discrete-pet/other/global294/legal-build/full-ability claims excluded. Combined46GREEN21.88s at7e541f03b; tests-only416735d34 explicitEnergy prediction0 assertion has fresh6GREEN19.39s,0warnings. Retained40 unchanged; fullcargo fmt0, independent lead gate pending.
