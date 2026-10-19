@@ -2,6 +2,9 @@
 
 [Focus timing](systems/combat-pet-lifecycle.md#hunter-focus-timing--2026-10-18): exact unchanged Bite RED76vs75 and native boundary RED76.25vs75; cost25 authenticated, pinnedTC24/4000ms spawn/full-pool phase consumer added only for Focus pets. Player/demon paths unchanged; merged3cc539edd exact originalBite/new interval/player5/s3GREEN62.27s + retained lifecycle/autocast/Imp4GREEN172.48s,0warnings; lead combined/check/format gate pending.
 
+## 2026-10-17 — Character-owned recipe Favorites
+
+[Professions](systems/professions.md#character-owned-recipe-favorites) adds known-spell-only preference requests and a character-keyed redb multimap without changing existing profession record encoding. Existing owner snapshots carry current favorites; request/refusal and reopen/isolation proof is pending targeted GREEN and the coordinated consumer gate.
 ## 2026-10-18 — Grounding-only target32 and natural INTRO2 GREEN
 
 [Bounded contract and proof ledger](../specs/ramparts-herald.md): model-free Z-only reader preserves XY and missing-height casts; full reach-dependent port remains blocked by122612 metadata. TC709–748 source-height query is made once with pre-clamp Y; traced identical-input rays are bit-stable, while a post-clamp-Y ray is a different query. Approved exact source-ray oracle uses finalXZ/pre-clampY and strict bits, no tolerance or WMO-reader changes. Grounding plus full follower-pet and retained controls pass; Normal/Heroic natural first-West and actual facing bits pass after master6c8929589 merge. Future source engage events remain scheduled/unasserted; later lifecycle/native/XY/collision/hover-swim/backoff gaps explicit. LEAD independent gate pending.
