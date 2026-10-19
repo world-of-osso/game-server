@@ -27,6 +27,7 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 - [x] Classify native MOD_MELEE_RANGED_HASTE_2 342 by the signed-stat positivity rule: negative base/per-level points are harmful, preserving prior passive/buff/debuff attribute precedence. Ordinary friendly Curse dispels must remove eligible native curses without adding spell-ID positivity overrides.
 - [x] Track unhandled aura types (logged once per spell) so they still show in the UI.
 - [x] Fail casts under stun, silence and pacify with `CastFailReason::Stunned`/`Silenced`/`Pacified`, and under confuse with `NotSupported` ("Can't do that while confused": shared-protocol has no `Confused` reason).
+- [x] The first MOD_STUN 12 application stops the unit's current cast or channel (TC `Unit::SetControlled` → `CastStop`).
 - [x] Apply talent passives (talent spells are in `KnownSpells`).
 - [x] Guardian Spirit47788 and Ardent Defender31850 share one exclusive-World death-prevention commit for melee, direct and periodic damage. Guardian matches native overkill school/limit, removes its parent before real48153 healing from snapshotted native effect1, and is consumed once. Each hit completes rescue before the next; death and logged damage/absorption use the committed result. This does not establish generic aura316 completeness.
 - [x] Melee and spell damage share school immunity and absorb capacity handling; immune swings log `Immune`, fully absorbed swings log `Absorb`, and partial absorbs log remaining damage plus absorbed amount. Depleted shields are removed.

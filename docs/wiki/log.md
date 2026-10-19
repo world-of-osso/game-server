@@ -1,3 +1,6 @@
+## 2026-10-19 — First stun stops the current cast; Bo control oracle
+
+[First-stun cast stop](systems/auras.md): native Paralysis115078/Leg Sweep119381 landed on a casting enemy without stopping it, making Bo's Leg Sweep oracle RNG-dependent ([follower data](investigations/follower-data.md)). RED e3f137f13 3/3 genuine (stun applied, CastState kept); fix3e0e8f09b. GREEN pending.
 ## 2026-10-18 — Herald min1 precommit source guard
 
 [Min1 guard](systems/boss-scripts.md#herald-min1-precommit-guard--2026-10-18): real intro/direct/self/spell/native melee and ordinary real1s periodic probes reproduce six lethal commits; exactHP1/no death/credit six-case GREEN146.24s. Source state, unchanged Gold/Nibbles behavior, listener audience and opt-in ownerless event capture are explicit. Approved six synchronized copies/two native cadences prove same-actor repeated melee82.49s at2639aed02; enabled all16 Herald+four grounding+five Gold+two Nibbles27/27 PASS209.65s atcbb9ef32f after master69ed NPCblock51 merge; LEAD gate pending; release/arrival/fall/paired credit/reset/native excluded.
