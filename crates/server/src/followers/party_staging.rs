@@ -59,6 +59,12 @@ fn require_idle_owned_party(
     }
     let members = run.members.clone();
     require_genuine_members(world, owner, copy, run)?;
+    require_selected_copy(world, owner, copy)?;
+    require_idle_copy(world, copy)?;
+    Ok((copy, members))
+}
+
+fn require_selected_copy(world: &World, owner: Entity, copy: InMap) -> Result<(), String> {
     let entrant = crate::maps::transfer::entrant_of(world, owner);
     let now = crate::maps::difficulty::now(world);
     if world
@@ -73,6 +79,10 @@ fn require_idle_owned_party(
     {
         return Err("owner's admitted follower copy is no longer selected".into());
     }
+    Ok(())
+}
+
+fn require_idle_copy(world: &mut World, copy: InMap) -> Result<(), String> {
     let encounter_active = world
         .get_resource::<crate::scripted_ai::instance_script::InstanceScripts>()
         .and_then(|scripts| scripts.0.get(&copy))
@@ -88,7 +98,7 @@ fn require_idle_owned_party(
     if encounter_active || combat_active {
         return Err("staging refused during combat or an encounter in progress".into());
     }
-    Ok((copy, members))
+    Ok(())
 }
 
 fn require_genuine_members(
@@ -98,23 +108,40 @@ fn require_genuine_members(
     run: &FollowerRun,
 ) -> Result<(), String> {
     for (&unit, profile) in run.members.iter().zip(&run.profiles) {
-        let genuine = world.get::<Follower>(unit).is_some_and(|follower| {
-            follower.owner == owner && follower.profile.entry == profile.entry
-        }) && world
-            .get::<crate::zones::TempSummon>(unit)
-            .is_some_and(|summon| summon.summoner == owner)
-            && world
-                .get::<Npc>(unit)
-                .is_some_and(|npc| npc.template_id == profile.entry)
-            && world.get::<InMap>(unit) == Some(&copy)
-            && world.get::<Position>(unit).is_some();
-        if !genuine {
+        if !is_genuine_follower(world, unit, owner, copy, profile.entry) {
             return Err("party member is not the owner's genuine follower".into());
         }
     }
+    require_owned_roster(world, owner, &run.members)
+}
+
+fn is_genuine_follower(
+    world: &World,
+    unit: Entity,
+    owner: Entity,
+    copy: InMap,
+    entry: u32,
+) -> bool {
+    let owned_profile = world
+        .get::<Follower>(unit)
+        .is_some_and(|follower| follower.owner == owner && follower.profile.entry == entry);
+    let owned_summon = world
+        .get::<crate::zones::TempSummon>(unit)
+        .is_some_and(|summon| summon.summoner == owner);
+    let native_npc = world
+        .get::<Npc>(unit)
+        .is_some_and(|npc| npc.template_id == entry);
+    owned_profile
+        && owned_summon
+        && native_npc
+        && world.get::<InMap>(unit) == Some(&copy)
+        && world.get::<Position>(unit).is_some()
+}
+
+fn require_owned_roster(world: &World, owner: Entity, members: &[Entity]) -> Result<(), String> {
     let id = world.get::<ClientId>(owner).expect("online owner").0;
     let expected: BTreeSet<_> = std::iter::once(id)
-        .chain(run.members.iter().copied().map(Follower::member_id))
+        .chain(members.iter().copied().map(Follower::member_id))
         .collect();
     let actual: BTreeSet<_> = world
         .resource::<GroupRegistry>()
