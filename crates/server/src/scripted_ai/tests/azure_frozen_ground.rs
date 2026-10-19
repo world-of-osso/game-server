@@ -463,12 +463,40 @@ fn azure_frozen_ground_native_expiry_hazard_is_escaped_by_a_native_follower_on_p
         !has_own_ground_aura(&h, unit, telash),
         "native aura cleanup after the membership update following physical escape"
     );
+    let mut detected_at = None;
     for _ in 0..40 {
+        let before = at(&h, unit).distance(center);
         h.advance(STEP);
+        let now = crate::auras::aura_now(h.app.world());
         let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+        let predicted = crate::spell_cast::area_trigger::avoidance_radius_at(
+            h.app.world(),
+            field,
+            unit,
+            now + 0.050,
+        )
+        .unwrap();
+        if before <= predicted {
+            detected_at.get_or_insert(now);
+        } else {
+            detected_at = None;
+        }
+        let after = at(&h, unit).distance(center);
         assert!(
-            at(&h, unit).distance(center) > radius + reach,
-            "normal follow/combat does not re-enter growing native affect range"
+            after >= before,
+            "normal follow/combat must not move back into the growing field"
         );
+        if after <= radius + reach {
+            let reacting = detected_at.is_some_and(|start| now < start + 0.250);
+            let pending = h
+                .app
+                .world()
+                .resource::<crate::navigation::Navigation>()
+                .route_pending(unit);
+            assert!(
+                reacting || pending || after > before,
+                "after reaction and publication the native follower must resume its escape"
+            );
+        }
     }
 }

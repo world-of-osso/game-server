@@ -125,6 +125,19 @@ impl Navigation {
         }
     }
 
+    /// Use the selected owned candidate corridor without another worker roundtrip.
+    pub(crate) fn adopt_candidate_route(
+        &mut self,
+        entity: Entity,
+        request: MoveRequest,
+        points: Vec<Vec3>,
+    ) {
+        self.cancel_query(entity, request.goal);
+        self.cancel_route(entity);
+        self.publish_route(entity, request, Ok(Some(Output::Path(points))));
+    }
+
+    #[cfg(test)]
     pub(crate) fn continue_route(
         &mut self,
         entity: Entity,

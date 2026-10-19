@@ -12,11 +12,16 @@ struct Field {
     radius: f32,
 }
 
+// FOLLOWER_HAZARD_REACTION_POLICY: project policy, not sourced Retail timing.
+const PREDICTION_SECONDS: f64 = 0.050;
+const REACTION_SECONDS: f64 = 0.250;
+
 #[derive(Component)]
 struct EscapeProbe {
     map: u32,
     goal: Goal,
-    targets: Vec<Vec3>,
+    detected_at: f64,
+    targets: Option<Vec<Vec3>>,
 }
 
 fn clear_escape_probe(world: &mut World, unit: Entity) {
@@ -42,6 +47,10 @@ fn contains(field: &Field, point: Vec3) -> bool {
 }
 
 fn hostile_fields(world: &mut World, unit: Entity) -> Vec<Field> {
+    hostile_fields_at(world, unit, 0.0)
+}
+
+fn hostile_fields_at(world: &mut World, unit: Entity, prediction: f64) -> Vec<Field> {
     let mut fields: Vec<_> = crate::spell_cast::scripts::hostile_ground_fields(world, unit)
         .into_iter()
         .map(|(entity, center, radius)| Field {
@@ -52,6 +61,7 @@ fn hostile_fields(world: &mut World, unit: Entity) -> Vec<Field> {
         .collect();
     let map = world.get::<InMap>(unit).copied();
     let now = crate::auras::aura_now(world);
+    let at = now + prediction;
     fields.extend(
         world
             .query::<(
@@ -65,7 +75,7 @@ fn hostile_fields(world: &mut World, unit: Entity) -> Vec<Field> {
                 field.trigger_spell != 0
                     && field.radius > 0.0
                     && field.relation == crate::spell_cast::targets::Relation::Enemy
-                    && field.expires_at.is_none_or(|expiry| expiry > now)
+                    && field.expires_at.is_none_or(|expiry| expiry > at)
                     && Some(**field_map) == map
                     && crate::spell_cast::targets::relation_matches(
                         world,
@@ -76,7 +86,7 @@ fn hostile_fields(world: &mut World, unit: Entity) -> Vec<Field> {
             })
             .filter_map(|(entity, _, anchor, _)| {
                 let Some(radius) =
-                    crate::spell_cast::area_trigger::avoidance_radius(world, entity, unit)
+                    crate::spell_cast::area_trigger::avoidance_radius_at(world, entity, unit, at)
                 else {
                     warn!(
                         ?unit,
@@ -162,7 +172,7 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
     let Some(from) = world.get::<Position>(unit).copied() else {
         return false;
     };
-    let fields = hostile_fields(world, unit);
+    let fields = hostile_fields_at(world, unit, PREDICTION_SECONDS);
     let Some(field) = fields.iter().find(|field| contains(field, point(from))) else {
         clear_escape_probe(world, unit);
         return false;
@@ -177,21 +187,42 @@ pub(super) fn escape(world: &mut World, unit: Entity) -> bool {
         return true;
     };
     let goal = Goal::Hazard(field.entity.to_bits());
-    let to = match escape_destination(world, unit, map.map_id, from, goal, field, &fields) {
-        EscapeDestination::Pending => {
-            advance_escape(world, unit, map.map_id, from, None, goal);
-            return true;
+    let now = crate::auras::aura_now(world);
+    let same_detection = world
+        .get::<EscapeProbe>(unit)
+        .is_some_and(|probe| probe.map == map.map_id && probe.goal == goal);
+    if !same_detection {
+        clear_escape_probe(world, unit);
+        world.entity_mut(unit).insert(EscapeProbe {
+            map: map.map_id,
+            goal,
+            detected_at: now,
+            targets: None,
+        });
+    }
+    // Submit immediately; preparation/publication may finish during human reaction.
+    let destination = escape_destination(world, unit, map.map_id, from, goal, field, &fields);
+    let detected_at = world
+        .get::<EscapeProbe>(unit)
+        .expect("active detection")
+        .detected_at;
+    if now < detected_at + REACTION_SECONDS {
+        crate::creature_ai::move_follower(world, unit, from, 0.0);
+        return true;
+    }
+    match destination {
+        EscapeDestination::Ready(to) => {
+            advance_escape(world, unit, map.map_id, from, position(to), goal)
         }
-        EscapeDestination::Ready(to) => to,
+        EscapeDestination::Pending => crate::creature_ai::move_follower(world, unit, from, 0.0),
         EscapeDestination::Blocked => {
             warn!(
                 "Follower {unit} cannot leave bound field {} through authored navigation",
                 field.entity
             );
-            return true;
+            crate::creature_ai::move_follower(world, unit, from, 0.0);
         }
-    };
-    advance_escape(world, unit, map.map_id, from, Some(position(to)), goal);
+    }
     true
 }
 
@@ -221,18 +252,17 @@ fn escape_destination(
     }
     // A growing native field must not replace its batch every tick. Capture the
     // decision once, then validate its returned endpoints against current fields.
-    let targets = if let Some(probe) = world.get::<EscapeProbe>(unit)
-        && probe.map == map
-        && probe.goal == goal
+    let targets = if let Some(targets) = world
+        .get::<EscapeProbe>(unit)
+        .and_then(|probe| probe.targets.clone())
     {
-        probe.targets.clone()
+        targets
     } else {
         let targets = sample_escape_targets(world, map, from, field, fields);
-        world.entity_mut(unit).insert(EscapeProbe {
-            map,
-            goal,
-            targets: targets.clone(),
-        });
+        world
+            .get_mut::<EscapeProbe>(unit)
+            .expect("active detection")
+            .targets = Some(targets.clone());
         targets
     };
     let result = world.resource_mut::<Navigation>().query_deferred(
@@ -259,15 +289,32 @@ fn escape_destination(
             return blocked_escape(world, unit);
         }
     };
-    let destination = choose_escape_route(unit, targets, routes, fields);
-    if matches!(destination, EscapeDestination::Blocked) {
-        clear_escape_probe(world, unit);
-    }
-    destination
+    let Some((to, path)) = choose_escape_route(unit, targets, routes, fields) else {
+        return blocked_escape(world, unit);
+    };
+    world.resource_mut::<Navigation>().adopt_candidate_route(
+        unit,
+        MoveRequest {
+            map_id: map,
+            goal,
+            from,
+            to: position(to),
+            distance: 0.0,
+            reach: 0.0,
+        },
+        path,
+    );
+    EscapeDestination::Ready(to)
 }
 
 fn blocked_escape(world: &mut World, unit: Entity) -> EscapeDestination {
-    clear_escape_probe(world, unit);
+    if let Some(mut probe) = world.get_mut::<EscapeProbe>(unit) {
+        probe.targets = None;
+        let goal = probe.goal;
+        if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
+            nav.cancel_query(unit, goal);
+        }
+    }
     EscapeDestination::Blocked
 }
 
@@ -294,8 +341,8 @@ fn choose_escape_route(
     targets: Vec<Vec3>,
     routes: Vec<Result<Vec<Vec3>, String>>,
     fields: &[Field],
-) -> EscapeDestination {
-    let mut best: Option<(f32, Vec3)> = None;
+) -> Option<(Vec3, Vec<Vec3>)> {
+    let mut best: Option<(f32, Vec3, Vec<Vec3>)> = None;
     for (to, route) in targets.into_iter().zip(routes) {
         let route = match route {
             Ok(route) => route,
@@ -308,13 +355,14 @@ fn choose_escape_route(
             continue;
         }
         let length = route.windows(2).map(|pair| pair[0].distance(pair[1])).sum();
-        if best.is_none_or(|(previous, _)| length < previous) {
-            best = Some((length, to));
+        if best
+            .as_ref()
+            .is_none_or(|(previous, _, _)| length < *previous)
+        {
+            best = Some((length, to, route));
         }
     }
-    best.map_or(EscapeDestination::Blocked, |(_, to)| {
-        EscapeDestination::Ready(to)
-    })
+    best.map(|(_, to, path)| (to, path))
 }
 
 fn supported_candidate(
@@ -358,7 +406,7 @@ fn advance_escape(
     unit: Entity,
     map: u32,
     from: Position,
-    to: Option<Position>,
+    to: Position,
     goal: Goal,
 ) {
     let scale = world
@@ -372,23 +420,17 @@ fn advance_escape(
     if distance <= 0.0 {
         return;
     }
-    let mut nav = world.resource_mut::<Navigation>();
-    let step = if let Some(to) = to {
-        nav.advance(
-            unit,
-            MoveRequest {
-                map_id: map,
-                goal,
-                from,
-                to,
-                distance,
-                reach: 0.0,
-            },
-        )
-    } else {
-        nav.continue_route(unit, map, from, distance)
-    };
-    drop(nav);
+    let step = world.resource_mut::<Navigation>().advance(
+        unit,
+        MoveRequest {
+            map_id: map,
+            goal,
+            from,
+            to,
+            distance,
+            reach: 0.0,
+        },
+    );
     if let Step::Moved { mut position, .. } = step {
         let crate::ground::GroundProbe::Supported(height) = world
             .resource_mut::<crate::ground::GroundMap>()
