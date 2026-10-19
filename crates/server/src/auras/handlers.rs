@@ -135,6 +135,8 @@ pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
 /// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
 pub const MOD_BLOCK_PERCENT: u32 = 51;
+/// TC Unit.cpp2889: NPC autoattack source crit; player weapon masks remain unsupported.
+pub const MOD_WEAPON_CRIT_PERCENT: u32 = 52;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
 /// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
@@ -339,6 +341,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
         | MOD_CRIT_PCT
+        | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING
         | MASTERY
         | MOD_STAT_BONUS_PCT

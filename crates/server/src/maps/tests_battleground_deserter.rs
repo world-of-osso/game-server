@@ -4,6 +4,9 @@ use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 #[path = "tests_battleground_deserter_port.rs"]
 mod port;
 
+#[path = "tests_battleground_lfg.rs"]
+mod lfg_refusal;
+
 // TC a352b1fa Player.h2594: IsDeserter() is HasAura(26013).
 const DESERTER_SPELL_ID: u32 = 26013;
 const DUNGEON_DESERTER_SPELL_ID: u32 = 71041;
