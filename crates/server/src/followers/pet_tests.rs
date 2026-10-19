@@ -550,7 +550,6 @@ fn assert_stockade_pet_route(chase: bool) {
 }
 
 #[test]
-#[ignore = "RED: live controlled-pet route must survive fixed pruning until actual despawn"]
 fn follower_live_pet_route_survives_fixed_pruning_and_cancels_after_despawn() {
     use crate::navigation::{Goal, MoveRequest, Navigation, Step};
     let (mut f, pet, _) = stockade_pet();
