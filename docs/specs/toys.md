@@ -13,6 +13,13 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Natural shared hearthstone charge coverage
+
+- [x] Hiveborne281136/1310234 and Shadeweaver281615/1311934 naturally recover the shared SpellCategory2309 charge: source MaxCharges1 and ChargeRecoveryTime1800000ms.
+- [x] In both directions, actual learning/first ten-second cast spends the charge and blocks the sibling before thirty minutes; ordinary passage permits the sibling's full ten-second cast, which spends the one shared charge and blocks the original.
+
+Use ordinary50ms fixture updates, observed completion-frame bounds and actual UseToy/charge messages; never reset charge state, edit deadlines or accelerate clocks. This is coverage-first, not an assumed runtime fix. Bind return and health/model invariance remain intact. No new Toy/data/assets or native proof; the accepted sourced boundary and three named gaps are unchanged.
+
 ## Ordinary lifetime and reuse follow-up
 
 - [x] Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830 naturally retain their own aura before the source30-minute lifetime, then remove it from authoritative and replicated state after expiry, without cancellation or health/body/position changes.
@@ -28,7 +35,7 @@ Proof must use ordinary50ms fixture updates and independently observed cast-time
 
 The shared census oracle preserves the named Full1166 baseline and adds only explicitly published build70448 identities from these hearthstones, the [stationary cosmetics](#expanded-build70448-stationary-loa-cosmetics) and the [footstep cosmetics](#expanded-build70448-footstep-cosmetics). Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare total must not replace the historical baseline or silently admit other source-only toys.
 
-CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Other newly approved toys are separate batches.
+[Natural thirty-minute shared-charge recovery](#natural-shared-hearthstone-charge-coverage) has bounded CPU coverage for281136/281615. Native visuals/audio and cross-map travel remain unproved. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Other newly approved toys are separate batches.
 
 ## Expanded build70448 stationary Loa cosmetics
 
