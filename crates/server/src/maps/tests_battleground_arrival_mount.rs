@@ -7,13 +7,11 @@ const STANDARD_GROUND_SPEED: u32 = 86457;
 const UNRELATED_AURA: u32 = DUNGEON_DESERTER_SPELL_ID;
 
 #[test]
-#[ignore = "RED: successful ordinary BG arrival retains mount aura and display"]
 fn bg_arrival_mount_concrete_dismounts_only_after_world_port_ack() {
     assert_arrival_dismounts(1018);
 }
 
 #[test]
-#[ignore = "RED: successful ordinary BG arrival retains mount aura and display"]
 fn bg_arrival_mount_random_dismounts_only_after_world_port_ack() {
     assert_arrival_dismounts(32);
 }
