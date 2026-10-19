@@ -1,5 +1,11 @@
 # Toy effects14 — active whole-goal coverage
 
+## Ordinary30-minute/hour coverage follow-up: pending (2026-10-18)
+
+Boundary docs73eb4c48b explicitly landedec7df3660; merged docs branch cleaned after ancestry verification. Approved follow-up covers only existing Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830. Authoritative70448 duration1800000ms/recovery3600000ms is already admitted; no runtime defect or RED is assumed.
+
+New real-learning/UseToy cases observe cast-time lower/upper bounds, then use only the existing harness's ordinary50ms updates: aura present before30min, naturally absent from authoritative/replicated state after30min, recovery refusal after expiry and near1h, then a second SpellGo/fresh owner aura after1h with unchanged health/body/position. Targets use1799/1801s and3598/3601s around the observed cast interval, not an internal deadline oracle. No cancellation, clock scaling, deadline/cooldown edits, source metadata, Toy rows or assets change. First targeted execution remains pending; honest first-run GREEN is an allowed coverage result, not a fabricated bug fix. [Contract](specs/toys.md#ordinary-lifetime-and-reuse-follow-up).
+
 ## Accepted sourced boundary: Full1166 plus seven (2026-10-18)
 
 Lead accepted the batch4 contract matrix: the current sourced boundary is complete at historical Full1166+seven published70448 extras, with the remaining three extras explicitly named gaps and absent from Toy membership. Current server69ed3c682 contains the two hearthstones and five Loa cosmetics; ty639 passed209/0/check0/fmt0 and landed batch3. Feature branches were cleaned after ancestry verification. Earlier pending labels below are historical, not the current acceptance state.

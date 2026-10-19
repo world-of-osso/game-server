@@ -13,6 +13,13 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Ordinary lifetime and reuse follow-up
+
+- [ ] Loa-Blessed Victory280820/1309827 and Nalorakk's Strength Charm280822/1309830 naturally retain their own aura before the source30-minute lifetime, then remove it from authoritative and replicated state after expiry, without cancellation or health/body/position changes.
+- [ ] Natural aura expiry does not clear the sourceone-hour recovery: actual UseToy refuses after expiry and near the hour boundary, then ordinary simulation passage permits a second SpellGo and fresh source-duration owner aura.
+
+Proof must use ordinary50ms fixture updates and independently observed cast-time bounds, not edited deadlines/cooldowns, accelerated clocks or an internal expiry value as its oracle. This is coverage of existing behavior, not an assumed runtime defect; first-run GREEN needs no fabricated RED. Scope is these two identities only. Other toys' full-duration/native presentation remains separate; accepted sourced boundary and all three unpublished gaps stay unchanged.
+
 ## Expanded build70448 hearthstones
 
 - [x] Admit Hiveborne281136/1310234 and Shadeweaver281615/1311934 from their exact build70448 Toy rows without replacing the historical1166 catalog or admitting the other eight newly scoped toys in this batch.
