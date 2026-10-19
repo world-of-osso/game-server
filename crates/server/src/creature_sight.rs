@@ -407,6 +407,32 @@ impl SightParams<'_, '_> {
     }
 }
 
+/// Read the production NPC-to-NPC acquisition predicate without adding threat.
+#[cfg(test)]
+pub(crate) fn read_npc_proximity_acquisition(
+    world: &mut World,
+    watcher: Entity,
+    target: Entity,
+) -> Result<bool, String> {
+    if world
+        .get_resource::<crate::line_of_sight::LineOfSight>()
+        .is_none()
+    {
+        return Err("Native acquisition proof requires actual LOS data".into());
+    }
+    let mut state = bevy::ecs::system::SystemState::<SightParams>::new(world);
+    let params = state
+        .get(world)
+        .map_err(|error| format!("Native NPC acquisition inputs unavailable: {error:?}"))?;
+    let me = params
+        .view(watcher)
+        .ok_or("Native acquisition watcher lacks a live active NPC view")?;
+    let who = params
+        .view(target)
+        .ok_or("Native acquisition recipient lacks a live active NPC view")?;
+    Ok(params.sight(watcher, &me, &who, distance(me.position, who.position)))
+}
+
 /// `Map::ProcessRelocationNotifies`, every `NOTIFY_PERIOD_SECS`: each pending creature
 /// and each creature near it see each other (`CreatureRelocationNotifier::Visit`); an idle
 /// aggressive creature that may start attacking one of the creatures it saw attacks the

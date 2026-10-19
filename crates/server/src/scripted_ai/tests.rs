@@ -42,7 +42,7 @@ pub(crate) fn install_fixture_ai(world: &mut World, actor: Entity, ai: Box<dyn C
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
 pub(super) mod cast_admission;
-mod data_bosses;
+pub(crate) mod data_bosses;
 mod dungeonach;
 mod rainfire_visibility;
 mod smart_combat;
