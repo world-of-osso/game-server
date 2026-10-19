@@ -1235,6 +1235,32 @@ fn threat_membership_dormant_despawn_does_not_publish_to_the_dead_entity() {
 }
 
 #[test]
+fn threat_membership_removed_then_reslept_never_publishes_a_wake() {
+    let mut app = App::new();
+    app.add_observer(replicate_woken_threat_list);
+    let victim = app.world_mut().spawn_empty().id();
+    let mut threat = ThreatTable::default();
+    threat.add_threat(victim.to_bits(), 100.0);
+    let npc = app.world_mut().spawn((threat, GridDormant)).id();
+    app.world_mut().commands().queue(move |world: &mut World| {
+        world.entity_mut(npc).remove::<GridDormant>();
+        world.entity_mut(npc).insert(GridDormant);
+    });
+    app.world_mut().flush();
+    assert!(app.world().get::<GridDormant>(npc).is_some());
+    assert!(
+        app.world().get::<UnitThreatList>(npc).is_none(),
+        "a re-slept creature must not publish an intermediate wake"
+    );
+    app.world_mut().entity_mut(npc).remove::<GridDormant>();
+    app.world_mut().flush();
+    assert_eq!(
+        app.world().get::<UnitThreatList>(npc).unwrap().0,
+        vec![victim.to_bits()]
+    );
+}
+
+#[test]
 fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
     let mut app = App::new();
     app.add_observer(replicate_woken_threat_list);

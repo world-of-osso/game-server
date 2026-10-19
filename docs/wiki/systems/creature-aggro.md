@@ -2,6 +2,10 @@
 
 How world creatures decide to fight: `crates/server/src/creature_aggro.rs` (`CreatureAggroPlugin`, FixedUpdate, before `chase_system`) ports AzerothCore's default creature AI (AggressorAI/ReactorAI): aggro on sight, threat from damage, top-threat victim selection and evade. Movement (chase, leash, return home) stays in [[creature-ai]]; swings go through the player auto-attack path in [[combat]]. Contract: [creature-aggro spec](../../specs/creature-aggro.md).
 
+## Dormant teardown versus waking — 2026-10-19
+
+Bevy removes `GridDormant` both on waking and during despawn. Publishing threat membership directly from the removal observer queued an insert while the dying entity remained queryable; after orphan follower cleanup despawned it, deferred insertion panicked. Native master614c tests reproduce both dormant despawn and owner-despawn→`followers::party::advance_runs`→orphan unsummon failures; unchanged actual-wake/active-edit control passes. Wake publication now resolves the surviving `Without<GridDormant>` creature after structural removal and inserts directly in that exclusive continuation. Despawn/re-sleep has no awake recipient, so publishes nothing; no silenced insertion or altered orphan cleanup. Targeted GREEN pending. [Native regression](../../../crates/server/src/creature_aggro_tests.rs), [owner teardown regression](../../../crates/server/src/followers/party.rs).
+
 ## Spawn components
 
 `CreatureTemplate.aggro_mode` is computed at load from `type`, `flags_extra`, `unit_flags` and `ScriptName` (`AggroMode::for_template`); `zones.rs` calls `insert_aggro_components`:

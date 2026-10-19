@@ -434,21 +434,24 @@ fn replicate_threat_list_system(
     }
 }
 
-fn replicate_woken_threat_list(
-    event: On<Remove, GridDormant>,
-    creatures: Query<(&ThreatTable, Option<&UnitThreatList>)>,
-    dirty: Option<Res<ReplicationDirtyQueue>>,
-    mut commands: Commands,
-) {
-    if let Ok((threat, replicated)) = creatures.get(event.entity) {
-        publish_threat_membership(
-            event.entity,
-            threat,
-            replicated,
-            dirty.as_deref(),
-            &mut commands,
-        );
-    }
+fn replicate_woken_threat_list(event: On<Remove, GridDormant>, mut commands: Commands) {
+    let creature = event.entity;
+    // Remove also fires during despawn. Resolve the surviving awake state only
+    // after the structural transition, not while the dying entity is queryable.
+    commands.queue(move |world: &mut World| {
+        let mut awake =
+            world.query_filtered::<(&ThreatTable, Option<&UnitThreatList>), Without<GridDormant>>();
+        let Ok((threat, replicated)) = awake.get(world, creature) else {
+            return;
+        };
+        let units = read_changed_threat_membership(threat, replicated);
+        if let Some(units) = units {
+            world.entity_mut(creature).insert(UnitThreatList(units));
+            if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+                dirty.mark(creature);
+            }
+        }
+    });
 }
 
 fn publish_threat_membership(
@@ -458,16 +461,23 @@ fn publish_threat_membership(
     dirty: Option<&ReplicationDirtyQueue>,
     commands: &mut Commands,
 ) {
-    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
-    if replicated.is_some_and(|replicated| replicated.0 == units)
-        || (replicated.is_none() && units.is_empty())
-    {
+    let Some(units) = read_changed_threat_membership(threat, replicated) else {
         return;
-    }
+    };
     commands.entity(creature).insert(UnitThreatList(units));
     if let Some(dirty) = dirty {
         dirty.mark(creature);
     }
+}
+
+fn read_changed_threat_membership(
+    threat: &ThreatTable,
+    replicated: Option<&UnitThreatList>,
+) -> Option<Vec<u64>> {
+    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
+    let unchanged = replicated.is_some_and(|replicated| replicated.0 == units)
+        || (replicated.is_none() && units.is_empty());
+    (!unchanged).then_some(units)
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
