@@ -35,7 +35,7 @@ use crate::persistence::GameDatabase;
 use crate::persistence::pet_store::{StoredPet, StoredPetStable, load_pet_stable, save_pet_stable};
 use crate::spell_cast::CastFailure;
 use crate::spell_cast::effects::EffectCtx;
-use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
+use crate::spell_cast::powers::{PetFocusRegen, PowerPools, PowerTypeTable};
 use crate::spell_info::{SpellEffect, SpellInfo};
 use crate::tame::{
     MAX_ACTIVE_PETS, PetStableSlots, TameFailReason, TameHunter, TameTarget, can_tame,
@@ -838,6 +838,9 @@ fn spawn_pet(
             CombatTarget::default(),
         ),
     ));
+    if power == PowerType::Focus {
+        pet.insert(PetFocusRegen::default());
+    }
     if companion {
         pet.insert(crate::followers::FollowerReach(
             crate::creature_ai::CHASE_REACH,

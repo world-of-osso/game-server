@@ -1,3 +1,11 @@
+## 2026-10-17 — NPC victim dodge49
+
+[NPC49](systems/player-damage.md#npc-victim-dodge-aura49--2026-10-17): ignoreddf529 pushed first; actual5277+62356effect1 sum0 across8s/block51=0, qualification1PASS33.62s. Nativefront/behind each5Damage despite live200, genuine2RED/4PASS35.27s. Existingtarget_auras consumer onlyNPC/allowedhit path before251/240/clamp; no playerdoublecount/otherdefense/Guardian/query/wire/RNG/clock change. Consumere6e99fb6e fresh nativebehavior6/6GREEN57.40s0warnings +retained qualification1PASS33.62s (7composite,notone7batch), onlythen allseven enabled/pushed; lead gate pending.
+
+## 2026-10-18 — Hunter-pet Focus interval
+
+[Focus timing](systems/combat-pet-lifecycle.md#hunter-focus-timing--2026-10-18): exact unchanged Bite RED76vs75 and native boundary RED76.25vs75; cost25 authenticated, pinnedTC24/4000ms spawn/full-pool phase consumer added only for Focus pets. Player/demon paths unchanged; merged3cc539edd exact originalBite/new interval/player5/s3GREEN62.27s + retained lifecycle/autocast/Imp4GREEN172.48s,0warnings; lead combined/check/format gate pending.
+
 ## 2026-10-17 — Character-owned recipe Favorites
 
 [Professions](systems/professions.md#character-owned-recipe-favorites) adds known-spell-only preference requests and a character-keyed redb multimap without changing existing profession record encoding. Existing owner snapshots carry current favorites; request/refusal and reopen/isolation proof is pending targeted GREEN and the coordinated consumer gate.
@@ -2941,3 +2949,4 @@ Recorded real33076 ward RED, approved per-cast stack/original-caster API and nat
 - 2026-10-18 — Replace LOS/nav bake and vehicle duplicate binary readers with pinned wow-formats geometry metadata; preserve selection/posing policy and capture old-reader Stockade reference. [Shared formats](systems/wow-formats.md).
 
 - 2026-10-18: Herald Call Nazan source ingress, native integer damage qualification and actual firstWest Fireball interruption. Two-case RED→GREEN; exact one-tick/self-target refinement and retained gate pending. See [boss scripts](systems/boss-scripts.md#herald-call-nazan-descent-ingress--2026-10-18).
+- 2026-10-18 — Pin projected runtime-ground metadata APIs in wow-formats; preserve selected-field/FDID/error policy and frozen metadata/bake receipt boundaries. [Shared readers](systems/wow-formats.md).
