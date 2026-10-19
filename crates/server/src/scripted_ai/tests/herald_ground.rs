@@ -347,7 +347,6 @@ fn assert_ground_parents(difficulty: u32) {
 
 /// Source Spell.cpp4265 expires1500ms at the30th actual50ms update, not31st.
 #[test]
-#[ignore = "HERALD_CAST_PROGRESS_MS_UNIMPLEMENTED: native1500ms AI boundary RED first"]
 fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
     let (mut h, _, nazan, _, _, _) = reach_fall(2);
     let origin = h.app.world().resource::<CastAdmissions>().origin;

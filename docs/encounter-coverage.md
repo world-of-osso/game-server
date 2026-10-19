@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Shared cast progress / Herald native1500ms — 2026-10-19
+
+hr705's captured Cone/Roar overlap exposes shared float accumulation1.4999996 after30×50ms, not a Herald evade/reset repeat change. Pushed ignored native AI RED39.30s and shared normal/channel/pushback3RED precede nearest-integer-ms progress. Shared53GREEN plus strict native1450/1500ms50.60s and six retained native ground/Omor pushback controls105.21s; no oracle widening, RNG/source schedule/pushback/wire-field change. Engine source has no shared tick caller. [Root and paired acceptance](wiki/systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19); independent wide protocol/server gate/co-landing pending.
+
 ## Herald loaded-copy evade/reset — 2026-10-19
 
 Ignored RED pushed first; actual native357/wipe setup and unchanged-buffer ordinary damage death control2PASS/four missingFAIL RED121.66s. Source evade→four missing group-restoration RED110.75s precede independent copy-owned30000ms clock/ordinary357 ignoreRespawn restoration. Four corrected native Normal/Heroic full/alive-counter cases pass67.43s atb549ffbaf: source scheduling tick/reset deadline, living identity/copy isolation/count reset, fresh patrol/min1 and natural two-Sentry intro. Tests enabled; [contract/proof](specs/ramparts-herald.md#loaded-copy-evade-and30s-reset), independent LEAD gate pending. Native5 is HARNESS SETUP, not balance; reload/re-entry/persistence/chest/loot/Liquid Fire/native remain excluded.
