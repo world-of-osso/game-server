@@ -48,12 +48,12 @@ impl Navigation {
         });
     }
 
-    pub(super) fn publish_ready_routes(&mut self) {
+    pub(super) fn publish_ready_routes(&mut self, simulation_s: Option<f64>) {
         #[cfg(test)]
         self.applied.clear();
         for response in self.worker.poll() {
             let entity = Entity::from_bits(response.entity);
-            if self.publish_query(&response) {
+            if self.publish_query(&response, simulation_s) {
                 #[cfg(test)]
                 self.applied.push((entity, response.id));
                 continue;
@@ -132,6 +132,17 @@ impl Navigation {
         request: MoveRequest,
         points: Vec<Vec3>,
     ) {
+        if let Goal::Hazard(field) = request.goal {
+            hazard_trace::emit("corridor_adopted", None, entity, || {
+                serde_json::json!({
+                    "field": field, "map_id": request.map_id,
+                    "request_id": self.queries.get(&entity).map(|query| query.id),
+                    "from": [request.from.x, request.from.y, request.from.z],
+                    "destination": [request.to.x, request.to.y, request.to.z],
+                    "corners": points.len(),
+                })
+            });
+        }
         self.cancel_query(entity, request.goal);
         self.cancel_route(entity);
         self.publish_route(entity, request, Ok(Some(Output::Path(points))));
@@ -207,7 +218,7 @@ impl Navigation {
     #[cfg(test)]
     pub(crate) fn drain_until_idle(&mut self) {
         while !self.worker.is_idle() {
-            self.publish_ready_routes();
+            self.publish_ready_routes(None);
             std::thread::yield_now();
         }
     }
@@ -225,6 +236,6 @@ fn same_route_request(previous: &MoveRequest, next: &MoveRequest) -> bool {
         && same_target
 }
 
-pub(super) fn publish_navigation_results(mut nav: ResMut<Navigation>) {
-    nav.publish_ready_routes();
+pub(super) fn publish_navigation_results(mut nav: ResMut<Navigation>, time: Res<Time<Virtual>>) {
+    nav.publish_ready_routes(Some(time.elapsed_secs_f64()));
 }

@@ -121,7 +121,7 @@ fn navigation_completion_sets_apply_in_entity_request_order() {
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut count = 0;
     while !nav.worker.is_idle() {
-        nav.publish_ready_routes();
+        nav.publish_ready_routes(None);
         assert!(
             nav.applied.windows(2).all(|pair| {
                 (pair[0].0.to_bits(), pair[0].1) < (pair[1].0.to_bits(), pair[1].1)
