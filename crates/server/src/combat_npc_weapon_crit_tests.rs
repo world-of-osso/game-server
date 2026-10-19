@@ -179,7 +179,6 @@ fn player_clamp_fixture() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "native qualification before aura52 consumer"]
 fn native_melee_npc_weapon_crit_inputs_are_runtime_qualified() {
     let (mut h, _) = fixture();
     let npc = h.npc;
@@ -213,7 +212,6 @@ fn native_melee_npc_weapon_crit_inputs_are_runtime_qualified() {
 }
 
 #[test]
-#[ignore = "native qualification before shared crit clamp correction"]
 fn native_melee_npc_weapon_crit_player_187_334_inputs_are_runtime_qualified() {
     let (mut h, victim) = player_clamp_fixture();
     let start = h.app.world().resource::<Time>().elapsed();
@@ -232,7 +230,6 @@ fn native_melee_npc_weapon_crit_player_187_334_inputs_are_runtime_qualified() {
 }
 
 #[test]
-#[ignore = "behavioral RED before NPC52 consumer"]
 fn native_melee_npc_weapon_crit_negative_prevents_crit() {
     let (mut h, victim) = fixture();
     let events = npc_swings(&mut h, victim, SWINGS);
@@ -240,7 +237,6 @@ fn native_melee_npc_weapon_crit_negative_prevents_crit() {
 }
 
 #[test]
-#[ignore = "behavioral RED before NPC52 consumer"]
 fn native_melee_npc_weapon_crit_positive_saturates_table() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -256,7 +252,6 @@ fn native_melee_npc_weapon_crit_positive_saturates_table() {
 }
 
 #[test]
-#[ignore = "behavioral RED before NPC52 consumer"]
 fn native_melee_npc_weapon_crit_signed_sum_not_last_effect_or_clipped_effects() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -269,7 +264,6 @@ fn native_melee_npc_weapon_crit_signed_sum_not_last_effect_or_clipped_effects() 
 }
 
 #[test]
-#[ignore = "behavioral control before NPC52 consumer"]
 fn native_melee_npc_weapon_crit_cancelled_positive_leaves_negative() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -281,7 +275,6 @@ fn native_melee_npc_weapon_crit_cancelled_positive_leaves_negative() {
 }
 
 #[test]
-#[ignore = "behavioral control before NPC52 consumer"]
 fn native_melee_npc_weapon_crit_foreign_positive_does_not_change_attacker() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, POSITIVE, 1);
@@ -292,7 +285,6 @@ fn native_melee_npc_weapon_crit_foreign_positive_does_not_change_attacker() {
 }
 
 #[test]
-#[ignore = "behavioral control before NPC52 consumer"]
 fn native_melee_npc_weapon_crit_without_52_keeps_five_percent_baseline() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -305,7 +297,6 @@ fn native_melee_npc_weapon_crit_without_52_keeps_five_percent_baseline() {
 }
 
 #[test]
-#[ignore = "behavioral RED before pre334 clamp correction"]
 fn native_melee_npc_weapon_crit_clamps_source_before_autoattack_334() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -317,7 +308,6 @@ fn native_melee_npc_weapon_crit_clamps_source_before_autoattack_334() {
 }
 
 #[test]
-#[ignore = "behavioral RED before shared player187/334 clamp correction"]
 fn native_melee_npc_weapon_crit_player_187_clamps_before_attacker_334() {
     let (mut h, victim) = player_clamp_fixture();
     let caster = h.caster;
