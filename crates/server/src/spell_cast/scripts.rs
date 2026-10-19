@@ -181,6 +181,7 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (20_538, 0) => Some(hate_to_zero),
         (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
@@ -460,6 +461,14 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
 
 /// TC a352b1fa spell_dh.cpp:1035-1055 bridges203720 to203819;
 /// spell_dh_deflecting_spikes:891-910 excludes parry effect0 without321028.
+/// TC spell_generic.cpp2015–2034: each actual20538 hit loses100% caster threat.
+fn hate_to_zero(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    if let Some(mut threat) = world.get_mut::<shared::components::ThreatTable>(caster) {
+        let amount = threat.threat_for(target.to_bits());
+        threat.add_threat(target.to_bits(), -amount);
+    }
+}
+
 fn demon_spikes(world: &mut World, caster: Entity, _target: Entity, _depth: u8) {
     let mut effect_mask = u32::MAX;
     if !crate::auras::has_aura(world, caster, DEFLECTING_SPIKES) {

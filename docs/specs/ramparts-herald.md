@@ -49,6 +49,11 @@ TC Object.cpp709–748 calls GetMapHeight with pre-clamp Z once, then assigns th
 - [x] Bounded lethal min1 guard (TC Initialize166/DamageTaken214–215): represent the Herald's source `_isUnkillable=true` state from appearance, preserve it across living entry morph and read it at the actual melee/direct/spell/periodic health-commit boundaries. Source lethal loss leaves exactly1HP, including self-source and repeated loss at1; nonlethal loss is unchanged. No death state/log/credit may precede the later release. Keep the existing intro-versus-own30 ordering, copy isolation and unrelated/Nibbles/Animated Gold semantics. Do not substitute generic SetUnkillable, which deliberately excludes self-loss. Scope stops before point4 arrival; `HERALD_UNKILLABLE_RELEASE_AFTER_FALL_UNIMPLEMENTED` names the later DESCEND4 false/release branch, not a fabricated release timer.
 - [ ] Run source ground-phase casts, fireball/cone liquid-fire children and object lifetimes with authored targets and effects; retain Heroic branches as unverified until tested, not silently replaced by Normal behavior.
 
+### Bounded fall through DESCEND3
+
+- [ ] Natural point4 arrival launches source MoveFall(5); retain XZ, sample the original map floor once, use TC falling acceleration/terminal velocity and integer-ms spline completion. No fabricated callback, teleport, run-speed interpolation or substitute deadline.
+- [ ] Actual EFFECT5 completion enables gravity and ordinary20538 exactly once. Its native DUMMY0 actual hits reduce caster threat by100%, retaining references; respect ordinary targets/admission and copy isolation. Stay Passive and min1-protected through this endpoint. DESCEND4/release, ground casts, paired credit/reset and native presentation remain excluded.
+
 ### Completion and reset
 
 - [ ] Credit1892/bit1 only when both Nazan and Vazruden have actually died, in either order, exactly once and only in their copy. Neither individual death, intro nor entry morph completes it.
