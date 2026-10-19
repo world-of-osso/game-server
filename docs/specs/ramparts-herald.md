@@ -10,7 +10,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - [x] Retain source actor roles: Herald17307 becomes Nazan17536 on the same actor;30717 summons Vazruden17537. A shared display alone cannot select a primary or create extra credit bindings.
 - [ ] Prepare only independent database copies from actual TDB1210 templates, difficulty rows, models and addons. Preserve authored fields, population and other encounters; no synthetic Normal row, legacy-stat substitution or admission override.
 - [x] The `herald` spell producer preserves every field of the seven authored18430/20538/30693/30694/30696/30698/30699 spell/effect pairs, idempotently; missing input refuses atomically without unrelated-data changes.
-- [ ] Preserve group357's actual ordinary initial population: Herald and two17517 Sentries, groupFlags0. Its ignoreRespawn reset must not require changing it into a manual-spawn group.
+- [x] Preserve group357's actual ordinary initial population: Herald and two17517 Sentries, groupFlags0. Its ignoreRespawn reset must not require changing it into a manual-spawn group.
 
 ### Prepared actors
 
@@ -75,11 +75,11 @@ Development proof: native actual dead30693/installed1892bit1 qualification1PASS 
 
 ### Loaded-copy evade and30s reset
 
-- [ ] Real loss of valid targets reaches source evade: Herald despawns and FAIL; Vazruden Talk0/despawns and FAIL. No fake hook, threat clear or health/stat override. FAIL is one transition/no1892success, even when both actors evade.
-- [ ] Independent copy clock runs after actor removal. Preserve source InstanceMap::Update order (Map.cpp2993–3000): unit hooks before instance Events.Update, so the30000ms event consumes its scheduling50ms frame and resets at observedFAIL+29950ms in the fixture. No shortened timer.
-- [ ] Use actual TDB group357 membership/flags0 with ignoreRespawn=true, NOTforce=true: clear timers, replace dead members from their authored placement/difficulty, preserve already-alive member identities and never withhold regular initial population or mutate canonical data. Source Map2360–2446/Creature1856–1884.
-- [ ] Restore source17307/two17517, zero Sentry counter, remove remaining17537, fresh physical patrol/min1 and natural two-Sentry intro; prove Normal/Heroic/copy-isolation/already-alive/counter1 controls. AfterDataLoad/OnPlayerEnter reload/re-entry, persistence acceptance, chest/loot, Liquid Fire and native presentation remain separate.
-- [ ] Label actual native5 player-instakill as wipe HARNESS SETUP, not authored boss rotation/balance. Include bounded ordinary boss-damage death control without modifying the fixture buffer; if unreachable, record its bound and remaining health.
+- [x] Real loss of valid targets reaches source evade: Herald despawns and FAIL; Vazruden Talk0/despawns and FAIL. No fake hook, threat clear or health/stat override. FAIL is one transition/no1892success, even when both actors evade.
+- [x] Independent copy clock runs after actor removal. Preserve source InstanceMap::Update order (Map.cpp2993–3000): unit hooks before instance Events.Update, so the30000ms event consumes its scheduling50ms frame and resets at observedFAIL+29950ms in the fixture. No shortened timer.
+- [x] Use actual TDB group357 membership/flags0 with ignoreRespawn=true, NOTforce=true: clear timers, replace dead members from their authored placement/difficulty, preserve already-alive member identities and never withhold regular initial population or mutate canonical data. Source Map2360–2446/Creature1856–1884.
+- [x] Restore source17307/two17517, zero Sentry counter, remove remaining17537, fresh physical patrol/min1 and natural two-Sentry intro; prove Normal/Heroic/copy-isolation/already-alive/counter1 controls. AfterDataLoad/OnPlayerEnter reload/re-entry, persistence acceptance, chest/loot, Liquid Fire and native presentation remain separate.
+- [x] Label actual native5 player-instakill as wipe HARNESS SETUP, not authored boss rotation/balance. Include bounded ordinary boss-damage death control without modifying the fixture buffer; if unreachable, record its bound and remaining health.
 
 ## How it works
 
@@ -89,13 +89,15 @@ Development proof: native actual dead30693/installed1892bit1 qualification1PASS 
 ## Implementation inventory
 
 - `crates/server/src/scripted_ai/hellfire_ramparts.rs`, `hellfire_ramparts/herald.rs` — registers Gargolmar, Omor, bounded Herald INTRO2 and actual Vazruden appearance/engagement. Real NPC death ingress counts Sentry entries in copy-lifetime instance state and dispatches1730700 to the retained ordinary Herald origin. INTRO1 removes active patrol state, not addon path data, then uses real point movement. Three INTRO1 and both Normal/Heroic INTRO2/copy cases are GREEN in the current targeted proof; later lifecycle is excluded.
-- `crates/server/src/scripted_ai/instance_script.rs` — copy-local boss/data state, transient Ramparts Sentry count and scheduled reset delays; unload discards them. Independent loaded-copy30s reset and ordinary group357 ignoreRespawn restoration are implemented after four genuine boundary REDs, awaiting targeted GREEN. Reload/re-entry remains excluded.
+- `crates/server/src/scripted_ai/instance_script.rs` — copy-local boss/data state, transient Ramparts Sentry count and scheduled reset delays; unload discards them. Independent loaded-copy30s reset and ordinary group357 ignoreRespawn restoration pass all four targeted Normal/Heroic full/alive-counter controls67.43s atb549ffbaf after four genuine boundary REDs. Independent integration gate remains pending. Reload/re-entry remains excluded.
 - `crates/server/src/zones/entry.rs` — `EntryProjection` reads/rolls represented target fields and applies them to a new or existing entity; `CreatureOrigin` retains ordinary source identity, `AddonPathId` is addon data rather than a running movement cursor. Bounded entry/spawn proof is GREEN; not a Herald AI registration or ordinary-respawn restoration.
 - `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
 - `scripts/encounter_summons.py` — `herald` projects17537/21252 base/models/addon and actual nonzero difficulty rows; the separate `herald-nazan` profile selects17536 base0/Heroic2 CT0 with source models/addon, without changing `herald`. Real-copy producer/refusal/idempotence/preservation controls are GREEN; natural Normal/Heroic INTRO2 now proves living runtime morph separately.
 
 ## Tests asserting this spec
+
+- `herald_reset.rs` — ignored test-onlyd856f7ddc pushed first; native actual357/wipe qualification and unchanged-buffer ordinary boss-damage death control2PASS, four genuine missingFAIL RED121.66s. Source real evade8985f8af3 reaches four genuine missing group357-restoration RED110.75s. Independent30000ms copy clock/ordinary ignoreRespawn reset9065beb3f passes timing/group/alive/copy/count/patrol/min1 but rejects a component-presence oracle for fresh default Aggressive. Corrected semantic value plus explicit fresh count1/no-speech assertionsb549ffbaf passes all four full endpoints67.43s,0ignored/no warnings. No runtime changes after9065beb3f except test-only diagnostic reads; all four reset tests enabled. Native5 remains HARNESS SETUP; separate actual ordinary Heroic death within180s retained. Neither this composite six-case development proof nor fresh fixture listener certifies persistence/re-entry/chest/loot/Liquid Fire/native presentation or balance.
 
 - `herald_ground.rs::assert_dispatch_windows` permanently dumps asserted-spell/Roar admission evidence before checking existing bounds. Optional `GAME_SERVER_HERALD_AI_TRACE=1` captures actual per-frame Nazan cast transitions/duration/pushback, victim/engagement and EventMap clock for the reported full-workspace Heroic36921 timing failure. Neither controlled same-CPU load1PASS118.34s nor small same-process/six-thread cohort7PASS49.68s reproduces it. One expanded module discriminator is pending; no runtime/timer/RNG/assertion change or root-cause claim. [Diagnostic boundary](../wiki/systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19).
 

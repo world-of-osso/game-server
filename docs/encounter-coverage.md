@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Herald loaded-copy evade/reset — 2026-10-19
+
+Ignored RED pushed first; actual native357/wipe setup and unchanged-buffer ordinary damage death control2PASS/four missingFAIL RED121.66s. Source evade→four missing group-restoration RED110.75s precede independent copy-owned30000ms clock/ordinary357 ignoreRespawn restoration. Four corrected native Normal/Heroic full/alive-counter cases pass67.43s atb549ffbaf: source scheduling tick/reset deadline, living identity/copy isolation/count reset, fresh patrol/min1 and natural two-Sentry intro. Tests enabled; [contract/proof](specs/ramparts-herald.md#loaded-copy-evade-and30s-reset), independent LEAD gate pending. Native5 is HARNESS SETUP, not balance; reload/re-entry/persistence/chest/loot/Liquid Fire/native remain excluded.
+
 ## Herald paired-death credit — 2026-10-18
 
 Native actualdead30693/1892bit1 qualification plus ten genuine missing-credit RED boundaries precede production. Corrected actual17537 TempSummon ownership (no ordinary CreatureOrigin injection) at647169a24 passes11/11 in187.96s,0ignored/no warnings: Normal/Heroic both sequential/same-frame orders, crossed-copy/corpse/unrelated controls, exact one1892success/bit1, sourceVazTalk3/ordinarydeathCall. Tests enabled, independent retained gate pending. [Contract](specs/ramparts-herald.md#completion-and-reset). Chest/loot/persistence acceptance, evade/reset, Liquid Fire children and native remain separate.

@@ -4,7 +4,7 @@
 
 ## 2026-10-19 — Herald real evade ingress RED
 
-[Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation now implemented, awaiting targeted GREEN; no canonical data/flag changes.
+[Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation→four full endpoint GREEN67.43s atb549ffbaf after correcting fresh default-reaction oracle. Source exact deadline/alive identity/count/patrol/min1/fresh natural intro pass; tests enabled, independent gate pending; no canonical data/flag changes.
 
 ## 2026-10-18 — Herald paired-death credit RED
 

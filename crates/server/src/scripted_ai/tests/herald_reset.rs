@@ -415,22 +415,18 @@ fn assert_reset(difficulty: u32, keep_one_sentry: bool) {
 }
 
 #[test]
-#[ignore = "HERALD_EVADE_RESET_UNIMPLEMENTED: real evade and30s RED first"]
 fn encounter_coverage_herald_reset_normal() {
     assert_reset(1, false);
 }
 #[test]
-#[ignore = "HERALD_EVADE_RESET_UNIMPLEMENTED: real evade and30s RED first"]
 fn encounter_coverage_herald_reset_heroic() {
     assert_reset(2, false);
 }
 #[test]
-#[ignore = "HERALD_EVADE_RESET_UNIMPLEMENTED: ignoreRespawn alive/counter RED first"]
 fn encounter_coverage_herald_reset_keep_alive_normal() {
     assert_reset(1, true);
 }
 #[test]
-#[ignore = "HERALD_EVADE_RESET_UNIMPLEMENTED: ignoreRespawn alive/counter RED first"]
 fn encounter_coverage_herald_reset_keep_alive_heroic() {
     assert_reset(2, true);
 }
