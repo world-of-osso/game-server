@@ -37,7 +37,16 @@ fn guild_leadership_transfer_moves_authority_and_reopens_before_former_master_le
     let db = redb::Database::create(&path).unwrap();
     create_tables(&db);
     let (master, officer, member) = members(&db);
-    let before = load_guild(&db, 7);
+    let mut before = load_guild(&db, 7);
+    let mut lowest = before.ranks[4].clone();
+    lowest.name = "Reserve".into();
+    before.ranks.push(lowest);
+    before.money = 735_121;
+    let mut tab = crate::bank_storage::BankTabData::new("Supplies".into());
+    tab.icon = 134400;
+    tab.text = "Keep this tab and balance".into();
+    before.tabs.push(tab);
+    crate::persistence::banks::save_guild(&db, 7, &before);
     let old_events = crate::guild_event_log::query(&db, master).events;
     assert_eq!(
         apply_rank_request(&db, 7, master, GuildRankRequest::Leave),
@@ -48,7 +57,7 @@ fn guild_leadership_transfer_moves_authority_and_reopens_before_former_master_le
         .expect("actual current master transfers to a stored offline member");
     assert_eq!(
         (rank(&db, master), rank(&db, officer), rank(&db, member)),
-        (4, 1, 0)
+        (5, 1, 0)
     );
     assert_eq!(
         load_guild(&db, 7),
@@ -63,7 +72,7 @@ fn guild_leadership_transfer_moves_authority_and_reopens_before_former_master_le
     let db = redb::Database::open(&path).unwrap();
     assert_eq!(
         (rank(&db, master), rank(&db, officer), rank(&db, member)),
-        (4, 1, 0)
+        (5, 1, 0)
     );
     assert_eq!(
         apply_rank_request(
@@ -202,7 +211,7 @@ fn guild_leadership_transfer_host_replies_to_both_members_and_rechecks_auth_and_
 #[test]
 #[ignore = "guild leadership transfer RED before implementation"]
 fn guild_leadership_transfer_readers_never_observe_zero_or_two_masters_during_real_commits() {
-    use redb::{ReadableDatabase, ReadableTable};
+    use redb::ReadableDatabase;
     use std::sync::{Arc, Barrier};
     let db = Arc::new(temp_database());
     let (master, _, member) = members(&db);
