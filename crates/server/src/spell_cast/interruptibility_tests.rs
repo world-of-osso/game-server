@@ -154,25 +154,21 @@ fn native_interruptibility_icy_devastator_channel_survives_counterspell() {
 }
 
 #[test]
-#[ignore = "RED: native Frost Bomb is incorrectly interruptible"]
 fn native_interruptibility_frost_bomb_survives_counterspell() {
     assert_native_cast_rejects_kick(FROST_BOMB);
 }
 
 #[test]
-#[ignore = "RED: native Sprout parent is incorrectly interruptible"]
 fn native_interruptibility_sprout_parent_without_categories_survives_counterspell() {
     assert_native_cast_rejects_kick(LEY_LINE_SPROUTS);
 }
 
 #[test]
-#[ignore = "RED: native Fissure is incorrectly interruptible"]
 fn native_interruptibility_fissure_survives_counterspell() {
     assert_native_cast_rejects_kick(ERUPTING_FISSURE);
 }
 
 #[test]
-#[ignore = "paired control for native interruptibility RED"]
 fn native_interruptibility_silence_prevention_fireball_is_interrupted() {
     let mut h = native_cast(FIREBALL);
     h.cast_and_deliver(COUNTERSPELL, Some(h.npc));
