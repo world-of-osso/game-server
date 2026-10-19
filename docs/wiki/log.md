@@ -2,6 +2,20 @@
 
 [NPC49](systems/player-damage.md#npc-victim-dodge-aura49--2026-10-17): ignoreddf529 pushed first; actual5277+62356effect1 sum0 across8s/block51=0, qualification1PASS33.62s. Nativefront/behind each5Damage despite live200, genuine2RED/4PASS35.27s. Existingtarget_auras consumer onlyNPC/allowedhit path before251/240/clamp; no playerdoublecount/otherdefense/Guardian/query/wire/RNG/clock change. Consumere6e99fb6e fresh nativebehavior6/6GREEN57.40s0warnings +retained qualification1PASS33.62s (7composite,notone7batch), onlythen allseven enabled/pushed; lead gate pending.
 
+## 2026-10-18 — Hunter-pet Focus interval
+
+[Focus timing](systems/combat-pet-lifecycle.md#hunter-focus-timing--2026-10-18): exact unchanged Bite RED76vs75 and native boundary RED76.25vs75; cost25 authenticated, pinnedTC24/4000ms spawn/full-pool phase consumer added only for Focus pets. Player/demon paths unchanged; merged3cc539edd exact originalBite/new interval/player5/s3GREEN62.27s + retained lifecycle/autocast/Imp4GREEN172.48s,0warnings; lead combined/check/format gate pending.
+
+## 2026-10-17 — Character-owned recipe Favorites
+
+[Professions](systems/professions.md#character-owned-recipe-favorites) adds known-spell-only preference requests and a character-keyed redb multimap without changing existing profession record encoding. Existing owner snapshots carry current favorites; request/refusal and reopen/isolation proof is pending targeted GREEN and the coordinated consumer gate.
+## 2026-10-18 — Grounding-only target32 and natural INTRO2 GREEN
+
+[Bounded contract and proof ledger](../specs/ramparts-herald.md): model-free Z-only reader preserves XY and missing-height casts; full reach-dependent port remains blocked by122612 metadata. TC709–748 source-height query is made once with pre-clamp Y; traced identical-input rays are bit-stable, while a post-clamp-Y ray is a different query. Approved exact source-ray oracle uses finalXZ/pre-clampY and strict bits, no tolerance or WMO-reader changes. Grounding plus full follower-pet and retained controls pass; Normal/Heroic natural first-West and actual facing bits pass after master6c8929589 merge. Future source engage events remain scheduled/unasserted; later lifecycle/native/XY/collision/hover-swim/backoff gaps explicit. LEAD independent gate pending.
+
+## 2026-10-18 — INTRO2 rewritten integration / target32 grounding blocked
+
+[Source transition](systems/boss-scripts.md#herald-intro2-first-west-boundary--2026-10-18): reset rewritten870659102, merge exact masterac36572bb including target32 revert; no port resurrection. Standalone copy-only prep and shared test visibility/difficulty API preserved without changing defaults. After excluding compiler/setup failure, ff1502383 gives4PASS/1genuineFAIL50.82s: exact actual-finalXYZ source floor89.05998 versus80.80767, no ULP tolerance. Normal initial transition/child and copy/duplicate/INTRO1 checks pass; Heroic/first-West assertions not reached. LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT blocks returning target32 port, not an accepted runtime gap. No summon-position/admission workaround, no ready/full-encounter claim.
 ## 2026-10-17 — NPC autoattack expertise
 
 [NPC240](systems/player-damage.md#npc-autoattack-expertise--2026-10-17): ignored2abb pushed first; native28305 singleapplication qualified14 across1536s,1PASS32.88s (post-command wrapper error, no invented exitcode). Genuine Rogue5DodgeRED plus cancelled/foreign2PASS; two owner-log fixture failures corrected to actual CombatEvent broadcasts without gameplay changes. Ignoredb1c2 native14/10000 give genuine2RED66.39s; minimal NPC-only240/4 dodge/parry consumer, block/Guardian/RNG/clocks unchanged. Consumer925224b2a fresh behavior5/5GREEN70.24s0warnings+retained lifetime1PASS32.88s (composite6,notone6batch), then allsix ignores removed; lead gate pending.

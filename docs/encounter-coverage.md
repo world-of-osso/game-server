@@ -1,5 +1,13 @@
 # Hosted encounter coverage
 
+## Target32 grounding-only prerequisite — 2026-10-18
+
+Separately approved Z-only slice follows TC Object.cpp698–762/Spell.cpp9286–9292 without model/reach reads or XY changes. Native30717/688, all follower-pet cases, retained controls and Normal/Heroic natural first-West INTRO2 are targeted GREEN; independent LEAD integration/check/fmt remains pending. The [contract](specs/ramparts-herald.md#grounding-only-target32-prerequisite) owns the exact source-ray oracle (no tolerance), proof ledger and remaining XY/first-collision/hover-swim/FORCE-backoff/other-selector gaps. No full-encounter or full target32 placement-parity claim.
+
+## Target32 reach-dependent port blocked — 2026-10-18
+
+`LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT` BLOCKS the reach-dependent target32 TC XY port: actual Lantha230861/display122612 has no authored model-info/reach row in canonical data or the local full TDB1210 source. The broader follower-pet gate exposed sixteen Felguard regressions, so the port was reverted, not accepted with production failures. It may return only with sourced metadata or an explicit user decision. The independent Z-only slice retires `SUMMON_TARGET32_GRAVITY_GROUNDING_UNIMPLEMENTED` for represented dry/non-hover states and enables the bounded first-West transition, without resolving or reintroducing the reach-dependent XY port. No reach default, widened ignores or manual summon-position workaround. [Contract](specs/ramparts-herald.md#known-gaps-current-cycle).
+
 Verified: 2026-10-13. **Census, not completion certification.**
 
 Server revision: `50a69ce7`. Input: `/home/osso/Projects/world-of-osso/game-server/data/world.db` (read-only).
