@@ -329,6 +329,13 @@ impl CreatureAi for HeraldIntro {
             }
         }
         boss_update_ai(self, ctx, diff_ms);
+        #[cfg(test)]
+        super::super::tests::cast_admission::record_ai_tick(
+            ctx.world,
+            ctx.me,
+            self.boss.events.elapsed_ms(),
+            diff_ms,
+        );
     }
 }
 

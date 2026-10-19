@@ -116,6 +116,12 @@ impl EventMap {
         Some(event_id)
     }
 
+    /// Exact EventMap clock for opt-in fixture evidence; never advances it.
+    #[cfg(test)]
+    pub(crate) fn elapsed_ms(&self) -> u64 {
+        self.time
+    }
+
     /// Scheduled event ids in due order (tests).
     #[cfg(test)]
     pub fn pending(&self) -> Vec<u32> {

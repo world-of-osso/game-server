@@ -4,7 +4,7 @@ use super::herald_call::{damage_to_percent, first_west};
 use super::herald_intro::{actors_in_copy, spawn_second_copy};
 use super::herald_intro2::received_casts;
 use super::*;
-use crate::scripted_ai::tests::cast_admission::CastAdmissions;
+use crate::scripted_ai::tests::cast_admission::{AiTickTrace, CastAdmissions};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 
 const DESCEND: Position = Position {
@@ -175,6 +175,14 @@ fn assert_dispatch_windows(
     repeat_max: f32,
 ) {
     let entries = &h.app.world().resource::<CastAdmissions>().entries;
+    // Permanent evidence precedes every assertion, including a failing boundary.
+    println!(
+        "native ground asserted{spell}/Roar admissions: {:?}",
+        entries
+            .iter()
+            .filter(|entry| entry.spell == spell || entry.spell == 39427)
+            .collect::<Vec<_>>()
+    );
     let attempts: Vec<_> = entries
         .iter()
         .filter(|entry| entry.spell == spell)
@@ -217,6 +225,14 @@ fn assert_ground_parents(difficulty: u32) {
     let other_player = h.players[1].0;
     let other_player_health = h.health(other_player).current;
     let mut saw_fear = false;
+    if std::env::var_os("GAME_SERVER_HERALD_AI_TRACE").is_some() {
+        let origin = h.app.world().resource::<CastAdmissions>().origin;
+        h.app.insert_resource(AiTickTrace {
+            actor: nazan,
+            origin,
+            frames: Vec::new(),
+        });
+    }
     // First source windows fail fast before a longer natural repeat observation.
     for tick in 1..=2240 {
         h.advance(0.05);
@@ -252,6 +268,14 @@ fn assert_ground_parents(difficulty: u32) {
         assert_eq!(h.health(other).current, other_health);
         assert_eq!(h.health(other_player).current, other_player_health);
         assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+    }
+    if let Some(trace) = h.app.world().get_resource::<AiTickTrace>() {
+        for frame in &trace.frames {
+            println!(
+                "native Herald AI tick {}",
+                serde_json::to_string(frame).unwrap()
+            );
+        }
     }
     assert_dispatch_windows(&h, fireball, 5.0, 5.0, 15.0);
     assert_dispatch_windows(&h, cone, 10.0, 10.0, 15.0);

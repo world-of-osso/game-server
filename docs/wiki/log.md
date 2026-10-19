@@ -1,3 +1,7 @@
+## 2026-10-19 — Herald ground timing diagnostic capture
+
+[Standing diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): original full-workspace Heroic36921 late repeat remains unreproduced after actual same-CPU load1PASS118.34s and small shared-process/six-thread7PASS49.68s. Approved permanent pre-assert spell/Roar dump and test-only opt-in actual AI/cast clocks added; one expanded module discriminator pending. No assertion/source timer/RNG/runtime changes.
+
 ## 2026-10-19 — Herald real evade ingress RED
 
 [Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation now implemented, awaiting targeted GREEN; no canonical data/flag changes.
