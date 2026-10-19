@@ -268,53 +268,43 @@ fn assert_crossed_copies(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_orders_normal() {
     assert_death_order(1, false, true);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_orders_heroic() {
     assert_death_order(2, false, true);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_same_frame_normal() {
     assert_death_order(1, true, true);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_same_frame_heroic() {
     assert_death_order(2, true, true);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_crossed_copies_normal() {
     assert_crossed_copies(1);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_crossed_copies_heroic() {
     assert_crossed_copies(2);
 }
 
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
 fn encounter_coverage_herald_pair_vazruden_first_normal() {
     assert_death_order(1, false, false);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
 fn encounter_coverage_herald_pair_vazruden_first_heroic() {
     assert_death_order(2, false, false);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
 fn encounter_coverage_herald_pair_vazruden_first_same_frame_normal() {
     assert_death_order(1, true, false);
 }
 #[test]
-#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
 fn encounter_coverage_herald_pair_vazruden_first_same_frame_heroic() {
     assert_death_order(2, true, false);
 }

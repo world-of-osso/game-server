@@ -1,6 +1,6 @@
 ## 2026-10-18 — Herald paired-death credit RED
 
-[Paired death contract](systems/boss-scripts.md#herald-paired-death-credit-boundary--2026-10-18): native ordinary dead30693 qualification passes; six genuine missing1892/bit1 REDs108.35s plus four isolated reverse-order REDs83.24s. Source per-AI other-dead/action1 and last-death completion ported before GREEN; copy-role origin retained through morph. Chest/reset/Liquid Fire/native excluded.
+[Paired death contract](systems/boss-scripts.md#herald-paired-death-credit-boundary--2026-10-18): native ordinary dead30693 qualification passes; six genuine missing1892/bit1 REDs108.35s plus four isolated reverse-order REDs83.24s. Source per-AI other-dead/action1 and last-death completion ported001d76905; fivePASS/sixFAIL identifies temporary17537's absent ordinary origin. Corrected actualNpc+same-copyTempSummon.summoner647169a24→all11/11GREEN187.96s,0ignored/no warnings; both orders/frame/copy/corpse/unrelated/deathspeech/deathCall pass. Enabled tests, independent retained gate pending. Chest/reset/Liquid Fire/native excluded.
 
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
