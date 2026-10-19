@@ -18,7 +18,7 @@ Follow the workflow in `SCHEMA.md`: check existing pages first (update > create)
 
 ## Shared format readers
 
-LOS/nav bake adapters and vehicle seat lookup use git-rev-pinned `world-of-osso/wow-formats` crates with default features disabled. LOS enables only M2 `animation`/`materials`; vehicles enable static `attachments`. Keep server geometry/posing policies local, never duplicate binary readers. See [shared formats](docs/wiki/systems/wow-formats.md).
+Runtime ground/terrain-height metadata, LOS/nav bake adapters and vehicle seat lookup use git-rev-pinned `world-of-osso/wow-formats` crates with default features disabled. LOS enables only M2 `animation`/`materials`; vehicles enable static `attachments`. Keep server geometry/posing policies local, never duplicate binary readers. See [shared formats](docs/wiki/systems/wow-formats.md).
 
 ## Development build/run
 

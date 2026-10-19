@@ -1,11 +1,13 @@
 //! TC a352b1fa Herald startup through the first real West arrival.
-//! Recurring flight, descent, paired credit/reset and native presentation remain unverified.
+//! Descent ingress stops before point4 arrival/fall; later phases/credit remain unverified.
 use bevy::prelude::*;
 use shared::components::{Npc, Position, Rotation};
 
 use super::super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::super::waypoint_path::GravityDisabled;
-use super::super::{CreatureAi, Ctx, EventMap, MotionType, ReactState, instance_script};
+use super::super::{
+    CreatureAi, Ctx, DamageTaken, EventMap, MotionType, ReactState, instance_script,
+};
 use crate::maps::{InMap, MapStore};
 use crate::zones::CreatureOrigin;
 
@@ -16,6 +18,7 @@ const SENTRY: u32 = 17_517;
 const ACTION_START_ENCOUNTER: i32 = 1_730_700;
 const INTRO_1: u32 = 1;
 const INTRO_2: u32 = 2;
+const DESCEND_1: u32 = 3;
 const FLY_TO_LOC: u32 = 7;
 const FIREBALL_VICTIM: u32 = 8;
 const FIREBALL_RANDOM: u32 = 9;
@@ -39,6 +42,11 @@ const NORTH: Position = Position {
     x: -1444.9900,
     y: 98.20342,
     z: -1752.9600,
+};
+const DESCEND: Position = Position {
+    x: -1429.1720,
+    y: 84.34760,
+    z: -1749.1290,
 };
 const CENTER: Position = Position {
     x: -1410.5204,
@@ -106,6 +114,7 @@ pub(super) struct HeraldIntro {
     special_tick: std::time::Duration,
     boss: BossAi,
     last_fly_spell: u32,
+    started_descending: bool,
 }
 
 impl Default for HeraldIntro {
@@ -116,6 +125,7 @@ impl Default for HeraldIntro {
             special_tick: std::time::Duration::ZERO,
             boss: BossAi::new(1),
             last_fly_spell: FLY_WEST,
+            started_descending: false,
         }
     }
 }
@@ -153,6 +163,23 @@ impl HeraldIntro {
         ctx.do_cast_self(LOGIC_TIMER);
         ctx.do_zone_in_combat(ctx.me);
         self.phase = IntroPhase::Finished;
+    }
+
+    // TC318–327: special events do not wait for the current non-melee cast.
+    fn start_descent(&mut self, ctx: &mut Ctx) {
+        ctx.talk(0);
+        ctx.set_react_state(ReactState::Passive);
+        crate::auras::remove_auras(
+            ctx.world,
+            ctx.me,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == DRAGON_HOVER,
+        );
+        super::super::movement::clear_point_movement(ctx.world, ctx.me);
+        ctx.move_point(ctx.me, 4, DESCEND);
+        crate::spell_cast::cancel_cast(ctx.world, ctx.me);
+        self.boss.events.reset();
+        // HERALD_POINT4_ARRIVAL_MOVE_FALL_UNIMPLEMENTED: no substitute fall/arrival.
     }
 
     fn choose_next_flight(&mut self, ctx: &mut Ctx) {
@@ -195,6 +222,19 @@ impl CreatureAi for HeraldIntro {
             self.phase = IntroPhase::MovingToCenter;
             self.special_events.schedule(INTRO_1, 0);
         }
+        // TC195–201: actual30693 hit dispatches action0 once.
+        if action == 0 && !self.started_descending {
+            self.started_descending = true;
+            self.special_events.schedule(DESCEND_1, 0);
+        }
+    }
+
+    // TC217–220: Finished is !_isPerformingIntro; action0 owns the once latch.
+    // The separate lethal min1 interception (TC214–215) is not implemented here.
+    fn damage_taken(&mut self, ctx: &mut Ctx, _attacker: Option<Entity>, damage: DamageTaken) {
+        if self.phase == IntroPhase::Finished && damage.health_below_pct_damaged(30.0) {
+            self.do_action(ctx, 0);
+        }
     }
 
     fn movement_inform(&mut self, ctx: &mut Ctx, kind: MotionType, id: u32) {
@@ -234,6 +274,7 @@ impl CreatureAi for HeraldIntro {
             match event {
                 INTRO_1 => self.start_intro(ctx),
                 INTRO_2 => self.continue_intro(ctx),
+                DESCEND_1 => self.start_descent(ctx),
                 _ => unreachable!("unknown Herald intro event{event}"),
             }
         }

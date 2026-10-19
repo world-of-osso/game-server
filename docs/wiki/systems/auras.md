@@ -353,11 +353,25 @@ Examples:
 - **Costs:** a `SpellPower` row with `RequiredAuraSpellID` applies only while the caster has that aura. Priest costs are gated on the spec passives 137031/137032/137033/417191, so a priest pays the row of whichever spec passive it knows; with none known the spell is free.
 - **Cast time:** ChangeCastTime mods, then ÷ `1 + CharacterStats.haste_pct/100`.
 - **Charges:** max charges and recharge follow MOD_MAX_CHARGES 411, CHARGE_RECOVERY_MOD 453 and CHARGE_RECOVERY_MULTIPLIER 454 on the charge category (`EffectMiscValue_0`). Double Time 103827 gives Charge 100 2 charges and a 17 s recharge.
-- **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates.
+- **Power regen:** MOD_POWER_REGEN_PERCENT 110 and MOD_MANA_REGEN_PCT 379 scale regen and decay rates. Continuous pools and Mana add recipient/power-matched aura85 raw amount/5 afterward; discrete pet aura85 remains a separate unproved consumer. Native Mana proof: [[auras#Water Shield flat Mana — 2026-10-18]].
 - **Max power:** MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 add their amount to the MiscValue power's max (`AuraStatMods.max_power_flat`; mana is not covered, its max comes from `stats.rs`).
 - **Charged combo points:** SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore) marks its MiscValue (1-based point index) charged: `AuraStatMods.charged_power_points`, ascending (Echoing Reprimand 354835 → 2-5, Supercharge 470398-470416 → 1-7). The finisher bonus of a charged point is not modelled.
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
+
+## Water Shield flat Mana — 2026-10-18
+
+Native70448 SpellEffect79509 supplies79949 effect1 aura85/Mana/10; effect79508's42→79950 sibling remains unchanged. SpellMisc58951/Duration6 supplies600000ms. TC a352b1fa StatSystem.cpp874-908 multiplies base-mana regeneration before adding flat85/5. The Elixir slice already collected recipient/power flat amounts, but separate authoritative Mana regeneration omitted them.
+
+Atf4c17e35b, an ordinary Shaman Healing Surge8004 with native137039 cost eligibility creates a real deficit. Native137039 aura379 gives25% base regeneration:10000/100*1.25=125/s. An ordinary79949 should add10/5 afterward for127/s; rate/order and cap/prediction cases genuinely failed125vs127. Baseline, actual600-second expiry through native50ms frames, and foreign authenticated self-cast controls passed3; two genuine REDs took25.33s. The earlier746a harness error incorrectly read Mana through the non-mana-only `Harness::power`; that run is not regression evidence. Tests now read the unchanged authoritative Mana component.
+
+The Mana consumer now adds the existing raw85 sum/5 after its multipliers; native spells, resources, frame clocks, proc behavior and definitions are unchanged. At merged82f8476d4/protocolf9a9175, combined WaterShield5 +Elixir5 +retained regen/resource30 pass40/40 in26.47s with zero ignored/warnings. This includes real50ms Mana gain, flat-after-percent127/s, cancellation, maximum/prediction, full600s natural expiry and foreign self-cast. Full `cargo fmt --package server` returned0 with clean status after merging current master; independent lead auras/check/format gate pending. This is native79949, not Retail52127/legal-build/full shield-proc certification; discrete pet85/global census claims remain separate. [Requirement](../../specs/class-completeness.md); tests `spell_cast::water_shield_mana_tests::`; assigneds6 evidence `data/class-completeness6-2026-10-12/water-shield-mana85-*`.
+
+## Energizing Elixir flat Energy — 2026-10-18
+
+Native70448 SpellEffect129038 supplies115288 aura85, power3, amount75; SpellMisc88282/Duration28 supplies5000ms, and effect288813 energizes2Chi independently. TC a352b1fa StatSystem.cpp901-908 adds flat aura85/5 AFTER percentage modifiers. Existing ActiveAuras retained85, but AuraStatMods had no flat collection and power regeneration only multiplied native rates. Ordinary Tiger Palm's real50-Energy spend followed by ordinary115288 reproduced10vs25/s; actual13750 composition reproduced17.5vs32.5/s. Baseline/expiry/actual foreign self-cast controls passed3; two genuine REDs at3993b7fe8 took26.42s.
+
+The modifier now stores raw five-second amounts by recipient/power; continuous non-mana pool rates add that sum/5 after multiplying native rates and before selecting refill/decay limits. Source metadata is not mutated. Atc62d61e9b/protocolf9a9175, native5/5 GREEN14.48s includes actual two-Chi preservation, removal, expiry, percentage order and foreign self-cast. Retained regeneration/class-resource30/30 GREEN14.31s covers existing mana/Focus/runes/Chi/caps/replication. Both have zero warnings; independent lead auras/check/format gate pending. Native spells/rows/powers/clocks remain unchanged. Legal talent/loadout acceptance, generic mana/pet85 and global aura85 census certification are not claimed. [Requirement](../../specs/class-completeness.md); tests: `spell_cast::energizing_elixir_tests::`; source and RED receipts: assigneds6 `data/class-completeness6-2026-10-12/energizing-elixir-*`.
 
 ## Stat modifiers
 
@@ -386,6 +400,7 @@ Every aura change recomputes two components, each written only when its value ch
 | `autoattack_range_bonus` | 153 signed additive yards | attacker-only main/off-hand swing distance |
 | `rage_from_damage_dealt_pct` | 213 | rage per melee swing dealt (summed percent) |
 | `power_regen_mult` | 110 (by power), 379 (mana) | regen |
+| `power_regen_flat` | 85 raw units/5s, summed by power | continuous pools and Mana after percent; discrete-pet85 unproved |
 | `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
 | `water_breathing` / `water_breathing_mult` | WATER_BREATHING 82 / MOD_WATER_BREATHING 155 | breath timer ([[swimming-and-breath]]) |
 
