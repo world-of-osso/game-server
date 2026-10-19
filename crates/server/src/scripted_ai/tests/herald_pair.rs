@@ -63,7 +63,14 @@ fn assert_credit(h: &Harness, pair: Pair, listener: usize, done: bool) {
         "installed1892/bit1 requires both actual partner deaths"
     );
     assert_eq!(
-        get_boss_state(h.app.world(), pair.map, 1),
+        Some(
+            h.app
+                .world()
+                .resource::<instance_script::InstanceScripts>()
+                .0[&pair.map]
+                .bosses[1]
+                .state
+        ),
         Some(if done {
             EncounterState::Done
         } else {
