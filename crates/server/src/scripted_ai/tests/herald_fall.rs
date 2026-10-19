@@ -134,10 +134,17 @@ fn natural_fall(difficulty: u32) {
             );
             assert_eq!(received_casts(&h, nazan, 20538), 0);
         } else {
+            let seconds = native_duration_ms as f32 / 1000.0;
+            let expected = (DESCEND.y - seconds * (seconds * GRAVITY * 0.5)).max(floor);
+            assert_ne!(
+                expected.to_bits(),
+                floor.to_bits(),
+                "this native drop exposes duration truncation"
+            );
             assert_eq!(
                 position.y.to_bits(),
-                floor.to_bits(),
-                "exact floor from original fall ray"
+                expected.to_bits(),
+                "source completion samples integer-ms curve; never snap to raw floor"
             );
             assert!(
                 h.app
