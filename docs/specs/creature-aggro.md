@@ -4,6 +4,8 @@ World creatures attack players: hostile creatures aggro players that come near, 
 
 ## What it must do
 
+A dormant creature's threat membership publishes only after it actually survives awake. Despawn or re-sleep during the same structural transition must not publish a wake or queue component insertion on a removed entity. Owner disconnect still unsummons orphan followers normally.
+
 ### Who takes part (`AggroMode`, from `creature_template` at load)
 
 - [x] Critters (`type` 8), non-combat pets (`type` 12), triggers (`flags_extra` 0x80), `IMMUNE_TO_PC` units (`unit_flags` 0x100) and `npc_training_dummy` creatures have no threat list: they never aggro, never chase and never swing, however they are attacked.

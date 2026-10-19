@@ -53,7 +53,7 @@ use shared::group::GroupRole;
 
 pub(crate) use ai::FollowerReach;
 pub(crate) use catalog::FollowerCatalog;
-pub(crate) use party::queue_player;
+pub(crate) use party::{queue_player, stage_follower_party};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Profile {

@@ -54,12 +54,14 @@ pub struct CreatureAggroPlugin;
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::creature_sight::CreatureSightPlugin);
-        app.add_observer(replicate_woken_threat_list);
+        app.init_resource::<PendingThreatWakes>()
+            .add_observer(replicate_woken_threat_list);
         app.add_systems(
             FixedUpdate,
             (
                 aggro_on_sight_system,
                 update_victim_system,
+                publish_woken_threat_lists,
                 replicate_threat_list_system,
             )
                 .chain()
@@ -434,20 +436,34 @@ fn replicate_threat_list_system(
     }
 }
 
+#[derive(Resource, Default)]
+struct PendingThreatWakes(Vec<Entity>);
+
 fn replicate_woken_threat_list(
     event: On<Remove, GridDormant>,
-    creatures: Query<(&ThreatTable, Option<&UnitThreatList>)>,
-    dirty: Option<Res<ReplicationDirtyQueue>>,
-    mut commands: Commands,
+    mut pending: ResMut<PendingThreatWakes>,
 ) {
-    if let Ok((threat, replicated)) = creatures.get(event.entity) {
-        publish_threat_membership(
-            event.entity,
-            threat,
-            replicated,
-            dirty.as_deref(),
-            &mut commands,
-        );
+    // Removal also fires during despawn; it only nominates a possible wake.
+    pending.0.push(event.entity);
+}
+
+pub(crate) fn publish_woken_threat_lists(world: &mut World) {
+    let pending = std::mem::take(&mut world.resource_mut::<PendingThreatWakes>().0);
+    if pending.is_empty() {
+        return;
+    }
+    let mut awake =
+        world.query_filtered::<(&ThreatTable, Option<&UnitThreatList>), Without<GridDormant>>();
+    for creature in pending {
+        let Ok((threat, replicated)) = awake.get(world, creature) else {
+            continue;
+        };
+        if let Some(units) = read_changed_threat_membership(threat, replicated) {
+            world.entity_mut(creature).insert(UnitThreatList(units));
+            if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+                dirty.mark(creature);
+            }
+        }
     }
 }
 
@@ -458,16 +474,23 @@ fn publish_threat_membership(
     dirty: Option<&ReplicationDirtyQueue>,
     commands: &mut Commands,
 ) {
-    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
-    if replicated.is_some_and(|replicated| replicated.0 == units)
-        || (replicated.is_none() && units.is_empty())
-    {
+    let Some(units) = read_changed_threat_membership(threat, replicated) else {
         return;
-    }
+    };
     commands.entity(creature).insert(UnitThreatList(units));
     if let Some(dirty) = dirty {
         dirty.mark(creature);
     }
+}
+
+fn read_changed_threat_membership(
+    threat: &ThreatTable,
+    replicated: Option<&UnitThreatList>,
+) -> Option<Vec<u64>> {
+    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
+    let unchanged = replicated.is_some_and(|replicated| replicated.0 == units)
+        || (replicated.is_none() && units.is_empty());
+    (!unchanged).then_some(units)
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {

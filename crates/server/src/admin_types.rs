@@ -116,6 +116,14 @@ pub enum AdminRequest {
         y: f32,
         z: f32,
     },
+    /// Admin-only harness staging of the owner's existing genuine follower party.
+    StageFollowerParty {
+        character_name: String,
+        map_id: u32,
+        x: f32,
+        y: f32,
+        z: f32,
+    },
     /// TrinityCore `.die`: the online character dies (`Unit::Kill`).
     Kill {
         character_name: String,
@@ -378,6 +386,10 @@ pub enum AdminResponse {
     CredentialsSet {
         account_id: u64,
         username: String,
+    },
+    FollowerPartyStaged {
+        character_name: String,
+        followers: usize,
     },
     PositionSet {
         character_name: String,
