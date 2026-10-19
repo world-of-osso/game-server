@@ -58,13 +58,21 @@ IgnoredREDdf529041d was pushed FIRST. Actual native5277 effect0/1892=+200/10s an
 
 The existing NPC broadcast test helper gains a count argument for these5-swing windows; all existing240 callers retain explicit512 and their unchanged60-frame-per-swing delivery budget. Native NPC-to-NPC receipts remain actual all-client CombatEvent messages, never fabricated player ownership. Five-swing all-Miss probability .05^5=3.125e-7; baseline all-avoid .14^5≈5.378e-5, combined family bound below1/1000. Consumere6e99fb6e is committed only after genuine RED; fresh ignored behavior6/6GREEN57.40s/exit0,0warnings (184.00s total), plus retained disjoint preconsumer qualification1PASS33.62s gives7nativeGREENcomposite, notone7batch. Only then allseven ignores are removed and GREEN pushed; independent lead gate pending. Nativejoint CC+49 remains source/wiring proof, not a separate new nativeRED. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-victim-dodge-*`; [contract](../../specs/player-damage.md).
 
+## NPC victim parry aura47 — 2026-10-17
+
+TC a352b1fa Unit.cpp2391/2805–2811 adds signed NPC victim MOD_PARRY_PERCENT47 to base6/level parry, before attacker240/4 and the final clamp2817–2822. Existing `roll_outcome` target_auras/NPC-only can_avoid/missing-stats guard supplies it beside NPC49. Player parry stays CharacterStats. Existing NO_PARRY/facing and casting/CC exclusions win; no extra query/scalar/state/wire, block/Guardian/RNG/clock change. Block51/248/player expertise/IsTotem remain separate gaps.
+
+IgnoredRED49f20a644 was pushed FIRST. Runtime qualification1PASS41.59s/exit0/0warnings precedes signed behavior: native23547 effect0/13823=+100 and64651 effect0/58903=-100 remain live/sum0 across8s; full native45769 gives actual aura54=5/251=-20 and folded hit5. These remove baseline miss/dodge through real native modifiers, not seeded RNG, fake defense flags, edited HP/ratings or timers. This is a coefficient fixture, NOT legal player/NPC loadout certification.
+
+Eight native behavior cases give genuine2FAIL/6PASS47.04s,0warnings: front live+100 logs5Damage/0Parry instead of the saturated106 table; live-100 still emits1Parry/4Damage instead of clamping0. Cancel/foreign/signed-zero, behind/actual36980 NO_PARRY, and actual62627 NPC expertise10000 ordering controls pass before the consumer. Five ordinary2s attempts/counts/native rows remain unchanged; old front table escapes this RED only .06^5=7.776e-7, also the baseline all-Parry false-failure bound. No fixture/compiler failures counted as RED. Consumer committed after genuine RED; native GREEN/independent lead gate pending. Joint CC+47 remains source/wiring proof, not a separate new nativeRED. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-victim-parry-*`; [contract](../../specs/player-damage.md).
+
 ## Hit table values
 
 | | Chance | Source |
 |---|---|---|
 | Miss | 5%, +19% with an off-hand weapon | Unit::GetUnitMissChance, MeleeSpellMissChance |
 | Dodge (creature) | 3% + victim49 + 1.5%/level above, before attacker251/240 | GetUnitDodgeChance |
-| Parry (creature) | 6% + 1.5%/level above | GetUnitParryChance |
+| Parry (creature) | 6% + victim47 + 1.5%/level above, before NPC240 | GetUnitParryChance |
 | Glancing (creature 4+ levels above) | 10% + 10%/level | RollMeleeOutcomeAgainst |
 | Block (creature) | 3% + 1.5%/level above, stops 30% | GetUnitBlockChance, GetBlockPercent |
 | Crit | `CharacterStats.crit_pct` | GetUnitCriticalChanceDone |
