@@ -10,13 +10,24 @@ use std::collections::BTreeSet;
 
 fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
+    let step = f.h.app.world().resource::<Time<Fixed>>().timestep();
+    assert_eq!(
+        step,
+        std::time::Duration::from_millis(50),
+        "native fixed-tick observation"
+    );
     let mut boundaries = Vec::new();
     let mut qualified = 0;
     let mut violations = Vec::new();
     for tick in 0..10 {
         let before_point = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
         let before = read_caster_boundary(f);
+        let before_tick = f.h.app.world().resource::<Time<Fixed>>().elapsed();
         f.h.advance(1);
+        assert_eq!(
+            f.h.app.world().resource::<Time<Fixed>>().elapsed() - before_tick,
+            step
+        );
         let after = read_caster_boundary(f);
         let at = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
         let qualifies = before.exposed
@@ -48,7 +59,7 @@ struct OriginProbe {
 
 impl OriginProbe {
     fn read_origin(&self, f: &mut Fixture, source: &pull_sources::Source) -> Value {
-        let mut row = json!({"origin_guid":source.guid,"entry":source.entry,"candidate":false});
+        let mut row = json!({"origin_kind":"source_spawn","origin_guid":source.guid,"entry":source.entry,"candidate":false});
         let origin = match place_party_at_authored_point(f, source.position, &self.party) {
             Ok(origin) => origin,
             Err(error) => {
@@ -136,14 +147,35 @@ fn native_overheat_authored_origin_refusal_enumeration() {
         &BTreeSet::new(),
     )
     .unwrap();
-    let mut rows: Vec<_> = origins
-        .values()
-        .map(|source| probe.read_origin(&mut probe_fixture, source))
-        .collect();
+    let entrance =
+        crate::spell_cast::targets::position(probe_fixture.h.app.world(), probe_fixture.tank)
+            .unwrap();
+    let entrance_cast = crate::spell_cast::read_native_cast_start(
+        probe_fixture.h.app.world_mut(),
+        caster,
+        &probe.fireball,
+        probe_fixture.tank,
+    );
+    let entrance_los = crate::line_of_sight::sees_in_world(
+        probe_fixture.h.app.world(),
+        caster,
+        probe_fixture.tank,
+    );
+    let mut rows = vec![
+        json!({"origin_kind":"entrance","origin_id":3599,"origin":[entrance.x,entrance.y,entrance.z],
+        "ordinary_cast_start":format!("{entrance_cast:?}"),"native_los":entrance_los,
+        "native_range_metadata":crate::spell_cast::targets::spell_range(&probe.fireball,true),
+        "candidate":false,"eligible_selected_trash":false,"reason":"authored entrance has no selected trash at its own point"}),
+    ];
+    rows.extend(
+        origins
+            .values()
+            .map(|source| probe.read_origin(&mut probe_fixture, source)),
+    );
     assert_eq!(
         rows.len(),
-        origins.len(),
-        "every actual authored Stockade source origin is recorded"
+        origins.len() + 1,
+        "every authored source origin and native entrance3599 is recorded"
     );
     drop(probe_fixture);
     let probe_errors = rows.iter().filter(|row| row.get("error").is_some()).count();
