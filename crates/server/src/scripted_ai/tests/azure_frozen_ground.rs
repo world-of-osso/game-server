@@ -323,19 +323,19 @@ fn assert_native_route(h: &mut Harness, unit: Entity, root: &Path) {
         },
     );
     let mut probe = crate::navigation::Navigation::new(&root.join("navmesh"));
+    let request = crate::navigation::MoveRequest {
+        map_id: 2515,
+        goal: crate::navigation::Goal::Point,
+        from,
+        to,
+        distance: 0.1,
+        reach: 0.0,
+    };
+    let _ = probe.advance(unit, request);
+    probe.drain_until_idle();
     assert!(
         matches!(
-            probe.advance(
-                unit,
-                crate::navigation::MoveRequest {
-                    map_id: 2515,
-                    goal: crate::navigation::Goal::Point,
-                    from,
-                    to,
-                    distance: 0.1,
-                    reach: 0.0,
-                }
-            ),
+            probe.advance(unit, request),
             crate::navigation::Step::Moved { .. }
         ),
         "prerequisite: actual2515 nav route from native actor feet"
