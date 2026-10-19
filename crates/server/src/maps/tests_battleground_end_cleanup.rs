@@ -11,7 +11,6 @@ struct CleanupFixture {
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion omits dead participant resurrection"]
 fn bg_end_cleanup_node_victory_resurrects_dead_participant_without_leaving() {
     let mut fixture = node_fixture();
     let (_, other_health) = drive_to_end(&mut fixture, 200);
@@ -20,7 +19,6 @@ fn bg_end_cleanup_node_victory_resurrects_dead_participant_without_leaving() {
 }
 
 #[test]
-#[ignore = "RED: ordinary BG completion leaves living participants in combat"]
 fn bg_end_cleanup_node_victory_stops_combat_without_healing_living_participant() {
     let mut fixture = node_fixture();
     let (living_health, other_health) = drive_to_end(&mut fixture, 200);
@@ -29,7 +27,6 @@ fn bg_end_cleanup_node_victory_stops_combat_without_healing_living_participant()
 }
 
 #[test]
-#[ignore = "RED: ordinary BG timeout completion omits life and combat cleanup"]
 fn bg_end_cleanup_timeout_draw_restores_dead_and_stops_living_without_leaving() {
     let template = shared::battleground::warsong_gulch();
     let starts = shared::battleground::flag_rules(template.map_id)
