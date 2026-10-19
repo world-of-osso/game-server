@@ -1,6 +1,6 @@
 ## 2026-10-19 — Herald ground timing diagnostic capture
 
-[Standing diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): original full-workspace Heroic36921 late repeat remains unreproduced after actual same-CPU load1PASS118.34s and small shared-process/six-thread7PASS49.68s. Approved permanent pre-assert spell/Roar dump and test-only opt-in actual AI/cast clocks added; one expanded module discriminator pending. No assertion/source timer/RNG/runtime changes.
+[Standing diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): original full-workspace Heroic36921 late repeat remains unreproduced after actual same-CPU load1PASS118.34s and small shared-process/six-thread7PASS49.68s. Approved permanent pre-assert spell/Roar dump and test-only opt-in actual AI/cast clocks added. Single full module discriminator a6f9baebc:261PASS/2private-Azure-prerequisiteFAIL/6ignored811.19s; all Herald ground/reset cases pass,4480actual50ms frames/three Roar start-end pairs/93zero-pushback CastState samples. P1 closed by approved stopping rule: not reproduced; evidence capture in place. No assertion/source timer/RNG/runtime changes or repeat; whole module not GREEN.
 
 ## 2026-10-19 — Herald real evade ingress RED
 
