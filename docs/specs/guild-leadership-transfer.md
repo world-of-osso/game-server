@@ -29,7 +29,7 @@ The authenticated current Guild Master may transfer to another stored same-guild
 
 ## Known gaps (current cycle)
 
-- [ ] Coordinated consumer gate and real two-member native authority readback remain pending. Actual authority RED4 precedes focused GREEN4/4 (six-rank/nonzero bank fixture, reopen/leave, auth/foreign/self, participant refresh and1000 real reader snapshots during31 commits).
+- [ ] Coordinated consumer gate and real two-member native authority readback remain pending. Actual authority RED4 precedes focused GREEN4/4 (six-rank/nonzero bank fixture, reopen/leave, auth/foreign/self, participant refresh and at least1000 real reader snapshots, continuing until the31-transfer writer finishes).
 
 ## Out of scope
 

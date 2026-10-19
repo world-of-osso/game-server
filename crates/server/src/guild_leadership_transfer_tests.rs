@@ -228,7 +228,8 @@ fn guild_leadership_transfer_readers_never_observe_zero_or_two_masters_during_re
         }
     });
     barrier.wait();
-    for _ in 0..1000 {
+    let mut reads = 0;
+    while !writer.is_finished() || reads < 1000 {
         let transaction = db.begin_read().unwrap();
         let ranks = transaction.open_table(GUILD_MEMBER_RANKS).unwrap();
         let pair = (
@@ -239,7 +240,9 @@ fn guild_leadership_transfer_readers_never_observe_zero_or_two_masters_during_re
             pair == (0, 4) || pair == (4, 0),
             "observed partial leadership commit: {pair:?}"
         );
+        reads += 1;
     }
     writer.join().unwrap();
+    eprintln!("leadership snapshots={reads}, completed transfers=31");
     assert_eq!((rank(&db, master), rank(&db, member)), (4, 0));
 }
