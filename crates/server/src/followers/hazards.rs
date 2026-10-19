@@ -122,16 +122,30 @@ pub(super) fn approach_is_unsafe(world: &mut World, unit: Entity, target: Entity
 }
 
 fn path_crosses_hostile_field(world: &mut World, unit: Entity, target: Entity) -> Option<bool> {
+    let Some(to) = world.get::<Position>(target).copied() else {
+        return Some(false);
+    };
+    read_route_hazard(world, unit, to, Goal::Approach(target.to_bits()))
+}
+
+pub(super) fn point_route_crosses_hostile_field(
+    world: &mut World,
+    unit: Entity,
+    to: Position,
+) -> Option<bool> {
+    read_route_hazard(world, unit, to, Goal::Point)
+}
+
+fn read_route_hazard(world: &mut World, unit: Entity, to: Position, goal: Goal) -> Option<bool> {
     let fields = hostile_fields(world, unit);
     if fields.is_empty() {
         if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-            nav.cancel_query(unit, Goal::Approach(target.to_bits()));
+            nav.cancel_query(unit, goal);
         }
         return Some(false);
     }
-    let (Some(from), Some(to), Some(map)) = (
+    let (Some(from), Some(map)) = (
         world.get::<Position>(unit).copied(),
-        world.get::<Position>(target).copied(),
         world.get::<InMap>(unit).copied(),
     ) else {
         return Some(false);
@@ -142,14 +156,14 @@ fn path_crosses_hostile_field(world: &mut World, unit: Entity, target: Entity) -
     let result = nav.query_deferred(
         unit,
         map.map_id,
-        Goal::Approach(target.to_bits()),
+        goal,
         NavQuery::Path {
             from: point(from),
             to: point(to),
         },
     )?;
     if result.is_err() {
-        nav.cancel_query(unit, Goal::Approach(target.to_bits()));
+        nav.cancel_query(unit, goal);
     }
     Some(match result {
         Ok(Some(Output::Path(mut path))) => {
@@ -384,6 +398,10 @@ fn supported_candidate(
     Some(to)
 }
 
+pub(super) fn route_crosses_hostile_field(world: &mut World, unit: Entity, route: &[Vec3]) -> bool {
+    !route_leaves_fields(route, &hostile_fields(world, unit))
+}
+
 fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
     fields.iter().all(|field| {
         route.windows(2).all(|pair| {
@@ -401,10 +419,10 @@ fn route_leaves_fields(route: &[Vec3], fields: &[Field]) -> bool {
     })
 }
 
-fn advance_escape(
+pub(super) fn advance_grounded_route(
     world: &mut World,
     unit: Entity,
-    map: u32,
+    map: InMap,
     from: Position,
     to: Position,
     goal: Goal,
@@ -423,7 +441,7 @@ fn advance_escape(
     let step = world.resource_mut::<Navigation>().advance(
         unit,
         MoveRequest {
-            map_id: map,
+            map_id: map.map_id,
             goal,
             from,
             to,
@@ -434,7 +452,7 @@ fn advance_escape(
     if let Step::Moved { mut position, .. } = step {
         let crate::ground::GroundProbe::Supported(height) = world
             .resource_mut::<crate::ground::GroundMap>()
-            .ground_at(map, point(position))
+            .creature_ground_in(map, point(position))
         else {
             error!("Follower {unit} escape route lost ground support");
             return;
