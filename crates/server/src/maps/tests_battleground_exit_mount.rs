@@ -87,7 +87,7 @@ fn assert_exit_dismounts(queue_id: u32, phase: BgPhase) {
     let (mut h, players, _database) = if phase == BgPhase::Ended {
         let template = shared::battleground::arathi_basin();
         let queue = if queue_id == 32 {
-            SourceQueueFixture::RandomPartiesOfFive
+            SourceQueueFixture::RandomFourPartiesOfFive
         } else {
             SourceQueueFixture::FourPartiesOfFiveAt25
         };
