@@ -1,3 +1,7 @@
+## 2026-10-17 — NPC victim dodge49
+
+[NPC49](systems/player-damage.md#npc-victim-dodge-aura49--2026-10-17): ignoreddf529 pushed first; actual5277+62356effect1 sum0 across8s/block51=0, qualification1PASS33.62s. Nativefront/behind each5Damage despite live200, genuine2RED/4PASS35.27s. Existingtarget_auras consumer onlyNPC/allowedhit path before251/240/clamp; no playerdoublecount/otherdefense/Guardian/query/wire/RNG/clock change. GREEN/lead gate pending.
+
 ## 2026-10-17 — NPC autoattack expertise
 
 [NPC240](systems/player-damage.md#npc-autoattack-expertise--2026-10-17): ignored2abb pushed first; native28305 singleapplication qualified14 across1536s,1PASS32.88s (post-command wrapper error, no invented exitcode). Genuine Rogue5DodgeRED plus cancelled/foreign2PASS; two owner-log fixture failures corrected to actual CombatEvent broadcasts without gameplay changes. Ignoredb1c2 native14/10000 give genuine2RED66.39s; minimal NPC-only240/4 dodge/parry consumer, block/Guardian/RNG/clocks unchanged. Consumer925224b2a fresh behavior5/5GREEN70.24s0warnings+retained lifetime1PASS32.88s (composite6,notone6batch), then allsix ignores removed; lead gate pending.

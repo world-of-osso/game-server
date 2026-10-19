@@ -985,9 +985,14 @@ fn roll_outcome(
     } else {
         melee::swing_chances(swinger, victim, can_avoid)
     };
-    // Unit.cpp2775–2782/2817–2822: signed attacker251, NPC240/4, then clamp.
+    // Unit.cpp2761–2782/2817–2822: NPC victim49, attacker251, NPC240/4, clamp.
     // Never restore CC/casting or missing-player-stats prohibited avoidance.
     if can_avoid && (attacker.creature || attacker.stats.is_some()) {
+        if matches!(victim, Victim::Creature { .. }) {
+            chances.dodge += target_auras.map_or(0.0, |auras| {
+                auras.modifier(crate::auras::handlers::MOD_DODGE_PERCENT)
+            });
+        }
         chances.dodge =
             (chances.dodge + attacker.enemy_dodge_pct - attacker.npc_expertise_pct).max(0.0);
         chances.parry = (chances.parry - attacker.npc_expertise_pct).max(0.0);
