@@ -7,37 +7,31 @@ use shared::protocol::{
 const DEADMINES: u32 = 100;
 
 #[test]
-#[ignore = "RED: ordinary BG admission ignores actual LFG queue activity"]
 fn bg_lfg_solo_concrete_refuses_queue_and_allows_native_dequeue() {
     assert_queued_lfg_refuses_bg(1018, 1);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG admission ignores actual LFG queue activity"]
 fn bg_lfg_solo_random_refuses_queue_and_allows_native_dequeue() {
     assert_queued_lfg_refuses_bg(32, 1);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG party admission ignores a member queued for LFG"]
 fn bg_lfg_party_concrete_refuses_atomically_until_member_dequeues() {
     assert_queued_lfg_refuses_bg(1018, 5);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG party admission ignores a member queued for LFG"]
 fn bg_lfg_party_random_refuses_atomically_until_member_dequeues() {
     assert_queued_lfg_refuses_bg(32, 5);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG admission ignores an active LFG role check"]
 fn bg_lfg_role_check_solo_refuses_then_allows_cancelled_selection_history() {
     assert_role_check_refuses_bg(1018, false);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG party admission ignores an active LFG role check"]
 fn bg_lfg_role_check_party_refuses_then_allows_cancelled_selection_history() {
     assert_role_check_refuses_bg(32, true);
 }
