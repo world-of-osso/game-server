@@ -45,10 +45,17 @@ fn damage_to_percent(h: &mut Harness, actor: Entity, percent: f32) {
     let multiplier = crate::level_scaling::UnitScaling::of(h.app.world(), actor).health_multiplier(
         &crate::level_scaling::UnitScaling::of(h.app.world(), player),
     );
-    let damage = (health.current - health.max * percent / 100.0) * multiplier;
+    let target_health = (health.max * percent / 100.0).round();
+    let damage = (health.current - target_health) * multiplier;
     assert!(damage > 0.0);
+    let expected_loss = (damage / multiplier).trunc();
     crate::combat::deal_direct_damage(h.app.world_mut(), player, actor, damage);
-    assert!((h.health(actor).current / health.max * 100.0 - percent).abs() < 0.001);
+    assert_eq!(h.health(actor).current, health.current - expected_loss);
+    assert_eq!(
+        h.health(actor).current < health.max * 0.4,
+        percent < 40.0,
+        "real native integer damage must land on the intended side of40%"
+    );
 }
 
 fn descent_emotes(h: &Harness, nazan: Entity) -> usize {
