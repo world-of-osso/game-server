@@ -132,6 +132,39 @@ fn swings(h: &mut Harness, attacker: Entity, victim: Entity, count: usize) -> Ve
     events
 }
 
+fn assert_no_crit(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .all(|e| e.event_type == CombatEventType::MeleeDamage),
+        "{events:?}"
+    );
+}
+
+fn assert_all_crit(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .all(|e| e.event_type == CombatEventType::CriticalHit),
+        "{events:?}"
+    );
+}
+
+fn assert_both(events: &[CombatEvent]) {
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::CriticalHit),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::MeleeDamage),
+        "{events:?}"
+    );
+}
+
 #[test]
 fn native_melee_npc_no_crit_actor_and_unchanged_target_are_runtime_qualified() {
     let (mut h, attacker, victim) = fixture(DARION);
@@ -202,4 +235,102 @@ fn native_melee_npc_no_crit_unflagged_actor_is_runtime_qualified() {
     let (mut h, attacker, victim) = fixture(KOBOLD);
     let events = swings(&mut h, attacker, victim, SWINGS);
     assert_eq!(events.len(), SWINGS);
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC source NO_CRIT consumer"]
+fn native_melee_npc_no_crit_flag_excludes_base_source_chance() {
+    let (mut h, attacker, victim) = fixture(DARION);
+    let events = swings(&mut h, attacker, victim, SWINGS);
+    // Old5% source's all-normal escape .95^256≈1.983e-6.
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC source NO_CRIT consumer"]
+fn native_melee_npc_no_crit_flag_excludes_weapon_52_source_chance() {
+    let (mut h, attacker, victim) = fixture(DARION);
+    apply(&mut h, attacker, WEAPON_CRIT, 1);
+    assert_eq!(modifier(&h, attacker, 52), 1000.0);
+    let events = swings(&mut h, attacker, victim, 5);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC source NO_CRIT consumer"]
+fn native_melee_npc_no_crit_flag_excludes_general_290_source_chance() {
+    let (mut h, attacker, victim) = fixture(DARION);
+    apply(&mut h, attacker, GENERAL_CRIT, 1);
+    assert_eq!(modifier(&h, attacker, 290), 100.0);
+    let events = swings(&mut h, attacker, victim, 5);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral RED before NPC source NO_CRIT consumer"]
+fn native_melee_npc_no_crit_flag_excludes_combined_52_and_290_source() {
+    let (mut h, attacker, victim) = fixture(DARION);
+    apply(&mut h, attacker, WEAPON_CRIT, 1);
+    apply(&mut h, attacker, GENERAL_CRIT, 1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::AuraStatMods>(attacker)
+            .unwrap()
+            .npc_crit_pct,
+        1100.0
+    );
+    let events = swings(&mut h, attacker, victim, 5);
+    assert_no_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control: NO_CRIT is not a final crit mask"]
+fn native_melee_npc_no_crit_flag_still_allows_later_attacker_334() {
+    let (mut h, attacker, victim) = fixture(DARION);
+    apply(&mut h, attacker, AUTO_CRIT, 1 << 1);
+    assert_eq!(modifier(&h, attacker, 334), 100.0);
+    assert_eq!(modifier(&h, attacker, 107), 0.0);
+    let events = swings(&mut h, attacker, victim, 5);
+    assert_all_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for native unflagged attacker"]
+fn native_melee_npc_no_crit_unflagged_actor_retains_base_source_chance() {
+    let (mut h, attacker, victim) = fixture(KOBOLD);
+    let events = swings(&mut h, attacker, victim, SWINGS);
+    assert_both(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for native unflagged source auras"]
+fn native_melee_npc_no_crit_unflagged_actor_retains_52_and_290() {
+    let (mut h, attacker, victim) = fixture(KOBOLD);
+    apply(&mut h, attacker, WEAPON_CRIT, 1);
+    apply(&mut h, attacker, GENERAL_CRIT, 1);
+    let events = swings(&mut h, attacker, victim, 5);
+    assert_all_crit(&events);
+}
+
+#[test]
+#[ignore = "behavioral control for actor-owned source flag"]
+fn native_melee_npc_no_crit_foreign_flagged_actor_does_not_suppress_attacker() {
+    let (mut h, attacker, victim) = fixture(KOBOLD);
+    let caster = h.caster;
+    let foreign =
+        crate::zones::summon_creature(h.app.world_mut(), caster, DARION, [9.0, 0.0, 0.0, 0.0])
+            .unwrap();
+    assert_ne!(
+        h.app
+            .world()
+            .get::<crate::zones::CreatureFlagsExtra>(foreign)
+            .unwrap()
+            .0
+            & NO_CRIT,
+        0
+    );
+    apply(&mut h, attacker, GENERAL_CRIT, 1);
+    let events = swings(&mut h, attacker, victim, 5);
+    assert_all_crit(&events);
 }
