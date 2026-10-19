@@ -132,6 +132,39 @@ pub struct ProfessionData {
 }
 
 impl ProfessionData {
+    /// Static trainer rows for learned owner skill lines, independent of recipe knowledge.
+    pub fn trainer_sources(
+        &self,
+        lines: &[shared::profession::ProfessionSkillLine],
+    ) -> Vec<shared::protocol::ProfessionTrainerSource> {
+        let learned: std::collections::HashSet<_> = lines
+            .iter()
+            .filter(|line| line.rank > 0)
+            .map(|line| line.skill_line)
+            .collect();
+        let mut sources: Vec<_> = self
+            .trainers
+            .values()
+            .flat_map(|trainer| {
+                trainer
+                    .spells
+                    .iter()
+                    .filter(|spell| learned.contains(&spell.req_skill_line))
+                    .map(|spell| shared::protocol::ProfessionTrainerSource {
+                        trainer_id: trainer.id,
+                        spell_id: spell.spell,
+                        cost: spell.cost,
+                        req_skill_line: spell.req_skill_line,
+                        req_skill_rank: spell.req_skill_rank,
+                        req_abilities: spell.req_abilities.clone(),
+                        req_level: spell.req_level,
+                    })
+            })
+            .collect();
+        sources.sort_by_key(|source| (source.spell_id, source.trainer_id));
+        sources
+    }
+
     pub fn skill_line(&self, id: u32) -> Option<&SkillLineInfo> {
         self.skill_lines.get(&id)
     }
