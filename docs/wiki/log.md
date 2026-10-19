@@ -3175,3 +3175,7 @@ Existing guild snapshot paths now resolve same-guild online map/position through
 
 Actual protocol1, both-skin UI1 and native HostClient server1 pass after their observed REDs. Tests enabled; production area authority/label semantics unchanged by fixture repairs. Coordinated integration gate and native proof next.
 - 2026-10-18: Share MFBO minimum signed-grid decoding, preserving consumer selection/errors and runtime plane policy. See [shared formats](systems/wow-formats.md).
+
+## 2026-10-19 — Priority-preserving follower interrupt provider
+
+[Provider integration](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): shared live source predicate with actual caster, once at first available kick-capable entry; real Garrick32 ordinary-update RED→96231 GREEN, native26 heal633-before31935 preserved. Four requested families50PASS118.50s/zero warnings, non-testcheck2m37s/fmtPASS; rewrittenf383e28c1 pushed, leadgate pending. No planner/navigation/ai.rs redesign or whole-kit/live acceptance.
