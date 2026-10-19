@@ -3,6 +3,7 @@ use super::kit_tests::{level32, uses_spell};
 use super::{update_ai, utility_tests};
 use crate::spell_cast::test_harness::Harness;
 use bevy::time::TimeUpdateStrategy;
+use shared::casting::CastState;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
@@ -304,6 +305,9 @@ fn follower_kit_utility_meredy_does_not_control_an_idle_attacker() {
 
 #[test]
 fn follower_kit_utility_bo_controls_caster_after_spent_spear_hand() {
+    use super::control_cast_stop_tests::{FIREBALL, logged, remaining_cast_frames};
+    const PARALYSIS: u32 = 115078;
+    const LEG_SWEEP: u32 = 119381;
     let (mut h, unit) = level32(227734);
     utility_tests::start_enemy_fireball(&mut h, unit);
     update_ai(h.app.world_mut());
@@ -316,6 +320,33 @@ fn follower_kit_utility_bo_controls_caster_after_spent_spear_hand() {
     );
     wait_for_native_school_unlock(&mut h, 116705);
     utility_tests::start_enemy_fireball(&mut h, unit);
-    uses_spell(&mut h, unit, 119381);
-    assert!(crate::auras::has_aura(h.app.world(), h.npc, 119381));
+    let (go_from, log_from) = (h.inbox.go.len(), h.inbox.log.len());
+    let frames = remaining_cast_frames(&h);
+    let (bo, enemy) = (unit.to_bits(), h.npc.to_bits());
+    // Both controls are priority43; spell ID orders Paralysis first.
+    uses_spell(&mut h, unit, PARALYSIS);
+    let first = h.inbox.go[go_from..].iter().find(|go| go.caster == bo);
+    assert_eq!(first.map(|go| go.spell_id), Some(PARALYSIS));
+    let paralyzed = logged(&h, log_from, bo, PARALYSIS, CombatLogKind::AuraApplied);
+    assert_eq!(
+        h.app.world().get::<CastState>(h.npc).is_none(),
+        paralyzed,
+        "only a landed stun stops the enemy cast"
+    );
+    if !paralyzed {
+        // Native creature physical miss leaves the cast for Leg Sweep.
+        uses_spell(&mut h, unit, LEG_SWEEP);
+    }
+    for _ in 0..frames {
+        update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    let swept = logged(&h, log_from, bo, LEG_SWEEP, CombatLogKind::AuraApplied);
+    let fireball = logged(&h, log_from, enemy, FIREBALL, CombatLogKind::CastSuccess);
+    assert_eq!(fireball, !paralyzed && !swept);
+    let leg_sweeps = h.inbox.go[go_from..]
+        .iter()
+        .filter(|go| go.caster == bo && go.spell_id == LEG_SWEEP)
+        .count();
+    assert_eq!(leg_sweeps, usize::from(!paralyzed));
 }
