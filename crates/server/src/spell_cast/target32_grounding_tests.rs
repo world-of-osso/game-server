@@ -70,6 +70,18 @@ fn source_floor(world: &mut World, position: Vec3) -> f32 {
     floor
 }
 
+fn assert_floor_from_cast_ray(world: &mut World, before: targets::Dest, after: targets::Dest) {
+    // TC Object.cpp709–748 queries once with the pre-clamp Y, then assigns Z.
+    // A ray from the assigned Y would be a different query, not TC's contract.
+    let ray = Vec3::new(after.position.x, before.position.y, after.position.z);
+    let expected = source_floor(world, ray);
+    assert_eq!(
+        after.position.y.to_bits(),
+        expected.to_bits(),
+        "bit-exact source floor at final XZ with the same pre-clamp Y/ray"
+    );
+}
+
 fn assert_xy_and_facing_retained(before: targets::Dest, after: targets::Dest) {
     assert_eq!(
         (after.position.x, after.position.z, after.orientation),
@@ -88,26 +100,7 @@ fn target32_grounding_dry_source30717_without_model_reach() {
     assert!(source_floor(&mut world, before.position) < before.position.y - 1.0);
     let after = planned(&mut world, caster, &spell);
     assert_xy_and_facing_retained(before, after);
-    let mut m2 = los::LosMap::new(&crate::ground::ground_data_dir().join("los/543/m2"));
-    for position in [before.position, after.position] {
-        eprintln!(
-            "TARGET32_M2 position={position:?} floor={:?}",
-            m2.floor_height(position)
-        );
-        let first = source_floor(&mut world, position);
-        let repeated = source_floor(&mut world, position);
-        eprintln!(
-            "TARGET32_RAY position={position:?} top={} bottom={} height={first:?} repeated={repeated:?} height_bits={:#x}",
-            position.y + shared::ground::STEP_UP_HEIGHT,
-            position.y - shared::ground::FLOOR_SEARCH_DEPTH,
-            first.to_bits()
-        );
-    }
-    assert_eq!(
-        after.position.y,
-        source_floor(&mut world, after.position),
-        "source floor re-probed at actual final XYZ; no ULP tolerance"
-    );
+    assert_floor_from_cast_ray(&mut world, before, after);
 }
 
 #[test]
@@ -129,9 +122,9 @@ fn target32_grounding_gravity_disabled_above_and_below_floor() {
         let after = planned(&mut world, caster, &spell);
         assert_xy_and_facing_retained(before, after);
         if below {
-            assert_eq!(after.position.y, source_floor(&mut world, after.position));
+            assert_floor_from_cast_ray(&mut world, before, after);
         } else {
-            assert_eq!(after.position.y, before.position.y);
+            assert_eq!(after.position.y.to_bits(), before.position.y.to_bits());
         }
     }
 }
@@ -170,5 +163,5 @@ fn target32_grounding_force_grounds_flyer_without_changing_existing_xy() {
     let before = selected(&world, caster, &spell);
     let after = planned(&mut world, caster, &spell);
     assert_xy_and_facing_retained(before, after);
-    assert_eq!(after.position.y, source_floor(&mut world, after.position));
+    assert_floor_from_cast_ray(&mut world, before, after);
 }

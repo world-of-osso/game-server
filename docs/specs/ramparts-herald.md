@@ -28,9 +28,11 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 
 ### Grounding-only target32 prerequisite
 
+TC Object.cpp709–748 calls GetMapHeight with pre-clamp Z once, then assigns the returned height; it does not demand that a second query from the assigned Z be a fixed point. Real ray trace at the same XZ gives81.05518 for inputY89.05998 and81.05517 for inputY81.05518, each bit-stable when repeated with identical inputs. Therefore the independent oracle uses the actual finalXZ but the identical pre-clamp Y/ray, and compares bits exactly. No ULP tolerance, rounding, repeated clamping or WMO-reader changes.
+
 - [ ] Apply TC Object.cpp698–762 Z semantics after existing target32 XY selection, without reading a model/display/reach: valid source floor for represented dry non-hover non-flyers; flyers only rise from below; invalid/missing height preserves Z.
 - [ ] Attr9 FORCE uses its final ground-Z branch regardless of flight; preserve existing XY. Do not claim FORCE distance-backoff parity.
-- [ ] Retain actual688 no-height and all follower Felguard behavior without source-reach defaults, changed assertions or widened ignores. Exact floor oracle re-probes finalXYZ without ULP tolerance.
+- [ ] Retain actual688 no-height and all follower Felguard behavior without source-reach defaults, changed assertions or widened ignores. Exact floor oracle queries finalXZ using the primitive's same pre-clamp Y/ray, then compares height bits with no tolerance.
 - [ ] Keep `TARGET32_CASTER_SUMMON_XY_UNIMPLEMENTED`, `TARGET32_FIRST_COLLISION_PARITY_UNIMPLEMENTED`, `TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED` and `TARGET32_FORCE_XY_BACKOFF_UNIMPLEMENTED` explicit. Selectors42,44,47,49,50,72,55 remain unchanged under `CASTER_RELATIVE_DEST_ALLOWED_Z_UNIMPLEMENTED`.
 
 ### Lifecycle and phases
