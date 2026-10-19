@@ -10,7 +10,7 @@
 
 ## Source-qualified pacing fixture gap
 
-[Bisect and native bounds](investigations/follower-data.md#pacing-fixture-qualification--2026-10-19): originalc759/P_a2 already fails3 affordability prerequisites; not a worker/threat regression. Current40d3/717 native100eligible endpoint footprints all≥2packs and unchanged23-pack entrance WaitReserve pass2/2 in68.09s/0warnings. Explicitly approved named ignore preserves exactly3test bodies/assertions; no stat/kit/budget/runtime tuning or claim ordinary first pulls are impossible. Scoped re-gate pending.
+[Bisect and native bounds](investigations/follower-data.md#pacing-fixture-qualification--2026-10-19): originalc759/P_a2 already fails3 affordability prerequisites; not a worker/threat regression. Current40d3/717 native100eligible endpoint footprints all≥2packs and unchanged23-pack entrance WaitReserve pass2/2 in68.09s/0warnings. Explicitly approved named ignore preserves exactly3test bodies/assertions; no stat/kit/budget/runtime tuning or claim ordinary first pulls are impossible. Final scoped26de10PASS/3namedignored47.31s/0warnings; check/fmt pass. Runtime pacing acceptance remains open.
 
 ## Worker-backed tank admission integration
 
