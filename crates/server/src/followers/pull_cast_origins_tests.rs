@@ -116,6 +116,21 @@ fn panic_message(error: Box<dyn std::any::Any + Send>) -> String {
 }
 
 #[test]
+fn native_overheat_caster_collection_refuses_measured_unengaged_route() {
+    // Authored-origin enumeration88b0309ac measured ten qualifying boundaries here.
+    let CasterFixture { mut f, .. } = overheat_fixture(false, 20375694);
+    let observation = observe_refusal_boundaries(&mut f);
+    assert_eq!(observation["qualified_boundaries"], 10, "{observation}");
+    assert!(
+        observation["violation_ticks"]
+            .as_array()
+            .unwrap()
+            .is_empty(),
+        "{observation}"
+    );
+}
+
+#[test]
 fn native_overheat_authored_origin_refusal_enumeration() {
     let mut probe_fixture = physical_fixture();
     let map = *probe_fixture

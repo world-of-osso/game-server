@@ -1,3 +1,7 @@
+## Measured Overheat refusal origins
+
+[Native origin/boundary proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):88b0309ac/P_a2b enumerates144authored origins, eight native-valid disposable kit/chase fixtures; four retain refusal/unengaged exposure/live12466 through ten50ms boundaries, zero movement violations. Native1PASS402.99s/0warnings, no input/prerequisite failures. Focused control uses measured20375694; positive20375738 remains existing defense. No runtime change/tuning; focused regression and stronger actual-kick frontal assertion pending.
+
 ## Actual destination-cone frontal RED and admitted point positioning
 
 [Native proof/implementation](investigations/follower-data.md#run-local-tank-observations--2026-10-18): a3ea7ae49/P_a2b actual386660/104 pose1RED38.01s/0warnings exposes all4living other party members despite successful native70/205 intro/body/LOS/approach/cast and clear-pose controls. First104 goal now records before legitimate follower kicks, validates native recipient geometry/actual-body mutual LOS/ground, and projects full point-route exposure through unchanged admission. No eye defaults, stat/kit/budget changes or interrupt-provider activation. Native GREEN and broader frontals/stacking remain open.
