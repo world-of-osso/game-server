@@ -21,9 +21,9 @@ This batch does not authorize generic dummy4 support, alter source weights or im
 
 ## Expanded build70448 footstep cosmetics
 
-- [ ] Trail of Halazzi280821/1309828 (Toy1764) and Rite of Jan'alai's Flame280825/1309844 (Toy1768) use source-exact Toy membership and actual bag learning/UseToy.
-- [ ] Apply the authored1800000ms owner cosmetic aura and3600000ms recovery. Real cancellation removes the aura without resetting recovery or changing health/body model/position; denied reuse produces no extra SpellGo.
-- [ ] Only these two named visual-only admissions and their published census item/name/spell triples may join this batch. Preserve Full1166 plus the five previously published extras; no bare total or generic dummy4 admission.
+- [x] Trail of Halazzi280821/1309828 (Toy1764) and Rite of Jan'alai's Flame280825/1309844 (Toy1768) use source-exact Toy membership and actual bag learning/UseToy.
+- [x] Apply the authored1800000ms owner cosmetic aura and3600000ms recovery. Real cancellation removes the aura without resetting recovery or changing health/body model/position; denied reuse produces no extra SpellGo.
+- [x] Only these two named visual-only admissions and their published census item/name/spell triples may join this batch. Preserve Full1166 plus the five previously published extras; no bare total or generic dummy4 admission.
 
 The lead independently published the exact Toy1764/1768 source rows and40 local-CASC files/57 target paths before canonical admission proof. Only1309828 and1309844 enter the existing strict visual-only whitelist; append their item/name/spell triples to the five published census extras in the same branch.
 
