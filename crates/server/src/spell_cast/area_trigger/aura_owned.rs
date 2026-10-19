@@ -180,7 +180,7 @@ fn eligible_units(
             let Some(radius) = collision_radius(world, entity, unit) else {
                 warn!(
                     ?unit,
-                    "Aura395 enemy collision requires source model combat reach"
+                    "Source field enemy collision requires source model combat reach"
                 );
                 return None;
             };
@@ -200,7 +200,7 @@ fn living_units_in_map(world: &mut World, map: InMap) -> Vec<(Entity, Position)>
         .collect()
 }
 
-fn update_actions(world: &mut World, entity: Entity, previous: &SpellAreaTrigger) {
+pub(super) fn update_actions(world: &mut World, entity: Entity, previous: &SpellAreaTrigger) {
     let inside = eligible_units(world, entity, previous);
     for &unit in previous.inside.difference(&inside) {
         undo_action(world, previous, unit);

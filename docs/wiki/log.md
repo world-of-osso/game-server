@@ -13,6 +13,31 @@
 ## 2026-10-18 — Navigation worker design and sight CPU gap
 
 [Design](design/navigation-worker.md) records approved pending movement/latest-request/fixed-order/error/test-drain behavior, exclusive map ownership, complete synchronous caller inventory, per-entity queue bound and explicit worker-death failure. Base83a8ce176/protocol029a927; no Rust implementation or RED yet. [SIGHT_FACTION_MAIN_THREAD_CPU](investigations/server-tick-lag.md#sight_faction_main_thread_cpu) records9of12 B partial stacks and sampled A/B CPU counts, with uncaptured maximum-gap stack and load/observer limitations. Navigation reads are a confirmed contributor, not sufficient evidence alone for historical ten-second stalls.
+## 2026-10-17 — Character-owned recipe Favorites
+
+[Professions](systems/professions.md#character-owned-recipe-favorites) adds known-spell-only preference requests and a character-keyed redb multimap without changing existing profession record encoding. Existing owner snapshots carry current favorites; request/refusal and reopen/isolation proof is pending targeted GREEN and the coordinated consumer gate.
+## 2026-10-18 — Grounding-only target32 and natural INTRO2 GREEN
+
+[Bounded contract and proof ledger](../specs/ramparts-herald.md): model-free Z-only reader preserves XY and missing-height casts; full reach-dependent port remains blocked by122612 metadata. TC709–748 source-height query is made once with pre-clamp Y; traced identical-input rays are bit-stable, while a post-clamp-Y ray is a different query. Approved exact source-ray oracle uses finalXZ/pre-clampY and strict bits, no tolerance or WMO-reader changes. Grounding plus full follower-pet and retained controls pass; Normal/Heroic natural first-West and actual facing bits pass after master6c8929589 merge. Future source engage events remain scheduled/unasserted; later lifecycle/native/XY/collision/hover-swim/backoff gaps explicit. LEAD independent gate pending.
+
+## 2026-10-18 — INTRO2 rewritten integration / target32 grounding blocked
+
+[Source transition](systems/boss-scripts.md#herald-intro2-first-west-boundary--2026-10-18): reset rewritten870659102, merge exact masterac36572bb including target32 revert; no port resurrection. Standalone copy-only prep and shared test visibility/difficulty API preserved without changing defaults. After excluding compiler/setup failure, ff1502383 gives4PASS/1genuineFAIL50.82s: exact actual-finalXYZ source floor89.05998 versus80.80767, no ULP tolerance. Normal initial transition/child and copy/duplicate/INTRO1 checks pass; Heroic/first-West assertions not reached. LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT blocks returning target32 port, not an accepted runtime gap. No summon-position/admission workaround, no ready/full-encounter claim.
+## 2026-10-17 — NPC autoattack expertise
+
+[NPC240](systems/player-damage.md#npc-autoattack-expertise--2026-10-17): ignored2abb pushed first; native28305 singleapplication qualified14 across1536s,1PASS32.88s (post-command wrapper error, no invented exitcode). Genuine Rogue5DodgeRED plus cancelled/foreign2PASS; two owner-log fixture failures corrected to actual CombatEvent broadcasts without gameplay changes. Ignoredb1c2 native14/10000 give genuine2RED66.39s; minimal NPC-only240/4 dodge/parry consumer, block/Guardian/RNG/clocks unchanged. Consumer925224b2a fresh behavior5/5GREEN70.24s0warnings+retained lifetime1PASS32.88s (composite6,notone6batch), then allsix ignores removed; lead gate pending.
+## 2026-10-18 — Frozen Ground fg602 landing and world-delta qualification
+
+[Qualified proof](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): independent fg602359PASS/0FAIL/14namedignored1998.44s includes fresh3 Frozen Ground cases; check/fmt0. Lead channel671 confirms08e3→b24e is only3Toy INSERTs, so retained3PASS stands without replay; original guard failure preserved. After push-race reconciliation, landed361efa1d2 with post-merge check/fmt0. Deployment started per lead; no live-dungeon/canonical-geometry-publication claim from this slice. Historical2+1/observer and input-provenance boundaries remain recorded below.
+
+## 2026-10-18 — Frozen Ground native2+1 and controls qualification
+
+[Current matrix](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18):13d7 Player periodic/slow/lifecycle+curve/30s2PASS;5730 genuine follower escape/next-membership cleanup1PASS118.14s, no source scheduling change. Retained Rune/Sprout/curve3PASS91.01s but08e3→b24e world guardfailed; source/protocol stable, no automatic rerun or clean-controls/final-gate claim. History rewritten b548→867c, then exactac365 merged; originalRED content proof preserved.
+
+## 2026-10-18 — Ordinary Frozen Ground source field
+
+[Finite387149/26505 binding](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): accepted real Frost-expiry aura/geometry RED;4LOS/4M2-floor/4nav private2515 bake with explicit mixed input provenance. Source action/curve/lifetime implementation committed before GREEN; downstream native follower escape/lifecycle proof pending, no arbitrary179/Mythic/VFX/full-Azure expansion.
+
 ## 2026-10-17 — Attacker251 / Guardian merge
 
 [Attacker251](systems/player-damage.md#autoattack-attacker251--2026-10-17): rewrite maps old035ae5cfb to de08aab30, identical tree; original proof labels retained. Merge masterac36572bb preserves Guardian same-tick try_swing one-shot health commit and251 scalar/roll consumer; requested original9 plus Guardian/Ardent integration proof pending.
@@ -2924,3 +2949,8 @@ User decision specifies MOBILE_BANKING_COOLDOWN_2H7200000ms over installed360000
 ## 2026-10-18 — Shared death-prevention commit
 
 Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame mitigation boundaries in [auras](systems/auras.md#shared-death-prevention-commit--2026-10-18); native rows/clocks/RNG unchanged, final combined gate pending.
+
+## 2026-10-18 — Prayer of Mending source/RED
+
+Recorded real33076 ward RED, approved per-cast stack/original-caster API and native delayed jump in [auras](systems/auras.md#prayer-of-mending-baseline--2026-10-18); player recipient qualification and PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT explicit; Native8/8 GREEN37.08s including actual expiry/exhaustion/foreign/no-recipient and no-override Agony controls; native4000ms Fireball readiness honored, independent lead gate pending.
+- 2026-10-18 — Replace LOS/nav bake and vehicle duplicate binary readers with pinned wow-formats geometry metadata; preserve selection/posing policy and capture old-reader Stockade reference. [Shared formats](systems/wow-formats.md).

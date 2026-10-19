@@ -1,5 +1,21 @@
 # Boss scripts
 
+## Target32 grounding-only prerequisite — 2026-10-18
+
+`targets::caster_summon_ground_destination` runs only for32 from mutable cast planning. It applies represented dry/non-hover floor/flight Z rules from TC Object.cpp709–762, preserving missing/invalid height rather than refusing. Attr9 FORCE (Spell.cpp9286–9292) uses only final ground-Z semantics Object.cpp698–706. Existing XY/radius selection, other selectors, collision and FORCE XY backoff remain unchanged. No source projection, model lookup or invented combat reach.
+
+Genuine source-plan REDs precede the Z-only implementation. All four grounding cases and the full follower-pet module now pass, with no changed follower assertions or source-reach defaults. Independent oracle queries finalXZ using the same pre-clamp Y/ray and compares bits exactly, matching TC's one-query assignment; it does not impose a second-ray fixed point. No ULP tolerance or WMO-reader change. [Contract, proof ledger and residuals](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite) distinguish setup failures from behavioral REDs and keep the122612 blocker limited to the full reach-dependent XY port. LEAD integration/check/fmt remains pending.
+
+## Herald INTRO2 first West boundary — 2026-10-18
+
+Pinned TC `boss_vazruden_the_herald.cpp224–241/305–316/260–271` continues actual center point arrival after1s. The existing Herald AI retains its allocation/origin and consumes the shared entry projection for17536;30717 runs while gravity is enabled, then30698/30694 and zone combat run after restoring flight.30698 SpellHit starts actual West2 point movement; arrival casts30700/18430 and changes reaction. `NPC_ONESHOT_EMOTE_UNIMPLEMENTED` means LAND emits nothing, never another pose/emote. Copy-only source templates/spells remain prerequisites, not canonical writes.
+
+Herald engage173–183 schedules victimFireball0, random10–15s and next flight20–30s through real EventMap; Passive suppresses fireball casts while retaining the source3200ms repeat. Vazruden17537 is registered for actual5301 appearance/zone combat and engage speech5s/Revenge5–10s434–450. Ordinary cast admission is unchanged. Future event handlers use real source casts/movement/repeats rather than empty stubs, but later loops remain unverified by this bounded slice.
+
+The natural REDs were pushed before implementation; corrected source-ray oracle now proves both Normal/Heroic first-West paths, actual facing bits and copy/duplicate negatives. Tests are enabled after GREEN. Simulation-time anchoring at the real center-arrival callback prevents its same-tick AI update shortening the source1s delay; no extra frame padding or invented clock. All source engage schedules remain real, but those beyond the endpoint are unasserted. `HERALD_RECURRING_FLIGHT_UNVERIFIED`, `HERALD_DESCENT_UNIMPLEMENTED`, `HERALD_PAIRED_CREDIT_UNIMPLEMENTED` and `HERALD_RESET_UNIMPLEMENTED` remain exclusions, plus LAND/native presentation and target32 XY/collision/hover-swim/FORCE-backoff/other-selector gaps. [Current bounded proof](../../specs/ramparts-herald.md#tests-asserting-this-spec) is not full encounter acceptance.
+
+Sources: pinned TC a352b1fa above; [contract/tests](../../specs/ramparts-herald.md), [target32 residuals](../../specs/ramparts-herald.md#known-gaps-current-cycle). LittleWigs Vazruden.lua5–14/56–77 corroborates actor/encounter identity, not an intro clock.
+
 Creature scripts by `creature_template.ScriptName`, ported from TrinityCore master a352b1fa: the `CreatureAI`/`ScriptedAI`/`BossAI` layer, `InstanceScript`, `CreatureTextMgr` and the Stockade scripts. Contract: `docs/specs/boss-scripts.md`. Code: `crates/server/src/scripted_ai/`.
 
 ## How a script runs

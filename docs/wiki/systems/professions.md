@@ -14,6 +14,12 @@ See [[gathering]] for the gathering-nodes branch's authored resource loop and ex
 
 Retail splits a profession into a parent `SkillLine` (197 Tailoring) and one child line per expansion (2540 Classic Tailoring, `ParentSkillLineID` 197, `ParentTierIndex` 4). `PlayerProfessions { lines, spells }` holds each learned line (`skill_line`, `step`, `rank`, `max_rank`) and every spell learned through professions. It is saved (redb `profession_state`, bitcode) and sent as `ProfessionSnapshot` whenever it changes (`save_and_send_professions`, `Changed<PlayerProfessions>`), which includes entering the world. The AzerothCore-era `professions` table (placeholder Mining/Blacksmithing) is deleted by `create_tables`.
 
+## Character-owned recipe Favorites
+
+`profession/favorites.rs` stores characterID→spellID pairs in redb `character_recipe_favorites`; existing bitcode `PlayerProfessions { lines, spells }` records are unchanged. The new table is initialized with the other persistence tables. `SetRecipeFavorite` takes its owner from the authenticated `PlayerLink`/`ClientId`, checks current `PlayerProfessions::knows`, then commits only the preference. Unknown-spell refusals log and return unchanged owner state.
+
+The existing owner snapshot adds `favorites`, loaded from this table and intersected with current known spells on world entry, profession changes and preference replies. No client-only preference cache grants authority. The [spec](../../specs/professions.md#recipe-favorites) owns requirements/source lines; fresh server/client reopen acceptance remains pending.
+
 ## Data (`ProfessionData`, loaded at startup)
 
 | Source | Use |

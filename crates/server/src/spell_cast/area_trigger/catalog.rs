@@ -1,4 +1,4 @@
-//! Source-defined aura395 spheres. Unsupported scripts, shapes and curve modes
+//! Source-defined aura395 spheres and the finite Frozen Ground effect179 binding. Unsupported scripts, shapes and curve modes
 //! remain explicit errors; they never acquire a guessed radius or curve type.
 use std::collections::HashMap;
 
@@ -62,7 +62,8 @@ impl FieldDefinition {
 pub(crate) fn load_catalog(connection: &Connection) -> rusqlite::Result<AuraFieldCatalog> {
     let mut statement = connection.prepare(
         "SELECT DISTINCT EffectMiscValue_0 FROM spell_effect \
-         WHERE EffectAura=395 AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0",
+         WHERE (EffectAura=395 OR (Effect=179 AND SpellID=387149 AND EffectMiscValue_0=26505)) \
+         AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0",
     )?;
     let properties = statement
         .query_map([], |row| row.get::<_, u32>(0))?
