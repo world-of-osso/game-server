@@ -158,11 +158,30 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
     let before_distance = from.distance(caster_point);
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let mut nearest = before_distance;
+    let mut acquired_caster = false;
     for _ in 0..10 {
         f.h.advance(1);
         let point = f.h.app.world().get::<Position>(f.tank).unwrap();
         nearest = nearest.min(Vec3::new(point.x, point.y, point.z).distance(caster_point));
+        acquired_caster |=
+            f.h.app
+                .world()
+                .get::<crate::networking::CombatTarget>(f.tank)
+                .is_some_and(|target| target.0 == Some(caster));
     }
+    assert_eq!(
+        f.h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(f.h.caster)
+            .unwrap()
+            .0,
+        Some(main),
+        "tank collection must not force the owner's selected target"
+    );
+    assert!(
+        acquired_caster,
+        "actual native tank victim must agree with the caster chase"
+    );
     assert!(
         nearest < before_distance,
         "production tank stayed on reachable selected trash instead of collecting real casting Overheat: distance {before_distance}, nearest {nearest}"

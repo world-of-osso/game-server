@@ -18,16 +18,14 @@ pub(super) fn update_caster_goal(
     tank: Entity,
     follower: &Follower,
     party: &[Entity],
-) {
+) -> Option<Entity> {
     let Some(caster) = read_admitted_caster(world, tank, follower, party) else {
         clear_caster_goal(world, tank);
-        return;
+        return None;
     };
     world.entity_mut(tank).insert(AdmittedCasterTarget(caster));
-    let selected = world
-        .get::<crate::networking::CombatTarget>(tank)
-        .and_then(|target| target.0);
-    apply_admitted_caster_target(world, tank, selected);
+    apply_admitted_caster_target(world, tank);
+    Some(caster)
 }
 
 fn read_admitted_caster(
@@ -74,11 +72,7 @@ fn clear_caster_goal(world: &mut World, tank: Entity) {
     }
 }
 
-pub(super) fn apply_admitted_caster_target(
-    world: &mut World,
-    tank: Entity,
-    selected: Option<Entity>,
-) -> bool {
+pub(super) fn apply_admitted_caster_target(world: &mut World, tank: Entity) -> bool {
     let Some(&AdmittedCasterTarget(caster)) = world.get::<AdmittedCasterTarget>(tank) else {
         return false;
     };
@@ -90,7 +84,7 @@ pub(super) fn apply_admitted_caster_target(
                 target: caster.to_bits(),
             },
             super::ai::FollowerReach(super::ai::MELEE_REACH),
-            crate::networking::CombatTarget(selected),
+            crate::networking::CombatTarget(Some(caster)),
         ));
     true
 }

@@ -35,8 +35,11 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
-    super::tank_planner::update_caster_goal(world, unit, follower, &party);
-    let selection = select_enemy(world, follower, unit, &party);
+    let collection_target = super::tank_planner::update_caster_goal(world, unit, follower, &party);
+    let selection = collection_target.map_or_else(
+        || select_enemy(world, follower, unit, &party),
+        EnemySelection::Attack,
+    );
     let enemy = match selection {
         EnemySelection::Attack(enemy) => Some(enemy),
         _ => None,
@@ -388,7 +391,7 @@ pub(super) fn pursue(
     melee: bool,
 ) -> bool {
     if super::tank_planner::apply_admitted_position(world, unit, Some(target))
-        || super::tank_planner::apply_admitted_caster_target(world, unit, Some(target))
+        || super::tank_planner::apply_admitted_caster_target(world, unit)
         || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
     {
         return true;
@@ -447,7 +450,7 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
     if super::tank_planner::apply_admitted_position(world, unit, None)
-        || super::tank_planner::apply_admitted_caster_target(world, unit, None)
+        || super::tank_planner::apply_admitted_caster_target(world, unit)
     {
         return;
     }
