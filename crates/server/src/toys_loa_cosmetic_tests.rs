@@ -1,4 +1,4 @@
-//! Build70448 stationary Loa cosmetics: actual learning, owner aura and cancellation.
+//! Build70448 Loa cosmetics: actual learning, owner aura and cancellation.
 use super::*;
 use shared::components::{Health, ModelDisplay, UnitAuras};
 
@@ -15,6 +15,16 @@ fn toyfx70448_nalorakk_charm_learns_applies_and_cancels_without_resetting_recove
 #[test]
 fn toyfx70448_akilzon_feathers_learns_applies_and_cancels_without_resetting_recovery() {
     assert_learned_loa_cosmetic_cancellation(280823, 1309831);
+}
+
+#[test]
+fn toyfx70448_halazzi_trail_learns_applies_and_cancels_without_resetting_recovery() {
+    assert_learned_loa_cosmetic_cancellation(280821, 1309828);
+}
+
+#[test]
+fn toyfx70448_janalai_flame_learns_applies_and_cancels_without_resetting_recovery() {
+    assert_learned_loa_cosmetic_cancellation(280825, 1309844);
 }
 
 fn assert_learned_loa_cosmetic_cancellation(item: u32, spell: u32) {

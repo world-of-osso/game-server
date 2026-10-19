@@ -1,3 +1,11 @@
+## 2026-10-18 — Batch2 landed; footstep70448 pair admission RED
+
+[Current matrix](../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): explicit tb625 stationary landing641cb2460, ancestry verified/feature branch deleted. New Halazzi/Jan'alai real-learning RED0/2/54.36s; lead exact twoToy-row and40file/57path publication; canonical aura4 RED0/2/30.71s. Two strict named admissions and same-branch census triples retain Full1166+seven; canonical1e5e55ae0 pair/all13 census/previous-family/absent-visual GREEN22/0/76.90s; lead broad gate/source landing pending. Absolute canonical shared-protocol patch resolves stale native-root interface without protocol/cache mutation; no native footstep/particle claim.
+
+## 2026-10-17 — NPC victim block51
+
+[Block51](systems/player-damage.md#npc-victim-block-aura51--2026-10-17): ignoredcd95 pushed first;10021+62356effect0 sum-100live8s/49=0 and62627fold qualified1PASS26.18s. Live+100→0Block4Melee1Crit andsigned-100→1Block4Melee give genuine2RED/5PASS64.12s. ExistingNPCguard/target_auras consumer+max0 without240subtraction; masks/direction/playerStats/blockedamount253/Guardian/RNG/clocks unchanged. Consumer28638df38 fresh ignored7nativeGREEN40.77s0warnings+retainedqualification1PASS26.18s (8composite,notone8batch), onlythen alleight enabled/pushed; lead gate pending.
+
 ## 2026-10-18 — Follower hazard reaction project policy
 
 [Policy and root cause](systems/navigation.md#follower-hazard-reaction-policy): master10PASS/0FAIL versus worker0PASS/10FAIL exposes field growth overtaking an exhausted corridor while the next batch is Pending. User accepts late-worker standing and defines50ms authored-radius prediction, immediate async request,250ms reaction and first-ready-tick movement. Three pushed behavioral REDs become GREEN; selected published candidate corridors eliminate a second worker roundtrip. Existing Azure oracle now observes predicted escape before actual aura cleanup. At6b374c251/protocolf9a91753, requested Azure4/hazard-approach7/reaction2/pet11/FIFO1/Gold8 passes33/0fail/0ignored in72.51s with no compiler warnings; lead merged-master wide/check/fmt/worker gate remains pending. This is project policy, not sourced Retail timing.

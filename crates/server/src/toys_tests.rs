@@ -73,6 +73,8 @@ const PUBLISHED_70448_TOYS: &[(u32, &str, u32)] = &[
     (280820, "Loa-Blessed Victory", 1309827),
     (280822, "Nalorakk's Strength Charm", 1309830),
     (280823, "Feathers of Akil'zon", 1309831),
+    (280821, "Trail of Halazzi", 1309828),
+    (280825, "Rite of Jan'alai's Flame", 1309844),
 ];
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
