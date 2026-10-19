@@ -281,7 +281,6 @@ fn native_melee_victim_summoner_crit_player_is_not_temp_summon_is_runtime_qualif
 }
 
 #[test]
-#[ignore = "behavioral RED before direct-summoner victim339 consumer"]
 fn native_melee_victim_summoner_crit_actual_owner_grants_received_crit() {
     let (mut h, attacker, victim) = fixture();
     let owner = h.caster;
@@ -292,7 +291,6 @@ fn native_melee_victim_summoner_crit_actual_owner_grants_received_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control: attacker identity is not direct summoner"]
 fn native_melee_victim_summoner_crit_attacker_caster_is_not_owner() {
     let (mut h, attacker, victim) = fixture();
     let events = sample_native_applications(&mut h, attacker, victim, attacker, victim);
@@ -300,7 +298,6 @@ fn native_melee_victim_summoner_crit_attacker_caster_is_not_owner() {
 }
 
 #[test]
-#[ignore = "behavioral control: foreign caster is not direct summoner"]
 fn native_melee_victim_summoner_crit_foreign_caster_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     let foreign = h.npc;
@@ -309,7 +306,6 @@ fn native_melee_victim_summoner_crit_foreign_caster_does_not_grant_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control: caster player is not a TempSummon attacker"]
 fn native_melee_victim_summoner_crit_player_source_cannot_use_own_339() {
     let (mut h, _, victim) = fixture();
     let player = h.caster;
@@ -343,7 +339,6 @@ fn native_melee_victim_summoner_crit_player_source_cannot_use_own_339() {
 }
 
 #[test]
-#[ignore = "behavioral control: 339 must be on actual victim"]
 fn native_melee_victim_summoner_crit_attacker_only_aura_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     let owner = h.caster;
@@ -352,7 +347,6 @@ fn native_melee_victim_summoner_crit_attacker_only_aura_does_not_grant_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control: 339 must be on actual victim"]
 fn native_melee_victim_summoner_crit_foreign_recipient_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     let (owner, foreign) = (h.caster, h.npc);
@@ -361,7 +355,6 @@ fn native_melee_victim_summoner_crit_foreign_recipient_does_not_grant_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control for native cancellation"]
 fn native_melee_victim_summoner_crit_cancelled_owner_aura_does_not_grant_crit() {
     let (mut h, attacker, victim) = fixture();
     let owner = h.caster;
@@ -393,7 +386,6 @@ fn native_melee_victim_summoner_crit_cancelled_owner_aura_does_not_grant_crit() 
 }
 
 #[test]
-#[ignore = "behavioral RED before actual direct-parent339 match"]
 fn native_melee_victim_summoner_crit_nested_actual_parent_grants_crit() {
     let (mut h, parent, victim) = fixture();
     let attacker = spawn_darion(&mut h, parent);
@@ -402,7 +394,6 @@ fn native_melee_victim_summoner_crit_nested_actual_parent_grants_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control: grandparent is not actual direct summoner"]
 fn native_melee_victim_summoner_crit_grandparent_caster_does_not_grant_crit() {
     let (mut h, parent, victim) = fixture();
     let grandparent = h.caster;
