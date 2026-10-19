@@ -734,7 +734,6 @@ fn bite_ordered_from_the_bar_is_cast_by_the_wolf_at_the_target() {
 }
 
 #[test]
-#[ignore = "missing native pet Focus interval consumer"]
 fn called_wolf_focus_regenerates_in_four_second_steps_without_resetting_at_full() {
     let mut p = hunter_with_wolf().expect("native hunter/wolf catalog");
     let kobold = p.h.npc;
