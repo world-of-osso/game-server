@@ -40,7 +40,6 @@ impl<'a> bevy::log::tracing_subscriber::fmt::MakeWriter<'a> for TraceBuffer {
 }
 
 #[test]
-#[ignore = "follower hazard live trace RED: enable after implementation"]
 fn follower_hazard_trace_correlates_native_detection_worker_and_escape() {
     let (mut h, unit, _) = stockade_fixture(FROM);
     hostile_field_at(&mut h, unit, FROM);
@@ -64,6 +63,7 @@ fn follower_hazard_trace_correlates_native_detection_worker_and_escape() {
         }
     });
     let text = String::from_utf8(buffer.0.lock().unwrap().clone()).unwrap();
+    eprintln!("{text}");
     let records: Vec<serde_json::Value> = text
         .lines()
         .filter_map(|line| {

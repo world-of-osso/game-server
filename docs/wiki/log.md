@@ -1,3 +1,7 @@
+## Follower hazard trace implementation proof
+
+[Opt-in trace](systems/navigation.md#follower-hazard-live-trace) joins native contact/reaction/hold/displacement/exit with current-ID worker publication and owned corridor adoption. Missing native events give a genuine RED; native trace/disabled-payload/reaction/FIFO/request14 controls pass, and three-distribution/policy/cancellation/cache/latest-ID analyzer7 controls pass. Owner client068066e6a/F9 native extension+CLI artifacts built without warnings. Bounded real Azure/Telash collection remains pending a granted server_perf/5761 window; no new runtime flags, gameplay changes or stress-capacity claim.
+
 ## 2026-10-18 — Follower hazard reaction project policy
 
 [Policy and root cause](systems/navigation.md#follower-hazard-reaction-policy): master10PASS/0FAIL versus worker0PASS/10FAIL exposes field growth overtaking an exhausted corridor while the next batch is Pending. User accepts late-worker standing and defines50ms authored-radius prediction, immediate async request,250ms reaction and first-ready-tick movement. Three pushed behavioral REDs become GREEN; selected published candidate corridors eliminate a second worker roundtrip. Existing Azure oracle now observes predicted escape before actual aura cleanup. At6b374c251/protocolf9a91753, requested Azure4/hazard-approach7/reaction2/pet11/FIFO1/Gold8 passes33/0fail/0ignored in72.51s with no compiler warnings; lead merged-master wide/check/fmt/worker gate remains pending. This is project policy, not sourced Retail timing.
