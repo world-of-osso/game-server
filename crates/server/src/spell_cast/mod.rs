@@ -3379,6 +3379,8 @@ mod power_drain_tests;
 #[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
+mod energizing_elixir_tests;
+#[cfg(test)]
 mod regen_tests;
 #[cfg(test)]
 mod rezrtap_tests;
