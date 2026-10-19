@@ -2,7 +2,7 @@
 
 ## Herald lethal min1 guard — 2026-10-18
 
-Actual source protection now acts at the existing precommit melee/direct/spell/periodic boundaries, including self-source, preserving exactHP1 before death/log/credit. Six initial native cases pass; six-copy/two-native-cadence same-actor repeated melee additionally passes82.49s in Normal/Heroic, with actual firstWest budget and per-frameHP1/no death before arrival. Retained enabled integration remains pending. No HP/stat writes, forced hits, timer/NPC overrides or generic SetUnkillable substitution. [Contract/proof](specs/ramparts-herald.md#tests-asserting-this-spec). Marker release after fall, arrival/fall, paired credit/reset/native remain excluded.
+Actual source protection now acts at the existing precommit melee/direct/spell/periodic boundaries, including self-source, preserving exactHP1 before death/log/credit. Six initial native cases pass; six-copy/two-native-cadence same-actor repeated melee additionally passes82.49s in Normal/Heroic, with actual firstWest budget and per-frameHP1/no death before arrival. Enabled all16 Herald/four grounding/five unchanged Gold/both unchanged Nibbles controls pass27/27 209.65s atcbb9ef32f/master69ed3c682/protocolf9a9175,0ignored/no warnings. Independent LEAD gate/check/fmt pending. No HP/stat writes, forced hits, timer/NPC overrides or generic SetUnkillable substitution. [Contract/proof](specs/ramparts-herald.md#tests-asserting-this-spec). Marker release after fall, arrival/fall, paired credit/reset/native remain excluded.
 
 ## Herald own nonlethal below30 ingress — 2026-10-18
 
