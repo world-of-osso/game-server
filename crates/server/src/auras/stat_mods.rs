@@ -418,9 +418,11 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 if misc == -2 {
                     stats.armor_from_primary_stat_pct += amount;
                 } else {
-                    add_to_stats(&mut stats.armor_from_stat_pct, amount, |index| {
-                        misc == index as i32
-                    });
+                    each_stat(
+                        &mut stats.armor_from_stat_pct,
+                        |index| misc == index as i32,
+                        |stat| *stat += amount,
+                    );
                 }
             }
             MOD_CRIT_PCT => stats.crit_pct += amount,
