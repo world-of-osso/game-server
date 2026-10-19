@@ -208,12 +208,58 @@ fn production_tank_goal_allows_existing_fight_defense_without_a_healer() {
     );
 }
 
+fn route_requires_a_new_unhealed_pull(h: &mut Harness, tank: Entity, guid: u32) -> bool {
+    let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
+    let history = super::pull_history::snapshot(h.app.world(), follower.owner).unwrap();
+    let map = *h.app.world().get::<InMap>(tank).unwrap();
+    let route = super::pull_route::read_route(
+        h.app.world_mut(),
+        &super::pull_route::Request {
+            tank,
+            target_guid: guid,
+            difficulty: 1,
+            cleared: &history.cleared_spawns,
+        },
+    )
+    .expect("unsafe-pursuit fixture requires a complete native route");
+    let sources = super::pull_sources::read_present_sources(
+        h.app.world_mut(),
+        map,
+        1,
+        &history.cleared_spawns,
+    )
+    .unwrap();
+    let party = super::ai::party_units(h.app.world_mut(), follower.owner);
+    let packs: BTreeSet<_> = super::ai::engaged_enemies(h.app.world_mut(), &follower, tank, &party)
+        .iter()
+        .map(|(enemy, _)| {
+            let guid = h
+                .app
+                .world()
+                .get::<crate::zones::CreatureOrigin>(*enemy)
+                .unwrap()
+                .guid;
+            sources[&guid].pack_guid
+        })
+        .collect();
+    let extra = route
+        .spawns
+        .iter()
+        .any(|guid| !packs.contains(&sources[guid].pack_guid));
+    if extra {
+        assert!(matches!(
+            super::pull_admission::read_pull_budget(h.app.world_mut(), tank, &route.spawns, 1)
+                .unwrap(),
+            super::pull_budget::Decision::Wait(super::pull_budget::Reason::Healer)
+        ));
+    }
+    extra
+}
+
 #[test]
 fn production_tank_goal_refuses_unbudgeted_pursuit_without_injected_position() {
-    let (mut h, tank, from, _) = kit_fixture();
+    let (mut h, tank, _, _) = kit_fixture();
     let map = *h.app.world().get::<InMap>(tank).unwrap();
-    // Actual owner attack changes the active victim to the far Riverpaw source.
-    // Its corridor crosses other packs, unlike the later defense-only old fixture.
     let target = h
         .app
         .world_mut()
@@ -233,65 +279,48 @@ fn production_tank_goal_refuses_unbudgeted_pursuit_without_injected_position() {
             .victim,
         target
     );
+    // Native initialization/self-casts may precede the first actual kit pursuit.
     super::update_ai(h.app.world_mut());
+    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
+    let tick = h.app.world().resource::<Time<Fixed>>().timestep();
     assert_eq!(
+        tick,
+        std::time::Duration::from_millis(50),
+        "use production20Hz native ordering"
+    );
+    for _ in 0..90 {
+        let before = *h.app.world().get::<Position>(tank).unwrap();
+        let at = h.app.world().resource::<Time<Fixed>>().elapsed();
+        let extra_before = route_requires_a_new_unhealed_pull(&mut h, tank, 20375669);
+        h.advance(1);
+        assert_eq!(
+            h.app.world().resource::<Time<Fixed>>().elapsed() - at,
+            tick,
+            "each observation must cover exactly one actual kit/chase tick"
+        );
+        let selected = h
+            .app
+            .world()
+            .get::<crate::networking::CombatTarget>(tank)
+            .is_some_and(|current| current.0 == Some(target));
+        if selected && extra_before && route_requires_a_new_unhealed_pull(&mut h, tank, 20375669) {
+            assert_stationary(
+                &[*h.app.world().get::<Position>(tank).unwrap()],
+                before,
+                "production planner started an actually unbudgeted route at its movement boundary",
+            );
+            return;
+        }
+    }
+    panic!(
+        "real kit never reached the unsafe pursuit boundary: current={:?}, cast={:?}",
         h.app
             .world()
             .get::<crate::networking::CombatTarget>(tank)
-            .unwrap()
-            .0,
-        Some(target),
-        "ordinary owner attack must reach the actual tank pursuit boundary"
-    );
-    let history = super::pull_history::snapshot(h.app.world(), h.caster).unwrap();
-    let route = super::pull_route::read_route(
-        h.app.world_mut(),
-        &super::pull_route::Request {
-            tank,
-            target_guid: 20375669,
-            difficulty: 1,
-            cleared: &history.cleared_spawns,
-        },
-    )
-    .unwrap();
-    let sources = super::pull_sources::read_present_sources(
-        h.app.world_mut(),
-        map,
-        1,
-        &history.cleared_spawns,
-    )
-    .unwrap();
-    let follower = h.app.world().get::<Follower>(tank).unwrap().clone();
-    let party = super::ai::party_units(h.app.world_mut(), follower.owner);
-    let engaged_packs: BTreeSet<_> =
-        super::ai::engaged_enemies(h.app.world_mut(), &follower, tank, &party)
-            .iter()
-            .map(|(enemy, _)| {
-                let guid = h
-                    .app
-                    .world()
-                    .get::<crate::zones::CreatureOrigin>(*enemy)
-                    .unwrap()
-                    .guid;
-                sources[&guid].pack_guid
-            })
-            .collect();
-    assert!(
-        route
-            .spawns
-            .iter()
-            .any(|guid| !engaged_packs.contains(&sources[guid].pack_guid)),
-        "this exact tick must expose a genuinely unengaged pack: route={route:?}, engaged={engaged_packs:?}"
-    );
-    assert!(matches!(
-        super::pull_admission::read_pull_budget(h.app.world_mut(), tank, &route.spawns, 1).unwrap(),
-        super::pull_budget::Decision::Wait(super::pull_budget::Reason::Healer)
-    ));
-    crate::creature_ai::install_follower_follow_fixture(&mut h.app);
-    h.advance(1);
-    assert_stationary(
-        &[*h.app.world().get::<Position>(tank).unwrap()],
-        from,
-        "production planner started an actually unbudgeted route at its movement boundary",
+            .and_then(|current| current.0),
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(tank)
+            .map(|cast| cast.spell_id)
     );
 }
