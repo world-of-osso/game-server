@@ -2,6 +2,8 @@
 mod herald;
 mod omor;
 mod vazruden;
+use crate::maps::InMap;
+use crate::zones::CreatureOrigin;
 use bevy::prelude::*;
 pub(crate) use herald::{HeraldUnkillable, on_unit_death};
 use shared::components::ThreatTable;
@@ -13,6 +15,30 @@ use super::{CreatureAi, Ctx, DamageTaken};
 pub(crate) fn call_nazan(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
     if world.get::<shared::components::Npc>(target).is_some() {
         super::dispatch(world, target, super::Hook::DoAction(0));
+    }
+}
+
+const ACTION_OTHER_IS_DEAD: i32 = 1;
+
+/// Instance creature roles retain their original entry across Herald's living morph.
+fn find_source_actor(world: &mut World, map: InMap, entry: u32) -> Option<Entity> {
+    world
+        .query::<(Entity, &InMap, &CreatureOrigin)>()
+        .iter(world)
+        .find_map(|(actor, copy, origin)| {
+            (*copy == map && origin.original_entry == entry).then_some(actor)
+        })
+}
+
+/// TC death hooks notify the same-copy partner; only its later JustDied completes.
+fn notify_partner_death(ctx: &mut Ctx, entry: u32) {
+    let map = ctx.map().expect("registered Ramparts actor map");
+    if let Some(partner) = find_source_actor(ctx.world, map, entry) {
+        super::dispatch(
+            ctx.world,
+            partner,
+            super::Hook::DoAction(ACTION_OTHER_IS_DEAD),
+        );
     }
 }
 

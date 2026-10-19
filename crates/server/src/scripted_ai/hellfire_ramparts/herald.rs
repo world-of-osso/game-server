@@ -1,5 +1,5 @@
 //! TC a352b1fa Herald startup through first West and real fall/DESCEND3.
-//! Ground parent spells only; Liquid Fire children, paired credit/reset/native remain gaps.
+//! Ground parents and source paired-death credit; Liquid Fire children/reset/native remain gaps.
 use bevy::prelude::*;
 use shared::components::{Npc, Position, Rotation};
 
@@ -93,22 +93,13 @@ pub(crate) fn on_unit_death(world: &mut World, unit: Entity) {
     }
     // Source resets even when the stored Herald is absent.
     script.ramparts_sentry_deaths = 0;
-    if let Some(herald) = find_herald(world, map) {
+    if let Some(herald) = super::find_source_actor(world, map, HERALD) {
         super::super::dispatch(
             world,
             herald,
             super::super::Hook::DoAction(ACTION_START_ENCOUNTER),
         );
     }
-}
-
-fn find_herald(world: &mut World, map: InMap) -> Option<Entity> {
-    world
-        .query::<(Entity, &InMap, &CreatureOrigin)>()
-        .iter(world)
-        .find_map(|(actor, copy, origin)| {
-            (*copy == map && origin.original_entry == HERALD).then_some(actor)
-        })
 }
 
 #[derive(Default, PartialEq, Eq)]
@@ -127,6 +118,7 @@ pub(super) struct HeraldIntro {
     boss: BossAi,
     last_fly_spell: u32,
     started_descending: bool,
+    is_other_dead: bool,
 }
 
 impl Default for HeraldIntro {
@@ -138,6 +130,7 @@ impl Default for HeraldIntro {
             boss: BossAi::new(1),
             last_fly_spell: FLY_WEST,
             started_descending: false,
+            is_other_dead: false,
         }
     }
 }
@@ -245,6 +238,9 @@ impl CreatureAi for HeraldIntro {
     }
 
     fn do_action(&mut self, _ctx: &mut Ctx, action: i32) {
+        if action == super::ACTION_OTHER_IS_DEAD {
+            self.is_other_dead = true;
+        }
         if action == ACTION_START_ENCOUNTER && self.phase == IntroPhase::Waiting {
             self.phase = IntroPhase::MovingToCenter;
             self.special_events.schedule(INTRO_1, 0);
@@ -254,6 +250,14 @@ impl CreatureAi for HeraldIntro {
             self.started_descending = true;
             self.special_events.schedule(DESCEND_1, 0);
         }
+    }
+
+    // TC281–288: the first real death only marks the survivor; the second completes.
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        if self.is_other_dead {
+            self.boss.just_died(ctx);
+        }
+        super::notify_partner_death(ctx, 17_537);
     }
 
     // TC217–220: Finished is !_isPerformingIntro; action0 owns the once latch.
