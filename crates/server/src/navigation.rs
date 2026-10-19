@@ -11,6 +11,7 @@ const TELEPORT_DISTANCE: f32 = 2.0;
 mod deferred;
 #[cfg(test)]
 mod fixture_queries;
+pub(crate) mod hazard_trace;
 mod requests;
 use deferred::PendingQuery;
 use requests::{PendingRoute, publish_navigation_results};
