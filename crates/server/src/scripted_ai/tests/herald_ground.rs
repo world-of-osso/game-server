@@ -357,7 +357,9 @@ fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
         frames: Vec::new(),
     });
     let mut started = None;
-    for _ in 0..100 {
+    // Initial Roar can be refused by the native shared category. Observe the
+    // same112s source window as the parent fixture; never override admission.
+    for _ in 0..2240 {
         h.advance(0.05);
         let accepted_roar = h
             .app
@@ -371,7 +373,11 @@ fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
             break;
         }
     }
-    let started = started.expect("actual source-scheduled ordinary Roar must begin");
+    println!(
+        "native1500ms setup admissions: {:?}",
+        h.app.world().resource::<CastAdmissions>().entries
+    );
+    let started = started.expect("actual ordinary Roar admission within112s source window");
     let first = h
         .app
         .world()
