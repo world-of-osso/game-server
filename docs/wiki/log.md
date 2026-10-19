@@ -2957,3 +2957,5 @@ Recorded real33076 ward RED, approved per-cast stack/original-caster API and nat
 
 - 2026-10-18: Herald Call Nazan source ingress, native integer damage qualification and actual firstWest Fireball interruption. Two-case RED→GREEN; exact one-tick/self-target refinement plus all7 Herald/four grounding11/11 PASS176.19s atd43cd6b04; LEAD independent gate/check/fmt pending. See [boss scripts](systems/boss-scripts.md#herald-call-nazan-descent-ingress--2026-10-18).
 - 2026-10-18 — Pin projected runtime-ground metadata APIs in wow-formats; preserve selected-field/FDID/error policy and frozen metadata/bake receipt boundaries. [Shared readers](systems/wow-formats.md).
+
+- 2026-10-18: Runtime height projection; frozen old-reader receipts, shared decoder pin and local policy boundary. See [shared formats](systems/wow-formats.md).
