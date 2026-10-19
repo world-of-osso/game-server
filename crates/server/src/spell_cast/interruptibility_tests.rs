@@ -11,6 +11,34 @@ const ERUPTING_FISSURE: u32 = 386660;
 
 fn native_cast(spell: u32) -> Harness {
     let mut h = harness(Vec::new(), &[spell, COUNTERSPELL], 8).unwrap();
+    // Reuse the harness Mage's actual class resources for the native Fireball control.
+    // The bare target NPC has no mana pool; do not replace native costs or grant amounts.
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .clone();
+    let mana = *h
+        .app
+        .world()
+        .get::<shared::components::Mana>(h.caster)
+        .unwrap();
+    let pools = h
+        .app
+        .world()
+        .get::<super::powers::PowerPools>(h.caster)
+        .unwrap()
+        .clone();
+    let level = *h
+        .app
+        .world()
+        .get::<shared::components::Level>(h.caster)
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((stats, mana, pools, level));
     let native = h
         .app
         .world()
