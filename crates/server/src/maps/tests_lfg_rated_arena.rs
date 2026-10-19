@@ -2,13 +2,11 @@ use super::*;
 use shared::protocol::DequeueFromPvp;
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits actual rated arena queue members"]
 fn lfg_rated_2v2_member_refuses_until_native_pvp_dequeue_clears_team() {
     assert_rated_queue_refuses_lfg(2);
 }
 
 #[test]
-#[ignore = "RED: ordinary LFG currently admits actual rated arena queue members"]
 fn lfg_rated_3v3_member_refuses_until_native_pvp_dequeue_clears_team() {
     assert_rated_queue_refuses_lfg(3);
 }
