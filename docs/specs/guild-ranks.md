@@ -27,7 +27,7 @@ Wire contract: shared-protocol `docs/guild-ranks.md`.
 - [x] Choose Demote when destination>current, Promote otherwise, matching pinned TC `Guild.cpp:1894–1930`. Recheck the corresponding right, reject self with the existing InvalidName refusal, and retain strict hierarchy: target and destination must both be below actor; rank0/out-of-range/cross-guild targets refuse without writes. Authorized unchanged destination leaves state unchanged; the source UI does not send current selection.
 - [x] Normal recipient snapshots/ChangedGuilds refresh follow the existing handler. Current rank settings/other members remain unchanged; assigned state survives redb reopen.
 - [x] Direct TC `SendGuildRanksUpdate`→`Member::ChangeRank` has no lifecycle-log call. Direct assignments append no synthetic step events; explicit Promote/Demote commands keep their existing logging.
-- Named exclusions: `GUILD_RANK_ASSIGNMENT_AUTHENTICATOR_GAP`, `GUILD_RANK_ASSIGNMENT_LEADERSHIP_GAP` (transfer/disband), `GUILD_RANK_ASSIGNMENT_CONFIG_EXCLUDED` (existing creation/reordering unchanged). No authenticator eligibility fields are fabricated. Protocol/server/client land together; native proof is post-landing.
+- Named exclusions: `GUILD_RANK_ASSIGNMENT_AUTHENTICATOR_GAP`, `GUILD_RANK_ASSIGNMENT_LEADERSHIP_GAP` (direct assignment cannot transfer/disband; voluntary transfer has a [separate contract](guild-leadership-transfer.md)), `GUILD_RANK_ASSIGNMENT_CONFIG_EXCLUDED` (existing creation/reordering unchanged). No authenticator eligibility fields are fabricated. Protocol/server/client land together; native proof is post-landing.
 
 ### Social permissions
 - [x] Guild/officer chat requires separate listening and speaking rights; history records only authorized recipients.

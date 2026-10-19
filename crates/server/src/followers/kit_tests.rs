@@ -12,7 +12,11 @@ fn level32_with_plugins(entry: u32, configure: impl FnOnce(&mut App)) -> (Harnes
     at_level(entry, 32, configure)
 }
 
-fn at_level(entry: u32, level: u8, configure: impl FnOnce(&mut App)) -> (Harness, Entity) {
+pub(super) fn at_level(
+    entry: u32,
+    level: u8,
+    configure: impl FnOnce(&mut App),
+) -> (Harness, Entity) {
     let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, configure);
     h.app.world_mut().get_mut::<Level>(h.caster).unwrap().0 = level;
     let kit_db = std::env::var_os("FOLLOWER_KIT_DB")
