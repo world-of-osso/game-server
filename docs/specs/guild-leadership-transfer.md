@@ -16,7 +16,7 @@ The authenticated current Guild Master may transfer to another stored same-guild
 
 ## Implementation inventory
 
-- `crates/server/src/guild_ranks.rs`: existing authenticated rank dispatcher; transfer pending.
+- `crates/server/src/guild_ranks.rs`: authenticated transfer transform and existing recipient refresh.
 - `crates/server/src/persistence_banks.rs`: existing atomic member-rank persistence.
 - `crates/server/src/guild_leadership_transfer_tests.rs`: ignored real persistence, refusal, HostClient and concurrent-reader regressions.
 

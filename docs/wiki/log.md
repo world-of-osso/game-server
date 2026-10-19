@@ -1,3 +1,7 @@
+## 2026-10-19 — Voluntary leadership authority RED
+
+[Source/policy/implementation](systems/guild-lifecycle.md#voluntary-leadership-transfer): permitted Retail UI/C API signature and full pinned TC self chain qualified before code; native Retail self behavior unproven, approved named Permissions refusal preserves state. Ignored P/E/S regressions pushed first; initial S unsupported-wire failures are not authority proof. Recognized-request baseline then reproduces four actual authority failures before member-rank mutation. Minimal rank0→target/current-lowest→former-master transform uses existing atomic persistence and recipient refresh. Six-rank/nonzero bank fixture, reopen, auth/foreign/self and real concurrent readers; focused GREEN/gate/native pending.
+
 ## 2026-10-18 — Herald paired-death credit RED
 
 [Paired death contract](systems/boss-scripts.md#herald-paired-death-credit-boundary--2026-10-18): native ordinary dead30693 qualification passes; six genuine missing1892/bit1 REDs108.35s plus four isolated reverse-order REDs83.24s. Source per-AI other-dead/action1 and last-death completion ported001d76905; fivePASS/sixFAIL identifies temporary17537's absent ordinary origin. Corrected actualNpc+same-copyTempSummon.summoner647169a24→all11/11GREEN187.96s,0ignored/no warnings; both orders/frame/copy/corpse/unrelated/deathspeech/deathCall pass. Enabled tests, independent retained gate pending. Chest/reset/Liquid Fire/native excluded.
