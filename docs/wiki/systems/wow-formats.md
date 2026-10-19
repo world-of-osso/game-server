@@ -22,7 +22,7 @@ Projected views preserve the old runtime field boundary rather than adopting unr
 
 `terrain_height.rs` reads fixed MCNK header fields and MCVT floats through shared projections. Root collection still validates the whole file before MH2O and individual MCNK parsing; first-MCVT selection, exact errors, low-hole widening, file-order liquid association, seam rounding, coordinates and four-triangle interpolation stay local. MH2O is unchanged. Raw header parsing does not require optional rendering payloads.
 
-The [height proof ledger](../../handoffs/wow-formats-runtime-heights.md) specifies frozen old-reader XY bits, full decoded-height/query bytes, malformed-input outcomes and the required Northshire/Jasperlode corpus. Baseline:23 height/harness tests and4 real ground controls pass; after-reader comparison pending.
+The [height proof ledger](../../handoffs/wow-formats-runtime-heights.md) specifies frozen old-reader XY bits, full decoded-height/query bytes, malformed-input outcomes and the required Northshire/Jasperlode corpus. Before/after:23 height/harness tests and4 real ground controls pass;35/35 frozen receipt/bake files19,169,465B match exactly,115/115 real input hashes unchanged. Each required ADT has256 chunks and135428 frozen queries;17 synthetic cases preserve failure/selection boundaries. Server check/fmt pass; independent lead integration remains pending.
 
 ## Reference proof
 
