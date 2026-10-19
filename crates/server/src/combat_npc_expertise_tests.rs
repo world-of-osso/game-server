@@ -182,7 +182,6 @@ fn dummy_duel() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_expertise_28305_lifetime_is_runtime_qualified() {
     let mut h = harness(Vec::new(), &[PET_PASSIVE], 1).unwrap();
     let actor = h.npc;
@@ -199,7 +198,6 @@ fn native_melee_npc_expertise_28305_lifetime_is_runtime_qualified() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_expertise_beats_live_player_evasion() {
     let mut h = rogue_duel();
     let (attacker, victim) = (h.npc, h.caster);
@@ -223,7 +221,6 @@ fn native_melee_npc_expertise_beats_live_player_evasion() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_expertise_cancelled_before_evasion_restores_dodge() {
     let mut h = rogue_duel();
     let (attacker, victim) = (h.npc, h.caster);
@@ -238,7 +235,6 @@ fn native_melee_npc_expertise_cancelled_before_evasion_restores_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_expertise_on_foreign_actor_does_not_reduce_dodge() {
     let mut h = rogue_duel();
     let (attacker, victim) = (h.npc, h.caster);
@@ -254,7 +250,6 @@ fn native_melee_npc_expertise_on_foreign_actor_does_not_reduce_dodge() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_expertise_suppresses_npc_dodge_parry_not_block() {
     let (mut h, victim) = dummy_duel();
     let attacker = h.npc;
@@ -279,7 +274,6 @@ fn native_melee_npc_expertise_suppresses_npc_dodge_parry_not_block() {
 }
 
 #[test]
-#[ignore]
 fn native_melee_npc_expertise_small_native_amount_preserves_remaining_parry() {
     // Executed only AFTER the separate runtime28305 lifetime qualification passes.
     let (mut h, victim) = dummy_duel();
