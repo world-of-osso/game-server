@@ -1,11 +1,13 @@
 //! TC a352b1fa Unit.cpp2777–2782/2817–2822: NPC attacker240/4, not block.
+use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
+use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::components::{Level, Position, Rotation, UnitLevel};
-use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
+use shared::protocol::{CombatEvent, CombatEventType, CombatLogEvent, CombatLogKind, MissKind};
 
 use super::facing_tests::collect_swings;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
-use crate::spell_cast::test_harness::{Harness, harness, harness_with, spawn_npc, world_db};
+use crate::spell_cast::test_harness::{Harness, drain, harness, harness_with, spawn_npc, world_db};
 
 const NPC_HIT_BUFFS: u32 = 62_627;
 const PET_PASSIVE: u32 = 28_305;
@@ -98,10 +100,6 @@ fn dodged(event: &CombatLogEvent) -> bool {
     event.kind == CombatLogKind::Miss(MissKind::Dodge)
 }
 
-fn parried(event: &CombatLogEvent) -> bool {
-    event.kind == CombatLogKind::Miss(MissKind::Parry)
-}
-
 fn assert_evasion_avoids(events: &[CombatLogEvent]) {
     assert!(
         events.iter().all(|e| matches!(
@@ -114,8 +112,54 @@ fn assert_evasion_avoids(events: &[CombatLogEvent]) {
     assert!(events.iter().any(dodged), "{events:?}");
 }
 
+fn collect_broadcast_swings(h: &mut Harness, attacker: Entity, victim: Entity) -> Vec<CombatEvent> {
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            super::start_attack(&mut commands, attacker, victim, None);
+        })
+        .unwrap();
+    let mut events = Vec::new();
+    for _ in 0..NPC_SWINGS * 60 {
+        h.advance(1);
+        events.extend(
+            drain::<CombatEvent>(&mut h.app, h.connection)
+                .into_iter()
+                .filter(|event| {
+                    event.attacker == attacker.to_bits()
+                        && event.target == victim.to_bits()
+                        && event.spell_id == 0
+                        && matches!(
+                            event.event_type,
+                            CombatEventType::MeleeDamage
+                                | CombatEventType::CriticalHit
+                                | CombatEventType::Miss
+                                | CombatEventType::Dodge
+                                | CombatEventType::Parry
+                                | CombatEventType::Block
+                        )
+                }),
+        );
+        if events.len() == NPC_SWINGS {
+            super::attack_stop(h.app.world_mut(), attacker);
+            h.advance(3);
+            return events;
+        }
+    }
+    panic!(
+        "only {} of{NPC_SWINGS} broadcast swings: {events:?}",
+        events.len()
+    );
+}
+
 fn dummy_duel() -> (Harness, Entity) {
     let mut h = harness(Vec::new(), &[NPC_HIT_BUFFS, PET_PASSIVE], 1).unwrap();
+    // Neither NPC has a player owner: subscribe the real all-client broadcast,
+    // not the owner-only CombatLogEvent path. Do not fabricate NPC ownership.
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<CombatEvent>::default(),
+        MessageReceiver::<CombatEvent>::default(),
+    ));
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -215,15 +259,23 @@ fn native_melee_npc_expertise_suppresses_npc_dodge_parry_not_block() {
     let (mut h, victim) = dummy_duel();
     let attacker = h.npc;
     cast_npc_buffs(&mut h, attacker);
-    let events = collect_swings(&mut h, attacker, victim, NPC_SWINGS);
+    let events = collect_broadcast_swings(&mut h, attacker, victim);
     assert_eq!(expertise(&h, attacker), 10_000.0);
     // Old missed9% dodge/parry bug probability .91^512≈1.07e-21.
     assert!(
-        !events.iter().any(|e| dodged(e) || parried(e)),
+        !events.iter().any(|e| matches!(
+            e.event_type,
+            CombatEventType::Dodge | CombatEventType::Parry
+        )),
         "{events:?}"
     );
     // Block remains native3%; P(noBlock)=.97^512≈1.687e-7.
-    assert!(events.iter().any(|e| e.blocked > 0), "{events:?}");
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::Block),
+        "{events:?}"
+    );
 }
 
 #[test]
@@ -233,14 +285,34 @@ fn native_melee_npc_expertise_small_native_amount_preserves_remaining_parry() {
     let (mut h, victim) = dummy_duel();
     let attacker = h.npc;
     apply_small_expertise(&mut h, attacker);
-    let events = collect_swings(&mut h, attacker, victim, NPC_SWINGS);
+    let events = collect_broadcast_swings(&mut h, attacker, victim);
     assert_eq!(expertise(&h, attacker), 14.0);
-    assert!(!events.iter().any(dodged), "{events:?}");
+    assert!(
+        !events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::Dodge),
+        "{events:?}"
+    );
     // Native14/4=3.5 removesDodge3 but leavesParry2.5, not a blanket mask.
     // P(noParry)=.975^512≈2.346e-6; block remains3%.
-    assert!(events.iter().any(parried), "{events:?}");
-    assert!(events.iter().any(|e| e.blocked > 0), "{events:?}");
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::Parry),
+        "{events:?}"
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.event_type == CombatEventType::Block),
+        "{events:?}"
+    );
     cancel_expertise(&mut h, attacker, PET_PASSIVE);
-    let restored = collect_swings(&mut h, attacker, victim, NPC_SWINGS);
-    assert!(restored.iter().any(dodged), "{restored:?}");
+    let restored = collect_broadcast_swings(&mut h, attacker, victim);
+    assert!(
+        restored
+            .iter()
+            .any(|e| e.event_type == CombatEventType::Dodge),
+        "{restored:?}"
+    );
 }
