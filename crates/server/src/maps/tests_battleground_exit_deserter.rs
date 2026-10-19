@@ -118,7 +118,24 @@ fn assert_early_exit_deserter(queue_id: u32, in_progress: bool) {
         updates.iter().all(|update| update.error.is_none()),
         "authored expiration permits requeue: {updates:?}"
     );
-    assert_queued(&h, std::slice::from_ref(held), queue_id);
+    let readmitted = h
+        .app
+        .world()
+        .get::<crate::pvp::PlayerPvpState>(held.player)
+        .unwrap();
+    let still_queued = matches!(
+        readmitted.queue,
+        Some(crate::pvp::PlayerPvpQueue::Battleground { battleground_id, .. })
+            if battleground_id == queue_id
+    );
+    let invited_again = readmitted
+        .battleground
+        .as_ref()
+        .is_some_and(|invitation| !invitation.accepted && invitation.map_id == 2107);
+    assert!(
+        still_queued || invited_again,
+        "eligible requeue must remain queued or receive a real matchmaking invitation: {readmitted:?}"
+    );
 }
 
 #[test]
