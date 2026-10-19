@@ -124,13 +124,16 @@ fn assert_active_combat_leave_refused(h: &mut Harness, players: &[Traveler]) {
     assert_eq!(retained.match_id, invitation.match_id);
     assert!(retained.accepted);
     assert_eq!(retained.phase, BgPhase::InProgress);
+    let world = h.app.world();
+    let reserved_copy = world.resource::<InstanceManager>().find_instance(
+        world.resource::<MapStore>(),
+        copy.map_id,
+        entrant(character, None),
+        SUNDAY_NOON,
+    );
     assert_eq!(
-        h.app.world().resource::<InstanceManager>().cannot_enter(
-            copy,
-            entrant(character, None),
-            SUNDAY_NOON
-        ),
-        None,
+        reserved_copy,
+        Some(copy),
         "refusal retains actual copy ownership"
     );
     assert!(players.iter().all(|who| h.map_of(who) == Some(copy)));
