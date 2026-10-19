@@ -7,6 +7,9 @@ fn guild_tabard_vendor_host_messages_revalidate_range_role_auth_and_catalog_befo
     let mut h = harness_with(HUMAN_TEMPLATE, |app| {
         let catalog =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/db2/active");
+        let conn = world_db().unwrap();
+        app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+        app.insert_resource(crate::test_data::ground_map());
         app.add_plugins(crate::guild_tabards::GuildTabardPlugin::load(&catalog).unwrap());
         add_inbox::<GuildTabardReply>(app);
     })

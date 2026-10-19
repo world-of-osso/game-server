@@ -2577,6 +2577,47 @@ fn plan_targets(
     Ok(plan)
 }
 
+/// Generic TRIGGER_SPELL64 runs only in LAUNCH/LAUNCH_TARGET mode
+/// (SpellEffects.cpp594–598); authored scripts keep their own hit handling.
+fn launches(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+    effect.effect == effects::EFFECT_TRIGGER_SPELL
+        && scripts::cast_effect(spell.id, effect.index).is_none()
+        && scripts::effect_handler(spell.id, effect.index).is_none()
+}
+
+/// `Spell::HandleLaunchPhase` (Spell.cpp8493–8527): launch-mode effects resolve on
+/// each planned unit when the spell launches, before any missile lands. Units
+/// that missed or were immune were already removed from the plan.
+fn resolve_launch_effects(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    depth: u8,
+) {
+    for planned in plan {
+        let effect = &spell.effects[planned.index];
+        if !launches(spell, effect)
+            || !scripts::effect_enabled(world, caster, spell.id, effect.index)
+        {
+            continue;
+        }
+        for &unit in &planned.units {
+            if world.get_entity(unit).is_err() {
+                continue;
+            }
+            let ctx = EffectCtx {
+                caster,
+                spell,
+                depth,
+                dest: planned.dest,
+                chain_multiplier: planned.chain_multiplier(unit),
+            };
+            queued_triggers::schedule(world, &ctx, effect, unit);
+        }
+    }
+}
+
 fn resolve_effects(
     world: &mut World,
     caster: Entity,
@@ -2667,8 +2708,12 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let handler = scripts::effect_handler(spell.id, effect.index)
-            .or_else(|| effects::handler(effect.effect));
+        let handler = if launches(spell, effect) {
+            None
+        } else {
+            scripts::effect_handler(spell.id, effect.index)
+                .or_else(|| effects::handler(effect.effect))
+        };
         let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
             if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
