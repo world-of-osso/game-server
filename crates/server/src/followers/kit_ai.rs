@@ -213,6 +213,10 @@ fn combat_allows(
     if condition.requires_cast && world.get::<CastState>(target).is_none() {
         return false;
     }
+    if entry.slot == Slot::Interrupt && !crate::spell_cast::can_interrupt_cast(world, unit, target)
+    {
+        return false;
+    }
     if entry.slot == Slot::Control
         && world
             .get::<crate::auras::ActiveAuras>(target)
