@@ -8,6 +8,10 @@
 
 [Source flag](systems/player-damage.md#npc-source-no_crit--2026-10-17): qualification04ef1a93f FIRST3PASS43.93s/native30838flags131072 level83→dummy80 HP3→3/3 after256ordinaryswings; positive52/290+334effect1 coexist768s. THEN ignored e9c68e588 PUSHED; genuine4RED/4PASS46.22s (flaggedbase/52/290/joint stillCrit, four controls pass). Minimal cached attacker metadata through existing tuple→snapshot→Attacker; source0 only, later187/334 retained, no query/state/wire/HP/RNG/clocks/Guardian changes. Consumerdf6575f78 fresh ignored8GREEN68.97s/0warnings plus retained qualification3PASS43.93s (eleven-case composite), only then all eight behavior ignores removed; independent lead gate pending. Foreign flagged victim/full tuned actor parity remain named proof boundaries.
 
+## Source-qualified pacing fixture gap
+
+[Bisect and native bounds](investigations/follower-data.md#pacing-fixture-qualification--2026-10-19): originalc759/P_a2 already fails3 affordability prerequisites; not a worker/threat regression. Current40d3/717 native100eligible endpoint footprints all≥2packs and unchanged23-pack entrance WaitReserve pass2/2 in68.09s/0warnings. Explicitly approved named ignore preserves exactly3test bodies/assertions; no stat/kit/budget/runtime tuning or claim ordinary first pulls are impossible. Scoped re-gate pending.
+
 ## Worker-backed tank admission integration
 
 [Route continuation and proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):57d6dd748/P_f9a merges worker master2e4dfb596; complete route publication gates movement, pending holds retain victims, native work keeps priority, and source/budget/field projection remains current. No synchronous runtime fallback or invented tolerance. Actual18planner/death +eight worker-request +nine hazard/reaction controls35GREEN245.77s; owned-eye Azure actual-kick/1041GREEN30.03s; check/fmt pass,0warnings. Initial merge compilation failure is not behavioral RED. Wide gate/provider remain open.
