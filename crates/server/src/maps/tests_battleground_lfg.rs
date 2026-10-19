@@ -42,8 +42,12 @@ fn bg_lfg_role_check_party_refuses_then_allows_cancelled_selection_history() {
     assert_role_check_refuses_bg(32, true);
 }
 
-fn lfg_harness(count: u64) -> (Harness, Vec<Traveler>) {
-    let mut h = harness_with(|app| {
+fn lfg_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempFile) {
+    let database_file = tempfile::NamedTempFile::new().unwrap();
+    let db = redb::Database::create(database_file.path()).unwrap();
+    crate::persistence::create_tables(&db);
+    let mut h = harness_with(move |app| {
+        app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.init_resource::<crate::followers::FollowerCatalog>();
         app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
         app.add_plugins((
@@ -72,7 +76,7 @@ fn lfg_harness(count: u64) -> (Harness, Vec<Traveler>) {
         ));
     }
     h.receive_pvp_updates(5);
-    (h, players)
+    (h, players, database_file)
 }
 
 fn queue_lfg(h: &mut Harness, who: &Traveler, role: GroupRoleSnapshot) {
@@ -159,7 +163,7 @@ fn assert_bg_join_allowed(h: &mut Harness, players: &[Traveler], queue_id: u32) 
 }
 
 fn assert_queued_lfg_refuses_bg(queue_id: u32, count: u64) {
-    let (mut h, players) = lfg_harness(count);
+    let (mut h, players, _database) = lfg_harness(count);
     if count == 5 {
         form_source_five_player_parties(&mut h, &players, 25);
     }
@@ -185,7 +189,7 @@ fn assert_queued_lfg_refuses_bg(queue_id: u32, count: u64) {
 }
 
 fn assert_role_check_refuses_bg(queue_id: u32, party: bool) {
-    let (mut h, players) = lfg_harness(5);
+    let (mut h, players, _database) = lfg_harness(5);
     if party {
         form_source_five_player_parties(&mut h, &players, 25);
     }
