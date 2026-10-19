@@ -1,6 +1,6 @@
 # Trading Post authority
 
-Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Blizzard_PerksProgram define source behavior. [Client contract](../../../../game-engine/docs/specs/trading-post.md) owns both-skin requirements. No invented catalog or rotations.
+Installed-build local CASC PerksActivity/PerksVendorItem rows and Mainline Blizzard_PerksProgram define source behavior. [Client contract](../../../../game-engine/docs/specs/trading-post.md) owns both-skin requirements. Monthly inventory has the explicit project-policy exception below; it is not a proven Retail calendar join.
 
 ## What it must do
 
@@ -13,6 +13,13 @@ Retail PerksActivity/PerksVendorItem rows from local CASC69933 and Mainline Bliz
 - [x] Zero-duration refund default leaves refund unavailable until an explicit policy is approved; no duration guessed.
 - [x] Vendor replies evaluate existing item class/race/level restrictions for the querying player, carrying optional `usable` state for the source filter. Missing item/player facts remain unknown; usability is not a new purchase restriction.
 - [x] Item icons follow C_Item.GetItemIconByID: lowest-order authored ItemModifiedAppearance → ItemAppearance.DefaultIconFileDataID; items without an appearance icon use their authored Item.IconFileDataID. Empty direct item icons must not erase available base-appearance icons.
+
+## Monthly inventory source policy (lead decision 2026-10-19)
+
+- [ ] `TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS` permits monthly full-inventory Wowhead news for PerksMonths 2–46, including bonus rewards and outlet inventories. [`data/trading-post-monthly-catalog.json`](../../data/trading-post-monthly-catalog.json) records source URLs, retrieval dates, HTML SHA-256s, literal item-to-vendor joins and unmatched references. Split bonus/outlet news retains separate provenance; news linkage is not proof of exhaustive Retail membership.
+- [ ] NPC-only links remain unconverted. Unmatched component links, including October 2026 collection masks, are not standalone products. No name-based item resolution or invented vendor IDs.
+- [ ] The permanent set requires presence in every sampled month from first appearance through month 46; first-seen46 singletons are recorded separately rather than treated as observed persistence. Returning/outlet appearances alone confer no permanence. The 133 vendor IDs without interval links remain the named open question `TP_133_VENDOR_ITEMS_WITHOUT_INTERVAL_LINKS`, not an assumed permanent set.
+- [ ] Runtime monthly filtering remains unimplemented by this data-only change. Future current-month membership must use the monthly list plus the strict permanent set, preserving the frozen-item contract; runtime work requires separate approval.
 
 ## Test/admin tools (lead decision 2026-10-12)
 
@@ -47,7 +54,7 @@ Private-server setup only, on the existing admin socket (`GAME_SERVER_ADMIN_SOCK
 
 ## Known gaps (current cycle)
 
-- [ ] Monthly featured catalog and seasonal reward/calendar binding.
+- [ ] Runtime monthly featured catalog and seasonal reward/calendar binding; the committed news-derived membership file is BEST_GUESS input only, not an enabled runtime filter.
 - [ ] Refund duration sourcing/policy (the admin window is test setup, not policy).
 
 ## Out of scope
