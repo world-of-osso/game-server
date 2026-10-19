@@ -1,3 +1,7 @@
+## 2026-10-18 — Successful-channel lifecycle native ordering RED
+
+[Root boundary](systems/spell-casting.md#successful-channel-lifecycle--2026-10-18): separate ignored7d3 first-push native RED sees damage11 after Player aura-removal10; cancellation/no-recipient/Hymn controls pass. Counterspell mana failure is a fixture prerequisite only, corrected by zero-cost Pummel7740 (1PASS17.88s). Natural completion now separates cast-state cleanup from explicit/cancel aura removal; final ticks/ritual cleanup retained. Root GREEN, unchanged Stomp amplification and enabled tests pending; no per-spell snapshot/death delay or test weakening.
+
 ## 2026-10-18 — Consuming Stomp native recipient-removal RED
 
 [Source/order boundary](systems/spell-casting.md#consuming-stomp-recipient-removal--2026-10-18): pushed test-only4c2534bf1 first; actual ordinary completion/cancel remove native e0/aura23 but leave recipients alive,2RED/96.10s with fixed guards. Minimal finite374720 self-death registration committed before GREEN; stack cleanup remains the existing death callback, e1/othercopy and retained Stomp damage controls pending. No generic scheduling fix or damage snapshot inferred from TC's separate recipient aura update.

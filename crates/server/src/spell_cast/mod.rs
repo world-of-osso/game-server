@@ -3207,8 +3207,17 @@ fn send_spell_failure(
     );
 }
 
-/// Remove an active cast without reporting it: a channel ran out or handed over.
+/// Explicitly end/cancel a cast, immediately removing its channel-owned auras.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    let cast = clear_cast_state(world, caster)?;
+    if cast.cast_type == CastType::Channel {
+        crate::auras::channel_ended(world, caster, cast.spell_id);
+        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
+    }
+    Some(cast)
+}
+
+fn clear_cast_state(world: &mut World, caster: Entity) -> Option<CastState> {
     crate::crafting_orders::interrupt(world, caster);
     world.entity_mut(caster).remove::<PendingCastSpell>();
     world
@@ -3217,10 +3226,6 @@ pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
     let cast = world.entity_mut(caster).take::<CastState>()?;
     debug!(caster = ?caster, state = ?cast, "Cast state ended");
     mark_dirty(world, caster);
-    if cast.cast_type == CastType::Channel {
-        crate::auras::channel_ended(world, caster, cast.spell_id);
-        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
-    }
     Some(cast)
 }
 
@@ -3313,21 +3318,28 @@ fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
     match result {
         // Channel periodic effects tick as auras (`crate::auras`).
         CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-        CastTickResult::ChannelComplete => {
-            crate::auras::channel_completed(world, caster, spell_id);
-            end_cast(world, caster);
-            crate::scripted_ai::dispatch(
-                world,
-                caster,
-                crate::scripted_ai::Hook::ChannelFinished { spell_id },
-            );
-        }
+        CastTickResult::ChannelComplete => finish_channel(world, caster, spell_id),
         CastTickResult::Completed => {
             debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
             world.entity_mut(caster).remove::<CastState>();
             complete_cast(world, caster, spell_id, target);
         }
     }
+}
+
+/// TC Spell.cpp4342–4350: finish before the recipient-owned aura expiry pass.
+fn finish_channel(world: &mut World, caster: Entity, spell_id: u32) {
+    crate::auras::channel_completed(world, caster, spell_id);
+    if let Some(cast) = clear_cast_state(world, caster)
+        && cast.cast_type == CastType::Channel
+    {
+        crate::meeting_stone::ritual::channel_ended(world, caster, cast.spell_id);
+    }
+    crate::scripted_ai::dispatch(
+        world,
+        caster,
+        crate::scripted_ai::Hook::ChannelFinished { spell_id },
+    );
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.

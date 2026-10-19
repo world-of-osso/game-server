@@ -1,5 +1,7 @@
 # Auras
 
+Successful natural channel finish and explicit cancellation have distinct recipient-aura lifetime boundaries; see [successful channel lifecycle](spell-casting.md#successful-channel-lifecycle--2026-10-18) and its native ordering/control proof.
+
 ## Prayer of Mending baseline — 2026-10-18
 
 `spell_cast/scripts/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.
