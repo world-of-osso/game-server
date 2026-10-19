@@ -57,6 +57,17 @@ fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTr
     })
 }
 
+pub(super) fn radius_at(world: &World, entity: Entity, at: f64) -> Option<f32> {
+    let binding = world.get::<FrozenGround>(entity)?;
+    Some(
+        world
+            .resource::<AuraFieldCatalog>()
+            .definition(CREATE_PROPERTIES as u32)
+            .expect("created Frozen Ground has supported source definition")
+            .radius_at(at - binding.created_at),
+    )
+}
+
 pub(super) fn update(world: &mut World, entity: Entity) {
     let binding = *world
         .get::<FrozenGround>(entity)

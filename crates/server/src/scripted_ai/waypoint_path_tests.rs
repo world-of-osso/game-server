@@ -4,6 +4,73 @@ use crate::scripted_ai::{CreatureAi, CreatureAiState, Ctx};
 use bevy::ecs::system::RunSystemOnce;
 use std::time::Duration;
 
+fn query_controls_fixture(
+    path: &ScriptPath,
+    node: usize,
+    source: &Launch,
+    mut navigation: Option<&mut crate::navigation::Navigation>,
+    mut ground: Option<&mut crate::ground::GroundMap>,
+) -> Result<Vec<Vec3>, String> {
+    loop {
+        if let Some(controls) = query_path_controls(
+            path,
+            node,
+            source,
+            navigation.as_deref_mut(),
+            ground.as_deref_mut(),
+        )? {
+            return Ok(controls);
+        }
+        navigation
+            .as_deref_mut()
+            .expect("pending ground controls need worker")
+            .drain_until_idle();
+    }
+}
+
+#[test]
+fn navigation_deferred_waypoint_does_not_start_or_advance_node_before_publication() {
+    let (mut world, actor, _) = motion_ownership_world();
+    let previous = &world.get::<PathMovement>(actor).unwrap().path;
+    let path = ScriptPath {
+        id: previous.id,
+        move_type: previous.move_type,
+        flags: 0,
+        velocity: previous.velocity,
+        has_node_timing: previous.has_node_timing,
+        nodes: previous.nodes.clone(),
+    };
+    {
+        let mut movement = world.get_mut::<PathMovement>(actor).unwrap();
+        movement.path = Arc::new(path);
+        movement.wait_ms = 0;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    world.insert_resource(crate::navigation::Navigation::new(dir.path()));
+    world.insert_resource(crate::ground::GroundMap::new(dir.path(), HashMap::new()));
+    let before = *world.get::<Position>(actor).unwrap();
+    path_movement_system(&mut world);
+    let movement = world
+        .get::<PathMovement>(actor)
+        .expect("pending query must not retire the generator");
+    assert!(
+        !movement.started,
+        "queuing navigation must not start a waypoint"
+    );
+    assert_eq!(movement.node, 0);
+    assert!(movement.spline.is_none());
+    assert_eq!(*world.get::<Position>(actor).unwrap(), before);
+    world
+        .resource_mut::<crate::navigation::Navigation>()
+        .drain_until_idle();
+    path_movement_system(&mut world);
+    assert!(
+        world.get::<PathMovement>(actor).is_none(),
+        "ready unbaked result retains stop-without-arrival semantics"
+    );
+    assert!(world.resource::<ArrivalReceipts>().0.is_empty());
+}
+
 #[test]
 fn waypoint_source_short_initial_segment_still_moves_to_the_real_destination() {
     // TC MoveSpline.cpp::_checkPathLengths starts at segment1, not segment0.
@@ -60,6 +127,7 @@ fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
         speed_run: 1.0,
     };
     let source = Launch {
+        entity: Entity::from_bits(41),
         map: crate::maps::InMap::continent(43),
         position: from,
         orientation: 0.0,
@@ -67,14 +135,20 @@ fn waypoint_authored_wailing_node2_launches_and_reaches_collision_floor() {
         walking: true,
         flying: false,
     };
-    let navigation = crate::navigation::Navigation::new(&root);
+    let mut navigation = crate::navigation::Navigation::new(&root);
     let maps = crate::maps::store::load_map_store(&db).unwrap();
     let mut ground = crate::ground::GroundMap::new(
         &crate::ground::ground_data_dir(),
         HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
     );
-    let controls =
-        query_path_controls(path, node, &source, Some(&navigation), Some(&mut ground)).unwrap();
+    let controls = query_controls_fixture(
+        path,
+        node,
+        &source,
+        Some(&mut navigation),
+        Some(&mut ground),
+    )
+    .unwrap();
     let spline = launch(controls.clone(), false, 0.0, 2.5)
         .unwrap_or_else(|| panic!("authored node2 must launch: {controls:?}"));
     assert_eq!(spline.position(MINIMAL_DURATION_MS), from);
@@ -107,7 +181,7 @@ fn waypoint_authored_wailing_all_nodes_preserve_collision() {
         &crate::ground::ground_data_dir(),
         HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
     );
-    let navigation = crate::navigation::Navigation::new(&root);
+    let mut navigation = crate::navigation::Navigation::new(&root);
     let mut los = los::LosMap::new(&root.parent().unwrap().parent().unwrap().join("los/43"));
     let mut at = Vec3::new(-134.965, 125.402, -78.0945);
     let mut nodes = 0;
@@ -123,6 +197,7 @@ fn waypoint_authored_wailing_all_nodes_preserve_collision() {
                 speed_run: 1.0,
             };
             let source = Launch {
+                entity: Entity::from_bits(41),
                 map: crate::maps::InMap::continent(43),
                 position: at,
                 orientation: 0.0,
@@ -130,11 +205,16 @@ fn waypoint_authored_wailing_all_nodes_preserve_collision() {
                 walking: true,
                 flying: false,
             };
-            let controls =
-                query_path_controls(path, node, &source, Some(&navigation), Some(&mut ground))
-                    .unwrap_or_else(|error| {
-                        panic!("path{id}/node{} generation: {error}", path.nodes[node].0)
-                    });
+            let controls = query_controls_fixture(
+                path,
+                node,
+                &source,
+                Some(&mut navigation),
+                Some(&mut ground),
+            )
+            .unwrap_or_else(|error| {
+                panic!("path{id}/node{} generation: {error}", path.nodes[node].0)
+            });
             let spline =
                 launch(controls, false, 0.0, 2.5).expect("strict source spline validation");
             let mut previous = at;
@@ -181,6 +261,7 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         nodes: vec![(0, Vec3::new(2.0, 3.0, 4.0)), (1, Vec3::new(4.0, 5.0, 6.0))],
     };
     let source = Launch {
+        entity: Entity::from_bits(41),
         map: crate::maps::InMap::continent(43),
         position: Vec3::ZERO,
         orientation: 0.0,
@@ -189,12 +270,12 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         flying: true,
     };
     assert_eq!(
-        query_path_controls(&path, 0, &source, None, None).unwrap(),
+        query_controls_fixture(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1]
     );
     path.flags = FLAG_EXACT_SPLINE;
     assert_eq!(
-        query_path_controls(&path, 0, &source, None, None).unwrap(),
+        query_controls_fixture(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
     );
     let source = Launch {
@@ -202,7 +283,7 @@ fn waypoint_flying_and_exact_controls_do_not_require_ground_navigation() {
         ..source
     };
     assert_eq!(
-        query_path_controls(&path, 0, &source, None, None).unwrap(),
+        query_controls_fixture(&path, 0, &source, None, None).unwrap(),
         vec![Vec3::ZERO, path.nodes[0].1, path.nodes[1].1]
     );
 }
@@ -221,7 +302,7 @@ fn waypoint_wailing_single_chase_snap_samples_both_real_floors() {
         &crate::ground::ground_data_dir(),
         HashMap::from([(43, maps.map(43).unwrap().wdt_file_data_id)]),
     );
-    let navigation = crate::navigation::Navigation::new(&root);
+    let mut navigation = crate::navigation::Navigation::new(&root);
     let mut los = los::LosMap::new(&root.parent().unwrap().parent().unwrap().join("los/43"));
     for (label, endpoints) in [
         (

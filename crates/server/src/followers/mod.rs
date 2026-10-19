@@ -127,7 +127,13 @@ mod cc_tests;
 #[cfg(test)]
 mod defensive_tests;
 #[cfg(test)]
+mod hazard_reaction_tests;
+#[cfg(test)]
 mod hazard_tests;
+#[cfg(test)]
+pub(crate) fn fixture_hazard_escape(world: &mut World, unit: Entity) -> bool {
+    hazards::escape(world, unit)
+}
 #[cfg(test)]
 mod kit_interrupt_tests;
 #[cfg(test)]

@@ -154,6 +154,17 @@ fn has_bound_effect(world: &World, binding: &AuraAreaTrigger) -> bool {
         })
 }
 
+pub(super) fn radius_at(world: &World, entity: Entity, at: f64) -> Option<f32> {
+    let binding = world.get::<AuraAreaTrigger>(entity)?;
+    Some(
+        world
+            .resource::<AuraFieldCatalog>()
+            .definition(binding.properties)
+            .expect("created field has a supported source definition")
+            .radius_at(at - binding.created_at),
+    )
+}
+
 /// TC IsWithinDist adds the unit's source combat reach; the trigger has no unit reach.
 pub(crate) fn collision_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
     let radius = world.get::<SpellAreaTrigger>(entity)?.radius;
