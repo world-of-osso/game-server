@@ -111,7 +111,7 @@ fn reset_preparing_resources(world: &mut World, entity: Entity) {
 }
 
 /// TC Player.cpp:1804: only the primary pool, not every class resource.
-fn reset_resources(world: &mut World, entity: Entity) {
+pub(super) fn reset_resources(world: &mut World, entity: Entity) {
     use crate::spell_cast::powers::{PowerPools, change_power, power_value};
     use shared::components::{Health, PowerType};
     if let Some(mut health) = world.get_mut::<Health>(entity) {
