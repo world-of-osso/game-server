@@ -7,6 +7,9 @@ use shared::protocol::{
 #[path = "tests_lfg_pvp_join.rs"]
 mod pvp_join;
 
+#[path = "tests_rated_arena_lfg.rs"]
+mod rated_refusal;
+
 const DEADMINES: u32 = 100;
 
 #[test]

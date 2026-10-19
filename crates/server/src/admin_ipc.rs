@@ -37,6 +37,27 @@ impl Plugin for AdminIpcPlugin {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn dispatch_staging_fixture(
+    world: &mut World,
+    request: serde_json::Value,
+) -> AdminResponse {
+    let request: AdminRequest = serde_json::from_value(request).expect("admin request accepted");
+    let database = persistence::GameDatabase::new(persistence::temp_database());
+    let (respond, receive) = mpsc::channel();
+    let mut state = bevy::ecs::system::SystemState::<AdminQueries>::new(world);
+    let mut queries = state.get_mut(world).expect("admin queries");
+    dispatch(
+        AdminCommand { request, respond },
+        &database,
+        &mut queries,
+        None,
+        None,
+    );
+    state.apply(world);
+    receive.try_recv().expect("queued admin response")
+}
+
 /// Resources needed by the admin IPC early-dispatch handlers.
 #[derive(SystemParam)]
 struct AdminResources<'w, 's> {
@@ -516,6 +537,34 @@ fn dispatch(
     interest_dirty: Option<&crate::interest::InterestDirtyQueue>,
     replication_dirty: Option<&lightyear::prelude::ReplicationDirtyQueue>,
 ) {
+    if let AdminRequest::StageFollowerParty {
+        character_name,
+        map_id,
+        x,
+        y,
+        z,
+    } = &cmd.request
+    {
+        let name = character_name.clone();
+        let destination = crate::maps::WorldLocation {
+            map_id: *map_id,
+            position: Vec3::new(*x, *y, *z),
+            orientation: 0.0,
+        };
+        queries.commands.queue(move |world: &mut World| {
+            let response = match crate::followers::stage_follower_party(world, &name, destination) {
+                Ok(followers) => AdminResponse::FollowerPartyStaged {
+                    character_name: name,
+                    followers,
+                },
+                Err(error) => AdminResponse::Error(error),
+            };
+            if cmd.respond.send(response).is_err() {
+                warn!("admin staging response receiver disconnected");
+            }
+        });
+        return;
+    }
     let commands = &mut queries.commands;
     let players = &mut queries.players;
     let equipment_query = &mut queries.equipment;
@@ -523,6 +572,7 @@ fn dispatch(
     let roster_update_senders = &mut queries.roster_senders;
 
     let response = match cmd.request {
+        AdminRequest::StageFollowerParty { .. } => unreachable!("queued world operation above"),
         AdminRequest::Ping => AdminResponse::Pong,
         AdminRequest::CombatLog { .. }
         | AdminRequest::GrantItem { .. }

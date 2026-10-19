@@ -1,3 +1,6 @@
+## 2026-10-19 — Azure live prerequisites and eye receipt
+
+[Investigation](investigations/follower-data.md#azure-live-prerequisites--2026-10-19): native admission works; exact owned navigation disconnects entrance/Telash despite local coverage. Book/spell destination bindings remain explicitly unsourced; no blind rebake or gameplay traversal claim. Existing eye producer reloads134 displays/1340 poses, native1PASS; missing-row fragment awaits independent lead publication preserving existing rows/scales/mappings. Natural hazard latency n=0.
 ## 2026-10-18 — Herald point4 fall through DESCEND3
 
 [Bounded fall](systems/boss-scripts.md#herald-point4-fall-through-descend3--2026-10-18): native qualification plus genuine Normal/Heroic missing50msfall and ordinary20538 threat1vs0 RED precede implementation3a96703c4. Targeted4/4GREEN70.06s; actual original-ray floor, TC analytic fall/integer-ms EFFECT completion, gravity enable and per-hit zero-but-retained threat. Source audit caught forced-floor endpoint: actual truncated-duration2RED55.69s→delete snap3d0fea7e5. Final enabled38/38GREEN314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings; includes retained Gold/Nibbles/Gordoth/point controls and actual post-fall min1/no replay. LEAD gate pending; DESCEND4 and later lifecycle excluded.
