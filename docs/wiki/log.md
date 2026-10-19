@@ -1,6 +1,6 @@
 ## 2026-10-17 — Victim general crit197
 
-[Received crit](systems/player-damage.md#victim-general-crit197--2026-10-17): qualificationc6da45e6d FIRST3PASS39.63s/native197+100/-101/raw-1/coexist768s plus187/52/player0/334/actualNO_CRIT joint inputs; THEN ignoredb48621910 PUSHED. Genuine6RED/6PASS76.80s0warnings includes positive/negative197, source52/187 preclamp, explicitplayer andNO_CRITsource+197. Minimal existingtarget_auras197+187 sum in sharedchance reader beforeclamp/334; no scalar/query/state/wire/RNG/HP/clocks/Guardian changes. Fresh GREEN/lead gate pending; autoattack-only, not spell/ranged/generic197census/fullclass certification.
+[Received crit](systems/player-damage.md#victim-general-crit197--2026-10-17): qualificationc6da45e6d FIRST3PASS39.63s/native197+100/-101/raw-1/coexist768s plus187/52/player0/334/actualNO_CRIT joint inputs; THEN ignoredb48621910 PUSHED. Genuine6RED/6PASS76.80s0warnings includes positive/negative197, source52/187 preclamp, explicitplayer andNO_CRITsource+197. Minimal existingtarget_auras197+187 sum in sharedchance reader beforeclamp/334; no scalar/query/state/wire/RNG/HP/clocks/Guardian changes. Consumerd3a6b734e fresh ignored12GREEN70.07s/0warnings plus retained qualification3PASS39.63s (fifteen-case composite), only then twelve behavioral ignores removed; lead gate pending. Autoattack-only, not spell/ranged/generic197census/fullclass certification.
 
 ## 2026-10-17 — NPC source NO_CRIT
 

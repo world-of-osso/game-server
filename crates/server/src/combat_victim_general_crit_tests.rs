@@ -272,7 +272,6 @@ fn native_melee_victim_general_crit_no_crit_source_pair_is_runtime_qualified() {
 }
 
 #[test]
-#[ignore = "behavioral RED before victim197 consumer"]
 fn native_melee_victim_general_crit_positive_saturates_received_chance() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, POSITIVE, 1);
@@ -287,7 +286,6 @@ fn native_melee_victim_general_crit_positive_saturates_received_chance() {
 }
 
 #[test]
-#[ignore = "behavioral RED before victim197 consumer"]
 fn native_melee_victim_general_crit_negative_prevents_received_crit() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, NEGATIVE, 1 << 1);
@@ -297,7 +295,6 @@ fn native_melee_victim_general_crit_negative_prevents_received_crit() {
 }
 
 #[test]
-#[ignore = "behavioral control for signed victim197 sum"]
 fn native_melee_victim_general_crit_signed_sum_with_negative_source_stays_zero() {
     let (mut h, victim) = fixture();
     apply_full_source(&mut h);
@@ -310,7 +307,6 @@ fn native_melee_victim_general_crit_signed_sum_with_negative_source_stays_zero()
 }
 
 #[test]
-#[ignore = "behavioral control for victim197 cancellation"]
 fn native_melee_victim_general_crit_cancelled_positive_restores_baseline() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, POSITIVE, 1);
@@ -321,7 +317,6 @@ fn native_melee_victim_general_crit_cancelled_positive_restores_baseline() {
 }
 
 #[test]
-#[ignore = "behavioral control for victim-owned197"]
 fn native_melee_victim_general_crit_foreign_positive_does_not_change_actual_victim() {
     let (mut h, victim) = fixture();
     let foreign = h.caster;
@@ -332,7 +327,6 @@ fn native_melee_victim_general_crit_foreign_positive_does_not_change_actual_vict
 }
 
 #[test]
-#[ignore = "behavioral control for victim-owned197"]
 fn native_melee_victim_general_crit_attacker_positive_does_not_change_received_chance() {
     let (mut h, victim) = fixture();
     let npc = h.npc;
@@ -343,7 +337,6 @@ fn native_melee_victim_general_crit_attacker_positive_does_not_change_received_c
 }
 
 #[test]
-#[ignore = "behavioral RED before received197 pre-clamp source sum"]
 fn native_melee_victim_general_crit_meets_source_52_before_zero_clamp() {
     let (mut h, victim) = fixture();
     apply_full_source(&mut h);
@@ -354,7 +347,6 @@ fn native_melee_victim_general_crit_meets_source_52_before_zero_clamp() {
 }
 
 #[test]
-#[ignore = "behavioral control for landed pre334 clamp"]
 fn native_melee_victim_general_crit_negative_clamps_before_attacker_334() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, NEGATIVE, 1 << 1);
@@ -365,7 +357,6 @@ fn native_melee_victim_general_crit_negative_clamps_before_attacker_334() {
 }
 
 #[test]
-#[ignore = "behavioral RED before joint victim187 and197 sum"]
 fn native_melee_victim_general_crit_meets_victim_187_before_zero_clamp() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, MELEE_REDUCTION, 1 << 2);
@@ -377,7 +368,6 @@ fn native_melee_victim_general_crit_meets_victim_187_before_zero_clamp() {
 }
 
 #[test]
-#[ignore = "behavioral RED before player-source victim197 consumer"]
 fn native_melee_victim_general_crit_player_source_uses_actual_victim() {
     let (mut h, victim) = fixture();
     apply(&mut h, victim, POSITIVE, 1);
@@ -391,7 +381,6 @@ fn native_melee_victim_general_crit_player_source_uses_actual_victim() {
 }
 
 #[test]
-#[ignore = "behavioral control for player attacker-owned197 exclusion"]
 fn native_melee_victim_general_crit_player_attacker_only_does_not_gain_crit() {
     let (mut h, victim) = fixture();
     let caster = h.caster;
@@ -402,7 +391,6 @@ fn native_melee_victim_general_crit_player_attacker_only_does_not_gain_crit() {
 }
 
 #[test]
-#[ignore = "behavioral RED: source NO_CRIT must not exclude received197"]
 fn native_melee_victim_general_crit_applies_after_native_source_no_crit() {
     let (mut h, victim) = fixture();
     let caster = h.caster;
