@@ -181,6 +181,7 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)

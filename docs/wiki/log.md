@@ -2,6 +2,9 @@
 
 [Parry47](systems/player-damage.md#npc-victim-parry-aura47--2026-10-17): ignored49f20 pushed first;23547/64651 signed0live8s andactualSunwellhit5/dodge-20 qualified1PASS41.59s. Front+100→5Damage/0Parry andnegative-100→1Parry/4Damage give genuine2RED/6PASS47.04s. Existingtarget_auras/NPCguard consumer before240/clamp; masks/direction/playerStats/block/Guardian/RNG/clocks unchanged; Consumeraa2ee70c1 fresh ignored8nativeGREEN34.40s0warnings+retainedqualification1PASS41.59s (9composite,notone9batch), onlythen allnine enabled/pushed; lead gate pending.
 
+## 2026-10-18 — Energizing Elixir flat Energy
+
+[Native115288](systems/auras.md#energizing-elixir-flat-energy--2026-10-18): source75Energy/5s AFTER percentage modifiers, real Tiger Palm deficit and ordinary Elixir RED10vs25, native13750 RED17.5vs32.5; sibling2Chi preserved. Tests-only ignored3993b7fe8 pushed first;3controlPASS/2genuineFAIL26.42s. Minimal continuous non-mana85 aggregation/consumer atc62d61e9b: native5GREEN14.48s +retained regen/resource30GREEN14.31s,0warnings; independent lead gate pending, no legal-loadout or generic85 certification.
 ## 2026-10-17 — NPC victim dodge49
 
 [NPC49](systems/player-damage.md#npc-victim-dodge-aura49--2026-10-17): ignoreddf529 pushed first; actual5277+62356effect1 sum0 across8s/block51=0, qualification1PASS33.62s. Nativefront/behind each5Damage despite live200, genuine2RED/4PASS35.27s. Existingtarget_auras consumer onlyNPC/allowedhit path before251/240/clamp; no playerdoublecount/otherdefense/Guardian/query/wire/RNG/clock change. Consumere6e99fb6e fresh nativebehavior6/6GREEN57.40s0warnings +retained qualification1PASS33.62s (7composite,notone7batch), onlythen allseven enabled/pushed; lead gate pending.
@@ -2952,4 +2955,5 @@ Recorded Guardian native rescue and shared Ardent actual-absorption/same-frame m
 Recorded real33076 ward RED, approved per-cast stack/original-caster API and native delayed jump in [auras](systems/auras.md#prayer-of-mending-baseline--2026-10-18); player recipient qualification and PRAYER_OF_MENDING_NPC_TREAT_AS_RAID_UNIT_STATIC_FLAG_ABSENT explicit; Native8/8 GREEN37.08s including actual expiry/exhaustion/foreign/no-recipient and no-override Agony controls; native4000ms Fireball readiness honored, independent lead gate pending.
 - 2026-10-18 — Replace LOS/nav bake and vehicle duplicate binary readers with pinned wow-formats geometry metadata; preserve selection/posing policy and capture old-reader Stockade reference. [Shared formats](systems/wow-formats.md).
 
+- 2026-10-18: Herald Call Nazan source ingress, native integer damage qualification and actual firstWest Fireball interruption. Two-case RED→GREEN; exact one-tick/self-target refinement plus all7 Herald/four grounding11/11 PASS176.19s atd43cd6b04; LEAD independent gate/check/fmt pending. See [boss scripts](systems/boss-scripts.md#herald-call-nazan-descent-ingress--2026-10-18).
 - 2026-10-18 — Pin projected runtime-ground metadata APIs in wow-formats; preserve selected-field/FDID/error policy and frozen metadata/bake receipt boundaries. [Shared readers](systems/wow-formats.md).

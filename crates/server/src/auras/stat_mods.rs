@@ -46,6 +46,8 @@ pub struct AuraStatMods {
     /// MOD_POWER_REGEN_PERCENT 110 by DB2 power type; MOD_MANA_REGEN_PCT
     /// 379 is folded into power type 0.
     pub power_regen_mult: Vec<(i32, f32)>,
+    /// MOD_POWER_REGEN 85, raw units per five seconds, summed by power type.
+    pub power_regen_flat: Vec<(i32, f32)>,
     /// MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 by DB2 power type, summed raw
     /// units (TrinityCore `HandleStatFlatModifier(UNIT_MOD_POWER_START + misc, TOTAL_VALUE)`).
     pub max_power_flat: Vec<(i32, f32)>,
@@ -109,6 +111,7 @@ impl Default for AuraStatMods {
             summon_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
+            power_regen_flat: Vec::new(),
             max_power_flat: Vec::new(),
             charged_power_points: Vec::new(),
             movement_speed: 1.0,
@@ -168,6 +171,14 @@ impl AuraStatMods {
             .filter(|(mask, _)| mask & school_mask != 0)
             .map(|(_, multiplier)| multiplier)
             .product()
+    }
+
+    pub fn power_regen_flat(&self, power_type: i32) -> f32 {
+        self.power_regen_flat
+            .iter()
+            .filter(|(power, _)| *power == power_type)
+            .map(|(_, amount)| amount)
+            .sum()
     }
 
     pub fn power_regen(&self, power_type: i32) -> f32 {
@@ -448,6 +459,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,
             MOD_SUMMON_DAMAGE => combat.summon_damage_mult *= pct(amount),
             MOD_RAGE_FROM_DAMAGE_DEALT => combat.rage_from_damage_dealt_pct += amount,
+            MOD_POWER_REGEN => combat.power_regen_flat.push((misc, amount)),
             MOD_POWER_REGEN_PERCENT => {
                 multiply_entry(&mut combat.power_regen_mult, misc, pct(amount))
             }
