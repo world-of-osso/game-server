@@ -9,6 +9,92 @@ pub(super) struct AdmittedPosition(pub Vec3);
 #[derive(Component)]
 struct AppliedMovementAt(f64);
 
+/// A budget-admitted existing-fight caster, consumed by ordinary native chase.
+#[derive(Component)]
+struct AdmittedCasterTarget(Entity);
+
+pub(super) fn update_caster_goal(
+    world: &mut World,
+    tank: Entity,
+    follower: &Follower,
+    party: &[Entity],
+) {
+    let Some(caster) = read_admitted_caster(world, tank, follower, party) else {
+        clear_caster_goal(world, tank);
+        return;
+    };
+    world.entity_mut(tank).insert(AdmittedCasterTarget(caster));
+    let selected = world
+        .get::<crate::networking::CombatTarget>(tank)
+        .and_then(|target| target.0);
+    apply_admitted_caster_target(world, tank, selected);
+}
+
+fn read_admitted_caster(
+    world: &mut World,
+    tank: Entity,
+    follower: &Follower,
+    party: &[Entity],
+) -> Option<Entity> {
+    if follower.profile.role != shared::group::GroupRole::Tank
+        || world.get::<AdmittedPosition>(tank).is_some()
+    {
+        return None;
+    }
+    for caster in read_engaged_caster_candidates(world, tank, follower, party) {
+        if super::hazards::target_is_hazardous(world, tank, caster)
+            || super::hazards::path_crosses_hostile_field(world, tank, caster)
+        {
+            continue;
+        }
+        match read_pursuit_admission(world, tank, caster, follower) {
+            Ok(true) => return Some(caster),
+            Ok(false) => debug!(?tank, ?caster, "Caster collection held by pull budget"),
+            Err(error) => debug!(?tank, ?caster, %error, "Caster collection admission unavailable"),
+        }
+    }
+    None
+}
+
+fn clear_caster_goal(world: &mut World, tank: Entity) {
+    let Some(AdmittedCasterTarget(caster)) = world.entity_mut(tank).take::<AdmittedCasterTarget>()
+    else {
+        return;
+    };
+    let pursuing = crate::creature_ai::CreatureState::Pursuing {
+        target: caster.to_bits(),
+    };
+    if world.get::<crate::creature_ai::CreatureState>(tank) == Some(&pursuing) {
+        world
+            .entity_mut(tank)
+            .insert(crate::creature_ai::CreatureState::Idle);
+        if let Some(position) = world.get::<shared::components::Position>(tank).copied() {
+            crate::creature_ai::move_follower(world, tank, position, 0.0);
+        }
+    }
+}
+
+pub(super) fn apply_admitted_caster_target(
+    world: &mut World,
+    tank: Entity,
+    selected: Option<Entity>,
+) -> bool {
+    let Some(&AdmittedCasterTarget(caster)) = world.get::<AdmittedCasterTarget>(tank) else {
+        return false;
+    };
+    world
+        .entity_mut(tank)
+        .remove::<crate::creature_ai::FollowOwner>()
+        .insert((
+            crate::creature_ai::CreatureState::Pursuing {
+                target: caster.to_bits(),
+            },
+            super::ai::FollowerReach(super::ai::MELEE_REACH),
+            crate::networking::CombatTarget(selected),
+        ));
+    true
+}
+
 /// Refusal lives at the kit's final pursuit boundary, not an overwritten early guard.
 /// In-place attacks still use the ordinary native cast/range/GCD checks.
 pub(super) fn hold_unbudgeted_pursuit(world: &mut World, tank: Entity, target: Entity) -> bool {
@@ -191,7 +277,6 @@ fn advance_admitted_once(
     Ok(())
 }
 
-#[cfg(test)]
 pub(super) fn read_engaged_caster_candidates(
     world: &mut World,
     unit: Entity,

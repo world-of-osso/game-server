@@ -12,6 +12,8 @@ use crate::networking::CombatTarget;
 #[derive(Component, Clone, Copy)]
 pub(crate) struct FollowerReach(pub f32);
 
+pub(super) const MELEE_REACH: f32 = 2.0;
+
 pub(super) fn update(world: &mut World) {
     super::pull_history::sample_all(world);
     let followers: Vec<_> = world
@@ -33,6 +35,7 @@ fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     }
     stop_attacking_cc(world, unit);
     let party = party_units(world, follower.owner);
+    super::tank_planner::update_caster_goal(world, unit, follower, &party);
     let selection = select_enemy(world, follower, unit, &party);
     let enemy = match selection {
         EnemySelection::Attack(enemy) => Some(enemy),
@@ -385,12 +388,13 @@ pub(super) fn pursue(
     melee: bool,
 ) -> bool {
     if super::tank_planner::apply_admitted_position(world, unit, Some(target))
+        || super::tank_planner::apply_admitted_caster_target(world, unit, Some(target))
         || super::tank_planner::hold_unbudgeted_pursuit(world, unit, target)
     {
         return true;
     }
     let reach = if melee {
-        Some(2.0)
+        Some(MELEE_REACH)
     } else {
         spell_reach(world, spell_id)
     };
@@ -442,7 +446,9 @@ fn cast(world: &mut World, unit: Entity, target: Entity, spell: u32) -> bool {
 
 pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     crate::combat::combat_stop(world, unit);
-    if super::tank_planner::apply_admitted_position(world, unit, None) {
+    if super::tank_planner::apply_admitted_position(world, unit, None)
+        || super::tank_planner::apply_admitted_caster_target(world, unit, None)
+    {
         return;
     }
     let unsafe_approach = super::hazards::target_is_hazardous(world, unit, owner)

@@ -167,4 +167,13 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         nearest < before_distance,
         "production tank stayed on reachable selected trash instead of collecting real casting Overheat: distance {before_distance}, nearest {nearest}"
     );
+    // A finished/interrupted cast must not leave an unowned chase overriding later kit work.
+    crate::spell_cast::cancel_cast(f.h.app.world_mut(), caster);
+    let at = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
+    f.h.advance(1);
+    let after = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
+    assert!(
+        after.distance(caster_point) >= at.distance(caster_point),
+        "ended source cast left a stale caster approach instead of the reachable selected fight"
+    );
 }

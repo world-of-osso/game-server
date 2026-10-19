@@ -1,3 +1,7 @@
+## Native Overheat caster pickup RED and admitted chase
+
+[Exact source/proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18):6cc8a02c2/P_a2b actual12466/20375719 versus reachable20375738 gives genuine1RED55.53s/0warnings,14.209645yd unchanged. Complete native engagement/body/LOS/Rebuke controls pass; earlier exact floor-height assertion was a setup failure. One admitted caster entity goal now survives selected-trash kit pursuit through ordinary native chase; ended casts retire its chase. Targeted GREEN pending; no provider activation, budget or stat/kit changes.
+
 ## Tank baked-corner acquisition and corrected pursuit proof
 
 [Exact proof/limits](investigations/follower-data.md#run-local-tank-observations--2026-10-18):36d7f43bc/P_a2b native5PASS160.19s/0warnings. All1353distinct interior native route points to20375689:35target-proximity refusals; remaining1235Reserve/83script refusals, no qualified corner. Native bodies/real LOS/stats and bounded other-source acquisition preserved. Corrected actual-tick pursuit4allPASS; Stockade policy3 geometry blocked, not behavioral RED. No budget/stat/kit tuning or full planner/gameplay acceptance.
