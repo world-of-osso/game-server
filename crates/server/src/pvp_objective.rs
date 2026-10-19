@@ -94,6 +94,15 @@ fn credit_completed_match(world: &mut World, match_id: u64) {
         .map(|(_, link, owner)| (link.0, winners.contains(&owner.character_id)))
         .collect();
     for (player, won) in players {
+        // TC Battleground.cpp675–695: clean up life/combat before the result snapshot.
+        let dead = world
+            .get::<Health>(player)
+            .is_some_and(|health| health.current <= 0.0);
+        if dead {
+            crate::death::resurrect_player_fully(world, player);
+        } else {
+            crate::combat::combat_stop(world, player);
+        }
         crate::achievement::record_battleground_end(world, player, map.map_id, won);
         super::honor::award_battleground_completion(world, player, map.map_id, bracket, won);
     }

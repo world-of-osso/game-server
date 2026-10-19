@@ -559,7 +559,7 @@ fn waypoint_system(
                                 sample_movement_ground(ground.as_deref_mut(), Some(map), position),
                                 reached,
                             ),
-                            Step::Blocked => (from, false),
+                            Step::Pending | Step::Blocked => (from, false),
                         }
                     },
                 )
@@ -851,6 +851,7 @@ pub(crate) fn chase_system(
                 Step::Unbaked if follower_reach.is_some() => *pos,
                 Step::Unbaked => chase_step(*pos, target_pos, run_speed * dt, reach),
                 Step::Moved { position, .. } => position,
+                Step::Pending => continue,
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);
@@ -909,6 +910,7 @@ type Chaser = (
 fn no_path_evade_system(
     time: Res<Time>,
     maps: Res<MapStore>,
+    nav: Option<Res<Navigation>>,
     mut blocked: Query<
         (
             Entity,
@@ -927,6 +929,9 @@ fn no_path_evade_system(
             })
         {
             commands.entity(entity).remove::<CannotReachTarget>();
+            continue;
+        }
+        if nav.as_ref().is_some_and(|nav| nav.route_pending(entity)) {
             continue;
         }
         if map
@@ -1224,7 +1229,7 @@ fn advance_companion_route(
     };
     match nav.advance(entity, request) {
         Step::Moved { position, reached } => Some((position, reached)),
-        Step::Unbaked | Step::Blocked => None,
+        Step::Pending | Step::Unbaked | Step::Blocked => None,
     }
 }
 
@@ -1670,6 +1675,7 @@ pub(crate) fn return_to_spawn_system(
                     }
                     (position, reached)
                 }
+                Step::Pending => continue,
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);

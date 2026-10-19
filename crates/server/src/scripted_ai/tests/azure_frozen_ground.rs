@@ -323,22 +323,56 @@ fn assert_native_route(h: &mut Harness, unit: Entity, root: &Path) {
         },
     );
     let mut probe = crate::navigation::Navigation::new(&root.join("navmesh"));
+    let request = crate::navigation::MoveRequest {
+        map_id: 2515,
+        goal: crate::navigation::Goal::Point,
+        from,
+        to,
+        distance: 0.1,
+        reach: 0.0,
+    };
+    let _ = probe.advance(unit, request);
+    probe.drain_until_idle();
     assert!(
         matches!(
-            probe.advance(
-                unit,
-                crate::navigation::MoveRequest {
-                    map_id: 2515,
-                    goal: crate::navigation::Goal::Point,
-                    from,
-                    to,
-                    distance: 0.1,
-                    reach: 0.0,
-                }
-            ),
+            probe.advance(unit, request),
             crate::navigation::Step::Moved { .. }
         ),
         "prerequisite: actual2515 nav route from native actor feet"
+    );
+}
+
+#[test]
+fn follower_hazard_reaction_detects_azure_contact_50ms_before_current_radius() {
+    let (mut h, telash) = source_fixture();
+    let root = private_ground();
+    h.app
+        .insert_resource(crate::navigation::Navigation::new(&root.join("navmesh")));
+    let (field, _, _) = expire_first_ordinary_frost(&mut h, telash);
+    let owner = h.player();
+    let unit = crate::followers::native_fixture::spawn(h.app.world_mut(), owner, 209057).unwrap();
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), unit).unwrap();
+    let center = at(&h, field);
+    let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+    // Native26505 grows by 1/3yd/s here: 0.008yd is outside now and inside at +50ms.
+    let position = Position {
+        x: center.x + radius + reach + 0.008,
+        y: center.y,
+        z: center.z,
+    };
+    h.app.world_mut().entity_mut(unit).insert(position);
+    assert!(
+        at(&h, unit).distance(center) > radius + reach,
+        "not current contact"
+    );
+    assert!(
+        crate::followers::fixture_hazard_escape(h.app.world_mut(), unit),
+        "+50ms authored prediction must detect the contact and start planning now"
+    );
+    assert_eq!(
+        *h.app.world().get::<Position>(unit).unwrap(),
+        position,
+        "prediction detects, but reaction does not move early"
     );
 }
 
@@ -384,8 +418,14 @@ fn azure_frozen_ground_native_expiry_hazard_is_escaped_by_a_native_follower_on_p
                 .expect("actual private2515 LOS tile"),
             "escape tick{tick} crossed native collision"
         );
-        let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
-        if position.distance(center) > radius + reach {
+        let predicted = crate::spell_cast::area_trigger::avoidance_radius_at(
+            h.app.world(),
+            field,
+            unit,
+            crate::auras::aura_now(h.app.world()) + 0.050,
+        )
+        .unwrap();
+        if position.distance(center) > predicted {
             escaped = true;
             break;
         }
@@ -428,12 +468,40 @@ fn azure_frozen_ground_native_expiry_hazard_is_escaped_by_a_native_follower_on_p
         !has_own_ground_aura(&h, unit, telash),
         "native aura cleanup after the membership update following physical escape"
     );
+    let mut detected_at = None;
     for _ in 0..40 {
+        let before = at(&h, unit).distance(center);
         h.advance(STEP);
+        let now = crate::auras::aura_now(h.app.world());
         let radius = h.app.world().get::<SpellAreaTrigger>(field).unwrap().radius;
+        let predicted = crate::spell_cast::area_trigger::avoidance_radius_at(
+            h.app.world(),
+            field,
+            unit,
+            now + 0.050,
+        )
+        .unwrap();
+        if before <= predicted {
+            detected_at.get_or_insert(now);
+        } else {
+            detected_at = None;
+        }
+        let after = at(&h, unit).distance(center);
         assert!(
-            at(&h, unit).distance(center) > radius + reach,
-            "normal follow/combat does not re-enter growing native affect range"
+            after >= before,
+            "normal follow/combat must not move back into the growing field"
         );
+        if after <= radius + reach {
+            let reacting = detected_at.is_some_and(|start| now < start + 0.250);
+            let pending = h
+                .app
+                .world()
+                .resource::<crate::navigation::Navigation>()
+                .route_pending(unit);
+            assert!(
+                reacting || pending || after > before,
+                "after reaction and publication the native follower must resume its escape"
+            );
+        }
     }
 }
