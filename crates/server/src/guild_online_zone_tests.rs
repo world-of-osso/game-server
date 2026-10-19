@@ -51,7 +51,23 @@ fn spawn_member(app: &mut App, name: &str, guild_id: u32, position: Vec3) -> (En
     (actor, id)
 }
 
+#[derive(Resource, Default)]
+struct ReceivedGuildUpdates(Vec<GuildStateUpdate>);
+
+fn collect_updates(
+    mut receivers: Query<&mut MessageReceiver<GuildStateUpdate>>,
+    mut received: ResMut<ReceivedGuildUpdates>,
+) {
+    for mut receiver in &mut receivers {
+        received.0.extend(receiver.receive());
+    }
+}
+
 fn query(app: &mut App, connection: Entity) -> GuildSnapshot {
+    app.world_mut()
+        .resource_mut::<ReceivedGuildUpdates>()
+        .0
+        .clear();
     app.world_mut()
         .get_mut::<MessageSender<QueryGuild>>(connection)
         .unwrap()
@@ -60,11 +76,10 @@ fn query(app: &mut App, connection: Entity) -> GuildSnapshot {
         app.update();
     }
     app.world_mut()
-        .get_mut::<MessageReceiver<GuildStateUpdate>>(connection)
-        .unwrap()
-        .receive()
-        .filter_map(|update| update.guild)
-        .last()
+        .resource_mut::<ReceivedGuildUpdates>()
+        .0
+        .pop()
+        .and_then(|update| update.guild)
         .expect("actual guild response")
 }
 
@@ -93,7 +108,9 @@ fn guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_priva
         (0, westfall, 40),
     ]));
     app.insert_resource(GameDatabase::new(crate::persistence::temp_database()));
-    app.add_systems(Update, process_query_requests);
+    app.init_resource::<ReceivedGuildUpdates>();
+    // Lightyear clears messages in Last: consume the real response during Update.
+    app.add_systems(Update, (process_query_requests, collect_updates).chain());
     app.finish();
     app.cleanup();
     app.update();
@@ -117,6 +134,8 @@ fn guild_online_zone_native_query_uses_parent_area_refreshes_and_preserves_priva
             MessageReceiver::<QueryGuild>::default(),
             MessageSender::<GuildStateUpdate>::default(),
             MessageReceiver::<GuildStateUpdate>::default(),
+            MessageSender::<shared::protocol::ProtocolFingerprint>::default(),
+            MessageReceiver::<shared::protocol::ProtocolFingerprint>::default(),
         ))
         .id();
     app.update();
