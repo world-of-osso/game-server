@@ -65,6 +65,8 @@ mod herald_intro2;
 mod herald_min1;
 #[path = "herald_pair.rs"]
 mod herald_pair;
+#[path = "herald_reset.rs"]
+mod herald_reset;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
