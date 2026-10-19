@@ -340,24 +340,20 @@ mod request_tests;
 fn prune_routes(
     mut nav: ResMut<Navigation>,
     actors: Query<(Option<&crate::maps::InMap>, Option<&Position>)>,
-    creatures: Query<
-        (Entity, Option<&crate::maps::InMap>, Option<&Position>),
-        With<crate::creature_ai::CreatureState>,
-    >,
 ) {
     deferred::prune_queries(&mut nav, &actors);
     let obsolete: Vec<_> = nav
         .pending
         .iter()
         .filter_map(|(entity, pending)| {
-            let Ok((_, map, position)) = creatures.get(*entity) else {
+            // Every request reads its owner's Position and InMap. CreatureState
+            // describes one AI driver, not navigation ownership (pets lack it).
+            let Ok((Some(map), Some(position))) = actors.get(*entity) else {
                 return Some(*entity);
             };
-            let wrong_map = map.is_some_and(|map| map.map_id != pending.request.map_id);
+            let wrong_map = map.map_id != pending.request.map_id;
             let moved = !pending.done
-                && position.is_none_or(|position| {
-                    horizontal(point(*position) - point(pending.request.from)) > TELEPORT_DISTANCE
-                });
+                && horizontal(point(*position) - point(pending.request.from)) > TELEPORT_DISTANCE;
             (wrong_map || moved).then_some(*entity)
         })
         .collect();
