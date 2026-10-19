@@ -1,14 +1,34 @@
 //! TC166/214–215: the source guard acts before real health/death commits.
 use super::herald_call::{damage_to_percent, descent_emotes, first_west, reach_first_west};
+use super::herald_damage::assert_source_step;
 use super::herald_intro::{actors_in_copy, spawn_source_copy};
 use super::herald_intro2::{prepared_ramparts, received_casts};
 use super::*;
+use crate::spell_cast::test_harness::ObservedCombatEvents;
 
 const DESCEND: Position = Position {
     x: -1429.1720,
     y: 84.34760,
     z: -1749.1290,
 };
+const CENTER: Position = Position {
+    x: -1410.5204,
+    y: 89.05998,
+    z: -1740.5852,
+};
+
+fn observe_first_west(difficulty: u32) -> (Harness, InMap, Entity, Entity) {
+    let (mut h, map, nazan, vazruden) = first_west(difficulty);
+    h.app.init_resource::<ObservedCombatEvents>();
+    // Type41/TextRange0 has a25yd audience; no NPC position/ownership changes.
+    let origin = *h.app.world().get::<Position>(nazan).unwrap();
+    let listener = h.player();
+    h.app.world_mut().entity_mut(listener).insert(Position {
+        x: origin.x + 3.0,
+        ..origin
+    });
+    (h, map, nazan, vazruden)
+}
 
 fn reduce_to_one(h: &mut Harness, actor: Entity) {
     let loss = h.health(actor).current - 1.0;
@@ -29,6 +49,17 @@ fn assert_alive_at_one(h: &mut Harness, actor: Entity, map: InMap) {
             .world()
             .get::<crate::combat::DeathState>(actor)
             .is_none()
+    );
+    assert!(
+        !h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(
+                |event| event.target == Some(actor.to_bits()) && event.kind == CombatLogKind::Death
+            ),
+        "no actual server death event, including ownerless self-source"
     );
     for (_, _, inbox) in &h.players {
         assert!(
@@ -62,7 +93,7 @@ fn deal_lethal(h: &mut Harness, actor: Entity, attacker: Entity, spell: bool) {
 
 fn assert_airborne_commits(spell: bool) {
     for difficulty in [1, 2] {
-        let (mut h, map, nazan, _) = first_west(difficulty);
+        let (mut h, map, nazan, _) = observe_first_west(difficulty);
         let player = h.player();
         deal_lethal(&mut h, nazan, player, spell);
         assert_alive_at_one(&mut h, nazan, map);
@@ -87,16 +118,20 @@ fn assert_airborne_commits(spell: bool) {
 fn encounter_coverage_herald_min1_intro_direct_self_nonlethal_and_copy_isolation() {
     for difficulty in [1, 2] {
         let (mut h, map, herald, _) = prepared_ramparts(difficulty);
+        h.app.init_resource::<ObservedCombatEvents>();
         let other_map = spawn_source_copy(&mut h, 8001, difficulty);
         let other = actors_in_copy(&mut h, 17307, other_map)[0];
         let other_health = h.health(other);
         damage_to_percent(&mut h, herald, 80.0);
+        h.advance(0.05); // Actual engagement starts INTRO1 and stops its patrol.
+        let before = *h.app.world().get::<Position>(herald).unwrap();
         let player = h.player();
         deal_lethal(&mut h, herald, player, false);
         assert_alive_at_one(&mut h, herald, map);
         deal_lethal(&mut h, herald, herald, false);
-        h.advance(0.1);
+        h.advance(0.05);
         assert_alive_at_one(&mut h, herald, map);
+        assert_source_step(&h, herald, before, CENTER);
         assert_eq!(
             descent_emotes(&h, herald),
             0,
@@ -139,7 +174,7 @@ fn encounter_coverage_herald_min1_airborne_spell_and_repeated_self() {
 
 fn assert_real_periodic_commits(self_source: bool) {
     for difficulty in [1, 2] {
-        let (mut h, map, nazan, _) = first_west(difficulty);
+        let (mut h, map, nazan, _) = observe_first_west(difficulty);
         // Let an actual ongoing Fireball finish; never cancel it to admit the probe.
         for _ in 0..65 {
             if h.app
@@ -212,8 +247,10 @@ fn assert_real_periodic_commits(self_source: bool) {
             h.advance(1.0);
             assert_alive_at_one(&mut h, nazan, map);
             let ticks = h
-                .inbox(0)
-                .log
+                .app
+                .world()
+                .resource::<ObservedCombatEvents>()
+                .0
                 .iter()
                 .filter(|event| {
                     event.source == Some(caster.to_bits())
@@ -308,7 +345,7 @@ fn native_avoidance_upper(h: &Harness, player: Entity, target: Entity) -> f64 {
 #[ignore = "RED: real queued native melee commits still kill Nazan"]
 fn encounter_coverage_herald_min1_native_melee_copies_before_point4_arrival() {
     for difficulty in [1, 2] {
-        let (mut h, map, nazan, _) = first_west(difficulty);
+        let (mut h, map, nazan, _) = observe_first_west(difficulty);
         let player = h.player();
         let avoid = native_avoidance_upper(&h, player, nazan);
         let copies = (1..=16).find(|count| avoid.powi(*count) < 0.001).unwrap();
