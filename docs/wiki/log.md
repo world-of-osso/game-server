@@ -1,6 +1,6 @@
 ## 2026-10-18 — Scarab target32 first-destination oracle
 
-[Scarab oracle](systems/toys.md#scarab-target32-grounded-oracle-2026-10-18): native92146 SUMMON28/32/noFORCE correctly grounds; pre-grounding oracle REDbe5cd97ae39.32s. Corrected identical pre-clampY ray/strict floor bits, retained count/scatter/follow/lifetime; GREEN pending, production unchanged.
+[Scarab oracle](systems/toys.md#scarab-target32-grounded-oracle-2026-10-18): native92146 SUMMON28/32/noFORCE correctly grounds; pre-grounding oracle REDbe5cd97ae39.32s. Corrected identical pre-clampY ray/strict floor bits, retained count/scatter/follow/lifetime; strict oracle+retained controls17/17 GREEN144.23s at206b095ed, independent LEAD full-Toy gate pending. Production unchanged.
 ## 2026-10-18 — Stationary70448 cosmetics admission RED and scoped repair
 
 [Source/RED/publication matrix](../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): rebase761→3ded411f0 onto rewrittenac36572bb with verified new ancestry. New-master learned-use RED0/3/78.01s; lead's exact threeToy INSERTs/34fresh-CASC files published; canonical aura4 admission RED0/3/59.41s. Minimal three-ID strict cosmetic admission plus same-branch published-census triples; canonical81c554bb1 GREEN20/0/151.90s includes all13census, prior3batch1 and absent-visual negative. Broad lead gate/source landing pending. Source30min/1h/cancel contract only; no genericdummy/native/full-duration/other-five claim.
