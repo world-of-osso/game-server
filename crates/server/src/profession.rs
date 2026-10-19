@@ -94,6 +94,7 @@ impl PlayerProfessions {
             lines: self.lines.clone(),
             spells: self.spells.clone(),
             recipe_sources: data.trainer_sources(&self.lines),
+            favorites: Vec::new(),
         }
     }
 }
