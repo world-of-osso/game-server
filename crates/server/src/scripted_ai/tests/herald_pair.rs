@@ -151,69 +151,67 @@ fn encounter_coverage_herald_pair_native_death_call_qualification() {
     assert_credit(&h, pair, 0, false);
 }
 
-fn assert_both_orders(difficulty: u32, same_frame: bool) {
-    for nazan_first in [true, false] {
-        let (mut h, pair) = first_pair(difficulty);
-        release_pair(&mut h, pair);
-        let player = h.player();
-        let position = *h.app.world().get::<Position>(pair.vazruden).unwrap();
-        h.app.world_mut().entity_mut(player).insert(Position {
-            x: position.x + 3.0,
-            ..position
-        });
-        assert_credit(&h, pair, 0, false);
-        let (first, second) = if nazan_first {
-            (pair.nazan, pair.vazruden)
-        } else {
-            (pair.vazruden, pair.nazan)
-        };
-        let time = h.app.world().resource::<Time<Fixed>>().elapsed();
-        let call_before = received_casts(&h, pair.vazruden, 30693);
-        kill_actor(&mut h, first);
-        assert_credit(&h, pair, 0, false);
-        let unrelated = actors_in_copy(&mut h, 17259, pair.map)
-            .into_iter()
-            .find(|actor| {
-                h.app
-                    .world()
-                    .get::<crate::zones::CreatureOrigin>(*actor)
-                    .is_some_and(|origin| origin.guid == 20_202_607)
-            })
-            .expect("actual source Bonechewer Hungerer20202607, not an encounter partner");
-        kill_actor(&mut h, unrelated);
-        assert_credit(&h, pair, 0, false);
-        if !same_frame {
-            h.advance(0.05);
-            assert_credit(&h, pair, 0, false);
-        }
-        kill_actor(&mut h, second);
-        if same_frame {
-            assert_eq!(h.app.world().resource::<Time<Fixed>>().elapsed(), time);
-        }
+fn assert_death_order(difficulty: u32, same_frame: bool, nazan_first: bool) {
+    let (mut h, pair) = first_pair(difficulty);
+    release_pair(&mut h, pair);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(pair.vazruden).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    assert_credit(&h, pair, 0, false);
+    let (first, second) = if nazan_first {
+        (pair.nazan, pair.vazruden)
+    } else {
+        (pair.vazruden, pair.nazan)
+    };
+    let time = h.app.world().resource::<Time<Fixed>>().elapsed();
+    let call_before = received_casts(&h, pair.vazruden, 30693);
+    kill_actor(&mut h, first);
+    assert_credit(&h, pair, 0, false);
+    let unrelated = actors_in_copy(&mut h, 17259, pair.map)
+        .into_iter()
+        .find(|actor| {
+            h.app
+                .world()
+                .get::<crate::zones::CreatureOrigin>(*actor)
+                .is_some_and(|origin| origin.guid == 20_202_607)
+        })
+        .expect("actual source Bonechewer Hungerer20202607, not an encounter partner");
+    kill_actor(&mut h, unrelated);
+    assert_credit(&h, pair, 0, false);
+    if !same_frame {
         h.advance(0.05);
-        assert_credit(&h, pair, 0, true);
-        assert_eq!(
-            death_speech_count(&h, pair.vazruden, 0),
-            1,
-            "sourceTalk3 on actual Vazruden death"
-        );
-        assert_eq!(
-            received_casts(&h, pair.vazruden, 30693),
-            call_before + 1,
-            "ordinary deathCall30693 once"
-        );
-        for actor in [first, second] {
-            kill_actor(&mut h, actor);
-        }
-        h.advance(0.05);
-        assert_credit(&h, pair, 0, true);
-        assert_eq!(death_speech_count(&h, pair.vazruden, 0), 1);
-        assert_eq!(received_casts(&h, pair.vazruden, 30693), call_before + 1);
-        assert!(
-            h.inbox(1).ends.iter().all(|end| !end.success),
-            "no other-copy success"
-        );
+        assert_credit(&h, pair, 0, false);
     }
+    kill_actor(&mut h, second);
+    if same_frame {
+        assert_eq!(h.app.world().resource::<Time<Fixed>>().elapsed(), time);
+    }
+    h.advance(0.05);
+    assert_credit(&h, pair, 0, true);
+    assert_eq!(
+        death_speech_count(&h, pair.vazruden, 0),
+        1,
+        "sourceTalk3 on actual Vazruden death"
+    );
+    assert_eq!(
+        received_casts(&h, pair.vazruden, 30693),
+        call_before + 1,
+        "ordinary deathCall30693 once"
+    );
+    for actor in [first, second] {
+        kill_actor(&mut h, actor);
+    }
+    h.advance(0.05);
+    assert_credit(&h, pair, 0, true);
+    assert_eq!(death_speech_count(&h, pair.vazruden, 0), 1);
+    assert_eq!(received_casts(&h, pair.vazruden, 30693), call_before + 1);
+    assert!(
+        h.inbox(1).ends.iter().all(|end| !end.success),
+        "no other-copy success"
+    );
 }
 
 fn second_pair(h: &mut Harness, difficulty: u32) -> Pair {
@@ -272,22 +270,22 @@ fn assert_crossed_copies(difficulty: u32) {
 #[test]
 #[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_orders_normal() {
-    assert_both_orders(1, false);
+    assert_death_order(1, false, true);
 }
 #[test]
 #[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_orders_heroic() {
-    assert_both_orders(2, false);
+    assert_death_order(2, false, true);
 }
 #[test]
 #[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_same_frame_normal() {
-    assert_both_orders(1, true);
+    assert_death_order(1, true, true);
 }
 #[test]
 #[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_same_frame_heroic() {
-    assert_both_orders(2, true);
+    assert_death_order(2, true, true);
 }
 #[test]
 #[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
@@ -298,4 +296,25 @@ fn encounter_coverage_herald_pair_crossed_copies_normal() {
 #[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: ignored RED first"]
 fn encounter_coverage_herald_pair_crossed_copies_heroic() {
     assert_crossed_copies(2);
+}
+
+#[test]
+#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
+fn encounter_coverage_herald_pair_vazruden_first_normal() {
+    assert_death_order(1, false, false);
+}
+#[test]
+#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
+fn encounter_coverage_herald_pair_vazruden_first_heroic() {
+    assert_death_order(2, false, false);
+}
+#[test]
+#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
+fn encounter_coverage_herald_pair_vazruden_first_same_frame_normal() {
+    assert_death_order(1, true, false);
+}
+#[test]
+#[ignore = "HERALD_PAIRED_CREDIT_UNIMPLEMENTED: reverse-order RED must not be masked"]
+fn encounter_coverage_herald_pair_vazruden_first_same_frame_heroic() {
+    assert_death_order(2, true, false);
 }
