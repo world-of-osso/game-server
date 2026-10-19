@@ -53,7 +53,7 @@ fn descent_emotes(h: &Harness, nazan: Entity) -> usize {
         .chat
         .iter()
         .filter(|line| {
-            line.channel == shared::protocol::ChatType::MonsterEmote(nazan.to_bits())
+            line.channel == shared::protocol::ChatType::RaidBossEmote(nazan.to_bits())
                 && line.content == "Nazan descends from the sky."
         })
         .count()
@@ -61,6 +61,12 @@ fn descent_emotes(h: &Harness, nazan: Entity) -> usize {
 
 fn assert_call_ingress(difficulty: u32) {
     let (mut h, map, nazan, vazruden) = first_west(difficulty);
+    // Authored Type41/TextRange0 has the normal25yd listening radius.
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: WEST.x + 3.0,
+        ..WEST
+    });
     let other_map = spawn_second_copy(&mut h);
     let other_herald = actors_in_copy(&mut h, 17307, other_map)[0];
     damage_to_percent(&mut h, vazruden, 45.0);
