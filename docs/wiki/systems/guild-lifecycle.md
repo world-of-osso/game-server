@@ -36,3 +36,9 @@ Four inspected1920×1080 originals are under `/syncthing/AgentShared/2026-10-15/
 ## See Also
 
 - [Banks](banks.md) — separate per-tab item/money history and guild authority.
+
+## Online member zone
+
+`guild_online_zone.rs` extends the existing online-member query parameter with the existing GroundMap/AreaTable resources. Zone names are loaded with the existing AreaTable rows by world-data startup; the guild plugin performs no database I/O or separate catalog load. Each existing guild snapshot path resolves only same-guild online actors' actual map/position to area, then the existing flagged immediate-parent zone, then its real AreaName_lang. Missing authority yields None. The label is not persisted or used as movement authority; offline state and recipient-filtered officer notes stay unchanged. No new per-frame mirror, sort, map-name substitute or network request. Protocol/consumer land together. Actual HostClient fixture delivers its reply into an Update observer before Lightyear's Last cleanup; earlier out-of-frame receiver inspection was a fixture error, not product RED. See [contract](../../specs/guild-ranks.md#online-member-zone). GREEN/gate/native pending.
+
+Targeted GREEN: protocol wire1/1, both-skin field/refresh/unknown/offline/action1/1 and server actual HostClient parent-area/refresh/privacy/unavailable-position1/1. Server note-privacy fixture now supplies explicit zone resources and uses mutable SystemState access; this is test adaptation to actual authority, not a read-only shim. Proven tests enabled after GREEN. Joint retained/check gate and native proof remain pending. gz682 exposed22 retained app startup panics from the former guild-specific relative-path database open. Names now belong to AreaTable; retained plugin fixtures load real area/terrain resources through shared test setup, and the HostClient regression installs the actual GuildPlugin. Requested retained families must pass before native proof.

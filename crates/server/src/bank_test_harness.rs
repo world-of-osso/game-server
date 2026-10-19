@@ -100,6 +100,8 @@ fn harness_with(db: redb::Database, name: &str) -> Option<Harness> {
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
     app.insert_resource(load_bank_tab_prices(&conn).unwrap());
+    app.insert_resource(crate::area_table::load_area_table(&conn).unwrap());
+    app.insert_resource(crate::test_data::ground_map());
     app.insert_resource(GameDatabase::new(db));
     app.init_resource::<GoldUpdateQueue>();
     app.add_plugins((
