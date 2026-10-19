@@ -66,6 +66,14 @@ IgnoredRED49f20a644 was pushed FIRST. Runtime qualification1PASS41.59s/exit0/0wa
 
 Eight native behavior cases give genuine2FAIL/6PASS47.04s,0warnings: front live+100 logs5Damage/0Parry instead of the saturated106 table; live-100 still emits1Parry/4Damage instead of clamping0. Cancel/foreign/signed-zero, behind/actual36980 NO_PARRY, and actual62627 NPC expertise10000 ordering controls pass before the consumer. Five ordinary2s attempts/counts/native rows remain unchanged; old front table escapes this RED only .06^5=7.776e-7, also the baseline all-Parry false-failure bound. No fixture/compiler failures counted as RED. Consumeraa2ee70c1 committed after genuine RED; fresh ignored nativebehavior8/8GREEN34.40s/exit0,0warnings (104.79s total), plus retained disjoint qualification1PASS41.59s gives9nativeGREENcomposite, notone9batch. Only then allnine ignores are removed and GREEN pushed; independent lead gate pending. Joint CC+47 remains source/wiring proof, not a separate new nativeRED. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-victim-parry-*`; [contract](../../specs/player-damage.md).
 
+## NPC victim block aura51 — 2026-10-17
+
+TC a352b1fa Unit.cpp2390/2851–2861 gives NPC base3+signed victimMOD_BLOCK_PERCENT51+level, then max0. Unlike dodge/parry, attacker251/240 does not reduce block. `roll_outcome` reads the existing target_auras inside the NPC-only can_avoid/missing-stats guard, clamps block before cached NO_BLOCK/facing. Player block stays CharacterStats. Blocked damage percent/armor/253 critical-block, Guardian health commit, query/state/wire, native RNG/clocks remain unchanged. Player expertise/248/runtime IsTotem/other flags remain separate gaps.
+
+IgnoredREDcd95bd2d5 was pushed FIRST. Qualification1PASS26.18s/exit0/0warnings precedes signed behavior: actual10021 effect0/4235=+100 permanent and62356 effect0/56356=-200/20s remain live/sum51=-100 after8s; target49=0 (62356effect1 excluded). Full actual NPC62627 gives24010000/hit54100/foldedhit100/miss0, removing miss/dodge/parry without synthetic flags, seeded RNG or edited ratings/HP/timers. This is a coefficient fixture, NOT legal NPC loadout certification. No fixture/compiler failures counted as RED.
+
+Seven native behavior cases give genuine2FAIL/5PASS64.12s,0warnings: front live+100 gives0Block/4Melee/1Critical instead of Block103; live signed-100 still emits1Block/4Melee instead of clamping0. Cancellation/foreign/negative-only, behind and actual36980 NO_BLOCK controls pass before the consumer. Five native2s attempts and authored rows remain unchanged. Old3% table escapes the saturated positive RED only .03^5=2.43e-8, also the baseline all-Block false-failure bound. Consumer28638df38 committed after genuine RED; fresh ignored nativebehavior7/7GREEN40.77s/exit0,0warnings (147.53s total), plus retained disjoint qualification1PASS26.18s gives8nativeGREENcomposite, notone8batch. Only then alleight ignores are removed and GREEN pushed; independent lead gate pending. Joint nativeCC+51 remains source/wiring proof, not a separate RED. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-victim-block-*`; [contract](../../specs/player-damage.md).
+
 ## Hit table values
 
 | | Chance | Source |
@@ -74,7 +82,7 @@ Eight native behavior cases give genuine2FAIL/6PASS47.04s,0warnings: front live+
 | Dodge (creature) | 3% + victim49 + 1.5%/level above, before attacker251/240 | GetUnitDodgeChance |
 | Parry (creature) | 6% + victim47 + 1.5%/level above, before NPC240 | GetUnitParryChance |
 | Glancing (creature 4+ levels above) | 10% + 10%/level | RollMeleeOutcomeAgainst |
-| Block (creature) | 3% + 1.5%/level above, stops 30% | GetUnitBlockChance, GetBlockPercent |
+| Block (creature) | 3% + victim51 + 1.5%/level above, no240 reduction; stops 30% | GetUnitBlockChance, GetBlockPercent |
 | Crit | `CharacterStats.crit_pct` | GetUnitCriticalChanceDone |
 
 TrinityCore's creature values differ from SimC's Retail target (3% miss, 3% dodge, 3% parry at equal level). The server follows TrinityCore; the difference is unverified against Retail.
