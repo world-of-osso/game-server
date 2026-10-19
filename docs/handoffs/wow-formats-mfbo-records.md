@@ -14,4 +14,4 @@ Queries call actual `GroundMap::min_height` on a legitimate warm cache populated
 
 ## Ledger
 
-Baseline pending. Servercd4553fd5,enginec177af21d,library2a91b224,protocolf9a91753bbbc15ad7ff7392955b52c4da989d22e. Test-only harness precedes production edits. Library targeted RED→GREEN/default/no-default/check/fmt/push first, then both pins and paired consumer gates.
+OLD test-only sourcec66700750: MFBO2/0,3roots71 frozen queries each,51synthetic cases/196MFBO files; retained MH2O2/0,terrain-height23/0,two exact real MFBO/fall controls2/0,fresh4LOS+4NAV0. Complete376-file inventory50,037,281B with120 source hashes and Map34WDT lookup791060 frozen at `/home/osso/.worktrees/logs/wow_formats-phase6-reference-receipt.json`. Each consumer compares only to its own baseline. Serverbasecd4553fd5,enginec177af21d,library2a91b224,protocolf9a91753bbbc15ad7ff7392955b52c4da989d22e. All old outputs captured before production edits. Library targeted RED→GREEN/default/no-default/check/fmt/push first, then both pins and paired consumer gates.
