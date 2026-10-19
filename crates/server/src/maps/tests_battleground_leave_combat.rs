@@ -30,24 +30,27 @@ fn pvp_leave_combat_arena_refuses_until_combat_stops() {
 
 #[test]
 fn pvp_leave_combat_ended_match_allows_return_despite_combat() {
-    let (mut h, players, _database) = pending_battleground(1018);
-    enter_all(&mut h, &players);
-    let held = &players[0];
-    let match_id = battleground(&h, held).match_id;
-    let copy = h.map_of(held).unwrap();
-    // Produce an actual source-node victory, not a direct phase assignment.
-    for point in source_battleground_objects(copy.map_id).0 {
-        let (object, at) = objects_in(&mut h, copy, point.info.entry)[0];
+    let template = shared::battleground::arathi_basin();
+    let mut entered = enter_source_match(&template, node_rules(template.map_id).unwrap().starts);
+    let held = &entered.players[0];
+    let h = &mut entered.h;
+    // Produce an actual source-node victory through the ordinary interaction harness.
+    for point in source_battleground_objects(entered.copy.map_id).0 {
+        let (object, at) = objects_in(h, entered.copy, point.info.entry)[0];
         h.walk_to(held, at);
-        use_object(&mut h, held, object);
+        use_object(h, held, object);
     }
-    use_second_frames(&mut h);
+    use_second_frames(h);
     h.advance(180);
-    assert_eq!(battleground(&h, held).phase, BgPhase::Ended);
-    let opponent = find_opponent(&h, &players);
-    land_nonlethal_hit(&mut h, held, opponent);
-    assert_return_to_origin(&mut h, held, match_id);
-    assert!(players[1..].iter().all(|who| h.map_of(who) == Some(copy)));
+    assert_eq!(battleground(h, held).phase, BgPhase::Ended);
+    let opponent = find_opponent(h, &entered.players);
+    land_nonlethal_hit(h, held, opponent);
+    assert_return_to_origin(h, held, entered.match_id);
+    assert!(
+        entered.players[1..]
+            .iter()
+            .all(|who| h.map_of(who) == Some(entered.copy))
+    );
 }
 
 fn enter_all(h: &mut Harness, players: &[Traveler]) {
