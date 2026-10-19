@@ -2115,6 +2115,9 @@ mod npc_flags_tests;
 #[path = "combat_npc_general_crit_tests.rs"]
 mod npc_general_crit_tests;
 #[cfg(test)]
+#[path = "combat_npc_no_crit_tests.rs"]
+mod npc_no_crit_tests;
+#[cfg(test)]
 #[path = "combat_npc_victim_block_tests.rs"]
 mod npc_victim_block_tests;
 #[cfg(test)]
