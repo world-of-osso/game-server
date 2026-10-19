@@ -7,7 +7,6 @@ use shared::casting::CastState;
 use shared::protocol::CombatLogKind;
 
 #[test]
-#[ignore = "RED: full-kit picker wastes Counterspell on a noninterruptible cast"]
 fn follower_kit_interrupt_does_not_spend_on_noninterruptible_cast() {
     let (mut h, unit) = level32(209059);
     utility_tests::start_enemy_fireball(&mut h, unit);
