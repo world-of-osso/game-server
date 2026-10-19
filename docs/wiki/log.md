@@ -1,6 +1,6 @@
 ## 2026-10-18 — Water Shield flat Mana
 
-[Native79949](systems/auras.md#water-shield-flat-mana--2026-10-18): TC base-mana multipliers then85/5; actual8004/137039 spend and ordinaryShield RED125vs127 in two cases,3controlsPASS25.33s atf4c17e35b. Initial harness-only failure excluded. Minimal Mana consumer; sibling79508→79950 unchanged; GREEN pending, no Retail52127/legal-build/full-proc claim.
+[Native79949](systems/auras.md#water-shield-flat-mana--2026-10-18): TC base-mana multipliers then85/5; actual8004/137039 spend and ordinaryShield RED125vs127 in two cases,3controlsPASS25.33s atf4c17e35b. Initial harness-only failure excluded. Minimal Mana consumer; sibling79508→79950 unchanged. Merged82f8476d4 native5 +Elixir5 +regen/resource30 GREEN40/40,26.47s,0warnings; fullcargo fmt0/cleanstatus, lead independent gate pending. No Retail52127/legal-build/full-proc claim.
 
 ## 2026-10-18 — Energizing Elixir flat Energy
 
