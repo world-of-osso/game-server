@@ -3049,3 +3049,7 @@ Recorded real33076 ward RED, approved per-cast stack/original-caster API and nat
 - 2026-10-18 — Pin projected runtime-ground metadata APIs in wow-formats; preserve selected-field/FDID/error policy and frozen metadata/bake receipt boundaries. [Shared readers](systems/wow-formats.md).
 
 - 2026-10-18: Runtime height projection; frozen old-reader receipts, shared decoder pin and local policy boundary. See [shared formats](systems/wow-formats.md).
+
+## 2026-10-19 — Stockade path-map renderer
+
+Manual SVG renderer with shared pure pull-source pack identity and existing validated navigation artifact codec. Trace clock/capture gaps explicit; real proof pending.
