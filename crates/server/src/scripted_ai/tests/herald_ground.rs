@@ -192,16 +192,18 @@ fn assert_dispatch_windows(
     );
     for pair in attempts.windows(2) {
         let elapsed = pair[1].time - pair[0].time;
-        // Only actual 1.5s Roar casting can defer due-event execution. This is
-        // source casting latency, not a widened RNG interval or forced success.
-        let blocked = entries
+        // Only a real accepted Roar spanning the latest possible deadline can
+        // justify an attempt later than the source upper bound.
+        let latest_due = pair[0].time + repeat_max;
+        let latest_dispatch = entries
             .iter()
             .filter(|entry| entry.spell == 39427 && entry.result.is_ok())
-            .any(|entry| entry.time > pair[0].time && entry.time <= pair[1].time);
-        let casting_latency = if blocked { 1.5 } else { 0.0 };
+            .filter(|entry| entry.time <= latest_due && entry.time + 1.5 > latest_due)
+            .map(|entry| entry.time + 1.5)
+            .fold(latest_due, f32::max);
         assert!(
-            elapsed >= repeat_min - 0.001 && elapsed <= repeat_max + casting_latency + 0.001,
-            "source repeat{spell}: {elapsed}, actualRoarBlocking={blocked}"
+            elapsed >= repeat_min - 0.001 && pair[1].time <= latest_dispatch + 0.001,
+            "source repeat{spell}: {elapsed}, latest permitted dispatch{latest_dispatch}"
         );
     }
 }
@@ -253,8 +255,39 @@ fn assert_ground_parents(difficulty: u32) {
     }
     assert_dispatch_windows(&h, fireball, 5.0, 5.0, 15.0);
     assert_dispatch_windows(&h, cone, 10.0, 10.0, 15.0);
+    let admissions = &h.app.world().resource::<CastAdmissions>().entries;
+    let wrong_difficulty = if difficulty == 2 {
+        [34653, 30926]
+    } else {
+        [36920, 36921]
+    };
+    assert!(
+        admissions
+            .iter()
+            .all(|entry| !wrong_difficulty.contains(&entry.spell))
+    );
+    assert_eq!(
+        received_casts(&h, nazan, 30694),
+        2,
+        "DESCEND4 cannot replay during real parent windows"
+    );
+    println!(
+        "native ground admissions difficulty{difficulty}: {:?}",
+        admissions
+            .iter()
+            .map(|entry| (entry.spell, entry.time, &entry.result))
+            .collect::<Vec<_>>()
+    );
     if difficulty == 2 {
         assert_dispatch_windows(&h, 39427, 2.0, 40.0, 50.0);
+        let first_roar = admissions
+            .iter()
+            .find(|entry| entry.spell == 39427)
+            .unwrap();
+        assert!(
+            (3.95..=4.0).contains(&first_roar.time),
+            "source2s ground clock, including same-tick50ms advancement only when victim exists"
+        );
         assert!(saw_fear, "actual native aura7 must fear a real player");
     } else {
         assert!(!saw_fear);
@@ -289,22 +322,18 @@ fn assert_ground_parents(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "HERALD_DESCEND4_UNIMPLEMENTED: realfall+2s/release RED first"]
 fn encounter_coverage_herald_ground_release_normal() {
     assert_release(1);
 }
 #[test]
-#[ignore = "HERALD_DESCEND4_UNIMPLEMENTED: realfall+2s/release RED first"]
 fn encounter_coverage_herald_ground_release_heroic() {
     assert_release(2);
 }
 #[test]
-#[ignore = "HERALD_DESCEND4_UNIMPLEMENTED: ground parent scheduler RED first"]
 fn encounter_coverage_herald_ground_parents_normal() {
     assert_ground_parents(1);
 }
 #[test]
-#[ignore = "HERALD_DESCEND4_UNIMPLEMENTED: ground parent scheduler RED first"]
 fn encounter_coverage_herald_ground_parents_heroic() {
     assert_ground_parents(2);
 }

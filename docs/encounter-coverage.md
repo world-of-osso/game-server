@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Herald DESCEND4 native parent boundary — 2026-10-18
+
+Ignored native qualification+four genuineRED86.63s at9691ff61b→fiveGREEN137.57s at354302f74: exact actualfall+2000ms Aggressive/ordinary30694/release; real lethalHP1 before andHP0 after; source ground initial/repeat requests and actual Normal/Heroic parent damage/fear. Existing fixture buffers unchanged, not native balance. Enabled retained/LEAD gate pending. [Contract](specs/ramparts-herald.md#descend4-and-native-ground-parents). `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED`; paired credit/reset/native remain separate.
+
 ## Herald point4 fall through DESCEND3 — 2026-10-18
 
 Natural point4→same-XZ analytic falling spline→actual EFFECT5→gravity enable/ordinary20538 now has genuine3RED→targeted4GREEN70.06s at3a96703c4. Exact native Normal/Heroic50ms samples/original-ray floor and actual hit threat-zero/reference retention pass. Source review additionally caught forced-floor completion: exact truncated-time endpoint2RED55.69s precedes deletion of snap. Final enabled38/38PASS314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings:20Herald+4grounding+5Gold+2Nibbles+6Gordoth+lower-point suspension. Includes actual post-fall self-lethal→HP1/no replay next frame. Independent LEAD gate/check/fmt pending. [Bounded contract](specs/ramparts-herald.md#bounded-fall-through-descend3). No DESCEND4/release/groundcasts/pairedcredit/reset/native proof.

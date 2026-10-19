@@ -1,6 +1,6 @@
 ## 2026-10-18 — Herald DESCEND4 parent boundary RED
 
-[Ground parent contract](systems/boss-scripts.md#herald-descend4-ground-parent-boundary--2026-10-18): ignored RED pushed before production; native qualification1PASS/four genuine failures86.63s at9691ff61b. Sourcefall+2000ms release and ordinary parent timers ported; GREEN pending. Liquid Fire effect77 children/pairedcredit/reset/native excluded.
+[Ground parent contract](systems/boss-scripts.md#herald-descend4-ground-parent-boundary--2026-10-18): ignored RED pushed before production; native qualification1PASS/four genuine failures86.63s at9691ff61b. Sourcefall+2000ms release and ordinary parent timers ported354302f74; five native casesGREEN137.57s. Enabled retained/LEAD gate pending; exact lethalbefore/after, source initial/repeats and actual parent damage/fear proven without overrides. Liquid Fire effect77 children/pairedcredit/reset/native excluded.
 
 ## 2026-10-18 — Herald point4 fall through DESCEND3
 
