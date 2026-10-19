@@ -377,16 +377,22 @@ fn encounter_fixture(
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    let (template_string_ids, spawn_string_ids, script_spawn_groups) = if populate {
-        (
-            crate::world_data::load_template_string_ids(&conn).unwrap(),
-            crate::world_data::load_spawn_string_ids(&conn).unwrap(),
-            crate::world_data::load_script_spawn_groups(&conn, super::super::SCRIPT_SPAWN_GROUPS)
+    let (template_string_ids, spawn_string_ids, script_spawn_groups, reset_spawn_groups) =
+        if populate {
+            (
+                crate::world_data::load_template_string_ids(&conn).unwrap(),
+                crate::world_data::load_spawn_string_ids(&conn).unwrap(),
+                crate::world_data::load_script_spawn_groups(
+                    &conn,
+                    super::super::SCRIPT_SPAWN_GROUPS,
+                    true,
+                )
                 .unwrap(),
-        )
-    } else {
-        Default::default()
-    };
+                crate::world_data::load_script_spawn_groups(&conn, &[357], false).unwrap(),
+            )
+        } else {
+            Default::default()
+        };
     app.insert_resource(WorldData {
         templates,
         difficulty_templates,
@@ -395,6 +401,7 @@ fn encounter_fixture(
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
+        reset_spawn_groups,
         // The Azure intro depends on the real non-following tender formation.
         formations: if populate && map_id == 2515 {
             crate::test_data::world_data().formations.clone()

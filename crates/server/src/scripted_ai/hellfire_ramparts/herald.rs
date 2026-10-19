@@ -66,7 +66,7 @@ const CENTER: Position = Position {
     z: -1740.5852,
 };
 
-fn is_ramparts(world: &World, map: InMap) -> bool {
+pub(super) fn is_ramparts(world: &World, map: InMap) -> bool {
     map.map_id == MAP
         && world.get_resource::<MapStore>().is_some_and(|maps| {
             maps.instance_scripts.get(&MAP).map(String::as_str) == Some("instance_ramparts")

@@ -10,7 +10,7 @@ Implement the Ramparts encounter from pinned TC `a352b1fa` `boss_vazruden_the_he
 - [x] Retain source actor roles: Herald17307 becomes Nazan17536 on the same actor;30717 summons Vazruden17537. A shared display alone cannot select a primary or create extra credit bindings.
 - [ ] Prepare only independent database copies from actual TDB1210 templates, difficulty rows, models and addons. Preserve authored fields, population and other encounters; no synthetic Normal row, legacy-stat substitution or admission override.
 - [x] The `herald` spell producer preserves every field of the seven authored18430/20538/30693/30694/30696/30698/30699 spell/effect pairs, idempotently; missing input refuses atomically without unrelated-data changes.
-- [ ] Preserve group357's actual ordinary initial population: Herald and two17517 Sentries, groupFlags0. Its forced reset must not require changing it into a manual-spawn group.
+- [ ] Preserve group357's actual ordinary initial population: Herald and two17517 Sentries, groupFlags0. Its ignoreRespawn reset must not require changing it into a manual-spawn group.
 
 ### Prepared actors
 
@@ -89,7 +89,7 @@ Development proof: native actual dead30693/installed1892bit1 qualification1PASS 
 ## Implementation inventory
 
 - `crates/server/src/scripted_ai/hellfire_ramparts.rs`, `hellfire_ramparts/herald.rs` — registers Gargolmar, Omor, bounded Herald INTRO2 and actual Vazruden appearance/engagement. Real NPC death ingress counts Sentry entries in copy-lifetime instance state and dispatches1730700 to the retained ordinary Herald origin. INTRO1 removes active patrol state, not addon path data, then uses real point movement. Three INTRO1 and both Normal/Heroic INTRO2/copy cases are GREEN in the current targeted proof; later lifecycle is excluded.
-- `crates/server/src/scripted_ai/instance_script.rs` — copy-local boss/data state and transient Ramparts Sentry count; unload discards it. Forced reset and remaining Herald lifecycle are not implemented.
+- `crates/server/src/scripted_ai/instance_script.rs` — copy-local boss/data state, transient Ramparts Sentry count and scheduled reset delays; unload discards them. Independent loaded-copy30s reset and ordinary group357 ignoreRespawn restoration are implemented after four genuine boundary REDs, awaiting targeted GREEN. Reload/re-entry remains excluded.
 - `crates/server/src/zones/entry.rs` — `EntryProjection` reads/rolls represented target fields and applies them to a new or existing entity; `CreatureOrigin` retains ordinary source identity, `AddonPathId` is addon data rather than a running movement cursor. Bounded entry/spawn proof is GREEN; not a Herald AI registration or ordinary-respawn restoration.
 - `scripts/encounter_cpp_bindings.py` — `herald` exports primary17307/1892/bit1 SQL only after pinned TC and explicit70448 DungeonEncounter/Journal/actor CSV validation; records the named policy and input hashes.
 - `scripts/encounter_serverside_spells.py` — `herald` copy-only profile selects the seven exact TDB spell/effect pairs.
