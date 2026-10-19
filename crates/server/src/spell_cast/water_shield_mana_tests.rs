@@ -3,7 +3,7 @@
 use super::test_harness::{Harness, harness, spawn_peer_connection, spawn_player};
 use crate::auras::{RemoveReason, has_aura, remove_auras};
 use shared::casting::CastState;
-use shared::components::{PowerType, UnitPowers};
+use shared::components::{Mana, PowerType, UnitPowers};
 use shared::protocol::CombatLogKind;
 
 const SHAMAN: u8 = 7;
@@ -47,7 +47,7 @@ fn spend_mana(h: &mut Harness) {
         h.advance(frames + 1);
     }
     assert_cast(h, HEALING_SURGE);
-    assert!(h.power(PowerType::Mana) < NATIVE_MANA_MAX);
+    assert!(mana(h) < NATIVE_MANA_MAX);
 }
 
 fn cast_shield(h: &mut Harness) {
@@ -55,6 +55,10 @@ fn cast_shield(h: &mut Harness) {
     assert_cast(h, WATER_SHIELD);
     h.advance(1);
     assert!(has_aura(h.app.world(), h.caster, WATER_SHIELD));
+}
+
+fn mana(h: &Harness) -> f32 {
+    h.app.world().get::<Mana>(h.caster).unwrap().current
 }
 
 fn mana_rate(h: &Harness) -> f32 {
@@ -75,9 +79,9 @@ fn water_shield_native_unbuffed_mana_deficit_keeps_restoration_base_multiplier()
     spend_mana(&mut h);
     h.advance(1);
     assert_eq!(mana_rate(&h), 125.0, "10000/100 * native137039 1.25");
-    let before = h.power(PowerType::Mana);
+    let before = mana(&h);
     h.advance(1);
-    assert_eq!(h.power(PowerType::Mana), before + 6.25);
+    assert_eq!(mana(&h), before + 6.25);
 }
 
 #[test]
@@ -87,13 +91,9 @@ fn water_shield_native_flat_mana_is_added_after_base_multipliers_and_removed() {
     spend_mana(&mut h);
     cast_shield(&mut h);
     assert_eq!(mana_rate(&h), 127.0, "100*1.25 +10/5, not (100+2)*1.25");
-    let before = h.power(PowerType::Mana);
+    let before = mana(&h);
     h.advance(1);
-    assert_eq!(
-        h.power(PowerType::Mana),
-        before + 6.35,
-        "actual native50ms gain"
-    );
+    assert_eq!(mana(&h), before + 6.35, "actual native50ms gain");
     let caster = h.caster;
     assert_eq!(
         remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
@@ -120,7 +120,7 @@ fn water_shield_native_regeneration_clamps_and_stops_replication_prediction_at_f
     cast_shield(&mut h);
     assert_eq!(mana_rate(&h), 127.0);
     h.advance(5 * FRAMES_PER_SECOND);
-    assert_eq!(h.power(PowerType::Mana), NATIVE_MANA_MAX);
+    assert_eq!(mana(&h), NATIVE_MANA_MAX);
     assert_eq!(mana_rate(&h), 0.0);
     assert!(has_aura(h.app.world(), h.caster, WATER_SHIELD));
 }
