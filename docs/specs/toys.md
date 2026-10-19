@@ -1,5 +1,18 @@
 # Toy Box server foundation
 
+## Accepted sourced boundary
+
+- [x] The approved toy scope is complete to its current sourced boundary: historical Full1166 plus the seven published build70448 extras described below. Keep the baseline and named extras distinct in census accounting.
+- [x] The three remaining70448 extras are accepted named gaps, not published Toy memberships. They must not expose a cast that reports success without performing the promised action.
+
+| Unpublished item/root | Accepted gap | Missing sourced contract |
+|---|---|---|
+|275039/1296034 Curse of the Aqir|`AQIR_SCRIPT_BINDING`|Egg/walkover-follower dispatch,20-second group winner and scarab ownership-transfer lifecycle. Same-name spells alone are not a root action binding.|
+|284159/1315208 Libram of the Matriarch|`LIBRAM_LOOT189_REWARD_BINDING`|Effect189's acquisition join, quantity and conditions for Glyph284160. Never interpret misc143823 as the reward item ID without an authoritative binding.|
+|286643/1320854 Kinduru's Spiriting Quill|`QUILL_LABYRINTH_EXIT_ACTION`|Labyrinth-only run transition and party treasure-room teleport/reward action. A generic game-event or partial scenario criterion is not the complete action.|
+
+Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
+
 ## Expanded build70448 hearthstones
 
 - [x] Admit Hiveborne281136/1310234 and Shadeweaver281615/1311934 from their exact build70448 Toy rows without replacing the historical1166 catalog or admitting the other eight newly scoped toys in this batch.
