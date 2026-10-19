@@ -67,7 +67,7 @@ fn follower_kit_interrupt_uses_native_eligibility_not_pushback_flag() {
         .get_mut::<CastState>(enemy)
         .unwrap()
         .interruptible = false;
-    assert!(crate::spell_cast::interruptibility::can_interrupt_cast(
+    assert!(crate::spell_cast::can_interrupt_cast(
         h.app.world(),
         unit,
         enemy
