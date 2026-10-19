@@ -65,11 +65,18 @@ fn deserter_harness(count: u64) -> (Harness, Vec<Traveler>, tempfile::NamedTempF
         app.insert_resource(crate::persistence::GameDatabase::new(db));
         app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
         app.insert_resource(spells);
+        app.insert_resource(
+            crate::spell_cast::toy_requirements::load(
+                crate::test_data::world_db_path().parent().unwrap(),
+            )
+            .expect("authored aura area requirements"),
+        );
         app.add_plugins((
             crate::group::GroupPlugin,
             crate::pvp::PvpPlugin,
             crate::experience::ExperiencePlugin,
             crate::death::DeathPlugin,
+            crate::auras::AuraPlugin,
         ));
     })
     .expect("real map/channel fixture");
