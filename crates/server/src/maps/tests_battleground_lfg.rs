@@ -85,12 +85,17 @@ fn queue_lfg(h: &mut Harness, who: &Traveler, role: GroupRoleSnapshot) {
 }
 
 fn query_lfg(h: &mut Harness, who: &Traveler) -> LfgSnapshot {
-    h.app
+    let previous: Vec<_> = h
+        .app
         .world_mut()
         .get_mut::<MessageReceiver<LfgStateUpdate>>(who.connection)
         .unwrap()
         .receive()
-        .for_each(drop);
+        .collect();
+    assert!(
+        previous.iter().all(|update| update.error.is_none()),
+        "earlier LFG response: {previous:?}"
+    );
     h.app
         .world_mut()
         .get_mut::<MessageSender<QueryLfgStatus>>(who.connection)
