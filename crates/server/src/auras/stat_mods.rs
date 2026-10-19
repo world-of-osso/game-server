@@ -32,6 +32,8 @@ pub struct AuraStatMods {
     pub healing_done_mult: f32,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
     pub healing_taken_mult: f32,
+    /// MOD_WEAPON_CRIT_PERCENT52: raw signed sum, consumed by NPC autoattacks only.
+    pub weapon_crit_pct: f32,
     /// MOD_AUTOATTACK_CRIT_CHANCE334: signed additive percentage points.
     pub autoattack_crit_pct: f32,
     /// MOD_AUTOATTACK_DAMAGE 344.
@@ -107,6 +109,7 @@ impl Default for AuraStatMods {
             critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
             healing_taken_mult: 1.0,
+            weapon_crit_pct: 0.0,
             autoattack_crit_pct: 0.0,
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
@@ -461,6 +464,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }),
             MOD_HEALING_DONE_PERCENT => combat.healing_done_mult *= pct(amount),
             MOD_HEALING_PCT | MOD_HEALING_RECEIVED => combat.healing_taken_mult *= pct(amount),
+            MOD_WEAPON_CRIT_PERCENT => combat.weapon_crit_pct += amount,
             MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,

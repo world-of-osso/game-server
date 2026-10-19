@@ -47,6 +47,13 @@ impl Navigation {
             map_id,
             query,
         });
+        if let Goal::Hazard(field) = goal {
+            hazard_trace::emit("query_submitted", None, entity, || {
+                serde_json::json!({
+                    "field": field, "map_id": map_id, "request_id": id,
+                })
+            });
+        }
         None
     }
 
@@ -74,7 +81,11 @@ impl Navigation {
         }
     }
 
-    pub(super) fn publish_query(&mut self, response: &::navigation::worker::Response) -> bool {
+    pub(super) fn publish_query(
+        &mut self,
+        response: &::navigation::worker::Response,
+        simulation_s: Option<f64>,
+    ) -> bool {
         let entity = Entity::from_bits(response.entity);
         let Some(query) = self.queries.get_mut(&entity) else {
             return false;
@@ -83,6 +94,23 @@ impl Navigation {
             return false;
         }
         query.result = Some(response.result.clone());
+        if let Goal::Hazard(field) = query.goal {
+            hazard_trace::emit("query_published", simulation_s, entity, || {
+                let (status, paths) = match &response.result {
+                    Ok(Some(Output::Candidates(routes))) => {
+                        ("ready", routes.iter().filter(|route| route.is_ok()).count())
+                    }
+                    Ok(None) => ("unbaked", 0),
+                    Err(_) => ("error", 0),
+                    Ok(Some(_)) => ("unexpected_output", 0),
+                };
+                serde_json::json!({
+                    "field": field, "map_id": query.map_id, "request_id": response.id,
+                    "status": status, "complete_paths": paths,
+                    "error": response.result.as_ref().err(),
+                })
+            });
+        }
         true
     }
 

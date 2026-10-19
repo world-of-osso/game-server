@@ -1,12 +1,25 @@
 # Toy Box server foundation
 
+## Accepted sourced boundary
+
+- [x] The approved toy scope is complete to its current sourced boundary: historical Full1166 plus the seven published build70448 extras described below. Keep the baseline and named extras distinct in census accounting.
+- [x] The three remaining70448 extras are accepted named gaps, not published Toy memberships. They must not expose a cast that reports success without performing the promised action.
+
+| Unpublished item/root | Accepted gap | Missing sourced contract |
+|---|---|---|
+|275039/1296034 Curse of the Aqir|`AQIR_SCRIPT_BINDING`|Egg/walkover-follower dispatch,20-second group winner and scarab ownership-transfer lifecycle. Same-name spells alone are not a root action binding.|
+|284159/1315208 Libram of the Matriarch|`LIBRAM_LOOT189_REWARD_BINDING`|Effect189's acquisition join, quantity and conditions for Glyph284160. Never interpret misc143823 as the reward item ID without an authoritative binding.|
+|286643/1320854 Kinduru's Spiriting Quill|`QUILL_LABYRINTH_EXIT_ACTION`|Labyrinth-only run transition and party treasure-room teleport/reward action. A generic game-event or partial scenario criterion is not the complete action.|
+
+Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
+
 ## Expanded build70448 hearthstones
 
 - [x] Admit Hiveborne281136/1310234 and Shadeweaver281615/1311934 from their exact build70448 Toy rows without replacing the historical1166 catalog or admitting the other eight newly scoped toys in this batch.
 - [x] Actual bag learning and UseToy must preserve the existing persisted-homebind requirement, source10000ms cast and shared charge2309 (one charge/1800000ms recharge). No early teleport/SpellGo, no charge spent for absent bind, and successful use blocks its sibling while preserving health/model.
 - [x] Selected Toy import must preserve unrelated catalog rows, remain idempotent and reject a requested missing source identity before mutation. Existing full-catalog import remains available explicitly without selection.
 
-The shared census oracle preserves the named Full1166 baseline and adds only explicitly published build70448 identities from these hearthstones and the [stationary cosmetics](#expanded-build70448-stationary-loa-cosmetics). Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare total must not replace the historical baseline or silently admit other source-only toys.
+The shared census oracle preserves the named Full1166 baseline and adds only explicitly published build70448 identities from these hearthstones, the [stationary cosmetics](#expanded-build70448-stationary-loa-cosmetics) and the [footstep cosmetics](#expanded-build70448-footstep-cosmetics). Assert each extra's actual name/on-use spell as well as total cardinality; later batches extend this named list only with their publication. A bare total must not replace the historical baseline or silently admit other source-only toys.
 
 CPU acceptance does not certify native visuals/audio, cross-map travel or natural thirty-minute recharge. Extract missing audio only from local CASC with provenance; lead publishes fragments before native proof. These ten newly approved source-only identities extend scope without changing the historical Full1166 denominator. Other newly approved toys are separate batches.
 
@@ -18,6 +31,16 @@ CPU acceptance does not certify native visuals/audio, cross-map travel or natura
 Admission is limited to these three spell IDs through the existing visual-only whitelist and its authored-visual/zero-payload guards. Their published item/name/spell triples join the two hearthstones in the census's named70448 extras list; keep the Full1166 baseline separate. Source Toy rows1763/1765/1766 and34 missing local-CASC files were independently reproduced and published by the lead before canonical admission proof.
 
 This batch does not authorize generic dummy4 support, alter source weights or implement the remaining scripted toys. Natural thirty-minute expiry, one-hour reuse and native cosmetic/audio presentation require separate proof.
+
+## Expanded build70448 footstep cosmetics
+
+- [x] Trail of Halazzi280821/1309828 (Toy1764) and Rite of Jan'alai's Flame280825/1309844 (Toy1768) use source-exact Toy membership and actual bag learning/UseToy.
+- [x] Apply the authored1800000ms owner cosmetic aura and3600000ms recovery. Real cancellation removes the aura without resetting recovery or changing health/body model/position; denied reuse produces no extra SpellGo.
+- [x] Only these two named visual-only admissions and their published census item/name/spell triples may join this batch. Preserve Full1166 plus the five previously published extras; no bare total or generic dummy4 admission.
+
+The lead independently published the exact Toy1764/1768 source rows and40 local-CASC files/57 target paths before canonical admission proof. Only1309828 and1309844 enter the existing strict visual-only whitelist; append their item/name/spell triples to the five published census extras in the same branch.
+
+Footstep placement, movement-driven visual/particle events, audio playback and native rendering remain separate from CPU aura acceptance. World/asset publication is lead-owned after source-exact copied-world/CASC proof. Natural thirty-minute expiry/hour reuse and the three remaining scripted gaps are not inferred.
 
 ## Runtime generated casting requirements
 
