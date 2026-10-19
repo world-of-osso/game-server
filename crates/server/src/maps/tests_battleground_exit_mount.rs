@@ -68,6 +68,10 @@ fn request_native_leave(h: &mut Harness, who: &Traveler, match_id: u64) -> Vec<P
 }
 
 fn finish_source_nodes(h: &mut Harness, who: &Traveler) {
+    h.app
+        .world_mut()
+        .entity_mut(who.connection)
+        .insert(pair::<UseGameObject>());
     let copy = h.map_of(who).unwrap();
     for point in source_battleground_objects(copy.map_id).0 {
         let (object, at) = objects_in(h, copy, point.info.entry)[0];
@@ -90,7 +94,7 @@ fn assert_exit_dismounts(queue_id: u32, phase: BgPhase) {
     enter_players(&mut h, entrants);
     mount_source_rider(&mut h, who);
     if phase == BgPhase::Ended {
-        finish_source_nodes(&mut h, who);
+        finish_source_nodes(&mut h, &players[1]);
         assert_source_mounted(&h, who);
     }
     assert_eq!(battleground(&h, who).phase, phase);
