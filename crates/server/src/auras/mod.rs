@@ -56,7 +56,7 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use shared::components::{AuraView, Npc, Player, UnitAuras};
+use shared::components::{AuraView, Npc, Player, UnitAuras, UnitStats};
 use shared::protocol::{CancelAura, CombatLogEvent, CombatLogKind};
 
 use crate::auth::{Authenticated, InWorld};
@@ -1451,6 +1451,11 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
     let primary_support = ebon_might::primary_bonus(&auras);
+    // TC HandleModPercentStat returns for non-Players, including controlled
+    // NPCs that happen to carry the follower class-stat bridge.
+    if world.get::<Player>(unit).is_none() {
+        stats.primary_base_pct = UnitStats::default();
+    }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;

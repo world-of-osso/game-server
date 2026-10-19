@@ -149,6 +149,8 @@ pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
+/// TC HandleModPercentStat: Player-only create/base percentage, stat index or -1.
+pub const MOD_PERCENT_STAT: u32 = 80;
 /// TC Unit.cpp:6962/8110: percentage done versus creature-type mask, not school.
 pub const MOD_DAMAGE_DONE_VERSUS: u32 = 168;
 pub const WATER_BREATHING: u32 = 82;
@@ -311,6 +313,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_ROOT
         | MOD_ROOT_2
         | MOD_STAT
+        | MOD_PERCENT_STAT
         | MOD_ARMOR_PCT_FROM_STAT
         | MOD_INCREASE_SPEED
         | MOD_DECREASE_SPEED

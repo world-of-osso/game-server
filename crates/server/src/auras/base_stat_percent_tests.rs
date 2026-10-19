@@ -76,7 +76,6 @@ fn base_stat80_native_9417_known_passive_produces_real_flat_intellect() {
 }
 
 #[test]
-#[ignore = "missing player base-stat percentage80 stage"]
 fn base_stat80_native_base_only_intellect_uses_its_authored_ten_percent() {
     let mut h = fixture(false);
     let before = primary(&h);
@@ -86,7 +85,6 @@ fn base_stat80_native_base_only_intellect_uses_its_authored_ten_percent() {
 }
 
 #[test]
-#[ignore = "missing player base-stat percentage80 stage"]
 fn base_stat80_native_flat_passive_is_added_after_create_stat_percentage() {
     let baseline = native_base();
     let mut h = fixture(true);
@@ -100,7 +98,6 @@ fn base_stat80_native_flat_passive_is_added_after_create_stat_percentage() {
 }
 
 #[test]
-#[ignore = "missing player base-stat percentage80 stage"]
 fn base_stat80_native_unlearning_flat_passive_and_removing_base_buff_recompute() {
     let baseline = native_base();
     let mut h = fixture(true);
@@ -140,7 +137,6 @@ fn base_stat80_native_intellect_index_does_not_modify_other_primary_stats() {
 }
 
 #[test]
-#[ignore = "missing player base-stat percentage80 stage"]
 fn base_stat80_native_foreign_self_cast_changes_only_foreign_create_stats() {
     let baseline = native_base();
     let mut h = fixture(true);
