@@ -345,6 +345,87 @@ fn assert_ground_parents(difficulty: u32) {
     );
 }
 
+/// Source Spell.cpp4265 expires1500ms at the30th actual50ms update, not31st.
+#[test]
+#[ignore = "HERALD_CAST_PROGRESS_MS_UNIMPLEMENTED: native1500ms AI boundary RED first"]
+fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
+    let (mut h, _, nazan, _, _, _) = reach_fall(2);
+    let origin = h.app.world().resource::<CastAdmissions>().origin;
+    h.app.insert_resource(AiTickTrace {
+        actor: nazan,
+        origin,
+        frames: Vec::new(),
+    });
+    let mut started = None;
+    for _ in 0..100 {
+        h.advance(0.05);
+        let accepted_roar = h
+            .app
+            .world()
+            .resource::<CastAdmissions>()
+            .entries
+            .iter()
+            .any(|entry| entry.spell == 39427 && entry.result.is_ok());
+        if accepted_roar {
+            started = Some(h.app.world().resource::<Time<Fixed>>().elapsed());
+            break;
+        }
+    }
+    let started = started.expect("actual source-scheduled ordinary Roar must begin");
+    let first = h
+        .app
+        .world()
+        .resource::<AiTickTrace>()
+        .frames
+        .last()
+        .unwrap();
+    let cast = first
+        .cast
+        .as_ref()
+        .expect("real cast exists at its AI dispatch");
+    assert_eq!(
+        (
+            cast.spell_id,
+            cast.duration,
+            cast.elapsed,
+            cast.pushback_count
+        ),
+        (39427, 1.5, 0.0, 0)
+    );
+    for _ in 0..29 {
+        h.advance(0.05);
+        let frame = h
+            .app
+            .world()
+            .resource::<AiTickTrace>()
+            .frames
+            .last()
+            .unwrap();
+        assert!(frame.cast.is_some(), "no early release before native1500ms");
+    }
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - started,
+        Duration::from_millis(1450)
+    );
+    h.advance(0.05);
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - started,
+        Duration::from_millis(1500)
+    );
+    let frame = h
+        .app
+        .world()
+        .resource::<AiTickTrace>()
+        .frames
+        .last()
+        .unwrap();
+    assert!(
+        frame.cast.is_none(),
+        "AI must observe native1500ms expiry at30ticks, not31; actual {:?}",
+        frame.cast
+    );
+}
+
 #[test]
 fn encounter_coverage_herald_ground_release_normal() {
     assert_release(1);

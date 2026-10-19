@@ -33,7 +33,7 @@ pub(super) struct AiTickFrame {
     victim: Option<u64>,
     engaged: bool,
     cast_transition: &'static str,
-    cast: Option<shared::casting::CastState>,
+    pub(super) cast: Option<shared::casting::CastState>,
 }
 
 /// Capture after the real Herald AI tick, including a paused combat EventMap.
