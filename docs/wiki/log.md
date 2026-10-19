@@ -1,3 +1,7 @@
+## 2026-10-19 — Effect64 launch phase
+
+The lead gate cs656 failed the Lantha Axe Toss test because [first-stun cast stop](systems/auras.md) ran before the hit-time effect64 child. [Effect64 launch phase](systems/spell-casting.md): RED cd7e783bd 2/2 genuine, fix ec953eeac. GREEN 44/0 in 118.99s, 0 warnings (control_cast_stop, pet_tests, Bo, queued_trigger families, warrior stuns, missiles).
+
 ## 2026-10-19 — First stun stops the current cast; Bo control oracle
 
 [First-stun cast stop](systems/auras.md): native Paralysis115078/Leg Sweep119381 landed on a casting enemy without stopping it, making Bo's Leg Sweep oracle RNG-dependent ([follower data](investigations/follower-data.md)). RED e3f137f13 3/3 genuine (stun applied, CastState kept); fix3e0e8f09b. GREEN32/0 63.47s,0 warnings: three new/rewritten tests plus warrior stun, creature-trigger stun and follower CC controls. Lead family gate pending.
