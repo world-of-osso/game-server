@@ -59,7 +59,8 @@ fn assert_authored_deserter(h: &Harness, who: &Traveler) -> u32 {
         .resource::<crate::spell_info::SpellStore>()
         .get(DESERTER_SPELL_ID)
         .unwrap();
-    let duration_ms = u32::try_from(spell.misc.duration.unwrap().duration_ms).unwrap();
+    let duration_ms =
+        u32::try_from(spell.misc.as_ref().unwrap().duration.unwrap().duration_ms).unwrap();
     assert!(
         duration_ms > 0,
         "source aura must have a finite positive duration"
