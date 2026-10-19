@@ -359,6 +359,14 @@ Examples:
 - **Movement:** movement reads `AuraStatMods.movement_speed`. It replaced the unused `shared::aura::Auras` read. The combination is the strongest MOD_INCREASE_SPEED 31 × every MOD_SPEED_ALWAYS 129 × the strongest MOD_DECREASE_SPEED 33, and 0 under MOD_ROOT 26, MOD_ROOT_2 455 or MOD_STUN 12.
 - **Crowd control:** cast validation fails with `Stunned` under MOD_STUN 12 (unless `SPELL_ATTR5_ALLOW_WHILE_STUNNED`), `Silenced` under MOD_SILENCE 27 or MOD_PACIFY_SILENCE 60 for `PreventionType` 1 spells, and `Pacified` under MOD_PACIFY 25 or 60 for `PreventionType` 2 spells. A cast already in progress is not interrupted.
 
+## Native power prevention294 — 2026-10-18
+
+TC a352b1fa StatSystem.cpp863-869 tests recipient aura294 `MiscValue & (1 << power)` and returns zero regeneration before base, percentage and flat terms. Amount is not consulted. Native70448 SpellEffect351520 supplies232865 mask8/amount0;623229 supplies262173 mask1/amount0, with623258's real379 −100% sibling. Both spells are permanent; tests do not invent expiry.
+
+Tests-only3041d69e3 reproduced Energy25vs0 with actual Tiger Palm/Elixir, Mana2vs0 after actual8004/137039/WaterShield and262173, and Energy25vs0 after removing only the other mask. Foreign authenticated self-casts and nonmatching-mask controls passed3; genuine RED3/6 took16.93s with zero warnings. Existing native fixtures are reused through test-only helpers; definitions, resources, stats and clocks are unchanged.
+
+AuraStatMods now unions recipient masks independent of effect amount. Only the continuous Energy loop and separate Mana path consume the mask before all regeneration terms, setting prediction to zero; source removal recomputes the union. Runes, discrete Focus pets and other continuous powers are unchanged and not certified, as are global294/legal-build/full-ability behavior. Native Elixir2Chi and NoMana379 −100% remain unchanged. GREEN pending. [Requirement](../../specs/class-completeness.md); new family `spell_cast::prevent_regen_tests::`; source/proof in assigneds6 `data/class-completeness6-2026-10-12/prevent-regen294-*`.
+
 ## Water Shield flat Mana — 2026-10-18
 
 Native70448 SpellEffect79509 supplies79949 effect1 aura85/Mana/10; effect79508's42→79950 sibling remains unchanged. SpellMisc58951/Duration6 supplies600000ms. TC a352b1fa StatSystem.cpp874-908 multiplies base-mana regeneration before adding flat85/5. The Elixir slice already collected recipient/power flat amounts, but separate authoritative Mana regeneration omitted them.
@@ -401,6 +409,7 @@ Every aura change recomputes two components, each written only when its value ch
 | `rage_from_damage_dealt_pct` | 213 | rage per melee swing dealt (summed percent) |
 | `power_regen_mult` | 110 (by power), 379 (mana) | regen |
 | `power_regen_flat` | 85 raw units/5s, summed by power | continuous pools and Mana after percent; discrete-pet85 unproved |
+| `power_regen_prevention_mask` | 294 union of MiscValue power bits, amount-independent | Mana/Energy only, before all terms; Rune/discrete-pet/other/global294 unproved |
 | `movement_speed` | 31, 129, 33, 26, 455, 12 | movement |
 | `water_breathing` / `water_breathing_mult` | WATER_BREATHING 82 / MOD_WATER_BREATHING 155 | breath timer ([[swimming-and-breath]]) |
 

@@ -7,6 +7,10 @@
 ## 2026-10-18 — Herald own nonlethal below30 ingress
 
 [Own30](systems/boss-scripts.md#herald-own-nonlethal-below30-ingress--2026-10-18): TC217–220 actual35→29 after intro reuses the descent latch, no30693; natural Normal/Heroic/INTRO1 negative RED1PASS2FAIL→GREEN3/3 62.04s. Real source-speed first step and cast interruption; lethal guard/arrival/fall excluded. Enabled all10 Herald+four grounding14/14 PASS172.99s ataed52b5b6; LEAD gate/check/fmt pending.
+## 2026-10-18 — Native continuous power prevention294
+
+[Native masks](systems/auras.md#native-power-prevention294--2026-10-18):232865/262173 amount0/masks8/1; TC prevention before base/%/flat. Actual Elixir/WaterShield RED3FAIL/3controlPASS16.93s,0warnings at3041d69e3 pushed first. Minimal recipient-mask Mana/Energy consumer; Rune/discrete-pet/other/global294/legal-build/full-ability claims excluded; GREEN pending.
+
 ## 2026-10-18 — Water Shield flat Mana
 
 [Native79949](systems/auras.md#water-shield-flat-mana--2026-10-18): TC base-mana multipliers then85/5; actual8004/137039 spend and ordinaryShield RED125vs127 in two cases,3controlsPASS25.33s atf4c17e35b. Initial harness-only failure excluded. Minimal Mana consumer; sibling79508→79950 unchanged. Merged82f8476d4 native5 +Elixir5 +regen/resource30 GREEN40/40,26.47s,0warnings; fullcargo fmt0/cleanstatus, lead independent gate pending. No Retail52127/legal-build/full-proc claim.

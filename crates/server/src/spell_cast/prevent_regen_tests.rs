@@ -60,7 +60,6 @@ fn cast_foreign_prevention(h: &mut Harness, class: u8, spell: u32) {
 }
 
 #[test]
-#[ignore = "missing native continuous power regeneration prevention294"]
 fn prevent_regen_native_energy_zero_amount_mask_stops_base_and_flat_but_not_chi() {
     let mut h = energy_fixture();
     assert_eq!(h.power(PowerType::Chi), 2.0);
@@ -77,7 +76,6 @@ fn prevent_regen_native_energy_zero_amount_mask_stops_base_and_flat_but_not_chi(
 }
 
 #[test]
-#[ignore = "missing native continuous power regeneration prevention294"]
 fn prevent_regen_native_mana_mask_stops_remaining_flat_after_real_minus100_percent() {
     let mut h = mana_fixture();
     cast_prevention(&mut h, PREVENT_MANA);
@@ -122,11 +120,17 @@ fn prevent_regen_native_foreign_mana_selfcast_does_not_freeze_owner() {
 }
 
 #[test]
-#[ignore = "missing native continuous power regeneration prevention294"]
 fn prevent_regen_native_removing_other_power_mask_keeps_energy_frozen() {
     let mut h = energy_fixture();
     cast_prevention(&mut h, PREVENT_ENERGY);
     cast_prevention(&mut h, PREVENT_MANA);
+    let before = h.power(PowerType::Energy);
+    h.advance(1);
+    assert_eq!(
+        h.power(PowerType::Energy),
+        before,
+        "both masks remain active"
+    );
     remove_prevention(&mut h, PREVENT_MANA);
     assert_eq!(energy::energy_gain_in_one_second(&mut h), 0.0);
     remove_prevention(&mut h, PREVENT_ENERGY);
