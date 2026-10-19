@@ -13,17 +13,18 @@ const ADRENALINE_RUSH: u32 = 13_750;
 const FRAMES_PER_SECOND: usize = 20;
 
 fn fixture() -> Harness {
-    let mut h = harness(
-        Vec::new(),
-        &[TIGER_PALM, ENERGIZING_ELIXIR, ADRENALINE_RUSH],
-        MONK,
-    )
-    .expect("native Monk spell/power catalog");
+    fixture_with_spells(&[])
+}
+
+pub(super) fn fixture_with_spells(additional: &[u32]) -> Harness {
+    let mut spells = vec![TIGER_PALM, ENERGIZING_ELIXIR, ADRENALINE_RUSH];
+    spells.extend_from_slice(additional);
+    let mut h = harness(Vec::new(), &spells, MONK).expect("native Monk spell/power catalog");
     h.advance(1);
     h
 }
 
-fn assert_cast(h: &Harness, spell: u32) {
+pub(super) fn assert_cast(h: &Harness, spell: u32) {
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
     assert!(
         h.inbox.log.iter().any(|event| {
@@ -36,7 +37,7 @@ fn assert_cast(h: &Harness, spell: u32) {
     );
 }
 
-fn spend_energy(h: &mut Harness) {
+pub(super) fn spend_energy(h: &mut Harness) {
     h.cast_and_deliver(TIGER_PALM, Some(h.npc));
     assert_cast(h, TIGER_PALM);
     let energy = h.power(PowerType::Energy);
@@ -46,13 +47,13 @@ fn spend_energy(h: &mut Harness) {
     );
 }
 
-fn cast_elixir(h: &mut Harness) {
+pub(super) fn cast_elixir(h: &mut Harness) {
     h.cast_and_deliver(ENERGIZING_ELIXIR, None);
     assert_cast(h, ENERGIZING_ELIXIR);
     h.advance(1);
 }
 
-fn energy_gain_in_one_second(h: &mut Harness) -> f32 {
+pub(super) fn energy_gain_in_one_second(h: &mut Harness) -> f32 {
     let before = h.power(PowerType::Energy);
     h.advance(FRAMES_PER_SECOND);
     h.power(PowerType::Energy) - before
