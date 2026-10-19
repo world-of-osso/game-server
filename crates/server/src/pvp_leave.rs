@@ -46,6 +46,13 @@ fn return_to_origin(
         .get::<shared::components::Player>(player)
         .ok_or("battleground player race missing")?
         .race;
+    // TC Battleground.cpp846–849: resurrect dead participants fully before exit.
+    let dead_participant = world
+        .get::<shared::components::Health>(player)
+        .is_some_and(|health| health.current <= 0.0);
+    if dead_participant {
+        crate::death::resurrect_player_fully(world, player);
+    }
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
     }

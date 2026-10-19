@@ -50,12 +50,20 @@ Ignored2abb070d2 was pushed before any consumer. Native28305 effect1/SpellEffect
 
 Corrected ignoredb1c2d11f2 execution runs only those two cases, preserving disjoint qualification/Rogue/control evidence: native14 yields16Dodge/37Parry/13Block in512; native10000 yields14Dodge/26Parry/17Block in512, genuine2RED66.39s. Samples and native clocks/RNG remain unchanged. Native14/4=3.5 should remove3%Dodge while retaining2.5%Parry and3%Block; no-Parry chance .975^512≈2.346e-6 and no-Block .97^512≈1.687e-7, well below1/1000. Five Evasion attempts fit its unchanged lifetime; no-Dodge positive-control chance .05^5=3.125e-7. This is not legal loadout or full hit-table certification. Consumer925224b2a committed after genuine RED; explicit ignored native behavior5/5GREEN70.24s (265.77s including compile),0warnings. Retain disjoint pre-consumer runtime-lifetime1PASS32.88s: six native cases GREEN as composite proof, not a replayed6-case batch. All six ignores are removed only after that proof; lead integration gate pending. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-expertise-*`; [contract](../../specs/player-damage.md).
 
+## NPC victim dodge aura49 — 2026-10-17
+
+TC a352b1fa Unit.cpp2389/2761–2762 adds signed victim `MOD_DODGE_PERCENT`49 to ordinary NPC dodge; level bonus and attacker251/240 precede the final clamp. `combat::roll_outcome` reads the already-present target_auras only for `Victim::Creature`, inside the existing can_avoid/missing-stats guard. Player49 stays in CharacterStats, not double-applied. No query, snapshot field, state or wire addition; parry/block, masks, NPC behind dodge, native RNG/clocks and Guardian same-tick health commit remain unchanged. Runtime IsTotem, NPCparry47/block51,248/player expertise remain separate gaps.
+
+IgnoredREDdf529041d was pushed FIRST. Actual native5277 effect0/1892=+200/10s and62356 effect1/56357=-200/20s were qualified before the signed behavior case: both remain live with summed49=0 across8s, block51=0 (effect0 excluded),1PASS33.62s/exit0,0warnings. Native unarmed Default speed2s is unchanged; five attempts fit native Evasion10s. Real behavior execution gives2genuineFAIL/4PASS35.27s: front and behind native31144/equal80 each log5Damage/0Dodge while actual victim200 is live. Cancellation/natural expiry, foreignNPC, qualified signed-zero and already-landed NPC62627 expertise ordering controls pass. No fixture/compiler failures count as RED; no rows/HP/stats/RNG/duration/timer edits.
+
+The existing NPC broadcast test helper gains a count argument for these5-swing windows; all existing240 callers retain explicit512 and their unchanged60-frame-per-swing delivery budget. Native NPC-to-NPC receipts remain actual all-client CombatEvent messages, never fabricated player ownership. Five-swing all-Miss probability .05^5=3.125e-7; baseline all-avoid .14^5≈5.378e-5, combined family bound below1/1000. Consumere6e99fb6e is committed only after genuine RED; fresh ignored behavior6/6GREEN57.40s/exit0,0warnings (184.00s total), plus retained disjoint preconsumer qualification1PASS33.62s gives7nativeGREENcomposite, notone7batch. Only then allseven ignores are removed and GREEN pushed; independent lead gate pending. Nativejoint CC+49 remains source/wiring proof, not a separate new nativeRED. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-npc-victim-dodge-*`; [contract](../../specs/player-damage.md).
+
 ## Hit table values
 
 | | Chance | Source |
 |---|---|---|
 | Miss | 5%, +19% with an off-hand weapon | Unit::GetUnitMissChance, MeleeSpellMissChance |
-| Dodge (creature) | 3% + 1.5%/level above | GetUnitDodgeChance |
+| Dodge (creature) | 3% + victim49 + 1.5%/level above, before attacker251/240 | GetUnitDodgeChance |
 | Parry (creature) | 6% + 1.5%/level above | GetUnitParryChance |
 | Glancing (creature 4+ levels above) | 10% + 10%/level | RollMeleeOutcomeAgainst |
 | Block (creature) | 3% + 1.5%/level above, stops 30% | GetUnitBlockChance, GetBlockPercent |
