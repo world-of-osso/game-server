@@ -112,7 +112,12 @@ fn assert_evasion_avoids(events: &[CombatLogEvent]) {
     assert!(events.iter().any(dodged), "{events:?}");
 }
 
-fn collect_broadcast_swings(h: &mut Harness, attacker: Entity, victim: Entity) -> Vec<CombatEvent> {
+pub(super) fn collect_broadcast_swings(
+    h: &mut Harness,
+    attacker: Entity,
+    victim: Entity,
+    count: usize,
+) -> Vec<CombatEvent> {
     h.app
         .world_mut()
         .run_system_once(move |mut commands: Commands| {
@@ -120,7 +125,7 @@ fn collect_broadcast_swings(h: &mut Harness, attacker: Entity, victim: Entity) -
         })
         .unwrap();
     let mut events = Vec::new();
-    for _ in 0..NPC_SWINGS * 60 {
+    for _ in 0..count * 60 {
         h.advance(1);
         events.extend(
             drain::<CombatEvent>(&mut h.app, h.connection)
@@ -140,14 +145,14 @@ fn collect_broadcast_swings(h: &mut Harness, attacker: Entity, victim: Entity) -
                         )
                 }),
         );
-        if events.len() == NPC_SWINGS {
+        if events.len() == count {
             super::attack_stop(h.app.world_mut(), attacker);
             h.advance(3);
             return events;
         }
     }
     panic!(
-        "only {} of{NPC_SWINGS} broadcast swings: {events:?}",
+        "only {} of{count} broadcast swings: {events:?}",
         events.len()
     );
 }
@@ -254,7 +259,7 @@ fn native_melee_npc_expertise_suppresses_npc_dodge_parry_not_block() {
     let (mut h, victim) = dummy_duel();
     let attacker = h.npc;
     cast_npc_buffs(&mut h, attacker);
-    let events = collect_broadcast_swings(&mut h, attacker, victim);
+    let events = collect_broadcast_swings(&mut h, attacker, victim, NPC_SWINGS);
     assert_eq!(expertise(&h, attacker), 10_000.0);
     // Old missed9% dodge/parry bug probability .91^512≈1.07e-21.
     assert!(
@@ -279,7 +284,7 @@ fn native_melee_npc_expertise_small_native_amount_preserves_remaining_parry() {
     let (mut h, victim) = dummy_duel();
     let attacker = h.npc;
     apply_small_expertise(&mut h, attacker);
-    let events = collect_broadcast_swings(&mut h, attacker, victim);
+    let events = collect_broadcast_swings(&mut h, attacker, victim, NPC_SWINGS);
     assert_eq!(expertise(&h, attacker), 14.0);
     assert!(
         !events
@@ -302,7 +307,7 @@ fn native_melee_npc_expertise_small_native_amount_preserves_remaining_parry() {
         "{events:?}"
     );
     cancel_expertise(&mut h, attacker, PET_PASSIVE);
-    let restored = collect_broadcast_swings(&mut h, attacker, victim);
+    let restored = collect_broadcast_swings(&mut h, attacker, victim, NPC_SWINGS);
     assert!(
         restored
             .iter()
