@@ -202,7 +202,7 @@ fn guild_leadership_transfer_host_replies_to_both_members_and_rechecks_auth_and_
 #[test]
 #[ignore = "guild leadership transfer RED before implementation"]
 fn guild_leadership_transfer_readers_never_observe_zero_or_two_masters_during_real_commits() {
-    use redb::ReadableTable;
+    use redb::{ReadableDatabase, ReadableTable};
     use std::sync::{Arc, Barrier};
     let db = Arc::new(temp_database());
     let (master, _, member) = members(&db);
