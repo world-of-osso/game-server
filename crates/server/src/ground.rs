@@ -13,6 +13,16 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+#[cfg(test)]
+use wow_adt::adt_obj::MODF_FLAG_HAS_SCALE;
+use wow_adt::adt_obj::{MODF_ENTRY_SIZE, MODF_FLAG_FILEDATAID};
+use wow_adt::wdt::MPHD_FLAG_GLOBAL_WMO;
+use wow_adt::{adt_obj, wdt};
+#[cfg(test)]
+use wow_chunk::read_u32;
+use wow_chunk::{find_reversed_chunk as find_chunk, read_u16};
+use wow_wmo::parser::parse_root_group_file_ids as group_file_data_ids;
+
 use bevy::math::{Affine3A, Vec3};
 use bevy::prelude::*;
 use shared::ground::{
@@ -32,13 +42,6 @@ const KNOWN_GROUND_GAPS: &str = include_str!("ground_gaps.tsv");
 const NO_WDT: &str = "no WDT FileDataID";
 const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
-/// MAID entry: root, obj0, obj1, tex0, lod, map texture, map normal, minimap FDIDs.
-const MAID_ENTRY_SIZE: usize = 32;
-const MODF_ENTRY_SIZE: usize = 64;
-const MODF_FLAG_HAS_SCALE: u16 = 0x4;
-const MODF_FLAG_FILEDATAID: u16 = 0x8;
-/// wowdev WDT MPHD `wdt_uses_global_map_obj`: the map is one WMO, placed by the WDT MODF.
-const MPHD_FLAG_GLOBAL_WMO: u32 = 0x1;
 /// `GridMap::getMinHeight` / `TerrainInfo::GetMinHeight` without flight bounds (no MFBO, or
 /// no grid at all as on a WMO-only map).
 const DEFAULT_MIN_HEIGHT: f32 = -500.0;
@@ -358,7 +361,7 @@ impl MapGround {
     fn open(data_dir: &Path, wdt_fdid: u32) -> Result<Self, String> {
         let wdt = read_client_file(data_dir, "terrain", wdt_fdid, "wdt")?;
         let mphd = find_chunk(&wdt, b"MPHD")?.ok_or("WDT has no MPHD")?;
-        if read_u32(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO != 0 {
+        if wdt::parse_mphd_flags(mphd)?.raw & MPHD_FLAG_GLOBAL_WMO != 0 {
             return Self::open_global_wmo(data_dir, &wdt);
         }
         Ok(Self {
@@ -576,7 +579,7 @@ enum WdtGround {
 
 fn wdt_ground(wdt: &[u8]) -> Result<WdtGround, String> {
     let mphd = find_chunk(wdt, b"MPHD")?.ok_or("WDT has no MPHD")?;
-    if read_u32(mphd, 0)? & MPHD_FLAG_GLOBAL_WMO == 0 {
+    if wdt::parse_mphd_flags(mphd)?.raw & MPHD_FLAG_GLOBAL_WMO == 0 {
         return parse_maid(wdt).map(WdtGround::Tiles);
     }
     let modf = find_chunk(wdt, b"MODF")?.ok_or("global-WMO WDT has no MODF")?;
@@ -712,22 +715,18 @@ fn load_wmo_placements(data_dir: &Path, obj0_fdid: u32) -> Result<Vec<WmoPlaceme
 }
 
 fn parse_modf_entry(entry: &[u8]) -> Result<WmoPlacement, String> {
-    let flags = read_u16(entry, 56)?;
+    let flags = adt_obj::modf_flags(entry)?;
     if flags & MODF_FLAG_FILEDATAID == 0 {
         return Err(format!(
             "MODF entry names its WMO by path (flags {flags:#x})"
         ));
     }
-    let scale = if flags & MODF_FLAG_HAS_SCALE != 0 {
-        f32::from(read_u16(entry, 62)?) / 1024.0
-    } else {
-        1.0
-    };
+    let transform = adt_obj::parse_modf_transform(entry)?;
     Ok(WmoPlacement {
-        fdid: read_u32(entry, 0)?,
-        position: read_vec3(entry, 8)?,
-        rotation: read_vec3(entry, 20)?,
-        scale,
+        fdid: transform.name_id,
+        position: transform.position,
+        rotation: transform.rotation,
+        scale: transform.scale,
     })
 }
 
@@ -744,27 +743,12 @@ fn load_wmo_groups(data_dir: &Path, root_fdid: u32) -> Result<Vec<Arc<WmoGroupCo
         .collect()
 }
 
-/// The root's MOHD group count of GFID group FileDataIDs.
-fn group_file_data_ids(root: &[u8]) -> Result<Vec<u32>, String> {
-    let mohd = find_chunk(root, b"MOHD")?.ok_or("WMO root has no MOHD")?;
-    let group_count = read_u32(mohd, 4)? as usize;
-    let gfid = find_chunk(root, b"GFID")?.ok_or("WMO root has no GFID")?;
-    (0..group_count)
-        .map(|index| read_u32(gfid, index * 4))
-        .collect()
-}
-
 fn parse_maid(wdt: &[u8]) -> Result<Vec<TileFiles>, String> {
     let maid = find_chunk(wdt, b"MAID")?.ok_or("WDT has no MAID")?;
-    (0..MAP_TILES * MAP_TILES)
-        .map(|index| {
-            let base = index * MAID_ENTRY_SIZE;
-            Ok(TileFiles {
-                root: read_u32(maid, base)?,
-                obj0: read_u32(maid, base + 4)?,
-            })
-        })
-        .collect()
+    Ok(wdt::parse_maid_root_obj0(maid)?
+        .into_iter()
+        .map(|(root, obj0)| TileFiles { root, obj0 })
+        .collect())
 }
 
 fn read_client_file(data_dir: &Path, dir: &str, fdid: u32, ext: &str) -> Result<Vec<u8>, String> {
@@ -773,43 +757,6 @@ fn read_client_file(data_dir: &Path, dir: &str, fdid: u32, ext: &str) -> Result<
     }
     let path = data_dir.join(format!("{dir}/{fdid}.{ext}"));
     std::fs::read(&path).map_err(|err| format!("{}: {err}", path.display()))
-}
-
-/// Payload of the first chunk tagged `tag` (tags are stored reversed).
-fn find_chunk<'a>(data: &'a [u8], tag: &[u8; 4]) -> Result<Option<&'a [u8]>, String> {
-    let mut rest = data;
-    while rest.len() >= 8 {
-        let chunk_tag = [rest[3], rest[2], rest[1], rest[0]];
-        let size = read_u32(rest, 4)? as usize;
-        let payload = rest
-            .get(8..8 + size)
-            .ok_or_else(|| format!("{} chunk truncated", String::from_utf8_lossy(&chunk_tag)))?;
-        if &chunk_tag == tag {
-            return Ok(Some(payload));
-        }
-        rest = &rest[8 + size..];
-    }
-    Ok(None)
-}
-
-fn read_u16(data: &[u8], offset: usize) -> Result<u16, String> {
-    data.get(offset..offset + 2)
-        .map(|bytes| u16::from_le_bytes([bytes[0], bytes[1]]))
-        .ok_or_else(|| format!("read_u16 out of bounds at {offset:#x}"))
-}
-
-fn read_u32(data: &[u8], offset: usize) -> Result<u32, String> {
-    data.get(offset..offset + 4)
-        .map(|bytes| u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
-        .ok_or_else(|| format!("read_u32 out of bounds at {offset:#x}"))
-}
-
-fn read_vec3(data: &[u8], offset: usize) -> Result<[f32; 3], String> {
-    Ok([
-        f32::from_bits(read_u32(data, offset)?),
-        f32::from_bits(read_u32(data, offset + 4)?),
-        f32::from_bits(read_u32(data, offset + 8)?),
-    ])
 }
 
 pub struct GroundPlugin;
@@ -919,6 +866,10 @@ mod m2_floor_tests;
 #[cfg(test)]
 #[path = "ground_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "ground/format_metadata_tests.rs"]
+mod format_metadata_tests;
 
 #[cfg(test)]
 #[path = "ground_achievement_fall_tests.rs"]
