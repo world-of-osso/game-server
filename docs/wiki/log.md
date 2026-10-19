@@ -1,3 +1,7 @@
+## 2026-10-18 — Consuming Stomp native recipient-removal RED
+
+[Source/order boundary](systems/spell-casting.md#consuming-stomp-recipient-removal--2026-10-18): pushed test-only4c2534bf1 first; actual ordinary completion/cancel remove native e0/aura23 but leave recipients alive,2RED/96.10s with fixed guards. Minimal finite374720 self-death registration committed before GREEN; stack cleanup remains the existing death callback, e1/othercopy and retained Stomp damage controls pending. No generic scheduling fix or damage snapshot inferred from TC's separate recipient aura update.
+
 ## 2026-10-18 — Frozen Ground fg602 landing and world-delta qualification
 
 [Qualified proof](systems/spell-casting.md#ordinary-frozen-ground--2026-10-18): independent fg602359PASS/0FAIL/14namedignored1998.44s includes fresh3 Frozen Ground cases; check/fmt0. Lead channel671 confirms08e3→b24e is only3Toy INSERTs, so retained3PASS stands without replay; original guard failure preserved. After push-race reconciliation, landed361efa1d2 with post-merge check/fmt0. Deployment started per lead; no live-dungeon/canonical-geometry-publication claim from this slice. Historical2+1/observer and input-provenance boundaries remain recorded below.

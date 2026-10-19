@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Consuming Stomp recipient removal — 2026-10-18
+
+Finite374720 on-remove registration checks actual e0/aura23 and calls the existing self-death path for its real recipient. No remove-reason gate, Player/entry workaround, extra stack decrement or generic channel change is added. Player e1/aura4 does not match. Source: TC a352 `boss_leymor.cpp481–492`, registration540; native70448 e0/500ms→374727 and entry190509 condition, [contract](../../specs/follower-dungeons.md#azure-sourced-partial), `scripted_ai/azure_vault.rs`.
+
+Test-only4c2534bf1 was pushed before production: real ordinary45s Stomp selected10 e0 recipients, then actual completion/cancel removed their auras but left them alive; genuine2RED/96.10s with fixed server/protocolaa6d925/worldb24e hashes. Native other-copy14 Sprouts were present; post-death/stack/e1/othercopy controls were downstream and not counted as independent REDs. Same-copy unselected set was0, not an invented negative. Implementation GREEN and retained Stomp damage/amplification controls are pending.
+
+Core trace: TC `Spell.cpp3642` removes channel target auras on cancel; successful completion4342–4350 sends0/finish then AI callback, with recipient aura expiry owned separately by `Unit.cpp2965–2983`. Rust currently pumps final ticks, removes channel auras, then dispatches ChannelFinished. Do not infer a universal cross-unit damage-versus-stack order or introduce a snapshot/delay to hide an observer mismatch. Trace/receipts: `/home/osso/.worktrees/follower-dungeons-2026-10-13/azure-stomp-removal-core-order.md` and `azure-stomp-removal-proof-ledger.json`. Mythic Saplings, VFX, forces, Tender combat and full Azure remain deferred.
+
 ## Ordinary Frozen Ground — 2026-10-18
 
 Exact387149/26505 dispatch creates a destination-owned field using existing source catalog30679/CAST387150/ENEMY, curve53094 and native duration. Only this effect179 binding is added. It reuses source-reach membership and caster-scoped action undo from aura-owned fields; the destination does not follow the bomb target. Aura387150 owns periodic damage and slow; the field has no damage tick clock. Caster/map loss and natural expiry retire its membership actions.

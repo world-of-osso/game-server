@@ -432,6 +432,13 @@ fn read_current_primary_power(world: &World, actor: Entity) -> Option<f32> {
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        CONSUMING_STOMP,
+        AuraScript {
+            on_remove: Some(kill_stomp_recipient_after_removal),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         ICE_POWER_PERIODIC,
         AuraScript {
             on_periodic: Some(tick_ice_power),
@@ -452,6 +459,22 @@ pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
             ..Default::default()
         },
     );
+}
+
+/// TC a352b1fa boss_leymor.cpp481–492: REAL e0/aura23 removal, all reasons.
+fn kill_stomp_recipient_after_removal(
+    world: &mut World,
+    target: Entity,
+    aura: &AuraInstance,
+    _reason: RemoveReason,
+) {
+    let periodic_recipient = aura
+        .effects
+        .iter()
+        .any(|effect| effect.index == 0 && effect.aura_type == handlers::PERIODIC_TRIGGER_SPELL);
+    if periodic_recipient {
+        crate::combat::kill_unit(world, target, target);
+    }
 }
 
 /// TC389453 effect0/PERIODIC_DUMMY: SetPower(primary, GetPower(ENERGY) +2).
