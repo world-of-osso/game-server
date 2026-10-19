@@ -2,6 +2,10 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Expanded70448 footstep cosmetics (2026-10-18)
+
+[Current source/publication/RED matrix](../../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): batch2 landed641cb2460 and its feature branch was deleted. Trail of Halazzi280821 and Jan'alai's Flame280825 actual learning RED0/2/54.36s precedes lead's exact twoToy-row/40file publication; canonical aura4 admission RED0/2/30.71s. Only two named IDs enter existing strict visual-only machinery, with their census triples appended beside five published extras. Canonical1e5e55ae0 GREEN22/0/76.90s covers pair/all13 census/five prior toys/retained2513 case/absent-visual negative. Lead broad gate/source landing pending; no inferred native footsteps/particles, generic dummy or scripted-gap change.
+
 ## Expanded70448 stationary Loa cosmetics (2026-10-18)
 
 [Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Canonical81c554bb1 targeted20/0/151.90s covers three new cosmetics/all13 census/three batch1 cases/absent-visual negative. Broad toy/check/fmt gate and source landing remain lead-owned; no generic dummy admission or other-five change.

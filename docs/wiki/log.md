@@ -49,6 +49,13 @@
 ## 2026-10-18 — Run-local tank observations
 
 [Native tank boundaries and proof](investigations/follower-data.md#run-local-tank-observations--2026-10-18): history, native forecast/lifetime, sourced healing capability, source/formation presence, full route exposure and admitted-point consumer. Production budget/goal generation and single interrupt-provider integration remain unfinished; no full-clear or gameplay acceptance.
+## 2026-10-17 — NPC weapon crit52 and shared clamp
+
+[Signed52/clamp](systems/player-damage.md#npc-weapon-crit52-and-shared-clamp-ordering--2026-10-17): ignored00ef37b6d pushed first; native52/334 and separate player187/334 qualification2PASS56.14s survive768s. Fresh6 genuine RED/2PASS56.19s includes explicit player0-60187+50334 zeroCrit/256; source clamps before334. Existing raw AuraStatMods sum/NPC-only consumer plus shared clamp correctionbd3cf7db7 committed after RED; fresh ignored8/8GREEN41.04s/0warnings plus retained qualification2PASS56.14s (ten-case composite), only then all ten enabled. Independent lead gate pending. No RNG/clocks/HP/native-input changes; player52 masks/290/NO_CRIT/mitigation excluded.
+## 2026-10-18 — Batch2 landed; footstep70448 pair admission RED
+
+[Current matrix](../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): explicit tb625 stationary landing641cb2460, ancestry verified/feature branch deleted. New Halazzi/Jan'alai real-learning RED0/2/54.36s; lead exact twoToy-row and40file/57path publication; canonical aura4 RED0/2/30.71s. Two strict named admissions and same-branch census triples retain Full1166+seven; canonical1e5e55ae0 pair/all13 census/previous-family/absent-visual GREEN22/0/76.90s; lead broad gate/source landing pending. Absolute canonical shared-protocol patch resolves stale native-root interface without protocol/cache mutation; no native footstep/particle claim.
+
 ## 2026-10-17 — NPC victim block51
 
 [Block51](systems/player-damage.md#npc-victim-block-aura51--2026-10-17): ignoredcd95 pushed first;10021+62356effect0 sum-100live8s/49=0 and62627fold qualified1PASS26.18s. Live+100→0Block4Melee1Crit andsigned-100→1Block4Melee give genuine2RED/5PASS64.12s. ExistingNPCguard/target_auras consumer+max0 without240subtraction; masks/direction/playerStats/blockedamount253/Guardian/RNG/clocks unchanged. Consumer28638df38 fresh ignored7nativeGREEN40.77s0warnings+retainedqualification1PASS26.18s (8composite,notone8batch), onlythen alleight enabled/pushed; lead gate pending.

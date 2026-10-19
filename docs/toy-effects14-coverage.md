@@ -1,5 +1,19 @@
 # Toy effects14 — active whole-goal coverage
 
+## Expanded70448 footstep cosmetics: canonical CPU GREEN (2026-10-18)
+
+Batch2 stationary cosmetics explicitly landed server641cb2460 after tb625 (earlier584/1 included the pre-existing master Scarab regression assigned separately). Featureb1ea04e10 ancestry was independently verified; its local/remote branch was deleted. Batch3 starts from641cb2460 and covers only Trail of Halazzi280821/1309828/Toy1764 and Rite of Jan'alai's Flame280825/1309844/Toy1768.
+
+Actual physical-learning RED atbbacc0a65:0/2/54.36s, both identities absent from Toy membership. The first two compiler-only attempts used an old shared-protocol interface and are not behavioral RED. Tests now use explicit absolute Cargo patch paths to canonical shared-protocolf9a91753 and its netcode/udp vendors; retargeting the native-root symlink alone reused the stale package interface. No protocol/cache mutation or fallback path was introduced.
+
+After independent producer rerun/byte-identical two-INSERT sqldiff, lead published canonical worldb24e9a42→bd4400f4af3a7676 (Toy1764/1768) and40 fresh local-CASC files to57 no-clobber paths, channel674. Direct canonical row and every manifest-target SHA readback agree. Canonical actual learned-use admission then reproduces0/2/30.71s with `unsupported toy spell: aura 4`.
+
+Minimal repair: append only1309828/1309844 to the existing strict visual-only whitelist, retaining authored-visual/zero-payload guards. Both source roots are instant6/aura4 self cosmetics,1800000ms lifetime/3600000ms recovery. Their exact item/name/spell triples append to the census's five published extras in the same branch: named Full1166+seven, never a bare total. At1e5e55ae0, canonical targeted GREEN22/0/0ignored/76.90s covers both new identities, all13 census callers, both hearthstones/three stationary cosmetics, retained Saptor/Idol/Badge cancellation/recovery and absent-visual refusal. Exact Full1166+seven identity/name/spell checks pass in the same run. Later changes are documentation only; lead broad gate/source landing remains pending, not an aggregate/native certificate. Earlier stage labels below are historical.
+
+Assets: two M2s,nine audio and29 descendants (14anim/eight skin/seven BLP),40 newly extracted files23,177,910bytes authenticated against local70448/wow88d5e8ef05ec5a8446cdec93d142d7c6 resolution content keys. Canonical-rooted discovered closure104/104 present,0 unresolved;64 preexisting file identities remain unverified. No native footstep placement, movement-driven particles/audio, natural30-minute expiry/hour reuse or scripted-gap acceptance is inferred from CPU auras. [Contract](specs/toys.md#expanded-build70448-footstep-cosmetics).
+
+Evidence: continuation `extras-footprints-{membership-absolute-command,membership-red-absolute-result,admission-red-result,fragment,asset-fragment,publication-receipt,green-command,green-result}.json`, associated logs and private `game-engine-s12/data/extras-footprints70448-proof/`. No worker canonical publication, source-weight change or generic dummy4 admission.
+
 ## Expanded70448 stationary cosmetics: canonical CPU GREEN (2026-10-18)
 
 After rewrite670, local batch2 RED was rebased as3ded411f0 onto exact serverac36572bb; ancestry proves new master present and old parent19f7b056a absent. Historical761d7e0bf proof is not a new-history certificate. On the rewritten tree, real bag learning fails0/3/78.01s because Toy membership is absent. After lead independently reproduced/published exactly Toy1763/1765/1766, canonical admission fails0/3/59.41s with `unsupported toy spell: aura 4`.
