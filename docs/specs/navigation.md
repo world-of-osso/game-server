@@ -15,6 +15,33 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
 - [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
 
+## Nonblocking server queries
+
+- [x] Server fixed systems never perform navigation directory/tile reads, decoding or Detour queries; a worker exclusively owns its NavigationMaps.
+- [x] Pending requests retain the current route/movement, or hold position without a route; Pending is neither Blocked nor Unbaked and never permits invented/direct movement.
+- [x] Latest request per entity wins; discard stale IDs, publish a completion set in `(entity bits, request ID)` order at the start of the next fixed tick. Request ownership uses the requesting entity's Position, not an AI-type component; despawn or loss of that component cancels its route. InMap metadata remains optional, with map/teleport invalidation unchanged.
+- [x] Bound queued work and retained completions to one live request/result per entity plus one executing worker job; no unbounded wake channel.
+- [x] Preserve ordinary query success/unbaked/error results. Log worker panic/exit, explicitly fail outstanding and future requests, and never leave them Pending forever or restart silently.
+- [x] A test-only drain supports synchronous fixtures; production never drains or joins the worker during ticks. A held actual tile read cannot stop ticks; after release the real path publishes.
+
+Design/caller inventory: [navigation worker](../wiki/design/navigation-worker.md). Worker/types and Navigation::advance have held-read/route GREEN proof. Follower approach probes and eight-candidate escape batches use deferred queries; a pending probe retains prior actor state and cannot become a clear approach or replace a current route. Capture escape candidates until completion, then revalidate against current fields so a growing aura395 cannot starve its batch. Fear captures one random intent, awaits collision, runs existing main-thread clipping/LOS, then awaits its path; interruption/removal invalidates that continuation and retries keep the existing timing. Normal ground script waypoints defer smooth-path controls and commit node/start state only after controls are ready; preemption/replacement cancels their pending identity. Exact/flying paths remain query-free. No production synchronous NavigationMap access remains. Test-only direct-query inspections submit to the same worker and explicitly drain. [Scoped GREEN proof and lead-owned gate](../wiki/systems/navigation.md#navigation-worker-migration--2026-10-18).
+
+## FOLLOWER_HAZARD_REACTION_POLICY
+
+User-approved project policy, not Retail reference data. Followers detect hostile field contact using its authoritative radius at simulation `now + 50ms`, evaluated by the existing authored catalog curve and native combat reach. Constant-radius fields retain that radius; no extra prediction safety margin is added.
+
+Detection immediately submits asynchronous escape planning and starts a250ms simulation-time reaction window. The follower holds position throughout that window even if its route publishes early. On the first tick at or after detection+250ms with a published valid corridor, escape movement starts. Selected candidate corridors are used directly, without a second worker roundtrip. Candidate refreshes during the same contact do not restart the reaction clock; leaving predicted contact or changing field/map starts a new detection.
+
+If planning is still Pending at the deadline, the follower continues standing, even inside the hazard. It starts on the first tick after publication. No synchronous query, production wait/drain, invented movement or fallback is allowed. Growth may overtake a holding follower during reaction or worker delay; that is accepted, not a navigation failure. Once ready after reaction, it must escape; ordinary follow/combat may not move it back into the field. [Follower contract](follower-dungeons.md#follower_hazard_reaction_policy).
+
+## Follower hazard trace
+
+Existing `RUST_LOG=game_server::follower_hazard_trace=debug` enables diagnostic records prefixed `FOLLOWER_HAZARD_TRACE ` on the existing log subscriber. Default logging produces none. Each JSON record has `schema:1`, `event`, `simulation_s`, process-relative `monotonic_ns`, numeric `actor` and event-specific `data`. No extra flag, geometry query or gameplay decision is introduced.
+
+Events correlate predicted-contact `detected`, current-ID `query_submitted`/`query_published`, selected `corridor_adopted`, actual `hold`/`move`, physical `exit` and cancelled contacts. Field/entity bits and request IDs preserve integer identity; authoritative source expiry/cancellation is not physical escape. Submission/adoption and standalone test publication may have null simulation time rather than fabricated precision; production FixedFirst publication and hazard decisions use the same virtual clock as reaction policy. Payload construction and monotonic-clock reads occur only when the debug target is enabled.
+
+`python3 scripts/follower_hazard_trace.py SERVER_LOG OUTPUT.json` correlates detection/request/publication/adoption/physical events. It reports separate simulation/wall n/min/nearest-rank p50/p95/max distributions for usable publication, first movement and physical exit. Reused corridors published before detection are counted separately, not assigned zero latency; missing clocks/results stay unavailable. Source cancellation is censored. Early motion, an extra hold decision after readiness/deadline, and observed displacement during a hold are explicit violations. Physical-clear observations without publication+movement do not count as worker-correlated escapes. Trace observations alone do not establish stress capacity.
+
 ## C++ script ground waypoints
 
 - [x] Normal ground `MotionMaster::MovePath` uses TC a352b1fa default `PathGenerator::FindSmoothPath` surface stepping (4yd step, 0.3yd steering slop, 74-point/polygon limit), then exact creature collision-height normalization. Generic chase/home/follow/hazard queries retain their existing portal-crossing output.
@@ -43,10 +70,16 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 - `crates/los/src/bake/` — shared asset and placement collector, collision selection and global-WMO placement.
 - `crates/los/src/liquid.rs` — shared runtime/bake MH2O parser (server re-exports it).
 - `crates/navigation/` — tiled Recast bake and path-query runtime.
-- `crates/server/src/navigation.rs`, `creature_ai.rs`, `main.rs` — cached route resource, movement integration and startup plugin.
+- `crates/navigation/src/worker.rs` — bounded owned-query worker, coalescing and explicit failure results.
+- `crates/server/src/navigation.rs`, `navigation/requests.rs`, `creature_ai.rs`, `main.rs` — cached route resource, current-ID fixed publication, movement integration and startup plugin.
 
 ## Tests asserting this spec
 
+- `crates/server/src/followers/hazard_reaction_tests.rs` and native Azure prediction/escape controls — +50ms source-curve contact, no early movement before250ms, first-ready-tick movement, actual held-worker standing inside, predicted escape and actual aura cleanup. Requested policy cohort passes33/0fail/0ignored; merged-master acceptance remains lead-owned.
+
+- `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; current dispatch recheck passes all six controls.
+- `crates/server/src/navigation_blocking_io_tests.rs` — actual FIFO tile-read boundary; synchronous tick-stall RED and production-worker GREEN.
+- `crates/server/src/navigation_request_tests.rs` — pending hold/continuation, latest pose/ID, completion-set ordering and old-map invalidation controls.
 - `crates/navigation/src/bake.rs` — deterministic walkable floor and steep-slope rejection.
 - `crates/navigation/src/query.rs` — real Stockade obstacle detours with LOS-clear path segments (opt-in); actual Ruby WMO4391189/MODD753 metalplate4496145 doorway re-collected and baked from local assets, then crossed without LOS obstruction (opt-in).
 - `crates/server/src/creature_ai_tests/stockade_chase.rs` — real chase/home/waypoint/repath/unreachable-evade fixtures (opt-in), including the supported narrow arch's exact five-second boundary, reachability/victim resets and raid exemption.

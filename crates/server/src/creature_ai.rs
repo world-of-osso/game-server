@@ -60,6 +60,7 @@ type Roaming = (
     Without<crate::scripted_ai::movement::ScriptedPath>,
     Without<crate::scripted_ai::waypoint_path::PathMovement>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
+    Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 /// Active creatures that are not confused, feared or in flight: chase and leash run.
@@ -69,6 +70,7 @@ pub(crate) type ActiveUncontrolled = (
     Without<Feared>,
     Without<crate::knockback::KnockbackFlight>,
     Without<crate::scripted_ai::jump_movement::JumpMovement>,
+    Without<crate::scripted_ai::fall_movement::FallMovement>,
     Without<crate::spell_cast::charge::ChargeMovement>,
 );
 
@@ -559,7 +561,7 @@ fn waypoint_system(
                                 sample_movement_ground(ground.as_deref_mut(), Some(map), position),
                                 reached,
                             ),
-                            Step::Blocked => (from, false),
+                            Step::Pending | Step::Blocked => (from, false),
                         }
                     },
                 )
@@ -851,6 +853,7 @@ pub(crate) fn chase_system(
                 Step::Unbaked if follower_reach.is_some() => *pos,
                 Step::Unbaked => chase_step(*pos, target_pos, run_speed * dt, reach),
                 Step::Moved { position, .. } => position,
+                Step::Pending => continue,
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);
@@ -909,6 +912,7 @@ type Chaser = (
 fn no_path_evade_system(
     time: Res<Time>,
     maps: Res<MapStore>,
+    nav: Option<Res<Navigation>>,
     mut blocked: Query<
         (
             Entity,
@@ -927,6 +931,9 @@ fn no_path_evade_system(
             })
         {
             commands.entity(entity).remove::<CannotReachTarget>();
+            continue;
+        }
+        if nav.as_ref().is_some_and(|nav| nav.route_pending(entity)) {
             continue;
         }
         if map
@@ -1224,11 +1231,11 @@ fn advance_companion_route(
     };
     match nav.advance(entity, request) {
         Step::Moved { position, reached } => Some((position, reached)),
-        Step::Unbaked | Step::Blocked => None,
+        Step::Pending | Step::Unbaked | Step::Blocked => None,
     }
 }
 
-/// Follower hazard escape uses the same native movement/interest/replication writer.
+/// Planned follower movement and hazard escape share the native movement/interest/replication writer.
 pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, speed: f32) {
     let mut state = bevy::ecs::system::SystemState::<(
         MoveQueues,
@@ -1249,7 +1256,11 @@ pub(crate) fn move_follower(world: &mut World, entity: Entity, to: Position, spe
         debug!("Follower {entity} escape movement held while externally controlled");
         return;
     };
-    let stride = Stride::moving(*position, to, CreatureMotion::Run, speed);
+    let stride = if *position == to {
+        Stride::still(*position)
+    } else {
+        Stride::moving(*position, to, CreatureMotion::Run, speed)
+    };
     queues.apply(
         entity,
         &mut position,
@@ -1602,6 +1613,7 @@ pub(crate) fn return_to_spawn_system(
         (
             Without<GridDormant>,
             Without<crate::scripted_ai::jump_movement::JumpMovement>,
+            Without<crate::scripted_ai::fall_movement::FallMovement>,
             Without<crate::spell_cast::charge::ChargeMovement>,
         ),
     >,
@@ -1670,6 +1682,7 @@ pub(crate) fn return_to_spawn_system(
                     }
                     (position, reached)
                 }
+                Step::Pending => continue,
                 Step::Blocked => {
                     let stride = Stride::still(*pos);
                     queues.apply(entity, &mut pos, bearing, stride);

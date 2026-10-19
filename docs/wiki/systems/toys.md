@@ -2,6 +2,86 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Natural shared hearthstone charge coverage (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-green-first-execution-2026-10-18), [contract](../../specs/toys.md#natural-shared-hearthstone-charge-coverage): tt653211/0/check/fmt landed stationary timer coveragea989c0f3b. Final toy test/docs slice covers281136/281615 in both directions: ordinary30min shared2309 recovery allows sibling10s cast, spends its only charge and blocks original. Observed completion bounds/normal50ms updates, no private deadline/reset/clock edits. First execution7adfb7b03 GREEN4/0/78.45s covers both new directions and both retained initial/missing-bind controls. Existing machinery works; no runtime repair/fabricated RED. Lead integration/landing pending; accepted sourced boundary/gaps/native exclusions unchanged.
+
+## Ordinary30-minute/hour coverage follow-up (2026-10-18)
+
+[Current proof scope](../../toy-effects14-coverage.md#ordinary30-minutehour-coverage-follow-up-green-first-execution-2026-10-18), [contract](../../specs/toys.md#ordinary-lifetime-and-reuse-follow-up): accepted boundary docs landedec7df3660. Two existing stationary identities280820/280822 now have ordinary50ms-update tests for natural30min expiry and1h recovery/reuse using observed cast bounds, no deadline/cooldown/time-scale edits. First executione10b9562b GREEN4/0/79.19s includes both new lifecycles and existing same-ID cancellation controls. Timers already work; no behavioral RED/runtime repair was invented. Lead integration/landing pending. Other identities/native visuals and accepted three unpublished gaps remain unchanged.
+
+## Accepted sourced boundary and three named gaps (2026-10-18)
+
+[Authoritative source/code/asset matrix](../../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18), [contract](../../specs/toys.md#accepted-sourced-boundary): approved current boundary complete at Full1166+seven published70448 extras. Batch3 landed69ed3c682 after ty639209/0/check0/fmt0; feature branch cleaned. Aqir275039 `AQIR_SCRIPT_BINDING`, Libram284159 `LIBRAM_LOOT189_REWARD_BINDING` and Quill286643 `QUILL_LABYRINTH_EXIT_ACTION` remain unpublished named gaps, not false-success cast admissions. Item143823 is not a sourced Glyph reward; Quill's real92 criterion does not establish its party exit/teleport action. Native visuals and full-duration reuse remain separate follow-ups; earlier pending stages below are historical.
+
+## Expanded70448 footstep cosmetics (2026-10-18)
+
+[Current source/publication/RED matrix](../../toy-effects14-coverage.md#expanded70448-footstep-cosmetics-canonical-cpu-green-2026-10-18): batch2 landed641cb2460 and its feature branch was deleted. Trail of Halazzi280821 and Jan'alai's Flame280825 actual learning RED0/2/54.36s precedes lead's exact twoToy-row/40file publication; canonical aura4 admission RED0/2/30.71s. Only two named IDs enter existing strict visual-only machinery, with their census triples appended beside five published extras. Canonical1e5e55ae0 GREEN22/0/76.90s covers pair/all13 census/five prior toys/retained2513 case/absent-visual negative. Lead broad gate/source landing pending; no inferred native footsteps/particles, generic dummy or scripted-gap change.
+
+## Expanded70448 stationary Loa cosmetics (2026-10-18)
+
+[Current source/RED/publication matrix](../../toy-effects14-coverage.md#expanded70448-stationary-cosmetics-canonical-cpu-green-2026-10-18): on rewrittenac36572bb, actual bag-learning RED0/3/78.01s→lead three-row publication→canonical aura4 admission RED0/3/59.41s. Only three named zero-payload cosmetics enter the existing strict whitelist; their published triples extend the census extras list to five while keeping Full1166 separate. Lead reproduced/published34 local-CASC files; direct row/SHA readback agrees, native remains unproved. Canonical81c554bb1 targeted20/0/151.90s covers three new cosmetics/all13 census/three batch1 cases/absent-visual negative. Broad toy/check/fmt gate and source landing remain lead-owned; no generic dummy admission or other-five change.
+
+## Published extras and census cardinality (2026-10-18)
+
+[Current regression/correction](../../toy-effects14-coverage.md#tg578-census-regression-named-baseline-and-published-extras-2026-10-18): tg578's12 census failures and st574's additional `toys_effect_census` share one stale1166 oracle after the two-row publication. Keep Full1166 as the baseline and append only named published70448 item/name/spell triples, asserting both identities and resulting count. Exact748a5ad78 merge preserves batch1; intentionally RED batch2 tests remain isolated. Thirteen census plus three batch1 targets pending; no runtime/data change or gate success claim.
+
+## mc548c landing and expanded70448 hearthstone admission (2026-10-18)
+
+[Current landing and batch1 matrix](../../toy-effects14-coverage.md#mc548c-maxcount-landed-expanded70448-hearthstone-batch-green-2026-10-18): lead confirms coordinated MaxCount landing and merged-engine1604/0; earlier pending labels below are historical. Expanded scope starts with two70448 hearthstones whose dependencies already exist but Toy membership is missing. Selected producer3808fe58f preserves unrelated rows; authentic copied-world diff has only twoToy INSERTs. Producer RED0/2→GREEN2/0; actual learned-use CPU RED0/2 before lead publication→canonical GREEN3/0/71.90s including retained three-item2513 case. Lead published the independently reproduced two-row world fragment and16 source-authenticated audio files; direct canonical rows/SHA readback agrees. Broad tg/toy gate, source landing and native proof remain pending. Historical Full1166 denominator and5efec9c6f families preserved.
+
+## Post-guild coordinated merge target proof (2026-10-18)
+
+[Current exact merge/codec/behavior matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18): landed guild masters merged into MaxCount; protocola2b07a6 passes2 wire+2 discriminant targets, stable prior tags/new21+13; server33c9d2eb2 passes17/0 including all five regressions and MaxCount controls; engine6c00abbf4 dispatch1/0. Both engine wiki-index entries retained. Final broad mc548b/check/fmt, coordinated landing/native/full1166 remain lead-owned/pending.
+
+## mc548b five-regression recovery targeted GREEN (2026-10-18)
+
+[Current five-case proof/limits](../../toy-effects14-coverage.md#mc548b-five-regression-recovery-targeted-green-rerun-pending-2026-10-18), [root-cause matrix](inventory.md#mc548b-regression-recovery--targeted-only-2026-10-18): exactcfdfc3ee6/protocol999b52e reproduction0/5→f97c118e4 GREEN5/0/25.95s. Three failures were competing test-harness error consumers; two production fixes retain authentic quest metadata and avoid inventory work for empty grants. All original expected outcomes remain unchanged; real creation caps/typed errors/source identity remain enforced. The exact three-item Saptor/Idol/Badge cancellation/recovery test individually passed mc548b; this does not make that RED aggregate green. Lead combined rerun/landing/native/full1166 proof remains pending; no own broad rerun.
+
+## Gate548 MaxCount repair targeted GREEN; coordinated gate pending (2026-10-18)
+
+[Current Toy proof/limits](../../toy-effects14-coverage.md#gate548-maxcount-defect-coordinated-repair-targeted-green-integration-pending-2026-10-18), [inventory mechanism/source/proof](inventory.md#ownership-maxcount--implementation-and-targeted-proof-2026-10-18): genuine548 duplicate-product defect now has sourceMaxCount/shared-store/passive-bank/quest-bypass/typed-cast repair. Targeted model5/0, quest3/0, Doomsday4/0, shared-wire1/0 and native-account CPU-dispatch1/0. Real ProfessionData requires regular second-use refusal/typed ItemMaxCount; separate triggered-effect and genuine-full controls retain their distinct semantics. Three-item2513 batch retained/compiled but behavior-unexecuted. Lead combined three-repo gate, landing/native/full1166 remain pending; no source data/weights edit or own broad rerun.
+
+## Three-item shared2513 cancellation/recovery batch pending (2026-10-18)
+
+[Exact batch/limits](../../toy-effects14-coverage.md#three-item-batch-saptor685-idol702-badge710-cancellationrecovery-pending-after548-2026-10-18):604c35311 adds actual Saptor685/Idol702/Badge710 learned cancellation/restoration/no2513 bypass/ordinary600s Pango reuse. Source pools and weights untouched; prior fixtures unchanged. One future gate for three identities, uncompiled/unexecuted AFTER548 with format/manual evidence only. No Masquerade cancellation/hour-expiry/exact-wall/native/distribution certificate or runtime/data edit.
+
+## Doomsday419 ordinary recovery/product cap acceptance pending (2026-10-18)
+
+[Exact acceptance/limits](../../toy-effects14-coverage.md#doomsday419-ordinary-recovery-and-unique-product-repeat-pending-after543-2026-10-18):cb46a33f9 keeps the real first202310 product while learned202309 refuses near295s and completes again after300 ordinary seconds; source MaxCount1 must preserve original GUID/quantity rather than duplicate/replace. TC `SpellEffects.cpp:1426–1440` bounds created quantity, not necessarily root-cast admission. Old first-product/Offering fixtures unchanged. Format/manual only, uncompiled/unexecuted AFTER543; no product-use/native/bank/account-cap certificate or runtime/data/clock/inventory mutation.
+
+## Gate543 Masquerade697 landed (2026-10-18)
+
+[Exact proof/landing](../../toy-effects14-coverage.md#gate543-green-and-landed-masquerade697-cast-boundary-2026-10-18): lead receipt/ancestry confirmsa8b96f8d9 on master3accdf1a1;543server318/0/1ignored635.32s/EXIT0/FMT0/CHECK0 with exact697 test OK. Prior pending labels are historical; exact timing/interruption/hour-expiry/native/all-five/full1166 limits persist.
+
+## Masquerade697 authored cast timing acceptance pending (2026-10-18)
+
+[Exact acceptance/limits](../../toy-effects14-coverage.md#masquerade697-authored-cast-prepost-completion-acceptance-pending-after541-2026-10-18):35168319d extends existing276207/1298957 with learned-use pre/post source600ms cast boundary: no early SpellGo/appearance/category recovery, then145134/misc267626,8/one-hour aura/shared2513 and Idol refusal. Prior fixtures unchanged. Format/manual only; uncompiled/unexecuted AFTER541. No new CancelCast/runtime/data/protocol or native/exact-timing/hour-expiry/all-five claim.
+
+## Gate541 Singed593 and Pango684 landed (2026-10-18)
+
+[Current gate/landing proof](../../toy-effects14-coverage.md#gate541-green-and-landed-singed593-repair-plus-pango684-lifecycle-2026-10-18): explicit lead receipt/ancestry confirmsa6f8505f7 on server master312f5aebd;541server317/0/1ignored469.98s/EXIT0/FMT0/CHECK0 with exact593/Pango tests OK.535's genuine runtime admission failure repaired via named Singed slot, not blanketdummy. Earlier pending labels below are historical; native/full1166/all-five/hour-expiry/distribution limits persist.
+
+## Singed593 and Pango684 owned CPU verification GREEN (2026-10-18)
+
+[Exact proof/limits](../../toy-effects14-coverage.md#singed593-repair-and-pango684-cpu-verification-green-successor-landing-pending-2026-10-18): runtime5ea7efcaa at6b54512a0, canonical shared11a058cf; real535RED→focused5931/0/25.16s, own toys197/0/337.82s includes593/Pango684 and preserved Citizens/generic dummy refusals. Workspace all-targets check/fmt pass. Minimal audited Singed slot only; no blanketdummy or10186 edit.593/Pango earlier pending labels are historical; lead successor/landing receipt and native/full1166 proof remain absent.
+
+## Gate535 RED and narrow Singed admission repair pending (2026-10-18)
+
+[Exact failure/repair scope](../../toy-effects14-coverage.md#gate535-genuine-red-narrow-singed-admission-repair-pending-verification-2026-10-18): actual593 refused child dummy4;535server315/1/1ignored/EXIT101/FMT0/CHECK0, not fixture failure or landing. Authorized5ea7efcaa admits only audited1220867/slot0 through existing zero-payload visual-aura guard. TC `SpellAuraEffects.cpp:76,4836–5117` has spell-specific dummy handlers; generic dummy admission would falsely accept unresolved scripts. Citizens/Personal Anchor refusal retained. Own focused compile/test running; no GREEN/native certificate yet, Pango remains stacked.
+
+## Pango684 cancellation and shared recovery pending (2026-10-18)
+
+[Exact acceptance and limits](../../toy-effects14-coverage.md#pango684-cancellation-and-ordinary-shared-recovery-pending-after535-2026-10-18): test/spec223d0916c extends existing Pango identity with real CancelAura restoration/no shared2513 bypass, refusal near580 simulated seconds and learned Saptor success after600 ordinary seconds. No deadline/cooldown mutation; prior shared-five fixture unchanged. Format/manual only, uncompiled/unexecuted AFTER535; no all-five lifecycle, wall-duration/hour-expiry/native/weighted-frequency certificate or runtime/data edit.
+
+## Mycomancer664 landed after532; Explosive593 queued535 (2026-10-18)
+
+[Current proof and landing](../../toy-effects14-coverage.md#mycomancer664-gate532-passed-and-landed-explosive593-queued535-2026-10-18): feature8af454985 landed server masterd0e0d7fc3 per lead receipt and ancestry.532 server315/0/1ignored673.31s/EXIT0/FMT0/CHECK0 includes exact Mycomancer learned-root CPU test; native/cross-map/missing-bind/natural-recharge limits persist. Explosive38ced31bd is separately queued535, not covered by532. Earlier pending labels below are source-stage history.
+
+## Explosive593 mixed hearthstone and Singed acceptance pending (2026-10-18)
+
+[Exact acceptance and limits](../../toy-effects14-coverage.md#explosive593-mixed-hearthstone-and-singed-cpu-acceptance-pending-after532-2026-10-18): test/specbb325c6a4 preserves actual236687/root1220729 ten-second252 plus queued self64→1220867/Singed dummy4/5000ms, real learned bind/shared2309 and ordinary child expiry. Native explosion/Singed art remains unverified; no invented damage or simple-hearth substitution.25 direct cases/helper and Mycomancer unchanged. Format/manual only; uncompiled/unexecuted after532; candidatefb2bd5a88 is not landing. No runtime/data/native edit or own heavy job.
+
 ## Mycomancer664 triggered hearthstone acceptance pending (2026-10-18)
 
 [Exact acceptance and limits](../../toy-effects14-coverage.md#mycomancer664-triggered-hearthstone-acceptance-pending-after-st526-2026-10-18): test/spec37a6c0598 learns264367 and uses actual ten-second root1299014→64→instant1286909/252, checking saved-bind return, root charge2309, unchanged health/model and Corewarden refusal. Separate fixture leaves25 direct-hearth cases/helper untouched. Format/manual readability only; uncompiled/unexecuted, lead successor afterst526 required. No missing-bind/cross-map/native/natural-recharge certificate or runtime/data edit.
@@ -526,9 +606,15 @@ Source135's maintained import and actual-use omissions were reproduced before ad
 
 Noble Gardener125 now has the actual saved-bind/shared2309 contract alongside four prior holiday roots. Citizens126 remains refused at the source child's permanent Personal Anchor dummy; its new actual-learning refusal test proves no partial actor/effect or recovery spending, not a successful summon. [Exact source124–129 matrix and retained proof scopes](../../toy-effects14-coverage.md#source124129-garmentanchoraction-gaps-and-noble-gardener-2026-10-17) distinguish these from native garment/surfing/zero-entry/script appearance gaps. No production admission.
 
+## Scarab target32 grounded oracle (2026-10-18)
+
+Native92146 is SUMMON28, implicit32+0 and Attr9=0. TC Spell1614/1640–1641/9286–9292 selects MovePositionToFirstCollision, whose Object2904 calls UpdateAllowedPositionZ. Object709–748 samples height once from the computed pre-clamp elevation. Therefore the first Scarab retains the post-grounding destination, not raw `effect_dest` Y. After hi609, the old pre-grounding oracle became stale; production grounding is correctly scoped.
+
+The corrected test independently samples the same selectedXZ/pre-clampY ray, requires this actual slope to distinguish old/new height, retains exact horizontal coordinates and strict floor bits, and leaves count/scatter/follow/lifetime checks unchanged. Ignored REDbe5cd97ae reproduces the original first-destination failure39.32s; corrected strict oracle and retained controls pass17/17 144.23s at206b095ed (master641cb2460/protocolf9a9175), including10 Herald, four grounding, two Scarab and the toyfx393 prefix-matched Hearthstone. Independent full-Toy gate remains LEAD-owned. No production code changes. [Contract](../../specs/toys.md), [target32 grounding](../../specs/ramparts-herald.md#grounding-only-target32-prerequisite).
+
 ## Scarab source scatter metric (2026-10-17)
 
-The first guardian retains the exact selected destination; secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
+The first guardian retains the exact selected destination after target32 grounding (see above); secondary placements use a horizontal5yd disk with independent ground-projected elevation. A3D-distance assertion incorrectly rejected valid sloped-ground points. [Merged-artifact30-repeat reproduction, deterministic actual-terrain RED and exact scoped GREEN](../../toy-effects14-coverage.md#gate412-scarab-source-ground-metric-2026-10-17) retain5.001 unchanged and strengthen the height/first-point checks. Runtime unchanged; merged verification remains lead-owned.
 
 ## Dragon costume simulation lifecycle (2026-10-17)
 

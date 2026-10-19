@@ -1,4 +1,5 @@
 use super::*;
+use crate::guild::guild_ranks::snapshot;
 use crate::persistence::banks::{load_guild, load_guild_member_rank, save_guild_member_rank};
 use crate::persistence::{create_tables, temp_database};
 use crate::persistence_character::{create_character, set_character_guild_by_id};
@@ -14,6 +15,172 @@ fn members(db: &redb::Database) -> (u64, u64, u64) {
         save_guild_member_rank(db, id, rank);
     }
     (ids[0], ids[1], ids[2])
+}
+
+fn direct_member_rank_request(name: &str, rank: u8) -> GuildRankRequest {
+    serde_json::from_value(serde_json::json!({"SetMemberRank":{"character_name":name,"rank":rank}}))
+        .unwrap()
+}
+
+#[test]
+fn guild_member_rank_assignment_jumps_once_without_fabricated_step_logs_and_reopens() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("direct-rank.redb");
+    let db = redb::Database::create(&path).unwrap();
+    create_tables(&db);
+    let (master, officer, member) = members(&db);
+    let before = snapshot(&db, master, None);
+    let old_events = crate::guild_event_log::query(&db, master).events;
+    assert_eq!(load_guild_member_rank(&db, &load_guild(&db, 7), member), 4);
+    apply_rank_request(&db, 7, master, direct_member_rank_request("Member", 1))
+        .expect("GM direct multi-rank assignment");
+    let guild = load_guild(&db, 7);
+    assert_eq!(load_guild_member_rank(&db, &guild, member), 1);
+    assert_eq!(load_guild_member_rank(&db, &guild, master), 0);
+    assert_eq!(load_guild_member_rank(&db, &guild, officer), 1);
+    assert_eq!(snapshot(&db, master, None).ranks, before.ranks);
+    assert_eq!(
+        crate::guild_event_log::query(&db, master).events,
+        old_events
+    );
+    drop(db);
+    let reopened = redb::Database::open(&path).unwrap();
+    assert_eq!(
+        load_guild_member_rank(&reopened, &load_guild(&reopened, 7), member),
+        1
+    );
+    assert_eq!(
+        crate::guild_event_log::query(&reopened, master).events,
+        old_events
+    );
+}
+
+#[test]
+fn guild_member_rank_assignment_rechecks_direction_hierarchy_self_and_membership() {
+    for (rights, current, target, destination, expected_error) in [
+        (GUILD_RIGHT_PROMOTE, 4, "Member", 2, None),
+        (GUILD_RIGHT_DEMOTE, 2, "Member", 4, None),
+        (
+            GUILD_RIGHT_PROMOTE,
+            2,
+            "Member",
+            4,
+            Some(GuildRankError::Permissions),
+        ),
+        (
+            GUILD_RIGHT_DEMOTE,
+            4,
+            "Member",
+            2,
+            Some(GuildRankError::Permissions),
+        ),
+        (
+            GUILD_RIGHT_PROMOTE,
+            4,
+            "Member",
+            1,
+            Some(GuildRankError::RankTooHigh),
+        ),
+        (
+            GUILD_RIGHT_PROMOTE,
+            4,
+            "Member",
+            0,
+            Some(GuildRankError::RankTooHigh),
+        ),
+        (
+            GUILD_RIGHT_PROMOTE | GUILD_RIGHT_DEMOTE,
+            4,
+            "Master",
+            3,
+            Some(GuildRankError::RankTooHigh),
+        ),
+        (
+            GUILD_RIGHT_DEMOTE,
+            4,
+            "Officer",
+            3,
+            Some(GuildRankError::InvalidName),
+        ),
+        (
+            GUILD_RIGHT_DEMOTE,
+            4,
+            "Member",
+            255,
+            Some(GuildRankError::RankTooLow),
+        ),
+        (
+            GUILD_RIGHT_PROMOTE,
+            4,
+            "Outsider",
+            2,
+            Some(GuildRankError::MemberNotFound),
+        ),
+        (0, 4, "Member", 2, Some(GuildRankError::Permissions)),
+        (GUILD_RIGHT_PROMOTE, 4, "Member", 4, None),
+        (
+            GUILD_RIGHT_DEMOTE,
+            4,
+            "Member",
+            4,
+            Some(GuildRankError::Permissions),
+        ),
+    ] {
+        let db = temp_database();
+        let (master, officer, member) = members(&db);
+        let (outsider, _) = create_character(&db, 2, "Outsider", 1, 1).unwrap();
+        set_character_guild_by_id(&db, outsider, 9, "Other Guild").unwrap();
+        save_guild_member_rank(&db, member, current);
+        apply_rank_request(
+            &db,
+            7,
+            master,
+            GuildRankRequest::SetPermissions {
+                rank: 1,
+                rights,
+                gold_per_day: 0,
+            },
+        )
+        .unwrap();
+        let before = snapshot(&db, master, None);
+        let old_events = crate::guild_event_log::query(&db, master).events;
+        let result = apply_rank_request(
+            &db,
+            7,
+            officer,
+            direct_member_rank_request(target, destination),
+        );
+        assert_eq!(
+            result.err(),
+            expected_error,
+            "rights={rights} target={target} current={current} destination={destination}"
+        );
+        if expected_error.is_some() {
+            assert_eq!(snapshot(&db, master, None), before);
+        } else {
+            assert_eq!(
+                load_guild_member_rank(&db, &load_guild(&db, 7), member),
+                destination
+            );
+        }
+        assert_eq!(
+            crate::guild_event_log::query(&db, master).events,
+            old_events
+        );
+    }
+    let db = temp_database();
+    let (master, _, _) = members(&db);
+    let (unguilded, _) = create_character(&db, 2, "Unguilded", 1, 1).unwrap();
+    let before = snapshot(&db, master, None);
+    assert_eq!(
+        apply_rank_request(&db, 7, unguilded, direct_member_rank_request("Member", 1)),
+        Err(GuildRankError::NotInGuild)
+    );
+    assert_eq!(
+        apply_rank_request(&db, 7, master, direct_member_rank_request("Master", 1)),
+        Err(GuildRankError::InvalidName)
+    );
+    assert_eq!(snapshot(&db, master, None), before);
 }
 
 #[test]
@@ -139,14 +306,18 @@ fn guild_member_notes_are_filtered_per_authenticated_snapshot_recipient() {
         },
     );
     let mut world = World::new();
+    world.init_resource::<crate::ground::GroundMap>();
+    world.init_resource::<crate::area_table::AreaTable>();
     let mut queries = bevy::ecs::system::SystemState::<OnlinePlayers>::new(&mut world);
-    let online = queries.get(&world).expect("read guild online query");
+    let mut online = queries
+        .get_mut(&mut world)
+        .expect("read guild online query");
     let guild = shared::components::GuildMembership {
         guild_id: 7,
         guild_name: "Bank Testers".into(),
     };
     for (viewer, private) in [(master, "Raid healer"), (member, "")] {
-        let snapshot = visible_guild_snapshot(&db, &guild, &online, viewer);
+        let snapshot = visible_guild_snapshot(&db, &guild, &mut online, viewer);
         let target = snapshot
             .members
             .iter()

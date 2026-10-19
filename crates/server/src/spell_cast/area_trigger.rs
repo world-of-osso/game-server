@@ -1,10 +1,13 @@
 //! Spell-created area triggers, distinct from static map/quest triggers.
 //! TC a352b1fa Spell::EffectCreateAreaTrigger: one object at the destination
-//! lasting CalcDuration; effect179 retains its explicit DB2 trigger binding.
+//! lasting CalcDuration; effect179 retains its explicit DB2 trigger binding,
+//! except the finite Frozen Ground source-template binding.
 //! Aura395 uses exact aura-effect ownership and supported source template actions.
 //! Missing or unsupported source definitions never acquire guessed geometry.
 mod aura_owned;
 mod catalog;
+mod frozen_ground;
+mod vault_rune;
 
 pub(crate) use aura_owned::{on_applied as on_aura_applied, on_removed as on_aura_removed};
 pub(crate) use catalog::load_catalog as load_aura_field_catalog;
@@ -19,12 +22,21 @@ use std::collections::HashSet;
 
 pub const EFFECT_CREATE_AREATRIGGER: u32 = 179;
 
-/// Aura395 collides with the unit's source reach; effect179 keeps its spell radius.
-pub(crate) fn avoidance_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
-    if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
-        return aura_owned::collision_radius(world, entity, unit);
-    }
-    Some(world.get::<SpellAreaTrigger>(entity)?.radius)
+/// Source-bound spheres add native reach; only authored native curves advance in time.
+pub(crate) fn avoidance_radius_at(
+    world: &World,
+    entity: Entity,
+    unit: Entity,
+    at: f64,
+) -> Option<f32> {
+    let radius = if world.get::<frozen_ground::FrozenGround>(entity).is_some() {
+        frozen_ground::radius_at(world, entity, at)?
+    } else if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
+        aura_owned::radius_at(world, entity, at)?
+    } else {
+        return Some(world.get::<SpellAreaTrigger>(entity)?.radius);
+    };
+    Some(radius + crate::scripted_ai::model_reach::combat_reach(world, unit)?)
 }
 
 #[derive(Component, Debug, Clone)]
@@ -59,6 +71,14 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
             dest.orientation,
             duration,
         );
+        return;
+    }
+    if ctx.spell.id == frozen_ground::SPELL
+        && effect.misc_values[0] == frozen_ground::CREATE_PROPERTIES
+    {
+        if let Err(reason) = frozen_ground::create(world, ctx, dest.position) {
+            warn!(spell = ctx.spell.id, "Frozen Ground not created: {reason}");
+        }
         return;
     }
     let Some(map) = world.get::<InMap>(ctx.caster).copied() else {
@@ -136,6 +156,10 @@ pub(super) fn update_area_triggers(world: &mut World) {
 }
 
 fn update_trigger(world: &mut World, entity: Entity) {
+    if world.get::<frozen_ground::FrozenGround>(entity).is_some() {
+        frozen_ground::update(world, entity);
+        return;
+    }
     if world.get::<aura_owned::AuraAreaTrigger>(entity).is_some() {
         aura_owned::update(world, entity);
         return;

@@ -10,13 +10,13 @@ The process/schema regression `python3 -m unittest scripts.tests.test_db2_curves
 
 ## Private CSV roots
 
-`DB2_CSV_ROOT` selects an isolated root for `scripts/db2.py` and importer tests that use its defaults. Without this setting, the source remains the sibling engine's `data/db2`. `--csv-root` overrides the environment for the DB2 command.
+`DB2_CSV_ROOT` selects an isolated root for `scripts/db2.py` and importer tests that use its defaults. Without this setting, the source remains the sibling engine's `data/db2`. `--csv-root` overrides the environment for the DB2 command. Import also requires an explicit `--source-dir` for the separate raw Forever overlay; tests and `import-azerothcore.sh` require `FOREVER_DB2_SOURCE`. See [untracked cache paths](../scripts/reference/forever-1.60.1.70205/README.md#local-data-paths).
 
 `active/receipt.json` supplies the build at each command startup unless `--build` is explicit. A private root must contain both the build directory and its `active` link; no canonical link needs changing. The server runtime reads imported SQLite catalogs, plus active-source JSON catalogs such as renown; changing CSV links does not reimport a running server's SQLite data.
 
 ```text
 DB2_CSV_ROOT=/private/data/db2 python3 scripts/db2.py check
-DB2_CSV_ROOT=/private/data/db2 python3 scripts/db2.py import --db /private/world.db
+DB2_CSV_ROOT=/private/data/db2 python3 scripts/db2.py import --source-dir "$FOREVER_DB2_SOURCE" --db /private/world.db
 ```
 
 The achievement-goggle process fixture also reads this active receipt and requires both imported `item` and `item_sparse` build receipts to match it exactly. Mixed/stale imports and missing source goggle rows remain errors; seven real item projections are unchanged. Regression: `python3 -m unittest scripts.tests.test_achievement_goggle_fixture`.

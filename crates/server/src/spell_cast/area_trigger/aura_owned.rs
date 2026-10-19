@@ -1,6 +1,6 @@
 //! TC HandleCreateAreaTrigger REAL apply/remove: exact aura-effect ownership,
-//! attachment to its target, and source CAST/ENEMY entry/exit actions.
-use super::catalog::AuraFieldCatalog;
+//! attachment to its target, source template actions and exact supported scripts.
+use super::catalog::{AuraFieldCatalog, FieldDefinition, FieldScript};
 use super::{SpellAreaTrigger, targets};
 use crate::auras::{ActiveAuras, AuraInstance, RemoveReason, handlers};
 use crate::maps::InMap;
@@ -50,8 +50,6 @@ fn create_field(
         .get_resource::<AuraFieldCatalog>()
         .ok_or("Aura395 catalog not loaded")?;
     let definition = catalog.definition(properties)?;
-    let radius = definition.radius_at(0.0);
-    let trigger_spell = definition.trigger_spell;
     let (position, map) = read_attachment(world, aura.caster, target)
         .ok_or("Aura395 target needs a position and the same map copy as its caster")?;
     let now = crate::auras::aura_now(world);
@@ -62,26 +60,21 @@ fn create_field(
         properties,
         created_at: now,
     };
-    let trigger = build_trigger(aura, trigger_spell, radius, now);
+    let trigger = build_trigger(aura, definition, now);
     world.spawn((binding, trigger, position, map));
     Ok(())
 }
 
-fn build_trigger(
-    aura: &AuraInstance,
-    trigger_spell: u32,
-    radius: f32,
-    now: f64,
-) -> SpellAreaTrigger {
+fn build_trigger(aura: &AuraInstance, definition: &FieldDefinition, now: f64) -> SpellAreaTrigger {
     SpellAreaTrigger {
         caster: aura.caster,
         spell_id: aura.spell_id,
-        trigger_spell,
-        radius,
+        trigger_spell: definition.trigger_spell,
+        radius: definition.radius_at(0.0),
         expires_at: aura.expires_at,
         period_ms: 0,
         next_tick_at: now,
-        relation: targets::Relation::Enemy,
+        relation: definition.relation,
         depth: 1,
         cast_item_level: None,
         inside: HashSet::new(),
@@ -120,14 +113,18 @@ pub(super) fn update(world: &mut World, entity: Entity) {
         remove_field(world, entity);
         return;
     };
-    let radius = world
+    let definition = world
         .resource::<AuraFieldCatalog>()
         .definition(binding.properties)
-        .expect("created field has a supported source definition")
-        .radius_at(now - binding.created_at);
+        .expect("created field has a supported source definition");
+    let radius = definition.radius_at(now - binding.created_at);
+    let script = definition.script;
     world.entity_mut(entity).insert(position);
     world.get_mut::<SpellAreaTrigger>(entity).unwrap().radius = radius;
-    update_actions(world, entity, &trigger);
+    match script {
+        None => update_actions(world, entity, &trigger),
+        Some(FieldScript::VaultRune) => super::vault_rune::update(world, entity, &trigger),
+    }
 }
 
 fn read_live_attachment(
@@ -157,6 +154,17 @@ fn has_bound_effect(world: &World, binding: &AuraAreaTrigger) -> bool {
         })
 }
 
+pub(super) fn radius_at(world: &World, entity: Entity, at: f64) -> Option<f32> {
+    let binding = world.get::<AuraAreaTrigger>(entity)?;
+    Some(
+        world
+            .resource::<AuraFieldCatalog>()
+            .definition(binding.properties)
+            .expect("created field has a supported source definition")
+            .radius_at(at - binding.created_at),
+    )
+}
+
 /// TC IsWithinDist adds the unit's source combat reach; the trigger has no unit reach.
 pub(crate) fn collision_radius(world: &World, entity: Entity, unit: Entity) -> Option<f32> {
     let radius = world.get::<SpellAreaTrigger>(entity)?.radius;
@@ -183,7 +191,7 @@ fn eligible_units(
             let Some(radius) = collision_radius(world, entity, unit) else {
                 warn!(
                     ?unit,
-                    "Aura395 enemy collision requires source model combat reach"
+                    "Source field enemy collision requires source model combat reach"
                 );
                 return None;
             };
@@ -203,7 +211,7 @@ fn living_units_in_map(world: &mut World, map: InMap) -> Vec<(Entity, Position)>
         .collect()
 }
 
-fn update_actions(world: &mut World, entity: Entity, previous: &SpellAreaTrigger) {
+pub(super) fn update_actions(world: &mut World, entity: Entity, previous: &SpellAreaTrigger) {
     let inside = eligible_units(world, entity, previous);
     for &unit in previous.inside.difference(&inside) {
         undo_action(world, previous, unit);
@@ -222,7 +230,7 @@ fn update_actions(world: &mut World, entity: Entity, previous: &SpellAreaTrigger
     }
 }
 
-fn undo_action(world: &mut World, trigger: &SpellAreaTrigger, target: Entity) {
+pub(super) fn undo_action(world: &mut World, trigger: &SpellAreaTrigger, target: Entity) {
     crate::auras::remove_auras(world, target, RemoveReason::Cancelled, |aura| {
         aura.spell_id == trigger.trigger_spell && aura.caster == trigger.caster
     });
@@ -232,8 +240,22 @@ fn remove_field(world: &mut World, entity: Entity) {
     let Some(trigger) = world.get::<SpellAreaTrigger>(entity).cloned() else {
         return;
     };
-    for &unit in &trigger.inside {
-        undo_action(world, &trigger, unit);
+    let properties = world
+        .get::<AuraAreaTrigger>(entity)
+        .expect("owned field binding")
+        .properties;
+    let script = world
+        .resource::<AuraFieldCatalog>()
+        .definition(properties)
+        .expect("created field has a supported source definition")
+        .script;
+    match script {
+        None => {
+            for &unit in &trigger.inside {
+                undo_action(world, &trigger, unit);
+            }
+        }
+        Some(FieldScript::VaultRune) => super::vault_rune::remove(world, entity, &trigger),
     }
     world.entity_mut(entity).despawn();
 }

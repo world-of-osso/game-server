@@ -71,6 +71,8 @@ pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object
     }
 }
 
+pub(crate) mod fall_movement;
+
 pub struct ScriptedAiPlugin;
 
 impl Plugin for ScriptedAiPlugin {
@@ -87,6 +89,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
+            .add_systems(FixedPreUpdate, fall_movement::release_finished_falls)
             .add_systems(
                 FixedUpdate,
                 (
@@ -107,6 +110,11 @@ impl Plugin for ScriptedAiPlugin {
                     movement::point_movement_system.before(crate::creature_ai::chase_system),
                     waypoint_path::path_movement_system.before(crate::creature_ai::chase_system),
                     jump_movement::advance_jumps
+                        .after(movement::point_movement_system)
+                        .after(waypoint_path::path_movement_system)
+                        .before(update_creature_ai)
+                        .before(crate::creature_ai::chase_system),
+                    fall_movement::advance_falls
                         .after(movement::point_movement_system)
                         .after(waypoint_path::path_movement_system)
                         .before(update_creature_ai)
@@ -134,12 +142,13 @@ impl Plugin for ScriptedAiPlugin {
 #[derive(Component, Debug, Clone)]
 pub struct CreatureScriptName(pub String);
 
-/// A scripted phase does not call TC UpdateVictim; the pre-AI generic updater
-/// must not refresh/evade that actor until the script resumes combat updates.
+/// A scripted phase does not call TC UpdateVictim: pause active-victim projection
+/// and evade until combat updates resume. ThreatManager's reference still updates.
 #[derive(Component)]
 pub(crate) struct ScriptedVictimUpdatePaused;
 
-/// `ReactStates`: a passive creature neither attacks on sight nor picks a victim
+/// `ReactStates`: a passive creature neither attacks on sight nor projects a new attack victim.
+/// Its threat-manager current reference still updates independently
 /// (`CreatureAI::UpdateVictim` stops its attack); an aggressive one does both.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ReactState {
@@ -568,18 +577,17 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
 /// execute before committing health so lethal interception cannot produce death.
 pub(crate) fn limit_scripted_loss(
     name: Option<&CreatureScriptName>,
+    herald_unkillable: bool,
     health: f32,
     loss: f32,
 ) -> f32 {
-    if has_damage_interceptor(name) {
-        kings_rest::limit_incoming_loss(health, loss)
+    let animated_gold = name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT);
+    let protected = herald_unkillable || animated_gold;
+    if protected && loss >= health {
+        (health - 1.0).max(0.0)
     } else {
         loss
     }
-}
-
-pub(crate) fn has_damage_interceptor(name: Option<&CreatureScriptName>) -> bool {
-    name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT)
 }
 
 /// `Unit::DealDamage` → `DamageTaken` for a scripted creature.
@@ -742,6 +750,12 @@ impl Ctx<'_> {
         if target.is_some() {
             self.do_cast_at(target, spell_id, false);
         }
+    }
+
+    /// `UnitAI::SelectTarget(MaxThreat)` with default offset/predicate:
+    /// current threat-manager reference first, not numeric top or attack target.
+    pub fn select_target_max_threat(&mut self) -> Option<Entity> {
+        crate::creature_aggro::current_victim(self.world, self.me)
     }
 
     /// `UnitAI::SelectTarget(SelectTargetMethod::Random, 0, dist, playerOnly)`: a

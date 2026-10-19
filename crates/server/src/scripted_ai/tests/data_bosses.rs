@@ -9,6 +9,8 @@ mod azure_combat;
 mod azure_explosive_brand;
 #[path = "azure_frost_bomb.rs"]
 mod azure_frost_bomb;
+#[path = "azure_frozen_ground.rs"]
+mod azure_frozen_ground;
 #[path = "azure_intro.rs"]
 mod azure_intro;
 #[path = "azure_jump_charge.rs"]
@@ -17,6 +19,12 @@ mod azure_jump_charge;
 mod azure_leymor_children;
 #[path = "azure_mechanic_power.rs"]
 mod azure_mechanic_power;
+#[path = "azure_rune_callbacks.rs"]
+mod azure_rune_callbacks;
+#[path = "azure_rune_fields.rs"]
+mod azure_rune_fields;
+#[path = "azure_rune_strip.rs"]
+mod azure_rune_strip;
 #[path = "azure_sprout_death.rs"]
 mod azure_sprout_death;
 #[path = "azure_sprout_field_actions.rs"]
@@ -27,6 +35,8 @@ mod azure_sprout_fields;
 mod azure_sprouts;
 #[path = "azure_telash.rs"]
 mod azure_telash;
+#[path = "azure_telash_return.rs"]
+mod azure_telash_return;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gargolmar.rs"]
@@ -39,6 +49,22 @@ mod gizlock;
 mod gnomeregan;
 #[path = "data_bosses_group_criteria.rs"]
 mod group_criteria;
+#[path = "herald_call.rs"]
+mod herald_call;
+#[path = "herald_damage.rs"]
+mod herald_damage;
+#[path = "herald_fall.rs"]
+mod herald_fall;
+#[path = "herald_ground.rs"]
+mod herald_ground;
+#[path = "herald_intro.rs"]
+mod herald_intro;
+#[path = "herald_intro2.rs"]
+mod herald_intro2;
+#[path = "herald_min1.rs"]
+mod herald_min1;
+#[path = "herald_pair.rs"]
+mod herald_pair;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
@@ -94,7 +120,9 @@ fn bound_boss_with_catalog(
 
 /// Use the production importer on a consistent isolated snapshot, never
 /// canonical data. The TempDir stays alive until all fixture resources are loaded.
-fn prepare_encounter_database(encounter: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+pub(crate) fn prepare_encounter_database(
+    encounter: &str,
+) -> (tempfile::TempDir, std::path::PathBuf) {
     // Concurrent full-world snapshots must not consume the shared /tmp tmpfs.
     let fixture_root =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/encounter-fixtures");
@@ -2736,6 +2764,20 @@ fn engaged_slagmaw() -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
+fn slagmaw_missile_hits(h: &Harness, boss: Entity, target: Entity) -> usize {
+    h.inbox(0)
+        .log
+        .iter()
+        .filter(|event| {
+            let missile_damage =
+                event.kind == CombatLogKind::Damage && event.spell_id == Some(119433);
+            let owned_target =
+                event.source == Some(boss.to_bits()) && event.target == Some(target.to_bits());
+            missile_damage && owned_target && event.amount > 0
+        })
+        .count()
+}
+
 /// TC boss_slagmaw: Lava Spit119434 at a random threat target from1s, re-armed1s
 /// (one event per UpdateAI, waiting out each3s cast); after five, Magnaw Submerge
 /// 120384, a server-side teleport other than the last (initially West) 3s later
@@ -2752,15 +2794,49 @@ fn encounter_coverage_slagmaw_spits_five_then_submerges_and_teleports() {
     h.advance(0.15);
     assert_eq!(casting(&h, boss), Some(119434));
     let tank = h.player();
-    let full = h.health(tank).max;
-    h.advance(3.2);
-    assert_eq!(h.casts(0, boss, 119434), 1);
-    assert!(
-        h.health(tank).current < full,
-        "119433 missile damages the target area"
+    let tick = h.app.world().resource::<Time<Fixed>>().timestep();
+    let cast = h.app.world().get::<CastState>(boss).unwrap();
+    assert_eq!(cast.duration, 3.0, "DB2 CastingTimeIndex14");
+    let remaining = Duration::from_secs_f32(cast.duration - cast.elapsed);
+    let now = h.app.world().resource::<Time<Fixed>>().elapsed();
+    let complete_by = now + remaining + tick;
+    // Preserve the original fourth-spit checkpoint, independent of this flight check.
+    let fourth_spit_at = now + Duration::from_millis(14_900);
+    while h.casts(0, boss, 119434) == 0 {
+        assert!(
+            h.app.world().resource::<Time<Fixed>>().elapsed() < complete_by,
+            "three-second cast completes within its fixed-tick quantization"
+        );
+        h.advance(tick.as_secs_f32());
+        assert_eq!(slagmaw_missile_hits(&h, boss, tank), 0);
+    }
+    let launched_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    assert!(launched_at >= now + remaining, "no early cast completion");
+    let spell = h.app.world().resource::<SpellStore>().get(119434).unwrap();
+    let misc = spell.misc.as_ref().unwrap();
+    assert_eq!(misc.attributes[9] & 0x10, 0x10, "speed is delay in seconds");
+    assert_eq!(misc.speed, 1.0);
+    assert_eq!((misc.launch_delay, misc.min_duration), (0.0, 0.0));
+    let impact_at = launched_at + Duration::from_secs_f32(misc.speed);
+    while h.app.world().resource::<Time<Fixed>>().elapsed() + tick < impact_at {
+        h.advance(tick.as_secs_f32());
+        assert_eq!(
+            slagmaw_missile_hits(&h, boss, tank),
+            0,
+            "119433 cannot damage before the authored missile delay"
+        );
+    }
+    h.advance(tick.as_secs_f32());
+    assert_eq!(h.app.world().resource::<Time<Fixed>>().elapsed(), impact_at);
+    assert_eq!(
+        slagmaw_missile_hits(&h, boss, tank),
+        1,
+        "119433 damages the target exactly when its missile is due, not on a melee roll"
     );
     // Each due event runs the update after the previous3s cast ends.
-    h.advance(11.7);
+    while h.app.world().resource::<Time<Fixed>>().elapsed() < fourth_spit_at {
+        h.advance(tick.as_secs_f32());
+    }
     assert_eq!(h.casts(0, boss, 119434), 4);
     let mut waited = 0.0;
     while h.casts(0, boss, 119434) < 5 {

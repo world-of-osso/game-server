@@ -23,6 +23,8 @@ pub mod area_trigger;
 #[cfg(test)]
 mod attack_power_tests;
 #[cfg(test)]
+mod attack_restriction_tests;
+#[cfg(test)]
 mod attack_speed_tests;
 mod aura_spell_restrictions;
 #[cfg(test)]
@@ -137,6 +139,8 @@ mod excluded_caster_type_tests;
 #[cfg(test)]
 mod expel_harm_tests;
 #[cfg(test)]
+mod fel_devastation_tests;
+#[cfg(test)]
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
@@ -152,6 +156,8 @@ mod normal_allow_dead_target_tests;
 pub(crate) mod omor_orbital;
 #[cfg(test)]
 mod ordinary_dead_caster_tests;
+#[cfg(test)]
+mod prayer_of_mending_tests;
 #[cfg(test)]
 mod queued_trigger_cost_tests;
 #[cfg(test)]
@@ -180,6 +186,8 @@ mod warrior_stuns;
 pub(crate) use hit::damage_shield_hits;
 #[cfg(test)]
 mod enemy_dodge_tests;
+#[cfg(test)]
+mod label_recovery_tests;
 #[cfg(test)]
 mod linked_aura_tests;
 #[cfg(test)]
@@ -408,6 +416,8 @@ pub enum CastFailure {
     Totems(String),
     /// A created item does not fit in the bags.
     InventoryFull,
+    /// Native equip error; reported to the owner instead of a spell cast error.
+    Inventory(shared::protocol::InventoryError),
     LowCastLevel,
     CantBeDisenchanted,
     CantBeDisenchantedSkill,
@@ -418,9 +428,11 @@ pub enum CastFailure {
 }
 
 impl CastFailure {
-    pub(crate) fn to_contract(&self) -> (CastFailReason, Option<String>) {
+    pub(crate) fn to_contract(
+        &self,
+    ) -> Result<(CastFailReason, Option<String>), shared::protocol::InventoryError> {
         use CastFailReason as R;
-        match self {
+        let contract = match self {
             Self::IncorrectArea(group) => (
                 R::IncorrectArea,
                 Some(format!("Requires area group{group}")),
@@ -476,13 +488,15 @@ impl CastFailure {
             Self::Reagents(item) => (R::Reagents, Some(format!("Missing reagent: {item}"))),
             Self::Totems(tool) => (R::Totems, Some(format!("Requires {tool}"))),
             Self::InventoryFull => (R::InventoryFull, Some("Inventory is full.".into())),
+            Self::Inventory(error) => return Err(error.clone()),
             // Existing wire contract has no LOW_CASTLEVEL variant.
             Self::LowCastLevel => (R::InvalidTarget, Some("SPELL_FAILED_LOW_CASTLEVEL".into())),
             Self::CantBeDisenchanted => (R::CantBeDisenchanted, None),
             Self::CantBeDisenchantedSkill => (R::CantBeDisenchantedSkill, None),
             Self::Pet(failure) => failure.to_contract(),
             Self::Unsupported(detail) => (R::NotSupported, Some(detail.clone())),
-        }
+        };
+        Ok(contract)
     }
 }
 
@@ -633,7 +647,7 @@ impl SpellHistory {
                     .is_some_and(|&at| at > now))
     }
 
-    fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
+    pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)
     }
@@ -972,11 +986,55 @@ pub(crate) fn send_to_owner<M: lightyear::prelude::Message + Clone>(
     }
 }
 
+/// TC Spell.cpp:7648–7656 reports item-cap checks as equip errors, not CastFailed.
+pub(crate) fn send_cast_rejection(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    failure: &CastFailure,
+) {
+    match failure.to_contract() {
+        Ok((reason, detail)) => send_to_owner(
+            world,
+            caster,
+            CastFailed {
+                spell_id,
+                reason,
+                detail,
+            },
+        ),
+        Err(error) => send_inventory_rejection(world, caster, error),
+    }
+}
+
+fn send_inventory_rejection(
+    world: &mut World,
+    caster: Entity,
+    error: shared::protocol::InventoryError,
+) {
+    let Some(connection) = owner_connection(world, caster) else {
+        debug!(?caster, "Inventory rejection has no connected owner");
+        return;
+    };
+    match world.get_mut::<MessageSender<shared::protocol::InventoryError>>(connection) {
+        Some(mut sender) => sender.send::<shared::protocol::InventoryChannel>(error),
+        None => warn!(
+            ?connection,
+            "Inventory rejection has no owner message sender"
+        ),
+    }
+}
+
 /// Send to the owners of the event's source and target (once each), including
 /// guardian ancestry (`GetCharmerOrOwnerPlayerOrPlayerItself`), stamped with the server's
 /// wall clock; damage also counts on the damage meters.
 pub(crate) fn log_event(world: &mut World, mut event: CombatLogEvent) {
     event.timestamp_unix_ms = unix_millis();
+    crate::followers::pull_history::record_event(world, &event);
+    #[cfg(test)]
+    if let Some(mut observed) = world.get_resource_mut::<test_harness::ObservedCombatEvents>() {
+        observed.0.push(event.clone());
+    }
     crate::scripted_ai::bossmod::cast_event(world, &event);
     crate::damage_meter::record_damage(world, &event);
     crate::pvp::record_arena_event(world, &event);
@@ -1143,16 +1201,7 @@ pub(crate) fn receive_cast_requests(world: &mut World) {
         debug!(caster = ?owner, request = ?request, "SpellCastRequest received (SpellCastIntent)");
         if let Err((spell_id, failure)) = request_cast(world, owner, &request) {
             debug!("Cast of {spell_id} by {owner} failed: {failure:?}");
-            let (reason, detail) = failure.to_contract();
-            send_to_owner(
-                world,
-                owner,
-                CastFailed {
-                    spell_id,
-                    reason,
-                    detail,
-                },
-            );
+            send_cast_rejection(world, owner, spell_id, &failure);
         }
     }
 }
@@ -1173,16 +1222,7 @@ pub(crate) fn cast_for_player(
         witness: None,
     };
     request_cast(world, player, &request).map_err(|(spell_id, failure)| {
-        let (reason, detail) = failure.to_contract();
-        send_to_owner(
-            world,
-            player,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, player, spell_id, &failure);
         failure
     })
 }
@@ -1232,16 +1272,7 @@ fn cast_granted_with_item_context(
         });
     debug!(caster = ?caster, spell_id, result = ?result, "Granted cast acceptance result");
     if let Err(failure) = &result {
-        let (reason, detail) = failure.to_contract();
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, caster, spell_id, failure);
     }
     result
 }
@@ -1283,16 +1314,7 @@ pub(crate) fn cast_item_spell(
                 .is_some_and(|&ready| ready > now)
         });
     if cooling {
-        let (reason, detail) = CastFailure::OnCooldown.to_contract();
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, caster, spell_id, &CastFailure::OnCooldown);
         return Err(CastFailure::OnCooldown);
     }
     cast_granted_with_item_context(
@@ -1344,16 +1366,7 @@ pub(crate) fn cast_toy_spell(
     }
     let result = start_cast(world, caster, &spell, target);
     if let Err(failure) = &result {
-        let (reason, detail) = failure.to_contract();
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        send_cast_rejection(world, caster, spell_id, failure);
     }
     result
 }
@@ -1513,16 +1526,7 @@ fn start_queued_casts(world: &mut World) {
         effective_spell.cast_destination = queued.spell.cast_destination;
         effective_spell.cast_target_item_guid = queued.spell.cast_target_item_guid;
         if let Err(failure) = start_cast(world, caster, &effective_spell, queued.explicit) {
-            let (reason, detail) = failure.to_contract();
-            send_to_owner(
-                world,
-                caster,
-                CastFailed {
-                    spell_id: queued.spell.id,
-                    reason,
-                    detail,
-                },
-            );
+            send_cast_rejection(world, caster, queued.spell.id, &failure);
         }
     }
 }
@@ -1595,12 +1599,118 @@ fn check_ordinary_caster_life(
 
 /// Validate everything checked before a cast starts; returns the explicit
 /// target the spell will use.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum StartCheck {
+    Native,
+    IgnoreCastInProgress,
+    TankHealCapability,
+}
+
 fn validate_start(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     explicit: Option<Entity>,
     ignore_cast_in_progress: bool,
+) -> Result<Option<Entity>, CastFailure> {
+    let check = if ignore_cast_in_progress {
+        StartCheck::IgnoreCastInProgress
+    } else {
+        StartCheck::Native
+    };
+    validate_start_with_policy(world, caster, spell, explicit, check)
+}
+
+/// Read ordinary native cast eligibility without casting, retargeting or spending.
+#[cfg(test)]
+pub(crate) fn read_native_cast_start(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start(world, caster, spell, Some(target), false)
+}
+
+/// Planner capability only: no cast, no spend, and no mutation of native GCD clocks.
+/// All native checks remain except the in-progress veto and a bounded transient GCD.
+pub(crate) fn read_tank_heal_capability(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    tank: Entity,
+) -> Result<Option<Entity>, CastFailure> {
+    validate_start_with_policy(
+        world,
+        caster,
+        spell,
+        Some(tank),
+        StartCheck::TankHealCapability,
+    )
+}
+
+pub(crate) fn read_targets_include(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    target: Entity,
+) -> Result<bool, CastFailure> {
+    let mut pending = vec![(spell.clone(), Some(target))];
+    let mut visited = std::collections::HashSet::new();
+    while let Some((spell, explicit)) = pending.pop() {
+        if !visited.insert((spell.id, explicit)) {
+            continue;
+        }
+        for effect in handled_effects(&spell) {
+            let units = targets::select_targets(
+                world,
+                caster,
+                explicit,
+                &spell,
+                effect,
+                max_targets(&spell),
+                false,
+            )
+            .map_err(|id| {
+                CastFailure::Unsupported(format!("implicit target {id} not supported"))
+            })?;
+            if units.contains(&target) {
+                return Ok(true);
+            }
+            if let Some(child) = read_periodic_trigger(world, effect)? {
+                pending.extend(units.into_iter().map(|unit| (child.clone(), Some(unit))));
+            }
+        }
+    }
+    Ok(false)
+}
+
+fn read_periodic_trigger(
+    world: &World,
+    effect: &crate::spell_info::SpellEffect,
+) -> Result<Option<SpellInfo>, CastFailure> {
+    if effect.aura != crate::auras::handlers::PERIODIC_TRIGGER_SPELL || effect.trigger_spell == 0 {
+        return Ok(None);
+    }
+    world
+        .get_resource::<SpellStore>()
+        .and_then(|store| store.get(effect.trigger_spell))
+        .cloned()
+        .map(Some)
+        .ok_or_else(|| {
+            CastFailure::Unsupported(format!(
+                "periodic healing trigger {} lacks source metadata",
+                effect.trigger_spell
+            ))
+        })
+}
+
+fn validate_start_with_policy(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    explicit: Option<Entity>,
+    check: StartCheck,
 ) -> Result<Option<Entity>, CastFailure> {
     check_ordinary_caster_life(world, caster, spell)?;
     casting_restriction::check_cast(world, caster, spell)?;
@@ -1615,10 +1725,10 @@ fn validate_start(
     mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
-    if !ignore_cast_in_progress && world.get::<CastState>(caster).is_some() {
+    if check == StartCheck::Native && world.get::<CastState>(caster).is_some() {
         return Err(CastFailure::InProgress);
     }
-    validate_history(world, caster, spell)?;
+    validate_history(world, caster, spell, check)?;
     let cast_blocked_by_moving =
         cast_time_ms(world, caster, spell) > 0 && !cast_allows_moving(world, caster, spell);
     let channel_blocked_by_moving =
@@ -1669,7 +1779,12 @@ fn validate_caster_state(
     Ok(())
 }
 
-fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<(), CastFailure> {
+fn validate_history(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    check: StartCheck,
+) -> Result<(), CastFailure> {
     let Some(history) = world.get::<SpellHistory>(caster) else {
         return Ok(());
     };
@@ -1679,7 +1794,14 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
     if !spell.cast_ignore_cooldowns && history.school_locked(spell.school_mask(), now) {
         return Err(CastFailure::SchoolLockedOut);
     }
-    if history.on_gcd(spell, now) {
+    let gcd_ready_at = history
+        .gcd_ready_at
+        .get(&gcd_category(spell))
+        .copied()
+        .unwrap_or(now);
+    if history.on_gcd(spell, now)
+        && !permits_transient_gcd(world, caster, spell, check, gcd_ready_at)
+    {
         return Err(CastFailure::OnGlobalCooldown);
     }
     if spell.cast_ignore_cooldowns {
@@ -1697,6 +1819,20 @@ fn validate_history(world: &World, caster: Entity, spell: &SpellInfo) -> Result<
         return Err(CastFailure::NoCharges);
     }
     Ok(())
+}
+
+fn permits_transient_gcd(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    check: StartCheck,
+    ready_at: f64,
+) -> bool {
+    if check != StartCheck::TankHealCapability {
+        return false;
+    }
+    let duration = f64::from(gcd_duration_ms(world, caster, spell)) / 1000.0;
+    ready_at <= history_now(world) + duration
 }
 
 /// Line of sight evidence when a cast checks its unit target (docs/specs/line-of-sight.md).
@@ -2073,25 +2209,7 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
     {
         return;
     }
-    let base_gcd_ms = spell
-        .cooldowns
-        .as_ref()
-        .map_or(0, |cd| cd.start_recovery_ms);
-    let gcd_ms = modify(
-        world,
-        caster,
-        spell,
-        SpellModOp::StartCooldown,
-        base_gcd_ms as f32,
-    )
-    .max(0.0)
-    .round() as u32;
-    // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
-    let gcd_ms = if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
-        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
-    } else {
-        gcd_ms
-    };
+    let gcd_ms = gcd_duration_ms(world, caster, spell);
     let category = gcd_category(spell);
     if gcd_ms == 0 || category == 0 {
         return;
@@ -2115,6 +2233,28 @@ fn start_gcd(world: &mut World, caster: Entity, spell: &SpellInfo) {
             is_gcd: true,
         },
     );
+}
+
+fn gcd_duration_ms(world: &World, caster: Entity, spell: &SpellInfo) -> u32 {
+    let base_gcd_ms = spell
+        .cooldowns
+        .as_ref()
+        .map_or(0, |cd| cd.start_recovery_ms);
+    let gcd_ms = modify(
+        world,
+        caster,
+        spell,
+        SpellModOp::StartCooldown,
+        base_gcd_ms as f32,
+    )
+    .max(0.0)
+    .round() as u32;
+    // Only a 750-1500 ms GCD is modified (Spell.cpp:9195-9198).
+    if (MIN_GCD_MS..=MAX_GCD_MS).contains(&base_gcd_ms) {
+        haste_regen_gcd_ms(world, caster, spell, gcd_ms)
+    } else {
+        gcd_ms
+    }
 }
 
 /// Recheck, plan targets, spend, start cooldowns, log CastSuccess, resolve.
@@ -2412,6 +2552,9 @@ fn plan_targets(
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
         let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        if effect.implicit_targets.contains(&32) {
+            dest = targets::caster_summon_ground_destination(world, caster, spell, dest)?;
+        }
         if let Some(dest) = &mut dest {
             scripts::relocate_destination(spell.id, effect, dest);
         }
@@ -2426,6 +2569,47 @@ fn plan_targets(
     }
     hit::remove_defended_targets(world, caster, spell, &mut plan);
     Ok(plan)
+}
+
+/// Generic TRIGGER_SPELL64 runs only in LAUNCH/LAUNCH_TARGET mode
+/// (SpellEffects.cpp594–598); authored scripts keep their own hit handling.
+fn launches(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+    effect.effect == effects::EFFECT_TRIGGER_SPELL
+        && scripts::cast_effect(spell.id, effect.index).is_none()
+        && scripts::effect_handler(spell.id, effect.index).is_none()
+}
+
+/// `Spell::HandleLaunchPhase` (Spell.cpp8493–8527): launch-mode effects resolve on
+/// each planned unit when the spell launches, before any missile lands. Units
+/// that missed or were immune were already removed from the plan.
+fn resolve_launch_effects(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    plan: &TargetPlan,
+    depth: u8,
+) {
+    for planned in plan {
+        let effect = &spell.effects[planned.index];
+        if !launches(spell, effect)
+            || !scripts::effect_enabled(world, caster, spell.id, effect.index)
+        {
+            continue;
+        }
+        for &unit in &planned.units {
+            if world.get_entity(unit).is_err() {
+                continue;
+            }
+            let ctx = EffectCtx {
+                caster,
+                spell,
+                depth,
+                dest: planned.dest,
+                chain_multiplier: planned.chain_multiplier(unit),
+            };
+            queued_triggers::schedule(world, &ctx, effect, unit);
+        }
+    }
 }
 
 fn resolve_effects(
@@ -2518,8 +2702,12 @@ fn resolve_effects(
             handler(world, &ctx, effect);
             continue;
         }
-        let handler = scripts::effect_handler(spell.id, effect.index)
-            .or_else(|| effects::handler(effect.effect));
+        let handler = if launches(spell, effect) {
+            None
+        } else {
+            scripts::effect_handler(spell.id, effect.index)
+                .or_else(|| effects::handler(effect.effect))
+        };
         let hook = scripts::on_effect_hit(spell.id, effect.index);
         for &unit in units {
             if crate::auras::effect_immunity::blocks_effect(world, unit, spell, effect) {
@@ -2795,6 +2983,38 @@ pub(super) fn cast_triggered_with_item_level(
     launch_triggered_spell(world, caster, &spell, explicit, depth)
 }
 
+/// The sourced CastSpellExtraArgs values carried by a real triggered cast.
+#[derive(Default)]
+pub(crate) struct TriggeredSpellOverrides {
+    pub effect0_amount: Option<f32>,
+    pub aura_stacks: Option<u8>,
+    pub original_caster: Option<Entity>,
+}
+
+pub(crate) fn cast_triggered_with_overrides(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    explicit: Option<Entity>,
+    depth: u8,
+    values: TriggeredSpellOverrides,
+) -> bool {
+    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
+        return false;
+    };
+    spell.cast_aura_stacks = values.aura_stacks;
+    spell.cast_original_caster = values.original_caster;
+    if let Some(amount) = values.effect0_amount {
+        let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
+            warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
+            return false;
+        };
+        effect.base_points = amount;
+    }
+    // The existing missile snapshot clones the whole per-cast SpellInfo.
+    launch_triggered_spell(world, caster, &spell, explicit, depth)
+}
+
 /// Source AddSpellBP0 for Ysera's Gift's percent-of-owner-health children.
 pub(crate) fn cast_triggered_with_effect0_amount(
     world: &mut World,
@@ -2804,15 +3024,17 @@ pub(crate) fn cast_triggered_with_effect0_amount(
     depth: u8,
     amount: f32,
 ) {
-    let Some(mut spell) = load_triggered_spell(world, spell_id, depth) else {
-        return;
-    };
-    let Some(effect) = spell.effects.iter_mut().find(|effect| effect.index == 0) else {
-        warn!("Triggered spell {spell_id} skipped: effect0 override has no effect0");
-        return;
-    };
-    effect.base_points = amount;
-    launch_triggered_spell(world, caster, &spell, explicit, depth);
+    cast_triggered_with_overrides(
+        world,
+        caster,
+        spell_id,
+        explicit,
+        depth,
+        TriggeredSpellOverrides {
+            effect0_amount: Some(amount),
+            ..Default::default()
+        },
+    );
 }
 
 /// Full-mask triggered cast at an authored destination, retaining native selectors and flight.
@@ -3312,18 +3534,11 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         crate::crafting_orders::interrupt(world, caster);
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
-        let (reason, detail) = failure.to_contract();
-        // `Spell::cast` cleanup: SendCastResult to the caster, SendInterrupted to its set.
-        send_spell_failure(world, caster, spell_id, reason, None);
-        send_to_owner(
-            world,
-            caster,
-            CastFailed {
-                spell_id,
-                reason,
-                detail,
-            },
-        );
+        // Equip errors use SPELL_FAILED_DONT_REPORT, never a fabricated spell failure.
+        if let Ok((reason, _)) = failure.to_contract() {
+            send_spell_failure(world, caster, spell_id, reason, None);
+        }
+        send_cast_rejection(world, caster, spell_id, &failure);
     }
 }
 
@@ -3331,6 +3546,8 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
 mod additional_optional_power_tests;
 #[cfg(test)]
 mod class_resource_tests;
+#[cfg(test)]
+mod energizing_elixir_tests;
 #[cfg(test)]
 mod line_of_sight_tests;
 #[cfg(test)]
@@ -3348,6 +3565,8 @@ mod override_queue_tests;
 #[cfg(test)]
 mod power_drain_tests;
 #[cfg(test)]
+mod prevent_regen_tests;
+#[cfg(test)]
 mod queue_tests;
 #[cfg(test)]
 mod regen_tests;
@@ -3358,6 +3577,10 @@ mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
 #[cfg(test)]
+mod target32_grounding_tests;
+#[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod water_shield_mana_tests;

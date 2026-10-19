@@ -28,6 +28,9 @@ impl<R: BattleRng> Runtime<'_, R> {
         failed: bool,
     ) -> Result<bool, String> {
         let p = effect.params;
+        if ability == 1954 && effect.property == 54 {
+            return self.apply_poison_protocol_aura(caster, target, effect);
+        }
         if matches!(effect.property, 50 | 52 | 54) && p[0] != 0 && failed {
             return Ok(false);
         }
@@ -224,21 +227,32 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             135 => self.kill_effect(caster, ability, effect),
             136 => self.cleanse(caster),
+            145 if ability == 1989 => self.force_swap(caster, effect),
             139 | 145 => self.force_swap(target, effect),
             24 | 222 => {
                 let target = if super::rules::damages_enemy_team(ability) {
                     let order = match ability {
                         774 => (effect.order - 1) % 3 + 1,
-                        920 | 2378 => effect.order.div_ceil(2),
+                        920 | 1013 | 2378 | 2457 => effect.order.div_ceil(2),
                         _ => effect.order,
                     };
                     other_team_slot(target, order)
                 } else {
                     target
                 };
+                if ability == 2457 {
+                    //A skipped/dead/blocked pair must not drain the preceding pair's hit.
+                    let last = self.catalog.state_id("Last_HitDealt")?;
+                    self.battle.pet_mut(caster).states.insert(last, 0);
+                }
                 self.damage_effect(caster, target, ability, effect)
             }
             29 => {
+                let target = if ability == 1013 {
+                    other_team_slot(target, effect.order.div_ceil(2))
+                } else {
+                    target
+                };
                 if !self.required_states(caster, target, p[2], p[3]) {
                     return Ok(false);
                 }
@@ -288,7 +302,15 @@ impl<R: BattleRng> Runtime<'_, R> {
                 }
                 let amount =
                     f64::from(self.state(caster, "Last_HitDealt")) * f64::from(p[0]) / 100.0;
-                self.heal_pet(caster, amount);
+                if ability == 2457 {
+                    let recipient = other_team_slot(caster, effect.order / 2);
+                    if self.battle.pet(recipient).health <= 0 {
+                        return Ok(false);
+                    }
+                    self.heal_between(caster, recipient, amount);
+                } else {
+                    self.heal_pet(caster, amount);
+                }
                 Ok(true)
             }
             79 => {
@@ -328,6 +350,7 @@ impl<R: BattleRng> Runtime<'_, R> {
                 Ok(true)
             }
             50 if !self.required_states(caster, target, p[4], p[5]) => Ok(false),
+            50 if ability == 2365 => self.add_aura_effect(caster, caster, effect),
             26 | 28 | 50 | 52 | 54 | 63 => {
                 let target = if matches!(ability, 527 | 920 | 1010) && effect.property == 50 {
                     other_team_slot(target, effect.order.div_ceil(2))
@@ -405,6 +428,31 @@ impl<R: BattleRng> Runtime<'_, R> {
             pet.health = shared_health.min(pet.stats.health);
         }
         true
+    }
+    fn apply_poison_protocol_aura(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let recipient = other_team_slot(target, effect.order - 3);
+        let action_start = self
+            .events
+            .iter()
+            .rposition(
+                |event| matches!(event, Event::Used { pet, ability: 1954, .. } if *pet == caster),
+            )
+            .expect("Poison Protocol has its own ability-use event");
+        //PET_BATTLE_POISON_PROTOCOL_PER_VICTIM_CHAIN_POLICY: only this action's
+        //positive direct hit qualifies the corresponding victim's poison row.
+        let qualified = self.events[action_start + 1..].iter().any(|event| {
+            matches!(event, Event::Damage { caster: attacker, target: victim, amount, periodic: false, .. }
+                if *attacker == caster && *victim == recipient && *amount > 0)
+        });
+        if !qualified {
+            return Ok(false);
+        }
+        self.add_aura_effect(caster, recipient, effect)
     }
     fn heal_other_ally(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
         let p = effect.params;

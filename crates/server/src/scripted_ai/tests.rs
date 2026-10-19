@@ -42,7 +42,7 @@ pub(crate) fn install_fixture_ai(world: &mut World, actor: Entity, ai: Box<dyn C
 const NPC_RANDOLPH_MOLOCH: u32 = 46383;
 
 pub(super) mod cast_admission;
-mod data_bosses;
+pub(crate) mod data_bosses;
 mod dungeonach;
 mod rainfire_visibility;
 mod smart_combat;
@@ -426,6 +426,7 @@ impl Harness {
     fn advance(&mut self, secs: f32) {
         let frames = (secs / 0.05).round().max(1.0) as usize;
         for _ in 0..frames {
+            crate::navigation::drain_fixture(&mut self.app);
             self.app.update();
             for (_, connection, inbox) in &mut self.players {
                 let world = self.app.world_mut();

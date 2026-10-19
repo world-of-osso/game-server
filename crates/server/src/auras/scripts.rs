@@ -232,6 +232,8 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == 740 && effect_index == 5)
         || (spell_id == 190456 && matches!(effect_index, 1 | 3))
         || (spell_id == 31850 && effect_index == 1)
+        || (spell_id == 47788 && effect_index == 2)
+        || (spell_id == crate::spell_cast::scripts::prayer_of_mending::WARD && effect_index == 0)
         || (spell_id == 288733 && effect_index == 1)
 }
 
@@ -325,6 +327,14 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
+    scripts.0.insert(
+        super::fel_devastation::FEL_DEVASTATION,
+        AuraScript {
+            on_periodic: Some(super::fel_devastation::cast_periodic_heal),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         crate::spell_cast::blooming_infusion::BLOOMING_INFUSION,
         AuraScript {

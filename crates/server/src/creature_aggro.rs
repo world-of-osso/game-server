@@ -1,6 +1,6 @@
 //! Creature aggro (docs/specs/creature-aggro.md): hostile creatures attack
 //! players that come within their aggro radius, any creature with a threat
-//! list fights back when damaged, the top-threat unit is chased and
+//! list fights back when damaged, its threat-selected current victim is chased and
 //! auto-attacked, and a creature with no valid target left evades home.
 //!
 //! AzerothCore references: `CreatureAI::MoveInLineOfSight` (CreatureAI.cpp:166),
@@ -31,9 +31,9 @@ pub(crate) const MAX_AGGRO_RADIUS: f32 = 45.0;
 #[path = "creature_aggro_distance.rs"]
 mod attack_distance;
 pub(crate) use attack_distance::AggroDistance;
-/// `ATTACK_DISTANCE` (ObjectDefines.h:25): melee range for the threat
-/// swap threshold.
-const ATTACK_DISTANCE: f32 = 5.0;
+#[path = "creature_threat.rs"]
+mod victim;
+pub(crate) use victim::{CurrentVictim, current_victim};
 /// `Creature::CanCreatureAttack` (Creature.cpp:2741-2755): a victim farther than this
 /// from the creature's home is out of reach: the continent visibility range
 /// (`Visibility.Distance.Continents` = 100, worldserver.conf.dist:2365; under the
@@ -54,12 +54,14 @@ pub struct CreatureAggroPlugin;
 impl Plugin for CreatureAggroPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(crate::creature_sight::CreatureSightPlugin);
-        app.add_observer(replicate_woken_threat_list);
+        app.init_resource::<PendingThreatWakes>()
+            .add_observer(replicate_woken_threat_list);
         app.add_systems(
             FixedUpdate,
             (
                 aggro_on_sight_system,
                 update_victim_system,
+                publish_woken_threat_lists,
                 replicate_threat_list_system,
             )
                 .chain()
@@ -195,110 +197,115 @@ type Watchers<'w, 's> = Query<
 /// inside its level-scaled aggro radius and in its line of sight
 /// (`Creature::CanStartAttack` → `IsWithinLOSInMap`; `crate::line_of_sight`). There is
 /// no Z-difference test.
-fn aggro_on_sight_system(
-    watchers: Watchers,
-    players: Query<(Entity, &Position, &InMap), With<Player>>,
-    victims: Victims,
-    templates: Res<FactionTemplates>,
-    attack_distance: AggroDistance,
-    bodies: Query<crate::line_of_sight::BodyParts>,
-    los: Option<Res<crate::line_of_sight::LineOfSight>>,
-    time: Res<Time>,
-    mut commands: Commands,
-) {
-    let players: Vec<(Entity, Position, InMap)> = players
+#[derive(bevy::ecs::system::SystemParam)]
+struct PlayerSight<'w, 's> {
+    watchers: Watchers<'w, 's>,
+    players: Query<'w, 's, (Entity, &'static Position, &'static InMap), With<Player>>,
+    victims: Victims<'w, 's>,
+    templates: Res<'w, FactionTemplates>,
+    attack_distance: AggroDistance<'w, 's>,
+    bodies: Query<'w, 's, crate::line_of_sight::BodyParts<'static>>,
+    los: Option<Res<'w, crate::line_of_sight::LineOfSight>>,
+}
+
+impl PlayerSight<'_, '_> {
+    fn candidate_distance(&self, creature: Entity, player: Entity) -> Option<f32> {
+        let (_, position, level, scaling, faction, state, map, react) =
+            self.watchers.get(creature).ok()?;
+        if !state.is_idle()
+            || react.is_some_and(|react| *react != crate::scripted_ai::ReactState::Aggressive)
+        {
+            return None;
+        }
+        let (_, player_pos, player_map) = self.players.get(player).ok()?;
+        if player_map != map {
+            return None;
+        }
+        let (_, _, player_faction, player_level, ..) = self.victims.get(player).ok()?;
+        let player_level = player_level.map_or(1, |level| level.0);
+        let creature_level = level_for_viewer(*level, scaling, player_level);
+        // Both native model reaches are added after TC's45yd clamp.
+        let radius =
+            self.attack_distance
+                .center_radius(creature, player, creature_level, player_level)?;
+        let distance = distance(position, player_pos);
+        let hostile = self
+            .templates
+            .reaction(faction.0, player_faction.map_or(0, |faction| faction.0))
+            == Reaction::Hostile;
+        (distance < radius
+            && hostile
+            && valid_victim(&self.victims, &self.templates, faction.0, map, player))
+        .then_some(distance)
+    }
+
+    fn sees(&self, creature: Entity, player: Entity) -> bool {
+        let Ok((_, _, _, _, _, _, map, _)) = self.watchers.get(creature) else {
+            return false;
+        };
+        match (self.bodies.get(creature), self.bodies.get(player)) {
+            (Ok(me), Ok(them)) => {
+                crate::line_of_sight::unit_sees(self.los.as_deref(), *map, me, them)
+            }
+            _ => false,
+        }
+    }
+}
+
+/// Read the actual production player-acquisition predicate without adding threat.
+#[cfg(test)]
+pub(crate) fn read_player_proximity_acquisition(
+    world: &mut World,
+    creature: Entity,
+    player: Entity,
+) -> Result<bool, String> {
+    if world
+        .get_resource::<crate::line_of_sight::LineOfSight>()
+        .is_none()
+    {
+        return Err("Native acquisition proof requires actual LOS data".into());
+    }
+    let mut state = bevy::ecs::system::SystemState::<PlayerSight>::new(world);
+    let params = state
+        .get(world)
+        .map_err(|error| format!("Native player acquisition inputs unavailable: {error:?}"))?;
+    Ok(params.candidate_distance(creature, player).is_some() && params.sees(creature, player))
+}
+
+fn aggro_on_sight_system(params: PlayerSight, time: Res<Time>, mut commands: Commands) {
+    let players: Vec<(Entity, Position, InMap)> = params
+        .players
         .iter()
         .map(|(player, position, map)| (player, *position, *map))
         .collect();
     if players.is_empty() {
         return;
     }
-    for (creature, position, level, scaling, faction, state, map, react) in &watchers {
-        let aggressive =
-            react.is_none_or(|react| *react == crate::scripted_ai::ReactState::Aggressive);
-        if !state.is_idle() || !aggressive {
-            continue;
-        }
-        // Model reaches are added after TC's45yd clamp; do not truncate the
-        // center-distance candidates at the unclothed attack-distance limit.
-        let in_reach = players
+    for (creature, position, _, _, _, _, map, _) in &params.watchers {
+        let mut candidates: Vec<(Entity, f32)> = players
             .iter()
-            .filter_map(|(player, player_pos, player_map)| {
-                let distance = distance(position, player_pos);
-                (player_map == map).then_some((*player, distance))
-            });
-        let mut candidates: Vec<(Entity, f32)> = in_reach
-            .filter(|&(player, distance)| {
-                let Ok((_, _, player_faction, player_level, ..)) = victims.get(player) else {
-                    return false;
-                };
-                let player_level = player_level.map_or(1, |l| l.0);
-                // Creature::GetAttackDistance: both levels against each other.
-                let creature_level = level_for_viewer(*level, scaling, player_level);
-                let Some(radius) =
-                    attack_distance.center_radius(creature, player, creature_level, player_level)
-                else {
-                    return false;
-                };
-                let hostile = templates.reaction(faction.0, player_faction.map_or(0, |f| f.0))
-                    == Reaction::Hostile;
-                distance < radius
-                    && hostile
-                    && valid_victim(&victims, &templates, faction.0, map, player)
+            .filter_map(|(player, ..)| {
+                params
+                    .candidate_distance(creature, *player)
+                    .map(|distance| (*player, distance))
             })
             .collect();
-        // The nearest one it sees: rays only until one is seen.
+        // Preserve nearest-first LOS evaluation: stop after the first visible player.
         candidates.sort_by(|a, b| a.1.total_cmp(&b.1));
-        let seen = candidates.into_iter().find(|&(player, _)| {
-            match (bodies.get(creature), bodies.get(player)) {
-                (Ok(me), Ok(them)) => {
-                    crate::line_of_sight::unit_sees(los.as_deref(), *map, me, them)
-                }
-                _ => false,
-            }
-        });
+        let seen = candidates
+            .into_iter()
+            .find(|&(player, _)| params.sees(creature, player));
         if let Some((player, center_distance)) = seen {
             debug!(
-                creature = creature.to_bits(),
-                target = player.to_bits(),
-                map = ?map,
+                creature = creature.to_bits(), target = player.to_bits(), map = ?map,
                 creature_position = ?position,
                 target_position = ?players.iter().find(|(unit, ..)| *unit == player).map(|(_, position, _)| position),
-                center_distance,
-                simulation_secs = time.elapsed_secs_f64(),
-                "player proximity acquisition"
+                center_distance, simulation_secs = time.elapsed_secs_f64(), "player proximity acquisition"
             );
             commands.queue(move |world: &mut World| attack_start(world, creature, player));
         }
     }
 }
-
-type Engaged<'w, 's> = Query<
-    'w,
-    's,
-    (
-        Entity,
-        &'static Position,
-        &'static UnitFactionTemplate,
-        &'static mut ThreatTable,
-        &'static mut CreatureState,
-        Option<&'static mut CombatTarget>,
-        &'static InMap,
-        Option<&'static crate::scripted_ai::ReactState>,
-        Option<&'static crate::auras::ActiveAuras>,
-        (
-            Option<&'static SpawnPoint>,
-            Option<&'static LastDamagedTime>,
-        ),
-        Has<crate::scripted_ai::ScriptedVictimUpdatePaused>,
-        Option<&'static Fixate>,
-    ),
-    (
-        Without<DeathState>,
-        Without<GridDormant>,
-        Without<crate::followers::Follower>,
-    ),
->;
 
 /// `Creature::SetLastDamagedTime`: until when direct damage exempts the creature's
 /// victims from the home distance check.
@@ -345,113 +352,64 @@ pub(crate) fn within_reach_of_home(
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Fixate(pub Entity);
 
-/// `CreatureAI::UpdateVictim` / `Creature::SelectVictim`: drop threat
-/// entries that are no longer valid targets, attack the top-threat unit
-/// (a challenger needs 110% of the current target's threat in melee range,
-/// 130% beyond it: `ThreatMgr::getHostileTarget`), and evade when no valid
-/// target is left. A passive creature keeps its victim without attacking it
-/// (`CreatureAI::UpdateVictim`, `scripted_ai::Ctx::update_victim`).
-pub(crate) fn update_victim_system(
-    time: Res<Time>,
-    mut engaged: Engaged,
-    victims: Victims,
-    templates: Res<FactionTemplates>,
-    maps: Option<Res<crate::maps::MapStore>>,
-    mut commands: Commands,
-) {
-    let now = time.elapsed_secs_f64();
-    for (
-        creature,
-        position,
-        faction,
-        mut threat,
-        mut state,
-        combat_target,
-        map,
-        react,
-        auras,
-        (home, last_damaged),
-        scripted_update_paused,
-        fixate,
-    ) in &mut engaged
+/// Select through the server-owned threat reference, then project active attacks.
+pub(crate) fn update_victim_system(world: &mut World) {
+    let creatures: Vec<_> = world
+        .query_filtered::<(Entity, &CreatureState), (
+            With<ThreatTable>,
+            With<Position>,
+            With<UnitFactionTemplate>,
+            With<InMap>,
+            Without<DeathState>,
+            Without<GridDormant>,
+            Without<crate::followers::Follower>,
+        )>()
+        .iter(world)
+        .filter(|(_, state)| matches!(state, CreatureState::Pursuing { .. }))
+        .map(|(creature, _)| creature)
+        .collect();
+    for creature in creatures {
+        // ThreatManager updates independently of AI/react state (TC:216–230).
+        victim::update_reference_when_due(world, creature);
+        update_active_projection(world, creature);
+    }
+}
+
+fn update_active_projection(world: &mut World, creature: Entity) {
+    let paused = world
+        .get::<crate::scripted_ai::ScriptedVictimUpdatePaused>(creature)
+        .is_some();
+    let passive = world.get::<crate::scripted_ai::ReactState>(creature)
+        == Some(&crate::scripted_ai::ReactState::Passive);
+    if paused || passive {
+        return;
+    }
+    let Some(target) = (crate::scripted_ai::Ctx {
+        world,
+        me: creature,
+    })
+    .select_target_max_threat() else {
+        enter_evade_mode(world, creature);
+        return;
+    };
+    project_victim(world, creature, target);
+}
+
+fn project_victim(world: &mut World, creature: Entity, target: Entity) {
+    let next = CreatureState::Pursuing {
+        target: target.to_bits(),
+    };
+    if world.get::<CreatureState>(creature) != Some(&next) {
+        world.entity_mut(creature).insert(next);
+    }
+    if world
+        .get::<CombatTarget>(creature)
+        .and_then(|target| target.0)
+        != Some(target)
     {
-        let dungeon = maps
-            .as_deref()
-            .and_then(|maps| maps.map(map.map_id))
-            .is_some_and(|entry| entry.is_dungeon());
-        let CreatureState::Pursuing { target } = *state else {
-            continue;
-        };
-        if scripted_update_paused || react == Some(&crate::scripted_ai::ReactState::Passive) {
-            continue;
-        }
-        let valid = |unit: u64| {
-            Entity::try_from_bits(unit).is_some_and(|unit| {
-                valid_victim(&victims, &templates, faction.0, map, unit)
-                    && victims.get(unit).is_ok_and(|(victim, ..)| {
-                        within_reach_of_home(home, last_damaged, now, dungeon, victim)
-                    })
-            })
-        };
-        let current = valid(target).then_some(target);
-        if current.is_none() {
-            threat.remove(target);
-        }
-        while let Some(top) = threat.top_threat().map(|entry| entry.entity) {
-            if valid(top) {
-                break;
-            }
-            threat.remove(top);
-        }
-        let Some(top) = threat.top_threat().map(|entry| entry.entity) else {
-            commands.queue(move |world: &mut World| enter_evade_mode(world, creature));
-            continue;
-        };
-        let top_in_melee = Entity::try_from_bits(top)
-            .and_then(|top| victims.get(top).ok())
-            .is_some_and(|(top_pos, ..)| distance(position, top_pos) <= ATTACK_DISTANCE);
-        let taunted = auras.and_then(|auras| {
-            auras
-                .iter()
-                .filter(|aura| {
-                    aura.effects
-                        .iter()
-                        .any(|effect| effect.aura_type == crate::auras::handlers::MOD_TAUNT)
-                        && valid(aura.caster.to_bits())
-                })
-                .last()
-                .map(|aura| aura.caster.to_bits())
-        });
-        // ReselectVictim: a listed fixate target is always preferred; removing its
-        // threat reference clears the fixate.
-        let fixated = fixate
-            .map(|fixate| fixate.0.to_bits())
-            .filter(|&fixated| threat.entries().iter().any(|entry| entry.entity == fixated));
-        if fixate.is_some() && fixated.is_none() {
-            commands.entity(creature).remove::<Fixate>();
-        }
-        let Some(victim) = fixated
-            .or(taunted)
-            .or_else(|| threat.aggro_target(current, top_in_melee))
-        else {
-            continue;
-        };
-        let attacking = combat_target
-            .as_ref()
-            .is_some_and(|combat_target| combat_target.0.map(Entity::to_bits) == Some(victim));
-        if victim == target && attacking {
-            continue;
-        }
-        if victim != target {
-            *state = CreatureState::Pursuing { target: victim };
-        }
-        let victim = Entity::from_bits(victim);
-        match combat_target {
-            Some(mut combat_target) => combat_target.0 = Some(victim),
-            None => {
-                commands.entity(creature).insert(CombatTarget(Some(victim)));
-            }
-        }
+        world
+            .entity_mut(creature)
+            .insert(CombatTarget(Some(target)));
     }
 }
 
@@ -478,20 +436,34 @@ fn replicate_threat_list_system(
     }
 }
 
+#[derive(Resource, Default)]
+struct PendingThreatWakes(Vec<Entity>);
+
 fn replicate_woken_threat_list(
     event: On<Remove, GridDormant>,
-    creatures: Query<(&ThreatTable, Option<&UnitThreatList>)>,
-    dirty: Option<Res<ReplicationDirtyQueue>>,
-    mut commands: Commands,
+    mut pending: ResMut<PendingThreatWakes>,
 ) {
-    if let Ok((threat, replicated)) = creatures.get(event.entity) {
-        publish_threat_membership(
-            event.entity,
-            threat,
-            replicated,
-            dirty.as_deref(),
-            &mut commands,
-        );
+    // Removal also fires during despawn; it only nominates a possible wake.
+    pending.0.push(event.entity);
+}
+
+pub(crate) fn publish_woken_threat_lists(world: &mut World) {
+    let pending = std::mem::take(&mut world.resource_mut::<PendingThreatWakes>().0);
+    if pending.is_empty() {
+        return;
+    }
+    let mut awake =
+        world.query_filtered::<(&ThreatTable, Option<&UnitThreatList>), Without<GridDormant>>();
+    for creature in pending {
+        let Ok((threat, replicated)) = awake.get(world, creature) else {
+            continue;
+        };
+        if let Some(units) = read_changed_threat_membership(threat, replicated) {
+            world.entity_mut(creature).insert(UnitThreatList(units));
+            if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+                dirty.mark(creature);
+            }
+        }
     }
 }
 
@@ -502,16 +474,23 @@ fn publish_threat_membership(
     dirty: Option<&ReplicationDirtyQueue>,
     commands: &mut Commands,
 ) {
-    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
-    if replicated.is_some_and(|replicated| replicated.0 == units)
-        || (replicated.is_none() && units.is_empty())
-    {
+    let Some(units) = read_changed_threat_membership(threat, replicated) else {
         return;
-    }
+    };
     commands.entity(creature).insert(UnitThreatList(units));
     if let Some(dirty) = dirty {
         dirty.mark(creature);
     }
+}
+
+fn read_changed_threat_membership(
+    threat: &ThreatTable,
+    replicated: Option<&UnitThreatList>,
+) -> Option<Vec<u64>> {
+    let units: Vec<u64> = threat.entries().iter().map(|entry| entry.entity).collect();
+    let unchanged = replicated.is_some_and(|replicated| replicated.0 == units)
+        || (replicated.is_none() && units.is_empty());
+    (!unchanged).then_some(units)
 }
 
 fn distance(a: &Position, b: &Position) -> f32 {
@@ -636,6 +615,13 @@ pub(crate) fn add_school_threat(
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {
         threat.add_threat(attacker.to_bits(), amount);
     }
+    // AddThreat only forces initial selection while no current reference exists.
+    if world
+        .get::<CurrentVictim>(creature)
+        .is_none_or(|reference| reference.target.is_none())
+    {
+        let _ = current_victim(world, creature);
+    }
     let engages = world.get::<CreatureState>(creature) == Some(&CreatureState::Idle);
     if engages {
         let mut entity = world.entity_mut(creature);
@@ -727,6 +713,7 @@ pub(crate) fn enter_evade_mode(world: &mut World, creature: Entity) {
         .remove::<crate::spell_cast::SpellHistory>();
     let mut entity = world.entity_mut(creature);
     entity.insert(CreatureState::Returning);
+    entity.remove::<CurrentVictim>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }
@@ -776,6 +763,7 @@ fn remove_auras_on_evade(world: &mut World, creature: Entity) {
 /// A dying creature forgets its fight (`Creature::setDeathState` →
 /// `ClearAllThreat`, `CombatStop`), so it respawns idle.
 pub(crate) fn forget_combat(entity: &mut EntityWorldMut) {
+    entity.remove::<CurrentVictim>();
     if let Some(mut threat) = entity.get_mut::<ThreatTable>() {
         threat.reset();
     }

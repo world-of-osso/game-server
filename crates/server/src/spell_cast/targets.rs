@@ -1018,9 +1018,17 @@ pub struct Dest {
 
 /// WoW orientation of a unit (`Rotation.y` is the orientation + pi/2).
 pub fn orientation(world: &World, unit: Entity) -> f32 {
-    world
-        .get::<Rotation>(unit)
-        .map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2)
+    orientation_from_rotation(world.get::<Rotation>(unit))
+}
+
+pub(crate) fn orientation_from_rotation(rotation: Option<&Rotation>) -> f32 {
+    rotation.map_or(0.0, |rotation| rotation.y - std::f32::consts::FRAC_PI_2)
+}
+
+/// The same inclusive180° front arc used by incoming spell defenses.
+pub(crate) fn in_front_arc(victim: Vec3, attacker: Vec3, orientation: f32) -> bool {
+    let forward = Vec3::new(orientation.cos(), 0.0, -orientation.sin());
+    forward.dot(attacker - victim) >= 0.0
 }
 
 /// `dist` yards behind `target` (`TARGET_DEST_TARGET_BACK`: `CalcDirectionAngle` pi
@@ -1253,6 +1261,57 @@ pub(super) fn ground_destination(
     };
     destination.position.y = height;
     Ok(Some(destination))
+}
+
+/// Target32 Z only: TC Object.cpp698–762, Spell.cpp9286–9292. Existing XY is
+/// intentionally unchanged (TARGET32_CASTER_SUMMON_XY_UNIMPLEMENTED).
+pub(super) fn caster_summon_ground_destination(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    destination: Option<Dest>,
+) -> Result<Option<Dest>, super::CastFailure> {
+    let Some(mut destination) = destination else {
+        return Ok(None);
+    };
+    let map = world
+        .get::<crate::maps::InMap>(caster)
+        .copied()
+        .ok_or(super::CastFailure::InvalidTarget)?;
+    let can_fly = caster_can_fly(world, caster);
+    // SPELL_ATTR9_FORCE_DEST_LOCATION selects UpdateGroundPositionZ, not allowed-Z.
+    const FORCE_DEST_LOCATION: u32 = 0x1;
+    let force = super::attributes(spell, 9) & FORCE_DEST_LOCATION != 0;
+    let Some(mut ground) = world.get_resource_mut::<crate::ground::GroundMap>() else {
+        return Ok(Some(destination));
+    };
+    if let crate::ground::GroundProbe::Supported(height) =
+        ground.creature_ground_in(map, destination.position)
+    {
+        // TARGET32_HOVER_SWIM_STATE_UNIMPLEMENTED: represented dry/non-hover states only.
+        destination.position.y = if force || !can_fly {
+            height
+        } else {
+            destination.position.y.max(height)
+        };
+    }
+    // INVALID_HEIGHT/unavailable data leaves computed Z unchanged; never fail for no height.
+    Ok(Some(destination))
+}
+
+fn caster_can_fly(world: &World, caster: Entity) -> bool {
+    let gravity_disabled = world
+        .get::<crate::scripted_ai::waypoint_path::GravityDisabled>(caster)
+        .is_some();
+    let motion_can_fly = world
+        .get::<shared::components::PlayerMotion>(caster)
+        .is_some_and(|motion| {
+            motion.0
+                & (shared::components::PlayerMotion::CAN_FLY
+                    | shared::components::PlayerMotion::FLYING)
+                != 0
+        });
+    gravity_disabled || motion_can_fly
 }
 
 /// Nearby/cone/area/line selections whose radii TC compares before sharing targets.

@@ -75,16 +75,6 @@ pub(crate) fn creature_ai(world: &World, actor: Entity, name: &str) -> Option<Bo
     Some(Box::new(AnimatedGold::default()))
 }
 
-/// Source DamageTaken's pure loss adjustment, before any health/death/loot commit.
-/// Unlike Unit::SetUnkillable, this script also intercepts self-inflicted loss.
-pub(crate) fn limit_incoming_loss(health: f32, loss: f32) -> f32 {
-    if loss >= health {
-        (health - 1.0).max(0.0)
-    } else {
-        loss
-    }
-}
-
 #[derive(Default)]
 struct AnimatedGold {
     molten_cast: bool,

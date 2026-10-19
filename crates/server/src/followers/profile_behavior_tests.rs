@@ -61,7 +61,7 @@ pub(super) fn spawn_profile_fixture_with_plugins(
 
 #[test]
 fn follower_selection_is_not_engagement_but_native_attack_is() {
-    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
+    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;
     let before = h.health(enemy);
     let position = *h
@@ -100,13 +100,23 @@ fn follower_selection_is_not_engagement_but_native_attack_is() {
         h.advance(1);
     }
     assert!(
-        h.inbox
-            .log
-            .iter()
-            .any(|event| event.source == Some(unit.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::Damage),
-        "real owner attack must engage follower"
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(unit.to_bits())
+                && event.target == Some(enemy.to_bits())
+                && event.spell_id == Some(profile.attack_spell)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        }),
+        "real owner attack must engage Meredy's authored attack spell"
     );
+    for event in h.inbox.log.iter().filter(|event| {
+        event.source == Some(unit.to_bits())
+            && event.target == Some(enemy.to_bits())
+            && event.spell_id == Some(profile.attack_spell)
+            && event.kind == shared::protocol::CombatLogKind::Damage
+    }) {
+        assert!(event.amount > 0, "{event:?}");
+        assert!((0..=event.amount).contains(&event.overflow), "{event:?}");
+    }
 }
 
 #[test]
@@ -554,21 +564,23 @@ fn diagnostic_tank_chase_trace_records_victim_and_pre_stop_cached_route_at_same_
         .world_mut()
         .entity_mut(victim)
         .insert((cached, map, ModelDisplay { display_id: 35076 }));
-    let seed = h
-        .app
-        .world_mut()
-        .resource_mut::<crate::navigation::Navigation>()
-        .advance(
-            tank,
-            MoveRequest {
-                map_id: 34,
-                goal: Goal::Chase(victim.to_bits()),
-                from,
-                to: cached,
-                distance: 0.0,
-                reach: 2.0,
-            },
-        );
+    let request = MoveRequest {
+        map_id: 34,
+        goal: Goal::Chase(victim.to_bits()),
+        from,
+        to: cached,
+        distance: 0.0,
+        reach: 2.0,
+    };
+    let seed = {
+        let mut navigation = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::navigation::Navigation>();
+        let _ = navigation.advance(tank, request);
+        navigation.drain_until_idle();
+        navigation.advance(tank, request)
+    };
     assert!(matches!(seed, Step::Moved { .. }));
     *h.app.world_mut().get_mut::<Position>(victim).unwrap() = Position {
         x: 122.66,

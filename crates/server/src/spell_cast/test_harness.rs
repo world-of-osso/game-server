@@ -26,6 +26,11 @@ use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spell_data};
 use crate::stats::CharacterStats;
 
+/// Opt-in actual server combat events, including ownerless NPC self-events.
+/// Captured before owner routing; never changes production delivery or ownership.
+#[derive(Resource, Default)]
+pub(crate) struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
+
 pub(crate) struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,
@@ -221,6 +226,7 @@ pub(crate) struct Harness {
 #[derive(Default)]
 pub(crate) struct Inbox {
     pub(crate) failed: Vec<CastFailed>,
+    pub(crate) inventory_errors: Vec<shared::protocol::InventoryError>,
     pub(crate) go: Vec<SpellGo>,
     pub(crate) cooldowns: Vec<SpellCooldownUpdate>,
     pub(crate) charges: Vec<SpellChargesUpdate>,
@@ -276,6 +282,9 @@ pub(crate) fn spawn_npc(app: &mut App, x: f32) -> Entity {
                 template_id: 6,
                 name: "Kobold Vermin".into(),
             },
+            crate::zones::CreatureFlagsExtra(
+                crate::test_data::world_data().templates[&6].flags_extra,
+            ),
             // Kobold Vermin: hostile to the Human caster.
             UnitFactionTemplate(25),
             Position { x, y: 0.0, z: 0.0 },
@@ -317,6 +326,8 @@ pub(crate) fn spawn_peer_connection(app: &mut App, player: Entity, peer: u64) ->
             (
                 MessageSender::<CastFailed>::default(),
                 MessageReceiver::<CastFailed>::default(),
+                MessageSender::<shared::protocol::InventoryError>::default(),
+                MessageReceiver::<shared::protocol::InventoryError>::default(),
                 MessageSender::<SpellCooldownUpdate>::default(),
                 MessageReceiver::<SpellCooldownUpdate>::default(),
                 MessageSender::<SpellChargesUpdate>::default(),
@@ -580,11 +591,18 @@ impl Harness {
 
     pub(crate) fn advance(&mut self, frames: usize) {
         for _ in 0..frames {
+            crate::navigation::drain_fixture(&mut self.app);
             self.app.update();
             let inbox = &mut self.inbox;
             inbox
                 .failed
                 .extend(drain::<CastFailed>(&mut self.app, self.connection));
+            inbox
+                .inventory_errors
+                .extend(drain::<shared::protocol::InventoryError>(
+                    &mut self.app,
+                    self.connection,
+                ));
             inbox
                 .go
                 .extend(drain::<SpellGo>(&mut self.app, self.connection));

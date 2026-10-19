@@ -252,7 +252,12 @@ pub(crate) fn use_toy(
         );
     crate::spell_cast::cast_toy_spell(world, player, &toy, target, item_level, request).map_err(
         |failure| match failure {
-            crate::spell_cast::CastFailure::IncorrectArea(_) => failure.to_contract().1.unwrap(),
+            crate::spell_cast::CastFailure::IncorrectArea(_) => failure
+                .to_contract()
+                .expect("area failures use the spell result contract")
+                .1
+                .unwrap(),
+            crate::spell_cast::CastFailure::Inventory(error) => error.reason.message(),
             _ => format!("{failure:?}"),
         },
     )

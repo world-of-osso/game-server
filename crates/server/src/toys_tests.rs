@@ -32,6 +32,8 @@ mod group_inheritance;
 mod group_private;
 #[path = "toys_hearthstone_tests.rs"]
 mod hearthstones;
+#[path = "toys_loa_cosmetic_tests.rs"]
+mod loa_cosmetics;
 #[path = "toys_offering_kit_tests.rs"]
 mod offering_kit;
 #[path = "toys_oomgut_tests.rs"]
@@ -62,6 +64,18 @@ mod ysera;
 const FIGURINE: u32 = 32782;
 const TRANSFORM: u32 = 41301;
 const FLAG_OWNERSHIP: u32 = 38578; // The Flag of Ownership: effect 3, spell 51640.
+
+const FULL1166_BASELINE_COUNT: usize = 1166;
+// Append only after the corresponding source-exact Toy rows are published.
+const PUBLISHED_70448_TOYS: &[(u32, &str, u32)] = &[
+    (281136, "Hiveborne Hearthstone", 1310234),
+    (281615, "Shadeweaver's Hearthstone", 1311934),
+    (280820, "Loa-Blessed Victory", 1309827),
+    (280822, "Nalorakk's Strength Charm", 1309830),
+    (280823, "Feathers of Akil'zon", 1309831),
+    (280821, "Trail of Halazzi", 1309828),
+    (280825, "Rite of Jan'alai's Flame", 1309844),
+];
 
 fn setup(path: &std::path::Path) -> (Harness, u64) {
     setup_for_race(path, 1)
@@ -580,7 +594,7 @@ fn learn_effect_toy(h: &mut Harness, character: u64, item_id: u32) {
             .iter()
             .any(|result| result.operation == ToyOperation::Learn && result.error.is_none()),
         "physical toy {item_id} did not learn: {results:?}; errors: {:?}",
-        drain::<InventoryError>(&mut h.app, h.connection)
+        h.inbox.inventory_errors
     );
 }
 
@@ -4241,7 +4255,7 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
             let failure = crate::spell_cast::cast_granted(h.app.world_mut(), h.caster, spell, None)
                 .unwrap_err();
             assert_eq!(
-                failure.to_contract(),
+                failure.to_contract().unwrap(),
                 (
                     shared::spell_data::CastFailReason::IncorrectArea,
                     Some(format!("Requires area group{}", group.as_u64().unwrap()))
@@ -6559,6 +6573,16 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
         rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
     let catalog = toy_catalog::load(&conn).unwrap();
+    assert_eq!(
+        catalog.0.len(),
+        FULL1166_BASELINE_COUNT + PUBLISHED_70448_TOYS.len(),
+        "Full1166 baseline plus explicitly published build70448 toys"
+    );
+    for &(item, name, spell) in PUBLISHED_70448_TOYS {
+        let toy = catalog.0.get(&item).expect("published build70448 toy");
+        assert_eq!(toy.snapshot.name, name, "item{item}");
+        assert_eq!(toy.snapshot.spell_id, Some(spell), "item{item}");
+    }
     let (store, _) = crate::spell_info::load_spell_data(&conn).unwrap();
     let mut world = World::new();
     world.insert_resource(store);
@@ -6621,7 +6645,6 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
         }
         rows.push(serde_json::json!({"item_id":toy.snapshot.item_id,"spell_id":toy.snapshot.spell_id,"unsupported":types,"unavailable":toy_catalog::unavailable(toy,&world)}));
     }
-    assert_eq!(catalog.0.len(), 1166);
     let candidate_usable = rows
         .iter()
         .filter(|row| row["unavailable"].is_null())

@@ -130,11 +130,17 @@ pub const MOD_RATING: u32 = 189;
 pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
 pub const MOD_ATTACKER_MELEE_CRIT_CHANCE: u32 = 187;
+/// TC Unit.cpp2924: victim-owned, included before the received-crit zero clamp.
+pub const MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: u32 = 197;
+/// TC Unit.cpp2911–2914: victim aura caster must equal the actual attacker.
+pub const MOD_CRIT_CHANCE_FOR_CASTER: u32 = 306;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
 /// SPELL_AURA_MOD_BLOCK_PERCENT (SpellAuraDefines.h:138, TrinityCore a352b1fa).
 pub const MOD_BLOCK_PERCENT: u32 = 51;
+/// TC Unit.cpp2889: NPC autoattack source crit; player weapon masks remain unsupported.
+pub const MOD_WEAPON_CRIT_PERCENT: u32 = 52;
 pub const MOD_HIT_CHANCE: u32 = 54;
 pub const MOUNTED: u32 = 78;
 /// Caster-owned vehicle boarding aura; runtime support is vehicle-context-specific.
@@ -149,6 +155,8 @@ pub const MOD_CASTING_SPEED_NOT_STACK: u32 = 65;
 pub const SCHOOL_ABSORB: u32 = 69;
 pub const REFLECT_SPELLS_SCHOOL: u32 = 74;
 pub const MOD_DAMAGE_PERCENT_DONE: u32 = 79;
+/// TC HandleModPercentStat: Player-only create/base percentage, stat index or -1.
+pub const MOD_PERCENT_STAT: u32 = 80;
 /// TC Unit.cpp:6962/8110: percentage done versus creature-type mask, not school.
 pub const MOD_DAMAGE_DONE_VERSUS: u32 = 168;
 pub const WATER_BREATHING: u32 = 82;
@@ -231,6 +239,8 @@ pub const MOD_AUTOATTACK_DAMAGE: u32 = 344;
 /// SPELL_AURA_OVERRIDE_SPELL_POWER_BY_AP_PCT (SpellAuraDefines.h, TrinityCore a352b1fa).
 pub const OVERRIDE_SPELL_POWER_BY_AP_PCT: u32 = 366;
 pub const MOD_MANA_REGEN_PCT: u32 = 379;
+/// TC StatSystem.cpp863-869: MiscValue is a power bitmask, independent of amount.
+pub const PREVENT_REGENERATE_POWER: u32 = 294;
 /// SPELL_AURA_MOD_CHARGE_RECOVERY_RATE (TC a352b1fa SpellHistory.cpp1003-1005).
 pub const MOD_CHARGE_RECOVERY_RATE: u32 = 148;
 pub const MOD_MAX_CHARGES: u32 = 411;
@@ -247,6 +257,8 @@ pub const MOD_COOLDOWN_BY_HASTE_REGEN: u32 = 416;
 pub const MOD_SPELL_CATEGORY_COOLDOWN: u32 = 341;
 /// Percent faster/slower cooldown recovery, matched by the native class mask.
 pub const MOD_RECOVERY_RATE: u32 = 286;
+/// Percent cooldown recovery selected by either native SpellLabel misc value.
+pub const MOD_RECOVERY_RATE_BY_SPELL_LABEL: u32 = 143;
 pub const MOD_MAX_POWER: u32 = 418;
 pub const SET_POWER_POINT_CHARGE: u32 = 494;
 pub const LINKED: u32 = 284;
@@ -264,6 +276,7 @@ pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
 pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
+pub const DISABLE_ATTACKING_EXCEPT_ABILITIES: u32 = 264;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
@@ -298,7 +311,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
-        DISABLE_CASTING_EXCEPT_ABILITIES => CastRestriction,
+        DISABLE_CASTING_EXCEPT_ABILITIES | DISABLE_ATTACKING_EXCEPT_ABILITIES => CastRestriction,
         MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
         MOD_DETECTED_RANGE => DetectedRange,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
@@ -306,6 +319,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_ROOT
         | MOD_ROOT_2
         | MOD_STAT
+        | MOD_PERCENT_STAT
         | MOD_ARMOR_PCT_FROM_STAT
         | MOD_INCREASE_SPEED
         | MOD_DECREASE_SPEED
@@ -331,6 +345,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
         | MOD_CRIT_PCT
+        | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING
         | MASTERY
         | MOD_STAT_BONUS_PCT
@@ -396,7 +411,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_GLOBAL_COOLDOWN_BY_HASTE_REGEN
         | MOD_COOLDOWN_BY_HASTE_REGEN
         | MOD_SPELL_CATEGORY_COOLDOWN
-        | MOD_RECOVERY_RATE => SpellMod,
+        | MOD_RECOVERY_RATE
+        | MOD_RECOVERY_RATE_BY_SPELL_LABEL => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,

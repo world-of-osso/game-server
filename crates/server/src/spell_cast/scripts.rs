@@ -22,6 +22,7 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+pub(crate) mod prayer_of_mending;
 mod scourge_strike;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
@@ -62,7 +63,8 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
-    batch13::effect_handler(spell, index)
+    prayer_of_mending::effect_handler(spell, index)
+        .or_else(|| batch13::effect_handler(spell, index))
 }
 
 pub(super) use batch12::empower_gargoyles;
@@ -179,12 +181,20 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (20_538, 0) => Some(hate_to_zero),
+        (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }
         (crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::cast_absolute_zero_outbound_jump)
+        }
+        (crate::scripted_ai::azure_vault::ACTIVATE_VAULT_RUNE, 0) => {
+            Some(crate::scripted_ai::azure_vault::activate_vault_rune)
+        }
+        (crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE, 1) => {
+            Some(crate::scripted_ai::azure_vault::strip_vault_rune)
         }
         (crate::seething_parachute::PARACHUTE, 1) => {
             Some(crate::seething_parachute::reset_fall_information)
@@ -399,6 +409,9 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
+            Some(crate::scripted_ai::azure_vault::return_after_absolute_zero)
+        }
         crate::auras::ebon_might::EBON => Some(crate::auras::ebon_might::cast_self_buff),
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
@@ -434,12 +447,23 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
 pub type AreaTargetFilter = fn(&World, &SpellInfo, Option<Entity>, &mut Vec<Entity>);
 
 pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetFilter> {
+    if let Some(filter) = prayer_of_mending::area_filter(spell_id, effect_index) {
+        return Some(filter);
+    }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),
         _ => None,
+    }
+}
+
+/// TC spell_generic.cpp2015–2034: each actual20538 hit loses100% caster threat.
+fn hate_to_zero(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    if let Some(mut threat) = world.get_mut::<shared::components::ThreatTable>(caster) {
+        let amount = threat.threat_for(target.to_bits());
+        threat.add_threat(target.to_bits(), -amount);
     }
 }
 

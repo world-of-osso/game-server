@@ -57,6 +57,179 @@ fn advance_until_phase_or_ready_deadline(h: &mut Harness, telash: Entity) {
     }
 }
 
+fn assert_rune_activation_source(h: &Harness) {
+    super::azure_rune_fields::assert_native_source(h);
+    let spell = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(ACTIVATE_RUNE)
+        .unwrap();
+    assert_eq!(spell.effects.len(), 1);
+    let effect = &spell.effects[0];
+    assert_eq!(
+        (effect.index, effect.effect, effect.implicit_targets),
+        (0, 3, [22, 7])
+    );
+    let connection =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let conditions: Vec<(u32, u32, u32, u32)> = connection.prepare(
+        "SELECT SourceGroup,ConditionTypeOrReference,ConditionValue1,ConditionValue2 FROM tdb_conditions WHERE SourceTypeOrReferenceId=13 AND SourceEntry=390209",
+    ).unwrap().query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))
+        .unwrap().map(Result::unwrap).collect();
+    assert_eq!(
+        conditions,
+        vec![(1, 31, 3, 197204)],
+        "native effect0 selects Vault Rune only"
+    );
+}
+
+pub(super) fn complete_ordinary_rune_activation_phase(h: &mut Harness, telash: Entity) {
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(telash).insert(visibility);
+    h.engage(telash);
+    assert!(h.has_aura(telash, ICE_POWER));
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((60.0, PHASE_ENERGY))
+    );
+    h.advance(19.0);
+    super::azure_telash::assert_living_victim(h, telash);
+    assert_eq!(
+        completed_casts(h, telash, ACTIVATE_RUNE),
+        0,
+        "no activation before natural phase"
+    );
+    for rune in h.creatures_of(197204) {
+        assert!(!h.has_aura(rune, 388065), "no pre-applied Rune field aura");
+    }
+    advance_until_phase_or_ready_deadline(h, telash);
+    assert_eq!(completed_casts(h, telash, ABSOLUTE_ZERO), 1);
+    assert_eq!(
+        completed_casts(h, telash, ACTIVATE_RUNE),
+        1,
+        "ordinary source phase casts390209"
+    );
+    assert_eq!(
+        power_value(h.app.world(), telash, PowerType::Energy),
+        Some((0.0, PHASE_ENERGY))
+    );
+}
+
+fn activation_hit_targets(h: &Harness, telash: Entity) -> std::collections::HashSet<u64> {
+    let casts: Vec<_> = h
+        .inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == telash.to_bits() && go.spell_id == ACTIVATE_RUNE)
+        .collect();
+    assert_eq!(casts.len(), 1, "actual390209 SpellGo prerequisite");
+    casts[0].hit_targets.iter().copied().collect()
+}
+
+fn assert_rune_owns_native_field(h: &mut Harness, rune: Entity) {
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(rune)
+        .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 388065));
+    assert!(
+        aura.is_some(),
+        "ordinary390209 hit must make the eligible Rune cast388065"
+    );
+    assert_eq!(
+        aura.unwrap().caster,
+        rune,
+        "Rune, not Telash, owns child cast"
+    );
+    let fields: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<&crate::spell_cast::area_trigger::SpellAreaTrigger>()
+        .iter(h.app.world())
+        .filter(|field| field.spell_id == 388065 && field.caster == rune)
+        .collect();
+    assert_eq!(
+        fields.len(),
+        1,
+        "full native child cast creates one actual owned field"
+    );
+}
+
+#[test]
+fn azure_telash_natural_390209_activates_only_native_runes_with_rune_owned_child_casts() {
+    let (mut h, telash) = super::azure_frost_bomb::fixture();
+    assert_rune_activation_source(&h);
+    let runes = h.creatures_of(197204);
+    assert_eq!(runes.len(), 3, "actual source group0, no fabricated Rune");
+    complete_ordinary_rune_activation_phase(&mut h, telash);
+    assert_eq!(
+        activation_hit_targets(&h, telash),
+        runes.iter().map(|rune| rune.to_bits()).collect(),
+        "native effect0 hits only three197204, not caster/player"
+    );
+    for rune in runes {
+        assert_rune_owns_native_field(&mut h, rune);
+    }
+    assert!(!h.has_aura(telash, 388065));
+    assert!(!h.has_aura(h.player(), 388065));
+    assert!(!h.has_aura(h.players[1].0, 388065));
+}
+
+#[test]
+fn azure_telash_natural_390209_skips_inactive_rune_and_other_copy_without_replacing_source_aura() {
+    let (mut h, telash) = super::azure_frost_bomb::fixture();
+    assert_rune_activation_source(&h);
+    let runes = h.creatures_of(197204);
+    assert_eq!(runes.len(), 3);
+    let (active, inactive, other_copy) = (runes[0], runes[1], runes[2]);
+    crate::spell_cast::creature_cast(h.app.world_mut(), inactive, 390238, Some(inactive), true)
+        .expect("actual inactive Rune source spell, not manual aura/AT hooks");
+    assert!(h.has_aura(inactive, 390238));
+    let inactive_instance = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(inactive)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 390238)
+        .unwrap()
+        .instance_id;
+    let map = *h.app.world().get::<InMap>(h.players[1].0).unwrap();
+    let position = *h.app.world().get::<Position>(active).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(other_copy)
+        .insert((map, position));
+    complete_ordinary_rune_activation_phase(&mut h, telash);
+    assert_eq!(
+        activation_hit_targets(&h, telash),
+        std::collections::HashSet::from([active.to_bits(), inactive.to_bits()]),
+        "inactive Rune still receives source hit; another copy does not"
+    );
+    assert_rune_owns_native_field(&mut h, active);
+    assert!(!h.has_aura(inactive, 388065), "390238 prevents activation");
+    assert!(
+        !h.has_aura(other_copy, 388065),
+        "same pose in another copy cannot activate"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(inactive)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 390238)
+            .unwrap()
+            .instance_id,
+        inactive_instance,
+        "inactive source aura is neither stripped nor refreshed"
+    );
+    assert!(!h.has_aura(telash, 388065));
+    assert!(!h.has_aura(h.player(), 388065));
+}
+
 #[test]
 fn azure_telash_natural_energy_phase_waits_for_casting_and_uses_native_cost_once() {
     let (mut h, telash) = super::azure_frost_bomb::fixture();

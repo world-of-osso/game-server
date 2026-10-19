@@ -177,7 +177,7 @@ fn native_excluded_caster_aura_spell_applies_to_ordinary_npc_casts() {
     let result =
         super::creature::creature_cast(h.app.world_mut(), h.npc, SHADOW_DANCE, Some(h.npc), false);
     let failure = result.expect_err("ordinary NPC must respect native caster exclusion");
-    let (reason, detail) = failure.to_contract();
+    let (reason, detail) = failure.to_contract().unwrap();
     assert_eq!(reason, CastFailReason::InvalidTarget);
     assert_eq!(detail.as_deref(), Some("SPELL_FAILED_CASTER_AURASTATE"));
     assert!(!crate::auras::has_aura(h.app.world(), h.npc, SHADOW_DANCE));

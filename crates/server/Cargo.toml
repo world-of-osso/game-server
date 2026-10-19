@@ -5,6 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# Projected runtime ground metadata; renderer-only modules stay disabled.
+wow-chunk = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+wow-adt = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+wow-wmo = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false }
+# Static seat offsets only; activation tracks and rendering data are not needed by vehicles.
+wow-m2 = { git = "https://github.com/world-of-osso/wow-formats.git", rev = "882b2fc748c0365dad315375d0827e1f066f733f", default-features = false, features = ["attachments"] }
 shared = { git = "https://github.com/world-of-osso/shared-protocol.git", rev = "74e67cf" }
 # Read-only packet iteration and exact send-stage ordering for diagnostic census only.
 lightyear_link = { version = "0.28", optional = true, features = ["test_utils"] }

@@ -1,6 +1,7 @@
 //! TC a352b1fa Leymor intro/Sprouts/Infused Strike, Brand and Telash Frost Bomb hooks.
 //! Telash power/rune startup/first-loop clocks, first100Energy poll and outbound
-//! jump hit/first center landing are ported; return phases and rune interactions remain open.
+//! jump hit/first center landing, Rune activation and effect1 strip are ported;
+//! native AfterCast return/landing and source post-phase counters are ported.
 use bevy::prelude::*;
 use shared::components::{PowerType, UnitFlags};
 
@@ -35,10 +36,20 @@ const ABSOLUTE_ZERO_POLL_MS: u64 = 500;
 const ABSOLUTE_ZERO_POWER: f32 = 100.0;
 pub(crate) const ABSOLUTE_ZERO_CAST: u32 = 387928;
 const ABSOLUTE_ZERO_JUMP: u32 = 387981;
-const ABSOLUTE_ZERO_DAMAGE: u32 = 388008;
+pub(crate) const ABSOLUTE_ZERO_DAMAGE: u32 = 388008;
 const TELASH_JUMP_POSITION_WOW: Vec3 = Vec3::new(-5336.8003, 1066.6493, 344.32678);
+const ABSOLUTE_ZERO_JUMP_BACK: u32 = 388082;
+const ACTION_RESCHEDULE_SPELLS: i32 = 1;
+const TELASH_JUMP_BACK_POSITIONS_WOW: [Vec3; 3] = [
+    Vec3::new(-5350.0835, 1089.8976, 340.5709),
+    Vec3::new(-5310.4464, 1066.8134, 340.5967),
+    Vec3::new(-5350.3934, 1043.9323, 340.5894),
+];
 const ABSOLUTE_ZERO_SHIELD: u32 = 388084;
-const ACTIVATE_VAULT_RUNE: u32 = 390209;
+pub(crate) const ACTIVATE_VAULT_RUNE: u32 = 390209;
+const VAULT_RUNE_AT_AURA: u32 = 388065;
+const VAULT_RUNE_SHIELD: u32 = 390201;
+const INACTIVE_VAULT_RUNE: u32 = 390238;
 const AZURE_INSTANCE: &str = "instance_azure_vault";
 const STASIS: u32 = 375729;
 const LEYMOR: u32 = 186644;
@@ -94,6 +105,8 @@ pub(super) fn creature_ai(
         TELASH_SCRIPT => Some(Box::new(Telash {
             boss,
             is_in_center: false,
+            frost_bombs_remaining: 0,
+            icy_devastators_remaining: 0,
         })),
         _ => None,
     }
@@ -254,9 +267,43 @@ impl super::CreatureAi for Leymor {
 struct Telash {
     boss: super::boss_ai::BossAi,
     is_in_center: bool,
+    frost_bombs_remaining: u8,
+    icy_devastators_remaining: u8,
 }
 
 impl Telash {
+    fn cast_frost_bomb(&mut self, ctx: &mut super::Ctx) {
+        ctx.do_cast_self(FROST_BOMB_CAST);
+        self.frost_bombs_remaining -= 1;
+        if self.frost_bombs_remaining == 0 {
+            if self.icy_devastators_remaining == 1 {
+                self.boss.events.reschedule(EVENT_ICY_DEVASTATOR, 10_800);
+            }
+            return;
+        }
+        let delay = if self.frost_bombs_remaining == 2 {
+            18_200
+        } else {
+            15_800
+        };
+        self.boss.events.schedule(EVENT_FROST_BOMB, delay);
+    }
+
+    fn cast_icy_devastator(&mut self, ctx: &mut super::Ctx) {
+        let Some(target) = ctx.select_target_random(75.0, true) else {
+            return;
+        };
+        ctx.do_cast_at(Some(target), ICY_DEVASTATOR, false);
+        self.icy_devastators_remaining -= 1;
+        if self.icy_devastators_remaining == 0 {
+            if self.frost_bombs_remaining == 1 {
+                self.boss.events.reschedule(EVENT_FROST_BOMB, 7_300);
+            }
+            return;
+        }
+        self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 23_100);
+    }
+
     fn start_absolute_zero_when_ready(&mut self, ctx: &mut super::Ctx) {
         let Some(power) = read_current_primary_power(ctx.world, ctx.me) else {
             warn!(actor = ?ctx.me, "Telash phase polling requires its actual primary power");
@@ -289,22 +336,14 @@ impl super::boss_ai::BossScript for Telash {
 
     fn execute_event(&mut self, ctx: &mut super::Ctx, event_id: u32) {
         match event_id {
-            EVENT_FROST_BOMB => {
-                ctx.do_cast_self(FROST_BOMB_CAST);
-                self.boss.events.reschedule(EVENT_ICY_DEVASTATOR, 10_800);
-            }
-            EVENT_ICY_DEVASTATOR => {
-                if let Some(target) = ctx.select_target_random(75.0, true) {
-                    ctx.do_cast_at(Some(target), ICY_DEVASTATOR, false);
-                }
-            }
+            EVENT_FROST_BOMB => self.cast_frost_bomb(ctx),
+            EVENT_ICY_DEVASTATOR => self.cast_icy_devastator(ctx),
             EVENT_ABSOLUTE_ZERO => {
                 self.start_absolute_zero_when_ready(ctx);
                 self.boss.events.repeat(ABSOLUTE_ZERO_POLL_MS);
             }
             _ => {}
         }
-        // TC starts with one Frost/Icy each; post-phase action/counters remain unported.
     }
 }
 
@@ -329,6 +368,8 @@ impl super::CreatureAi for Telash {
 
     fn just_engaged_with(&mut self, ctx: &mut super::Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
+        self.frost_bombs_remaining = 1;
+        self.icy_devastators_remaining = 1;
         ctx.do_cast(ICE_POWER_PERIODIC);
         self.boss.events.schedule(EVENT_FROST_BOMB, 3_500);
         self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 14_500);
@@ -338,11 +379,29 @@ impl super::CreatureAi for Telash {
     }
 
     fn movement_inform(&mut self, ctx: &mut super::Ctx, _kind: super::MotionType, id: u32) {
-        // TC boss_telash_greywing.cpp:133–144 first-center branch; type is ignored.
-        // Return-landing actions remain a separate, not-yet-ported boundary.
-        if id == super::jump_movement::EVENT_JUMP && !self.is_in_center {
+        // TC boss_telash_greywing.cpp:133–149; actual jump arrival, type ignored.
+        if id != super::jump_movement::EVENT_JUMP {
+            return;
+        }
+        if self.is_in_center {
+            ctx.do_cast_self(ICE_POWER_PERIODIC);
+            crate::auras::remove_auras(ctx.world, ctx.me, RemoveReason::Cancelled, |aura| {
+                aura.spell_id == ABSOLUTE_ZERO_SHIELD
+            });
+            ctx.set_react_state(super::ReactState::Aggressive);
+            self.is_in_center = false;
+        } else {
             ctx.do_cast_self(ABSOLUTE_ZERO_DAMAGE);
             self.is_in_center = true;
+        }
+    }
+
+    fn do_action(&mut self, _ctx: &mut super::Ctx, action: i32) {
+        if action == ACTION_RESCHEDULE_SPELLS {
+            self.frost_bombs_remaining = 3;
+            self.icy_devastators_remaining = 2;
+            self.boss.events.schedule(EVENT_FROST_BOMB, 4_300);
+            self.boss.events.schedule(EVENT_ICY_DEVASTATOR, 15_200);
         }
     }
 
@@ -494,6 +553,88 @@ pub(crate) fn cast_absolute_zero_outbound_jump(
         Vec3::new(x, y, z),
         depth + 1,
     );
+}
+
+/// TC a352b1fa388008 AfterCast: AI/current MaxThreat guards precede both actions.
+pub(crate) fn return_after_absolute_zero(
+    world: &mut World,
+    caster: Entity,
+    _spell: &crate::spell_info::SpellInfo,
+) {
+    if world.get::<super::CreatureAiState>(caster).is_none() {
+        return;
+    }
+    let Some(victim) = (super::Ctx { world, me: caster }).select_target_max_threat() else {
+        return;
+    };
+    super::dispatch(
+        world,
+        caster,
+        super::Hook::DoAction(ACTION_RESCHEDULE_SPELLS),
+    );
+    let Some(destination) = find_nearest_telash_return_position(world, victim) else {
+        warn!(
+            ?caster,
+            ?victim,
+            "Absolute Zero return requires source victim position and combat reach"
+        );
+        return;
+    };
+    crate::spell_cast::cast_triggered_at_destination(
+        world,
+        caster,
+        ABSOLUTE_ZERO_JUMP_BACK,
+        destination,
+        1,
+    );
+}
+
+fn find_nearest_telash_return_position(world: &World, victim: Entity) -> Option<Vec3> {
+    let victim_position = crate::spell_cast::targets::position(world, victim)?;
+    let reach = super::model_reach::combat_reach(world, victim)?;
+    let points = TELASH_JUMP_BACK_POSITIONS_WOW.map(|point| {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(point.x, point.y, point.z);
+        Vec3::new(x, y, z)
+    });
+    let mut nearest = points[0];
+    let mut nearest_distance = f32::MAX;
+    for point in points {
+        // Object.cpp436–439 GetDistance(Position): reach subtraction and zero floor.
+        let distance = (victim_position.distance(point) - reach).max(0.0);
+        if distance < nearest_distance {
+            nearest_distance = distance;
+            nearest = point;
+        }
+    }
+    Some(nearest)
+}
+
+/// TC a352b1fa390209 effect0/DUMMY: source entry conditions select the Rune;
+/// inactive Runes are skipped, otherwise the hit Rune casts with implicit self.
+pub(crate) fn activate_vault_rune(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    if crate::auras::has_aura(world, target, INACTIVE_VAULT_RUNE) {
+        return;
+    }
+    if let Err(error) =
+        crate::spell_cast::creature_cast(world, target, VAULT_RUNE_AT_AURA, None, true)
+    {
+        warn!(
+            ?target,
+            ?error,
+            "Vault Rune activation could not cast native388065"
+        );
+    }
+}
+
+/// TC a352b1fa388008 effect1/DUMMY: source entry conditions select197204.
+/// Remove the field aura before the shield so native OnRemove sees live membership.
+pub(crate) fn strip_vault_rune(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    crate::auras::remove_auras(world, target, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == VAULT_RUNE_AT_AURA
+    });
+    crate::auras::remove_auras(world, target, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == VAULT_RUNE_SHIELD
+    });
 }
 
 /// OnEffectHitTarget, effect0/SPELL_EFFECT_DUMMY.

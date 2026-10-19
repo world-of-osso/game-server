@@ -1,10 +1,67 @@
 //! Ramparts bosses, TC a352b1fa. EventMap repeats anchor to dispatch.
+mod herald;
 mod omor;
+mod vazruden;
+use crate::maps::InMap;
+use crate::zones::CreatureOrigin;
 use bevy::prelude::*;
+pub(crate) use herald::{HeraldUnkillable, on_unit_death};
 use shared::components::ThreatTable;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
 use super::{CreatureAi, Ctx, DamageTaken};
+
+/// TC557–568: effect0 SCRIPT_EFFECT sends action0 to the actual hit creature.
+pub(crate) fn call_nazan(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
+    if world.get::<shared::components::Npc>(target).is_some() {
+        super::dispatch(world, target, super::Hook::DoAction(0));
+    }
+}
+
+const ACTION_OTHER_IS_DEAD: i32 = 1;
+
+/// Ordinary creature roles retain their original entry across Herald's living morph.
+fn find_source_actor(world: &mut World, map: InMap, entry: u32) -> Option<Entity> {
+    world
+        .query::<(Entity, &InMap, &CreatureOrigin)>()
+        .iter(world)
+        .find_map(|(actor, copy, origin)| {
+            (*copy == map && origin.original_entry == entry).then_some(actor)
+        })
+}
+
+/// Temporary17537 has no ordinary CreatureOrigin; its actual summoner owns the role.
+fn find_summoned_vazruden(world: &mut World, map: InMap, herald: Entity) -> Option<Entity> {
+    world
+        .query::<(
+            Entity,
+            &InMap,
+            &shared::components::Npc,
+            &crate::zones::TempSummon,
+        )>()
+        .iter(world)
+        .find_map(|(actor, copy, npc, summon)| {
+            (*copy == map && npc.template_id == 17_537 && summon.summoner == herald)
+                .then_some(actor)
+        })
+}
+
+/// TC death hooks notify the same-copy partner; only its later JustDied completes.
+fn notify_partner_death(ctx: &mut Ctx, entry: u32) {
+    let map = ctx.map().expect("registered Ramparts actor map");
+    let partner = if entry == 17_537 {
+        find_summoned_vazruden(ctx.world, map, ctx.me)
+    } else {
+        find_source_actor(ctx.world, map, entry)
+    };
+    if let Some(partner) = partner {
+        super::dispatch(
+            ctx.world,
+            partner,
+            super::Hook::DoAction(ACTION_OTHER_IS_DEAD),
+        );
+    }
+}
 
 const SCRIPT: &str = "boss_watchkeeper_gargolmar";
 const TAUNT: u32 = 1;
@@ -15,6 +72,8 @@ const RETALIATION: u32 = 22857;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     matches!(name, SCRIPT | "boss_omor_the_unscarred")
+        || name == herald::SCRIPT
+        || name == vazruden::SCRIPT
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -26,7 +85,14 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     if instance != "instance_ramparts" {
         return None;
     }
-    if world.get::<super::CreatureScriptName>(actor)?.0 == "boss_omor_the_unscarred" {
+    let script = &world.get::<super::CreatureScriptName>(actor)?.0;
+    if script == herald::SCRIPT {
+        return Some(Box::new(herald::HeraldIntro::default()));
+    }
+    if script == vazruden::SCRIPT {
+        return Some(vazruden::creature_ai());
+    }
+    if script == "boss_omor_the_unscarred" {
         return Some(omor::creature_ai());
     }
     Some(Box::new(Gargolmar {

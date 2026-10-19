@@ -4,6 +4,8 @@ World creatures attack players: hostile creatures aggro players that come near, 
 
 ## What it must do
 
+A dormant creature's threat membership publishes only after it actually survives awake. Despawn or re-sleep during the same structural transition must not publish a wake or queue component insertion on a removed entity. Owner disconnect still unsummons orphan followers normally.
+
 ### Who takes part (`AggroMode`, from `creature_template` at load)
 
 - [x] Critters (`type` 8), non-combat pets (`type` 12), triggers (`flags_extra` 0x80), `IMMUNE_TO_PC` units (`unit_flags` 0x100) and `npc_training_dummy` creatures have no threat list: they never aggro, never chase and never swing, however they are attacked.
@@ -36,9 +38,14 @@ World creatures attack players: hostile creatures aggro players that come near, 
 - Damage and healing apply active school-matching `SPELL_AURA_MOD_THREAT` (10), including Righteous Fury when applied (`ThreatManager.cpp:677-730`). Physical swings use the physical school.
 - `ThreatUpdate` sends the complete descending creature table only to its engaged players; unchanged tables are not re-sent, changes coalesce at most every 250 ms. New engaged connections receive current state. Removed membership, reset, death or despawn sends an empty table to previous recipients (`ThreatManager.cpp:829-875`, `ThreatClear` / `ThreatUpdate`). Entries include identity, raw threat, threat status and percentages relative to the current victim and 110%/130% aggro thresholds.
 
-- [x] The creature attacks the highest-threat valid unit; a challenger takes over only above 110% of the current target's threat inside 5 yards, 130% beyond.
+- [x] `THREAT_CURRENT_VICTIM_RESELECTION`: keep a server-owned threat current-victim reference, distinct from active attack/chase projection. TC a352b1fa `ThreatManager.cpp:216–248,581–657` and `ThreatManager.h:86` require periodic1000ms reselection even while passive and lazy refresh when absent/offline. Passive reselection must not start attacks/chase. Active aggro projects the reference into existing CreatureState and CombatTarget; scripted MaxThreat uses current-reference-first ordering (`UnitAI.cpp:319–348`).
+- [x] Available fixate wins; taunt priority precedes ordinary threat. Otherwise retain the incumbent at exact110% melee and130% ranged; only strict excess switches (`ThreatManager.cpp:620–626,674–681`). If the highest candidate is ranged below130%, a lower-ranked melee candidate above110% can win. Melee geometry uses the candidate's authored combat reach and the actor's native autoattack range (`Unit.cpp:691–710`), not a universal5yd center cutoff. Unavailable references do not win selection; reset/death/clear must not retain a stale current reference.
 - [x] A target that dies is dropped from the threat list.
 - [ ] Ghosts, players on a flight path, despawned units and units the creature's faction cannot attack are dropped the same way (same check as aggro on sight; not asserted on an engaged creature).
+
+### Taunt timing qualification
+
+`TAUNT_IMMEDIACY_RETAIL_UNVERIFIED`: pinned TC a352b1fa `TauntUpdate`/`EffectTaunt` and their complete selection-relevant call chain do not force current-victim reselection for an already-engaged target with a healthy listed rival. Native Provoke observations therefore cross the1000ms periodic deadline while retaining every threat/identity/expiry assertion. Retail taunt appears immediate in play; parity with that observed timing is **not verified**. This is user-awareness state, not authorization for a product timing change. Complete source excerpts and dual-head gate evidence accompany the feature packet.
 
 ### Chase and melee
 

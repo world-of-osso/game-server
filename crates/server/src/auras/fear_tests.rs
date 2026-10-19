@@ -113,6 +113,38 @@ fn assert_flees_then_stops(mut h: Harness, caster: Entity, victim: Entity) {
 }
 
 #[test]
+fn navigation_deferred_fear_holds_until_collision_and_path_publication() {
+    let (mut h, _dir) = fleeing_harness();
+    let (caster, victim) = (h.caster, h.npc);
+    start_fleeing(&mut h, victim, caster);
+    h.app
+        .world_mut()
+        .resource_mut::<Time>()
+        .advance_by(std::time::Duration::from_millis(50));
+    let before = *h.app.world().get::<Position>(victim).unwrap();
+    super::fleeing::update(h.app.world_mut());
+    assert_eq!(
+        *h.app.world().get::<Position>(victim).unwrap(),
+        before,
+        "unpublished collision and path cannot move a feared unit"
+    );
+    crate::navigation::drain_fixture(&mut h.app);
+    super::fleeing::update(h.app.world_mut());
+    assert_eq!(
+        *h.app.world().get::<Position>(victim).unwrap(),
+        before,
+        "collision completion alone is not a published path"
+    );
+    crate::navigation::drain_fixture(&mut h.app);
+    super::fleeing::update(h.app.world_mut());
+    let after = *h.app.world().get::<Position>(victim).unwrap();
+    assert!(
+        after.x > before.x,
+        "published real route must flee away: {after:?}"
+    );
+}
+
+#[test]
 fn fear_native_creature_flees_on_navmesh_and_stops_on_removal() {
     let (h, _dir) = fleeing_harness();
     let (caster, victim) = (h.caster, h.npc);

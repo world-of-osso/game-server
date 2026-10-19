@@ -1,4 +1,4 @@
-//! Source-defined aura395 spheres. Unsupported scripts, shapes and curve modes
+//! Source-defined aura395 spheres and the finite Frozen Ground effect179 binding. Unsupported scripts, shapes and curve modes
 //! remain explicit errors; they never acquire a guessed radius or curve type.
 use std::collections::HashMap;
 
@@ -8,8 +8,15 @@ use rusqlite::Connection;
 #[derive(Resource)]
 pub(crate) struct AuraFieldCatalog(HashMap<u32, Result<FieldDefinition, String>>);
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum FieldScript {
+    VaultRune,
+}
+
 pub(super) struct FieldDefinition {
     pub trigger_spell: u32,
+    pub relation: super::targets::Relation,
+    pub script: Option<FieldScript>,
     radius: f32,
     time_to_scale_ms: u32,
     scale_curve: Option<Vec<(f32, f32)>>,
@@ -21,6 +28,8 @@ struct SphereProperties {
     radius: f32,
     curve: u32,
     time_to_scale_ms: u32,
+    script_name: String,
+    flags: u32,
 }
 
 impl AuraFieldCatalog {
@@ -53,7 +62,8 @@ impl FieldDefinition {
 pub(crate) fn load_catalog(connection: &Connection) -> rusqlite::Result<AuraFieldCatalog> {
     let mut statement = connection.prepare(
         "SELECT DISTINCT EffectMiscValue_0 FROM spell_effect \
-         WHERE EffectAura=395 AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0",
+         WHERE (EffectAura=395 OR (Effect=179 AND SpellID=387149 AND EffectMiscValue_0=26505)) \
+         AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0",
     )?;
     let properties = statement
         .query_map([], |row| row.get::<_, u32>(0))?
@@ -73,7 +83,8 @@ fn load_definition(connection: &Connection, id: u32) -> Result<FieldDefinition, 
             properties.radius
         ));
     }
-    let trigger_spell = load_enemy_action(connection, properties.template, properties.custom)?;
+    let script = select_script(id, &properties)?;
+    let (trigger_spell, relation) = load_action(connection, &properties, script)?;
     let scale_curve = if properties.curve == 0 {
         None
     } else {
@@ -81,6 +92,8 @@ fn load_definition(connection: &Connection, id: u32) -> Result<FieldDefinition, 
     };
     Ok(FieldDefinition {
         trigger_spell,
+        relation,
+        script,
         radius: properties.radius,
         time_to_scale_ms: properties.time_to_scale_ms,
         scale_curve,
@@ -90,10 +103,10 @@ fn load_definition(connection: &Connection, id: u32) -> Result<FieldDefinition, 
 fn load_sphere_properties(connection: &Connection, id: u32) -> Result<SphereProperties, String> {
     connection
         .query_row(
-            "SELECT AreaTriggerId,IsAreatriggerCustom,ShapeData0,ScaleCurveId,TimeToTargetScale \
+            "SELECT AreaTriggerId,IsAreatriggerCustom,ShapeData0,ScaleCurveId,TimeToTargetScale,ScriptName,Flags \
          FROM tdb_areatrigger_create_properties \
          WHERE Id=?1 AND IsCustom=0 AND Shape=0 AND ShapeData0=ShapeData1 \
-         AND MoveCurveId=0 AND MorphCurveId=0 AND FacingCurveId=0 AND ScriptName=''",
+         AND MoveCurveId=0 AND MorphCurveId=0 AND FacingCurveId=0",
             [id],
             |row| {
                 Ok(SphereProperties {
@@ -102,23 +115,59 @@ fn load_sphere_properties(connection: &Connection, id: u32) -> Result<SphereProp
                     radius: row.get(2)?,
                     curve: row.get(3)?,
                     time_to_scale_ms: row.get(4)?,
+                    script_name: row.get(5)?,
+                    flags: row.get(6)?,
                 })
             },
         )
         .map_err(|error| {
             format!(
-                "Aura395 properties {id}: missing or unsupported fixed unscripted sphere: {error}"
+                "Aura395 properties {id}: missing or unsupported fixed sphere: {error}"
             )
         })
 }
 
-fn load_enemy_action(connection: &Connection, template: u32, custom: bool) -> Result<u32, String> {
-    validate_template(connection, template, custom)?;
-    let actions = load_actions(connection, template, custom)?;
-    match actions.as_slice() {
-        [(0, spell, 2)] if *spell != 0 => Ok(*spell),
+fn select_script(id: u32, properties: &SphereProperties) -> Result<Option<FieldScript>, String> {
+    if properties.script_name.is_empty() {
+        return Ok(None);
+    }
+    let native_identity = id == super::vault_rune::CREATE_PROPERTIES
+        && properties.template == super::vault_rune::TEMPLATE
+        && properties.script_name == super::vault_rune::SCRIPT_NAME;
+    if !native_identity {
+        return Err(format!(
+            "Aura395 properties {id}: unsupported script {:?}",
+            properties.script_name
+        ));
+    }
+    let native_mode = !properties.custom
+        && properties.flags == 4
+        && properties.curve == 0
+        && properties.time_to_scale_ms == 0;
+    if !native_mode {
+        return Err(format!(
+            "Aura395 properties {id}: unsupported Rune flags/custom/scale mode"
+        ));
+    }
+    Ok(Some(FieldScript::VaultRune))
+}
+
+fn load_action(
+    connection: &Connection,
+    properties: &SphereProperties,
+    script: Option<FieldScript>,
+) -> Result<(u32, super::targets::Relation), String> {
+    use super::targets::Relation;
+    validate_template(connection, properties.template, properties.custom)?;
+    let actions = load_actions(connection, properties.template, properties.custom)?;
+    match (script, actions.as_slice()) {
+        (None, [(0, spell, 2)]) if *spell != 0 => Ok((*spell, Relation::Enemy)),
+        (Some(FieldScript::VaultRune), [(0, super::vault_rune::PROTECTION, 1)]) => {
+            Ok((super::vault_rune::PROTECTION, Relation::Ally))
+        }
         _ => Err(format!(
-            "Aura395 template {template}/{custom}: unsupported actions {actions:?}; requires one CAST/ENEMY action"
+            "Aura395 template {}/{}: unsupported actions {actions:?}",
+            properties.template, properties.custom
         )),
     }
 }

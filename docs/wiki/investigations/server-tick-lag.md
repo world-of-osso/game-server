@@ -4,6 +4,18 @@ The :5000 dev server ran its 20 Hz simulation at 55–70% of real time while pla
 
 ## Content
 
+### SIGHT_FACTION_MAIN_THREAD_CPU
+
+Named next candidate after the [navigation worker](../design/navigation-worker.md), not part of its implementation. Joint capture2026-10-18 confirms a separate main-thread CPU contributor; no claim it alone causes historical ten-second gaps.
+
+| Scope | Unattached observations | Stack evidence |
+|---|---|---|
+| A8b/P11a,11peers, tick140→1412.347966s |222R/2D samples;223CPUticks at100Hz;0.011107s whole tool excluded; small LOS reads also present|partial main11 faction.rs96/107→creature_sight.rs382/347/447; main10 faction/creature_aggro |
+| B3acc/975719/P11a, support accept→entry |9of12 partial main stacks include creature_sight; tick4760→4761 has40R samples/39CPUticks and faction_reaction30/85/99→faction107→sight382|sight436/450, aggro-distance94 and faction queries recur |
+| B largest entry gap5440→5441,0.635352s |63R samples/62CPUticks; no IO or tool overlap sampled|NOT captured:12stack cap exhausted bytick4900; do not assign an exact caller from neighboring samples |
+
+All counts exclude entire tool intervals. Worker sampling does not exclude starvation between polls; wire sends UNKNOWN. Dense B evidence stops at the256MiB budget before the full native flow ends; complete FixedFirst logs show no ten-second gap through return. Different maps/pressure/cohorts prevent causal comparison. Raw counts, exact UTC windows, partial-stack limits and artifact names: sibling `game-engine/data/diagnostics/server-live-frame-cost-2026-10-16/joint-capture-results.md`, `joint-maincaller-A1-analysis.json`, and `joint-maincaller-269cf3fe-a9fd-4ad9-bb45-80c25b0852b5-B-analysis.json`. No sight/faction production change made.
+
 ### Dormant aura initialization and addons (2026-10-17)
 
 On requested base `5d201f1f2`, a real stationary Cenarion15184 spawn, resolved through `zones::spawn_creature` with authored addon18950, becomes dormant through the real grid plugin but still applies the addon. The functional RED is `cold_authored_spawn_defers_addon_until_real_player_wake_in_same_fixed_step`; the active-spawn and native Azure Sprout authored-addon controls already pass. No CPU timing assertion is involved. The bounded fix filters only dormant aura initialization and pending addon application; the test retains a real player wake, exact one-fixed-step delivery, once-only identity, subsequent sleep/wake, unchanged health and entity count. Targeted run at `fc0372d93` passes44 controls/0fail with2 pre-existing ignored world-DB fixtures (not claimed as passing): all core aura behavior, actual cold/active authored guards, grid patrol/escort/wake controls, native model-scale and Azure Sprout addon behavior. Native check and fmt pass; lead gate502 lands the slice with507 server controls passing/0fail/50 existing ignores and fmt0. Functional deferral is verified; performance acceptance remains open.

@@ -1,11 +1,15 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use shared::battleground::BgPhase;
+use shared::components::CombatStatus;
 use shared::protocol::LeaveBattleground;
 
 use super::{PlayerPvpState, PvpServerState};
 use crate::auth::{Authenticated, InWorld};
 use crate::maps::{InMap, InstanceManager, TeleportOptions, WorldLocation};
 use crate::networking::PlayerLink;
+
+const DESERTER_SPELL_ID: u32 = 26013;
 
 pub(super) fn process_battleground_leave_requests(world: &mut World) {
     let mut receivers = world.query_filtered::<(
@@ -39,11 +43,24 @@ fn return_to_origin(
     match_id: u64,
 ) -> Result<String, String> {
     let (map, origin) = return_destination(world, state, player, character_id, match_id)?;
-    let arena = state.battleground_matches[&match_id].arena.is_some();
+    let matched = &state.battleground_matches[&match_id];
+    let arena = matched.arena.is_some();
+    let early_battleground_exit = !arena
+        && matches!(
+            matched.instance.phase,
+            BgPhase::Waiting | BgPhase::InProgress
+        );
     let race = world
         .get::<shared::components::Player>(player)
         .ok_or("battleground player race missing")?
         .race;
+    // TC Battleground.cpp846–849: resurrect dead participants fully before exit.
+    let dead_participant = world
+        .get::<shared::components::Health>(player)
+        .is_some_and(|health| health.current <= 0.0);
+    if dead_participant {
+        crate::death::resurrect_player_fully(world, player);
+    }
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
     }
@@ -77,6 +94,19 @@ fn return_to_origin(
     if !state.battleground_matches.contains_key(&match_id) {
         super::pvp_invites::close_match_map(world, map)?;
     }
+    // TC Player.cpp24310–24326: cast after removal/resurrection, never on arena/end exit.
+    if early_battleground_exit {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: player,
+                target: player,
+                spell_id: DESERTER_SPELL_ID,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
     Ok("returned to battleground origin".into())
 }
 
@@ -104,6 +134,13 @@ fn return_destination(
     let map = matched.map.ok_or("battleground map missing")?;
     if world.get::<InMap>(player) != Some(&map) {
         return Err("battleground map transfer is still pending".into());
+    }
+    // TC BattleGroundHandler.cpp431–439: combat blocks leave except STATUS_WAIT_LEAVE.
+    let in_combat = world
+        .get::<CombatStatus>(player)
+        .is_some_and(|status| status.0);
+    if in_combat && matched.instance.phase != BgPhase::Ended {
+        return Err("cannot leave a battlefield while in combat".into());
     }
     let origin = matched
         .origins

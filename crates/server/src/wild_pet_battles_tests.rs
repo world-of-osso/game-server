@@ -39,6 +39,514 @@ fn owned_states(catalog: &WildCatalog, journal: &PetJournal) -> OwnedBattleState
 }
 
 #[test]
+fn wild_pet_battles_mega_discharge_uses_nonowned_enemy_maker_and_named_same_round_policy() {
+    let catalog = catalog();
+    let journal = journal();
+    assert!(journal.pets.iter().all(|pet| pet.species_id == 39));
+    let states = owned_states(&catalog, &journal);
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    //Controlled1/Common/breed3 and benches are not authored NPC composition.
+    let enemies = build_team(
+        &catalog,
+        &[
+            Identity {
+                guid: None,
+                species: 2814,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+        ],
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let npc = &enemies.pets[0];
+    assert_eq!(npc.species, 2814);
+    assert_eq!(npc.abilities, [2365, 0, 0]);
+    assert_eq!(
+        npc.stats,
+        ::server::pet_battle::Stats {
+            health: 491,
+            power: 10,
+            speed: 7
+        }
+    );
+    let boss = catalog.turns.state_id("Passive_Boss").unwrap();
+    assert_eq!(catalog.turns.species_states[&2814].get(&boss), Some(&1));
+    assert_eq!(npc.state(boss), 0);
+    assert_eq!(npc.state(183), 0); //Unnamed source183=2363 remains a fidelity gap.
+    let initial = Battle::new([allies, enemies]).unwrap();
+    //The sourced player is faster: legal Metal Fist384 precedes2365, unboosted.
+    assert_eq!(initial.teams[0].pets[0].abilities[0], 384);
+    let (state, events) = initial
+        .step(
+            &catalog.turns,
+            [Action::Ability(384), Action::Ability(2365)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { caster, amount, .. } => Some((caster.team, *amount)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, [(0, 30), (1, 45), (1, 22), (1, 22)]);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [114, 137, 137]
+    );
+    assert_eq!(state.teams[1].pets[0].health, 461);
+    assert!(events.contains(&Event::AuraApplied {
+        target: ::server::pet_battle::PetRef { team: 1, slot: 0 },
+        ability: 542
+    }));
+    assert!(state.auras.is_empty());
+    //PET_BATTLE_DURATION_ONE_SAME_ROUND_POLICY: application round counts.
+    assert_eq!(
+        state.teams[1].pets[0].state(catalog.turns.state_id("Mod_DamageTakenPercent").unwrap()),
+        0
+    );
+    assert_eq!(state.teams[1].pets[0].cooldowns.get(&2365), Some(&5));
+    assert!(journal.pets.iter().all(|pet| pet.species_id != 2814));
+}
+
+#[test]
+fn wild_pet_battles_whirling_gears_uses_only_nonowned_enemy_math_and_swaps_the_player() {
+    let catalog = catalog();
+    let journal = journal();
+    assert!(journal.pets.iter().all(|pet| pet.species_id == 39));
+    let mut states = owned_states(&catalog, &journal);
+    states.get_mut(&42).unwrap().health = 100;
+    states.get_mut(&43).unwrap().health = 120;
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    //Controlled1/Common/breed3/benches are NOT authored NPC composition.
+    //No live NPC encounter service or native proof is claimed.
+    let enemies = build_team(
+        &catalog,
+        &[
+            Identity {
+                guid: None,
+                species: 2803,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+        ],
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let npc = &enemies.pets[0];
+    assert_eq!(npc.species, 2803);
+    assert_eq!(npc.abilities, [2351, 0, 0]);
+    assert_eq!(
+        npc.stats,
+        ::server::pet_battle::Stats {
+            health: 156,
+            power: 7,
+            speed: 10
+        }
+    );
+    let elite = catalog.turns.state_id("Passive_Elite").unwrap();
+    assert_eq!(catalog.turns.species_states[&2803].get(&elite), Some(&1));
+    assert_eq!(npc.state(elite), 0);
+    //Raw source state183=2235 is unnamed/unmodeled; retain that fidelity gap.
+    assert_eq!(npc.state(183), 0);
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let (state, events) = initial
+        .step(
+            &catalog.turns,
+            [Action::Pass, Action::Ability(2351)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [16; 3]);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        //Rare/breed3 level1 Squirrel starts159HP, not Rabbit's147HP.
+        [143, 84, 104]
+    );
+    assert_eq!(state.teams[0].active, 1);
+    assert_eq!(state.teams[1].active, 0);
+    assert_eq!(state.teams[1].pets[0].health, 156);
+    assert_eq!(state.teams[1].pets[0].cooldowns.get(&2351), Some(&5));
+    assert!(journal.pets.iter().all(|pet| pet.species_id != 2803));
+}
+
+#[test]
+#[ignore = "PET_BATTLE_OVERRIDE_INDEX_1_SEMANTICS_UNPROVEN"]
+fn wild_pet_battles_anvil_drop_uses_legal_alvin_and_two_round_continuation() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 3274), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 15, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 2, 2483)
+        .unwrap();
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 10, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 3274);
+    //Source SlotEnum1 is zero-based; journal selection/UI slot2 is one-based.
+    assert_eq!(caller.abilities[1], 2483);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 3274, 3, 3, 15).unwrap()
+    );
+    assert_eq!(caller.stats.power, 176);
+    let before = encounter.battle.teams[1].pets[0].health;
+    let (leaping, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2483), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, Event::Damage { .. }))
+    );
+    assert_eq!(leaping.teams[1].pets[0].health, before);
+    assert_eq!(leaping.teams[0].pets[0].continuation, Some((2483, 2)));
+    assert_eq!(leaping.auras.len(), 1);
+    assert_eq!(leaping.auras[0].ability, 2339);
+    let (landed, events) = leaping
+        .step(&catalog.turns, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, [156]);
+    assert_eq!(landed.teams[1].pets[0].health, before - 156);
+    assert_eq!(
+        landed.teams[0].pets.each_ref().map(|pet| pet.health),
+        encounter.battle.teams[0]
+            .pets
+            .each_ref()
+            .map(|pet| pet.health)
+    );
+    assert_eq!(landed.teams[0].pets[0].continuation, None);
+    assert!(landed.auras.is_empty());
+    for name in ["untargettable", "Mechanic_IsFlying"] {
+        assert_eq!(
+            landed.teams[0].pets[0].state(catalog.turns.state_id(name).unwrap()),
+            0
+        );
+    }
+}
+
+#[test]
+fn wild_pet_battles_poison_protocol_uses_legal_anomalus_and_existing_periodic_expiry() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 2842), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 1954)
+        .unwrap();
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 2842);
+    assert_eq!(caller.abilities[2], 1954);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 2842, 3, 3, 4).unwrap()
+    );
+    assert_eq!(caller.stats.power, 50);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(1954), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage {
+                amount, periodic, ..
+            } => Some((*periodic, *amount)),
+            _ => None,
+        })
+        .collect();
+    //Beast7 direct is strong versus Critter4; Elemental6 periodic is weak.
+    assert_eq!(hits, [(false, 26), (true, 11)]);
+    assert_eq!(state.teams[1].pets[0].health, 110);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        encounter.battle.teams[0]
+            .pets
+            .each_ref()
+            .map(|pet| pet.health)
+    );
+    assert_eq!(state.auras.len(), 1);
+    assert_eq!(state.auras[0].ability, 379);
+    assert_eq!(state.auras[0].remaining, 1);
+    let (state, events) = state
+        .step(&catalog.turns, [Action::Pass; 2], &mut Fixed(500_000))
+        .unwrap();
+    let periodic: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage {
+                amount,
+                periodic: true,
+                ..
+            } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(periodic, [11]);
+    assert_eq!(state.teams[1].pets[0].health, 99);
+    assert!(state.auras.is_empty());
+    assert_eq!(
+        state.teams[1].pets[0].state(catalog.turns.state_id("Mechanic_IsPoisoned").unwrap()),
+        0
+    );
+}
+
+#[test]
+fn wild_pet_battles_blood_harvest_uses_legal_hemospore_and_actual_damage_for_its_injured_caster() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 4507), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 15, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 2, 2457)
+        .unwrap();
+    for (guid, health) in [(41, 100), (42, 200), (43, 300)] {
+        states.get_mut(&guid).unwrap().health = health;
+    }
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 4507);
+    assert_eq!(caller.abilities[1], 2457);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 4507, 3, 3, 15).unwrap()
+    );
+    assert_eq!(caller.stats.power, 185);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(2457), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [102]);
+    assert_eq!(state.teams[1].pets[0].health, 45);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [202, 200, 300]
+    );
+    assert_eq!(state.teams[0].pets[0].cooldowns.get(&2457), Some(&2));
+}
+
+#[test]
+fn wild_pet_battles_sunshell_uses_nonowned_crystalsnap_only_as_enemy_npc() {
+    let catalog = catalog();
+    //70448 NPCTeamMember is empty: level1/Common/breed3 and these benches are
+    //controlled adapter inputs, not actual NPC composition or BossPassive fidelity.
+    let journal = journal();
+    assert!(journal.pets.iter().all(|pet| pet.species_id == 39));
+    let states = owned_states(&catalog, &journal);
+    let identities: Vec<_> = journal.pets.iter().map(Identity::from).collect();
+    let allies = build_team(&catalog, &identities, &states).unwrap();
+    let enemies = build_team(
+        &catalog,
+        &[
+            Identity {
+                guid: None,
+                species: 3068,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+            Identity {
+                guid: None,
+                species: 39,
+                level: 1,
+                breed: 3,
+                quality: PetQuality::Common,
+            },
+        ],
+        &OwnedBattleStates::new(),
+    )
+    .unwrap();
+    let npc = &enemies.pets[0];
+    assert_eq!(npc.species, 3068);
+    assert_eq!(npc.abilities, [2410, 0, 0]);
+    assert_eq!(
+        npc.stats,
+        ::server::pet_battle::Stats {
+            health: 174,
+            power: 12,
+            speed: 7
+        }
+    );
+    let boss = catalog.turns.state_id("Passive_Boss").unwrap();
+    assert_eq!(catalog.turns.species_states[&3068].get(&boss), Some(&1));
+    //The adapter installs family passives, not species BossPassive.
+    //Retain the named fidelity gap rather than promoting this fixture to parity.
+    assert_eq!(npc.state(boss), 0);
+    let initial = Battle::new([allies, enemies]).unwrap();
+    let (state, events) = initial
+        .step(
+            &catalog.turns,
+            [Action::Pass, Action::Ability(2410)],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let hits: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { target, amount, .. } => Some((target.team, target.slot, *amount)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(hits, [(0, 0, 12), (0, 1, 12), (0, 2, 12)]);
+    assert_eq!(state.teams[1].pets[0].health, 174);
+    assert_eq!(state.teams[1].pets[0].stats.health, 261);
+    assert_eq!(state.teams[1].pets[0].cooldowns.get(&2410), Some(&3));
+    assert!(journal.pets.iter().all(|pet| pet.species_id != 3068));
+}
+
+#[test]
+fn wild_pet_battles_call_of_winter_uses_legal_buttercup_level_twenty_slot_three() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 3255), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 20, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let mut states = owned_states(&catalog, &journal);
+    states
+        .get_mut(&41)
+        .unwrap()
+        .select_ability(&catalog.turns, journal.get(41).unwrap(), 3, 1013)
+        .unwrap();
+    let encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    let caller = &encounter.battle.teams[0].pets[0];
+    assert_eq!(caller.species, 3255);
+    assert_eq!(caller.abilities[2], 1013);
+    assert_eq!(
+        caller.stats,
+        calculate_stats(&catalog.turns, 3255, 3, 3, 20).unwrap()
+    );
+    assert_eq!(caller.stats.power, 221);
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(1013), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    //Elemental6 is weak against Rabbit's Critter4: existing0.67 multiplier/floor.
+    assert_eq!(amounts, [64]);
+    assert_eq!(state.teams[1].pets[0].health, 83);
+    assert_eq!(state.teams[0].pets[0].health, caller.health);
+    assert_eq!(state.teams[0].pets[0].cooldowns.get(&1013), Some(&3));
+    for team in &state.teams {
+        for pet in &team.pets {
+            assert_eq!(
+                pet.state(catalog.turns.state_id("Weather_Blizzard").unwrap()),
+                1
+            );
+            assert_eq!(
+                pet.state(catalog.turns.state_id("Mechanic_IsChilled").unwrap()),
+                1
+            );
+        }
+    }
+}
+
+#[test]
 fn wild_pet_battles_bonestorm30_uses_legal_whirly_level_four_and_own_maximum_cost() {
     let catalog = catalog();
     let mut journal = PetJournal::default();
@@ -118,6 +626,48 @@ fn wild_pet_battles_bonestorm_uses_legal_graves_level_two_and_own_maximum_cost()
             encounter.battle.teams[0].pets[slot].health
         );
     }
+}
+
+#[test]
+fn wild_pet_battles_shell_rush_uses_legal_glimmershell_and_swaps_its_own_team() {
+    let catalog = catalog();
+    let mut journal = PetJournal::default();
+    for (guid, species) in [(41, 2687), (42, 39), (43, 39)] {
+        journal
+            .add_with_guid(species, 4, PetQuality::Rare, 3, guid)
+            .unwrap();
+    }
+    let states = owned_states(&catalog, &journal);
+    assert_eq!(states[&41].selected_abilities[2], 1989);
+    let mut encounter = Encounter::start(&catalog, &journal, &states, 378, 1, 1, 1).unwrap();
+    assert_eq!(encounter.battle.teams[0].pets[0].species, 2687);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.power, 44);
+    assert_eq!(encounter.battle.teams[0].pets[0].stats.health, 344);
+    encounter.battle.teams[0].pets[1].health = 200;
+    encounter.battle.teams[0].pets[2].health = 300;
+    let (state, events) = encounter
+        .battle
+        .step(
+            &catalog.turns,
+            [Action::Ability(1989), Action::Pass],
+            &mut Fixed(500_000),
+        )
+        .unwrap();
+    let amounts: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            Event::Damage { amount, .. } => Some(*amount),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(amounts, [38]);
+    assert_eq!(state.teams[1].pets[0].health, 109);
+    assert_eq!(state.teams[1].active, 0);
+    assert_eq!(state.teams[0].active, 2);
+    assert_eq!(
+        state.teams[0].pets.each_ref().map(|pet| pet.health),
+        [344, 200, 300]
+    );
 }
 
 #[test]

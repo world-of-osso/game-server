@@ -293,6 +293,26 @@ impl PetHarness {
             .count()
     }
 
+    fn assert_melee_attempts(&self, target: Entity) {
+        assert!(self.melee_swings(target) > 0, "the wolf never swung");
+        let damage: i32 = self
+            .h
+            .inbox
+            .log
+            .iter()
+            .filter(|event| {
+                event.source == Some(self.pet.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            })
+            .map(|event| {
+                assert!(event.amount > 0, "{event:?}");
+                event.amount
+            })
+            .sum();
+        assert_eq!(5_000.0 - self.h.health(target), damage as f32);
+    }
+
     /// The pet's completed casts of `spell` at `target`, landed or missed.
     fn spell_casts(&self, spell: u32, target: Entity) -> usize {
         self.h
@@ -434,6 +454,24 @@ fn hunter_pet_dismiss_command_abandons_the_saved_wolf() {
 }
 
 #[test]
+fn native_called_hunter_pet_carries_source_creature_flags_extra() {
+    let p = hunter_with_wolf().expect("native called Hunter pet");
+    let world = p.h.app.world();
+    let entry = world
+        .get::<shared::components::Npc>(p.pet)
+        .unwrap()
+        .template_id;
+    let expected = world.resource::<WorldData>().templates[&entry].flags_extra;
+    assert_eq!(
+        world
+            .get::<crate::zones::CreatureFlagsExtra>(p.pet)
+            .map(|flags| flags.0),
+        Some(expected),
+        "ordinary Call Pet caches its authored template flags"
+    );
+}
+
+#[test]
 fn a_called_wolf_sends_its_owner_the_retail_pet_bar() {
     let Some(p) = hunter_with_wolf() else {
         return;
@@ -496,7 +534,7 @@ fn attack_sends_the_wolf_at_the_target_and_follow_brings_it_back() {
         p.gap(p.pet, kobold)
     );
     let hurt = p.h.health(kobold);
-    assert!(hurt < 5_000.0, "the kobold took no swing");
+    p.assert_melee_attempts(kobold);
 
     p.command(COMMAND_FOLLOW);
     assert_eq!(p.last_bar().command_state, COMMAND_FOLLOW);
@@ -645,10 +683,7 @@ fn attack_sends_the_wolf_at_a_neutral_beast() {
     p.advance(100);
     assert_eq!(p.pet_victim(), Some(kobold));
     assert!(p.pet_in_combat());
-    assert!(
-        p.h.health(kobold) < 5_000.0,
-        "the neutral beast took no bite"
-    );
+    p.assert_melee_attempts(kobold);
 }
 
 #[test]
@@ -696,6 +731,64 @@ fn bite_ordered_from_the_bar_is_cast_by_the_wolf_at_the_target() {
     assert_eq!(p.focus(), 75);
     // The wolf goes after the unit it bit (`_AttackStart`).
     assert_eq!(p.pet_victim(), Some(kobold));
+}
+
+#[test]
+fn called_wolf_focus_regenerates_in_four_second_steps_without_resetting_at_full() {
+    let mut p = hunter_with_wolf().expect("native hunter/wolf catalog");
+    let kobold = p.h.npc;
+    let beside = p.position(p.pet);
+    p.h.app.world_mut().entity_mut(kobold).insert(Position {
+        x: beside.x + 2.0,
+        ..beside
+    });
+    p.order(pet_action_button(BITE, ACT_DISABLED), Some(kobold), None);
+    p.command(COMMAND_FOLLOW);
+    assert_eq!(p.spell_casts(BITE, kobold), 1);
+    let focus = |p: &PetHarness| {
+        crate::spell_cast::powers::power_value(p.h.app.world(), p.pet, PowerType::Focus)
+            .unwrap()
+            .0
+    };
+    // TC a352b1fa Pet.cpp64,671-687 / CreatureData.h423 / Creature.cpp964-998:
+    // spawn-anchored 4-second timer, +24 whole Focus, even in combat.
+    for _ in 0..60 {
+        assert_eq!(focus(&p), 75.0, "no fractional player-style regeneration");
+        p.advance(1);
+    }
+    let mut first_tick = false;
+    for _ in 0..20 {
+        p.advance(1);
+        if focus(&p) != 75.0 {
+            assert_eq!(focus(&p), 99.0);
+            first_tick = true;
+            break;
+        }
+    }
+    assert!(first_tick, "first +24 tick within four seconds of spawn");
+    for _ in 0..79 {
+        p.advance(1);
+        assert_eq!(focus(&p), 99.0);
+    }
+    p.advance(1);
+    assert_eq!(focus(&p), 100.0, "next tick clamps to maximum");
+
+    // A full pool does not pause/reset the timer. Spend three seconds into its
+    // next interval: the next +24 is one second later, not four after spending.
+    p.advance(60);
+    let beside = p.position(p.pet);
+    p.h.app.world_mut().entity_mut(kobold).insert(Position {
+        x: beside.x + 2.0,
+        ..beside
+    });
+    p.order(pet_action_button(BITE, ACT_DISABLED), Some(kobold), None);
+    p.command(COMMAND_FOLLOW);
+    assert_eq!(p.spell_casts(BITE, kobold), 2);
+    assert_eq!(focus(&p), 75.0);
+    p.advance(13);
+    assert_eq!(focus(&p), 75.0);
+    p.advance(1);
+    assert_eq!(focus(&p), 99.0, "full-pool timer phase survives spending");
 }
 
 #[test]

@@ -642,15 +642,281 @@ fn highest_threat_attacker_takes_aggro_past_the_threshold() {
     add_threat(app.world_mut(), spider, tank, 100.0);
     // Ranged challenger (30 yd) needs 130%: 120 is not enough.
     add_threat(app.world_mut(), spider, mage, 120.0);
-    run(&mut app, 1);
+    // TC ThreatManager.h:86 / ThreatManager.cpp:216–230: cross1000ms reselection.
+    run(&mut app, 21);
     assert_eq!(state(&app, spider), pursuing(tank));
 
     add_threat(app.world_mut(), spider, mage, 15.0);
-    run(&mut app, 1);
+    run(&mut app, 21);
     assert_eq!(state(&app, spider), pursuing(mage));
     assert_eq!(
         app.world().get::<CombatTarget>(spider).unwrap().0,
         Some(mage)
+    );
+}
+
+fn current_victim_fixture() -> (App, Entity, Entity) {
+    let mut app = aggro_app();
+    let creature = spawn_creature(&mut app, &FOREST_SPIDER, at(0.0, 0.0));
+    let tank = spawn_player(&mut app, at(1.0, 0.0), 5);
+    run(&mut app, 1);
+    assert_eq!(state(&app, creature), pursuing(tank));
+    app.world_mut()
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .reset();
+    add_threat(app.world_mut(), creature, tank, 1000.0);
+    (app, creature, tank)
+}
+
+#[test]
+fn threat_current_victim_exact_melee_threshold_retains_incumbent() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, melee, 1100.0);
+    // TC ThreatManager.h:86 and ThreatManager.cpp:216–230: periodic1000ms update.
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "TC strict110% boundary"
+    );
+    add_threat(app.world_mut(), creature, melee, 10.0);
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "111% melee switches"
+    );
+}
+
+#[test]
+fn threat_current_victim_exact_ranged_threshold_retains_incumbent() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let ranged = spawn_player(&mut app, at(0.0, 30.0), 5);
+    add_threat(app.world_mut(), creature, ranged, 1300.0);
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "TC strict130% boundary"
+    );
+    add_threat(app.world_mut(), creature, ranged, 10.0);
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(ranged),
+        "131% ranged switches"
+    );
+}
+
+#[test]
+fn threat_current_victim_lower_melee_challenger_beats_highest_ranged() {
+    let (mut app, creature, _tank) = current_victim_fixture();
+    let ranged = spawn_player(&mut app, at(0.0, 30.0), 5);
+    let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, ranged, 1200.0);
+    add_threat(app.world_mut(), creature, melee, 1150.0);
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "TC scans eligible melee below ranged top"
+    );
+    assert_eq!(
+        app.world().get::<CombatTarget>(creature).unwrap().0,
+        Some(melee)
+    );
+}
+
+#[test]
+fn threat_current_victim_passive_periodic_selection_does_not_project_attacks() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    assert_eq!(current_victim(app.world_mut(), creature), Some(tank));
+    let melee = spawn_player(&mut app, at(2.0, 0.0), 5);
+    let origin = *app.world().get::<Position>(creature).unwrap();
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::scripted_ai::ReactState::Passive);
+    crate::combat::attack_stop(app.world_mut(), creature);
+    add_threat(app.world_mut(), creature, melee, 1110.0);
+    run(&mut app, 6);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(tank),
+        "valid reference waits for1000ms periodic update"
+    );
+    run(&mut app, 20);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(melee),
+        "passive threat reference must still update"
+    );
+    assert_eq!(
+        crate::scripted_ai::Ctx {
+            world: app.world_mut(),
+            me: creature
+        }
+        .select_target_max_threat(),
+        Some(melee),
+        "MaxThreat follows the threat reference while active victim remains the tank"
+    );
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "passive reference is not active chase projection"
+    );
+    assert_eq!(
+        app.world().get::<CombatTarget>(creature).unwrap().0,
+        Some(tank)
+    );
+    assert!(app.world().get::<AutoAttack>(creature).is_none());
+    assert_eq!(*app.world().get::<Position>(creature).unwrap(), origin);
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(crate::scripted_ai::ReactState::Aggressive);
+    run(&mut app, 1);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "aggression projects the already selected reference"
+    );
+}
+
+#[test]
+fn threat_current_victim_lazy_refresh_skips_offline_without_erasing_membership() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let other = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, other, 100.0);
+    app.world_mut()
+        .entity_mut(tank)
+        .insert(crate::maps::InMap::continent(1));
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(other),
+        "lazy refresh precedes the periodic deadline"
+    );
+    assert_eq!(
+        state(&app, creature),
+        pursuing(tank),
+        "query does not issue an attack"
+    );
+    assert_eq!(
+        app.world()
+            .get::<ThreatTable>(creature)
+            .unwrap()
+            .threat_for(tank.to_bits()),
+        1000.0
+    );
+    run(&mut app, 1);
+    assert_eq!(state(&app, creature), pursuing(other));
+}
+
+#[test]
+fn threat_current_victim_lazy_clear_returns_none_before_periodic_deadline() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    assert_eq!(current_victim(app.world_mut(), creature), Some(tank));
+    app.world_mut()
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .reset();
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        None,
+        "cleared membership cannot retain a cached victim"
+    );
+    // At its spawn, return-home completes immediately; keep the old player out
+    // of proximity so the assertion observes reset, not a new zero-threat fight.
+    app.world_mut()
+        .entity_mut(tank)
+        .insert(crate::maps::InMap::continent(1));
+    run(&mut app, 1);
+    assert!(
+        app.world().get::<CurrentVictim>(creature).is_none(),
+        "evade clears the reference and deadline; state={:?}, current={:?}, entries={:?}",
+        state(&app, creature),
+        app.world()
+            .get::<CurrentVictim>(creature)
+            .map(|reference| reference.target),
+        app.world().get::<ThreatTable>(creature).unwrap().entries()
+    );
+}
+
+#[test]
+fn threat_current_victim_removed_fixate_does_not_reappear_on_new_membership() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let other = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, other, 1.0);
+    app.world_mut().entity_mut(creature).insert(Fixate(other));
+    run(&mut app, 21);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(other),
+        "available fixate outranks numeric threat"
+    );
+    app.world_mut()
+        .get_mut::<ThreatTable>(creature)
+        .unwrap()
+        .remove(other.to_bits());
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(tank),
+        "removed fixate requires immediate reselection"
+    );
+    assert!(app.world().get::<Fixate>(creature).is_none());
+    add_threat(app.world_mut(), creature, other, 1.0);
+    run(&mut app, 21);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(tank),
+        "new membership cannot resurrect the removed fixate"
+    );
+}
+
+#[test]
+fn threat_current_victim_lazy_refresh_preserves_the_periodic_deadline() {
+    let (mut app, creature, tank) = current_victim_fixture();
+    let other = spawn_player(&mut app, at(2.0, 0.0), 5);
+    add_threat(app.world_mut(), creature, other, 1000.0);
+    run(&mut app, 14);
+    app.world_mut()
+        .entity_mut(tank)
+        .insert(crate::maps::InMap::continent(1));
+    assert_eq!(current_victim(app.world_mut(), creature), Some(other));
+    let melee = spawn_player(&mut app, at(2.5, 0.0), 5);
+    add_threat(app.world_mut(), creature, melee, 1110.0);
+    run(&mut app, 7);
+    assert_eq!(
+        current_victim(app.world_mut(), creature),
+        Some(melee),
+        "lazy selection must not postpone the original1000ms periodic deadline"
+    );
+}
+
+#[test]
+fn threat_current_victim_scaled_source_reach_extends_the_melee_threshold() {
+    let (mut app, creature, _tank) = current_victim_fixture();
+    app.world_mut()
+        .entity_mut(creature)
+        .insert(shared::components::UnitScale(4.0));
+    let own_reach = crate::scripted_ai::model_reach::combat_reach(app.world(), creature).unwrap();
+    let melee = spawn_player(&mut app, at(1.0, 0.0), 5);
+    let other_reach = crate::scripted_ai::model_reach::combat_reach(app.world(), melee).unwrap();
+    let native_range = own_reach + other_reach + 4.0 / 3.0;
+    assert!(
+        native_range > 5.0,
+        "actual authored model/scale prerequisite"
+    );
+    let center_distance = (5.0 + native_range) / 2.0;
+    app.world_mut()
+        .entity_mut(melee)
+        .insert(at(center_distance, 0.0));
+    add_threat(app.world_mut(), creature, melee, 1110.0);
+    run(&mut app, 21);
+    assert_eq!(
+        state(&app, creature),
+        pursuing(melee),
+        "candidate inside sourced melee reach needs110%, not the ranged130%"
     );
 }
 
@@ -956,9 +1222,57 @@ fn a_player_on_another_map_at_the_spiders_coordinates_is_not_attacked() {
 }
 
 #[test]
+fn threat_membership_dormant_despawn_does_not_publish_to_the_dead_entity() {
+    let mut app = App::new();
+    app.init_resource::<PendingThreatWakes>()
+        .add_observer(replicate_woken_threat_list)
+        .add_systems(Update, publish_woken_threat_lists);
+    let victim = app.world_mut().spawn_empty().id();
+    let mut threat = ThreatTable::default();
+    threat.add_threat(victim.to_bits(), 100.0);
+    let npc = app.world_mut().spawn((threat, GridDormant)).id();
+    app.world_mut().despawn(npc);
+    app.world_mut().flush();
+    app.update();
+    assert!(app.world().get_entity(npc).is_err());
+}
+
+#[test]
+fn threat_membership_removed_then_reslept_never_publishes_a_wake() {
+    let mut app = App::new();
+    app.init_resource::<PendingThreatWakes>()
+        .add_observer(replicate_woken_threat_list)
+        .add_systems(Update, publish_woken_threat_lists);
+    let victim = app.world_mut().spawn_empty().id();
+    let mut threat = ThreatTable::default();
+    threat.add_threat(victim.to_bits(), 100.0);
+    let npc = app.world_mut().spawn((threat, GridDormant)).id();
+    app.world_mut().commands().queue(move |world: &mut World| {
+        world.entity_mut(npc).remove::<GridDormant>();
+        world.entity_mut(npc).insert(GridDormant);
+    });
+    app.world_mut().flush();
+    app.update();
+    assert!(app.world().get::<GridDormant>(npc).is_some());
+    assert!(
+        app.world().get::<UnitThreatList>(npc).is_none(),
+        "a re-slept creature must not publish an intermediate wake"
+    );
+    app.world_mut().entity_mut(npc).remove::<GridDormant>();
+    app.world_mut().flush();
+    app.update();
+    assert_eq!(
+        app.world().get::<UnitThreatList>(npc).unwrap().0,
+        vec![victim.to_bits()]
+    );
+}
+
+#[test]
 fn threat_membership_wakes_with_current_entries_and_tracks_active_edits() {
     let mut app = App::new();
-    app.add_observer(replicate_woken_threat_list);
+    app.init_resource::<PendingThreatWakes>()
+        .add_observer(replicate_woken_threat_list)
+        .add_systems(Update, publish_woken_threat_lists);
     app.add_systems(Update, replicate_threat_list_system);
     let victim = app.world_mut().spawn_empty().id();
     let npc = app

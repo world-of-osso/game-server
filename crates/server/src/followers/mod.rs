@@ -7,16 +7,55 @@ mod kit_ai;
 mod kit_area;
 // Joint activation: requires the shared-planner caller in the same gate.
 mod kit_interrupt;
+mod pack_identity;
 mod party;
+mod pull_admission;
+#[cfg(test)]
+mod pull_admission_tests;
+mod pull_budget;
+#[cfg(test)]
+mod pull_budget_tests;
+#[cfg(test)]
+mod pull_corner_tests;
+#[cfg(test)]
+mod pull_eligibility_tests;
+#[cfg(test)]
+mod pull_endpoint_tests;
+#[cfg(test)]
+mod pull_forecast_tests;
+#[cfg(test)]
+mod pull_goal_tests;
+pub(crate) mod pull_history;
+#[cfg(test)]
+mod pull_history_tests;
+#[cfg(test)]
+mod pull_movement_tests;
+#[cfg(test)]
+mod pull_position_tests;
+mod pull_readiness;
+#[cfg(test)]
+mod pull_readiness_tests;
+mod pull_route;
+#[cfg(test)]
+mod pull_route_tests;
+mod pull_sources;
+#[cfg(test)]
+mod pull_sources_tests;
+#[cfg(test)]
+mod pull_stat_provenance_tests;
 mod spawning;
 mod stockade_diagnostic;
+mod tank_frontal;
+mod tank_planner;
+#[cfg(test)]
+mod tank_planner_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
 
 pub(crate) use ai::FollowerReach;
 pub(crate) use catalog::FollowerCatalog;
-pub(crate) use party::queue_player;
+pub(crate) use party::{queue_player, stage_follower_party};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Profile {
@@ -127,9 +166,17 @@ mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;
 #[cfg(test)]
+mod control_cast_stop_tests;
+#[cfg(test)]
 mod defensive_tests;
 #[cfg(test)]
+mod hazard_reaction_tests;
+#[cfg(test)]
 mod hazard_tests;
+#[cfg(test)]
+pub(crate) fn fixture_hazard_escape(world: &mut World, unit: Entity) -> bool {
+    hazards::escape(world, unit)
+}
 #[cfg(test)]
 mod kit_interrupt_tests;
 #[cfg(test)]
@@ -138,6 +185,8 @@ mod kit_source_tests;
 mod kit_tests;
 #[cfg(test)]
 mod kit_utility_tests;
+#[cfg(test)]
+pub(crate) mod native_fixture;
 #[cfg(test)]
 mod navigation_tests;
 #[cfg(test)]

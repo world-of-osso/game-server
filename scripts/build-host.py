@@ -16,6 +16,7 @@ BINARIES = {
     "game-server": "server",
     "game-server-admin": "server",
     "game-server-site-export": "server",
+    "bot-map": "server",
     "game-cli": "client",
     "los-bake": "los",
 }

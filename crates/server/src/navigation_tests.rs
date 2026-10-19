@@ -1,5 +1,6 @@
 use super::*;
 use crate::ground::{GroundMap, GroundProbe};
+use std::collections::HashMap;
 
 fn ground_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/ground")
@@ -69,8 +70,8 @@ fn navigation_stormwind_stairs_reach_upper_landing() {
         ))
         .insert_resource(crate::world_data::WorldData::default())
         .insert_resource(ground())
-        .insert_resource(Navigation::new(&ground_dir().join("navmesh")))
         .add_plugins(crate::creature_ai::CreatureAiPlugin);
+    install_fixture(&mut app, Navigation::new(&ground_dir().join("navmesh")));
     app.update();
     let from = wow(-8737.0, 993.0, 79.5);
     let goal = wow(-8737.0, 971.0, 85.3);
@@ -158,12 +159,19 @@ fn request(map_id: u32, from: Vec3, to: Vec3) -> MoveRequest {
     }
 }
 
+fn ready_step(nav: &mut Navigation, entity: Entity, request: MoveRequest) -> Step {
+    let _ = nav.advance(entity, request);
+    nav.drain_until_idle();
+    nav.advance(entity, request)
+}
+
 #[test]
 fn navigation_unbaked_map_is_explicit_legacy_boundary() {
     let dir = tempfile::tempdir().unwrap();
     let mut nav = Navigation::new(dir.path());
     assert!(matches!(
-        nav.advance(
+        ready_step(
+            &mut nav,
             Entity::from_bits(1),
             request(34, wow(115.6, 46.6, -34.8), wow(128.5, 52.0, -33.86))
         ),
@@ -179,7 +187,8 @@ fn navigation_empty_baked_tile_is_blocked_not_legacy() {
     std::fs::write(map_dir.join("31_31.nav"), []).unwrap();
     let mut nav = Navigation::new(dir.path());
     assert!(matches!(
-        nav.advance(
+        ready_step(
+            &mut nav,
             Entity::from_bits(1),
             request(34, wow(115.6, 46.6, -34.8), wow(128.5, 52.0, -33.86))
         ),
@@ -195,7 +204,8 @@ fn navigation_missing_tile_on_baked_map_is_blocked_not_legacy() {
     std::fs::write(map_dir.join("31_31.nav"), []).unwrap();
     let mut nav = Navigation::new(dir.path());
     assert!(matches!(
-        nav.advance(
+        ready_step(
+            &mut nav,
             Entity::from_bits(1),
             request(34, wow(115.6, 46.6, -34.8), wow(115.6, -600.0, -33.86))
         ),
@@ -211,7 +221,8 @@ fn navigation_corrupt_tile_is_blocked_not_legacy() {
     std::fs::write(map_dir.join("31_31.nav"), b"truncated navigation").unwrap();
     let mut nav = Navigation::new(dir.path());
     assert!(matches!(
-        nav.advance(
+        ready_step(
+            &mut nav,
             Entity::from_bits(1),
             request(34, wow(115.6, 46.6, -34.8), wow(128.5, 52.0, -33.86))
         ),

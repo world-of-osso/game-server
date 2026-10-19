@@ -1,5 +1,37 @@
 # Hosted encounter coverage
 
+## Herald paired-death credit — 2026-10-18
+
+Native actualdead30693/1892bit1 qualification plus ten genuine missing-credit RED boundaries precede production. Corrected actual17537 TempSummon ownership (no ordinary CreatureOrigin injection) at647169a24 passes11/11 in187.96s,0ignored/no warnings: Normal/Heroic both sequential/same-frame orders, crossed-copy/corpse/unrelated controls, exact one1892success/bit1, sourceVazTalk3/ordinarydeathCall. Tests enabled, independent retained gate pending. [Contract](specs/ramparts-herald.md#completion-and-reset). Chest/loot/persistence acceptance, evade/reset, Liquid Fire children and native remain separate.
+
+## Herald DESCEND4 native parent boundary — 2026-10-18
+
+Ignored native qualification+four genuineRED86.63s at9691ff61b→fiveGREEN137.57s at354302f74: exact actualfall+2000ms Aggressive/ordinary30694/release; real lethalHP1 before andHP0 after; source ground initial/repeat requests and actual Normal/Heroic parent damage/fear. Existing fixture buffers unchanged, not native balance. Enabled final43/43PASS374.35s at1799e2743/master717ae67df,0ignored/no warnings:25Herald+4grounding+5Gold+2Nibbles+6Gordoth+lower-point. Admission traces preserve real OnCooldown and source same-tick combat-clock advancement; actual parent damage/fear and exact before/after release pass. LEAD gate/check/fmt pending. [Contract](specs/ramparts-herald.md#descend4-and-native-ground-parents). `NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED`; paired credit/reset/native remain separate.
+
+## Herald point4 fall through DESCEND3 — 2026-10-18
+
+Natural point4→same-XZ analytic falling spline→actual EFFECT5→gravity enable/ordinary20538 now has genuine3RED→targeted4GREEN70.06s at3a96703c4. Exact native Normal/Heroic50ms samples/original-ray floor and actual hit threat-zero/reference retention pass. Source review additionally caught forced-floor completion: exact truncated-time endpoint2RED55.69s precedes deletion of snap. Final enabled38/38PASS314.51s at3d0fea7e5/master614c59b44,0ignored/no warnings:20Herald+4grounding+5Gold+2Nibbles+6Gordoth+lower-point suspension. Includes actual post-fall self-lethal→HP1/no replay next frame. Independent LEAD gate/check/fmt pending. [Bounded contract](specs/ramparts-herald.md#bounded-fall-through-descend3). No DESCEND4/release/groundcasts/pairedcredit/reset/native proof.
+
+## Herald lethal min1 guard — 2026-10-18
+
+Actual source protection now acts at the existing precommit melee/direct/spell/periodic boundaries, including self-source, preserving exactHP1 before death/log/credit. Six initial native cases pass; six-copy/two-native-cadence same-actor repeated melee additionally passes82.49s in Normal/Heroic, with actual firstWest budget and per-frameHP1/no death before arrival. Enabled all16 Herald/four grounding/five unchanged Gold/both unchanged Nibbles controls pass27/27 209.65s atcbb9ef32f/master69ed3c682/protocolf9a9175,0ignored/no warnings. Independent LEAD gate/check/fmt pending. No HP/stat writes, forced hits, timer/NPC overrides or generic SetUnkillable substitution. [Contract/proof](specs/ramparts-herald.md#tests-asserting-this-spec). Marker release after fall, arrival/fall, paired credit/reset/native remain excluded.
+
+## Herald own nonlethal below30 ingress — 2026-10-18
+
+Nazan's actual own damage35→29 starts the existing descent only after intro, once, without Call30693 or damage to Vazruden. Natural Normal/Heroic RED→GREEN3/3 includes real INTRO1 negative, exact native integer loss, actual Fireball interruption and first one50ms point4 step; enabled all10 Herald+four grounding14/14 PASS172.99s ataed52b5b6, independent LEAD gate pending. [Contract/proof](specs/ramparts-herald.md#tests-asserting-this-spec). Lethal/min1 guard, point4 arrival/fall, future cancellation, paired credit/reset/native remain excluded.
+
+## Herald Call Nazan descent ingress — 2026-10-18
+
+Natural firstWest Normal/Heroic now covers real incoming below40 damage, once ordinary30693, actual hit-creature action0, source descent setup and first physical point4 step. Genuine missing-Go RED precedes two-case GREEN, then enabled all7 Herald plus four target32 grounding cases pass11/11 176.19s atd43cd6b04. Independent LEAD gate/check/fmt remain pending. [Contract/proof ledger](specs/ramparts-herald.md#tests-asserting-this-spec) owns details. This does not certify future timer cancellation, point4 arrival/MoveFall, own30 guard, paired credit/reset or native presentation.
+
+## Target32 grounding-only prerequisite — 2026-10-18
+
+Separately approved Z-only slice follows TC Object.cpp698–762/Spell.cpp9286–9292 without model/reach reads or XY changes. Native30717/688, all follower-pet cases, retained controls and Normal/Heroic natural first-West INTRO2 are targeted GREEN; LEAD hi609 integration/check/fmt landed in serverf19522c55. The [contract](specs/ramparts-herald.md#grounding-only-target32-prerequisite) owns the exact source-ray oracle (no tolerance), proof ledger and remaining XY/first-collision/hover-swim/FORCE-backoff/other-selector gaps. No full-encounter or full target32 placement-parity claim.
+
+## Target32 reach-dependent port blocked — 2026-10-18
+
+`LANTHA_DISPLAY_122612_MODEL_INFO_ABSENT` BLOCKS the reach-dependent target32 TC XY port: actual Lantha230861/display122612 has no authored model-info/reach row in canonical data or the local full TDB1210 source. The broader follower-pet gate exposed sixteen Felguard regressions, so the port was reverted, not accepted with production failures. It may return only with sourced metadata or an explicit user decision. The independent Z-only slice retires `SUMMON_TARGET32_GRAVITY_GROUNDING_UNIMPLEMENTED` for represented dry/non-hover states and enables the bounded first-West transition, without resolving or reintroducing the reach-dependent XY port. No reach default, widened ignores or manual summon-position workaround. [Contract](specs/ramparts-herald.md#known-gaps-current-cycle).
+
 Verified: 2026-10-13. **Census, not completion certification.**
 
 Server revision: `50a69ce7`. Input: `/home/osso/Projects/world-of-osso/game-server/data/world.db` (read-only).

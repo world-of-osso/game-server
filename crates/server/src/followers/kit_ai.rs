@@ -127,7 +127,7 @@ fn is_tank(world: &World, unit: Entity) -> bool {
         })
 }
 
-fn conditions_met(
+pub(super) fn conditions_met(
     world: &mut World,
     unit: Entity,
     target: Entity,

@@ -455,7 +455,7 @@ fn expire_single_auction(db: &redb::Database, auction: &AuctionData) -> Result<(
         vec![(
             auction.seller_character_id,
             super::operations::build_auction_mail(
-                db,
+                persistence::next_id(db, "mail"),
                 &super::operations::auction_mail_subject("AUCTION_EXPIRED_MAIL_SUBJECT", auction),
                 "",
                 auction.deposit,

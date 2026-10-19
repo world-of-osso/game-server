@@ -48,6 +48,9 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     1269949, // Valdekar's Special
     1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory
+    // Build70448 stationary Loa victory/hand-glow/feathers: source30min cosmetics.
+    1309827, 1309830, 1309831, 1309828,
+    1309844, // Halazzi / Jan'alai source30min footstep cosmetics.
     // Complete ordinary-model caster kits; no procedural/positioner/conditional payload.
     // Exact source contracts and exclusions: docs/toy-effects14-coverage.md.
     160093, 160688, 170869, // Mysterious Flower, smoldering boots, Blazing Wings
@@ -67,11 +70,14 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
 /// Paint carries amount1; the shell carries amount1 plus two native trigger
 /// effects whose children each carry amount0. Their visuals and movement
 /// interrupts are authored in DB2. See docs/toy-effects13-coverage.md.
+/// Singed1220867 is the zero-payload five-second cosmetic child of1220729.
+/// TC SpellAuraEffects.cpp:76,4836–5117 dispatches dummy4 to spell-specific
+/// handlers, not a generic immediate effect; unaudited dummy spells stay refused.
 /// Other slots still require their own ordinary runtime handler.
 pub(crate) fn is_visual_aura(spell: &SpellInfo, effect: &SpellEffect) -> bool {
     let expected_amount = match (spell.id, effect.index) {
         (127803 | 128150, 0) => 1.0,
-        (128151 | 128152, 0) => 0.0,
+        (128151 | 128152 | 1220867, 0) => 0.0,
         _ => return false,
     };
     let dummy_aura = effect.effect == 6 && effect.aura == crate::auras::handlers::DUMMY;

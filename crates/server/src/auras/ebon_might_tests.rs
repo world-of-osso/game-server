@@ -256,7 +256,7 @@ fn augmentation_ebon_native_updates_intellect_and_recipient_count_without_refres
         .into_iter()
         .find(|effect| effect.index == 6)
         .unwrap()
-        .next_tick_at;
+        .next_tick_at();
     let frames = ((clock - aura_now(h.app.world())) / 0.05).ceil().max(0.0) as usize + 1;
     h.advance(frames);
     let old = stats(&h, allies[0]).primary.intellect;
