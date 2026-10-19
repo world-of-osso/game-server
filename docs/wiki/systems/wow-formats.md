@@ -16,7 +16,7 @@ No assets are downloaded, copied or committed. No decompiled or leaked client so
 
 `ground.rs` delegates MPHD/MAID, MODF transform and MOHD/GFID decoding to projected shared views. Mandatory chunks, first-match selection, FDID-only refusal, per-placement skipping, file loading, transforms and shared runtime WMO collision remain server policy. `find_chunk` and integer/vector decoding are no longer duplicate local implementations. MFBO flight-plane interpretation, terrain interpolation and MH2O are unchanged; existing flight-plane reads use the shared byte helper.
 
-Projected views preserve the old runtime field boundary rather than adopting unrelated rendering validation: a58-byte FDID MODF without scale,8-byte MOHD prefix and MAID without unused trailing companion fields remain sufficient. Scale-bearing MODF still requires its scale bytes; missing/short GFID and path MODF still fail. Unvisited malformed render tails remain unvisited. See the [runtime metadata proof ledger](../../handoffs/wow-formats-ground-metadata.md).
+Projected views preserve the old runtime field boundary rather than adopting unrelated rendering validation: a58-byte FDID MODF without scale,8-byte MOHD prefix and MAID without unused trailing companion fields remain sufficient. Scale-bearing MODF still requires its scale bytes; missing/short GFID and path MODF still fail. Unvisited malformed render tails remain unvisited. Before/after both pass5 runtime/metadata tests; all11 metadata bins33288bytes and fresh4LOS+4NAV bins7196988bytes match byte-for-byte with identical inventories/sizes/SHA-256,113 input hashes unchanged. See the [runtime metadata proof ledger](../../handoffs/wow-formats-ground-metadata.md).
 
 ## Reference proof
 

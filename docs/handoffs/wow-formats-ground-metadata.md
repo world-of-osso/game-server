@@ -26,6 +26,14 @@ The canonical projection retains source order and f32 bits: MAID root/obj0 pairs
 
 Metadata total: **11 files /33288bytes**. Fresh Stockade reference: **4LOS +4NAV files /7196988bytes**,39,791 collected navigation triangles. Timing-bearing reports are excluded. Full reference inventory with filenames, byte lengths and SHA-256, plus113 input-file hashes: `/home/osso/.worktrees/logs/wow_formats-phase3-reference-receipt.json`. Reference directories: `wow_formats-phase3-reference-metadata/` and `wow_formats-phase3-reference-bake/` under the same logs directory.
 
+## After proof
+
+Tested consumer revision: `9dee3c63e0edcfbbad8300aa7294aeed095ed26f`, including master `8d88013ed`; protocol remained exact and clean `aa6d925`. Both before and after passed the same **5 tests /0 failures /0 ignored** and the complete five-name multiset matches. Initial compile caught an existing STV test helper using the removed local integer reader; its binding now imports the shared reader under `cfg(test)`, without restoring a duplicate implementation.
+
+**All19 binary outputs are byte-for-byte identical**, with identical output inventories, counts, sizes and SHA-256: **11 metadata files /33288bytes** and **4LOS +4NAV files /7196988bytes**. All**113** metadata/Stockade-bake input-file sizes and hashes remain unchanged. The metadata input-file list and output-size JSON also match exactly. No approximate float comparison substitutes for binary equality.
+
+After receipt and complete size/hash inventories: `/home/osso/.worktrees/logs/wow_formats-phase3-after-receipt.json`. After artifacts: `wow_formats-phase3-after-metadata/`, `wow_formats-phase3-after-bake/`; successful logs: `wow_formats-phase3-after-ground-2.log`, `wow_formats-phase3-after-bake.log`. Server and engine Godot workspace format checks pass. Independent landing gates remain lead-owned.
+
 ## Exact verification commands
 
 Every command uses `agent-run wow_formats` and `CAPACITY_OWNER=wow_formats`; capacity admission precedes builds. Set `GAME_SERVER_GROUND_DIR=/home/osso/Projects/world-of-osso/game-engine/data` and an explicit `WOW_FORMATS_METADATA_OUTPUT=<reference-or-after-directory>` for the metadata process test:
