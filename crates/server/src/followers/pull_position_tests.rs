@@ -76,7 +76,6 @@ struct CasterFixture {
     caster: Entity,
     from: Vec3,
     caster_point: Vec3,
-    footprint: Vec<u32>,
 }
 
 fn overheat_fixture(whole_route: bool) -> CasterFixture {
@@ -180,7 +179,6 @@ fn overheat_fixture(whole_route: bool) -> CasterFixture {
         caster,
         from,
         caster_point,
-        footprint,
     }
 }
 
@@ -236,14 +234,14 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
     );
 }
 
-#[test]
-fn production_tank_caster_collection_refuses_unengaged_route_exposure() {
-    let CasterFixture {
-        mut f,
-        from,
-        footprint,
-        ..
-    } = overheat_fixture(false);
+struct CasterBoundary {
+    exposed: bool,
+    refused: bool,
+    casting: bool,
+    details: String,
+}
+
+fn read_caster_boundary(f: &mut Fixture) -> CasterBoundary {
     let follower = f.h.app.world().get::<Follower>(f.tank).unwrap().clone();
     let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
     let (map, members, _) = super::party::read_admission(f.h.app.world(), f.h.caster).unwrap();
@@ -268,26 +266,83 @@ fn production_tank_caster_collection_refuses_unengaged_route_exposure() {
             sources[&guid].pack_guid
         })
         .collect();
-    assert!(
-        footprint
-            .iter()
-            .any(|guid| !packs.contains(&sources[guid].pack_guid)),
-        "negative control must actually expose an unengaged formation, not existing defense"
-    );
-    let footprint = footprint.into_iter().collect();
+    let route = pull_route::read_route(
+        f.h.app.world_mut(),
+        &pull_route::Request {
+            tank: f.tank,
+            target_guid: OVERHEAT_GUID,
+            difficulty: 1,
+            cleared: &history.cleared_spawns,
+        },
+    )
+    .unwrap();
+    let exposed = route
+        .spawns
+        .iter()
+        .any(|guid| !packs.contains(&sources[guid].pack_guid));
     let admission =
-        super::pull_admission::read_pull_budget(f.h.app.world_mut(), f.tank, &footprint, 1);
+        super::pull_admission::read_pull_budget(f.h.app.world_mut(), f.tank, &route.spawns, 1);
+    let refused = !matches!(admission, Ok(super::pull_budget::Decision::Allow { .. }));
+    let caster = source(&mut f.h, f.tank, OVERHEAT_GUID);
+    let casting =
+        f.h.app
+            .world()
+            .get::<CastState>(caster)
+            .is_some_and(|cast| cast.spell_id == OVERHEAT_FIREBALL && cast.interruptible);
+    CasterBoundary {
+        exposed,
+        refused,
+        casting,
+        details: format!(
+            "extra={exposed} refused={refused} casting={casting} route={:?} engaged_packs={packs:?} admission={admission:?}",
+            route.spawns
+        ),
+    }
+}
+
+#[test]
+fn production_tank_caster_collection_refuses_unengaged_route_exposure() {
+    let CasterFixture { mut f, .. } = overheat_fixture(false);
+    let initial = read_caster_boundary(&mut f);
     assert!(
-        !matches!(admission, Ok(super::pull_budget::Decision::Allow { .. })),
-        "negative control requires an actual native admission refusal"
+        initial.exposed && initial.refused && initial.casting,
+        "control must begin with actual unengaged route exposure/refusal and native cast: {}",
+        initial.details
     );
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
-    for _ in 0..10 {
+    let mut held_boundaries = 0;
+    for tick in 0..10 {
+        let before_point = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
+        let before = read_caster_boundary(&mut f);
         f.h.advance(1);
+        let after = read_caster_boundary(&mut f);
         let at = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
-        assert_eq!(
-            at, from,
-            "caster collection bypassed refusal for an unengaged route formation"
-        );
+        if at != before_point || before.exposed != after.exposed || before.casting != after.casting
+        {
+            println!(
+                "CASTER_BOUNDARY tick={tick} moved={} before={} after={}",
+                at != before_point,
+                before.details,
+                after.details
+            );
+        }
+        if before.exposed
+            && after.exposed
+            && before.refused
+            && after.refused
+            && before.casting
+            && after.casting
+        {
+            assert_eq!(
+                at, before_point,
+                "caster collection bypassed actual tick refusal; before={} after={}",
+                before.details, after.details
+            );
+            held_boundaries += 1;
+        }
     }
+    assert!(
+        held_boundaries > 0,
+        "real kit did not expose an actual new-pack caster refusal boundary; setup is not behavioral evidence"
+    );
 }
