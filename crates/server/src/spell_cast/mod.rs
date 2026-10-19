@@ -3394,3 +3394,5 @@ mod target32_grounding_tests;
 mod teleport_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod water_shield_mana_tests;
