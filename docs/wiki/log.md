@@ -35,7 +35,7 @@
 [Own30](systems/boss-scripts.md#herald-own-nonlethal-below30-ingress--2026-10-18): TC217–220 actual35→29 after intro reuses the descent latch, no30693; natural Normal/Heroic/INTRO1 negative RED1PASS2FAIL→GREEN3/3 62.04s. Real source-speed first step and cast interruption; lethal guard/arrival/fall excluded. Enabled all10 Herald+four grounding14/14 PASS172.99s ataed52b5b6; LEAD gate/check/fmt pending.
 ## 2026-10-18 — Independent native137 composition
 
-[Source-gated137](systems/auras.md#independent-primary-stat137-composition--2026-10-18): completeTDB1210 groups/rules +all32pinnedworldSQLupdates establish independent51271/53365. Ignored8aef2fabb RED3FAIL/3controlPASS18.87s shows real HumanDK Strength33→44.55vs45.54 bothorders/removal. Minimal percentage-representation fold preserves flat29/masks; GREEN pending. No fake stats/source/clock edits or legal-kit/runeforge-proc/fullPillar/group-engine/PvP certificate.
+[Source-gated137](systems/auras.md#independent-primary-stat137-composition--2026-10-18): completeTDB1210 groups/rules +all32pinnedworldSQLupdates establish independent51271/53365. Ignored8aef2fabb RED3FAIL/3controlPASS18.87s shows real HumanDK Strength33→44.55vs45.54 bothorders/removal. Minimal percentage-representation fold preserves flat29/182 addition/masks. At853447542 native6 +retained23 GREEN29/29,46.49s,0warnings/ignored; stats substring also covers item/frame families. Fullcargo fmt0, independent lead gate pending. No fake stats/source/clock edits or legal-kit/runeforge-proc/fullPillar/group-engine/PvP certificate.
 
 ## 2026-10-18 — Native continuous power prevention294
 
