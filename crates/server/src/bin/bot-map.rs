@@ -34,7 +34,6 @@ mod tests {
     use bot_map::scene::{Scene, Spawn};
 
     #[test]
-    #[ignore = "behavioral RED: exact source end-state marker not implemented"]
     fn end_state_legend_distinguishes_observed_dead_alive_and_unknown() {
         let trace = concat!(
             "{\"event\":\"run_start\",\"run_id\":\"states\",\"revision\":\"abc\",\"map_id\":34,\"at_ms\":0}\n",
@@ -62,7 +61,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "behavioral RED: opted-in Stockade trace renderer not implemented"]
     fn concrete_trace_draws_paths_time_ticks_and_death_marker() {
         let trace = concat!(
             "{\"event\":\"run_start\",\"run_id\":\"stockade-fixture\",\"revision\":\"abc123\",\"map_id\":34,\"at_ms\":1000}\n",

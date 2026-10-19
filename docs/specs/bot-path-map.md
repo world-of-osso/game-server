@@ -4,10 +4,10 @@ Manual `bot-map` binary renders an explicitly captured Stockade (map 34) harness
 
 ## What it must do
 
-- [ ] Read JSONL and render observed paths with periodic wall-time ticks, combat/death markers, legend, run ID/revision/duration.
+- [x] Read JSONL and render observed paths with periodic wall-time ticks, combat/death markers, legend, run ID/revision/duration.
 - [ ] Render baked walkability with existing navigation artifact readers; flatten all levels explicitly.
 - [ ] Read map34 creature rows from world.db; share the tank planner's pure formation identity rule, never geometric grouping.
-- [ ] Mark observed end-state honestly; unknown identity/census data remains unknown.
+- [x] Mark observed end-state honestly; unknown identity/census data remains unknown.
 - [ ] Preserve existing pull-source/route behavior and tests unchanged.
 - [ ] Produce one real Stockade SVG and inspected PNG.
 

@@ -3053,3 +3053,7 @@ Recorded real33076 ward RED, approved per-cast stack/original-caster API and nat
 ## 2026-10-19 — Stockade path-map renderer
 
 Manual SVG renderer with shared pure pull-source pack identity and existing validated navigation artifact codec. Trace clock/capture gaps explicit; real proof pending.
+
+## 2026-10-19 — Path-map fixture proof
+
+Native fixture RED→GREEN2 at91fa9b74d: concrete points/time/death/title and distinct source ALIVE/DEAD/UNKNOWN. Proven tests enabled; real geometry/run and retained planner gate pending.
