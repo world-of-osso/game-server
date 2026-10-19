@@ -10,7 +10,7 @@ const CENTER: Position = Position {
     y: 89.05998,
     z: -1740.5852,
 };
-const WEST: Position = Position {
+pub(super) const WEST: Position = Position {
     x: -1423.4910,
     y: 103.7056,
     z: -1710.4010,
@@ -80,7 +80,7 @@ fn prepared_source_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Ent
     (h, map, herald, sentries)
 }
 
-fn reach_center(h: &mut Harness, herald: Entity, sentries: &[Entity]) -> Duration {
+pub(super) fn reach_center(h: &mut Harness, herald: Entity, sentries: &[Entity]) -> Duration {
     let listener = *h.app.world().get::<Position>(sentries[0]).unwrap();
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(listener);
@@ -108,7 +108,7 @@ fn reach_center(h: &mut Harness, herald: Entity, sentries: &[Entity]) -> Duratio
     panic!("source center must be reached by real point movement");
 }
 
-fn prepared_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
+pub(super) fn prepared_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
     let (mut h, map, herald, sentries) = prepared_source_ramparts(difficulty);
     for (_, connection, _) in &h.players {
         h.app.world_mut().entity_mut(*connection).insert((
@@ -119,7 +119,7 @@ fn prepared_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
     (h, map, herald, sentries)
 }
 
-fn received_casts(h: &Harness, caster: Entity, spell_id: u32) -> usize {
+pub(super) fn received_casts(h: &Harness, caster: Entity, spell_id: u32) -> usize {
     h.inbox(0)
         .spell_gos
         .iter()
