@@ -313,15 +313,12 @@ fn interrupt_spell(spec: u32) -> Option<u32> {
 }
 
 pub(super) fn interrupt_enemy(world: &mut World, unit: Entity, enemy: Entity, spec: u32) -> bool {
-    let interruptible = world
-        .get::<CastState>(enemy)
-        .is_some_and(|cast| cast.interruptible);
-    if !interruptible {
-        return false;
-    }
     let Some((caster, spell)) = interrupt_source(world, unit, spec) else {
         return false;
     };
+    if !crate::spell_cast::can_interrupt_cast(world, caster, enemy) {
+        return false;
+    }
     if caster != unit && super::hazards::target_is_hazardous(world, caster, caster) {
         return false;
     }

@@ -148,6 +148,12 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+mod interruptibility;
+pub(crate) use interruptibility::can_interrupt_cast;
+#[cfg(test)]
+mod interruptibility_rule_tests;
+#[cfg(test)]
+mod interruptibility_tests;
 pub(crate) mod mobile_banking;
 #[cfg(test)]
 mod mobile_banking_tests;

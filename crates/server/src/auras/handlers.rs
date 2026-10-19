@@ -119,6 +119,10 @@ pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_DODGE_PERCENT: u32 = 49;
 pub const MOD_PARRY_PERCENT: u32 = 47;
 pub const MECHANIC_IMMUNITY: u32 = 77;
+/// Matching class-mask protection read by SpellInfo::CanBeInterrupted.
+pub const PREVENT_INTERRUPT: u32 = 203;
+/// Interrupter-side permission for the exact spell ID in MiscValue0.
+pub const ALLOW_INTERRUPT_SPELL: u32 = 484;
 /// MiscValue0 is a creature_immunities row ID, not the mechanics bitmask itself.
 pub const MECHANIC_IMMUNITY_MASK: u32 = 147;
 pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
@@ -134,6 +138,8 @@ pub const MOD_ATTACKER_MELEE_CRIT_CHANCE: u32 = 187;
 pub const MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: u32 = 197;
 /// TC Unit.cpp2911–2914: victim aura caster must equal the actual attacker.
 pub const MOD_CRIT_CHANCE_FOR_CASTER: u32 = 306;
+/// TC Unit.cpp2916–2921: actual TempSummon direct summoner owns this victim modifier.
+pub const MOD_CRIT_CHANCE_FOR_CASTER_PET: u32 = 339;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
@@ -311,7 +317,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
-        DISABLE_CASTING_EXCEPT_ABILITIES | DISABLE_ATTACKING_EXCEPT_ABILITIES => CastRestriction,
+        DISABLE_CASTING_EXCEPT_ABILITIES
+        | DISABLE_ATTACKING_EXCEPT_ABILITIES
+        | PREVENT_INTERRUPT
+        | ALLOW_INTERRUPT_SPELL => CastRestriction,
         MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
         MOD_DETECTED_RANGE => DetectedRange,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
