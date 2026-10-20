@@ -5,7 +5,14 @@ use crate::spell_cast::test_harness::{Harness, harness_with, world_db};
 
 fn fixture(ids: &[u32]) -> Harness {
     let mut h = harness_with(Vec::new(), ids, 8, false).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
     h.advance(3);
+    let caster = h.caster;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |_| true);
+    h.advance(2);
     h
 }
 

@@ -242,3 +242,41 @@ fn aura_stat_native_103_reselects_without_erasing_base_or_new_threat() {
         300.0
     );
 }
+
+#[test]
+#[ignore = "aura-stat-mods RED: native overkill316 accounting"]
+fn aura_stat_native_316_absorbs_lethal_damage_without_inventing_script_death_prevention() {
+    for spell_id in [31230, 86949] {
+        let mut h = fixture(&[spell_id]);
+        apply(&mut h, spell_id, 0);
+        let caster = h.caster;
+        *h.app.world_mut().get_mut::<Health>(caster).unwrap() = Health {
+            current: 500.0,
+            max: 1000.0,
+        };
+        let commit = apply_attack_damage(h.app.world_mut(), caster, 600.0, 4);
+        assert!(commit.lethal, "only a sourced script may prevent death");
+        assert_eq!(
+            commit.absorbed_loss, 600.0,
+            "native zero316 defaults to full accounting"
+        );
+        assert_eq!(h.health(caster), 0.0);
+    }
+}
+
+#[test]
+#[ignore = "aura-stat-mods control: native overkill316 boundaries"]
+fn aura_stat_native_316_does_not_absorb_nonlethal_or_twice_maximum_damage() {
+    for loss in [400.0, 2000.0] {
+        let mut h = fixture(&[31230]);
+        apply(&mut h, 31230, 0);
+        let caster = h.caster;
+        *h.app.world_mut().get_mut::<Health>(caster).unwrap() = Health {
+            current: 500.0,
+            max: 1000.0,
+        };
+        let commit = apply_attack_damage(h.app.world_mut(), caster, loss, 1);
+        assert_eq!(commit.absorbed_loss, 0.0);
+        assert_eq!(commit.lethal, loss >= 500.0);
+    }
+}
