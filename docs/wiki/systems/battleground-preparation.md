@@ -10,7 +10,7 @@ The ordinary-match readiness check previously called `BgInstance::start` as soon
 
 ## Proof boundary
 
-Native channel regressions cover concrete/Random roster arrival and objective refusal through the preparation interval. Source-backed gate fixtures exercise map-copy collision/animation/lifetime. CPU-only evidence does not establish UDP delivery, rendered collision or deployment. Preparation44521 and resource reset remain a separate slice.
+Native channel regressions cover concrete/Random roster arrival and objective refusal through the preparation interval. Source-backed gate fixtures exercise map-copy collision/animation/lifetime. The [proof ledger](../../handoffs/pvp-bg-preparation-proof-ledger.md) separates partial retained cohorts, prerequisite failures and final focused passes; Lead final integration remains pending. CPU-only evidence does not establish UDP delivery, rendered collision or deployment. Preparation44521 and resource reset remain a separate slice.
 
 ## Sources
 

@@ -3,7 +3,7 @@
 [Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
 ## 2026-10-19 — Ordinary battleground preparation
 
-[Preparation](systems/battleground-preparation.md): source first-arrival120/60/30/0 clock, original roster minimum and sourced copied-map gates implemented after native concrete/Random RED2; initial ignored GREEN2 at0f224310f. Expanded pending-transfer/all-map gate and retained fixture checks remain pending. Seething missing placements named; no countdown UI/44521/resource changes.
+[Preparation](systems/battleground-preparation.md): source first-arrival120/60/30/0 clock, original roster minimum and sourced copied-map gates after native concrete/Random RED2. Actual10-map gate/loader2PASS; corrected pending-transfer/clock2PASS in partial retained114/25. Exact failed25→22PASS/3FAIL, then qualified ground root/restored original frame cadence→last3PASS53.66s atbc3850ae0. EDQUOT and two compile prerequisites remain separately recorded. [Proof ledger](../handoffs/pvp-bg-preparation-proof-ledger.md) qualifies revision scopes; no unified current-tip retained pass. Lead integration pending; Seething missing placements named; no UI/44521/resources.
 
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
