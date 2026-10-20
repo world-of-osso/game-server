@@ -71,6 +71,18 @@ fn observed_casts(h: &Harness, caster: Entity, spell: u32) -> usize {
         .count()
 }
 
+/// Burning Maul36057 Damage lines by `caster` logged since event index `start`.
+fn maul_hits(h: &Harness, caster: Entity, start: usize) -> usize {
+    h.app.world().resource::<ObservedCombatEvents>().0[start..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(BURNING_MAUL_HIT)
+        })
+        .count()
+}
+
 /// The first player stands `offset` yards east of O'mrogg.
 fn stand_beside(h: &mut Harness, boss: Entity, offset: f32) {
     let origin = *h.app.world().get::<Position>(boss).unwrap();
@@ -190,28 +202,14 @@ fn encounter_coverage_omrogg_native_spell_admissions_qualify() {
         }
         assert!(h.has_aura(boss, maul), "Burning Maul self aura");
 
-        // The aura's PROC_TRIGGER_SPELL default: melee hits trigger Burning Maul36057.
+        // The aura's PROC_TRIGGER_SPELL default: melee hits trigger Burning Maul36057,
+        // a triggered spell logged by its Damage line, not a CastSuccess.
         // HARNESS SETUP: direct threat so O'mrogg swings at the adjacent player.
         h.engage(boss);
         let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
         h.advance(6.0);
-        let player = h.player();
-        let from_boss: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[start..]
-            .iter()
-            .filter(|event| event.source == Some(boss.to_bits()))
-            .map(|event| (event.kind.clone(), event.spell_id, event.amount))
-            .collect();
-        eprintln!(
-            "OMROGG difficulty{difficulty} maul hits={} aura={} player_health={:?} victim={:?} boss_events={from_boss:?}",
-            observed_casts(&h, boss, BURNING_MAUL_HIT),
-            h.has_aura(boss, maul),
-            h.health(player),
-            crate::creature_aggro::current_victim(h.app.world_mut(), boss)
-                .map(|unit| unit == player),
-        );
-        assert!(
-            observed_casts(&h, boss, BURNING_MAUL_HIT) > 0,
-            "default proc of the Burning Maul aura"
-        );
+        let hits = maul_hits(&h, boss, start);
+        eprintln!("OMROGG difficulty{difficulty} maul hits={hits}");
+        assert!(hits > 0, "default proc of the Burning Maul aura");
     }
 }
