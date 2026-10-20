@@ -65,6 +65,8 @@ fn encounter_coverage_herald_liquid_fire_source_qualification() {
 
 fn install_liquid_fire_inputs(h: &mut Harness) {
     let (_directory, path) = prepare_encounter_database("herald");
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
     let source = crate::world_data::load_world_data(&path);
     let mut data = h.app.world_mut().resource_mut::<WorldData>();
     data.templates
@@ -136,16 +138,16 @@ fn assert_liquid_fire(difficulty: u32, cone: bool) {
         hit,
         "ordinary source parent{parent} must really hit the native player"
     );
-    let child_go = h
-        .inbox(0)
-        .spell_gos
-        .iter()
-        .find(|go| go.spell_id == child && go.caster == player.to_bits());
+    let child_casts = &h
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+        .0;
+    println!("native parent{parent} actual successful triggered launches: {child_casts:?}");
     assert!(
-        child_go.is_some(),
+        child_casts.contains(&(player, child, Some(player))),
         "actual parent{parent} hit unit must self-trigger native{child}"
     );
-    assert_eq!(child_go.unwrap().target, Some(player.to_bits()));
     let objects: Vec<_> = h
         .app
         .world_mut()
