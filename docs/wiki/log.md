@@ -3229,3 +3229,7 @@ gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated 
 ## 2026-10-19 — Last Online authority implementation
 
 After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-app query RED, added disconnect-only character logout persistence and optional raw guild timestamp. Rest/admin timestamps are not reused or backfilled. Focused GREEN/coordinated landing/native pending; see guild lifecycle Last Online section.
+
+## 2026-10-19 — Actor-owned DoT integrated proof
+
+[Exact scope/proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19):6a82516ac integratedkit_+nativeperiodic/coexistence60PASS/0FAIL/1explicitfile-writingexportignored45.05s/compile5m20s, check1m55s/fmt/diffPASS, zero warnings. Allfournewnativecasesenabled, sourceSimC76f8118receiptretained; foreignHoT/globalhas_auraunchanged. Pushed; independentmo730queued(allfollowers/auras/pets+AzureENV/check/fmt). No redundantlocalrun.
