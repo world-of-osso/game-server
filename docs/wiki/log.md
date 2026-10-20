@@ -1,6 +1,13 @@
 ## 2026-10-20 — Blood Furnace The Maker
 
 [The Maker17381](systems/boss-scripts.md#blood-furnace-the-maker--2026-10-20) ported on BossAi(0) with `Ctx::dungeon_mode` consolidation; qualification, pushed ignored RED, GREEN5/5 before enabling. Read-only trace found no canonical542/543 creature bindings (`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`).
+## 2026-10-20 — db2_casc scalar-first pallet order
+
+[Decoder notes](../db2-casc-sparse.md#fixed-record-decoding):
+- `db2_casc` fixed decoding now goes through one `read_fixed` parser, which the engine readers are moving onto.
+- Fixed latent bug: pallets were read in field order. Real PlayerCondition 1045411 declares an array pallet before scalar pallets, so all 48,491 rows read WeaponSubclassMask 1048866 / ContentTuningID 958 instead of 0, and the ContentTuningID pallet repeated entries.
+- No import used that path; `world.db` PlayerCondition comes from the scalar-first engine CSVs.
+- Regression: `test_db2_casc_player_condition`, RED on the old decoder, GREEN now.
 
 ## 2026-10-19 — Ordinary quest max-level bonus
 
