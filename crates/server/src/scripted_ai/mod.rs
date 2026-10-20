@@ -55,6 +55,11 @@ pub use event_map::EventMap;
 pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
     kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
     kings_rest::SPAWN_GROUP_SERPENT_BOSS,
+    blood_furnace::SPAWN_GROUP_CHANNELER_1,
+    blood_furnace::SPAWN_GROUP_CHANNELER_2,
+    blood_furnace::SPAWN_GROUP_CHANNELER_3,
+    blood_furnace::SPAWN_GROUP_CHANNELER_4,
+    blood_furnace::SPAWN_GROUP_CHANNELER_5,
 ];
 
 /// `gameobject_template.ScriptName`s with a ported `GameObjectAI`.
@@ -88,6 +93,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(Startup, azure_vault::register_aura_scripts)
+            .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -193,6 +199,8 @@ pub enum Hook {
         damage: f32,
     },
     EnterEvadeMode,
+    /// `HomeMovementGenerator::DoFinalize` → `CreatureAI::JustReachedHome`.
+    JustReachedHome,
     JustSummoned(Entity),
     IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
@@ -244,6 +252,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
         self.reset(ctx);
     }
+    fn just_reached_home(&mut self, _ctx: &mut Ctx) {}
     fn just_summoned(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn is_summoned_by(&mut self, _ctx: &mut Ctx, _summoner: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
@@ -564,6 +573,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
             );
         }
         Hook::EnterEvadeMode => ai.enter_evade_mode(&mut ctx),
+        Hook::JustReachedHome => ai.just_reached_home(&mut ctx),
         Hook::JustSummoned(summon) => ai.just_summoned(&mut ctx, summon),
         Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
