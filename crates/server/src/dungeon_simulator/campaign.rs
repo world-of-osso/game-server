@@ -31,9 +31,9 @@ pub(super) struct Sample {
 
 #[derive(Serialize)]
 pub(super) struct PullDecision {
-    at: f64,
-    pack: u32,
-    decision: String,
+    pub at: f64,
+    pub pack: u32,
+    pub decision: String,
 }
 
 #[derive(Serialize)]
