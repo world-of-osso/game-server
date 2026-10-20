@@ -121,6 +121,10 @@ Matching full `toys:: --test-threads=1 --format=pretty` runs compare base3373553
 
 The five directly affected tests improve244.738→113.634s combined (131.103s): transmitted-object lifecycles113.962→64.136s; four facing tests130.776→49.498s. The208 unaffected tests grow2001.814→2563.669s, overwhelming that local saving. Lead accepted that unaffected growth as host contention, not the two-site change; these receipts do not quantify its separate phases. Results were not rerun to select a better outcome. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/toys-{before,after}/` and aggregate `wow_formats-toys-comparison.json`.
 
+## Nested achievement canonical catalog reuse
+
+The [nested-all native encounter fixture](../../../crates/server/src/achievement_nested_all_tests.rs) clones the complete catalog through existing `test_data::achievement_catalog()` instead of decoding canonical achievement rows for each variant. No cache is added. All four difficulty/prerequisite combinations, fresh app/redb ownership, foreign-character isolation, ordinary updates and persisted-reopen assertions remain unchanged. The connection still loads the original map store; no map producer is replaced.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.
