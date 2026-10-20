@@ -205,12 +205,12 @@ fn aura_stat_native_103_reselects_without_erasing_base_or_new_threat() {
     table.add_threat(other.to_bits(), 100.0);
     h.app.world_mut().entity_mut(h.npc).insert(table);
     assert_eq!(
-        crate::creature_threat::current_victim(h.app.world_mut(), h.npc),
+        crate::creature_aggro::current_victim(h.app.world_mut(), h.npc),
         Some(caster)
     );
     apply(&mut h, 586, 0);
     assert_eq!(
-        crate::creature_threat::current_victim(h.app.world_mut(), h.npc),
+        crate::creature_aggro::current_victim(h.app.world_mut(), h.npc),
         Some(other)
     );
     h.app
@@ -230,7 +230,7 @@ fn aura_stat_native_103_reselects_without_erasing_base_or_new_threat() {
         a.spell_id == 586
     });
     assert_eq!(
-        crate::creature_threat::current_victim(h.app.world_mut(), h.npc),
+        crate::creature_aggro::current_victim(h.app.world_mut(), h.npc),
         Some(caster)
     );
     assert_eq!(
