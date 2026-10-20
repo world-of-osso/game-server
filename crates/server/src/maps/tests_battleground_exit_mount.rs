@@ -120,6 +120,10 @@ fn assert_exit_dismounts(queue_id: u32, phase: BgPhase) {
     if phase != BgPhase::Ended {
         enter_players(&mut h, entrants);
     }
+    if phase == BgPhase::InProgress {
+        use_second_frames(&mut h);
+        h.advance(121);
+    }
     mount_source_rider(&mut h, who);
     if phase == BgPhase::Ended {
         finish_source_nodes(&mut h, &players[1]);

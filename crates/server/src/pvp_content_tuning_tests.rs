@@ -34,10 +34,11 @@ fn achievements_criteria_content268_full_hundred_settlements_grant_both_factions
             let mut state = world.resource_mut::<PvpServerState>();
             let invitation = state.battleground_matches.get_mut(&17).unwrap();
             invitation.instance = BgInstance::from_match(&matched, &template);
+            invitation.preparation = Default::default();
             invitation.flags = shared::battleground::flag_rules(template.map_id)
                 .map(shared::battleground::FlagBattle::new);
         }
-        pvp_objective::update_battleground_objectives(&mut world);
+        advance_native_preparation(&mut world);
         assert_eq!(
             world.resource::<PvpServerState>().battleground_matches[&17]
                 .instance
