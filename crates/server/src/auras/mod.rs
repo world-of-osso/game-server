@@ -43,6 +43,7 @@ pub(crate) mod mastery;
 mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
+mod natures_guardian;
 mod periodic;
 pub mod procs;
 mod refresh;

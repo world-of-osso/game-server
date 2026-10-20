@@ -1,5 +1,15 @@
 # Auras
 
+## Nature's Guardian baseline — 2026-10-19
+
+`natures_guardian.rs` binds only30884 existing check_proc/on_damage_proc hooks. It reads the actual action target's current Health and native effect0 threshold, using strict currentHP < truncated maxHP×amount/100; at35% equality no proc. Existing445698 blocks eligibility. The callback casts real445698 first through the existing `creature_cast_ignoring_in_progress` path, then native31616 through existing `cast_costed_trigger_with_context` (FULL_MASK minus power/reagent bypass). A cooldown-cast failure is logged but does not suppress the default heal, matching the source's non-preventing OnEffectProc. No custom timer, state, query schema, trigger API, wire or generic DUMMY framework is introduced; Guardian/Ardent health commits are untouched.
+
+Source: pinned TC a352b1fa `spell_shaman.cpp2348–2376`/enum127 (cooldown445698), `SpellAuraEffects.cpp1463–1494/6126–6149` script-before-default-DUMMY trigger. Active70448 receipt-matching native rows:30884 A4 threshold35/Trigger31616;31616 E136 heal40%;445698 A4/SpellDuration22=45000ms. Selected seven CSV hashes match the accepted canonical active closed set; false table-level authentication flags remain explicit. All three Shaman candidate unions contain30884 talent; this is not legal-loadout certification.
+
+Qualification FIRST is three-case COMPOSITE:451e90058 retains two PASS from its36.02s batch (actual player188196 cast state/owned completion survives limited445698; native45s expiry;65 actual NPC10 hits1000→350/next340), excluding that batch's failed premature wound observation. Corrected native2000ms209140 cast wait070de6448 gives the remaining single PASS17.53s: real800 wound→200, native400 heal→600,26 ordinary two-NPC10 hits→340 in24.8s <45s. No native amount/HP/clock/RNG edits. This is not one3PASS batch. Native SpellPower/Reagents have no rows for the three IDs.
+
+Pushed ignored823c414e4 then gives genuine5FAIL/3controlsPASS21.36s/0warnings: below-threshold HP remains200 or340 instead of600/740. Missing/unlearned/lethal controls pass. Minimal binding follows this RED; fresh GREEN/lead integration pending. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/natures-guardian-*`. [Contract](../../specs/class-completeness.md#natures-guardian-baseline-active70448).
+
 ## Spirit Wolf baseline — 2026-10-19
 
 `spirit_wolf.rs` registers only existing on_apply/on_remove hooks on2645 and260878. Apply requires both native parents and casts real self260882; removing either removes260882/260881 on that unit. Existing A23 dispatch, native1000ms/no0x200 initial period, permanent duration21, native260881 cap4 and A129+5/A87-5 per stack handle the rest. No component, timer, periodic hook, target state or wire field is added. The unrelated Feral Spirit guardian `SpiritWolf` is unchanged.
