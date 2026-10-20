@@ -2,6 +2,9 @@
 
 [Flying actual-impact boundary](systems/boss-scripts.md#herald-flying-liquid-fire--2026-10-19): qualification73bc2PASS64.88s establishes natural victim/random admission and positive impacts in Normal/Heroic FIRST. Pushed ignored4b11→four genuineRED200.85s; production adds only four IDs to existing Fireball hit hookd75c→four full nativeGREEN287.96s before enabling. Actual frame-local child/freshGO prevents stale victim-field acceptance; source GO lifecycle/damage/copy oracle reused unchanged. Retained natural qualification2PASS plus extracted ground/source/refusal6PASS183.95s ate0e53 completes a twelve-case composite; independent gate pending. No broader flight/native/balance/loot/persistence claim.
 
+## 2026-10-19 — Native forced-miss readiness oracle RED
+
+[Follow-up](systems/auras.md#attack-readiness-oracle-follow-up--2026-10-19):7ff4c9857/cc83515b6 fixed recovery, not initial HP⇒attack helpers. Pushed ignoredea66eb290 native50240 counterexamples give2RED21.29s/three actual Miss attempts each; minimal TEST-only event/Pursuing/currentvictim correction preserves100/120-frame windows and every wound/death/evade/regeneration assertion. No production/RNG/input changes. CurrentVictim namespace compile correction1aea734bf (not behavioral proof); fresh two-module31GREEN94.76s/0warnings including new2ignored via --include-ignored, then both enabled. Independent lead gate pending.
 ## 2026-10-19 — Herald ground Liquid Fire
 
 [Ground child/object boundary](systems/boss-scripts.md#herald-ground-liquid-fire--2026-10-19): source qualification1PASS27.70s; corrected actual-launch ignoredcb85 pushed on pre-runtime base, four genuineRED156.95s. Ground-only hit-unit self-children plus exact registered GO AI/native21252 ordinary pulses/damage/lifetimes pass four complete endpoints159.72s at7ea954c38; retained source/refusal controls make a six-case composite. Invalid initial network child receipt oracle excluded; no wire workaround. Tests enabled, independent gate pending; flying/native/balance/persistence/re-entry/loot excluded.
@@ -28,6 +31,10 @@
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 
 [Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
+## 2026-10-19 — Bounded ordinary BG Preparation44521
+
+[Aura lifecycle](../handoffs/pvp-bg-preparation-aura-proof-ledger.md): ignored36bfc2ea0 pushed before genuine6RED/7controls (13cases11.98s). Native authored44521 makes Fireball Mana20/Energy45 SinisterStrike cost/admission zero, then normal removal restores exact baselines. Consumerb0a123256 adds WaitingACK/start/BG-exit role boundaries with normal AuraAPI, no arena reset or new effects. GREEN13/0/0ignored12.32s at31dc2bb27 before enabling six regressions; separate retained76/0/0ignored18.89s at6d03ade8b after master merge (new13 skipped,89distinct notone89run). Lead integration pending. Generic interrupt semantics remain `AURA_INTERRUPT_LEAVE_ENTER_WORLD_SEMANTICS_UNQUALIFIED`; no zoning/logout/persistence purge.
+
 ## 2026-10-19 — Ordinary battleground preparation
 
 [Preparation follow-up](../handoffs/pvp-bg-preparation-proof-ledger.md#bp732-integration-correction-and-test-driver-audit): bp732278PASS/3FAIL/1ignored, CHECK0/FMT0. Test-only natural wait for reconnect/flag captures, original delta preserved after native wait, fresh preparation per100 replacement matches. Grep14modules found two additional flag-channel tests; exact3+own4+flag2 GREEN9/0/0ignored53.80s on rebased2a6ab113e/protocol7f9bd7c. Production unchanged; Lead regate pending.
