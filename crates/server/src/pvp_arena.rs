@@ -205,6 +205,7 @@ pub(super) fn create_match(
         id,
         InvitedBattleground {
             instance: BgInstance::from_match(&matched, &template),
+            preparation: Default::default(),
             accepted: Default::default(),
             map: None,
             origins: Default::default(),

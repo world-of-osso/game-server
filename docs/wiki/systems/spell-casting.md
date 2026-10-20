@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Auto Shot autorepeat — 2026-10-19
+
+`spell_cast/auto_repeat.rs`: `execute_cast` success on an Attr2 0x20 spell inserts `AutoRepeat {spell_id, target, ready_in}` on the caster. `auto_repeat::update` (FixedUpdate after `start_queued_casts`) counts `ready_in` down and refires through `execute_cast`; success re-enters `on_cast`, resetting the timer to `swing_time(ranged main-hand speed or 2s, haste)`. A failed Auto Shot only skips; other autorepeat spells cancel. `stop_all_casts` (StopSpellCast, first stun, fear, confuse) removes the component then cancels the active cast. Spec gaps: [player-damage](../../specs/player-damage.md#known-gaps-current-cycle).
+
 ## Live source interrupt eligibility
 
 `spell_cast/interruptibility.rs` ports pinned TC `SpellInfo.cpp:1618–1628` (`CanBeInterrupted`). Follower fallback, pet, full-kit and tank-caster selection read the active cast's native spell and current aura state; hostile effect68 rechecks at execution. Attr7, channel Damage/EnteringCombat, DamageCancels/player-only and the interrupter's exact484 aura are positive branches that bypass target protection. The final SILENCE-prevention branch checks mechanic26 immunity and matching203 aura; ignore-immunity bypasses only mechanic immunity. Missing categories means PreventionType0.
