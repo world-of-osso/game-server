@@ -16,6 +16,7 @@
 //! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
+mod abundance;
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
 pub(crate) mod augmentation;
