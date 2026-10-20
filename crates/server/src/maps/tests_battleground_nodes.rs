@@ -446,6 +446,16 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
         h.app.world().get::<Health>(friendly).unwrap().current,
         before
     );
+    // AttackStop leaves the captain's untimed PvE combat reference intact if
+    // its retaliation missed. This fixture has no chase/evade systems to end it.
+    crate::combat::combat_stop(h.app.world_mut(), actor.player);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(actor.player),
+        Some(&shared::components::CombatStatus(false)),
+        "actor must leave combat before requesting battleground return"
+    );
     h.app
         .world_mut()
         .get_mut::<MessageSender<LeaveBattleground>>(actor.connection)
