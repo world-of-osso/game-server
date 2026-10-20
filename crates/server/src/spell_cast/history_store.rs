@@ -210,8 +210,6 @@ fn active_updates(history: &SpellHistory, now: f64) -> Vec<SpellCooldownUpdate> 
 
 #[cfg(test)]
 mod tests {
-    use redb::ReadableTable;
-
     use super::*;
 
     fn stored_row(db: &Database, character_id: u64) -> Option<StoredCooldowns> {
