@@ -1,5 +1,9 @@
 # Spell Casting
 
+## Spell cooldown persistence
+
+`spell_cast/history_store.rs` keeps `SpellHistory` spell and category deadlines in `character_spell_cooldowns` (character id → bitcode spell/category unix-ms deadlines). `queue_player_despawn` converts the live `history_now` deadlines to wallclock and saves them; `queue_restore` runs on `Added<PlayerLink>`, loads the row (pruning expired entries), merges by max and replays `SpellCooldownUpdate`s through the existing owner channel. GCD, school locks and charges stay in memory. [Contract](../../specs/spell-cooldown-persistence.md).
+
 ## Auto Shot autorepeat — 2026-10-19
 
 `spell_cast/auto_repeat.rs`: `execute_cast` success on an Attr2 0x20 spell inserts `AutoRepeat {spell_id, target, ready_in}` on the caster. `auto_repeat::update` (FixedUpdate after `start_queued_casts`) counts `ready_in` down and refires through `execute_cast`; success re-enters `on_cast`, resetting the timer to `swing_time(ranged main-hand speed or 2s, haste)`. A failed Auto Shot only skips; other autorepeat spells cancel. `stop_all_casts` (StopSpellCast, first stun, fear, confuse) removes the component then cancels the active cast. Spec gaps: [player-damage](../../specs/player-damage.md#known-gaps-current-cycle).
