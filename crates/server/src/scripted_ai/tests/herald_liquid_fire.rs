@@ -63,7 +63,7 @@ fn encounter_coverage_herald_liquid_fire_source_qualification() {
     }
 }
 
-fn install_liquid_fire_inputs(h: &mut Harness) {
+pub(super) fn install_liquid_fire_inputs(h: &mut Harness) {
     let (_directory, path) = prepare_encounter_database("herald");
     h.app
         .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
@@ -156,15 +156,34 @@ fn assert_liquid_fire(difficulty: u32, cone: bool) {
         .filter(|(_, info, summon, copy)| {
             info.entry == entry && summon.spell_id == child && **copy == map
         })
-        .map(|(entity, _, summon, _)| (entity, summon.owner, summon.expires_at))
+        .map(|(entity, _, summon, _)| (entity, summon.owner))
         .collect();
     assert_eq!(
         objects.len(),
         1,
         "actual hit produces one real source wild GO"
     );
-    let (object, owner, expiry) = objects[0];
+    let (object, owner) = objects[0];
     assert_eq!(owner, None, "source wild GO has no owner");
+    assert_field_lifetime(&mut h, map, object, duration, damage);
+}
+
+pub(super) fn assert_field_lifetime(
+    h: &mut Harness,
+    map: InMap,
+    object: Entity,
+    duration: u64,
+    damage: u32,
+) {
+    use crate::game_objects::summoned::SummonedObject;
+    use crate::spell_cast::test_harness::ObservedCombatEvents;
+    let expiry = h
+        .app
+        .world()
+        .get::<SummonedObject>(object)
+        .unwrap()
+        .expires_at;
+    let player = h.player();
     let created = h.app.world().resource::<Time<Real>>().elapsed();
     assert_eq!(
         ((expiry.unwrap() - created.as_secs_f64()) * 1000.0).round() as u64,
@@ -179,7 +198,7 @@ fn assert_liquid_fire(difficulty: u32, cone: bool) {
     let until = created + Duration::from_millis(duration + 2050);
     loop {
         let now = h.app.world().resource::<Time<Real>>().elapsed();
-        for trigger in pulses(&mut h, object) {
+        for trigger in pulses(h, object) {
             if born.contains_key(&trigger) {
                 continue;
             }
