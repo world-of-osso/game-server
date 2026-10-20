@@ -932,6 +932,7 @@ mod tests {
             npc_flags: 0,
             speed_walk: 1.0,
             speed_run: 1.0,
+            base_attack_time_ms: 2_000,
             health_modifier: health_mod,
             unit_class: 1,
             expansion: 0,

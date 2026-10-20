@@ -35,6 +35,8 @@ pub struct CreatureTemplate {
     pub npc_flags: u64,
     pub speed_walk: f32,
     pub speed_run: f32,
+    /// Source BaseAttackTime in milliseconds, after TC's zero-to2000 normalization.
+    pub base_attack_time_ms: u32,
     pub health_modifier: f32,
     /// `unit_class`: the `creature_classlevelstats.class` row.
     pub unit_class: u8,
@@ -555,6 +557,12 @@ fn classification_rank(row: &Row, index: usize) -> rusqlite::Result<u8> {
 }
 
 fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<CreatureTemplate> {
+    // TC ObjectMgr.cpp1056–1057 normalizes an unset BaseAttackTime to BASE_ATTACK_TIME.
+    const DEFAULT_BASE_ATTACK_TIME_MS: u32 = 2_000;
+    let base_attack_time_ms = match row.get::<_, u32>("BaseAttackTime")? {
+        0 => DEFAULT_BASE_ATTACK_TIME_MS,
+        authored => authored,
+    };
     let unit_class = row.get::<_, i64>(14)? as u8;
     let health_modifier = row.get(6)?;
     let armor_modifier = row.get(23)?;
@@ -595,6 +603,7 @@ fn template_from_row(row: &Row, expected: &ExpectedStats) -> rusqlite::Result<Cr
         gives_experience: row.get::<_, i64>(10)? != CREATURE_TYPE_CRITTER
             && row.get::<_, i64>(11)? & CREATURE_FLAG_EXTRA_NO_XP == 0,
         speed_run: row.get(12)?,
+        base_attack_time_ms,
         script_name: row.get(13)?,
         unit_class,
         expansion: row.get::<_, i64>(15)? as u8,
@@ -628,7 +637,7 @@ pub(crate) fn load_templates(
                     rank, ExperienceModifier, type, flags_extra, speed_run, ScriptName, unit_class, exp,
                     detection_range, unit_flags, ContentTuningID, HealthScalingExpansion,
                     LevelScalingDeltaMin, LevelScalingDeltaMax, DamageModifier, ArmorModifier, subname,
-                    ManaModifier, unit_flags2, RegenHealth, family, type_flags
+                    ManaModifier, unit_flags2, RegenHealth, family, type_flags, BaseAttackTime
              FROM content_creature_template",
         )
         .expect("Failed to prepare content_creature_template query");
@@ -660,7 +669,7 @@ pub(crate) fn load_difficulty_templates(
                     d.ContentTuningID, d.HealthScalingExpansion, d.LevelScalingDeltaMin,
                     d.LevelScalingDeltaMax, d.DamageModifier, d.ArmorModifier, t.subname,
                     d.ManaModifier, t.unit_flags2, t.RegenHealth, t.family, t.type_flags,
-                    d.DifficultyID
+                    d.DifficultyID, t.BaseAttackTime
              FROM content_creature_template_difficulty d
              JOIN content_creature_template t ON t.entry = d.entry",
         )

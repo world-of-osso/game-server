@@ -18,6 +18,14 @@ Creatures use the ExpectedStat roll (tuned) or10 every2s instead of the player w
 
 Avoided swings emit `CombatEventType::Miss | Dodge | Parry` and `CombatLogKind::Miss(..)` with amount 0, add 0 threat, still give swing rage and raise no proc events.
 
+## Ordinary NPC authored cadence — 2026-10-19
+
+`content_creature_template.BaseAttackTime` is loaded on both base and difficulty templates. Source0 is normalized to2000ms exactly as TC a352b1fa ObjectMgr.cpp1056–1057; `EntryProjection` caches the resulting seconds as server-only `CreatureAttackTime` on spawn and entry changes. `Attacker` uses it only outside the existing CharacterStats/Spirit Wolf weapon paths; independently constructed controlled pets keep their existing clocks. No protocol or world-data publication is involved.
+
+NPC period = authored base × the existing signed `time_percent_mod(haste)` × attack/cast-time and attack-time multipliers. `auras_changed` rescales live remaining hand timers by new/old period, matching Unit.cpp11032–11055, rather than resetting progress or waiting for another full old-period swing. The existing ExpectedStat per-hit damage normalization is unchanged; this is timing, not a damage-formula expansion. [Contract](../../specs/level-scaling.md#what-it-must-do).
+
+Ignored tests were pushed before product changes: actual ordinary source-spawn Prowler118/1500ms and Murloc Warrior171/3000ms both emitted2.050s intervals at674bb88eb. At05df30702 the native2825/+30,246/−35 and mid-swing246 controls also fail after their real modifier amounts qualify. The246 observation window is bounded before its authored6000ms expiry. Targeted GREEN and requested touched-family integration are pending; no current acceptance claim.
+
 ## Aura248 native-input gap — 2026-10-19
 
 **AURA_248_NO_NONZERO_NATIVE_INPUT_70448** remains DEFERRED under the [class-completeness contract](../../specs/class-completeness.md#named-native-input-gap-active70448). Read-only all-difficulty canonical70448 scan finds only261912 effect4/710273: aura248 amount0/MiscValue0=0/MiscValue1=0; imported `tdb_serverside_spell_effect` has no248 rows. Pinned TC a352b1fa Unit.cpp2772 adds attacker248 matching VICTIMSTATE_DODGE2 (Unit.h51, SpellAuraDefines.h335), before251/expertise/finalzero clamp, but current input does not exercise that nonzero path. No native behavioral RED/GREEN or generic coverage is claimed. The synthetic-only source-math implementation proposal was declined: do not add speculative runtime code or alter native rows to create a consumer. This is not proof that every upstream/build lacks248; reconsider only with an actual nonzero native70448 consumer. Durable scan/proposal: engine `data/diagnostics/class-coverage-b-2026-10-17/melee-attacker-result-chance-{native-scan.json,proposal.md}`. No production code, tests or native data changed.

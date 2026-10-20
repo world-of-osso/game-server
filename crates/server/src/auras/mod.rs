@@ -71,6 +71,7 @@ use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::StatModifiers;
 pub use spell_mods::SpellModOp;
 pub use stat_mods::AuraStatMods;
+pub(crate) use stat_mods::time_percent_mod;
 pub use unit_state::{Confused, Feared, is_polymorphed};
 pub(crate) use unit_state::{orb_deception_display, supports_zero_entry_costume};
 
@@ -1463,6 +1464,7 @@ pub fn remove_instance(world: &mut World, unit: Entity, instance_id: u32, reason
 /// replicated view stale. Components are written only on change, so
 /// `update_character_stats` recomputes only when aura stats moved.
 pub fn auras_changed(world: &mut World, unit: Entity) {
+    let previous_attack_time = crate::combat::read_creature_swing_time(world, unit);
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };
@@ -1493,6 +1495,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
+    crate::combat::rescale_creature_swing_timers(world, unit, previous_attack_time);
     unit_state::reconcile(world, unit);
     health_pct_trigger::reconcile(world, unit);
     crate::spell_cast::refresh_cast_movement_permission(world, unit);
