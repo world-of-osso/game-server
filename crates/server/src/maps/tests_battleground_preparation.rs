@@ -2,14 +2,15 @@ use super::*;
 use crate::game_objects::GameObjectSpawns;
 use shared::protocol::GameObjectCollision;
 
+#[path = "tests_battleground_preparation_gates.rs"]
+mod gates;
+
 #[test]
-#[ignore = "RED: ordinary BG starts immediately without source preparation interval"]
 fn bg_preparation_concrete_full_roster_waits_and_blocks_objectives_until_source_deadline() {
     assert_source_preparation(false);
 }
 
 #[test]
-#[ignore = "RED: ordinary BG starts immediately without source preparation interval"]
 fn bg_preparation_random_full_roster_waits_and_blocks_objectives_until_source_deadline() {
     assert_source_preparation(true);
 }
@@ -78,7 +79,7 @@ fn assert_source_preparation(random: bool) {
     );
     let first_arrival = std::rc::Rc::new(std::cell::Cell::new(None));
     let capture = first_arrival.clone();
-    let mut entered = enter_source_match_with_arrival(
+    let mut entered = enter_source_match_preparing(
         &template,
         node_rules(template.map_id).unwrap().starts,
         |app| {
@@ -93,8 +94,15 @@ fn assert_source_preparation(random: bool) {
         } else {
             SourceQueueFixture::FourPartiesOfFiveAt25
         },
-        move |h, _, index| {
+        move |h, players, index| {
             if index == 0 {
+                use_second_frames(h);
+                h.advance(130);
+                assert_eq!(
+                    battleground(h, &players[0]).phase,
+                    BgPhase::Waiting,
+                    "pending transfers do not start the preparation clock"
+                );
                 capture.set(Some(
                     h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64(),
                 ));

@@ -2871,6 +2871,30 @@ fn enter_source_match_with_arrival(
     queue_fixture: SourceQueueFixture,
     mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
 ) -> EnteredMatch {
+    enter_source_match_preparing(
+        template,
+        starts,
+        setup,
+        queue_fixture,
+        |h, players, index| {
+            if index == 1 {
+                // Existing objective fixtures begin after the actual first arrival's
+                // preparation clock; readiness still waits for the authored roster.
+                use_second_frames(h);
+                h.advance(121);
+            }
+            before_arrival(h, players, index);
+        },
+    )
+}
+
+fn enter_source_match_preparing(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+    mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
