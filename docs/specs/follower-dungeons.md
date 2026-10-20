@@ -58,7 +58,7 @@ Kit pursuit must project the complete authored route before starting native chas
 Pull candidates must pass native `relation_matches(Enemy)` selection/attackability and must not have the source template's native `AggroMode::Passive`. Proximity exposure includes only native aggressive sources, not passive triggers or reactive civilians; deliberately attacking an eligible reactive target still includes its authored formation. Keep passive source GUIDs in the presence inventory: excluding noncombatants from aggro is not recording their death. Actual Stockade template53488 trigger GUIDs20375809/20375810 must never become cheap pull candidates or proximity damage debt.
 
 `TANK_PULL_BUDGET` USER-approved values (verbatim):
-- observation window for measured group DPS and healing: 10 s
+- observation window for measured group DPS and healing: 10 s of active combat (user clarification, 2026-10-20). Pause this clock out of combat and retain the most recent ten active seconds across travel, recovery and admission holds. Measurements are current-run only; reset at dungeon start and on a full-party wipe. Resetting measurements does not erase observed source-spawn deaths in the same copy. Out-of-combat recovery healing does not count as combat throughput; the separate five-second party-HP stability window remains wall-clock time.
 - HP reserve: the forecast must leave ≥ 30% of tank max HP untouched
 - first pull of a run: single pack only, with no overlap until one fight has produced real measurements. No reuse of prior-run numbers.
 

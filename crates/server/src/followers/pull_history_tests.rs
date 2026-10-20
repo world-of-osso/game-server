@@ -155,8 +155,33 @@ fn tank_pull_history_preserves_active_combat_window_across_idle_and_resets_on_wi
     assert_eq!(idle.healer_hps, fought.healer_hps);
     assert_eq!(idle.observation_seconds, fought.observation_seconds);
     let cleared = idle.cleared_spawns;
+    h.app.world_mut().get_mut::<Health>(tank).unwrap().current -= 20.0;
+    assert_eq!(heal(&mut h, owner, tank, 1000.0), 20.0);
+    assert_eq!(
+        pull_history::snapshot(h.app.world(), owner)
+            .unwrap()
+            .healer_hps,
+        fought.healer_hps,
+        "out-of-combat recovery is not measured combat healing"
+    );
+    let next = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 100.0);
+    h.app
+        .world_mut()
+        .entity_mut(next)
+        .insert((COPY, shared::components::ThreatTable::default()));
+    damage(&mut h, owner, next, 1.0);
+    advance_samples(&mut h, 180);
+    let latest = damage(&mut h, owner, next, 100.0);
+    advance_samples(&mut h, 22);
+    let rolled = pull_history::snapshot(h.app.world(), owner).unwrap();
+    assert_eq!(
+        rolled.group_dps,
+        Some(f64::from(latest) / 10.0),
+        "ten further active seconds expire the first fight's measurements"
+    );
+    assert_eq!(rolled.healer_hps, Some(0.0));
     for member in [owner, tank] {
-        crate::combat::kill_unit(h.app.world_mut(), enemy, member);
+        crate::combat::kill_unit(h.app.world_mut(), next, member);
     }
     advance_samples(&mut h, 1);
     let wiped = pull_history::snapshot(h.app.world(), owner).unwrap();

@@ -11,7 +11,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
 - [ ] Clear every Stockade boss in seconds of wall time. Report cleared/wiped, failed pack, HP/mana traces and pull decisions.
 - [ ] Batch N seeded runs and summarize per-pack wipe rate.
-- [ ] Preserve approved tank policy: 10-second observation, 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
+- [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
 ## How it works
 
