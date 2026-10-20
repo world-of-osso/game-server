@@ -1,3 +1,6 @@
+## 2026-10-20 — Blood Furnace The Maker
+
+[The Maker17381](systems/boss-scripts.md#blood-furnace-the-maker--2026-10-20) ported on BossAi(0) with `Ctx::dungeon_mode` consolidation; qualification, pushed ignored RED, GREEN5/5 before enabling. Read-only trace found no canonical542/543 creature bindings (`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`).
 ## 2026-10-20 — db2_casc scalar-first pallet order
 
 [Decoder notes](../db2-casc-sparse.md#fixed-record-decoding):
