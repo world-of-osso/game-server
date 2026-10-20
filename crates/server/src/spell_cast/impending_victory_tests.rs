@@ -231,3 +231,34 @@ fn native_impending_victory_direct_victorious_has_native_twenty_second_lifetime(
         "native32216directspell20snaturalexpiry;VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED/removalinputONLY/noordinarykillclaim"
     );
 }
+
+#[test]
+fn native_impending_victory_actual_victorious_makes_native_root_free() {
+    let mut h = fixture();
+    assert_eq!(h.power(PowerType::Rage), 0.0);
+    h.cast_and_deliver(VICTORIOUS, None);
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(aura(&h, h.caster, VICTORIOUS).is_some());
+    h.cast_and_deliver(ROOT, Some(h.npc));
+    h.advance(3);
+    assert!(
+        h.inbox.failed.is_empty(),
+        "native32216 A108 should make202168 free:{:?}",
+        h.inbox.failed
+    );
+    assert_eq!(h.power(PowerType::Rage), 0.0);
+    assert!(h.inbox.log.iter().any(|event| event.spell_id == Some(ROOT)
+        && event.kind == CombatLogKind::CastSuccess
+        && event.source == Some(h.caster.to_bits())));
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .any(|entry| entry.spell_id == ROOT && !entry.is_gcd && entry.duration_ms == 25000)
+    );
+    // Do not assert aura retention: qualification must remain valid after source removal binds.
+    eprintln!(
+        "nativeDIRECT32216A108maskword2=256→202168freeat0Rage/native25srecovery;killproducerunimplemented"
+    );
+}
