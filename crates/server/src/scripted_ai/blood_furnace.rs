@@ -63,6 +63,13 @@ const TASK_STAR_BEAM: u32 = 1;
 const TASK_SHADOW_BOLT: u32 = 2;
 const TASK_MARK_OF_SHADOW: u32 = 3;
 
+/// `FindNearestCreatureWithOptions(100.0f, ...)` partner search radius.
+const STAR_BEAM_PARTNER_RANGE: f32 = 100.0;
+const STAR_BEAM_DELAY_MS: u64 = 10_000;
+const STAR_BEAM_RETRY_MS: u64 = 1_000;
+/// `roll_chance(15)` for the second channeler aggro line.
+const CHANNELER_AGGRO_2_CHANCE: f64 = 0.15;
+
 const ACTION_CHANNELER_DIES: i32 = 0;
 const ACTION_RESET_ENCOUNTER: i32 = 1;
 const MAX_CHANNELERS: u8 = 5;
@@ -251,12 +258,7 @@ impl CreatureAi for Kelidan {
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         if !ctx.update_victim() {
-            self.boss.events.update(u64::from(diff_ms));
-            while let Some(event) = self.boss.events.execute_event() {
-                if event == EVENT_EVOCATION {
-                    ctx.do_cast_self(EVOCATION);
-                }
-            }
+            self.run_idle_evocation(ctx, diff_ms);
             return;
         }
         self.boss.events.update(u64::from(diff_ms));
@@ -273,6 +275,16 @@ impl CreatureAi for Kelidan {
 }
 
 impl Kelidan {
+    /// Out of combat only the reset's EVENT_EVOCATION runs; other due events drop.
+    fn run_idle_evocation(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        self.boss.events.update(u64::from(diff_ms));
+        while let Some(event) = self.boss.events.execute_event() {
+            if event == EVENT_EVOCATION {
+                ctx.do_cast_self(EVOCATION);
+            }
+        }
+    }
+
     fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
         let events = &mut self.boss.events;
         match event {
@@ -305,7 +317,7 @@ struct Channeler {
 impl Channeler {
     /// `DoCastChanneledSpell`: Star Beam at the partner after10s, retried each second.
     fn schedule_star_beam(&mut self) {
-        self.tasks.schedule(TASK_STAR_BEAM, 10_000);
+        self.tasks.schedule(TASK_STAR_BEAM, STAR_BEAM_DELAY_MS);
     }
 
     /// TC `GetStringIdOfChanneler`.
@@ -340,7 +352,7 @@ impl Channeler {
 
     fn cast_star_beam(&mut self, ctx: &mut Ctx) {
         let partner = Self::partner_string_id(ctx)
-            .and_then(|id| ctx.find_nearest_creature_with_string_id(100.0, id))
+            .and_then(|id| ctx.find_nearest_creature_with_string_id(STAR_BEAM_PARTNER_RANGE, id))
             .filter(|&partner| {
                 ctx.world.get::<crate::creature_ai::CreatureState>(partner)
                     != Some(&crate::creature_ai::CreatureState::Returning)
@@ -349,7 +361,9 @@ impl Channeler {
             Some(partner) => {
                 ctx.do_cast_at(Some(partner), STAR_BEAM, false);
             }
-            None => self.tasks.repeat_from_due_range(1_000, 1_000),
+            None => self
+                .tasks
+                .repeat_from_due_range(STAR_BEAM_RETRY_MS, STAR_BEAM_RETRY_MS),
         }
     }
 
@@ -409,7 +423,7 @@ impl CreatureAi for Channeler {
         self.tasks.reset();
         crate::spell_cast::cancel_cast(ctx.world, ctx.me);
         ctx.talk(SAY_CHANNELER_AGGRO_1);
-        if rand::Rng::gen_bool(&mut rand::thread_rng(), 0.15) {
+        if rand::Rng::gen_bool(&mut rand::thread_rng(), CHANNELER_AGGRO_2_CHANCE) {
             ctx.talk(SAY_CHANNELER_AGGRO_2);
         }
         self.tasks.schedule_range(TASK_SHADOW_BOLT, 0, 5_000);
