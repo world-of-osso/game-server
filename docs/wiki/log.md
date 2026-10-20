@@ -1,3 +1,7 @@
+## 2026-10-19 — Ordinary quest max-level bonus
+
+[Authored bonus](systems/quests.md#authored-max-level-money--2026-10-19): pushed ignored65805b8eb ordinary62 cap RED105000≠105120 and missing-catalog startup RED; player89 control passes above quest tuning ceiling30. Selected-TC nullable metadata exports tracked catalog, required sibling loader and deploy shipment; ordinary settlement leaves base previews/WQ/captured/legacy paths unchanged. Fresh GREEN and lead gate pending; no deployment.
+
 ## 2026-10-19 — Auto Shot75 autorepeat
 
 [AutoRepeat](systems/spell-casting.md#auto-shot-autorepeat--2026-10-19): ignored RED606c6ead2/2ded8d38e pushed first; four genuine failures (one shot, no repeat). Fix997d00e04 repeats on the ranged timer (rifle73000 delay3000/haste), no GCD; moving keeps it, out of range skips, StopSpellCast/first stun/fear/confuse cancel via `stop_all_casts`. Resume-window oracle correctedcbf8c8d9d (window included the next legitimate repeat). Stun test RED-proven by reverting only its call (exit101 at the cancel assertion). GREEN169/0,3 pre-existing LOS ignores,66.96s: auto_shot, Dark Luck75, defensives, autoattack range, attack speed, combat::tests, dummy, control stop, fear/confuse/stun. Gaps in [spec](../../specs/player-damage.md#known-gaps-current-cycle).

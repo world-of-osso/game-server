@@ -162,6 +162,58 @@ fn ordinary_bonus_turn_in(level: u8, expected: u32) {
 }
 
 #[test]
+#[ignore = "native flag/zero/legacy and excluded-branch controls join initial GREEN"]
+fn ordinary_quest_bonus_native_flag_zero_legacy_and_excluded_settlements() {
+    qualify_native_bonus_rows();
+    let quests = test_quest_db().expect("authentic quests and required catalog");
+    let player = crate::quest_rules::QuestPlayer {
+        level: crate::experience::MAX_LEVEL,
+        race: 1,
+        class: 1,
+    };
+    let flagged = &quests.quests[&54083];
+    assert_eq!(flagged.reward_bonus_money, 46_200);
+    assert_ne!(flagged.flags & 0x100, 0);
+    assert_eq!(
+        crate::quest_bonus_money::settlement(quests, flagged, player),
+        Some(257_400)
+    );
+    let zero = &quests.quests[&35];
+    assert_eq!(zero.reward_bonus_money, 0);
+    assert_eq!(
+        crate::quest_bonus_money::settlement(quests, zero, player),
+        Some(0)
+    );
+    let legacy = &quests.quests[&2945];
+    assert!(legacy.money_scaling.is_none());
+    assert_eq!(legacy.reward_bonus_money, 0);
+    assert_eq!(
+        crate::quest_bonus_money::settlement(quests, legacy, player),
+        Some(-300)
+    );
+    for legacy_id in [1, 55] {
+        assert_eq!(
+            quests.quests[&legacy_id].reward_bonus_money, 0,
+            "do not borrow raw same-ID TC bonus"
+        );
+    }
+    // Branch-isolation controls, not invented native world/captured quest data.
+    let mut excluded = quests.quests[&62].clone();
+    assert_eq!(excluded.reward_bonus_money, BONUS_COPPER);
+    excluded.quest_info_modifiers |= 0x100;
+    assert_eq!(
+        crate::quest_bonus_money::settlement(quests, &excluded, player),
+        Some(BASE_COPPER as i32)
+    );
+    excluded.quest_info_modifiers = 0;
+    excluded.captured_reward_xp = Some(0);
+    assert_eq!(
+        crate::quest_bonus_money::settlement(quests, &excluded, player),
+        Some(BASE_COPPER as i32)
+    );
+}
+
+#[test]
 #[ignore = "pushed native regression: player-cap bonus settlement missing"]
 fn ordinary_quest_bonus_at_player_cap_pays_authored_money_once_and_survives_reopen() {
     ordinary_bonus_turn_in(crate::experience::MAX_LEVEL, BASE_COPPER + BONUS_COPPER);

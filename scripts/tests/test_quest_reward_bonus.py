@@ -18,10 +18,8 @@ class QuestRewardBonusTest(unittest.TestCase):
         # Native TDB62/35/54083 values;7 remains a legacy content row, not selected TC.
         with sqlite3.connect(":memory:") as db, tempfile.TemporaryDirectory() as directory:
             db.executescript("""
-                CREATE TABLE tdb_quest_template(ID INTEGER PRIMARY KEY,RewardBonusMoney INTEGER);
-                INSERT INTO tdb_quest_template VALUES(62,120),(35,0),(54083,46200),(7,0);
-                CREATE TEMP TABLE retail_quest(ID INTEGER PRIMARY KEY);
-                INSERT INTO retail_quest VALUES(62),(35),(54083);
+                CREATE TABLE content_quest_template(ID INTEGER PRIMARY KEY,RewardBonusMoney INTEGER);
+                INSERT INTO content_quest_template VALUES(62,120),(35,0),(54083,46200),(7,NULL);
             """)
             output = Path(directory) / "quest-reward-bonus.json"
             retail_content.write_quest_reward_bonus(db, output)

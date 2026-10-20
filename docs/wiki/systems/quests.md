@@ -8,6 +8,14 @@ Requirements and gaps: [quests spec](../../specs/quests.md). Exact [GO/spell cen
 
 Link tables follow AzerothCore `ObjectMgr::LoadQuests`: `prev_quests[q]` = `PrevQuestID` of q plus every quest whose `NextQuestID` is q (sign kept); `prev_chain_quests` from `RewardNextQuest`; `exclusive_groups`.
 
+## Authored max-level money — 2026-10-19
+
+`retail_content.py` copies selected TC `RewardBonusMoney` into nullable producer metadata: NULL means legacy/unselected, while selected authored0 remains0. After its database commit `content_policy.py` exports those selected values to tracked `content/quest-reward-bonus.json`; deploy.sh ships it to the runtime world.db sibling. Existing databases need a content rebuild before producers export the new metadata. Runtime never borrows a raw same-ID TC bonus for a legacy row. [Catalog provenance](../../../content/quest-reward-bonus-source.md).
+
+`load_quest_db` requires that sibling JSON and propagates missing/invalid-file errors into the existing startup panic. `quest_bonus_money::settlement` adds the authored bonus only for ordinary quests at the existing player cap, unless Quest.Flags0x100 suppresses it. World-quest and captured branches retain their settlement; unrepresentable integer totals reject before mutation. One amount feeds inventory, completion packet and achievement money event. `quest_money` and dialog/log/offer previews remain base, as TC `BuildQuestRewards` specifies.
+
+Authority: TC a352b1fa QuestDef.cpp97–101/525–531/578–586; Player.cpp15201–15218/17303–17313; QuestDef.h222. Money rates default1 (World.cpp970/1019–1020); no new rate infrastructure. Native quest62 has base105000+bonus120, tuning ceiling30 versus player cap90. Pushed65805b8eb: actual cap settlement105000 instead of105120 and missing-file startup boundary RED; below-cap89 control passes. Producer/deploy delivery tests cover selected zero versus unselected legacy and actual shipped bytes with fake remote commands. Fresh GREEN/lead integration remain pending; no deployment claim.
+
 ## Rules (`quest_rules.rs`)
 
 Pure functions over `QuestDb` + `QuestLogData` + `QuestPlayer{level, race, class}`, after AzerothCore `Player`:
