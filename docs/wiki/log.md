@@ -3233,3 +3233,6 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 ## 2026-10-19 — Actor-owned DoT integrated proof
 
 [Exact scope/proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19):6a82516ac integratedkit_+nativeperiodic/coexistence60PASS/0FAIL/1explicitfile-writingexportignored45.05s/compile5m20s, check1m55s/fmt/diffPASS, zero warnings. Allfournewnativecasesenabled, sourceSimC76f8118receiptretained; foreignHoT/globalhas_auraunchanged. Pushed; independentmo730queued(allfollowers/auras/pets+AzureENV/check/fmt). No redundantlocalrun.
+## 2026-10-19 — Last Online native acceptance
+
+gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
