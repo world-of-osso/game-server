@@ -22,6 +22,7 @@ Record original recipe identity on authoritative crafted item instances, using T
 ## Tests asserting this spec
 
 - `crates/server/src/profession/crafting_origin_tests.rs` — real casts, original-vs-crafted items and database reopen.
+- `crates/server/src/profession/crafting_provenance_fixture.rs` — ignored private seed and post-reopen assert for the [native proof](../../../game-engine/docs/wiki/systems/native-professions-crafting.md#native-provenance-proof--2026-10-20).
 
 ## Known gaps (current cycle)
 
