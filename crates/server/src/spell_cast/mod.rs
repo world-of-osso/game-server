@@ -48,6 +48,10 @@ mod cast_while_moving_tests;
 mod caster_school_damage_tests;
 mod casting_restriction;
 #[cfg(test)]
+mod census_death_grip_tests;
+#[cfg(test)]
+mod census_guardian_aura_tests;
+#[cfg(test)]
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
