@@ -1,6 +1,6 @@
 ## 2026-10-19 — Ordinary quest max-level bonus
 
-[Authored bonus](systems/quests.md#authored-max-level-money--2026-10-19): pushed ignored65805b8eb ordinary62 cap RED105000≠105120 and missing-catalog startup RED; player89 control passes above quest tuning ceiling30. Selected-TC nullable metadata exports tracked catalog, required sibling loader and deploy shipment; ordinary settlement leaves base previews/WQ/captured/legacy paths unchanged. Fresh GREEN and lead gate pending; no deployment.
+[Authored bonus](systems/quests.md#authored-max-level-money--2026-10-19): pushed ignored65805b8eb ordinary62 cap RED105000≠105120 and missing-catalog startup RED; player89 control passes above quest tuning ceiling30. Selected-TC nullable metadata exports tracked catalog, required sibling loader and deploy shipment; ordinary settlement leaves base previews/WQ/captured/legacy paths unchanged. Fresh ignored607a8da1a GREEN4/0/33.87s/no warnings, then enabled; producer/deploy byte-transfer2/0. Merged family gate pending; no deployment.
 
 ## 2026-10-19 — Auto Shot75 autorepeat
 

@@ -162,7 +162,6 @@ fn ordinary_bonus_turn_in(level: u8, expected: u32) {
 }
 
 #[test]
-#[ignore = "native flag/zero/legacy and excluded-branch controls join initial GREEN"]
 fn ordinary_quest_bonus_native_flag_zero_legacy_and_excluded_settlements() {
     qualify_native_bonus_rows();
     let quests = test_quest_db().expect("authentic quests and required catalog");
@@ -214,13 +213,11 @@ fn ordinary_quest_bonus_native_flag_zero_legacy_and_excluded_settlements() {
 }
 
 #[test]
-#[ignore = "pushed native regression: player-cap bonus settlement missing"]
 fn ordinary_quest_bonus_at_player_cap_pays_authored_money_once_and_survives_reopen() {
     ordinary_bonus_turn_in(crate::experience::MAX_LEVEL, BASE_COPPER + BONUS_COPPER);
 }
 
 #[test]
-#[ignore = "required bonus catalog must fail startup explicitly when missing"]
 fn ordinary_quest_bonus_missing_runtime_catalog_is_an_explicit_load_error() {
     let directory = tempfile::tempdir().unwrap();
     let world = directory.path().join("world.db");
@@ -235,7 +232,6 @@ fn ordinary_quest_bonus_missing_runtime_catalog_is_an_explicit_load_error() {
 }
 
 #[test]
-#[ignore = "control bundled with native bonus RED"]
 fn ordinary_quest_bonus_below_player_cap_above_quest_ceiling_keeps_base_money() {
     ordinary_bonus_turn_in(crate::experience::MAX_LEVEL - 1, BASE_COPPER);
 }
