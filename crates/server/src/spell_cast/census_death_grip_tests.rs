@@ -58,7 +58,6 @@ fn assert_jump_and_land(h: &mut Harness, mover: Entity, destination: Position) {
 }
 
 #[test]
-#[ignore = "pushed native census regression before E213/Death Grip binding"]
 fn native_census_death_grip_direct_native213_uses_destination_jump_clock() {
     let mut h = fixture(false);
     let origin = position(&h, h.caster);
@@ -101,7 +100,6 @@ fn native_census_death_grip_direct_native213_uses_destination_jump_clock() {
 }
 
 #[test]
-#[ignore = "pushed native census regression before E213/Death Grip binding"]
 fn native_census_death_grip_nonblood_launches_owned_visual_and_reversed_jump_without_taunt() {
     let mut h = fixture(false);
     let caster = h.caster;
@@ -126,7 +124,6 @@ fn native_census_death_grip_nonblood_launches_owned_visual_and_reversed_jump_wit
 }
 
 #[test]
-#[ignore = "pushed native census regression before E213/Death Grip binding"]
 fn native_census_death_grip_actual_blood_passive_adds_owned_native_taunt_after_jump_launch() {
     let mut h = fixture(true);
     let caster = h.caster;
@@ -155,7 +152,6 @@ fn native_census_death_grip_actual_blood_passive_adds_owned_native_taunt_after_j
 }
 
 #[test]
-#[ignore = "pushed native census regression before E213/Death Grip binding"]
 fn native_census_death_grip_refused_range_cast_launches_no_children() {
     let mut h = fixture(false);
     h.app.world_mut().entity_mut(h.npc).insert(Position {
@@ -176,7 +172,6 @@ fn native_census_death_grip_refused_range_cast_launches_no_children() {
 }
 
 #[test]
-#[ignore = "pushed native census regression before E213/Death Grip binding"]
 fn native_census_death_grip_real_native_death_refuses_parent_without_children() {
     let mut h = fixture(false);
     super::creature_cast(h.app.world_mut(), h.caster, 5, Some(h.npc), true).unwrap();

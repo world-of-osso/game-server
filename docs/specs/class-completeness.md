@@ -192,7 +192,11 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] Native aura142's physical-school percentage multiplies player gear/base armor and pet base armor, not armor contributed afterward by stats. Independent aura factors multiply; removal/expiry restores armor, ordinary NPCs do not gain base armor, and physical spell/melee damage use the same live pet modifier. Nonphysical base-resistance modeling remains separate.
 - [x] Aura466 multiplies player armor after base/gear percentages and stat-derived armor. Independent native factors multiply; removal/expiry recomputes armor, native zero values remain zero, and fractional stat armor is retained until final conversion.
 - [ ] Aura467 applies its authored percentage only to gear/flat stat bonuses, preserving create/base stats. Native stat indices select individual fields; removal restores those bonuses, and ordinary total-stat percentages apply after base plus modified bonus are combined.
-- [x] Aura429 multiplies direct spell and melee damage of the current owner's controlled pets and guardians, not that owner's personal damage or a stranger's summons. Removed modifiers stop affecting summons; copied source damage does not consume the owner modifier again.
+- [x] Aura429 multiplies the current owner's controlled pet damage only; aura531 multiplies guardian damage only, including signed reductions. Spell and melee paths use live ownership with mutually exclusive selection, never double-apply paired429/531 effects, preserve native Command/Restoration totals, and exclude the owner and strangers. Removal stops the modifier; copied source damage does not consume it again.
+- [x] Aura380 multiplies spell and melee damage received from the aura caster's own guardian, excluding controlled pets, players and foreign guardians; removal ends the bonus.
+- [x] Effects42 JUMP_DEST and213 JUMP_DEST_2 use the existing parabolic jump clock with native run-speed/amplitude and height bounds. Attr9 0x800000 preserves the mover's facing; absent that flag, existing facing behavior is unchanged.
+- [x] Death Grip49576 launches owned243912 at the victim, victim-owned49575 back at the caster, then caster-owned51399 only with Blood137008. Rejected range/dead-target casts launch no children.
+- [ ] **AURA_320_LABEL_SELECTOR_SOURCE_CONFLICT_70448**: pinned sources disagree on aura320's SpellLabel selector. Keep unimplemented until the selector conflict is resolved; do not infer a label from another aura or certify census closure.
 - [ ] Native MasteryAffectsPoints adds raw mastery points times the authored effect coefficient before points modifiers. Self-owned flagged aura amounts follow stat/aura changes without restarting duration, stacks or tick phase; derived mastery percent is not substituted for raw points. Underivable Lycara point/percent conversion remains a gap.
 - [x] Apply native aura537 damage percentages only for matching label and aura owner.
 - [x] Apply aura457 haste only to its charge category; preserve running-clock progress and publish rate changes/replenishment without another cast.
@@ -377,4 +381,5 @@ Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per posi
 
 - [x] Aura270 multiplies incoming spell damage only for the aura caster and overlapping native school masks, using live amounts/stacks; removal and expiry remove the bonus. Existing IgnoreDamageTakenModifiers bypass remains in force.
 - [x] Native Haunt48181 effect1 increases the owner's actual Fireball damage by16%; foreign Haunt and physical-only Open Wounds188400 do not amplify Fire damage.
-- [ ] Haunt pet amplification381, unknown380, optional periodic/talent behavior and fresh UDP acceptance remain separate.
+- [x] Haunt48181's native380 effect amplifies only the aura caster's guardian damage, as specified above.
+- [ ] Haunt controlled-pet amplification381, optional periodic/talent behavior and fresh UDP acceptance remain separate.

@@ -174,6 +174,15 @@ const SKULL_BASH_INTERRUPT: u32 = 93_985;
 /// after the effect's handler. A DUMMY effect with a hook selects targets.
 pub type EffectHitHook = fn(&mut World, Entity, Entity, u8);
 
+/// TC a352b1fa spell_dk.cpp663–673: victim casts the pull back at the owner.
+fn death_grip(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    super::cast_triggered(world, caster, 243_912, Some(target), depth + 1);
+    super::cast_triggered(world, target, 49_575, Some(caster), depth + 1);
+    if crate::auras::has_aura(world, caster, 137_008) {
+        super::cast_triggered(world, caster, 51_399, Some(target), depth + 1);
+    }
+}
+
 /// Source OnDestinationTargetSelect hooks, keyed by spell/effect/target selector.
 pub(super) fn relocate_destination(
     spell_id: u32,
@@ -196,6 +205,7 @@ pub(super) fn relocate_destination(
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (49_576, 0) => Some(death_grip),
         (20_538, 0) => Some(hate_to_zero),
         (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
         (30_691 | 32_491 | 33_793 | 33_794 | 34_653 | 36_920, 1) => {

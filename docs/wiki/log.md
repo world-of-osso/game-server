@@ -1,3 +1,7 @@
+## 2026-10-20 — Guardian aura split and Death Grip
+
+[Guardian damage](systems/auras.md#guardian-and-controlled-pet-damage--2026-10-20) separates531 guardians from429 controlled pets and matches victim380 to the guardian's owner; [Death Grip](systems/spell-casting.md#death-grip-and-destination-jumps--2026-10-20) binds native children and42/213 jump clocks/no-facing flag. Twelve ignored native tests first RED4PASS/8FAIL; owner-selection correction replaces invalid melee no-receipt with genuine10vs20 at `eee8013db`, same4PASS/8FAIL23.02s. Implemented/enabled; GREEN and retained gates pending. Aura320 remains named **AURA_320_LABEL_SELECTOR_SOURCE_CONFLICT_70448**, not implemented.
+
 ## 2026-10-19 — Private native-proof purchase hold harness
 
 [Hook and proof status](investigations/server-tick-lag.md#native-proof-purchase-hold-test-only-harness): explicitly approved non-default debug Cargo feature holds only the existing FIFO purchase/checkout work behind private files, keeping UDP live and the10s timeout unchanged. Pushed-first process cases reached two genuine missing-hold assertions; fixed30s watchdog refuses without charge and release builds are rejected. Feature7/default2 GREEN; parent persistence/check/fmt gate pending. Release guard source-inspected, not a release-hook build; no tracing or native runtime used.

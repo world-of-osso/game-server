@@ -1476,6 +1476,9 @@ fn try_swing(
             &attacker_scaling,
             target_mods,
             context.summon_modifiers.multiplier(attacker.entity)
+                * context
+                    .summon_modifiers
+                    .taken_multiplier(attacker.entity, avoidance.1.as_deref())
                 * versus
                 * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity),
         ) * armor

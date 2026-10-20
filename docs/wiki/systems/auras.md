@@ -1,5 +1,11 @@
 # Auras
 
+## Guardian and controlled-pet damage — 2026-10-20
+
+SimC76f8118 `parse_effects.cpp911–919/1290–1300` selects controlled pets for429 and guardians for531; `1125–1134/1463–1466` selects damage received from the aura caster's guardian for380. `AuraStatMods` stores separate pet/guardian products. `summon_damage` selects controlled pets first, otherwise existing guardian summon properties, using live owners. Shared spell/melee consumers apply exactly one owner product; target380 matches that guardian's direct owner to `AuraInstance.caster`. Native paired Command21563 and Restoration137012 retain their previous totals rather than multiplying twice. Copied source damage retains its existing owner-modifier exemption.
+
+Twelve native behavioral regressions use actual Raise Dead/Summon Imp actors, Wound209140, signed Feral/Unholy531, paired Destruction429/531, Haunt380 and real melee receipts. Initial RED4PASS/8FAIL included an invalid melee start: GuardianActor overwrote the manually started attack from an empty owner selection. Corrected real SetTarget producer gives genuine melee10vs20 and the same4PASS/8FAIL in23.02s at `eee8013db`; no HP/RNG/timer changes. GREEN and retained-family gates pending. This is consumer/effect-mask qualification, not a legal simultaneous-loadout or whole-class certificate. [Contract and aura320 source-conflict gap](../../specs/class-completeness.md); [Death Grip jump binding](spell-casting.md#death-grip-and-destination-jumps--2026-10-20).
+
 ## Nature's Guardian baseline — 2026-10-19
 
 `natures_guardian.rs` binds only30884 existing check_proc/on_damage_proc hooks. It reads the actual action target's current Health and native effect0 threshold, using strict currentHP < truncated maxHP×amount/100; at35% equality no proc. Existing445698 blocks eligibility. The callback casts real445698 first through the existing `creature_cast_ignoring_in_progress` path, then native31616 through existing `cast_costed_trigger_with_context` (FULL_MASK minus power/reagent bypass). A cooldown-cast failure is logged but does not suppress the default heal, matching the source's non-preventing OnEffectProc. No custom timer, state, query schema, trigger API, wire or generic DUMMY framework is introduced; Guardian/Ardent health commits are untouched.
@@ -528,7 +534,7 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
 - Handled aura IDs (`handlers::kind`): 3, 4, 5, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 56, 60, 65, 69, 79, 82, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 155, 192, 193, 213, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 453, 454, 455.
 - Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 36 IDs covering 5693 instances (87%) are handled. DUMMY4 is a registered type, not blanket spell-specific coverage; the current class hooks are listed above.
 - Unhandled cut IDs, all tracked and replicated:
-  - no pet or summon system: 429, 382;
+  - historical pet/summon gaps: 382;429/531 are now handled above;
   - client or visual only: 332 action bar override, 61 scale, 260 screen effect, 403 visual override, 44 tracking;
   - no mount, shapeshift or area-trigger system: 78, 36, 275, 395;
   - no PvP context: 647, 648, 649;
@@ -537,7 +543,7 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
   - no armor, block or avoidance model: 142, 51, 187, 229;
   - no haste-regen stat: 416, 417, 457;
   - no consumer: 418 max power, 443 leech;
-  - not yet: 63 additional power cost, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320, 531.
+  - historical unhandled snapshot (later consumers documented above): 63 additional power cost, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320. Guardian531 is now handled.
 
 ## Sources
 
@@ -586,4 +592,4 @@ Aura168 stores `(creature mask,multiplier)` pairs in `AuraStatMods`, combining m
 
 Native70391 Haunt48181 effect1 is aura270, amount16, school mask127. The shared victim multiplier handled family271 and label537 but omitted270, so Haunt applied normally without increasing the owner's damage. TC a352b1fa `Unit.cpp:7056–7059/8178–8181` matches both aura caster and incoming school. The same multiplier now handles270 using the existing amount/stack product and IgnoreDamageTakenModifiers boundary. Autoswings do not use this special-spell condition.
 
-Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381/380, optional periodic talents, full Affliction and rendered/UDP parity remain open.
+Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381 (380 is handled above), optional periodic talents, full Affliction and rendered/UDP parity remain open.

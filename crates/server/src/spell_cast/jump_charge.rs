@@ -9,7 +9,8 @@ use super::effects::EffectCtx;
 use crate::scripted_ai::jump_movement::{EVENT_JUMP, JumpOptions, move_jump_with_options};
 use crate::spell_info::SpellEffect;
 
-const SPECIAL_FACING_ATTRIBUTES: u32 = 0x0000_1000 | 0x0080_0000;
+const FACE_UNIT_TARGET_UPON_COMPLETION: u32 = 0x0000_1000;
+const JUMPCHARGE_NO_FACING_CONTROL: u32 = 0x0080_0000;
 
 #[derive(Clone, Copy)]
 pub(crate) struct JumpChargeParam {
@@ -76,6 +77,7 @@ impl JumpChargeParam {
             unlimited_speed: self.unlimited_speed,
             min_height,
             max_height,
+            no_facing_control: false,
         })
     }
 }
@@ -86,7 +88,7 @@ fn prepare_jump(
     effect: &SpellEffect,
 ) -> Result<(Position, JumpOptions), &'static str> {
     let misc = ctx.spell.misc.as_ref().ok_or("missing SpellMisc")?;
-    if misc.attributes[9] & SPECIAL_FACING_ATTRIBUTES != 0 || effect.trigger_spell != 0 {
+    if misc.attributes[9] & FACE_UNIT_TARGET_UPON_COMPLETION != 0 || effect.trigger_spell != 0 {
         return Err("unsupported jump facing or effect arrival-spell options");
     }
     let parameters = &world
@@ -97,19 +99,76 @@ fn prepare_jump(
         .0
         .get(&(effect.misc_values[0] as u32))
         .ok_or("missing referenced jump-charge parameters")?;
-    let options = parameter.motion_options()?;
+    let mut options = parameter.motion_options()?;
+    options.no_facing_control = misc.attributes[9] & JUMPCHARGE_NO_FACING_CONTROL != 0;
+    Ok((jump_destination(ctx)?, options))
+}
+
+fn jump_destination(ctx: &EffectCtx) -> Result<Position, &'static str> {
     let point = ctx.dest.ok_or("missing exact jump destination")?.position;
     if !point.is_finite() {
         return Err("non-finite jump destination");
     }
-    Ok((
-        Position {
-            x: point.x,
-            y: point.y,
-            z: point.z,
+    Ok(Position {
+        x: point.x,
+        y: point.y,
+        z: point.z,
+    })
+}
+
+/// TC EffectJumpDest42/213 and MotionMaster.cpp837–911 default run-speed branch.
+fn effect_jump_options(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+) -> Result<JumpOptions, &'static str> {
+    let attributes = super::attributes(ctx.spell, 9);
+    if attributes & FACE_UNIT_TARGET_UPON_COMPLETION != 0 || effect.trigger_spell != 0 {
+        return Err("unsupported jump facing or effect arrival-spell options");
+    }
+    let run_multiplier = if let Some(npc) = world.get::<shared::components::Npc>(ctx.caster) {
+        world
+            .get_resource::<crate::world_data::WorldData>()
+            .and_then(|data| data.templates.get(&npc.template_id))
+            .ok_or("missing jumping creature template")?
+            .speed_run
+    } else {
+        1.0
+    };
+    let speed_multiplier = if effect.amplitude > 0.0 {
+        effect.amplitude
+    } else {
+        1.0
+    };
+    let [minimum, maximum] = effect.misc_values;
+    Ok(JumpOptions {
+        speed: crate::creature_ai::BASE_RUN_SPEED * run_multiplier * 3.0 * speed_multiplier,
+        time_mode: false,
+        unlimited_speed: false,
+        min_height: if minimum != 0 {
+            minimum as f32 / 10.0
+        } else {
+            0.5
         },
-        options,
-    ))
+        max_height: if maximum != 0 {
+            maximum as f32 / 10.0
+        } else {
+            1000.0
+        },
+        no_facing_control: attributes & JUMPCHARGE_NO_FACING_CONTROL != 0,
+    })
+}
+
+pub(super) fn jump_to_effect_destination(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    let prepared = jump_destination(ctx).and_then(|destination| {
+        effect_jump_options(world, ctx, effect).map(|options| (destination, options))
+    });
+    match prepared {
+        Ok((destination, options)) => {
+            move_jump_with_options(world, ctx.caster, EVENT_JUMP, destination, options);
+        }
+        Err(reason) => error!("Spell {} destination jump refused: {reason}", ctx.spell.id),
+    }
 }
 
 #[cfg(test)]

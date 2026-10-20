@@ -185,6 +185,7 @@ pub type CastEffectHandler = fn(&mut World, &EffectCtx, &SpellEffect);
 pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
     Some(match effect_id {
         super::disenchant::EFFECT_DISENCHANT => super::disenchant::effect_disenchant,
+        42 | 213 => super::jump_charge::jump_to_effect_destination,
         254 => super::jump_charge::jump_to_destination,
         crate::game_objects::summoned::EFFECT_TRANSMITTED => {
             crate::game_objects::summoned::spawn_transmitted

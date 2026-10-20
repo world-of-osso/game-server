@@ -40,8 +40,10 @@ pub struct AuraStatMods {
     pub autoattack_damage_mult: f32,
     /// MOD_AUTOATTACK_RANGE153: signed additive yards, attacker-owned only.
     pub autoattack_range_bonus: f32,
-    /// MOD_SUMMON_DAMAGE429: consumed by units whose owner carries this aura.
-    pub summon_damage_mult: f32,
+    /// MOD_SUMMON_DAMAGE429: only the owner's controlled pets.
+    pub pet_damage_mult: f32,
+    /// MOD_GUARDIAN_DAMAGE_DONE531: only the owner's guardians.
+    pub guardian_damage_mult: f32,
     /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
     /// `GetTotalAuraModifier` in `RewardRage`).
     pub rage_from_damage_dealt_pct: f32,
@@ -113,7 +115,8 @@ impl Default for AuraStatMods {
             autoattack_crit_pct: 0.0,
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
-            summon_damage_mult: 1.0,
+            pet_damage_mult: 1.0,
+            guardian_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
             power_regen_flat: Vec::new(),
@@ -506,7 +509,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,
-            MOD_SUMMON_DAMAGE => combat.summon_damage_mult *= pct(amount),
+            MOD_SUMMON_DAMAGE => combat.pet_damage_mult *= pct(amount),
+            MOD_GUARDIAN_DAMAGE_DONE => combat.guardian_damage_mult *= pct(amount),
             MOD_RAGE_FROM_DAMAGE_DEALT => combat.rage_from_damage_dealt_pct += amount,
             PREVENT_REGENERATE_POWER => combat.power_regen_prevention_mask |= misc as u32,
             MOD_POWER_REGEN => combat.power_regen_flat.push((misc, amount)),

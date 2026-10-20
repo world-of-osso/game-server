@@ -141,7 +141,6 @@ fn damage(h: &mut Harness, actor: Entity, multiplier: f32) {
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_531_positive_native_effect_changes_real_guardian_spell() {
     let mut h = fixture();
     let owner = h.caster;
@@ -152,7 +151,6 @@ fn native_census_guardian_531_positive_native_effect_changes_real_guardian_spell
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_531_signed_native_effect_and_removal_use_live_owner() {
     let mut h = fixture();
     let owner = h.caster;
@@ -166,7 +164,6 @@ fn native_census_guardian_531_signed_native_effect_and_removal_use_live_owner() 
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_531_does_not_modify_actual_controlled_pet_or_owner() {
     let mut h = fixture();
     let actor = pet(&mut h);
@@ -177,7 +174,6 @@ fn native_census_guardian_531_does_not_modify_actual_controlled_pet_or_owner() {
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_429_531_paired_native_effects_are_not_double_applied() {
     let mut h = fixture();
     let owner = h.caster;
@@ -191,7 +187,6 @@ fn native_census_guardian_429_531_paired_native_effects_are_not_double_applied()
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_380_matches_actual_guardian_owner_not_pet_or_player() {
     let mut h = fixture();
     let owner = h.caster;
@@ -204,7 +199,6 @@ fn native_census_guardian_380_matches_actual_guardian_owner_not_pet_or_player() 
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_380_does_not_match_foreign_aura_caster_and_removal_ends_bonus() {
     let mut h = fixture();
     let owner = h.caster;
@@ -221,7 +215,6 @@ fn native_census_guardian_380_does_not_match_foreign_aura_caster_and_removal_end
 }
 
 #[test]
-#[ignore = "native census regression before generic531/380 implementation"]
 fn native_census_guardian_531_and_380_change_actual_melee_receipts_without_rng_edits() {
     let mut h = fixture();
     let owner = h.caster;
