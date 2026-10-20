@@ -424,34 +424,38 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
         },
     );
     let applied_at = h.app.world().resource::<Time<Fixed>>().elapsed();
-    println!(
-        "critical-block aura applied at{applied_at:?}: {:?}",
-        h.app.world().get::<ActiveAuras>(defender).unwrap()
-    );
-    // Native2500ms cast +400ms flight; loopback3frames makes the3s buff
-    // expire after launch but before impact, without changing spell metadata.
+    let expiry = applied_at + std::time::Duration::from_millis(3000);
+    // Native2500ms +400ms flight originally hit at the3000ms aura-expiry tick.
+    // One real50ms frame before requesting puts impact strictly after expiry;
+    // do not retain the old float cast's accidental extra50ms as fixture setup.
+    h.advance(1);
     start_damage_spell(&mut h, defender, 19434);
-    println!(
-        "critical-block shot received at{:?}: {:?}",
-        h.app.world().resource::<Time<Fixed>>().elapsed(),
-        h.app.world().get::<shared::casting::CastState>(h.caster)
-    );
     wait_for_aimed_launch(&mut h);
-    println!(
-        "critical-block shot launched at{:?}",
-        h.app.world().resource::<Time<Fixed>>().elapsed()
+    let launched_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    assert!(launched_at < expiry, "native buff must still cover launch");
+    let impact_at = launched_at + std::time::Duration::from_millis(400);
+    assert!(
+        expiry < impact_at,
+        "expiry must precede impact, not share its tick"
     );
     assert!(crate::auras::has_aura(h.app.world(), defender, 203524));
     assert!(aimed_damage(&h, defender).is_empty());
+    let mut observed_impact = None;
     for _ in 0..12 {
         h.advance(1);
-        println!(
-            "critical-block flight at{:?}, aura{}, hits{:?}",
-            h.app.world().resource::<Time<Fixed>>().elapsed(),
-            crate::auras::has_aura(h.app.world(), defender, 203524),
-            aimed_damage(&h, defender)
-        );
+        let now = h.app.world().resource::<Time<Fixed>>().elapsed();
+        let hits = aimed_damage(&h, defender);
+        if now == expiry {
+            assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
+            assert!(hits.is_empty(), "buff must expire before any actual damage");
+        }
+        if !hits.is_empty() {
+            observed_impact.get_or_insert(now);
+            assert!(now > expiry);
+            assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
+        }
     }
+    assert_eq!(observed_impact, Some(impact_at));
     assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
     let hits = aimed_damage(&h, defender);
     assert_eq!(hits.len(), 1);
