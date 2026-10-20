@@ -1,3 +1,7 @@
+## 2026-10-19 — Herald flying Liquid Fire
+
+[Flying actual-impact boundary](systems/boss-scripts.md#herald-flying-liquid-fire--2026-10-19): qualification73bc2PASS64.88s establishes natural victim/random admission and positive impacts in Normal/Heroic FIRST. Pushed ignored4b11→four genuineRED200.85s; production adds only four IDs to existing Fireball hit hookd75c→four full nativeGREEN287.96s before enabling. Actual frame-local child/freshGO prevents stale victim-field acceptance; source GO lifecycle/damage/copy oracle reused unchanged. Natural qualification retained, extracted ground controls and independent gate pending; no broader flight/native/balance/loot/persistence claim.
+
 ## 2026-10-19 — Herald ground Liquid Fire
 
 [Ground child/object boundary](systems/boss-scripts.md#herald-ground-liquid-fire--2026-10-19): source qualification1PASS27.70s; corrected actual-launch ignoredcb85 pushed on pre-runtime base, four genuineRED156.95s. Ground-only hit-unit self-children plus exact registered GO AI/native21252 ordinary pulses/damage/lifetimes pass four complete endpoints159.72s at7ea954c38; retained source/refusal controls make a six-case composite. Invalid initial network child receipt oracle excluded; no wire workaround. Tests enabled, independent gate pending; flying/native/balance/persistence/re-entry/loot excluded.

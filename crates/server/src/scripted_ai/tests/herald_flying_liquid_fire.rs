@@ -197,22 +197,18 @@ fn assert_flying_liquid_fire(difficulty: u32, random: bool) {
 }
 
 #[test]
-#[ignore = "flying Liquid Fire actual natural-impact child RED before four hook registrations"]
 fn encounter_coverage_herald_flying_liquid_fire_normal_victim() {
     assert_flying_liquid_fire(1, false);
 }
 #[test]
-#[ignore = "flying Liquid Fire actual natural-impact child RED before four hook registrations"]
 fn encounter_coverage_herald_flying_liquid_fire_normal_random() {
     assert_flying_liquid_fire(1, true);
 }
 #[test]
-#[ignore = "flying Liquid Fire actual natural-impact child RED before four hook registrations"]
 fn encounter_coverage_herald_flying_liquid_fire_heroic_victim() {
     assert_flying_liquid_fire(2, false);
 }
 #[test]
-#[ignore = "flying Liquid Fire actual natural-impact child RED before four hook registrations"]
 fn encounter_coverage_herald_flying_liquid_fire_heroic_random() {
     assert_flying_liquid_fire(2, true);
 }
