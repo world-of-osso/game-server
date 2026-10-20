@@ -382,3 +382,5 @@ Movement104/106/488 are distinct server permissions, retaining other same-type s
 Named gaps: `PVP_AURA_646_649_TC_NULL` (all four TC handlers are NULL; do not reuse ordinary spellmods or change PvE), `WORLD_AURA_CLIENT_PROJECTION` (104/106/488 flags,44 tracking and485 movement-force projection need engine/protocol work), `AURA_235_188_408_CLIENT_ONLY` (native aura payload retained; no server gameplay effect), `AURA_373_TC_NULL_MOVEMENT` (native payload only; no invented forced-speed formula), `AURA_71_PERSISTENCE_AND_RETURN_EFFECT` (runtime origin only; persistence/return effect outside slice), `SAFE_FALL_BASE_CURVE_PARITY` (existing quadratic base curve differs from TC linear). No protocol/engine changes or class/census promotion.
 
 Source/proof matrix: [auras wiki](../wiki/systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+Server implementation now wires200/291/348,58,104/106/488/485/44/71/179 and client-only235/188/408 classification.373 and646–649 remain explicitly unhandled TC NULL gaps.144 awaits its corrected deterministic landing RED; server motion/wire projection is not claimed.

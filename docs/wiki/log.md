@@ -3358,3 +3358,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 [Nested-all fixture](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) clones the existing canonical catalog, no new cache or map producer change. Same native test/four difficulty-prerequisite variants PASS before/after27.029→17.224s wall; CPU26.189→17.176s and peakRSS+52508KiB. Fresh apps/redb, persisted-reopen/foreign-character/refusal assertions unchanged. Code6122e8f0c pushed before after; independent lead integration pending.
 
 - 2026-10-20: Aura world/XP slice: sourced TC a352b1fa matrix, native ignored RED tests and server-state declarations; [coverage/gaps](systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+- 2026-10-20: Wired generic world/XP consumers after13 genuine native RED failures; corrected safe-fall clock remains pending its own RED. Client and TC-NULL gaps remain explicit.
