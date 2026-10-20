@@ -276,6 +276,9 @@ pub(super) fn snapshot_periodic_amount(
     effect: &crate::spell_info::SpellEffect,
     amount: f32,
 ) -> f32 {
+    let amount = crate::spell_cast::scripts::snapshot_soul_of_the_forest(
+        world, caster, spell, effect, amount,
+    );
     if spell.id == RAKE_BLEED && effect.index == 0 {
         crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
     } else {

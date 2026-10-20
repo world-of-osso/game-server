@@ -10,6 +10,10 @@ TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable state
 
 On a successful native18562 hit, consume exactly one HoT owned by that caster from the actual hit patient, in Regrowth8936 → Wild Growth48438 → Rejuvenation774 order (SimC76f8118 `swiftmend_t::impact`). Preserve other casters' instances and lower-priority HoTs. Actual learned native Verdant Infusion392410 disables consumption; no fabricated talent grants or aura removals. This hook retains ordinary healing/cost/timing/eligibility and does not implement the consumed-HoT bonus healing, which remains a named unimplemented effect outside this slice.
 
+## Restoration Soul of the Forest
+
+Successful Swiftmend18562 with actual learned158478 grants native114108 to the caster, not the healed patient. The next Regrowth8936 or Rejuvenation774 consumes the buff after resolving its effects. Use the buff's actual effect0 percentage (native60), as SimC76f8118's persistent multiplier: direct Regrowth healing and the affected periodic-heal snapshot gain the bonus, which remains on that snapshot after buff removal. Never reread the live buff to amplify old periodic ticks. Germination's Rejuvenation child uses the same sourced snapshot rule; parent774 retains consumption/cost ownership. Untalented casts and unrelated heals stay unchanged. Extra targets392302 and other Soul-of-Forest variants are excluded.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
