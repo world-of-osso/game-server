@@ -93,7 +93,6 @@ fn cast_colossus_smash(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED: Colossus Smash omits208086 aura343 and swings ignore343"]
 fn class_completeness_native_colossus_smash_applies_owner_melee_vulnerability_343() {
     let mut h = warrior();
     cast_colossus_smash(&mut h);
@@ -113,7 +112,6 @@ fn class_completeness_native_colossus_smash_applies_owner_melee_vulnerability_34
 }
 
 #[test]
-#[ignore = "RED: Colossus Smash omits208086 aura343 and swings ignore343"]
 fn class_completeness_native_colossus_smash_amplifies_only_owner_white_swings() {
     let mut h = warrior();
     let base = native_swing_range(&h);
