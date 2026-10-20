@@ -118,25 +118,25 @@ fn census_three_245_native_modifiers_sum_without_changing_positive_duration() {
 #[test]
 #[ignore = "RED:262 existing masked state consumer lacks support recognition"]
 fn census_three_262_native_masked_state_permission_has_no_unknown_warning() {
-    let mut h = fixture(2, &[31884, 24275, 163201]);
-    let hammer = world_db().unwrap().store.get(24275).unwrap();
-    let execute = world_db().unwrap().store.get(163201).unwrap();
+    let mut h = fixture(11, &[391528, 18562]);
+    let swiftmend = world_db().unwrap().store.get(18562).unwrap();
     assert!(
-        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), hammer)
+        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), swiftmend)
             .is_err()
     );
-    apply(&mut h, 31884, 1 << 6);
+    apply(&mut h, 391528, 1 << 4); // Native Convoke permission includes Swiftmend.
     assert!(
-        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), hammer).is_ok()
+        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), swiftmend)
+            .is_ok()
     );
     assert!(
-        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), execute)
+        super::check_target_aura_restrictions(h.app.world(), h.npc, Some(h.caster), swiftmend)
             .is_err()
     );
-    assert!(!crate::auras::take_unhandled_auras(h.app.world_mut()).contains(&(31884, 262)));
-    remove(&mut h, 31884);
+    assert!(!crate::auras::take_unhandled_auras(h.app.world_mut()).contains(&(391528, 262)));
+    remove(&mut h, 391528);
     assert!(
-        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), hammer)
+        super::check_target_aura_restrictions(h.app.world(), h.caster, Some(h.npc), swiftmend)
             .is_err()
     );
 }
