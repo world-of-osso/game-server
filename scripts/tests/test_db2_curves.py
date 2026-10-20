@@ -14,7 +14,8 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 REFERENCE = SCRIPTS / "reference/forever-1.60.1.70205"
 FIXTURE_BUILD = "fixture-curve-publication"
 # Actual70448 Curve.csv rows: Type0 is linear; retain flags independently.
@@ -51,6 +52,7 @@ def write_csv_fixture(root):
     return path
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class CurvePublicationTest(unittest.TestCase):
     def test_process_import_publishes_native_types_flags_and_build_on_regeneration(self):
         with tempfile.TemporaryDirectory() as directory:

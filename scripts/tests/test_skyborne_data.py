@@ -17,10 +17,12 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2_casc
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 REFERENCE = SCRIPTS / "reference/forever-1.60.1.70205"
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class SkyborneDecodeTest(unittest.TestCase):
     def test_zephras_row_decodes_strings_arrays_and_selected_id(self):
         data = (SOURCE / "1349477.db2").read_bytes()
@@ -156,6 +158,7 @@ class SkyborneDecodeTest(unittest.TestCase):
         self.assertEqual(rows[2991][23], 7198644)
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class SkyborneImportTest(unittest.TestCase):
     def test_corrupt_source_fails_before_database_changes(self):
         with tempfile.TemporaryDirectory() as directory:

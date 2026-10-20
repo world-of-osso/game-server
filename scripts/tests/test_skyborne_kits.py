@@ -17,11 +17,13 @@ import skyborne_data
 import content_policy
 from content_common import Report
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 REFERENCE = SCRIPTS / "reference/forever-1.60.1.70205"
 DECODED = json.loads((REFERENCE / "starter-kit-rows.json").read_text())
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class LoadoutPublicationTest(unittest.TestCase):
     def setUp(self):
         self.db = sqlite3.connect(":memory:")
@@ -114,6 +116,7 @@ class LoadoutPublicationTest(unittest.TestCase):
                     skyborne_data.import_rows(self.db, rows)
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class IsolatedItemPublicationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
