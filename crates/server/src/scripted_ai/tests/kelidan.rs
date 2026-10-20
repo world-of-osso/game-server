@@ -1,5 +1,6 @@
 //! TC a352b1fa Blood Furnace Keli'dan the Breaker17377 (boss_kelidan_the_breaker.cpp).
 use super::*;
+use crate::spell_cast::test_harness::ObservedCombatEvents;
 
 const KELIDAN: u32 = 17377;
 const CHANNELER: u32 = 17653;
@@ -53,6 +54,21 @@ fn watch(h: &mut Harness, actors: &[Entity]) {
         visibility.gain_visibility(connection);
         h.app.world_mut().entity_mut(actor).insert(visibility);
     }
+}
+
+/// Every logged `spell` CastSuccess by `caster`, including events no player receives.
+fn observed_casts(h: &Harness, caster: Entity, spell: u32) -> usize {
+    h.app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::CastSuccess
+                && event.source == Some(caster.to_bits())
+                && event.spell_id == Some(spell)
+        })
+        .count()
 }
 
 fn spawn_string_id(h: &Harness, actor: Entity) -> Option<String> {
@@ -169,6 +185,7 @@ fn encounter_coverage_kelidan_native_inputs_qualify() {
 fn encounter_coverage_kelidan_native_spell_admissions_qualify() {
     for difficulty in [1, 2] {
         let (mut h, _) = kelidan_copy(difficulty);
+        h.app.init_resource::<ObservedCombatEvents>();
         let boss = h.creatures_of(KELIDAN)[0];
         let first = channeler(&mut h, 1);
         let partner = channeler(&mut h, 4);
@@ -203,9 +220,12 @@ fn encounter_coverage_kelidan_native_spell_admissions_qualify() {
         h.advance(5.5);
         eprintln!(
             "KELIDAN difficulty{difficulty} nova casts={} vortex casts={}",
-            h.casts(0, boss, nova),
-            h.casts(0, boss, VORTEX)
+            observed_casts(&h, boss, nova),
+            observed_casts(&h, boss, VORTEX)
         );
-        assert_eq!(h.casts(0, boss, nova), 1, "Fire Nova completes");
+        assert_eq!(observed_casts(&h, boss, nova), 1, "Fire Nova completes");
+        if difficulty == 2 {
+            assert_eq!(observed_casts(&h, boss, VORTEX), 1, "Vortex resolves");
+        }
     }
 }
