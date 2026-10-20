@@ -93,7 +93,7 @@ Qualification842fa8143 passes42.42s: Human warrior level10 gets1110HP from `upda
 - [x] Vazruden's actual death performs sourceTalk3, ordinary30693 and partner notification in source order. Qualify native AllowCastWhileDead and real dead-caster admission; never force flags, casts or hits. Chest/loot/persistence acceptance, evade/reset, Liquid Fire children and native presentation remain separate.
 Development proof: native actual dead30693/installed1892bit1 qualification1PASS plus six genuine missing-credit REDs108.35s at9405ae010; isolated reverse-order fourRED83.24s at818e1a386. Initial port001d76905 gives5PASS/sixFAIL because temporary17537 has no ordinary origin; corrected Npc+same-copy TempSummon.summoner lookup647169a24 gives all11/11GREEN187.96s,0ignored/no warnings. Tests enabled; independent retained gate pending. No origin injection, cast override or credit metadata rebinding.
 
-- [ ] Activate the authored difficulty-specific chest on completion; preserve loot and persistence boundaries.
+- [ ] `GO_NOT_SELECTABLE_FLAG_UNMODELLED` blocks Fel Iron chest MakeActive on completion. Preserve authoritative185168 difficulties1,2 and185169 difficulty1, actual last-registered instance handle and separate loot/persistence boundaries. [Census and existing-content hazard](../wiki/investigations/go-not-selectable-flag.md).
 - [ ] Preserve source evade/failure,30s forced group357 reset and unloaded/reloaded instance behavior without stale Sentry counts or surviving summoned Vazruden duplicates.
 
 ### Loaded-copy evade and30s reset

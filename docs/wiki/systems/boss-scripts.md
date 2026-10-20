@@ -1,5 +1,9 @@
 # Boss scripts
 
+## Fel Iron chest activation blocked
+
+`GO_NOT_SELECTABLE_FLAG_UNMODELLED` blocks the chest MakeActive slice; the native flag and its existing unlock consumers are not a chest-only state change. [Read-only census and source/consumer evidence](../investigations/go-not-selectable-flag.md). No implementation was attempted.
+
 ## Target32 grounding-only prerequisite — 2026-10-18
 
 `targets::caster_summon_ground_destination` runs only for32 from mutable cast planning. It applies represented dry/non-hover floor/flight Z rules from TC Object.cpp709–762, preserving missing/invalid height rather than refusing. Attr9 FORCE (Spell.cpp9286–9292) uses only final ground-Z semantics Object.cpp698–706. Existing XY/radius selection, other selectors, collision and FORCE XY backoff remain unchanged. No source projection, model lookup or invented combat reach.

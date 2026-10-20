@@ -1,6 +1,9 @@
 ## 2026-10-19 — Vazruden actual slay speech
 
 [Bounded slay](systems/boss-scripts.md#vazruden-slay-speech--2026-10-19): unrealistic1M buffer did not qualify lethal180s; approved native level10/class1 stat producer1110HP gives ordinary17537 melee death/corpse, qualification1PASS42.42s. Pushed ignoredfdeea2RED/1control55.54s plus real ownedHound reward-owner baseline1PASS59.78s; sole unfiltered killed_unit→Talk2 hook4d2f gives fourGREEN79.39s before enabling. Five-case composite with retained qualification, independent gate pending. Controls use approved production Unit::Kill HARNESS SETUP, no HP shortcuts/fabricated hooks or owners; no source timer/ability/native-audio/loot/persistence change.
+## 2026-10-19 — Fel Iron chest flag preflight blocked
+
+[GO_NOT_SELECTABLE_FLAG_UNMODELLED](investigations/go-not-selectable-flag.md) records the read-only placement/interaction census and existing Isle keep-banner unlock hazard. Fel Iron MakeActive stopped before implementation; raw census attached from the separate engine data evidence tree. No server/protocol/client flag semantics or chest behavior changed.
 
 ## 2026-10-19 — Herald flying Liquid Fire
 
@@ -3287,6 +3290,17 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 
 gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
 
+## 2026-10-19 — Native Germination shorter-remaining routing
+
+[Source/native boundary](investigations/follower-data.md#germination-shorter-remaining-routing--2026-10-19): SimC76f8118/native155675learned33not32. Pushedignored3first; native1PASS/secondHoTmissingRED/thirdprerequisiteblocked19.16s→pre-applyordinary155777redirect3GREEN30.79s/zero warnings. EnabledafterGREENc252954fc, dualperiodichealreceipts/otherdeadlineunchanged; no cost/timer/globalstacking/Swiftmendinteraction changes. Pushed; finalgatepending.
 ## 2026-10-19 — Swiftmend own-HoT hit consumption
 
 [Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.
+
+## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
+
+[Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
+
+## 2026-10-19 — Native Abundance five-own-HoT threshold
+
+[Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).
