@@ -2849,6 +2849,7 @@ enum SourceQueueFixture {
     FourPartiesOfFive,
     FourPartiesOfFiveAt25,
     RandomPartiesOfFive,
+    RandomFourPartiesOfFive,
 }
 
 fn enter_source_match_queued(
@@ -2885,6 +2886,7 @@ fn enter_source_match_with_arrival(
             SourceQueueFixture::FourPartiesOfFive
                 | SourceQueueFixture::FourPartiesOfFiveAt25
                 | SourceQueueFixture::RandomPartiesOfFive
+                | SourceQueueFixture::RandomFourPartiesOfFive
         ) {
             app.add_plugins(crate::group::GroupPlugin);
         }
@@ -2957,7 +2959,9 @@ fn enter_source_match_with_arrival(
     let origin = STOCKADE_ENTRANCE_TRIGGER + Vec3::new(0.0, 0.0, 20.0);
     let count = match queue_fixture {
         SourceQueueFixture::SoloMinimum => u64::from(template.min_players_per_team) * 2,
-        SourceQueueFixture::FourPartiesOfFive | SourceQueueFixture::FourPartiesOfFiveAt25 => 20,
+        SourceQueueFixture::FourPartiesOfFive
+        | SourceQueueFixture::FourPartiesOfFiveAt25
+        | SourceQueueFixture::RandomFourPartiesOfFive => 20,
         SourceQueueFixture::RandomPartiesOfFive => 10,
     };
     // BattlemasterList's broad admission minimum need not have a PVPDifficulty row
@@ -2967,7 +2971,9 @@ fn enter_source_match_with_arrival(
         .expect("source fixture needs an authored PVPDifficulty level");
     let level = if matches!(
         queue_fixture,
-        SourceQueueFixture::RandomPartiesOfFive | SourceQueueFixture::FourPartiesOfFiveAt25
+        SourceQueueFixture::RandomPartiesOfFive
+            | SourceQueueFixture::RandomFourPartiesOfFive
+            | SourceQueueFixture::FourPartiesOfFiveAt25
     ) {
         25
     } else {
@@ -2998,7 +3004,8 @@ fn enter_source_match_with_arrival(
         SourceQueueFixture::SoloMinimum => players.iter().collect(),
         SourceQueueFixture::FourPartiesOfFive
         | SourceQueueFixture::FourPartiesOfFiveAt25
-        | SourceQueueFixture::RandomPartiesOfFive => {
+        | SourceQueueFixture::RandomPartiesOfFive
+        | SourceQueueFixture::RandomFourPartiesOfFive => {
             form_source_five_player_parties(&mut h, &players, level);
             players.iter().step_by(5).collect()
         }
@@ -3009,8 +3016,11 @@ fn enter_source_match_with_arrival(
             .get_mut::<MessageSender<QueueForBattleground>>(who.connection)
             .unwrap()
             .send::<PvpChannel>(QueueForBattleground {
-                battleground_id: if matches!(queue_fixture, SourceQueueFixture::RandomPartiesOfFive)
-                {
+                battleground_id: if matches!(
+                    queue_fixture,
+                    SourceQueueFixture::RandomPartiesOfFive
+                        | SourceQueueFixture::RandomFourPartiesOfFive
+                ) {
                     32
                 } else {
                     template.id
