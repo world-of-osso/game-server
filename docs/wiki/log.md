@@ -3218,3 +3218,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Leadership transfer native proof
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
+
+## 2026-10-19 — Last Online authority implementation
+
+After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-app query RED, added disconnect-only character logout persistence and optional raw guild timestamp. Rest/admin timestamps are not reused or backfilled. Focused GREEN/coordinated landing/native pending; see guild lifecycle Last Online section.

@@ -37,6 +37,12 @@ Four inspected1920×1080 originals are under `/syncthing/AgentShared/2026-10-15/
 
 - [Banks](banks.md) — separate per-tab item/money history and guild authority.
 
+## Last Online recency
+
+[Contract](../../specs/guild-last-online.md). `networking::save_and_despawn` captures wall time only for a real in-world character at the production disconnect observer, then saves `character_last_logout`. This per-character table is the only Last Online authority; it is deliberately separate from RestData because admin set-rested also changes RestData's timestamp. Creating the table never populates historical rows. Normal character saves, queries and startup do not stamp it; character deletion removes its row. Offline snapshots expose optional `last_logout_unix_secs`; online snapshots suppress it. The client owns source elapsed-unit display in unchanged fields.
+
+TC a352b1fa Guild.cpp603–606/640/681–685 records/loads logout and derives offline inactivity; Mainline GuildRoster.lua115–120, CommunitiesMemberList.lua1285–1297 and TimeUtil.lua24–43 consume elapsed recency. Ignored tests/specs were pushed first. Actual RED370fe2e1e crosses two real observer disconnects, live-state save/despawn, closed DB/new-app reopen and real same-guild query before failing on absent logout authority. Initial missing-ClientOf setup failure is explicitly not authority proof. Focused GREEN1/1 passes (266s compile,0.98s test, no warnings), including distinct logout times, repeated-query stability, unknown rest/admin history and online suppression; the proven test is enabled. Coordinated landing and actual both-skin native disconnect/readback/reconnect remain pending.
+
 ## Voluntary leadership transfer
 
 [Contract](../../specs/guild-leadership-transfer.md). The project stores no separate leader GUID: member rank0 is authority. `guild_ranks.rs` checks current authenticated guild/master, resolves the same-guild stored target, and transforms only the old/new ranks. Existing `save_guild_ranks` commits all member positions atomically; existing replies refresh participants. Other ranks, bank data and lifecycle log remain unchanged. Offline targets use the same membership authority, not an online-player query. `/gleader` uses the existing native chat/GuildChannel path; no new UI or leader mirror.
