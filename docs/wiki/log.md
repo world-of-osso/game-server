@@ -1,3 +1,7 @@
+## 2026-10-19 — Wild Growth native-coefficient falloff policy
+
+[Source and proof boundary](investigations/follower-data.md#wild-growth-native-coefficient-falloff-policy--2026-10-19): explicit `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`, never legacy0.175/TC curve; absolute Retail shape uncertified. Pushed3ignored1fb0e4983 gives1PASS/2FAIL23.67s: native42 constant62×7 genuine decline RED,43 relative check blocked by same baseline prerequisite, natural expiry PASS. Minimal48438-only scheduled-deadline multipliere930 plus landed master merge43e0 gives unchanged3GREEN20.54s/no warnings:42 actual65→57,43 normalized native40%-less and unchanged seven-tick expiry. Enabled only afterward3327; final independent lead gate pending.
+
 ## 2026-10-19 — Vazruden actual slay speech
 
 [Bounded slay](systems/boss-scripts.md#vazruden-slay-speech--2026-10-19): unrealistic1M buffer did not qualify lethal180s; approved native level10/class1 stat producer1110HP gives ordinary17537 melee death/corpse, qualification1PASS42.42s. Pushed ignoredfdeea2RED/1control55.54s plus real ownedHound reward-owner baseline1PASS59.78s; sole unfiltered killed_unit→Talk2 hook4d2f gives fourGREEN79.39s before enabling. Five-case composite with retained qualification, independent gate pending. Controls use approved production Unit::Kill HARNESS SETUP, no HP shortcuts/fabricated hooks or owners; no source timer/ability/native-audio/loot/persistence change.
