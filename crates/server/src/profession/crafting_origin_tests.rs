@@ -236,3 +236,98 @@ fn crafting_origin_actual_cast_survives_database_reopen_in_owner_snapshot() {
         "identical non-crafted item must stay unknown"
     );
 }
+
+fn origin_rows(h: &Harness, item_id: u32) -> Vec<(u64, shared::protocol::CraftingOrigin)> {
+    persistence::load_inventory(h.db(), h.character_id)
+        .items
+        .iter()
+        .filter(|item| item.item_id == item_id)
+        .filter_map(|item| {
+            persistence::inventory_store::load_item_crafting_origin(h.db(), item.item_guid)
+                .map(|origin| (item.item_guid, origin))
+        })
+        .collect()
+}
+
+#[test]
+#[ignore = "RED: CRAFTING_ORIGIN_NOT_RECORDED_ON_STACKABLE_ITEMS"]
+fn crafting_origin_stackable_craft_output_merges_with_looted_stack() {
+    let mut h = harness(10).unwrap();
+    h.learn_tailoring();
+    h.give(2996, "Bolt of Linen Cloth", 1);
+    let looted = persistence::load_inventory(h.db(), h.character_id)
+        .items
+        .into_iter()
+        .find(|item| item.item_id == 2996)
+        .unwrap()
+        .item_guid;
+    h.give(2589, "Linen Cloth", 4);
+    h.craft(2963, 2);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    let stacks: Vec<_> = persistence::load_inventory(h.db(), h.character_id)
+        .items
+        .into_iter()
+        .filter(|item| item.item_id == 2996)
+        .map(|item| (item.item_guid, item.stack_count))
+        .collect();
+    assert_eq!(
+        stacks,
+        vec![(looted, 3)],
+        "crafted Bolt of Linen Cloth merges into the looted stack"
+    );
+    assert_eq!(
+        origin_rows(&h, 2996),
+        vec![],
+        "stackable output carries no origin"
+    );
+}
+
+#[test]
+#[ignore = "RED: CRAFTING_ORIGIN_NOT_RECORDED_ON_STACKABLE_ITEMS"]
+fn crafting_origin_persisted_stackable_row_is_dropped_at_load() {
+    let mut h = harness(10).unwrap();
+    h.give(2318, "Light Leather", 10);
+    let templates = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    let mut model = crate::inventory::load_model(h.db(), templates, h.character_id).unwrap();
+    let legacy = persistence::load_inventory(h.db(), h.character_id).items[0].item_guid;
+    // A row written before the policy: Light Leather crafted by 2881 (ability 1708).
+    model.record_crafting_origin(
+        legacy,
+        shared::protocol::CraftingOrigin {
+            skill_line_ability_id: 1708,
+            recipe_spell_id: 2881,
+            crafting_quality_id: None,
+        },
+    );
+    persistence::inventory_store::save_inventory_record(
+        h.db(),
+        h.character_id,
+        &model.into_record(),
+    );
+    let reloaded = crate::inventory::load_model(h.db(), templates, h.character_id).unwrap();
+    let legacy_view = reloaded
+        .view()
+        .into_values()
+        .find(|item| item.item_guid == legacy)
+        .unwrap();
+    assert_eq!(
+        legacy_view.crafting_origin, None,
+        "stackable origin is dropped at load"
+    );
+    h.give(2318, "Light Leather", 1);
+    let stacks: Vec<_> = persistence::load_inventory(h.db(), h.character_id)
+        .items
+        .into_iter()
+        .filter(|item| item.item_id == 2318)
+        .map(|item| (item.item_guid, item.stack_count))
+        .collect();
+    assert_eq!(
+        stacks,
+        vec![(legacy, 11)],
+        "looted Light Leather merges into the legacy stack"
+    );
+}
