@@ -35,6 +35,8 @@ fn qualify_native_bonus_rows() {
 
 fn bonus_app(path: &std::path::Path) -> App {
     let mut app = setup_app_with(|app| {
+        app.register_message::<AchievementStateUpdate>();
+        app.register_message::<AchievementDelta>();
         app.insert_resource(crate::test_data::achievement_catalog());
         app.add_plugins(AchievementPlugin);
     })
