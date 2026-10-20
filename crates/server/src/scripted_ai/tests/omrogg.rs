@@ -180,7 +180,9 @@ fn encounter_coverage_omrogg_native_spell_admissions_qualify() {
         let (mut h, _) = omrogg_copy(difficulty);
         h.app.init_resource::<ObservedCombatEvents>();
         let boss = h.creatures_of(OMROGG)[0];
-        stand_beside(&mut h, boss, 2.0);
+        // Out of every area: the ordinary casts must not engage the live port,
+        // whose own rotation would hold or lock the next admission.
+        stand_beside(&mut h, boss, 100.0);
         watch(&mut h, &[boss]);
         let maul = if difficulty == 2 {
             BURNING_MAUL_H
@@ -205,6 +207,7 @@ fn encounter_coverage_omrogg_native_spell_admissions_qualify() {
         // The aura's PROC_TRIGGER_SPELL default: melee hits trigger Burning Maul36057,
         // a triggered spell logged by its Damage line, not a CastSuccess.
         // HARNESS SETUP: direct threat so O'mrogg swings at the adjacent player.
+        stand_beside(&mut h, boss, 2.0);
         h.engage(boss);
         let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
         h.advance(6.0);
