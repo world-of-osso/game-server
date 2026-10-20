@@ -3214,3 +3214,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Leadership transfer native proof
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
+
+## 2026-10-19 — Actor-owned periodic-damage maintenance
+
+[Source and native proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19): SimC76f8118actor-specificMoonfire semantics confirmed; ordinarydual164812caster/tick+ownrecastcontrolsPASS/foreignsuppressionRED. PeriodicdamageAttack-onlycasterfilteref0603bb1 gives4nativePASS20.11s includingforeignHoTunchanged. Enabled3provedqualifications; integratedkit/stackingcontrols andleadgatepending. No globalhas_aura/timer/priority/movement/pet/planner edits.
