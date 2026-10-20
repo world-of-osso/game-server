@@ -11,9 +11,12 @@ use super::*;
 const PRISMATIC_SPHERE: u32 = 28027;
 const PRISMATIC_SPHERE_ITEM: u32 = 22460;
 const LARGE_PRISMATIC_SHARD: u32 = 22449;
+/// Totem category 41, Prismatic Sphere's required tool (`spell_totems`).
+const RUNED_FEL_IRON_ROD: u32 = 22461;
 const ENCHANTING_CATEGORY: u32 = 1174;
 const SPHERE_COOLDOWN_MS: u32 = 172_800_000;
-const ENCHANTING_TRAINER_NPC: u32 = 18753;
+/// Johan Barnes, Honor Hold (Alliance); Felannia 18753 is Horde.
+const ENCHANTING_TRAINER_NPC: u32 = 18773;
 const ENCHANTING: u32 = 264457;
 const OUTLAND_ENCHANTING: u32 = 264461;
 const OUTLAND_ENCHANTING_SKILL: u32 = 2493;
@@ -120,12 +123,42 @@ fn assert_replayed(h: &mut Harness, spell_id: u32, category: u32, full_ms: u32, 
     );
 }
 
+/// Johan Barnes (npcflag 209) is also a vendor, so pick the trainer option
+/// (TC `GOSSIP_ICON_TRAINER` 3) from his role-built gossip menu.
+fn open_enchanting_trainer(h: &mut Harness) -> Entity {
+    let npc = h.spawn_npc(ENCHANTING_TRAINER_NPC);
+    h.send::<_, InteractionChannel>(InteractNpc { npc: npc.to_bits() });
+    let opened = h.take::<InteractionOpened>();
+    let [
+        InteractionOpened {
+            kind: InteractionKind::Gossip(menu),
+            ..
+        },
+    ] = opened.as_slice()
+    else {
+        panic!("{opened:?}")
+    };
+    let option = menu
+        .options
+        .iter()
+        .find(|option| option.icon == 3)
+        .unwrap_or_else(|| panic!("{menu:?}"));
+    h.send::<_, InteractionChannel>(SelectGossipOption {
+        npc: npc.to_bits(),
+        option_id: option.option_id,
+    });
+    h.advance(3);
+    npc
+}
+
 fn learn_prismatic_sphere(h: &mut Harness) {
     h.set_gold(1000);
-    let npc = h.open_trainer(ENCHANTING_TRAINER_NPC);
-    h.buy(npc, ENCHANTING);
-    h.buy(npc, OUTLAND_ENCHANTING);
-    assert!(h.take::<TrainerBuyFailed>().is_empty());
+    let npc = open_enchanting_trainer(h);
+    for spell in [ENCHANTING, OUTLAND_ENCHANTING] {
+        h.buy(npc, spell);
+        let failed = h.take::<TrainerBuyFailed>();
+        assert!(failed.is_empty(), "{spell}: {failed:?}");
+    }
     h.set_rank(OUTLAND_ENCHANTING_SKILL, 25);
     h.buy(npc, PRISMATIC_SPHERE);
     assert!(h.take::<TrainerBuyFailed>().is_empty());
@@ -161,12 +194,14 @@ fn spell_cooldown_recipe_rejects_repeat_in_session_after_relog_and_after_restart
     let path = dir.path().join("recipe-cooldown.redb");
     let mut h = file_harness(&path);
     learn_prismatic_sphere(&mut h);
+    h.give(RUNED_FEL_IRON_ROD, "Runed Fel Iron Rod", 1);
     h.give(LARGE_PRISMATIC_SHARD, "Large Prismatic Shard", 12);
     h.take::<CastFailed>();
     h.take::<SpellCooldownUpdate>();
     h.craft(PRISMATIC_SPHERE, 1);
     h.finish_crafting();
-    assert!(h.take::<CastFailed>().is_empty());
+    let failed = h.take::<CastFailed>();
+    assert!(failed.is_empty(), "{failed:?}");
     assert_eq!(h.bag_count(PRISMATIC_SPHERE_ITEM), 1);
     assert_eq!(h.bag_count(LARGE_PRISMATIC_SHARD), 8);
     let started = h.take::<SpellCooldownUpdate>();
