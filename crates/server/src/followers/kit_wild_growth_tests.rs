@@ -175,7 +175,6 @@ fn normalized_drop_bounds(observed: &GrowthObservation) -> (f32, f32) {
 }
 
 #[test]
-#[ignore = "WILD_GROWTH_NATIVE_FALLOFF: policy curve around actual0.481, no legacy0.175"]
 fn follower_wild_growth_level42_native_ticks_follow_simc_policy_shape() {
     let observed = observe_native_growth(42);
     println!(
@@ -190,7 +189,6 @@ fn follower_wild_growth_level42_native_ticks_follow_simc_policy_shape() {
 }
 
 #[test]
-#[ignore = "WILD_GROWTH_NATIVE_FALLOFF: real learned43 less-falloff40pct versus42 control"]
 fn follower_wild_growth_level43_native_unstoppable_reduces_normalized_falloff() {
     let control = observe_native_growth(42);
     let talented = observe_native_growth(43);
@@ -213,7 +211,6 @@ fn follower_wild_growth_level43_native_unstoppable_reduces_normalized_falloff() 
 }
 
 #[test]
-#[ignore = "WILD_GROWTH_NATIVE_FALLOFF: retained actual duration and finite tick count"]
 fn follower_wild_growth_native_duration_and_expiry_stop_real_heals() {
     let observed = observe_native_growth(42);
     assert_eq!(
