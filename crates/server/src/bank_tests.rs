@@ -34,6 +34,54 @@ fn buy_tab(h: &mut Harness, npc: bevy::prelude::Entity, bank: BankType) {
     });
 }
 
+/// Retail `ItemUtil.GetCraftingReagentCount` counts both banks away from a banker,
+/// so a character entering the world learns their contents.
+#[test]
+#[ignore = "RED: CRAFTING_REAGENTS_FROM_BANK"]
+fn entering_the_world_sends_both_banks_without_a_banker() {
+    use crate::bank_storage::BankTabData;
+    use crate::persistence::banks::{BankData, BankOwner, save_bank_move};
+    let Some(mut h) = harness() else { return };
+    let alt = h.create_alt("Alt");
+    let linen = |count| {
+        let mut tab = BankTabData::new("Tab 1".into());
+        tab.slots[3] = Some(crate::persistence::InventoryItemData {
+            item_guid: crate::persistence::next_id(h.db(), "item_instance"),
+            item_id: LINEN,
+            name: "Linen Cloth".into(),
+            quality: 1,
+            required_level: 0,
+            stack_count: count,
+            vendor_sell_price: 0,
+            unique_auction: false,
+        });
+        BankData {
+            tabs: vec![tab],
+            ..Default::default()
+        }
+    };
+    let (character, warband) = (linen(2), linen(5));
+    save_bank_move(h.db(), alt, BankOwner::Character(alt, &character), None);
+    save_bank_move(
+        h.db(),
+        alt,
+        BankOwner::Account(crate::bank_test_harness::ACCOUNT, &warband),
+        None,
+    );
+
+    let connection = h.connect_character(alt, "Alt");
+    h.app.update();
+    let sent = h.take_for::<BankContents>(connection);
+    let linen_of = |bank| {
+        sent.iter()
+            .rev()
+            .find(|contents| contents.bank == bank)
+            .map(|contents| slot_items(contents, 0))
+    };
+    assert_eq!(linen_of(BankType::Character), Some(vec![(3, LINEN, 2)]));
+    assert_eq!(linen_of(BankType::Account), Some(vec![(3, LINEN, 5)]));
+}
+
 #[test]
 fn opening_the_banker_sends_both_empty_banks_with_retail_first_tab_prices() {
     let Some(mut h) = harness() else { return };

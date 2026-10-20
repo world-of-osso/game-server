@@ -1595,6 +1595,63 @@ fn crafting_consumes_reagents_from_bags_then_character_bank_then_warband_bank() 
     assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 4);
 }
 
+/// The client counts bank reagents from `BankContents`, so a craft that takes
+/// from a bank sends that bank's new contents, banker or not.
+#[test]
+#[ignore = "RED: CRAFTING_REAGENTS_FROM_BANK"]
+fn crafting_from_banks_sends_their_new_contents() {
+    use persistence::banks::{BankOwner, save_bank_move};
+    use shared::protocol::{BankContents, BankType};
+    let Some(mut h) = harness_with(10, |app| {
+        add_inbox::<BankContents>(app);
+        app.add_plugins(crate::bank::BankPlugin);
+    }) else {
+        return;
+    };
+    let connection = h.connection;
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(pair::<BankContents>());
+    h.learn_tailoring();
+    let character_bank = linen_bank(&h, 1);
+    let warband_bank = linen_bank(&h, 5);
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Character(h.character_id, &character_bank),
+        None,
+    );
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Account(1, &warband_bank),
+        None,
+    );
+    h.take::<BankContents>();
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    let sent = h.take::<BankContents>();
+    let linen_sent = |bank| {
+        sent.iter()
+            .rev()
+            .find(|contents| contents.bank == bank)
+            .map(|contents| {
+                contents
+                    .tabs
+                    .iter()
+                    .flat_map(|tab| tab.slots.iter().flatten())
+                    .filter(|item| item.item_id == LINEN_CLOTH)
+                    .map(|item| item.count)
+                    .sum::<u32>()
+            })
+    };
+    assert_eq!(linen_sent(BankType::Character), Some(0));
+    assert_eq!(linen_sent(BankType::Account), Some(4));
+}
+
 #[test]
 fn stopping_the_cast_cancels_the_remaining_crafts() {
     let Some(mut h) = harness(10) else { return };
