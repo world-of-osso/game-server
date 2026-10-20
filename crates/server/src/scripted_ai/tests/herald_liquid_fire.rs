@@ -56,6 +56,9 @@ fn encounter_coverage_herald_liquid_fire_source_qualification() {
             .template_for(21252, difficulty)
             .expect("source trigger difficulty");
         assert_eq!(template.entry, 21252);
-        println!("native21252 difficulty{difficulty}: {template:?}");
+        println!(
+            "native21252 difficulty{difficulty}: name={} faction={} type={}",
+            template.name, template.faction, template.creature_type
+        );
     }
 }
