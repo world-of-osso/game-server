@@ -185,6 +185,8 @@ mod kit_germination_tests;
 #[cfg(test)]
 mod kit_interrupt_tests;
 #[cfg(test)]
+mod kit_lifebloom_refresh_tests;
+#[cfg(test)]
 mod kit_soul_of_forest_tests;
 #[cfg(test)]
 mod kit_source_tests;
