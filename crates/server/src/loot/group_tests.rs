@@ -636,3 +636,43 @@ fn group_kill_broadcasts_one_shared_item_roll_not_two_personal_items() {
         })
     )));
 }
+
+#[test]
+#[ignore = "aura-world native RED/GREEN gate"]
+fn aura_world_group_loot_money_modifies_each_recipients_share_before_cap() {
+    let (mut h, other) = grouped();
+    let auras = crate::auras::world_xp_tests::native_auras(291619);
+    h.app.world_mut().entity_mut(h.looter.player).insert(auras);
+    {
+        let mut tables = h.app.world_mut().resource_mut::<LootTables>();
+        let money = tables.money.get_mut(&KOBOLD_VERMIN).unwrap();
+        money.min_gold = 1000;
+        money.max_gold = 1000;
+    }
+    let corpse = h.kill_kobold();
+    h.open(corpse, true);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_inventory(db, h.looter.character_id).gold,
+        510
+    );
+    assert_eq!(
+        persistence::load_inventory(db, other.character_id).gold,
+        500
+    );
+    let mut inventory = persistence::load_inventory(db, h.looter.character_id);
+    inventory.gold = MAX_MONEY - 505;
+    persistence::save_inventory(db, h.looter.character_id, &inventory);
+    let corpse = h.kill_kobold();
+    h.open(corpse, true);
+    let db = &h.app.world().resource::<GameDatabase>().db;
+    assert_eq!(
+        persistence::load_inventory(db, h.looter.character_id).gold,
+        MAX_MONEY - 505
+    );
+    assert_eq!(
+        persistence::load_inventory(db, other.character_id).gold,
+        500,
+        "bonus cap failure must preserve peer wallet"
+    );
+}
