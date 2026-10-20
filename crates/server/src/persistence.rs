@@ -407,6 +407,7 @@ pub(crate) fn create_tables(db: &Database) {
     toy_store::create_tables(&txn);
     housing_store::create_tables(&txn);
     mount_store::create_tables(&txn);
+    crate::spell_cast::history_store::create_table(&txn);
     txn.commit().expect("Failed to commit initial tables");
     migrate_legacy_inventories(db);
     migrate_legacy_characters(db);

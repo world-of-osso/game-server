@@ -83,6 +83,8 @@ mod omor;
 mod omor_pushback;
 #[path = "omor_slay.rs"]
 mod omor_slay;
+#[path = "the_maker.rs"]
+mod the_maker;
 #[path = "theradras.rs"]
 mod theradras;
 #[path = "vazruden_slay.rs"]

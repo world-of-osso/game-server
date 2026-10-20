@@ -91,7 +91,7 @@ The covered mutation boundaries are barber payments, completed trades, auction c
 ## What Is NOT Persisted
 
 These are transient and reconstructed on login or respawn:
-- Active combat state (current target, in-progress cooldowns)
+- Active combat state (current target, global cooldown, school locks, charges); spell/category cooldowns persist ([spec](../../specs/spell-cooldown-persistence.md))
 - Active auras / buffs (except those with explicit persistence)
 - Movement interpolation state
 - NPC runtime state (aggro tables, patrol progress, wander seed)
