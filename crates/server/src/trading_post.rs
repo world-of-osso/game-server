@@ -157,6 +157,7 @@ fn prepare_snapshot(
     world: &World,
     connection: Entity,
     rows: &Rows,
+    reply_kind: TradingPostReplyKind,
 ) -> (TradingPostSnapshot, Option<catalog::CatalogData>, i64) {
     let now = world.resource::<crate::maps::ServerClock>().unix();
     let calendar = crate::adventure_guide::calendar_month(now);
@@ -185,6 +186,7 @@ fn prepare_snapshot(
             items: Vec::new(),
             thresholds: Vec::new(),
             catalog_complete: matches!(rows, Rows::Catalog),
+            reply_kind,
             source_gaps: vec![
             "TP_MONTHLY_CATALOG_WOWHEAD_NEWS_BEST_GUESS: news-derived inventory; not Retail parity. Seasonal activity/reward binding remains unresolved."
                 .into(),
