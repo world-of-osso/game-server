@@ -912,3 +912,5 @@ Debug logs and root cause analyses.
 - [Selected native follower metadata](investigations/slow-native-test-fixtures.md#selected-native-follower-metadata-2026-10-19) — existing canonical template/class views, two-live-app isolation, unchanged1353-corner/144-origin/36-kit coverage and matched wall/CPU/RSS observations.
 
 - [Prepared encounter fixture inputs](investigations/slow-native-test-fixtures.md#fully-prepared-encounter-inputs-2026-10-19) — complete immutable producer/composite profiles, independent resource copies, cross-profile/difficulty isolation;28 unchanged cases and matched wall/CPU/RSS, including cold Ragefire regression and retained-memory cost.
+
+- [Canonical toy spell reuse](investigations/slow-native-test-fixtures.md#canonical-toy-spell-reuse) — existing full spell-store copies at two fixture sites;213/213 unchanged cases before/after, five affected tests131s faster, whole-family contention regression disclosed.
