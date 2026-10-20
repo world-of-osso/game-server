@@ -123,7 +123,7 @@ fn receive_hold_purchase(
     }
 }
 
-fn child_hold_case(root: &Path, checkout: bool) {
+fn child_hold_case(root: &Path, checkout: bool, timeout: bool) {
     let mut h = prepare_hold_buyer(root);
     let command = if checkout {
         TradingPostRequest::Checkout {
@@ -135,25 +135,54 @@ fn child_hold_case(root: &Path, checkout: bool) {
     let kind = command.reply_kind();
     let reply = receive_hold_purchase(&mut h, root, command);
     assert_eq!(reply.reply_kind, kind);
-    assert!(reply.error.is_none(), "{:?}", reply.error);
-    assert_eq!(reply.tender, 400);
-    assert!(
-        reply
-            .items
-            .iter()
-            .find(|row| row.id == 4)
-            .unwrap()
-            .purchased
+    let expected_tender = if timeout { 500 } else { 400 };
+    if timeout {
+        assert!(reply.error.as_ref().unwrap().contains("deadline expired"));
+        assert_eq!(store::load(h.db(), ACCOUNT).tender, 500);
+    } else {
+        assert!(reply.error.is_none(), "{:?}", reply.error);
+        assert!(
+            reply
+                .items
+                .iter()
+                .find(|row| row.id == 4)
+                .unwrap()
+                .purchased
+        );
+    }
+    assert_eq!(reply.tender, expected_tender);
+    assert_eq!(
+        crate::persistence::appearance_store::load_account_appearances(h.db(), ACCOUNT).has(37866),
+        !timeout
     );
-    assert!(
-        crate::persistence::appearance_store::load_account_appearances(h.db(), ACCOUNT).has(37866)
+    assert_eq!(
+        request(&mut h, TradingPostRequest::Balance).tender,
+        expected_tender,
+        "later FIFO work drains after release or watchdog refusal"
     );
-    fs::write(root.join("completed"), b"committed").unwrap();
+    fs::write(root.join("completed"), b"completed").unwrap();
 }
 
-fn run_hold_case(test: &str, checkout: bool) {
+fn wait_for_child(child: &mut Child) -> std::process::ExitStatus {
+    let deadline = Instant::now() + Duration::from_secs(60);
+    loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            return status;
+        }
+        if Instant::now() >= deadline {
+            child
+                .kill()
+                .expect("kill only the owned hung fixture child");
+            return child.wait().expect("reap owned fixture child");
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn run_hold_case(test: &str, checkout: bool, timeout: bool) {
+    let expect_hold = cfg!(feature = "native-proof-hold-persistence");
     if let Some(root) = std::env::var_os(CHILD_ROOT) {
-        child_hold_case(Path::new(&root), checkout);
+        child_hold_case(Path::new(&root), checkout, timeout);
         return;
     }
     let dir = tempfile::tempdir().unwrap();
@@ -161,7 +190,7 @@ fn run_hold_case(test: &str, checkout: bool) {
     let log = fs::File::create(root.join("child.log")).unwrap();
     let mut child = OwnedChild(
         Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", test, "--ignored", "--nocapture"])
+            .args(["--exact", test, "--nocapture"])
             .env(CHILD_ROOT, root)
             .env(HOLD_ROOT, root)
             .stdout(Stdio::from(log.try_clone().unwrap()))
@@ -174,43 +203,87 @@ fn run_hold_case(test: &str, checkout: bool) {
     fs::write(root.join("go"), b"go").unwrap();
     let held = ready && wait_for_hold_or_completion(root);
     let observed = held && wait_for_file(root, "observed", 5);
-    // Release before assertions, including expected RED, so no fixture child stays blocked.
-    fs::write(root.join("release"), b"release").unwrap();
-    let status = child.0.wait().unwrap();
+    // Watchdog proof deliberately sends no release; its request must fail without charge.
+    if !timeout {
+        fs::write(root.join("release"), b"release").unwrap();
+    }
+    let status = wait_for_child(&mut child.0);
     let log = fs::read_to_string(root.join("child.log")).unwrap();
     assert!(
         ready && status.success(),
         "child must execute the real transaction successfully: {log}"
     );
-    assert!(
-        held,
-        "Purchase/Checkout commit must wait for private release; completed without a held marker: {log}"
+    assert_eq!(
+        held, expect_hold,
+        "only the explicit private feature may claim a hold: {log}"
     );
-    assert!(
-        observed,
-        "the app must keep ticking while its durable purchase is held"
-    );
-    let observation: serde_json::Value =
-        serde_json::from_slice(&fs::read(root.join("observed")).unwrap()).unwrap();
-    assert_eq!(observation["tender"], 500);
-    assert_eq!(observation["appearance"], false);
+    if expect_hold {
+        assert!(
+            observed,
+            "the app must keep ticking while its durable purchase is held"
+        );
+        let observation: serde_json::Value =
+            serde_json::from_slice(&fs::read(root.join("observed")).unwrap()).unwrap();
+        assert_eq!(observation["tender"], 500);
+        assert_eq!(observation["appearance"], false);
+        for marker in ["arm", "held", "release"] {
+            assert!(!root.join(marker).exists());
+        }
+    } else {
+        assert!(
+            root.join("arm").exists(),
+            "default binary ignores the private hook entirely"
+        );
+    }
     assert!(root.join("completed").exists());
 }
 
+#[cfg(feature = "native-proof-hold-persistence")]
 #[test]
-#[ignore = "TDD harness RED: no private purchase-commit hold yet"]
 fn native_proof_hold_persistence_purchase_waits_for_release() {
     run_hold_case(
         "trading_post::tests::native_proof_hold::native_proof_hold_persistence_purchase_waits_for_release",
         false,
+        false,
     );
 }
 
+#[cfg(feature = "native-proof-hold-persistence")]
 #[test]
-#[ignore = "TDD harness RED: no private checkout-commit hold yet"]
 fn native_proof_hold_persistence_checkout_waits_for_release() {
     run_hold_case(
         "trading_post::tests::native_proof_hold::native_proof_hold_persistence_checkout_waits_for_release",
+        true,
+        false,
+    );
+}
+
+#[cfg(not(feature = "native-proof-hold-persistence"))]
+#[test]
+fn native_proof_hold_persistence_purchase_default_ignores_private_arm() {
+    run_hold_case(
+        "trading_post::tests::native_proof_hold::native_proof_hold_persistence_purchase_default_ignores_private_arm",
+        false,
+        false,
+    );
+}
+
+#[cfg(not(feature = "native-proof-hold-persistence"))]
+#[test]
+fn native_proof_hold_persistence_checkout_default_ignores_private_arm() {
+    run_hold_case(
+        "trading_post::tests::native_proof_hold::native_proof_hold_persistence_checkout_default_ignores_private_arm",
+        true,
+        false,
+    );
+}
+
+#[cfg(feature = "native-proof-hold-persistence")]
+#[test]
+fn native_proof_hold_persistence_timeout_refuses_purchase_without_charge() {
+    run_hold_case(
+        "trading_post::tests::native_proof_hold::native_proof_hold_persistence_timeout_refuses_purchase_without_charge",
+        false,
         true,
     );
 }

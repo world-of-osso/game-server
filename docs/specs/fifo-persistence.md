@@ -44,10 +44,18 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 ## Native proof purchase hold (harness hook)
 
 - [ ] Explicitly opt-in `native-proof-hold-persistence` Cargo feature exists only for private debug peer builds. It is not a default feature; release/deploy builds must not contain it.
-- [ ] `NATIVE_PROOF_HOLD_PERSISTENCE_DIR` names an absolute private control directory. A valid Purchase/Checkout job on the existing FIFO claims `arm` as `held` before any purchase mutation; `release` lets that same job commit and publish its real reply. Query/Balance/Refund/Freeze and main-thread UDP work do not acquire this hold.
-- [ ] A30-second hard maximum rejects the held request without committing when release never arrives. Release/held markers are consumed, stale markers and filesystem errors are explicit failures, and later FIFO work remains drainable. This is a failure watchdog, not timed auto-release for ordering proofs.
+- [ ] `NATIVE_PROOF_HOLD_PERSISTENCE_DIR` names an absolute private control directory. A prepared, membership-validated Purchase/Checkout job on the existing FIFO claims `arm` as `held` before any purchase mutation; `release` lets that same job commit and publish its real reply. Query/Balance/Refund/Freeze and main-thread UDP work do not acquire this hold.
+- [ ] A30-second hard maximum rejects the held request without purchasing or charging when release never arrives; the ordinary failed-action snapshot retains current authority. Release/held markers are consumed, stale markers and filesystem errors are explicit failures, and later FIFO work remains drainable. This is a failure watchdog, not timed auto-release for ordering proofs.
 - [ ] Default production behavior,10-second Netcode timeout, heartbeat and gameplay clocks remain unchanged. No ptrace/strace, host-permission changes, alternate writer, wire IDs or production delay knob.
-- [ ] Process-isolated existing-API purchase/checkout regressions are staged ignored before implementation; explicit-release pre/post-commit state, app responsiveness, default exclusion and watchdog behavior require targeted proof before native use.
+- [ ] Pushed-first ignored existing-API purchase/checkout regressions c7b86e113 reached both expected missing-hold assertions before production edits: both child transactions genuinely completed without a held marker (407.8s helper/17.39s tests). Feature-enabled explicit-release/watchdog and default-mode exclusion controls are separate profiles; targeted GREEN and parent gate remain pending before native use.
+
+Private build only (never pass the feature to release/deploy):
+
+```text
+agent-run <owner> python3 scripts/build-host.py --features native-proof-hold-persistence --bin game-server
+```
+
+Set `NATIVE_PROOF_HOLD_PERSISTENCE_DIR` only on the owned private peer, create that directory, then create `arm` before accepting one purchase and `release` after observing `held`. Feature tests use `--features native-proof-hold-persistence`; default-exclusion tests omit it. Both are filtered by `native_proof_hold_persistence`.
 
 ## Known gaps (current cycle)
 

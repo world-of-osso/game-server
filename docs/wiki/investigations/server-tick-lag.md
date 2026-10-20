@@ -35,6 +35,14 @@ The live comparison is explicitly **split-window**, not a consolidated controlle
 
 Lead reports that the full suite and three gates were compiling during the after-window. One consolidated baseline→after run is explicitly authorized in a quiet22-minute window only after full suite st508 finishes, with new gate admissions held and the same four frozen artifacts/private inputs. That run has not started; split observations above are retained unchanged, not replaced by a performance PASS.
 
+### Native proof purchase hold (test-only harness)
+
+The client Netcode timeout is10s, so whole-server SIGSTOP cannot reliably prove the independent10s SLOW_PURCHASE notice. Tracing is forbidden on this host. The explicitly approved `native-proof-hold-persistence` Cargo feature instead blocks only a prepared, membership-validated Purchase/Checkout inside the existing FIFO worker, before purchase mutation. The main app/UDP loop stays available. Default builds compile out the hook; its module rejects release builds.
+
+`crates/server/src/native_proof_hold_persistence.rs` reads the private directory only in that feature build. An atomic `arm`→`held` rename acknowledges ownership; consuming `release` removes the hold. The30s watchdog fails the action, without charging, rather than silently committing abandoned proof work; `execute_and_snapshot` still produces the ordinary current-authority error snapshot. Stale signals and filesystem failures are explicit. [Harness contract and invocation](../../specs/fifo-persistence.md#native-proof-purchase-hold-harness-hook).
+
+Process-isolated existing-API Purchase/Checkout cases were pushed first and reached actual missing-hold assertions atc7b86e113 before the hook existed. Both underlying child purchases completed successfully; this is not a compile/setup RED. The same process fixtures now distinguish feature-enabled hold/release and default-mode exclusion; a real deadline case verifies refusal without a charge and subsequent FIFO progress. Targeted GREEN and parent gate remain pending. Native timing/input proof has not run.
+
 ### FIFO persistence core restoration (2026-10-17)
 
 The landed netdelta runtime did not contain the earlier FIFO lane: `c391e8bbb` was not an ancestor of measured server `d9a8e1d8`. Four current-source held-writer controls reproduced 250–253ms tick waits: periodic character saves, achievement account updates, monthly contributions and real Guide/Tender refresh. Native compilation/setup failures were not counted as RED.

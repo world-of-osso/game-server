@@ -1,3 +1,7 @@
+## 2026-10-19 — Private native-proof purchase hold harness
+
+[Hook and proof status](investigations/server-tick-lag.md#native-proof-purchase-hold-test-only-harness): explicitly approved non-default debug Cargo feature holds only the existing FIFO purchase/checkout work behind private files, keeping UDP live and the10s timeout unchanged. Pushed-first process cases reached two genuine missing-hold assertions; fixed30s watchdog refuses without charge and release builds are rejected. GREEN/gate pending; no tracing or native runtime used.
+
 ## 2026-10-19 — Lifebloom near-expiration refresh bloom
 
 [Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.
