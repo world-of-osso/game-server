@@ -98,6 +98,7 @@ fn bank_splits_preserve_binding_guids_and_counts_after_database_reopen() {
     let contents = h
         .take::<BankContents>()
         .into_iter()
+        .rev()
         .find(|c| c.bank == BankType::Character)
         .unwrap();
     let kept = contents.tabs[0].slots[0].as_ref().unwrap();

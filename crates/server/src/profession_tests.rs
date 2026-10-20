@@ -7,10 +7,16 @@
 //! cap 300 from tier 336). Bolt of Linen Cloth (2963) is learned with the line,
 //! takes 2 Linen Cloth (2589), casts 1.5 s, and is orange below rank 25.
 
+#[path = "profession/bank_reagents_native_fixture.rs"]
+mod bank_reagents_native_fixture;
 #[path = "crafting_orders/tests.rs"]
 mod crafting_order_tests;
 #[path = "profession/crafting_origin_tests.rs"]
 mod crafting_origin_tests;
+#[path = "profession/recipe_cooldown_native_fixture.rs"]
+mod recipe_cooldown_native_fixture;
+#[path = "profession/spell_cooldown_persistence_tests.rs"]
+mod spell_cooldown_persistence_tests;
 
 #[test]
 fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopens() {
@@ -546,8 +552,8 @@ use shared::components::{CharacterAppearance, Health, Level, Npc, Position, Unit
 use shared::protocol::{
     CastFailed, CombatChannel, CraftRecipe, InteractNpc, InteractionChannel, InteractionKind,
     InteractionOpened, NpcFlags, ProtocolPlugin, SelectGossipOption, SpellCastIntent,
-    StopSpellCast, TrainerBuyFailed, TrainerBuySpell, TrainerChannel, TrainerFailReason,
-    TrainerList, TrainerServiceState,
+    SpellCooldownUpdate, StopSpellCast, TrainerBuyFailed, TrainerBuySpell, TrainerChannel,
+    TrainerFailReason, TrainerList, TrainerServiceState,
 };
 use shared::spell_data::CastFailReason;
 
@@ -624,13 +630,15 @@ struct Harness {
     character_id: u64,
     player: Entity,
     connection: Entity,
+    level: u8,
 }
 
 fn harness(level: u8) -> Option<Harness> {
     harness_with(level, |_| {})
 }
 
-fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
+/// The profession server app over `world.db`, without a character.
+fn harness_app(extra: impl FnOnce(&mut App)) -> Option<(App, Connection)> {
     let path = world_db_path()?;
     let data = world_db()?;
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -645,6 +653,7 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     add_inbox::<TrainerBuyFailed>(&mut app);
     add_inbox::<ProfessionSnapshot>(&mut app);
     add_inbox::<CastFailed>(&mut app);
+    add_inbox::<SpellCooldownUpdate>(&mut app);
     app.insert_resource(world_db_faction_templates()?);
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
@@ -674,9 +683,29 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     app.insert_resource(SpellStore::fixture(spells));
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
+    Some((app, conn))
+}
+
+fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
+    let (mut app, conn) = harness_app(extra)?;
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) =
         persistence::create_character(db, 1, "Crafter", 1, 1).expect("create character");
+    let (player, connection) = enter_world(&mut app, character_id, level);
+    Some(Harness {
+        app,
+        conn,
+        character_id,
+        player,
+        connection,
+        level,
+    })
+}
+
+/// Spawn the character's player, with its saved professions, and an in-world connection.
+fn enter_world(app: &mut App, character_id: u64, level: u8) -> (Entity, Entity) {
+    let professions =
+        persistence::load_professions(&app.world().resource::<GameDatabase>().db, character_id);
     let player = app
         .world_mut()
         .spawn((
@@ -700,7 +729,7 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
             UnitFactionTemplate(HUMAN_TEMPLATE),
             crate::maps::InMap::continent(0),
             Moving(false),
-            PlayerProfessions::default(),
+            professions,
         ))
         .id();
     let connection = app
@@ -726,17 +755,12 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
                 pair::<CastFailed>(),
                 pair::<SpellCastIntent>(),
                 pair::<StopSpellCast>(),
+                pair::<SpellCooldownUpdate>(),
             ),
         ))
         .id();
     app.update();
-    Some(Harness {
-        app,
-        conn,
-        character_id,
-        player,
-        connection,
-    })
+    (player, connection)
 }
 
 impl Harness {
@@ -1504,6 +1528,131 @@ fn queued_crafts_stop_when_the_linen_runs_out() {
         failed.iter().map(|f| f.reason).collect::<Vec<_>>(),
         vec![CastFailReason::Reagents]
     );
+}
+
+/// One bank tab holding `count` Linen Cloth.
+fn linen_bank(h: &Harness, count: u32) -> persistence::banks::BankData {
+    let mut tab = crate::bank_storage::BankTabData::new("Reagents".into());
+    tab.slots[0] = Some(InventoryItemData {
+        item_guid: persistence::next_id(h.db(), "item_instance"),
+        item_id: LINEN_CLOTH,
+        name: "Linen Cloth".into(),
+        quality: 1,
+        required_level: 0,
+        stack_count: count,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    });
+    persistence::banks::BankData {
+        tabs: vec![tab],
+        ..Default::default()
+    }
+}
+
+fn linen_in(bank: &persistence::banks::BankData) -> u32 {
+    bank.tabs
+        .iter()
+        .flat_map(|tab| tab.slots.iter().flatten())
+        .filter(|item| item.item_id == LINEN_CLOTH)
+        .map(|item| item.stack_count)
+        .sum()
+}
+
+/// Retail `ItemUtil.GetCraftingReagentCount` counts bags, the character bank
+/// and the Warband bank; reagents are consumed in project policy
+/// CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS.
+#[test]
+fn crafting_consumes_reagents_from_bags_then_character_bank_then_warband_bank() {
+    use persistence::banks::{BankOwner, load_account_bank, load_character_bank, save_bank_move};
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 1);
+    let character_bank = linen_bank(&h, 2);
+    let warband_bank = linen_bank(&h, 5);
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Character(h.character_id, &character_bank),
+        None,
+    );
+    // The harness connection authenticates account 1.
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Account(1, &warband_bank),
+        None,
+    );
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(BOLT_ITEM), 1);
+    assert_eq!(h.bag_count(LINEN_CLOTH), 0);
+    assert_eq!(linen_in(&load_character_bank(h.db(), h.character_id)), 1);
+    assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 5);
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(BOLT_ITEM), 2);
+    assert_eq!(linen_in(&load_character_bank(h.db(), h.character_id)), 0);
+    assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 4);
+}
+
+/// The client counts bank reagents from `BankContents`, so a craft that takes
+/// from a bank sends that bank's new contents, banker or not.
+#[test]
+fn crafting_from_banks_sends_their_new_contents() {
+    use persistence::banks::{BankOwner, save_bank_move};
+    use shared::protocol::{BankContents, BankType};
+    let Some(mut h) = harness_with(10, |app| {
+        add_inbox::<BankContents>(app);
+        app.add_plugins(crate::bank::BankPlugin);
+    }) else {
+        return;
+    };
+    let connection = h.connection;
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(pair::<BankContents>());
+    h.learn_tailoring();
+    let character_bank = linen_bank(&h, 1);
+    let warband_bank = linen_bank(&h, 5);
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Character(h.character_id, &character_bank),
+        None,
+    );
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Account(1, &warband_bank),
+        None,
+    );
+    h.take::<BankContents>();
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    let sent = h.take::<BankContents>();
+    let linen_sent = |bank| {
+        sent.iter()
+            .rev()
+            .find(|contents| contents.bank == bank)
+            .map(|contents| {
+                contents
+                    .tabs
+                    .iter()
+                    .flat_map(|tab| tab.slots.iter().flatten())
+                    .filter(|item| item.item_id == LINEN_CLOTH)
+                    .map(|item| item.count)
+                    .sum::<u32>()
+            })
+    };
+    assert_eq!(linen_sent(BankType::Character), Some(0));
+    assert_eq!(linen_sent(BankType::Account), Some(4));
 }
 
 #[test]

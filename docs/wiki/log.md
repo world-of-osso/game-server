@@ -1,6 +1,43 @@
 ## 2026-10-20 — Generic combat/stat aura consumers
 
 [Per-type source matrix and ledger](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20):12 generic consumers,4 explicit TC NYI gaps. Pushed ignored REDs first; corrected retired weapon ID, saturated armor and pre-owned expertise fixtures without changing native spell data.419 current mana clamps instead of scaling.316 accounts absorption but does not invent a script rescue. Final861d7edd5 targeted15 enabled PASS26.31s/0warnings, protocol600b755; no full suite or independent parent gate. Receipt-backed pinned sources supersede shifted citations from the broader TC tree; compared handler bodies are identical.
+## 2026-10-19 — Private native-proof purchase hold harness
+
+[Hook and proof status](investigations/server-tick-lag.md#native-proof-purchase-hold-test-only-harness): explicitly approved non-default debug Cargo feature holds only the existing FIFO purchase/checkout work behind private files, keeping UDP live and the10s timeout unchanged. Pushed-first process cases reached two genuine missing-hold assertions; fixed30s watchdog refuses without charge and release builds are rejected. Feature7/default2 GREEN; parent persistence/check/fmt gate pending. Release guard source-inspected, not a release-hook build; no tracing or native runtime used.
+
+## 2026-10-20 — Spell cooldown persistence
+
+[Contract](../specs/spell-cooldown-persistence.md): player spell/category cooldowns persist as wallclock deadlines at logout and replay as `SpellCooldownUpdate` at world entry (TC SpellHistory SaveToDB/LoadFromDB/SendSpellHistory). RED e9b2860dc/cca7855fc failed at relog replay for Prismatic Sphere28027 and Berserker Rage18499 (in-session rejection already held); GREEN passes in session, after relog and after restart, plus load-time pruning.
+## 2026-10-20 — Armor specialization equipped armor
+
+[Item requirements](systems/auras.md#armor-specialization-equipment--2026-10-20): ignored RED pushed first (9b073510a, rebased ae2683f3b); three genuine failures at the aura-absent assertion, full-plate control passes. Fix b1a250fb2: player Attr8 armor passives need all eight armor slots to fit (Paladin loadout164 plate, Druid leather chest 72689 negative). GREEN 826/0, 4 pre-existing ignores, 252.73s: auras::, stats, followers::passive_stats, class_progression, inventory, combat::tests, class_completeness. No existing test changed. Remaining item-requirement gaps in the [spec](../../specs/player-damage.md#known-gaps-current-cycle).
+
+## 2026-10-19 — Omen and one-use Clearcasting
+
+[Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
+
+## 2026-10-19 — Tranquil Mind two-stack Clearcasting
+
+[Native source and proof](investigations/follower-data.md#tranquil-mind-two-stack-clearcasting--2026-10-19): actual25 native403521s3 chance5%/s1 op37+1 cap; existing generic cap already passes actual24 repeated procs/25 third proc. Pushedc4aa native3 gives2PASS/1FAIL28.55s: two earned stacks→first free Regrowth wrongly removes both. Minimal2b8f chooses native5% and existing spend_stack; unchanged3GREEN17.68s/zero warnings proves2→1→0 then actual paid Regrowth before enablingf43b. Binomial bounds cover multiple late-enough natural procs per finite native lifetime, not a frequency certificate/gameplay timer. Clearcasting index/investigation merge conflict resolved retaining both sides; requested merged Clearcasting3PASS16.04s atcd1bbe, then Tranquil rebased onto that tip with four patch-equivalent commits. Independent final gate pending.
+
+## 2026-10-20 — Shattered Halls O'mrogg
+
+[Warbringer O'mrogg16809 and heads19523/19524](systems/boss-scripts.md#shattered-halls-omrogg--2026-10-20) ported on BossAi(2) with a Burning Maul AuraScript and a Beatdown AfterCast; new `creature_aggro::reset_all_threat` (TC ResetAllThreat, references kept). Prepared fixture WorldData now carries canonical equipment. Qualification, pushed ignored RED, GREEN8/8 before enabling. `OMROGG_BURNING_MAUL_30620_ABSENT_70448`.
+
+## 2026-10-20 — Blood Furnace Keli'dan
+
+[Keli'dan17377 and Shadowmoon Channelers17653](systems/boss-scripts.md#blood-furnace-kelidan--2026-10-20) ported on BossAi(1) with a Burning Nova AuraScript; shared `Hook::JustReachedHome` at home arrival and non-forced `SpawnGroupSpawn` (keep living, replace dead). Qualification, pushed ignored RED, GREEN11/11 before enabling. `KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`.
+
+## 2026-10-20 — Blood Furnace The Maker
+
+[The Maker17381](systems/boss-scripts.md#blood-furnace-the-maker--2026-10-20) ported on BossAi(0) with `Ctx::dungeon_mode` consolidation; qualification, pushed ignored RED, GREEN5/5 before enabling. Read-only trace found no canonical542/543 creature bindings (`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`).
+## 2026-10-20 — db2_casc scalar-first pallet order
+
+[Decoder notes](../db2-casc-sparse.md#fixed-record-decoding):
+- `db2_casc` fixed decoding now goes through one `read_fixed` parser, which the engine readers are moving onto.
+- Fixed latent bug: pallets were read in field order. Real PlayerCondition 1045411 declares an array pallet before scalar pallets, so all 48,491 rows read WeaponSubclassMask 1048866 / ContentTuningID 958 instead of 0, and the ContentTuningID pallet repeated entries.
+- No import used that path; `world.db` PlayerCondition comes from the scalar-first engine CSVs.
+- Regression: `test_db2_casc_player_condition`, RED on the old decoder, GREEN now.
 
 ## 2026-10-19 — Ordinary quest max-level bonus
 
@@ -1991,6 +2028,9 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+-2026-10-19: Impending Victory202168→202166 then own32216 removal: five native qualifications4+1 first, pushed ignored69af7bb76→fiveRED/one control14.11s; minimal existing AfterCast/FULL-trigger/remove consumerf041d6b70→fresh ignored sixGREEN13.06s/0warnings before enabling; initial eleven-case composite then masterdfdd71578 merged d1af4b8a7→fresh targeted elevenGREEN14.64s/0warnings; lead gate pending. VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED/direct-native32216 removal-only boundary preserved. See [spell casting](systems/spell-casting.md#impending-victory-consequence--2026-10-19).
+-2026-10-19: Invigorating Fury184364+383468→385174 qualified native payload/8vs11s/defense/recovery/actual Warrior cast preservation3PASS; pushed ignored788ff0e68→3RED/3controls; existing AfterCast/limited helper consumer4a5aaa555→fresh ignored6GREEN25.43s/0warnings; enabled after GREEN, retained3qualification forms nine-case composite; lead integration pending. See [spell casting](systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
+
 - 2026-10-13 — [Recovery rates](systems/auras.md#cooldown-recovery-rates): native286 start/apply/remove/refresh/expiry, owning spell attribution for category-only timers, real Rapid Fire/Sprint/Hot Hand controls and current owner updates; full ability/global-time/native-rendered parity remains open.
 - 2026-10-13 — [Map instance type](systems/dungeon-achievements.md#map-instance-type-verified-2026-10-13): exact authored122 map membership, native arena/BG killing-blow/reward/queued-death RED/GREEN and cross-type/persistence controls; +4 statistics, missing raid-death18 unclaimed.
 
@@ -3325,3 +3365,21 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).
+
+## 2026-10-19 — Loa canonical fixture spell reuse
+
+[Loa follow-up](investigations/slow-native-test-fixtures.md#loa-canonical-spell-store-follow-up): two canonical reloads use existing complete store copies, no new cache. Same seven cases pass before/after, wall132.283→99.566s/CPU127.577→98.679s/RSS+36500KiB. All1800s/3600s ordinary frames and persistence/assertions preserved. Pushed208f091df precedes after measurement; independent lead integration pending.
+## 2026-10-19 — Nested achievement fixture catalog reuse
+
+[Nested-all fixture](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) clones the existing canonical catalog, no new cache or map producer change. Same native test/four difficulty-prerequisite variants PASS before/after27.029→17.224s wall; CPU26.189→17.176s and peakRSS+52508KiB. Fresh apps/redb, persisted-reopen/foreign-character/refusal assertions unchanged. Code6122e8f0c pushed before after; independent lead integration pending.
+
+- 2026-10-20: Aura world/XP slice: sourced TC a352b1fa matrix, native ignored RED tests and server-state declarations; [coverage/gaps](systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+- 2026-10-20: Wired generic world/XP consumers after13 genuine native RED failures; corrected safe-fall clock remains pending its own RED. Client and TC-NULL gaps remain explicit.
+
+- 2026-10-20: Corrected native SafeFall1860 reaches numeric RED beside14GREEN; implemented144 summed landing-height reduction without changing base curve. Final targeted GREEN pending.
+
+- 2026-10-20: Aura world/XP native15/15GREEN29.01s atc9b7c3e59, no warnings; enabled unchanged tests. Source/per-type matrix and TCNULL/client/persistence/base-curve gaps retained; lead integration gates documented.
+## 2026-10-20 — Crafting reagents from banks
+
+[Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.

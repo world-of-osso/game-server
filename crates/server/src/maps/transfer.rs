@@ -245,6 +245,10 @@ fn complete_transfer(world: &mut World, player: Entity) {
         return;
     };
     world.entity_mut(player).remove::<MapTransfer>();
+    // Consumed by this arrival either way: a refused return never requeues later.
+    let requeue = world
+        .entity_mut(player)
+        .take::<crate::pvp::PendingSkirmishRequeue>();
     let entrant = entrant_of(world, player);
     let now = super::difficulty::now(world);
     let resolved = world.resource_scope(|world, mut instances: Mut<InstanceManager>| {
@@ -271,6 +275,9 @@ fn complete_transfer(world: &mut World, player: Entity) {
     place_player(world, player, &transfer.destination);
     crate::transport::finish_entry(world, player, resolved.map);
     crate::pvp::prepare_battleground_arrival(world, player);
+    if let Some(requeue) = requeue {
+        crate::pvp::queue_skirmish_again(world, player, requeue);
+    }
     reset_sent_tiles(world, player);
     let corpse_here = world
         .get::<crate::death::PlayerDeathState>(player)

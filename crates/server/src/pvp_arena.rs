@@ -242,40 +242,48 @@ pub(super) fn receive_queue_requests(world: &mut World) {
         })
         .collect();
     for (connection, player, id, mode) in requests {
-        let level = world.get::<Level>(player).map(|level| level.0);
-        let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
+        queue_and_form(world, connection, player, id, mode);
+    }
+}
+/// Ordinary skirmish/Shuffle admission, then form and invite every full match.
+pub(super) fn queue_and_form(
+    world: &mut World,
+    connection: Entity,
+    player: Entity,
+    id: u64,
+    mode: ArenaQueueMode,
+) {
+    let level = world.get::<Level>(player).map(|level| level.0);
+    let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
+        world.resource_scope(|world, catalog: Mut<Catalog>| {
+            if mode == ArenaQueueMode::SoloShuffle {
+                super::arena_shuffle::validate_entrant(world, player, id)?;
+            }
+            let mut actor = world
+                .get_mut::<PlayerPvpState>(player)
+                .ok_or("PvP state unavailable")?;
+            queue_player(
+                &mut actor,
+                &mut state,
+                &catalog,
+                id,
+                level.ok_or("player level unavailable")?,
+                mode,
+            )
+        })
+    });
+    super::pvp_invites::send_response(world, connection, player, result.clone());
+    if result.is_ok() {
+        while let Some(match_id) = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
             world.resource_scope(|world, catalog: Mut<Catalog>| {
                 if mode == ArenaQueueMode::SoloShuffle {
-                    super::arena_shuffle::validate_entrant(world, player, id)?;
+                    super::arena_shuffle::form_match(world, &mut state, &catalog)
+                } else {
+                    form_match(&mut state, &catalog, mode)
                 }
-                let mut actor = world
-                    .get_mut::<PlayerPvpState>(player)
-                    .ok_or("PvP state unavailable")?;
-                queue_player(
-                    &mut actor,
-                    &mut state,
-                    &catalog,
-                    id,
-                    level.ok_or("player level unavailable")?,
-                    mode,
-                )
             })
-        });
-        super::pvp_invites::send_response(world, connection, player, result.clone());
-        if result.is_ok() {
-            while let Some(match_id) =
-                world.resource_scope(|world, mut state: Mut<PvpServerState>| {
-                    world.resource_scope(|world, catalog: Mut<Catalog>| {
-                        if mode == ArenaQueueMode::SoloShuffle {
-                            super::arena_shuffle::form_match(world, &mut state, &catalog)
-                        } else {
-                            form_match(&mut state, &catalog, mode)
-                        }
-                    })
-                })
-            {
-                publish_invitation(world, match_id);
-            }
+        }) {
+            publish_invitation(world, match_id);
         }
     }
 }

@@ -421,6 +421,7 @@ fn save_and_despawn(
 
 pub(crate) fn queue_player_despawn(commands: &mut Commands, entity: Entity) {
     commands.queue(move |world: &mut World| {
+        crate::spell_cast::history_store::save(world, entity);
         crate::pvp::reconnect::logged_out(world, entity);
         crate::hunter_pet::persist_current_pet_health(world, entity);
         // The transport can outlive its retired player while ForcedDisconnect is
@@ -802,6 +803,9 @@ pub(crate) fn apply_terrain_gravity(
                 FallAuras {
                     feather_fall: feather_fall.is_some_and(|state| state.0),
                     damage_multiplier: fall_damage_multiplier(auras),
+                    safe_fall_yards: auras.map_or(0.0, |auras| {
+                        auras.modifier(crate::auras::handlers::SAFE_FALL)
+                    }),
                 },
             );
         let min_height =
@@ -1015,7 +1019,14 @@ fn clamp_to_ground(
         }
     }
 
-    let fall_damage = apply_fall_damage_on_landing(fall_tracker, pos.y, ground_y, vert_vel.0, dt);
+    let fall_damage = apply_fall_damage_on_landing(
+        fall_tracker,
+        pos.y,
+        ground_y,
+        vert_vel.0,
+        dt,
+        fall_auras.safe_fall_yards,
+    );
     crate::death::deal_environmental_damage(
         player,
         EnvironmentalKind::Falling,
@@ -1030,6 +1041,8 @@ fn clamp_to_ground(
 pub(crate) struct FallAuras {
     pub(crate) feather_fall: bool,
     pub(crate) damage_multiplier: f32,
+    /// Player::HandleFall27473–27476: additive yards removed from landing distance.
+    pub(crate) safe_fall_yards: f32,
 }
 
 impl FallAuras {
@@ -1037,6 +1050,7 @@ impl FallAuras {
     pub(crate) const NONE: Self = Self {
         feather_fall: false,
         damage_multiplier: 1.0,
+        safe_fall_yards: 0.0,
     };
 }
 
@@ -1061,6 +1075,7 @@ fn apply_fall_damage_on_landing(
     ground_y: f32,
     vertical_velocity: f32,
     dt: f32,
+    safe_fall_yards: f32,
 ) -> f32 {
     let now_airborne = current_y > ground_y + GROUND_SNAP_THRESHOLD || vertical_velocity > 0.0;
     if !fall_tracker.airborne && now_airborne {
@@ -1079,7 +1094,7 @@ fn apply_fall_damage_on_landing(
     let mut damage = 0.0;
     if landed {
         let fall_distance = (fall_tracker.peak_y - ground_y).max(0.0);
-        damage = shared::movement::fall_damage_percent(fall_distance);
+        damage = shared::movement::fall_damage_percent((fall_distance - safe_fall_yards).max(0.0));
         fall_tracker.airborne = false;
         fall_tracker.peak_y = ground_y;
         fall_tracker.air_secs = 0.0;

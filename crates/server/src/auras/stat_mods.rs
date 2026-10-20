@@ -300,6 +300,7 @@ struct Accumulator {
     always_mounted: f32,
     mounted_not_stack: f32,
     fastest_flight: f32,
+    fastest_swim: f32,
     always_flight: f32,
     flight_not_stack: f32,
     slowest: f32,
@@ -332,12 +333,8 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     } else {
         (pct(acc.fastest) * acc.always, pct(acc.flight_not_stack))
     };
-    //172/211 affect run/flight only, not the existing swim normalization path.
-    let swim = if acc.mounted {
-        pct(acc.fastest_mounted) * acc.always_mounted
-    } else {
-        pct(acc.fastest) * acc.always
-    };
+    // TC Unit.cpp8826–8829: swim is independent of run and mounted bonuses.
+    let swim = pct(acc.fastest_swim);
     // Unit::UpdateSpeed applies normalization before the strongest slow.
     // Both the server's run and flight base speeds are 7 yards/second.
     const BASE_SPEED: f32 = 7.0;
@@ -570,6 +567,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
+            MOD_INCREASE_SWIM_SPEED => acc.fastest_swim = acc.fastest_swim.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
             USE_NORMAL_MOVEMENT_SPEED => acc.normal_speed_cap = acc.normal_speed_cap.max(amount),
             REDUCE_PUSHBACK => combat.pushback_reduction_pct += amount,

@@ -129,6 +129,7 @@ fn send<M: Message>(senders: &mut Senders<M>, connection: Entity, message: M) {
 pub(super) struct QuestUnits<'w, 's> {
     connections: Query<'w, 's, (Entity, &'static InWorld, &'static PlayerLink)>,
     queried: Query<'w, 's, &'static mut QueriedQuestGivers>,
+    auras: Query<'w, 's, &'static crate::auras::ActiveAuras>,
     players: Query<'w, 's, (&'static Player, &'static Level, &'static Position)>,
     npcs: Query<'w, 's, (&'static Npc, &'static Position, Has<DeathState>)>,
     lives: Query<'w, 's, &'static crate::death::PlayerDeathState>,
@@ -736,6 +737,16 @@ impl<'a> QuestSession<'a, '_, '_> {
         self.io.effects.dirty.0.insert(character);
     }
 
+    fn reward_auras(&self) -> Option<&crate::auras::ActiveAuras> {
+        let (_, _, link) = self
+            .io
+            .units
+            .connections
+            .get(self.requester.connection)
+            .ok()?;
+        self.io.units.auras.get(link.0).ok()
+    }
+
     fn save_inventory(&mut self, inventory: &InventoryData, gold_changed: bool) {
         let character = self.character();
         persistence::save_inventory(self.db, character, inventory);
@@ -1006,8 +1017,19 @@ impl<'a> QuestSession<'a, '_, '_> {
             warn!("Quest {quest_id} reward rejected: {error}");
             failed(quest_id, QuestFailedReason::NotAvailable)
         })?;
-        let money = crate::quest_bonus_money::settlement(self.quests, quest, self.requester.player)
-            .ok_or(failed(quest_id, QuestFailedReason::NotAvailable))?;
+        let base_money =
+            crate::quest_bonus_money::settlement(self.quests, quest, self.requester.player)
+                .ok_or(failed(quest_id, QuestFailedReason::NotAvailable))?;
+        let money = if base_money > 0 {
+            i32::try_from(crate::auras::reward_mods::money(
+                base_money as u64,
+                self.reward_auras(),
+                0,
+            ))
+            .map_err(|_| failed(quest_id, QuestFailedReason::NotAvailable))?
+        } else {
+            base_money
+        };
         let gold = inventory.gold.checked_add_signed(i64::from(money));
         let Some(gold) = gold else {
             return Err(failed(quest_id, QuestFailedReason::NotEnoughMoney));
@@ -1065,6 +1087,7 @@ impl<'a> QuestSession<'a, '_, '_> {
                 None => quest_xp(quest.level, level, quest.reward_xp_difficulty),
             }
         };
+        let xp = crate::auras::reward_mods::quest_xp(xp, self.reward_auras());
         if xp > 0 {
             let character_id = self.character();
             self.io.effects.xp.0.push(XpAward::quest(character_id, xp));

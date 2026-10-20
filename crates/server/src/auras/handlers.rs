@@ -71,6 +71,8 @@ pub enum AuraKind {
     MechanicDuration,
     /// Target detection-distance modifier read by `creature_aggro::AggroDistance`.
     DetectedRange,
+    /// Award-time XP and source-filtered money modifiers.
+    Reward,
 }
 
 pub const PERIODIC_DAMAGE: u32 = 3;
@@ -308,6 +310,21 @@ pub const MODIFY_FALL_DAMAGE_PCT: u32 = 374;
 pub const FORCE_MOVE_FORWARD: u32 = 241;
 /// TC HandleCreateAreaTrigger: original caster, attached aura target, exact effect lifetime.
 pub const CREATE_AREATRIGGER: u32 = 395;
+pub const MOD_XP_PCT: u32 = 200;
+pub const MOD_XP_QUEST_PCT: u32 = 291;
+pub const MOD_MONEY_GAIN: u32 = 348;
+pub const WATER_WALK: u32 = 104;
+pub const HOVER: u32 = 106;
+pub const MOD_HOVER_NO_HEIGHT_OFFSET: u32 = 235;
+pub const DISABLE_GRAVITY: u32 = 488;
+pub const SAFE_FALL: u32 = 144;
+pub const MOD_INCREASE_SWIM_SPEED: u32 = 58;
+pub const MOD_MOVEMENT_FORCE_MAGNITUDE: u32 = 485;
+pub const TRACK_CREATURES: u32 = 44;
+pub const STORE_TELEPORT_RETURN_POINT: u32 = 71;
+pub const MOD_UI_HEALING_RANGE: u32 = 188;
+pub const MOD_POWER_DISPLAY: u32 = 179;
+pub const SET_ACTION_BUTTON_SPELL_COUNT: u32 = 408;
 
 pub fn kind(aura_type: u32) -> Option<AuraKind> {
     use AuraKind::*;
@@ -327,7 +344,12 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         DAMAGE_SHIELD => DamageShield,
         MOD_AOE_DAMAGE_AVOIDANCE => AreaAvoidance,
         super::damage_transfer::SPLIT_DAMAGE_PCT => DamageTransfer,
-        SCREEN_EFFECT | CHANGE_MODEL_FOR_ALL_HUMANOIDS => ClientVisual,
+        SCREEN_EFFECT
+        | CHANGE_MODEL_FOR_ALL_HUMANOIDS
+        | MOD_HOVER_NO_HEIGHT_OFFSET
+        | MOD_UI_HEALING_RANGE
+        | SET_ACTION_BUTTON_SPELL_COUNT => ClientVisual,
+        MOD_XP_PCT | MOD_XP_QUEST_PCT | MOD_MONEY_GAIN => Reward,
         LINKED_SUMMON => LinkedSummon,
         CREATE_AREATRIGGER => AreaTrigger,
         LINKED | LINKED_2 => Linked,
@@ -347,12 +369,14 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_PERCENT_STAT
         | MOD_ARMOR_PCT_FROM_STAT
         | MOD_INCREASE_SPEED
+        | MOD_INCREASE_SWIM_SPEED
         | MOD_DECREASE_SPEED
         | MOD_CASTING_SPEED_NOT_STACK
         | MOD_DAMAGE_PERCENT_DONE
         | MOD_CRIT_DAMAGE_BONUS
         | MOD_THREAT
         | MODIFY_FALL_DAMAGE_PCT
+        | SAFE_FALL
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT
@@ -430,6 +454,13 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INVISIBILITY_DETECT
         | DETECT_VISIBLE_WHILE_INVISIBLE
         | MOD_SCALE
+        | WATER_WALK
+        | HOVER
+        | DISABLE_GRAVITY
+        | MOD_MOVEMENT_FORCE_MAGNITUDE
+        | TRACK_CREATURES
+        | STORE_TELEPORT_RETURN_POINT
+        | MOD_POWER_DISPLAY
         | FEATHER_FALL
         | FORCE_MOVE_FORWARD
         | MOD_UNATTACKABLE

@@ -11,6 +11,17 @@ Named gaps remain explicit:
 Proof is bounded native consumer behavior, not complete ability/class/legal-loadout/UDP parity. Census22842's145 amount0 stays unchanged; native182775 amount50 supplies its nonzero oracle. No item-restricted240 source occurs in this census slice; weapon-equipment filtering outside these native sources remains unqualified. The server has no magical resistance pool for269 to modify.
 
 [Per-type pinned TC file:line citations, implementation and proof ledger](../wiki/systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20). Enabled targeted15/15 pass at861d7edd5; no full suite or independent parent gate claimed.
+## Impending Victory consequence (active70448)
+
+- Successful ordinary202168 casts real self202166, then removes32216 from that caster only. Native202166 owns its30%-maximum-health payload, crit, overheal and triggered flags. Missing Victorious does not disable the heal; another Warrior's32216 is preserved.
+- Preserve202168 native AP0.589999974/variance0.05,10Rage cost without Victorious,25s recovery and1500ms GCD. Actual32216's matching A108 -100% cost modifier makes the root free, including at0Rage. Rejected0Rage without32216 and rejected cooldown with reapplied32216 cannot heal or consume that aura. Natural recovery permits another ordinary cast.
+- **VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED** — native32216 direct spell application and20s natural lifetime qualify removal only, not kill-producer parity. Do not invent a kill consumer or aura. Victory Rush34428/override lifecycle, kill cooldown reset, other talents, equipment/legal-loadout/full class/rotation/UDP/census remain unqualified.
+- Use existing AfterCast, source FULL-trigger helper and aura removal only, preserving actual Warrior64382 CastState/owned completion. No new API, state, timer, wire or native HP/power/regen/combat/RNG/clock writes. [Implementation/proof](../wiki/systems/spell-casting.md#impending-victory-consequence--2026-10-19).
+## Invigorating Fury consequence (active70448)
+
+- Ordinary Enraged Regeneration184364 with actual caster aura383468 casts real385174 once after success. Native385174 self selection,10% maximum-health amount, CANT_CRIT and overheal remain authoritative; no amount override from the talent dummy.
+- Missing, unlearned or another Warrior's talent cannot enable this caster. A rejected root recast cannot heal. Retain root native8s duration, -30% all-school damage taken and120s cooldown/noGCD;383468's existing masked+3000ms modifier gives11s.
+- Use only existing AfterCast and qualified limited IGNORE_CAST_IN_PROGRESS path, preserving actual in-progress Warrior64382 state and owned completion. No new state, timer, trigger API or native HP/regen/RNG/clock changes. Wider Bloodthirst/talent behavior, equipment/legal-loadout, full class, rotation, UDP and census parity are unqualified. [Implementation/proof](../wiki/systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
 ## Nature's Guardian baseline (active70448)
 
@@ -378,3 +389,17 @@ Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per posi
 - [x] Aura270 multiplies incoming spell damage only for the aura caster and overlapping native school masks, using live amounts/stacks; removal and expiry remove the bonus. Existing IgnoreDamageTakenModifiers bypass remains in force.
 - [x] Native Haunt48181 effect1 increases the owner's actual Fireball damage by16%; foreign Haunt and physical-only Open Wounds188400 do not amplify Fire damage.
 - [ ] Haunt pet amplification381, unknown380, optional periodic/talent behavior and fresh UDP acceptance remain separate.
+
+## Aura world/XP slice (active70448, 2026-10-20)
+
+Generic server consumers must use authored aura amounts, not spell-ID cases. Native269083 supplies200/291 at10;282559 supplies neither and must preserve baseline XP/money. Kill XP200 multiplies the individual share before rested XP. Quest291 applies each percentage sequentially, retaining integer truncation. Money348 selects Misc0 quests / Misc1 loot; Misc3/4 do not match these sources.
+
+Movement104/106/488 are distinct server permissions, retaining other same-type sources on removal. Swim58 uses strongest positive swim bonus, not run speed. SafeFall144 subtracts summed yards from landing height; preserve the existing server fall curve (not a claim of TC curve parity). Force485 uses the total percentage product. Tracking44 uses player-only creature-type bits. StoreReturn71 snapshots the player's actual map/pose on application and removes its entry on aura removal. DisplayPower179 uses authored Misc0 after form precedence, replacing earlier display auras.
+
+Named gaps: `PVP_AURA_646_649_TC_NULL` (all four TC handlers are NULL; do not reuse ordinary spellmods or change PvE), `WORLD_AURA_CLIENT_PROJECTION` (104/106/488 flags,44 tracking and485 movement-force projection need engine/protocol work), `AURA_235_188_408_CLIENT_ONLY` (native aura payload retained; no server gameplay effect), `AURA_373_TC_NULL_MOVEMENT` (native payload only; no invented forced-speed formula), `AURA_71_PERSISTENCE_AND_RETURN_EFFECT` (runtime origin only; persistence/return effect outside slice), `SAFE_FALL_BASE_CURVE_PARITY` (existing quadratic base curve differs from TC linear). No protocol/engine changes or class/census promotion.
+
+Source/proof matrix: [auras wiki](../wiki/systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+Server implementation now wires200/291/348,58,104/106/488/485/44/71/179 and client-only235/188/408 classification.373 and646–649 remain explicitly unhandled TC NULL gaps.144 subtracts the summed safe-fall yards in the existing landing path after its corrected numeric RED; server motion/wire projection is not claimed.
+
+Native targeted proof:15/15GREEN at c9b7c3e59; tests enabled afterwards with bodies unchanged.104/106/488/485/44 are server state, not certified motion/prediction/minimap integration;106 landing exemption remains unqualified. Named TC/client/persistence/base-curve gaps above remain open. No full-class or census promotion.

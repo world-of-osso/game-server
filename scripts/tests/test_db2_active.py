@@ -13,9 +13,11 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import db2
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class ActiveDb2Tests(unittest.TestCase):
     def test_private_root_does_not_read_canonical_csvs(self):
         with tempfile.TemporaryDirectory() as directory:

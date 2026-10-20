@@ -570,6 +570,18 @@ pub(crate) fn add_threat(world: &mut World, creature: Entity, attacker: Entity, 
     add_school_threat(world, creature, attacker, amount, 1);
 }
 
+/// `ThreatManager::ResetAllThreat` (TC a352b1fa ThreatManager.cpp:527-531):
+/// `ScaleThreat(0)` on every reference; the references stay listed.
+pub(crate) fn reset_all_threat(world: &mut World, creature: Entity) {
+    let Some(mut table) = world.get_mut::<ThreatTable>(creature) else {
+        return;
+    };
+    let entries = table.entries().to_vec();
+    for entry in entries {
+        table.add_threat(entry.entity, -entry.threat);
+    }
+}
+
 /// TC a352b1fa ThreatManager.cpp:677-730, SPELL_AURA_MOD_THREAT (10),
 /// including school-specific Righteous Fury when its aura is active.
 fn threat_multiplier(world: &World, source: Entity, school: u32) -> f32 {

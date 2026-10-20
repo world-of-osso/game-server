@@ -151,8 +151,13 @@ mod full_trigger_dead_target_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
+pub(crate) mod history_store;
 mod hit;
+#[cfg(test)]
+mod impending_victory_tests;
 mod interruptibility;
+#[cfg(test)]
+mod invigorating_fury_tests;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
 mod interruptibility_rule_tests;
@@ -344,6 +349,7 @@ impl Plugin for SpellCastPlugin {
                 Update,
                 (receive_cast_requests, receive_stop_requests).chain(),
             )
+            .add_systems(Update, history_store::queue_restore)
             .add_systems(
                 FixedUpdate,
                 (

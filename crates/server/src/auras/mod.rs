@@ -39,6 +39,7 @@ pub(crate) mod forecast;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;
+mod item_requirements;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
@@ -49,6 +50,7 @@ mod natures_guardian;
 mod periodic;
 pub mod procs;
 mod refresh;
+pub(crate) mod reward_mods;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -57,6 +59,9 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
 mod unit_state;
+pub(crate) mod world_state;
+#[cfg(test)]
+pub(crate) mod world_xp_tests;
 pub use invisibility::Invisibility;
 
 use std::collections::HashSet;
@@ -1042,6 +1047,7 @@ pub(crate) fn apply_aura_with_spell(
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
         }
+        world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
@@ -1192,7 +1198,7 @@ pub enum RemoveReason {
     ChannelEnded,
     /// Stacks, charges or absorb points used up.
     Consumed,
-    /// The passive spell is no longer known.
+    /// The passive spell is no longer known, or its required equipment is gone.
     Unlearned,
     CasterGone,
     /// The creature evaded (`RemoveEvadeAuras`).
@@ -1354,6 +1360,7 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
@@ -1548,6 +1555,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     }
     crate::combat::rescale_creature_swing_timers(world, unit, previous_attack_time);
     unit_state::reconcile(world, unit);
+    world_state::reconcile(world, unit);
     health_pct_trigger::reconcile(world, unit);
     crate::spell_cast::refresh_cast_movement_permission(world, unit);
 }
@@ -2050,7 +2058,7 @@ fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
     }
 }
 
-/// Owners whose knowledge or actual map changed since the last passive sync.
+/// Owners whose knowledge, actual map or equipment changed since the last passive sync.
 #[derive(Resource, Debug, Default)]
 struct PendingPassiveSync(Vec<Entity>);
 
@@ -2060,7 +2068,11 @@ type ChangedPassiveOwners<'w, 's> = Query<
     Entity,
     (
         With<KnownSpells>,
-        Or<(Changed<KnownSpells>, Changed<crate::maps::InMap>)>,
+        Or<(
+            Changed<KnownSpells>,
+            Changed<crate::maps::InMap>,
+            Changed<crate::stats::EquippedItems>,
+        )>,
     ),
 >;
 
@@ -2088,6 +2100,7 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
         .filter_map(|&id| lookup_spell(world, id))
         .filter(|spell| is_passive(spell) && aura_effect_mask(spell) != 0)
         .filter(|spell| passive_map_allowed(world, unit, spell))
+        .filter(|spell| item_requirements::passive_items_fit(world, unit, spell))
         .collect();
     let ids: Vec<u32> = passives.iter().map(|spell| spell.id).collect();
     remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
@@ -2353,6 +2366,8 @@ mod toy_effects_tests;
 
 #[cfg(test)]
 mod agony_tests;
+#[cfg(test)]
+mod armor_specialization_tests;
 #[cfg(test)]
 mod augmentation_tests;
 #[cfg(test)]

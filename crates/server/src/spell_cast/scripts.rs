@@ -22,6 +22,8 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod clearcasting;
+pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
 pub(super) use germination::redirect_rejuvenation;
 pub(crate) mod prayer_of_mending;
@@ -130,6 +132,12 @@ const BLOODTHIRST: u32 = 23_881;
 const BLOODTHIRST_HEAL: u32 = 117_313;
 const RAMPAGE: u32 = 184_367;
 const ENRAGE: u32 = 184_362;
+const IMPENDING_VICTORY: u32 = 202_168;
+const IMPENDING_VICTORY_HEAL: u32 = 202_166;
+const VICTORIOUS: u32 = 32_216;
+const ENRAGED_REGENERATION: u32 = 184_364;
+const INVIGORATING_FURY: u32 = 383_468;
+const INVIGORATING_FURY_HEAL: u32 = 385_174;
 const HOLY_SHOCK: u32 = 20_473;
 const HOLY_SHOCK_DAMAGE: u32 = 25_912;
 const HOLY_SHOCK_HEAL: u32 = 25_914;
@@ -420,10 +428,15 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        IMPENDING_VICTORY => Some(heal_and_consume_victorious),
+        ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
             Some(crate::scripted_ai::azure_vault::return_after_absolute_zero)
         }
         crate::auras::ebon_might::EBON => Some(crate::auras::ebon_might::cast_self_buff),
+        crate::scripted_ai::shattered_halls::BEATDOWN => {
+            Some(crate::scripted_ai::shattered_halls::beatdown_reset_threat)
+        }
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
         }
@@ -450,6 +463,32 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch7::VERDANT_EMBRACE => Some(batch7::heal_panacea),
         _ => shared::skyriding::ability_impulse(spell_id)
             .map(|_| crate::skyriding::flap as AfterCastHook),
+    }
+}
+
+/// TC a352b1fa spell_warrior.cpp1145–1164: real triggered heal, then aura removal.
+fn heal_and_consume_victorious(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    if !super::try_cast_triggered(world, caster, IMPENDING_VICTORY_HEAL, Some(caster), 0) {
+        warn!(?caster, "Impending Victory202166 triggered heal refused");
+    }
+    crate::auras::remove_auras(
+        world,
+        caster,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == VICTORIOUS,
+    );
+}
+
+/// TC a352b1fa spell_warrior.cpp1380–1405: AfterCast with IGNORE_CAST_IN_PROGRESS,
+/// not FULL_MASK. Native385174 owns its self target and10% max-health payload.
+fn cast_invigorating_fury_heal(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    if !crate::auras::has_aura(world, caster, INVIGORATING_FURY) {
+        return;
+    }
+    if let Err(reason) =
+        super::creature_cast_ignoring_in_progress(world, caster, INVIGORATING_FURY_HEAL, None)
+    {
+        warn!(?caster, ?reason, "Invigorating Fury385174 cast refused");
     }
 }
 
@@ -1190,9 +1229,8 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
-        soul_of_the_forest::REGROWTH | soul_of_the_forest::REJUVENATION => {
-            Some(soul_of_the_forest::consume_after_heal)
-        }
+        soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
+        soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),

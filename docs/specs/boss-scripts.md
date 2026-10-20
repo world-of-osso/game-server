@@ -320,3 +320,46 @@ Omor runtime EventMap port: ShadowBolt30686 immediately then6–10s in actual so
 Landslide timing acceptance observes actual ordinary cast requests and their admission results, not successful SpellGo messages alone. Authored18670 cooldown11000ms remains active: TaskScheduler repeats from its original due time even when channel deferral makes a repeat fail OnCooldown. Deterministic seeds104(rejected repeat) and0(no rejection) retain unchanged source timing intervals and channel/summon/damage/credit checks; every fixture frame must advance exactly50ms.
 
 SAI clock fixtures retain150ms dispatch grace and100ms protected sampling guards. Sampling must include exact50ms frame endpoints using integer milliseconds, so a cast-blocked interval is not rejected merely because strict floating-point bounds discard both real samples. Unblocked endpoint and early-repeat controls must still fail.
+
+## Blood Furnace The Maker source boundary
+
+- [x] Pinned TC a352b1fa `boss_the_maker.cpp`: 17381 under `instance_blood_furnace`, ordinal0 = installed DungeonEncounter1922 bit0.
+- [x] Engage: Talk group0 once, then Exploding Beaker first5–15s, repeat10–20s at the victim with `DUNGEON_MODE(30925,40059)`.
+- [x] Heroic40059 must be an ordinary admitted cast with actual area damage and knockback.
+- [x] `MAKER_NORMAL_BEAKER_30925_ABSENT_70448`: retail DB2 has no30925, so Normal casts nothing and no substitute spell is used.
+- [x] KilledUnit speaks group1 only for player victims; NPC victims are silent. JustDied completes1922 bit0, then speaks group2.
+- [x] Evade resets the encounter; a re-pull re-arms Talk0 and the beaker schedule.
+- [ ] `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`: Domination30923 needs player charm (aura6) and more than one threat player; not scheduled.
+- [ ] `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`: Maker doors181811/181812/181815 DoorData state.
+- [x] `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED` retired: canonical world data publishes the542/543 creature bindings (2026-10-20) and tests use them.
+- Broggok (lever MakeActive, `GO_NOT_SELECTABLE_FLAG_UNMODELLED`), prisoner waves, sound, loot, persistence and native presentation are out of scope.
+
+Proof: `scripted_ai/tests/the_maker.rs`.
+
+## Blood Furnace Keli'dan source boundary
+
+- [x] Pinned TC a352b1fa `boss_kelidan_the_breaker.cpp`: 17377 under `instance_blood_furnace`; TC DATA_KELIDAN ordinal2 = installed DungeonEncounter1923 bit1.
+- [x] JustAppeared: ImmuneToNPC, Uninteractible and Passive, self Evocation30935, `SpawnGroupSpawn`360–364. Those manual groups are withheld from copy fill; each holds one Shadowmoon Channeler17653 with StringId `KelidansShadowmoonChanneler1`–`5`.
+- [x] Channelers: Star Beam30888 at the partner (1→4, 2→3, 3→5, 4→2, 5→1, within100yd) 10s after appearing or reaching home, retried each second while absent or evading. Combat: Talk0, 15% Talk1, Shadow Bolt `DUNGEON_MODE(12739,15472)` 0–5s/10–15s, Mark of Shadow30937 at a random threat target without it 5–15s/5–15s, tasks waiting while casting. Corpse delay3s. Death notifies Keli'dan ChannelerDies; reaching home notifies his reset.
+- [x] The fifth channeler death clears his flags, makes him aggressive and zones in the copy. Engage: Talk0, interrupt, volley `DUNGEON_MODE(17228,40070)` 0–2s/15–25s, Corruption30938 5–10s/10–15s, Burning Nova30940 10–20s/25–35s. SpellHit(30940) Talk1; KilledUnit Talk2 for any victim; JustDied completes1923 bit1, then Talk3.
+- [x] Burning Nova AuraScript: Heroic AfterApply triggers Vortex37370; AfterRemove casts an ordinary Fire Nova33775, Heroic37371.
+- [x] JustReachedHome: dormant again, Evocation after5s, channeler groups respawned (living members kept, dead ones replaced).
+- [x] `KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`: retail DB2 has no40070, so the Heroic volley casts nothing and no substitute spell is used.
+- [ ] The source banish-immunity toggle around Burning Nova is not modelled; it brackets an instant self cast whose stun aura already applies.
+- [ ] `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`: Keli'dan exit door181823 and final exit181766 DoorData state.
+- Broggok, loot, persistence, native presentation and an autonomous full clear are out of scope.
+
+Proof: `scripted_ai/tests/kelidan.rs`.
+
+## Shattered Halls O'mrogg source boundary
+
+- [x] Pinned TC a352b1fa `boss_warbringer_omrogg.cpp`: 16809 and heads19523/19524 under `instance_shattered_halls`; TC DATA_OMROGG ordinal2 = installed DungeonEncounter1937 bit2 (published binding).
+- [x] Engage: Fear30584 20–30s/15–35s, Thunderclap30633 15–25s/15–30s, Beatdown30618 25–30s/25–40s, Burning Maul30598 50–60s/60–70s in both difficulties; the left head plays a random aggro sequence.
+- [x] Thunderclap and Beatdown share category1152: a roll inside the other's lock fails admission and still repeats, as in the source.
+- [x] Heads (`npc_omrogg_heads`): every sequence runs on the left head, the right head speaking its lines; 3s gaps (2s for the fourth attack sequence). OnSpellCast(Beatdown) plays a random attack sequence; OnSpellCast(Burning Maul) is O'mrogg's EMOTE_ROAR; KilledUnit a random slay sequence; JustDied the death sequence, both heads despawning4s after its last line.
+- [x] Beatdown AfterCast: `ResetAllThreat` zeroes every threat reference and keeps it, so the first unit to gain threat afterwards becomes the victim (110% of zero). Its AttackStart of a random player adds no reference to an engaged creature.
+- [x] Burning Maul AuraScript (30598/36056): apply loads equipment ID2 (29479), removal the spawn's original ID (29484); each proc keeps the default36057 trigger and rolls a30% Blast Wave30600.
+- [x] `OMROGG_BURNING_MAUL_30620_ABSENT_70448`: the aura's periodic trigger30620 has no SpellInfo in retail DB2; nothing substitutes it.
+- Porung, Nethekurse, Kargath, loot, persistence and native presentation are out of scope.
+
+Proof: `scripted_ai/tests/omrogg.rs`.

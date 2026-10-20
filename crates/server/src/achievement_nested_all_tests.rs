@@ -37,7 +37,7 @@ fn achievements_criteria_nested_all_native_encounter_respects_prerequisite_and_d
             })
             .unwrap();
         h.app
-            .insert_resource(load_achievement_catalog(&conn).unwrap());
+            .insert_resource(crate::test_data::achievement_catalog());
         let store = crate::maps::store::load_map_store(&conn).unwrap();
         let mut manager = crate::maps::InstanceManager::default();
         let map = manager

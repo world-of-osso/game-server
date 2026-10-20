@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 pub(crate) mod azure_vault;
+mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
 pub(crate) mod caster_chase;
@@ -31,6 +32,7 @@ pub mod movement;
 pub mod murder_row;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
+pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
 pub(crate) mod wailing_caverns;
@@ -54,6 +56,11 @@ pub use event_map::EventMap;
 pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
     kings_rest::SPAWN_GROUP_PRE_FIRST_BOSS,
     kings_rest::SPAWN_GROUP_SERPENT_BOSS,
+    blood_furnace::SPAWN_GROUP_CHANNELER_1,
+    blood_furnace::SPAWN_GROUP_CHANNELER_2,
+    blood_furnace::SPAWN_GROUP_CHANNELER_3,
+    blood_furnace::SPAWN_GROUP_CHANNELER_4,
+    blood_furnace::SPAWN_GROUP_CHANNELER_5,
 ];
 
 /// `gameobject_template.ScriptName`s with a ported `GameObjectAI`.
@@ -87,6 +94,8 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(Startup, azure_vault::register_aura_scripts)
+            .add_systems(Startup, blood_furnace::register_aura_scripts)
+            .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -192,6 +201,8 @@ pub enum Hook {
         damage: f32,
     },
     EnterEvadeMode,
+    /// `HomeMovementGenerator::DoFinalize` → `CreatureAI::JustReachedHome`.
+    JustReachedHome,
     JustSummoned(Entity),
     IsSummonedBy(Entity),
     SummonedCreatureDespawn(Entity),
@@ -243,6 +254,7 @@ pub trait CreatureAi: Send + Sync + 'static {
     fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
         self.reset(ctx);
     }
+    fn just_reached_home(&mut self, _ctx: &mut Ctx) {}
     fn just_summoned(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
     fn is_summoned_by(&mut self, _ctx: &mut Ctx, _summoner: Entity) {}
     fn summoned_creature_despawn(&mut self, _ctx: &mut Ctx, _summon: Entity) {}
@@ -319,6 +331,12 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if hellfire_ramparts::is_creature_script(script_name) {
         return hellfire_ramparts::creature_ai(world, creature);
     }
+    if blood_furnace::is_creature_script(script_name) {
+        return blood_furnace::creature_ai(world, creature);
+    }
+    if shattered_halls::is_creature_script(script_name) {
+        return shattered_halls::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -338,6 +356,8 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
+        || blood_furnace::is_creature_script(script_name)
+        || shattered_halls::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
@@ -559,6 +579,7 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
             );
         }
         Hook::EnterEvadeMode => ai.enter_evade_mode(&mut ctx),
+        Hook::JustReachedHome => ai.just_reached_home(&mut ctx),
         Hook::JustSummoned(summon) => ai.just_summoned(&mut ctx, summon),
         Hook::IsSummonedBy(summoner) => ai.is_summoned_by(&mut ctx, summoner),
         Hook::SummonedCreatureDespawn(summon) => ai.summoned_creature_despawn(&mut ctx, summon),
@@ -911,6 +932,16 @@ impl Ctx<'_> {
     /// The map copy's `InstanceScript` (`me->GetInstanceScript()`).
     pub fn map(&self) -> Option<InMap> {
         self.world.get::<InMap>(self.me).copied()
+    }
+
+    /// `DUNGEON_MODE(normal, heroic)`: the Heroic value in a difficulty2 copy.
+    pub fn dungeon_mode(&self, normal: u32, heroic: u32) -> u32 {
+        let map = self.map().expect("dungeon script actor map");
+        if crate::zones::map_difficulty_id(self.world, map) == 2 {
+            heroic
+        } else {
+            normal
+        }
     }
 }
 

@@ -344,6 +344,7 @@ type KillPlayers<'w, 's> = Query<
         &'static Position,
         Option<&'static PlayerDeathState>,
         &'static crate::maps::InMap,
+        Option<&'static crate::auras::ActiveAuras>,
     ),
     With<Player>,
 >;
@@ -381,7 +382,7 @@ fn award_kill_xp(
         for &killer in tap.tappers.iter().filter(|&&tapper| {
             players
                 .iter()
-                .any(|(id, .., tapper_map)| id.0 == tapper && tapper_map == map)
+                .any(|(id, _, _, _, tapper_map, _)| id.0 == tapper && tapper_map == map)
         }) {
             let group = groups
                 .as_deref()
@@ -394,13 +395,13 @@ fn award_kill_xp(
             }
             let members: Vec<KillMember> = players
                 .iter()
-                .filter(|(id, _, member_position, _, member_map)| {
+                .filter(|(id, _, member_position, _, member_map, _)| {
                     id.0 == killer
                         || (group.contains(&id.0)
                             && *member_map == map
                             && distance(member_position, position) <= GROUP_XP_DISTANCE)
                 })
-                .map(|(id, level, _, death, _)| KillMember {
+                .map(|(id, level, _, death, _, _)| KillMember {
                     character_id: id.0,
                     level: level.0,
                     alive: is_alive(death),
@@ -408,18 +409,23 @@ fn award_kill_xp(
                 })
                 .collect();
             let rewards = kill_rewards(&victim, &members, !group.is_empty());
-            awards.0.extend(
-                rewards
-                    .shares
-                    .into_iter()
-                    .map(|(character_id, amount)| XpAward {
+            awards
+                .0
+                .extend(rewards.shares.into_iter().map(|(character_id, amount)| {
+                    XpAward {
                         character_id,
-                        amount,
+                        amount: crate::auras::reward_mods::kill_xp(
+                            amount,
+                            players
+                                .iter()
+                                .find(|(id, ..)| id.0 == character_id)
+                                .and_then(|(_, _, _, _, _, auras)| auras),
+                        ),
                         victim: Some(npc_entity),
                         group_bonus: rewards.group_bonus,
                         reason: XpGainReason::Kill,
-                    }),
-            );
+                    }
+                }));
         }
     }
 }

@@ -14,7 +14,8 @@ import retail_content
 import skyborne_data
 from content_common import Report
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 
 # Concrete battleground gear absent from the old reference-filtered projection.
 ITEM_IDS = (
@@ -40,6 +41,7 @@ def copy_source_table(source, destination, table, item_ids=None):
         destination.executemany(f'INSERT INTO "{table}" VALUES ({placeholders})', rows)
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class InstalledContentItemsTest(unittest.TestCase):
     def test_item_only_refresh_preserves_isolated_overlay_and_provenance(self):
         import skyborne_kit_fixture
