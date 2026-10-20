@@ -139,6 +139,9 @@ pub const MOD_ABSORB_TAKEN_PCT: u32 = 422;
 pub const MOD_TOTAL_THREAT: u32 = 103;
 pub const SCHOOL_ABSORB_OVERKILL: u32 = 316;
 pub const MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH: u32 = 354;
+pub const MOD_SPELL_CRIT_CHANCE: u32 = 57;
+pub const MOD_EXPERTISE: u32 = 240;
+pub const MOD_IGNORE_TARGET_RESIST: u32 = 269;
 /// The three versatility ratings share one value in our CombatRatings component.
 pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
@@ -377,6 +380,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INCREASE_HEALTH_PERCENT2
         | MOD_ABSORB_TAKEN_PCT
         | MOD_TOTAL_THREAT
+        | MOD_SPELL_CRIT_CHANCE
+        | MOD_EXPERTISE
+        | MOD_IGNORE_TARGET_RESIST
         | MASTERY
         | MOD_STAT_BONUS_PCT
         | MOD_BONUS_ARMOR_PCT

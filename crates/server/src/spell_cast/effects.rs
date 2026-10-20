@@ -641,7 +641,7 @@ fn armor_reduced(
     caster: Entity,
     target: Entity,
     amount: f32,
-    _spell: &SpellInfo,
+    spell: &SpellInfo,
 ) -> f32 {
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, caster),
@@ -664,6 +664,7 @@ fn armor_reduced(
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
         armor,
@@ -719,7 +720,18 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
             let base = world
                 .get::<CharacterStats>(caster)
                 .map_or(0.0, |stats| stats.crit_pct);
-            spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+            let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
+                0.0
+            } else {
+                stat_mods(world, caster).map_or(0.0, |mods| mods.spell_crit_pct)
+            };
+            spell_mods::modify(
+                world,
+                caster,
+                spell,
+                SpellModOp::CritChance,
+                base + spell_bonus,
+            )
         });
     let modifier = if takes_melee_crit_modifier(spell) {
         world

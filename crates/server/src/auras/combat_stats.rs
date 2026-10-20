@@ -4,6 +4,17 @@ use crate::spell_info::SpellInfo;
 use bevy::prelude::*;
 use shared::components::Health;
 
+/// StatSystem.cpp777-803 / Unit.cpp2850: player expertise is integral and nonnegative.
+pub(crate) fn expertise_reduction(auras: Option<&ActiveAuras>, player: bool) -> f32 {
+    let amount = auras.map_or(0.0, |auras| auras.modifier(handlers::MOD_EXPERTISE));
+    let expertise = if player {
+        amount.trunc().max(0.0)
+    } else {
+        amount
+    };
+    expertise / 4.0
+}
+
 /// SpellInfo.cpp1979-1990: family0 and an empty mask are wildcards.
 fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     if aura.class_set == 0 {
@@ -13,6 +24,29 @@ fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInf
         aura.class_set == options.spell_class_set
             && (effect.class_mask == [0; 4]
                 || (0..4).any(|word| effect.class_mask[word] & options.spell_class_mask[word] != 0))
+    })
+}
+
+/// Unit.cpp1712-1716: physical269 uses its native family mask and floors per effect.
+pub(crate) fn armor_after_ignore(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    armor: f32,
+) -> f32 {
+    world.get::<ActiveAuras>(caster).map_or(armor, |auras| {
+        auras.iter().fold(armor, |armor, aura| {
+            aura.effects
+                .iter()
+                .filter(|effect| {
+                    effect.aura_type == handlers::MOD_IGNORE_TARGET_RESIST
+                        && effect.misc_values[0] & 1 != 0
+                        && affects_spell(aura, effect, spell)
+                })
+                .fold(armor, |armor, effect| {
+                    (armor * (1.0 - effect.amount * aura.stack_multiplier() / 100.0)).floor()
+                })
+        })
     })
 }
 

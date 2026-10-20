@@ -1706,11 +1706,14 @@ pub fn damage_taken_multiplier(
             })
             .product()
     });
-    taken
+    let taken = taken
         * versatility
         * from_caster
         * scripts::unstable_affliction_multiplier(world, attacker, target)
-        * scripts::outgoing_to_owner_multiplier(world, attacker, target)
+        * scripts::outgoing_to_owner_multiplier(world, attacker, target);
+    world.get::<AuraStatMods>(attacker).map_or(taken, |mods| {
+        mods.bypass_damage_reduction(school_mask, taken)
+    })
 }
 
 /// White-swing damage taken from `attacker`: every MOD_MELEE_DAMAGE_FROM_CASTER

@@ -127,7 +127,7 @@ fn run_attack_tick(app: &mut App) {
                     stats,
                     haste_pct: 0.0,
                     enemy_dodge_pct: 0.0,
-                    npc_expertise_pct: 0.0,
+                    expertise_pct: 0.0,
                     creature: false,
                     authored_attack_time: None,
                     creature_flags: None,

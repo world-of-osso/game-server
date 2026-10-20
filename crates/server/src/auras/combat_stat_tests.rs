@@ -280,3 +280,29 @@ fn aura_stat_native_316_does_not_absorb_nonlethal_or_twice_maximum_damage() {
         assert_eq!(commit.lethal, loss >= 500.0);
     }
 }
+
+#[test]
+#[ignore = "aura-stat-mods RED: native mana419 current pool"]
+fn aura_stat_native_419_preserves_current_mana_and_only_clamps_on_removal() {
+    let mut h = fixture(&[429399]);
+    let caster = h.caster;
+    let base = h.app.world().get::<Mana>(caster).unwrap().max;
+    h.app.world_mut().get_mut::<Mana>(caster).unwrap().current = base / 2.0;
+    apply(&mut h, 429399, 1);
+    assert_eq!(
+        h.app.world().get::<Mana>(caster).unwrap().current,
+        base / 2.0
+    );
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |_| true);
+    h.advance(3);
+    assert_eq!(
+        h.app.world().get::<Mana>(caster).unwrap().current,
+        base / 2.0
+    );
+    apply(&mut h, 429399, 1);
+    let maximum = h.app.world().get::<Mana>(caster).unwrap().max;
+    h.app.world_mut().get_mut::<Mana>(caster).unwrap().current = maximum;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |_| true);
+    h.advance(3);
+    assert_eq!(h.app.world().get::<Mana>(caster).unwrap().current, base);
+}
