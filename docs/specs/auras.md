@@ -26,6 +26,10 @@ Successful Swiftmend18562 with actual learned158478 grants native114108 to the c
 
 `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC`: ordinary33763 refreshing its caster's existing33763 on the hit patient triggers one native33778 heal when the old remaining duration is inclusively at most30% of its full duration (SimC76f8118 `sc_druid.cpp:6229–6240`). Inspect the old own deadline before ordinary aura refresh replaces it. Early refresh does not bloom. Keep the refreshed HoT active with ordinary duration/period/costs; retain existing native expiry/dispel bloom and no-bloom target-swap behavior. Native70448's tooltip names the near-expiration refresh bloom, while the exact threshold is sourced from SimC, not DB2. Other Lifebloom talents, Omen, target selection and global refresh/timer changes are excluded.
 
+## Wild Growth falloff policy
+
+Native48438 periodic heals use `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`: `c(t) = native_coefficient + decay/2 - decay*elapsedFraction`, with `decay = 0.07*(1-native382559percentage/100)` when Unstoppable Growth is actually learned, else0.07. Keep Retail70448's native0.481 coefficient, native period, full duration and natural expiry. Use each tick's scheduled time, not the update frame's wall time. SimC76f8118 `sc_druid.cpp:6611–6635` supplies only the explicitly approved shape; its historical0.175 and TrinityCore's legacy curve must not replace native data. Absolute Retail shape remains uncertified. This slice covers real level42 decline, level43's native40%-less normalized decay, and finite native ticks/expiry; target selection/caps, Tree of Life and other talent interactions are excluded.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
