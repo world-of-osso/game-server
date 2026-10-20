@@ -176,11 +176,12 @@ fn encounter_coverage_omrogg_native_spell_admissions_qualify() {
             BURNING_MAUL
         };
         // Thunderclap and Beatdown share category1152 "Creature Special 1":
-        // Beatdown locks it8s, Thunderclap3s. Each cast waits out the prior lock.
+        // Beatdown locks it8s, Thunderclap3s, from completion of their1s casts.
+        // Each cast waits out the prior lock.
         for spell in [FEAR, BEATDOWN, THUNDERCLAP, BLAST_WAVE, maul] {
             crate::spell_cast::creature_cast(h.app.world_mut(), boss, spell, None, false)
                 .unwrap_or_else(|error| panic!("ordinary self-area {spell}: {error:?}"));
-            h.advance(8.5);
+            h.advance(9.5);
             eprintln!(
                 "OMROGG difficulty{difficulty} spell{spell} casts={}",
                 observed_casts(&h, boss, spell)
