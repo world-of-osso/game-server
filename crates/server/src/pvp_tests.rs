@@ -905,6 +905,13 @@ fn native_flag_match_in_world(
     let mut state = PvpServerState::default();
     state.battleground_matches.insert(17, invitation);
     world.insert_resource(state);
+    // Objective receipts below begin after the ordinary first-arrival clock.
+    for _ in 0..=121 {
+        pvp_objective::update_battleground_objectives(&mut world);
+        world
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(std::time::Duration::from_secs(1));
+    }
     (world, players, file)
 }
 
@@ -916,7 +923,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
     use shared::battleground::{BgPhase, BgTeam};
     let template = shared::battleground::warsong_gulch();
     let (mut world, players, file) = native_flag_match(&template);
-    // Native readiness starts the match and builds its authored scoreboard columns.
+    // Native preparation/readiness has built the authored scoreboard columns.
     pvp_objective::update_battleground_objectives(&mut world);
     {
         let mut state = world.resource_mut::<PvpServerState>();
