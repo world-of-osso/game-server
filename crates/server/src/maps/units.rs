@@ -17,8 +17,11 @@ impl MapUnits {
     }
 }
 
-/// Installs the index. Must run before any `InMap` is inserted.
+/// Installs the index and observers once. Must run before any `InMap` is inserted.
 pub(crate) fn install(app: &mut App) {
+    if app.world().contains_resource::<MapUnits>() {
+        return;
+    }
     app.init_resource::<MapUnits>()
         .add_observer(index_unit)
         .add_observer(unindex_unit);
@@ -71,6 +74,29 @@ mod tests {
         map_id: 0,
         instance_id: 0,
     };
+
+    #[test]
+    fn follower_plugin_indexes_units_without_map_plugin() {
+        let mut app = App::new();
+        app.add_plugins(crate::followers::FollowerPlugin);
+        let unit = app.world_mut().spawn(AZURE).id();
+        assert_eq!(members(&app, AZURE), vec![unit]);
+        app.world_mut().entity_mut(unit).insert(OTHER_COPY);
+        assert!(members(&app, AZURE).is_empty());
+        assert_eq!(members(&app, OTHER_COPY), vec![unit]);
+        app.world_mut().despawn(unit);
+        assert!(members(&app, OTHER_COPY).is_empty());
+    }
+
+    #[test]
+    fn creature_ai_plugin_indexes_units_without_map_plugin() {
+        let mut app = App::new();
+        app.add_plugins(crate::creature_ai::CreatureAiPlugin);
+        let unit = app.world_mut().spawn(AZURE).id();
+        assert_eq!(members(&app, AZURE), vec![unit]);
+        app.world_mut().entity_mut(unit).remove::<InMap>();
+        assert!(members(&app, AZURE).is_empty());
+    }
 
     #[test]
     fn spawned_units_are_listed_only_in_their_own_copy() {

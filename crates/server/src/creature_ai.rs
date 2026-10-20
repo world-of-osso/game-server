@@ -78,6 +78,7 @@ pub struct CreatureAiPlugin;
 
 impl Plugin for CreatureAiPlugin {
     fn build(&self, app: &mut App) {
+        crate::maps::units::install(app);
         app.init_resource::<MapStore>();
         app.add_systems(
             FixedUpdate,
