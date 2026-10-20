@@ -82,7 +82,7 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
         .entity_mut(tank)
         .insert(crate::networking::CombatTarget(Some(target)));
     crate::creature_aggro::add_threat(run.app.world_mut(), target, tank, 1.0);
-    crate::followers::pull_history::sample_all(run.app.world_mut());
+    crate::followers::update_ai(run.app.world_mut());
     assert_eq!(
         crate::followers::simulator::inspect_tank_movement(run.app.world_mut(), tank),
         Ok(Some(true)),
