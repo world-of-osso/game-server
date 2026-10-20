@@ -1,3 +1,11 @@
+## 2026-10-20 — db2_casc scalar-first pallet order
+
+[Decoder notes](../db2-casc-sparse.md#fixed-record-decoding):
+- `db2_casc` fixed decoding now goes through one `read_fixed` parser, which the engine readers are moving onto.
+- Fixed latent bug: pallets were read in field order. Real PlayerCondition 1045411 declares an array pallet before scalar pallets, so all 48,491 rows read WeaponSubclassMask 1048866 / ContentTuningID 958 instead of 0, and the ContentTuningID pallet repeated entries.
+- No import used that path; `world.db` PlayerCondition comes from the scalar-first engine CSVs.
+- Regression: `test_db2_casc_player_condition`, RED on the old decoder, GREEN now.
+
 ## 2026-10-19 — Lifebloom near-expiration refresh bloom
 
 [Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.
