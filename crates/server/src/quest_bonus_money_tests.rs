@@ -130,6 +130,13 @@ fn ordinary_bonus_turn_in(level: u8, expected: u32) {
     if level == crate::experience::MAX_LEVEL {
         assert_eq!(complete.xp, 0);
         assert!(received::<LogXpGain>(&mut app, &client).is_empty());
+    } else {
+        // The unchanged pre-product level89 control observed13000 quest XP.
+        assert_eq!(complete.xp, 13_000);
+        let gains = received::<LogXpGain>(&mut app, &client);
+        assert_eq!(gains.len(), 1);
+        assert_eq!(gains[0].reason, XpGainReason::Quest);
+        assert_eq!(gains[0].amount, 13_000);
     }
     crate::test_data::drain_persistence(app.world().resource::<GameDatabase>());
     let achievements = persistence::load_achievements(db(&app), client.character_id);
