@@ -189,7 +189,6 @@ fn native_spirit_wolf_direct_period_stack_cap_speed_and_incoming_damage_are_qual
 }
 
 #[test]
-#[ignore = "behavioral RED before Spirit Wolf parent-chain hook"]
 fn native_spirit_wolf_talent_then_form_natural_stacks_cap_speed_and_damage() {
     let mut h = fixture(true);
     cast_ghost(&mut h);
@@ -221,7 +220,6 @@ fn native_spirit_wolf_talent_then_form_natural_stacks_cap_speed_and_damage() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Spirit Wolf talent-after-form hook"]
 fn native_spirit_wolf_form_then_learned_talent_activates_native_periodic() {
     let mut h = fixture(true);
     set_talent(&mut h, false);
@@ -239,7 +237,6 @@ fn native_spirit_wolf_form_then_learned_talent_activates_native_periodic() {
 }
 
 #[test]
-#[ignore = "native Spirit Wolf no-talent control"]
 fn native_spirit_wolf_form_without_talent_has_no_children() {
     let mut h = fixture(false);
     cast_ghost(&mut h);
@@ -250,7 +247,6 @@ fn native_spirit_wolf_form_without_talent_has_no_children() {
 }
 
 #[test]
-#[ignore = "native Spirit Wolf no-form control"]
 fn native_spirit_wolf_talent_without_form_has_no_children() {
     let mut h = fixture(true);
     h.advance(120);
@@ -260,7 +256,6 @@ fn native_spirit_wolf_talent_without_form_has_no_children() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Ghost Wolf removal cleans native children"]
 fn native_spirit_wolf_form_removal_cleans_period_and_stacks() {
     let mut h = fixture(true);
     cast_ghost(&mut h);
@@ -275,7 +270,6 @@ fn native_spirit_wolf_form_removal_cleans_period_and_stacks() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Spirit Wolf talent removal cleans native children"]
 fn native_spirit_wolf_talent_removal_cleans_children_but_keeps_form() {
     let mut h = fixture(true);
     cast_ghost(&mut h);
@@ -290,7 +284,6 @@ fn native_spirit_wolf_talent_removal_cleans_children_but_keeps_form() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Spirit Wolf re-entry starts fresh stacks"]
 fn native_spirit_wolf_form_reentry_starts_again_at_one_stack() {
     let mut h = fixture(true);
     cast_ghost(&mut h);
@@ -304,7 +297,6 @@ fn native_spirit_wolf_form_reentry_starts_again_at_one_stack() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Spirit Wolf two-owner lifecycle isolation"]
 fn native_spirit_wolf_two_owners_form_removal_keeps_other_stack_chain() {
     let mut h = fixture(true);
     cast_ghost(&mut h);
