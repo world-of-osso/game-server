@@ -298,6 +298,26 @@ fn cast_time_spell_completes_after_its_cast_time() {
         h.app.world().get::<Mana>(h.caster).unwrap().current,
         9_900.0
     );
+    // Launch/cost precede the native Fireball missile: minimum5yd /45yd/s
+    // takes111ms, first observed at the third50ms flight tick, not at launch.
+    let misc = h
+        .app
+        .world()
+        .resource::<super::SpellStore>()
+        .get(FIREBALL)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap();
+    assert_eq!((misc.speed, misc.launch_delay), (45.0, 0.0));
+    assert_eq!(h.health(h.npc), 5000.0);
+    h.advance(2);
+    assert_eq!(h.health(h.npc), 5000.0);
+    h.advance(1);
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - launch_at,
+        std::time::Duration::from_millis(150)
+    );
     // SP coefficient 3.8812 × spell power 100 = 388, ± 2.5% variance.
     assert!(varied(388.12).contains(&(5000.0 - h.health(h.npc))));
     // Source1750ms =35 progress ticks, not the old float36th tick. Cost is
