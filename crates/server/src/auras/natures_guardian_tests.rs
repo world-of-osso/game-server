@@ -16,6 +16,9 @@ const LIGHTNING_BOLT: u32 = 188_196;
 const WOUND: u32 = 209_140;
 const NPC_BUFFS: u32 = 62_627;
 
+#[path = "natures_guardian_behavior_tests.rs"]
+mod behavior;
+
 fn fixture(passive: bool) -> Harness {
     let mut ids = vec![COOLDOWN, HEAL, LIGHTNING_BOLT, WOUND, NPC_BUFFS];
     if passive {
