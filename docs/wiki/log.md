@@ -3210,3 +3210,5 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Leadership transfer native proof
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
+
+- [Prepared encounter fixture inputs](investigations/slow-native-test-fixtures.md#fully-prepared-encounter-inputs-2026-10-19) — complete immutable producer/composite profiles, independent resource copies, cross-profile/difficulty isolation;28 unchanged cases and matched wall/CPU/RSS, including cold Ragefire regression and retained-memory cost.
