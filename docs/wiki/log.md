@@ -3250,6 +3250,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
 
+- [Prepared encounter fixture inputs](investigations/slow-native-test-fixtures.md#fully-prepared-encounter-inputs-2026-10-19) — complete immutable producer/composite profiles, independent resource copies, cross-profile/difficulty isolation;28 unchanged cases and matched wall/CPU/RSS, including cold Ragefire regression and retained-memory cost.
 ## 2026-10-19 — Actor-owned periodic-damage maintenance
 
 [Source and native proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19): SimC76f8118actor-specificMoonfire semantics confirmed; ordinarydual164812caster/tick+ownrecastcontrolsPASS/foreignsuppressionRED. PeriodicdamageAttack-onlycasterfilteref0603bb1 gives4nativePASS20.11s includingforeignHoTunchanged. Enabled3provedqualifications; integratedkit/stackingcontrols andleadgatepending. No globalhas_aura/timer/priority/movement/pet/planner edits.
@@ -3263,3 +3264,7 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 ## 2026-10-19 — Last Online native acceptance
 
 gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
+
+## 2026-10-19 — Swiftmend own-HoT hit consumption
+
+[Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.

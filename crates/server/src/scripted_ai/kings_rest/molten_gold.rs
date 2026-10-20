@@ -15,11 +15,13 @@ const CREATE_PROPERTIES: i32 = 12928;
 const PLAYER_COMBAT_REACH: f32 = 1.5;
 
 #[derive(Resource)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct MoltenGoldAreas {
     radius: f32,
     active: HashMap<Entity, MoltenGoldArea>,
 }
 
+#[cfg_attr(test, derive(Clone))]
 struct MoltenGoldArea {
     aura_instance: u32,
     members: HashSet<Entity>,
