@@ -1,15 +1,40 @@
 //! Manually clocked gameplay App. No server, protocol, replication or socket plugins.
 use bevy::prelude::*;
 use rand::{SeedableRng, rngs::StdRng};
-use shared::components::{Health, Position};
+use shared::components::Position;
 use std::time::Duration;
 
 use super::graph::{Graph, Pack};
 
 const TICK: Duration = Duration::from_millis(50);
 
-pub(super) fn run_stockade(_seed: u64) -> Result<usize, String> {
-    Err("full frozen-graph Stockade route is not implemented".into())
+pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
+    let report = super::campaign::run(seed)?;
+    let directory = std::env::var_os("DUNGEON_SIMULATOR_OUTPUT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../target/dungeon-simulator")
+        });
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    std::fs::write(
+        directory.join(format!("run-{seed}.json")),
+        serde_json::to_vec_pretty(&report).unwrap(),
+    )
+    .map_err(|error| error.to_string())?;
+    println!(
+        "RUN seed={seed} status={} bosses={:?} pack={:?} sim_s={:.2} wall_s={:.3} detail={}",
+        report.status,
+        report.bosses_killed,
+        report.failed_pack,
+        report.simulated_seconds,
+        report.wall_seconds,
+        report.detail
+    );
+    if report.status != "cleared" {
+        return Err(format!("{}: {}", report.status, report.detail));
+    }
+    Ok(report.bosses_killed.len())
 }
 
 pub(super) fn build_app() -> App {
@@ -32,7 +57,10 @@ pub(super) fn build_app() -> App {
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.add_systems(
         FixedUpdate,
-        (crate::followers::simulator::update_leader, move_combatants)
+        (
+            crate::followers::simulator::update_leader,
+            super::movement::update,
+        )
             .chain()
             .after(crate::followers::update_ai),
     );
@@ -71,7 +99,7 @@ fn load_gameplay_data(app: &mut App) {
     );
 }
 
-fn create_copy(app: &mut App) -> crate::maps::InMap {
+pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
     let maps = app.world().resource::<crate::maps::MapStore>().clone();
     app.world_mut()
         .resource_mut::<crate::maps::InstanceManager>()
@@ -94,7 +122,12 @@ fn create_copy(app: &mut App) -> crate::maps::InMap {
         .map
 }
 
-fn spawn_pack(app: &mut App, copy: crate::maps::InMap, pack: &Pack, seed: u64) -> Vec<Entity> {
+pub(super) fn spawn_pack(
+    app: &mut App,
+    copy: crate::maps::InMap,
+    pack: &Pack,
+    seed: u64,
+) -> Vec<Entity> {
     let data = app
         .world()
         .resource::<crate::world_data::WorldData>()
@@ -199,7 +232,7 @@ pub(super) fn run_first_pack() -> Result<(), String> {
         app.world_mut().entity_mut(unit).insert(at);
     }
     let guids = pack.spawns.iter().map(|spawn| spawn.guid).collect();
-    if !crate::followers::simulator::pull(app.world_mut(), party.tank, &guids)? {
+    if !crate::followers::simulator::pull(app.world_mut(), party.tank, &guids)?.0 {
         return Err(format!(
             "source pull budget refused opening pack{}",
             pack.id
@@ -242,57 +275,4 @@ pub(super) fn run_first_pack() -> Result<(), String> {
         }
     }
     Err(format!("one-pack simulation stalled on pack{}", pack.id))
-}
-
-/// Physical movement is replaced, not emulated: all runtime positions are 2D.
-/// The production AI and kits still choose pursuit targets, ranges and holds.
-fn move_combatants(world: &mut World) {
-    let dt = world.resource::<Time>().delta_secs();
-    let mut query = world.query::<(
-        Entity,
-        &Position,
-        &Health,
-        &crate::creature_ai::CreatureState,
-    )>();
-    let moves: Vec<_> = query
-        .iter(world)
-        .filter_map(|(unit, from, health, state)| {
-            if health.current <= 0.0
-                || world
-                    .get::<shared::casting::CastState>(unit)
-                    .is_some_and(|cast| !cast.cast_while_moving)
-            {
-                return None;
-            }
-            let crate::creature_ai::CreatureState::Pursuing { target } = state else {
-                return None;
-            };
-            let target = Entity::try_from_bits(*target)?;
-            let to = world.get::<Position>(target)?;
-            let reach = world
-                .get::<crate::followers::FollowerReach>(unit)
-                .map_or(2.0, |reach| reach.0);
-            let speed = world
-                .get::<crate::creature_ai::SpawnPoint>(unit)
-                .map_or(1.0, |spawn| spawn.speed_run)
-                * crate::creature_ai::BASE_RUN_SPEED
-                * world
-                    .get::<crate::auras::AuraStatMods>(unit)
-                    .map_or(1.0, |mods| mods.movement_speed);
-            let delta = Vec2::new(to.x - from.x, to.z - from.z);
-            let travel = (delta.length() - reach).clamp(0.0, speed * dt);
-            let step = delta.normalize_or_zero() * travel;
-            Some((
-                unit,
-                Position {
-                    x: from.x + step.x,
-                    y: 0.0,
-                    z: from.z + step.y,
-                },
-            ))
-        })
-        .collect();
-    for (unit, to) in moves {
-        crate::creature_ai::move_follower(world, unit, to, 7.0);
-    }
 }

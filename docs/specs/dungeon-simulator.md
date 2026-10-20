@@ -20,7 +20,10 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 ## Implementation inventory
 
 - `crates/server/src/dungeon_simulator/mod.rs`: targeted qualification entry points.
-- `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and 2D pursuit adapter.
+- `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and native source spawning.
+- `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller and HP/mana/pull/death report.
+- `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.
+- `scripts/run-dungeon-simulator.py`: execute the compiled filtered test from repository root, with explicit output directory.
 - `crates/server/src/followers/simulator.rs`: authentic party initialization and direct leader/kit/pull-admission seam.
 - `crates/server/src/dungeon_simulator/graph.rs`: typed frozen graph and explicit one-time native-nav extraction; minimum spanning forest plus four nearest neighbours per pack.
 

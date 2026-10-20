@@ -97,8 +97,30 @@ pub(crate) fn pull(
     world: &mut World,
     tank: Entity,
     guids: &std::collections::BTreeSet<u32>,
-) -> Result<bool, String> {
+) -> Result<(bool, String), String> {
     pull_history::sample_all(world);
     let decision = pull_admission::read_pull_budget(world, tank, guids, 1)?;
-    Ok(matches!(decision, pull_budget::Decision::Allow { .. }))
+    let allowed = matches!(decision, pull_budget::Decision::Allow { .. });
+    Ok((allowed, format!("{decision:?}")))
+}
+
+pub(crate) fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
+    let spell_id = world.get::<Follower>(tank).unwrap().profile.attack_spell;
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .unwrap();
+    (
+        spell_id,
+        crate::spell_cast::targets::spell_range(spell, true).1,
+    )
+}
+
+pub(crate) fn cast_opening(
+    world: &mut World,
+    tank: Entity,
+    target: Entity,
+) -> Result<(), crate::spell_cast::CastFailure> {
+    let (spell, _) = opening_spell(world, tank);
+    crate::spell_cast::creature_cast(world, tank, spell, Some(target), false)
 }

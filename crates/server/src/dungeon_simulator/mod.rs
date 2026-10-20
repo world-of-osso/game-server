@@ -1,5 +1,7 @@
 //! Transport-free dungeon qualification, driven by the server test executable.
+mod campaign;
 mod graph;
+mod movement;
 mod runtime;
 pub(crate) use graph::Space;
 
