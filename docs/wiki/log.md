@@ -17,6 +17,10 @@
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 
 [Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
+## 2026-10-19 — Bounded ordinary BG Preparation44521
+
+[Aura lifecycle](../handoffs/pvp-bg-preparation-aura-proof-ledger.md): ignored36bfc2ea0 pushed before genuine6RED/7controls (13cases11.98s). Native authored44521 makes Fireball Mana20/Energy45 SinisterStrike cost/admission zero, then normal removal restores exact baselines. Consumerb0a123256 adds WaitingACK/start/BG-exit role boundaries with normal AuraAPI, no arena reset or new effects. GREEN pending. Generic interrupt semantics remain `AURA_INTERRUPT_LEAVE_ENTER_WORLD_SEMANTICS_UNQUALIFIED`; no zoning/logout/persistence purge.
+
 ## 2026-10-19 — Ordinary battleground preparation
 
 [Preparation follow-up](../handoffs/pvp-bg-preparation-proof-ledger.md#bp732-integration-correction-and-test-driver-audit): bp732278PASS/3FAIL/1ignored, CHECK0/FMT0. Test-only natural wait for reconnect/flag captures, original delta preserved after native wait, fresh preparation per100 replacement matches. Grep14modules found two additional flag-channel tests; exact3+own4+flag2 GREEN9/0/0ignored53.80s on rebased2a6ab113e/protocol7f9bd7c. Production unchanged; Lead regate pending.
