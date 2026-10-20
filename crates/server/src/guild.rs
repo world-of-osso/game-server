@@ -584,10 +584,10 @@ fn build_member_snapshot(
         public_note: crate::persistence_character::load_guild_public_note(db, member.character_id),
         is_self: false,
         online_zone: online_state.and_then(|state| state.online_zone.clone()),
-        last_online: if online_state.is_some() {
-            "Online".into()
+        last_logout_unix_secs: if online_state.is_some() {
+            None
         } else {
-            "Offline".into()
+            crate::persistence_character::load_character_last_logout(db, member.character_id)
         },
     }
 }
@@ -635,6 +635,10 @@ fn class_name_from_id(class_id: u8) -> String {
     }
     .into()
 }
+
+#[cfg(test)]
+#[path = "guild_last_online_tests.rs"]
+mod guild_last_online_tests;
 
 #[cfg(test)]
 #[path = "guild_online_zone_tests.rs"]

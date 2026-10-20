@@ -880,7 +880,7 @@ fn swing_damage(
     hand: Hand,
     scaling: &UnitScaling,
     target_mods: Option<&AuraStatMods>,
-    additional_done_mult: f32,
+    additional_mult: f32,
 ) -> f32 {
     let mut rng = rand::thread_rng();
     let base = if let Some((_, attack_power)) = attacker.spirit_wolf {
@@ -897,23 +897,21 @@ fn swing_damage(
             None => creature_weapon_damage(scaling),
         }
     };
-    apply_swing_multipliers(base, attacker.mods, target_mods, additional_done_mult)
+    apply_swing_multipliers(base, attacker.mods, target_mods, additional_mult)
 }
 
 fn apply_swing_multipliers(
     base: f32,
     attacker_mods: Option<&AuraStatMods>,
     target_mods: Option<&AuraStatMods>,
-    additional_done_mult: f32,
+    additional_mult: f32,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
-    (base * done * additional_done_mult * taken)
-        .max(0.0)
-        .round()
+    (base * done * additional_mult * taken).max(0.0).round()
 }
 
 /// TC Unit.cpp:8110, the victim type is shared with spell damage/target admission.
@@ -1419,7 +1417,9 @@ fn try_swing(
             hand,
             &attacker_scaling,
             target_mods,
-            context.summon_modifiers.multiplier(attacker.entity) * versus,
+            context.summon_modifiers.multiplier(attacker.entity)
+                * versus
+                * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity),
         ) * armor
             .1
             .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier),

@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Spirit Wolf baseline (active70448)
+
+- Ghost Wolf2645 plus actual talent260878 starts real260882 regardless of which parent was applied first. With either parent absent, this binding must not start the child.
+- Preserve native260882 A23/1000ms/no-initial-tick permanent lifetime and260881 cap4, +5% A129 movement/-5% A87 all-school damage taken per stack. Existing periodic/stack/stat consumers remain authoritative; no new timer, state or periodic hook.
+- Removing either parent removes260882 and260881 on that unit, preserving the other parent and other owners. Re-entering form starts fresh growth; no stale stacks. Other Ghost Wolf effects/forms/visuals, foreign-cast semantics, full class/legal-loadout/nativeUDP/census promotion remain unqualified. [Implementation/proof](../wiki/systems/auras.md#spirit-wolf-baseline--2026-10-19).
+
 ## Earthen Rage baseline (active70448)
 
 - Native Elemental talent170374 records its owner's latest actual harmful-spell action target and casts real self170377. Selection changes and melee swings do not retarget or activate it;170379 must not retrigger it.
