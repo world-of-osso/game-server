@@ -9,12 +9,14 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import db2_casc
 import import_summon_property_flags as flags
+from tests.fixture_env import env_path, requires_env
 
 
+@requires_env("TOY_SUMMON_PROPERTIES_DB2")
 class SummonPropertyFlagsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.payload = Path(os.environ['TOY_SUMMON_PROPERTIES_DB2']).read_bytes()
+        cls.payload = env_path('TOY_SUMMON_PROPERTIES_DB2').read_bytes()
         _, cls.source = db2_casc.decode(cls.payload)
 
     def database(self):

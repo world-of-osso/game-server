@@ -11,7 +11,8 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 FIXTURE = SCRIPTS / "tests/fixtures/zephras-content.json"
 TABLES = [
     "creature_template",
@@ -44,6 +45,7 @@ def scratch_db():
     return db
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class ContentOverlayTest(unittest.TestCase):
     def setUp(self):
         self.content = json.loads(FIXTURE.read_text())
