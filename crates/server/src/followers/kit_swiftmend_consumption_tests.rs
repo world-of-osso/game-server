@@ -76,6 +76,13 @@ fn follower_swiftmend_consumption_preserves_another_casters_rejuvenation() {
         .profile
         .clone();
     let other = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert(shared::components::Npc {
+            template_id: profile.entry,
+            name: profile.name.clone(),
+        });
     let owner = h.caster;
     super::spawning::initialize(h.app.world_mut(), owner, other, profile).unwrap();
     creature_cast(h.app.world_mut(), other, REJUVENATION, Some(healer), false).unwrap();
