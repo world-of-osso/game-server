@@ -14,7 +14,11 @@ Ordinary battlegrounds use the TC a352b1fa Battleground.cpp100–103/334–445 p
 
 Load only authored world.db preparation-gate placements named by the corresponding TC map scripts. Keep their authored closed collision and closed animation during preparation. At the actual start, run the sourced open/removal behavior: WSG2106, AB2107, TwinPeaks726, Gilneas761, Eye566, AV30, Silvershard727 and Deephaul2656 open doors then remove them after3seconds; AB/AV ghost blockers disappear immediately. Isle628 starting doors195703/195491 open and disappear after20seconds; portcullises195436/195437 open and remain. Kotmogu998 doors215760 open24seconds after the30-second stage;215787 open at start, both remain. Limit every callback to its exact match copy; destructible objective gates are not preparation doors.
 
-Named asset gap: Seething1803 has sourced templates281224/281226 and an OnStart callback, but zero imported placements. Do not fabricate them. Strand607 remains unimplemented. This slice does not add countdown UI/wire fields, Preparation44521, resource resets, rewards or unrelated map objectives.
+Named asset gap: Seething1803 has sourced templates281224/281226 and an OnStart callback, but zero imported placements. Do not fabricate them. Strand607 remains unimplemented. The clock/gate behavior adds no countdown UI/wire fields, resource resets, rewards or unrelated map objectives.
+
+Ordinary accepted/current-copy Waiting WorldPortAck applies the authored Preparation44521 once (TC a352b1fa Battleground.cpp1054–1056), not at queue/acceptance or on late InProgress arrival. Its existing school/power cost modifiers make eligible native costs zero; the normal start removes44521 and restores the exact original cost (Battleground.cpp444). Successful ordinary BG exit also clears this BG-preparation role in the existing BG-exit cleanup beside in-match mount removal. Failed exit retains it. Do not use arena reset_entry/clear_preparation or add resource/cooldown resets. Preserve unrelated auras, other-copy/unentered actors and arena32727. No new effect handlers or claim of complete44521 immunity/talent/periodic behavior.
+
+`AURA_INTERRUPT_LEAVE_ENTER_WORLD_SEMANTICS_UNQUALIFIED` remains a named gap: this BG role cleanup does not implement generic LeaveWorld/EnterWorld interrupts for map transfers, persistence or logout. Do not infer a universal aura purge from raw70448 interrupt bits. [CPU lifecycle/cost evidence](../handoffs/pvp-bg-preparation-aura-proof-ledger.md).
 
 ## Ordinary battleground party queue
 
