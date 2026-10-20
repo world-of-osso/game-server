@@ -64,6 +64,12 @@ fn prepare_hold_buyer(root: &Path) -> Harness {
         wait_for_file(root, "go", 60),
         "parent starts the private proof request"
     );
+    assert_eq!(request(&mut h, TradingPostRequest::Balance).tender, 500);
+    assert!(
+        root.join("arm").exists(),
+        "Balance cannot consume the purchase hold"
+    );
+    assert!(!root.join("held").exists());
     h
 }
 
