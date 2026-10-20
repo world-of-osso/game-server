@@ -274,8 +274,17 @@ impl Run {
             .iter()
             .map(|spawn| spawn.guid)
             .collect();
-        let (allowed, decision) =
-            crate::followers::simulator::pull(self.app.world_mut(), self.party.tank, &guids)?;
+        let (allowed, decision) = match crate::followers::simulator::pull(
+            self.app.world_mut(),
+            self.party.tank,
+            &guids,
+        ) {
+            Ok(decision) => decision,
+            Err(error) => {
+                self.record_pull(pack_id, format!("Unavailable: {error}"));
+                return Ok(());
+            }
+        };
         self.record_pull(pack_id, decision);
         if !allowed {
             return Ok(());
