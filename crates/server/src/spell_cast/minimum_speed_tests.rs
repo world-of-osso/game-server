@@ -110,10 +110,13 @@ fn class_completeness_native_minimum_speed_never_lowers_faster_movement() {
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == CHILLED,
     );
-    assert_eq!(speeds(&h), [1.3, 1.0, 1.3]);
+    // TC a352b1fa Unit.cpp:8818–8829 separates run auras from swim aura58.
+    // Ghost Wolf's aura129 grants +30% run only; aura305 floors swim at 100%
+    // after slows (Unit.cpp:8931–8939), not at the run multiplier.
+    assert_eq!(speeds(&h), [1.3, 1.0, 1.0]);
     let npc = h.npc;
     apply_torpedo_speed(&mut h, npc);
-    assert_eq!(speeds(&h), [1.3, 1.0, 1.3]);
+    assert_eq!(speeds(&h), [1.3, 1.0, 1.0]);
 }
 
 #[test]

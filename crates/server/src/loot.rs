@@ -24,7 +24,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use redb::Database;
-use shared::components::{Health, Npc, Position};
+use shared::components::{Health, Npc, Player, Position};
 use shared::protocol::{
     CorpseLootable, LootChannel, LootClosed, LootContent, LootError, LootFailed, LootRelease,
     LootResponse, LootSlot, LootSlotRemoved, LootSlotRequest, LootUnit,
@@ -271,7 +271,16 @@ fn remaining_for(
 
 /// Persistence, templates and names: what taking a slot reads and writes.
 #[derive(SystemParam)]
-struct LootStore<'w> {
+struct LootStore<'w, 's> {
+    auras: Query<
+        'w,
+        's,
+        (
+            &'static crate::persistence::ClientId,
+            &'static crate::auras::ActiveAuras,
+        ),
+        With<Player>,
+    >,
     db: Option<Res<'w, GameDatabase>>,
     templates: Option<Res<'w, ItemTemplates>>,
     catalog: Res<'w, VendorCatalog>,
@@ -281,7 +290,16 @@ struct LootStore<'w> {
     quest_dirty: Option<ResMut<'w, crate::quest::QuestDirty>>,
 }
 
-impl LootStore<'_> {
+impl LootStore<'_, '_> {
+    fn modified_money(&self, character: u64, base: u64) -> u64 {
+        let auras = self
+            .auras
+            .iter()
+            .find(|(id, _)| id.0 == character)
+            .map(|(_, auras)| auras);
+        crate::auras::reward_mods::money(base, auras, 1)
+    }
+
     fn get(&self) -> Option<(&Database, &ItemTemplates)> {
         Some((&self.db.as_ref()?.db, self.templates.as_deref()?))
     }
@@ -292,22 +310,23 @@ impl LootStore<'_> {
         let share = copper / characters.len() as u64;
         let mut models = Vec::new();
         for &character in characters {
+            let amount = self.modified_money(character, share);
             let mut model =
                 load_model(db, templates, character).map_err(|_| LootError::NoPermission)?;
             let gold = model
                 .gold()
-                .checked_add(share)
+                .checked_add(amount)
                 .filter(|gold| *gold <= MAX_MONEY)
                 .ok_or(LootError::TooMuchGold)?;
             model.set_gold(gold);
-            models.push((character, gold, model.into_record()));
+            models.push((character, gold, amount, model.into_record()));
         }
-        for (character, _, record) in &models {
+        for (character, _, _, record) in &models {
             save_inventory_record(db, *character, record);
         }
-        for (character, gold, _) in models {
+        for (character, gold, amount, _) in models {
             self.gold.record(character, gold);
-            self.gold.record_looted_money(character, share);
+            self.gold.record_looted_money(character, amount);
         }
         Ok(())
     }
@@ -354,15 +373,21 @@ impl LootStore<'_> {
                 return Ok(());
             }
         }
+        let credited_money = match content {
+            LootContent::Money { copper } => self.modified_money(character_id, *copper),
+            LootContent::Item { .. } => 0,
+        };
         let (db, templates) = self.get().ok_or(LootError::NoPermission)?;
         let mut model =
             load_model(db, templates, character_id).map_err(|_| LootError::NoPermission)?;
         match content {
-            LootContent::Money { copper } => {
-                if model.gold() + copper > MAX_MONEY {
-                    return Err(LootError::TooMuchGold);
-                }
-                model.set_gold(model.gold() + copper);
+            LootContent::Money { .. } => {
+                let gold = model
+                    .gold()
+                    .checked_add(credited_money)
+                    .filter(|gold| *gold <= MAX_MONEY)
+                    .ok_or(LootError::TooMuchGold)?;
+                model.set_gold(gold);
             }
             &LootContent::Item {
                 item_id,
@@ -425,7 +450,9 @@ impl LootStore<'_> {
                 self.gold
                     .record_looted_item(character_id, *item_id, *count, kind.0);
             }
-            LootContent::Money { copper } => self.gold.record_looted_money(character_id, *copper),
+            LootContent::Money { .. } => {
+                self.gold.record_looted_money(character_id, credited_money)
+            }
         }
         Ok(())
     }
@@ -481,13 +508,13 @@ impl LootSenders<'_, '_> {
 }
 
 #[derive(SystemParam)]
-struct LootRolls<'w> {
+struct LootRolls<'w, 's> {
     tables: Res<'w, LootTables>,
-    store: LootStore<'w>,
+    store: LootStore<'w, 's>,
     quests: Option<Res<'w, QuestDb>>,
 }
 
-impl LootRolls<'_> {
+impl LootRolls<'_, '_> {
     fn roll(
         &self,
         entry: u32,
@@ -610,7 +637,7 @@ type Corpses<'w, 's> = Query<
 /// Everything a loot request reads and writes.
 #[derive(SystemParam)]
 struct Looting<'w, 's> {
-    store: LootStore<'w>,
+    store: LootStore<'w, 's>,
     corpses: Corpses<'w, 's>,
     players: Query<
         'w,

@@ -242,3 +242,35 @@ fn ordinary_quest_bonus_missing_runtime_catalog_is_an_explicit_load_error() {
 fn ordinary_quest_bonus_below_player_cap_above_quest_ceiling_keeps_base_money() {
     ordinary_bonus_turn_in(crate::experience::MAX_LEVEL - 1, BASE_COPPER);
 }
+
+#[test]
+fn aura_world_quest_enlisted_rewards_and_honorless_control() {
+    for (spell, xp, money) in [(269083, 14_300, 115_500), (282559, 13_000, 105_000)] {
+        let mut app = setup_app().unwrap();
+        let client = spawn_client(&mut app, 89);
+        enter_world(&mut app, &client);
+        let auras = crate::auras::world_xp_tests::native_auras(spell);
+        app.world_mut().entity_mut(client.player).insert(auras);
+        let giver = spawn_npc(&mut app, MARSHAL_DUGHAN, 0.0);
+        accept(&mut app, &client, giver, 62);
+        explore_fargodeep(&mut app, &client);
+        let before = persistence::load_inventory(db(&app), client.character_id).gold;
+        turn_in(&mut app, &client, giver, 62, None);
+        assert!(received::<QuestFailed>(&mut app, &client).is_empty());
+        let complete = received::<QuestGiverQuestComplete>(&mut app, &client)
+            .pop()
+            .unwrap();
+        assert_eq!(complete.xp, xp, "native{spell} XP");
+        assert_eq!(
+            complete.money, money,
+            "native{spell} quest money only (Misc0), not Misc3/4"
+        );
+        assert_eq!(
+            persistence::load_inventory(db(&app), client.character_id).gold - before,
+            u64::from(money)
+        );
+        let gains = received::<LogXpGain>(&mut app, &client);
+        assert_eq!(gains.len(), 1);
+        assert_eq!(gains[0].amount, xp);
+    }
+}
