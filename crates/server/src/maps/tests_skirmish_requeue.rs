@@ -12,7 +12,6 @@ const RETURNED: &str = "returned to battleground origin";
 const QUEUED: &str = "queued for arena skirmish";
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_2v2_returns_then_queues_same_mode_after_origin_ack() {
     exercise_arena_channel_with_completion(
         ArenaQueueMode::Skirmish2v2,
@@ -24,7 +23,6 @@ fn skirmish_requeue_2v2_returns_then_queues_same_mode_after_origin_ack() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_3v3_returns_then_queues_same_mode_after_origin_ack() {
     exercise_arena_channel_with_completion(
         ArenaQueueMode::Skirmish3v3,
@@ -36,7 +34,6 @@ fn skirmish_requeue_3v3_returns_then_queues_same_mode_after_origin_ack() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_queue_failure_after_return_stays_at_origin() {
     exercise_arena_channel_with_completion(
         ArenaQueueMode::Skirmish2v2,
@@ -48,7 +45,6 @@ fn skirmish_requeue_queue_failure_after_return_stays_at_origin() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_refuses_rated_arena() {
     exercise_arena_channel_with_completion(
         ArenaQueueMode::Rated2v2,
@@ -60,7 +56,6 @@ fn skirmish_requeue_refuses_rated_arena() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_refuses_solo_shuffle() {
     exercise_arena_channel_with_completion(
         ArenaQueueMode::SoloShuffle,
@@ -72,7 +67,6 @@ fn skirmish_requeue_refuses_solo_shuffle() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_refuses_ordinary_battleground() {
     flag_match_with_completion(
         shared::battleground::warsong_gulch(),

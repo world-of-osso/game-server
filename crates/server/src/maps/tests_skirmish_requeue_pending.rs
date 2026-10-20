@@ -5,7 +5,6 @@ use shared::battleground::BgPhase;
 use shared::protocol::RequeueSkirmish;
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_refuses_unaccepted_invitation() {
     let (mut h, players, _database) = pending_arena(25);
     let who = &players[0];
@@ -14,7 +13,6 @@ fn skirmish_requeue_refuses_unaccepted_invitation() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_refuses_waiting_copy() {
     let (mut h, players, _database) = pending_arena(25);
     enter(&mut h, &players[..1]);
@@ -22,7 +20,6 @@ fn skirmish_requeue_refuses_waiting_copy() {
 }
 
 #[test]
-#[ignore = "RED: skirmish Queue Again handler not implemented"]
 fn skirmish_requeue_refuses_in_progress_copy() {
     let (mut h, players, _database) = pending_arena(25);
     enter(&mut h, &players);
