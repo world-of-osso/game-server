@@ -76,6 +76,8 @@ fn batch_summary_counts_wipes_per_reached_pack_and_retains_stalls() {
         wall_seconds: 1.0,
         detail: String::new(),
         samples: Vec::new(),
+        performance: serde_json::Value::Null,
+        terminal_units: serde_json::Value::Null,
         pulls: packs
             .iter()
             .map(|&pack| super::campaign::PullDecision {

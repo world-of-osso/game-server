@@ -104,6 +104,20 @@ pub(crate) fn pull(
     Ok((allowed, format!("{decision:?}")))
 }
 
+pub(crate) fn inspect_tank_movement(world: &mut World, tank: Entity) -> String {
+    let Some(target) = world
+        .get::<crate::networking::CombatTarget>(tank)
+        .and_then(|target| target.0)
+    else {
+        return "tank has no selected victim".into();
+    };
+    let follower = world.get::<Follower>(tank).unwrap().clone();
+    format!(
+        "{:?}",
+        tank_planner::read_movement_admission(world, tank, target, &follower, None)
+    )
+}
+
 pub(crate) fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id = world.get::<Follower>(tank).unwrap().profile.attack_spell;
     let spell = world

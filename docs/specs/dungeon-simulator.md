@@ -9,7 +9,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [x] Freeze map-34 Normal spawns grouped by the tank planner's source formation identity into `content/dungeons/stockade-34.json`; retain source GUIDs, entries and 2D positions.
 - [ ] Extract inter-pack walk distances once using the existing nav query. Runtime movement consumes only the frozen graph; aggro and range use 2D positions.
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
-- [ ] Clear every Stockade boss in seconds of wall time. Report cleared/wiped, failed pack, HP/mana traces and pull decisions.
+- [ ] Clear every Stockade boss in seconds of CPU, targeting at least 100 simulated seconds per wall-second. Report ticks, setup/update/control/observation wall costs, simulation ratio, live entity/event counts and process memory in periodic checkpoints. Report cleared/wiped, failed pack, HP/mana traces and pull decisions; terminal source-unit state must make stalls diagnosable. Unrelated NPC fights/regen and unexecuted movement requests do not establish party progress.
 - [ ] Batch N seeded runs and summarize per-pack wipe rate. Report runs reaching each pack as the denominator, wipes separately from all failed clears (including stalls/blocks/timeouts), and keep each run's HP/mana/pull trace. A batch that executed successfully is not a clear unless all runs cleared.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
@@ -22,7 +22,8 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - `crates/server/src/dungeon_simulator/mod.rs`: targeted qualification entry points.
 - `crates/server/src/random.rs`: explicit test-only seeded scope over unchanged native rand distributions; normal production execution reexports rand unchanged. Gameplay RNG call sites share this scope, and simulator schedules run single-threaded.
 - `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and native source spawning.
-- `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller and HP/mana/pull/death report.
+- `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller, real party-progress observation, periodic profiling checkpoints and HP/mana/pull/death report.
+- `crates/server/src/dungeon_simulator/diagnostics.rs`: read-only source-unit snapshots and process memory observations.
 - `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.
 - `scripts/run-dungeon-simulator.py`: execute the compiled filtered test from repository root, with explicit output directory, run count and starting seed.
 - `crates/server/src/dungeon_simulator/batch.rs`: seeded collector, per-pack wipe/failure counts and summary JSON.

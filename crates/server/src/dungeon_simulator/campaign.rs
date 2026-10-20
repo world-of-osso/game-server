@@ -47,6 +47,8 @@ pub(super) struct Report {
     pub detail: String,
     pub samples: Vec<Sample>,
     pub pulls: Vec<PullDecision>,
+    pub performance: serde_json::Value,
+    pub terminal_units: serde_json::Value,
 }
 
 struct Run {
@@ -57,31 +59,50 @@ struct Run {
     report: Report,
     current_pack: Option<u32>,
     last_progress: f64,
-    last_health: f32,
+    event_cursor: usize,
+    last_owner_position: Vec3,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
     let _rng_scope = crate::random::seed_scope(seed);
     let started = std::time::Instant::now();
     let mut run = spawn_run(seed)?;
+    let setup = started.elapsed();
+    let mut timings = [std::time::Duration::ZERO; 3];
+    let mut ticks = 0;
     for tick in 0..MAX_TICKS {
+        let observe = std::time::Instant::now();
         if tick % 10 == 0 {
             run.sample();
         }
         if run.finished() {
             break;
         }
+        timings[0] += observe.elapsed();
+        let control = std::time::Instant::now();
         if let Err(error) = run.control() {
             run.report.status = "blocked".into();
             run.report.detail = error;
             break;
         }
+        timings[1] += control.elapsed();
+        let update = std::time::Instant::now();
         run.app.update();
+        timings[2] += update.elapsed();
+        ticks += 1;
+        if tick % 1000 == 0 {
+            run.write_progress(ticks, started, setup, &timings)?;
+        }
         if run.stalled() {
             break;
         }
     }
     run.sample();
+    run.report.performance = run.performance(ticks, started, setup, &timings);
+    run.report.performance["tank_movement_admission"] = serde_json::json!(
+        crate::followers::simulator::inspect_tank_movement(run.app.world_mut(), run.party.tank)
+    );
+    run.report.terminal_units = run.inspect_units();
     run.report.simulated_seconds = run.now();
     run.report.wall_seconds = started.elapsed().as_secs_f64();
     run.report.failed_pack = (run.report.status != "cleared")
@@ -117,6 +138,7 @@ fn spawn_run(seed: u64) -> Result<Run, String> {
                 .map(|(source, actor)| (source.guid, actor)),
         );
     }
+    let last_owner_position = Vec3::new(graph.entrance[0], 0.0, graph.entrance[1]);
     Ok(Run {
         app,
         graph,
@@ -124,7 +146,8 @@ fn spawn_run(seed: u64) -> Result<Run, String> {
         actors,
         current_pack: None,
         last_progress: 0.0,
-        last_health: 0.0,
+        event_cursor: 0,
+        last_owner_position,
         report: Report {
             seed,
             status: "running".into(),
@@ -135,11 +158,77 @@ fn spawn_run(seed: u64) -> Result<Run, String> {
             detail: String::new(),
             samples: Vec::new(),
             pulls: Vec::new(),
+            performance: serde_json::Value::Null,
+            terminal_units: serde_json::Value::Null,
         },
     })
 }
 
 impl Run {
+    fn performance(
+        &self,
+        ticks: usize,
+        started: std::time::Instant,
+        setup: std::time::Duration,
+        timings: &[std::time::Duration; 3],
+    ) -> serde_json::Value {
+        let elapsed = started.elapsed();
+        let steady = elapsed.saturating_sub(setup).as_secs_f64();
+        serde_json::json!({"ticks": ticks, "sim_seconds": self.now(),
+            "setup_wall_seconds": setup.as_secs_f64(), "wall_seconds": elapsed.as_secs_f64(),
+            "sim_per_wall": self.now() / elapsed.as_secs_f64(),
+            "steady_sim_per_wall": self.now() / steady,
+            "observation_wall_seconds": timings[0].as_secs_f64(),
+            "control_wall_seconds": timings[1].as_secs_f64(),
+            "update_wall_seconds": timings[2].as_secs_f64(),
+            "live_entities": self.app.world().entities().len(),
+            "observed_events": self.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len(),
+            "samples": self.report.samples.len(), "memory": super::diagnostics::read_process_memory()})
+    }
+
+    fn inspect_units(&self) -> serde_json::Value {
+        let units: Vec<_> = self
+            .actors
+            .iter()
+            .map(|(guid, actor)| (Some(*guid), *actor))
+            .chain(self.members().map(|actor| (None, actor)))
+            .map(|(guid, actor)| super::diagnostics::inspect_unit(self.app.world(), guid, actor))
+            .collect();
+        serde_json::json!(units)
+    }
+
+    fn write_progress(
+        &mut self,
+        ticks: usize,
+        started: std::time::Instant,
+        setup: std::time::Duration,
+        timings: &[std::time::Duration; 3],
+    ) -> Result<(), String> {
+        let mut performance = self.performance(ticks, started, setup, timings);
+        performance["tank_movement_admission"] =
+            serde_json::json!(crate::followers::simulator::inspect_tank_movement(
+                self.app.world_mut(),
+                self.party.tank
+            ));
+        println!(
+            "PROGRESS seed={} ticks={} sim_s={:.2} ratio={} steady_ratio={} entities={} events={}",
+            self.report.seed,
+            ticks,
+            self.now(),
+            performance["sim_per_wall"],
+            performance["steady_sim_per_wall"],
+            performance["live_entities"],
+            performance["observed_events"]
+        );
+        let directory = super::runtime::output_directory();
+        std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+        let path = directory.join(format!("progress-{}.json", self.report.seed));
+        let checkpoint = serde_json::json!({"seed": self.report.seed, "current_pack": self.current_pack,
+            "performance": performance, "last_sample": self.report.samples.last(), "units": self.inspect_units()});
+        std::fs::write(&path, serde_json::to_vec_pretty(&checkpoint).unwrap())
+            .map_err(|error| format!("write {}: {error}", path.display()))
+    }
+
     fn now(&self) -> f64 {
         self.app
             .world()
@@ -258,7 +347,6 @@ impl Run {
                     0.0,
                     target_position.z,
                 )));
-            self.last_progress = self.now();
             return Ok(());
         }
         self.app
@@ -299,10 +387,7 @@ impl Run {
             self.party.tank,
             target,
         ) {
-            Ok(()) => {
-                self.last_progress = self.now();
-                Ok(())
-            }
+            Ok(()) => Ok(()),
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
                 | crate::spell_cast::CastFailure::OnCooldown
@@ -361,23 +446,40 @@ impl Run {
     }
 
     fn stalled(&mut self) -> bool {
-        let health: f32 = self
-            .actors
-            .values()
-            .filter_map(|actor| self.app.world().get::<Health>(*actor))
-            .map(|hp| hp.current)
-            .sum();
-        if health != self.last_health {
-            self.last_health = health;
+        let world = self.app.world();
+        let events = &world
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let members: Vec<_> = self.members().collect();
+        let damage = events[self.event_cursor..].iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > event.overflow.max(0)
+                && event
+                    .source
+                    .and_then(Entity::try_from_bits)
+                    .is_some_and(|source| {
+                        members.contains(&crate::spell_cast::combat_event_owner(world, source))
+                    })
+        });
+        self.event_cursor = events.len();
+        let position = world.get::<Position>(self.party.owner).unwrap();
+        let position = Vec3::new(position.x, 0.0, position.z);
+        if damage || position != self.last_owner_position {
             self.last_progress = self.now();
         }
+        self.last_owner_position = position;
         if self.now() - self.last_progress < STALL_SECONDS {
             return false;
         }
         self.report.status = "stalled".into();
         self.report.detail = self.report.pulls.last().map_or_else(
-            || "no damage or admitted movement for 60s".into(),
-            |pull| pull.decision.clone(),
+            || "no party damage or actual leader movement for 60s".into(),
+            |pull| {
+                format!(
+                    "no party damage or actual leader movement for 60s; last pull: {}",
+                    pull.decision
+                )
+            },
         );
         true
     }
