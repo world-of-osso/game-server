@@ -1,3 +1,13 @@
+## 2026-10-19 — Herald flying Liquid Fire
+
+[Flying actual-impact boundary](systems/boss-scripts.md#herald-flying-liquid-fire--2026-10-19): qualification73bc2PASS64.88s establishes natural victim/random admission and positive impacts in Normal/Heroic FIRST. Pushed ignored4b11→four genuineRED200.85s; production adds only four IDs to existing Fireball hit hookd75c→four full nativeGREEN287.96s before enabling. Actual frame-local child/freshGO prevents stale victim-field acceptance; source GO lifecycle/damage/copy oracle reused unchanged. Retained natural qualification2PASS plus extracted ground/source/refusal6PASS183.95s ate0e53 completes a twelve-case composite; independent gate pending. No broader flight/native/balance/loot/persistence claim.
+
+## 2026-10-19 — Server-recorded crafting provenance, targeted GREEN
+
+[Storage and proof boundary](systems/inventory.md#server-recorded-crafting-origin): pushed-first actual2153 craft/fresh-DB owner-snapshot RED; additive GUID metadata preserves ability1355 joinedspell2153 without changing legacy instance encoding. Actual2963×2 exposed unknown-stack merging; origin-compatible merge/capacity and split-copy controls pass, class item-creation remains unknown. Server2 targeted cases GREEN at5ea22bf55; protocol/engine proofs are separately pinned. Atomic lead gate and any new native session remain pending; recraft/evaluator/slots/watermark stay unavailable.
+## 2026-10-19 — Ordinary NPC authored cadence
+
+[Source timing](systems/player-damage.md#ordinary-npc-authored-cadence--2026-10-19): pushed ignored674bb88eb before two genuine ordinary-source-spawn REDs (Prowler1181500ms/Murloc1713000ms both observed2.050s). Ignored05df30702 adds real2825/+30,246/−35 and mid-swing progress controls: all five genuine RED, helperexit101/23.99s;246 measurement bounded before authored6s expiry. Loader/base+difficulty template cache now supplies the ordinary white clock with TC zero normalization and signed/progress factors. Player/controlled-pet/SpiritWolf weapons and per-hit damage stay unchanged. Fresh ignored2386d767dGREEN5/0/15.88s/no warnings, then enabled five plus source-zero and combined252/319 controls. Requested family proof: combat228/0 (all seven controls), creature/zones/world-data/startup242/0, disjoint scripted/encounter/SpiritWolf/pet-control380 passes plus private Azure2/0 at protocol50517c9. Fixture-only ac3db20a9 projects actual Herald/Nazan2000ms and explicit synthetic TC2000ms; no swing-count assertions changed. Missing-column/private-environment attempts retained separately; no full-suite or deployment claim.
 ## 2026-10-19 — Native forced-miss readiness oracle RED
 
 [Follow-up](systems/auras.md#attack-readiness-oracle-follow-up--2026-10-19):7ff4c9857/cc83515b6 fixed recovery, not initial HP⇒attack helpers. Pushed ignoredea66eb290 native50240 counterexamples give2RED21.29s/three actual Miss attempts each; minimal TEST-only event/Pursuing/currentvictim correction preserves100/120-frame windows and every wound/death/evade/regeneration assertion. No production/RNG/input changes. CurrentVictim namespace compile correction1aea734bf (not behavioral proof); fresh two-module31GREEN94.76s/0warnings including new2ignored via --include-ignored, then both enabled. Independent lead gate pending.
@@ -3273,6 +3283,13 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 
 gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
 
+## 2026-10-19 — Native Germination shorter-remaining routing
+
+[Source/native boundary](investigations/follower-data.md#germination-shorter-remaining-routing--2026-10-19): SimC76f8118/native155675learned33not32. Pushedignored3first; native1PASS/secondHoTmissingRED/thirdprerequisiteblocked19.16s→pre-applyordinary155777redirect3GREEN30.79s/zero warnings. EnabledafterGREENc252954fc, dualperiodichealreceipts/otherdeadlineunchanged; no cost/timer/globalstacking/Swiftmendinteraction changes. Pushed; finalgatepending.
 ## 2026-10-19 — Swiftmend own-HoT hit consumption
 
 [Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.
+
+## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
+
+[Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.

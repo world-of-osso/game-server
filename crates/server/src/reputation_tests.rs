@@ -30,6 +30,7 @@ fn test_template(entry: u32, faction: u16, min_level: u8, max_level: u8) -> Crea
         npc_flags: 0,
         speed_walk: 1.0,
         speed_run: 1.0,
+        base_attack_time_ms: 2_000,
         health_modifier: 1.0,
         unit_class: 1,
         expansion: 0,
