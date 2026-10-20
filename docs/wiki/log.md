@@ -1,3 +1,7 @@
+## 2026-10-19 — Aura343 white-swing vulnerability
+
+[MOD_MELEE_DAMAGE_FROM_CASTER343](systems/auras.md#damage-and-healing) scales the attacker's own white swings; Colossus Smash208086 now applies effect1. RED aa26a134b genuine at the343 boundary (empty343 effects; swing35 outside44–46). GREEN pending.
+
 ## 2026-10-19 — Aura248 native-input gap
 
 [Named gap](systems/player-damage.md#aura248-native-input-gap--2026-10-19): AURA_248_NO_NONZERO_NATIVE_INPUT_70448 DEFERRED after fresh all-difficulty canonical scan finds only261912effect4 amount0/Misc0 and no imported server-side248 rows. Synthetic-only implementation declined as speculative; contract/wiki record native-proof boundary, no production/test/data change or coverage promotion.

@@ -240,6 +240,8 @@ Reference: TrinityCore `a352b1fa`, `Unit::UpdateSpeed` (normalization before slo
 
 Healing takes the same mods, then MOD_HEALING_DONE_PERCENT 136 and the target's healing taken (118, 283).
 
+White swings (no spell) do not take 271. They take MOD_MELEE_DAMAGE_FROM_CASTER 343 instead: the product of the attacker's own 343 effects on the victim, before rounding and armor (`melee_damage_from_caster`, TC Unit.cpp8213–8219). A foreign caster's 343 changes nothing. Colossus Smash208086 supplies both: effect0 271 for spells, effect1 343 +30% for white swings (2026-10-19).
+
 Crits:
 - Chance = `CharacterStats.crit_pct` (base, rating and MOD_CRIT_PCT auras) + CritChance mods.
 - A crit adds 100% of the amount, scaled by CritDamageAndHealing mods.
