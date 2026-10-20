@@ -186,11 +186,14 @@ fn assert_liquid_fire(difficulty: u32, cone: bool) {
                 first <= created + Duration::from_millis(50),
                 "source zero-delay first GO update"
             );
-            assert_eq!(
-                (now - first).as_millis() % 2000,
-                0,
-                "actual source repeat2s"
-            );
+            // TaskScheduler.cpp319–329 repeats from the previous scheduled
+            // deadline0, not callback time50: first gap1950ms, then2000ms.
+            let expected = if born.is_empty() {
+                first
+            } else {
+                first - Duration::from_millis(50) + Duration::from_millis(2000 * born.len() as u64)
+            };
+            assert_eq!(now, expected, "exact source task deadline");
             assert_eq!(h.app.world().get::<InMap>(trigger), Some(&map));
             assert_eq!(h.app.world().get::<Position>(trigger), Some(&location));
             born.insert(trigger, now);
@@ -214,9 +217,14 @@ fn assert_liquid_fire(difficulty: u32, cone: bool) {
         }
         h.advance(0.05);
     }
+    let scheduler_origin = first.expect("source zero-delay pulse") - Duration::from_millis(50);
+    let expiry = created + Duration::from_millis(duration);
+    let repeats = (1..)
+        .take_while(|index| scheduler_origin + Duration::from_millis(2000 * index) < expiry)
+        .count();
     assert_eq!(
         born.len(),
-        duration.div_ceil(2000) as usize,
+        1 + repeats,
         "no later pulses after source expiry"
     );
     assert_eq!(died.len(), born.len());
