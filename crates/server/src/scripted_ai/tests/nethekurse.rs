@@ -329,7 +329,6 @@ fn populated_nethekurse(difficulty: u32) -> (Harness, Entity, InMap, Vec<Entity>
 }
 
 #[test]
-#[ignore = "RED: authentic event convert death callbacks not ported"]
 fn encounter_coverage_nethekurse_four_event_peons_release_and_all_dead_speech() {
     for difficulty in [1, 2] {
         let (mut h, boss, map, peons) = populated_nethekurse(difficulty);
@@ -356,7 +355,6 @@ fn encounter_coverage_nethekurse_four_event_peons_release_and_all_dead_speech() 
 }
 
 #[test]
-#[ignore = "RED: authentic event convert death count not ported"]
 fn encounter_coverage_nethekurse_non_event_peons_do_not_count_and_some_alive_speech() {
     let (mut h, boss, _, peons) = populated_nethekurse(1);
     let non_event = h
@@ -386,7 +384,6 @@ fn encounter_coverage_nethekurse_non_event_peons_do_not_count_and_some_alive_spe
 }
 
 #[test]
-#[ignore = "RED: event convert engagement line not ported"]
 fn encounter_coverage_nethekurse_event_peon_engagement_notifies_boss() {
     let (mut h, boss, _, peons) = populated_nethekurse(1);
     let peon = peons[0];
