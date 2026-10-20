@@ -1750,11 +1750,23 @@ fn solo_shuffle_six_rounds_restore_source_gates_and_return_all_origins() {
     }
 }
 
+type PvpCompletionCheck = fn(&mut Harness, &[Traveler], &[Vec3], u64);
+
 fn exercise_arena_channel_with_reconnect(
     mode: ArenaQueueMode,
     forfeit: bool,
     map_id: u32,
     reconnect: Option<ReconnectCase>,
+) {
+    exercise_arena_channel_with_completion(mode, forfeit, map_id, reconnect, None);
+}
+
+fn exercise_arena_channel_with_completion(
+    mode: ArenaQueueMode,
+    forfeit: bool,
+    map_id: u32,
+    reconnect: Option<ReconnectCase>,
+    after_complete: Option<PvpCompletionCheck>,
 ) {
     use shared::protocol::{ArenaQueueMode, QueueForArena};
     let rated = matches!(mode, ArenaQueueMode::Rated2v2 | ArenaQueueMode::Rated3v3);
@@ -2176,7 +2188,15 @@ fn exercise_arena_channel_with_reconnect(
         );
     }
     if mode == ArenaQueueMode::SoloShuffle {
-        exercise_shuffle_rounds(&mut h, &players, &origins, match_id, map, &gate_actions);
+        exercise_shuffle_rounds(
+            &mut h,
+            &players,
+            &origins,
+            match_id,
+            map,
+            &gate_actions,
+            after_complete,
+        );
         return;
     }
     let preparing = players[0].player;
@@ -2480,6 +2500,10 @@ fn exercise_arena_channel_with_reconnect(
             assert_eq!(saved, *progress);
         }
     }
+    if let Some(check) = after_complete {
+        check(&mut h, &players, &origins, match_id);
+        return;
+    }
     for who in &players {
         assert_eq!(
             h.app.world().get::<Health>(who.player).unwrap().current,
@@ -2539,6 +2563,7 @@ fn exercise_shuffle_rounds(
     match_id: u64,
     map: InMap,
     gates: &[(u32, String, u32)],
+    after_complete: Option<PvpCompletionCheck>,
 ) {
     use shared::battleground::{BgPhase, BgTeam};
     let mut combinations = std::collections::BTreeSet::new();
@@ -2716,6 +2741,10 @@ fn exercise_shuffle_rounds(
             .rounds_won,
         vec![(1, 6), (2, 0), (3, 3), (4, 3), (5, 3), (6, 3)]
     );
+    if let Some(check) = after_complete {
+        check(h, players, origins, match_id);
+        return;
+    }
     for (index, who) in players.iter().enumerate() {
         let state = h
             .app
@@ -2921,6 +2950,15 @@ fn flag_match_with_reconnect(
     template: shared::battleground::BgTemplate,
     directory: &str,
     reconnect: Option<ReconnectCase>,
+) {
+    flag_match_with_completion(template, directory, reconnect, None);
+}
+
+fn flag_match_with_completion(
+    template: shared::battleground::BgTemplate,
+    directory: &str,
+    reconnect: Option<ReconnectCase>,
+    after_complete: Option<PvpCompletionCheck>,
 ) {
     let rules = shared::battleground::flag_rules(template.map_id).unwrap();
     let flags = source_battleground_objects(template.map_id);
@@ -3166,6 +3204,10 @@ fn flag_match_with_reconnect(
                 shared::battleground::BgTeam::A
             ))
         );
+    }
+    if let Some(check) = after_complete {
+        check(&mut h, &players, &origins, match_id);
+        return;
     }
     for who in &players {
         h.app
