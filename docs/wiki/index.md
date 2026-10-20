@@ -910,3 +910,5 @@ Debug logs and root cause analyses.
 - [Selected native follower metadata](investigations/slow-native-test-fixtures.md#selected-native-follower-metadata-2026-10-19) — existing canonical template/class views, two-live-app isolation, unchanged1353-corner/144-origin/36-kit coverage and matched wall/CPU/RSS observations.
 
 - [Prepared encounter fixture inputs](investigations/slow-native-test-fixtures.md#fully-prepared-encounter-inputs-2026-10-19) — complete immutable producer/composite profiles, independent resource copies, cross-profile/difficulty isolation;28 unchanged cases and matched wall/CPU/RSS, including cold Ragefire regression and retained-memory cost.
+
+- [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.

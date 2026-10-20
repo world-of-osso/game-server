@@ -3297,3 +3297,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
 
 [Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
+
+- [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.
