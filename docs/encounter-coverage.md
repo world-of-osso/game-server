@@ -1,8 +1,12 @@
 # Hosted encounter coverage
 
+## Blood Furnace Keli'dan — 2026-10-20
+
+Source17377 dormant Evocation with withheld channeler groups360–364 spawned once, 10s partner Star Beams, fifth-channeler release/Talk0/zone-in, Normal volley/Corruption/Burning Nova rotation with nova speech, Burning Nova aura script (Heroic Vortex, Fire Nova on remove), slay/death speech plus1923 bit1 credit, reset re-dormancy/5s Evocation/channeler respawn and channeler combat. Shared `Hook::JustReachedHome` and non-forced `SpawnGroupSpawn`. Qualification2PASS36.98s→pushed ignored RED (8 genuine + 1 corrected oracle)→GREEN11/11 83.10s, tests enabled. Named gaps: `KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`, `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`. [Contract](specs/boss-scripts.md#blood-furnace-kelidan-source-boundary); independent gate pending.
+
 ## Blood Furnace The Maker — 2026-10-20
 
-Source17381 Talk0/Heroic40059 victim beaker5–15/10–20s with actual damage and knockback, player-only slay Talk1, death Talk2 plus1922 bit0 credit, evade re-arm. Qualification2PASS39.74s→pushed ignored5RED36.78s→minimal GREEN5/5 29.90s, tests enabled. Named gaps: `MAKER_NORMAL_BEAKER_30925_ABSENT_70448`, `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`, `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`, `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`. [Contract](specs/boss-scripts.md#blood-furnace-the-maker-source-boundary); independent gate pending.
+Source17381 Talk0/Heroic40059 victim beaker5–15/10–20s with actual damage and knockback, player-only slay Talk1, death Talk2 plus1922 bit0 credit, evade re-arm. Qualification2PASS39.74s→pushed ignored5RED36.78s→minimal GREEN5/5 29.90s, tests enabled. Named gaps: `MAKER_NORMAL_BEAKER_30925_ABSENT_70448`, `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`, `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED` (binding publication since retired). [Contract](specs/boss-scripts.md#blood-furnace-the-maker-source-boundary); independent gate pending.
 
 ## Fel Iron chest activation blocked
 
