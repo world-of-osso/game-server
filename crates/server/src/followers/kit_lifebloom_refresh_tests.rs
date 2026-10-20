@@ -72,7 +72,6 @@ fn refresh_and_observe(h: &mut Harness, caster: Entity, old: &AuraInstance) {
 }
 
 #[test]
-#[ignore = "LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC: early own refresh must not bloom"]
 fn follower_lifebloom_early_native_refresh_does_not_bloom() {
     let (mut h, caster, old) = prepare_refresh(0.6);
     refresh_and_observe(&mut h, caster, &old);
@@ -80,7 +79,6 @@ fn follower_lifebloom_early_native_refresh_does_not_bloom() {
 }
 
 #[test]
-#[ignore = "LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC: late own refresh must bloom once"]
 fn follower_lifebloom_late_native_refresh_blooms_once_and_retains_hot() {
     let (mut h, caster, old) = prepare_refresh(0.2);
     refresh_and_observe(&mut h, caster, &old);
