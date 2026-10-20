@@ -352,7 +352,6 @@ fn released(difficulty: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_appears_dormant_with_one_set_of_channelers() {
     for difficulty in [1, 2] {
         let (mut h, map) = kelidan_copy(difficulty);
@@ -388,7 +387,6 @@ fn encounter_coverage_kelidan_appears_dormant_with_one_set_of_channelers() {
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_channelers_star_beam_their_source_partner_after_10s() {
     let (mut h, _) = kelidan_copy(1);
     let events = observe(&mut h, 11.0);
@@ -414,7 +412,6 @@ fn encounter_coverage_kelidan_channelers_star_beam_their_source_partner_after_10
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_wakes_only_after_the_fifth_channeler_dies() {
     for difficulty in [1, 2] {
         let (mut h, map) = kelidan_copy(difficulty);
@@ -459,7 +456,6 @@ fn encounter_coverage_kelidan_wakes_only_after_the_fifth_channeler_dies() {
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_normal_rotation_and_nova_speech() {
     let (mut h, boss, _) = released(1);
     let events = observe(&mut h, 60.0);
@@ -487,7 +483,6 @@ fn encounter_coverage_kelidan_normal_rotation_and_nova_speech() {
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_heroic_volley_absent_without_substitute() {
     let (mut h, boss, _) = released(2);
     let events = observe(&mut h, 60.0);
@@ -501,7 +496,6 @@ fn encounter_coverage_kelidan_heroic_volley_absent_without_substitute() {
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_burning_nova_aura_script_casts_vortex_and_fire_nova() {
     for difficulty in [1, 2] {
         // Dormant Keli'dan casts nothing that could hold the stimulus InProgress.
@@ -558,7 +552,6 @@ fn encounter_coverage_kelidan_burning_nova_aura_script_casts_vortex_and_fire_nov
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_slay_and_death_speech_with_credit() {
     let (mut h, boss, _) = released(1);
     super::omor_slay::install_player_death_transition(&mut h);
@@ -589,7 +582,6 @@ fn encounter_coverage_kelidan_slay_and_death_speech_with_credit() {
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_reset_redormant_reevocates_and_respawns_channelers() {
     let (mut h, boss, map) = released(1);
     h.advance(2.0);
@@ -636,7 +628,6 @@ fn encounter_coverage_kelidan_reset_redormant_reevocates_and_respawns_channelers
 }
 
 #[test]
-#[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_channeler_combat_speech_bolt_and_mark() {
     for difficulty in [1, 2] {
         let (mut h, _) = kelidan_copy(difficulty);
