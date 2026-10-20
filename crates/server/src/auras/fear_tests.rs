@@ -466,9 +466,32 @@ fn shout_harness() -> Harness {
 }
 
 fn kobold_swings_within(h: &mut Harness, frames: usize) -> bool {
-    let health = h.health(h.caster);
+    let first_event = h.inbox.log.len();
     h.advance(frames);
-    h.health(h.caster) < health
+    let swung = h.inbox.log[first_event..].iter().any(|event| {
+        event.source == Some(h.npc.to_bits())
+            && event.target == Some(h.caster.to_bits())
+            && event.spell_id.is_none()
+            && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+    });
+    if swung {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(h.npc),
+            Some(&crate::creature_ai::CreatureState::Pursuing {
+                target: h.caster.to_bits()
+            })
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_threat::CurrentVictim>(h.npc)
+                .and_then(|victim| victim.target),
+            Some(h.caster)
+        );
+    }
+    swung
 }
 
 #[test]

@@ -119,18 +119,42 @@ fn polymorphed(h: &Harness) -> bool {
     has_aura(h.app.world(), h.npc, POLYMORPH)
 }
 
-/// The kobold attacks the mage (`AttackStart`) until one swing has landed.
+/// Wait for a real owned swing attempt, including a legitimate miss.
 fn kobold_attacks(h: &mut Harness) {
     let (npc, caster) = (h.npc, h.caster);
+    let first_event = h.inbox.log.len();
     crate::creature_aggro::attack_start(h.app.world_mut(), npc, caster);
     for _ in 0..100 {
         h.advance(1);
-        if h.health(h.caster) < 1000.0 {
+        let swung = h.inbox.log[first_event..].iter().any(|event| {
+            event.source == Some(npc.to_bits())
+                && event.target == Some(caster.to_bits())
+                && event.spell_id.is_none()
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Damage
+                        | shared::protocol::CombatLogKind::Miss(_)
+                )
+        });
+        if swung {
+            assert_eq!(
+                h.app.world().get::<CreatureState>(npc),
+                Some(&CreatureState::Pursuing {
+                    target: caster.to_bits()
+                })
+            );
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::creature_threat::CurrentVictim>(npc)
+                    .and_then(|victim| victim.target),
+                Some(caster)
+            );
             return;
         }
     }
     panic!(
-        "the kobold never hit the mage; actual events={:?}; state={:?}; fixed_time={:?}",
+        "the kobold never attempted a swing at the mage; actual events={:?}; state={:?}; fixed_time={:?}",
         h.inbox.log,
         h.app.world().get::<CreatureState>(h.npc),
         h.app.world().resource::<Time<Fixed>>().elapsed()
