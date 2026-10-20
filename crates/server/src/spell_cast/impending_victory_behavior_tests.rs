@@ -53,7 +53,6 @@ fn assert_native_heal(h: &Harness, index: usize, full: bool) -> i32 {
 }
 
 #[test]
-#[ignore = "pushed native regression before Impending Victory AfterCast binding"]
 fn native_impending_victory_wounded_owner_without_victorious_still_heals_once() {
     let mut h = fixture();
     wound(&mut h);
@@ -68,7 +67,6 @@ fn native_impending_victory_wounded_owner_without_victorious_still_heals_once() 
 }
 
 #[test]
-#[ignore = "pushed native regression before Impending Victory AfterCast binding"]
 fn native_impending_victory_full_health_casts_native_overheal() {
     let mut h = fixture();
     charge_for_real_rage(&mut h);
@@ -79,7 +77,6 @@ fn native_impending_victory_full_health_casts_native_overheal() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Impending Victory AfterCast binding"]
 fn native_impending_victory_consumes_only_casting_warriors_actual_victorious() {
     let mut h = fixture();
     let peer = super::super::test_harness::spawn_player(&mut h.app, 1, 1.0);
@@ -109,7 +106,6 @@ fn native_impending_victory_consumes_only_casting_warriors_actual_victorious() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Impending Victory AfterCast binding"]
 fn native_impending_victory_refused_zero_rage_without_victorious_cannot_heal() {
     let mut h = fixture();
     wound(&mut h);
@@ -124,7 +120,6 @@ fn native_impending_victory_refused_zero_rage_without_victorious_cannot_heal() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Impending Victory AfterCast binding"]
 fn native_impending_victory_cooldown_refusal_neither_heals_nor_consumes_reapplied_aura() {
     let mut h = fixture();
     cast_victorious(&mut h);
@@ -146,7 +141,6 @@ fn native_impending_victory_cooldown_refusal_neither_heals_nor_consumes_reapplie
 }
 
 #[test]
-#[ignore = "pushed native regression before Impending Victory AfterCast binding"]
 fn native_impending_victory_natural_recovery_allows_new_real_wound_heal() {
     let mut h = fixture();
     cast_victorious(&mut h);
