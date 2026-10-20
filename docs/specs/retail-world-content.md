@@ -167,7 +167,7 @@ Server behaviour on Retail content
 - `crates/server/src/quest_data.rs`, `loot/tables.rs`: read `content_creature_template`
 
 - `scripts/derived_merchants.py`, `scripts/derived-merchants.json` — validated, explicitly derived merchant publication inputs.
-- `scripts/terrain_height.py` — client ADT triangle-height sampling for derived placement.
+- `scripts/terrain_height.py` — client ADT triangle-height sampling for derived placement. Bytes are decoded by the `wow-formats-dump adt-height` CLI at the revision pinned in `scripts/wow_formats_dump.py` (a missing binary fails with its `cargo install` command); the script keeps chunk selection, validation, error messages and interpolation.
 
 ## Tests asserting this spec
 
