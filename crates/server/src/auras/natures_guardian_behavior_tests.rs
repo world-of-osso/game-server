@@ -157,8 +157,30 @@ fn native_natures_guardian_cooldown_blocks_repeat_then_natural_expiry_rearms() {
     assert_eq!(h.health(owner), 340.0);
     assert!(h.app.world().resource::<Time>().elapsed_secs_f64() < expiry);
     assert_owned_children(&h, owner, 1);
+    eprintln!(
+        "idle-CD-wait start t{} HP{} expiry{expiry}",
+        h.app.world().resource::<Time>().elapsed_secs_f64(),
+        h.health(owner)
+    );
+    let mut previous_health = h.health(owner);
     while h.app.world().resource::<Time>().elapsed_secs_f64() <= expiry {
         h.advance(1);
+        let current_health = h.health(owner);
+        if current_health != previous_health {
+            eprintln!(
+                "idle-HP-change t{} {previous_health}→{current_health} combat{:?} native-heals{} regen{:?}",
+                h.app.world().resource::<Time>().elapsed_secs_f64(),
+                h.app
+                    .world()
+                    .get::<shared::components::CombatStatus>(owner)
+                    .map(|combat| combat.0),
+                heals(&h, owner).len(),
+                h.app
+                    .world()
+                    .get::<crate::spell_cast::powers::PlayerHealthRegen>(owner)
+            );
+            previous_health = current_health;
+        }
     }
     h.advance(3);
     assert!(aura(&h, owner, COOLDOWN).is_none());
