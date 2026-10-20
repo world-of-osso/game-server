@@ -44,6 +44,7 @@ pub fn tab_slots(
     tab: &BankTabData,
     soulbound: impl Fn(u64) -> bool,
     source: impl Fn(u64) -> shared::item_data::ItemDefinitionSource,
+    origin: impl Fn(u64) -> Option<shared::protocol::CraftingOrigin>,
 ) -> Vec<Option<ItemStack>> {
     tab.slots
         .iter()
@@ -55,6 +56,7 @@ pub fn tab_slots(
                 count: item.stack_count,
                 durability: None,
                 soulbound: soulbound(item.item_guid),
+                crafting_origin: origin(item.item_guid),
             })
         })
         .collect()
