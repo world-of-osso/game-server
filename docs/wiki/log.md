@@ -1,3 +1,7 @@
+## 2026-10-19 — Wild Growth native-coefficient falloff policy
+
+[Source and proof boundary](investigations/follower-data.md#wild-growth-native-coefficient-falloff-policy--2026-10-19): explicit `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`, never legacy0.175/TC curve; absolute Retail shape uncertified. Pushed3ignored1fb0e4983 gives1PASS/2FAIL23.67s: native42 constant62×7 genuine decline RED,43 relative check blocked by same baseline prerequisite, natural expiry PASS. Minimal48438-only scheduled-deadline multipliere930 plus landed master merge43e0 gives unchanged3GREEN20.54s/no warnings:42 actual65→57,43 normalized native40%-less and unchanged seven-tick expiry. Enabled only afterward3327; final independent lead gate pending.
+
 ## 2026-10-19 — Fel Iron chest flag preflight blocked
 
 [GO_NOT_SELECTABLE_FLAG_UNMODELLED](investigations/go-not-selectable-flag.md) records the read-only placement/interaction census and existing Isle keep-banner unlock hazard. Fel Iron MakeActive stopped before implementation; raw census attached from the separate engine data evidence tree. No server/protocol/client flag semantics or chest behavior changed.
