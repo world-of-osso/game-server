@@ -204,7 +204,7 @@ fn health_and_auras_allow(
     };
     if condition
         .missing_aura
-        .is_some_and(|aura| crate::auras::has_aura(world, aura_target, aura))
+        .is_some_and(|aura| maintenance_aura_present(world, unit, aura_target, entry.slot, aura))
     {
         return false;
     }
@@ -218,6 +218,35 @@ fn health_and_auras_allow(
         return false;
     }
     true
+}
+
+fn maintenance_aura_present(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    slot: Slot,
+    aura: u32,
+) -> bool {
+    let periodic_damage = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(aura)
+        .is_some_and(|spell| {
+            spell.effects.iter().any(|effect| {
+                crate::auras::is_aura_effect(effect)
+                    && effect.aura == crate::auras::PERIODIC_DAMAGE_AURA
+            })
+        });
+    if slot != Slot::Attack || !periodic_damage {
+        return crate::auras::has_aura(world, target, aura);
+    }
+    // SimC76f8118 sc_druid.cpp13833: target.get_dot("moonfire", &source).
+    world
+        .get::<crate::auras::ActiveAuras>(target)
+        .is_some_and(|auras| {
+            auras
+                .iter()
+                .any(|active| active.spell_id == aura && active.caster == caster)
+        })
 }
 
 fn combat_allows(
