@@ -13,6 +13,7 @@
 //! `CREATE_ITEM` (24) stores the item and rolls `Player::UpdateCraftSkill`.
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
+mod bank_reagents;
 mod concentration;
 #[cfg(test)]
 mod crafting_provenance_fixture;
@@ -24,6 +25,7 @@ mod modern_crafting_fixture;
 mod quality_reagents;
 pub(crate) mod specializations;
 mod trainer;
+use bank_reagents::ReagentBanks;
 pub(crate) use gathering::GatherProgress;
 
 use bevy::prelude::*;
@@ -43,7 +45,6 @@ use crate::inventory::load_model;
 use crate::item_templates::ItemTemplates;
 use crate::merchant::VendorCatalog;
 use crate::networking::PlayerLink;
-use crate::persistence::inventory_store::save_inventory_record;
 use crate::persistence::{self, ClientId, GameDatabase, InventoryItemData};
 use crate::spell_cast::CastFailure;
 use crate::spell_cast::effects::EffectCtx;
@@ -437,12 +438,18 @@ struct Bags<'w> {
     templates: &'w ItemTemplates,
     catalog: &'w VendorCatalog,
     character_id: u64,
+    /// The account of the player's connection, for the Warband bank.
+    account_id: Option<u64>,
 }
 
 impl Bags<'_> {
     fn load(&self) -> Result<InventoryModel, String> {
         load_model(&self.db.db, self.templates, self.character_id)
             .map_err(|error| format!("{error:?}"))
+    }
+
+    fn load_banks(&self) -> ReagentBanks {
+        ReagentBanks::load(&self.db.db, self.character_id, self.account_id)
     }
 
     fn item_name(&self, item_id: u32) -> String {
@@ -509,8 +516,17 @@ fn with_bags<R>(world: &World, player: Entity, apply: impl FnOnce(&Bags) -> R) -
         templates: world.get_resource::<ItemTemplates>()?,
         catalog: world.get_resource::<VendorCatalog>()?,
         character_id,
+        account_id: player_account(world, player),
     };
     Some(apply(&bags))
+}
+
+fn player_account(world: &World, player: Entity) -> Option<u64> {
+    world
+        .try_query::<(&PlayerLink, &Authenticated)>()?
+        .iter(world)
+        .find(|(link, _)| link.0 == player)
+        .map(|(_, auth)| auth.account_id)
 }
 
 pub(crate) fn new_order_item(
@@ -604,8 +620,9 @@ pub(crate) fn check_cast_items(
         let mut model = bags
             .load()
             .map_err(|detail| CastFailure::Unsupported(format!("bags unavailable: {detail}")))?;
+        let banks = bags.load_banks();
         for &(item, count) in reagents {
-            if model.bag_count(Retail, item) < count {
+            if model.bag_count(Retail, item) + banks.count(item) < count {
                 return Err(CastFailure::Reagents(bags.item_name(item)));
             }
         }
@@ -655,7 +672,8 @@ fn check_tools(
     Ok(())
 }
 
-/// `Spell::TakeReagents`: remove the spell's reagents from the caster's bags.
+/// `Spell::TakeReagents`: remove the spell's reagents from the caster's bags,
+/// then its banks (`bank_reagents`).
 pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo) {
     // Order reagents are consumed atomically with result/commission delivery at effect24.
     if crate::crafting_orders::is_order_cast(world, caster, spell.id) {
@@ -672,10 +690,11 @@ pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo
     }
     let taken = with_bags(world, caster, |bags| {
         let mut model = bags.load()?;
+        let mut banks = bags.load_banks();
         for (item, count) in reagents {
-            model.destroy_bag_items(Retail, item, count)?;
+            banks.take(&mut model, item, count)?;
         }
-        save_inventory_record(&bags.db.db, bags.character_id, &model.into_record());
+        banks.save(&bags.db.db, model);
         Ok::<_, String>(bags.character_id)
     });
     match taken {

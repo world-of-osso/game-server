@@ -1556,9 +1556,8 @@ fn linen_in(bank: &persistence::banks::BankData) -> u32 {
 
 /// Retail `ItemUtil.GetCraftingReagentCount` counts bags, the character bank
 /// and the Warband bank; reagents are consumed in project policy
-/// CRAFTING_REAGENT_CONSUMPTION_ORDER_BAGS_THEN_REAGENT_BANK_THEN_BANK_THEN_WARBAND.
+/// CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS.
 #[test]
-#[ignore = "RED: CRAFTING_REAGENTS_FROM_BANK"]
 fn crafting_consumes_reagents_from_bags_then_character_bank_then_warband_bank() {
     use persistence::banks::{BankOwner, load_account_bank, load_character_bank, save_bank_move};
     let Some(mut h) = harness(10) else { return };
