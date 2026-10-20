@@ -22,9 +22,14 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod germination;
+pub(super) use germination::redirect_rejuvenation;
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
+mod soul_of_the_forest;
 mod swiftmend;
+pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
+pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
@@ -1183,7 +1188,10 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
-        swiftmend::SWIFTMEND => Some(swiftmend::consume_own_hot),
+        swiftmend::SWIFTMEND => Some(swiftmend::hit),
+        soul_of_the_forest::REGROWTH | soul_of_the_forest::REJUVENATION => {
+            Some(soul_of_the_forest::consume_after_heal)
+        }
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),

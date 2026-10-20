@@ -3283,6 +3283,13 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 
 gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
 
+## 2026-10-19 — Native Germination shorter-remaining routing
+
+[Source/native boundary](investigations/follower-data.md#germination-shorter-remaining-routing--2026-10-19): SimC76f8118/native155675learned33not32. Pushedignored3first; native1PASS/secondHoTmissingRED/thirdprerequisiteblocked19.16s→pre-applyordinary155777redirect3GREEN30.79s/zero warnings. EnabledafterGREENc252954fc, dualperiodichealreceipts/otherdeadlineunchanged; no cost/timer/globalstacking/Swiftmendinteraction changes. Pushed; finalgatepending.
 ## 2026-10-19 — Swiftmend own-HoT hit consumption
 
 [Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.
+
+## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
+
+[Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.

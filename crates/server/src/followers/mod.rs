@@ -181,7 +181,11 @@ mod kit_abundance_tests;
 #[cfg(test)]
 mod kit_dot_ownership_tests;
 #[cfg(test)]
+mod kit_germination_tests;
+#[cfg(test)]
 mod kit_interrupt_tests;
+#[cfg(test)]
+mod kit_soul_of_forest_tests;
 #[cfg(test)]
 mod kit_source_tests;
 #[cfg(test)]
