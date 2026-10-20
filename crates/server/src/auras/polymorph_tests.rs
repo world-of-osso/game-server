@@ -129,7 +129,12 @@ fn kobold_attacks(h: &mut Harness) {
             return;
         }
     }
-    panic!("the kobold never hit the mage");
+    panic!(
+        "the kobold never hit the mage; actual events={:?}; state={:?}; fixed_time={:?}",
+        h.inbox.log,
+        h.app.world().get::<CreatureState>(h.npc),
+        h.app.world().resource::<Time<Fixed>>().elapsed()
+    );
 }
 
 /// Let Polymorph finish, including up to two 500 ms damage pushbacks.
@@ -465,6 +470,41 @@ fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seco
         return;
     };
     kobold_attacks(&mut h);
+    assert_spy_evades_and_regenerates(&mut h, max_health);
+}
+
+#[test]
+#[ignore = "native forced-miss RED before polymorph readiness event oracle"]
+fn polymorph_native_forced_miss_engagement_still_evades_and_regenerates() {
+    let (mut h, max_health) = spy_harness().unwrap();
+    h.cast_and_deliver(EVASIVE_MANEUVERS, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has_aura(h.app.world(), h.caster, EVASIVE_MANEUVERS));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .modifier(184),
+        -200.0
+    );
+    kobold_attacks(&mut h);
+    assert_eq!(
+        h.health(h.caster),
+        1000.0,
+        "native misses do not reduce mage health"
+    );
+    assert!(h.inbox.log.iter().any(|event| {
+        event.source == Some(h.npc.to_bits())
+            && event.target == Some(h.caster.to_bits())
+            && event.spell_id.is_none()
+            && event.kind == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Miss)
+    }));
+    assert_spy_evades_and_regenerates(&mut h, max_health);
+}
+
+fn assert_spy_evades_and_regenerates(h: &mut Harness, max_health: f32) {
     // Its home is 10 yd away: 1.7 s of running back at 6 yd/s.
     h.app.world_mut().get_mut::<SpawnPoint>(h.npc).unwrap().x += 10.0;
     let wounded = (max_health / 10.0).floor();
