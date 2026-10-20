@@ -7,7 +7,7 @@ const OLD_OFFER: u32 = 4;
 
 fn monthly_path() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../data/trading-post-monthly-catalog.json")
+        .join("../../content/trading-post-monthly-catalog.json")
 }
 
 fn prepare_monthly(h: &mut Harness, now: i64) {
