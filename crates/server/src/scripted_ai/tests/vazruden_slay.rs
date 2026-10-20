@@ -121,7 +121,6 @@ fn slay_count(h: &Harness, actor: Entity, listener: usize) -> usize {
 }
 
 #[test]
-#[ignore = "unfiltered source17537 NPC victim and real corpse replay control"]
 fn encounter_coverage_vazruden_slay_npc_victim_speaks_once() {
     let (mut h, _, nazan, vazruden, _, _) = super::herald_ground::reach_fall(2);
     h.advance(2.0);
@@ -149,7 +148,6 @@ fn encounter_coverage_vazruden_slay_npc_victim_speaks_once() {
 }
 
 #[test]
-#[ignore = "native nonlethal damage then another real killer cannot award17537 slay"]
 fn encounter_coverage_vazruden_slay_nonlethal_then_other_killer_stays_silent() {
     let (mut h, _, nazan, vazruden) = first_west(1);
     h.app.init_resource::<ObservedCombatEvents>();
@@ -211,7 +209,6 @@ fn encounter_coverage_vazruden_slay_nonlethal_then_other_killer_stays_silent() {
 }
 
 #[test]
-#[ignore = "shared production Unit::Kill must notify actual owned killer, not reward owner"]
 fn encounter_coverage_vazruden_slay_shared_owned_killer_does_not_notify_owner() {
     // Shared attribution control uses actual Omor30707 -> owned17540, not
     // an invented minion/owner component on Vazruden, who has no such source summon.
@@ -256,7 +253,6 @@ fn encounter_coverage_vazruden_slay_ordinary_lethal_qualification() {
 }
 
 #[test]
-#[ignore = "source17537 actual ordinary native player kill must emit missing Talk2"]
 fn encounter_coverage_vazruden_slay_ordinary_player_death_speaks_once() {
     let (mut h, _, nazan, vazruden) = ordinary_lethal_fixture();
     assert_eq!(

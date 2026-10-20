@@ -1,3 +1,7 @@
+## 2026-10-19 — Vazruden actual slay speech
+
+[Bounded slay](systems/boss-scripts.md#vazruden-slay-speech--2026-10-19): unrealistic1M buffer did not qualify lethal180s; approved native level10/class1 stat producer1110HP gives ordinary17537 melee death/corpse, qualification1PASS42.42s. Pushed ignoredfdeea2RED/1control55.54s plus real ownedHound reward-owner baseline1PASS59.78s; sole unfiltered killed_unit→Talk2 hook4d2f gives fourGREEN79.39s before enabling. Five-case composite with retained qualification, independent gate pending. Controls use approved production Unit::Kill HARNESS SETUP, no HP shortcuts/fabricated hooks or owners; no source timer/ability/native-audio/loot/persistence change.
+
 ## 2026-10-19 — Herald flying Liquid Fire
 
 [Flying actual-impact boundary](systems/boss-scripts.md#herald-flying-liquid-fire--2026-10-19): qualification73bc2PASS64.88s establishes natural victim/random admission and positive impacts in Normal/Heroic FIRST. Pushed ignored4b11→four genuineRED200.85s; production adds only four IDs to existing Fireball hit hookd75c→four full nativeGREEN287.96s before enabling. Actual frame-local child/freshGO prevents stale victim-field acceptance; source GO lifecycle/damage/copy oracle reused unchanged. Retained natural qualification2PASS plus extracted ground/source/refusal6PASS183.95s ate0e53 completes a twelve-case composite; independent gate pending. No broader flight/native/balance/loot/persistence claim.
