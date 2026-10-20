@@ -14,7 +14,7 @@ const DESCEND: Position = Position {
 };
 const GROUND_SPELLS: [u32; 5] = [34653, 36920, 30926, 36921, 39427];
 
-fn reach_fall(difficulty: u32) -> (Harness, InMap, Entity, Entity, Entity, Duration) {
+pub(super) fn reach_fall(difficulty: u32) -> (Harness, InMap, Entity, Entity, Entity, Duration) {
     let (mut h, map, nazan, vazruden) = first_west(difficulty);
     h.app.init_resource::<ObservedCombatEvents>();
     let floor = h
