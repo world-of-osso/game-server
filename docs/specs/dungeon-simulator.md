@@ -11,6 +11,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Spawn through the production map-population path, preserving its Normal difficulty, formation, pool and source-identity semantics; a hand-built population must not bypass those tags.
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
 - [ ] Clear every Stockade boss in seconds of CPU, targeting at least 100 simulated seconds per wall-second. Report ticks, setup/update/control/observation wall costs, simulation ratio, live entity/event counts and process memory in periodic checkpoints. Report cleared/wiped, failed pack, HP/mana traces and pull decisions; terminal source-unit state must make stalls diagnosable. Unrelated NPC fights/regen and unexecuted movement requests do not establish party progress.
+- [ ] Use optimized `sim` profile (release inheritance with debug assertions), and reuse loaded immutable catalogs across fresh seeded worlds without per-run catalog clones.
 - [ ] Batch N seeded runs and summarize per-pack wipe rate. Report runs reaching each pack as the denominator, wipes separately from all failed clears (including stalls/blocks/timeouts), and keep each run's HP/mana/pull trace. A batch that executed successfully is not a clear unless all runs cleared.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
@@ -26,6 +27,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller, real party-progress observation, periodic profiling checkpoints and HP/mana/pull/death report.
 - `crates/server/src/dungeon_simulator/diagnostics.rs`: read-only source-unit snapshots and process memory observations.
 - `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.
+- `Cargo.toml` `[profile.sim]`: optimized batch execution with native debug assertions.
 - `scripts/run-dungeon-simulator.py`: execute the compiled filtered test from repository root, with explicit output directory, run count and starting seed.
 - `crates/server/src/dungeon_simulator/batch.rs`: seeded collector, per-pack wipe/failure counts and summary JSON.
 - `crates/server/src/followers/simulator.rs`: authentic party initialization and direct leader/kit/pull-admission seam.
