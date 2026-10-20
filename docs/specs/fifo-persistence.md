@@ -41,6 +41,22 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - `crates/server/src/adventure_guide_tests.rs` — real monthly refresh under a held writer.
 - `crates/server/src/trading_post_tests.rs` — held-writer request responsiveness/no early reply, same-tick real earning→purchase→reopen and existing vendor/purchase/cart/refund/month-reset controls.
 
+## Native proof purchase hold (harness hook)
+
+- [ ] Explicitly opt-in `native-proof-hold-persistence` Cargo feature exists only for private debug peer builds. It is not a default feature; release/deploy builds must not contain it.
+- [ ] `NATIVE_PROOF_HOLD_PERSISTENCE_DIR` names an absolute private control directory. A prepared, membership-validated Purchase/Checkout job on the existing FIFO claims `arm` as `held` before any purchase mutation; `release` lets that same job commit and publish its real reply. Query/Balance/Refund/Freeze and main-thread UDP work do not acquire this hold.
+- [ ] A30-second hard maximum rejects the held request without purchasing or charging when release never arrives; the ordinary failed-action snapshot retains current authority. Release/held markers are consumed, stale markers and filesystem errors are explicit failures, and later FIFO work remains drainable. This is a failure watchdog, not timed auto-release for ordering proofs.
+- [ ] Default production behavior,10-second Netcode timeout, heartbeat and gameplay clocks remain unchanged. No ptrace/strace, host-permission changes, alternate writer, wire IDs or production delay knob.
+- [ ] Pushed-first ignored existing-API purchase/checkout regressions c7b86e113 reached both expected missing-hold assertions before production edits: both child transactions genuinely completed without a held marker (407.8s helper/17.39s tests). At5ded6c44f, feature-enabled7/0/0 passes actual Purchase/Checkout release, fixed30s refusal/no charge/later FIFO progress, and marker/error controls; default2/0/0 separately proves private arm is ignored while real transactions complete. Release cfg guard is source-inspected, not a performed release-hook build. Parent persistence/check/fmt gate remains pending before native use.
+
+Private build only (never pass the feature to release/deploy):
+
+```text
+agent-run <owner> python3 scripts/build-host.py --features native-proof-hold-persistence --bin game-server
+```
+
+Set `NATIVE_PROOF_HOLD_PERSISTENCE_DIR` only on the owned private peer, create that directory, then create `arm` before accepting one purchase and `release` after observing `held`. Feature tests use `--features native-proof-hold-persistence`; default-exclusion tests omit it. Both are filtered by `native_proof_hold_persistence`.
+
 ## Known gaps (current cycle)
 
 - [x] Minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import integrated with master b8b6c2f9d and landed netdelta;13 core controls pass within28 affected controls.
