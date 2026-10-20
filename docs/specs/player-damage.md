@@ -57,6 +57,8 @@ Examples
 - A level 10 Human Mage (Int 38 = SP 38) casts Frostbolt for 2.448 × 38 = 93 ± 2.5%, 186 ± 2.5% on a crit.
 - Live: a level 10 Arms Warrior with the Worn Shortsword killed a level 10 Mangy Wolf in 10 swings (7 hits of 60-64, 3 dodges) in 24 s. Arms Warrior 137049 gives auto-attacks +476%; Plate Specialization 86101 gives +5% Strength (35 AP); 15-16 × 5.76 = 86-92, less 30% armor (`game-engine/data/diagnostics/playerdamage-20260926/`).
 
+- [x] Auto Shot75 (SPELL_ATTR2_AUTO_REPEAT) repeats on the ranged attack timer after a successful cast: base time is the ranged main-hand delay (BASE_ATTACK_TIME 2s otherwise) divided by haste; each shot resets it and fires without GCD (TC Unit.cpp3008–3044, Spell.cpp4229–4238). Moving does not stop it; a failed check (out of range) skips the shot and keeps the repeat. StopSpellCast and the first stun, fear or confuse cancel it (Unit.cpp1191–1196, 3251–3259, 11609–11617).
+
 ## How it works
 
 - [Player damage](../wiki/systems/player-damage.md) — swing pipeline, armor, spell amounts
@@ -100,7 +102,7 @@ Examples
 - [ ] Creature crit auras, the attacker's MOD_ATTACKER_MELEE_CRIT_CHANCE on the victim, sitting victims being crit, evading victims (`MELEE_HIT_EVADE`), `CREATURE_FLAG_EXTRA_NO_PARRY/NO_BLOCK/NO_CRIT` and totems are not modelled.
 - [ ] Block 107 is on the general Defense skill line 95, which class progression does not learn, so players do not block yet; Parry is on class skill lines (Warrior 3127, Death Knight 82246).
 - [ ] Hit rating and expertise (TrinityCore `m_modMeleeHitChance`, GetExpertiseDodgeOrParryReduction), MOD_CRIT_DAMAGE_BONUS and armor penetration are not modelled.
-- [ ] Ranged auto-shot does not exist on the server; ranged weapons do not swing.
+- [ ] Auto Shot75 does not enforce its equipped-ranged-weapon requirement; Wand Shoot and other autorepeat spells, ranged-haste auras, ranged-timer pausing during other casts (Unit.cpp465–474), death cancel, Scatter Shot, client toggle/UI and pet/NPC ranged attacks are not modelled. Players still melee-swing with a ranged main hand.
 - [ ] Dual wield is not tracked: the inventory refuses one-handers in the off hand, so only off-hand-only weapons swing there.
 - [ ] Proc hit masks are not modelled: avoided swings raise no procs, so dodge- or parry-triggered procs never fire.
 - [ ] Spell hit and resist rolls, and the ArmorItemLevelDiminishing curve at the maximum level, are not modelled.

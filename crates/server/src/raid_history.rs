@@ -158,6 +158,7 @@ mod tests {
                     handled_area_triggers: Default::default(),
                     data: Default::default(),
                     ramparts_sentry_deaths: 0,
+                    ramparts_reset_delays: Vec::new(),
                 },
             )])));
         assert!(set_boss_state(

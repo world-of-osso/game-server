@@ -153,6 +153,75 @@ pub(crate) fn spawn_group_spawn(
     entities
 }
 
+/// `SpawnGroupSpawn(group, ignoreRespawn=true, force=false)` for an ordinary group.
+/// Living members stay untouched; dead instances and their timers are replaced.
+pub(crate) fn reset_spawn_group(world: &mut World, map: crate::maps::InMap, group: u32) {
+    let guids = world
+        .resource::<WorldData>()
+        .reset_spawn_groups
+        .get(&group)
+        .expect("reset spawn group must be loaded")
+        .clone();
+    let (alive, replicate) = remove_dead_group_members(world, map, &guids);
+    let difficulty = map_difficulty_id(world, map);
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    world.init_resource::<crate::ground::GroundMap>();
+    world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
+        let data = world.resource::<WorldData>();
+        let spawns = data.spawns_by_map[&(map.map_id as u16)]
+            .iter()
+            .map(|&index| &data.spawns[index])
+            .filter(|spawn| {
+                guids.contains(&spawn.guid)
+                    && !alive.contains(&spawn.guid)
+                    && spawn.spawns_at(difficulty)
+            });
+        let mut commands = Commands::new(&mut queue, world);
+        spawn_creatures(
+            &mut commands,
+            data,
+            map,
+            difficulty,
+            replicate,
+            spawns,
+            Some(&mut ground),
+        );
+    });
+    queue.apply(world);
+}
+
+/// Removing the dead actor also removes its old respawn timer; keep living GUIDs.
+fn remove_dead_group_members(
+    world: &mut World,
+    map: crate::maps::InMap,
+    guids: &[u32],
+) -> (HashSet<u32>, bool) {
+    let members: Vec<_> = world
+        .query::<(
+            Entity,
+            &crate::maps::InMap,
+            &CreatureOrigin,
+            &shared::components::Health,
+            Has<Replicate>,
+        )>()
+        .iter(world)
+        .filter(|(_, copy, origin, _, _)| **copy == map && guids.contains(&origin.guid))
+        .map(|(actor, _, origin, health, replicate)| {
+            (actor, origin.guid, health.current > 0.0, replicate)
+        })
+        .collect();
+    let replicate = members.iter().any(|row| row.3);
+    let mut alive = HashSet::new();
+    for (actor, guid, living, _) in members {
+        if living {
+            alive.insert(guid);
+        } else {
+            world.despawn(actor);
+        }
+    }
+    (alive, replicate)
+}
+
 /// The difficulty a creature's map copy was created at (`Map::GetDifficultyID`), which
 /// picks its template's difficulty row and loot.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]

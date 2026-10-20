@@ -155,6 +155,8 @@ Ordinary difficulty205 Frozen Ground387149 must bind native create-properties265
 
 ## Full-spec follower kits (user decision, 2026-10-18)
 
+Periodic-damage maintenance in attack slots must check the actor's own active aura, not another caster's instance. Derive periodic damage from the native maintenance aura's actual effect metadata; preserve any-caster semantics for HoTs, buffs, dispels and other non-periodic maintenance. Source: SimC76f8118 Restoration Moonfire APL20/38 and `sc_druid.cpp:13833` actor-specific target DoT, not a claim of Retail follower AI parity. Global `has_aura` semantics remain unchanged.
+
 Party/tank patient eligibility must reuse the ordinary spell backend's target-aura restriction check before ranking by health. This applies generically, including computed target states and source owner exemptions; no Swiftmend-specific spell ID rule. Cast costs/recovery, urgent-cast replacement and pursuit remain ordinary execution responsibilities, not new patient-ranking gates.
 
 `FOLLOWER_OWNER_TARGET_AURA_STATE_EXEMPTION_VIA_SUMMONED_BY`: followers use the project's existing `UnitSummonedBy(owner)` representation. Consequently the shared backend's source owner-target aura-state exemption applies when healing that owner; this follower modelling choice is project policy, not Retail follower-dungeon parity. The source relation is TC a352b1fa `SpellInfo.cpp:2497` `!unitCaster->IsVehicle() && !(unitCaster->GetCharmerOrOwner() == target)`; `Unit.h:1208,1233–1238` derives owner from SummonedBy and prefers charmer. Charmer ownership is currently unmodelled.

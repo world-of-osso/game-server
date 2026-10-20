@@ -50,6 +50,11 @@ impl CreatureAi for Vazruden {
         }
     }
 
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        ctx.talk(0);
+        super::evade_encounter(ctx);
+    }
+
     // TC482–495: completion precedes source speech, ordinary death Call and notification.
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         if self.is_other_dead {
