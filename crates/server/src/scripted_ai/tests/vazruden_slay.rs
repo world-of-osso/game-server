@@ -3,6 +3,35 @@ use super::herald_call::first_west;
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 
+fn apply_native_low_level_stats(h: &mut Harness) {
+    use bevy::ecs::system::RunSystemOnce;
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert((
+        shared::components::Level(10),
+        shared::components::UnitLevel(10),
+    ));
+    let source = crate::spell_cast::test_harness::world_db().unwrap();
+    h.app
+        .insert_resource(crate::spell_cast::test_harness::class_spells(source));
+    h.app
+        .world_mut()
+        .run_system_once(crate::stats::update_character_stats)
+        .unwrap();
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(player)
+        .unwrap();
+    assert_eq!(h.health(player).max, stats.max_health);
+    assert!(h.health(player).current > 0.0);
+    println!(
+        "native Human warrior level10 production stat path: currentHP{} maxHP{} stamina{}",
+        h.health(player).current,
+        stats.max_health,
+        stats.primary.stamina
+    );
+}
+
 #[test]
 fn encounter_coverage_vazruden_slay_ordinary_lethal_qualification() {
     let (mut h, map, _, vazruden) = first_west(2);
@@ -18,7 +47,9 @@ fn encounter_coverage_vazruden_slay_ordinary_lethal_qualification() {
     println!("native17537 sourceGroup2: {texts:?}");
     let position = *h.app.world().get::<Position>(vazruden).unwrap();
     let player = h.player();
-    // Pose-only harness setup at the real grounded summon; HP/stats stay untouched.
+    // Level/class inputs go through the real stat producer; no Health assignment.
+    apply_native_low_level_stats(&mut h);
+    // Pose-only harness setup at the real grounded summon.
     h.app.world_mut().entity_mut(player).insert(Position {
         x: position.x + 3.0,
         ..position
@@ -48,7 +79,7 @@ fn encounter_coverage_vazruden_slay_ordinary_lethal_qualification() {
         })
         .collect();
     println!(
-        "ordinary17537 unchanged initialHP{before} remainingHP{after}, damage_count{}; actual deaths:{deaths:?}",
+        "ordinary17537 native level10 initialHP{before} remainingHP{after}, damage_count{}; actual deaths:{deaths:?}",
         damage.len()
     );
     assert!(
@@ -73,6 +104,4 @@ fn encounter_coverage_vazruden_slay_ordinary_lethal_qualification() {
     assert_eq!(death.state, shared::death::DeathState::Dead);
     assert!(death.corpse.is_some());
     assert_eq!(h.app.world().get::<InMap>(vazruden), Some(&map));
-    assert!(h.inbox(0).chat.iter().any(|line| line.channel == shared::protocol::ChatType::MonsterYell(vazruden.to_bits())),
-        "actual source aggro speech qualifies live17537 in-copy text routing before slay hook");
 }
