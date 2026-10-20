@@ -614,6 +614,8 @@ Source root `game-engine/data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa`
 
 [Contract and named gaps](../../specs/class-completeness.md#aura-worldxp-slice-active70448-2026-10-20). No spell special cases, client/protocol edits or native class completeness claim.
 
+Ghost Wolf2645's native aura129 grants30% run speed, with aura305's100% minimum and no aura58. TC `Unit.cpp:8818–8829` separates run129 from swim58; `8931–8939` applies the minimum after slows. The old minimum-speed test incorrectly expected run's1.3 multiplier on swim: removing Chilled must yield `[run1.3, flight1.0, swim1.0]`. The independent swim consumer is retained; only that test's two expectations are corrected.
+
 RED `d9cbac593`: corrected runtime gate `--bin game-server aura_world_ -- --ignored --test-threads=1` ran15:1 existing-payload control PASS,13 genuine missing-consumer failures and1 SafeFall fixture failure (wall-clock dt had not landed). Initial `--lib` matched0 and is not proof. Corrected SafeFall fixture uses manual50ms before retesting. Runtime log `/tmp/aura-world-red-bin.log`.
 
 Implementation: `auras/reward_mods.rs` is read by individual kill shares, quest settlement and both solo/group loot settlement. Bonus money is checked before atomic group writes and actual credited coins feed gold criteria. `world_state.rs` derives permissions/track mask/force magnitude and snapshots runtime return origins; power display uses existing pools/form precedence. Client-only235/188/408 retain ordinary aura publication without altering healing range, movement or charges.373/646–649 remain warnings/gaps.144 now subtracts summed yards before the existing landing curve; baseline curve remains unchanged.
