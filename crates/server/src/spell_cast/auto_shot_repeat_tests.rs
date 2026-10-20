@@ -9,6 +9,7 @@ use bevy::time::TimeUpdateStrategy;
 use lightyear::prelude::*;
 use shared::components::Position;
 use shared::protocol::{CombatChannel, StopSpellCast};
+use std::ops::RangeInclusive;
 
 const AUTO_SHOT: u32 = 75;
 /// CharacterLoadout158 (Hunter, Purpose0) item: InventoryType26, ItemDelay3000.
@@ -43,17 +44,23 @@ fn hunter() -> Harness {
         .get::<crate::stats::CharacterStats>(caster)
         .unwrap();
     assert_eq!(stats.main_hand.speed, 3.0, "native rifle delay3000");
-    assert_eq!(stats.haste_pct, 0.0, "fixture cadence excludes haste");
     h
 }
 
-/// Frames per native ranged attack at the harness's manual frame step.
-fn shot_interval_frames(h: &Harness) -> usize {
+/// Whole frames between shots: the rifle delay over the computed haste
+/// (Unit::ApplyAttackTimePercentMod), at the harness's manual frame step.
+fn shot_interval_frames(h: &Harness) -> RangeInclusive<usize> {
     let frame_ms = match h.app.world().resource::<TimeUpdateStrategy>() {
-        TimeUpdateStrategy::ManualDuration(step) => step.as_millis() as usize,
+        TimeUpdateStrategy::ManualDuration(step) => step.as_secs_f32() * 1000.0,
         _ => panic!("native harness must use a known manual frame step"),
     };
-    3000 / frame_ms
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap();
+    let frames = stats.main_hand.speed * 1000.0 / (1.0 + stats.haste_pct / 100.0) / frame_ms;
+    frames.floor() as usize..=frames.ceil() as usize
 }
 
 fn shot_count(h: &Harness) -> usize {
@@ -98,10 +105,13 @@ fn class_completeness_native_auto_shot_repeats_at_ranged_weapon_speed() {
     let mut h = hunter();
     let interval = shot_interval_frames(&h);
     start_auto_shot(&mut h);
-    let shots = shots_over(&mut h, interval * 3 + 2);
-    assert_eq!(shots.len(), 3, "three repeats in9s: {shots:?}");
+    let shots = shots_over(&mut h, interval.end() * 3 + 2);
+    assert_eq!(shots.len(), 3, "three repeats: {shots:?}");
     for pair in shots.windows(2) {
-        assert_eq!(pair[1] - pair[0], interval, "ranged cadence {shots:?}");
+        assert!(
+            interval.contains(&(pair[1] - pair[0])),
+            "ranged cadence {shots:?}"
+        );
     }
 }
 
@@ -116,7 +126,7 @@ fn class_completeness_native_auto_shot_keeps_firing_while_moving() {
         .world_mut()
         .entity_mut(caster)
         .insert(crate::networking::Moving(true));
-    let shots = shots_over(&mut h, interval * 2 + 2);
+    let shots = shots_over(&mut h, interval.end() * 2 + 2);
     assert!(
         h.app
             .world()
@@ -139,10 +149,13 @@ fn class_completeness_native_auto_shot_out_of_range_pauses_without_cancelling() 
     start_auto_shot(&mut h);
     let near = h.app.world().get::<Position>(h.npc).unwrap().x;
     move_npc(&mut h, AUTO_SHOT_RANGE + 10.0);
-    assert!(shots_over(&mut h, interval * 2).is_empty(), "out of range");
+    assert!(
+        shots_over(&mut h, interval.end() * 2).is_empty(),
+        "out of range"
+    );
     move_npc(&mut h, near);
     // The timer stayed ready; the retained repeat fires without a new cast.
-    let resumed = shots_over(&mut h, interval + 2);
+    let resumed = shots_over(&mut h, interval.end() + 2);
     assert_eq!(resumed.len(), 1, "back in range: {resumed:?}");
     assert!(resumed[0] < 3, "ready timer fires at once: {resumed:?}");
 }
@@ -153,7 +166,7 @@ fn class_completeness_native_auto_shot_stop_cast_cancels_the_repeat() {
     let mut h = hunter();
     let interval = shot_interval_frames(&h);
     start_auto_shot(&mut h);
-    let repeat = shots_over(&mut h, interval + 2);
+    let repeat = shots_over(&mut h, interval.end() + 2);
     assert_eq!(repeat.len(), 1, "one repeat before cancelling: {repeat:?}");
     let connection = h.connection;
     h.app
@@ -162,7 +175,7 @@ fn class_completeness_native_auto_shot_stop_cast_cancels_the_repeat() {
         .unwrap()
         .send::<CombatChannel>(StopSpellCast);
     assert!(
-        shots_over(&mut h, interval * 3).is_empty(),
+        shots_over(&mut h, interval.end() * 3).is_empty(),
         "cancelled repeat"
     );
 }
