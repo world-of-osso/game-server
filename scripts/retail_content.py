@@ -10,6 +10,8 @@ loot of 143 NPCs). Every TrinityCore row is mapped into the AzerothCore-shaped c
 table the server already reads. docs/specs/retail-world-content.md is the contract.
 """
 
+import json
+
 from content_common import clone_table
 
 RETAIL_MAPS = (0, 1, 34, 670, 2106, 2107, 761, 726, 566, 998, 727)
@@ -881,7 +883,7 @@ NPC_OR_GO_SLOTS, ITEM_SLOTS = 4, 6
 # AzerothCore column ← TrinityCore column, same meaning.
 QUEST_COLUMNS = {name: name for name in (
     "ID", "QuestType", "QuestSortID", "QuestInfoID", "SuggestedGroupNum", "RewardNextQuest", "RewardXPDifficulty",
-    "RewardMoneyDifficulty", "RewardSpell", "RewardHonor", "RewardKillHonor", "StartItem", "Flags",
+    "RewardMoneyDifficulty", "RewardBonusMoney", "RewardSpell", "RewardHonor", "RewardKillHonor", "StartItem", "Flags",
     *[f"RewardItem{n}" for n in range(1, 5)], *[f"RewardAmount{n}" for n in range(1, 5)],
     *[f"ItemDrop{n}" for n in range(1, 5)], *[f"ItemDropQuantity{n}" for n in range(1, 5)],
     *[f"RewardChoiceItemID{n}" for n in range(1, 7)], *[f"RewardChoiceItemQuantity{n}" for n in range(1, 7)],
@@ -929,11 +931,21 @@ def build_quests(conn, report):
     conn.execute(f"DELETE FROM content_quest_template WHERE ID IN ({quests})")
     conn.execute("ALTER TABLE content_quest_template ADD COLUMN ContentTuningID INTEGER NOT NULL DEFAULT 0")
     conn.execute("ALTER TABLE content_quest_template ADD COLUMN RewardMoneyMultiplier REAL NOT NULL DEFAULT 1")
+    # NULL means this row was not selected from TC; selected TC zero remains authored.
+    conn.execute("ALTER TABLE content_quest_template ADD COLUMN RewardBonusMoney INTEGER")
     insert_quest_templates(conn, quests, report)
     map_quest_objectives(conn, quests, report)
     build_quest_children(conn, quests, report)
     map_quest_exploration(conn, quests, report)
     build_quest_relations(conn, report)
+
+
+def write_quest_reward_bonus(conn, output):
+    """Export only the TC rows chosen by build_quests, including authored zeroes."""
+    rows = conn.execute("""SELECT ID,RewardBonusMoney FROM content_quest_template
+        WHERE RewardBonusMoney IS NOT NULL ORDER BY ID""")
+    bonuses = [{"quest_id": quest, "bonus_money": money} for quest, money in rows]
+    output.write_text(json.dumps(bonuses, indent=2) + "\n")
 
 
 def insert_quest_templates(conn, quests, report):

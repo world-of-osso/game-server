@@ -26,6 +26,30 @@ Other sparse flags/compressions/widths fail explicitly.
   instead reports and skips zero-filled encrypted sections and reads already
   decrypted sections, preserving the existing behavior.
 
+## Fixed-record decoding
+
+`read_fixed(data, id_field=None)` is the one fixed-record WDC5 parser.
+It returns the header, field infos, and per section either the records (ID, per-field values, packed bits, parent, record offset, global index) plus copy pairs, or `records=None` for a zero-filled encrypted section.
+`decode()` builds its rows from it, and so do the engine's `export_db2_csv.read_wdc5` and `import_npc_appearance.read_wdc5`.
+`read_string` / `read_string_at` resolve string offsets through the virtual concatenation of all section string blocks.
+A string that lands in a zero-filled encrypted section fails rather than reading as empty.
+
+Scalar pallets precede array pallets in the pallet block, each in field order.
+
+Fixed latent bug (2026-10-20):
+
+- **Symptom.** `decode()` read pallets in plain field order. Real PlayerCondition `1D743D99` (FDID 1045411, build 70391) declares array pallet field 48 MovementFlags before scalar pallets 49 WeaponSubclassMask and 56 ContentTuningID. In field order:
+  - every one of its 48,491 rows read WeaponSubclassMask 1048866 and ContentTuningID 958 instead of 0;
+  - 21 rows had shifted MovementFlags;
+  - the deduplicated ContentTuningID pallet repeated six entries.
+- **Impact.** No server import was affected: `world.db` PlayerCondition comes from engine-exported CSVs, which already read scalar pallets first.
+- **Regression.** The test needs `PLAYER_CONDITION_DB2` (SHA-256 pinned in the test):
+
+```sh
+PLAYER_CONDITION_DB2=/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/wow-formats-python-readers-2026-10-20/db2/1045411.db2 \
+  python3 -m unittest scripts.tests.test_db2_casc_player_condition
+```
+
 ## Concrete evidence and targeted tests
 
 The untracked engine cache `data/db2/fixtures/item_sparse_6fcc3191_selected.db2`
