@@ -3,7 +3,6 @@ use crate::auras::{AuraApplication, AuraSource, apply_aura};
 use crate::spell_cast::test_harness::{harness_with, world_db};
 
 #[test]
-#[ignore = "aura-stat-mods RED: native player expertise240"]
 fn aura_stat_native_240_reduces_actual_player_weapon_spell_dodge_chance() {
     let mut h = harness_with(Vec::new(), &[105805], 1, false).unwrap();
     h.app

@@ -32,7 +32,6 @@ fn apply(h: &mut Harness, spell_id: u32, index: u32) {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native spell crit57"]
 fn aura_stat_native_57_changes_magic_crit_but_not_weapon_crit() {
     let mut h = fixture(&[450831]); //2.5 spell-only percentage points.
     let magic = world_db().unwrap().store.get(314633).unwrap();
@@ -58,7 +57,6 @@ fn aura_stat_native_57_changes_magic_crit_but_not_weapon_crit() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native healing354"]
 fn aura_stat_native_354_scales_real_heal_by_missing_health_and_class_mask() {
     let mut h = fixture(&[383191]); //Tranquility mask128,20% at completely missing health.
     apply(&mut h, 383191, 1);
@@ -98,7 +96,6 @@ fn aura_stat_native_354_scales_real_heal_by_missing_health_and_class_mask() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native resistance269"]
 fn aura_stat_native_269_negative_ignore_increases_physical_armor_not_damage_percent() {
     let mut h = fixture(&[1160]); //Native -20%, school127: armor×1.20, not damage×0.80.
     let spell = world_db().unwrap().store.get(12294).unwrap();
@@ -134,7 +131,6 @@ fn aura_stat_native_269_negative_ignore_increases_physical_armor_not_damage_perc
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native resistance269 reduction bypass"]
 fn aura_stat_native_269_scales_existing_damage_reduction_for_matching_school() {
     let mut h = fixture(&[1160, 33206]);
     let caster = h.caster;

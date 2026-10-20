@@ -641,7 +641,7 @@ fn armor_reduced(
     caster: Entity,
     target: Entity,
     amount: f32,
-    _spell: &SpellInfo,
+    spell: &SpellInfo,
 ) -> f32 {
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, caster),
@@ -664,6 +664,7 @@ fn armor_reduced(
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
         armor,

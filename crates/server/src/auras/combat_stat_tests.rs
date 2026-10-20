@@ -52,7 +52,6 @@ fn computed(h: &Harness, ratings: CombatRatings) -> CharacterStats {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native rating405"]
 fn aura_stat_native_405_scales_selected_ratings_not_percent_chance() {
     let mut h = fixture(&[117216, 417489, 1262442]);
     let ratings = CombatRatings {
@@ -73,7 +72,6 @@ fn aura_stat_native_405_scales_selected_ratings_not_percent_chance() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native conversion463"]
 fn aura_stat_native_463_uses_base_crit_rating_without_consuming_it() {
     let mut h = fixture(&[161797, 117216]);
     let ratings = CombatRatings {
@@ -95,7 +93,6 @@ fn aura_stat_native_463_uses_base_crit_rating_without_consuming_it() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native mana419"]
 fn aura_stat_native_419_changes_max_mana_but_not_create_mana_cost_basis() {
     let mut h = fixture(&[429399, 443448]);
     let base = h
@@ -125,7 +122,6 @@ fn aura_stat_native_419_changes_max_mana_but_not_create_mana_cost_basis() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native AP override404"]
 fn aura_stat_native_404_replaces_melee_and_ranged_ap_with_spell_power_percent() {
     let mut h = fixture(&[137012]);
     apply(&mut h, 137012, 7); //104%, not ordinary +104% AP.
@@ -145,7 +141,6 @@ fn aura_stat_native_404_replaces_melee_and_ranged_ap_with_spell_power_percent() 
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native health145"]
 fn aura_stat_native_145_preserves_health_fraction_and_restores_on_remove() {
     //Census22842's145 has amount0. Native182775 supplies a nonzero50% oracle.
     let mut h = fixture(&[22842, 182775]);
@@ -169,7 +164,6 @@ fn aura_stat_native_145_preserves_health_fraction_and_restores_on_remove() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native absorb taken422"]
 fn aura_stat_native_422_scales_incoming_shield_capacity_once_not_each_hit() {
     let mut h = fixture(&[391571, 17]);
     let caster = h.caster;
@@ -194,7 +188,6 @@ fn aura_stat_native_422_scales_incoming_shield_capacity_once_not_each_hit() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native temporary threat103"]
 fn aura_stat_native_103_reselects_without_erasing_base_or_new_threat() {
     use shared::threat::ThreatTable;
     let mut h = fixture(&[586]); //NativeFade: -90000000 temporary flat threat.
@@ -244,7 +237,6 @@ fn aura_stat_native_103_reselects_without_erasing_base_or_new_threat() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native overkill316 accounting"]
 fn aura_stat_native_316_absorbs_lethal_damage_without_inventing_script_death_prevention() {
     for spell_id in [31230, 86949] {
         let mut h = fixture(&[spell_id]);
@@ -265,7 +257,6 @@ fn aura_stat_native_316_absorbs_lethal_damage_without_inventing_script_death_pre
 }
 
 #[test]
-#[ignore = "aura-stat-mods control: native overkill316 boundaries"]
 fn aura_stat_native_316_does_not_absorb_nonlethal_or_twice_maximum_damage() {
     for loss in [400.0, 2000.0] {
         let mut h = fixture(&[31230]);
@@ -282,7 +273,6 @@ fn aura_stat_native_316_does_not_absorb_nonlethal_or_twice_maximum_damage() {
 }
 
 #[test]
-#[ignore = "aura-stat-mods RED: native mana419 current pool"]
 fn aura_stat_native_419_preserves_current_mana_and_only_clamps_on_removal() {
     let mut control = fixture(&[429399]);
     let control_caster = control.caster;

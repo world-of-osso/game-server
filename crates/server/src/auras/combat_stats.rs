@@ -27,6 +27,31 @@ fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInf
     })
 }
 
+/// Unit.cpp1712-1716: physical269 filters the spell, then floors armor per effect.
+pub(crate) fn armor_after_ignore(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    armor: f32,
+) -> f32 {
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return armor;
+    };
+    auras.iter().fold(armor, |armor, aura| {
+        aura.effects
+            .iter()
+            .filter(|effect| {
+                effect.aura_type == handlers::MOD_IGNORE_TARGET_RESIST
+                    && effect.misc_values[0] & 1 != 0
+                    && affects_spell(aura, effect, spell)
+            })
+            .fold(armor, |armor, effect| {
+                let remaining = 1.0 - effect.amount * aura.stack_multiplier() / 100.0;
+                (armor * remaining).floor()
+            })
+    })
+}
+
 /// Unit.cpp7505-7509: each matched354 scales by the recipient's live missing HP.
 pub(crate) fn healing_multiplier(
     world: &World,
