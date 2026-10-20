@@ -3254,9 +3254,9 @@ fn advance_source_preparation(h: &mut Harness) {
     let max_delta = h.app.world().resource::<Time<Virtual>>().max_delta();
     let strategy = h
         .app
-        .world()
-        .resource::<bevy::time::TimeUpdateStrategy>()
-        .clone();
+        .world_mut()
+        .remove_resource::<bevy::time::TimeUpdateStrategy>()
+        .unwrap();
     use_second_frames(h);
     h.advance(121);
     h.app
