@@ -9,6 +9,8 @@
 
 #[path = "crafting_orders/tests.rs"]
 mod crafting_order_tests;
+#[path = "profession/crafting_origin_tests.rs"]
+mod crafting_origin_tests;
 
 #[test]
 fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopens() {

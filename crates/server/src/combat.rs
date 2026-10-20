@@ -32,9 +32,8 @@ use std::collections::VecDeque;
 const MELEE_RANGE: f32 = 5.0;
 /// Attack's spell ID for the existing owner spell-error channel.
 const ATTACK_SPELL_ID: u32 = 6603;
-/// Seconds between the auto-attack swings of units without `CharacterStats`
-/// (creatures, `BaseAttackTime` 2000 for every Stockade creature); players swing
-/// at their weapon speed.
+/// Default unit attack time and existing ExpectedStat damage normalization.
+/// Source-spawned creatures carry CreatureAttackTime; players use their weapons.
 pub(crate) const AUTO_ATTACK_INTERVAL: f32 = 2.0;
 /// `Unit::GetUnitMissChance`: every victim's base melee miss chance, percent.
 const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
@@ -454,6 +453,57 @@ fn send_attack_stopped(world: &mut World, attacker: Entity, victim: Option<Entit
     crate::spell_cast::send_to_set(world, attacker, message);
 }
 
+/// Template-owned melee interval (TC Creature::UpdateEntry), not player or pet weapons.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct CreatureAttackTime(pub f32);
+
+impl CreatureAttackTime {
+    fn modified(self, haste_pct: f32, mods: Option<&AuraStatMods>) -> f32 {
+        let slow = mods.map_or(1.0, |mods| {
+            mods.attack_cast_time_mult * mods.attack_time_mult
+        });
+        self.0 * crate::auras::time_percent_mod(haste_pct) * slow
+    }
+}
+
+/// Read the ordinary creature's current interval before changing cached aura modifiers.
+pub(crate) fn read_creature_swing_time(world: &World, unit: Entity) -> Option<f32> {
+    if world.get::<CharacterStats>(unit).is_some()
+        || world
+            .get::<crate::spell_cast::guardian::SpiritWolf>(unit)
+            .is_some()
+    {
+        return None;
+    }
+    let base = world.get::<CreatureAttackTime>(unit)?;
+    let haste = world
+        .get::<crate::stats::StatModifiers>(unit)
+        .map_or(0.0, |mods| mods.haste_pct);
+    Some(base.modified(haste, world.get::<AuraStatMods>(unit)))
+}
+
+/// TC Unit::ApplyAttackTimePercentMod preserves each hand's remaining progress.
+pub(crate) fn rescale_creature_swing_timers(
+    world: &mut World,
+    unit: Entity,
+    previous: Option<f32>,
+) {
+    let Some(previous) = previous else {
+        return;
+    };
+    let Some(current) = read_creature_swing_time(world, unit) else {
+        return;
+    };
+    if previous == current {
+        return;
+    }
+    if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
+        let multiplier = current / previous;
+        attack.timer *= multiplier;
+        attack.off_hand_timer *= multiplier;
+    }
+}
+
 type AutoAttackers<'w, 's> = Query<
     'w,
     's,
@@ -468,6 +518,7 @@ type AutoAttackers<'w, 's> = Query<
             Has<Npc>,
             Option<&'static crate::zones::CreatureFlagsExtra>,
             Option<&'static crate::zones::TempSummon>,
+            Option<&'static CreatureAttackTime>,
         ),
     ),
 >;
@@ -635,6 +686,7 @@ fn auto_attack_unit(
         enemy_dodge_pct: snapshot.enemy_dodge_pct,
         npc_expertise_pct: snapshot.npc_expertise_pct,
         creature: snapshot.creature,
+        authored_attack_time: snapshot.authored_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
         temp_summoner: snapshot.temp_summoner,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
@@ -693,6 +745,7 @@ struct SwingSnapshot {
     enemy_dodge_pct: f32,
     npc_expertise_pct: f32,
     creature: bool,
+    authored_attack_time: Option<CreatureAttackTime>,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
     temp_summoner: Option<Entity>,
 }
@@ -709,7 +762,7 @@ fn snapshot_attacker(
         mods,
         stats,
         (stat_mods, casting, auras),
-        (creature, flags, summon),
+        (creature, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer -= dt;
     auto_attack.off_hand_timer -= dt;
@@ -731,6 +784,7 @@ fn snapshot_attacker(
             0.0
         },
         creature,
+        authored_attack_time: attack_time.copied(),
         creature_flags: flags.copied(),
         temp_summoner: summon.map(|summon| summon.summoner),
     })
@@ -822,6 +876,7 @@ pub(crate) struct Attacker<'a> {
     pub npc_expertise_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
+    pub authored_attack_time: Option<CreatureAttackTime>,
     /// Actual attacker's already-cached template flags, independent of victim flags.
     pub creature_flags: Option<&'a crate::zones::CreatureFlagsExtra>,
     /// Existing TempSummon direct summoner, not player owner or recursive ancestor.
@@ -843,9 +898,8 @@ impl Attacker<'_> {
         }
     }
 
-    /// Seconds to the hand's next swing: the weapon speed over haste for
-    /// players, the flat interval over aura haste otherwise
-    /// (Unit::ApplyAttackTimePercentMod), times the MOD_SPEED_SLOW_ALL multiplier.
+    /// Players/Spirit Wolf retain their weapon clocks; source creatures use their
+    /// authored interval and TC's signed attack-time factors.
     fn swing_time(&self, weapon: &WeaponDamage) -> f32 {
         let slow = self.mods.map_or(1.0, |mods| {
             mods.attack_cast_time_mult * mods.attack_time_mult
@@ -853,10 +907,14 @@ impl Attacker<'_> {
         if self.spirit_wolf.is_some() {
             return weapon.speed / (1.0 + self.haste_pct / 100.0).max(0.01) * slow;
         }
-        self.stats.map_or(
-            AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01),
-            |stats| melee::swing_time(weapon.speed, stats.haste_pct),
-        ) * slow
+        if let Some(stats) = self.stats {
+            return melee::swing_time(weapon.speed, stats.haste_pct) * slow;
+        }
+        if let Some(base) = self.authored_attack_time {
+            return base.modified(self.haste_pct, self.mods);
+        }
+        // Units outside template-owned creature timing keep their existing base clock.
+        AUTO_ATTACK_INTERVAL / (1.0 + self.haste_pct / 100.0).max(0.01) * slow
     }
 }
 
@@ -2223,6 +2281,9 @@ mod enemy_dodge_tests;
 #[cfg(test)]
 #[path = "combat_facing_tests.rs"]
 mod facing_tests;
+#[cfg(test)]
+#[path = "combat_npc_cadence_tests.rs"]
+mod npc_cadence_tests;
 #[cfg(test)]
 #[path = "combat_npc_expertise_tests.rs"]
 mod npc_expertise_tests;

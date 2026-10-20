@@ -153,7 +153,18 @@ pub(crate) fn grant_item(
     templates: &ItemTemplates,
     catalog: &crate::merchant::VendorCatalog,
     character_id: u64,
+    item: (u32, u32),
+) -> Result<String, String> {
+    grant_item_with_origin(db, templates, catalog, character_id, item, None)
+}
+
+pub(crate) fn grant_item_with_origin(
+    db: &Database,
+    templates: &ItemTemplates,
+    catalog: &crate::merchant::VendorCatalog,
+    character_id: u64,
     (item_id, count): (u32, u32),
+    origin: Option<shared::protocol::CraftingOrigin>,
 ) -> Result<String, String> {
     let goods = catalog
         .goods
@@ -174,6 +185,9 @@ pub(crate) fn grant_item(
         vendor_sell_price: goods.sell_price,
         unique_auction: false,
     };
+    if let Some(origin) = origin {
+        model.record_crafting_origin(item.item_guid, origin);
+    }
     let mut mint = || persistence::next_id(db, "item_instance");
     model
         .store_item(

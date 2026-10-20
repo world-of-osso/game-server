@@ -382,7 +382,7 @@ impl BossScript for HeraldIntro {
                 ctx.do_cast_self(39_427);
                 self.boss.events.repeat_range(40_000, 50_000);
             }
-            // NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED: parent77 has no child/object hook.
+            // Fireball/Cone77 hit hooks and the source GO AI live in liquid_fire.
             _ => unreachable!("unknown Herald combat event{event}"),
         }
     }

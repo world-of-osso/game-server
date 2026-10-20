@@ -184,6 +184,10 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (20_538, 0) => Some(hate_to_zero),
         (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
+        (30_691 | 32_491 | 33_793 | 33_794 | 34_653 | 36_920, 1) => {
+            Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::fireball_hit)
+        }
+        (30_926 | 36_921, 1) => Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::cone_hit),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)

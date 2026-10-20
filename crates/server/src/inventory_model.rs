@@ -12,9 +12,9 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use shared::components::EquippedAppearanceEntry;
 use shared::item_data::ItemDefinitionSource;
 use shared::protocol::{
-    BACKPACK_SLOTS, BAG_COUNT, BagContents, BagSlotItem, EquipmentSlot, EquipmentSnapshot,
-    EquippedItem as EquippedItemView, InventoryError, InventoryErrorReason, InventorySlotChange,
-    InventorySnapshot, ItemDurability, ItemLocation, ItemStack, REAGENT_BAG,
+    BACKPACK_SLOTS, BAG_COUNT, BagContents, BagSlotItem, CraftingOrigin, EquipmentSlot,
+    EquipmentSnapshot, EquippedItem as EquippedItemView, InventoryError, InventoryErrorReason,
+    InventorySlotChange, InventorySnapshot, ItemDurability, ItemLocation, ItemStack, REAGENT_BAG,
 };
 
 use crate::item_stats::ItemScaling;
@@ -50,6 +50,7 @@ pub(crate) struct InventoryModel {
     overflow: Vec<InventoryItemData>,
     equipped: BTreeMap<EquipmentSlot, InventoryItemData>,
     instances: HashMap<u64, ItemInstanceData>,
+    crafting_origins: HashMap<u64, CraftingOrigin>,
     item_durability: HashMap<u64, (u32, u32)>,
     definition_sources: HashMap<u64, ItemDefinitionSource>,
     /// Source-qualified definitions of owned items.
@@ -100,6 +101,7 @@ impl InventoryModel {
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
+            crafting_origins: record.crafting_origins,
             item_durability: record.item_durability,
             definition_sources: record.definition_sources,
             templates: owned_templates,
@@ -186,6 +188,11 @@ impl InventoryModel {
                     )
                 })?;
             self.register_definition(item, source, template);
+            if let Some(origin) =
+                crate::persistence::inventory_store::load_item_crafting_origin(db, item.item_guid)
+            {
+                self.crafting_origins.insert(item.item_guid, origin);
+            }
             self.instances.insert(
                 item.item_guid,
                 ItemInstanceData {
@@ -238,7 +245,7 @@ impl InventoryModel {
                 let source_guid = item.item_guid;
                 let meta = self.instances.get(&source_guid).copied();
                 item.item_guid = mint();
-                self.copy_definition_source(source_guid, item.item_guid);
+                self.copy_instance_identity(source_guid, item.item_guid);
                 seen.insert(item.item_guid);
                 if let Some(meta) = meta {
                     self.instances.insert(item.item_guid, meta);
@@ -397,6 +404,7 @@ impl InventoryModel {
             nonvisual_equipped,
             bag_slots,
             instances: self.instances,
+            crafting_origins: self.crafting_origins,
             item_durability: self.item_durability,
             definition_sources: self.definition_sources,
             appearance_account: self.appearance_account,
@@ -405,10 +413,17 @@ impl InventoryModel {
         }
     }
 
-    fn copy_definition_source(&mut self, source_guid: u64, new_guid: u64) {
+    fn copy_instance_identity(&mut self, source_guid: u64, new_guid: u64) {
         if let Some(source) = self.definition_sources.get(&source_guid).copied() {
             self.definition_sources.insert(new_guid, source);
         }
+        if let Some(origin) = self.crafting_origins.get(&source_guid).copied() {
+            self.crafting_origins.insert(new_guid, origin);
+        }
+    }
+
+    pub(crate) fn record_crafting_origin(&mut self, guid: u64, origin: CraftingOrigin) {
+        self.crafting_origins.insert(guid, origin);
     }
 
     pub(crate) fn remember_definition_sources(
@@ -446,6 +461,12 @@ impl InventoryModel {
             && self.definition_source(left.item_guid) == self.definition_source(right.item_guid)
     }
 
+    fn same_stack_identity(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
+        self.same_definition(left, right)
+            && self.crafting_origins.get(&left.item_guid)
+                == self.crafting_origins.get(&right.item_guid)
+    }
+
     // --- Views -----------------------------------------------------------
 
     pub(crate) fn appearance(&self) -> &shared::components::EquipmentAppearance {
@@ -478,6 +499,7 @@ impl InventoryModel {
                 .instances
                 .get(&item.item_guid)
                 .is_some_and(|meta| meta.soulbound),
+            crafting_origin: self.crafting_origins.get(&item.item_guid).copied(),
         }
     }
 
@@ -805,7 +827,7 @@ impl InventoryModel {
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. }
             )
-        ) && self.same_definition(source, target)
+        ) && self.same_stack_identity(source, target)
             && target.stack_count < self.max_stack(target)
     }
 
@@ -1252,7 +1274,7 @@ impl InventoryModel {
         }
         self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
-            let fits = self.same_definition(source, target)
+            let fits = self.same_stack_identity(source, target)
                 && target.stack_count + count <= self.max_stack(target);
             if !fits {
                 return Err(error(
@@ -1267,7 +1289,7 @@ impl InventoryModel {
         let source_guid = split.item_guid;
         split.item_guid = new_guid;
         split.stack_count = count;
-        self.copy_definition_source(source_guid, new_guid);
+        self.copy_instance_identity(source_guid, new_guid);
         if let Some(meta) = self.instances.get(&source_guid).copied() {
             self.instances.insert(new_guid, meta);
         }
@@ -1599,7 +1621,7 @@ impl InventoryModel {
         let mut taken = item.clone();
         taken.item_guid = mint();
         taken.stack_count = count;
-        self.copy_definition_source(item_guid, taken.item_guid);
+        self.copy_instance_identity(item_guid, taken.item_guid);
         if let Some(meta) = self.instances.get(&item_guid).copied() {
             self.instances.insert(taken.item_guid, meta);
         }
@@ -1627,12 +1649,14 @@ impl InventoryModel {
         }
         let mut left = item.stack_count;
         let sources = &self.definition_sources;
+        let origins = &self.crafting_origins;
         for other in self.bags.iter_mut().flatten().flatten() {
             if left == 0 {
                 break;
             }
             if other.item_id == item.item_id
                 && sources[&other.item_guid] == source
+                && origins.get(&other.item_guid) == origins.get(&item.item_guid)
                 && other.stack_count < max_stack
             {
                 let moved = left.min(max_stack - other.stack_count);
@@ -1647,7 +1671,7 @@ impl InventoryModel {
             let mut stack = item.clone();
             stack.item_guid = guid.take().unwrap_or_else(&mut *mint);
             stack.stack_count = count;
-            self.copy_definition_source(item.item_guid, stack.item_guid);
+            self.copy_instance_identity(item.item_guid, stack.item_guid);
             self.bags[bag][slot] = Some(stack);
             left -= count;
         }
@@ -1674,7 +1698,7 @@ impl InventoryModel {
                 break;
             };
             let item_guid = guid.take().unwrap_or_else(&mut *mint);
-            self.copy_definition_source(item.item_guid, item_guid);
+            self.copy_instance_identity(item.item_guid, item_guid);
             let copy = InventoryItemData {
                 item_guid,
                 stack_count: 1,
@@ -1692,7 +1716,7 @@ impl InventoryModel {
             stack_count: left,
             ..item
         };
-        self.copy_definition_source(item.item_guid, item_guid);
+        self.copy_instance_identity(item.item_guid, item_guid);
         self.store_item(rest, source, template, mint)
     }
 
@@ -1791,7 +1815,9 @@ impl InventoryModel {
         let max_stack = template.max_stack.max(1);
         let room_here = match self.get(location) {
             None => max_stack,
-            Some(other) if self.same_definition(other, &item) && other.stack_count < max_stack => {
+            Some(other)
+                if self.same_stack_identity(other, &item) && other.stack_count < max_stack =>
+            {
                 max_stack - other.stack_count
             }
             Some(_) => {
@@ -1830,7 +1856,7 @@ impl InventoryModel {
         if guid_taken {
             let source_guid = item.item_guid;
             item.item_guid = mint();
-            self.copy_definition_source(source_guid, item.item_guid);
+            self.copy_instance_identity(source_guid, item.item_guid);
         }
         item.stack_count = rest;
         self.store_item(item, source, template, mint)
@@ -1846,7 +1872,7 @@ impl InventoryModel {
             .flat_map(|(_, cells)| cells)
             .map(|cell| match cell {
                 None => max_stack,
-                Some(other) if self.same_definition(other, item) => {
+                Some(other) if self.same_stack_identity(other, item) => {
                     max_stack.saturating_sub(other.stack_count)
                 }
                 Some(_) => 0,

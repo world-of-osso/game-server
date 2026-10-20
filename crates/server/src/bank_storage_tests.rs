@@ -138,7 +138,7 @@ fn owned_sources_bank_deposit_keeps_collision_stacks_and_minted_identity() {
     assert_eq!(tabs[0].slots[1].as_ref().unwrap().item_guid, 1000);
     assert_eq!(sources[&1], Retail);
     assert_eq!(sources[&1000], Forever70205);
-    let view = tab_slots(&tabs[0], |_| false, |guid| sources[&guid]);
+    let view = tab_slots(&tabs[0], |_| false, |guid| sources[&guid], |_| None);
     assert_eq!(view[5].as_ref().unwrap().definition_source, Retail);
     assert_eq!(view[0].as_ref().unwrap().definition_source, Forever70205);
 }
