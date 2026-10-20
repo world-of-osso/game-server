@@ -145,21 +145,18 @@ fn earn_qualified_stack_block(level: u8, needed_procs: usize) -> (Harness, Entit
 }
 
 #[test]
-#[ignore = "TRANQUIL_MIND_NATIVE: actual24 remains cap1 through repeated natural procs"]
 fn follower_tranquil_mind_level24_natural_refreshes_preserve_one_stack_cap() {
     let (h, caster) = earn_qualified_stack_block(24, 2);
     assert_eq!(own_aura(&h, caster, CLEARCASTING).unwrap().stacks, 1);
 }
 
 #[test]
-#[ignore = "TRANQUIL_MIND_NATIVE: actual25 caps at2 even after third natural proc"]
 fn follower_tranquil_mind_level25_third_natural_proc_does_not_exceed_two() {
     let (h, caster) = earn_qualified_stack_block(25, 3);
     assert_eq!(own_aura(&h, caster, CLEARCASTING).unwrap().stacks, 2);
 }
 
 #[test]
-#[ignore = "TRANQUIL_MIND_NATIVE: two earned stacks buy exactly two ordinary Regrowths"]
 fn follower_tranquil_mind_two_native_stacks_consume_one_per_free_regrowth() {
     let (mut h, caster) = earn_qualified_stack_block(25, 2);
     for remaining in [1, 0] {
