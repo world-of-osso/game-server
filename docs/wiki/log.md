@@ -3175,3 +3175,5 @@ Existing guild snapshot paths now resolve same-guild online map/position through
 
 Actual protocol1, both-skin UI1 and native HostClient server1 pass after their observed REDs. Tests enabled; production area authority/label semantics unchanged by fixture repairs. Coordinated integration gate and native proof next.
 - 2026-10-18: Share MFBO minimum signed-grid decoding, preserving consumer selection/errors and runtime plane policy. See [shared formats](systems/wow-formats.md).
+
+- [Selected native follower metadata](investigations/slow-native-test-fixtures.md#selected-native-follower-metadata-2026-10-19) — existing canonical template/class views, two-live-app isolation, unchanged1353-corner/144-origin/36-kit coverage and matched wall/CPU/RSS observations.

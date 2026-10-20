@@ -884,3 +884,5 @@ Debug logs and root cause analyses.
 - [SAI protected clock samples](systems/boss-scripts.md#sai-protected-clock-samples--2026-10-16) — actual Vyletongue RED isolates dropped50ms endpoint evidence; no production/tolerance change.
 
 - [Prayer of Mending baseline](systems/auras.md#prayer-of-mending-baseline--2026-10-18) — native ward/heal/delayed original-Priest jump, per-cast stack arguments, player-qualified RNG and named NPC static-flag gap; genuine ward RED→native8/8 GREEN including lifetime/ownership/exhaustion/no-override controls; independent lead gate pending.
+
+- [Selected native follower metadata](investigations/slow-native-test-fixtures.md#selected-native-follower-metadata-2026-10-19) — existing canonical template/class views, two-live-app isolation, unchanged1353-corner/144-origin/36-kit coverage and matched wall/CPU/RSS observations.
