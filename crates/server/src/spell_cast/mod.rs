@@ -154,6 +154,8 @@ mod guardian_tests;
 pub(crate) mod history_store;
 mod hit;
 mod interruptibility;
+#[cfg(test)]
+mod invigorating_fury_tests;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
 mod interruptibility_rule_tests;

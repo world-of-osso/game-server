@@ -320,3 +320,18 @@ Omor runtime EventMap port: ShadowBolt30686 immediately then6–10s in actual so
 Landslide timing acceptance observes actual ordinary cast requests and their admission results, not successful SpellGo messages alone. Authored18670 cooldown11000ms remains active: TaskScheduler repeats from its original due time even when channel deferral makes a repeat fail OnCooldown. Deterministic seeds104(rejected repeat) and0(no rejection) retain unchanged source timing intervals and channel/summon/damage/credit checks; every fixture frame must advance exactly50ms.
 
 SAI clock fixtures retain150ms dispatch grace and100ms protected sampling guards. Sampling must include exact50ms frame endpoints using integer milliseconds, so a cast-blocked interval is not rejected merely because strict floating-point bounds discard both real samples. Unblocked endpoint and early-repeat controls must still fail.
+
+## Blood Furnace The Maker source boundary
+
+- [x] Pinned TC a352b1fa `boss_the_maker.cpp`: 17381 under `instance_blood_furnace`, ordinal0 = installed DungeonEncounter1922 bit0.
+- [x] Engage: Talk group0 once, then Exploding Beaker first5–15s, repeat10–20s at the victim with `DUNGEON_MODE(30925,40059)`.
+- [x] Heroic40059 must be an ordinary admitted cast with actual area damage and knockback.
+- [x] `MAKER_NORMAL_BEAKER_30925_ABSENT_70448`: retail DB2 has no30925, so Normal casts nothing and no substitute spell is used.
+- [x] KilledUnit speaks group1 only for player victims; NPC victims are silent. JustDied completes1922 bit0, then speaks group2.
+- [x] Evade resets the encounter; a re-pull re-arms Talk0 and the beaker schedule.
+- [ ] `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`: Domination30923 needs player charm (aura6) and more than one threat player; not scheduled.
+- [ ] `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`: Maker doors181811/181812/181815 DoorData state.
+- [ ] `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`: canonical world data has no542/543 creature bindings; tests use the fixture-only ordinal binding, as Ramparts does.
+- Broggok (lever MakeActive, `GO_NOT_SELECTABLE_FLAG_UNMODELLED`), Keli'dan, prisoner waves, sound, loot, persistence and native presentation are out of scope.
+
+Proof: `scripted_ai/tests/the_maker.rs`.

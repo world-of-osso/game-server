@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Invigorating Fury consequence (active70448)
+
+- Ordinary Enraged Regeneration184364 with actual caster aura383468 casts real385174 once after success. Native385174 self selection,10% maximum-health amount, CANT_CRIT and overheal remain authoritative; no amount override from the talent dummy.
+- Missing, unlearned or another Warrior's talent cannot enable this caster. A rejected root recast cannot heal. Retain root native8s duration, -30% all-school damage taken and120s cooldown/noGCD;383468's existing masked+3000ms modifier gives11s.
+- Use only existing AfterCast and qualified limited IGNORE_CAST_IN_PROGRESS path, preserving actual in-progress Warrior64382 state and owned completion. No new state, timer, trigger API or native HP/regen/RNG/clock changes. Wider Bloodthirst/talent behavior, equipment/legal-loadout, full class, rotation, UDP and census parity are unqualified. [Implementation/proof](../wiki/systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
+
 ## Nature's Guardian baseline (active70448)
 
 - Actual passive30884 effect0 requires current action-target health strictly below its native35% threshold, not equality, and absent native445698 cooldown. Preserve native proc eligibility/chance; do not add a positive-damage predicate or lethal-rescue rule.
