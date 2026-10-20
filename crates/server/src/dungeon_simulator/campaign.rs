@@ -305,6 +305,7 @@ impl Run {
             Err(
                 crate::spell_cast::CastFailure::OnGlobalCooldown
                 | crate::spell_cast::CastFailure::OnCooldown
+                | crate::spell_cast::CastFailure::NoCharges
                 | crate::spell_cast::CastFailure::InProgress,
             ) => Ok(()),
             Err(error) => Err(format!(
