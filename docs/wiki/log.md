@@ -3265,3 +3265,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Swiftmend own-HoT hit consumption
 
 [Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.
+
+- [Canonical toy spell reuse](investigations/slow-native-test-fixtures.md#canonical-toy-spell-reuse) — existing full spell-store copies at two fixture sites;213/213 unchanged cases before/after, five affected tests131s faster, whole-family contention regression disclosed.
