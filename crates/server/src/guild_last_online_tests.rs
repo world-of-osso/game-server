@@ -131,7 +131,10 @@ fn member(snapshot: &GuildSnapshot, name: &str) -> serde_json::Value {
 fn disconnect(app: &mut App, connection: Entity, player: Entity) -> (u64, u64) {
     let before = crate::rest::unix_secs();
     // Invoke the actual production observer; do not write a synthetic logout row.
-    app.world_mut().entity_mut(connection).remove::<Connected>();
+    app.world_mut()
+        .entity_mut(connection)
+        .insert(lightyear::prelude::server::ClientOf)
+        .remove::<Connected>();
     for _ in 0..3 {
         app.update();
     }
