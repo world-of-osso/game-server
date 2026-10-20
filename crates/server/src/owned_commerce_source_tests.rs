@@ -159,7 +159,7 @@ fn owned_commerce_sources_mail_return_and_take_preserve_both_catalogs_after_reop
     drop(db);
 
     let db = Database::open(file.path()).unwrap();
-    let contents = crate::mail::mailbox_contents(&db, recipient, 0);
+    let contents = crate::mail::mailbox_contents(&db, &catalog.templates, recipient, 0);
     assert_eq!(contents.mails.len(), 1);
     assert_stacks(
         contents.mails[0].attachments.iter().map(|a| a.item.clone()),
@@ -178,7 +178,7 @@ fn owned_commerce_sources_mail_return_and_take_preserve_both_catalogs_after_reop
     drop(db);
 
     let db = Database::open(file.path()).unwrap();
-    let returned = crate::mail::mailbox_contents(&db, sender, 0);
+    let returned = crate::mail::mailbox_contents(&db, &catalog.templates, sender, 0);
     assert_eq!(returned.mails.len(), 1);
     assert!(returned.mails[0].returned);
     assert_stacks(
