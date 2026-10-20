@@ -41,6 +41,14 @@ Tick-triggered character, achievement/account and Adventure Guide persistence mu
 - `crates/server/src/adventure_guide_tests.rs` — real monthly refresh under a held writer.
 - `crates/server/src/trading_post_tests.rs` — held-writer request responsiveness/no early reply, same-tick real earning→purchase→reopen and existing vendor/purchase/cart/refund/month-reset controls.
 
+## Native proof purchase hold (harness hook)
+
+- [ ] Explicitly opt-in `native-proof-hold-persistence` Cargo feature exists only for private debug peer builds. It is not a default feature; release/deploy builds must not contain it.
+- [ ] `NATIVE_PROOF_HOLD_PERSISTENCE_DIR` names an absolute private control directory. A valid Purchase/Checkout job on the existing FIFO claims `arm` as `held` before any purchase mutation; `release` lets that same job commit and publish its real reply. Query/Balance/Refund/Freeze and main-thread UDP work do not acquire this hold.
+- [ ] A30-second hard maximum rejects the held request without committing when release never arrives. Release/held markers are consumed, stale markers and filesystem errors are explicit failures, and later FIFO work remains drainable. This is a failure watchdog, not timed auto-release for ordering proofs.
+- [ ] Default production behavior,10-second Netcode timeout, heartbeat and gameplay clocks remain unchanged. No ptrace/strace, host-permission changes, alternate writer, wire IDs or production delay knob.
+- [ ] Process-isolated existing-API purchase/checkout regressions are staged ignored before implementation; explicit-release pre/post-commit state, app responsiveness, default exclusion and watchdog behavior require targeted proof before native use.
+
 ## Known gaps (current cycle)
 
 - [x] Minimal `b80131863` / `c391e8bbb` / `98cfbc490b` import integrated with master b8b6c2f9d and landed netdelta;13 core controls pass within28 affected controls.
