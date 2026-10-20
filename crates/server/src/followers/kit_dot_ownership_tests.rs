@@ -91,7 +91,6 @@ fn native_period_steps(h: &Harness) -> usize {
 }
 
 #[test]
-#[ignore = "MOONFIRE_ACTOR_OWNED_MAINTENANCE: qualify ordinary periodic ownership first"]
 fn follower_moonfire_ownership_two_native_casters_keep_distinct_periodic_damage() {
     let (mut h, caster) = ready_crenna();
     let other = add_native_druid(&mut h, caster);
@@ -118,7 +117,6 @@ fn follower_moonfire_ownership_two_native_casters_keep_distinct_periodic_damage(
 }
 
 #[test]
-#[ignore = "MOONFIRE_ACTOR_OWNED_MAINTENANCE: foreign aura must not satisfy actor's dot"]
 fn follower_moonfire_ownership_foreign_dot_does_not_suppress_native_follower() {
     let (mut h, caster) = ready_crenna();
     let other = add_native_druid(&mut h, caster);
@@ -175,7 +173,6 @@ fn follower_moonfire_ownership_keeps_foreign_hot_any_caster_semantics() {
 }
 
 #[test]
-#[ignore = "MOONFIRE_ACTOR_OWNED_MAINTENANCE: retain own active aura refusal"]
 fn follower_moonfire_ownership_own_active_dot_prevents_root_recast() {
     let (mut h, caster) = ready_crenna();
     apply_moonfire(&mut h, caster);
