@@ -870,7 +870,8 @@ pub(crate) fn interrupt_channel_with_flags(world: &mut World, caster: Entity, fl
     }
 }
 
-/// TC Unit::CanCastSpellWhileMoving: native330 uses a family mask, not its amount.
+/// TC Unit::CanCastSpellWhileMoving:330 uses a family mask;307 uses Misc0
+/// SpellLabel without a family constraint. Neither selector depends on amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
     if attributes(spell, 13) & NO_DISABLE_MOVEMENT_INTERRUPT != 0 {
@@ -881,7 +882,17 @@ fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool 
         caster,
         crate::auras::handlers::CAST_WHILE_WALKING,
         spell,
-    )
+    ) || world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .is_some_and(|auras| {
+            auras.iter().any(|aura| {
+                aura.effects.iter().any(|effect| {
+                    effect.aura_type == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
+                        && u32::try_from(effect.misc_values[0])
+                            .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+                })
+            })
+        })
 }
 
 /// Aura gain/removal/expiry updates the server cast and its replicated movement flag.
