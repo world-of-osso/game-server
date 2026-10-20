@@ -1,3 +1,7 @@
+## 2026-10-19 — Herald flying Liquid Fire
+
+[Flying actual-impact boundary](systems/boss-scripts.md#herald-flying-liquid-fire--2026-10-19): qualification73bc2PASS64.88s establishes natural victim/random admission and positive impacts in Normal/Heroic FIRST. Pushed ignored4b11→four genuineRED200.85s; production adds only four IDs to existing Fireball hit hookd75c→four full nativeGREEN287.96s before enabling. Actual frame-local child/freshGO prevents stale victim-field acceptance; source GO lifecycle/damage/copy oracle reused unchanged. Retained natural qualification2PASS plus extracted ground/source/refusal6PASS183.95s ate0e53 completes a twelve-case composite; independent gate pending. No broader flight/native/balance/loot/persistence claim.
+
 ## 2026-10-19 — Server-recorded crafting provenance, targeted GREEN
 
 [Storage and proof boundary](systems/inventory.md#server-recorded-crafting-origin): pushed-first actual2153 craft/fresh-DB owner-snapshot RED; additive GUID metadata preserves ability1355 joinedspell2153 without changing legacy instance encoding. Actual2963×2 exposed unknown-stack merging; origin-compatible merge/capacity and split-copy controls pass, class item-creation remains unknown. Server2 targeted cases GREEN at5ea22bf55; protocol/engine proofs are separately pinned. Atomic lead gate and any new native session remain pending; recraft/evaluator/slots/watermark stay unavailable.
