@@ -2820,6 +2820,9 @@ fn encounter_coverage_slagmaw_spits_five_then_submerges_and_teleports() {
         assert_eq!(slagmaw_missile_hits(&h, boss, tank), 0);
     }
     let launched_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    println!(
+        "Slagmaw sourcecast capture{now:?}, remaining{remaining:?}, launch{launched_at:?}, tick{tick:?}"
+    );
     assert!(launched_at >= now + remaining, "no early cast completion");
     let spell = h.app.world().resource::<SpellStore>().get(119434).unwrap();
     let misc = spell.misc.as_ref().unwrap();

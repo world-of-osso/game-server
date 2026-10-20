@@ -423,13 +423,35 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
             source: AuraSource::Cast,
         },
     );
+    let applied_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    println!(
+        "critical-block aura applied at{applied_at:?}: {:?}",
+        h.app.world().get::<ActiveAuras>(defender).unwrap()
+    );
     // Native2500ms cast +400ms flight; loopback3frames makes the3s buff
     // expire after launch but before impact, without changing spell metadata.
     start_damage_spell(&mut h, defender, 19434);
+    println!(
+        "critical-block shot received at{:?}: {:?}",
+        h.app.world().resource::<Time<Fixed>>().elapsed(),
+        h.app.world().get::<shared::casting::CastState>(h.caster)
+    );
     wait_for_aimed_launch(&mut h);
+    println!(
+        "critical-block shot launched at{:?}",
+        h.app.world().resource::<Time<Fixed>>().elapsed()
+    );
     assert!(crate::auras::has_aura(h.app.world(), defender, 203524));
     assert!(aimed_damage(&h, defender).is_empty());
-    h.advance(12);
+    for _ in 0..12 {
+        h.advance(1);
+        println!(
+            "critical-block flight at{:?}, aura{}, hits{:?}",
+            h.app.world().resource::<Time<Fixed>>().elapsed(),
+            crate::auras::has_aura(h.app.world(), defender, 203524),
+            aimed_damage(&h, defender)
+        );
+    }
     assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
     let hits = aimed_damage(&h, defender);
     assert_eq!(hits.len(), 1);

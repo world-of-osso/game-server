@@ -262,6 +262,10 @@ fn cast_time_spell_completes_after_its_cast_time() {
     h.cast_and_deliver(FIREBALL, Some(h.npc));
     let cast = h.app.world().get::<CastState>(h.caster).expect("cast bar");
     assert_eq!(cast.duration, 1.75);
+    println!(
+        "native Fireball received at{:?}, state{cast:?}",
+        h.app.world().resource::<Time<Fixed>>().elapsed()
+    );
     assert_eq!(
         h.app.world().get::<Mana>(h.caster).unwrap().current,
         10_000.0
@@ -275,6 +279,10 @@ fn cast_time_spell_completes_after_its_cast_time() {
     assert!(varied(388.12).contains(&(5000.0 - h.health(h.npc))));
     // 1% of base mana (100) spent on completion, then at most 0.25 s of 1%/s regen.
     let mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
+    println!(
+        "native Fireball final at{:?}, mana{mana}",
+        h.app.world().resource::<Time<Fixed>>().elapsed()
+    );
     assert!((9_900.0..=9_925.0).contains(&mana), "mana {mana}");
     let kinds: Vec<_> = std::mem::take(&mut h.inbox.log)
         .into_iter()

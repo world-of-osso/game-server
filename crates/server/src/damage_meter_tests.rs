@@ -411,6 +411,16 @@ fn damage_meter_melee_damage_delays_frostbolt_launch_by_ten_ticks() {
     h.advance(18);
     assert!(h.app.world().get::<CastState>(caster).is_some());
     h.advance(9);
+    println!(
+        "Frostbolt olddeadline at{:?}, state{:?}, launches{:?}",
+        h.app.world().resource::<Time<Fixed>>().elapsed(),
+        h.app.world().get::<CastState>(caster),
+        h.inbox
+            .log
+            .iter()
+            .filter(|event| event.kind == CombatLogKind::CastSuccess)
+            .collect::<Vec<_>>()
+    );
     assert!(h.app.world().get::<CastState>(caster).is_some());
     assert!(
         !h.inbox
