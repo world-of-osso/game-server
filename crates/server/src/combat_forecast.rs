@@ -157,8 +157,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
             .get::<crate::stats::StatModifiers>(enemy)
             .map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
-        npc_expertise_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_EXPERTISE))
-            / EXPERTISE_PER_AVOIDANCE_PERCENT,
+        expertise_pct: crate::auras::combat_stats::expertise_reduction(auras, false),
         creature: true,
         authored_attack_time: world.get::<super::CreatureAttackTime>(enemy).copied(),
         creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(enemy),
@@ -272,12 +271,18 @@ fn read_damage_versus(
 }
 
 fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32 {
-    let modified = apply_swing_multipliers(
-        base,
-        projection.attacker.mods,
-        projection.target_mods,
-        projection.versus,
-    );
+    let taken = projection
+        .target_mods
+        .map_or(1.0, |mods| mods.damage_taken(1))
+        * world
+            .get::<CharacterStats>(projection.target)
+            .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier)
+        * crate::auras::melee_damage_from_caster(
+            world.get::<crate::auras::ActiveAuras>(projection.target),
+            projection.attacker.entity,
+        );
+    let modified =
+        apply_swing_multipliers(base, projection.attacker.mods, taken, projection.versus);
     armor_mitigated(
         modified,
         projection.armor,

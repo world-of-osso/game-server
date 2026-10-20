@@ -22,6 +22,10 @@
 //! weapon type (SimC `action_t::calculate_weapon_damage`). Main-hand damage is
 //! `CharacterStats.main_hand` (`item_stats.rs`), unarmed 1-2 at 2.0 s.
 
+#[cfg(test)]
+#[path = "aura_stat_spell_tests.rs"]
+mod aura_stat_spell_tests;
+
 use std::collections::HashSet;
 
 use bevy::prelude::*;
@@ -635,7 +639,13 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
 
 /// The target's armor against the caster: a creature's own armor at the
 /// caster's level, a player's gear armor.
-fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+fn armor_reduced(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+    spell: &SpellInfo,
+) -> f32 {
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, caster),
         UnitScaling::of(world, target),
@@ -657,6 +667,7 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
         armor,
@@ -712,7 +723,18 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
             let base = world
                 .get::<CharacterStats>(caster)
                 .map_or(0.0, |stats| stats.crit_pct);
-            spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+            let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
+                0.0
+            } else {
+                stat_mods(world, caster).map_or(0.0, |mods| mods.spell_crit_pct)
+            };
+            spell_mods::modify(
+                world,
+                caster,
+                spell,
+                SpellModOp::CritChance,
+                base + spell_bonus,
+            )
         });
     let modifier = if takes_melee_crit_modifier(spell) {
         world
@@ -1188,7 +1210,7 @@ fn deal_damage_and_report(
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
         && reduced_by_armor(ctx.spell)
     {
-        armor_reduced(world, ctx.caster, target, amount)
+        armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
     };
@@ -1394,7 +1416,7 @@ pub fn apply_heal(
 ) {
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster)
-        * missing_health_healing_multiplier(world, ctx.caster, target, ctx.spell);
+        * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
@@ -1404,42 +1426,6 @@ pub fn apply_heal(
         .max(0.0)
         .round();
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
-}
-
-/// TC Unit::SpellHealingPctDone (a352b1fa Unit.cpp7503): each matching354
-/// adds its percentage scaled by the recipient's live missing-health percentage.
-fn missing_health_healing_multiplier(
-    world: &World,
-    caster: Entity,
-    target: Entity,
-    spell: &SpellInfo,
-) -> f32 {
-    let Some(health) = world
-        .get::<Health>(target)
-        .filter(|health| health.max > 0.0)
-    else {
-        return 1.0;
-    };
-    let missing_fraction = 1.0 - health.current / health.max;
-    world
-        .get::<crate::auras::ActiveAuras>(caster)
-        .map_or(1.0, |auras| {
-            auras
-                .iter()
-                .flat_map(|aura| {
-                    aura.effects
-                        .iter()
-                        .filter(move |effect| {
-                            effect.aura_type
-                                == crate::auras::handlers::MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH
-                                && spell_mods::class_mask_affects(aura, effect, spell)
-                        })
-                        .map(move |effect| {
-                            1.0 + effect.amount * f32::from(aura.stacks) * missing_fraction / 100.0
-                        })
-                })
-                .product()
-        })
 }
 
 /// A named transfer already computed from effective healing; no second spell-power,

@@ -16,9 +16,11 @@ const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const ATTR7_NO_ATTACK_DODGE: u32 = 0x0080_0000;
-const MOD_EXPERTISE: u32 = 240;
+#[cfg(test)]
+#[path = "aura_expertise_tests.rs"]
+mod aura_expertise_tests;
+
 const MOD_ENEMY_DODGE: u32 = 251;
-const EXPERTISE_PER_DODGE_PERCENT: f32 = 4.0;
 const MELEE_HIT_DODGE: i32 = 2;
 const MELEE_HIT_BLOCK: i32 = 3;
 const DEFENSE_MAGIC: u32 = 1;
@@ -251,7 +253,7 @@ fn weapon_spell_miss_chance(
 }
 
 /// Unit.cpp2750–2785: player DodgePercentage or NPC baseline/49/level bonus,
-/// then caster251 and non-player expertise. Player expertise/248 remain gaps.
+/// then caster251 and expertise240. Aura248 remains a named native-input gap.
 fn weapon_spell_dodge_chance(
     world: &World,
     caster: Entity,
@@ -287,13 +289,10 @@ fn weapon_spell_dodge_chance(
 fn apply_caster_dodge_modifiers(world: &World, caster: Entity, dodge: f32) -> f32 {
     let caster_auras = world.get::<ActiveAuras>(caster);
     let enemy_dodge = caster_auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE));
-    let expertise = if world.get::<shared::components::Player>(caster).is_some() {
-        0.0
-    } else {
-        caster_auras.map_or(0.0, |auras| {
-            auras.modifier(MOD_EXPERTISE) / EXPERTISE_PER_DODGE_PERCENT
-        })
-    };
+    let expertise = crate::auras::combat_stats::expertise_reduction(
+        caster_auras,
+        world.get::<shared::components::Player>(caster).is_some(),
+    );
     (dodge + enemy_dodge - expertise).max(0.0)
 }
 

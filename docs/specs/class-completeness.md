@@ -1,5 +1,16 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Generic combat/stat aura census slice — 2026-10-20
+
+Generic consumers cover57,103,145,240,269,316,354,404,405,419,422,463 with native70448 spell definitions. Preserve native masks, stacking, rating truncation, create-mana cost basis and reversible changes; do not introduce per-spell cases. Aura419 changes maximum mana without granting proportional current mana; removal only clamps. Aura316's generic absorption accounting must not invent death prevention.
+
+Named gaps remain explicit:
+- **TC_NYI_AURA_443**, **TC_NYI_AURA_220**, **TC_NYI_AURA_381**, **TC_NYI_AURA_382**: pinned TC declares these NYI/HandleNULL. Keep unsupported; do not claim a consumer.
+- **AURA316_SPELLSCRIPT_DEATH_PREVENTION_UNPORTED**: census20711,31230,31850,86949,114556,209258,404195,1265361 require individual sourced SpellScript qualification. Existing bounded31850 behavior stays intact; generic316 is not a substitute for any callback.
+
+Proof is bounded native consumer behavior, not complete ability/class/legal-loadout/UDP parity. Census22842's145 amount0 stays unchanged; native182775 amount50 supplies its nonzero oracle. No item-restricted240 source occurs in this census slice; weapon-equipment filtering outside these native sources remains unqualified. The server has no magical resistance pool for269 to modify.
+
+[Per-type pinned TC file:line citations, implementation and proof ledger](../wiki/systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20). Enabled targeted15/15 pass at861d7edd5; no full suite or independent parent gate claimed.
 ## Impending Victory consequence (active70448)
 
 - Successful ordinary202168 casts real self202166, then removes32216 from that caster only. Native202166 owns its30%-maximum-health payload, crit, overheal and triggered flags. Missing Victorious does not disable the heal; another Warrior's32216 is preserved.
@@ -388,7 +399,7 @@ Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per posi
 
 - Effect137 restores the authored percentage of the living recipient's maximum raw power, truncating before the shared energize/clamp/overflow-log path. Unknown or absent power pools do not receive power.
 - Aura307 permits cast/channel movement when the cast has its Misc0 SpellLabel, independent of aura amount and class family. Native movement-interrupt exclusion attributes retain priority. Gain/removal/expiry update in-progress cast permission through the existing330 lifecycle.
-- Aura354 multiplies each class-mask-matching direct or periodic heal by `1 + stacked_amount / 100 * (1 - recipient_current_health / recipient_max_health)`, using live recipient health. Each matching effect multiplies independently; removal removes its contribution. Foreign families and nonintersecting masks do not match.
+- Aura354 belongs to the inherited generic combat/stat slice, not a second implementation here. Retained numeric tests must use that existing shared consumer exactly once.
 - `AURA_470_TC_NULL_TIME_RATE_BY_LABEL` remains a named gap: pinned TC uses HandleNULL, so no invented aura clock scaling. Existing373 NULL and188/235/408 client-only gaps remain.285 is already implemented; no replacement in this slice.
 
 Source and proof: [generic census slice](../wiki/systems/auras.md#census-generic-next--2026-10-20). These are generic consumer requirements, not full-class or legal-loadout certification.

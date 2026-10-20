@@ -181,11 +181,12 @@ fn class_completeness_native_base_armor_player_factors_multiply_before_stat_armo
         .find(|e| e.aura == 142)
         .unwrap()
         .base_points;
-    let mut mods = *h
+    let mut mods = h
         .app
         .world()
         .get::<crate::stats::StatModifiers>(player)
-        .unwrap();
+        .unwrap()
+        .clone();
     mods.armor_from_primary_stat_pct = 100.0;
     let input = crate::stats::StatInputs {
         class: 8,
