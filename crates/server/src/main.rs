@@ -36,6 +36,8 @@ mod db2_source_build;
 mod death;
 mod duel;
 mod durability;
+#[cfg(test)]
+mod dungeon_simulator;
 mod economy;
 mod equipment_admin_types;
 mod experience;
