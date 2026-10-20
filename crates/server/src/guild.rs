@@ -637,6 +637,10 @@ fn class_name_from_id(class_id: u8) -> String {
 }
 
 #[cfg(test)]
+#[path = "guild_last_online_tests.rs"]
+mod guild_last_online_tests;
+
+#[cfg(test)]
 #[path = "guild_online_zone_tests.rs"]
 mod guild_online_zone_tests;
 
