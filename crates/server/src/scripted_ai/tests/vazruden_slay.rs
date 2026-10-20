@@ -3,7 +3,8 @@ use super::herald_call::first_west;
 use super::*;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 
-fn apply_native_low_level_stats(h: &mut Harness) {
+/// Level/class inputs through the production stat producer; no Health assignment.
+pub(super) fn apply_native_low_level_stats(h: &mut Harness) {
     use bevy::ecs::system::RunSystemOnce;
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert((

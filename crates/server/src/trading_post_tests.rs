@@ -1,6 +1,8 @@
 use super::*;
 #[path = "trading_post_monthly_tests.rs"]
 mod monthly;
+#[path = "trading_post_native_proof_hold_tests.rs"]
+mod native_proof_hold;
 use crate::bank_test_harness::{ACCOUNT, Harness};
 use shared::components::{Health, Level, Npc, Position, UnitFactionTemplate};
 use shared::protocol::AdventureGuideClock;
