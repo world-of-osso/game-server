@@ -2,6 +2,9 @@ use super::*;
 use shared::components::{Mounted, PlayerMotion};
 use shared::profession::ProfessionSkillLine;
 
+#[path = "tests_battleground_exit_mount.rs"]
+mod exit_mount;
+
 const GOLDEN_GRYPHON: u32 = 32235;
 const STANDARD_GROUND_SPEED: u32 = 86457;
 const UNRELATED_AURA: u32 = DUNGEON_DESERTER_SPELL_ID;

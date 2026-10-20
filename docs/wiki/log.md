@@ -1,3 +1,7 @@
+## 2026-10-19 — Aura248 native-input gap
+
+[Named gap](systems/player-damage.md#aura248-native-input-gap--2026-10-19): AURA_248_NO_NONZERO_NATIVE_INPUT_70448 DEFERRED after fresh all-difficulty canonical scan finds only261912effect4 amount0/Misc0 and no imported server-side248 rows. Synthetic-only implementation declined as speculative; contract/wiki record native-proof boundary, no production/test/data change or coverage promotion.
+
 ## 2026-10-19 — Voluntary leadership authority RED
 
 [Source/policy/implementation](systems/guild-lifecycle.md#voluntary-leadership-transfer): permitted Retail UI/C API signature and full pinned TC self chain qualified before code; native Retail self behavior unproven, approved named Permissions refusal preserves state. Ignored P/E/S regressions pushed first; initial S unsupported-wire failures are not authority proof. Recognized-request baseline then reproduces four actual authority failures before member-rank mutation. Minimal rank0→target/current-lowest→former-master transform uses existing atomic persistence and recipient refresh. Six-rank/nonzero bank fixture, reopen, auth/foreign/self and real concurrent readers; focused GREEN/gate/native pending.
@@ -3187,6 +3191,7 @@ Existing guild snapshot paths now resolve same-guild online map/position through
 Actual protocol1, both-skin UI1 and native HostClient server1 pass after their observed REDs. Tests enabled; production area authority/label semantics unchanged by fixture repairs. Coordinated integration gate and native proof next.
 - 2026-10-18: Share MFBO minimum signed-grid decoding, preserving consumer selection/errors and runtime plane policy. See [shared formats](systems/wow-formats.md).
 
+- [Selected native follower metadata](investigations/slow-native-test-fixtures.md#selected-native-follower-metadata-2026-10-19) — existing canonical template/class views, two-live-app isolation, unchanged1353-corner/144-origin/36-kit coverage and matched wall/CPU/RSS observations.
 ## 2026-10-19 — Priority-preserving follower interrupt provider
 
 [Provider integration](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): shared live source predicate with actual caster, once at first available kick-capable entry; real Garrick32 ordinary-update RED→96231 GREEN, native26 heal633-before31935 preserved. Four requested families50PASS118.50s/zero warnings, non-testcheck2m37s/fmtPASS; rewrittenf383e28c1 pushed, leadgate pending. No planner/navigation/ai.rs redesign or whole-kit/live acceptance.
@@ -3194,3 +3199,14 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Follower kick candidate-scope regression repair
 
 [Exact root/proof](investigations/follower-data.md#priority-preserving-interrupt-provider--2026-10-19): fk702 two genuine Overheat regressions despite prior50GREEN; bounded diagnostic2RED identifies spec63 off-selectedkick from widened all-engaged handoff. fb4edd4b7 restores selectedenemy-only runtime envelope, providermultiAPIunchanged; fourfamilies+bothunchangedOverheat52PASS96.87s/ZEROwarnings, check8.43s/fmtPASS. Pushed; successor gatepending. No assertion/planner/ai.rs edits, no weakened collection/budget checks.
+
+## 2026-10-19 — Swiftmend native prerequisite qualification
+
+[Qualification](investigations/follower-data.md#swiftmend-prerequisite-qualification--2026-10-19): test-onlydecf6a597, native18562/noHoT wronglyacceptedRED; real774/actualhealPASS; lowernoHoTversushigherHoTfollowerpatientselectionRED. Explicitignoredrun1PASS/2FAIL22.71s/zero warnings, all3remainignored. Backendboundaryfailsfirst; no follower-onlyworkaround or productionchangeauthorized.
+
+## 2026-10-19 — Swiftmend computed-state backend and generic patient eligibility
+
+[Source/capabilities/proof](investigations/follower-data.md#computed-target-state-and-eligible-patient-ranking--2026-10-19): onlystate15computed, ANYcasterHoT, exactownerrelation/namedfollowerpolicy; originalownernegativecorrectedtoself. SourceRED3/2→backend4/1→separatelyapprovedsharedtargetpredicatebeforehealthrank7GREEN; final278PASS/8existingignored535.73s, privateAzurefrontalexplicitLOCALskip, check43.07s/fmtPASS. Uncomputedstatesnotfalse; no18562override orpriority/timer/movement/pet/planner change. Pushed7938b558d; leadgatepending.
+## 2026-10-19 — Leadership transfer native proof
+
+gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.

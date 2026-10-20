@@ -1,5 +1,9 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Named native-input gap (active70448)
+
+- **AURA_248_NO_NONZERO_NATIVE_INPUT_70448** — DEFERRED. Canonical70448 `spell_effect` across all difficulty rows contains only261912 effect4/710273: aura248 amount0/MiscValue0=0; imported `tdb_serverside_spell_effect` contains no248 rows. No nonzero matching-Dodge native input qualifies a runtime RED. Do not implement a synthetic-only speculative path, change native data, or promote native/class/legal-loadout/census coverage. This is a bounded current-input gap, not an upstream/global absence claim. Reconsider only when an actual native70448 consumer supplies a nonzero authored or source-derived amount. [Evidence and source semantics](../wiki/systems/player-damage.md#aura248-native-input-gap--2026-10-19).
+
 ## Prayer of Mending baseline (active70448)
 
 - Ordinary33076 must cast real41635 with native effect0 jump count plus the initial recipient, using source per-cast aura-stack arguments before initial stack/log/view publication.

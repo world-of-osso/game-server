@@ -64,6 +64,9 @@ fn return_to_origin(
     if !crate::maps::teleport_to(world, player, origin, TeleportOptions::default()) {
         return Err("return to battleground origin was refused".into());
     }
+    if !arena {
+        super::remove_battleground_mount_auras(world, player);
+    }
     world
         .entity_mut(player)
         .insert(crate::faction::current_pvp_faction_for_race(race));
