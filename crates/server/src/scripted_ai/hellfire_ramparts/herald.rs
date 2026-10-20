@@ -66,7 +66,7 @@ const CENTER: Position = Position {
     z: -1740.5852,
 };
 
-fn is_ramparts(world: &World, map: InMap) -> bool {
+pub(super) fn is_ramparts(world: &World, map: InMap) -> bool {
     map.map_id == MAP
         && world.get_resource::<MapStore>().is_some_and(|maps| {
             maps.instance_scripts.get(&MAP).map(String::as_str) == Some("instance_ramparts")
@@ -192,6 +192,13 @@ impl HeraldIntro {
         ctx.set_react_state(ReactState::Aggressive);
         ctx.do_cast_self(LOGIC_TIMER);
         ctx.world.entity_mut(ctx.me).remove::<HeraldUnkillable>();
+        #[cfg(test)]
+        if let Some(seed) = ctx
+            .world
+            .get::<super::super::tests::cast_admission::GroundCombatSeed>(ctx.me)
+        {
+            self.boss.events.seed_rng(seed.0);
+        }
         self.boss.events.schedule_range(FIREBALL_GROUND, 0, 5_000);
         self.boss.events.schedule_range(CONE_OF_FIRE, 0, 10_000);
         let map = ctx.map().expect("registered Ramparts actor map");
@@ -250,6 +257,10 @@ impl CreatureAi for HeraldIntro {
             self.started_descending = true;
             self.special_events.schedule(DESCEND_1, 0);
         }
+    }
+
+    fn enter_evade_mode(&mut self, ctx: &mut Ctx) {
+        super::evade_encounter(ctx);
     }
 
     // TC281–288: the first real death only marks the survivor; the second completes.
@@ -325,6 +336,13 @@ impl CreatureAi for HeraldIntro {
             }
         }
         boss_update_ai(self, ctx, diff_ms);
+        #[cfg(test)]
+        super::super::tests::cast_admission::record_ai_tick(
+            ctx.world,
+            ctx.me,
+            self.boss.events.elapsed_ms(),
+            diff_ms,
+        );
     }
 }
 

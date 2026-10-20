@@ -8,6 +8,14 @@ Retail Mainline behavior applies to both client art skins. Extend existing PvP/r
 - War Mode changes require authoritative rest-area, combat and instance checks; its source-backed buff and talent activation must follow actual world state.
 - PvP talent selection requires source specialization, slot-mask/unlock, level and PlayerCondition eligibility. Unknown conditions cannot be guessed true.
 
+## Ordinary battleground preparation
+
+Ordinary battlegrounds use the TC a352b1fa Battleground.cpp100–103/334–445 preparation stages120/60/30/0. The first accepted player actually arriving in the current copy starts the120-second clock; invitations, pending transfers and later arrivals do not restart it. A full roster remains Waiting and cannot advance objectives before the deadline. Preserve the existing authored per-team minimum as a separate start condition. Arena timing remains unchanged.
+
+Load only authored world.db preparation-gate placements named by the corresponding TC map scripts. Keep their authored closed collision and closed animation during preparation. At the actual start, run the sourced open/removal behavior: WSG2106, AB2107, TwinPeaks726, Gilneas761, Eye566, AV30, Silvershard727 and Deephaul2656 open doors then remove them after3seconds; AB/AV ghost blockers disappear immediately. Isle628 starting doors195703/195491 open and disappear after20seconds; portcullises195436/195437 open and remain. Kotmogu998 doors215760 open24seconds after the30-second stage;215787 open at start, both remain. Limit every callback to its exact match copy; destructible objective gates are not preparation doors.
+
+Named asset gap: Seething1803 has sourced templates281224/281226 and an OnStart callback, but zero imported placements. Do not fabricate them. Strand607 remains unimplemented. This slice does not add countdown UI/wire fields, Preparation44521, resource resets, rewards or unrelated map objectives.
+
 ## Ordinary battleground party queue
 
 A grouped character's QueueForBattleground request is leader-only. Resolve its GroupRegistry roster, validate all members are online, available for PvP and in the same source bracket, then enqueue the whole roster through existing join_group atomically. Reject groups larger than one battleground team. Every queued member receives the normal queue projection; existing matchmaking keeps the party together without changing minimums or capacity.

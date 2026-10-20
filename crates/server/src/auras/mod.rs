@@ -1065,7 +1065,7 @@ fn stop_cast_on_first_stun(world: &mut World, unit: Entity, aura: &AuraInstance)
             .any(|other| other.instance_id != aura.instance_id && stuns(other))
     });
     if stuns(aura) && !already_stunned {
-        crate::spell_cast::cancel_cast(world, unit);
+        crate::spell_cast::stop_all_casts(world, unit);
     }
 }
 
