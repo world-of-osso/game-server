@@ -3257,3 +3257,7 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 ## 2026-10-19 — Last Online native acceptance
 
 gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
+
+## 2026-10-19 — Native Germination shorter-remaining routing
+
+[Source/native boundary](investigations/follower-data.md#germination-shorter-remaining-routing--2026-10-19): SimC76f8118/native155675learned33not32. Pushedignored3first; native1PASS/secondHoTmissingRED/thirdprerequisiteblocked19.16s→pre-applyordinary155777redirect3GREEN30.79s/zero warnings. EnabledafterGREENc252954fc, dualperiodichealreceipts/otherdeadlineunchanged; no cost/timer/globalstacking/Swiftmendinteraction changes. Pushed; finalgatepending.
