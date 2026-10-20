@@ -334,6 +334,8 @@ pub(crate) fn create_tables(db: &Database) {
     txn.open_table(inventory_store::NONVISUAL_EQUIPMENT)
         .expect("create nonvisual equipment table");
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
+    txn.open_table(inventory_store::ITEM_CRAFTING_ORIGINS)
+        .expect("create crafting origins table");
     txn.open_table(inventory_store::ITEM_UNLOCKED)
         .expect("create item unlock state table");
     txn.open_table(inventory_store::ITEM_DURABILITIES)

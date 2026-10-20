@@ -1,7 +1,68 @@
 use super::*;
 
 #[test]
-#[ignore = "RED: actual2153 craft has no persisted per-instance origin"]
+#[ignore = "RED: crafted stacks merge into unknown-origin instances"]
+fn crafting_origin_stack_preserves_unknown_item_and_final_surviving_crafted_guid() {
+    let mut h = harness(10).unwrap();
+    h.learn_tailoring();
+    h.give(2996, "Bolt of Linen Cloth", 1);
+    let unknown_guid = persistence::load_inventory(h.db(), h.character_id)
+        .items
+        .into_iter()
+        .find(|item| item.item_id == 2996)
+        .unwrap()
+        .item_guid;
+    h.give(2589, "Linen Cloth", 4);
+    h.craft(2963, 2);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(2589), 0);
+    assert_eq!(h.bag_count(2996), 3);
+    let model = crate::inventory::load_model(
+        h.db(),
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        h.character_id,
+    )
+    .unwrap();
+    let wire = serde_json::to_value(model.inventory_snapshot()).unwrap();
+    let items: Vec<_> = wire["bags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|bag| bag["items"].as_array().unwrap())
+        .map(|slot| &slot["item"])
+        .filter(|item| item["item_id"] == 2996)
+        .collect();
+    let unknown = items
+        .iter()
+        .find(|item| item["item_guid"] == unknown_guid)
+        .unwrap();
+    assert_eq!(
+        unknown["count"], 1,
+        "actual crafts cannot relabel/merge into an identical unknown-origin stack"
+    );
+    assert!(
+        unknown
+            .get("crafting_origin")
+            .is_none_or(serde_json::Value::is_null)
+    );
+    let crafted = items
+        .iter()
+        .find(|item| item["item_guid"] != unknown_guid)
+        .unwrap();
+    assert_eq!(
+        crafted["count"], 2,
+        "same-origin craft output must retain its final surviving stack GUID"
+    );
+    assert_eq!(
+        crafted["crafting_origin"],
+        serde_json::json!({"skill_line_ability_id":2359,"recipe_spell_id":2963,"crafting_quality_id":null})
+    );
+}
+
+#[test]
 fn crafting_origin_actual_cast_survives_database_reopen_in_owner_snapshot() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("crafting-origin.redb");
