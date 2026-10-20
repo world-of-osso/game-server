@@ -104,3 +104,90 @@ fn prepared_encounter_profiles_and_live_difficulties_keep_app_edits_local() {
             .is_some()
     );
 }
+
+#[test]
+fn prepared_liquid_fire_overlay_keeps_live_apps_and_reloads_independent() {
+    use crate::game_objects::summoned::{SummonedObjectTemplates, wild_unsupported_reason};
+    use std::collections::BTreeSet;
+
+    let (mut normal, _, _, _) = herald_intro2::prepared_ramparts(1);
+    let (mut heroic, _, _, _) = herald_intro2::prepared_ramparts(2);
+    herald_liquid_fire::install_liquid_fire_inputs(&mut normal);
+    herald_liquid_fire::install_liquid_fire_inputs(&mut heroic);
+    let original = normal.app.world().resource::<WorldData>().templates[&21252].clone();
+    let models: Vec<_> = original
+        .models
+        .iter()
+        .map(|model| model.display_id)
+        .collect();
+    let difficulties: BTreeSet<_> = normal
+        .app
+        .world()
+        .resource::<WorldData>()
+        .difficulty_templates
+        .keys()
+        .filter(|(entry, _)| *entry == 21252)
+        .copied()
+        .collect();
+    let unrelated = heroic.app.world().resource::<WorldData>().templates[&17536]
+        .name
+        .clone();
+    let effect = normal
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(31706)
+        .unwrap()
+        .effects[0]
+        .clone();
+    assert_eq!(wild_unsupported_reason(normal.app.world(), &effect), None);
+    assert_eq!(wild_unsupported_reason(heroic.app.world(), &effect), None);
+    {
+        let mut data = normal.app.world_mut().resource_mut::<WorldData>();
+        let trigger = data.templates.get_mut(&21252).unwrap();
+        trigger.name = "only the normal app".into();
+        trigger.models.clear();
+        data.difficulty_templates
+            .retain(|(entry, _), _| *entry != 21252);
+        data.expected_stats.by_level.clear();
+    }
+    normal
+        .app
+        .insert_resource(SummonedObjectTemplates::default());
+    assert!(wild_unsupported_reason(normal.app.world(), &effect).is_some());
+    assert_eq!(wild_unsupported_reason(heroic.app.world(), &effect), None);
+    let sibling = heroic.app.world().resource::<WorldData>();
+    assert_eq!(sibling.templates[&21252].name, original.name);
+    assert_eq!(sibling.templates[&17536].name, unrelated);
+    assert!(!sibling.expected_stats.by_level.is_empty());
+    assert_eq!(
+        sibling.templates[&21252]
+            .models
+            .iter()
+            .map(|model| model.display_id)
+            .collect::<Vec<_>>(),
+        models
+    );
+    herald_liquid_fire::install_liquid_fire_inputs(&mut normal);
+    let restored = normal.app.world().resource::<WorldData>();
+    assert_eq!(restored.templates[&21252].name, original.name);
+    assert_eq!(
+        restored.templates[&21252]
+            .models
+            .iter()
+            .map(|model| model.display_id)
+            .collect::<Vec<_>>(),
+        models
+    );
+    assert_eq!(
+        restored
+            .difficulty_templates
+            .keys()
+            .filter(|(entry, _)| *entry == 21252)
+            .copied()
+            .collect::<BTreeSet<_>>(),
+        difficulties
+    );
+    assert!(restored.expected_stats.by_level.is_empty());
+    assert_eq!(wild_unsupported_reason(normal.app.world(), &effect), None);
+}
