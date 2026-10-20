@@ -3218,3 +3218,7 @@ gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated 
 ## 2026-10-19 — Actor-owned periodic-damage maintenance
 
 [Source and native proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19): SimC76f8118actor-specificMoonfire semantics confirmed; ordinarydual164812caster/tick+ownrecastcontrolsPASS/foreignsuppressionRED. PeriodicdamageAttack-onlycasterfilteref0603bb1 gives4nativePASS20.11s includingforeignHoTunchanged. Enabled3provedqualifications; integratedkit/stackingcontrols andleadgatepending. No globalhas_aura/timer/priority/movement/pet/planner edits.
+
+## 2026-10-19 — Actor-owned DoT integrated proof
+
+[Exact scope/proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19):6a82516ac integratedkit_+nativeperiodic/coexistence60PASS/0FAIL/1explicitfile-writingexportignored45.05s/compile5m20s, check1m55s/fmt/diffPASS, zero warnings. Allfournewnativecasesenabled, sourceSimC76f8118receiptretained; foreignHoT/globalhas_auraunchanged. Pushed; independentmo730queued(allfollowers/auras/pets+AzureENV/check/fmt). No redundantlocalrun.
