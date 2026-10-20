@@ -126,6 +126,7 @@ fn fixture(queue: u32) -> (Harness, Vec<Traveler>, tempfile::NamedTempFile) {
                     max: 100.0,
                     regen_per_sec: 0.0,
                 }],
+                ..Default::default()
             },
         ));
     }
@@ -158,7 +159,7 @@ fn affordable(h: &Harness, who: &Traveler) -> bool {
     })
 }
 
-fn aura_id(h: &Harness, who: &Traveler, spell: u32) -> Option<u64> {
+fn aura_id(h: &Harness, who: &Traveler, spell: u32) -> Option<u32> {
     h.app
         .world()
         .get::<ActiveAuras>(who.player)?
