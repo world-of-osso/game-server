@@ -4,7 +4,7 @@ use super::herald_call::{damage_to_percent, first_west};
 use super::herald_intro::{actors_in_copy, spawn_second_copy};
 use super::herald_intro2::received_casts;
 use super::*;
-use crate::scripted_ai::tests::cast_admission::CastAdmissions;
+use crate::scripted_ai::tests::cast_admission::{AiTickTrace, CastAdmissions};
 use crate::spell_cast::test_harness::ObservedCombatEvents;
 
 const DESCEND: Position = Position {
@@ -175,6 +175,14 @@ fn assert_dispatch_windows(
     repeat_max: f32,
 ) {
     let entries = &h.app.world().resource::<CastAdmissions>().entries;
+    // Permanent evidence precedes every assertion, including a failing boundary.
+    println!(
+        "native ground asserted{spell}/Roar admissions: {:?}",
+        entries
+            .iter()
+            .filter(|entry| entry.spell == spell || entry.spell == 39427)
+            .collect::<Vec<_>>()
+    );
     let attempts: Vec<_> = entries
         .iter()
         .filter(|entry| entry.spell == spell)
@@ -217,6 +225,14 @@ fn assert_ground_parents(difficulty: u32) {
     let other_player = h.players[1].0;
     let other_player_health = h.health(other_player).current;
     let mut saw_fear = false;
+    if std::env::var_os("GAME_SERVER_HERALD_AI_TRACE").is_some() {
+        let origin = h.app.world().resource::<CastAdmissions>().origin;
+        h.app.insert_resource(AiTickTrace {
+            actor: nazan,
+            origin,
+            frames: Vec::new(),
+        });
+    }
     // First source windows fail fast before a longer natural repeat observation.
     for tick in 1..=2240 {
         h.advance(0.05);
@@ -252,6 +268,14 @@ fn assert_ground_parents(difficulty: u32) {
         assert_eq!(h.health(other).current, other_health);
         assert_eq!(h.health(other_player).current, other_player_health);
         assert!(h.inbox(0).ends.iter().all(|end| !end.success));
+    }
+    if let Some(trace) = h.app.world().get_resource::<AiTickTrace>() {
+        for frame in &trace.frames {
+            println!(
+                "native Herald AI tick {}",
+                serde_json::to_string(frame).unwrap()
+            );
+        }
     }
     assert_dispatch_windows(&h, fireball, 5.0, 5.0, 15.0);
     assert_dispatch_windows(&h, cone, 10.0, 10.0, 15.0);
@@ -318,6 +342,97 @@ fn assert_ground_parents(difficulty: u32) {
             .resource::<crate::maps::InstanceManager>()
             .completed_encounters(map),
         0
+    );
+}
+
+/// Source Spell.cpp4265 expires1500ms at the30th actual50ms update, not31st.
+#[test]
+fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
+    let (mut h, _, nazan, _, _, _) = reach_fall(2);
+    // StdRng0 yields authored initial Fireball3656ms/Cone7735ms rolls,
+    // both after the first Roar2000ms request and its ordinary1500ms cast.
+    h.app.world_mut().entity_mut(nazan).insert(
+        crate::scripted_ai::tests::cast_admission::GroundCombatSeed(0),
+    );
+    let origin = h.app.world().resource::<CastAdmissions>().origin;
+    h.app.insert_resource(AiTickTrace {
+        actor: nazan,
+        origin,
+        frames: Vec::new(),
+    });
+    let mut started = None;
+    // Fixture-only combat RNG starts at natural release; real source ranges
+    // place competing first requests after Roar, without bypassing admission.
+    for _ in 0..100 {
+        h.advance(0.05);
+        let accepted_roar = h
+            .app
+            .world()
+            .resource::<CastAdmissions>()
+            .entries
+            .iter()
+            .any(|entry| entry.spell == 39427 && entry.result.is_ok());
+        if accepted_roar {
+            started = Some(h.app.world().resource::<Time<Fixed>>().elapsed());
+            break;
+        }
+    }
+    println!(
+        "native1500ms setup admissions: {:?}",
+        h.app.world().resource::<CastAdmissions>().entries
+    );
+    let started = started.expect("seeded source rolls admit ordinary first Roar");
+    let first = h
+        .app
+        .world()
+        .resource::<AiTickTrace>()
+        .frames
+        .last()
+        .unwrap();
+    let cast = first
+        .cast
+        .as_ref()
+        .expect("real cast exists at its AI dispatch");
+    assert_eq!(
+        (
+            cast.spell_id,
+            cast.duration,
+            cast.elapsed,
+            cast.pushback_count
+        ),
+        (39427, 1.5, 0.0, 0)
+    );
+    for _ in 0..29 {
+        h.advance(0.05);
+        let frame = h
+            .app
+            .world()
+            .resource::<AiTickTrace>()
+            .frames
+            .last()
+            .unwrap();
+        assert!(frame.cast.is_some(), "no early release before native1500ms");
+    }
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - started,
+        Duration::from_millis(1450)
+    );
+    h.advance(0.05);
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - started,
+        Duration::from_millis(1500)
+    );
+    let frame = h
+        .app
+        .world()
+        .resource::<AiTickTrace>()
+        .frames
+        .last()
+        .unwrap();
+    assert!(
+        frame.cast.is_none(),
+        "AI must observe native1500ms expiry at30ticks, not31; actual {:?}",
+        frame.cast
     );
 }
 
