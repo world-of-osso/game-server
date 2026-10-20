@@ -1,5 +1,5 @@
 //! Active70448 receipt-matching inputs; TC a352b1fa spell_shaman.cpp2348–2376.
-//! Qualification only: no Nature's Guardian script consumer/chain certificate.
+//! Native qualification plus child-module chain behavior; not legal-loadout/full-class proof.
 use bevy::ecs::system::RunSystemOnce;
 use bevy::prelude::*;
 use shared::casting::CastState;

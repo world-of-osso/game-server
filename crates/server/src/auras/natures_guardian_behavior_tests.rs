@@ -1,4 +1,4 @@
-//! Ignored native chain regressions, written after qualification and before consumer.
+//! Native chain regressions; source inputs qualified before the pushed behavioral RED.
 use super::*;
 use shared::protocol::CombatLogEvent;
 
@@ -89,7 +89,6 @@ fn take_swings(h: &mut Harness, actors: &[Entity], count: usize) {
 }
 
 #[test]
-#[ignore = "behavioral RED before Nature's Guardian named proc consumer"]
 fn native_natures_guardian_below_threshold_casts_cooldown_before_real_heal() {
     let mut h = behavior_fixture(true);
     let owner = h.caster;
@@ -124,7 +123,6 @@ fn native_natures_guardian_below_threshold_casts_cooldown_before_real_heal() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Nature's Guardian strict current-health check"]
 fn native_natures_guardian_above_and_equal_do_not_proc_but_below_does() {
     let mut h = behavior_fixture(true);
     let (owner, attacker) = (h.caster, h.npc);
@@ -143,7 +141,6 @@ fn native_natures_guardian_above_and_equal_do_not_proc_but_below_does() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Nature's Guardian native cooldown lifetime"]
 fn native_natures_guardian_cooldown_blocks_repeat_then_natural_expiry_rearms() {
     let mut h = behavior_fixture(true);
     let (owner, first) = (h.caster, h.npc);
@@ -270,7 +267,6 @@ fn native_natures_guardian_cooldown_blocks_repeat_then_natural_expiry_rearms() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Nature's Guardian preserves its player's cast"]
 fn native_natures_guardian_actual_proc_keeps_player_cast_and_owned_completion() {
     let mut h = behavior_fixture(true);
     let (owner, attacker) = (h.caster, h.npc);
@@ -307,7 +303,6 @@ fn native_natures_guardian_actual_proc_keeps_player_cast_and_owned_completion() 
 }
 
 #[test]
-#[ignore = "native Nature's Guardian missing-passive control"]
 fn native_natures_guardian_without_passive_has_no_children() {
     let mut h = behavior_fixture(false);
     let owner = h.caster;
@@ -318,7 +313,6 @@ fn native_natures_guardian_without_passive_has_no_children() {
 }
 
 #[test]
-#[ignore = "native Nature's Guardian removed-passive control"]
 fn native_natures_guardian_unlearned_passive_has_no_children() {
     let mut h = behavior_fixture(true);
     let owner = h.caster;
@@ -347,7 +341,6 @@ fn native_natures_guardian_unlearned_passive_has_no_children() {
 }
 
 #[test]
-#[ignore = "behavioral RED before Nature's Guardian two-owner isolation"]
 fn native_natures_guardian_two_shamans_keep_their_own_heals_and_cooldowns() {
     let mut h = behavior_fixture(true);
     let first = h.caster;
@@ -371,7 +364,6 @@ fn native_natures_guardian_two_shamans_keep_their_own_heals_and_cooldowns() {
 }
 
 #[test]
-#[ignore = "native Nature's Guardian is not a lethal-hit rescue"]
 fn native_natures_guardian_lethal_hit_is_not_rescued() {
     let mut h = harness(Vec::new(), &[PASSIVE, COOLDOWN, HEAL, 314_616], 7).unwrap();
     h.app
