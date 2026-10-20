@@ -65,8 +65,9 @@ fn native_census_death_grip_direct_native213_uses_destination_jump_clock() {
     let mover = h.npc;
     let facing = 0.37;
     h.app.world_mut().entity_mut(mover).insert(Rotation {
+        x: 0.0,
         y: facing,
-        ..default()
+        z: 0.0,
     });
     assert_ne!(
         super::attributes(world_db().unwrap().store.get(JUMP).unwrap(), 9) & 0x0080_0000,
