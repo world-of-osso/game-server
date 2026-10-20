@@ -13,7 +13,13 @@ const DEATH_COIL: u32 = 30500;
 const SHADOW_CLEAVE: u32 = 30495;
 const SHADOW_SLAM: u32 = 35953;
 const DARK_SPIN: u32 = 30502;
+const ACTION_PEON_ENGAGED: i32 = 1;
 const ACTION_PEON_KILLED: i32 = 2;
+const EVENT_INTERNAL_COOLDOWN: u32 = 2;
+const EVENT_CLEAR_EMOTE: u32 = 3;
+/// TC SharedDefines.h EMOTE_STATE_APPLAUD.
+const EMOTE_STATE_APPLAUD: u32 = 253;
+const PEON_REACTION_MS: u64 = 5_000;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
     matches!(name, SCRIPT | "npc_fel_orc_convert")
@@ -35,6 +41,7 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
         boss: BossAi::new(ENCOUNTER_BIT),
         dead_peons: 0,
         dark_spin_started: false,
+        peon_event_on_cooldown: false,
     }))
 }
 
@@ -43,12 +50,66 @@ struct Nethekurse {
     /// TC Reset deliberately preserves the count of already killed converts.
     dead_peons: u32,
     dark_spin_started: bool,
+    peon_event_on_cooldown: bool,
+}
+
+impl Nethekurse {
+    fn react_to_peon(&mut self, ctx: &mut Ctx, defeated: bool) {
+        ctx.talk(if defeated { 7 } else { 6 });
+        let orientation = if defeated { 4.5727625 } else { 4.537856 };
+        if let Some(mut rotation) = ctx.world.get_mut::<shared::components::Rotation>(ctx.me) {
+            rotation.y = orientation + std::f32::consts::FRAC_PI_2;
+        }
+        if defeated {
+            ctx.world
+                .get_mut::<shared::components::UnitPose>(ctx.me)
+                .expect("creature pose")
+                .emote_state = EMOTE_STATE_APPLAUD;
+            self.boss
+                .events
+                .schedule(EVENT_CLEAR_EMOTE, PEON_REACTION_MS);
+        }
+        if let Some(queue) = ctx
+            .world
+            .get_resource::<lightyear::prelude::ReplicationDirtyQueue>()
+        {
+            queue.mark(ctx.me);
+        }
+        // NETHEKURSE_WAYPOINT_PAUSE_UNIMPLEMENTED: TC also pauses patrol5s.
+        self.peon_event_on_cooldown = true;
+        self.boss
+            .events
+            .schedule(EVENT_INTERNAL_COOLDOWN, PEON_REACTION_MS);
+    }
+
+    fn update_out_of_combat(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        self.boss.events.update(u64::from(diff_ms));
+        while let Some(event) = self.boss.events.execute_event() {
+            match event {
+                EVENT_INTERNAL_COOLDOWN => self.peon_event_on_cooldown = false,
+                EVENT_CLEAR_EMOTE => {
+                    ctx.world
+                        .get_mut::<shared::components::UnitPose>(ctx.me)
+                        .expect("creature pose")
+                        .emote_state = 0;
+                    if let Some(queue) = ctx
+                        .world
+                        .get_resource::<lightyear::prelude::ReplicationDirtyQueue>()
+                    {
+                        queue.mark(ctx.me);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 impl CreatureAi for Nethekurse {
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
         self.dark_spin_started = false;
+        self.peon_event_on_cooldown = false;
     }
 
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
@@ -75,11 +136,23 @@ impl CreatureAi for Nethekurse {
     }
 
     fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
-        if action == ACTION_PEON_KILLED && ctx.is_alive() {
-            self.dead_peons += 1;
-            if !ctx.is_engaged() && self.dead_peons == 4 {
-                ctx.do_zone_in_combat(ctx.me);
+        if !ctx.is_alive() {
+            return;
+        }
+        match action {
+            ACTION_PEON_ENGAGED if !ctx.is_engaged() && !self.peon_event_on_cooldown => {
+                self.react_to_peon(ctx, false);
             }
+            ACTION_PEON_KILLED => {
+                self.dead_peons += 1;
+                if !ctx.is_engaged() && self.dead_peons == 4 {
+                    ctx.do_zone_in_combat(ctx.me);
+                }
+                if !ctx.is_engaged() && !self.peon_event_on_cooldown && self.dead_peons != 4 {
+                    self.react_to_peon(ctx, true);
+                }
+            }
+            _ => {}
         }
     }
 
@@ -100,7 +173,11 @@ impl CreatureAi for Nethekurse {
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
-        boss_update_ai(self, ctx, diff_ms);
+        if ctx.update_victim() {
+            boss_update_ai(self, ctx, diff_ms);
+        } else {
+            self.update_out_of_combat(ctx, diff_ms);
+        }
     }
 }
 
@@ -174,7 +251,7 @@ impl CreatureAi for FelOrcConvert {
             ctx.talk(0);
         }
         self.tasks.schedule_range(HEMORRHAGE, 5_000, 10_000);
-        Self::notify_nethekurse(ctx, 1);
+        Self::notify_nethekurse(ctx, ACTION_PEON_ENGAGED);
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
