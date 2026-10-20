@@ -2326,6 +2326,8 @@ mod guardian_spirit_tests;
 #[cfg(test)]
 mod monster_rising_tests;
 #[cfg(test)]
+mod natures_guardian_tests;
+#[cfg(test)]
 mod power_strike_tests;
 #[cfg(test)]
 mod spirit_wolf_tests;
