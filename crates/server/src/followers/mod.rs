@@ -142,6 +142,7 @@ pub(crate) fn update_ai(world: &mut World) {
 pub(crate) struct FollowerPlugin;
 impl Plugin for FollowerPlugin {
     fn build(&self, app: &mut App) {
+        crate::maps::units::install(app);
         app.init_resource::<FollowerCatalog>()
             .add_systems(
                 Startup,

@@ -4,6 +4,7 @@ use shared::components::{Health, Position};
 
 use super::kit::Entry;
 use crate::maps::InMap;
+use crate::maps::units::MapUnits;
 use crate::spell_cast::targets::{self, Relation};
 use crate::spell_info::SpellStore;
 
@@ -39,20 +40,20 @@ pub(super) fn allows(
     }
     // An implicit area must not recruit a fresh pack or break protected CC.
     // Movement remains owned by the existing navigation/positioning controller.
-    // The query spans every loaded map: cheap alive/copy/radius filters must run
-    // before the faction/detection relation check.
-    let map = world.get::<InMap>(caster).copied();
-    !world
-        .query::<(Entity, &Health, &Position, &InMap)>()
-        .iter(world)
-        .any(|(unit, health, at, unit_map)| {
-            health.current > 0.0
-                && Some(*unit_map) == map
-                && center.distance(Vec3::new(at.x, at.y, at.z)) <= radius
-                && targets::relation_matches(world, caster, unit, Relation::Enemy)
-                && (!enemies.iter().any(|(enemy, _)| *enemy == unit)
-                    || crate::auras::has_breakable_by_damage_cc(world, unit))
-        })
+    // Only the caster's copy; cheap alive/radius filters run before the
+    // faction/detection relation check.
+    let Some(map) = world.get::<InMap>(caster).copied() else {
+        return true;
+    };
+    !world.resource::<MapUnits>().in_map(map).any(|unit| {
+        world
+            .get::<Health>(unit)
+            .is_some_and(|health| health.current > 0.0)
+            && position(world, unit).is_some_and(|at| center.distance(at) <= radius)
+            && targets::relation_matches(world, caster, unit, Relation::Enemy)
+            && (!enemies.iter().any(|(enemy, _)| *enemy == unit)
+                || crate::auras::has_breakable_by_damage_cc(world, unit))
+    })
 }
 
 fn spell_radius(world: &World, caster: Entity, entry: &Entry) -> Option<f32> {
