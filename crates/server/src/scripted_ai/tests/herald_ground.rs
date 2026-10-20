@@ -1,5 +1,5 @@
 //! TC331–346/355–420: real fall+2s release and ordinary ground parent spells.
-//! NAZAN_LIQUID_FIRE_EFFECT77_CHILDREN_UNIMPLEMENTED: no child/object claim.
+//! Parent-only assertions; herald_liquid_fire.rs proves the separate ground children.
 use super::herald_call::{damage_to_percent, first_west};
 use super::herald_intro::{actors_in_copy, spawn_second_copy};
 use super::herald_intro2::received_casts;

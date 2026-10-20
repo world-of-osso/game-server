@@ -265,28 +265,23 @@ fn assert_liquid_fire(difficulty: u32, cone: bool) {
 }
 
 #[test]
-#[ignore = "ground Liquid Fire native end-to-end RED before runtime implementation"]
 fn encounter_coverage_herald_liquid_fire_normal_fireball() {
     assert_liquid_fire(1, false);
 }
 #[test]
-#[ignore = "ground Liquid Fire native end-to-end RED before runtime implementation"]
 fn encounter_coverage_herald_liquid_fire_heroic_fireball() {
     assert_liquid_fire(2, false);
 }
 #[test]
-#[ignore = "ground Liquid Fire native end-to-end RED before runtime implementation"]
 fn encounter_coverage_herald_liquid_fire_normal_cone() {
     assert_liquid_fire(1, true);
 }
 #[test]
-#[ignore = "ground Liquid Fire native end-to-end RED before runtime implementation"]
 fn encounter_coverage_herald_liquid_fire_heroic_cone() {
     assert_liquid_fire(2, true);
 }
 
 #[test]
-#[ignore = "retained unrelated scripted wild-object refusal control"]
 fn encounter_coverage_herald_liquid_fire_unrelated_script_refused() {
     let (mut h, _, _, _, _, _) = super::herald_ground::reach_fall(1);
     install_liquid_fire_inputs(&mut h);

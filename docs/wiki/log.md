@@ -1,3 +1,7 @@
+## 2026-10-19 — Herald ground Liquid Fire
+
+[Ground child/object boundary](systems/boss-scripts.md#herald-ground-liquid-fire--2026-10-19): source qualification1PASS27.70s; corrected actual-launch ignoredcb85 pushed on pre-runtime base, four genuineRED156.95s. Ground-only hit-unit self-children plus exact registered GO AI/native21252 ordinary pulses/damage/lifetimes pass four complete endpoints159.72s at7ea954c38; retained source/refusal controls make a six-case composite. Invalid initial network child receipt oracle excluded; no wire workaround. Tests enabled, independent gate pending; flying/native/balance/persistence/re-entry/loot excluded.
+
 ## 2026-10-19 — Herald fixture-only admitted Roar seed
 
 [Ground diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hc729's three legitimate category-cooldown refusals leave the1500ms probe without an admitted cast. Approved actor-local fixture seed0 at natural release gives authored initial Fireball3656ms/Cone7735ms, after Roar2000ms plus1500ms cast. EventMap clock/queue, source ranges/repeats/admission and production RNG remain unchanged; exact expiry oracle retained. Three independent native stability executions7eff0e0fa/protocolfc37 pass36.11s/37.75s/41.14s, each actual first Roar3.95 admitted/exact1450/1500ms AI expiry; initial compile-only visibility failure excluded. Independent changed-family gate/co-landing pending.
