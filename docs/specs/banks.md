@@ -22,6 +22,7 @@ The client frames are specified in game-engine `docs/specs/bank-frame.md` and `d
   | Warband | 1000; 25,000; 100,000; 500,000; 2,500,000 |
 
   Every bank starts with 0 tabs.
+- [x] Entering the world sends `BankContents` for both banks without a banker, and a craft that took reagents from a bank sends that bank's new contents: Retail clients count bank reagents anywhere ([professions](professions.md)).
 - [x] Buying a tab charges the player. `CantAfford` changes nothing.
 - [x] A deposit moves the whole bag stack into the chosen tab, then into later tabs. It tops up same-item stacks first. `TabLocked` means no such tab, and `BankFull` changes nothing.
 - [x] A withdrawal moves the whole stack into the bags through `store_item`. `InventoryFull` changes nothing.

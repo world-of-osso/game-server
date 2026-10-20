@@ -45,7 +45,7 @@ pub struct InventoryPlugin;
 
 impl Plugin for InventoryPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<crate::bank::ChangedCharacterBanks>()
+        app.init_resource::<crate::bank::ChangedBanks>()
             .add_systems(
                 Update,
                 (
@@ -306,7 +306,7 @@ struct MoveStore<'w, 's> {
     store: InventoryStore<'w, 's>,
     updates: ResMut<'w, GoldUpdateQueue>,
     errors: ErrorSenders<'w, 's>,
-    banks: ResMut<'w, crate::bank::ChangedCharacterBanks>,
+    banks: ResMut<'w, crate::bank::ChangedBanks>,
 }
 
 /// TC a352b1fa ItemHandler.cpp `HandleSwapItem`: both bank positions require
@@ -343,7 +343,10 @@ fn process_item_moves<M: lightyear::prelude::Message>(
                 Ok(()) => {
                     store.updates.record_items(character_id);
                     if bank_move {
-                        store.banks.0.insert(connection);
+                        store
+                            .banks
+                            .0
+                            .insert((connection, shared::protocol::BankType::Character));
                     }
                 }
                 Err(error) => send_error(connection, &mut store.errors, error),

@@ -1,5 +1,9 @@
 # Auras
 
+## Armor specialization equipment — 2026-10-20
+
+`auras/item_requirements.rs` `passive_items_fit` filters `sync_passives` for players: a passive whose `equipped_items` is class4 with Attr8 0x100000 needs every one of the eight armor slots to hold a template of that class whose subclass bit is in the mask (zero mask = any). `ChangedPassiveOwners` also watches `EquippedItems`, so unequipping removes the aura (`RemoveReason::Unlearned`) and re-equipping reapplies it; stats follow through StatModifiers. Non-players and other item requirements are unchanged; gaps in [player-damage](../../specs/player-damage.md#known-gaps-current-cycle).
+
 ## Nature's Guardian baseline — 2026-10-19
 
 `natures_guardian.rs` binds only30884 existing check_proc/on_damage_proc hooks. It reads the actual action target's current Health and native effect0 threshold, using strict currentHP < truncated maxHP×amount/100; at35% equality no proc. Existing445698 blocks eligibility. The callback casts real445698 first through the existing `creature_cast_ignoring_in_progress` path, then native31616 through existing `cast_costed_trigger_with_context` (FULL_MASK minus power/reagent bypass). A cooldown-cast failure is logged but does not suppress the default heal, matching the source's non-preventing OnEffectProc. No custom timer, state, query schema, trigger API, wire or generic DUMMY framework is introduced; Guardian/Ardent health commits are untouched.

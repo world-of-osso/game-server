@@ -264,27 +264,43 @@ pub fn save_bank_move(
     owner: BankOwner,
     inventory: Option<&InventoryRecord>,
 ) {
+    save_bank_moves(db, character_id, [owner], inventory);
+}
+
+/// `save_bank_move` for several banks in one transaction.
+pub fn save_bank_moves<'a>(
+    db: &Database,
+    character_id: u64,
+    owners: impl IntoIterator<Item = BankOwner<'a>>,
+    inventory: Option<&InventoryRecord>,
+) {
     let txn = db.begin_write().expect("Failed to begin bank write");
+    for owner in owners {
+        write_bank_owner(&txn, character_id, owner);
+    }
+    if let Some(record) = inventory {
+        write_inventory_record(&txn, character_id, record);
+    }
+    txn.commit().expect("Failed to commit bank write");
+}
+
+fn write_bank_owner(txn: &WriteTransaction, character_id: u64, owner: BankOwner) {
     match owner {
-        BankOwner::Character(id, bank) => write(&txn, CHARACTER_BANKS, id, bank),
-        BankOwner::Account(id, bank) => write(&txn, ACCOUNT_BANKS, id, bank),
+        BankOwner::Character(id, bank) => write(txn, CHARACTER_BANKS, id, bank),
+        BankOwner::Account(id, bank) => write(txn, ACCOUNT_BANKS, id, bank),
         BankOwner::Guild {
             guild_id,
             guild,
             logs,
             usage,
         } => {
-            write(&txn, GUILDS, guild_id, guild);
-            write(&txn, GUILD_BANK_LOGS, guild_id, logs);
+            write(txn, GUILDS, guild_id, guild);
+            write(txn, GUILD_BANK_LOGS, guild_id, logs);
             if let Some(usage) = usage {
-                write(&txn, GUILD_BANK_USAGE, character_id, usage);
+                write(txn, GUILD_BANK_USAGE, character_id, usage);
             }
         }
     }
-    if let Some(record) = inventory {
-        write_inventory_record(&txn, character_id, record);
-    }
-    txn.commit().expect("Failed to commit bank write");
 }
 
 /// `GuildRankData` before `withdraw_repair` (guild rank layout version 0).

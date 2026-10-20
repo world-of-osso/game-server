@@ -7,10 +7,14 @@
 //! cap 300 from tier 336). Bolt of Linen Cloth (2963) is learned with the line,
 //! takes 2 Linen Cloth (2589), casts 1.5 s, and is orange below rank 25.
 
+#[path = "profession/bank_reagents_native_fixture.rs"]
+mod bank_reagents_native_fixture;
 #[path = "crafting_orders/tests.rs"]
 mod crafting_order_tests;
 #[path = "profession/crafting_origin_tests.rs"]
 mod crafting_origin_tests;
+#[path = "profession/recipe_cooldown_native_fixture.rs"]
+mod recipe_cooldown_native_fixture;
 #[path = "profession/spell_cooldown_persistence_tests.rs"]
 mod spell_cooldown_persistence_tests;
 
@@ -1524,6 +1528,131 @@ fn queued_crafts_stop_when_the_linen_runs_out() {
         failed.iter().map(|f| f.reason).collect::<Vec<_>>(),
         vec![CastFailReason::Reagents]
     );
+}
+
+/// One bank tab holding `count` Linen Cloth.
+fn linen_bank(h: &Harness, count: u32) -> persistence::banks::BankData {
+    let mut tab = crate::bank_storage::BankTabData::new("Reagents".into());
+    tab.slots[0] = Some(InventoryItemData {
+        item_guid: persistence::next_id(h.db(), "item_instance"),
+        item_id: LINEN_CLOTH,
+        name: "Linen Cloth".into(),
+        quality: 1,
+        required_level: 0,
+        stack_count: count,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    });
+    persistence::banks::BankData {
+        tabs: vec![tab],
+        ..Default::default()
+    }
+}
+
+fn linen_in(bank: &persistence::banks::BankData) -> u32 {
+    bank.tabs
+        .iter()
+        .flat_map(|tab| tab.slots.iter().flatten())
+        .filter(|item| item.item_id == LINEN_CLOTH)
+        .map(|item| item.stack_count)
+        .sum()
+}
+
+/// Retail `ItemUtil.GetCraftingReagentCount` counts bags, the character bank
+/// and the Warband bank; reagents are consumed in project policy
+/// CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS.
+#[test]
+fn crafting_consumes_reagents_from_bags_then_character_bank_then_warband_bank() {
+    use persistence::banks::{BankOwner, load_account_bank, load_character_bank, save_bank_move};
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 1);
+    let character_bank = linen_bank(&h, 2);
+    let warband_bank = linen_bank(&h, 5);
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Character(h.character_id, &character_bank),
+        None,
+    );
+    // The harness connection authenticates account 1.
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Account(1, &warband_bank),
+        None,
+    );
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(BOLT_ITEM), 1);
+    assert_eq!(h.bag_count(LINEN_CLOTH), 0);
+    assert_eq!(linen_in(&load_character_bank(h.db(), h.character_id)), 1);
+    assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 5);
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(BOLT_ITEM), 2);
+    assert_eq!(linen_in(&load_character_bank(h.db(), h.character_id)), 0);
+    assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 4);
+}
+
+/// The client counts bank reagents from `BankContents`, so a craft that takes
+/// from a bank sends that bank's new contents, banker or not.
+#[test]
+fn crafting_from_banks_sends_their_new_contents() {
+    use persistence::banks::{BankOwner, save_bank_move};
+    use shared::protocol::{BankContents, BankType};
+    let Some(mut h) = harness_with(10, |app| {
+        add_inbox::<BankContents>(app);
+        app.add_plugins(crate::bank::BankPlugin);
+    }) else {
+        return;
+    };
+    let connection = h.connection;
+    h.app
+        .world_mut()
+        .entity_mut(connection)
+        .insert(pair::<BankContents>());
+    h.learn_tailoring();
+    let character_bank = linen_bank(&h, 1);
+    let warband_bank = linen_bank(&h, 5);
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Character(h.character_id, &character_bank),
+        None,
+    );
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Account(1, &warband_bank),
+        None,
+    );
+    h.take::<BankContents>();
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    let sent = h.take::<BankContents>();
+    let linen_sent = |bank| {
+        sent.iter()
+            .rev()
+            .find(|contents| contents.bank == bank)
+            .map(|contents| {
+                contents
+                    .tabs
+                    .iter()
+                    .flat_map(|tab| tab.slots.iter().flatten())
+                    .filter(|item| item.item_id == LINEN_CLOTH)
+                    .map(|item| item.count)
+                    .sum::<u32>()
+            })
+    };
+    assert_eq!(linen_sent(BankType::Character), Some(0));
+    assert_eq!(linen_sent(BankType::Account), Some(4));
 }
 
 #[test]
