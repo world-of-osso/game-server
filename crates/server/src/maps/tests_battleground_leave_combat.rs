@@ -72,6 +72,10 @@ fn enter_all(h: &mut Harness, players: &[Traveler]) {
     }
     let copy = h.map_of(&players[0]).unwrap();
     assert!(players.iter().all(|who| h.map_of(who) == Some(copy)));
+    if battleground(h, &players[0]).arena.is_none() {
+        use_second_frames(h);
+        h.advance(121);
+    }
 }
 
 fn find_opponent<'a>(h: &Harness, players: &'a [Traveler]) -> &'a Traveler {

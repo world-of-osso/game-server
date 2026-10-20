@@ -143,12 +143,19 @@ fn update_match(
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
+    let now = world.resource::<Time<Fixed>>().elapsed_secs_f64();
     let mut changed = false;
-    if matched.instance.phase == BgPhase::Waiting
-        && roster_ready(matched, actors, map, template.min_players_per_team as usize)
-    {
-        changed = matched.instance.start();
+    if matched.instance.phase == BgPhase::Waiting {
+        let arrived = matched
+            .accepted
+            .iter()
+            .any(|id| actors.get(id).is_some_and(|actor| actor.map == map));
+        let ready = roster_ready(matched, actors, map, template.min_players_per_team as usize);
+        if matched.preparation.advance(now, arrived, ready) {
+            changed = matched.instance.start();
+        }
     }
+    super::bg_preparation::update_gates(world, map, &matched.preparation, now);
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }

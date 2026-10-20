@@ -9,6 +9,9 @@ mod deserter;
 #[path = "tests_battleground_end_cleanup.rs"]
 mod end_cleanup;
 
+#[path = "tests_battleground_preparation.rs"]
+mod preparation;
+
 struct EnteredMatch {
     h: Harness,
     players: Vec<Traveler>,
@@ -2868,6 +2871,29 @@ fn enter_source_match_with_arrival(
     queue_fixture: SourceQueueFixture,
     mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
 ) -> EnteredMatch {
+    enter_source_match_preparing(
+        template,
+        starts,
+        setup,
+        queue_fixture,
+        |h, players, index| {
+            if index == 1 {
+                // Existing objective fixtures begin after the actual first arrival's
+                // preparation clock; readiness still waits for the authored roster.
+                advance_source_preparation(h);
+            }
+            before_arrival(h, players, index);
+        },
+    )
+}
+
+fn enter_source_match_preparing(
+    template: &BgTemplate,
+    starts: [u32; 2],
+    setup: impl FnOnce(&mut App),
+    queue_fixture: SourceQueueFixture,
+    mut before_arrival: impl FnMut(&mut Harness, &[Traveler], usize),
+) -> EnteredMatch {
     let objects = if template.map_id == 998 {
         source_kotmogu_objects()
     } else if matches!(template.map_id, 727 | 1803) {
@@ -3220,6 +3246,28 @@ fn battleground<'a>(h: &'a Harness, who: &Traveler) -> &'a BattlegroundSnapshot 
         .battleground
         .as_ref()
         .expect("authoritative battleground state")
+}
+
+/// Wait the real preparation interval without changing the caller's cast/frame timing.
+pub(super) fn advance_source_preparation(h: &mut Harness) {
+    let fixed_step = h.app.world().resource::<Time<Fixed>>().timestep();
+    let max_delta = h.app.world().resource::<Time<Virtual>>().max_delta();
+    let strategy = h
+        .app
+        .world_mut()
+        .remove_resource::<bevy::time::TimeUpdateStrategy>()
+        .unwrap();
+    use_second_frames(h);
+    h.advance(121);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .set_timestep(fixed_step);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(max_delta);
+    h.app.insert_resource(strategy);
 }
 
 /// One-second frames so source heartbeats, ticks and capture clocks run on whole seconds.

@@ -90,6 +90,8 @@ pub(crate) use pvp_silvershard::{change_track, insert_track_switch};
 
 #[path = "pvp_bg_backfill.rs"]
 mod bg_backfill;
+#[path = "pvp_bg_preparation.rs"]
+pub(crate) mod bg_preparation;
 #[path = "pvp_leave.rs"]
 mod pvp_leave;
 
@@ -283,6 +285,7 @@ pub(crate) fn seed_terminal_reinforcements(
 #[derive(Debug)]
 struct InvitedBattleground {
     instance: BgInstance,
+    preparation: bg_preparation::Preparation,
     accepted: BTreeSet<u64>,
     map: Option<crate::maps::InMap>,
     origins: BTreeMap<u64, crate::maps::WorldLocation>,
@@ -392,6 +395,7 @@ fn form_battleground_invitation(
         match_id,
         InvitedBattleground {
             instance: BgInstance::from_match(&matched, &template),
+            preparation: Default::default(),
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),

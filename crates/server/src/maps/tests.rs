@@ -3072,6 +3072,7 @@ fn flag_match_with_reconnect(
             .lock_copies_in_use()
             .is_empty()
     );
+    battleground_nodes::advance_source_preparation(&mut h);
     if let Some(case) = reconnect {
         exercise_pvp_reconnect(&mut h, &players, &origins, case, database_file.path());
         return;
