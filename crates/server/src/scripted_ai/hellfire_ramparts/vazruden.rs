@@ -80,7 +80,7 @@ impl BossScript for Vazruden {
             SAY_AGGRO => ctx.talk(1),
             CALL_NAZAN => ctx.do_cast_self(30_693),
             REVENGE => {
-                ctx.do_cast_victim(super::herald::difficulty_spell(ctx, 19_130, 40_392));
+                ctx.do_cast_victim(ctx.dungeon_mode(19_130, 40_392));
                 self.boss.events.repeat_range(5_000, 10_000);
             }
             _ => unreachable!("unknown Vazruden engagement event{event}"),

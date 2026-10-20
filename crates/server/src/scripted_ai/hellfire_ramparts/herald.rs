@@ -356,26 +356,26 @@ impl BossScript for HeraldIntro {
             FLY_TO_LOC => self.choose_next_flight(ctx),
             FIREBALL_VICTIM => {
                 if ctx.react_state() != ReactState::Passive {
-                    ctx.do_cast_victim(difficulty_spell(ctx, 30_691, 32_491));
+                    ctx.do_cast_victim(ctx.dungeon_mode(30_691, 32_491));
                 }
                 self.boss.events.repeat(3_200);
             }
             FIREBALL_RANDOM => {
                 if ctx.react_state() != ReactState::Passive {
                     if let Some(target) = ctx.select_target_random(0.0, false) {
-                        ctx.do_cast_at(Some(target), difficulty_spell(ctx, 33_793, 33_794), false);
+                        ctx.do_cast_at(Some(target), ctx.dungeon_mode(33_793, 33_794), false);
                     }
                 }
                 self.boss.events.repeat_range(10_000, 15_000);
             }
             FIREBALL_GROUND => {
                 if let Some(target) = ctx.select_target_random(0.0, false) {
-                    ctx.do_cast_at(Some(target), difficulty_spell(ctx, 34_653, 36_920), false);
+                    ctx.do_cast_at(Some(target), ctx.dungeon_mode(34_653, 36_920), false);
                 }
                 self.boss.events.repeat_range(5_000, 15_000);
             }
             CONE_OF_FIRE => {
-                ctx.do_cast_victim(difficulty_spell(ctx, 30_926, 36_921));
+                ctx.do_cast_victim(ctx.dungeon_mode(30_926, 36_921));
                 self.boss.events.repeat_range(10_000, 15_000);
             }
             BELLOWING_ROAR => {
@@ -427,15 +427,6 @@ fn morph_to_nazan(ctx: &mut Ctx) -> bool {
     // TC305–310: gravity is enabled before entry projection and the normal30717 cast.
     ctx.world.entity_mut(ctx.me).remove::<GravityDisabled>();
     projection.apply(ctx.world.entity_mut(ctx.me), false)
-}
-
-pub(super) fn difficulty_spell(ctx: &Ctx, normal: u32, heroic: u32) -> u32 {
-    let map = ctx.map().expect("registered Ramparts actor map");
-    if crate::zones::map_difficulty_id(ctx.world, map) == 2 {
-        heroic
-    } else {
-        normal
-    }
 }
 
 fn face_highest_threat(ctx: &mut Ctx) {

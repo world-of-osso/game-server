@@ -912,6 +912,16 @@ impl Ctx<'_> {
     pub fn map(&self) -> Option<InMap> {
         self.world.get::<InMap>(self.me).copied()
     }
+
+    /// `DUNGEON_MODE(normal, heroic)`: the Heroic value in a difficulty2 copy.
+    pub fn dungeon_mode(&self, normal: u32, heroic: u32) -> u32 {
+        let map = self.map().expect("dungeon script actor map");
+        if crate::zones::map_difficulty_id(self.world, map) == 2 {
+            heroic
+        } else {
+            normal
+        }
+    }
 }
 
 /// `Unit::AttackStop`: stop swinging at the victim.
