@@ -211,7 +211,7 @@ fn reconcile_confused(world: &mut World, unit: Entity, confused: bool) {
         world.entity_mut(unit).remove::<Confused>();
         return;
     }
-    crate::spell_cast::cancel_cast(world, unit);
+    crate::spell_cast::stop_all_casts(world, unit);
     let reference = world
         .get::<Position>(unit)
         .map_or((0.0, 0.0), |position| (position.x, position.z));
@@ -230,7 +230,7 @@ fn reconcile_feared(world: &mut World, unit: Entity, fear_caster: Option<Entity>
         super::fleeing::stop(world, unit);
         return;
     };
-    crate::spell_cast::cancel_cast(world, unit);
+    crate::spell_cast::stop_all_casts(world, unit);
     world.entity_mut(unit).insert(Feared { flee_from });
     super::fleeing::start(world, unit);
 }

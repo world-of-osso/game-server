@@ -107,6 +107,7 @@ impl SummonProperties {
 }
 
 #[derive(Resource, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub struct SummonPropertiesStore(pub HashMap<u32, SummonProperties>);
 
 pub fn load_summon_properties(conn: &Connection) -> rusqlite::Result<SummonPropertiesStore> {

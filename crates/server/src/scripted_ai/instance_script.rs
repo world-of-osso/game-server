@@ -62,6 +62,8 @@ pub struct InstanceScript {
     pub(crate) data: HashMap<u32, u32>,
     /// Ramparts OnUnitDeath state, discarded with this copy; not a saved boss bit.
     pub(crate) ramparts_sentry_deaths: u8,
+    /// Remaining ms of scheduled Ramparts reset events; copy-owned, not actor-owned.
+    pub(crate) ramparts_reset_delays: Vec<u32>,
 }
 
 impl InstanceScript {
@@ -111,6 +113,7 @@ fn compatibility_catalog(map_id: u32) -> InstanceScript {
         handled_area_triggers: HashSet::new(),
         data: HashMap::new(),
         ramparts_sentry_deaths: 0,
+        ramparts_reset_delays: Vec::new(),
     };
     for row in include_str!("encounter_compat.csv")
         .lines()
@@ -381,6 +384,7 @@ pub fn set_boss_state(world: &mut World, map: InMap, boss_id: u32, state: Encoun
         EncounterState::NotStarted | EncounterState::Fail => {}
     }
     super::wailing_caverns::on_boss_state_changed(world, map, encounter_id, state);
+    super::hellfire_ramparts::on_boss_state_changed(world, map, encounter_id, state);
     true
 }
 

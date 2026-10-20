@@ -47,8 +47,12 @@ fn import_intro_spells(path: &std::path::Path) {
     );
 }
 
-fn load_prepared_templates(h: &mut Harness, conn: &Connection) {
-    let mut data = h.app.world().resource::<WorldData>().clone();
+fn load_prepared_inputs(
+    source: &WorldData,
+    spells: &SpellStore,
+    conn: &Connection,
+) -> prepared_inputs::PreparedInputs {
+    let mut data = source.clone();
     let selected: std::collections::HashSet<_> = data
         .templates
         .keys()
@@ -65,17 +69,34 @@ fn load_prepared_templates(h: &mut Harness, conn: &Connection) {
     data.template_addons = crate::world_data::load_template_addons(conn);
     data.equipment = crate::test_data::world_data().equipment.clone();
     data.summon_levels = crate::world_data::summon_levels::SummonLevels::load(conn).unwrap();
-    h.app.insert_resource(data);
-    let mut spells = h.app.world().resource::<SpellStore>().clone();
+    let mut spells = spells.clone();
     spells.append_serverside(conn).unwrap();
-    h.app.insert_resource(spells);
+    let mut inputs = prepared_inputs::PreparedInputs::default();
+    inputs.push(data);
+    inputs.push(spells);
+    inputs
 }
 
 fn prepared_source_ramparts(difficulty: u32) -> (Harness, InMap, Entity, Vec<Entity>) {
-    let (_directory, path) = prepare_intro2_copy();
-    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let (mut h, map, herald, sentries) = ordinary_ramparts_at(difficulty);
-    load_prepared_templates(&mut h, &conn);
+    let inputs = prepared_inputs::cached_inputs(
+        prepared_inputs::InputKey {
+            producer: "herald-intro2",
+            entry: HERALD,
+            map: 543,
+            populate: true,
+        },
+        || {
+            let (_directory, path) = prepare_intro2_copy();
+            let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+            load_prepared_inputs(
+                h.app.world().resource::<WorldData>(),
+                h.app.world().resource::<SpellStore>(),
+                &conn,
+            )
+        },
+    );
+    inputs.install(&mut h.app);
     h.app.insert_resource(crate::test_data::ground_map());
     (h, map, herald, sentries)
 }

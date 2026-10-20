@@ -6,6 +6,7 @@ use bevy::prelude::Resource;
 use rusqlite::Connection;
 
 #[derive(Resource)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct AuraFieldCatalog(HashMap<u32, Result<FieldDefinition, String>>);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -13,6 +14,7 @@ pub(super) enum FieldScript {
     VaultRune,
 }
 
+#[cfg_attr(test, derive(Clone))]
 pub(super) struct FieldDefinition {
     pub trigger_spell: u32,
     pub relation: super::targets::Relation,

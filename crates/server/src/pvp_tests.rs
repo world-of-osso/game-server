@@ -575,6 +575,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
         17,
         InvitedBattleground {
             instance: BgInstance::from_match(&matched, &template),
+            preparation: Default::default(),
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
@@ -883,6 +884,7 @@ fn native_flag_match_in_world(
     };
     let invitation = InvitedBattleground {
         instance: BgInstance::from_match(&matched, &template),
+        preparation: Default::default(),
         accepted: players.iter().map(|p| p.0).collect(),
         map: Some(map),
         origins: BTreeMap::new(),
@@ -903,7 +905,22 @@ fn native_flag_match_in_world(
     let mut state = PvpServerState::default();
     state.battleground_matches.insert(17, invitation);
     world.insert_resource(state);
+    advance_native_preparation(&mut world);
     (world, players, file)
+}
+
+fn advance_native_preparation(world: &mut World) {
+    let previous_delta = world.resource::<Time<Fixed>>().delta();
+    for _ in 0..=121 {
+        pvp_objective::update_battleground_objectives(world);
+        world
+            .resource_mut::<Time<Fixed>>()
+            .advance_by(std::time::Duration::from_secs(1));
+    }
+    // Preparation must not seed a later objective fixture with a one-second tick.
+    world
+        .resource_mut::<Time<Fixed>>()
+        .advance_by(previous_delta);
 }
 
 #[test]
@@ -914,7 +931,7 @@ fn achievements_criteria_native_flag_capture_credits_present_participants_and_wi
     use shared::battleground::{BgPhase, BgTeam};
     let template = shared::battleground::warsong_gulch();
     let (mut world, players, file) = native_flag_match(&template);
-    // Native readiness starts the match and builds its authored scoreboard columns.
+    // Native preparation/readiness has built the authored scoreboard columns.
     pvp_objective::update_battleground_objectives(&mut world);
     {
         let mut state = world.resource_mut::<PvpServerState>();
