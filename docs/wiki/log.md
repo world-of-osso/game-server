@@ -2,6 +2,9 @@
 
 [The Maker17381](systems/boss-scripts.md#blood-furnace-the-maker--2026-10-20) ported on BossAi(0) with `Ctx::dungeon_mode` consolidation; qualification, pushed ignored RED, GREEN5/5 before enabling. Read-only trace found no canonical542/543 creature bindings (`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`).
 
+## 2026-10-19 — Ordinary quest max-level bonus
+
+[Authored bonus](systems/quests.md#authored-max-level-money--2026-10-19): pushed ignored65805b8eb ordinary62 cap RED105000≠105120 and missing-catalog startup RED; player89 control passes above quest tuning ceiling30. Selected-TC nullable metadata exports tracked catalog, required sibling loader and deploy shipment; ordinary settlement leaves base previews/WQ/captured/legacy paths unchanged. Fresh ignored607a8da1a GREEN4/0/33.87s/no warnings, then enabled; merged566 family89/0 plus disjoint rules/data/view19/0 (one existing private-population ignore), native producer/deploy3/0, helper check/fmt0. No deployment; independent lead landing separate.
 ## 2026-10-19 — Lifebloom near-expiration refresh bloom
 
 [Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.

@@ -40,6 +40,7 @@ import argparse
 import csv
 import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
 
 import derived_merchants
@@ -473,6 +474,11 @@ def main():
         default=PROJECT_DIR / "target/zephras-content-report.json",
     )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument(
+        "--quest-reward-bonus", type=Path,
+        default=PROJECT_DIR / "content/quest-reward-bonus.json",
+        help="tracked selected-TC bonus output, shipped beside world.db",
+    )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--mode", choices=("rebuild", "items-refresh", "world-promote", "world-census"), default="rebuild")
     parser.add_argument("--maps", help="comma-separated explicit open-world map IDs; world-promote only")
@@ -505,6 +511,8 @@ def main():
                 world_population.validate_maps(conn, maps)
             return
         result = world_population.import_database(args.db, maps)
+        with closing(sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)) as conn:
+            retail_content.write_quest_reward_bonus(conn, args.quest_reward_bonus)
         world_population.write_report(args.report, result)
         print(f"Promoted open-world maps {result['target_maps']}; report: {args.report}")
         return
@@ -535,6 +543,7 @@ def main():
         apply_policy(conn, wrath_spell_names, args.overrides, report, merchants)
         zephras_report = zephras_content.apply_overlay(conn, *zephras)
         conn.execute("COMMIT")
+        retail_content.write_quest_reward_bonus(conn, args.quest_reward_bonus)
     except BaseException:
         if conn.in_transaction:
             conn.execute("ROLLBACK")

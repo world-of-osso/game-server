@@ -106,6 +106,7 @@ mod player_start;
 mod profession;
 mod pvp;
 mod quest;
+mod quest_bonus_money;
 mod quest_data;
 mod quest_rules;
 mod quest_time;

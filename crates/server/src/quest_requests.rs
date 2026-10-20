@@ -28,7 +28,7 @@ use crate::persistence::quest_store::{
 use crate::persistence::{self, InventoryData};
 use crate::quest_data::{ObjectiveKind, QuestDb, QuestTemplate};
 use crate::quest_rules::{
-    QuestPlayer, can_take, ends, giver_quest_list, is_complete_in_log, quest_money, starts,
+    QuestPlayer, can_take, ends, giver_quest_list, is_complete_in_log, starts,
 };
 use crate::quest_view::{
     bag_count, grant_item, quest_details, quest_rewards, remove_items, required_items,
@@ -1006,7 +1006,8 @@ impl<'a> QuestSession<'a, '_, '_> {
             warn!("Quest {quest_id} reward rejected: {error}");
             failed(quest_id, QuestFailedReason::NotAvailable)
         })?;
-        let money = quest_money(self.quests, quest, self.requester.player);
+        let money = crate::quest_bonus_money::settlement(self.quests, quest, self.requester.player)
+            .ok_or(failed(quest_id, QuestFailedReason::NotAvailable))?;
         let gold = inventory.gold.checked_add_signed(i64::from(money));
         let Some(gold) = gold else {
             return Err(failed(quest_id, QuestFailedReason::NotEnoughMoney));
