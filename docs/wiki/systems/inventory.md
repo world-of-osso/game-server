@@ -4,6 +4,14 @@ Requirements and data gaps: [inventory spec](../../specs/inventory.md).
 
 Item-use scaling and regression evidence: [[item-healing-scaling]].
 
+## Server-recorded crafting origin
+
+[Origin contract](../../specs/crafting-origin.md) adds GUID-keyed causal provenance alongside unchanged legacy instance records. `ProfessionData` retains the authored SkillLineAbility row ID and joined SpellID. Real CREATE_ITEM completion passes that origin into inventory storage; generic grants remain unknown. Class item-creation abilities are excluded using TC SkillLine categories7 versus primary11/secondary9, not guessed from output templates.
+
+`InventoryRecord`/`InventoryModel` carry a separate origin map; the inventory transaction writes `item_crafting_origins` without changing ItemInstanceData's bitcode encoding. Projection loads origin by actual owned GUID. Craft storage, merge capacity and manual splitting use origin-compatible stack identity; unique-equipped checks retain template/source identity. Split GUIDs copy origin; same-origin output merging keeps the surviving GUID's metadata, while unknown stacks remain separate. Bank/mail views project known global GUID metadata; no complete transfer/split matrix beyond the recorded targeted tests is claimed here.
+
+Pushed-first REDs and targeted real2153/database-reopen plus2963/unknown-stack/split tests are recorded in the [engine proof ledger](../../../../game-engine/docs/wiki/systems/native-professions-crafting.md#targeted-provenance-proof--integration-pending). Those CPU proofs do not certify a new rendered native session, OS-process reopen, positive recraft eligibility or an operation evaluator. Quality remains unassigned when unknown; slots and watermark are unwritten. Current atomic protocol/consumer integration is lead-gated.
+
 ## Post-guild protocol integration target proof (2026-10-18)
 
 [Authoritative merged-code proof matrix](../../toy-effects14-coverage.md#post-guild-merge-codec-and-bounded-maxcount-proof-green-2026-10-18) records requested masters, both append-only wire variants, unchanged prior discriminants and current17-case server/one-case client CPU proof. The mechanism below is unchanged; lead's combined gate/landing remains pending, not certified by codec or CPU subsets.

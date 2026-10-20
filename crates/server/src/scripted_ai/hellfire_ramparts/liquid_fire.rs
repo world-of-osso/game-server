@@ -1,5 +1,5 @@
 //! TC a352b1fa boss_vazruden_the_herald.cpp535–555/575–610.
-//! Ground hit-unit children and the registered source Liquid Fire GO AI only.
+//! Fireball/Cone hit-unit children and the registered source Liquid Fire GO AI.
 use bevy::prelude::*;
 use shared::components::{Position, Rotation};
 

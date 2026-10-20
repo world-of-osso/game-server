@@ -183,6 +183,7 @@ fn character_disk_abi_owned_sources_hydrate_by_guid_not_race_after_reopen() {
                 bag_slots: vec![],
                 nonvisual_equipped: Vec::new(),
                 instances: HashMap::new(),
+                crafting_origins: HashMap::new(),
                 equipped: vec![EquippedItem {
                     slot: EquipmentVisualSlot::Feet,
                     item: InventoryItemData {
