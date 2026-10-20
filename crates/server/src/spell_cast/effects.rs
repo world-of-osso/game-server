@@ -22,6 +22,10 @@
 //! weapon type (SimC `action_t::calculate_weapon_damage`). Main-hand damage is
 //! `CharacterStats.main_hand` (`item_stats.rs`), unarmed 1-2 at 2.0 s.
 
+#[cfg(test)]
+#[path = "aura_stat_spell_tests.rs"]
+mod aura_stat_spell_tests;
+
 use std::collections::HashSet;
 
 use bevy::prelude::*;
@@ -633,7 +637,13 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
 
 /// The target's armor against the caster: a creature's own armor at the
 /// caster's level, a player's gear armor.
-fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+fn armor_reduced(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+    spell: &SpellInfo,
+) -> f32 {
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, caster),
         UnitScaling::of(world, target),
@@ -655,6 +665,7 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
         armor,
@@ -710,7 +721,18 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
             let base = world
                 .get::<CharacterStats>(caster)
                 .map_or(0.0, |stats| stats.crit_pct);
-            spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+            let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
+                0.0
+            } else {
+                stat_mods(world, caster).map_or(0.0, |mods| mods.spell_crit_pct)
+            };
+            spell_mods::modify(
+                world,
+                caster,
+                spell,
+                SpellModOp::CritChance,
+                base + spell_bonus,
+            )
         });
     let modifier = if takes_melee_crit_modifier(spell) {
         world
@@ -1186,7 +1208,7 @@ fn deal_damage_and_report(
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
         && reduced_by_armor(ctx.spell)
     {
-        armor_reduced(world, ctx.caster, target, amount)
+        armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
     };
@@ -1391,7 +1413,8 @@ pub fn apply_heal(
     periodic: bool,
 ) {
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
-        * versatility_multiplier(world, ctx.caster);
+        * versatility_multiplier(world, ctx.caster)
+        * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(

@@ -1,5 +1,16 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Generic combat/stat aura census slice — 2026-10-20
+
+Generic consumers cover57,103,145,240,269,316,354,404,405,419,422,463 with native70448 spell definitions. Preserve native masks, stacking, rating truncation, create-mana cost basis and reversible changes; do not introduce per-spell cases. Aura419 changes maximum mana without granting proportional current mana; removal only clamps. Aura316's generic absorption accounting must not invent death prevention.
+
+Named gaps remain explicit:
+- **TC_NYI_AURA_443**, **TC_NYI_AURA_220**, **TC_NYI_AURA_381**, **TC_NYI_AURA_382**: pinned TC declares these NYI/HandleNULL. Keep unsupported; do not claim a consumer.
+- **AURA316_SPELLSCRIPT_DEATH_PREVENTION_UNPORTED**: census20711,31230,31850,86949,114556,209258,404195,1265361 require individual sourced SpellScript qualification. Existing bounded31850 behavior stays intact; generic316 is not a substitute for any callback.
+
+Proof is bounded native consumer behavior, not complete ability/class/legal-loadout/UDP parity. Census22842's145 amount0 stays unchanged; native182775 amount50 supplies its nonzero oracle. No item-restricted240 source occurs in this census slice; weapon-equipment filtering outside these native sources remains unqualified. The server has no magical resistance pool for269 to modify.
+
+[Per-type pinned TC file:line citations, implementation and proof ledger](../wiki/systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20). Enabled targeted15/15 pass at861d7edd5; no full suite or independent parent gate claimed.
 ## Impending Victory consequence (active70448)
 
 - Successful ordinary202168 casts real self202166, then removes32216 from that caster only. Native202166 owns its30%-maximum-health payload, crit, overheal and triggered flags. Missing Victorious does not disable the heal; another Warrior's32216 is preserved.

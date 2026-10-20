@@ -40,7 +40,7 @@ pub struct EquippedItems {
 
 /// Aura stat changes across create/base, bonus and total stages. Absent means none.
 /// Percent fields store 10.0 for +10%; aura handlers compose their modifiers.
-#[derive(Component, Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Component, Debug, Clone, Default, PartialEq)]
 pub struct StatModifiers {
     /// Player-only aura80: create/base percentage, before flat/gear bonuses and137.
     pub primary_base_pct: UnitStats,
@@ -52,6 +52,14 @@ pub struct StatModifiers {
     pub primary_bonus_pct: UnitStats,
     /// Added to gear ratings before conversion.
     pub ratings_flat: CombatRatings,
+    /// Aura405: ordered rating mask/percent pairs; truncation occurs per effect.
+    pub rating_percent_mods: Vec<(u32, f32)>,
+    /// Aura463: composed percentage of base melee crit rating added to parry.
+    pub crit_to_parry_pct: f32,
+    /// Aura419: composed BASE_PCT mana modifier; never changes create-mana costs.
+    pub base_mana_pct: f32,
+    /// Aura404: presence replaces both AP bases, including an authored zero.
+    pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
     pub haste_pct: f32,
     pub mastery_points: f32,
@@ -130,9 +138,11 @@ pub struct CharacterStats {
     /// Effective ratings (gear + modifiers).
     pub ratings: CombatRatings,
     pub max_health: f32,
-    /// gtBaseMP; 0 for classes without mana. Max mana equals it and
-    /// `PowerCostPct` mana costs are a percentage of it.
+    /// Create mana (gtBaseMP), 0 for classes without mana. `PowerCostPct`
+    /// costs use this unmodified basis, not the effective maximum.
     pub base_mana: f32,
+    /// Effective mana maximum after aura419's BASE_PCT modifier.
+    pub max_mana: f32,
     /// Damage spell power: Intellect when the main stat is Intellect, else 0
     /// (Unit::SpellBaseDamageBonusDone, Unit.cpp:7118-7119).
     pub spell_power: f32,
@@ -339,14 +349,48 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
     (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
-/// Retail stats for `input`, with aura `mods` folded in. `None` for a class
-/// or level outside the tables (1..=13, 1..=90).
+/// TC Player.cpp5271-5279: sequential integer rating changes, then base crit conversion.
+fn modified_ratings(base: CombatRatings, mods: &StatModifiers) -> CombatRatings {
+    let mut ratings = base;
+    for &(mask, percent) in &mods.rating_percent_mods {
+        for (bits, value) in rating_fields(&mut ratings) {
+            if mask & bits != 0 {
+                *value += (*value * percent / 100.0).trunc();
+            }
+        }
+    }
+    ratings.parry += (base.crit * mods.crit_to_parry_pct / 100.0).trunc();
+    for (_, value) in rating_fields(&mut ratings) {
+        *value = value.max(0.0);
+    }
+    ratings
+}
+
+/// TC Unit.h329-365. Shared melee/ranged/spell ratings select a field only once.
+fn rating_fields(ratings: &mut CombatRatings) -> [(u32, &mut f32); 10] {
+    [
+        (1 << 2, &mut ratings.dodge),
+        (1 << 3, &mut ratings.parry),
+        (1 << 4, &mut ratings.block),
+        (0x700, &mut ratings.crit),
+        (0xE0000, &mut ratings.haste),
+        (1 << 25, &mut ratings.mastery),
+        (0x7000_0000, &mut ratings.versatility),
+        (1 << 13, &mut ratings.speed),
+        (1 << 16, &mut ratings.leech),
+        (1 << 20, &mut ratings.avoidance),
+    ]
+}
+
+/// Retail stats for `input`, with aura `mods` folded in. `None` outside
+/// the class (1..=13) and level (1..=90) tables.
 pub fn compute_character_stats(
     input: &StatInputs,
     mods: Option<&StatModifiers>,
 ) -> Option<CharacterStats> {
     let level = level_index(input.level)?;
-    let mods = mods.copied().unwrap_or_default();
+    let default_mods = StatModifiers::default();
+    let mods = mods.unwrap_or(&default_mods);
     let mut primary = apply_primary_pct(
         base_primary_stats(input.class, input.race, input.level)?,
         mods.primary_base_pct,
@@ -357,6 +401,7 @@ pub fn compute_character_stats(
     let primary = apply_primary_pct(primary, mods.primary_pct);
     let mut ratings = input.gear_ratings;
     ratings += mods.ratings_flat;
+    let ratings = modified_ratings(ratings, mods);
     let base_mana = base_mana(input.class, input.level);
     let base_attack_power = primary.strength * input.attack_power_per_strength
         + primary.agility * input.attack_power_per_agility;
@@ -381,6 +426,16 @@ pub fn compute_character_stats(
             if base_mana.is_some() { intellect } else { 0.0 },
         )
     };
+    // TC StatSystem.cpp362-385 replaces both AP bases with minimum spell power.
+    let (attack_power, ranged_attack_power) = if let Some(percent) = mods.attack_power_from_sp_pct {
+        let power = spell_power.min(healing_power) * (percent / 100.0);
+        (
+            power * (1.0 + mods.attack_power_pct / 100.0),
+            power * (1.0 + mods.ranged_attack_power_pct / 100.0),
+        )
+    } else {
+        (attack_power, ranged_attack_power)
+    };
     let mastery_points = BASE_MASTERY_POINTS
         + rating_value(ratings.mastery, MASTERY_RATING[level])
         + mods.mastery_points;
@@ -393,6 +448,7 @@ pub fn compute_character_stats(
             + mods.max_health_flat)
             .floor(),
         base_mana: base_mana.unwrap_or(0.0),
+        max_mana: (base_mana.unwrap_or(0.0) * (1.0 + mods.base_mana_pct / 100.0)).round(),
         spell_power,
         healing_power,
         attack_power,
@@ -679,6 +735,7 @@ type StatsQuery = (
     Option<&'static EquippedItems>,
     Option<&'static KnownSpells>,
     Option<&'static StatModifiers>,
+    Option<&'static CharacterStats>,
     &'static mut UnitStats,
     &'static mut CombatRatings,
     &'static mut DerivedStats,
@@ -734,6 +791,7 @@ pub(crate) fn update_character_stats(
         equipped,
         known,
         mods,
+        previous_stats,
         mut unit_stats,
         mut ratings,
         mut derived,
@@ -799,9 +857,19 @@ pub(crate) fn update_character_stats(
             max: stats.max_health,
         });
         if let Some(mut mana) = mana {
+            // Aura419 changes BASE_PCT, not create mana. SetMaxPower clamps
+            // current power instead of granting/draining a proportional amount.
+            let aura_maximum_changed = previous_stats.is_some_and(|previous| {
+                previous.base_mana == stats.base_mana && previous.max_mana != stats.max_mana
+            });
+            let current = if aura_maximum_changed {
+                mana.current.min(stats.max_mana)
+            } else {
+                rescaled_current(mana.current, mana.max, stats.max_mana)
+            };
             changed |= mana.set_if_neq(Mana {
-                current: rescaled_current(mana.current, mana.max, stats.base_mana),
-                max: stats.base_mana,
+                current,
+                max: stats.max_mana,
             });
         }
         commands.entity(entity).insert(stats);

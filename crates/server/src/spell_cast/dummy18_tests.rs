@@ -372,7 +372,9 @@ fn dummy18_ignore_pain_versatility_scales_budget_below_cap() {
     let (_, absorbed) = crate::auras::absorb_damage(h.app.world_mut(), caster, 4, 100.0);
     let coefficient =
         world_db().unwrap().store.get(190456).unwrap().effects[0].bonus_coefficient_from_ap;
-    assert!((absorbed - coefficient * 2.0).abs() < 0.01);
+    // TC a352b1fa Unit.cpp:7725-7737 rounds the received shield budget,
+    // including when the recipient has no MOD_ABSORB_TAKEN_PCT aura.
+    assert_eq!(absorbed, (coefficient * 2.0).round());
 }
 
 #[test]

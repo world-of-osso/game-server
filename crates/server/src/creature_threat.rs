@@ -92,13 +92,40 @@ fn collect_candidates(world: &World, creature: Entity) -> Vec<Candidate> {
             let unit = Entity::try_from_bits(entry.entity)?;
             available(world, creature, unit).then(|| Candidate {
                 unit,
-                threat: entry.threat,
+                threat: (entry.threat + temporary_threat(world, unit)).max(0.0),
                 in_melee: in_melee_range(world, creature, unit),
             })
         })
         .collect();
     candidates.sort_by(|left, right| right.threat.total_cmp(&left.threat));
     candidates
+}
+
+/// TC ThreatManager.cpp773-790: reversible flat modifier, never base threat.
+fn temporary_threat(world: &World, unit: Entity) -> f32 {
+    if world.get::<Player>(unit).is_none() {
+        return 0.0;
+    }
+    world
+        .get::<crate::auras::AuraStatMods>(unit)
+        .map_or(0.0, |mods| mods.temporary_threat)
+}
+
+pub(crate) fn refresh_temporary_threat(world: &mut World, unit: Entity) {
+    let affected: Vec<Entity> = world
+        .query::<(Entity, &ThreatTable)>()
+        .iter(world)
+        .filter(|(_, table)| {
+            table
+                .entries()
+                .iter()
+                .any(|entry| entry.entity == unit.to_bits())
+        })
+        .map(|(creature, _)| creature)
+        .collect();
+    for creature in affected {
+        refresh_reference(world, creature);
+    }
 }
 
 fn latest_available_taunt(
