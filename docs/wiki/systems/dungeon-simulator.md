@@ -23,7 +23,28 @@ Five sourced kits: Garrick, Crenna, Shuja, Meredy, Austin. Austin is the in-proc
 
 ## Catalog lifetime
 
-Seeded batches move 24 typed immutable catalog resources out of each completed App after diagnostics, then install those same allocations into the next fresh App. Native plugin Build still registers all systems/observers and fresh queues, clocks and instance state; cached Apps skip catalog-loading Startup. No `WorldData` or `SpellStore` clones, no test-harness global catalog copies, no reused dynamic World. Optional native resource absence is preserved. First load calls the production world/spell loaders directly. The allocation/state-reset regression first failed with distinct spawn allocations (optimized profile, 7.33s); GREEN and seeded gameplay qualification remain pending.
+Seeded batches move 24 typed immutable catalog resources out of each completed App after diagnostics, then install those same allocations into the next fresh App. Native plugin Build still registers all systems/observers and fresh queues, clocks and instance state; cached Apps skip catalog-loading Startup. No `WorldData` or `SpellStore` clones, no test-harness global catalog copies, no reused dynamic World. Optional native resource absence is preserved. First load calls the production world/spell loaders directly. The allocation/state-reset regression first failed with distinct spawn allocations (optimized profile, 7.33s); GREEN at497be2f37 (6.39s); optimized batch2 at2fa2b68d5/P03cebdb executes all ten seeded worlds with the cache. Setup drops from seconds on first load to milliseconds thereafter.
+
+## Seeded batch2 — 2026-10-20
+
+All ten runs completed in201.90wall_s; no boss died. This is failure evidence, not clear qualification. Native dead summons despawn after corpse decay: samples now retain their admitted IDs with `exists=false` and null observations (kill→native decay→sample RED8.34s→GREEN11.23s).
+
+| Seed | Clear / wipe / stall | Other outcome | Failed pack | sim:wall |
+|---|---|---|---|---|
+|1|0 / 0 / 0|3600s timeout; repeated Moloch Polymorph hold|20375718|50.0×|
+|2|0 / 0 / 0|Garrick dead205s, later despawned; no tank route anchor|20375765|41.7×|
+|3|0 / 0 / 1|Scripted boss requires explicit pull decision|20375766|39.7×|
+|4|0 / 0 / 0|3600s timeout; repeated Moloch Polymorph hold|20375718|73.2×|
+|5|0 / 0 / 0|Garrick dead223.5s, later despawned; no tank route anchor|20375765|102.7×|
+|6|0 / 0 / 0|3600s timeout; repeated Moloch Polymorph hold|20375717|101.9×|
+|7|0 / 1 / 0|Garrick dead143s, remaining party then dies; Thug still7644HP|20375765|93.4×|
+|8|0 / 0 / 1|Scripted boss requires explicit pull decision|20375766|85.2×|
+|9|0 / 1 / 0|Garrick dead144.5s, remaining party then dies; Thug still8196HP|20375765|100.3×|
+|10|0 / 0 / 1|Scripted boss requires explicit pull decision|20375766|89.7×|
+
+Totals:0clears,2wipes,3stalls,3timeouts,2blocks. Ratios vary with host contention; ≥100× is not consistently qualified. Earlier diagnostic seed1 achieved94.59× overall/111× steady. Seeds1/4/6 hold a full-health Polymorphed Moloch indefinitely; the exact generic cause remains under investigation. Seeds3/8/10 correctly refuse to invent scripted forecasts. Seeds2/5/7/9 need native damage/heal event causality before a production fix. Crenna selecting Meredy may be ordinary healing pursuit, not proof of hostile party targeting. Complete terminal combat events are now serialized for diagnosis.
+
+Evidence: `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/sim-batch2/{summary,run-1..10}.json`, revision2fa2b68d5; event-trace addition requires a new diagnostic batch.
 
 ## Sources
 

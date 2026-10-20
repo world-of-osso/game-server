@@ -177,6 +177,13 @@ pub(super) fn run_cached(
     run.report.performance["tank_movement_admission"] = serde_json::json!(
         crate::followers::simulator::inspect_tank_movement(run.app.world_mut(), run.party.tank)
     );
+    run.report.performance["combat_events"] = serde_json::to_value(
+        &run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0,
+    )
+    .map_err(|error| format!("serialize native combat trace: {error}"))?;
     run.report.terminal_units = run.inspect_units();
     run.report.simulated_seconds = run.now();
     run.report.wall_seconds = started.elapsed().as_secs_f64();
