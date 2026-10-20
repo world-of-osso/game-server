@@ -22,6 +22,8 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod germination;
+pub(super) use germination::redirect_rejuvenation;
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
 mod touch_of_death;

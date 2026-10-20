@@ -6,6 +6,10 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).
 
+## Germination Rejuvenation routing
+
+With actual learned155675, ordinary774 must apply native155777 instead when its caster already owns774 and has no own155777, or when own155777 has less remaining time than own774. Otherwise apply/refresh774 normally. Compare only that caster's actual aura deadlines, retaining the other instance's absolute expiry. Untalented casts must remain single774 refreshes. Source: SimC76f8118 `sc_druid.cpp:6487–6518`; child155777 uses its native periodic heal effects/duration. Preserve ordinary parent costs, GCD, cast receipt and generic aura behavior; no timer/amount overrides, Swiftmend interaction or global stacking changes.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
