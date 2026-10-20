@@ -6,7 +6,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 ## What it must do
 
-- [ ] Freeze map-34 Normal spawns grouped by the tank planner's source formation identity into `content/dungeons/stockade-34.json`; retain source GUIDs, entries and 2D positions.
+- [x] Freeze map-34 Normal spawns grouped by the tank planner's source formation identity into `content/dungeons/stockade-34.json`; retain source GUIDs, entries and 2D positions.
 - [ ] Extract inter-pack walk distances once using the existing nav query. Runtime movement consumes only the frozen graph; aggro and range use 2D positions.
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
 - [ ] Clear every Stockade boss in seconds of wall time. Report cleared/wiped, failed pack, HP/mana traces and pull decisions.
@@ -26,11 +26,13 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 ## Tests asserting this spec
 
-- `dungeon_simulator::frozen_stockade_graph_covers_native_formations`: exact Normal spawn GUID/formation census (RED).
+- `dungeon_simulator::frozen_stockade_graph_covers_native_formations`: exact Normal spawn GUID/formation census (GREEN).
+- `dungeon_simulator::one_pack_runs_real_gameplay_without_transport`: isolated native pack death with real positive damage events (GREEN; execute from repository root).
+- `dungeon_simulator::full_stockade_clears_all_three_bosses`: full-route completion and three boss deaths (RED).
 
 ## Known gaps (current cycle)
 
-- [ ] Graph extraction and one-pack RED/GREEN.
+- [x] Graph extraction and isolated one-pack RED/GREEN: pack20375759, 5.70 simulated seconds, 221 real combat events. This fixture limits the source population to that pack; it does not prove full-route admission.
 - [ ] Complete route, seeded batches and low-wipe qualification.
 - [ ] Final live acceptance after simulator qualification.
 

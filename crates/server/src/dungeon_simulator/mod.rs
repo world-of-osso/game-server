@@ -9,6 +9,12 @@ fn one_pack_runs_real_gameplay_without_transport() {
 }
 
 #[test]
+fn full_stockade_clears_all_three_bosses() {
+    let bosses = runtime::run_stockade(1).expect("full Stockade route completes");
+    assert_eq!(bosses, 3, "every Stockade boss must die in the same run");
+}
+
+#[test]
 fn frozen_stockade_graph_covers_native_formations() {
     let graph = graph::read_graph().expect("frozen Stockade pack graph");
     assert_eq!(graph.map_id, 34);

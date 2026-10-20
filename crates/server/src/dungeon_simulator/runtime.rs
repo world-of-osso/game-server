@@ -8,6 +8,10 @@ use super::graph::{Graph, Pack};
 
 const TICK: Duration = Duration::from_millis(50);
 
+pub(super) fn run_stockade(_seed: u64) -> Result<usize, String> {
+    Err("full frozen-graph Stockade route is not implemented".into())
+}
+
 pub(super) fn build_app() -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
