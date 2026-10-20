@@ -24,6 +24,8 @@ use crate::item_templates::{ItemTemplates, load_item_templates};
 use crate::persistence::InventoryItemData;
 use crate::quest_data::test_quest_db;
 
+#[path = "quest_bonus_money_tests.rs"]
+mod bonus_money_tests;
 #[path = "quest_max_count_tests.rs"]
 mod max_count_tests;
 
