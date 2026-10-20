@@ -1,6 +1,6 @@
 ## 2026-10-19 — Private native-proof purchase hold harness
 
-[Hook and proof status](investigations/server-tick-lag.md#native-proof-purchase-hold-test-only-harness): explicitly approved non-default debug Cargo feature holds only the existing FIFO purchase/checkout work behind private files, keeping UDP live and the10s timeout unchanged. Pushed-first process cases reached two genuine missing-hold assertions; fixed30s watchdog refuses without charge and release builds are rejected. GREEN/gate pending; no tracing or native runtime used.
+[Hook and proof status](investigations/server-tick-lag.md#native-proof-purchase-hold-test-only-harness): explicitly approved non-default debug Cargo feature holds only the existing FIFO purchase/checkout work behind private files, keeping UDP live and the10s timeout unchanged. Pushed-first process cases reached two genuine missing-hold assertions; fixed30s watchdog refuses without charge and release builds are rejected. Feature7/default2 GREEN; parent persistence/check/fmt gate pending. Release guard source-inspected, not a release-hook build; no tracing or native runtime used.
 
 ## 2026-10-20 — db2_casc scalar-first pallet order
 
