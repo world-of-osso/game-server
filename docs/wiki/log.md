@@ -26,7 +26,7 @@
 
 ## 2026-10-19 — Nature's Guardian native RED and named binding
 
-[Baseline](systems/auras.md#natures-guardian-baseline--2026-10-19): three-case qualification COMPOSITE FIRST (two retained PASS including actual player-cast preservation/native45s expiry/exact350340; corrected native2000ms wound observation single PASS17.53s). Pushed ignored823c414e4 genuine5RED/3controls21.36s; named30884 hooks use existing limited cooldown path then source-costed heal path. Strict threshold/no custom state/timer/API or HP/RNG/clock edits. GREEN/lead gate pending;248 remains DEFERRED.
+[Baseline](systems/auras.md#natures-guardian-baseline--2026-10-19): three-case qualification COMPOSITE FIRST (two retained PASS including actual player-cast preservation/native45s expiry/exact350340; corrected native2000ms wound observation single PASS17.53s). Pushed ignored823c414e4 genuine5RED/3controls21.36s; named30884 hooks use existing limited cooldown path then source-costed heal path. Strict threshold/no custom state/timer/API or HP/RNG/clock edits. First behavior7PASS/1idle-HP-oracleFAIL28.82s; diagnostic61805c213 proves seven natural20HP out-of-combat regeneration ticks/unchanged native heal count. Explicitly approved TEST-only continuous-combat correction retains initial26 hits/native45s and uses actual damage/heals for final HP, with no state/timer writes or runtime change. Corrected case/lead gate pending;248 remains DEFERRED.
 
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 

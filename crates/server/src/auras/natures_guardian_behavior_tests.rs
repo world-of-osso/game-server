@@ -147,47 +147,126 @@ fn native_natures_guardian_above_and_equal_do_not_proc_but_below_does() {
 fn native_natures_guardian_cooldown_blocks_repeat_then_natural_expiry_rearms() {
     let mut h = behavior_fixture(true);
     let (owner, first) = (h.caster, h.npc);
+    let starting_health = h.health(owner);
     cast_native_wound(&mut h, owner);
     assert_eq!(h.health(owner), 600.0);
-    let expiry = assert_owned_children(&h, owner, 1).expires_at.unwrap();
+    let original_cooldown = assert_owned_children(&h, owner, 1);
+    let expiry = original_cooldown.expires_at.unwrap();
     let second = spawn_npc(&mut h.app, 3.0);
     buff_native_npc(&mut h, first);
     buff_native_npc(&mut h, second);
-    take_swings(&mut h, &[first, second], 26);
-    assert_eq!(h.health(owner), 340.0);
-    assert!(h.app.world().resource::<Time>().elapsed_secs_f64() < expiry);
-    assert_owned_children(&h, owner, 1);
-    eprintln!(
-        "idle-CD-wait start t{} HP{} expiry{expiry}",
-        h.app.world().resource::<Time>().elapsed_secs_f64(),
-        h.health(owner)
-    );
-    let mut previous_health = h.health(owner);
-    while h.app.world().resource::<Time>().elapsed_secs_f64() <= expiry {
+    let actors = [first, second];
+    let first_event = h.inbox.log.len();
+    let started = h.app.world().resource::<Time>().elapsed_secs_f64();
+    let dt = h.app.world().resource::<Time>().delta().as_secs_f64();
+    // Native45s expiry, then at most one native2s swing interval plus four frames.
+    let window = expiry - started + f64::from(crate::combat::AUTO_ATTACK_INTERVAL) + 4.0 * dt;
+    let max_frames = (window / dt).ceil() as usize;
+    h.app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands| {
+            for actor in &actors {
+                crate::combat::start_attack(&mut commands, *actor, owner, None);
+            }
+        })
+        .unwrap();
+    let mut initial_window_observed = false;
+    let mut rearmed = false;
+    for _ in 0..max_frames {
         h.advance(1);
-        let current_health = h.health(owner);
-        if current_health != previous_health {
-            eprintln!(
-                "idle-HP-change t{} {previous_health}→{current_health} combat{:?} native-heals{} regen{:?}",
-                h.app.world().resource::<Time>().elapsed_secs_f64(),
-                h.app
-                    .world()
-                    .get::<shared::components::CombatStatus>(owner)
-                    .map(|combat| combat.0),
-                heals(&h, owner).len(),
-                h.app
-                    .world()
-                    .get::<crate::spell_cast::powers::PlayerHealthRegen>(owner)
+        let now = h.app.world().resource::<Time>().elapsed_secs_f64();
+        let hits: Vec<_> = h.inbox.log[first_event..]
+            .iter()
+            .filter(|event| {
+                event.spell_id.is_none()
+                    && event.target == Some(owner.to_bits())
+                    && actors
+                        .iter()
+                        .any(|actor| event.source == Some(actor.to_bits()))
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            })
+            .collect();
+        assert!(
+            hits.iter().all(|event| event.kind == CombatLogKind::Damage
+                && event.amount == 10
+                && !event.crit),
+            "{hits:?}"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::CombatStatus>(owner)
+                .map(|combat| combat.0),
+            Some(true),
+            "actual continuous hits must sustain combat, never write this flag"
+        );
+        assert!(h.health(owner) > 0.0);
+        let healing = heals(&h, owner);
+        assert!(healing.len() <= 2, "{healing:?}");
+        if !initial_window_observed && hits.len() >= 26 {
+            assert_eq!(hits.len(), 26);
+            assert_eq!(h.health(owner), 340.0);
+            assert!(now < expiry);
+            assert_eq!(healing.len(), 1);
+            initial_window_observed = true;
+        }
+        if now < expiry {
+            assert_eq!(
+                healing.len(),
+                1,
+                "second heal before native cooldown expiry"
             );
-            previous_health = current_health;
+        }
+        if healing.len() == 2 {
+            assert!(initial_window_observed);
+            assert!(
+                now >= expiry,
+                "post-expiry proc occurred at{now} before{expiry}"
+            );
+            let next = assert_owned_children(&h, owner, 2);
+            assert_ne!(next.instance_id, original_cooldown.instance_id);
+            assert!(next.expires_at.unwrap() > expiry);
+            let events = &h
+                .app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0;
+            let damage: i32 = events
+                .iter()
+                .filter(|event| {
+                    event.target == Some(owner.to_bits()) && event.kind == CombatLogKind::Damage
+                })
+                .map(|event| event.amount)
+                .sum();
+            let healed: i32 = healing.iter().map(|event| event.amount).sum();
+            let expected_health = starting_health - damage as f32 + healed as f32;
+            assert_eq!(
+                h.health(owner),
+                expected_health,
+                "HP must equal actual damage/heal receipts, with no synthetic freeze or regen writes"
+            );
+            eprintln!(
+                "continuous native CD expiry{expiry}/post-expiry proc{now};initial26→340 retained;ordinaryhits{} actualdamage{damage}/actualhealing{healed}/finalHP{expected_health};native45s/newCD{}",
+                hits.len(),
+                next.expires_at.unwrap()
+            );
+            for actor in actors {
+                crate::combat::attack_stop(h.app.world_mut(), actor);
+            }
+            h.advance(3);
+            assert_eq!(h.health(owner), expected_health);
+            rearmed = true;
+            break;
         }
     }
-    h.advance(3);
-    assert!(aura(&h, owner, COOLDOWN).is_none());
-    assert_eq!(h.health(owner), 340.0);
-    take_swings(&mut h, &[first], 1);
-    assert_eq!(h.health(owner), 730.0);
-    assert_owned_children(&h, owner, 2);
+    assert!(
+        initial_window_observed,
+        "the original26-hit native window was not observed"
+    );
+    assert!(
+        rearmed,
+        "no actual post-expiry heal/newCD within the next native swing interval"
+    );
 }
 
 #[test]
