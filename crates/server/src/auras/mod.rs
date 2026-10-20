@@ -49,6 +49,7 @@ mod refresh;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
+mod spirit_wolf;
 pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
@@ -1662,6 +1663,24 @@ pub fn damage_taken_multiplier(
         * scripts::outgoing_to_owner_multiplier(world, attacker, target)
 }
 
+/// White-swing damage taken from `attacker`: every MOD_MELEE_DAMAGE_FROM_CASTER
+/// 343 effect it owns on the victim (TC Unit::MeleeDamageBonusTaken, Unit.cpp8213–8219).
+pub(crate) fn melee_damage_from_caster(auras: Option<&ActiveAuras>, attacker: Entity) -> f32 {
+    auras.map_or(1.0, |auras| {
+        auras
+            .iter()
+            .filter(|aura| aura.caster == attacker)
+            .flat_map(|aura| {
+                let stacks = aura.stack_multiplier();
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.aura_type == handlers::MOD_MELEE_DAMAGE_FROM_CASTER)
+                    .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
+            })
+            .product()
+    })
+}
+
 /// SCHOOL_ABSORB 69: matching absorbs (MiscValue school mask) soak damage,
 /// oldest aura first; a depleted absorb removes its aura. Returns
 /// `(damage left, absorbed)`.
@@ -2311,6 +2330,8 @@ mod guardian_spirit_tests;
 mod monster_rising_tests;
 #[cfg(test)]
 mod power_strike_tests;
+#[cfg(test)]
+mod spirit_wolf_tests;
 #[cfg(test)]
 mod tiger_dash_tests;
 #[cfg(test)]

@@ -1,10 +1,17 @@
 ## 2026-10-19 — Ordinary NPC authored cadence
 
 [Source timing](systems/player-damage.md#ordinary-npc-authored-cadence--2026-10-19): pushed ignored674bb88eb before two genuine ordinary-source-spawn REDs (Prowler1181500ms/Murloc1713000ms both observed2.050s). Ignored05df30702 adds real2825/+30,246/−35 and mid-swing progress controls: all five genuine RED, helperexit101/23.99s;246 measurement bounded before authored6s expiry. Loader/base+difficulty template cache now supplies the ordinary white clock with TC zero normalization and signed/progress factors. Player/controlled-pet/SpiritWolf weapons and per-hit damage stay unchanged. Fresh ignored2386d767dGREEN5/0/15.88s/no warnings, then enabled five plus source-zero and combined252/319 controls. Requested tip touched-family proof remains pending; no deployment.
+## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
+
+[Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
 
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
+[Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. First consumer attempt6PASS/2FAIL20.25s exposes source-invalid two-child/no-in-flight-arrival oracles. Approved separate oracle correction cites SpellMisc144253 Attributes_5=8704/0x200 initial tick and child Speed90/LaunchDelay0.75; native0/3/6 dispatches and already-launched missile preserved,180-frame window unchanged. Corrected ignoredc27aad3788GREEN18.15s/0warnings, then eight enabled; qualification3PASS67.67s retained separately (eleven-case composite). er723 landed d53e8f2b8, gate/check/fmt0;248 remains DEFERRED.
 [Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. First consumer attempt6PASS/2FAIL20.25s exposes source-invalid two-child/no-in-flight-arrival oracles. Approved separate oracle correction cites SpellMisc144253 Attributes_5=8704/0x200 initial tick and child Speed90/LaunchDelay0.75; native0/3/6 dispatches and already-launched missile preserved,180-frame window unchanged. Corrected ignoredc27aad3788GREEN18.15s/0warnings, then eight enabled; qualification3PASS67.67s retained separately (eleven-case composite). Independent lead integration pending;248 remains DEFERRED.
+## 2026-10-19 — Aura343 white-swing vulnerability
+
+[MOD_MELEE_DAMAGE_FROM_CASTER343](systems/auras.md#damage-and-healing) scales the attacker's own white swings; Colossus Smash208086 now applies effect1. RED aa26a134b genuine at the343 boundary (empty343 effects; swing35 outside44–46); fix bae6bf60c. GREEN167/0 142.95s,0 warnings across the new tests, Colossus T150, attack power, melee crit/creature-type/summon/armor/block, versatility, crit-damage and combat::tests.
 
 ## 2026-10-19 — Aura248 native-input gap
 
@@ -3218,3 +3225,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Leadership transfer native proof
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
+
+## 2026-10-19 — Last Online authority implementation
+
+After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-app query RED, added disconnect-only character logout persistence and optional raw guild timestamp. Rest/admin timestamps are not reused or backfilled. Focused GREEN/coordinated landing/native pending; see guild lifecycle Last Online section.

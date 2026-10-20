@@ -183,7 +183,7 @@ Sources: local Mainline12.1.0.69933 DB2/read-only world.db; guardian_spells from
 
 ### Seventh-batch locally derived paths
 
-- [x] Colossus Smash167105 applies208086's base caster-owned30% vulnerability to each enemy its damage hits, after that initial damage. Foreign attackers do not benefit; native expiry remains active.
+- [x] Colossus Smash167105 applies208086's effects0 and1 to each enemy its damage hits, after that initial damage: the caster-owned30% spell vulnerability (271) and30% white-swing vulnerability (343). Foreign attackers do not benefit; native expiry remains active.
 - [x] Survival Instincts61336 applies50322's base50% damage reduction on application and removes the owned child when the parent ends, including cancellation.
 - [x] Heart Strike206930 with Heartbreaker221536 grants210738's authored20 raw Runic Power per native chain target; absent talent grants no bonus.
 - [x] Power Word: Radiance194509 heals its primary and at most four injured allies inside the catalog radius, prioritizing allies without this priest's Atonement. Foreign marks do not demote allies.
@@ -192,7 +192,7 @@ Sources: local Mainline12.1.0.69933 DB2/read-only world.db; guardian_spells from
 - [x] Verdant Embrace360995 with Panacea387761 instantly heals the caster through387763, not the selected ally; absent talent grants no self heal.
 - [x] Rake1822 with231052 or405834 and active stealth gains its authored60% initial-damage bonus and163505 stun. Missing either condition preserves ordinary initial damage/DoT/combo point.
 
-These are bounded paths, not whole abilities. Colossus optional343/In for the Kill, Survival child Dummy2, Heart Strike rank316575/front-arc targeting, Radiance raid-pet priority (Atonement application/duration follows in batch9), Raging Blow other reset talents, Whirlwind copied cleave/consumption and soft cap, Verdant flight/primary heal, and Rake periodic snapshot remain uncertified. Sources: read-only TDB1210.26091 archive registrations/proc/link rows, TC a352b1fa, and local Mainline12.1.0.69933 descriptions/effects. Archive names route investigation; they are not standalone behavior proof. No spell_bonus_data table exists in this archive; DB2 SP/AP/scaling fields supply its numerical equivalents.
+These are bounded paths, not whole abilities. Colossus effect2 caster marker/In for the Kill, Survival child Dummy2, Heart Strike rank316575/front-arc targeting, Radiance raid-pet priority (Atonement application/duration follows in batch9), Raging Blow other reset talents, Whirlwind copied cleave/consumption and soft cap, Verdant flight/primary heal, and Rake periodic snapshot remain uncertified. Sources: read-only TDB1210.26091 archive registrations/proc/link rows, TC a352b1fa, and local Mainline12.1.0.69933 descriptions/effects. Archive names route investigation; they are not standalone behavior proof. No spell_bonus_data table exists in this archive; DB2 SP/AP/scaling fields supply its numerical equivalents.
 
 ### Eighth-batch locally derived paths
 
