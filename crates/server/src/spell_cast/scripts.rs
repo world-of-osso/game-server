@@ -129,6 +129,9 @@ const BLOODTHIRST: u32 = 23_881;
 const BLOODTHIRST_HEAL: u32 = 117_313;
 const RAMPAGE: u32 = 184_367;
 const ENRAGE: u32 = 184_362;
+const IMPENDING_VICTORY: u32 = 202_168;
+const IMPENDING_VICTORY_HEAL: u32 = 202_166;
+const VICTORIOUS: u32 = 32_216;
 const HOLY_SHOCK: u32 = 20_473;
 const HOLY_SHOCK_DAMAGE: u32 = 25_912;
 const HOLY_SHOCK_HEAL: u32 = 25_914;
@@ -419,6 +422,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
             Some(crate::scripted_ai::azure_vault::return_after_absolute_zero)
         }
@@ -450,6 +454,19 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         _ => shared::skyriding::ability_impulse(spell_id)
             .map(|_| crate::skyriding::flap as AfterCastHook),
     }
+}
+
+/// TC a352b1fa spell_warrior.cpp1145–1164: real triggered heal, then aura removal.
+fn heal_and_consume_victorious(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    if !super::try_cast_triggered(world, caster, IMPENDING_VICTORY_HEAL, Some(caster), 0) {
+        warn!(?caster, "Impending Victory202166 triggered heal refused");
+    }
+    crate::auras::remove_auras(
+        world,
+        caster,
+        crate::auras::RemoveReason::Consumed,
+        |aura| aura.spell_id == VICTORIOUS,
+    );
 }
 
 /// `SpellObjectAreaTargetSelectFn`: narrows the units an effect selected.
