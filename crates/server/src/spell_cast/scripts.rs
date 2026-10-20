@@ -24,6 +24,7 @@ mod batch9;
 mod chrono_flame;
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
+mod swiftmend;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
@@ -1178,6 +1179,7 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        swiftmend::SWIFTMEND => Some(swiftmend::consume_own_hot),
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),
