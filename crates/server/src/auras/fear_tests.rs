@@ -486,7 +486,7 @@ fn kobold_swings_within(h: &mut Harness, frames: usize) -> bool {
         assert_eq!(
             h.app
                 .world()
-                .get::<crate::creature_threat::CurrentVictim>(h.npc)
+                .get::<crate::creature_aggro::CurrentVictim>(h.npc)
                 .and_then(|victim| victim.target),
             Some(h.caster)
         );

@@ -146,7 +146,7 @@ fn kobold_attacks(h: &mut Harness) {
             assert_eq!(
                 h.app
                     .world()
-                    .get::<crate::creature_threat::CurrentVictim>(npc)
+                    .get::<crate::creature_aggro::CurrentVictim>(npc)
                     .and_then(|victim| victim.target),
                 Some(caster)
             );
