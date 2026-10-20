@@ -113,7 +113,6 @@ fn prepare_five_native_hots() -> (Harness, Entity, [Entity; 5]) {
 }
 
 #[test]
-#[ignore = "ABUNDANCE_NATIVE_THRESHOLD_5: level68 absent-talent control"]
 fn follower_abundance_level68_five_native_rejuvenations_do_not_grant_buff() {
     let (mut h, healer, patients) = native_party(68);
     assert!(!has_aura(h.app.world(), healer, TALENT));
@@ -125,7 +124,6 @@ fn follower_abundance_level68_five_native_rejuvenations_do_not_grant_buff() {
 }
 
 #[test]
-#[ignore = "ABUNDANCE_NATIVE_THRESHOLD_5: four-to-five own primary HoTs"]
 fn follower_abundance_level69_fifth_native_rejuvenation_grants_one_stack() {
     let (mut h, healer, patients) = native_party(69);
     assert!(has_aura(h.app.world(), healer, TALENT));
@@ -148,7 +146,6 @@ fn follower_abundance_level69_fifth_native_rejuvenation_grants_one_stack() {
 }
 
 #[test]
-#[ignore = "ABUNDANCE_NATIVE_THRESHOLD_5: five-HoT prerequisite before natural expiry removal"]
 fn follower_abundance_level69_first_native_expiry_removes_threshold_buff() {
     let (mut h, healer, patients) = prepare_five_native_hots();
     let deadline = patients
