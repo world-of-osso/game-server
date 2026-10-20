@@ -149,6 +149,8 @@ fn enter_supports(h: &mut Harness, supports: &[Traveler], match_id: u64) -> InMa
     }
     let copy = h.map_of(&supports[0]).unwrap();
     assert!(supports.iter().all(|who| h.map_of(who) == Some(copy)));
+    use_second_frames(h);
+    h.advance(121);
     copy
 }
 
