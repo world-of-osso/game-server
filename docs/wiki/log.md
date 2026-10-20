@@ -1,6 +1,10 @@
 ## 2026-10-20 — Spell cooldown persistence
 
 [Contract](../specs/spell-cooldown-persistence.md): player spell/category cooldowns persist as wallclock deadlines at logout and replay as `SpellCooldownUpdate` at world entry (TC SpellHistory SaveToDB/LoadFromDB/SendSpellHistory). RED e9b2860dc/cca7855fc failed at relog replay for Prismatic Sphere28027 and Berserker Rage18499 (in-session rejection already held); GREEN passes in session, after relog and after restart, plus load-time pruning.
+## 2026-10-20 — Armor specialization equipped armor
+
+[Item requirements](systems/auras.md#armor-specialization-equipment--2026-10-20): ignored RED pushed first (9b073510a, rebased ae2683f3b); three genuine failures at the aura-absent assertion, full-plate control passes. Fix b1a250fb2: player Attr8 armor passives need all eight armor slots to fit (Paladin loadout164 plate, Druid leather chest 72689 negative). GREEN 826/0, 4 pre-existing ignores, 252.73s: auras::, stats, followers::passive_stats, class_progression, inventory, combat::tests, class_completeness. No existing test changed. Remaining item-requirement gaps in the [spec](../../specs/player-damage.md#known-gaps-current-cycle).
+
 ## 2026-10-19 — Omen and one-use Clearcasting
 
 [Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
