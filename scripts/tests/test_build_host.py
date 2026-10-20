@@ -334,6 +334,8 @@ class BuildHostTests(unittest.TestCase):
                 "--bin",
                 "game-server-admin",
                 "--bin",
+                "game-server-site-export",
+                "--bin",
                 "game-cli",
             ],
         )
