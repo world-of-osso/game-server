@@ -432,6 +432,7 @@ pub(crate) fn harness_with_plugins(
     let data = world_db()?;
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
+    crate::maps::units::install(&mut app);
     app.add_plugins(lightyear::prelude::server::ServerPlugins {
         tick_duration: Duration::from_millis(50),
     });

@@ -290,7 +290,10 @@ pub const LINKED: u32 = 284;
 pub const MOD_FIXATE: u32 = 128;
 pub const LINKED_2: u32 = 285;
 pub const LINKED_SUMMON: u32 = 428;
+/// SimC76f8118 distinguishes controlled pets429 from guardians531.
 pub const MOD_SUMMON_DAMAGE: u32 = 429;
+pub const MOD_GUARDIAN_DAMAGE_DONE: u32 = 531;
+pub const MOD_DAMAGE_FROM_CASTER_GUARDIAN: u32 = 380;
 pub const MOD_BONUS_ARMOR_PCT: u32 = 466;
 pub const MOD_STAT_BONUS_PCT: u32 = 467;
 pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
@@ -418,6 +421,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_AUTOATTACK_DAMAGE
         | MOD_AUTOATTACK_RANGE
         | MOD_SUMMON_DAMAGE
+        | MOD_GUARDIAN_DAMAGE_DONE
         | MOD_RAGE_FROM_DAMAGE_DEALT
         | MOD_MANA_REGEN_PCT
         | MOD_HIT_CHANCE
@@ -490,7 +494,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER
         | MOD_SPELL_DAMAGE_FROM_CASTER
         | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL
-        | MOD_MELEE_DAMAGE_FROM_CASTER => DamageFromCaster,
+        | MOD_MELEE_DAMAGE_FROM_CASTER
+        | MOD_DAMAGE_FROM_CASTER_GUARDIAN => DamageFromCaster,
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD

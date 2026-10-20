@@ -57,6 +57,12 @@ Cargo options used before `test`:
 ```
 
 Suggested parent gates: `aura_stat_native_`, `npc_expertise_tests`, `guardian_spirit`, `stats::tests`; all remain targeted filters, not a full-suite request.
+## Guardian and controlled-pet damage — 2026-10-20
+
+SimC76f8118 `parse_effects.cpp911–919/1290–1300` selects controlled pets for429 and guardians for531; `1125–1134/1463–1466` selects damage received from the aura caster's guardian for380. `AuraStatMods` stores separate pet/guardian products. `summon_damage` selects controlled pets first, otherwise existing guardian summon properties, using live owners. Shared spell/melee consumers apply exactly one owner product; target380 matches that guardian's direct owner to `AuraInstance.caster`. Native paired Command21563 and Restoration137012 retain their previous totals rather than multiplying twice. Copied source damage retains its existing owner-modifier exemption.
+
+Native behavioral regressions use actual Raise Dead/Summon Imp actors, Wound209140, signed Feral/Unholy531, paired Destruction429/531, Haunt380 and real melee receipts. Initial RED4PASS/8FAIL included an invalid melee start: GuardianActor overwrote the manually started attack from an empty owner selection. Corrected real SetTarget producer gives genuine melee10vs20 and the same4PASS/8FAIL in23.02s at `eee8013db`; no HP/RNG/timer changes. First implementation exposed a second oracle error: Wound209140 has native Attr4 0x100 IgnoreDamageTakenModifiers, so its spell380 expectation was invalid. The two owned/foreign spell380 cases now use actual Musket Barrage208227 (native800, no ignore flag,100yd range; Charged149328's5yd range does not qualify the unchanged distant fixture); a thirteenth case preserves Wound's exclusion. The spell380 consumer was removed for corrected RED, leaving melee/531 behavior in place. After awaiting its actual35yd/s missile impact, `56bde0a1f` yields genuine owned800vs928 in both corrected cases, plus native ignore controlPASS (1PASS/2FAIL28.71s). Restored the shared target consumer only after that proof. At `2304683e1`, corrected census13/13GREEN22.80s (original twelve plus native ignore control), shared600b755. Retained pet/guardian/summon/jump/warlock/hunter filters give318PASS/1 environment-onlyFAIL/2existing ignored226.67s; the failure required explicit GAME_SERVER_GROUND_DIR and passes alone10.95s. The shared sibling advanced after the first two runs, so remaining integration uses private detached600b755 with all three Cargo path overrides. Merged gate at `28094f04e` initially cannot compile against600b755 because new master imports RequeueSkirmish; parent explicitly superseded the pin with03cebdb. Clean private03cebdb then passes **321/0/2existing ignored in171.38s**, including all13 census cases and native Command/Restoration totals, under filters `pet guardian summon jump warlock hunter native_census_` with explicit ground data. `cargo fmt --all -- --check` passes; no warnings. Log: `/home/osso/.worktrees/logs/census-grip-merged-03cebdb-gate.log`; private Cargo override file alongside it pins shared and both patched transports. This is consumer/effect-mask qualification, not a legal simultaneous-loadout or whole-class certificate. [Contract and aura320 source-conflict gap](../../specs/class-completeness.md); [Death Grip jump binding](spell-casting.md#death-grip-and-destination-jumps--2026-10-20).
+
 ## Armor specialization equipment — 2026-10-20
 
 `auras/item_requirements.rs` `passive_items_fit` filters `sync_passives` for players: a passive whose `equipped_items` is class4 with Attr8 0x100000 needs every one of the eight armor slots to hold a template of that class whose subclass bit is in the mask (zero mask = any). `ChangedPassiveOwners` also watches `EquippedItems`, so unequipping removes the aura (`RemoveReason::Unlearned`) and re-equipping reapplies it; stats follow through StatModifiers. Non-players and other item requirements are unchanged; gaps in [player-damage](../../specs/player-damage.md#known-gaps-current-cycle).
@@ -589,7 +595,7 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
 - Handled aura IDs (`handlers::kind`): 3, 4, 5, 8, 12, 20, 23, 24, 25, 26, 27, 29, 31, 33, 39, 42, 56, 60, 65, 69, 79, 82, 87, 89, 107, 108, 110, 118, 129, 133, 136, 137, 138, 140, 155, 192, 193, 213, 216, 218, 219, 226, 231, 271, 283, 290, 318, 342, 344, 379, 411, 453, 454, 455.
 - Of the 95% cut (77 IDs, 6576 instances in [spell coverage](../../spell-coverage.md)), 36 IDs covering 5693 instances (87%) are handled. DUMMY4 is a registered type, not blanket spell-specific coverage; the current class hooks are listed above.
 - Unhandled cut IDs, all tracked and replicated:
-  - no pet or summon system: 429, 382;
+  - historical pet/summon gaps: 382;429/531 are now handled above;
   - client or visual only: 332 action bar override, 61 scale, 260 screen effect, 403 visual override, 44 tracking;
   - no mount, shapeshift or area-trigger system: 78, 36, 275, 395;
   - no PvP context: 647, 648, 649;
@@ -598,7 +604,7 @@ Critical Chaos 320413 calculates effect 0's ProcChance modifier as effect 1's pe
   - no armor, block or avoidance model: 142, 51, 187, 229;
   - no haste-regen stat: 416, 417, 457;
   - no consumer: 418 max power, 443 leech;
-  - not yet: 63 additional power cost, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320, 531.
+  - historical unhandled snapshot (later consumers documented above): 63 additional power cost, 213 rage from damage, 220 ability school, 285 linked, 468/396 trigger on health/power, 191/305 speed rules, 467 stat bonus pct, 320. Guardian531 is now handled.
 
 ## Sources
 
@@ -647,7 +653,7 @@ Aura168 stores `(creature mask,multiplier)` pairs in `AuraStatMods`, combining m
 
 Native70391 Haunt48181 effect1 is aura270, amount16, school mask127. The shared victim multiplier handled family271 and label537 but omitted270, so Haunt applied normally without increasing the owner's damage. TC a352b1fa `Unit.cpp:7056–7059/8178–8181` matches both aura caster and incoming school. The same multiplier now handles270 using the existing amount/stack product and IgnoreDamageTakenModifiers boundary. Autoswings do not use this special-spell condition.
 
-Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381/380, optional periodic talents, full Affliction and rendered/UDP parity remain open.
+Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381 (380 is handled above), optional periodic talents, full Affliction and rendered/UDP parity remain open.
 
 ## Aura world/XP native70448 — 2026-10-20
 

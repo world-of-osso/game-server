@@ -17,6 +17,7 @@ pub(crate) mod persistence;
 pub(crate) mod raid;
 pub(crate) mod store;
 pub(crate) mod transfer;
+pub(crate) mod units;
 
 use bevy::prelude::*;
 use shared::components::{Player, Position};
@@ -77,6 +78,7 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
+        units::install(app);
         app.init_resource::<InstanceManager>()
             .init_resource::<ServerClock>()
             .init_resource::<difficulty::DifficultyChanges>()

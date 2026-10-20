@@ -1473,7 +1473,11 @@ fn try_swing(
             hand,
             &attacker_scaling,
             taken,
-            context.summon_modifiers.multiplier(attacker.entity) * versus,
+            context.summon_modifiers.multiplier(attacker.entity)
+                * context
+                    .summon_modifiers
+                    .taken_multiplier(attacker.entity, avoidance.1.as_deref())
+                * versus,
         ),
         target_armor(armor, &target, &attacker_scaling),
         &attacker_scaling,

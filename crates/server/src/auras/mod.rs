@@ -1717,6 +1717,7 @@ pub fn damage_taken_multiplier(
     let taken = taken
         * versatility
         * from_caster
+        * summon_damage::taken_multiplier(world, attacker, world.get::<ActiveAuras>(target))
         * scripts::unstable_affliction_multiplier(world, attacker, target)
         * scripts::outgoing_to_owner_multiplier(world, attacker, target);
     world.get::<AuraStatMods>(attacker).map_or(taken, |mods| {
