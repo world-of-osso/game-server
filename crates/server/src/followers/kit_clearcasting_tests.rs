@@ -144,11 +144,24 @@ fn earn_native_clearcasting() -> (Harness, Entity) {
         store
             .get(CLEARCASTING)
             .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
             .duration
             .unwrap()
             .duration_ms,
     ) / 1000.0;
-    let cast_time = f64::from(store.get(REGROWTH).unwrap().cast_time.unwrap().base_ms) / 1000.0;
+    let cast_time = f64::from(
+        store
+            .get(REGROWTH)
+            .unwrap()
+            .misc
+            .as_ref()
+            .unwrap()
+            .cast_time
+            .unwrap()
+            .base_ms,
+    ) / 1000.0;
     let needed_window = 2.0 * cast_time + frame_seconds(&h);
     let mut attempts = 0;
     while attempts < tick_bound {
