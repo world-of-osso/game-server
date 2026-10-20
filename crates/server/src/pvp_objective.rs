@@ -100,8 +100,12 @@ fn credit_completed_match(world: &mut World, match_id: u64) {
             .is_some_and(|health| health.current <= 0.0);
         if dead {
             crate::death::resurrect_player_fully(world, player);
-        } else {
-            crate::combat::combat_stop(world, player);
+        }
+        // TC Battleground.cpp772–773: ResetAllPowers precedes CombatStopWithPets.
+        super::arena_preparation::reset_resources(world, player);
+        crate::combat::combat_stop(world, player);
+        if let Some(pet) = crate::hunter_pet::summoned_pet(world, player) {
+            crate::combat::combat_stop(world, pet);
         }
         crate::achievement::record_battleground_end(world, player, map.map_id, won);
         super::honor::award_battleground_completion(world, player, map.map_id, bracket, won);

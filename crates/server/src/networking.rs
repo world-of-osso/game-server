@@ -406,8 +406,10 @@ fn save_and_despawn(
     if let (Some(db), Some(_)) = (db.as_ref(), in_world)
         && let Ok((pos, health, player, cid, death, map, transfer, rest)) = player_query.get(entity)
     {
+        let observed_logout = crate::rest::unix_secs();
         let map_id = crate::maps::saved_map_id(map, transfer);
         persistence::save_live_character(&db.db, cid.0, player, pos, health, death, map_id);
+        persistence::save_character_last_logout(&db.db, cid.0, observed_logout);
         if let Some(rest) = rest {
             let data = rest.logout_data(crate::rest::unix_secs());
             crate::persistence_progression::save_rest(&db.db, cid.0, &data);

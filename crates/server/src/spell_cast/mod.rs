@@ -27,6 +27,7 @@ mod attack_restriction_tests;
 #[cfg(test)]
 mod attack_speed_tests;
 mod aura_spell_restrictions;
+pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
 #[cfg(test)]
@@ -148,6 +149,12 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 mod hit;
+mod interruptibility;
+pub(crate) use interruptibility::can_interrupt_cast;
+#[cfg(test)]
+mod interruptibility_rule_tests;
+#[cfg(test)]
+mod interruptibility_tests;
 pub(crate) mod mobile_banking;
 #[cfg(test)]
 mod mobile_banking_tests;
@@ -196,6 +203,8 @@ mod mechanic_duration_tests;
 mod mechanic_resistance_tests;
 #[cfg(test)]
 mod melee_crit_taken_tests;
+#[cfg(test)]
+mod melee_from_caster_tests;
 #[cfg(test)]
 mod melee_hit_modifier_tests;
 #[cfg(test)]
@@ -1745,7 +1754,7 @@ fn validate_start_with_policy(
         )));
     }
     let target = validate_target(world, caster, spell, explicit, Sight::Start)?;
-    aura_spell_restrictions::check_target(world, target, spell)?;
+    aura_spell_restrictions::check_target(world, caster, target, spell)?;
     toy_facing::check_cast(world, caster, spell.id, target)?;
     crate::hunter_pet::check_cast(world, caster, spell, target)?;
     spell_costs(world, caster, spell)?;
@@ -2272,7 +2281,7 @@ pub(crate) fn execute_cast(
     toy_area::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Finish)?;
-    aura_spell_restrictions::check_target(world, explicit, spell)?;
+    aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     if cast_time_ms(world, caster, spell) > 0 {
         toy_facing::check_cast(world, caster, spell.id, explicit)?;
     }
@@ -3087,7 +3096,7 @@ fn plan_triggered_spell(
     if target_dead && !spell.allows_dead_target() {
         return Err(CastFailure::InvalidTarget);
     }
-    aura_spell_restrictions::check_target(world, explicit, spell)?;
+    aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     plan_targets(world, caster, spell, explicit, true)
 }
 
@@ -3146,7 +3155,7 @@ fn execute_costed_trigger(
     druid_transform::before_cast(world, caster, spell, depth)?;
     aura_spell_restrictions::check_caster(world, caster, spell)?;
     let explicit = validate_target(world, caster, spell, explicit, Sight::Start)?;
-    aura_spell_restrictions::check_target(world, explicit, spell)?;
+    aura_spell_restrictions::check_target(world, caster, explicit, spell)?;
     let costs = spell_costs(world, caster, spell)?;
     crate::profession::check_cast_items(world, caster, spell)?;
     let prepared = resources::snapshot(world, caster, spell, &costs);

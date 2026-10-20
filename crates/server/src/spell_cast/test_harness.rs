@@ -155,24 +155,20 @@ fn import_class_world() -> std::sync::Arc<tempfile::TempDir> {
 
 /// Explicit native template authority for fixtures whose spells restrict creature type.
 pub(crate) fn load_native_creature_world(entries: &[u32]) -> crate::world_data::WorldData {
-    let conn = Connection::open_with_flags(
-        world_db().unwrap().powers_db.clone(),
-        OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    let expected = crate::world_data::load_expected_stats(&conn);
-    let mut templates = crate::world_data::load_templates(&conn, &expected);
-    templates.retain(|entry, _| entries.contains(entry));
-    for entry in entries {
-        assert!(
-            templates.contains_key(entry),
-            "missing source fixture creature template{entry}"
-        );
-    }
-    crate::world_data::load_template_models(&conn, &mut templates);
+    let source = crate::test_data::world_data();
+    let templates = entries
+        .iter()
+        .map(|entry| {
+            let template = source
+                .templates
+                .get(entry)
+                .unwrap_or_else(|| panic!("missing source fixture creature template{entry}"));
+            (*entry, template.clone())
+        })
+        .collect();
     crate::world_data::WorldData {
         templates,
-        expected_stats: expected,
+        expected_stats: source.expected_stats.clone(),
         ..Default::default()
     }
 }

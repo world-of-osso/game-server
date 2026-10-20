@@ -11,6 +11,9 @@ use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use shared::protocol::*;
 
+// Retail's native C API self behavior is unqualified; approved project policy, not parity.
+const GUILD_SELF_LEADER_TRANSFER_REFUSED_UNSOURCED: GuildRankError = GuildRankError::Permissions;
+
 pub(crate) fn character_has_right(
     db: &redb::Database,
     character: u64,
@@ -74,7 +77,11 @@ pub(super) fn apply_rank_request(
             (m.character_id, m.name, rank)
         })
         .collect();
-    let event = if let GuildRankRequest::SetMemberRank {
+    let event = if let GuildRankRequest::TransferLeadership { character_name } = &request {
+        transfer_leadership(&guild, &mut members, (actor, actor_rank), character_name)?;
+        // TC emits a new-leader notification, not fabricated rank-step lifecycle entries.
+        None
+    } else if let GuildRankRequest::SetMemberRank {
         character_name,
         rank,
     } = &request
@@ -236,6 +243,34 @@ fn change_member_rank(
     ))
 }
 
+fn transfer_leadership(
+    guild: &GuildData,
+    members: &mut [(u64, String, u8)],
+    (actor, actor_rank): (u64, u8),
+    name: &str,
+) -> Result<(), GuildRankError> {
+    if actor_rank != 0 {
+        return Err(GuildRankError::Permissions);
+    }
+    let target = members
+        .iter()
+        .find(|(_, member_name, _)| member_name.eq_ignore_ascii_case(name))
+        .map(|(id, _, _)| *id)
+        .ok_or(GuildRankError::MemberNotFound)?;
+    if target == actor {
+        return Err(GUILD_SELF_LEADER_TRANSFER_REFUSED_UNSOURCED);
+    }
+    let lowest = guild.lowest_rank();
+    for (id, _, rank) in members {
+        if *id == actor {
+            *rank = lowest;
+        } else if *id == target {
+            *rank = 0;
+        }
+    }
+    Ok(())
+}
+
 fn assign_member_rank(
     guild: &GuildData,
     members: &mut [(u64, String, u8)],
@@ -362,7 +397,8 @@ fn edit_rank(
         GuildRankRequest::Promote { .. }
         | GuildRankRequest::Demote { .. }
         | GuildRankRequest::SetMemberNote { .. }
-        | GuildRankRequest::SetMemberRank { .. } => {
+        | GuildRankRequest::SetMemberRank { .. }
+        | GuildRankRequest::TransferLeadership { .. } => {
             unreachable!("handled before rank editing")
         }
     }

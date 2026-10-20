@@ -1,5 +1,21 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Spirit Wolf baseline (active70448)
+
+- Ghost Wolf2645 plus actual talent260878 starts real260882 regardless of which parent was applied first. With either parent absent, this binding must not start the child.
+- Preserve native260882 A23/1000ms/no-initial-tick permanent lifetime and260881 cap4, +5% A129 movement/-5% A87 all-school damage taken per stack. Existing periodic/stack/stat consumers remain authoritative; no new timer, state or periodic hook.
+- Removing either parent removes260882 and260881 on that unit, preserving the other parent and other owners. Re-entering form starts fresh growth; no stale stacks. Other Ghost Wolf effects/forms/visuals, foreign-cast semantics, full class/legal-loadout/nativeUDP/census promotion remain unqualified. [Implementation/proof](../wiki/systems/auras.md#spirit-wolf-baseline--2026-10-19).
+
+## Earthen Rage baseline (active70448)
+
+- Native Elemental talent170374 records its owner's latest actual harmful-spell action target and casts real self170377. Selection changes and melee swings do not retarget or activate it;170379 must not retrigger it.
+- Native170377 effect0 retains SpellMisc144253 Attributes_5=8704, including0x200 EXTRA_INITIAL_PERIOD: ticks at0/3000/6000ms, casting real170379 at that remembered target only while the original caster retains170374. Preserve native damage coefficient/variance, expiry and ordinary spell damage resolution. Missing/despawned targets never select a substitute.
+- Keep one spell-specific transient target Entity per passive caster, clear it on passive removal, and isolate multiple owners. No persistence, wire fields, generic proc framework or fallback targeting. Other Shaman talents/overloads, legal loadouts, full class and UDP parity remain unqualified. [Implementation/proof](../wiki/systems/auras.md#earthen-rage-baseline--2026-10-19).
+
+## Named native-input gap (active70448)
+
+- **AURA_248_NO_NONZERO_NATIVE_INPUT_70448** — DEFERRED. Canonical70448 `spell_effect` across all difficulty rows contains only261912 effect4/710273: aura248 amount0/MiscValue0=0; imported `tdb_serverside_spell_effect` contains no248 rows. No nonzero matching-Dodge native input qualifies a runtime RED. Do not implement a synthetic-only speculative path, change native data, or promote native/class/legal-loadout/census coverage. This is a bounded current-input gap, not an upstream/global absence claim. Reconsider only when an actual native70448 consumer supplies a nonzero authored or source-derived amount. [Evidence and source semantics](../wiki/systems/player-damage.md#aura248-native-input-gap--2026-10-19).
+
 ## Prayer of Mending baseline (active70448)
 
 - Ordinary33076 must cast real41635 with native effect0 jump count plus the initial recipient, using source per-cast aura-stack arguments before initial stack/log/view publication.

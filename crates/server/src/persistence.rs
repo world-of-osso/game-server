@@ -47,6 +47,9 @@ pub use crate::persistence_types::*;
 
 /// Character data table: character_id (u64) -> serialized CharacterData (bytes).
 pub(crate) const CHARACTERS: TableDefinition<u64, &[u8]> = TableDefinition::new("characters");
+/// Observed in-world disconnects only; legacy/rest/admin timestamps are not provenance.
+pub(crate) const CHARACTER_LAST_LOGOUT: TableDefinition<u64, u64> =
+    TableDefinition::new("character_last_logout");
 
 /// Inventory table: PlayerId (u64) -> serialized inventory (bytes).
 /// Inventory table: character_id -> bitcode `InventoryData` (gold in `u64` copper).
@@ -326,6 +329,8 @@ fn game_database_path() -> PathBuf {
 pub(crate) fn create_tables(db: &Database) {
     let txn = db.begin_write().expect("Failed to begin write txn");
     let _ = txn.open_table(CHARACTERS);
+    txn.open_table(CHARACTER_LAST_LOGOUT)
+        .expect("create observed character logout table");
     let _ = txn.open_table(INVENTORIES);
     txn.open_table(equipment::EQUIPMENT)
         .expect("Failed to create equipment table");

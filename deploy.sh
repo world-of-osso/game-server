@@ -25,6 +25,8 @@ done
 
 echo "Uploading data (world.db and economy config are read relative to ${STATE_DIR})..."
 scp data/world.db "${SERVER_HOST}:${STATE_DIR}/data/world.db"
+test -f content/trading-post-monthly-catalog.json || { echo "Missing committed content/trading-post-monthly-catalog.json" >&2; exit 1; }
+scp content/trading-post-monthly-catalog.json "${SERVER_HOST}:${STATE_DIR}/data/trading-post-monthly-catalog.json"
 test -f data/game_object_locks.json || { echo "Missing data/game_object_locks.json: run scripts/import_game_object_locks.py" >&2; exit 1; }
 scp data/game_object_locks.json "${SERVER_HOST}:${STATE_DIR}/data/game_object_locks.json"
 scp data/economy/config.json "${SERVER_HOST}:${STATE_DIR}/data/economy/config.json"

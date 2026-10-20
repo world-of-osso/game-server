@@ -464,7 +464,11 @@ type AutoAttackers<'w, 's> = Query<
         Option<&'static AuraStatMods>,
         Option<&'static CharacterStats>,
         SwingState<'static>,
-        (Has<Npc>, Option<&'static crate::zones::CreatureFlagsExtra>),
+        (
+            Has<Npc>,
+            Option<&'static crate::zones::CreatureFlagsExtra>,
+            Option<&'static crate::zones::TempSummon>,
+        ),
     ),
 >;
 
@@ -632,6 +636,7 @@ fn auto_attack_unit(
         npc_expertise_pct: snapshot.npc_expertise_pct,
         creature: snapshot.creature,
         creature_flags: snapshot.creature_flags.as_ref(),
+        temp_summoner: snapshot.temp_summoner,
         spirit_wolf: params.spirit_wolves.get(attacker_entity).ok().map(|wolf| {
             let owner = params
                 .owner_stats
@@ -689,6 +694,7 @@ struct SwingSnapshot {
     npc_expertise_pct: f32,
     creature: bool,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
+    temp_summoner: Option<Entity>,
 }
 
 fn snapshot_attacker(
@@ -696,8 +702,15 @@ fn snapshot_attacker(
     entity: Entity,
     dt: f32,
 ) -> Option<SwingSnapshot> {
-    let (_, mut auto_attack, position, mods, stats, (stat_mods, casting, auras), (creature, flags)) =
-        attackers.get_mut(entity).ok()?;
+    let (
+        _,
+        mut auto_attack,
+        position,
+        mods,
+        stats,
+        (stat_mods, casting, auras),
+        (creature, flags, summon),
+    ) = attackers.get_mut(entity).ok()?;
     auto_attack.timer -= dt;
     auto_attack.off_hand_timer -= dt;
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
@@ -719,6 +732,7 @@ fn snapshot_attacker(
         },
         creature,
         creature_flags: flags.copied(),
+        temp_summoner: summon.map(|summon| summon.summoner),
     })
 }
 
@@ -810,6 +824,8 @@ pub(crate) struct Attacker<'a> {
     pub creature: bool,
     /// Actual attacker's already-cached template flags, independent of victim flags.
     pub creature_flags: Option<&'a crate::zones::CreatureFlagsExtra>,
+    /// Existing TempSummon direct summoner, not player owner or recursive ancestor.
+    pub temp_summoner: Option<Entity>,
     pub spirit_wolf: Option<(&'a crate::spell_cast::guardian::SpiritWolf, f32)>,
 }
 
@@ -864,7 +880,7 @@ fn swing_damage(
     hand: Hand,
     scaling: &UnitScaling,
     target_mods: Option<&AuraStatMods>,
-    additional_done_mult: f32,
+    additional_mult: f32,
 ) -> f32 {
     let mut rng = rand::thread_rng();
     let base = if let Some((_, attack_power)) = attacker.spirit_wolf {
@@ -881,23 +897,21 @@ fn swing_damage(
             None => creature_weapon_damage(scaling),
         }
     };
-    apply_swing_multipliers(base, attacker.mods, target_mods, additional_done_mult)
+    apply_swing_multipliers(base, attacker.mods, target_mods, additional_mult)
 }
 
 fn apply_swing_multipliers(
     base: f32,
     attacker_mods: Option<&AuraStatMods>,
     target_mods: Option<&AuraStatMods>,
-    additional_done_mult: f32,
+    additional_mult: f32,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
     let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
-    (base * done * additional_done_mult * taken)
-        .max(0.0)
-        .round()
+    (base * done * additional_mult * taken).max(0.0).round()
 }
 
 /// TC Unit.cpp:8110, the victim type is shared with spell damage/target admission.
@@ -980,8 +994,17 @@ fn roll_outcome(
     can_avoid: bool,
     in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
+    target_health: &Health,
 ) -> MeleeOutcome {
-    let chances = read_outcome_chances(attacker, victim, flags, can_avoid, in_front, target_auras);
+    let chances = read_outcome_chances(
+        attacker,
+        victim,
+        flags,
+        can_avoid,
+        in_front,
+        target_auras,
+        target_health,
+    );
     melee::roll_melee_outcome(
         &chances,
         rand::Rng::gen_range(&mut rand::thread_rng(), 0..10_000),
@@ -995,6 +1018,7 @@ fn read_outcome_chances(
     can_avoid: bool,
     in_front: bool,
     target_auras: Option<&crate::auras::ActiveAuras>,
+    target_health: &Health,
 ) -> melee::MeleeChances {
     let swinger = match (attacker.creature, attacker.stats) {
         (true, _) => Swinger::Creature {
@@ -1072,7 +1096,19 @@ fn read_outcome_chances(
     let crit_modifier = target_auras.map_or(0.0, |auras| {
         auras.modifier(crate::auras::handlers::MOD_ATTACKER_MELEE_CRIT_CHANCE)
             + auras.modifier(crate::auras::handlers::MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE)
-            + caster_crit_modifier(auras, attacker.entity)
+            + health_crit_modifier(auras, target_health)
+            + caster_crit_modifier(
+                auras,
+                attacker.entity,
+                crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER,
+            )
+            + attacker.temp_summoner.map_or(0.0, |summoner| {
+                caster_crit_modifier(
+                    auras,
+                    summoner,
+                    crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER_PET,
+                )
+            })
     });
     let npc_crit_modifier = if attacker.creature {
         attacker.mods.map_or(0.0, |mods| mods.npc_crit_pct)
@@ -1090,25 +1126,44 @@ fn read_outcome_chances(
     } else {
         chances.crit + npc_crit_modifier
     };
-    // Unit.cpp2911–2926 clamps source + victim187/197/matching306 BEFORE334 at2387.
+    // Unit.cpp2906–2926 clamps source + received183/187/197/306/339 BEFORE334 at2387.
     let crit_taken = (source_crit + crit_modifier).max(0.0);
     let autoattack_crit_modifier = attacker.mods.map_or(0.0, |mods| mods.autoattack_crit_pct);
     chances.crit = (crit_taken + autoattack_crit_modifier).max(0.0);
     chances
 }
 
-/// TC Unit.cpp2911–2914: recipient306 belongs only to its actual aura caster.
-fn caster_crit_modifier(auras: &crate::auras::ActiveAuras, attacker: Entity) -> f32 {
+/// TC Unit.cpp2906–2909 / Unit.h804,809: !HealthBelowPct includes equality.
+fn health_crit_modifier(auras: &crate::auras::ActiveAuras, health: &Health) -> f32 {
     auras
         .iter()
-        .filter(|aura| aura.caster == attacker)
         .map(|aura| {
             let stacks = aura.stack_multiplier();
             aura.effects
                 .iter()
                 .filter(|effect| {
-                    effect.aura_type == crate::auras::handlers::MOD_CRIT_CHANCE_FOR_CASTER
+                    effect.aura_type == crate::auras::handlers::MOD_CRIT_CHANCE_VERSUS_TARGET_HEALTH
                 })
+                .filter(|effect| {
+                    let threshold = (health.max * effect.misc_values[1] as f32 / 100.0).trunc();
+                    health.current >= threshold
+                })
+                .map(|effect| effect.amount * stacks)
+                .sum::<f32>()
+        })
+        .sum()
+}
+
+/// TC Unit.cpp2911–2921: recipient crit306/339 effects match the sourced caster.
+fn caster_crit_modifier(auras: &crate::auras::ActiveAuras, caster: Entity, aura_type: u32) -> f32 {
+    auras
+        .iter()
+        .filter(|aura| aura.caster == caster)
+        .map(|aura| {
+            let stacks = aura.stack_multiplier();
+            aura.effects
+                .iter()
+                .filter(|effect| effect.aura_type == aura_type)
                 .map(|effect| effect.amount * stacks)
                 .sum::<f32>()
         })
@@ -1362,7 +1417,9 @@ fn try_swing(
             hand,
             &attacker_scaling,
             target_mods,
-            context.summon_modifiers.multiplier(attacker.entity) * versus,
+            context.summon_modifiers.multiplier(attacker.entity)
+                * versus
+                * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity),
         ) * armor
             .1
             .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier),
@@ -1392,6 +1449,7 @@ fn try_swing(
         can_avoid((avoidance.0, avoidance.1.as_deref())),
         in_front,
         avoidance.1.as_deref(),
+        &health,
     );
     // Unit::DealMeleeDamage → DealDamage (Unit.cpp:1185-1186): every swing, missed or
     // not, stands a player victim up.
@@ -2198,3 +2256,9 @@ mod victim_caster_crit_tests;
 #[cfg(test)]
 #[path = "combat_victim_general_crit_tests.rs"]
 mod victim_general_crit_tests;
+#[cfg(test)]
+#[path = "combat_victim_health_crit_tests.rs"]
+mod victim_health_crit_tests;
+#[cfg(test)]
+#[path = "combat_victim_summoner_crit_tests.rs"]
+mod victim_summoner_crit_tests;

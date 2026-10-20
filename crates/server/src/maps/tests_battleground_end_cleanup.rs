@@ -3,6 +3,12 @@ use crate::death::PlayerDeathState;
 use shared::components::{CombatStatus, Mana};
 use shared::death::DeathState;
 
+#[path = "tests_battleground_end_resources.rs"]
+mod resources;
+
+#[path = "tests_battleground_end_pets.rs"]
+mod pets;
+
 struct CleanupFixture {
     entered: EnteredMatch,
     unentered: Traveler,
@@ -19,11 +25,11 @@ fn bg_end_cleanup_node_victory_resurrects_dead_participant_without_leaving() {
 }
 
 #[test]
-fn bg_end_cleanup_node_victory_stops_combat_without_healing_living_participant() {
+fn bg_end_cleanup_node_victory_stops_combat_and_restores_living_participant() {
     let mut fixture = node_fixture();
     let (living_health, other_health) = drive_to_end(&mut fixture, 200);
     assert_untouched_actors_and_no_transfer(&mut fixture, other_health);
-    assert_living_participant_stopped_unhealed(&fixture, living_health);
+    assert_living_participant_restored_and_stopped(&fixture, living_health);
 }
 
 #[test]
@@ -41,7 +47,7 @@ fn bg_end_cleanup_timeout_draw_restores_dead_and_stops_living_without_leaving() 
     );
     assert_untouched_actors_and_no_transfer(&mut fixture, other_health);
     assert_dead_participant_restored(&fixture);
-    assert_living_participant_stopped_unhealed(&fixture, living_health);
+    assert_living_participant_restored_and_stopped(&fixture, living_health);
 }
 
 fn node_fixture() -> CleanupFixture {
@@ -137,6 +143,10 @@ fn seed_mana_and_life(h: &mut Harness, who: &Traveler) {
         Mana {
             current: 30.0,
             max: 200.0,
+        },
+        crate::spell_cast::powers::PowerPools {
+            order: vec![shared::components::PowerType::Mana],
+            ..Default::default()
         },
     ));
 }
@@ -242,14 +252,17 @@ fn assert_dead_participant_restored(fixture: &CleanupFixture) {
     assert!(death.graveyard.is_none());
 }
 
-fn assert_living_participant_stopped_unhealed(fixture: &CleanupFixture, expected_health: f32) {
+fn assert_living_participant_restored_and_stopped(fixture: &CleanupFixture, prior_health: f32) {
     let world = fixture.entered.h.app.world();
     let living = fixture.entered.players[1].player;
-    assert_eq!(
-        world.get::<Health>(living).unwrap().current,
-        expected_health
+    let health = world.get::<Health>(living).unwrap();
+    assert!(
+        prior_health < health.max,
+        "real injury before the terminal tick"
     );
-    assert_eq!(world.get::<Mana>(living).unwrap().current, 30.0);
+    assert_eq!(health.current, health.max);
+    let mana = world.get::<Mana>(living).unwrap();
+    assert_eq!(mana.current, mana.max);
     assert_eq!(
         world.get::<CombatStatus>(living),
         Some(&CombatStatus(false)),

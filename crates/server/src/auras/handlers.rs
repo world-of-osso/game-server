@@ -119,6 +119,10 @@ pub const MOD_DECREASE_SPEED: u32 = 33;
 pub const MOD_DODGE_PERCENT: u32 = 49;
 pub const MOD_PARRY_PERCENT: u32 = 47;
 pub const MECHANIC_IMMUNITY: u32 = 77;
+/// Matching class-mask protection read by SpellInfo::CanBeInterrupted.
+pub const PREVENT_INTERRUPT: u32 = 203;
+/// Interrupter-side permission for the exact spell ID in MiscValue0.
+pub const ALLOW_INTERRUPT_SPELL: u32 = 484;
 /// MiscValue0 is a creature_immunities row ID, not the mechanics bitmask itself.
 pub const MECHANIC_IMMUNITY_MASK: u32 = 147;
 pub const MOD_ATTACKER_MELEE_HIT_CHANCE: u32 = 184;
@@ -130,10 +134,14 @@ pub const MOD_RATING: u32 = 189;
 pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
 pub const MOD_ATTACKER_MELEE_CRIT_CHANCE: u32 = 187;
+/// TC Unit.cpp2906–2909 / Unit.h804,809: victim current health >= MiscValueB threshold.
+pub const MOD_CRIT_CHANCE_VERSUS_TARGET_HEALTH: u32 = 183;
 /// TC Unit.cpp2924: victim-owned, included before the received-crit zero clamp.
 pub const MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: u32 = 197;
 /// TC Unit.cpp2911–2914: victim aura caster must equal the actual attacker.
 pub const MOD_CRIT_CHANCE_FOR_CASTER: u32 = 306;
+/// TC Unit.cpp2916–2921: actual TempSummon direct summoner owns this victim modifier.
+pub const MOD_CRIT_CHANCE_FOR_CASTER_PET: u32 = 339;
 /// TrinityCore a352b1fa SpellAuraDefines.h: 287 deflects, 288 ignores facing.
 pub const DEFLECT_SPELLS: u32 = 287;
 pub const IGNORE_HIT_DIRECTION: u32 = 288;
@@ -224,6 +232,8 @@ pub const MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER: u32 = 270;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 /// TC a352b1fa Unit::SpellDamageBonusTaken: owner + SpellLabel match.
 pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
+/// TC a352b1fa Unit.cpp8213–8219: white swings (no spell) from the aura owner.
+pub const MOD_MELEE_DAMAGE_FROM_CASTER: u32 = 343;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
@@ -311,7 +321,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
-        DISABLE_CASTING_EXCEPT_ABILITIES | DISABLE_ATTACKING_EXCEPT_ABILITIES => CastRestriction,
+        DISABLE_CASTING_EXCEPT_ABILITIES
+        | DISABLE_ATTACKING_EXCEPT_ABILITIES
+        | PREVENT_INTERRUPT
+        | ALLOW_INTERRUPT_SPELL => CastRestriction,
         MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
         MOD_DETECTED_RANGE => DetectedRange,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
@@ -422,7 +435,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         EFFECT_IMMUNITY => EffectImmunity,
         MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER
         | MOD_SPELL_DAMAGE_FROM_CASTER
-        | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
+        | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL
+        | MOD_MELEE_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD

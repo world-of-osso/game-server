@@ -7,8 +7,8 @@ const MAX_CHARACTERS_PER_ACCOUNT: usize = 10;
 use crate::persistence::inventory_store::save_inventory_record;
 use crate::persistence::next_id;
 use crate::persistence::{
-    ACCOUNT_CHARACTERS, CHARACTER_GUILDS, CHARACTER_NAMES, CHARACTERS, GUILD_MEMBER_NOTES,
-    GUILD_PROFILES, PENDING_GUILD_INVITES,
+    ACCOUNT_CHARACTERS, CHARACTER_GUILDS, CHARACTER_LAST_LOGOUT, CHARACTER_NAMES, CHARACTERS,
+    GUILD_MEMBER_NOTES, GUILD_PROFILES, PENDING_GUILD_INVITES,
 };
 use crate::persistence_types::*;
 use crate::player_create_info::NewCharacterKit;
@@ -20,6 +20,32 @@ pub struct GuildMemberRecord {
     pub level: u16,
     pub class_id: u8,
     pub guild_name: String,
+}
+
+/// Never derive this from rest rows: admin rest mutations also stamp their own clock.
+pub fn load_character_last_logout(db: &Database, character_id: u64) -> Option<u64> {
+    let txn = db.begin_read().expect("begin observed logout read");
+    let table = txn
+        .open_table(CHARACTER_LAST_LOGOUT)
+        .expect("open observed logout table");
+    table
+        .get(character_id)
+        .expect("read observed logout")
+        .map(|row| row.value())
+}
+
+/// Called only by the production in-world disconnect observer, not periodic saves.
+pub fn save_character_last_logout(db: &Database, character_id: u64, observed_unix_secs: u64) {
+    let txn = db.begin_write().expect("begin observed logout write");
+    {
+        let mut table = txn
+            .open_table(CHARACTER_LAST_LOGOUT)
+            .expect("open observed logout table");
+        table
+            .insert(character_id, observed_unix_secs)
+            .expect("write observed logout");
+    }
+    txn.commit().expect("commit observed logout");
 }
 
 /// Save a single character to the database.
@@ -787,6 +813,10 @@ pub(crate) fn remove_character(
     {
         let mut chars = txn.open_table(CHARACTERS).expect("open characters");
         chars.remove(character_id).expect("remove character");
+        txn.open_table(CHARACTER_LAST_LOGOUT)
+            .expect("open observed logout table")
+            .remove(character_id)
+            .expect("remove observed logout");
         let mut names = txn.open_table(CHARACTER_NAMES).expect("open names");
         names.remove(name).expect("remove character name");
         let mut acct = txn.open_table(ACCOUNT_CHARACTERS).expect("open acct chars");
