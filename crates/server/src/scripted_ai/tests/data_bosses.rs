@@ -77,6 +77,8 @@ mod kelidan;
 mod landslide;
 #[path = "maraudon.rs"]
 mod maraudon;
+#[path = "nethekurse.rs"]
+mod nethekurse;
 #[path = "noxxion.rs"]
 mod noxxion;
 #[path = "omor.rs"]
@@ -87,8 +89,6 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
-#[path = "nethekurse.rs"]
-mod nethekurse;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
