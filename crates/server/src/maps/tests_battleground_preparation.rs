@@ -5,6 +5,23 @@ use shared::protocol::GameObjectCollision;
 #[path = "tests_battleground_preparation_gates.rs"]
 mod gates;
 
+#[derive(Resource, Default)]
+struct FirstArrival(Option<f64>);
+
+fn observe_first_arrival(
+    players: Query<&InMap, With<shared::components::Player>>,
+    time: Res<Time<Fixed>>,
+    mut arrival: ResMut<FirstArrival>,
+) {
+    if arrival.0.is_none()
+        && players
+            .iter()
+            .any(|map| map.map_id == 2107 && map.instance_id != 0)
+    {
+        arrival.0 = Some(time.elapsed_secs_f64());
+    }
+}
+
 #[test]
 fn bg_preparation_concrete_full_roster_waits_and_blocks_objectives_until_source_deadline() {
     assert_source_preparation(false);
@@ -77,12 +94,12 @@ fn assert_source_preparation(random: bool) {
         4,
         "two authored faction doors and two ghost gates"
     );
-    let first_arrival = std::rc::Rc::new(std::cell::Cell::new(None));
-    let capture = first_arrival.clone();
     let mut entered = enter_source_match_preparing(
         &template,
         node_rules(template.map_id).unwrap().starts,
         |app| {
+            app.init_resource::<FirstArrival>();
+            app.add_systems(FixedUpdate, observe_first_arrival);
             app.insert_resource(crate::pvp::random_bg::tests::source_catalog(&[1018]));
             app.world_mut()
                 .resource_mut::<GameObjectSpawns>()
@@ -103,9 +120,6 @@ fn assert_source_preparation(random: bool) {
                     BgPhase::Waiting,
                     "pending transfers do not start the preparation clock"
                 );
-                capture.set(Some(
-                    h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64(),
-                ));
             }
         },
     );
@@ -138,7 +152,7 @@ fn assert_source_preparation(random: bool) {
         "objective use blocked during preparation"
     );
     use_second_frames(h);
-    let start = first_arrival.get().unwrap();
+    let start = h.app.world().resource::<FirstArrival>().0.unwrap();
     for remaining in [60.0, 30.0, 1.0] {
         let deadline = start + 120.0 - remaining;
         while h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64() + 1.0 < deadline {
