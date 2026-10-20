@@ -83,6 +83,8 @@ mod omor;
 mod omor_pushback;
 #[path = "omor_slay.rs"]
 mod omor_slay;
+#[path = "omrogg.rs"]
+mod omrogg;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
@@ -335,8 +337,8 @@ fn encounter_fixture(
             std::collections::HashMap::from([(map_id, wdt)]),
         ));
     }
-    // Ramparts and Blood Furnace bindings are published world data.
-    if ![542, 543].contains(&map_id) {
+    // Shattered Halls, Ramparts and Blood Furnace bindings are published world data.
+    if ![540, 542, 543].contains(&map_id) {
         maps.raid_creature_encounters.insert((map_id, entry), bit);
     }
     if map_id == 43 {
