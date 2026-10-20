@@ -6,6 +6,9 @@ use shared::death::DeathState;
 #[path = "tests_battleground_end_resources.rs"]
 mod resources;
 
+#[path = "tests_battleground_end_pets.rs"]
+mod pets;
+
 struct CleanupFixture {
     entered: EnteredMatch,
     unentered: Traveler,

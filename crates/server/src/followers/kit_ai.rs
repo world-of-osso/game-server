@@ -29,18 +29,31 @@ pub(super) fn update(
     }
     let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let enemies = ai::engaged_enemies(world, follower, unit, party);
-    if follower.profile.spec_id == 266
-        && enemy.is_some_and(|enemy| ai::interrupt_enemy(world, unit, enemy, 266))
-    {
-        return true;
-    }
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }
+    let candidates: Vec<_> = enemy.into_iter().collect();
+    let mut interrupt_attempted = false;
     for entry in entries
         .iter()
         .filter(|entry| entry.available(follower.profile.spec_id, level))
     {
+        let interrupt_entry = super::kit_interrupt::is_interrupt_entry(
+            entry,
+            world.resource::<crate::spell_info::SpellStore>(),
+        );
+        let pet_interrupt = follower.profile.spec_id == 266;
+        if !interrupt_attempted && (interrupt_entry || pet_interrupt) {
+            interrupt_attempted = true;
+            if super::kit_interrupt::try_interrupt_candidates(
+                world,
+                unit,
+                &follower.profile,
+                &candidates,
+            ) {
+                return true;
+            }
+        }
         let Some(target) = select_target(world, unit, party, enemy, entry) else {
             continue;
         };
@@ -75,7 +88,8 @@ fn select_target(
     enemy: Option<Entity>,
     entry: &Entry,
 ) -> Option<Entity> {
-    if matches!(entry.slot, Slot::Passive | Slot::Utility) {
+    // The provider owns kicks at their existing priority position.
+    if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
         return None;
     }
     match entry.conditions.target {
@@ -213,10 +227,6 @@ fn combat_allows(
     if condition.requires_cast && world.get::<CastState>(target).is_none() {
         return false;
     }
-    if entry.slot == Slot::Interrupt && !crate::spell_cast::can_interrupt_cast(world, unit, target)
-    {
-        return false;
-    }
     if entry.slot == Slot::Control
         && world
             .get::<crate::auras::ActiveAuras>(target)
@@ -240,9 +250,6 @@ fn combat_allows(
     {
         return false;
     }
-    if entry.slot == Slot::Interrupt && world.get::<CastState>(target).is_none() {
-        return false;
-    }
     true
 }
 
@@ -261,8 +268,7 @@ fn attempt_cast(
     {
         return true;
     }
-    let urgent = entry.slot == Slot::Interrupt
-        || entry.slot == Slot::Control
+    let urgent = entry.slot == Slot::Control
         || entry.slot == Slot::Defensive
         || (entry.slot == Slot::Heal
             && entry
@@ -273,7 +279,7 @@ fn attempt_cast(
         return false;
     }
     if target != unit
-        && !matches!(entry.slot, Slot::Interrupt | Slot::Control)
+        && entry.slot != Slot::Control
         && !ai::pursue(
             world,
             unit,

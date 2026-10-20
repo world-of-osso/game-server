@@ -205,7 +205,19 @@ fn read_swing_projection(
         source_position,
         crate::spell_cast::targets::orientation(world, tank),
     );
-    let chances = read_outcome_chances(&attacker, victim, flags, avoids, in_front, target_auras);
+    // Current health snapshot only; this does not simulate future threshold crossings.
+    let target_health = world
+        .get::<Health>(tank)
+        .ok_or("forecast tank lacks health")?;
+    let chances = read_outcome_chances(
+        &attacker,
+        victim,
+        flags,
+        avoids,
+        in_front,
+        target_auras,
+        target_health,
+    );
     let armor = read_armor(world, tank, &source_scaling, &target_scaling);
     let blocked_pct = blocked_pct(
         victim,
