@@ -497,8 +497,8 @@ fn encounter_coverage_omrogg_burning_maul_swaps_weapon_and_procs_blast_wave() {
     seed_rotation(&mut h, boss);
     h.engage(boss);
     let mut weapons = Vec::new();
-    // Two Burning Maul windows: 50-60s, then 60-70s later, 18s each.
-    let (events, _) = observe_with(&mut h, 150.0, |h, at| {
+    // Three Burning Maul windows: 50-60s, then every 60-70s, 18s each.
+    let (events, _) = observe_with(&mut h, 215.0, |h, at| {
         let aura = h.has_aura(boss, BURNING_MAUL);
         weapons.push((at, aura, weapon(h, boss)));
     });
@@ -506,7 +506,7 @@ fn encounter_coverage_omrogg_burning_maul_swaps_weapon_and_procs_blast_wave() {
     let hits = times(&events, CombatLogKind::Damage, boss, BURNING_MAUL_HIT);
     let waves = times(&events, CombatLogKind::CastStart, boss, BLAST_WAVE);
     eprintln!("OMROGG mauls={mauls:?} hits={hits:?} waves={waves:?}");
-    assert_eq!(mauls.len(), 2, "two Burning Maul casts in150s");
+    assert_eq!(mauls.len(), 3, "three Burning Maul casts in215s");
     for &(at, aura, weapon) in &weapons {
         let expected = if aura {
             BURNING_MAUL_WEAPON
@@ -525,8 +525,8 @@ fn encounter_coverage_omrogg_burning_maul_swaps_weapon_and_procs_blast_wave() {
         assert!(hits.contains(wave), "Blast Wave {wave} rides a36057 proc");
     }
     assert!(
-        hits.len() >= 12,
-        "enough procs that no Blast Wave has p<=0.7^12: {}",
+        hits.len() >= 20,
+        "enough procs that no Blast Wave has p<=0.7^20: {}",
         hits.len()
     );
     assert!(!waves.is_empty(), "30% Blast Wave on proc");
