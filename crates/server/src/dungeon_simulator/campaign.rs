@@ -15,12 +15,13 @@ pub(super) struct MoveIntent(pub Vec3);
 #[derive(Serialize)]
 pub(super) struct MemberSample {
     entity: u64,
-    name: String,
-    health: f32,
-    max_health: f32,
+    exists: bool,
+    name: Option<String>,
+    health: Option<f32>,
+    max_health: Option<f32>,
     mana: Option<f32>,
     max_mana: Option<f32>,
-    position: [f32; 2],
+    position: Option<[f32; 2]>,
 }
 
 #[derive(Serialize)]
@@ -106,7 +107,16 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run.sample())).is_ok(),
         "a native dead summon is reportable, not a batch-aborting panic"
     );
-    assert_eq!(run.report.samples.last().unwrap().members.len(), 5);
+    let sample = run.report.samples.last().unwrap();
+    assert_eq!(sample.members.len(), 5);
+    let absent = sample
+        .members
+        .iter()
+        .find(|state| state.entity == member.to_bits())
+        .unwrap();
+    assert!(!absent.exists);
+    assert!(absent.health.is_none());
+    assert!(absent.position.is_none());
 }
 
 struct Run {
@@ -316,11 +326,9 @@ impl Run {
             .members()
             .map(|entity| {
                 let world = self.app.world();
-                let health = world
-                    .get::<Health>(entity)
-                    .expect("admitted bot retains health");
+                let health = world.get::<Health>(entity);
                 let mana = world.get::<Mana>(entity);
-                let position = world.get::<Position>(entity).unwrap();
+                let position = world.get::<Position>(entity);
                 let name = world
                     .get::<shared::components::Npc>(entity)
                     .map(|npc| npc.name.clone())
@@ -328,16 +336,16 @@ impl Run {
                         world
                             .get::<shared::components::Player>(entity)
                             .map(|player| player.name.clone())
-                    })
-                    .unwrap();
+                    });
                 MemberSample {
                     entity: entity.to_bits(),
+                    exists: world.get_entity(entity).is_ok(),
                     name,
-                    health: health.current,
-                    max_health: health.max,
+                    health: health.map(|health| health.current),
+                    max_health: health.map(|health| health.max),
                     mana: mana.map(|mana| mana.current),
                     max_mana: mana.map(|mana| mana.max),
-                    position: [position.x, position.z],
+                    position: position.map(|position| [position.x, position.z]),
                 }
             })
             .collect();
