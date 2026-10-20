@@ -112,7 +112,7 @@ fn aura_stat_native_269_negative_ignore_increases_physical_armor_not_damage_perc
     h.app
         .world_mut()
         .entity_mut(h.npc)
-        .insert(CreatureArmor(3000.0));
+        .insert(CreatureArmor(300.0));
     let before = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
     apply(&mut h, 1160, 0);
     let after = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
@@ -126,7 +126,7 @@ fn aura_stat_native_269_negative_ignore_increases_physical_armor_not_damage_perc
     h.app
         .world_mut()
         .entity_mut(h.npc)
-        .insert(CreatureArmor(3600.0));
+        .insert(CreatureArmor(360.0));
     assert_eq!(
         after,
         armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell)

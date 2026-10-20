@@ -735,6 +735,7 @@ type StatsQuery = (
     Option<&'static EquippedItems>,
     Option<&'static KnownSpells>,
     Option<&'static StatModifiers>,
+    Option<&'static CharacterStats>,
     &'static mut UnitStats,
     &'static mut CombatRatings,
     &'static mut DerivedStats,
@@ -790,6 +791,7 @@ pub(crate) fn update_character_stats(
         equipped,
         known,
         mods,
+        previous_stats,
         mut unit_stats,
         mut ratings,
         mut derived,
@@ -855,8 +857,18 @@ pub(crate) fn update_character_stats(
             max: stats.max_health,
         });
         if let Some(mut mana) = mana {
+            // Aura419 changes BASE_PCT, not create mana. SetMaxPower clamps
+            // current power instead of granting/draining a proportional amount.
+            let aura_maximum_changed = previous_stats.is_some_and(|previous| {
+                previous.base_mana == stats.base_mana && previous.max_mana != stats.max_mana
+            });
+            let current = if aura_maximum_changed {
+                mana.current.min(stats.max_mana)
+            } else {
+                rescaled_current(mana.current, mana.max, stats.max_mana)
+            };
             changed |= mana.set_if_neq(Mana {
-                current: rescaled_current(mana.current, mana.max, stats.max_mana),
+                current,
                 max: stats.max_mana,
             });
         }
