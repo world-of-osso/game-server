@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tests.fixture_env import env_path, requires_env
 import db2_casc
 
 
@@ -231,11 +232,10 @@ class ItemSparseSourceTest(unittest.TestCase):
                 self.assertEqual(row[101:104], [inventory_type, 1, 0])
         self.assertEqual(rows[280400][7], 0.6000000238418579)
 
+    @requires_env("ITEM_SPARSE_SELECTED_FIXTURE")
     def test_exact_real_selected_record_bytes(self):
         self.assert_selected_items(
-            (
-                Path(os.environ["ITEM_SPARSE_SELECTED_FIXTURE"])
-            ).read_bytes()
+            env_path("ITEM_SPARSE_SELECTED_FIXTURE").read_bytes()
         )
 
     @unittest.skipUnless(
