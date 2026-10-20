@@ -1,5 +1,5 @@
 //! Native70448 Elemental talent170374; TC a352b1fa spell_shaman.cpp861–920.
-//! Qualification only: native root eligibility/clock/child payload, NOT parent-chain proof.
+//! Native qualification plus ordinary proc-chain, target, ownership and lifetime behavior.
 use bevy::prelude::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
@@ -190,7 +190,6 @@ fn native_earthen_rage_direct_damage_child_payload_is_qualified() {
 }
 
 #[test]
-#[ignore = "behavioral RED before native Earthen Rage proc consumer"]
 fn native_earthen_rage_ordinary_damage_procs_self_aura_and_three_scheduled_children() {
     let mut h = fixture();
     let (source, target) = (h.caster, h.npc);
@@ -236,7 +235,6 @@ fn native_earthen_rage_ordinary_damage_procs_self_aura_and_three_scheduled_child
 }
 
 #[test]
-#[ignore = "behavioral RED before last-action-target native Earthen Rage state"]
 fn native_earthen_rage_latest_actual_action_target_replaces_first_and_not_selection() {
     let mut h = fixture();
     let (source, first) = (h.caster, h.npc);
@@ -260,7 +258,6 @@ fn native_earthen_rage_latest_actual_action_target_replaces_first_and_not_select
 }
 
 #[test]
-#[ignore = "behavioral control for native passive ownership"]
 fn native_earthen_rage_without_passive_does_not_proc_or_damage() {
     let mut h = fixture();
     remove_passive(&mut h);
@@ -272,7 +269,6 @@ fn native_earthen_rage_without_passive_does_not_proc_or_damage() {
 }
 
 #[test]
-#[ignore = "behavioral control for spell-only native proc mask"]
 fn native_earthen_rage_ordinary_melee_swings_do_not_proc_spell_passive() {
     let mut h = fixture();
     let target = h.npc;
@@ -286,7 +282,6 @@ fn native_earthen_rage_ordinary_melee_swings_do_not_proc_spell_passive() {
 }
 
 #[test]
-#[ignore = "behavioral control against damage-child self-reentry"]
 fn native_earthen_rage_child_cannot_reactivate_or_refresh_its_parent() {
     let mut h = fixture();
     let (source, target) = (h.caster, h.npc);
@@ -299,7 +294,6 @@ fn native_earthen_rage_child_cannot_reactivate_or_refresh_its_parent() {
 }
 
 #[test]
-#[ignore = "behavioral RED before passive-scoped Earthen Rage target lifecycle"]
 fn native_earthen_rage_passive_removal_stops_pending_child_dispatch() {
     let mut h = fixture();
     let (source, target) = (h.caster, h.npc);
@@ -319,7 +313,6 @@ fn native_earthen_rage_passive_removal_stops_pending_child_dispatch() {
 }
 
 #[test]
-#[ignore = "behavioral RED before owned Earthen Rage target isolation"]
 fn native_earthen_rage_two_shamans_keep_independent_last_action_targets() {
     let mut h = fixture();
     let (first, first_target) = (h.caster, h.npc);
@@ -365,7 +358,6 @@ fn native_earthen_rage_two_shamans_keep_independent_last_action_targets() {
 }
 
 #[test]
-#[ignore = "behavioral RED before actual resolved-target Earthen Rage dispatch"]
 fn native_earthen_rage_despawned_action_target_has_no_fallback_victim() {
     let mut h = fixture();
     let target = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 4.0);
