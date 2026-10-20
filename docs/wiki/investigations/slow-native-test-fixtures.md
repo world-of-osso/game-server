@@ -125,6 +125,8 @@ The five directly affected tests improve244.738→113.634s combined (131.103s): 
 
 The [nested-all native encounter fixture](../../../crates/server/src/achievement_nested_all_tests.rs) clones the complete catalog through existing `test_data::achievement_catalog()` instead of decoding canonical achievement rows for each variant. No cache is added. All four difficulty/prerequisite combinations, fresh app/redb ownership, foreign-character isolation, ordinary updates and persisted-reopen assertions remain unchanged. The connection still loads the original map store; no map producer is replaced.
 
+Matched full serial `achievement::nested_all_tests:: --test-threads=1 --format=pretty` compares base dfdd71578 with pushed code6122e8f0c on frozen protocol600b755. The same single native test passes both sides, retaining `(15,true)`, `(16,true)`, `(14,true)` and `(15,false)` plus every persistence/refusal assertion. Process wall27.029→17.224s saves9.805s; user+system CPU26.189→17.176s; peak RSS680488→732996KiB increases52508KiB. Baseline observer/test completed exit0; a summary-print typo failed afterward and was fixed without rerunning the measurement. Code was committed/pushed before the after build/test. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/nested-{before,after}/` and `wow_formats-nested-comparison.json`. Changed-Rust manual readability, format and diff checks pass; broader independent integration is lead-owned. Serial savings do not predict gate wall.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.
