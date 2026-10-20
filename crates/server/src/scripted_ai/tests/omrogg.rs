@@ -193,10 +193,21 @@ fn encounter_coverage_omrogg_native_spell_admissions_qualify() {
         // The aura's PROC_TRIGGER_SPELL default: melee hits trigger Burning Maul36057.
         // HARNESS SETUP: direct threat so O'mrogg swings at the adjacent player.
         h.engage(boss);
+        let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
         h.advance(6.0);
+        let player = h.player();
+        let from_boss: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .filter(|event| event.source == Some(boss.to_bits()))
+            .map(|event| (event.kind.clone(), event.spell_id, event.amount))
+            .collect();
         eprintln!(
-            "OMROGG difficulty{difficulty} maul hits={}",
-            observed_casts(&h, boss, BURNING_MAUL_HIT)
+            "OMROGG difficulty{difficulty} maul hits={} aura={} player_health={:?} victim={:?} boss_events={from_boss:?}",
+            observed_casts(&h, boss, BURNING_MAUL_HIT),
+            h.has_aura(boss, maul),
+            h.health(player),
+            crate::creature_threat::current_victim(h.app.world_mut(), boss)
+                .map(|unit| unit == player),
         );
         assert!(
             observed_casts(&h, boss, BURNING_MAUL_HIT) > 0,
