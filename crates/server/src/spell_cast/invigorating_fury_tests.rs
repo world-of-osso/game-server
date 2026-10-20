@@ -1,5 +1,5 @@
 //! Active70448 receipt-matching Fury inputs; TC a352b1fa spell_warrior.cpp1380–1405.
-//! Qualification first: native baseline/cast flag behavior, not the missing parent chain.
+//! Qualification precedes the parent-chain regression cases below.
 use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::protocol::CombatLogKind;
@@ -13,6 +13,9 @@ const HEAL: u32 = 385_174;
 const SHATTERING_THROW: u32 = 64_382;
 const WOUND: u32 = 209_140;
 const NON_BYPASSING_DAMAGE: u32 = 314_616;
+
+#[path = "invigorating_fury_behavior_tests.rs"]
+mod behavior;
 
 fn fixture(talent: bool) -> Harness {
     let mut ids = vec![
