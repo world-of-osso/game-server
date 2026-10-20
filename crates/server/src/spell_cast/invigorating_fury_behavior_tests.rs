@@ -37,7 +37,6 @@ fn assert_owned_heal(h: &Harness, amount: i32, overflow: i32) {
 }
 
 #[test]
-#[ignore = "pushed native regression before Invigorating Fury AfterCast binding"]
 fn native_invigorating_fury_wounded_root_cast_heals_once_with_native_payload() {
     let mut h = fixture(true);
     cast_native_attack(&mut h, WOUND);
@@ -58,7 +57,6 @@ fn native_invigorating_fury_wounded_root_cast_heals_once_with_native_payload() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Invigorating Fury AfterCast binding"]
 fn native_invigorating_fury_full_health_still_casts_real_native_overheal() {
     let mut h = fixture(true);
     cast_root(&mut h);
@@ -67,7 +65,6 @@ fn native_invigorating_fury_full_health_still_casts_real_native_overheal() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Invigorating Fury AfterCast binding"]
 fn native_invigorating_fury_missing_talent_never_heals_wounded_owner() {
     let mut h = fixture(false);
     cast_native_attack(&mut h, WOUND);
@@ -79,7 +76,6 @@ fn native_invigorating_fury_missing_talent_never_heals_wounded_owner() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Invigorating Fury AfterCast binding"]
 fn native_invigorating_fury_unlearned_actual_passive_no_longer_heals() {
     let mut h = fixture(true);
     assert_eq!(aura(&h, TALENT).unwrap().source, AuraSource::KnownSpell);
@@ -103,7 +99,6 @@ fn native_invigorating_fury_unlearned_actual_passive_no_longer_heals() {
 }
 
 #[test]
-#[ignore = "pushed native regression before Invigorating Fury AfterCast binding"]
 fn native_invigorating_fury_other_warriors_known_talent_does_not_enable_owner() {
     let mut h = fixture(true);
     h.app
@@ -143,7 +138,6 @@ fn native_invigorating_fury_other_warriors_known_talent_does_not_enable_owner() 
 }
 
 #[test]
-#[ignore = "pushed native regression before Invigorating Fury AfterCast binding"]
 fn native_invigorating_fury_refused_root_recast_cannot_issue_another_heal() {
     let mut h = fixture(true);
     cast_native_attack(&mut h, WOUND);
