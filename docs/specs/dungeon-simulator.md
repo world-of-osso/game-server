@@ -10,7 +10,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Extract inter-pack walk distances once using the existing nav query. Runtime movement consumes only the frozen graph; aggro and range use 2D positions.
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
 - [ ] Clear every Stockade boss in seconds of wall time. Report cleared/wiped, failed pack, HP/mana traces and pull decisions.
-- [ ] Batch N seeded runs and summarize per-pack wipe rate.
+- [ ] Batch N seeded runs and summarize per-pack wipe rate. Report runs reaching each pack as the denominator, wipes separately from all failed clears (including stalls/blocks/timeouts), and keep each run's HP/mana/pull trace. A batch that executed successfully is not a clear unless all runs cleared.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
 
 ## How it works
@@ -24,7 +24,8 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and native source spawning.
 - `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller and HP/mana/pull/death report.
 - `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.
-- `scripts/run-dungeon-simulator.py`: execute the compiled filtered test from repository root, with explicit output directory.
+- `scripts/run-dungeon-simulator.py`: execute the compiled filtered test from repository root, with explicit output directory, run count and starting seed.
+- `crates/server/src/dungeon_simulator/batch.rs`: seeded collector, per-pack wipe/failure counts and summary JSON.
 - `crates/server/src/followers/simulator.rs`: authentic party initialization and direct leader/kit/pull-admission seam.
 - `crates/server/src/dungeon_simulator/graph.rs`: typed frozen graph and explicit one-time native-nav extraction; minimum spanning forest plus four nearest neighbours per pack.
 
@@ -33,6 +34,9 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - `dungeon_simulator::frozen_stockade_graph_covers_native_formations`: exact Normal spawn GUID/formation census (GREEN).
 - `dungeon_simulator::one_pack_runs_real_gameplay_without_transport`: isolated native pack death with real positive damage events (GREEN; execute from repository root).
 - `dungeon_simulator::full_stockade_clears_all_three_bosses`: full-route completion and three boss deaths (RED).
+- `dungeon_simulator::batch::batch_summary_counts_wipes_per_reached_pack_and_retains_stalls`: concrete aggregation with a clear, wipe and stall (RED observed; GREEN pending).
+- `random::same_seed_replays_native_random_draws`: repeated native draw sequences and different-seed control (GREEN).
+- `followers::pull_history_tests::tank_pull_history_preserves_active_combat_window_across_idle_and_resets_on_wipe`: real combat/death/OOC ordering, active-window rollover and wipe reset (GREEN; full history family5/5).
 
 ## Known gaps (current cycle)
 

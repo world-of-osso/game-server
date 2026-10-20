@@ -1,8 +1,68 @@
 //! Seeded-run aggregation distinguishes wipes from other failed clears.
 use super::campaign::Report;
 
-pub(super) fn summarize(_reports: &[Report]) -> serde_json::Value {
-    serde_json::json!({})
+pub(super) fn summarize(reports: &[Report]) -> serde_json::Value {
+    let mut packs = std::collections::BTreeMap::<u32, (usize, usize, usize)>::new();
+    for report in reports {
+        let reached: std::collections::BTreeSet<_> = report
+            .pulls
+            .iter()
+            .map(|pull| pull.pack)
+            .chain(report.failed_pack)
+            .collect();
+        for pack in reached {
+            let counts = packs.entry(pack).or_default();
+            counts.0 += 1;
+            counts.1 += usize::from(report.failed_pack == Some(pack) && report.status == "wiped");
+            counts.2 += usize::from(report.failed_pack == Some(pack) && report.status != "cleared");
+        }
+    }
+    let packs: std::collections::BTreeMap<_, _> = packs.into_iter().map(|(pack, (reaching, wipes, failures))| {
+        (pack, serde_json::json!({"runs_reaching": reaching, "wipes": wipes, "failures": failures,
+            "wipe_rate": wipes as f64 / reaching as f64, "failure_rate": failures as f64 / reaching as f64}))
+    }).collect();
+    let count = |status| {
+        reports
+            .iter()
+            .filter(|report| report.status == status)
+            .count()
+    };
+    serde_json::json!({"runs": reports.len(), "seeds": reports.iter().map(|report| report.seed).collect::<Vec<_>>(),
+        "cleared": count("cleared"), "wiped": count("wiped"), "stalled": count("stalled"),
+        "blocked": count("blocked"), "timed_out": count("timeout"),
+        "failed_runs": reports.len() - count("cleared"), "packs": packs})
+}
+
+#[test]
+#[ignore = "explicit seeded dungeon batch; execute through scripts/run-dungeon-simulator.py"]
+fn run_stockade_batch() {
+    let runs: u64 = std::env::var("DUNGEON_SIMULATOR_RUNS")
+        .expect("batch run count")
+        .parse()
+        .expect("positive run count");
+    let seed: u64 = std::env::var("DUNGEON_SIMULATOR_SEED")
+        .expect("batch initial seed")
+        .parse()
+        .expect("u64 seed");
+    assert!(runs > 0, "batch run count must be positive");
+    let mut reports = Vec::new();
+    for offset in 0..runs {
+        let report =
+            super::campaign::run(seed.checked_add(offset).expect("seed range exceeds u64"))
+                .expect("initialize native dungeon simulation");
+        super::runtime::write_report(&report).expect("write actual run trace");
+        super::runtime::print_report(&report);
+        reports.push(report);
+    }
+    let summary = summarize(&reports);
+    let path = super::runtime::output_directory().join("summary.json");
+    std::fs::write(&path, serde_json::to_vec_pretty(&summary).unwrap())
+        .expect("write seeded batch summary");
+    println!("BATCH {}", serde_json::to_string(&summary).unwrap());
+    assert_eq!(
+        summary["cleared"], runs,
+        "batch completed, but not every dungeon cleared; inspect summary.json"
+    );
 }
 
 #[test]

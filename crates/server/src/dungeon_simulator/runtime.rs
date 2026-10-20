@@ -9,22 +9,29 @@ use super::graph::{Graph, Pack};
 
 const TICK: Duration = Duration::from_millis(50);
 
-pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
-    let report = super::campaign::run(seed)?;
-    let directory = std::env::var_os("DUNGEON_SIMULATOR_OUTPUT")
+pub(super) fn output_directory() -> std::path::PathBuf {
+    std::env::var_os("DUNGEON_SIMULATOR_OUTPUT")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("../../target/dungeon-simulator")
-        });
+        })
+}
+
+pub(super) fn write_report(report: &super::campaign::Report) -> Result<(), String> {
+    let directory = output_directory();
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
     std::fs::write(
-        directory.join(format!("run-{seed}.json")),
+        directory.join(format!("run-{}.json", report.seed)),
         serde_json::to_vec_pretty(&report).unwrap(),
     )
-    .map_err(|error| error.to_string())?;
+    .map_err(|error| error.to_string())
+}
+
+pub(super) fn print_report(report: &super::campaign::Report) {
     println!(
-        "RUN seed={seed} status={} bosses={:?} pack={:?} sim_s={:.2} wall_s={:.3} detail={}",
+        "RUN seed={} status={} bosses={:?} pack={:?} sim_s={:.2} wall_s={:.3} detail={}",
+        report.seed,
         report.status,
         report.bosses_killed,
         report.failed_pack,
@@ -32,6 +39,12 @@ pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
         report.wall_seconds,
         report.detail
     );
+}
+
+pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
+    let report = super::campaign::run(seed)?;
+    write_report(&report)?;
+    print_report(&report);
     if report.status != "cleared" {
         return Err(format!("{}: {}", report.status, report.detail));
     }
