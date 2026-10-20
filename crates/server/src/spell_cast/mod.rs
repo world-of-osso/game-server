@@ -151,6 +151,8 @@ mod full_trigger_dead_target_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
+#[cfg(test)]
+mod impending_victory_tests;
 mod hit;
 mod interruptibility;
 pub(crate) use interruptibility::can_interrupt_cast;
