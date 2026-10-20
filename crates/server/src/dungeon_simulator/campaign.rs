@@ -167,15 +167,18 @@ fn spawn_run(seed: u64) -> Result<Run, String> {
             z: graph.entrance[1],
         },
     )?;
-    let mut actors = BTreeMap::new();
-    for pack in &graph.packs {
-        let units = runtime::spawn_pack(&mut app, copy, pack, seed ^ u64::from(pack.id));
-        actors.extend(
-            pack.spawns
-                .iter()
-                .zip(units)
-                .map(|(source, actor)| (source.guid, actor)),
-        );
+    let actors = runtime::spawn_population(&mut app, copy);
+    let missing: Vec<_> = graph
+        .packs
+        .iter()
+        .flat_map(|pack| &pack.spawns)
+        .filter(|spawn| !actors.contains_key(&spawn.guid))
+        .map(|spawn| spawn.guid)
+        .collect();
+    if !missing.is_empty() {
+        return Err(format!(
+            "frozen graph contains sources absent from production Normal population: {missing:?}"
+        ));
     }
     let last_owner_position = Vec3::new(graph.entrance[0], 0.0, graph.entrance[1]);
     Ok(Run {

@@ -1,7 +1,6 @@
 //! Manually clocked gameplay App. No server, protocol, replication or socket plugins.
 use bevy::ecs::schedule::ScheduleLabel;
 use bevy::prelude::*;
-use rand::{SeedableRng, rngs::StdRng};
 use shared::components::Position;
 use std::time::Duration;
 
@@ -147,48 +146,34 @@ pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
         .map
 }
 
-pub(super) fn spawn_pack(
+pub(super) fn spawn_population(
     app: &mut App,
     copy: crate::maps::InMap,
-    pack: &Pack,
-    seed: u64,
-) -> Vec<Entity> {
-    let data = app
-        .world()
-        .resource::<crate::world_data::WorldData>()
-        .clone();
-    let mut rng = StdRng::seed_from_u64(seed);
+) -> std::collections::BTreeMap<u32, Entity> {
     let mut queue = bevy::ecs::world::CommandQueue::default();
-    let mut commands = Commands::new(&mut queue, app.world());
-    let mut context = crate::zones::CreatureSpawnContext {
-        map: copy,
-        difficulty_id: 1,
-        ground: None,
-        temporary: false,
-    };
-    let actors = pack
-        .spawns
-        .iter()
-        .map(|member| {
-            let spawn = data
-                .spawns
-                .iter()
-                .find(|spawn| spawn.guid == member.guid)
-                .unwrap();
-            crate::zones::spawn_creature(
+    app.world_mut()
+        .resource_scope(|world, data: Mut<crate::world_data::WorldData>| {
+            let mut commands = Commands::new(&mut queue, world);
+            crate::zones::spawn_map_creatures(
                 &mut commands,
                 &data,
-                data.template_for(member.entry, 1).unwrap(),
-                &mut context,
+                crate::zones::MapContent {
+                    map: copy,
+                    difficulty_id: 1,
+                    dead_bosses: Vec::new(),
+                },
                 false,
-                spawn,
-                &mut rng,
-            )
-            .expect("source Stockade creature spawn")
-        })
-        .collect();
+                None,
+            );
+        });
     queue.apply(app.world_mut());
-    actors
+    let world = app.world_mut();
+    world
+        .query::<(Entity, &crate::zones::CreatureOrigin, &crate::maps::InMap)>()
+        .iter(world)
+        .filter(|(_, source, map)| **map == copy && source.guid != 0)
+        .map(|(actor, source, _)| (source.guid, actor))
+        .collect()
 }
 
 fn first_hostile_pack<'a>(app: &mut App, graph: &'a Graph, tank: Entity) -> &'a Pack {
@@ -220,6 +205,7 @@ fn first_hostile_pack<'a>(app: &mut App, graph: &'a Graph, tank: Entity) -> &'a 
 }
 
 pub(super) fn run_first_pack() -> Result<(), String> {
+    let _rng_scope = crate::random::seed_scope(1);
     let graph = super::graph::read_graph()?;
     let mut app = build_app();
     let copy = create_copy(&mut app);
@@ -247,7 +233,12 @@ pub(super) fn run_first_pack() -> Result<(), String> {
             .collect();
         data.spawns_by_map.insert(34, indices);
     }
-    let enemies = spawn_pack(&mut app, copy, &pack, 1);
+    let population = spawn_population(&mut app, copy);
+    let enemies: Vec<_> = pack
+        .spawns
+        .iter()
+        .map(|spawn| population[&spawn.guid])
+        .collect();
     let at = Position {
         x: pack.position[0] - 2.0,
         y: 0.0,

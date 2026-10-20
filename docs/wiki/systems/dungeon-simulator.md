@@ -17,8 +17,9 @@ Five sourced kits: Garrick, Crenna, Shuja, Meredy, Austin. Austin is the in-proc
 - Graph census passed against actual Normal spawn GUIDs and formation IDs.
 - Isolated opening pack20375759 cleared at5.70 simulated seconds, with221 real combat events, before full-route work. That fixture deliberately narrows the source population to one pack; it is not dungeon-clear proof.
 - Full-population runs produce actual HP/mana/position samples, native pull decisions and exact source-actor boss death receipts. No Stockade boss clear is qualified yet.
-- Route3 stalled at160.05s on20375765: trailing wall-time history erased DPS during an OOC forecast/recovery hold. User clarified ten **active-combat** seconds, retained across OOC and reset at dungeon start/full wipe. Production correction is committed; GREEN pending. Five-second HP stability still uses wall time. Observed dead-spawn knowledge survives a same-copy wipe.
-- Combat RNG repeatability and seeded batch reporting remain unfinished. Current diagnostic seeds cover spawn rolls only. No low-wipe-rate or live acceptance claim.
+- Route3 stalled at160.05s on20375765: trailing wall-time history erased DPS during an OOC forecast/recovery hold. User clarified ten **active-combat** seconds, retained across OOC and reset at dungeon start/full wipe. Production correction passes all five targeted history tests, including active-window rollover, OOC retention/healing exclusion and wipe/new-copy reset. Five-second HP stability still uses wall time. Observed dead-spawn knowledge survives a same-copy wipe.
+- Native RNG scoped replay and batch-summary accounting pass. The first seeded batch was incomplete: seed1 timed out at3600sim_s/505.211wall_s (7.13×), seed2 interrupted, no batch rate. A partial perf checkpoint measured11.4× steady speed: setup22.90s, update42.50s at10001 ticks, observed events7576, memory plateau1.106GB/no swap. No low-wipe-rate or live acceptance claim.
+- Native-state inspection found the manual constructor omitted `CreatureDifficulty`; Garrick's real admission refused with that explicit error. The regression reproduces it at the native movement-consumer boundary. Population creation now uses production `zones::spawn_map_creatures`, not a simulator copy; GREEN pending. An optimized `sim` profile is configured, and catalog reuse remains in progress.
 
 ## Sources
 

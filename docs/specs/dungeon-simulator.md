@@ -23,7 +23,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 - `crates/server/src/dungeon_simulator/mod.rs`: targeted qualification entry points.
 - `crates/server/src/random.rs`: explicit test-only seeded scope over unchanged native rand distributions; normal production execution reexports rand unchanged. Gameplay RNG call sites share this scope, and simulator schedules run single-threaded.
-- `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and native source spawning.
+- `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and production `zones::spawn_map_creatures` population, with replication disabled.
 - `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller, real party-progress observation, periodic profiling checkpoints and HP/mana/pull/death report.
 - `crates/server/src/dungeon_simulator/diagnostics.rs`: read-only source-unit snapshots and process memory observations.
 - `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.
@@ -39,7 +39,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - `dungeon_simulator::one_pack_runs_real_gameplay_without_transport`: isolated native pack death with real positive damage events (GREEN; execute from repository root).
 - `dungeon_simulator::full_stockade_clears_all_three_bosses`: full-route completion and three boss deaths (RED).
 - `dungeon_simulator::batch::batch_summary_counts_wipes_per_reached_pack_and_retains_stalls`: concrete aggregation with a clear, wipe and stall (RED observed; GREEN pending).
-- `dungeon_simulator::campaign::spawned_normal_population_allows_existing_fight_tank_movement`: native existing-fight consumer accepts spawned population metadata (RED pending).
+- `dungeon_simulator::campaign::spawned_normal_population_allows_existing_fight_tank_movement`: native existing-fight consumer accepts spawned population metadata (missing-difficulty RED observed; GREEN pending).
 - `random::same_seed_replays_native_random_draws`: repeated native draw sequences and different-seed control (GREEN).
 - `followers::pull_history_tests::tank_pull_history_preserves_active_combat_window_across_idle_and_resets_on_wipe`: real combat/death/OOC ordering, active-window rollover and wipe reset (GREEN; full history family5/5).
 
