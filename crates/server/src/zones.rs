@@ -116,7 +116,8 @@ pub(crate) fn map_difficulty_id(world: &World, map: crate::maps::InMap) -> u32 {
         .map_or(0, |difficulty| difficulty.difficulty_id)
 }
 
-/// `Map::SpawnGroupSpawn(groupId)` for a script-owned group withheld at copy fill.
+/// `Map::SpawnGroupSpawn(groupId, ignoreRespawn=true)` for a script-owned group withheld
+/// at copy fill. Without `force`, a living member is kept and a dead one replaced.
 pub(crate) fn spawn_group_spawn(
     world: &mut World,
     map: crate::maps::InMap,
@@ -124,18 +125,28 @@ pub(crate) fn spawn_group_spawn(
     replicate: bool,
     group: u32,
 ) -> Vec<Entity> {
+    let Some(guids) = world
+        .resource::<WorldData>()
+        .script_spawn_groups
+        .get(&group)
+        .cloned()
+    else {
+        error!("SpawnGroupSpawn: group {group} is not a loaded script spawn group");
+        return Vec::new();
+    };
+    let (alive, _) = remove_dead_group_members(world, map, &guids);
     let mut queue = bevy::ecs::world::CommandQueue::default();
     world.init_resource::<crate::ground::GroundMap>();
     let entities = world.resource_scope(|world, mut ground: Mut<crate::ground::GroundMap>| {
         let world_data = world.resource::<WorldData>();
-        let Some(guids) = world_data.script_spawn_groups.get(&group) else {
-            error!("SpawnGroupSpawn: group {group} is not a loaded script spawn group");
-            return Vec::new();
-        };
         let spawns = world_data.spawns_by_map[&(map.map_id as u16)]
             .iter()
             .map(|&idx| &world_data.spawns[idx])
-            .filter(|spawn| guids.contains(&spawn.guid) && spawn.spawns_at(difficulty_id));
+            .filter(|spawn| {
+                guids.contains(&spawn.guid)
+                    && !alive.contains(&spawn.guid)
+                    && spawn.spawns_at(difficulty_id)
+            });
         let mut commands = Commands::new(&mut queue, world);
         spawn_creatures(
             &mut commands,

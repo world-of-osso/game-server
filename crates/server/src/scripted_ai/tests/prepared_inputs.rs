@@ -197,6 +197,10 @@ fn decode_encounter_inputs(
         },
         addons: crate::world_data::load_spawn_addons(&conn),
         template_addons: crate::world_data::load_template_addons(&conn),
+        // Creature::LoadEquipment at spawn needs the canonical equip templates.
+        equipment: canonical
+            .map(|data| data.equipment.clone())
+            .unwrap_or_default(),
         class_level_base_hp: hp,
         class_level_base_mana: data.base_mana.clone(),
         expected_stats: expected,
