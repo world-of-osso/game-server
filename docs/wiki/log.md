@@ -1,3 +1,7 @@
+## 2026-10-19 — Aura248 native-input gap
+
+[Named gap](systems/player-damage.md#aura248-native-input-gap--2026-10-19): AURA_248_NO_NONZERO_NATIVE_INPUT_70448 DEFERRED after fresh all-difficulty canonical scan finds only261912effect4 amount0/Misc0 and no imported server-side248 rows. Synthetic-only implementation declined as speculative; contract/wiki record native-proof boundary, no production/test/data change or coverage promotion.
+
 ## 2026-10-19 — Voluntary leadership authority RED
 
 [Source/policy/implementation](systems/guild-lifecycle.md#voluntary-leadership-transfer): permitted Retail UI/C API signature and full pinned TC self chain qualified before code; native Retail self behavior unproven, approved named Permissions refusal preserves state. Ignored P/E/S regressions pushed first; initial S unsupported-wire failures are not authority proof. Recognized-request baseline then reproduces four actual authority failures before member-rank mutation. Minimal rank0→target/current-lowest→former-master transform uses existing atomic persistence and recipient refresh. Six-rank/nonzero bank fixture, reopen, auth/foreign/self and real concurrent readers; focused GREEN/gate/native pending.
@@ -3202,3 +3206,6 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 ## 2026-10-19 — Swiftmend computed-state backend and generic patient eligibility
 
 [Source/capabilities/proof](investigations/follower-data.md#computed-target-state-and-eligible-patient-ranking--2026-10-19): onlystate15computed, ANYcasterHoT, exactownerrelation/namedfollowerpolicy; originalownernegativecorrectedtoself. SourceRED3/2→backend4/1→separatelyapprovedsharedtargetpredicatebeforehealthrank7GREEN; final278PASS/8existingignored535.73s, privateAzurefrontalexplicitLOCALskip, check43.07s/fmtPASS. Uncomputedstatesnotfalse; no18562override orpriority/timer/movement/pet/planner change. Pushed7938b558d; leadgatepending.
+## 2026-10-19 — Leadership transfer native proof
+
+gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
