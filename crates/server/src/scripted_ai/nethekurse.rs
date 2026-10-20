@@ -2,7 +2,8 @@
 use bevy::prelude::*;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
-use super::{CreatureAi, Ctx, DamageTaken};
+use super::event_map::EventMap;
+use super::{CreatureAi, Ctx, DamageTaken, Hook};
 
 const SCRIPT: &str = "boss_grand_warlock_nethekurse";
 /// TC DATA_NETHEKURSE ordinal0 corresponds to installed1936/map540 bit1.
@@ -15,7 +16,7 @@ const DARK_SPIN: u32 = 30502;
 const ACTION_PEON_KILLED: i32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    name == SCRIPT
+    matches!(name, SCRIPT | "npc_fel_orc_convert")
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -26,6 +27,9 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
         .get(&map.map_id)?;
     if instance != "instance_shattered_halls" {
         return None;
+    }
+    if world.get::<super::CreatureScriptName>(actor)?.0 == "npc_fel_orc_convert" {
+        return Some(Box::new(FelOrcConvert::default()));
     }
     Some(Box::new(Nethekurse {
         boss: BossAi::new(ENCOUNTER_BIT),
@@ -125,6 +129,70 @@ impl BossScript for Nethekurse {
             }
             DARK_SPIN => ctx.do_cast_self(DARK_SPIN),
             _ => {}
+        }
+    }
+}
+
+const HEMORRHAGE: u32 = 30478;
+const EVENT_CONVERT: &str = "FelOrcConvertNethekurseEvent";
+
+#[derive(Default)]
+struct FelOrcConvert {
+    tasks: EventMap,
+}
+
+impl FelOrcConvert {
+    fn notify_nethekurse(ctx: &mut Ctx, action: i32) {
+        if !ctx
+            .world
+            .get::<crate::zones::CreatureStringIds>(ctx.me)
+            .is_some_and(|ids| ids.has(EVENT_CONVERT))
+        {
+            return;
+        }
+        let Some(map) = ctx.map() else { return };
+        let boss = ctx
+            .world
+            .query::<(Entity, &crate::maps::InMap, &shared::components::Npc)>()
+            .iter(ctx.world)
+            .find_map(|(actor, copy, npc)| {
+                (*copy == map && npc.template_id == 16807).then_some(actor)
+            });
+        if let Some(boss) = boss {
+            super::dispatch(ctx.world, boss, Hook::DoAction(action));
+        }
+    }
+}
+
+impl CreatureAi for FelOrcConvert {
+    fn reset(&mut self, _ctx: &mut Ctx) {
+        self.tasks.reset();
+    }
+
+    fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
+        if rand::Rng::gen_bool(&mut rand::thread_rng(), 0.15) {
+            ctx.talk(0);
+        }
+        self.tasks.schedule_range(HEMORRHAGE, 5_000, 10_000);
+        Self::notify_nethekurse(ctx, 1);
+    }
+
+    fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
+        Self::notify_nethekurse(ctx, ACTION_PEON_KILLED);
+    }
+
+    fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
+        if !ctx.update_victim() {
+            return;
+        }
+        self.tasks.update(u64::from(diff_ms));
+        while !ctx.is_casting()
+            && let Some(event) = self.tasks.execute_event()
+        {
+            if event == HEMORRHAGE {
+                ctx.do_cast_victim(HEMORRHAGE);
+                self.tasks.repeat_from_due_range(5_000, 10_000);
+            }
         }
     }
 }
