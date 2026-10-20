@@ -114,6 +114,13 @@ impl CreatureAi for TheMaker {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         ctx.talk(0);
+        #[cfg(test)]
+        if let Some(seed) = ctx
+            .world
+            .get::<super::tests::cast_admission::GroundCombatSeed>(ctx.me)
+        {
+            self.boss.events.seed_rng(seed.0);
+        }
         self.boss
             .events
             .schedule_range(EXPLODING_BEAKER, 5_000, 15_000);
