@@ -48,6 +48,26 @@ Two isolation tests pass36.82s, proving app creature/catalog/class changes do no
 
 After merging master6403a988 (combat/aggro/script changes) atedd15fd6, the complete bounded set passes together: **14/14 in410.83s** (eleven named tests plus two isolation controls and the imported encounter-copy control). Compile/package-lock time is separately recorded3m13s; current feature check passes11.37s without warnings. This merge intersects gameplay consumers, so the bounded rerun is new integration proof, not a ceremonial repeat. Formatting/diff and manual changed-Rust readability checks pass. Full-server suite timing and independent verification remain lead-owned.
 
+## Promoted battleground world reuse
+
+`maps::tests::battleground_nodes::promoted_source_world` retains the fully decoded `WorldData` only after its copy-only promotion completes, keyed by the exact map ID. Alterac30 and Isle628 have separate entries; every fresh app receives its own clone. The temporary database is deleted after loading. No app, redb, entity, navigation query or canonical cache is shared, and the producer pipeline and all roster/frame/clock/assertion boundaries remain unchanged. A two-live-app test mutates both profiles' names, populations and expected-stat maps, then reloads each original profile to check isolation.
+
+Matching serial `maps::tests::battleground_nodes::alterac_channel_` runs compare base17847d172 with code def21aaad on frozen protocol5660814. Both use Cargo's package working directory (`crates/server`) for the existing relative importer path and the same canonical ground root. All nine test names/statuses match:9 pass, no failures/ignores, with separate start/finish observations.
+
+| Metric | Before | After |
+|---|---:|---:|
+| Process wall |292.732s|35.023s|
+| User+system CPU |285.464s|27.368s|
+| Peak RSS |616380KiB|713468KiB|
+
+The cohort saves257.709s wall with +97088KiB peak RSS. First profile use still loads/imports/decodes; subsequent cases retain every native frame and assertion. These serial observations do not guarantee a parallel gate's reduction. One decoded world remains resident per requested profile; this Alterac-only peak does not bound a process also retaining Isle628. The separate two-profile isolation characterization passes before75.01s and after27.05s; it is not a full Isle gameplay-suite result.
+
+Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/alterac-{before,after}/`, aggregate `wow_formats-alterac-comparison.json` and `wow_formats-alterac-isolation-{before,after}.log`. No repeated benchmark was used to replace an outcome.
+
+### Sources
+
+- [Fixture loader and isolation test](../../../crates/server/src/maps/tests_battleground_nodes.rs), [copy-only promotion producer](../../../scripts/promote_battlegrounds.py).
+
 ## Arena residual: bounded independent fixtures (2026-10-16)
 
 The sixteen-map test runs a fresh App and redb for every map. LEAD confirmed no cross-map serial-order contract and authorized at most four workers. Scoped workers now execute all sixteen source cases, join every worker and propagate every fixture panic; source census, gate/orb/combat/return/reopen assertions, frame counts and50ms steps are unchanged. No production catalog experiment or scheduler override is included in this follow-up.
@@ -92,6 +112,14 @@ Base09cbaf988 and implementationf504ae535 use the same frozen protocol0399f8b. A
 Ragefire isolated cold wall regressed despite lower CPU: the cohort uses each prepared profile for the first time, so no repeated-profile savings are claimed there. Samples/receipts retain the measured I/O and contention rather than replacing that result with a retry. Every cohort's peak RSS increases because decoded resources live until process exit; these isolated peaks are not a bound for a gate retaining every profile. First-load imports, per-app clones and native simulation still run. Serial wall savings are not guaranteed parallel-gate savings.
 
 Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/phase-b-{before,after}-{omor,ragefire,azure-rune,azure-return,herald-intro,herald-min1}/`; aggregate `wow_formats-phase-b-measured-comparison.json`. Per-test start/finish flushes are separately observed for every enabled case. Package check passes90s with no warnings; format/diff checks pass. Broader merged-master integration remains lead-owned.
+
+## Canonical toy spell reuse
+
+The transmitted-object fixtures and shared facing fixture read the unchanged canonical spell database. They now clone the complete store already loaded by `spell_cast::test_harness::world_db()`, instead of rebuilding it for each app. Prepared-copy spell loaders are unchanged. Every app still owns its store, redb, cases and ordinary50ms lifecycle observations; this adds no cache and removes no tick or assertion.
+
+Matching full `toys:: --test-threads=1 --format=pretty` runs compare base337355397 with code c9feb45a2 on frozen protocol da007a6. Both pass the exact same213 cases with no failures or ignores; every test has separate start/finish output events. Full-family wall **regressed2246.693→2677.801s**, process CPU2046.590→2346.632s and peak RSS1655476→1756852KiB. No full-family or gate-wall improvement is claimed.
+
+The five directly affected tests improve244.738→113.634s combined (131.103s): transmitted-object lifecycles113.962→64.136s; four facing tests130.776→49.498s. The208 unaffected tests grow2001.814→2563.669s, overwhelming that local saving. Lead accepted that unaffected growth as host contention, not the two-site change; these receipts do not quantify its separate phases. Results were not rerun to select a better outcome. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/toys-{before,after}/` and aggregate `wow_formats-toys-comparison.json`.
 
 ## Related
 

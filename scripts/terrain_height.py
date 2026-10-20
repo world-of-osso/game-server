@@ -4,31 +4,35 @@
 Tile row/column are the two numbers in e.g. azeroth_40_15.adt, not MCNK
 indices. Matches game-engine's adt_format/adt.rs and terrain_height_data.rs:
 MCNK index_y advances world X rows; index_x advances world Y columns.
+Bytes are decoded by the pinned wow-formats-dump CLI; this script owns chunk
+selection, validation and interpolation.
 """
 
 import argparse
 import math
-import struct
 from pathlib import Path
+
+import wow_formats_dump
 
 CHUNK_SIZE = 100.0 / 3.0
 UNIT_SIZE = CHUNK_SIZE / 8.0
 TILE_SIZE = CHUNK_SIZE * 16.0
+MCNK_HEADER_BYTES = 128
 
 
-def chunks(data):
-    """Read reversed-tag ADT chunks, rejecting incomplete frames."""
-    offset = 0
-    while offset < len(data):
-        if len(data) - offset < 8:
-            raise ValueError(f"truncated chunk header at byte {offset}")
-        tag = data[offset : offset + 4][::-1]
-        size = struct.unpack_from("<I", data, offset + 4)[0]
-        end = offset + 8 + size
-        if end > len(data):
-            raise ValueError(f"truncated {tag!r} payload at byte {offset}")
-        yield tag, data[offset + 8 : end]
-        offset = end
+def read_adt_height(path):
+    """Height projection of a root ADT: every MCNK and MCVT in file order."""
+    return wow_formats_dump.dump("adt-height", path)
+
+
+def raise_framing_error(frames, length):
+    """Fail on the incomplete frame that ended a scan of `length` bytes."""
+    truncated = frames["truncated"]
+    if truncated is not None:
+        tag = bytes(truncated["tag"])
+        raise ValueError(f"truncated {tag!r} payload at byte {truncated['offset']}")
+    if frames["tail"]:
+        raise ValueError(f"truncated chunk header at byte {length - frames['tail']}")
 
 
 def interpolate_height(heights, row, col, fx, fz):
@@ -56,8 +60,8 @@ def interpolate_height(heights, row, col, fx, fz):
     return wa * ha + wb * hb + (1 - wa - wb) * center
 
 
-def sample_adt_height(data, world_x, world_y, tile_row, tile_col):
-    """Sample one point; reject wrong tile/chunk origins and absent/bad heights."""
+def sample_adt_height(adt, world_x, world_y, tile_row, tile_col):
+    """Sample one point of a projection; reject wrong tile/chunk origins and absent/bad heights."""
     if not math.isfinite(world_x) or not math.isfinite(world_y):
         raise ValueError("world coordinates must be finite")
     if not (0 <= tile_row < 64 and 0 <= tile_col < 64):
@@ -70,15 +74,13 @@ def sample_adt_height(data, world_x, world_y, tile_row, tile_col):
     wanted_y = math.floor(local_x / CHUNK_SIZE)
     wanted_x = math.floor(local_y / CHUNK_SIZE)
     selected = None
-    for tag, payload in chunks(data):
-        if tag != b"MCNK":
-            continue
-        if len(payload) < 128:
+    for mcnk in adt["mcnk"]:
+        if mcnk["bytes"] < MCNK_HEADER_BYTES:
             raise ValueError("truncated MCNK header (need 128 bytes)")
-        index_x, index_y = struct.unpack_from("<II", payload, 4)
+        index_x, index_y = mcnk["index"]
         if index_x >= 16 or index_y >= 16:
             raise ValueError(f"invalid MCNK chunk indices ({index_x}, {index_y})")
-        origin_x, origin_y, base = struct.unpack_from("<3f", payload, 104)
+        origin_x, origin_y, base = mcnk["origin"]
         expected_x = tile_x - index_y * CHUNK_SIZE
         expected_y = tile_y - index_x * CHUNK_SIZE
         # Header positions are f32; computed tile origins are double precision.
@@ -94,17 +96,17 @@ def sample_adt_height(data, world_x, world_y, tile_row, tile_col):
         if (index_x, index_y) == (wanted_x, wanted_y):
             if selected is not None:
                 raise ValueError(f"duplicate MCNK chunk ({wanted_x}, {wanted_y})")
-            selected = (payload, base, expected_x, expected_y)
+            selected = (mcnk, base, expected_x, expected_y)
+    raise_framing_error(adt, adt["bytes"])
     if selected is None:
         raise ValueError(f"missing MCNK chunk ({wanted_x}, {wanted_y})")
-    payload, base, origin_x, origin_y = selected
+    mcnk, base, origin_x, origin_y = selected
     heights = None
-    for tag, sub in chunks(payload[128:]):
-        if tag != b"MCVT":
-            continue
-        if heights is not None or len(sub) != 145 * 4:
+    for mcvt in mcnk["mcvt"]:
+        if heights is not None or mcvt["bytes"] != 145 * 4:
             raise ValueError("MCVT must contain exactly one set of 145 heights")
-        heights = struct.unpack("<145f", sub)
+        heights = mcvt["heights"]
+    raise_framing_error(mcnk, mcnk["bytes"] - MCNK_HEADER_BYTES)
     if heights is None:
         raise ValueError("selected MCNK missing MCVT heights")
     if not math.isfinite(base) or not all(math.isfinite(h) for h in heights):
@@ -125,7 +127,7 @@ def main():
     args = parser.parse_args()
     try:
         height = sample_adt_height(
-            args.adt.read_bytes(),
+            read_adt_height(args.adt),
             args.world_x,
             args.world_y,
             args.tile_row,

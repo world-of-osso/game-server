@@ -1392,7 +1392,10 @@ pub fn apply_heal(
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
-    let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell);
+    let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
+        * super::scripts::soul_of_the_forest_direct_multiplier(
+            world, ctx.caster, ctx.spell, periodic,
+        );
     let amount = (modded_amount(world, ctx, amount, periodic) * done * taken * named)
         .max(0.0)
         .round();

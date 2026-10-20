@@ -6,9 +6,29 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).
 
+## Germination Rejuvenation routing
+
+With actual learned155675, ordinary774 must apply native155777 instead when its caster already owns774 and has no own155777, or when own155777 has less remaining time than own774. Otherwise apply/refresh774 normally. Compare only that caster's actual aura deadlines, retaining the other instance's absolute expiry. Untalented casts must remain single774 refreshes. Source: SimC76f8118 `sc_druid.cpp:6487–6518`; child155777 uses its native periodic heal effects/duration. Preserve ordinary parent costs, GCD, cast receipt and generic aura behavior; no timer/amount overrides, Swiftmend interaction or global stacking changes.
+
 ## Swiftmend own-HoT consumption
 
 On a successful native18562 hit, consume exactly one HoT owned by that caster from the actual hit patient, in Regrowth8936 → Wild Growth48438 → Rejuvenation774 order (SimC76f8118 `swiftmend_t::impact`). Preserve other casters' instances and lower-priority HoTs. Actual learned native Verdant Infusion392410 disables consumption; no fabricated talent grants or aura removals. This hook retains ordinary healing/cost/timing/eligibility and does not implement the consumed-HoT bonus healing, which remains a named unimplemented effect outside this slice.
+
+## Abundance native threshold
+
+Actual learned207383 grants one native207640 buff only while the caster has at least the native threshold of own primary Rejuvenation774 auras active (70448 effect0 threshold5, buff CumulativeAura1). Reconcile on ordinary774 application/removal; natural expiry below the threshold removes the buff. Preserve native207640 cost/crit effects and duration, without old TC per-Rejuvenation stack increments. Germination counting, duplicate-refresh semantics and other-caster policy changes are outside this slice.
+
+## Restoration Soul of the Forest
+
+Successful Swiftmend18562 with actual learned158478 grants native114108 to the caster, not the healed patient. The next Regrowth8936 or Rejuvenation774 consumes the buff after resolving its effects. Use the buff's actual effect0 percentage (native60), as SimC76f8118's persistent multiplier: direct Regrowth healing and the affected periodic-heal snapshot gain the bonus, which remains on that snapshot after buff removal. Never reread the live buff to amplify old periodic ticks. Germination's Rejuvenation child uses the same sourced snapshot rule; parent774 retains consumption/cost ownership. Untalented casts and unrelated heals stay unchanged. Extra targets392302 and other Soul-of-Forest variants are excluded.
+
+## Lifebloom near-expiration refresh
+
+`LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC`: ordinary33763 refreshing its caster's existing33763 on the hit patient triggers one native33778 heal when the old remaining duration is inclusively at most30% of its full duration (SimC76f8118 `sc_druid.cpp:6229–6240`). Inspect the old own deadline before ordinary aura refresh replaces it. Early refresh does not bloom. Keep the refreshed HoT active with ordinary duration/period/costs; retain existing native expiry/dispel bloom and no-bloom target-swap behavior. Native70448's tooltip names the near-expiration refresh bloom, while the exact threshold is sourced from SimC, not DB2. Other Lifebloom talents, Omen, target selection and global refresh/timer changes are excluded.
+
+## Wild Growth falloff policy
+
+Native48438 periodic heals use `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`: `c(t) = native_coefficient + decay/2 - decay*elapsedFraction`, with `decay = 0.07*(1-native382559percentage/100)` when Unstoppable Growth is actually learned, else0.07. Keep Retail70448's native0.481 coefficient, native period, full duration and natural expiry. Use each tick's scheduled time, not the update frame's wall time. SimC76f8118 `sc_druid.cpp:6611–6635` supplies only the explicitly approved shape; its historical0.175 and TrinityCore's legacy curve must not replace native data. Absolute Retail shape remains uncertified. This slice covers real level42 decline, level43's native40%-less normalized decay, and finite native ticks/expiry; target selection/caps, Tree of Life and other talent interactions are excluded.
 
 ## What it must do
 

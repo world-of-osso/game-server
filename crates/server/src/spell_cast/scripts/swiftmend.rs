@@ -8,7 +8,12 @@ pub(super) const SWIFTMEND: u32 = 18562;
 const VERDANT_INFUSION: u32 = 392410;
 const OWN_HOT_CONSUMPTION_ORDER: &[u32] = &[8936, 48438, 774];
 
-pub(super) fn consume_own_hot(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+pub(super) fn hit(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    consume_own_hot(world, caster, target);
+    super::soul_of_the_forest::grant_after_swiftmend(world, caster, depth);
+}
+
+fn consume_own_hot(world: &mut World, caster: Entity, target: Entity) {
     if has_aura(world, caster, VERDANT_INFUSION) {
         return;
     }
