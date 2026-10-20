@@ -2,6 +2,9 @@
 
 [Ground child/object boundary](systems/boss-scripts.md#herald-ground-liquid-fire--2026-10-19): source qualification1PASS27.70s; corrected actual-launch ignoredcb85 pushed on pre-runtime base, four genuineRED156.95s. Ground-only hit-unit self-children plus exact registered GO AI/native21252 ordinary pulses/damage/lifetimes pass four complete endpoints159.72s at7ea954c38; retained source/refusal controls make a six-case composite. Invalid initial network child receipt oracle excluded; no wire workaround. Tests enabled, independent gate pending; flying/native/balance/persistence/re-entry/loot excluded.
 
+## 2026-10-19 — Auto Shot75 autorepeat
+
+[AutoRepeat](systems/spell-casting.md#auto-shot-autorepeat--2026-10-19): ignored RED606c6ead2/2ded8d38e pushed first; four genuine failures (one shot, no repeat). Fix997d00e04 repeats on the ranged timer (rifle73000 delay3000/haste), no GCD; moving keeps it, out of range skips, StopSpellCast/first stun/fear/confuse cancel via `stop_all_casts`. Resume-window oracle correctedcbf8c8d9d (window included the next legitimate repeat). Stun test RED-proven by reverting only its call (exit101 at the cancel assertion). GREEN169/0,3 pre-existing LOS ignores,66.96s: auto_shot, Dark Luck75, defensives, autoattack range, attack speed, combat::tests, dummy, control stop, fear/confuse/stun. Gaps in [spec](../../specs/player-damage.md#known-gaps-current-cycle).
 ## 2026-10-19 — Herald fixture-only admitted Roar seed
 
 [Ground diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hc729's three legitimate category-cooldown refusals leave the1500ms probe without an admitted cast. Approved actor-local fixture seed0 at natural release gives authored initial Fireball3656ms/Cone7735ms, after Roar2000ms plus1500ms cast. EventMap clock/queue, source ranges/repeats/admission and production RNG remain unchanged; exact expiry oracle retained. Three independent native stability executions7eff0e0fa/protocolfc37 pass36.11s/37.75s/41.14s, each actual first Roar3.95 admitted/exact1450/1500ms AI expiry; initial compile-only visibility failure excluded. Independent changed-family gate/co-landing pending.
@@ -21,6 +24,11 @@
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 
 [Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
+## 2026-10-19 — Ordinary battleground preparation
+
+[Preparation follow-up](../handoffs/pvp-bg-preparation-proof-ledger.md#bp732-integration-correction-and-test-driver-audit): bp732278PASS/3FAIL/1ignored, CHECK0/FMT0. Test-only natural wait for reconnect/flag captures, original delta preserved after native wait, fresh preparation per100 replacement matches. Grep14modules found two additional flag-channel tests; exact3+own4+flag2 GREEN9/0/0ignored53.80s on rebased2a6ab113e/protocol7f9bd7c. Production unchanged; Lead regate pending.
+
+[Preparation](systems/battleground-preparation.md): source first-arrival120/60/30/0 clock, original roster minimum and sourced copied-map gates after native concrete/Random RED2. Actual10-map gate/loader2PASS; corrected pending-transfer/clock2PASS in partial retained114/25. Exact failed25→22PASS/3FAIL, then qualified ground root/restored original frame cadence→last3PASS53.66s atbc3850ae0. EDQUOT and two compile prerequisites remain separately recorded. [Proof ledger](../handoffs/pvp-bg-preparation-proof-ledger.md) qualifies revision scopes; no unified current-tip retained pass. Lead integration pending; Seething missing placements named; no UI/44521/resources.
 
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
