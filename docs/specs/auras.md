@@ -18,6 +18,10 @@ On a successful native18562 hit, consume exactly one HoT owned by that caster fr
 
 Successful Swiftmend18562 with actual learned158478 grants native114108 to the caster, not the healed patient. The next Regrowth8936 or Rejuvenation774 consumes the buff after resolving its effects. Use the buff's actual effect0 percentage (native60), as SimC76f8118's persistent multiplier: direct Regrowth healing and the affected periodic-heal snapshot gain the bonus, which remains on that snapshot after buff removal. Never reread the live buff to amplify old periodic ticks. Germination's Rejuvenation child uses the same sourced snapshot rule; parent774 retains consumption/cost ownership. Untalented casts and unrelated heals stay unchanged. Extra targets392302 and other Soul-of-Forest variants are excluded.
 
+## Wild Growth falloff policy
+
+Native48438 periodic heals use `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`: `c(t) = native_coefficient + decay/2 - decay*elapsedFraction`, with `decay = 0.07*(1-native382559percentage/100)` when Unstoppable Growth is actually learned, else0.07. Keep Retail70448's native0.481 coefficient, native period, full duration and natural expiry. Use each tick's scheduled time, not the update frame's wall time. SimC76f8118 `sc_druid.cpp:6611–6635` supplies only the explicitly approved shape; its historical0.175 and TrinityCore's legacy curve must not replace native data. Absolute Retail shape remains uncertified. This slice covers real level42 decline, level43's native40%-less normalized decay, and finite native ticks/expiry; target selection/caps, Tree of Life and other talent interactions are excluded.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
