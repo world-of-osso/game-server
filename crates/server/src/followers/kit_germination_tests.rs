@@ -58,7 +58,6 @@ fn prepare_two_native_hots() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "GERMINATION_NATIVE_ROUTING: level32 absent-talent refresh control"]
 fn follower_germination_level32_without_talent_refreshes_one_rejuvenation() {
     let (mut h, healer) = at_level(CRENNA, 32, |_| {});
     assert!(!crate::auras::has_aura(
@@ -83,7 +82,6 @@ fn follower_germination_level32_without_talent_refreshes_one_rejuvenation() {
 }
 
 #[test]
-#[ignore = "GERMINATION_NATIVE_ROUTING: actual learned33 second774 creates periodic child"]
 fn follower_germination_level33_second_rejuvenation_keeps_two_owned_hots() {
     let (mut h, healer) = prepare_two_native_hots();
     let mut health = h.app.world_mut().get_mut::<Health>(healer).unwrap();
@@ -126,7 +124,6 @@ fn follower_germination_level33_second_rejuvenation_keeps_two_owned_hots() {
 }
 
 #[test]
-#[ignore = "GERMINATION_NATIVE_ROUTING: second-HoT prerequisite before shorter-remaining routing"]
 fn follower_germination_level33_third_cast_refreshes_shorter_owned_hot() {
     let (mut h, healer) = prepare_two_native_hots();
     let base = own_expiry(&h, healer, REJUVENATION).unwrap();
