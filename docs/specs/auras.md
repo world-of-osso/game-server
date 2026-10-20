@@ -34,6 +34,10 @@ Native48438 periodic heals use `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFIC
 
 Actual learned113043 rolls its native effect0 percentage (70448 value4) only on its caster's real periodic33763 healing, triggering native16870. Native DB ProcChance100 is admission metadata, not a substitute for that effect-amount roll (TC a352b1fa `spell_druid.cpp:1871–1882`; SimC76f8118 `sc_druid.cpp:6247,11532–11535`). Clearcasting's existing native16870 modifier makes the next Regrowth8936 free; consume the caster-owned buff when that Regrowth successfully lands, preserving the composed Soul-of-the-Forest hit hook. Unrelated Rejuvenation must neither consume nor refresh Clearcasting. Retain ordinary mana, regeneration, costs, timing and spell-modifier behavior. Natural acquisition tests use a confidence bound derived from native chance, never a gameplay timer or fake buff/RNG/resource grant. Moment of Clarity155577, extra charges, healing bonus392220, other Omen variants and global proc changes are excluded.
 
+## Tranquil Mind Clearcasting stacks
+
+Actual learned403521 replaces Omen113043's proc chance with its native effect2 value (70448 value5%, not +5%). Native effect0/op37 supplies one additional Clearcasting16870 stack through the existing modifier runtime: preserve cap1 without the talent and cap2 with it, including a third real proc at the cap. Each successfully completed Regrowth spends exactly one owned Clearcasting stack without refreshing its deadline; two earned stacks fund two free Regrowths, then ordinary mana cost resumes. Retain the existing Soul-of-the-Forest hit composition and generic stacking/cost behavior. Confidence bounds for natural acquisition account for multiple required procs within the actual finite native lifetime; they are not gameplay timers or frequency certification. Index1 mana-regeneration numeric certification, other extra-charge talents and global stacking changes are excluded.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
