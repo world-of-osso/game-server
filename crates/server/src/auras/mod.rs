@@ -2309,6 +2309,8 @@ mod monster_rising_tests;
 #[cfg(test)]
 mod power_strike_tests;
 #[cfg(test)]
+mod spirit_wolf_tests;
+#[cfg(test)]
 mod tiger_dash_tests;
 #[cfg(test)]
 mod total_stat_percent_tests;
