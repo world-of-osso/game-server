@@ -1,3 +1,7 @@
+## 2026-10-20 — Blood Furnace The Maker
+
+[The Maker17381](systems/boss-scripts.md#blood-furnace-the-maker--2026-10-20) ported on BossAi(0) with `Ctx::dungeon_mode` consolidation; qualification, pushed ignored RED, GREEN5/5 before enabling. Read-only trace found no canonical542/543 creature bindings (`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`).
+
 ## 2026-10-19 — Fel Iron chest flag preflight blocked
 
 [GO_NOT_SELECTABLE_FLAG_UNMODELLED](investigations/go-not-selectable-flag.md) records the read-only placement/interaction census and existing Isle keep-banner unlock hazard. Fel Iron MakeActive stopped before implementation; raw census attached from the separate engine data evidence tree. No server/protocol/client flag semantics or chest behavior changed.

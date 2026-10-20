@@ -1,5 +1,16 @@
 # Boss scripts
 
+## Blood Furnace The Maker — 2026-10-20
+
+`scripted_ai/blood_furnace.rs` ports [The Maker](../../specs/boss-scripts.md#blood-furnace-the-maker-source-boundary) on BossAi(0)/EventMap. Heroic beaker is `ctx.do_cast_victim(ctx.dungeon_mode(30925, 40059))`; `Ctx::dungeon_mode` replaces the former Ramparts-local `difficulty_spell`. Normal30925 does not exist in retail DB2, so the Normal cast resolves `UnknownSpell`, exactly as TC's missing SpellInfo.
+
+Proof order:
+1. Qualification (no production edits). First run0PASS/2FAIL24.16s was harness-only: the base fixture had no GroundMap/LineOfSight for Knockback98, and a wrongly removed fixture binding. Retry f913363a8 2PASS39.74s.
+2. Pushed ignored RED04cc9210c: 5 genuine FAIL plus 2 qualification and 1 NPC-victim control PASS, 36.78s.
+3. GREEN16d96a1b9: 5/5, 29.90s, before enabling. Heroic beaker times11.5/29.85/49.25s.
+
+The player-slay positive uses the production level10/class stat path and autonomous Normal melee; the NPC control uses a real17370 with HARNESS SETUP `kill_unit`. Domination, doors, binding publication and Broggok/Keli'dan remain named gaps.
+
 ## Fel Iron chest activation blocked
 
 `GO_NOT_SELECTABLE_FLAG_UNMODELLED` blocks the chest MakeActive slice; the native flag and its existing unlock consumers are not a chest-only state change. [Read-only census and source/consumer evidence](../investigations/go-not-selectable-flag.md). No implementation was attempted.
