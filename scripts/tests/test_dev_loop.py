@@ -1,5 +1,6 @@
 """Process-level contracts for the watched native server entrypoint."""
 
+import hashlib
 import json
 import os
 import shlex
@@ -40,6 +41,7 @@ sys.exit(result)
 """
 
 RUNTIME = """#!/usr/bin/env python3
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -50,7 +52,10 @@ sys.path.insert(0, os.environ["BUILD_HOST_SCRIPTS"])
 import native_build_hosts as native
 with native.lifetime(monitor="desktop" in os.environ.get("MODE", "")) as lease:
     with open(os.environ["EVENTS"], "a") as output:
-        output.write(json.dumps(dict(kind="runtime", pid=os.getpid(), at=time.monotonic())) + "\\n")
+        catalogs = {name: hashlib.sha256(Path("data", name).read_bytes()).hexdigest()
+                    for name in ("trading-post-monthly-catalog.json", "quest-reward-bonus.json")}
+        output.write(json.dumps(dict(kind="runtime", pid=os.getpid(), at=time.monotonic(),
+                                    cwd=str(Path.cwd()), catalogs=catalogs)) + "\\n")
     marker = Path(os.environ["EVENTS"] + ".crashed")
     if os.environ.get("CRASH_ONCE") and not marker.exists():
         marker.touch()
@@ -72,6 +77,12 @@ class DevLoopTests(unittest.TestCase):
             shutil.copy2(loop, self.root / "scripts/dev-loop.py")
         (self.root / "scripts/build-host.py").write_text(HELPER)
         (self.root / "scripts/runtime.py").write_text(RUNTIME)
+        (self.root / "data").mkdir()
+        self.catalogs = {}
+        for name in ("trading-post-monthly-catalog.json", "quest-reward-bonus.json"):
+            source = ROOT / "content" / name
+            shutil.copy2(source, self.root / "data" / name)
+            self.catalogs[name] = hashlib.sha256(source.read_bytes()).hexdigest()
         self.events = self.root / "events.jsonl"
         self.environment = dict(
             os.environ, EVENTS=str(self.events), BUILD_HOST_SCRIPTS=str(COMMON)
@@ -177,6 +188,15 @@ class DevLoopTests(unittest.TestCase):
         self.wait_for("runtime")
         process.send_signal(signal.SIGTERM)
         process.wait(timeout=12)
+
+    def test_runtime_reads_staged_tracked_catalogs_from_checkout_data(self):
+        process = self.start_loop("--build-host", "local")
+        runtime = self.wait_for("runtime")[0]
+        self.assertEqual(runtime["cwd"], str(self.root))
+        self.assertEqual(runtime["catalogs"], self.catalogs)
+        process.send_signal(signal.SIGTERM)
+        process.wait(timeout=12)
+        self.assert_stopped(runtime["pid"])
 
     def test_selected_hosts_flags_and_shutdown_clean_separate_runtime_groups(self):
         for host in ("local", "desktop"):
