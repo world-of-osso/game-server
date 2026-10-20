@@ -13,6 +13,11 @@ const DEATH_COIL: u32 = 30500;
 const SHADOW_CLEAVE: u32 = 30495;
 const SHADOW_SLAM: u32 = 35953;
 const DARK_SPIN: u32 = 30502;
+const ACTION_START_INTRO: i32 = 0;
+const EVENT_TAUNT_PEONS: u32 = 1;
+const PEON_SHADOW_SEAR: u32 = 30735;
+const PEON_DEATH_COIL: u32 = 30741;
+const PEON_TARGET_FISSURES: u32 = 30745;
 const ACTION_PEON_ENGAGED: i32 = 1;
 const ACTION_PEON_KILLED: i32 = 2;
 const EVENT_INTERNAL_COOLDOWN: u32 = 2;
@@ -82,10 +87,24 @@ impl Nethekurse {
             .schedule(EVENT_INTERNAL_COOLDOWN, PEON_REACTION_MS);
     }
 
+    fn taunt_peons(&mut self, ctx: &mut Ctx) {
+        let group = rand::Rng::gen_range(&mut rand::thread_rng(), 0..3);
+        let spell = [PEON_SHADOW_SEAR, PEON_DEATH_COIL, PEON_TARGET_FISSURES][group];
+        ctx.talk(group as u8);
+        ctx.do_cast_self(spell);
+        self.boss.events.cancel(EVENT_TAUNT_PEONS);
+        if self.dead_peons != 4 {
+            self.boss
+                .events
+                .schedule_range(EVENT_TAUNT_PEONS, 25_000, 35_000);
+        }
+    }
+
     fn update_out_of_combat(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         self.boss.events.update(u64::from(diff_ms));
         while let Some(event) = self.boss.events.execute_event() {
             match event {
+                EVENT_TAUNT_PEONS => self.taunt_peons(ctx),
                 EVENT_INTERNAL_COOLDOWN => self.peon_event_on_cooldown = false,
                 EVENT_CLEAR_EMOTE => {
                     ctx.world
@@ -140,6 +159,9 @@ impl CreatureAi for Nethekurse {
             return;
         }
         match action {
+            ACTION_START_INTRO if !ctx.is_engaged() && self.dead_peons != 4 => {
+                self.boss.events.schedule(EVENT_TAUNT_PEONS, 0);
+            }
             ACTION_PEON_ENGAGED if !ctx.is_engaged() && !self.peon_event_on_cooldown => {
                 self.react_to_peon(ctx, false);
             }
@@ -272,4 +294,22 @@ impl CreatureAi for FelOrcConvert {
             }
         }
     }
+}
+
+/// TC DoCastSelf30735 SPELLVALUE_MAX_TARGETS2, without modifying native SpellInfo.
+pub(crate) fn filter_shadow_sear(
+    world: &World,
+    _spell: &crate::spell_info::SpellInfo,
+    explicit: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    if !explicit
+        .and_then(|actor| world.get::<shared::components::Npc>(actor))
+        .is_some_and(|npc| npc.template_id == 16807)
+    {
+        return;
+    }
+    use rand::seq::SliceRandom;
+    targets.shuffle(&mut rand::thread_rng());
+    targets.truncate(2);
 }

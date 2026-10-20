@@ -30,7 +30,7 @@ pub(crate) mod maraudon;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
-mod nethekurse;
+pub(crate) mod nethekurse;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
