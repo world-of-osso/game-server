@@ -49,6 +49,7 @@ mod natures_guardian;
 mod periodic;
 pub mod procs;
 mod refresh;
+pub(crate) mod reward_mods;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -57,6 +58,9 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
 mod unit_state;
+pub(crate) mod world_state;
+#[cfg(test)]
+pub(crate) mod world_xp_tests;
 pub use invisibility::Invisibility;
 
 use std::collections::HashSet;
@@ -1028,6 +1032,7 @@ pub(crate) fn apply_aura_with_spell(
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
         }
+        world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
@@ -1316,6 +1321,7 @@ pub(crate) fn apply_attack_damage(
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
@@ -1501,6 +1507,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     }
     crate::combat::rescale_creature_swing_timers(world, unit, previous_attack_time);
     unit_state::reconcile(world, unit);
+    world_state::reconcile(world, unit);
     health_pct_trigger::reconcile(world, unit);
     crate::spell_cast::refresh_cast_movement_permission(world, unit);
 }

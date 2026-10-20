@@ -108,7 +108,7 @@ pub(super) fn remove_other_forms(world: &mut World, unit: Entity, keep_instance:
     });
 }
 
-/// `Unit::CalculateDisplayPowerType` without MOD_POWER_DISPLAY and vehicles.
+/// `Unit::CalculateDisplayPowerType`: fixed forms precede aura179 and class power.
 fn display_power(form: Option<i32>, class_display: Option<PowerType>) -> Option<PowerType> {
     match form {
         Some(FORM_CAT | FORM_GHOUL) => Some(PowerType::Energy),
@@ -128,9 +128,18 @@ pub(super) fn reconcile_display_power(world: &mut World, unit: Entity) {
         .get::<ActiveAuras>(unit)
         .and_then(current_form)
         .map(|(_, form)| form);
-    let class_display = world
-        .get_resource::<PowerTypeTable>()
-        .and_then(|table| table.display_power(class));
+    let aura_display = world.get::<ActiveAuras>(unit).and_then(|auras| {
+        auras
+            .iter()
+            .flat_map(|aura| &aura.effects)
+            .filter(|effect| effect.aura_type == super::handlers::MOD_POWER_DISPLAY)
+            .find_map(|effect| PowerType::from_db(effect.misc_values[0]))
+    });
+    let class_display = aura_display.or_else(|| {
+        world
+            .get_resource::<PowerTypeTable>()
+            .and_then(|table| table.display_power(class))
+    });
     let Some(display) = display_power(form, class_display) else {
         return;
     };
