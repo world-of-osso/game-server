@@ -1,6 +1,6 @@
 ## 2026-10-19 — Native forced-miss readiness oracle RED
 
-[Follow-up](systems/auras.md#attack-readiness-oracle-follow-up--2026-10-19):7ff4c9857/cc83515b6 fixed recovery, not initial HP⇒attack helpers. Pushed ignoredea66eb290 native50240 counterexamples give2RED21.29s/three actual Miss attempts each; minimal TEST-only event/Pursuing/currentvictim correction preserves100/120-frame windows and every wound/death/evade/regeneration assertion. No production/RNG/input changes; GREEN/lead gate pending.
+[Follow-up](systems/auras.md#attack-readiness-oracle-follow-up--2026-10-19):7ff4c9857/cc83515b6 fixed recovery, not initial HP⇒attack helpers. Pushed ignoredea66eb290 native50240 counterexamples give2RED21.29s/three actual Miss attempts each; minimal TEST-only event/Pursuing/currentvictim correction preserves100/120-frame windows and every wound/death/evade/regeneration assertion. No production/RNG/input changes. CurrentVictim namespace compile correction1aea734bf (not behavioral proof); fresh two-module31GREEN94.76s/0warnings including new2ignored via --include-ignored, then both enabled. Independent lead gate pending.
 
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 

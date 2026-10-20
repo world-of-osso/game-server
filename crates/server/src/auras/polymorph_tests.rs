@@ -498,7 +498,6 @@ fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seco
 }
 
 #[test]
-#[ignore = "native forced-miss RED before polymorph readiness event oracle"]
 fn polymorph_native_forced_miss_engagement_still_evades_and_regenerates() {
     let (mut h, max_health) = spy_harness().unwrap();
     h.cast_and_deliver(EVASIVE_MANEUVERS, Some(h.caster));

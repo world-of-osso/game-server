@@ -495,7 +495,6 @@ fn kobold_swings_within(h: &mut Harness, frames: usize) -> bool {
 }
 
 #[test]
-#[ignore = "native forced-miss RED before fear readiness event oracle"]
 fn class_completeness_native_fear_readiness_counts_real_forced_miss_attempts() {
     let mut h = shout_harness();
     let (npc, player) = (h.npc, h.caster);
