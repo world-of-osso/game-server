@@ -125,6 +125,8 @@ The five directly affected tests improve244.738→113.634s combined (131.103s): 
 
 Both [Loa fixture helpers](../../../crates/server/src/toys_loa_cosmetic_tests.rs) now clone the same existing canonical `world_db().store` instead of reparsing it. This adds no cache and preserves all seven cases, app ownership and the ordinary1800s aura/3600s recovery timelines. No lifecycle tick, cancellation, learning or persisted-use assertion changes.
 
+Matching full serial `toys::tests::loa_cosmetics:: --test-threads=1 --format=pretty` runs compare base a5a5af6d3 with pushed code208f091df on frozen protocol600b755. Both pass the same seven names/statuses with no failures or ignores and separate start/finish output events. Process wall132.283→99.566s saves32.718s; user+system CPU127.577→98.679s; peak RSS1241736→1278236KiB increases36500KiB. Ordinary expiry/reuse still executes every50ms frame through1800s/3600s; no parallel-gate speedup is inferred. First-case canonical initialization remains included. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/loa-{before,after}/` and `wow_formats-loa-comparison.json`. Code was committed and pushed before the after build/measurement. Changed-Rust manual readability, format and diff checks pass; independent merged-master integration remains lead-owned.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.
