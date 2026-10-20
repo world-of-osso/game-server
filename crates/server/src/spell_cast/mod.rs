@@ -204,6 +204,8 @@ mod mechanic_resistance_tests;
 #[cfg(test)]
 mod melee_crit_taken_tests;
 #[cfg(test)]
+mod melee_from_caster_tests;
+#[cfg(test)]
 mod melee_hit_modifier_tests;
 #[cfg(test)]
 mod minimum_speed_tests;

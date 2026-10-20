@@ -32,9 +32,9 @@ const RAKE_STUN: u32 = 163505;
 const STEALTH_AURA: u32 = 16;
 const RAW_RAGE_PER_POINT: f32 = 10.0;
 
-/// TC spell_warr_colossus_smash;167105 explicitly names208086s1/d.
-/// Apply only the base caster-owned vulnerability, not optional aura343 or
-/// the child's unidentified self marker. Never amplify the initial strike.
+/// TC spell_warr_colossus_smash (spell_warrior.cpp583–598) casts208086 on each
+/// hit target: effect0 spell271 and effect1 white-swing343 vulnerabilities. The
+/// effect2 caster-target Dummy marker has no consumer. Never amplify the initial strike.
 pub(super) fn apply_colossus_wound(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
     crate::auras::apply_aura(
         world,
@@ -42,7 +42,7 @@ pub(super) fn apply_colossus_wound(world: &mut World, caster: Entity, target: En
             caster,
             target,
             spell_id: COLOSSUS_WOUND,
-            effect_mask: 1,
+            effect_mask: 0b11,
             source: AuraSource::Cast,
         },
     );
