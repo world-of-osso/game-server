@@ -207,3 +207,40 @@ fn active_updates(history: &SpellHistory, now: f64) -> Vec<SpellCooldownUpdate> 
     updates.sort_unstable_by_key(|update| update.spell_id);
     updates
 }
+
+#[cfg(test)]
+mod tests {
+    use redb::ReadableTable;
+
+    use super::*;
+
+    fn stored_row(db: &Database, character_id: u64) -> Option<StoredCooldowns> {
+        let txn = db.begin_read().unwrap();
+        let table = txn.open_table(SPELL_COOLDOWNS).unwrap();
+        let row = table.get(character_id).unwrap()?;
+        Some(bitcode::decode(row.value()).unwrap())
+    }
+
+    #[test]
+    fn spell_cooldown_load_prunes_expired_rows_from_the_store() {
+        let db = crate::persistence::temp_database();
+        let now_ms = 1_800_000_000_000;
+        write(
+            &db,
+            7,
+            &StoredCooldowns {
+                spells: vec![(18499, now_ms - 1), (28027, now_ms + 5_000)],
+                categories: vec![(1174, 28027, now_ms + 5_000), (99, 18499, now_ms)],
+            },
+        );
+        let unexpired = StoredCooldowns {
+            spells: vec![(28027, now_ms + 5_000)],
+            categories: vec![(1174, 28027, now_ms + 5_000)],
+        };
+        assert_eq!(load(&db, 7, now_ms), unexpired);
+        assert_eq!(stored_row(&db, 7), Some(unexpired));
+
+        assert_eq!(load(&db, 7, now_ms + 5_000), StoredCooldowns::default());
+        assert_eq!(stored_row(&db, 7), None, "a fully expired row is removed");
+    }
+}
