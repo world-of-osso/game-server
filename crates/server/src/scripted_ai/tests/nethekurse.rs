@@ -402,3 +402,89 @@ fn encounter_coverage_nethekurse_event_peon_engagement_notifies_boss() {
     );
     assert_eq!(nethekurse_yells(&h, boss, 3), 0, "boss not pulled directly");
 }
+
+#[test]
+#[ignore = "RED: source intro taunts not ported"]
+fn encounter_coverage_nethekurse_intro_reentry_keeps_one_source_taunt_chain() {
+    let (mut h, boss, _, _) = populated_nethekurse(1);
+    observe_admissions(&mut h, boss);
+    // HARNESS SETUP: both source entry points send ACTION_START_INTRO=0.
+    crate::scripted_ai::dispatch(
+        h.app.world_mut(),
+        boss,
+        crate::scripted_ai::Hook::DoAction(0),
+    );
+    crate::scripted_ai::dispatch(
+        h.app.world_mut(),
+        boss,
+        crate::scripted_ai::Hook::DoAction(0),
+    );
+    h.advance(0.2);
+    let taunts = |h: &Harness| {
+        h.app
+            .world()
+            .resource::<crate::scripted_ai::tests::cast_admission::CastAdmissions>()
+            .entries
+            .iter()
+            .filter(|entry| [30735, 30741, 30745].contains(&entry.spell))
+            .map(|entry| entry.time)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        taunts(&h).len(),
+        1,
+        "duplicates cancelled by the first due taunt"
+    );
+    h.advance(35.0);
+    let times = taunts(&h);
+    assert_eq!(times.len(), 2, "one repeat chain: {times:?}");
+    assert!(
+        times[1] - times[0] >= 25.0 && times[1] - times[0] <= 35.1,
+        "source25–35s: {times:?}"
+    );
+}
+
+#[test]
+fn encounter_coverage_nethekurse_peon_death_reactions_share_five_second_cooldown() {
+    let (mut h, boss, _, peons) = populated_nethekurse(1);
+    h.hit_pct(peons[0], 200.0);
+    h.advance(0.2);
+    assert_eq!(nethekurse_yells(&h, boss, 7), 1);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitPose>(boss)
+            .unwrap()
+            .emote_state,
+        253
+    );
+    h.hit_pct(peons[1], 200.0);
+    h.advance(4.7);
+    assert_eq!(nethekurse_yells(&h, boss, 7), 1, "shared5s cooldown");
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitPose>(boss)
+            .unwrap()
+            .emote_state,
+        253,
+        "not cleared early"
+    );
+    h.advance(0.3);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitPose>(boss)
+            .unwrap()
+            .emote_state,
+        0,
+        "source5s clear"
+    );
+    h.hit_pct(peons[2], 200.0);
+    h.advance(0.2);
+    assert_eq!(
+        nethekurse_yells(&h, boss, 7),
+        2,
+        "cooldown releases for third death"
+    );
+}
