@@ -636,7 +636,13 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
 
 /// The target's armor against the caster: a creature's own armor at the
 /// caster's level, a player's gear armor.
-fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+fn armor_reduced(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+    _spell: &SpellInfo,
+) -> f32 {
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, caster),
         UnitScaling::of(world, target),
@@ -1189,7 +1195,7 @@ fn deal_damage_and_report(
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
         && reduced_by_armor(ctx.spell)
     {
-        armor_reduced(world, ctx.caster, target, amount)
+        armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
     };

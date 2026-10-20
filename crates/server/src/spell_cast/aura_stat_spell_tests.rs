@@ -36,7 +36,7 @@ fn apply(h: &mut Harness, spell_id: u32, index: u32) {
 fn aura_stat_native_57_changes_magic_crit_but_not_weapon_crit() {
     let mut h = fixture(&[450831]); //2.5 spell-only percentage points.
     let magic = world_db().unwrap().store.get(314633).unwrap();
-    let weapon = world_db().unwrap().store.get(78).unwrap();
+    let weapon = world_db().unwrap().store.get(12294).unwrap();
     let before_magic = crit_chance(h.app.world(), h.caster, h.npc, magic);
     let before_weapon = crit_chance(h.app.world(), h.caster, h.npc, weapon);
     apply(&mut h, 450831, 0);
@@ -101,13 +101,21 @@ fn aura_stat_native_354_scales_real_heal_by_missing_health_and_class_mask() {
 #[ignore = "aura-stat-mods RED: native resistance269"]
 fn aura_stat_native_269_negative_ignore_increases_physical_armor_not_damage_percent() {
     let mut h = fixture(&[1160]); //Native -20%, school127: armor×1.20, not damage×0.80.
+    let spell = world_db().unwrap().store.get(12294).unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_expected_stats(&conn).armor_constants());
     h.app
         .world_mut()
         .entity_mut(h.npc)
         .insert(CreatureArmor(3000.0));
-    let before = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0);
+    let before = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
     apply(&mut h, 1160, 0);
-    let after = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0);
+    let after = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
     assert!(
         after < before,
         "native-20 ignore increases armor: {after} vs {before}"
@@ -119,5 +127,35 @@ fn aura_stat_native_269_negative_ignore_increases_physical_armor_not_damage_perc
         .world_mut()
         .entity_mut(h.npc)
         .insert(CreatureArmor(3600.0));
-    assert_eq!(after, armor_reduced(h.app.world(), h.caster, h.npc, 1000.0));
+    assert_eq!(
+        after,
+        armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell)
+    );
+}
+
+#[test]
+#[ignore = "aura-stat-mods RED: native resistance269 reduction bypass"]
+fn aura_stat_native_269_scales_existing_damage_reduction_for_matching_school() {
+    let mut h = fixture(&[1160, 33206]);
+    let caster = h.caster;
+    let target = h.npc;
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target,
+            spell_id: 33206,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    let spell = world_db().unwrap().store.get(314633).unwrap();
+    let before = crate::auras::damage_taken_multiplier(h.app.world(), target, caster, spell);
+    assert!((before - 0.6).abs() < 0.0001);
+    apply(&mut h, 1160, 0);
+    let after = crate::auras::damage_taken_multiplier(h.app.world(), target, caster, spell);
+    assert!(
+        (after - 0.52).abs() < 0.0001,
+        "-20% ignore strengthens40% reduction to48%, got{after}"
+    );
 }
