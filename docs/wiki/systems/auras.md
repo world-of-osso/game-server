@@ -1,5 +1,13 @@
 # Auras
 
+## Generic combat/stat aura census slice — 2026-10-20
+
+Native70448 regression work on `aura-stat-mods`, protocol600b755. Initial ignored tests cover405 rating scaling,463 base-crit→parry,419 maximum (not create) mana,404 SP→AP and145 health percentage. Census22842 has145 amount0; native182775 amount50 provides the nonzero oracle without changing DB2.
+
+TC a352b1fa local source: `data/diagnostics/arena-coverage-2026-10-12/tc-master-src/src/server/game/` in game-engine. `Spells/Auras/SpellAuraDefines.h` marks **443 MOD_LEECH**, **220 MOD_ABILITY_SCHOOL_MASK**, **381 MOD_DAMAGE_TAKEN_FROM_CASTER_PET**, **382 MOD_PET_STAT_PCT** NYI; their `SpellAuraEffects.cpp:515,292,453,454` handlers are NULL. Named gaps **TC_NYI_AURA_443**, **TC_NYI_AURA_220**, **TC_NYI_AURA_381**, **TC_NYI_AURA_382** remain unsupported, not silently registered.
+
+Stat source semantics: `Entities/Player/Player.cpp:5239-5247` scales selected rating amounts with per-effect integer truncation, then adds base crit rating conversion; `Entities/Unit/StatSystem.cpp:362-385` replaces both AP bases with minimum spell/healing power times404; `Spells/Auras/SpellAuraEffects.cpp:4209-4231,4250-4263` preserves health fraction for145 and changes BASE_PCT mana419. Proof pending; no completion/census parity claim.
+
 ## Nature's Guardian baseline — 2026-10-19
 
 `natures_guardian.rs` binds only30884 existing check_proc/on_damage_proc hooks. It reads the actual action target's current Health and native effect0 threshold, using strict currentHP < truncated maxHP×amount/100; at35% equality no proc. Existing445698 blocks eligibility. The callback casts real445698 first through the existing `creature_cast_ignoring_in_progress` path, then native31616 through existing `cast_costed_trigger_with_context` (FULL_MASK minus power/reagent bypass). A cooldown-cast failure is logged but does not suppress the default heal, matching the source's non-preventing OnEffectProc. No custom timer, state, query schema, trigger API, wire or generic DUMMY framework is introduced; Guardian/Ardent health commits are untouched.

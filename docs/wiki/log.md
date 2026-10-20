@@ -1,3 +1,7 @@
+## 2026-10-20 — Generic combat/stat aura slice
+
+Ignored native regression first batch405/463/419/404/145; source-backed NYI gaps443/220/381/382 retained. [Status and TC citations](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20). RED execution pending.
+
 ## 2026-10-19 — Ordinary quest max-level bonus
 
 [Authored bonus](systems/quests.md#authored-max-level-money--2026-10-19): pushed ignored65805b8eb ordinary62 cap RED105000≠105120 and missing-catalog startup RED; player89 control passes above quest tuning ceiling30. Selected-TC nullable metadata exports tracked catalog, required sibling loader and deploy shipment; ordinary settlement leaves base previews/WQ/captured/legacy paths unchanged. Fresh ignored607a8da1a GREEN4/0/33.87s/no warnings, then enabled; merged566 family89/0 plus disjoint rules/data/view19/0 (one existing private-population ignore), native producer/deploy3/0, helper check/fmt0. No deployment; independent lead landing separate.

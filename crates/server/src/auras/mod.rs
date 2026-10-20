@@ -2292,6 +2292,8 @@ fn receive_cancel_aura(world: &mut World) {
 }
 
 #[cfg(test)]
+mod combat_stat_tests;
+#[cfg(test)]
 mod periodic_deadline_tests;
 #[cfg(test)]
 mod tests;

@@ -1,5 +1,13 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Generic combat/stat aura census slice — 2026-10-20
+
+Native70448 regression work on `aura-stat-mods`, protocol600b755. Initial ignored tests cover405 rating scaling,463 base-crit→parry,419 maximum (not create) mana,404 SP→AP and145 health percentage. Census22842 has145 amount0; native182775 amount50 provides the nonzero oracle without changing DB2.
+
+TC a352b1fa local source: `data/diagnostics/arena-coverage-2026-10-12/tc-master-src/src/server/game/` in game-engine. `Spells/Auras/SpellAuraDefines.h` marks **443 MOD_LEECH**, **220 MOD_ABILITY_SCHOOL_MASK**, **381 MOD_DAMAGE_TAKEN_FROM_CASTER_PET**, **382 MOD_PET_STAT_PCT** NYI; their `SpellAuraEffects.cpp:515,292,453,454` handlers are NULL. Named gaps **TC_NYI_AURA_443**, **TC_NYI_AURA_220**, **TC_NYI_AURA_381**, **TC_NYI_AURA_382** remain unsupported, not silently registered.
+
+Stat source semantics: `Entities/Player/Player.cpp:5239-5247` scales selected rating amounts with per-effect integer truncation, then adds base crit rating conversion; `Entities/Unit/StatSystem.cpp:362-385` replaces both AP bases with minimum spell/healing power times404; `Spells/Auras/SpellAuraEffects.cpp:4209-4231,4250-4263` preserves health fraction for145 and changes BASE_PCT mana419. Proof pending; no completion/census parity claim.
+
 ## Nature's Guardian baseline (active70448)
 
 - Actual passive30884 effect0 requires current action-target health strictly below its native35% threshold, not equality, and absent native445698 cooldown. Preserve native proc eligibility/chance; do not add a positive-damage predicate or lethal-rescue rule.
