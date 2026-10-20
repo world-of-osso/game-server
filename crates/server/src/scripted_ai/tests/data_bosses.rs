@@ -112,6 +112,25 @@ mod wailing_ritual_waves;
 #[path = "wailing_start.rs"]
 mod wailing_start;
 
+#[test]
+fn encounter_coverage_published_ramparts_and_blood_furnace_boss_bindings() {
+    let maps = &data().expect("world.db fixture").maps;
+    for (map, entry, bit) in [
+        (542, 17381, 0),
+        (542, 17377, 1),
+        (542, 17380, 2),
+        (543, 17308, 0),
+        (543, 17307, 1),
+        (543, 17306, 2),
+    ] {
+        assert_eq!(
+            maps.raid_creature_encounters.get(&(map, entry)),
+            Some(&bit),
+            "published journal binding map{map} creature{entry}"
+        );
+    }
+}
+
 fn bound_boss(entry: u32, map_id: u32, bit: u32) -> (Harness, Entity, InMap) {
     bound_boss_with_catalog(entry, map_id, bit, None)
 }
@@ -312,7 +331,10 @@ fn encounter_fixture(
             std::collections::HashMap::from([(map_id, wdt)]),
         ));
     }
-    maps.raid_creature_encounters.insert((map_id, entry), bit);
+    // Ramparts and Blood Furnace bindings are published world data.
+    if ![542, 543].contains(&map_id) {
+        maps.raid_creature_encounters.insert((map_id, entry), bit);
+    }
     if map_id == 43 {
         // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
         for (entry, bit) in [
