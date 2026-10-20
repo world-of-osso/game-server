@@ -599,7 +599,7 @@ Source root `game-engine/data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa`
 |348|SpellAuraDefines.h435; SpellAuraEffects.cpp420|Misc0 quests /1 loot; other sources excluded|
 |646/647/648/649|SpellAuraEffects.cpp718/719/720/721; SpellAuraDefines.h733–736|`PVP_AURA_646_649_TC_NULL`: no implemented TC algorithm; remain unhandled|
 |104|SpellAuraEffects.cpp2884–2899|Server water-walking permission; client projection gap|
-|106|SpellAuraEffects.cpp2922–2937; Player.cpp27469–27471|Server hover permission / landing exemption; visual height projection gap|
+|106|SpellAuraEffects.cpp2922–2937; Player.cpp27469–27471|Server hover permission only; motion/landing exemption and visual-height projection remain unqualified|
 |235|SpellAuraEffects.cpp307|Clientside, authoritative native payload only|
 |488|SpellAuraEffects.cpp3182–3195|Server gravity permission; client projection gap|
 |144|Player.cpp27473–27476|Subtract summed safe-fall yards; existing base-curve parity gap|
@@ -619,3 +619,17 @@ RED `d9cbac593`: corrected runtime gate `--bin game-server aura_world_ -- --igno
 Implementation: `auras/reward_mods.rs` is read by individual kill shares, quest settlement and both solo/group loot settlement. Bonus money is checked before atomic group writes and actual credited coins feed gold criteria. `world_state.rs` derives permissions/track mask/force magnitude and snapshots runtime return origins; power display uses existing pools/form precedence. Client-only235/188/408 retain ordinary aura publication without altering healing range, movement or charges.373/646–649 remain warnings/gaps.144 now subtracts summed yards before the existing landing curve; baseline curve remains unchanged.
 
 At61f9abca6, corrected manual50ms runtime gate:14PASS/1FAIL23.55s. SafeFall1860 now lands exactly at50yd and reaches the health assertion, proving a genuine missing-height-reduction RED.144 implementation adds summed safe-fall yards to existing FallAuras and subtracts them only at landing. No shared curve, physics speed or protocol edits. `/tmp/aura-world-intermediate2.log`.
+
+### Final native proof and lead gate
+
+At `c9b7c3e59`, `agent-run aura_world python3 scripts/build-host.py --build-host native --test -p server --bin game-server [private protocol patch overrides] aura_world_ -- --ignored --test-threads=1`: **15 passed /0 failed /0 ignored**,29.01s; compile1m38s without warnings. Gate printedADD first; log `/tmp/aura-world-green.log`. Tests now enabled without changing their bodies. Earlier corrected144 numericRED plus13 genuine originalRED cases establish14 newly failing behaviors; payload-retention control was already GREEN. No broad suite/check/lint or independent gate run here.
+
+| Types | Final status / proof |
+|---|---|
+|200,291,348|Implemented generic reward consumers; native269083 +10% and282559 baseline, quest62 actual packet/persistence,291619 +2% loot, group per-recipient and atomic cap proof|
+|104,106,488,485,44,71|Server state only; native546/11010/195289/188494+189425/1494+5225/18960 application/removal/overlap or snapshot proof; motion/prediction, wire/client use and71persistence remain gaps|
+|144,58,179|Server landing-height/swim/display-power consumers; native1860 +17yd,7840 +100% vs8747 +15%,197911 Misc8 application/removal proof; baseline fall curve remains separately unqualified|
+|235,188,408|Explicit TC client-only classification; native47536/214202/52437 authoritative payload/publication control, no fabricated movement/healing-range/charge gameplay|
+|373,646,647,648,649|TCNULL named gaps;373 native101545 amount300 retained by payload control; all remain unhandled, no invented PvP or forced-motion algorithm|
+
+Lead integration filter after enabling: `--bin game-server aura_world_ -- --test-threads=1` (15cases). Suggested retained narrow gates: `experience::tests::`, `loot::tests::group_loot::`, `spell_auras_191`, `networking::tests::physics::`, and `quest::tests::bonus_money_tests::`; do not rerun them merely as a milestone if already proven at integration. Private detached protocol is clean600b7555fca599b2ecb578ef050e6aef8ef75899; command overrides shared, lightyear_netcode and lightyear_udp paths without tracked Cargo edits.

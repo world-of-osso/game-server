@@ -1059,7 +1059,6 @@ fn achievements_criteria_loot_item_counts_only_committed_loot_slots() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_loot_city_of_gold_not_quest_enlisted_money() {
     for (spell, expected) in [(291619, 1020), (269083, 1000)] {
         let mut h = harness(false).unwrap();

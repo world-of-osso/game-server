@@ -203,3 +203,5 @@ At the existing eligible world-HK recipient boundary, increment and persist this
 Enlisted269083's authored200/291 +10% must modify actual kill and quest XP once;200 precedes rested XP. Honorless282559 has no such aura and leaves baseline unchanged. Quest gold348 uses only Misc0. This adds no War Mode activation/eligibility logic or PvP damage formula. [Generic contract](class-completeness.md#aura-worldxp-slice-active70448-2026-10-20).
 
 Award consumers now read live ActiveAuras on each rewarded player; no War Mode boolean or269083/282559 special cases are introduced. Individual group shares are modified independently.
+
+Native reward proof at c9b7c3e59:269083 gives142 total killXP from baseline65 with71rested spent (baseline282559 gives130/65); ordinary quest62 pays14300XP and115500copper vs baseline13000/105000. Tests are enabled after the15-case GREEN.

@@ -357,7 +357,6 @@ fn kill_xp_spends_rested_xp_for_a_matching_bonus_and_quest_xp_does_not() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_kill_xp_enlisted_before_rested_and_honorless_control() {
     let data = crate::test_data::world_data();
     for (spell, boosted) in [(269083, true), (282559, false)] {

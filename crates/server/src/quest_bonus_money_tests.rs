@@ -244,7 +244,6 @@ fn ordinary_quest_bonus_below_player_cap_above_quest_ceiling_keeps_base_money() 
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_quest_enlisted_rewards_and_honorless_control() {
     for (spell, xp, money) in [(269083, 14_300, 115_500), (282559, 13_000, 105_000)] {
         let mut app = setup_app().unwrap();

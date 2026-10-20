@@ -3362,3 +3362,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: Wired generic world/XP consumers after13 genuine native RED failures; corrected safe-fall clock remains pending its own RED. Client and TC-NULL gaps remain explicit.
 
 - 2026-10-20: Corrected native SafeFall1860 reaches numeric RED beside14GREEN; implemented144 summed landing-height reduction without changing base curve. Final targeted GREEN pending.
+
+- 2026-10-20: Aura world/XP native15/15GREEN29.01s atc9b7c3e59, no warnings; enabled unchanged tests. Source/per-type matrix and TCNULL/client/persistence/base-curve gaps retained; lead integration gates documented.

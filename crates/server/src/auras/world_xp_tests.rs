@@ -41,7 +41,6 @@ fn clear(h: &mut Harness, spell: u32) {
 macro_rules! movement_flag {
     ($name:ident, $spell:expr, $field:ident) => {
         #[test]
-        #[ignore = "aura-world native RED/GREEN gate"]
         fn $name() {
             let mut h = setup(&[$spell], 1);
             apply_native(h.app.world_mut(), h.caster, $spell);
@@ -67,7 +66,6 @@ movement_flag!(aura_world_hover_11010, 11010, hover);
 movement_flag!(aura_world_disable_gravity_195289, 195289, disable_gravity);
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_water_walk_overlapping_sources_survive_one_removal() {
     let mut h = setup(&[546, 3714], 1);
     for spell in [546, 3714] {
@@ -91,7 +89,6 @@ fn aura_world_water_walk_overlapping_sources_survive_one_removal() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_tracking_beasts_humanoids_player_only() {
     let mut h = setup(&[1494, 5225], 1);
     for spell in [1494, 5225] {
@@ -125,7 +122,6 @@ fn aura_world_tracking_beasts_humanoids_player_only() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_force_magnitude_multiplies_and_restores() {
     let mut h = setup(&[188494, 189425], 1);
     apply_native(h.app.world_mut(), h.caster, 188494); // -50%
@@ -159,7 +155,6 @@ fn aura_world_force_magnitude_multiplies_and_restores() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_swim_7840_is_not_a_run_speed_buff_and_strongest_wins() {
     let mut h = setup(&[7840, 8747], 1);
     for spell in [7840, 8747] {
@@ -182,7 +177,6 @@ fn aura_world_swim_7840_is_not_a_run_speed_buff_and_strongest_wins() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_power_display_native_astral_power_restores_mana() {
     let mut h = setup(&[197911], 11);
     apply_native(h.app.world_mut(), h.caster, 197911);
@@ -208,7 +202,6 @@ fn aura_world_power_display_native_astral_power_restores_mana() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_teleport_origin_snapshots_pose_not_later_movement() {
     let mut h = setup(&[18960], 11);
     let map = crate::maps::InMap::continent(1);
@@ -253,7 +246,6 @@ fn aura_world_teleport_origin_snapshots_pose_not_later_movement() {
 
 /// TC declares these clientside/NULL. Verify authoritative native payload, not invented movement/UI.
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_client_owned_native_payloads_are_retained() {
     for (id, kind, amount) in [
         (47536, 235, 0.0),

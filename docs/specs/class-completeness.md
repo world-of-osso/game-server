@@ -384,3 +384,5 @@ Named gaps: `PVP_AURA_646_649_TC_NULL` (all four TC handlers are NULL; do not re
 Source/proof matrix: [auras wiki](../wiki/systems/auras.md#aura-worldxp-native70448--2026-10-20).
 
 Server implementation now wires200/291/348,58,104/106/488/485/44/71/179 and client-only235/188/408 classification.373 and646–649 remain explicitly unhandled TC NULL gaps.144 subtracts the summed safe-fall yards in the existing landing path after its corrected numeric RED; server motion/wire projection is not claimed.
+
+Native targeted proof:15/15GREEN at c9b7c3e59; tests enabled afterwards with bodies unchanged.104/106/488/485/44 are server state, not certified motion/prediction/minimap integration;106 landing exemption remains unqualified. Named TC/client/persistence/base-curve gaps above remain open. No full-class or census promotion.

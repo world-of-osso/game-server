@@ -638,7 +638,6 @@ fn group_kill_broadcasts_one_shared_item_roll_not_two_personal_items() {
 }
 
 #[test]
-#[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_group_loot_money_modifies_each_recipients_share_before_cap() {
     let (mut h, other) = grouped();
     let auras = crate::auras::world_xp_tests::native_auras(291619);

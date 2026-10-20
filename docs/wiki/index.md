@@ -927,3 +927,5 @@ Debug logs and root cause analyses.
 - [Loa spell-store reuse](investigations/slow-native-test-fixtures.md#loa-canonical-spell-store-follow-up) — seven unchanged cases/1800s+3600s timelines; matched wall132.283→99.566s, CPU127.577→98.679s, peak RSS+36500KiB; no new cache.
 
 - [Nested achievement catalog reuse](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) — existing canonical catalog copies; all four difficulty/prerequisite/persistence variants preserved, matched wall27.029→17.224s, CPU26.189→17.176s, peak RSS+52508KiB.
+
+- [Aura world/XP native70448](systems/auras.md#aura-worldxp-native70448--2026-10-20) — generic200/291/348 reward consumers,144/58/179 consumers and server-only world flags; native15GREEN, explicit TCNULL/client gaps.
