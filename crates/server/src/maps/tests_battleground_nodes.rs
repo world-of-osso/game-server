@@ -9,6 +9,9 @@ mod deserter;
 #[path = "tests_battleground_end_cleanup.rs"]
 mod end_cleanup;
 
+#[path = "tests_battleground_preparation.rs"]
+mod preparation;
+
 struct EnteredMatch {
     h: Harness,
     players: Vec<Traveler>,
