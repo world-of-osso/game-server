@@ -6,6 +6,11 @@
 - Preserve202168 native AP0.589999974/variance0.05,10Rage cost without Victorious,25s recovery and1500ms GCD. Actual32216's matching A108 -100% cost modifier makes the root free, including at0Rage. Rejected0Rage without32216 and rejected cooldown with reapplied32216 cannot heal or consume that aura. Natural recovery permits another ordinary cast.
 - **VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED** — native32216 direct spell application and20s natural lifetime qualify removal only, not kill-producer parity. Do not invent a kill consumer or aura. Victory Rush34428/override lifecycle, kill cooldown reset, other talents, equipment/legal-loadout/full class/rotation/UDP/census remain unqualified.
 - Use existing AfterCast, source FULL-trigger helper and aura removal only, preserving actual Warrior64382 CastState/owned completion. No new API, state, timer, wire or native HP/power/regen/combat/RNG/clock writes. [Implementation/proof](../wiki/systems/spell-casting.md#impending-victory-consequence--2026-10-19).
+## Invigorating Fury consequence (active70448)
+
+- Ordinary Enraged Regeneration184364 with actual caster aura383468 casts real385174 once after success. Native385174 self selection,10% maximum-health amount, CANT_CRIT and overheal remain authoritative; no amount override from the talent dummy.
+- Missing, unlearned or another Warrior's talent cannot enable this caster. A rejected root recast cannot heal. Retain root native8s duration, -30% all-school damage taken and120s cooldown/noGCD;383468's existing masked+3000ms modifier gives11s.
+- Use only existing AfterCast and qualified limited IGNORE_CAST_IN_PROGRESS path, preserving actual in-progress Warrior64382 state and owned completion. No new state, timer, trigger API or native HP/regen/RNG/clock changes. Wider Bloodthirst/talent behavior, equipment/legal-loadout, full class, rotation, UDP and census parity are unqualified. [Implementation/proof](../wiki/systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
 ## Nature's Guardian baseline (active70448)
 
