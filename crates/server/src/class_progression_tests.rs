@@ -1053,6 +1053,7 @@ fn world_with_creature(entry: u32, min_level: u8) -> crate::world_data::WorldDat
         npc_flags: 0,
         speed_walk: 1.0,
         speed_run: 1.0,
+        base_attack_time_ms: 2_000,
         health_modifier: 1.0,
         unit_class: 1,
         expansion: 0,

@@ -144,6 +144,10 @@ fn header(db: &Database, mail: &MailData, soulbound: &HashSet<u64>) -> MailHeade
                     count: attached.item.stack_count,
                     durability: None,
                     soulbound: soulbound.contains(&attached.item.item_guid),
+                    crafting_origin: persistence::inventory_store::load_item_crafting_origin(
+                        db,
+                        attached.item.item_guid,
+                    ),
                 },
                 name: attached.item.name.clone(),
                 quality: attached.item.quality,

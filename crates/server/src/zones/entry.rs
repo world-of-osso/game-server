@@ -234,6 +234,7 @@ impl EntryProjection {
                 name: self.template.name.clone(),
             },
             CreatureFlagsExtra(self.template.flags_extra),
+            crate::combat::CreatureAttackTime(self.template.base_attack_time_ms as f32 / 1000.0),
             Health {
                 current: self.stats.health,
                 max: self.stats.health,

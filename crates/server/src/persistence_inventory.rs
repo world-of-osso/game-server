@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use shared::item_data::ItemDefinitionSource;
+use shared::protocol::CraftingOrigin;
 
 use super::equipment::{EQUIPMENT, EquippedItem};
 use super::{
@@ -36,6 +37,10 @@ pub(crate) const NONVISUAL_EQUIPMENT: TableDefinition<u64, &[u8]> =
 /// Keyed by guid so attributes follow the item through trade, mail and auctions.
 pub(crate) const ITEM_INSTANCES: TableDefinition<u64, &[u8]> =
     TableDefinition::new("item_instances");
+
+/// Additive GUID-keyed provenance; the legacy ItemInstanceData encoding is unchanged.
+pub(crate) const ITEM_CRAFTING_ORIGINS: TableDefinition<u64, &[u8]> =
+    TableDefinition::new("item_crafting_origins");
 
 /// Immutable catalog identity, independent of owner and unchanged serialized rows.
 /// Tags: 0 = Retail, 1 = Forever build 70205. Unmarked legacy GUIDs are Retail.
@@ -95,6 +100,7 @@ pub struct InventoryRecord {
     pub nonvisual_equipped: Vec<(u8, InventoryItemData)>,
     pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
+    pub crafting_origins: HashMap<u64, CraftingOrigin>,
     pub item_durability: HashMap<u64, (u32, u32)>,
     pub definition_sources: HashMap<u64, ItemDefinitionSource>,
     /// Runtime-only collection receipt; not part of the stored inventory ABI.
@@ -149,6 +155,15 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
             Some((guid, data))
         })
         .collect();
+    let origin_table = txn
+        .open_table(ITEM_CRAFTING_ORIGINS)
+        .expect("open crafting origins");
+    let crafting_origins = guids
+        .iter()
+        .filter_map(|&guid| {
+            read_item_crafting_origin(&origin_table, guid).map(|origin| (guid, origin))
+        })
+        .collect();
     let durability_table = txn
         .open_table(ITEM_DURABILITIES)
         .expect("open item durability");
@@ -171,12 +186,29 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         nonvisual_equipped,
         bag_slots,
         instances,
+        crafting_origins,
         item_durability,
         definition_sources,
         appearance_account: super::find_account_id_for_character(db, character_id),
         appearance_grants: Vec::new(),
         transmogs,
     })
+}
+
+pub(crate) fn load_item_crafting_origin(db: &Database, guid: u64) -> Option<CraftingOrigin> {
+    let txn = db.begin_read().expect("begin crafting origin read");
+    let table = txn
+        .open_table(ITEM_CRAFTING_ORIGINS)
+        .expect("open crafting origins");
+    read_item_crafting_origin(&table, guid)
+}
+
+fn read_item_crafting_origin(
+    table: &impl ReadableTable<u64, &'static [u8]>,
+    guid: u64,
+) -> Option<CraftingOrigin> {
+    let row = table.get(guid).expect("read crafting origin")?;
+    Some(bitcode::decode(row.value()).expect("decode crafting origin"))
 }
 
 /// Read global GUID identity; absent legacy markers mean Retail, not a catalog probe.
@@ -332,5 +364,14 @@ pub(crate) fn write_inventory_record(
             .expect("write item instance");
     }
     drop(instances);
+    let mut origins = txn
+        .open_table(ITEM_CRAFTING_ORIGINS)
+        .expect("open crafting origins");
+    for (&guid, origin) in &record.crafting_origins {
+        origins
+            .insert(guid, bitcode::encode(origin).as_slice())
+            .expect("write crafting origin");
+    }
+    drop(origins);
     super::charters::prune_destroyed_in(txn, character_id, record);
 }

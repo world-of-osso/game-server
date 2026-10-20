@@ -349,6 +349,12 @@ impl GuildVault<'_, '_> {
                                     guid,
                                 )
                             },
+                            |guid| {
+                                persistence::inventory_store::load_item_crafting_origin(
+                                    self.db(),
+                                    guid,
+                                )
+                            },
                         )
                     } else {
                         Vec::new()

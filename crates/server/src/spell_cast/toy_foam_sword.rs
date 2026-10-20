@@ -50,7 +50,7 @@ pub(super) fn create_one_foam_sword(world: &mut World, ctx: &EffectCtx, _effect:
     }
     let choice = rand::Rng::gen_range(&mut rand::thread_rng(), 0..FOAM_SWORDS.len());
     if let Err(error) =
-        crate::profession::store_created_item(world, ctx.caster, FOAM_SWORDS[choice], 1)
+        crate::profession::store_created_item(world, ctx.caster, FOAM_SWORDS[choice], 1, None)
     {
         warn!("Spell {}: foam sword not created: {error}", ctx.spell.id);
     }
