@@ -1,6 +1,9 @@
 ## 2026-10-19 — Omen and one-use Clearcasting
 
 [Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
+## 2026-10-19 — Lifebloom near-expiration refresh bloom
+
+[Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.
 
 ## 2026-10-19 — Wild Growth native-coefficient falloff policy
 
@@ -3314,6 +3317,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
 
+- [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).

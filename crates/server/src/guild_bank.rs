@@ -349,10 +349,11 @@ impl GuildVault<'_, '_> {
                                     guid,
                                 )
                             },
-                            |guid| {
-                                persistence::inventory_store::load_item_crafting_origin(
+                            |item| {
+                                crate::inventory::stored_crafting_origin(
                                     self.db(),
-                                    guid,
+                                    self.templates.as_ref().expect("checked by ready"),
+                                    item,
                                 )
                             },
                         )

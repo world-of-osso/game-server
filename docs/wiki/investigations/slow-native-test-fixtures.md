@@ -48,6 +48,26 @@ Two isolation tests pass36.82s, proving app creature/catalog/class changes do no
 
 After merging master6403a988 (combat/aggro/script changes) atedd15fd6, the complete bounded set passes together: **14/14 in410.83s** (eleven named tests plus two isolation controls and the imported encounter-copy control). Compile/package-lock time is separately recorded3m13s; current feature check passes11.37s without warnings. This merge intersects gameplay consumers, so the bounded rerun is new integration proof, not a ceremonial repeat. Formatting/diff and manual changed-Rust readability checks pass. Full-server suite timing and independent verification remain lead-owned.
 
+## Promoted battleground world reuse
+
+`maps::tests::battleground_nodes::promoted_source_world` retains the fully decoded `WorldData` only after its copy-only promotion completes, keyed by the exact map ID. Alterac30 and Isle628 have separate entries; every fresh app receives its own clone. The temporary database is deleted after loading. No app, redb, entity, navigation query or canonical cache is shared, and the producer pipeline and all roster/frame/clock/assertion boundaries remain unchanged. A two-live-app test mutates both profiles' names, populations and expected-stat maps, then reloads each original profile to check isolation.
+
+Matching serial `maps::tests::battleground_nodes::alterac_channel_` runs compare base17847d172 with code def21aaad on frozen protocol5660814. Both use Cargo's package working directory (`crates/server`) for the existing relative importer path and the same canonical ground root. All nine test names/statuses match:9 pass, no failures/ignores, with separate start/finish observations.
+
+| Metric | Before | After |
+|---|---:|---:|
+| Process wall |292.732s|35.023s|
+| User+system CPU |285.464s|27.368s|
+| Peak RSS |616380KiB|713468KiB|
+
+The cohort saves257.709s wall with +97088KiB peak RSS. First profile use still loads/imports/decodes; subsequent cases retain every native frame and assertion. These serial observations do not guarantee a parallel gate's reduction. One decoded world remains resident per requested profile; this Alterac-only peak does not bound a process also retaining Isle628. The separate two-profile isolation characterization passes before75.01s and after27.05s; it is not a full Isle gameplay-suite result.
+
+Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/alterac-{before,after}/`, aggregate `wow_formats-alterac-comparison.json` and `wow_formats-alterac-isolation-{before,after}.log`. No repeated benchmark was used to replace an outcome.
+
+### Sources
+
+- [Fixture loader and isolation test](../../../crates/server/src/maps/tests_battleground_nodes.rs), [copy-only promotion producer](../../../scripts/promote_battlegrounds.py).
+
 ## Arena residual: bounded independent fixtures (2026-10-16)
 
 The sixteen-map test runs a fresh App and redb for every map. LEAD confirmed no cross-map serial-order contract and authorized at most four workers. Scoped workers now execute all sixteen source cases, join every worker and propagate every fixture panic; source census, gate/orb/combat/return/reopen assertions, frame counts and50ms steps are unchanged. No production catalog experiment or scheduler override is included in this follow-up.
