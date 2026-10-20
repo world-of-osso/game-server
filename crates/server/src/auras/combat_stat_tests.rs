@@ -161,7 +161,7 @@ fn aura_stat_native_145_preserves_health_fraction_and_restores_on_remove() {
     );
     assert_eq!(
         h.app.world().get::<Health>(caster).unwrap().current,
-        (before.max * 1.5).floor() / 2.0
+        ((before.max * 1.5).floor() / 2.0).floor()
     );
     remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |_| true);
     h.advance(3);

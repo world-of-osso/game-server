@@ -130,6 +130,14 @@ pub const MOD_ATTACKER_RANGED_HIT_CHANCE: u32 = 185;
 pub const MOD_ATTACKER_SPELL_HIT_CHANCE: u32 = 186;
 /// TC HandleModRating applies integer points to every selected CombatRating.
 pub const MOD_RATING: u32 = 189;
+pub const MOD_RATING_PCT: u32 = 405;
+pub const CONVERT_CRIT_RATING_PCT_TO_PARRY_RATING: u32 = 463;
+pub const MOD_BASE_MANA_PCT: u32 = 419;
+pub const OVERRIDE_ATTACK_POWER_BY_SP_PCT: u32 = 404;
+pub const MOD_INCREASE_HEALTH_PERCENT2: u32 = 145;
+pub const MOD_ABSORB_TAKEN_PCT: u32 = 422;
+pub const MOD_TOTAL_THREAT: u32 = 103;
+pub const SCHOOL_ABSORB_OVERKILL: u32 = 316;
 /// The three versatility ratings share one value in our CombatRatings component.
 pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
@@ -360,6 +368,13 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_CRIT_PCT
         | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING
+        | MOD_RATING_PCT
+        | CONVERT_CRIT_RATING_PCT_TO_PARRY_RATING
+        | MOD_BASE_MANA_PCT
+        | OVERRIDE_ATTACK_POWER_BY_SP_PCT
+        | MOD_INCREASE_HEALTH_PERCENT2
+        | MOD_ABSORB_TAKEN_PCT
+        | MOD_TOTAL_THREAT
         | MASTERY
         | MOD_STAT_BONUS_PCT
         | MOD_BONUS_ARMOR_PCT
@@ -429,7 +444,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
         MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
-        SCHOOL_ABSORB => Absorb,
+        SCHOOL_ABSORB | SCHOOL_ABSORB_OVERKILL => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
         MECHANIC_IMMUNITY | MECHANIC_IMMUNITY_MASK => MechanicImmunity,
         EFFECT_IMMUNITY => EffectImmunity,
