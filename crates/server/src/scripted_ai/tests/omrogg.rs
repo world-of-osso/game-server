@@ -560,8 +560,9 @@ fn encounter_coverage_omrogg_death_lines_then_heads_despawn() {
         let mut alive = Vec::new();
         h.hit_pct(boss, 200.0);
         let (_, lines) = observe_with(&mut h, 8.0, |h, at| {
-            let exists = |unit| h.app.world().get_entity(unit).is_ok();
-            alive.push((at, exists(left), exists(right)));
+            // A despawned spawn stays in the world: dead, hidden, awaiting respawn.
+            let present = |unit| crate::spell_cast::targets::is_alive(h.app.world(), unit);
+            alive.push((at, present(left), present(right)));
         });
         eprintln!("OMROGG difficulty{difficulty} death lines={lines:?}");
         assert_eq!(
