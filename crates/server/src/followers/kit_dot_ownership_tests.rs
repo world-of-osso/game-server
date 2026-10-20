@@ -143,6 +143,38 @@ fn follower_moonfire_ownership_foreign_dot_does_not_suppress_native_follower() {
 }
 
 #[test]
+fn follower_moonfire_ownership_keeps_foreign_hot_any_caster_semantics() {
+    let (mut h, caster) = ready_crenna();
+    let other = add_native_druid(&mut h, caster);
+    const REJUVENATION: u32 = 774;
+    creature_cast(h.app.world_mut(), other, REJUVENATION, Some(caster), false).unwrap();
+    h.advance(3);
+    let mut health = h
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Health>(caster)
+        .unwrap();
+    health.current = health.max * 0.7;
+    super::update_ai(h.app.world_mut());
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(caster)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == REJUVENATION && aura.caster == other)
+    );
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == REJUVENATION),
+        "foreign HoT must retain existing any-caster maintenance policy"
+    );
+}
+
+#[test]
 #[ignore = "MOONFIRE_ACTOR_OWNED_MAINTENANCE: retain own active aura refusal"]
 fn follower_moonfire_ownership_own_active_dot_prevents_root_recast() {
     let (mut h, caster) = ready_crenna();
