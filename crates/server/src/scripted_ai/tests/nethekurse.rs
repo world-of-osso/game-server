@@ -288,3 +288,92 @@ fn encounter_coverage_nethekurse_slay_player_and_npc() {
         assert!(h.inbox(1).chat.is_empty());
     }
 }
+
+fn populated_nethekurse(difficulty: u32) -> (Harness, Entity, InMap, Vec<Entity>) {
+    let (mut h, _, map) = encounter_fixture(
+        NETHEKURSE,
+        SHATTERED_HALLS,
+        NETHEKURSE_BIT,
+        difficulty,
+        None,
+        EncounterState::NotStarted,
+        true,
+    );
+    let boss = h.creatures_of(NETHEKURSE)[0];
+    let peons = h
+        .creatures_of(17083)
+        .into_iter()
+        .filter(|&actor| {
+            h.app
+                .world()
+                .get::<crate::zones::CreatureStringIds>(actor)
+                .is_some_and(|ids| ids.has("FelOrcConvertNethekurseEvent"))
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        peons.len(),
+        4,
+        "four source StringId actors, not all17083 spawns"
+    );
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
+    (h, boss, map, peons)
+}
+
+#[test]
+#[ignore = "RED: authentic event convert death callbacks not ported"]
+fn encounter_coverage_nethekurse_four_event_peons_release_and_all_dead_speech() {
+    for difficulty in [1, 2] {
+        let (mut h, boss, map, peons) = populated_nethekurse(difficulty);
+        for (index, peon) in peons.into_iter().enumerate() {
+            // HARNESS SETUP: actual lethal Fireball damage at the authored actor;
+            // distant entrant prevents proximity pulls before the fourth death.
+            h.hit_pct(peon, 200.0);
+            h.advance(0.2);
+            if index < 3 {
+                assert_eq!(
+                    instance_script::get_boss_state(h.app.world_mut(), map, NETHEKURSE_BIT),
+                    Some(EncounterState::NotStarted)
+                );
+            }
+        }
+        assert_eq!(
+            instance_script::get_boss_state(h.app.world_mut(), map, NETHEKURSE_BIT),
+            Some(EncounterState::InProgress),
+            "fourth event convert DoZoneInCombat"
+        );
+        assert_eq!(nethekurse_yells(&h, boss, 5), 1, "SAY_AGGRO_ALL_DEAD");
+        assert!(h.inbox(1).starts.is_empty() && h.inbox(1).chat.is_empty());
+    }
+}
+
+#[test]
+#[ignore = "RED: authentic event convert death count not ported"]
+fn encounter_coverage_nethekurse_non_event_peons_do_not_count_and_some_alive_speech() {
+    let (mut h, boss, _, peons) = populated_nethekurse(1);
+    let non_event = h
+        .creatures_of(17083)
+        .into_iter()
+        .find(|actor| !peons.contains(actor))
+        .expect("ordinary untagged convert");
+    h.hit_pct(non_event, 200.0);
+    h.advance(0.2);
+    h.hit_pct(peons[0], 200.0);
+    h.advance(0.2);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.2);
+    assert_eq!(nethekurse_yells(&h, boss, 4), 1, "one event convert dead");
+    assert_eq!(nethekurse_yells(&h, boss, 3), 0, "not the all-alive line");
+    assert_eq!(
+        nethekurse_yells(&h, boss, 5),
+        0,
+        "ordinary convert was not counted"
+    );
+}
