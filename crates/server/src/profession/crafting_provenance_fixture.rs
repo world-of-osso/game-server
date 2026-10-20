@@ -1,6 +1,7 @@
 //! Private native crafting-provenance proof. Seeds prerequisites only: no profession,
 //! recipe, crafted output or origin row is granted; the native run acquires and crafts.
-use crate::{persistence, persistence_accounts, persistence_inventory};
+use crate::persistence::inventory_store;
+use crate::{persistence, persistence_accounts};
 use shared::protocol::CraftingOrigin;
 use std::path::{Path, PathBuf};
 
@@ -51,7 +52,7 @@ fn seed_private_crafting_provenance_fixture() {
         let mut inventory = persistence::load_inventory(&database, id);
         inventory.gold = 1000;
         persistence::save_inventory(&database, id, &inventory);
-        let record = persistence_inventory::load_inventory_record(&database, id).unwrap();
+        let record = inventory_store::load_inventory_record(&database, id).unwrap();
         assert!(
             record.crafting_origins.is_empty(),
             "generic grants carry no origin"
@@ -72,7 +73,7 @@ fn assert_private_crafting_provenance_after_reopen() {
     };
     for (_, name) in OWNERS {
         let id = persistence::find_character_id_by_name(&db, name).unwrap();
-        let record = persistence_inventory::load_inventory_record(&db, id).unwrap();
+        let record = inventory_store::load_inventory_record(&db, id).unwrap();
         let pants: Vec<u64> = record
             .inventory
             .items
