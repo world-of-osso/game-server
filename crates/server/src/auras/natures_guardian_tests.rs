@@ -62,8 +62,8 @@ fn swing_until_health(h: &mut Harness, actors: &[Entity], expected_health: f32) 
     h.app
         .world_mut()
         .run_system_once(move |mut commands: Commands| {
-            for actor in starts {
-                crate::combat::start_attack(&mut commands, actor, victim, None);
+            for actor in &starts {
+                crate::combat::start_attack(&mut commands, *actor, victim, None);
             }
         })
         .unwrap();
