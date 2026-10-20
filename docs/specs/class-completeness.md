@@ -384,6 +384,15 @@ Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per posi
 - [x] Haunt48181's native380 effect amplifies only the aura caster's guardian damage, as specified above.
 - [ ] Haunt controlled-pet amplification381, optional periodic/talent behavior and fresh UDP acceptance remain separate.
 
+## Census generic healing, movement and energize (active70448, 2026-10-20)
+
+- Effect137 restores the authored percentage of the living recipient's maximum raw power, truncating before the shared energize/clamp/overflow-log path. Unknown or absent power pools do not receive power.
+- Aura307 permits cast/channel movement when the cast has its Misc0 SpellLabel, independent of aura amount and class family. Native movement-interrupt exclusion attributes retain priority. Gain/removal/expiry update in-progress cast permission through the existing330 lifecycle.
+- Aura354 multiplies each class-mask-matching direct or periodic heal by `1 + stacked_amount / 100 * (1 - recipient_current_health / recipient_max_health)`, using live recipient health. Each matching effect multiplies independently; removal removes its contribution. Foreign families and nonintersecting masks do not match.
+- `AURA_470_TC_NULL_TIME_RATE_BY_LABEL` remains a named gap: pinned TC uses HandleNULL, so no invented aura clock scaling. Existing373 NULL and188/235/408 client-only gaps remain.285 is already implemented; no replacement in this slice.
+
+Source and proof: [generic census slice](../wiki/systems/auras.md#census-generic-next--2026-10-20). These are generic consumer requirements, not full-class or legal-loadout certification.
+
 ## Aura world/XP slice (active70448, 2026-10-20)
 
 Generic server consumers must use authored aura amounts, not spell-ID cases. Native269083 supplies200/291 at10;282559 supplies neither and must preserve baseline XP/money. Kill XP200 multiplies the individual share before rested XP. Quest291 applies each percentage sequentially, retaining integer truncation. Money348 selects Misc0 quests / Misc1 loot; Misc3/4 do not match these sources.

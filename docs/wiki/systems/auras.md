@@ -1,5 +1,13 @@
 # Auras
 
+## Census generic next — 2026-10-20
+
+The shared effect dispatcher adds137 `energize_pct`, reading the target's actual maximum raw pool and passing the truncated percentage gain to existing `energize_unit`. `aura_allows_moving` extends330's family-mask path with307's independent Misc0 SpellLabel selection; existing aura reconciliation updates active casts on apply/remove/expiry. The shared `apply_heal` path reads354 effects on the healer, matches the native class mask and multiplies live target-missing-health bonuses for both direct and periodic healing. No per-spell hooks, new components or protocol changes.
+
+Sources: allowed pinned TC a352b1fa `SpellEffects.cpp1619–1640`, `Unit.cpp3298–3313/7503–7507`, `SpellAuraEffects.cpp379/426/542`; all under engine `data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa`. Authored70448 world.db rows5405 (137 mana25%),55316 (137 energy100%),343012 (307 label16),295263 (307 label661),383191 (354 Rejuvenation10%, Tranquility20%) supply tests; fixture incoming100 healing isolates multiplier, not a claim of native heal size.
+
+Pushed ignored RED498eeb521:4 behavioral failures (137×2,307 active gain,354 missing-health scaling) and2 selector controls pass. GREEN proof pending. `AURA_470_TC_NULL_TIME_RATE_BY_LABEL` remains unsupported because the pinned TC handler is NULL;373 already has the same NULL gap,188/235/408 are already client-only,285 already has linked lifecycle. Untouched candidates262/269/103/396/245/463/404 and effects176/167/72 are not claimed. [Contract](../../specs/class-completeness.md#census-generic-healing-movement-and-energize-active70448-2026-10-20).
+
 ## Guardian and controlled-pet damage — 2026-10-20
 
 SimC76f8118 `parse_effects.cpp911–919/1290–1300` selects controlled pets for429 and guardians for531; `1125–1134/1463–1466` selects damage received from the aura caster's guardian for380. `AuraStatMods` stores separate pet/guardian products. `summon_damage` selects controlled pets first, otherwise existing guardian summon properties, using live owners. Shared spell/melee consumers apply exactly one owner product; target380 matches that guardian's direct owner to `AuraInstance.caster`. Native paired Command21563 and Restoration137012 retain their previous totals rather than multiplying twice. Copied source damage retains its existing owner-modifier exemption.

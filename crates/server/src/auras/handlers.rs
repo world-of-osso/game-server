@@ -289,6 +289,10 @@ pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const MOD_RESISTANCE_PCT: u32 = 101;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
+/// TC Unit::CanCastSpellWhileMoving: Misc0 SpellLabel, no family mask.
+pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
+/// TC Unit::SpellHealingPctDone: masked healing times target missing health.
+pub const MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH: u32 = 354;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
 pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
 pub const DISABLE_ATTACKING_EXCEPT_ABILITIES: u32 = 264;
@@ -344,7 +348,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED_SUMMON => LinkedSummon,
         CREATE_AREATRIGGER => AreaTrigger,
         LINKED | LINKED_2 => Linked,
-        CAST_WHILE_WALKING => CastMovement,
+        CAST_WHILE_WALKING | CAST_WHILE_WALKING_BY_SPELL_LABEL => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
         DISABLE_CASTING_EXCEPT_ABILITIES
         | DISABLE_ATTACKING_EXCEPT_ABILITIES
@@ -377,6 +381,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INCREASE_HEALTH
         | MOD_INCREASE_HEALTH_PERCENT
         | MOD_HEALING_DONE_PERCENT
+        | MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH
         | MOD_TOTAL_STAT_PERCENTAGE
         | MOD_MELEE_HASTE
         | MOD_RANGED_HASTE

@@ -64,6 +64,7 @@ pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
+pub const EFFECT_ENERGIZE_PCT: u32 = 137;
 pub const EFFECT_FORCE_CAST: u32 = 140;
 /// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA: u32 = 164;
@@ -109,6 +110,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
             crate::death::resurrection::send_offer
         }
         EFFECT_ENERGIZE => energize,
+        EFFECT_ENERGIZE_PCT => energize_pct,
         41 => super::teleport::jump_to_unit,
         96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
@@ -1391,7 +1393,8 @@ pub fn apply_heal(
     periodic: bool,
 ) {
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
-        * versatility_multiplier(world, ctx.caster);
+        * versatility_multiplier(world, ctx.caster)
+        * missing_health_healing_multiplier(world, ctx.caster, target, ctx.spell);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
@@ -1401,6 +1404,42 @@ pub fn apply_heal(
         .max(0.0)
         .round();
     apply_resolved_heal(world, ctx, target, amount, crit, periodic);
+}
+
+/// TC Unit::SpellHealingPctDone (a352b1fa Unit.cpp7503): each matching354
+/// adds its percentage scaled by the recipient's live missing-health percentage.
+fn missing_health_healing_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    let Some(health) = world
+        .get::<Health>(target)
+        .filter(|health| health.max > 0.0)
+    else {
+        return 1.0;
+    };
+    let missing_fraction = 1.0 - health.current / health.max;
+    world
+        .get::<crate::auras::ActiveAuras>(caster)
+        .map_or(1.0, |auras| {
+            auras
+                .iter()
+                .flat_map(|aura| {
+                    aura.effects
+                        .iter()
+                        .filter(move |effect| {
+                            effect.aura_type
+                                == crate::auras::handlers::MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH
+                                && spell_mods::class_mask_affects(aura, effect, spell)
+                        })
+                        .map(move |effect| {
+                            1.0 + effect.amount * f32::from(aura.stacks) * missing_fraction / 100.0
+                        })
+                })
+                .product()
+        })
 }
 
 /// A named transfer already computed from effective healing; no second spell-power,
@@ -1654,6 +1693,28 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         0.0
     };
     energize_unit(world, ctx, target, power, amount + bonus, false);
+}
+
+/// TC EffectEnergizePct (a352b1fa SpellEffects.cpp1619): target maximum,
+/// raw power units, truncated before the ordinary energize/overflow pipeline.
+fn energize_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if !world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return;
+    }
+    let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
+        return;
+    };
+    let Some((_, max)) =
+        super::powers::power_value(world, target, power).filter(|(_, max)| *max > 0.0)
+    else {
+        return;
+    };
+    let percent = modded_base_points(world, ctx.caster, ctx.spell, effect);
+    let amount = (max * percent / 100.0).trunc();
+    energize_unit(world, ctx, target, power, amount, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.
