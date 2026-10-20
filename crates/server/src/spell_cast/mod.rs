@@ -152,9 +152,9 @@ pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
 pub(crate) mod history_store;
+mod hit;
 #[cfg(test)]
 mod impending_victory_tests;
-mod hit;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
