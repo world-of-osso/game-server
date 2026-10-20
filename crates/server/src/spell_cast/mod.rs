@@ -27,6 +27,7 @@ mod attack_restriction_tests;
 #[cfg(test)]
 mod attack_speed_tests;
 mod aura_spell_restrictions;
+pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
 pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
@@ -355,6 +356,7 @@ impl Plugin for SpellCastPlugin {
                     charge::advance,
                     missiles::resolve_due_hits,
                     start_queued_casts,
+                    auto_repeat::update,
                     queued_triggers::resolve_due,
                     powers::sync_unit_powers,
                     runes::sync_unit_runes,
@@ -2355,6 +2357,7 @@ pub(crate) fn execute_cast(
     if attributes(spell, 0) & SPELL_ATTR0_CANCELS_AUTO_ATTACK_COMBAT != 0 {
         crate::combat::attack_stop(world, caster);
     }
+    auto_repeat::on_cast(world, caster, spell, explicit);
     Ok(())
 }
 
@@ -3370,6 +3373,13 @@ pub(crate) fn cancel_cast(world: &mut World, caster: Entity) {
     interrupt_cast(world, caster, CastFailReason::Interrupted, None);
 }
 
+/// `Unit::CastStop` / cancel-cast `InterruptNonMeleeSpells`: the active cast and the
+/// autorepeat spell (Unit.cpp1191–1196, 3251–3259).
+pub(crate) fn stop_all_casts(world: &mut World, caster: Entity) {
+    auto_repeat::cancel(world, caster);
+    cancel_cast(world, caster);
+}
+
 /// `Spell::cancel(result, ..., failedBy)`: end the cast and tell the caster's set why
 /// (`Spell::SendInterrupted`, Spell.cpp:3613, 5177).
 pub(crate) fn interrupt_cast(
@@ -3447,7 +3457,7 @@ pub(crate) fn receive_stop_requests(world: &mut World) {
         if world.get::<CastState>(owner).is_some() {
             world.entity_mut(owner).remove::<QueuedSpellCast>();
         }
-        cancel_cast(world, owner);
+        stop_all_casts(world, owner);
     }
 }
 

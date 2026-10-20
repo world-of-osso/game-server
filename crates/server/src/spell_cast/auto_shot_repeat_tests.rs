@@ -14,11 +14,13 @@ use std::ops::RangeInclusive;
 const AUTO_SHOT: u32 = 75;
 /// CharacterLoadout158 (Hunter, Purpose0) item: InventoryType26, ItemDelay3000.
 const BEASTSOUL_RIFLE: u32 = 73000;
+/// Native MOD_STUN12 control.
+const HAMMER_OF_JUSTICE: u32 = 853;
 /// SpellRange5 maximum.
 const AUTO_SHOT_RANGE: f32 = 40.0;
 
 fn hunter() -> Harness {
-    let mut h = harness_with(Vec::new(), &[AUTO_SHOT], 3, true).unwrap();
+    let mut h = harness_with(Vec::new(), &[AUTO_SHOT, HAMMER_OF_JUSTICE], 3, true).unwrap();
     let path = crate::test_data::world_db_path();
     h.app
         .world_mut()
@@ -100,7 +102,6 @@ fn move_npc(h: &mut Harness, x: f32) {
 }
 
 #[test]
-#[ignore = "RED: Auto Shot75 resolves once; no autorepeat state"]
 fn class_completeness_native_auto_shot_repeats_at_ranged_weapon_speed() {
     let mut h = hunter();
     let interval = shot_interval_frames(&h);
@@ -116,7 +117,6 @@ fn class_completeness_native_auto_shot_repeats_at_ranged_weapon_speed() {
 }
 
 #[test]
-#[ignore = "RED: Auto Shot75 resolves once; no autorepeat state"]
 fn class_completeness_native_auto_shot_keeps_firing_while_moving() {
     let mut h = hunter();
     let interval = shot_interval_frames(&h);
@@ -142,7 +142,6 @@ fn class_completeness_native_auto_shot_keeps_firing_while_moving() {
 }
 
 #[test]
-#[ignore = "RED: Auto Shot75 resolves once; no autorepeat state"]
 fn class_completeness_native_auto_shot_out_of_range_pauses_without_cancelling() {
     let mut h = hunter();
     let interval = shot_interval_frames(&h);
@@ -161,7 +160,6 @@ fn class_completeness_native_auto_shot_out_of_range_pauses_without_cancelling() 
 }
 
 #[test]
-#[ignore = "RED: Auto Shot75 resolves once; no autorepeat state"]
 fn class_completeness_native_auto_shot_stop_cast_cancels_the_repeat() {
     let mut h = hunter();
     let interval = shot_interval_frames(&h);
@@ -177,5 +175,40 @@ fn class_completeness_native_auto_shot_stop_cast_cancels_the_repeat() {
     assert!(
         shots_over(&mut h, interval.end() * 3).is_empty(),
         "cancelled repeat"
+    );
+}
+
+/// SetControlled(STUNNED) → CastStop also interrupts CURRENT_AUTOREPEAT_SPELL
+/// (Unit.cpp1191–1196, 11609–11617): the repeat does not resume after the stun.
+#[test]
+fn class_completeness_native_auto_shot_stun_cancels_the_repeat() {
+    let mut h = hunter();
+    let interval = shot_interval_frames(&h);
+    start_auto_shot(&mut h);
+    let (hunter, npc) = (h.caster, h.npc);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: npc,
+            target: hunter,
+            spell_id: HAMMER_OF_JUSTICE,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        hunter,
+        HAMMER_OF_JUSTICE
+    ));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        hunter,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == HAMMER_OF_JUSTICE,
+    );
+    assert!(
+        shots_over(&mut h, interval.end() * 3).is_empty(),
+        "stun cancelled repeat"
     );
 }
