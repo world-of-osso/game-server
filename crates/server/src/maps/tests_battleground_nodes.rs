@@ -2880,8 +2880,7 @@ fn enter_source_match_with_arrival(
             if index == 1 {
                 // Existing objective fixtures begin after the actual first arrival's
                 // preparation clock; readiness still waits for the authored roster.
-                use_second_frames(h);
-                h.advance(121);
+                advance_source_preparation(h);
             }
             before_arrival(h, players, index);
         },
@@ -3247,6 +3246,28 @@ fn battleground<'a>(h: &'a Harness, who: &Traveler) -> &'a BattlegroundSnapshot 
         .battleground
         .as_ref()
         .expect("authoritative battleground state")
+}
+
+/// Wait the real preparation interval without changing the caller's cast/frame timing.
+fn advance_source_preparation(h: &mut Harness) {
+    let fixed_step = h.app.world().resource::<Time<Fixed>>().timestep();
+    let max_delta = h.app.world().resource::<Time<Virtual>>().max_delta();
+    let strategy = h
+        .app
+        .world()
+        .resource::<bevy::time::TimeUpdateStrategy>()
+        .clone();
+    use_second_frames(h);
+    h.advance(121);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Fixed>>()
+        .set_timestep(fixed_step);
+    h.app
+        .world_mut()
+        .resource_mut::<Time<Virtual>>()
+        .set_max_delta(max_delta);
+    h.app.insert_resource(strategy);
 }
 
 /// One-second frames so source heartbeats, ticks and capture clocks run on whole seconds.
