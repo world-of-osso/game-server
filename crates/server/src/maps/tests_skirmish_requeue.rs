@@ -136,7 +136,6 @@ fn played_mode(h: &Harness, who: &Traveler, match_id: u64) -> ArenaQueueMode {
 
 /// Request from the finished copy: ordinary return, no queue until the origin ACK.
 fn request_and_return(h: &mut Harness, players: &[Traveler], match_id: u64) {
-    let arena_map = h.map_of(&players[0]);
     for who in players {
         send_requeue(h, who, match_id);
     }
@@ -164,7 +163,7 @@ fn request_and_return(h: &mut Harness, players: &[Traveler], match_id: u64) {
         let destinations = h.new_worlds(who);
         assert_eq!(destinations.len(), 1, "one return transfer");
         assert_eq!(destinations[0].map_id, STORMWIND.map_id);
-        assert_eq!(h.map_of(who), arena_map, "still in transfer before ACK");
+        assert_eq!(h.map_of(who), None, "left the copy, awaiting origin ACK");
     }
 }
 
