@@ -29,6 +29,43 @@ class QuestRewardBonusTest(unittest.TestCase):
                 {"quest_id": 54083, "bonus_money": 46200},
             ])
 
+    def test_native_selected_template_mapping_retains_bonus_and_legacy_provenance(self):
+        from content_common import Report
+        source = (ROOT / "data/world.db").resolve()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "world.copy.db"
+            with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as original:
+                with sqlite3.connect(path) as db:
+                    original.backup(db)
+            with sqlite3.connect(path) as db:
+                # The maintained full rebuild starts from the AC-shaped table.
+                for column in ["ContentTuningID", "RewardMoneyMultiplier", "RewardBonusMoney"]:
+                    columns = {row[1] for row in db.execute("PRAGMA table_info(content_quest_template)")}
+                    if column in columns:
+                        db.execute(f"ALTER TABLE content_quest_template DROP COLUMN {column}")
+                offset = retail_content.RETAIL_GUID_OFFSET
+                db.execute(f"""CREATE TEMP TABLE retail_entry AS SELECT DISTINCT c.id1 entry
+                    FROM content_creature c JOIN tdb_creature t
+                    ON c.guid=t.guid+{offset} AND c.id1=t.id""")
+                db.execute(f"""CREATE TEMP TABLE retail_gameobject AS SELECT DISTINCT c.id
+                    FROM content_gameobject c JOIN tdb_gameobject t
+                    ON c.guid=t.guid+{offset} AND c.id=t.id""")
+                self.assertEqual(db.execute(
+                    "SELECT RewardBonusMoney FROM tdb_quest_template WHERE ID=55"
+                ).fetchone(), (570,))
+                retail_content.build_quests(db, Report())
+                output = Path(directory) / "quest-reward-bonus.json"
+                retail_content.write_quest_reward_bonus(db, output)
+                bonuses = {row["quest_id"]: row["bonus_money"]
+                           for row in json.loads(output.read_text())}
+                self.assertEqual(bonuses[62], 120)
+                self.assertEqual(bonuses[35], 0)
+                self.assertNotIn(1, bonuses)
+                self.assertNotIn(55, bonuses)
+                self.assertEqual(db.execute(
+                    "SELECT RewardMoney,RewardBonusMoney FROM content_quest_template WHERE ID=62"
+                ).fetchone(), (105000, 120))
+
     def test_deploy_ships_required_bonus_bytes_beside_world_database(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
