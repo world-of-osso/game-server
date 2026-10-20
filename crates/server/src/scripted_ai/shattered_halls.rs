@@ -77,14 +77,11 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     if instance != INSTANCE {
         return None;
     }
-    let ai: Box<dyn CreatureAi> = if world.get::<Npc>(actor)?.template_id == LEFT_HEAD
-        || world.get::<Npc>(actor)?.template_id == RIGHT_HEAD
-    {
-        Box::new(OmroggHead::default())
-    } else {
-        Box::new(Omrogg {
+    let ai: Box<dyn CreatureAi> = match world.get::<Npc>(actor)?.template_id {
+        LEFT_HEAD | RIGHT_HEAD => Box::new(OmroggHead::default()),
+        _ => Box::new(Omrogg {
             boss: BossAi::new(DATA_OMROGG),
-        })
+        }),
     };
     Some(ai)
 }
