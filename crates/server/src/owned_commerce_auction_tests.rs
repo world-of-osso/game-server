@@ -74,7 +74,7 @@ fn owned_commerce_sources_auction_mints_and_settles_both_catalogs_through_mail_r
     drop(db);
 
     let db = redb::Database::open(file.path()).unwrap();
-    let contents = crate::mail::mailbox_contents(&db, buyer, 0);
+    let contents = crate::mail::mailbox_contents(&db, &catalog.templates, buyer, 0);
     assert_eq!(contents.mails.len(), 2);
     assert_stacks(
         contents

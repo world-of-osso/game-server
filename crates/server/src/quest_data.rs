@@ -126,6 +126,8 @@ pub(crate) struct QuestTemplate {
     /// Copper; negative = the quest costs money to turn in. TrinityCore quests
     /// store `Quest::MaxMoneyValue` here and pay `money_scaling` per player.
     pub reward_money: i32,
+    /// Authored selected-TC RewardBonusMoney; legacy/captured rows have no bonus.
+    pub reward_bonus_money: u32,
     /// TrinityCore quests (`ContentTuningID` != 0): `Quest::MoneyValue` inputs and the
     /// ContentTuning range `Player::GetQuestLevel` clamps to.
     pub money_scaling: Option<QuestMoneyScaling>,
@@ -380,6 +382,7 @@ fn quest_from_row(
         exclusive_group: int(row, "ExclusiveGroup")? as i32,
         reward_next_quest: int(row, "RewardNextQuest")? as u32,
         reward_money: int(row, "RewardMoney")? as i32,
+        reward_bonus_money: 0,
         money_scaling: (int(row, "ContentTuningID")? != 0)
             .then(|| -> rusqlite::Result<QuestMoneyScaling> {
                 Ok(QuestMoneyScaling {
@@ -562,8 +565,16 @@ struct ContentNames {
 #[test]
 #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
 fn zone_population_real_copy_loads_quests_givers_and_objectives() {
-    let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
-    let db = load_quest_db(Path::new(&path)).expect("promoted quest content loads");
+    let source = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("world.db");
+    std::os::unix::fs::symlink(std::fs::canonicalize(source).unwrap(), &path).unwrap();
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../content/quest-reward-bonus.json"),
+        directory.path().join("quest-reward-bonus.json"),
+    )
+    .expect("stage tracked catalog beside the private promoted world copy");
+    let db = load_quest_db(&path).expect("promoted quest content loads");
     for (id, title, giver) in [
         (36626, "Host Howell", 86065),
         (48677, "Wicker Worship", 127296),
@@ -596,6 +607,7 @@ pub(crate) fn load_quest_db(path: &Path) -> rusqlite::Result<QuestDb> {
         links.push((quest.id, link));
         db.quests.insert(quest.id, quest);
     }
+    crate::quest_bonus_money::load(&path.with_file_name("quest-reward-bonus.json"), &mut db)?;
     let knowledge_rewards =
         crate::profession::specializations::load_knowledge_quest_rewards(&conn)?;
     for (quest_id, rewards) in knowledge_rewards {

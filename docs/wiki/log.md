@@ -1,3 +1,18 @@
+## 2026-10-20 — db2_casc scalar-first pallet order
+
+[Decoder notes](../db2-casc-sparse.md#fixed-record-decoding):
+- `db2_casc` fixed decoding now goes through one `read_fixed` parser, which the engine readers are moving onto.
+- Fixed latent bug: pallets were read in field order. Real PlayerCondition 1045411 declares an array pallet before scalar pallets, so all 48,491 rows read WeaponSubclassMask 1048866 / ContentTuningID 958 instead of 0, and the ContentTuningID pallet repeated entries.
+- No import used that path; `world.db` PlayerCondition comes from the scalar-first engine CSVs.
+- Regression: `test_db2_casc_player_condition`, RED on the old decoder, GREEN now.
+
+## 2026-10-19 — Ordinary quest max-level bonus
+
+[Authored bonus](systems/quests.md#authored-max-level-money--2026-10-19): pushed ignored65805b8eb ordinary62 cap RED105000≠105120 and missing-catalog startup RED; player89 control passes above quest tuning ceiling30. Selected-TC nullable metadata exports tracked catalog, required sibling loader and deploy shipment; ordinary settlement leaves base previews/WQ/captured/legacy paths unchanged. Fresh ignored607a8da1a GREEN4/0/33.87s/no warnings, then enabled; merged566 family89/0 plus disjoint rules/data/view19/0 (one existing private-population ignore), native producer/deploy3/0, helper check/fmt0. No deployment; independent lead landing separate.
+## 2026-10-19 — Lifebloom near-expiration refresh bloom
+
+[Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.
+
 ## 2026-10-19 — Wild Growth native-coefficient falloff policy
 
 [Source and proof boundary](investigations/follower-data.md#wild-growth-native-coefficient-falloff-policy--2026-10-19): explicit `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`, never legacy0.175/TC curve; absolute Retail shape uncertified. Pushed3ignored1fb0e4983 gives1PASS/2FAIL23.67s: native42 constant62×7 genuine decline RED,43 relative check blocked by same baseline prerequisite, natural expiry PASS. Minimal48438-only scheduled-deadline multipliere930 plus landed master merge43e0 gives unchanged3GREEN20.54s/no warnings:42 actual65→57,43 normalized native40%-less and unchanged seven-tick expiry. Enabled only afterward3327; final independent lead gate pending.
@@ -3312,6 +3327,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
 
+- [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).

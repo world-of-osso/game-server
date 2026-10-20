@@ -233,8 +233,12 @@ impl Vault<'_, '_> {
                                 guid,
                             )
                         },
-                        |guid| {
-                            persistence::inventory_store::load_item_crafting_origin(self.db(), guid)
+                        |item| {
+                            crate::inventory::stored_crafting_origin(
+                                self.db(),
+                                self.templates.as_ref().expect("checked by ready"),
+                                item,
+                            )
                         },
                     ),
                 })

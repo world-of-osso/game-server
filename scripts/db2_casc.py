@@ -25,6 +25,8 @@ import os
 import struct
 import subprocess
 import tempfile
+import warnings
+from collections import namedtuple
 from pathlib import Path
 
 CASC_LOCAL = Path(
@@ -132,138 +134,58 @@ def decode(
     header = read_header(data)
     if header["flags"] & 1:
         if relationship_column is not None:
-            raise ValueError("inline relationship validation is not supported for sparse DB2")
+            raise ValueError(
+                "inline relationship validation is not supported for sparse DB2"
+            )
         return header, decode_sparse(
             data, header, text_columns, inline_arrays, field_types or {}, record_ids
         )
     if field_types:
         raise ValueError("field_types is supported only for sparse DB2 layouts")
-    offset = 204
-    sections = []
-    for _ in range(header["section_count"]):
-        (
-            key,
-            file_offset,
-            count,
-            strings,
-            _end,
-            id_list,
-            relations,
-            _offset_map,
-            copies,
-        ) = struct.unpack_from("<Q8I", data, offset)
-        sections.append((key, file_offset, count, strings, id_list, copies, relations))
-        offset += 40
-    offset += header["field_count"] * 4
-    infos = [
-        struct.unpack_from("<HHIIIII", data, offset + 24 * i)
-        for i in range(header["info_size"] // 24)
-    ]
-    offset += header["info_size"]
-    pallets, commons = {}, {}
-    cursor = offset
-    for index, (_, _, extra, compression, *_rest) in enumerate(infos):
-        if compression in (COMPRESSION_PALLET, COMPRESSION_PALLET_ARRAY):
-            pallets[index] = data[cursor : cursor + extra]
-            cursor += extra
-        elif compression not in (
-            COMPRESSION_NONE,
-            COMPRESSION_BITPACKED,
-            COMPRESSION_COMMON,
-            COMPRESSION_SIGNED,
-        ):
-            raise ValueError(
-                f"field {index}: compression {compression} is not supported"
-            )
-    cursor = offset + header["pallet_size"]
-    for index, (_, _, extra, compression, *_rest) in enumerate(infos):
-        if compression == COMPRESSION_COMMON:
-            commons[index] = dict(
-                struct.iter_unpack("<II", data[cursor : cursor + extra])
-            )
-            cursor += extra
-    size = header["record_size"]
+    header, infos, sections = read_fixed(data)
+    blocks = string_blocks(data, header)
     rows = {}
-    # WDC5 string offsets refer to global record/string blocks, not physical
-    # section offsets (DBCD.IO/Readers/WDC5Reader.cs).
-    string_blocks = []
-    previous_strings = 0
-    for key, file_offset, count, strings, *_ in sections:
-        start = file_offset + count * size
-        string_blocks.append((previous_strings, data[start : start + strings]))
-        previous_strings += strings
-    previous_records = 0
-    for key, file_offset, count, strings, id_list, copies, relations in sections:
-        record_base = previous_records
-        previous_records += count
-        if key and not any(data[file_offset : file_offset + count * size]):
-            import warnings
-
+    for section in sections:
+        if section.records is None:
             warnings.warn(
-                f"Skipping zero-filled DB2 section key {key:016X}, {count} records",
+                f"Skipping zero-filled DB2 section key {section.key:016X}, {section.count} records",
                 stacklevel=2,
             )
             continue
-        ids_at = file_offset + count * size + strings
-        ids = struct.unpack_from(f"<{id_list // 4}I", data, ids_at) if id_list else None
-        text_fields = [column - (1 if ids else 0) for column in text_columns]
-        # Section order: records, strings, ID list, copy table, relationship map
-        # (entry count, min id, max id, then (foreign id, record index) pairs).
-        relation_at = ids_at + id_list + 8 * copies
-        related = {}
-        if relations:
-            entries = struct.unpack_from("<I", data, relation_at)[0]
-            related = {
-                index: foreign
-                for foreign, index in struct.iter_unpack(
-                    "<II", data[relation_at + 12 : relation_at + 12 + 8 * entries]
-                )
-            }
-        for record in range(count):
-            bits = int.from_bytes(
-                data[file_offset + record * size : file_offset + (record + 1) * size],
-                "little",
-            )
-            fields = [
-                field_value(index, info, bits, pallets)
-                for index, info in enumerate(infos)
-            ]
-            record_id = ids[record] if ids else fields[header["id_index"]]
+        text_fields = [
+            column - (1 if section.id_list else 0) for column in text_columns
+        ]
+        for record in section.records:
+            fields = list(record.values)
             for index in text_fields:
-                if fields[index] == 0:
-                    fields[index] = ""
-                    continue
-                string_offset = (
-                    (record_base + record - header["record_count"]) * size
-                    + infos[index][0] // 8
-                    + fields[index]
+                fields[index] = read_string_at(
+                    data, header, blocks, record.index, infos[index], fields[index]
                 )
-                fields[index] = read_global_string(string_blocks, string_offset)
             for index, count in inline_arrays.items():
                 bit_offset, bit_size, _, compression, *_ = infos[index]
                 width, remainder = divmod(bit_size, count)
-                if compression != COMPRESSION_NONE or remainder or width not in (8, 16, 32):
+                if (
+                    compression != COMPRESSION_NONE
+                    or remainder
+                    or width not in (8, 16, 32)
+                ):
                     raise ValueError(
                         f"field {index}: expected inline array of {count} 8/16/32-bit values"
                     )
                 fields[index] = tuple(
-                    (bits >> (bit_offset + slot * width)) & ((1 << width) - 1)
+                    (record.bits >> (bit_offset + slot * width)) & ((1 << width) - 1)
                     for slot in range(count)
                 )
-            for index, info in enumerate(infos):
-                if info[3] == COMPRESSION_COMMON:
-                    fields[index] = commons[index].get(record_id, info[4])
-            values = [record_id] if ids else []
+            values = [record.id] if section.id_list else []
             for value in fields:
                 values.extend(value if isinstance(value, tuple) else (value,))
-            if relations:
-                values = join_relationship(values, related.get(record, 0), relationship_column)
-            rows[record_id] = values
-        id_column = 0 if ids else header["id_index"]
-        copy_at = ids_at + id_list
-        for new_id, source_id in struct.iter_unpack(
-            "<II", data[copy_at : copy_at + 8 * copies]
-        ):
+            if section.relations:
+                values = join_relationship(
+                    values, record.parent or 0, relationship_column
+                )
+            rows[record.id] = values
+        id_column = 0 if section.id_list else header["id_index"]
+        for new_id, source_id in section.copies:
             rows[new_id] = [
                 new_id if i == id_column else v for i, v in enumerate(rows[source_id])
             ]
@@ -274,9 +196,13 @@ def join_relationship(values, foreign_id, inline_column):
     if inline_column is None:
         return [*values, foreign_id]
     if not 0 <= inline_column < len(values):
-        raise ValueError(f"inline relationship column {inline_column} is outside the row")
+        raise ValueError(
+            f"inline relationship column {inline_column} is outside the row"
+        )
     if values[inline_column] != foreign_id:
-        raise ValueError(f"inline relationship {values[inline_column]} differs from mapped parent {foreign_id}")
+        raise ValueError(
+            f"inline relationship {values[inline_column]} differs from mapped parent {foreign_id}"
+        )
     return values
 
 
@@ -329,6 +255,7 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
     ) in sections:
         if key and count and not any(data[start:end]):
             import warnings
+
             warnings.warn(
                 f"Skipping zero-filled DB2 section key {key:016X}, {count} records",
                 stacklevel=2,
@@ -348,39 +275,54 @@ def decode_sparse(data, header, text_columns, arrays, field_types, record_ids):
         map_at = copy_at + 8 * copies
         entries = struct.iter_unpack("<IH", data[map_at : map_at + 6 * map_count])
         map_ids_at = map_at + 6 * map_count
-        if header['flags'] & 2:
+        if header["flags"] & 2:
             ids_at = map_ids_at
             relation_at = ids_at + 4 * map_count
         else:
             relation_at = map_ids_at
             ids_at = relation_at + relations
         ids = struct.unpack_from(f"<{map_count}I", data, ids_at)
-        relation_ids = set(ids) if header['flags'] & 2 else None
-        related = read_sparse_relations(data, relation_at, relations, count, relation_ids)
+        relation_ids = set(ids) if header["flags"] & 2 else None
+        related = read_sparse_relations(
+            data, relation_at, relations, count, relation_ids
+        )
         for index, (record_id, (at, size)) in enumerate(zip(ids, entries)):
             if not size or not start <= at < at + size <= end:
                 raise ValueError(f"sparse DB2 row {record_id}: invalid offset/size")
             try:
                 values = read_sparse_row(
-                    data[at : at + size], metadata, infos, text_columns, arrays, field_types
+                    data[at : at + size],
+                    metadata,
+                    infos,
+                    text_columns,
+                    arrays,
+                    field_types,
                 )
             except UnicodeDecodeError as error:
                 import warnings
-                warnings.warn(f"unreadable UTF-8 in DB2 row {record_id}: {error}", stacklevel=2)
-                header.setdefault('unreadable_record_ids', []).append(record_id)
+
+                warnings.warn(
+                    f"unreadable UTF-8 in DB2 row {record_id}: {error}", stacklevel=2
+                )
+                header.setdefault("unreadable_record_ids", []).append(record_id)
                 continue
             except ValueError as error:
-                raise ValueError(f"sparse DB2 row {record_id} in section {key:016X}: {error}") from error
+                raise ValueError(
+                    f"sparse DB2 row {record_id} in section {key:016X}: {error}"
+                ) from error
             rows[record_id] = [record_id, *values]
             if relations:
-                relation_key = record_id if header['flags'] & 2 else index
+                relation_key = record_id if header["flags"] & 2 else index
                 rows[record_id].append(related.get(relation_key, 0))
     for new_id, source_id in copy_pairs:
         if source_id not in rows:
-            if source_id in header.get('unreadable_record_ids', []):
+            if source_id in header.get("unreadable_record_ids", []):
                 import warnings
-                warnings.warn(f"DB2 copy {new_id} has unreadable source {source_id}", stacklevel=2)
-                header['unreadable_record_ids'].append(new_id)
+
+                warnings.warn(
+                    f"DB2 copy {new_id} has unreadable source {source_id}", stacklevel=2
+                )
+                header["unreadable_record_ids"].append(new_id)
                 continue
             raise ValueError(
                 f"sparse DB2 copy {new_id}: missing readable source {source_id}"
@@ -401,8 +343,11 @@ def read_sparse_relations(data, at, size, count, record_ids=None):
         index: foreign
         for foreign, index in struct.iter_unpack("<II", data[at + 12 : at + size])
     }
-    invalid = (any(index not in record_ids for index in related) if record_ids is not None
-               else any(index >= count for index in related))
+    invalid = (
+        any(index not in record_ids for index in related)
+        if record_ids is not None
+        else any(index >= count for index in related)
+    )
     if invalid:
         raise ValueError("invalid sparse DB2 relationship record index")
     return related
@@ -453,24 +398,202 @@ def sparse_typed(raw, width, field_type):
     raise ValueError(f"unsupported sparse field type {field_type!r} at width {width}")
 
 
-def read_global_string(blocks, offset):
-    for base, block in blocks:
-        at = offset - base
-        if 0 <= at < len(block):
-            return block[at : block.index(b"\0", at)].decode("utf-8")
-    raise ValueError(f"DB2 string offset {offset} is not in a readable string block")
+FixedRecord = namedtuple("FixedRecord", "id values bits parent offset index")
+FixedSection = namedtuple("FixedSection", "key count id_list relations records copies")
+
+
+def read_fixed(data, id_field=None):
+    """(header, field infos, sections) of a fixed-record WDC5, decoded once for every reader.
+
+    Record values apply pallet, pallet-array, signed and common storage; inline arrays
+    stay packed in each record's `bits`. A zero-filled encrypted section has
+    `records=None` and no copies. Without an ID list, `id_field` (default: the header's
+    id_index) names the inline ID field. `parent` is None for records the relationship
+    map omits; `index` counts records across all sections.
+    """
+    header = read_header(data)
+    size = header["record_size"]
+    if id_field is None:
+        id_field = header["id_index"]
+    section_headers = [
+        struct.unpack_from("<Q8I", data, 204 + 40 * i)
+        for i in range(header["section_count"])
+    ]
+    offset = 204 + 40 * header["section_count"] + header["field_count"] * 4
+    infos = [
+        struct.unpack_from("<HHIIIII", data, offset + 24 * i)
+        for i in range(header["info_size"] // 24)
+    ]
+    pallets, commons = read_field_storage(
+        data, header, infos, offset + header["info_size"]
+    )
+    sections, record_base = [], 0
+    for (
+        key,
+        start,
+        count,
+        strings,
+        _,
+        id_size,
+        relation_size,
+        _,
+        copies,
+    ) in section_headers:
+        payload = data[start : start + count * size]
+        if key and count and not any(payload):
+            sections.append(
+                FixedSection(key, count, bool(id_size), bool(relation_size), None, ())
+            )
+            record_base += count
+            continue
+        ids_at = start + count * size + strings
+        ids = struct.unpack_from(f"<{id_size // 4}I", data, ids_at) if id_size else None
+        copy_at = ids_at + id_size
+        related = read_relations(data, copy_at + 8 * copies, relation_size)
+        records = []
+        for record in range(count):
+            bits = int.from_bytes(
+                payload[record * size : (record + 1) * size], "little"
+            )
+            values = [
+                field_value(index, info, bits, pallets)
+                for index, info in enumerate(infos)
+            ]
+            record_id = ids[record] if ids else values[id_field]
+            for index, common in commons.items():
+                values[index] = common.get(record_id, infos[index][4])
+            records.append(
+                FixedRecord(
+                    record_id,
+                    values,
+                    bits,
+                    related.get(record),
+                    start + record * size,
+                    record_base + record,
+                )
+            )
+        pairs = tuple(struct.iter_unpack("<II", data[copy_at : copy_at + 8 * copies]))
+        sections.append(
+            FixedSection(key, count, bool(id_size), bool(relation_size), records, pairs)
+        )
+        record_base += count
+    return header, infos, sections
+
+
+def read_field_storage(data, header, infos, start):
+    """Per-field pallet bytes and common {record id: value} maps.
+
+    Scalar pallets precede array pallets in the pallet block, each group in field
+    order. PlayerCondition 1D743D99 declares an array pallet before scalar ones: read
+    in plain field order its deduplicated ContentTuningID pallet repeats entries and
+    every row reads WeaponSubclassMask 1048866 / ContentTuningID 958 instead of 0.
+    """
+    for index, (_, _, _, compression, *_rest) in enumerate(infos):
+        if compression not in (
+            COMPRESSION_NONE,
+            COMPRESSION_BITPACKED,
+            COMPRESSION_COMMON,
+            COMPRESSION_PALLET,
+            COMPRESSION_PALLET_ARRAY,
+            COMPRESSION_SIGNED,
+        ):
+            raise ValueError(
+                f"field {index}: compression {compression} is not supported"
+            )
+    pallets, cursor = {}, start
+    for kind in (COMPRESSION_PALLET, COMPRESSION_PALLET_ARRAY):
+        for index, info in enumerate(infos):
+            if info[3] == kind:
+                pallets[index] = data[cursor : cursor + info[2]]
+                cursor += info[2]
+    commons, cursor = {}, start + header["pallet_size"]
+    for index, info in enumerate(infos):
+        if info[3] == COMPRESSION_COMMON:
+            commons[index] = dict(
+                struct.iter_unpack("<II", data[cursor : cursor + info[2]])
+            )
+            cursor += info[2]
+    return pallets, commons
+
+
+def read_relations(data, at, size):
+    """{record index in section: foreign id} from a section relationship map."""
+    if not size:
+        return {}
+    entries = struct.unpack_from("<I", data, at)[0]
+    return {
+        index: foreign
+        for foreign, index in struct.iter_unpack(
+            "<II", data[at + 12 : at + 12 + 8 * entries]
+        )
+    }
+
+
+def string_blocks(data, header):
+    """(string block offset, size, unreadable key or 0) per section, in file order."""
+    size = header["record_size"]
+    blocks = []
+    for i in range(header["section_count"]):
+        key, start, count, strings, *_ = struct.unpack_from("<Q8I", data, 204 + 40 * i)
+        block = start + count * size
+        unreadable = key if key and not any(data[start : block + strings]) else 0
+        blocks.append((block, strings, unreadable))
+    return blocks
+
+
+def read_string_at(data, header, blocks, record_index, field, value):
+    """String `value` bytes past `field`'s byte in global record `record_index`.
+
+    WDC5 offsets address the virtual concatenation of every section's string block,
+    counted from the end of all records (DBCD.IO/Readers/WDC5Reader.cs). A string in a
+    zero-filled encrypted section fails instead of reading as empty."""
+    if value == 0:
+        return ""
+    logical = (
+        (record_index - header["record_count"]) * header["record_size"]
+        + field[0] // 8
+        + value
+    )
+    for block, strings, unreadable in blocks:
+        if 0 <= logical < strings:
+            if unreadable:
+                raise ValueError(
+                    f"string offset lands in unreadable encrypted section {unreadable:016X}"
+                )
+            end = data.index(b"\0", block + logical, block + strings)
+            return data[block + logical : end].decode("utf-8")
+        logical -= strings
+    raise ValueError("string offset outside concatenated section string blocks")
+
+
+def read_string(data, record_offset, field, value):
+    """String field `value` of the record stored at byte `record_offset`."""
+    header = read_header(data)
+    size = header["record_size"]
+    preceding = 0
+    for i in range(header["section_count"]):
+        _, start, count, *_ = struct.unpack_from("<Q8I", data, 204 + 40 * i)
+        if start <= record_offset < start + count * size:
+            index = preceding + (record_offset - start) // size
+            break
+        preceding += count
+    else:
+        raise ValueError(f"string record offset {record_offset} outside all sections")
+    return read_string_at(
+        data, header, string_blocks(data, header), index, field, value
+    )
 
 
 def field_value(index, info, bits, pallets):
-    bit_offset, bit_size, _, compression, _, value2, _ = info
+    bit_offset, bit_size, _, compression, *_ = info
     raw = (bits >> bit_offset) & ((1 << bit_size) - 1) if bit_size else 0
     if compression == COMPRESSION_PALLET:
         return struct.unpack_from("<I", pallets[index], raw * 4)[0]
     if compression == COMPRESSION_PALLET_ARRAY:
         count = info[6]
         return struct.unpack_from(f"<{count}I", pallets[index], raw * 4 * count)
-    if compression == COMPRESSION_SIGNED and raw & (1 << (value2 - 1)):
-        return raw - (1 << value2)
+    if compression == COMPRESSION_SIGNED and bit_size and raw & (1 << (bit_size - 1)):
+        return raw - (1 << bit_size)
     return raw
 
 
@@ -496,7 +619,9 @@ def extract_rows(fdid, layout_hash, columns, localized=False, inline_arrays=None
     text_columns = frozenset(
         i for i, (_, sql_type) in enumerate(columns) if sql_type == "TEXT"
     )
-    header, rows = decode(data, text_columns if localized else frozenset(), inline_arrays=inline_arrays)
+    header, rows = decode(
+        data, text_columns if localized else frozenset(), inline_arrays=inline_arrays
+    )
     if header["layout_hash"] != layout_hash:
         raise SystemExit(
             f"FDID {fdid}: layout {header['layout_hash']:08X}, expected {layout_hash:08X}"
