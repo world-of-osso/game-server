@@ -1,3 +1,7 @@
+## 2026-10-19 — Earthen Rage native RED and consumer
+
+[Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. GREEN/lead integration pending;248 remains DEFERRED.
+
 ## 2026-10-19 — Aura248 native-input gap
 
 [Named gap](systems/player-damage.md#aura248-native-input-gap--2026-10-19): AURA_248_NO_NONZERO_NATIVE_INPUT_70448 DEFERRED after fresh all-difficulty canonical scan finds only261912effect4 amount0/Misc0 and no imported server-side248 rows. Synthetic-only implementation declined as speculative; contract/wiki record native-proof boundary, no production/test/data change or coverage promotion.

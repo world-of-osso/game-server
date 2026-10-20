@@ -1,5 +1,11 @@
 # Auras
 
+## Earthen Rage baseline — 2026-10-19
+
+`earthen_rage.rs` binds170374's existing A4 proc hooks and170377's effect0 A226 periodic hook. One private `EarthenRageTarget(Entity)` on each passive caster mirrors TC's passive AuraScript target GUID; actual action events replace it and passive removal clears it. Real self170377 and targeted170379 casts retain the native3000ms period/6000ms expiry and child SP0.424710006/variance0.05. Periodic lookup requires the original passive and a surviving remembered entity; current selection is not a substitute.
+
+Source: pinned TC a352b1fa `spell_shaman.cpp861–920`; authenticated70448 native CSV receipt/effects and Elemental262 talent170374 membership. Qualification96c5dc235 FIRST3PASS67.67s establishes KnownSpell passive/proc options, ordinary188196 harmful damage, independent170377 natural lifetime and direct170379 payload; it is not parent-chain proof. Pushed ignored6ae2239e1 then gives genuine5FAIL/3controlsPASS17.89s: actual188196 damage fails to create170377. Minimal consumer follows this RED; GREEN and independent lead integration pending. Exact source/commands/logs/revision receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/earthen-rage-*`. Other talents/overloads/legal loadouts/full class/UDP remain unqualified; aura248 stays DEFERRED. [Contract](../../specs/class-completeness.md#earthen-rage-baseline-active70448).
+
 ## Prayer of Mending baseline — 2026-10-18
 
 `spell_cast/scripts/prayer_of_mending.rs` handles33076 and155793's native effect0 DUMMY and41635's on-damage proc. Root native jump count4 creates5 initial stacks; existing owned wards add the authored4 through normal refresh, capped by native max10. A proc casts real33110 from the original Priest, launches real155793 from the current holder with remaining stacks/original caster, then removes that holder's ward. The actual40yd/s missile keeps its per-cast SpellInfo clone, so delayed arrival can apply41635 with the original Priest and remaining count. Healing coefficient0.732/variance0.05 and RNG are unchanged. Ward tooltip-point/custom-visual projection and talent custom arguments are outside this baseline.

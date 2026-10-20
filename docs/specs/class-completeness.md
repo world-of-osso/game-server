@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Earthen Rage baseline (active70448)
+
+- Native Elemental talent170374 records its owner's latest actual harmful-spell action target and casts real self170377. Selection changes and melee swings do not retarget or activate it;170379 must not retrigger it.
+- Native170377 effect0 ticks every3000ms for6000ms, casting real170379 at that remembered target only while the original caster retains170374. Preserve native damage coefficient/variance, expiry and ordinary spell damage resolution. Missing/despawned targets never select a substitute.
+- Keep one spell-specific transient target Entity per passive caster, clear it on passive removal, and isolate multiple owners. No persistence, wire fields, generic proc framework or fallback targeting. Other Shaman talents/overloads, legal loadouts, full class and UDP parity remain unqualified. [Implementation/proof](../wiki/systems/auras.md#earthen-rage-baseline--2026-10-19).
+
 ## Named native-input gap (active70448)
 
 - **AURA_248_NO_NONZERO_NATIVE_INPUT_70448** — DEFERRED. Canonical70448 `spell_effect` across all difficulty rows contains only261912 effect4/710273: aura248 amount0/MiscValue0=0; imported `tdb_serverside_spell_effect` contains no248 rows. No nonzero matching-Dodge native input qualifies a runtime RED. Do not implement a synthetic-only speculative path, change native data, or promote native/class/legal-loadout/census coverage. This is a bounded current-input gap, not an upstream/global absence claim. Reconsider only when an actual native70448 consumer supplies a nonzero authored or source-derived amount. [Evidence and source semantics](../wiki/systems/player-damage.md#aura248-native-input-gap--2026-10-19).

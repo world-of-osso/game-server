@@ -25,6 +25,7 @@ pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
 pub(crate) mod damage_transfer;
+mod earthen_rage;
 pub(crate) mod ebon_might;
 pub(crate) mod effect_immunity;
 mod fear;
