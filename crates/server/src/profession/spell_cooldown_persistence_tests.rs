@@ -36,7 +36,7 @@ fn file_harness(path: &Path) -> Harness {
 }
 
 /// The default profession spells plus the Enchanting trainer's and Berserker Rage.
-fn install_spells(app: &mut App, conn: &Connection) {
+pub(super) fn install_spells(app: &mut App, conn: &Connection) {
     let data = world_db().unwrap();
     let mut ids = profession_spells(conn);
     let mut statement = conn
@@ -151,7 +151,7 @@ fn open_enchanting_trainer(h: &mut Harness) -> Entity {
     npc
 }
 
-fn learn_prismatic_sphere(h: &mut Harness) {
+pub(super) fn learn_prismatic_sphere(h: &mut Harness) {
     h.set_gold(1000);
     let npc = open_enchanting_trainer(h);
     for spell in [ENCHANTING, OUTLAND_ENCHANTING] {
