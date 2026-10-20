@@ -32,6 +32,7 @@ pub mod movement;
 pub mod murder_row;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
+pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
 pub(crate) mod wailing_caverns;
@@ -94,6 +95,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(Startup, blood_furnace::register_aura_scripts)
+            .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -332,6 +334,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if blood_furnace::is_creature_script(script_name) {
         return blood_furnace::creature_ai(world, creature);
     }
+    if shattered_halls::is_creature_script(script_name) {
+        return shattered_halls::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -352,6 +357,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || azure_vault::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
+        || shattered_halls::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
