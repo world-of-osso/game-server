@@ -121,6 +121,17 @@ Matching full `toys:: --test-threads=1 --format=pretty` runs compare base3373553
 
 The five directly affected tests improve244.738→113.634s combined (131.103s): transmitted-object lifecycles113.962→64.136s; four facing tests130.776→49.498s. The208 unaffected tests grow2001.814→2563.669s, overwhelming that local saving. Lead accepted that unaffected growth as host contention, not the two-site change; these receipts do not quantify its separate phases. Results were not rerun to select a better outcome. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/toys-{before,after}/` and aggregate `wow_formats-toys-comparison.json`.
 
+### Loa canonical spell-store follow-up
+
+Both [Loa fixture helpers](../../../crates/server/src/toys_loa_cosmetic_tests.rs) now clone the same existing canonical `world_db().store` instead of reparsing it. This adds no cache and preserves all seven cases, app ownership and the ordinary1800s aura/3600s recovery timelines. No lifecycle tick, cancellation, learning or persisted-use assertion changes.
+
+Matching full serial `toys::tests::loa_cosmetics:: --test-threads=1 --format=pretty` runs compare base a5a5af6d3 with pushed code208f091df on frozen protocol600b755. Both pass the same seven names/statuses with no failures or ignores and separate start/finish output events. Process wall132.283→99.566s saves32.718s; user+system CPU127.577→98.679s; peak RSS1241736→1278236KiB increases36500KiB. Ordinary expiry/reuse still executes every50ms frame through1800s/3600s; no parallel-gate speedup is inferred. First-case canonical initialization remains included. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/loa-{before,after}/` and `wow_formats-loa-comparison.json`. Code was committed and pushed before the after build/measurement. Changed-Rust manual readability, format and diff checks pass; independent merged-master integration remains lead-owned.
+## Nested achievement canonical catalog reuse
+
+The [nested-all native encounter fixture](../../../crates/server/src/achievement_nested_all_tests.rs) clones the complete catalog through existing `test_data::achievement_catalog()` instead of decoding canonical achievement rows for each variant. No cache is added. All four difficulty/prerequisite combinations, fresh app/redb ownership, foreign-character isolation, ordinary updates and persisted-reopen assertions remain unchanged. The connection still loads the original map store; no map producer is replaced.
+
+Matched full serial `achievement::nested_all_tests:: --test-threads=1 --format=pretty` compares base dfdd71578 with pushed code6122e8f0c on frozen protocol600b755. The same single native test passes both sides, retaining `(15,true)`, `(16,true)`, `(14,true)` and `(15,false)` plus every persistence/refusal assertion. Process wall27.029→17.224s saves9.805s; user+system CPU26.189→17.176s; peak RSS680488→732996KiB increases52508KiB. Baseline observer/test completed exit0; a summary-print typo failed afterward and was fixed without rerunning the measurement. Code was committed/pushed before the after build/test. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/nested-{before,after}/` and `wow_formats-nested-comparison.json`. Changed-Rust manual readability, format and diff checks pass; broader independent integration is lead-owned. Serial savings do not predict gate wall.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.

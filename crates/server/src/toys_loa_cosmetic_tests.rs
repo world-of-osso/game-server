@@ -46,13 +46,7 @@ fn assert_ordinary_loa_expiry_and_reuse(item: u32, spell: u32) {
     const AFTER_RECOVERY_SECONDS: f64 = 3601.0;
     let directory = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&directory.path().join("loa-ordinary-timers.redb"));
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.insert_resource(world_db().unwrap().store.clone());
     let caster = h.caster;
     let health = *h.app.world().get::<Health>(caster).unwrap();
     let display = h.app.world().get::<ModelDisplay>(caster).copied();
@@ -145,13 +139,7 @@ fn assert_learned_loa_cosmetic_cancellation(item: u32, spell: u32) {
     const RECOVERY_MS: u32 = 3_600_000;
     let directory = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&directory.path().join("loa.redb"));
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.insert_resource(world_db().unwrap().store.clone());
     let caster = h.caster;
     let health = *h.app.world().get::<Health>(caster).unwrap();
     let display = h.app.world().get::<ModelDisplay>(caster).copied();

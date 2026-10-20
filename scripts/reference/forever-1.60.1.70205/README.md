@@ -11,9 +11,9 @@ Map's inline Corpse[2] and global record/string offsets are decoded, OceanLiquid
 
 Raw `.db2` files are not tracked. The complete reference directory (DB2 bytes plus text) lives in the untracked cache `/home/osso/Projects/world-of-osso/game-engine/data/db2/forever-1.60.1.70205/`. This repository retains the decoded JSON, WoWDBDefs definitions and provenance only. Tests continue reading those text files here.
 
-Set `FOREVER_DB2_SOURCE` to that cache directory for Python tests and `scripts/import-azerothcore.sh`; an unset variable fails explicitly. Pass `--source-dir "$FOREVER_DB2_SOURCE"` to `skyborne_data.py`, `zephras_content.py`, `skyborne_kit_fixture.py`, `add_player_create_info.py`, `db2.py import`, and `content_policy.py` rebuild/check. None defaults to an in-repository DB2 source. CSV-only `db2.py check` and non-rebuild content-policy modes do not require raw DB2s.
+Set `FOREVER_DB2_SOURCE` to that cache directory for Python tests and `scripts/import-azerothcore.sh`. The import script fails explicitly when it is unset; tests that need it skip, naming the variable (`scripts/tests/fixture_env.py`). Pass `--source-dir "$FOREVER_DB2_SOURCE"` to `skyborne_data.py`, `zephras_content.py`, `skyborne_kit_fixture.py`, `add_player_create_info.py`, `db2.py import`, and `content_policy.py` rebuild/check. None defaults to an in-repository DB2 source. CSV-only `db2.py check` and non-rebuild content-policy modes do not require raw DB2s.
 
-The selected sparse fixture lives at `/home/osso/Projects/world-of-osso/game-engine/data/db2/fixtures/item_sparse_6fcc3191_selected.db2`; tests require `ITEM_SPARSE_SELECTED_FIXTURE` pointing to it. See [sparse decoding tests](../../../docs/db2-casc-sparse.md).
+The selected sparse fixture lives at `/home/osso/Projects/world-of-osso/game-engine/data/db2/fixtures/item_sparse_6fcc3191_selected.db2`; tests using it skip unless `ITEM_SPARSE_SELECTED_FIXTURE` points to it. See [sparse decoding tests](../../../docs/db2-casc-sparse.md).
 
 ## Starting kit sources
 
