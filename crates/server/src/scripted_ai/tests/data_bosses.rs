@@ -85,6 +85,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "theradras.rs"]
 mod theradras;
+#[path = "vazruden_slay.rs"]
+mod vazruden_slay;
 #[path = "vyletongue.rs"]
 mod vyletongue;
 
