@@ -61,6 +61,8 @@ mod herald_ground;
 mod herald_intro;
 #[path = "herald_intro2.rs"]
 mod herald_intro2;
+#[path = "herald_liquid_fire.rs"]
+mod herald_liquid_fire;
 #[path = "herald_min1.rs"]
 mod herald_min1;
 #[path = "herald_pair.rs"]

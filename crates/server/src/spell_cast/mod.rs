@@ -3114,6 +3114,12 @@ fn launch_triggered_spell(
 ) -> bool {
     match plan_triggered_spell(world, caster, spell, explicit, depth) {
         Ok(plan) => {
+            #[cfg(test)]
+            if let Some(mut observed) =
+                world.get_resource_mut::<test_harness::ObservedTriggeredCasts>()
+            {
+                observed.0.push((caster, spell.id, explicit));
+            }
             crate::achievement::record_spell_cast(world, caster, spell.id);
             missiles::launch(world, caster, spell, plan, depth);
             druid_transform::after_cast(world, caster, spell);
