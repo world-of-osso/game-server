@@ -40,6 +40,7 @@ import argparse
 import csv
 import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
 
 import derived_merchants
@@ -510,7 +511,7 @@ def main():
                 world_population.validate_maps(conn, maps)
             return
         result = world_population.import_database(args.db, maps)
-        with sqlite3.connect(f"file:{args.db}?mode=ro", uri=True) as conn:
+        with closing(sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)) as conn:
             retail_content.write_quest_reward_bonus(conn, args.quest_reward_bonus)
         world_population.write_report(args.report, result)
         print(f"Promoted open-world maps {result['target_maps']}; report: {args.report}")

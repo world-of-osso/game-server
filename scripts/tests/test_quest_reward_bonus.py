@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -16,7 +17,7 @@ import retail_content
 class QuestRewardBonusTest(unittest.TestCase):
     def test_selected_retail_rows_preserve_zero_and_do_not_borrow_legacy_same_id(self):
         # Native TDB62/35/54083 values;7 remains a legacy content row, not selected TC.
-        with sqlite3.connect(":memory:") as db, tempfile.TemporaryDirectory() as directory:
+        with closing(sqlite3.connect(":memory:")) as db, tempfile.TemporaryDirectory() as directory:
             db.executescript("""
                 CREATE TABLE content_quest_template(ID INTEGER PRIMARY KEY,RewardBonusMoney INTEGER);
                 INSERT INTO content_quest_template VALUES(62,120),(35,0),(54083,46200),(7,NULL);
@@ -34,10 +35,10 @@ class QuestRewardBonusTest(unittest.TestCase):
         source = (ROOT / "data/world.db").resolve()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "world.copy.db"
-            with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as original:
-                with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as original:
+                with closing(sqlite3.connect(path)) as db:
                     original.backup(db)
-            with sqlite3.connect(path) as db:
+            with closing(sqlite3.connect(path)) as db:
                 # The maintained full rebuild starts from the AC-shaped table.
                 for column in ["ContentTuningID", "RewardMoneyMultiplier", "RewardBonusMoney"]:
                     columns = {row[1] for row in db.execute("PRAGMA table_info(content_quest_template)")}
@@ -54,6 +55,7 @@ class QuestRewardBonusTest(unittest.TestCase):
                     "SELECT RewardBonusMoney FROM tdb_quest_template WHERE ID=55"
                 ).fetchone(), (570,))
                 retail_content.build_quests(db, Report())
+                db.commit()
                 output = Path(directory) / "quest-reward-bonus.json"
                 retail_content.write_quest_reward_bonus(db, output)
                 bonuses = {row["quest_id"]: row["bonus_money"]
