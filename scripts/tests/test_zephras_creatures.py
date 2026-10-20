@@ -6,9 +6,11 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class CreatureDecodeTest(unittest.TestCase):
     def test_known_names_displays_and_relationships(self):
         import zephras_creatures

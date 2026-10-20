@@ -208,6 +208,16 @@ fn active_updates(history: &SpellHistory, now: f64) -> Vec<SpellCooldownUpdate> 
     updates
 }
 
+/// Unexpired (spell, ready unix ms) and (category, spell, ready unix ms) for fixtures.
+#[cfg(test)]
+pub(crate) fn stored_deadlines(
+    db: &Database,
+    character_id: u64,
+) -> (Vec<(u32, u64)>, Vec<(u32, u32, u64)>) {
+    let cooldowns = load(db, character_id, unix_ms());
+    (cooldowns.spells, cooldowns.categories)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -21,7 +21,8 @@ import db2
 import retail_content
 
 CRAFTING_SOURCE = SCRIPTS.parent / "data/reference/crafting/12.1.0.69933"
-FOREVER_SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+FOREVER_SOURCE = env_path("FOREVER_DB2_SOURCE")
 
 AZEROTHCORE_SQL = Path(os.environ.get("AZEROTHCORE_SQL", "/home/osso/Repos/azerothcore/data/sql/base/db_world"))
 
@@ -252,6 +253,7 @@ class DisenchantLootImportTests(unittest.TestCase):
                 )
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class CreatureEventImportTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -1815,6 +1817,7 @@ class CreatureEventImportTests(unittest.TestCase):
         self.assertIn("unparseable value", result.stderr)
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 @unittest.skipUnless(AZEROTHCORE_SQL.is_dir(), f"AzerothCore dumps not present at {AZEROTHCORE_SQL}")
 @unittest.skipUnless(PINNED_BUILD_DIR.is_dir(), f"pinned DB2 CSVs not present at {PINNED_BUILD_DIR}")
 @unittest.skipUnless(TDB_DIR.is_dir(), f"TrinityCore Retail excerpts not present at {TDB_DIR}")
@@ -2018,6 +2021,7 @@ class AzerothCoreContentTests(unittest.TestCase):
         self.assertEqual(self.rows("SELECT name FROM creature_template WHERE name LIKE 'Remy%'"), [('Remy "Two Times"',)])
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class Db2ReimportTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -2106,6 +2110,7 @@ class Db2ReimportTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT ID, Name_lang FROM spell_name").fetchall(), [(35395, "Crusader Strike")])
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 @unittest.skipUnless(PINNED_BUILD_DIR.is_dir(), f"pinned DB2 CSVs not present at {PINNED_BUILD_DIR}")
 class PinnedBuildImportTests(unittest.TestCase):
     """Import the real pinned wago.tools exports and check known Retail rows."""

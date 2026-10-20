@@ -5,6 +5,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread::JoinHandle;
 
+#[cfg(feature = "native-proof-hold-persistence")]
+#[path = "native_proof_hold_persistence.rs"]
+pub(crate) mod native_proof_hold;
+
 #[cfg(test)]
 #[path = "persistence_writer_tests.rs"]
 mod tests;
