@@ -146,7 +146,7 @@ class BuildHostTests(unittest.TestCase):
             self.put(self.root, name, b"LIVE PRIVATE BYTES")
         self.common = self.base / "common"
         self.common.mkdir()
-        for name in ("depot-build.py", "build_hosts.py", "prepare_ui_icons.py", "native_cargo.py"):
+        for name in ("depot-build.py", "build_hosts.py", "prepare_ui_icons.py", "db2_source.py", "native_cargo.py"):
             shutil.copyfile(COMMON / name, self.common / name)
         (self.common / "native_build_hosts.py").write_text(FAKE_NATIVE)
         self.record = self.base / "record.json"
