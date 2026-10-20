@@ -1,3 +1,7 @@
+## 2026-10-19 — Lifebloom near-expiration refresh bloom
+
+[Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.
+
 ## 2026-10-19 — Wild Growth native-coefficient falloff policy
 
 [Source and proof boundary](investigations/follower-data.md#wild-growth-native-coefficient-falloff-policy--2026-10-19): explicit `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`, never legacy0.175/TC curve; absolute Retail shape uncertified. Pushed3ignored1fb0e4983 gives1PASS/2FAIL23.67s: native42 constant62×7 genuine decline RED,43 relative check blocked by same baseline prerequisite, natural expiry PASS. Minimal48438-only scheduled-deadline multipliere930 plus landed master merge43e0 gives unchanged3GREEN20.54s/no warnings:42 actual65→57,43 normalized native40%-less and unchanged seven-tick expiry. Enabled only afterward3327; final independent lead gate pending.
