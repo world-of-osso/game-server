@@ -188,7 +188,6 @@ fn assert_sphere_rejected(h: &mut Harness, when: &str) {
 }
 
 #[test]
-#[ignore = "RED: SPELL_COOLDOWNS_PERSIST_AND_REPLAY"]
 fn spell_cooldown_recipe_rejects_repeat_in_session_after_relog_and_after_restart() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("recipe-cooldown.redb");
@@ -266,7 +265,6 @@ fn cast_berserker_rage(h: &mut Harness) -> Vec<(u32, CastFailReason)> {
 }
 
 #[test]
-#[ignore = "RED: SPELL_COOLDOWNS_PERSIST_AND_REPLAY"]
 fn spell_cooldown_class_spell_rejects_repeat_in_session_after_relog_and_after_restart() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("class-cooldown.redb");
