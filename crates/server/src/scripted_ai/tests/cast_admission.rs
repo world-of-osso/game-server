@@ -19,7 +19,7 @@ pub(super) struct CastAdmissions {
 
 /// One actor's fixture RNG seed, applied only at natural ground release.
 #[derive(Component)]
-pub(super) struct GroundCombatSeed(pub u64);
+pub(in crate::scripted_ai) struct GroundCombatSeed(pub u64);
 
 /// Opt-in fixture evidence; never installed in production or ordinary test apps.
 #[derive(Resource)]
