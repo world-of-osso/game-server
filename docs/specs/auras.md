@@ -10,6 +10,10 @@ TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable state
 
 On a successful native18562 hit, consume exactly one HoT owned by that caster from the actual hit patient, in Regrowth8936 → Wild Growth48438 → Rejuvenation774 order (SimC76f8118 `swiftmend_t::impact`). Preserve other casters' instances and lower-priority HoTs. Actual learned native Verdant Infusion392410 disables consumption; no fabricated talent grants or aura removals. This hook retains ordinary healing/cost/timing/eligibility and does not implement the consumed-HoT bonus healing, which remains a named unimplemented effect outside this slice.
 
+## Abundance native threshold
+
+Actual learned207383 grants one native207640 buff only while the caster has at least the native threshold of own primary Rejuvenation774 auras active (70448 effect0 threshold5, buff CumulativeAura1). Reconcile on ordinary774 application/removal; natural expiry below the threshold removes the buff. Preserve native207640 cost/crit effects and duration, without old TC per-Rejuvenation stack increments. Germination counting, duplicate-refresh semantics and other-caster policy changes are outside this slice.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
