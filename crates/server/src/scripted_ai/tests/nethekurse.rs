@@ -488,3 +488,106 @@ fn encounter_coverage_nethekurse_peon_death_reactions_share_five_second_cooldown
         "cooldown releases for third death"
     );
 }
+
+fn taunt_requests(h: &Harness) -> usize {
+    [30735, 30741, 30745]
+        .iter()
+        .map(|&spell| requested_times(h, spell).len())
+        .sum()
+}
+
+#[test]
+#[ignore = "RED: source sewer trigger4347 not ported"]
+fn encounter_coverage_nethekurse_sewer_trigger_uses_authored_geometry() {
+    let (mut h, boss, _, _) = populated_nethekurse(1);
+    observe_admissions(&mut h, boss);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (x, y, z, radius): (f32, f32, f32, f32) = conn
+        .query_row(
+            "SELECT Pos_0,Pos_1,Pos_2,Radius FROM area_trigger WHERE ID=4347 AND ContinentID=540",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap();
+    let position = |x, y, z| {
+        let (x, y, z) = crate::terrain_height::wow_to_bevy(x, y, z);
+        Position { x, y, z }
+    };
+    let player = h.player();
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(position(x + radius + 1.0, y, z));
+    h.advance(0.1);
+    assert_eq!(taunt_requests(&h), 0, "outside does nothing");
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(position(x, y, z));
+    h.advance(0.1);
+    assert_eq!(taunt_requests(&h), 1, "actual outside-to-inside4347 edge");
+    h.advance(0.2);
+    assert_eq!(
+        taunt_requests(&h),
+        1,
+        "standing inside is not another entry"
+    );
+    assert!(h.inbox(1).chat.is_empty());
+}
+
+#[test]
+#[ignore = "RED: source chamber door OnGossipHello not ported"]
+fn encounter_coverage_nethekurse_chamber_door_real_use_starts_intro() {
+    let (mut h, boss, map, _) = populated_nethekurse(1);
+    observe_admissions(&mut h, boss);
+    let door = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::protocol::GameObjectInfo, &InMap)>()
+        .iter(h.app.world())
+        .find_map(|(actor, info, copy)| (info.entry == 182539 && *copy == map).then_some(actor))
+        .expect("authored chamber door");
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(door).unwrap();
+    h.app.world_mut().entity_mut(player).insert(position);
+    let connection = h.players[0].1;
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::UseGameObject>>(connection)
+        .unwrap()
+        .send::<shared::protocol::InteractionChannel>(shared::protocol::UseGameObject {
+            object: door.to_bits(),
+        });
+    h.advance(0.2);
+    assert_eq!(
+        taunt_requests(&h),
+        1,
+        "real UseGameObject ingress reaches source action"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::game_objects::GameObjectInUse>(door)
+            .is_none(),
+        "source handler does not UseDoorOrButton"
+    );
+}
+
+#[test]
+fn encounter_coverage_nethekurse_shadow_sear_caps_two_authentic_event_targets() {
+    let (mut h, boss, _, peons) = populated_nethekurse(1);
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30735, Some(boss), false)
+        .expect("ordinary native30735");
+    h.advance(0.1);
+    let affected = h
+        .creatures_of(17083)
+        .into_iter()
+        .filter(|&actor| h.has_aura(actor, 30735))
+        .collect::<Vec<_>>();
+    assert_eq!(affected.len(), 2, "source SPELLVALUE_MAX_TARGETS2");
+    assert!(
+        affected.iter().all(|actor| peons.contains(actor)),
+        "native StringId condition excludes ordinary converts"
+    );
+}
