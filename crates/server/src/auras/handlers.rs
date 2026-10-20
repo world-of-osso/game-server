@@ -232,6 +232,8 @@ pub const MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER: u32 = 270;
 pub const MOD_SPELL_DAMAGE_FROM_CASTER: u32 = 271;
 /// TC a352b1fa Unit::SpellDamageBonusTaken: owner + SpellLabel match.
 pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
+/// TC a352b1fa Unit.cpp8213–8219: white swings (no spell) from the aura owner.
+pub const MOD_MELEE_DAMAGE_FROM_CASTER: u32 = 343;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
@@ -433,7 +435,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         EFFECT_IMMUNITY => EffectImmunity,
         MOD_SCHOOL_MASK_DAMAGE_FROM_CASTER
         | MOD_SPELL_DAMAGE_FROM_CASTER
-        | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL => DamageFromCaster,
+        | MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL
+        | MOD_MELEE_DAMAGE_FROM_CASTER => DamageFromCaster,
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD
