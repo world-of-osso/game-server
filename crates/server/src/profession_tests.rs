@@ -11,6 +11,8 @@
 mod crafting_order_tests;
 #[path = "profession/crafting_origin_tests.rs"]
 mod crafting_origin_tests;
+#[path = "profession/recipe_cooldown_native_fixture.rs"]
+mod recipe_cooldown_native_fixture;
 #[path = "profession/spell_cooldown_persistence_tests.rs"]
 mod spell_cooldown_persistence_tests;
 

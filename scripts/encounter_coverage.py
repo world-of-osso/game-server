@@ -40,7 +40,18 @@ PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240
                  'boss_the_golden_serpent': [265773,265781,265910,265923],
                  'boss_dark_shaman_koranthal': [119928,119300,119971,119973],
                  'boss_lava_guard_gordoth': [119999,120024,50420],
-                 'boss_slagmaw': [119434,120384,119424,119425,119426,119428]}
+                 'boss_slagmaw': [119434,120384,119424,119425,119426,119428],
+                 'boss_watchkeeper_gargolmar': [30641,34645,30642,22857],
+                 'boss_omor_the_unscarred': [30686,30695,30707,35642,31901],
+                 'boss_vazruden_the_herald': [30717,30698,30694,30700,18430,20538,30691,32491,
+                                              33793,33794,34653,36920,30926,36921,39427],
+                 'boss_vazruden': [5301,30693,19130,40392],
+                 'boss_the_maker': [40059],
+                 'boss_kelidan_the_breaker': [30935,17228,30938,30940,37370,33775,37371],
+                 'boss_noxxion': [21687,22916,21708,21707],
+                 'boss_celebras_the_cursed': [21807,12747,21968],
+                 'boss_landslide': [18670,5568,21808],
+                 'boss_princess_theradras': [21909,21832,3391,21869]}
 PARTIAL_GAPS = {
     'boss_slagmaw': [
         'source five Lava Spits/Submerge/nonrepeat teleport/emerge and model-reach boundary supported; server-side spells/model geometry are separate reviewed-copy imports',
@@ -64,6 +75,39 @@ PARTIAL_GAPS = {
         'delayed follow/absorption/announcement supported: real-bake,3D reach,subyard repath,root/cast pause and4s retirement fixtures; source near-point collision/floor and full motion-priority equivalence unproved',
         'source-empty loot unproved',
         'ordinary balance, full instance and both-skin native acceptance unproved'],
+    'boss_watchkeeper_gargolmar': [
+        'source timed10-15min idle taunt, Mortal Wound30641 victim, Surge34645 farthest threat, incoming-below40 Request Heal30642 once and below20 Retaliation22857 then30s repeats; reset re-arms both',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_omor_the_unscarred': [
+        'source Shadow Bolt30686, Treacherous Aura30695, 30% hound summon30707 on cast, Orbital Strike35642 and Demonic Shield31901 supported',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_vazruden_the_herald': [
+        'source intro/flight/hover, descent and fall, Normal/Heroic ground parents and ground/flying Liquid Fire children supported',
+        'open: GO_NOT_SELECTABLE_FLAG_UNMODELLED (Fel Iron chest), NPC_ONESHOT_EMOTE_UNIMPLEMENTED, CREATURE_ENTRY_RESPAWN_RESTORE_UNIMPLEMENTED, TARGET32 XY/collision/hover gaps',
+        'native presentation, Heroic balance, loot and persistence unproved'],
+    'boss_vazruden': [
+        'source5301 appearance, 5s aggro speech, Revenge19130/40392, incoming-below40 Call Nazan30693 and unfiltered slay speech supported',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_the_maker': [
+        'source aggro speech, Heroic40059 beaker 5-15s/10-20s, player-only slay speech and death credit supported',
+        'open: MAKER_NORMAL_BEAKER_30925_ABSENT_70448 (Normal casts nothing), MAKER_DOMINATION_CHARM_UNIMPLEMENTED, BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_kelidan_the_breaker': [
+        'source dormant Evocation until five Shadowmoon Channeler17653 deaths, partner Star Beams, volley/Corruption/Burning Nova rotation, Burning Nova aura script Vortex/Fire Nova, slay/death speech and reset channeler respawn supported',
+        'open: KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448 (Heroic volley casts nothing), BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED; banish-immunity toggle not modelled',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_noxxion': [
+        'source Toxic Volley21687, Uppercut22916 and Summon Dummy21708 passive/uninteractible window with triggered21707 five13456 spawns supported',
+        'ordinary/native clear, knockback movement, loot and persistence unproved'],
+    'boss_celebras_the_cursed': [
+        'source Wrath21807, Entangling Roots12747 and Corrupt Forces21968 summon13743, death summon13716 supported',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_landslide': [
+        'source Knock Away18670, Trample5568 and below50 Landslide21808 then30-40s repeats; reset re-arms once',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_princess_theradras': [
+        'source Dust Field21909, Boulder21832, Thrash3391 dispatch and Repulsive Gaze21869; death summon Zaetar12238',
+        'Thrash extra-attacks effect19 unsupported; ordinary/native fight, loot, persistence and spirit quest/gossip unproved'],
 }
 PORTS = {'boss_hogger': [86604, 86620, 86736],
          'boss_lord_overheat': [12466, 86633, 86636],

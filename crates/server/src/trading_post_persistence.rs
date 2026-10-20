@@ -223,6 +223,10 @@ fn execute_and_snapshot(
     }
     let result = action.and_then(|action| {
         validate_membership(&action, catalog.as_ref(), &before, snapshot.now_unix)?;
+        #[cfg(feature = "native-proof-hold-persistence")]
+        if matches!(&action, Action::Purchase(_) | Action::Checkout(_)) {
+            crate::persistence_writer::native_proof_hold::wait_for_release()?;
+        }
         execute_action(db, account, action, snapshot.now_unix)
     });
     // The reply's rollover settlement is ordered too; never commit it on the tick.

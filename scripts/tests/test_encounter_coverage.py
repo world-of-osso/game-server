@@ -53,6 +53,21 @@ class CoverageTests(unittest.TestCase):
         self.assertFalse(any('infusion' in reason or 'Fel Spray' in reason for reason in gaps))
         self.assertEqual(actor['proof'], 'structural inspection only')
 
+    def test_landed_maker_port_is_partial_with_its_named_gaps(self):
+        source = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
+        with closing(sqlite3.connect(source.as_uri()+'?mode=ro', uri=True)) as connection:
+            order = {row[0]: dict(tier=3, sort=(3,row[0]), reason='test source inventory')
+                     for row in connection.execute('SELECT ID FROM map')}
+            records = coverage.collect(connection, [], [], {}, [], order)
+        maker = next(row for row in records if row['map_id']==542 and row['encounter_id']==1922)
+        actor = next(actor for actor in maker['actors'] if actor['entry']==17381)
+        self.assertFalse(actor['cpp_gap'])
+        self.assertEqual(actor['runtime_ai'], 'partial TC C++ port')
+        self.assertEqual(actor['admitted_casts'], [40059])
+        gaps = [reason for gap in actor['ai_gaps'] for reason in gap['reasons']]
+        self.assertTrue(any('MAKER_NORMAL_BEAKER_30925_ABSENT_70448' in reason for reason in gaps))
+        self.assertFalse(any('Herald' in reason or 'Toxic Volley' in reason for reason in gaps))
+
     def test_deadmines_source_primary_is_not_its_journal_companion(self):
         source = Path('/home/osso/Projects/world-of-osso/game-server/data/world.db')
         journals = [['Helix Gearbreaker', '', 0, 0, 90, 1, 2977]]
