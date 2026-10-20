@@ -4,10 +4,10 @@ Persist actual observed character logout authority, not guessed historical dates
 
 ## What it must do
 
-- [ ] A real in-world disconnect records observed logout time durably; reopen and repeated queries preserve it.
-- [ ] Unknown history remains absent. Never backfill from query/startup/migration time or RestData timestamps (admin rest commands also write those).
-- [ ] Offline same-guild snapshots carry optional timestamp authority; online snapshots suppress stale offline time. Other-guild members remain private.
-- [ ] Distinct genuine logout events retain distinct timestamps. No new guild-only mirror of a second authoritative logout field.
+- [x] A real in-world disconnect records observed logout time durably; reopen and repeated queries preserve it.
+- [x] Unknown history remains absent. Never backfill from query/startup/migration time or RestData timestamps (admin rest commands also write those).
+- [x] Offline same-guild snapshots carry optional timestamp authority; online snapshots suppress stale offline time. Other-guild members remain private.
+- [x] Distinct genuine logout events retain distinct timestamps. No new guild-only mirror of a second authoritative logout field.
 
 ## How it works
 
@@ -24,7 +24,7 @@ Persist actual observed character logout authority, not guessed historical dates
 
 ## Known gaps (current cycle)
 
-- [ ] Implementation, actual RED→GREEN, coordinated P/S/E landing and both-skin native disconnect/readback/reconnect proof pending.
+- [ ] Actual authority RED observed after real disconnect/save/despawn and closed DB/new-app reopen. Implementation committed; focused GREEN, coordinated P/S/E landing and both-skin native disconnect/readback/reconnect proof pending.
 
 ## Out of scope
 
