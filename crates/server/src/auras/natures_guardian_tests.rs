@@ -38,6 +38,16 @@ fn aura(h: &Harness, unit: Entity, spell: u32) -> Option<AuraInstance> {
         .cloned()
 }
 
+fn cast_native_wound(h: &mut Harness, target: Entity) {
+    crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, WOUND, Some(target), false).unwrap();
+    // Native209140 SpellMisc183160/CastingTime5 is2000ms, not instant.
+    let dt = h.app.world().resource::<Time>().delta_secs();
+    let frames = h.app.world().get::<CastState>(h.npc).map_or(0, |cast| {
+        ((cast.duration - cast.elapsed).max(0.0) / dt).ceil() as usize
+    });
+    h.advance(frames + 3);
+}
+
 fn buff_native_npc(h: &mut Harness, npc: Entity) {
     super::apply_aura(
         h.app.world_mut(),
@@ -184,8 +194,7 @@ fn native_natures_guardian_limited_cooldown_preserves_actual_player_cast_and_exp
 fn native_natures_guardian_direct_heal_and_nonlethal_repeat_window_are_qualified() {
     let mut h = fixture(false);
     let (source, first) = (h.caster, h.npc);
-    crate::spell_cast::creature_cast(h.app.world_mut(), first, WOUND, Some(source), false).unwrap();
-    h.advance(3);
+    cast_native_wound(&mut h, source);
     assert_eq!(h.health(source), 200.0);
     crate::spell_cast::cast_triggered(h.app.world_mut(), source, HEAL, Some(source), 1);
     h.advance(3);
