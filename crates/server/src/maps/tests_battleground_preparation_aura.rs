@@ -47,6 +47,69 @@ fn bg_preparation_aura_native44521_qualification_changes_cost_and_affordability_
 }
 
 #[test]
+fn bg_preparation_aura_arena_ack_retains32727_without44521() {
+    let (mut h, players, _database) = pending_arena(25);
+    let data = crate::spell_cast::test_harness::world_db().unwrap();
+    let spells = [
+        32727,
+        PREPARATION,
+        DESERTER_SPELL_ID,
+        DUNGEON_DESERTER_SPELL_ID,
+    ]
+    .into_iter()
+    .map(|id| data.store.get(id).unwrap().clone())
+    .collect();
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(spells));
+    for who in &players {
+        let match_id = battleground(&h, who).match_id;
+        let updates = request_port(&mut h, who, match_id);
+        assert!(updates.iter().all(|update| update.error.is_none()));
+        assert_eq!(h.new_worlds(who).len(), 1);
+        h.ack(who);
+        assert!(aura_id(&h, who, PREPARATION).is_none());
+        assert!(
+            aura_id(&h, who, 32727).is_some(),
+            "existing arena preparation remains"
+        );
+    }
+}
+
+#[test]
+fn bg_preparation_aura_declined_pending_invitation_cannot_grant_zero_cost() {
+    for queue in [1018, 32] {
+        let (mut h, players, _database) = fixture(queue);
+        let who = &players[0];
+        let match_id = battleground(&h, who).match_id;
+        h.app
+            .world_mut()
+            .get_mut::<MessageSender<RespondToBattlegroundInvite>>(who.connection)
+            .unwrap()
+            .send::<PvpChannel>(RespondToBattlegroundInvite {
+                match_id,
+                accepted: false,
+            });
+        let updates = h.receive_pvp_updates(5);
+        assert!(
+            updates[&who.connection]
+                .iter()
+                .all(|update| update.error.is_none())
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<crate::pvp::PlayerPvpState>(who.player)
+                .unwrap()
+                .battleground
+                .is_none()
+        );
+        assert!(aura_id(&h, who, PREPARATION).is_none());
+        assert_eq!(costs(&h, who), BASELINE_COSTS);
+        assert!(h.new_worlds(who).is_empty());
+    }
+}
+
+#[test]
 #[ignore = "RED: ordinary Waiting ACK does not grant native Preparation44521"]
 fn bg_preparation_aura_concrete_actual_ack_grants_once_then_start_restores_cost() {
     assert_arrival(1018);
