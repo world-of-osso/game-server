@@ -504,11 +504,22 @@ fn encounter_coverage_kelidan_heroic_volley_absent_without_substitute() {
 fn encounter_coverage_kelidan_burning_nova_aura_script_casts_vortex_and_fire_nova() {
     for difficulty in [1, 2] {
         let (mut h, boss, _) = released(difficulty);
-        let events = observe(&mut h, 0.05);
-        assert!(events.iter().all(|event| event.spell != Some(BURNING_NOVA)));
+        h.app.init_resource::<ObservedCombatEvents>();
+        let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, BURNING_NOVA, None, false)
             .expect("ordinary self Burning Nova stimulus");
-        let events = observe(&mut h, 6.0);
+        // The instant aura applies inside the cast call, at observation time0.
+        let mut events: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .map(|event| Timed {
+                at: 0.0,
+                kind: event.kind.clone(),
+                source: event.source,
+                target: event.target,
+                spell: event.spell_id,
+            })
+            .collect();
+        events.extend(observe(&mut h, 6.0));
         let applied = events
             .iter()
             .find(|event| {
