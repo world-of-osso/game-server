@@ -28,6 +28,7 @@ const BONE_SHIELD: u32 = 195181;
 const IMPROVED_REGROWTH: u32 = 231032;
 pub(crate) const LIFEBLOOM: u32 = 33763;
 const LIFEBLOOM_HEAL: u32 = 33778;
+const LIFEBLOOM_REFRESH_BLOOM_FRACTION: f64 = 0.3;
 pub(crate) const CENARION_WARD: u32 = 102351;
 const CENARION_HEAL: u32 = 102352;
 
@@ -163,8 +164,38 @@ pub(super) fn regrowth_crit(world: &World, caster: Entity, target: Entity) -> Op
     Some(modified + script_effect_value(world, caster, IMPROVED_REGROWTH, 0))
 }
 
-///33763 names33778 only for expiry/dispel. Near-expiration refresh threshold
-///is absent from inspected local rows and is deliberately not guessed.
+/// LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC: SimC76f8118 sc_druid.cpp6229–6240.
+/// Read the old owned deadline before native application replaces it.
+pub(super) fn bloom_lifebloom_before_refresh(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) {
+    if spell != LIFEBLOOM {
+        return;
+    }
+    let now = crate::auras::aura_now(world);
+    let near_expiration = world
+        .get::<ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == LIFEBLOOM && aura.caster == caster)
+        })
+        .is_some_and(|aura| {
+            let threshold_seconds =
+                f64::from(aura.duration_ms) / 1000.0 * LIFEBLOOM_REFRESH_BLOOM_FRACTION;
+            aura.expires_at
+                .is_some_and(|expiry| expiry - now <= threshold_seconds)
+        });
+    if near_expiration {
+        spell_cast::cast_triggered(world, caster, LIFEBLOOM_HEAL, Some(target), depth + 1);
+    }
+}
+
+///33763 names33778 for expiry/dispel; refresh is handled before application.
 pub(crate) fn bloom_lifebloom(
     world: &mut World,
     unit: Entity,
