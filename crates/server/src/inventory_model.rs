@@ -461,6 +461,12 @@ impl InventoryModel {
             && self.definition_source(left.item_guid) == self.definition_source(right.item_guid)
     }
 
+    fn same_stack_identity(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
+        self.same_definition(left, right)
+            && self.crafting_origins.get(&left.item_guid)
+                == self.crafting_origins.get(&right.item_guid)
+    }
+
     // --- Views -----------------------------------------------------------
 
     pub(crate) fn appearance(&self) -> &shared::components::EquipmentAppearance {
@@ -821,7 +827,7 @@ impl InventoryModel {
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. }
             )
-        ) && self.same_definition(source, target)
+        ) && self.same_stack_identity(source, target)
             && target.stack_count < self.max_stack(target)
     }
 
@@ -1268,7 +1274,7 @@ impl InventoryModel {
         }
         self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
-            let fits = self.same_definition(source, target)
+            let fits = self.same_stack_identity(source, target)
                 && target.stack_count + count <= self.max_stack(target);
             if !fits {
                 return Err(error(
@@ -1643,12 +1649,14 @@ impl InventoryModel {
         }
         let mut left = item.stack_count;
         let sources = &self.definition_sources;
+        let origins = &self.crafting_origins;
         for other in self.bags.iter_mut().flatten().flatten() {
             if left == 0 {
                 break;
             }
             if other.item_id == item.item_id
                 && sources[&other.item_guid] == source
+                && origins.get(&other.item_guid) == origins.get(&item.item_guid)
                 && other.stack_count < max_stack
             {
                 let moved = left.min(max_stack - other.stack_count);
@@ -1807,7 +1815,9 @@ impl InventoryModel {
         let max_stack = template.max_stack.max(1);
         let room_here = match self.get(location) {
             None => max_stack,
-            Some(other) if self.same_definition(other, &item) && other.stack_count < max_stack => {
+            Some(other)
+                if self.same_stack_identity(other, &item) && other.stack_count < max_stack =>
+            {
                 max_stack - other.stack_count
             }
             Some(_) => {
@@ -1862,7 +1872,7 @@ impl InventoryModel {
             .flat_map(|(_, cells)| cells)
             .map(|cell| match cell {
                 None => max_stack,
-                Some(other) if self.same_definition(other, item) => {
+                Some(other) if self.same_stack_identity(other, item) => {
                     max_stack.saturating_sub(other.stack_count)
                 }
                 Some(_) => 0,

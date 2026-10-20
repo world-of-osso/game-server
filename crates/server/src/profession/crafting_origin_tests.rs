@@ -1,9 +1,16 @@
 use super::*;
 
 #[test]
-#[ignore = "RED: crafted stacks merge into unknown-origin instances"]
 fn crafting_origin_stack_preserves_unknown_item_and_final_surviving_crafted_guid() {
     let mut h = harness(10).unwrap();
+    assert!(
+        h.app
+            .world()
+            .resource::<ProfessionData>()
+            .crafting_origin(212205)
+            .is_none(),
+        "Rogue Create:CrimsonVial is a class ability, not a profession recipe"
+    );
     h.learn_tailoring();
     h.give(2996, "Bolt of Linen Cloth", 1);
     let unknown_guid = persistence::load_inventory(h.db(), h.character_id)
@@ -18,7 +25,7 @@ fn crafting_origin_stack_preserves_unknown_item_and_final_surviving_crafted_guid
     assert!(h.take::<CastFailed>().is_empty());
     assert_eq!(h.bag_count(2589), 0);
     assert_eq!(h.bag_count(2996), 3);
-    let model = crate::inventory::load_model(
+    let mut model = crate::inventory::load_model(
         h.db(),
         h.app
             .world()
@@ -59,6 +66,70 @@ fn crafting_origin_stack_preserves_unknown_item_and_final_surviving_crafted_guid
     assert_eq!(
         crafted["crafting_origin"],
         serde_json::json!({"skill_line_ability_id":2359,"recipe_spell_id":2963,"crafting_quality_id":null})
+    );
+    let crafted_guid = crafted["item_guid"].as_u64().unwrap();
+    let from = model
+        .view()
+        .into_iter()
+        .find(|(_, item)| item.item_guid == crafted_guid)
+        .unwrap()
+        .0;
+    let unknown_slot = model
+        .view()
+        .into_iter()
+        .find(|(_, item)| item.item_guid == unknown_guid)
+        .unwrap()
+        .0;
+    let before = model.inventory_snapshot();
+    let split_guid = persistence::next_id(h.db(), "item_instance");
+    assert!(
+        model.split(from, unknown_slot, 1, split_guid).is_err(),
+        "manual split cannot merge known origin into unknown"
+    );
+    assert_eq!(model.inventory_snapshot(), before);
+    let destination = shared::protocol::ItemLocation::Bag { bag: 0, slot: 15 };
+    assert!(!model.view().contains_key(&destination));
+    model.split(from, destination, 1, split_guid).unwrap();
+    persistence::inventory_store::save_inventory_record(
+        h.db(),
+        h.character_id,
+        &model.into_record(),
+    );
+    let reloaded = crate::inventory::load_model(
+        h.db(),
+        h.app
+            .world()
+            .resource::<crate::item_templates::ItemTemplates>(),
+        h.character_id,
+    )
+    .unwrap()
+    .view();
+    let split = &reloaded[&destination];
+    assert_eq!(split.item_guid, split_guid);
+    assert_eq!(split.count, 1);
+    assert_eq!(
+        split.crafting_origin,
+        Some(shared::protocol::CraftingOrigin {
+            skill_line_ability_id: 2359,
+            recipe_spell_id: 2963,
+            crafting_quality_id: None
+        })
+    );
+    assert_eq!(
+        reloaded
+            .values()
+            .find(|item| item.item_guid == crafted_guid)
+            .unwrap()
+            .count,
+        1
+    );
+    assert_eq!(
+        reloaded
+            .values()
+            .find(|item| item.item_guid == unknown_guid)
+            .unwrap()
+            .crafting_origin,
+        None
     );
 }
 

@@ -14,6 +14,8 @@ use crate::race_class::race_mask_allows;
 
 /// `SkillLine.CategoryID` of primary professions (TrinityCore `SKILL_CATEGORY_PROFESSION`).
 pub const SKILL_CATEGORY_PROFESSION: u32 = 11;
+/// TrinityCore SkillLineCategory: secondary professions, not class abilities.
+const SKILL_CATEGORY_SECONDARY: u32 = 9;
 /// `SkillLineAbilityAcquireMethod::AutomaticSkillRank`.
 pub const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 /// AutomaticSkillRank, AutomaticCharLevel, LearnedOrAutomaticCharLevel
@@ -211,6 +213,12 @@ impl ProfessionData {
         let [ability] = self.abilities_for_spell(spell) else {
             return None;
         };
+        if !matches!(
+            self.skill_line(ability.skill_line)?.category,
+            SKILL_CATEGORY_PROFESSION | SKILL_CATEGORY_SECONDARY
+        ) {
+            return None;
+        }
         Some(shared::protocol::CraftingOrigin {
             skill_line_ability_id: ability.id,
             recipe_spell_id: ability.spell,
