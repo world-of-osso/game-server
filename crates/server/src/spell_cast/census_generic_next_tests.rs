@@ -6,6 +6,14 @@ use shared::components::{CombatStatus, Health, Mana, PowerType};
 use shared::protocol::CombatLogKind;
 
 fn apply_native(h: &mut Harness, id: u32, effect_mask: u32) {
+    assert!(
+        h.app
+            .world()
+            .resource::<crate::spell_info::SpellStore>()
+            .get(id)
+            .is_some(),
+        "native aura{id} must be in the fixture store"
+    );
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -21,7 +29,7 @@ fn apply_native(h: &mut Harness, id: u32, effect_mask: u32) {
 #[test]
 #[ignore = "RED census-next137: percent energize missing"]
 fn census_next137_native_mana_uses_target_max_and_logs_overflow() {
-    let mut h = harness(Vec::new(), &[], 8).unwrap();
+    let mut h = harness(Vec::new(), &[5405], 8).unwrap();
     let spell = world_db().unwrap().store.get(5405).unwrap();
     assert_eq!(
         (spell.effects[0].effect, spell.effects[0].base_points),
@@ -45,7 +53,7 @@ fn census_next137_native_mana_uses_target_max_and_logs_overflow() {
 #[test]
 #[ignore = "RED census-next137: percent energize missing"]
 fn census_next137_native_energy_uses_raw_pool_and_dead_target_is_untouched() {
-    let mut h = harness(Vec::new(), &[], 4).unwrap();
+    let mut h = harness(Vec::new(), &[55316], 4).unwrap();
     h.app
         .world_mut()
         .entity_mut(h.caster)
@@ -67,7 +75,7 @@ fn census_next137_native_energy_uses_raw_pool_and_dead_target_is_untouched() {
 #[test]
 #[ignore = "RED census-next307: label mobility missing"]
 fn census_next307_native_label_allows_foreign_family_and_removal_interrupts() {
-    let mut h = harness(Vec::new(), &[133], 8).unwrap();
+    let mut h = harness(Vec::new(), &[133, 343012], 8).unwrap();
     let aura = world_db().unwrap().store.get(343012).unwrap();
     assert_eq!(
         (aura.effects[0].aura, aura.effects[0].misc_values[0]),
@@ -125,7 +133,7 @@ fn census_next307_native_label_allows_foreign_family_and_removal_interrupts() {
 #[test]
 #[ignore = "RED census-next307: label mobility missing"]
 fn census_next307_label_mismatch_does_not_grant_permission() {
-    let mut h = harness(Vec::new(), &[133], 8).unwrap();
+    let mut h = harness(Vec::new(), &[133, 295263], 8).unwrap();
     // Native295263 selects661, unlike Fireball's native labels17/16/292.
     apply_native(&mut h, 295263, 1);
     assert!(crate::auras::take_unhandled_auras(h.app.world_mut()).is_empty());
@@ -172,7 +180,7 @@ fn heal_fixture(h: &mut Harness, spell_id: u32, periodic: bool, health_pct: f32)
 #[test]
 #[ignore = "RED census-next354: missing-health healing missing"]
 fn census_next354_native_regenesis_scales_live_missing_health_and_removes() {
-    let mut h = harness(Vec::new(), &[], 11).unwrap();
+    let mut h = harness(Vec::new(), &[383191, 774], 11).unwrap();
     apply_native(&mut h, 383191, 1);
     let baseline = heal_fixture(&mut h, 774, true, 0.5);
     assert_eq!(baseline, 105.0);
@@ -190,7 +198,7 @@ fn census_next354_native_regenesis_scales_live_missing_health_and_removes() {
 #[test]
 #[ignore = "RED census-next354: missing-health healing missing"]
 fn census_next354_native_class_mask_and_family_exclusions() {
-    let mut h = harness(Vec::new(), &[], 11).unwrap();
+    let mut h = harness(Vec::new(), &[383191, 8936, 8004], 11).unwrap();
     apply_native(&mut h, 383191, 1);
     assert!(crate::auras::take_unhandled_auras(h.app.world_mut()).is_empty());
     assert_eq!(
