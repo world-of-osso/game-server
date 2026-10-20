@@ -7,8 +7,21 @@ const NORMAL_BEAKER: u32 = 30925;
 const HEROIC_BEAKER: u32 = 40059;
 const DOMINATION: u32 = 30923;
 
+/// Like Ramparts, the boss slot is the fixture-only ordinal0 binding; production
+/// world data publishes no Blood Furnace creature binding yet.
 fn maker_copy(difficulty: u32) -> (Harness, Entity, InMap) {
-    bound_boss_at_difficulty(MAKER, BLOOD_FURNACE, 0, difficulty, None)
+    let (mut h, boss, map) = bound_boss_at_difficulty(MAKER, BLOOD_FURNACE, 0, difficulty, None);
+    let directory = crate::ground::ground_data_dir();
+    let wdt = h.app.world().resource::<MapStore>().maps[&BLOOD_FURNACE].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &directory,
+        std::collections::HashMap::from([(BLOOD_FURNACE, wdt)]),
+    ));
+    h.app.insert_resource(
+        crate::line_of_sight::LineOfSight::load(&directory.join("los"))
+            .expect("authentic eye tables"),
+    );
+    (h, boss, map)
 }
 
 /// Advance `secs`, reporting whether `target` was ever in a knockback flight.
@@ -63,14 +76,12 @@ fn encounter_coverage_maker_native_inputs_qualify() {
         );
         assert!(spells.get(HEROIC_BEAKER).is_some());
         assert!(spells.get(DOMINATION).is_some());
-        // HARNESS SETUP: production state transition proves ordinal0 resolves encounter1922.
-        assert!(instance_script::set_boss_state(
-            h.app.world_mut(),
-            map,
-            0,
-            EncounterState::InProgress
-        ));
-        h.advance(0.05);
+        h.engage(boss);
+        h.advance(0.5);
+        assert_eq!(
+            instance_script::get_boss_state(h.app.world_mut(), map, 0),
+            Some(EncounterState::InProgress)
+        );
         assert!(
             h.inbox(0)
                 .starts

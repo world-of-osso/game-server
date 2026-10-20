@@ -314,10 +314,7 @@ fn encounter_fixture(
             std::collections::HashMap::from([(map_id, wdt)]),
         ));
     }
-    // Blood Furnace has no installed creature binding; its BossAI must come from the script.
-    if map_id != 542 {
-        maps.raid_creature_encounters.insert((map_id, entry), bit);
-    }
+    maps.raid_creature_encounters.insert((map_id, entry), bit);
     if map_id == 43 {
         // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
         for (entry, bit) in [
