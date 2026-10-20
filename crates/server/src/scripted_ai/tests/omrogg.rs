@@ -370,7 +370,6 @@ fn current_victim(h: &mut Harness, boss: Entity) -> Option<Entity> {
 }
 
 #[test]
-#[ignore = "RED: O'mrogg script not ported"]
 fn encounter_coverage_omrogg_aggro_dialogue_from_the_heads() {
     for difficulty in [1, 2] {
         let (mut h, boss, _) = listening(difficulty);
@@ -384,7 +383,6 @@ fn encounter_coverage_omrogg_aggro_dialogue_from_the_heads() {
 }
 
 #[test]
-#[ignore = "RED: O'mrogg script not ported"]
 fn encounter_coverage_omrogg_rotation_beatdown_lines_and_burning_maul_roar() {
     for difficulty in [1, 2] {
         let (mut h, boss, _) = listening(difficulty);
@@ -444,7 +442,6 @@ fn encounter_coverage_omrogg_rotation_beatdown_lines_and_burning_maul_roar() {
 }
 
 #[test]
-#[ignore = "RED: Beatdown AfterCast ResetAllThreat not ported"]
 fn encounter_coverage_omrogg_beatdown_zeroes_threat_and_keeps_references() {
     let (mut h, boss, map) = listening(1);
     let tank = h.player();
@@ -495,7 +492,6 @@ fn encounter_coverage_omrogg_beatdown_zeroes_threat_and_keeps_references() {
 }
 
 #[test]
-#[ignore = "RED: Burning Maul AuraScript not ported"]
 fn encounter_coverage_omrogg_burning_maul_swaps_weapon_and_procs_blast_wave() {
     let (mut h, boss, _) = listening(1);
     seed_rotation(&mut h, boss);
@@ -537,7 +533,6 @@ fn encounter_coverage_omrogg_burning_maul_swaps_weapon_and_procs_blast_wave() {
 }
 
 #[test]
-#[ignore = "RED: O'mrogg script not ported"]
 fn encounter_coverage_omrogg_slay_lines_from_the_heads() {
     let (mut h, boss, _) = listening(1);
     super::omor_slay::install_player_death_transition(&mut h);
@@ -553,7 +548,6 @@ fn encounter_coverage_omrogg_slay_lines_from_the_heads() {
 }
 
 #[test]
-#[ignore = "RED: O'mrogg script not ported"]
 fn encounter_coverage_omrogg_death_lines_then_heads_despawn() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = listening(difficulty);
