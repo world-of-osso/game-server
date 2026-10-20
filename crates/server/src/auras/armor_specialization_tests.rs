@@ -93,7 +93,6 @@ fn assert_unspecialized(h: &Harness, unspecialized_strength: f32) {
 }
 
 #[test]
-#[ignore = "RED: armor specialization ignores its equipped-armor requirement"]
 fn armor_specialization_native_plate_absent_without_armor() {
     let base = strength(&paladin(false, &[]));
     assert_unspecialized(&paladin(true, &[]), base);
@@ -106,7 +105,6 @@ fn armor_specialization_native_full_plate_applies_five_percent_strength() {
 }
 
 #[test]
-#[ignore = "RED: armor specialization ignores its equipped-armor requirement"]
 fn armor_specialization_native_unequipping_chest_removes_and_reequip_restores() {
     let partial = strength(&paladin(false, &plate_without_chest()));
     let full = strength(&paladin(false, &LOADOUT_164_PLATE));
@@ -119,7 +117,6 @@ fn armor_specialization_native_unequipping_chest_removes_and_reequip_restores() 
 }
 
 #[test]
-#[ignore = "RED: armor specialization ignores its equipped-armor requirement"]
 fn armor_specialization_native_leather_chest_does_not_fit_plate() {
     let mut items = plate_without_chest();
     items.push((EquipmentSlot::Chest, LEATHER_CHEST));
