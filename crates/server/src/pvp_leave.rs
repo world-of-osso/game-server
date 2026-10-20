@@ -66,6 +66,7 @@ fn return_to_origin(
     }
     if !arena {
         super::remove_battleground_mount_auras(world, player);
+        super::clear_battleground_preparation(world, player);
     }
     world
         .entity_mut(player)

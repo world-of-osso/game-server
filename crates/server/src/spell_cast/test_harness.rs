@@ -31,6 +31,10 @@ use crate::stats::CharacterStats;
 #[derive(Resource, Default)]
 pub(crate) struct ObservedCombatEvents(pub Vec<CombatLogEvent>);
 
+/// Actual successful triggered launch boundary; FULL_MASK casts have no wire SpellGo.
+#[derive(Resource, Default)]
+pub(crate) struct ObservedTriggeredCasts(pub Vec<(Entity, u32, Option<Entity>)>);
+
 pub(crate) struct WorldData {
     pub(crate) store: SpellStore,
     pub(crate) classes: ClassSpells,

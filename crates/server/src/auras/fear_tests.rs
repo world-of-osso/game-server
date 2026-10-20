@@ -395,6 +395,8 @@ const BERSERKER_RAGE: u32 = 18499;
 const WILL_OF_THE_FORSAKEN: u32 = 7744;
 const BARKSKIN: u32 = 22812;
 const EVASION: u32 = 5277;
+/// Native50240: -200 attacker melee hit chance for30s.
+const EVASIVE_MANEUVERS: u32 = 50240;
 const KOBOLD_VERMIN: u32 = 6;
 const KOBOLD_DISPLAY: u32 = 10913;
 const WARRIOR: u8 = 1;
@@ -417,14 +419,20 @@ fn kobold_data() -> WorldData {
 
 /// A warrior with Intimidating Shout and a world kobold with creature AI and aggro.
 fn shout_harness() -> Harness {
-    let mut h = harness_with_plugins(Vec::new(), &[INTIMIDATING_SHOUT], WARRIOR, false, |app| {
-        app.insert_resource(kobold_data());
-        app.add_plugins((
-            crate::creature_ai::CreatureAiPlugin,
-            crate::creature_aggro::CreatureAggroPlugin,
-            crate::unit_target::UnitTargetPlugin,
-        ));
-    })
+    let mut h = harness_with_plugins(
+        Vec::new(),
+        &[INTIMIDATING_SHOUT, EVASIVE_MANEUVERS],
+        WARRIOR,
+        false,
+        |app| {
+            app.insert_resource(kobold_data());
+            app.add_plugins((
+                crate::creature_ai::CreatureAiPlugin,
+                crate::creature_aggro::CreatureAggroPlugin,
+                crate::unit_target::UnitTargetPlugin,
+            ));
+        },
+    )
     .expect("real world.db required");
     let position = *h.app.world().get::<Position>(h.npc).unwrap();
     h.app.world_mut().entity_mut(h.npc).insert((
@@ -458,9 +466,73 @@ fn shout_harness() -> Harness {
 }
 
 fn kobold_swings_within(h: &mut Harness, frames: usize) -> bool {
-    let health = h.health(h.caster);
+    let first_event = h.inbox.log.len();
     h.advance(frames);
-    h.health(h.caster) < health
+    let swung = h.inbox.log[first_event..].iter().any(|event| {
+        event.source == Some(h.npc.to_bits())
+            && event.target == Some(h.caster.to_bits())
+            && event.spell_id.is_none()
+            && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+    });
+    if swung {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(h.npc),
+            Some(&crate::creature_ai::CreatureState::Pursuing {
+                target: h.caster.to_bits()
+            })
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::creature_aggro::CurrentVictim>(h.npc)
+                .and_then(|victim| victim.target),
+            Some(h.caster)
+        );
+    }
+    swung
+}
+
+#[test]
+fn class_completeness_native_fear_readiness_counts_real_forced_miss_attempts() {
+    let mut h = shout_harness();
+    let (npc, player) = (h.npc, h.caster);
+    h.cast_and_deliver(EVASIVE_MANEUVERS, Some(player));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has_aura(h.app.world(), player, EVASIVE_MANEUVERS));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(player)
+            .unwrap()
+            .modifier(184),
+        -200.0
+    );
+    let health = h.health(player);
+    crate::creature_aggro::attack_start(h.app.world_mut(), npc, player);
+    let swung = kobold_swings_within(&mut h, 100);
+    assert_eq!(
+        h.health(player),
+        health,
+        "native forced misses preserve health"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(npc.to_bits())
+                && event.target == Some(player.to_bits())
+                && event.spell_id.is_none()
+                && event.kind == CombatLogKind::Miss(MissKind::Miss)
+        }),
+        "{:?}",
+        h.inbox.log
+    );
+    assert!(
+        swung,
+        "real native Miss attempts must count as swings: {:?}",
+        h.inbox.log
+    );
 }
 
 /// The npc fears the harness player with one native fear effect.
