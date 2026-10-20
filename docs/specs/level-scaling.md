@@ -102,7 +102,7 @@ Client
 
 - [ ] Resolve the reported Northshire native-stat display/combat block at the client/runtime boundary. Current Godot `targeting.rs` projects levels and health per viewer (client commit `ec4a6eff`); server real-spawn regressions pass, so native `npc-info` values alone do not reproduce the block.
 - [ ] Creature attack power is not modelled. Creature armor is ExpectedStat CreatureArmor ([player damage](player-damage.md)).
-- [ ] Authored ordinary-NPC cadence and native positive/negative/mid-swing haste regressions are committed; targeted GREEN and requested combat/creature/encounter/scripted integration proof pending.
+- [ ] Five native ordinary-NPC cadence/positive/negative/mid-swing controls pass at2386d767d (15.88s). They are enabled with source-zero/default and combined252/319 controls; requested tip combat/creature/encounter/scripted integration proof is pending.
 - [ ] Nameplates show no level. Retail's default nameplates show none either. Unit tooltips are the npctooltip branch's, which calls `level_for_viewer`.
 - [ ] Kill reputation still uses the template's `max(minlevel, maxlevel)`. That matches the scaled level except for creatures with a negative delta.
 - [ ] Mythic+ seasons are not modelled: ContentTuningXExpected rows with a `MinMythicPlusSeasonID` never apply, and rows with only a maximum season always do. No map 0 tuning uses either.

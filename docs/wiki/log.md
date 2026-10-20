@@ -1,6 +1,6 @@
 ## 2026-10-19 — Ordinary NPC authored cadence
 
-[Source timing](systems/player-damage.md#ordinary-npc-authored-cadence--2026-10-19): pushed ignored674bb88eb before two genuine ordinary-source-spawn REDs (Prowler1181500ms/Murloc1713000ms both observed2.050s). Ignored05df30702 adds real2825/+30,246/−35 and mid-swing progress controls: all five genuine RED, helperexit101/23.99s;246 measurement bounded before authored6s expiry. Loader/base+difficulty template cache now supplies the ordinary white clock with TC zero normalization and signed/progress factors. Player/controlled-pet/SpiritWolf weapons and per-hit damage stay unchanged. Targeted GREEN and requested touched-family proof pending; no deployment.
+[Source timing](systems/player-damage.md#ordinary-npc-authored-cadence--2026-10-19): pushed ignored674bb88eb before two genuine ordinary-source-spawn REDs (Prowler1181500ms/Murloc1713000ms both observed2.050s). Ignored05df30702 adds real2825/+30,246/−35 and mid-swing progress controls: all five genuine RED, helperexit101/23.99s;246 measurement bounded before authored6s expiry. Loader/base+difficulty template cache now supplies the ordinary white clock with TC zero normalization and signed/progress factors. Player/controlled-pet/SpiritWolf weapons and per-hit damage stay unchanged. Fresh ignored2386d767dGREEN5/0/15.88s/no warnings, then enabled five plus source-zero and combined252/319 controls. Requested tip touched-family proof remains pending; no deployment.
 
 ## 2026-10-19 — Earthen Rage native RED and consumer
 

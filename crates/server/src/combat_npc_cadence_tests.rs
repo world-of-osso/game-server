@@ -111,7 +111,7 @@ fn assert_source_cadence(entry: u32, authored_ms: u32) {
     assert!(h.app.world().get::<Health>(h.caster).unwrap().current > 0.0);
 }
 
-fn apply_native_haste(h: &mut Harness, npc: Entity, spell_id: u32, amount: f32) {
+fn apply_native_clock_effect(h: &mut Harness, npc: Entity, spell_id: u32) {
     crate::auras::apply_aura(
         h.app.world_mut(),
         &crate::auras::AuraApplication {
@@ -123,6 +123,10 @@ fn apply_native_haste(h: &mut Harness, npc: Entity, spell_id: u32, amount: f32) 
         },
     );
     assert!(crate::auras::has_aura(h.app.world(), npc, spell_id));
+}
+
+fn apply_native_haste(h: &mut Harness, npc: Entity, spell_id: u32, amount: f32) {
+    apply_native_clock_effect(h, npc, spell_id);
     assert_eq!(
         h.app
             .world()
@@ -154,33 +158,28 @@ fn assert_modified_cadence(spell_id: u32, amount: f32, factor: f64) {
 }
 
 #[test]
-#[ignore = "RED: source Prowler118 has1500ms but ordinary NPC swings at hardcoded2s"]
 fn ordinary_npc_authored_cadence_prowler_1500ms() {
     assert_source_cadence(118, 1500);
 }
 
 #[test]
-#[ignore = "RED: source Murloc Warrior171 has3000ms but ordinary NPC swings at hardcoded2s"]
 fn ordinary_npc_authored_cadence_murloc_warrior_3000ms() {
     assert_source_cadence(171, 3000);
 }
 
 #[test]
-#[ignore = "RED: native Bloodlust2825 effect0 must modify Prowler's authored1500ms"]
 fn ordinary_npc_authored_cadence_native_positive_haste() {
     // Native2825 effect0: MELEE_SLOW193 +30; TC time ×100/130.
     assert_modified_cadence(2825, 30.0, 100.0 / 130.0);
 }
 
 #[test]
-#[ignore = "RED: native246 effect0 slows authored1500ms by35%, not inverse haste"]
 fn ordinary_npc_authored_cadence_native_negative_haste() {
     // Native246 effect0: MOD_MELEE_HASTE138 -35; TC time ×135/100.
     assert_modified_cadence(246, -35.0, 135.0 / 100.0);
 }
 
 #[test]
-#[ignore = "RED: TC Unit::ApplyAttackTimePercentMod preserves remaining swing progress"]
 fn ordinary_npc_authored_cadence_native_haste_change_preserves_progress() {
     assert_eq!(source_cadence_ms(118), 1500);
     let (mut h, npc) = cadence_fixture(118, &[246]);
@@ -200,4 +199,43 @@ fn ordinary_npc_authored_cadence_native_haste_change_preserves_progress() {
         times[1] >= expected_next - 0.001 && times[1] <= expected_next + 0.051,
         "source246 at{changed_at:.6}, expected next{expected_next:.6}, observed{times:?}"
     );
+}
+
+#[test]
+fn ordinary_npc_authored_cadence_source_zero_uses_tc_default() {
+    // Actual Scorched Ground33123 supplies the unset field; this is catalog
+    // normalization coverage, not a claim that this ground effect fights.
+    assert_eq!(source_cadence_ms(33_123), 0);
+    assert_eq!(
+        crate::test_data::world_data().templates[&33_123].base_attack_time_ms,
+        2_000
+    );
+}
+
+#[test]
+fn ordinary_npc_authored_cadence_native_time_multipliers_combine() {
+    let (mut h, npc) = cadence_fixture(118, &[74_976, 128_852]);
+    // Actual effect0s:74976 aura252 −50 and128852 aura319 +30.
+    apply_native_clock_effect(&mut h, npc, 74_976);
+    apply_native_clock_effect(&mut h, npc, 128_852);
+    let mods = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(npc)
+        .unwrap();
+    assert!((mods.attack_cast_time_mult - 1.5).abs() < 1e-6);
+    assert!((mods.attack_time_mult - 100.0 / 130.0).abs() < 1e-6);
+    h.advance(100);
+    assert!(crate::auras::has_aura(h.app.world(), npc, 74_976));
+    assert!(crate::auras::has_aura(h.app.world(), npc, 128_852));
+    let times = observed_white_swing_times(&h, npc);
+    assert!(times.len() >= 3, "only {times:?}");
+    let expected = 1.5 * 1.5 * 100.0 / 130.0;
+    for pair in times.windows(2) {
+        let interval = pair[1] - pair[0];
+        assert!(
+            interval >= expected - 0.001 && interval <= expected + 0.051,
+            "native252/319 expected{expected:.6}s, observed{interval:.6}s: {times:?}"
+        );
+    }
 }
