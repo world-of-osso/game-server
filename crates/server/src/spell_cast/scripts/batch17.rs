@@ -166,7 +166,7 @@ pub(super) fn regrowth_crit(world: &World, caster: Entity, target: Entity) -> Op
 
 /// LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC: SimC76f8118 sc_druid.cpp6229–6240.
 /// Read the old owned deadline before native application replaces it.
-pub(super) fn bloom_lifebloom_before_refresh(
+pub(in crate::spell_cast) fn bloom_lifebloom_before_refresh(
     world: &mut World,
     caster: Entity,
     target: Entity,
