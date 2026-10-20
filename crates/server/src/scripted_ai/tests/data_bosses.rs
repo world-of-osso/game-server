@@ -55,12 +55,16 @@ mod herald_call;
 mod herald_damage;
 #[path = "herald_fall.rs"]
 mod herald_fall;
+#[path = "herald_flying_liquid_fire.rs"]
+mod herald_flying_liquid_fire;
 #[path = "herald_ground.rs"]
 mod herald_ground;
 #[path = "herald_intro.rs"]
 mod herald_intro;
 #[path = "herald_intro2.rs"]
 mod herald_intro2;
+#[path = "herald_liquid_fire.rs"]
+mod herald_liquid_fire;
 #[path = "herald_min1.rs"]
 mod herald_min1;
 #[path = "herald_pair.rs"]

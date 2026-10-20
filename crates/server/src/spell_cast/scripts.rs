@@ -22,9 +22,14 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod germination;
+pub(super) use germination::redirect_rejuvenation;
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
+mod soul_of_the_forest;
 mod swiftmend;
+pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
+pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
 pub(crate) use chrono_flame::record_health_change;
 
@@ -184,6 +189,10 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (20_538, 0) => Some(hate_to_zero),
         (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
+        (30_691 | 32_491 | 33_793 | 33_794 | 34_653 | 36_920, 1) => {
+            Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::fireball_hit)
+        }
+        (30_926 | 36_921, 1) => Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::cone_hit),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
@@ -1179,7 +1188,10 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
-        swiftmend::SWIFTMEND => Some(swiftmend::consume_own_hot),
+        swiftmend::SWIFTMEND => Some(swiftmend::hit),
+        soul_of_the_forest::REGROWTH | soul_of_the_forest::REJUVENATION => {
+            Some(soul_of_the_forest::consume_after_heal)
+        }
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),

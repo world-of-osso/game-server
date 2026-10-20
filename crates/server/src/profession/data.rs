@@ -14,6 +14,8 @@ use crate::race_class::race_mask_allows;
 
 /// `SkillLine.CategoryID` of primary professions (TrinityCore `SKILL_CATEGORY_PROFESSION`).
 pub const SKILL_CATEGORY_PROFESSION: u32 = 11;
+/// TrinityCore SkillLineCategory: secondary professions, not class abilities.
+const SKILL_CATEGORY_SECONDARY: u32 = 9;
 /// `SkillLineAbilityAcquireMethod::AutomaticSkillRank`.
 pub const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 /// AutomaticSkillRank, AutomaticCharLevel, LearnedOrAutomaticCharLevel
@@ -31,6 +33,7 @@ pub struct SkillLineInfo {
 /// One `SkillLineAbility` row.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ability {
+    pub id: u32,
     pub spell: u32,
     pub skill_line: u32,
     /// Line the recipe raises; 0 = `skill_line`.
@@ -204,6 +207,25 @@ impl ProfessionData {
             .is_some_and(|row| row.flags & SKILL_FLAG_ALWAYS_MAX_VALUE != 0)
     }
 
+    /// TC modifier39 stores SkillLineAbility identity, not the spell ID.
+    /// Ambiguous/missing authored rows cannot establish an instance origin.
+    pub fn crafting_origin(&self, spell: u32) -> Option<shared::protocol::CraftingOrigin> {
+        let [ability] = self.abilities_for_spell(spell) else {
+            return None;
+        };
+        if !matches!(
+            self.skill_line(ability.skill_line)?.category,
+            SKILL_CATEGORY_PROFESSION | SKILL_CATEGORY_SECONDARY
+        ) {
+            return None;
+        }
+        Some(shared::protocol::CraftingOrigin {
+            skill_line_ability_id: ability.id,
+            recipe_spell_id: ability.spell,
+            crafting_quality_id: None,
+        })
+    }
+
     pub fn abilities_for_spell(&self, spell: u32) -> &[Ability] {
         self.abilities_by_spell
             .get(&spell)
@@ -372,10 +394,11 @@ fn load_abilities(conn: &Connection) -> rusqlite::Result<Vec<Ability>> {
     let mut statement = conn.prepare(
         "SELECT Spell, SkillLine, SkillupSkillLineID, MinSkillLineRank, AcquireMethod, \
          TrivialSkillLineRankLow, TrivialSkillLineRankHigh, NumSkillUps, ClassMask, \
-         RaceMasks_0, RaceMasks_1 FROM skill_line_ability ORDER BY ID",
+         RaceMasks_0, RaceMasks_1, ID FROM skill_line_ability ORDER BY ID",
     )?;
     let rows = statement.query_map(params![], |row| {
         Ok(Ability {
+            id: uint(row, 11)?,
             spell: uint(row, 0)?,
             skill_line: uint(row, 1)?,
             skillup_line: uint(row, 2)?,

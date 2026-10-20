@@ -42,7 +42,10 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             .battleground_matches
             .iter_mut()
             .filter_map(|(match_id, matched)| {
-                update_match(world, matched, &actors).then_some(*match_id)
+                let preparing = matched.instance.phase == BgPhase::Waiting;
+                let changed = update_match(world, matched, &actors);
+                let started = preparing && matched.instance.phase != BgPhase::Waiting;
+                changed.then_some((*match_id, started))
             })
             .collect::<Vec<_>>()
     });
@@ -50,10 +53,33 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
     super::honor::award_isle_resource_gains(world, isle_resources);
     super::honor::award_alterac_tower_changes(world, alterac_towers);
     credit_objective_events(world);
-    for match_id in changed {
+    for (match_id, started) in changed {
+        if started {
+            clear_started_preparation(world, match_id);
+        }
         super::honor::award_alterac_survivor_honor(world, match_id);
         credit_completed_match(world, match_id);
         send_match_snapshot(world, match_id);
+    }
+}
+
+/// TC Battleground.cpp444: remove preparation only from accepted players in this copy.
+fn clear_started_preparation(world: &mut World, match_id: u64) {
+    let (map, accepted) = {
+        let matched = &world.resource::<PvpServerState>().battleground_matches[&match_id];
+        (
+            matched.map.expect("started match has a copy"),
+            matched.accepted.clone(),
+        )
+    };
+    let players: Vec<_> = world
+        .query::<(Entity, &ClientId, &InMap)>()
+        .iter(world)
+        .filter(|(_, id, copy)| accepted.contains(&id.0) && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    for player in players {
+        super::clear_battleground_preparation(world, player);
     }
 }
 

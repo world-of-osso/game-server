@@ -416,7 +416,10 @@ pub(crate) fn effect_create_item(
         });
         return;
     }
-    if let Err(error) = store_created_item(world, target, effect.item_type, count) {
+    let origin = world
+        .get_resource::<ProfessionData>()
+        .and_then(|data| data.crafting_origin(ctx.spell.id));
+    if let Err(error) = store_created_item(world, target, effect.item_type, count, origin) {
         warn!("Spell {}: CREATE_ITEM failed: {error}", ctx.spell.id);
         return;
     }
@@ -522,14 +525,16 @@ pub(crate) fn store_created_item(
     player: Entity,
     item_id: u32,
     count: u32,
+    origin: Option<shared::protocol::CraftingOrigin>,
 ) -> Result<(), String> {
     let character_id = with_bags(world, player, |bags| {
-        crate::inventory::grant_item(
+        crate::inventory::grant_item_with_origin(
             &bags.db.db,
             bags.templates,
             bags.catalog,
             bags.character_id,
             (item_id, count),
+            origin,
         )
         .map(|_| {
             let template = bags

@@ -1,5 +1,6 @@
 //! Ramparts bosses, TC a352b1fa. EventMap repeats anchor to dispatch.
 mod herald;
+pub(crate) mod liquid_fire;
 mod omor;
 mod vazruden;
 use crate::maps::InMap;

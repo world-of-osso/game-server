@@ -29,6 +29,7 @@ struct ObjectTemplate {
     chair: Option<crate::chair::Chair>,
     scripted: bool,
     seaforium_spell: Option<u32>,
+    liquid_fire_spell: Option<u32>,
     spellcaster: Option<super::spellcaster::SpellcasterObject>,
     cooking_focus: Option<(u32, f32)>,
     extra_focus_payload: bool,
@@ -91,6 +92,13 @@ fn template_from_row(row: &Row, conn: &Connection) -> rusqlite::Result<(u32, Obj
                 .transpose()?,
             scripted: !ai_name.is_empty() || !script_name.is_empty(),
             seaforium_spell,
+            liquid_fire_spell: crate::scripted_ai::hellfire_ramparts::liquid_fire::source_spell(
+                entry,
+                go_type,
+                &ai_name,
+                &script_name,
+                row.get(22)?,
+            ),
             spellcaster: (go_type == super::spellcaster::GAMEOBJECT_TYPE_SPELLCASTER)
                 .then(|| -> rusqlite::Result<_> {
                     Ok(super::spellcaster::SpellcasterObject {
@@ -175,6 +183,19 @@ pub(crate) fn unsupported_reason(world: &World, effect: &SpellEffect) -> Option<
                 "Seaforium gameobject {entry} missing display {}",
                 template.info.display_id
             )
+        });
+    }
+    if let Some(spell) = template.liquid_fire_spell {
+        return crate::scripted_ai::hellfire_ramparts::liquid_fire::unsupported_reason(
+            world, spell,
+        )
+        .or_else(|| {
+            template.bounds.is_none().then(|| {
+                format!(
+                    "Liquid Fire gameobject {entry} missing display {}",
+                    template.info.display_id
+                )
+            })
         });
     }
     if template.scripted {
@@ -354,6 +375,7 @@ fn spawn_object(
             .expect("supported template has display bounds")
     };
     let seaforium_spell = template.seaforium_spell;
+    let liquid_fire_spell = template.liquid_fire_spell;
     let linked_trap = template.cooking_focus.and_then(|_| {
         world
             .resource::<SummonedObjectTemplates>()
@@ -392,6 +414,9 @@ fn spawn_object(
         object.insert(spellcaster);
     }
     let parent = object.id();
+    if let Some(spell) = liquid_fire_spell {
+        crate::scripted_ai::hellfire_ramparts::liquid_fire::arm(world, parent, spell);
+    }
     if let Some(spell_id) = seaforium_spell {
         super::seaforium_bombs::arm(world, parent, spell_id);
     }
