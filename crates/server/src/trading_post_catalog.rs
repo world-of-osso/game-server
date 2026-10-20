@@ -5,6 +5,8 @@ use rusqlite::{Connection, OptionalExtension};
 use serde::Deserialize;
 use shared::protocol::{TradingPostCategory, TradingPostItem};
 use std::collections::BTreeMap;
+use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Resource)]
 pub(crate) struct Catalog(pub Result<CatalogData, String>);
@@ -17,6 +19,7 @@ impl Default for Catalog {
 pub(crate) struct CatalogData {
     pub categories: Vec<TradingPostCategory>,
     pub items: BTreeMap<u32, (TradingPostItem, Result<Grant, String>)>,
+    pub monthly: Arc<super::monthly::Catalog>,
 }
 
 #[derive(Deserialize)]
@@ -71,8 +74,8 @@ fn read_rows<T: serde::de::DeserializeOwned>(
     .collect()
 }
 
-pub(crate) fn load(conn: &Connection) -> Result<CatalogData, String> {
-    crate::db2_source_build::read_source_build(conn, "trading_post_source")?;
+pub(crate) fn load(conn: &Connection, monthly_path: &Path) -> Result<CatalogData, String> {
+    let build = crate::db2_source_build::read_source_build(conn, "trading_post_source")?;
     let categories = read_rows::<Category>(conn, "perks_vendor_category")?
         .into_iter()
         .map(|row| TradingPostCategory {
@@ -85,14 +88,19 @@ pub(crate) fn load(conn: &Connection) -> Result<CatalogData, String> {
         .into_iter()
         .map(|row| (row.id, row))
         .collect();
-    let items = read_rows::<Vendor>(conn, "perks_vendor_item")?
+    let items: BTreeMap<_, _> = read_rows::<Vendor>(conn, "perks_vendor_item")?
         .into_iter()
         .map(|vendor| {
             let (row, grant) = read_item(conn, &vendor, groups.get(&vendor.group));
             (vendor.id, (row, grant))
         })
         .collect();
-    Ok(CatalogData { categories, items })
+    let monthly = super::monthly::load(monthly_path, &build, &items.keys().copied().collect())?;
+    Ok(CatalogData {
+        categories,
+        items,
+        monthly: Arc::new(monthly),
+    })
 }
 
 fn read_item(

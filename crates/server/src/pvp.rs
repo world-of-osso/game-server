@@ -214,6 +214,11 @@ pub(crate) fn dismount_battleground_arrival(world: &mut World, player: Entity) {
     if !ordinary_battleground {
         return;
     }
+    remove_battleground_mount_auras(world, player);
+}
+
+/// TC Battleground.cpp834/1038: normal aura removal also clears mount display/speed.
+fn remove_battleground_mount_auras(world: &mut World, player: Entity) {
     crate::auras::remove_auras(
         world,
         player,
