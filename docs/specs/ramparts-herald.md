@@ -65,6 +65,14 @@ Development proof: ignored native RED first1PASS/3FAIL51.19s; source-correct end
 
 Proof: ignoredRED pushed first; native qualification1PASS/four genuineFAIL86.63s at9691ff61b→fiveGREEN137.57s at354302f74. Enabled final43/43PASS374.35s at1799e2743/master717ae67df,0ignored/no warnings:25Herald+four grounding+five unchanged Gold+two Nibbles+six Gordoth+lower-point suspension. Admission trace records real OnCooldown rejections and admitted parent damage/fear; no forced successes. Special release is exactlyfall+2000ms; first Heroic Roar request isfall+3950ms because source combat EventMap consumes50ms on the release tick. Repeat upper bounds expand only for an actual accepted1.5s Roar spanning the source latest deadline. Independent LEAD gate/check/fmt pending.
 
+### Ground Liquid Fire
+
+- [ ] Ground34653/36920 and30926/36921 effect1 must run on each actual hit unit: it self-triggers31706/30928 by its map difficulty, or23971 for Cone in either difficulty. Flying30691/32491/33793/33794 remain excluded.
+- [ ] Admit only fully implemented registered `go_vazruden_liquid_fire` source traps181890/182533/180125; preserve unrelated scripted wild-object refusal and missing-data diagnostics. Actual wild objects remain ownerless for their native15s/30s/20s durations.
+- [ ] Source GO Reset schedules0s, then TaskScheduler repeats each2s from the prior scheduled deadline (the first50ms update consumes50ms toward that deadline). Each pulse summons actual21252 in its copy/pose, ordinarily self-casts native trap spell30927/32492/23972 and expires after1s. Expired objects emit no more pulses; no fabricated metadata, forced hits or cast admission bypass.
+
+Development: native-input qualification1PASS27.70s at46a85902b. Ignored regressions632d227ae pushed first: four genuine missing-hit-unit-child failures and unrelated scripted-object refusal1PASS256.04s. Source pulse oraclebad00e30a corrects the previously unreachable first-repeat phase using TaskScheduler.cpp319–329; GREEN pending. This slice does not certify flying children, native presentation, balance, persistence, re-entry or loot.
+
 ### Completion and reset
 
 - [x] Credit1892/bit1 only when both Nazan and Vazruden have actually died, in either order, exactly once and only in their copy. Neither individual death, intro nor entry morph completes it. Preserve source per-actor other-dead state/action1: first JustDied notifies its actual same-copy source partner; only the later JustDied calls the existing boss completion path. Preserve Herald's original17307 role through17536 morph and identify actual17537 by its same-copy TempSummon summoner link; ordinary CreatureOrigin is intentionally absent on temporary actors. Verify Normal/Heroic, both sequential and same-frame orders, corpse re-damage, unrelated actual17259 death and crossed-copy negatives; no fake death callbacks or HP/stat writes.
