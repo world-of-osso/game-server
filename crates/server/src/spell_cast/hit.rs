@@ -16,6 +16,10 @@ const ATTR8_NO_ATTACK_BLOCK: u32 = 0x1;
 const ATTR3_NO_AVOIDANCE: u32 = 0x40;
 const ATTR7_NO_ATTACK_MISS: u32 = 0x0200_0000;
 const ATTR7_NO_ATTACK_DODGE: u32 = 0x0080_0000;
+#[cfg(test)]
+#[path = "aura_expertise_tests.rs"]
+mod aura_expertise_tests;
+
 const MOD_EXPERTISE: u32 = 240;
 const MOD_ENEMY_DODGE: u32 = 251;
 const EXPERTISE_PER_DODGE_PERCENT: f32 = 4.0;

@@ -22,6 +22,10 @@
 //! weapon type (SimC `action_t::calculate_weapon_damage`). Main-hand damage is
 //! `CharacterStats.main_hand` (`item_stats.rs`), unarmed 1-2 at 2.0 s.
 
+#[cfg(test)]
+#[path = "aura_stat_spell_tests.rs"]
+mod aura_stat_spell_tests;
+
 use std::collections::HashSet;
 
 use bevy::prelude::*;

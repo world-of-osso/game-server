@@ -3325,3 +3325,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).
+
+Generic aura-stat second RED batch: native450831 spell-only57,383191 masked missing-health354,1160 signed armor-ignore269,105805 player240,391571→17 shield422,586 temporary103. Source: TC `SpellAuraEffects.cpp:4461-4471,3962-3973`; `Unit.cpp:1712-1716,7505-7509,7727-7739`; `ThreatManager.cpp:773-790`. All ignored; execution pending capacity admission.
