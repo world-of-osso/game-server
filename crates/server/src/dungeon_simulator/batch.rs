@@ -46,10 +46,13 @@ fn run_stockade_batch() {
         .expect("u64 seed");
     assert!(runs > 0, "batch run count must be positive");
     let mut reports = Vec::new();
+    let mut catalogs = None;
     for offset in 0..runs {
-        let report =
-            super::campaign::run(seed.checked_add(offset).expect("seed range exceeds u64"))
-                .expect("initialize native dungeon simulation");
+        let report = super::campaign::run_cached(
+            seed.checked_add(offset).expect("seed range exceeds u64"),
+            &mut catalogs,
+        )
+        .expect("initialize native dungeon simulation");
         super::runtime::write_report(&report).expect("write actual run trace");
         super::runtime::print_report(&report);
         reports.push(report);

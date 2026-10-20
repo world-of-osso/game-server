@@ -8,7 +8,7 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 ## Execution
 
-Build the filtered server test executable through `scripts/build-host.py --test -p server --bin game-server --no-run`. Pass Cargo's printed executable to `scripts/run-dungeon-simulator.py --test-executable PATH --output DIRECTORY`, via `agent-run stockade` after capacity admission. The runner supplies repository-root working context because gameplay Startup loaders use `data/world.db`. It never launches a server or connects a client.
+Build the filtered server test executable through `scripts/build-host.py --test -p server --bin game-server --profile sim --no-run`. Pass Cargo's printed executable to `scripts/run-dungeon-simulator.py --test-executable PATH --output DIRECTORY`, via `agent-run stockade` after capacity admission. The runner supplies repository-root working context because gameplay Startup loaders use `data/world.db`. It never launches a server or connects a client.
 
 Five sourced kits: Garrick, Crenna, Shuja, Meredy, Austin. Austin is the in-process leader using the same kit controller, not a self-owned follower. This explicitly differs from the older live Fury72 owner.
 
@@ -19,7 +19,11 @@ Five sourced kits: Garrick, Crenna, Shuja, Meredy, Austin. Austin is the in-proc
 - Full-population runs produce actual HP/mana/position samples, native pull decisions and exact source-actor boss death receipts. No Stockade boss clear is qualified yet.
 - Route3 stalled at160.05s on20375765: trailing wall-time history erased DPS during an OOC forecast/recovery hold. User clarified ten **active-combat** seconds, retained across OOC and reset at dungeon start/full wipe. Production correction passes all five targeted history tests, including active-window rollover, OOC retention/healing exclusion and wipe/new-copy reset. Five-second HP stability still uses wall time. Observed dead-spawn knowledge survives a same-copy wipe.
 - Native RNG scoped replay and batch-summary accounting pass. The first seeded batch was incomplete: seed1 timed out at3600sim_s/505.211wall_s (7.13×), seed2 interrupted, no batch rate. A partial perf checkpoint measured11.4× steady speed: setup22.90s, update42.50s at10001 ticks, observed events7576, memory plateau1.106GB/no swap. No low-wipe-rate or live acceptance claim.
-- Native-state inspection found the manual constructor omitted `CreatureDifficulty`; Garrick's real admission refused with that explicit error. The regression reproduces it at the native movement-consumer boundary. Population creation now uses production `zones::spawn_map_creatures`, not a simulator copy; GREEN pending. An optimized `sim` profile is configured, and catalog reuse remains in progress.
+- Native-state inspection found the manual constructor omitted `CreatureDifficulty`; Garrick's real admission refused with that explicit error. The regression reproduces it at the native movement-consumer boundary. Population creation now uses production `zones::spawn_map_creatures`, not a simulator copy; unchanged consumer regression GREEN at50cc09c7e (33.21s). The optimized `sim` profile builds successfully after merging master27743876c and pinning protocol03cebdb.
+
+## Catalog lifetime
+
+Seeded batches move 24 typed immutable catalog resources out of each completed App after diagnostics, then install those same allocations into the next fresh App. Native plugin Build still registers all systems/observers and fresh queues, clocks and instance state; cached Apps skip catalog-loading Startup. No `WorldData` or `SpellStore` clones, no test-harness global catalog copies, no reused dynamic World. Optional native resource absence is preserved. First load calls the production world/spell loaders directly. The allocation/state-reset regression first failed with distinct spawn allocations (optimized profile, 7.33s); GREEN and seeded gameplay qualification remain pending.
 
 ## Sources
 

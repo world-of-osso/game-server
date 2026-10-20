@@ -103,9 +103,16 @@ struct Run {
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
+    run_cached(seed, &mut None)
+}
+
+pub(super) fn run_cached(
+    seed: u64,
+    catalogs: &mut Option<super::catalogs::Catalogs>,
+) -> Result<Report, String> {
     let _rng_scope = crate::random::seed_scope(seed);
     let started = std::time::Instant::now();
-    let mut run = spawn_run(seed)?;
+    let mut run = spawn_run(seed, catalogs)?;
     let setup = started.elapsed();
     let mut timings = [std::time::Duration::ZERO; 3];
     let mut ticks = 0;
@@ -151,12 +158,13 @@ pub(super) fn run(seed: u64) -> Result<Report, String> {
         run.report.status = "timeout".into();
         run.report.detail = "one-hour simulated bound reached".into();
     }
+    *catalogs = Some(super::catalogs::Catalogs::take(run.app.world_mut()));
     Ok(run.report)
 }
 
-fn spawn_run(seed: u64) -> Result<Run, String> {
+fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Result<Run, String> {
     let graph = super::graph::read_graph()?;
-    let mut app = runtime::build_app();
+    let mut app = runtime::build_cached_app(catalogs);
     let copy = runtime::create_copy(&mut app);
     let party = crate::followers::simulator::spawn_party(
         app.world_mut(),

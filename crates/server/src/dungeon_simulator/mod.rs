@@ -1,6 +1,7 @@
 //! Transport-free dungeon qualification, driven by the server test executable.
 mod batch;
 mod campaign;
+mod catalogs;
 mod diagnostics;
 mod graph;
 mod movement;

@@ -82,7 +82,7 @@ mod critical_block_tests;
 mod dead_cast_progress_tests;
 #[cfg(test)]
 mod dead_caster_channel_tests;
-mod disenchant;
+pub(crate) mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
 mod druid_transform;
@@ -225,7 +225,7 @@ mod minimum_speed_tests;
 mod missiles;
 #[cfg(test)]
 mod npc_dodge_tests;
-mod open_lock;
+pub(crate) mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]

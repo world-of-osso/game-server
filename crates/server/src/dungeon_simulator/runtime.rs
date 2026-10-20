@@ -51,6 +51,10 @@ pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
 }
 
 pub(super) fn build_app() -> App {
+    build_cached_app(&mut None)
+}
+
+pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>) -> App {
     let mut app = App::new();
     app.insert_resource(super::Space(super::graph::read_graph().unwrap()));
     app.add_plugins((MinimalPlugins, bevy::state::app::StatesPlugin));
@@ -88,62 +92,69 @@ pub(super) fn build_app() -> App {
             schedule.set_executor(bevy::ecs::schedule::SingleThreadedExecutor::new());
         });
     }
+    let reused = catalogs.is_some();
+    if let Some(catalogs) = catalogs.take() {
+        catalogs.install(app.world_mut());
+        // Plugin Build still creates fresh dynamic state and systems. Startup only
+        // loads definitions/registers function pointers in this transport-free App.
+        app.add_schedule(bevy::ecs::schedule::Schedule::new(Startup));
+    }
     app.finish();
     app.cleanup();
     app.update();
-    load_gameplay_data(&mut app);
+    if !reused {
+        load_gameplay_data(&mut app);
+    }
     app
 }
 
 fn load_gameplay_data(app: &mut App) {
-    let source = crate::spell_cast::test_harness::world_db().unwrap();
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let mut data = crate::test_data::world_data().clone();
+    let mut data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
     // The approved simulation geometry is a plane. Native combat/stat inputs stay intact.
     for spawn in data.spawns.iter_mut().filter(|spawn| spawn.map == 34) {
         spawn.position_z = 0.0;
     }
     app.insert_resource(data.armor_constants.clone());
     app.insert_resource(data);
-    app.insert_resource(source.store.clone());
-    app.insert_resource(source.classes.clone());
-    app.insert_resource(crate::spell_cast::test_harness::power_table(source));
-    app.insert_resource(crate::spell_cast::test_harness::shapeshift_forms(source));
-    app.insert_resource(crate::item_stats::load_item_scaling_tables(&source.powers_db).unwrap());
+    let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
+    app.insert_resource(spells);
+    app.insert_resource(classes);
+    app.insert_resource(crate::item_stats::load_item_scaling_tables(&db).unwrap());
     app.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
     app.insert_resource(crate::maps::store::load_map_store(&db).unwrap());
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
     app.insert_resource(crate::unit_creature_type::load_race_types(&db).unwrap());
-    app.insert_resource(
-        crate::conditions::load_spell_target_conditions(&source.powers_db).unwrap(),
-    );
+    app.insert_resource(crate::conditions::load_spell_target_conditions(&db).unwrap());
 }
 
 pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
-    let maps = app.world().resource::<crate::maps::MapStore>().clone();
     app.world_mut()
-        .resource_mut::<crate::maps::InstanceManager>()
-        .create_map(
-            &maps,
-            34,
-            crate::maps::instances::InstanceEntrant {
-                character_id: 1,
-                group: None,
-                leader: 1,
-                difficulty_id: 1,
-                ..default()
-            },
-            crate::maps::instances::Now {
-                elapsed: 0.0,
-                unix: 1_792_454_400,
-            },
-        )
-        .unwrap()
-        .map
+        .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
+            world
+                .resource_mut::<crate::maps::InstanceManager>()
+                .create_map(
+                    &maps,
+                    34,
+                    crate::maps::instances::InstanceEntrant {
+                        character_id: 1,
+                        group: None,
+                        leader: 1,
+                        difficulty_id: 1,
+                        ..default()
+                    },
+                    crate::maps::instances::Now {
+                        elapsed: 0.0,
+                        unix: 1_792_454_400,
+                    },
+                )
+                .unwrap()
+                .map
+        })
 }
 
 pub(super) fn spawn_population(
