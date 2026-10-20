@@ -4,7 +4,11 @@
 
 SimC76f8118 `parse_effects.cpp911–919/1290–1300` selects controlled pets for429 and guardians for531; `1125–1134/1463–1466` selects damage received from the aura caster's guardian for380. `AuraStatMods` stores separate pet/guardian products. `summon_damage` selects controlled pets first, otherwise existing guardian summon properties, using live owners. Shared spell/melee consumers apply exactly one owner product; target380 matches that guardian's direct owner to `AuraInstance.caster`. Native paired Command21563 and Restoration137012 retain their previous totals rather than multiplying twice. Copied source damage retains its existing owner-modifier exemption.
 
-Native behavioral regressions use actual Raise Dead/Summon Imp actors, Wound209140, signed Feral/Unholy531, paired Destruction429/531, Haunt380 and real melee receipts. Initial RED4PASS/8FAIL included an invalid melee start: GuardianActor overwrote the manually started attack from an empty owner selection. Corrected real SetTarget producer gives genuine melee10vs20 and the same4PASS/8FAIL in23.02s at `eee8013db`; no HP/RNG/timer changes. First implementation exposed a second oracle error: Wound209140 has native Attr4 0x100 IgnoreDamageTakenModifiers, so its spell380 expectation was invalid. The two owned/foreign spell380 cases now use actual Musket Barrage208227 (native800, no ignore flag,100yd range; Charged149328's5yd range does not qualify the unchanged distant fixture); a thirteenth case preserves Wound's exclusion. The spell380 consumer was removed for corrected RED, leaving melee/531 behavior in place. After awaiting its actual35yd/s missile impact, `56bde0a1f` yields genuine owned800vs928 in both corrected cases, plus native ignore controlPASS (1PASS/2FAIL28.71s). Restored the shared target consumer only after that proof. GREEN and retained-family gates pending. This is consumer/effect-mask qualification, not a legal simultaneous-loadout or whole-class certificate. [Contract and aura320 source-conflict gap](../../specs/class-completeness.md); [Death Grip jump binding](spell-casting.md#death-grip-and-destination-jumps--2026-10-20).
+Native behavioral regressions use actual Raise Dead/Summon Imp actors, Wound209140, signed Feral/Unholy531, paired Destruction429/531, Haunt380 and real melee receipts. Initial RED4PASS/8FAIL included an invalid melee start: GuardianActor overwrote the manually started attack from an empty owner selection. Corrected real SetTarget producer gives genuine melee10vs20 and the same4PASS/8FAIL in23.02s at `eee8013db`; no HP/RNG/timer changes. First implementation exposed a second oracle error: Wound209140 has native Attr4 0x100 IgnoreDamageTakenModifiers, so its spell380 expectation was invalid. The two owned/foreign spell380 cases now use actual Musket Barrage208227 (native800, no ignore flag,100yd range; Charged149328's5yd range does not qualify the unchanged distant fixture); a thirteenth case preserves Wound's exclusion. The spell380 consumer was removed for corrected RED, leaving melee/531 behavior in place. After awaiting its actual35yd/s missile impact, `56bde0a1f` yields genuine owned800vs928 in both corrected cases, plus native ignore controlPASS (1PASS/2FAIL28.71s). Restored the shared target consumer only after that proof. At `2304683e1`, corrected census13/13GREEN22.80s (original twelve plus native ignore control), shared600b755. Retained pet/guardian/summon/jump/warlock/hunter filters give318PASS/1 environment-onlyFAIL/2existing ignored226.67s; the failure required explicit GAME_SERVER_GROUND_DIR and passes alone10.95s. The shared sibling advanced after the first two runs, so remaining integration uses private detached600b755 with all three Cargo path overrides. Post-master gate pending. This is consumer/effect-mask qualification, not a legal simultaneous-loadout or whole-class certificate. [Contract and aura320 source-conflict gap](../../specs/class-completeness.md); [Death Grip jump binding](spell-casting.md#death-grip-and-destination-jumps--2026-10-20).
+
+## Armor specialization equipment — 2026-10-20
+
+`auras/item_requirements.rs` `passive_items_fit` filters `sync_passives` for players: a passive whose `equipped_items` is class4 with Attr8 0x100000 needs every one of the eight armor slots to hold a template of that class whose subclass bit is in the mask (zero mask = any). `ChangedPassiveOwners` also watches `EquippedItems`, so unequipping removes the aura (`RemoveReason::Unlearned`) and re-equipping reapplies it; stats follow through StatModifiers. Non-players and other item requirements are unchanged; gaps in [player-damage](../../specs/player-damage.md#known-gaps-current-cycle).
 
 ## Nature's Guardian baseline — 2026-10-19
 
@@ -593,3 +597,51 @@ Aura168 stores `(creature mask,multiplier)` pairs in `AuraStatMods`, combining m
 Native70391 Haunt48181 effect1 is aura270, amount16, school mask127. The shared victim multiplier handled family271 and label537 but omitted270, so Haunt applied normally without increasing the owner's damage. TC a352b1fa `Unit.cpp:7056–7059/8178–8181` matches both aura caster and incoming school. The same multiplier now handles270 using the existing amount/stack product and IgnoreDamageTakenModifiers boundary. Autoswings do not use this special-spell condition.
 
 Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381 (380 is handled above), optional periodic talents, full Affliction and rendered/UDP parity remain open.
+
+## Aura world/XP native70448 — 2026-10-20
+
+Source root `game-engine/data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa` is the locally receipted TC a352b1fa snapshot (not the adjacent unpinned tc-master-src tree). Initial commit adds ignored native behavior tests and server-state declarations only; no behavior implementation yet. Test filter `aura_world_ -- --ignored --test-threads=1` covers native flags/removal/overlap, tracking, force product, swim isolation, power display, return origin, XP/rested ordering, ordinary quest settlement and loot source filtering. Client-payload retention is an existing-behavior control, not a new gameplay consumer.
+
+| Aura | TC a352b1fa source file:line | Server contract / remaining boundary |
+|---|---|---|
+|200|KillRewarder.cpp158–160 (local pvp-progression-2026-10-16)|Individual kill share × total aura multiplier before rested|
+|291|Player.cpp14960–14969|Sequential AddPct on integer quest XP|
+|348|SpellAuraDefines.h435; SpellAuraEffects.cpp420|Misc0 quests /1 loot; other sources excluded|
+|646/647/648/649|SpellAuraEffects.cpp718/719/720/721; SpellAuraDefines.h733–736|`PVP_AURA_646_649_TC_NULL`: no implemented TC algorithm; remain unhandled|
+|104|SpellAuraEffects.cpp2884–2899|Server water-walking permission; client projection gap|
+|106|SpellAuraEffects.cpp2922–2937; Player.cpp27469–27471|Server hover permission only; motion/landing exemption and visual-height projection remain unqualified|
+|235|SpellAuraEffects.cpp307|Clientside, authoritative native payload only|
+|488|SpellAuraEffects.cpp3182–3195|Server gravity permission; client projection gap|
+|144|Player.cpp27473–27476|Subtract summed safe-fall yards; existing base-curve parity gap|
+|58|Unit.cpp8826–8829|Strongest positive swim-speed bonus only|
+|373|SpellAuraEffects.cpp445|NULL; retain payload, forced-motion algorithm unqualified|
+|485|Unit.cpp14200–14228|Server total magnitude product; wire/client force application gap|
+|44|SpellAuraEffects.cpp2635–2648|Player-only bit (Misc0−1); minimap projection gap|
+|71|SpellAuraEffects.cpp6548–6561; Player.cpp2686–2704|Runtime spell-keyed map/pose snapshot; persistence/return-effect gap|
+|188|SpellAuraEffects.cpp260|Client UnitInRange only; do not alter actual healing range|
+|179|SpellAuraEffects.cpp4249–4261; Unit.cpp5779–5822|Replace prior179; forms precede authored display-power override|
+|408|SpellAuraEffects.cpp480|Clientside button count only; no fabricated server charge/resource behavior|
+
+[Contract and named gaps](../../specs/class-completeness.md#aura-worldxp-slice-active70448-2026-10-20). No spell special cases, client/protocol edits or native class completeness claim.
+
+Ghost Wolf2645's native aura129 grants30% run speed, with aura305's100% minimum and no aura58. TC `Unit.cpp:8818–8829` separates run129 from swim58; `8931–8939` applies the minimum after slows. The old minimum-speed test incorrectly expected run's1.3 multiplier on swim: removing Chilled must yield `[run1.3, flight1.0, swim1.0]`. The independent swim consumer is retained; only that test's two expectations are corrected.
+
+RED `d9cbac593`: corrected runtime gate `--bin game-server aura_world_ -- --ignored --test-threads=1` ran15:1 existing-payload control PASS,13 genuine missing-consumer failures and1 SafeFall fixture failure (wall-clock dt had not landed). Initial `--lib` matched0 and is not proof. Corrected SafeFall fixture uses manual50ms before retesting. Runtime log `/tmp/aura-world-red-bin.log`.
+
+Implementation: `auras/reward_mods.rs` is read by individual kill shares, quest settlement and both solo/group loot settlement. Bonus money is checked before atomic group writes and actual credited coins feed gold criteria. `world_state.rs` derives permissions/track mask/force magnitude and snapshots runtime return origins; power display uses existing pools/form precedence. Client-only235/188/408 retain ordinary aura publication without altering healing range, movement or charges.373/646–649 remain warnings/gaps.144 now subtracts summed yards before the existing landing curve; baseline curve remains unchanged.
+
+At61f9abca6, corrected manual50ms runtime gate:14PASS/1FAIL23.55s. SafeFall1860 now lands exactly at50yd and reaches the health assertion, proving a genuine missing-height-reduction RED.144 implementation adds summed safe-fall yards to existing FallAuras and subtracts them only at landing. No shared curve, physics speed or protocol edits. `/tmp/aura-world-intermediate2.log`.
+
+### Final native proof and lead gate
+
+At `c9b7c3e59`, `agent-run aura_world python3 scripts/build-host.py --build-host native --test -p server --bin game-server [private protocol patch overrides] aura_world_ -- --ignored --test-threads=1`: **15 passed /0 failed /0 ignored**,29.01s; compile1m38s without warnings. Gate printedADD first; log `/tmp/aura-world-green.log`. Tests now enabled without changing their bodies. Earlier corrected144 numericRED plus13 genuine originalRED cases establish14 newly failing behaviors; payload-retention control was already GREEN. No broad suite/check/lint or independent gate run here.
+
+| Types | Final status / proof |
+|---|---|
+|200,291,348|Implemented generic reward consumers; native269083 +10% and282559 baseline, quest62 actual packet/persistence,291619 +2% loot, group per-recipient and atomic cap proof|
+|104,106,488,485,44,71|Server state only; native546/11010/195289/188494+189425/1494+5225/18960 application/removal/overlap or snapshot proof; motion/prediction, wire/client use and71persistence remain gaps|
+|144,58,179|Server landing-height/swim/display-power consumers; native1860 +17yd,7840 +100% vs8747 +15%,197911 Misc8 application/removal proof; baseline fall curve remains separately unqualified|
+|235,188,408|Explicit TC client-only classification; native47536/214202/52437 authoritative payload/publication control, no fabricated movement/healing-range/charge gameplay|
+|373,646,647,648,649|TCNULL named gaps;373 native101545 amount300 retained by payload control; all remain unhandled, no invented PvP or forced-motion algorithm|
+
+Lead integration filter after enabling: `--bin game-server aura_world_ -- --test-threads=1` (15cases). Suggested retained narrow gates: `experience::tests::`, `loot::tests::group_loot::`, `spell_auras_191`, `networking::tests::physics::`, and `quest::tests::bonus_money_tests::`; do not rerun them merely as a milestone if already proven at integration. Private detached protocol is clean600b7555fca599b2ecb578ef050e6aef8ef75899; command overrides shared, lightyear_netcode and lightyear_udp paths without tracked Cargo edits.

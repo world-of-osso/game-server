@@ -149,6 +149,11 @@ fn pull_maker(difficulty: u32) -> (Harness, Entity, InMap) {
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
+    // An unseeded first beaker roll near15s plus its500ms cast lands after the
+    // 15.2s observation window. Seed only the fixture's EventMap rolls.
+    h.app.world_mut().entity_mut(boss).insert(
+        crate::scripted_ai::tests::cast_admission::GroundCombatSeed(0),
+    );
     h.engage(boss);
     (h, boss, map)
 }

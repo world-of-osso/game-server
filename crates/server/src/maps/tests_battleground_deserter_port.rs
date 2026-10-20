@@ -15,6 +15,9 @@ mod arrival_mount;
 #[path = "tests_battleground_preparation_aura.rs"]
 mod preparation_aura;
 
+#[path = "tests_skirmish_requeue_pending.rs"]
+mod skirmish_requeue_pending;
+
 #[test]
 fn bg_deserter_port_concrete_refuses_late_aura_and_releases_reservation() {
     assert_late_deserter_port_refusal(1018, 19, shared::battleground::BgPhase::InProgress);

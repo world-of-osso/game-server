@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::battleground::BgPhase;
 use shared::components::CombatStatus;
-use shared::protocol::LeaveBattleground;
+use shared::protocol::{ArenaQueueMode, LeaveBattleground, RequeueSkirmish};
 
 use super::{PlayerPvpState, PvpServerState};
 use crate::auth::{Authenticated, InWorld};
@@ -32,6 +32,100 @@ pub(super) fn process_battleground_leave_requests(world: &mut World) {
             return_to_origin(world, &mut state, player, character_id, request.match_id)
         });
         super::pvp_invites::send_response(world, connection, player, result);
+    }
+}
+
+/// Project policy SKIRMISH_REQUEUE_LEAVE_THEN_QUEUE_SAME_MODE: Retail PVPMatchResults.lua
+/// proves only the skirmish-only button; native ordering stays
+/// SKIRMISH_REQUEUE_TRANSITION_UNQUALIFIED. The played mode is queued at origin ACK.
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PendingSkirmishRequeue {
+    mode: ArenaQueueMode,
+    connection: Entity,
+}
+
+pub(super) fn process_skirmish_requeue_requests(world: &mut World) {
+    let mut receivers = world.query_filtered::<(
+        Entity,
+        &PlayerLink,
+        &InWorld,
+        &mut MessageReceiver<RequeueSkirmish>,
+    ), With<Authenticated>>();
+    let requests: Vec<_> = receivers
+        .iter_mut(world)
+        .flat_map(|(connection, link, in_world, mut receiver)| {
+            receiver
+                .receive()
+                .map(|request| (connection, link.0, in_world.character_id, request.match_id))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    for (connection, player, character_id, match_id) in requests {
+        let result = world.resource_scope(|world, mut state: Mut<PvpServerState>| {
+            let mode = finished_skirmish_mode(world, &state, player, match_id)?;
+            let returned = return_to_origin(world, &mut state, player, character_id, match_id)?;
+            Ok((mode, returned))
+        });
+        let result = result.map(|(mode, returned)| {
+            world
+                .entity_mut(player)
+                .insert(PendingSkirmishRequeue { mode, connection });
+            returned
+        });
+        super::pvp_invites::send_response(world, connection, player, result);
+    }
+}
+
+/// Successful origin ACK: ordinary skirmish admission; a refusal leaves the player there.
+pub(crate) fn queue_skirmish_again(
+    world: &mut World,
+    player: Entity,
+    pending: PendingSkirmishRequeue,
+) {
+    let Some(character_id) = world
+        .get::<InWorld>(pending.connection)
+        .map(|owner| owner.character_id)
+    else {
+        warn!("{player} left before its skirmish requeue could be queued");
+        return;
+    };
+    super::arena::queue_and_form(
+        world,
+        pending.connection,
+        player,
+        character_id,
+        pending.mode,
+    );
+}
+
+fn finished_skirmish_mode(
+    world: &World,
+    state: &PvpServerState,
+    player: Entity,
+    match_id: u64,
+) -> Result<ArenaQueueMode, String> {
+    let current = world
+        .get::<PlayerPvpState>(player)
+        .and_then(|pvp| pvp.battleground.as_ref())
+        .is_some_and(|snapshot| snapshot.match_id == match_id);
+    let matched = state
+        .battleground_matches
+        .get(&match_id)
+        .filter(|_| current)
+        .ok_or("battleground scoreboard is no longer current")?;
+    let skirmish = matched
+        .arena
+        .as_ref()
+        .map(|arena| arena.mode)
+        .filter(|mode| {
+            matches!(
+                mode,
+                ArenaQueueMode::Skirmish2v2 | ArenaQueueMode::Skirmish3v3
+            )
+        });
+    match skirmish {
+        Some(mode) if matched.instance.phase == BgPhase::Ended => Ok(mode),
+        _ => Err("Queue Again requires a finished arena skirmish".into()),
     }
 }
 

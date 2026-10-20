@@ -1,6 +1,6 @@
 ## 2026-10-20 — Guardian aura split and Death Grip
 
-[Guardian damage](systems/auras.md#guardian-and-controlled-pet-damage--2026-10-20) separates531 guardians from429 controlled pets and matches victim380 to the guardian's owner; [Death Grip](systems/spell-casting.md#death-grip-and-destination-jumps--2026-10-20) binds native children and42/213 jump clocks/no-facing flag. Twelve ignored native tests first RED4PASS/8FAIL; owner-selection correction replaces invalid melee no-receipt with genuine10vs20 at `eee8013db`, same4PASS/8FAIL23.02s. Original380 Wound spell was an invalid IgnoreDamageTakenModifiers oracle; native208227 with real missile impact gives isolated1PASS/2FAIL28.71s before restoring the target consumer. Native49575 target64 radius15 lands3yd forward, not exact origin; corrected Death Grip5/5 already pass. Implemented/enabled; GREEN and retained gates pending. Aura320 remains named **AURA_320_LABEL_SELECTOR_SOURCE_CONFLICT_70448**, not implemented.
+[Guardian damage](systems/auras.md#guardian-and-controlled-pet-damage--2026-10-20) separates531 guardians from429 controlled pets and matches victim380 to the guardian's owner; [Death Grip](systems/spell-casting.md#death-grip-and-destination-jumps--2026-10-20) binds native children and42/213 jump clocks/no-facing flag. Twelve ignored native tests first RED4PASS/8FAIL; owner-selection correction replaces invalid melee no-receipt with genuine10vs20 at `eee8013db`, same4PASS/8FAIL23.02s. Original380 Wound spell was an invalid IgnoreDamageTakenModifiers oracle; native208227 with real missile impact gives isolated1PASS/2FAIL28.71s before restoring the target consumer. Native49575 target64 radius15 lands3yd forward, not exact origin; corrected Death Grip5/5 already pass. Implemented/enabled at2304683e1: corrected13/13GREEN22.80s; six-name retained filters318PASS/1 missing-ground-envFAIL/2existing ignored226.67s, explicit-ground retry1PASS10.95s. Census/families preceded external shared sibling advancement; remaining integration pins private detached600b755. Post-master gate pending. Aura320 remains named **AURA_320_LABEL_SELECTOR_SOURCE_CONFLICT_70448**, not implemented.
 
 ## 2026-10-19 — Private native-proof purchase hold harness
 
@@ -9,6 +9,10 @@
 ## 2026-10-20 — Spell cooldown persistence
 
 [Contract](../specs/spell-cooldown-persistence.md): player spell/category cooldowns persist as wallclock deadlines at logout and replay as `SpellCooldownUpdate` at world entry (TC SpellHistory SaveToDB/LoadFromDB/SendSpellHistory). RED e9b2860dc/cca7855fc failed at relog replay for Prismatic Sphere28027 and Berserker Rage18499 (in-session rejection already held); GREEN passes in session, after relog and after restart, plus load-time pruning.
+## 2026-10-20 — Armor specialization equipped armor
+
+[Item requirements](systems/auras.md#armor-specialization-equipment--2026-10-20): ignored RED pushed first (9b073510a, rebased ae2683f3b); three genuine failures at the aura-absent assertion, full-plate control passes. Fix b1a250fb2: player Attr8 armor passives need all eight armor slots to fit (Paladin loadout164 plate, Druid leather chest 72689 negative). GREEN 826/0, 4 pre-existing ignores, 252.73s: auras::, stats, followers::passive_stats, class_progression, inventory, combat::tests, class_completeness. No existing test changed. Remaining item-requirement gaps in the [spec](../../specs/player-damage.md#known-gaps-current-cycle).
+
 ## 2026-10-19 — Omen and one-use Clearcasting
 
 [Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
@@ -16,6 +20,10 @@
 ## 2026-10-19 — Tranquil Mind two-stack Clearcasting
 
 [Native source and proof](investigations/follower-data.md#tranquil-mind-two-stack-clearcasting--2026-10-19): actual25 native403521s3 chance5%/s1 op37+1 cap; existing generic cap already passes actual24 repeated procs/25 third proc. Pushedc4aa native3 gives2PASS/1FAIL28.55s: two earned stacks→first free Regrowth wrongly removes both. Minimal2b8f chooses native5% and existing spend_stack; unchanged3GREEN17.68s/zero warnings proves2→1→0 then actual paid Regrowth before enablingf43b. Binomial bounds cover multiple late-enough natural procs per finite native lifetime, not a frequency certificate/gameplay timer. Clearcasting index/investigation merge conflict resolved retaining both sides; requested merged Clearcasting3PASS16.04s atcd1bbe, then Tranquil rebased onto that tip with four patch-equivalent commits. Independent final gate pending.
+
+## 2026-10-20 — Shattered Halls O'mrogg
+
+[Warbringer O'mrogg16809 and heads19523/19524](systems/boss-scripts.md#shattered-halls-omrogg--2026-10-20) ported on BossAi(2) with a Burning Maul AuraScript and a Beatdown AfterCast; new `creature_aggro::reset_all_threat` (TC ResetAllThreat, references kept). Prepared fixture WorldData now carries canonical equipment. Qualification, pushed ignored RED, GREEN8/8 before enabling. `OMROGG_BURNING_MAUL_30620_ABSENT_70448`.
 
 ## 2026-10-20 — Blood Furnace Keli'dan
 
@@ -3365,3 +3373,14 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Nested achievement fixture catalog reuse
 
 [Nested-all fixture](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) clones the existing canonical catalog, no new cache or map producer change. Same native test/four difficulty-prerequisite variants PASS before/after27.029→17.224s wall; CPU26.189→17.176s and peakRSS+52508KiB. Fresh apps/redb, persisted-reopen/foreign-character/refusal assertions unchanged. Code6122e8f0c pushed before after; independent lead integration pending.
+
+- 2026-10-20: Aura world/XP slice: sourced TC a352b1fa matrix, native ignored RED tests and server-state declarations; [coverage/gaps](systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+- 2026-10-20: Wired generic world/XP consumers after13 genuine native RED failures; corrected safe-fall clock remains pending its own RED. Client and TC-NULL gaps remain explicit.
+
+- 2026-10-20: Corrected native SafeFall1860 reaches numeric RED beside14GREEN; implemented144 summed landing-height reduction without changing base curve. Final targeted GREEN pending.
+
+- 2026-10-20: Aura world/XP native15/15GREEN29.01s atc9b7c3e59, no warnings; enabled unchanged tests. Source/per-type matrix and TCNULL/client/persistence/base-curve gaps retained; lead integration gates documented.
+## 2026-10-20 — Crafting reagents from banks
+
+[Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.

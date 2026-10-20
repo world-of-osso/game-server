@@ -1069,3 +1069,27 @@ fn a_player_the_server_flies_is_left_out_of_gravity() {
 
     assert_eq!(app.world().get::<Position>(player).unwrap().y, 60.0);
 }
+
+#[test]
+fn aura_world_safe_fall_1860_reduces_landing_height_seventeen_yards() {
+    let mut app = setup_app_with_time();
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
+    app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
+        100.0, 100.0, 50.0,
+    ));
+    let player = spawn_player(app.world_mut(), 90.0, 80.0, -90.0);
+    let auras = crate::auras::world_xp_tests::native_auras(1860);
+    assert_eq!(auras.modifier(144), 17.0);
+    app.world_mut().entity_mut(player).insert(auras);
+    for _ in 0..150 {
+        app.update();
+        app.world_mut()
+            .run_system_once(apply_terrain_gravity)
+            .unwrap();
+    }
+    assert!((app.world().get::<Position>(player).unwrap().y - 50.0).abs() < 0.001);
+    let expected = 100.0 * (1.0 - shared::movement::fall_damage_percent(13.0));
+    assert!((app.world().get::<Health>(player).unwrap().current - expected).abs() < 0.001);
+}

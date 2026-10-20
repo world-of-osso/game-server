@@ -350,3 +350,16 @@ Proof: `scripted_ai/tests/the_maker.rs`.
 - Broggok, loot, persistence, native presentation and an autonomous full clear are out of scope.
 
 Proof: `scripted_ai/tests/kelidan.rs`.
+
+## Shattered Halls O'mrogg source boundary
+
+- [x] Pinned TC a352b1fa `boss_warbringer_omrogg.cpp`: 16809 and heads19523/19524 under `instance_shattered_halls`; TC DATA_OMROGG ordinal2 = installed DungeonEncounter1937 bit2 (published binding).
+- [x] Engage: Fear30584 20–30s/15–35s, Thunderclap30633 15–25s/15–30s, Beatdown30618 25–30s/25–40s, Burning Maul30598 50–60s/60–70s in both difficulties; the left head plays a random aggro sequence.
+- [x] Thunderclap and Beatdown share category1152: a roll inside the other's lock fails admission and still repeats, as in the source.
+- [x] Heads (`npc_omrogg_heads`): every sequence runs on the left head, the right head speaking its lines; 3s gaps (2s for the fourth attack sequence). OnSpellCast(Beatdown) plays a random attack sequence; OnSpellCast(Burning Maul) is O'mrogg's EMOTE_ROAR; KilledUnit a random slay sequence; JustDied the death sequence, both heads despawning4s after its last line.
+- [x] Beatdown AfterCast: `ResetAllThreat` zeroes every threat reference and keeps it, so the first unit to gain threat afterwards becomes the victim (110% of zero). Its AttackStart of a random player adds no reference to an engaged creature.
+- [x] Burning Maul AuraScript (30598/36056): apply loads equipment ID2 (29479), removal the spawn's original ID (29484); each proc keeps the default36057 trigger and rolls a30% Blast Wave30600.
+- [x] `OMROGG_BURNING_MAUL_30620_ABSENT_70448`: the aura's periodic trigger30620 has no SpellInfo in retail DB2; nothing substitutes it.
+- Porung, Nethekurse, Kargath, loot, persistence and native presentation are out of scope.
+
+Proof: `scripted_ai/tests/omrogg.rs`.

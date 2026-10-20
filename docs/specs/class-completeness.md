@@ -383,3 +383,17 @@ Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per posi
 - [x] Native Haunt48181 effect1 increases the owner's actual Fireball damage by16%; foreign Haunt and physical-only Open Wounds188400 do not amplify Fire damage.
 - [x] Haunt48181's native380 effect amplifies only the aura caster's guardian damage, as specified above.
 - [ ] Haunt controlled-pet amplification381, optional periodic/talent behavior and fresh UDP acceptance remain separate.
+
+## Aura world/XP slice (active70448, 2026-10-20)
+
+Generic server consumers must use authored aura amounts, not spell-ID cases. Native269083 supplies200/291 at10;282559 supplies neither and must preserve baseline XP/money. Kill XP200 multiplies the individual share before rested XP. Quest291 applies each percentage sequentially, retaining integer truncation. Money348 selects Misc0 quests / Misc1 loot; Misc3/4 do not match these sources.
+
+Movement104/106/488 are distinct server permissions, retaining other same-type sources on removal. Swim58 uses strongest positive swim bonus, not run speed. SafeFall144 subtracts summed yards from landing height; preserve the existing server fall curve (not a claim of TC curve parity). Force485 uses the total percentage product. Tracking44 uses player-only creature-type bits. StoreReturn71 snapshots the player's actual map/pose on application and removes its entry on aura removal. DisplayPower179 uses authored Misc0 after form precedence, replacing earlier display auras.
+
+Named gaps: `PVP_AURA_646_649_TC_NULL` (all four TC handlers are NULL; do not reuse ordinary spellmods or change PvE), `WORLD_AURA_CLIENT_PROJECTION` (104/106/488 flags,44 tracking and485 movement-force projection need engine/protocol work), `AURA_235_188_408_CLIENT_ONLY` (native aura payload retained; no server gameplay effect), `AURA_373_TC_NULL_MOVEMENT` (native payload only; no invented forced-speed formula), `AURA_71_PERSISTENCE_AND_RETURN_EFFECT` (runtime origin only; persistence/return effect outside slice), `SAFE_FALL_BASE_CURVE_PARITY` (existing quadratic base curve differs from TC linear). No protocol/engine changes or class/census promotion.
+
+Source/proof matrix: [auras wiki](../wiki/systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+Server implementation now wires200/291/348,58,104/106/488/485/44/71/179 and client-only235/188/408 classification.373 and646–649 remain explicitly unhandled TC NULL gaps.144 subtracts the summed safe-fall yards in the existing landing path after its corrected numeric RED; server motion/wire projection is not claimed.
+
+Native targeted proof:15/15GREEN at c9b7c3e59; tests enabled afterwards with bodies unchanged.104/106/488/485/44 are server state, not certified motion/prediction/minimap integration;106 landing exemption remains unqualified. Named TC/client/persistence/base-curve gaps above remain open. No full-class or census promotion.

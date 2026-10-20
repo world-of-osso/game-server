@@ -48,6 +48,7 @@ PARTIAL_PORTS = {'boss_kystia_manaheart': [474365,1230298,1264095,1264098,474240
                  'boss_vazruden': [5301,30693,19130,40392],
                  'boss_the_maker': [40059],
                  'boss_kelidan_the_breaker': [30935,17228,30938,30940,37370,33775,37371],
+                 'boss_warbringer_omrogg': [30584,30633,30618,30598,36057,30600],
                  'boss_noxxion': [21687,22916,21708,21707],
                  'boss_celebras_the_cursed': [21807,12747,21968],
                  'boss_landslide': [18670,5568,21808],
@@ -91,6 +92,10 @@ PARTIAL_GAPS = {
     'boss_the_maker': [
         'source aggro speech, Heroic40059 beaker 5-15s/10-20s, player-only slay speech and death credit supported',
         'open: MAKER_NORMAL_BEAKER_30925_ABSENT_70448 (Normal casts nothing), MAKER_DOMINATION_CHARM_UNIMPLEMENTED, BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED',
+        'ordinary/native fight, loot and persistence unproved'],
+    'boss_warbringer_omrogg': [
+        'source Fear/Thunderclap/Beatdown/Burning Maul rotation with shared category1152, left/right head aggro/attack/slay/death sequences, EMOTE_ROAR, Beatdown ResetAllThreat keeping references, Burning Maul equip swap and 30% Blast Wave on proc, death credit and head despawn supported',
+        'open: OMROGG_BURNING_MAUL_30620_ABSENT_70448 (periodic trigger casts nothing)',
         'ordinary/native fight, loot and persistence unproved'],
     'boss_kelidan_the_breaker': [
         'source dormant Evocation until five Shadowmoon Channeler17653 deaths, partner Star Beams, volley/Corruption/Burning Nova rotation, Burning Nova aura script Vortex/Fire Nova, slay/death speech and reset channeler respawn supported',

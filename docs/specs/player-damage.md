@@ -59,6 +59,8 @@ Examples
 
 - [x] Auto Shot75 (SPELL_ATTR2_AUTO_REPEAT) repeats on the ranged attack timer after a successful cast: base time is the ranged main-hand delay (BASE_ATTACK_TIME 2s otherwise) divided by haste; each shot resets it and fires without GCD (TC Unit.cpp3008–3044, Spell.cpp4229–4238). Moving does not stop it; a failed check (out of range) skips the shot and keeps the repeat. StopSpellCast and the first stun, fear or confuse cancel it (Unit.cpp1191–1196, 3251–3259, 11609–11617).
 
+- [x] Player passives with armor EquippedItemClass4 and ATTR8_REQUIRES_EQUIPPED_INV_TYPES (Plate/Mail/Leather Specialization, Nethermancy, Wizardry, Mysticism) apply only while head, shoulders, chest, waist, legs, feet, wrists and hands all hold an item of that class and subclass mask; equipping or unequipping re-checks (TC Player.cpp3104–3117, 8297–8317, 26217–26228, 26258–26281; Item.cpp1477–1509). Creatures and followers keep them unconditionally.
+
 ## How it works
 
 - [Player damage](../wiki/systems/player-damage.md) — swing pipeline, armor, spell amounts
@@ -108,7 +110,7 @@ Examples
 - [ ] Spell hit and resist rolls, and the ArmorItemLevelDiminishing curve at the maximum level, are not modelled.
 - [ ] SpellEffect `Coefficient` with a `ScalingClass` (SpellScaling game table base points) is not modelled; those effects use `EffectBasePointsF`.
 - [ ] The Worn Shortsword rolls 0-1 (item level 1). Retail's tooltip was not checked.
-- [ ] Plate Specialization (86101) applies without plate armor (aura runtime: armor specialization conditions are not checked).
+- [ ] Item requirements of other passives are not checked: weapon-class passives (Might of the Frozen Wastes 81333, Master of Arms 1258398, Windwalker Two-Hand Adjustment 346104, Single-Minded Fury 81099), the non-Attr8 armor branch (shield Block 123829–123831), broken items, and interrupting the current cast on unequip (Player.cpp26283–26287).
 
 ## Out of scope
 

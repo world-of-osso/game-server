@@ -1,7 +1,7 @@
 use super::super::*;
 use super::*;
 use crate::item_templates::ItemTemplate;
-use crate::persistence::inventory_store::load_inventory_record;
+use crate::persistence::inventory_store::{load_inventory_record, save_inventory_record};
 use shared::item_data::ItemDefinitionSource::{Forever70205, Retail};
 use std::collections::HashMap;
 
