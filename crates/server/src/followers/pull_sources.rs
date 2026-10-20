@@ -44,7 +44,9 @@ fn read_source_actors(
     map: InMap,
 ) -> Result<BTreeMap<u32, (Entity, u32)>, String> {
     let mut actors = BTreeMap::new();
-    let units = world.resource::<crate::maps::units::MapUnits>();
+    let units = world
+        .get_resource::<crate::maps::units::MapUnits>()
+        .ok_or("Pull admission requires the map unit index")?;
     for unit in units.in_map(map) {
         let Some(origin) = world.get::<CreatureOrigin>(unit) else {
             continue;
