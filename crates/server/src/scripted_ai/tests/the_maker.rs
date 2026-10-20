@@ -206,31 +206,6 @@ fn assert_beaker_window(times: &[f32], first: (f32, f32)) {
     );
 }
 
-/// Level/class inputs through the production stat producer; no Health assignment.
-/// Retire for the shared Vazruden slay helper once that branch lands.
-fn apply_native_low_level_stats(h: &mut Harness) {
-    use bevy::ecs::system::RunSystemOnce;
-    let player = h.player();
-    h.app.world_mut().entity_mut(player).insert((
-        shared::components::Level(10),
-        shared::components::UnitLevel(10),
-    ));
-    let source = crate::spell_cast::test_harness::world_db().unwrap();
-    h.app
-        .insert_resource(crate::spell_cast::test_harness::class_spells(source));
-    h.app
-        .world_mut()
-        .run_system_once(crate::stats::update_character_stats)
-        .unwrap();
-    let max = h
-        .app
-        .world()
-        .get::<crate::stats::CharacterStats>(player)
-        .unwrap()
-        .max_health;
-    assert_eq!(h.health(player).max, max);
-}
-
 #[test]
 fn encounter_coverage_maker_heroic_aggro_speech_and_beaker_schedule() {
     let (mut h, boss, _) = pull_maker(2);
@@ -285,7 +260,7 @@ fn encounter_coverage_maker_normal_beaker_absent_without_substitute() {
 fn encounter_coverage_maker_slay_speaks_for_autonomous_player_kill() {
     let (mut h, boss, _) = maker_copy(1);
     super::omor_slay::install_player_death_transition(&mut h);
-    apply_native_low_level_stats(&mut h);
+    super::vazruden_slay::apply_native_low_level_stats(&mut h);
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
