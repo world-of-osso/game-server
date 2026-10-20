@@ -46,9 +46,18 @@ fn start_server(cwd: &Path, ground_dir: Option<&Path>) -> Child {
         )
         .unwrap();
     }
+    let content = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../content");
+    for name in [
+        "trading-post-monthly-catalog.json",
+        "quest-reward-bonus.json",
+    ] {
+        std::fs::copy(content.join(name), cwd.join("data").join(name))
+            .unwrap_or_else(|error| panic!("Stage tracked startup catalog {name}: {error}"));
+    }
     let mut command = Command::new(env!("CARGO_BIN_EXE_game-server"));
     command
         .current_dir(cwd)
+        .env("GAME_SERVER_BIND_IP", "127.0.0.1")
         .env("GAME_SERVER_PORT", free_udp_port().to_string())
         .env("GAME_SERVER_DB_PATH", cwd.join("game.redb"))
         .env("GAME_SERVER_ADMIN_SOCKET", cwd.join("admin.sock"))
