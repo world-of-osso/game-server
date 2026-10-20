@@ -364,6 +364,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_CRIT_DAMAGE_BONUS
         | MOD_THREAT
         | MODIFY_FALL_DAMAGE_PCT
+        | SAFE_FALL
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
         | MOD_HEALING_PCT
