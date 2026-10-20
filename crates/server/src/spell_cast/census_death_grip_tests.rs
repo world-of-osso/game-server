@@ -2,7 +2,7 @@
 //! Actual native child casts, reversed actor/target, real jump clock and Blood taunt.
 use super::test_harness::{Harness, ObservedTriggeredCasts, harness, world_db};
 use bevy::prelude::*;
-use shared::components::Position;
+use shared::components::{Position, Rotation};
 
 const GRIP: u32 = 49576;
 const VISUAL: u32 = 243912;
@@ -63,11 +63,40 @@ fn native_census_death_grip_direct_native213_uses_destination_jump_clock() {
     let mut h = fixture(false);
     let origin = position(&h, h.caster);
     let mover = h.npc;
+    let facing = 0.37;
+    h.app.world_mut().entity_mut(mover).insert(Rotation {
+        y: facing,
+        ..default()
+    });
+    assert_ne!(
+        super::attributes(world_db().unwrap().store.get(JUMP).unwrap(), 9) & 0x0080_0000,
+        0,
+        "native213 requests no facing control"
+    );
     super::creature_cast(h.app.world_mut(), mover, JUMP, Some(h.caster), true)
         .expect("native213 aliases TC EffectJumpDest42, not unsupported or instant teleport");
     assert_jump_and_land(&mut h, mover, origin);
     assert_eq!(position(&h, h.caster), origin);
     assert_eq!(h.health(mover), 5000.0);
+    assert_eq!(h.app.world().get::<Rotation>(mover).unwrap().y, facing);
+
+    // Native4336 is effect42 with ordinary facing, not a fabricated alias row.
+    h.app
+        .world_mut()
+        .entity_mut(mover)
+        .insert(Position { x: 15.0, ..origin });
+    super::cast_triggered_at_destination(
+        h.app.world_mut(),
+        mover,
+        4336,
+        Vec3::new(origin.x, origin.y, origin.z),
+        0,
+    );
+    assert_jump_and_land(&mut h, mover, origin);
+    assert_eq!(
+        h.app.world().get::<Rotation>(mover).unwrap().y,
+        crate::creature_ai::facing_along(-15.0, 0.0).unwrap()
+    );
 }
 
 #[test]

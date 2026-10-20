@@ -246,9 +246,9 @@ fn native_census_guardian_531_and_380_change_actual_melee_receipts_without_rng_e
     });
     apply_effect(&mut h, owner, owner, FERAL, 2);
     apply_effect(&mut h, owner, target, HAUNT, 3);
-    let world = h.app.world_mut();
-    crate::combat::start_attack(&mut world.commands(), ghoul, target, None);
-    world.flush();
+    // GuardianActor copies its owner's live selection each tick; a manually
+    // started swing with no owner selection is correctly stopped by that driver.
+    h.select(Some(target));
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
     for _ in 0..640 {
         // At most16 source2000ms swings at the unchanged50ms fixture step.
