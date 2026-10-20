@@ -13,6 +13,10 @@
 
 [Native source and proof](investigations/follower-data.md#tranquil-mind-two-stack-clearcasting--2026-10-19): actual25 native403521s3 chance5%/s1 op37+1 cap; existing generic cap already passes actual24 repeated procs/25 third proc. Pushedc4aa native3 gives2PASS/1FAIL28.55s: two earned stacks→first free Regrowth wrongly removes both. Minimal2b8f chooses native5% and existing spend_stack; unchanged3GREEN17.68s/zero warnings proves2→1→0 then actual paid Regrowth before enablingf43b. Binomial bounds cover multiple late-enough natural procs per finite native lifetime, not a frequency certificate/gameplay timer. Clearcasting index/investigation merge conflict resolved retaining both sides; requested merged Clearcasting3PASS16.04s atcd1bbe, then Tranquil rebased onto that tip with four patch-equivalent commits. Independent final gate pending.
 
+## 2026-10-20 — Shattered Halls O'mrogg
+
+[Warbringer O'mrogg16809 and heads19523/19524](systems/boss-scripts.md#shattered-halls-omrogg--2026-10-20) ported on BossAi(2) with a Burning Maul AuraScript and a Beatdown AfterCast; new `creature_aggro::reset_all_threat` (TC ResetAllThreat, references kept). Prepared fixture WorldData now carries canonical equipment. Qualification, pushed ignored RED, GREEN8/8 before enabling. `OMROGG_BURNING_MAUL_30620_ABSENT_70448`.
+
 ## 2026-10-20 — Blood Furnace Keli'dan
 
 [Keli'dan17377 and Shadowmoon Channelers17653](systems/boss-scripts.md#blood-furnace-kelidan--2026-10-20) ported on BossAi(1) with a Burning Nova AuraScript; shared `Hook::JustReachedHome` at home arrival and non-forced `SpawnGroupSpawn` (keep living, replace dead). Qualification, pushed ignored RED, GREEN11/11 before enabling. `KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`.

@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Shattered Halls O'mrogg — 2026-10-20
+
+Source16809 Fear/Thunderclap/Beatdown/Burning Maul rotation with the shared category1152 lock, left/right head aggro, attack, slay and death sequences, EMOTE_ROAR, Beatdown `ResetAllThreat` (references kept, new victim at first threat), Burning Maul equip swap and30% Blast Wave on proc, death credit1937 bit2 and head despawn. Qualification2PASS29.90s→pushed ignored6RED60.05s→GREEN8/8 57.48s, tests enabled. Named gap: `OMROGG_BURNING_MAUL_30620_ABSENT_70448`. [Contract](specs/boss-scripts.md#shattered-halls-omrogg-source-boundary); independent gate pending.
+
 ## Blood Furnace Keli'dan — 2026-10-20
 
 Source17377 dormant Evocation with withheld channeler groups360–364 spawned once, 10s partner Star Beams, fifth-channeler release/Talk0/zone-in, Normal volley/Corruption/Burning Nova rotation with nova speech, Burning Nova aura script (Heroic Vortex, Fire Nova on remove), slay/death speech plus1923 bit1 credit, reset re-dormancy/5s Evocation/channeler respawn and channeler combat. Shared `Hook::JustReachedHome` and non-forced `SpawnGroupSpawn`. Qualification2PASS36.98s→pushed ignored RED (8 genuine + 1 corrected oracle)→GREEN11/11 83.10s, tests enabled. Named gaps: `KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`, `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`. [Contract](specs/boss-scripts.md#blood-furnace-kelidan-source-boundary); independent gate pending.
