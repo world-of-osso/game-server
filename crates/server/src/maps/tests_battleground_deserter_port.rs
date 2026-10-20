@@ -12,6 +12,9 @@ mod leave_combat;
 #[path = "tests_battleground_arrival_mount.rs"]
 mod arrival_mount;
 
+#[path = "tests_battleground_preparation_aura.rs"]
+mod preparation_aura;
+
 #[test]
 fn bg_deserter_port_concrete_refuses_late_aura_and_releases_reservation() {
     assert_late_deserter_port_refusal(1018, 19, shared::battleground::BgPhase::InProgress);
@@ -149,6 +152,8 @@ fn enter_supports(h: &mut Harness, supports: &[Traveler], match_id: u64) -> InMa
     }
     let copy = h.map_of(&supports[0]).unwrap();
     assert!(supports.iter().all(|who| h.map_of(who) == Some(copy)));
+    use_second_frames(h);
+    h.advance(121);
     copy
 }
 

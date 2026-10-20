@@ -1,5 +1,6 @@
 //! Ramparts bosses, TC a352b1fa. EventMap repeats anchor to dispatch.
 mod herald;
+pub(crate) mod liquid_fire;
 mod omor;
 mod vazruden;
 use crate::maps::InMap;
@@ -9,12 +10,84 @@ pub(crate) use herald::{HeraldUnkillable, on_unit_death};
 use shared::components::ThreatTable;
 
 use super::boss_ai::{BossAi, BossScript, boss_update_ai};
+use super::instance_script::{self, EncounterState};
 use super::{CreatureAi, Ctx, DamageTaken};
 
 /// TC557–568: effect0 SCRIPT_EFFECT sends action0 to the actual hit creature.
 pub(crate) fn call_nazan(world: &mut World, _caster: Entity, target: Entity, _depth: u8) {
     if world.get::<shared::components::Npc>(target).is_some() {
         super::dispatch(world, target, super::Hook::DoAction(0));
+    }
+}
+
+/// TC Herald276–280/Vazruden467–474: source despawn, then copy FAIL.
+fn evade_encounter(ctx: &mut Ctx) {
+    let map = ctx.map().expect("registered Ramparts actor map");
+    crate::combat::despawn_creature(ctx.world, ctx.me);
+    instance_script::set_boss_state(ctx.world, map, 1, EncounterState::Fail);
+}
+
+const HERALD_ENCOUNTER: u32 = 1892;
+const HERALD_SPAWN_GROUP: u32 = 357;
+const HERALD_RESET_MS: u32 = 30_000;
+
+/// TC instance89–105: schedule only after SetBossState accepts the transition.
+pub(super) fn on_boss_state_changed(
+    world: &mut World,
+    map: InMap,
+    encounter: u32,
+    state: EncounterState,
+) {
+    if encounter != HERALD_ENCOUNTER
+        || state != EncounterState::Fail
+        || !herald::is_ramparts(world, map)
+    {
+        return;
+    }
+    let Some(script) = instance_script::instance_script(world, map) else {
+        return;
+    };
+    script.ramparts_reset_delays.push(HERALD_RESET_MS);
+}
+
+/// TC InstanceMap2993–3000: unit hooks run before the copy's Events.Update(diff).
+/// This independent clock survives the actor's despawn and executes one due event.
+pub(crate) fn update_instance_resets(world: &mut World) {
+    let diff = world.resource::<Time<Fixed>>().delta().as_millis() as u32;
+    let mut due = Vec::new();
+    for (map, script) in &mut world.resource_mut::<instance_script::InstanceScripts>().0 {
+        for delay in &mut script.ramparts_reset_delays {
+            *delay = delay.saturating_sub(diff);
+        }
+        if script.ramparts_reset_delays.first() == Some(&0) {
+            script.ramparts_reset_delays.remove(0);
+            due.push(*map);
+        }
+    }
+    for map in due {
+        reset_herald_copy(world, map);
+    }
+}
+
+fn reset_herald_copy(world: &mut World, map: InMap) {
+    crate::zones::reset_spawn_group(world, map, HERALD_SPAWN_GROUP);
+    instance_script::instance_script(world, map)
+        .expect("loaded reset copy")
+        .ramparts_sentry_deaths = 0;
+    let remaining: Vec<_> = world
+        .query::<(
+            Entity,
+            &InMap,
+            &shared::components::Npc,
+            &crate::zones::TempSummon,
+        )>()
+        .iter(world)
+        .filter_map(|(actor, copy, npc, _)| {
+            (*copy == map && npc.template_id == 17_537).then_some(actor)
+        })
+        .collect();
+    for actor in remaining {
+        crate::combat::despawn_creature(world, actor);
     }
 }
 

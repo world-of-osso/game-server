@@ -1,6 +1,41 @@
+## 2026-10-19 — Native forced-miss readiness oracle RED
+
+[Follow-up](systems/auras.md#attack-readiness-oracle-follow-up--2026-10-19):7ff4c9857/cc83515b6 fixed recovery, not initial HP⇒attack helpers. Pushed ignoredea66eb290 native50240 counterexamples give2RED21.29s/three actual Miss attempts each; minimal TEST-only event/Pursuing/currentvictim correction preserves100/120-frame windows and every wound/death/evade/regeneration assertion. No production/RNG/input changes. CurrentVictim namespace compile correction1aea734bf (not behavioral proof); fresh two-module31GREEN94.76s/0warnings including new2ignored via --include-ignored, then both enabled. Independent lead gate pending.
+## 2026-10-19 — Herald ground Liquid Fire
+
+[Ground child/object boundary](systems/boss-scripts.md#herald-ground-liquid-fire--2026-10-19): source qualification1PASS27.70s; corrected actual-launch ignoredcb85 pushed on pre-runtime base, four genuineRED156.95s. Ground-only hit-unit self-children plus exact registered GO AI/native21252 ordinary pulses/damage/lifetimes pass four complete endpoints159.72s at7ea954c38; retained source/refusal controls make a six-case composite. Invalid initial network child receipt oracle excluded; no wire workaround. Tests enabled, independent gate pending; flying/native/balance/persistence/re-entry/loot excluded.
+
+## 2026-10-19 — Auto Shot75 autorepeat
+
+[AutoRepeat](systems/spell-casting.md#auto-shot-autorepeat--2026-10-19): ignored RED606c6ead2/2ded8d38e pushed first; four genuine failures (one shot, no repeat). Fix997d00e04 repeats on the ranged timer (rifle73000 delay3000/haste), no GCD; moving keeps it, out of range skips, StopSpellCast/first stun/fear/confuse cancel via `stop_all_casts`. Resume-window oracle correctedcbf8c8d9d (window included the next legitimate repeat). Stun test RED-proven by reverting only its call (exit101 at the cancel assertion). GREEN169/0,3 pre-existing LOS ignores,66.96s: auto_shot, Dark Luck75, defensives, autoattack range, attack speed, combat::tests, dummy, control stop, fear/confuse/stun. Gaps in [spec](../../specs/player-damage.md#known-gaps-current-cycle).
+## 2026-10-19 — Herald fixture-only admitted Roar seed
+
+[Ground diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hc729's three legitimate category-cooldown refusals leave the1500ms probe without an admitted cast. Approved actor-local fixture seed0 at natural release gives authored initial Fireball3656ms/Cone7735ms, after Roar2000ms plus1500ms cast. EventMap clock/queue, source ranges/repeats/admission and production RNG remain unchanged; exact expiry oracle retained. Three independent native stability executions7eff0e0fa/protocolfc37 pass36.11s/37.75s/41.14s, each actual first Roar3.95 admitted/exact1450/1500ms AI expiry; initial compile-only visibility failure excluded. Independent changed-family gate/co-landing pending.
+
+## 2026-10-19 — Herald native cast millisecond root fix
+
+[Captured root cause](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hr705 Cone38.65→53.70/Roar52.15+1500ms=53.65 isolates shared float progress1.4999996 after30×50ms. Pushed ignored actual native AI regressionbdb50ac74 fails39.30s; shared normal/channel/pushback3RED +nearest-ms control precede integer-ms runtimebb18da9. Shared53GREEN; strict native1450/1500ms endpoint50.60s plus six retained native ground/Omor pushback controls105.21s. Nearest-ms conversion/public f32 wire/pushback/source windows retained; no epsilon or broad rerun. Engine has no shared tick caller. Paired protocol/server independent gate/co-landing pending; original docs-only1a5 closure held.
+
+## 2026-10-19 — Herald ground timing diagnostic capture
+
+[Standing diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): original full-workspace Heroic36921 late repeat remains unreproduced after actual same-CPU load1PASS118.34s and small shared-process/six-thread7PASS49.68s. Approved permanent pre-assert spell/Roar dump and test-only opt-in actual AI/cast clocks added; single expanded module261PASS/2private-Azure-envFAIL/6ignored811.19s did not reproduce; subsequent hr705 isolated the shared cast-progress defect above. No assertion/source timer/RNG changes; standing diagnostic retained.
+
+## 2026-10-19 — Herald real evade ingress RED
+
+[Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation→four full endpoint GREEN67.43s atb549ffbaf after correcting fresh default-reaction oracle. Source exact deadline/alive identity/count/patrol/min1/fresh natural intro pass; tests enabled, independent gate pending; no canonical data/flag changes.
+
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 
 [Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
+## 2026-10-19 — Bounded ordinary BG Preparation44521
+
+[Aura lifecycle](../handoffs/pvp-bg-preparation-aura-proof-ledger.md): ignored36bfc2ea0 pushed before genuine6RED/7controls (13cases11.98s). Native authored44521 makes Fireball Mana20/Energy45 SinisterStrike cost/admission zero, then normal removal restores exact baselines. Consumerb0a123256 adds WaitingACK/start/BG-exit role boundaries with normal AuraAPI, no arena reset or new effects. GREEN13/0/0ignored12.32s at31dc2bb27 before enabling six regressions; separate retained76/0/0ignored18.89s at6d03ade8b after master merge (new13 skipped,89distinct notone89run). Lead integration pending. Generic interrupt semantics remain `AURA_INTERRUPT_LEAVE_ENTER_WORLD_SEMANTICS_UNQUALIFIED`; no zoning/logout/persistence purge.
+
+## 2026-10-19 — Ordinary battleground preparation
+
+[Preparation follow-up](../handoffs/pvp-bg-preparation-proof-ledger.md#bp732-integration-correction-and-test-driver-audit): bp732278PASS/3FAIL/1ignored, CHECK0/FMT0. Test-only natural wait for reconnect/flag captures, original delta preserved after native wait, fresh preparation per100 replacement matches. Grep14modules found two additional flag-channel tests; exact3+own4+flag2 GREEN9/0/0ignored53.80s on rebased2a6ab113e/protocol7f9bd7c. Production unchanged; Lead regate pending.
+
+[Preparation](systems/battleground-preparation.md): source first-arrival120/60/30/0 clock, original roster minimum and sourced copied-map gates after native concrete/Random RED2. Actual10-map gate/loader2PASS; corrected pending-transfer/clock2PASS in partial retained114/25. Exact failed25→22PASS/3FAIL, then qualified ground root/restored original frame cadence→last3PASS53.66s atbc3850ae0. EDQUOT and two compile prerequisites remain separately recorded. [Proof ledger](../handoffs/pvp-bg-preparation-proof-ledger.md) qualifies revision scopes; no unified current-tip retained pass. Lead integration pending; Seething missing placements named; no UI/44521/resources.
 
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
@@ -3223,6 +3258,7 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
 
+- [Prepared encounter fixture inputs](investigations/slow-native-test-fixtures.md#fully-prepared-encounter-inputs-2026-10-19) — complete immutable producer/composite profiles, independent resource copies, cross-profile/difficulty isolation;28 unchanged cases and matched wall/CPU/RSS, including cold Ragefire regression and retained-memory cost.
 ## 2026-10-19 — Actor-owned periodic-damage maintenance
 
 [Source and native proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19): SimC76f8118actor-specificMoonfire semantics confirmed; ordinarydual164812caster/tick+ownrecastcontrolsPASS/foreignsuppressionRED. PeriodicdamageAttack-onlycasterfilteref0603bb1 gives4nativePASS20.11s includingforeignHoTunchanged. Enabled3provedqualifications; integratedkit/stackingcontrols andleadgatepending. No globalhas_aura/timer/priority/movement/pet/planner edits.
@@ -3236,3 +3272,7 @@ After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-ap
 ## 2026-10-19 — Last Online native acceptance
 
 gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.
+
+## 2026-10-19 — Swiftmend own-HoT hit consumption
+
+[Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.

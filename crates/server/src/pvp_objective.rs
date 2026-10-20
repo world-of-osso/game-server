@@ -42,7 +42,10 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
             .battleground_matches
             .iter_mut()
             .filter_map(|(match_id, matched)| {
-                update_match(world, matched, &actors).then_some(*match_id)
+                let preparing = matched.instance.phase == BgPhase::Waiting;
+                let changed = update_match(world, matched, &actors);
+                let started = preparing && matched.instance.phase != BgPhase::Waiting;
+                changed.then_some((*match_id, started))
             })
             .collect::<Vec<_>>()
     });
@@ -50,10 +53,33 @@ pub(super) fn update_battleground_objectives(world: &mut World) {
     super::honor::award_isle_resource_gains(world, isle_resources);
     super::honor::award_alterac_tower_changes(world, alterac_towers);
     credit_objective_events(world);
-    for match_id in changed {
+    for (match_id, started) in changed {
+        if started {
+            clear_started_preparation(world, match_id);
+        }
         super::honor::award_alterac_survivor_honor(world, match_id);
         credit_completed_match(world, match_id);
         send_match_snapshot(world, match_id);
+    }
+}
+
+/// TC Battleground.cpp444: remove preparation only from accepted players in this copy.
+fn clear_started_preparation(world: &mut World, match_id: u64) {
+    let (map, accepted) = {
+        let matched = &world.resource::<PvpServerState>().battleground_matches[&match_id];
+        (
+            matched.map.expect("started match has a copy"),
+            matched.accepted.clone(),
+        )
+    };
+    let players: Vec<_> = world
+        .query::<(Entity, &ClientId, &InMap)>()
+        .iter(world)
+        .filter(|(_, id, copy)| accepted.contains(&id.0) && **copy == map)
+        .map(|(entity, _, _)| entity)
+        .collect();
+    for player in players {
+        super::clear_battleground_preparation(world, player);
     }
 }
 
@@ -143,12 +169,19 @@ fn update_match(
     let Some(map) = matched.map else { return false };
     let template =
         template_by_id(matched.instance.bg_id).expect("matched template remains registered");
+    let now = world.resource::<Time<Fixed>>().elapsed_secs_f64();
     let mut changed = false;
-    if matched.instance.phase == BgPhase::Waiting
-        && roster_ready(matched, actors, map, template.min_players_per_team as usize)
-    {
-        changed = matched.instance.start();
+    if matched.instance.phase == BgPhase::Waiting {
+        let arrived = matched
+            .accepted
+            .iter()
+            .any(|id| actors.get(id).is_some_and(|actor| actor.map == map));
+        let ready = roster_ready(matched, actors, map, template.min_players_per_team as usize);
+        if matched.preparation.advance(now, arrived, ready) {
+            changed = matched.instance.start();
+        }
     }
+    super::bg_preparation::update_gates(world, map, &matched.preparation, now);
     if matched.instance.phase != BgPhase::InProgress {
         return changed;
     }

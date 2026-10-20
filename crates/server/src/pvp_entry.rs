@@ -284,6 +284,8 @@ fn create_match_map(
     if arena {
         super::arena_objects::prepare_map(world, map);
         super::arena_sight::prepare_map(world, map);
+    } else {
+        super::bg_preparation::prepare_map(world, map);
     }
     if let Some(alterac) = alterac {
         let states = alterac.battle.world_states(
