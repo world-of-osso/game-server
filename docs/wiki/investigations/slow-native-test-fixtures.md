@@ -93,6 +93,10 @@ Ragefire isolated cold wall regressed despite lower CPU: the cohort uses each pr
 
 Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/phase-b-{before,after}-{omor,ragefire,azure-rune,azure-return,herald-intro,herald-min1}/`; aggregate `wow_formats-phase-b-measured-comparison.json`. Per-test start/finish flushes are separately observed for every enabled case. Package check passes90s with no warnings; format/diff checks pass. Broader merged-master integration remains lead-owned.
 
+## Canonical toy spell reuse
+
+The transmitted-object fixtures and shared facing fixture read the unchanged canonical spell database. They now clone the complete store already loaded by `spell_cast::test_harness::world_db()`, instead of rebuilding it for each app. Prepared-copy spell loaders are unchanged. Every app still owns its store, redb, cases and ordinary50ms lifecycle observations; this adds no cache and removes no tick or assertion.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.
