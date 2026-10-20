@@ -110,32 +110,26 @@ fn bg_preparation_aura_declined_pending_invitation_cannot_grant_zero_cost() {
 }
 
 #[test]
-#[ignore = "RED: ordinary Waiting ACK does not grant native Preparation44521"]
 fn bg_preparation_aura_concrete_actual_ack_grants_once_then_start_restores_cost() {
     assert_arrival(1018);
 }
 #[test]
-#[ignore = "RED: ordinary Waiting ACK does not grant native Preparation44521"]
 fn bg_preparation_aura_random_actual_ack_grants_once_then_start_restores_cost() {
     assert_arrival(32);
 }
 #[test]
-#[ignore = "RED: natural ordinary BG start does not remove44521"]
 fn bg_preparation_aura_concrete_start_clears_only_current_arrived_copy() {
     assert_start(1018);
 }
 #[test]
-#[ignore = "RED: natural ordinary BG start does not remove44521"]
 fn bg_preparation_aura_random_start_clears_only_current_arrived_copy() {
     assert_start(32);
 }
 #[test]
-#[ignore = "RED: ordinary successful BG exit does not clear44521 role aura"]
 fn bg_preparation_aura_concrete_successful_exit_restores_cost() {
     assert_exit(1018, false);
 }
 #[test]
-#[ignore = "RED: ordinary successful BG exit does not clear44521 role aura"]
 fn bg_preparation_aura_random_successful_exit_restores_cost() {
     assert_exit(32, false);
 }
