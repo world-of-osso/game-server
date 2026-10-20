@@ -447,7 +447,7 @@ fn class_can_need(context: &NeedContext) -> bool {
 
 #[derive(SystemParam)]
 pub(super) struct RollDelivery<'w, 's> {
-    store: LootStore<'w>,
+    store: LootStore<'w, 's>,
     commands: Commands<'w, 's>,
     corpses: Query<
         'w,

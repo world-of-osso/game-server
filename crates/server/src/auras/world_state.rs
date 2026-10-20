@@ -97,6 +97,7 @@ pub(super) fn on_applied(world: &mut World, unit: Entity, aura: &AuraInstance) {
         .entity_mut(unit)
         .entry::<AuraTeleportOrigins>()
         .or_default()
+        .into_mut()
         .0
         .insert(aura.spell_id, TeleportOrigin { map, position, yaw });
 }
