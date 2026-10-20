@@ -182,7 +182,6 @@ fn earn_native_clearcasting() -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "CLEARCASTING_NATIVE_LIFECYCLE: actual14 has no Omen proc"]
 fn follower_clearcasting_level14_native_lifebloom_never_grants_buff() {
     let (mut h, caster) = at_level(CRENNA, 14, |_| {});
     assert!(!has_aura(h.app.world(), caster, OMEN));
@@ -192,7 +191,6 @@ fn follower_clearcasting_level14_native_lifebloom_never_grants_buff() {
 }
 
 #[test]
-#[ignore = "CLEARCASTING_NATIVE_LIFECYCLE: earned buff makes one Regrowth free and is consumed"]
 fn follower_clearcasting_native_regrowth_is_free_once_then_consumes_buff() {
     let (mut h, caster) = earn_native_clearcasting();
     assert_eq!(mana_cost(&h, caster, REGROWTH), 0.0);
@@ -217,7 +215,6 @@ fn follower_clearcasting_native_regrowth_is_free_once_then_consumes_buff() {
 }
 
 #[test]
-#[ignore = "CLEARCASTING_NATIVE_LIFECYCLE: unrelated native healing preserves earned buff"]
 fn follower_clearcasting_native_rejuvenation_preserves_earned_buff() {
     let (mut h, caster) = earn_native_clearcasting();
     let buff = own_aura(&h, caster, CLEARCASTING).unwrap();
