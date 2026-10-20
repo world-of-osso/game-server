@@ -70,7 +70,7 @@ export ITEM_SPARSE_SELECTED_FIXTURE=/home/osso/Projects/world-of-osso/game-engin
 python3 -m unittest scripts.tests.test_db2_casc_sparse scripts.tests.test_skyborne_data.SkyborneDecodeTest
 ```
 
-Both paths are required: missing environment variables fail explicitly. Raw DB2s
+Tests that need an unset variable skip and name it (`scripts/tests/fixture_env.py`); set both to run them. Raw DB2s
 are not tracked; the [reference README](../scripts/reference/forever-1.60.1.70205/README.md)
 owns cache layout and provenance. Decoded JSON and schema text remain in the repo.
 

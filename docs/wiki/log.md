@@ -3349,3 +3349,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).
+
+## 2026-10-19 — Loa canonical fixture spell reuse
+
+[Loa follow-up](investigations/slow-native-test-fixtures.md#loa-canonical-spell-store-follow-up): two canonical reloads use existing complete store copies, no new cache. Same seven cases pass before/after, wall132.283→99.566s/CPU127.577→98.679s/RSS+36500KiB. All1800s/3600s ordinary frames and persistence/assertions preserved. Pushed208f091df precedes after measurement; independent lead integration pending.
+## 2026-10-19 — Nested achievement fixture catalog reuse
+
+[Nested-all fixture](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) clones the existing canonical catalog, no new cache or map producer change. Same native test/four difficulty-prerequisite variants PASS before/after27.029→17.224s wall; CPU26.189→17.176s and peakRSS+52508KiB. Fresh apps/redb, persisted-reopen/foreign-character/refusal assertions unchanged. Code6122e8f0c pushed before after; independent lead integration pending.

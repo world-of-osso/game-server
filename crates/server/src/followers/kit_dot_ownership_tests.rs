@@ -99,20 +99,27 @@ fn follower_moonfire_ownership_two_native_casters_keep_distinct_periodic_damage(
     assert!(has_owned_dot(&h, other));
     assert!(has_owned_dot(&h, caster));
     let steps = native_period_steps(&h);
+    let after_both_applied = h.inbox.log.len();
     h.advance(steps);
     for source in [caster, other] {
-        assert!(
-            h.inbox
-                .log
-                .iter()
-                .any(|event| event.kind == CombatLogKind::Damage
+        assert!(has_owned_dot(&h, source));
+        let receipts: Vec<i32> = h.inbox.log[after_both_applied..]
+            .iter()
+            .filter(|event| {
+                event.kind == CombatLogKind::Damage
                     && event.periodic
                     && event.spell_id == Some(MOONFIRE_DOT)
                     && event.source == Some(source.to_bits())
                     && event.target == Some(h.npc.to_bits())
-                    && event.amount > 0),
-            "real periodic damage missing for {source:?}"
+                    && event.amount > 0
+            })
+            .map(|event| event.amount)
+            .collect();
+        assert!(
+            !receipts.is_empty(),
+            "fresh periodic damage after both applications missing for {source:?}"
         );
+        println!("MOONFIRE source={source:?} fresh_periodic_receipts={receipts:?}");
     }
 }
 

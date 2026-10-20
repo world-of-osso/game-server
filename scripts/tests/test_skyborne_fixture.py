@@ -11,9 +11,11 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 import skyborne_kit_fixture
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class PortableFixtureTest(unittest.TestCase):
     def test_native_fixture_matches_current_source_definitions_and_retail_rows(self):
         path = SCRIPTS.parent / "crates/server/src/skyborne_kit_fixture.rs"
