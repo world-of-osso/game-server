@@ -37,7 +37,6 @@ fn buy_tab(h: &mut Harness, npc: bevy::prelude::Entity, bank: BankType) {
 /// Retail `ItemUtil.GetCraftingReagentCount` counts both banks away from a banker,
 /// so a character entering the world learns their contents.
 #[test]
-#[ignore = "RED: CRAFTING_REAGENTS_FROM_BANK"]
 fn entering_the_world_sends_both_banks_without_a_banker() {
     use crate::bank_storage::BankTabData;
     use crate::persistence::banks::{BankData, BankOwner, save_bank_move};

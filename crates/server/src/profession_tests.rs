@@ -1598,7 +1598,6 @@ fn crafting_consumes_reagents_from_bags_then_character_bank_then_warband_bank() 
 /// The client counts bank reagents from `BankContents`, so a craft that takes
 /// from a bank sends that bank's new contents, banker or not.
 #[test]
-#[ignore = "RED: CRAFTING_REAGENTS_FROM_BANK"]
 fn crafting_from_banks_sends_their_new_contents() {
     use persistence::banks::{BankOwner, save_bank_move};
     use shared::protocol::{BankContents, BankType};

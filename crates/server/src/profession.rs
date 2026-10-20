@@ -516,17 +516,18 @@ fn with_bags<R>(world: &World, player: Entity, apply: impl FnOnce(&Bags) -> R) -
         templates: world.get_resource::<ItemTemplates>()?,
         catalog: world.get_resource::<VendorCatalog>()?,
         character_id,
-        account_id: player_account(world, player),
+        account_id: player_connection(world, player).map(|(_, account)| account),
     };
     Some(apply(&bags))
 }
 
-fn player_account(world: &World, player: Entity) -> Option<u64> {
+/// The player's connection and its account.
+fn player_connection(world: &World, player: Entity) -> Option<(Entity, u64)> {
     world
-        .try_query::<(&PlayerLink, &Authenticated)>()?
+        .try_query::<(Entity, &PlayerLink, &Authenticated)>()?
         .iter(world)
-        .find(|(link, _)| link.0 == player)
-        .map(|(_, auth)| auth.account_id)
+        .find(|(_, link, _)| link.0 == player)
+        .map(|(connection, _, auth)| (connection, auth.account_id))
 }
 
 pub(crate) fn new_order_item(
@@ -694,13 +695,24 @@ pub(crate) fn take_reagents(world: &mut World, caster: Entity, spell: &SpellInfo
         for (item, count) in reagents {
             banks.take(&mut model, item, count)?;
         }
-        banks.save(&bags.db.db, model);
-        Ok::<_, String>(bags.character_id)
+        let changed = banks.save(&bags.db.db, model);
+        Ok::<_, String>((bags.character_id, changed))
     });
     match taken {
-        Some(Ok(character_id)) => world
-            .resource_mut::<GoldUpdateQueue>()
-            .record_items(character_id),
+        Some(Ok((character_id, changed))) => {
+            world
+                .resource_mut::<GoldUpdateQueue>()
+                .record_items(character_id);
+            let connection = player_connection(world, caster).map(|(connection, _)| connection);
+            if let (Some(connection), Some(mut banks)) = (
+                connection,
+                world.get_resource_mut::<crate::bank::ChangedBanks>(),
+            ) {
+                banks
+                    .0
+                    .extend(changed.into_iter().map(|bank| (connection, bank)));
+            }
+        }
         Some(Err(error)) => warn!("Spell {}: reagents not taken: {error}", spell.id),
         None => {}
     }

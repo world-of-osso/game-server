@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use redb::Database;
 use shared::item_data::ItemDefinitionSource::{self, Retail};
+use shared::protocol::BankType;
 
 use crate::bank_storage::{BankTabData, load_tab_definition_sources};
 use crate::inventory::inventory_model::InventoryModel;
@@ -78,8 +79,9 @@ impl ReagentBanks {
         Ok(())
     }
 
-    /// Save the bags and every bank a `take` changed in one transaction.
-    pub(super) fn save(&self, db: &Database, model: InventoryModel) {
+    /// Save the bags and every bank a `take` changed in one transaction; returns
+    /// the changed banks.
+    pub(super) fn save(&self, db: &Database, model: InventoryModel) -> Vec<BankType> {
         let character = self
             .character_changed
             .then_some(BankOwner::Character(self.character_id, &self.character));
@@ -94,6 +96,13 @@ impl ReagentBanks {
             character.into_iter().chain(account),
             Some(&model.into_record()),
         );
+        [
+            (self.character_changed, BankType::Character),
+            (self.account_changed, BankType::Account),
+        ]
+        .into_iter()
+        .filter_map(|(changed, bank)| changed.then_some(bank))
+        .collect()
     }
 
     fn banks(&self) -> impl Iterator<Item = &[BankTabData]> {

@@ -456,6 +456,7 @@ fn character_and_guild_banks_survive_reopening_the_game_database() {
     let bank = h
         .take::<BankContents>()
         .into_iter()
+        .rev()
         .find(|contents| contents.bank == BankType::Character)
         .expect("character bank sent");
     let stored: Vec<_> = bank.tabs[0]
