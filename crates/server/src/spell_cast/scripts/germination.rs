@@ -7,7 +7,7 @@ const REJUVENATION: u32 = 774;
 const GERMINATION_TALENT: u32 = 155675;
 const GERMINATION_HOT: u32 = 155777;
 
-pub(super) fn redirect_rejuvenation(
+pub(in crate::spell_cast) fn redirect_rejuvenation(
     world: &mut World,
     caster: Entity,
     target: Entity,
