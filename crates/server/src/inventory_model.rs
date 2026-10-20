@@ -79,7 +79,7 @@ impl InventoryModel {
         templates: &ItemTemplates,
         mint: &mut impl FnMut() -> u64,
     ) -> Self {
-        let owned_templates = record
+        let owned: Vec<_> = record
             .inventory
             .items
             .iter()
@@ -89,10 +89,21 @@ impl InventoryModel {
             .filter_map(|item| {
                 let source = record.definition_sources[&item.item_guid];
                 Some((
+                    item.item_guid,
                     (source, item.item_id),
                     *templates.get(source, item.item_id)?,
                 ))
             })
+            .collect();
+        let mut crafting_origins = record.crafting_origins;
+        crafting_origins.retain(|guid, _| {
+            owned
+                .iter()
+                .any(|(owned, _, template)| owned == guid && template.records_crafting_origin())
+        });
+        let owned_templates = owned
+            .into_iter()
+            .map(|(_, key, template)| (key, template))
             .collect();
         let mut model = Self {
             bags: vec![Vec::new(); usize::from(BAG_COUNT)],
@@ -101,7 +112,7 @@ impl InventoryModel {
             overflow: Vec::new(),
             equipped: BTreeMap::new(),
             instances: record.instances,
-            crafting_origins: record.crafting_origins,
+            crafting_origins,
             item_durability: record.item_durability,
             definition_sources: record.definition_sources,
             templates: owned_templates,
@@ -190,6 +201,7 @@ impl InventoryModel {
             self.register_definition(item, source, template);
             if let Some(origin) =
                 crate::persistence::inventory_store::load_item_crafting_origin(db, item.item_guid)
+                    .filter(|_| template.records_crafting_origin())
             {
                 self.crafting_origins.insert(item.item_guid, origin);
             }
@@ -417,9 +429,6 @@ impl InventoryModel {
         if let Some(source) = self.definition_sources.get(&source_guid).copied() {
             self.definition_sources.insert(new_guid, source);
         }
-        if let Some(origin) = self.crafting_origins.get(&source_guid).copied() {
-            self.crafting_origins.insert(new_guid, origin);
-        }
     }
 
     pub(crate) fn record_crafting_origin(&mut self, guid: u64, origin: CraftingOrigin) {
@@ -459,12 +468,6 @@ impl InventoryModel {
     fn same_definition(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
         left.item_id == right.item_id
             && self.definition_source(left.item_guid) == self.definition_source(right.item_guid)
-    }
-
-    fn same_stack_identity(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
-        self.same_definition(left, right)
-            && self.crafting_origins.get(&left.item_guid)
-                == self.crafting_origins.get(&right.item_guid)
     }
 
     // --- Views -----------------------------------------------------------
@@ -827,7 +830,7 @@ impl InventoryModel {
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. }
             )
-        ) && self.same_stack_identity(source, target)
+        ) && self.same_definition(source, target)
             && target.stack_count < self.max_stack(target)
     }
 
@@ -1274,7 +1277,7 @@ impl InventoryModel {
         }
         self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
-            let fits = self.same_stack_identity(source, target)
+            let fits = self.same_definition(source, target)
                 && target.stack_count + count <= self.max_stack(target);
             if !fits {
                 return Err(error(
@@ -1649,14 +1652,12 @@ impl InventoryModel {
         }
         let mut left = item.stack_count;
         let sources = &self.definition_sources;
-        let origins = &self.crafting_origins;
         for other in self.bags.iter_mut().flatten().flatten() {
             if left == 0 {
                 break;
             }
             if other.item_id == item.item_id
                 && sources[&other.item_guid] == source
-                && origins.get(&other.item_guid) == origins.get(&item.item_guid)
                 && other.stack_count < max_stack
             {
                 let moved = left.min(max_stack - other.stack_count);
@@ -1815,9 +1816,7 @@ impl InventoryModel {
         let max_stack = template.max_stack.max(1);
         let room_here = match self.get(location) {
             None => max_stack,
-            Some(other)
-                if self.same_stack_identity(other, &item) && other.stack_count < max_stack =>
-            {
+            Some(other) if self.same_definition(other, &item) && other.stack_count < max_stack => {
                 max_stack - other.stack_count
             }
             Some(_) => {
@@ -1872,7 +1871,7 @@ impl InventoryModel {
             .flat_map(|(_, cells)| cells)
             .map(|cell| match cell {
                 None => max_stack,
-                Some(other) if self.same_stack_identity(other, item) => {
+                Some(other) if self.same_definition(other, item) => {
                     max_stack.saturating_sub(other.stack_count)
                 }
                 Some(_) => 0,

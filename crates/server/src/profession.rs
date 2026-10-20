@@ -14,6 +14,8 @@
 //! `PlayerProfessions` changes are saved and sent as `ProfessionSnapshot`.
 
 mod concentration;
+#[cfg(test)]
+mod crafting_provenance_fixture;
 mod data;
 pub(crate) mod favorites;
 mod gathering;
