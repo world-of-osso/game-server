@@ -2,6 +2,8 @@
 
 Transport-free Stockade qualification runs real gameplay systems in a plain Bevy App in the server test executable. The game-server entry point is never run. [Implementation](../wiki/systems/dungeon-simulator.md).
 
+Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), Meredy (Fire), Austin (Beast Mastery) as the in-process leader using the same kit controller. This user-approved party replaces the prior live Fury72 owner; no Fury APL is recreated.
+
 ## What it must do
 
 - [ ] Freeze map-34 Normal spawns grouped by the tank planner's source formation identity into `content/dungeons/stockade-34.json`; retain source GUIDs, entries and 2D positions.
@@ -17,7 +19,9 @@ Transport-free Stockade qualification runs real gameplay systems in a plain Bevy
 
 ## Implementation inventory
 
-- `crates/server/src/dungeon_simulator/mod.rs`: source graph qualification; gameplay runner pending.
+- `crates/server/src/dungeon_simulator/mod.rs`: targeted qualification entry points.
+- `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and 2D pursuit adapter.
+- `crates/server/src/followers/simulator.rs`: authentic party initialization and direct leader/kit/pull-admission seam.
 - `crates/server/src/dungeon_simulator/graph.rs`: typed frozen graph and explicit one-time native-nav extraction; minimum spanning forest plus four nearest neighbours per pack.
 
 ## Tests asserting this spec

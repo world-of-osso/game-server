@@ -35,6 +35,76 @@ pub(super) struct Graph {
     pub unreachable: Vec<u32>,
 }
 
+#[derive(Resource)]
+pub(crate) struct Space(pub(super) Graph);
+
+impl Space {
+    pub(crate) fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
+        let nearest = |point: Vec3| {
+            self.0
+                .packs
+                .iter()
+                .min_by(|a, b| {
+                    let distance = |pack: &Pack| {
+                        Vec2::from_array(pack.position).distance(Vec2::new(point.x, point.z))
+                    };
+                    distance(a).total_cmp(&distance(b)).then(a.id.cmp(&b.id))
+                })
+                .map(|pack| pack.id)
+                .ok_or("frozen graph has no packs")
+        };
+        let start = nearest(from)?;
+        let goal = nearest(to)?;
+        let mut distances = BTreeMap::from([(start, 0.0_f32)]);
+        let mut previous = BTreeMap::new();
+        let mut visited = BTreeSet::new();
+        while let Some((&node, &distance)) = distances
+            .iter()
+            .filter(|(node, _)| !visited.contains(node))
+            .min_by(|a, b| a.1.total_cmp(b.1).then(a.0.cmp(b.0)))
+        {
+            if node == goal {
+                break;
+            }
+            visited.insert(node);
+            for edge in &self.0.edges {
+                let next = if edge.from == node {
+                    edge.to
+                } else if edge.to == node {
+                    edge.from
+                } else {
+                    continue;
+                };
+                let total = distance + edge.yards;
+                if distances.get(&next).is_none_or(|known| total < *known) {
+                    distances.insert(next, total);
+                    previous.insert(next, node);
+                }
+            }
+        }
+        if !distances.contains_key(&goal) {
+            return Err(format!(
+                "frozen graph cannot reach pack{goal} from pack{start}"
+            ));
+        }
+        let mut nodes = vec![goal];
+        while *nodes.last().unwrap() != start {
+            nodes.push(previous[nodes.last().unwrap()]);
+        }
+        nodes.reverse();
+        let mut points: Vec<_> = nodes
+            .into_iter()
+            .skip(1)
+            .map(|id| {
+                let pack = self.0.packs.iter().find(|pack| pack.id == id).unwrap();
+                Vec3::new(pack.position[0], 0.0, pack.position[1])
+            })
+            .collect();
+        points.push(to);
+        Ok(points)
+    }
+}
+
 pub(super) fn graph_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../content/dungeons/stockade-34.json")
 }

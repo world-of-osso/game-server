@@ -1,13 +1,11 @@
 //! Transport-free dungeon qualification, driven by the server test executable.
 mod graph;
-
-fn run_first_pack() -> Result<(), String> {
-    Err("transport-free one-pack gameplay runner is not implemented".into())
-}
+mod runtime;
+pub(crate) use graph::Space;
 
 #[test]
 fn one_pack_runs_real_gameplay_without_transport() {
-    run_first_pack().expect("one pack cleared by real gameplay in a plain Bevy App");
+    runtime::run_first_pack().expect("one pack cleared by real gameplay in a plain Bevy App");
 }
 
 #[test]
