@@ -1,6 +1,8 @@
 use super::*;
 use shared::battleground::{BgOutcome, BgPhase, BgTeam, BgTemplate, node_rules};
 use shared::protocol::BattlegroundSnapshot;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 #[path = "tests_battleground_backfill.rs"]
 mod backfill;
@@ -3912,6 +3914,18 @@ fn kotmogu_channel_orbs_region_ticks_death_respawn_victory_and_origin_return() {
 }
 
 fn promoted_source_world(map_id: u32) -> crate::world_data::WorldData {
+    static WORLDS: OnceLock<Mutex<HashMap<u32, crate::world_data::WorldData>>> = OnceLock::new();
+    let mut worlds = WORLDS
+        .get_or_init(Default::default)
+        .lock()
+        .expect("promoted world fixture cache poisoned");
+    worlds
+        .entry(map_id)
+        .or_insert_with(|| prepare_promoted_source_world(map_id))
+        .clone()
+}
+
+fn prepare_promoted_source_world(map_id: u32) -> crate::world_data::WorldData {
     let copy = tempfile::NamedTempFile::new().unwrap();
     std::fs::copy(crate::test_data::world_db_path(), copy.path()).unwrap();
     let promoted = std::process::Command::new("python3")
@@ -3930,6 +3944,77 @@ fn promoted_source_world(map_id: u32) -> crate::world_data::WorldData {
         String::from_utf8_lossy(&promoted.stderr)
     );
     crate::world_data::load_world_data(copy.path())
+}
+
+#[test]
+fn promoted_world_map_profiles_keep_live_apps_and_cached_sources_isolated() {
+    use crate::world_data::WorldData;
+
+    let mut alterac = App::new();
+    let mut isle = App::new();
+    alterac.insert_resource(promoted_source_world(30));
+    isle.insert_resource(promoted_source_world(628));
+    let source = alterac.world().resource::<WorldData>();
+    let general_name = source.templates[&11948].name.clone();
+    let alterac_guids: Vec<_> = source
+        .spawns
+        .iter()
+        .filter(|spawn| spawn.map == 30)
+        .map(|spawn| spawn.guid)
+        .collect();
+    let original_mods = source.expected_stats.mods.clone();
+    let source = isle.world().resource::<WorldData>();
+    let commander_name = source.templates[&34922].name.clone();
+    let isle_guids: Vec<_> = source
+        .spawns
+        .iter()
+        .filter(|spawn| spawn.map == 628)
+        .map(|spawn| spawn.guid)
+        .collect();
+    let original_levels = source.expected_stats.by_level.clone();
+    assert!(!alterac_guids.is_empty());
+    assert!(!isle_guids.is_empty());
+    assert!(!original_mods.is_empty());
+    assert!(!original_levels.is_empty());
+    {
+        let mut local = alterac.world_mut().resource_mut::<WorldData>();
+        local.templates.get_mut(&11948).unwrap().name = "Alterac app only".into();
+        local.spawns.retain(|spawn| spawn.map != 30);
+        local.expected_stats.by_level.clear();
+    }
+    assert_eq!(
+        isle.world().resource::<WorldData>().expected_stats.by_level,
+        original_levels
+    );
+    {
+        let mut local = isle.world_mut().resource_mut::<WorldData>();
+        local.templates.get_mut(&34922).unwrap().name = "Isle app only".into();
+        local.spawns.retain(|spawn| spawn.map != 628);
+        local.expected_stats.mods.clear();
+    }
+    assert_eq!(
+        alterac.world().resource::<WorldData>().expected_stats.mods,
+        original_mods
+    );
+    for (map, entry, name, guids) in [
+        (30, 11948, general_name, alterac_guids),
+        (628, 34922, commander_name, isle_guids),
+    ] {
+        let restored = promoted_source_world(map);
+        assert_eq!(restored.templates[&entry].name, name);
+        let actual: Vec<_> = restored
+            .spawns
+            .iter()
+            .filter(|spawn| u32::from(spawn.map) == map)
+            .map(|spawn| spawn.guid)
+            .collect();
+        assert_eq!(
+            actual, guids,
+            "promoted map{map} retains its source population"
+        );
+        assert!(!restored.expected_stats.by_level.is_empty());
+        assert!(!restored.expected_stats.mods.is_empty());
+    }
 }
 
 fn deephaul_source_world() -> (

@@ -55,6 +55,11 @@ impl CreatureAi for Vazruden {
         super::evade_encounter(ctx);
     }
 
+    // TC475–480: source KilledUnit is unfiltered, including NPC victims.
+    fn killed_unit(&mut self, ctx: &mut Ctx, _victim: Entity) {
+        ctx.talk(2);
+    }
+
     // TC482–495: completion precedes source speech, ordinary death Call and notification.
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
         if self.is_other_dead {

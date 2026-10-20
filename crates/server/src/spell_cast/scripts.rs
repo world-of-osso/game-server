@@ -80,6 +80,7 @@ pub(crate) use batch14::{DEATHMARK, EYE_BEAM, cast_eye_beam_tick, deathmark_ener
 pub(super) use batch15::heal_beacon;
 pub(crate) use batch15::{replace_beacon, snapshot_combustion};
 pub(super) use batch16::{blast_cast_time, blast_multiplier, mana_cost};
+pub(super) use batch17::bloom_lifebloom_before_refresh;
 pub(crate) use batch17::{
     CENARION_WARD, LIFEBLOOM, bloom_lifebloom, heal_cenarion_ward, replace_lifebloom,
 };

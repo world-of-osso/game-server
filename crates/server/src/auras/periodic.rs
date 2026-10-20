@@ -18,6 +18,9 @@ use crate::spell_info::{SpellInfo, SpellStore};
 
 /// Triggered spells cast by ticks resolve at this depth (no proc events).
 const TICK_TRIGGER_DEPTH: u8 = 1;
+const WILD_GROWTH: u32 = 48438;
+const UNSTOPPABLE_GROWTH: u32 = 382559;
+const WILD_GROWTH_DECAY: f32 = 0.07;
 
 /// World of Osso user decision (2026-10-05): Recuperate ends at full health.
 /// Not TC behavior: SpellAuraEffects.cpp:5879-5881 skips only permanent auras.
@@ -30,6 +33,7 @@ struct Tick {
     effect_index: u8,
     aura_type: u32,
     amount: f32,
+    scheduled_at: f64,
     misc: i32,
     trigger_spell: u32,
 }
@@ -54,6 +58,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
             .filter(|effect| effect.period_ms > 0)
         {
             while effect.next_tick_at() <= now && effect.next_tick_at() <= expiry {
+                let scheduled_at = effect.next_tick_at();
                 effect.next_tick_index += 1;
                 ticks.push(Tick {
                     instance_id: aura.instance_id,
@@ -62,6 +67,7 @@ fn due_ticks(world: &mut World, unit: Entity, now: f64, only: Option<u32>) -> Ve
                     effect_index: effect.index,
                     aura_type: effect.aura_type,
                     amount: effect.amount * stacks,
+                    scheduled_at,
                     misc: effect.misc_values[0],
                     trigger_spell: effect.trigger_spell,
                 });
@@ -159,7 +165,10 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             false,
             true,
         ),
-        PERIODIC_HEAL => effects::apply_heal(world, &ctx, unit, tick.amount, false, true),
+        PERIODIC_HEAL => {
+            let amount = periodic_heal_amount(world, unit, spell, tick);
+            effects::apply_heal(world, &ctx, unit, amount, false, true);
+        }
         OBS_MOD_HEALTH => effects::apply_heal(
             world,
             &ctx,
@@ -201,6 +210,43 @@ fn run_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) {
             spell.id
         ),
     }
+}
+
+/// WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT policy.
+/// SimC76f8118 sc_druid.cpp6611–6635 supplies the shape, NOT its legacy0.175.
+/// Absolute Retail shape remains uncertified; native coefficient/timing stay intact.
+fn periodic_heal_amount(world: &World, unit: Entity, spell: &SpellInfo, tick: &Tick) -> f32 {
+    if spell.id != WILD_GROWTH {
+        return tick.amount;
+    }
+    let aura = world
+        .get::<ActiveAuras>(unit)
+        .and_then(|auras| auras.get(tick.instance_id))
+        .expect("Wild Growth tick retains its active aura");
+    let duration = f64::from(aura.duration_ms) / 1000.0;
+    let expiry = aura.expires_at.expect("native Wild Growth is finite");
+    let elapsed_fraction = (1.0 - (expiry - tick.scheduled_at) / duration) as f32;
+    let native_coefficient = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == tick.effect_index)
+        .expect("Wild Growth tick retains its native effect")
+        .bonus_coefficient;
+    let decay = WILD_GROWTH_DECAY * (1.0 - unstoppable_growth_reduction(world, tick.caster));
+    let coefficient = native_coefficient + decay / 2.0 - decay * elapsed_fraction;
+    tick.amount * coefficient / native_coefficient
+}
+
+fn unstoppable_growth_reduction(world: &World, caster: Entity) -> f32 {
+    world
+        .get::<ActiveAuras>(caster)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == UNSTOPPABLE_GROWTH)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount / 100.0)
 }
 
 fn run_scripted_tick(world: &mut World, unit: Entity, spell: &SpellInfo, tick: &Tick) -> bool {

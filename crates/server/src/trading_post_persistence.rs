@@ -175,7 +175,8 @@ pub(super) fn queue_request(
 ) {
     let action = prepare_action(world, connection, player, request);
     let rows = requested_rows(request);
-    let (snapshot, catalog, month) = prepare_snapshot(world, connection, &rows);
+    let (snapshot, catalog, month) =
+        prepare_snapshot(world, connection, &rows, request.reply_kind());
     let failed_snapshot = snapshot.clone();
     let settlement = world
         .get::<crate::adventure_guide::MonthSettlement>(connection)

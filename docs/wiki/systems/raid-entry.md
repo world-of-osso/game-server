@@ -10,11 +10,15 @@ Verified: 2026-10-11. Raid admission and selection extend the existing map/copy 
 
 ### Authentic death credit
 
-`scripts/raid_encounters.py` reads local CASC JournalEncounter1240336/layoutB88D11CC and JournalEncounterCreature1301155/layout81A3C769 for12.1.0.69933. DungeonEncounterID supplies map/bit. Exactly one journal creature must join one TDB creature on that map by display ID. Shared displays, multiple actors, absent joins and creatures linked to multiple encounters remain unbound; names never create bindings. Current private copy yields106 bindings and331 reported gaps. Journal membership alone does not supply council or non-death completion rules.
+`scripts/raid_encounters.py` reads local CASC JournalEncounter1240336/layoutB88D11CC and JournalEncounterCreature1301155/layout81A3C769; `--journal-build` records the extraction build in the report. DungeonEncounterID supplies map/bit. Exactly one journal creature must join one TDB creature on that map by display ID. Shared displays, multiple actors, absent joins and creatures linked to multiple encounters remain unbound; names never create bindings. The10-11 publication was raid-only (106 bindings) even after the preparer was widened to5-player dungeons; see [binding publication](#binding-publication--2026-10-20). Journal rows without a dungeon/raid DungeonEncounter are named gaps. Journal membership alone does not supply council or non-death completion rules.
 
-Generated SQL replaces only `raid_encounter_creature` in a reviewable backup copy. The preparer never writes a database. Lead prepares a population-imported copy, generates SQL with `--db COPY --journal EXTRACTED/1240336.db2 --creatures EXTRACTED/1301155.db2 --output raid-reference.sql --report raid-reference.json`, applies SQL to the copy, reviews gaps and publishes separately. Canonical world.db was not changed.
+Generated SQL replaces only `raid_encounter_creature` in a reviewable backup copy. The preparer never writes a database. Lead prepares a population-imported copy, generates SQL with `--db COPY --journal EXTRACTED/1240336.db2 --creatures EXTRACTED/1301155.db2 --journal-build BUILD --output raid-reference.sql --report raid-reference.json`, applies SQL to the copy, re-applies `encounter_cpp_bindings.py` profiles absent from the journal join (the SQL replaces the table), reviews gaps and publishes separately. Canonical world.db was not changed.
 
 The real combat death boundary records mapped boss bits through `InstanceManager::update_instance_lock`; all characters in that copy save, other copies do not. Permanent/shared data use existing redb persistence. Mapped saved bosses are omitted on reload. Reset expires exactly Tuesday15:00 UTC; an extended owning lock postpones copy expiry. Unextension does not erase an active Retail bind.
+
+### Binding publication — 2026-10-20
+
+`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`: canonical held only the raid-only10-11 output plus three cpp profiles (121 rows; 5 of 144 five-player maps bound). Regenerated from12.1.5.70448 local-CASC journal binaries (`data/diagnostics/boss-bindings-2026-10-20/` in game-engine): 390 journal rows plus kystia/slagmaw/mutanus profiles = 393 rows. All121 prior rows are retained identically; 272 rows add 84 five-player maps, including Ramparts1891–1893 and Blood Furnace1922–1924. 57 five-player maps stay underivable (multi-actor/shared display). Encounter fixtures no longer insert542/543 bindings; Ramparts lifecycle tests load them from world data. Publication is the lead's.
 
 ### Bounded proof
 

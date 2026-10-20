@@ -2750,6 +2750,7 @@ fn resolve_effects(
         if scripts::redirect_rejuvenation(world, caster, target, spell.id, depth) {
             continue;
         }
+        scripts::bloom_lifebloom_before_refresh(world, caster, target, spell.id, depth);
         crate::auras::apply_aura_with_spell(
             world,
             &AuraApplication {

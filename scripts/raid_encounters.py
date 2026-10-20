@@ -33,15 +33,17 @@ def derive_bindings(connection, encounters, creatures):
     bindings, gaps = [], []
     for row in encounters:
         encounter_id = row[6] & 0xFFFF
+        journal_id = row[4]
         encounter = connection.execute(
             "SELECT e.MapID,e.Bit,e.Name_lang FROM dungeon_encounter e "
             "JOIN map m ON m.ID=e.MapID WHERE e.ID=? AND m.InstanceType IN (1,2)",
             (encounter_id,),
         ).fetchone()
         if encounter is None:
+            gaps.append(dict(map_id=None, encounter_id=encounter_id, journal_encounter_id=journal_id,
+                             reason="no dungeon or raid DungeonEncounter"))
             continue
         map_id, bit, name = encounter
-        journal_id = row[4]
         participants = actors[journal_id]
         if len(participants) != 1:
             gaps.append(dict(map_id=map_id, encounter_id=encounter_id, name=name,
@@ -77,7 +79,7 @@ def derive_bindings(connection, encounters, creatures):
     return list(unique.values()), gaps
 
 
-def prepare(db, journal, creatures, output, report):
+def prepare(db, journal, creatures, output, report, build):
     encounters = read_journal(journal, 0xB88D11CC, 13, {2: 2})
     actors = read_journal(creatures, 0x81A3C769, 9)
     with closing(sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
@@ -94,7 +96,7 @@ def prepare(db, journal, creatures, output, report):
         statements = list(staging.iterdump())
     statements.insert(1, "DROP TABLE IF EXISTS raid_encounter_creature;")
     output.write_text("\n".join(statements) + "\n")
-    report.write_text(json.dumps(dict(build="12.1.0.69933",bindings=bindings,gaps=gaps), indent=2)+"\n")
+    report.write_text(json.dumps(dict(build=build, bindings=bindings, gaps=gaps), indent=2) + "\n")
     return bindings, gaps
 
 
@@ -103,10 +105,13 @@ def main():
     parser.add_argument("--db", type=Path, required=True)
     parser.add_argument("--journal", type=Path, required=True)
     parser.add_argument("--creatures", type=Path, required=True)
+    parser.add_argument("--journal-build", required=True,
+                        help="client build the journal binaries were extracted from")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
-    bindings, gaps = prepare(args.db, args.journal, args.creatures, args.output, args.report)
+    bindings, gaps = prepare(args.db, args.journal, args.creatures, args.output, args.report,
+                             args.journal_build)
     print(f"Prepared {len(bindings)} bindings; {len(gaps)} underivable encounters recorded")
 
 
