@@ -1,4 +1,5 @@
 use super::*;
+use crate::game_objects::GameObjectSpawns;
 use shared::protocol::GameObjectCollision;
 
 #[test]
