@@ -1,6 +1,6 @@
 ## 2026-10-19 — Aura343 white-swing vulnerability
 
-[MOD_MELEE_DAMAGE_FROM_CASTER343](systems/auras.md#damage-and-healing) scales the attacker's own white swings; Colossus Smash208086 now applies effect1. RED aa26a134b genuine at the343 boundary (empty343 effects; swing35 outside44–46). GREEN pending.
+[MOD_MELEE_DAMAGE_FROM_CASTER343](systems/auras.md#damage-and-healing) scales the attacker's own white swings; Colossus Smash208086 now applies effect1. RED aa26a134b genuine at the343 boundary (empty343 effects; swing35 outside44–46); fix bae6bf60c. GREEN167/0 142.95s,0 warnings across the new tests, Colossus T150, attack power, melee crit/creature-type/summon/armor/block, versatility, crit-damage and combat::tests.
 
 ## 2026-10-19 — Aura248 native-input gap
 
