@@ -107,7 +107,11 @@ fn encounter_coverage_nethekurse_native_inputs_qualify() {
     for difficulty in [1, 2] {
         let (h, boss, _) = nethekurse_copy(difficulty);
         assert_eq!(
-            h.app.world().get::<Npc>(boss).unwrap().template_id,
+            h.app
+                .world()
+                .get::<shared::components::Npc>(boss)
+                .unwrap()
+                .template_id,
             NETHEKURSE
         );
         let store = h.app.world().resource::<SpellStore>();
