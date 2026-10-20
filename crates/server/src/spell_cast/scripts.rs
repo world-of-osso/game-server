@@ -434,6 +434,9 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
             Some(crate::scripted_ai::azure_vault::return_after_absolute_zero)
         }
         crate::auras::ebon_might::EBON => Some(crate::auras::ebon_might::cast_self_buff),
+        crate::scripted_ai::shattered_halls::BEATDOWN => {
+            Some(crate::scripted_ai::shattered_halls::beatdown_reset_threat)
+        }
         crate::scripted_ai::murder_row::SPELL_BLINK => {
             Some(crate::scripted_ai::murder_row::cast_fel_nova_after_blink)
         }

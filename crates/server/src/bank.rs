@@ -88,16 +88,19 @@ pub(crate) fn new_tab(number: usize) -> BankTabData {
     tab
 }
 
-/// Bank moves on InventoryChannel schedule a fresh character-bank snapshot.
+/// Banks whose contents a connection gets in `PostUpdate` without a banker:
+/// both banks on entering the world, and banks that InventoryChannel moves or
+/// recipe reagents changed. Retail clients know their banks anywhere
+/// (`ItemUtil.GetCraftingReagentCount` counts them).
 #[derive(Resource, Default)]
-pub(crate) struct ChangedCharacterBanks(pub std::collections::HashSet<Entity>);
+pub(crate) struct ChangedBanks(pub std::collections::HashSet<(Entity, BankType)>);
 
 pub struct BankPlugin;
 
 impl Plugin for BankPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<BankTabPrices>()
-            .init_resource::<ChangedCharacterBanks>()
+            .init_resource::<ChangedBanks>()
             .add_systems(
                 Update,
                 (
@@ -113,7 +116,9 @@ impl Plugin for BankPlugin {
             )
             .add_systems(
                 PostUpdate,
-                send_changed_character_banks.before(MessageSystems::Send),
+                (send_banks_on_entering_world, send_changed_banks)
+                    .chain()
+                    .before(MessageSystems::Send),
             );
     }
 }
@@ -334,15 +339,25 @@ fn send_bank_contents(
     }
 }
 
-fn send_changed_character_banks(
-    mut changed: ResMut<ChangedCharacterBanks>,
+fn send_banks_on_entering_world(
+    entered: Query<Entity, Changed<InWorld>>,
+    mut changed: ResMut<ChangedBanks>,
+) {
+    for connection in &entered {
+        changed.0.insert((connection, BankType::Character));
+        changed.0.insert((connection, BankType::Account));
+    }
+}
+
+fn send_changed_banks(
+    mut changed: ResMut<ChangedBanks>,
     patrons: Query<(&InWorld, &Authenticated)>,
     mut vault: Vault,
 ) {
     if !vault.ready() {
         return;
     }
-    for connection in changed.0.drain() {
+    for (connection, bank) in changed.0.drain() {
         let Ok((in_world, auth)) = patrons.get(connection) else {
             continue;
         };
@@ -352,8 +367,8 @@ fn send_changed_character_banks(
             account_id: auth.account_id,
             banker: None,
         };
-        let data = vault.load_bank(&patron, BankType::Character);
-        vault.send_contents(connection, BankType::Character, &data);
+        let data = vault.load_bank(&patron, bank);
+        vault.send_contents(connection, bank, &data);
     }
 }
 

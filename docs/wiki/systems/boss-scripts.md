@@ -1,5 +1,16 @@
 # Boss scripts
 
+## Shattered Halls O'mrogg — 2026-10-20
+
+`scripted_ai/shattered_halls.rs` ports [Warbringer O'mrogg and his heads](../../specs/boss-scripts.md#shattered-halls-omrogg-source-boundary) on BossAi(2). The heads are separate spawned creatures; boss hooks dispatch `DoAction` to the copy's left head, whose AI queues TC's TaskScheduler sequences and makes the right head speak. Despawned heads stay in the world dead and hidden (`combat::despawn_creature`). The Burning Maul `AuraScript` swaps `EquipmentAppearance` through `WorldData.equipment`. Beatdown's AfterCast uses the new `creature_aggro::reset_all_threat` (TC `ResetAllThreat`): `ThreatTable::reset` clears the references instead, so it is not a substitute.
+
+Proof order:
+1. Qualification: three INVALID runs (prepared fixture `WorldData` had no equipment; oracles ignored the authentic category1152 lock and the1s cast before it; triggered36057 logs Damage, not CastSuccess). 8f11fcca4: 2PASS29.90s.
+2. Pushed ignored RED de14bc2a4: 6 genuine FAIL60.05s.
+3. GREEN f594f5fc7: 7/8, then two test-only fixture fixes with unchanged oracles (a despawned head is dead and hidden, not removed; admissions stand out of range so the live port stays unengaged). 8a105d9e9: 8/8 57.48s, then enabled.
+
+Rotation, Beatdown and Burning Maul fixtures seed O'mrogg's EventMap (`GroundCombatSeed(0)`). Blast Wave's30% roll is unseeded: three Burning Maul windows and at least20 procs bound a run with none at ≤0.7^20 (0.08%). Direct threat, kills and the second player joining the copy are HARNESS SETUP.
+
 ## Blood Furnace Keli'dan — 2026-10-20
 
 `scripted_ai/blood_furnace.rs` ports [Keli'dan and the Shadowmoon Channelers](../../specs/boss-scripts.md#blood-furnace-kelidan-source-boundary) on BossAi(1): TC DATA_KELIDAN is ordinal2, installed encounter1923 completes bit1. Keli'dan's `JustAppeared` makes him ImmuneToNPC/Uninteractible/Passive, casts Evocation and spawns script groups360–364 (`scripted_ai::SCRIPT_SPAWN_GROUPS`), whose members copy fill withholds. Each channeler counts its own death into Keli'dan's `DoAction`; the fifth releases him and zones in the copy. His out-of-combat path only runs the reset's 5s Evocation event; in combat a volley that comes due while his own Burning Nova stun holds fails admission and still repeats, as in the source. The Burning Nova `AuraScript` casts Heroic Vortex on apply and Fire Nova on remove. Heroic volley40070 is absent from retail DB2 (`KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`).
