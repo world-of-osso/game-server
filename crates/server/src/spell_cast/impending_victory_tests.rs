@@ -17,6 +17,9 @@ const CHARGE_EFFECT: u32 = 198_337;
 const WOUND: u32 = 209_140;
 const SHATTERING_THROW: u32 = 64_382;
 
+#[path = "impending_victory_behavior_tests.rs"]
+mod behavior;
+
 fn fixture() -> Harness {
     let mut h = harness(
         Vec::new(),
