@@ -30,6 +30,14 @@ pub struct AuraStatMods {
     pub critical_damage_mods: Vec<(u32, f32)>,
     /// MOD_HEALING_DONE_PERCENT 136.
     pub healing_done_mult: f32,
+    /// Aura422 scales newly received shields, not damage per hit.
+    pub absorb_taken_mult: f32,
+    /// Aura103: temporary flat threat; base threat is never rewritten.
+    pub temporary_threat: f32,
+    /// Aura57: spell-only critical chance; never affects weapon attacks.
+    pub spell_crit_pct: f32,
+    /// Aura269: product of remaining damage reduction, by school.
+    pub target_reduction_mult: Vec<(u32, f32)>,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
     pub healing_taken_mult: f32,
     /// Raw signed MOD_WEAPON_CRIT_PERCENT52 + MOD_CRIT_PCT290, NPC autoattacks only.
@@ -40,8 +48,10 @@ pub struct AuraStatMods {
     pub autoattack_damage_mult: f32,
     /// MOD_AUTOATTACK_RANGE153: signed additive yards, attacker-owned only.
     pub autoattack_range_bonus: f32,
-    /// MOD_SUMMON_DAMAGE429: consumed by units whose owner carries this aura.
-    pub summon_damage_mult: f32,
+    /// MOD_SUMMON_DAMAGE429: only the owner's controlled pets.
+    pub pet_damage_mult: f32,
+    /// MOD_GUARDIAN_DAMAGE_DONE531: only the owner's guardians.
+    pub guardian_damage_mult: f32,
     /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
     /// `GetTotalAuraModifier` in `RewardRage`).
     pub rage_from_damage_dealt_pct: f32,
@@ -108,12 +118,17 @@ impl Default for AuraStatMods {
             damage_taken_mult: [1.0; SCHOOL_COUNT],
             critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
+            absorb_taken_mult: 1.0,
+            temporary_threat: 0.0,
+            spell_crit_pct: 0.0,
+            target_reduction_mult: Vec::new(),
             healing_taken_mult: 1.0,
             npc_crit_pct: 0.0,
             autoattack_crit_pct: 0.0,
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
-            summon_damage_mult: 1.0,
+            pet_damage_mult: 1.0,
+            guardian_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
             power_regen_flat: Vec::new(),
@@ -169,6 +184,20 @@ impl AuraStatMods {
 
     pub fn damage_taken(&self, school_mask: u32) -> f32 {
         Self::school_mult(&self.damage_taken_mult, school_mask)
+    }
+
+    /// TC a352b1fa Unit.cpp7081-7094/8237-8252: scale a reduction, not a vulnerability.
+    pub fn bypass_damage_reduction(&self, school_mask: u32, taken: f32) -> f32 {
+        if taken >= 1.0 {
+            return taken;
+        }
+        let remaining: f32 = self
+            .target_reduction_mult
+            .iter()
+            .filter(|(mask, _)| mask & school_mask != 0)
+            .map(|(_, multiplier)| multiplier)
+            .product();
+        (1.0 - (1.0 - taken) * remaining).max(0.0)
     }
 
     pub fn critical_damage(&self, school_mask: u32) -> f32 {
@@ -274,6 +303,7 @@ struct Accumulator {
     always_mounted: f32,
     mounted_not_stack: f32,
     fastest_flight: f32,
+    fastest_swim: f32,
     always_flight: f32,
     flight_not_stack: f32,
     slowest: f32,
@@ -306,12 +336,8 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     } else {
         (pct(acc.fastest) * acc.always, pct(acc.flight_not_stack))
     };
-    //172/211 affect run/flight only, not the existing swim normalization path.
-    let swim = if acc.mounted {
-        pct(acc.fastest_mounted) * acc.always_mounted
-    } else {
-        pct(acc.fastest) * acc.always
-    };
+    // TC Unit.cpp8826–8829: swim is independent of run and mounted bonuses.
+    let swim = pct(acc.fastest_swim);
     // Unit::UpdateSpeed applies normalization before the strongest slow.
     // Both the server's run and flight base speeds are 7 yards/second.
     const BASE_SPEED: f32 = 7.0;
@@ -462,6 +488,23 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 stats.ranged_attack_power_pct +=
                     amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
             }
+            MOD_RATING_PCT => stats.rating_percent_mods.push((misc as u32, amount)),
+            CONVERT_CRIT_RATING_PCT_TO_PARRY_RATING => {
+                stats.crit_to_parry_pct += amount * (1.0 + stats.crit_to_parry_pct / 100.0);
+            }
+            MOD_BASE_MANA_PCT => {
+                stats.base_mana_pct += amount * (1.0 + stats.base_mana_pct / 100.0);
+            }
+            OVERRIDE_ATTACK_POWER_BY_SP_PCT => {
+                stats.attack_power_from_sp_pct =
+                    Some(stats.attack_power_from_sp_pct.unwrap_or(0.0) + amount);
+            }
+            MOD_ABSORB_TAKEN_PCT => combat.absorb_taken_mult *= pct(amount),
+            MOD_TOTAL_THREAT => combat.temporary_threat += amount,
+            MOD_SPELL_CRIT_CHANCE => combat.spell_crit_pct += amount,
+            MOD_IGNORE_TARGET_RESIST => combat
+                .target_reduction_mult
+                .push((misc as u32, 1.0 - amount / 100.0)),
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
             // triple-count the same rating for damage/healing/damage-taken bits.
@@ -482,7 +525,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             // (AuraEffect::HandleOverrideSpellPowerByAttackPower, SpellAuraEffects.cpp:3997-4008).
             OVERRIDE_SPELL_POWER_BY_AP_PCT => stats.spell_power_from_ap_pct += amount,
             MOD_INCREASE_HEALTH => stats.max_health_flat += amount,
-            MOD_INCREASE_HEALTH_PERCENT => stats.max_health_pct += amount,
+            MOD_INCREASE_HEALTH_PERCENT | MOD_INCREASE_HEALTH_PERCENT2 => {
+                stats.max_health_pct += amount * (1.0 + stats.max_health_pct / 100.0);
+            }
             // Mainline55233s4 explicitly supplies Vampiric Blood's max-health percent.
             DUMMY if aura.spell_id == 55233 && effect.index == 3 => stats.max_health_pct += amount,
             // Unit::GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT) (StatSystem.cpp:499).
@@ -506,7 +551,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_AUTOATTACK_CRIT_CHANCE => combat.autoattack_crit_pct += amount,
             MOD_AUTOATTACK_DAMAGE => combat.autoattack_damage_mult *= pct(amount),
             MOD_AUTOATTACK_RANGE => combat.autoattack_range_bonus += amount,
-            MOD_SUMMON_DAMAGE => combat.summon_damage_mult *= pct(amount),
+            MOD_SUMMON_DAMAGE => combat.pet_damage_mult *= pct(amount),
+            MOD_GUARDIAN_DAMAGE_DONE => combat.guardian_damage_mult *= pct(amount),
             MOD_RAGE_FROM_DAMAGE_DEALT => combat.rage_from_damage_dealt_pct += amount,
             PREVENT_REGENERATE_POWER => combat.power_regen_prevention_mask |= misc as u32,
             MOD_POWER_REGEN => combat.power_regen_flat.push((misc, amount)),
@@ -525,6 +571,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
+            MOD_INCREASE_SWIM_SPEED => acc.fastest_swim = acc.fastest_swim.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
             USE_NORMAL_MOVEMENT_SPEED => acc.normal_speed_cap = acc.normal_speed_cap.max(amount),
             REDUCE_PUSHBACK => combat.pushback_reduction_pct += amount,

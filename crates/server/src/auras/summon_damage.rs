@@ -1,5 +1,5 @@
-//! Native429 modifies damage of the owner's summons, not the owner itself.
-use super::AuraStatMods;
+//! SimC76f8118 parse_effects: pet429, guardian531 and caster's guardian380.
+use super::{ActiveAuras, AuraStatMods, handlers};
 use crate::hunter_pet::HunterPet;
 use crate::spell_cast::summon::SummonedCreature;
 use bevy::ecs::system::SystemParam;
@@ -7,22 +7,73 @@ use bevy::prelude::*;
 
 type Ownership<'a> = (Option<&'a SummonedCreature>, Option<&'a HunterPet>);
 
-fn owner((summon, pet): Ownership<'_>) -> Option<Entity> {
+/// Controlled pets win even if their summon properties also name a guardian.
+fn owner_and_guardian((summon, pet): Ownership<'_>) -> Option<(Entity, bool)> {
+    if let Some(pet) = pet {
+        return Some((pet.owner, false));
+    }
+    let summon = summon?;
+    if summon.properties.is_pet() {
+        return Some((summon.owner, false));
+    }
     summon
-        .map(|unit| unit.owner)
-        .or_else(|| pet.map(|unit| unit.owner))
+        .properties
+        .is_guardian()
+        .then_some((summon.owner, true))
 }
 
-pub(crate) fn multiplier(world: &World, unit: Entity) -> f32 {
-    owner((
+fn owner_multiplier(mods: &AuraStatMods, guardian: bool) -> f32 {
+    if guardian {
+        mods.guardian_damage_mult
+    } else {
+        mods.pet_damage_mult
+    }
+}
+
+fn guardian_taken_multiplier(
+    ownership: Option<(Entity, bool)>,
+    auras: Option<&ActiveAuras>,
+) -> f32 {
+    let Some((owner, true)) = ownership else {
+        return 1.0;
+    };
+    auras.map_or(1.0, |auras| {
+        auras
+            .iter()
+            .filter(|aura| aura.caster == owner)
+            .flat_map(|aura| {
+                let stacks = aura.stack_multiplier();
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.aura_type == handlers::MOD_DAMAGE_FROM_CASTER_GUARDIAN)
+                    .map(move |effect| 1.0 + effect.amount * stacks / 100.0)
+            })
+            .product()
+    })
+}
+
+fn ownership(world: &World, unit: Entity) -> Option<(Entity, bool)> {
+    owner_and_guardian((
         world.get::<SummonedCreature>(unit),
         world.get::<HunterPet>(unit),
     ))
-    .and_then(|owner| world.get::<AuraStatMods>(owner))
-    .map_or(1.0, |mods| mods.summon_damage_mult)
 }
 
-/// Reads the same native ownership fields without aliasing melee's mutable health query.
+pub(crate) fn multiplier(world: &World, unit: Entity) -> f32 {
+    ownership(world, unit)
+        .and_then(|(owner, guardian)| {
+            world
+                .get::<AuraStatMods>(owner)
+                .map(|mods| owner_multiplier(mods, guardian))
+        })
+        .unwrap_or(1.0)
+}
+
+pub(crate) fn taken_multiplier(world: &World, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
+    guardian_taken_multiplier(ownership(world, unit), auras)
+}
+
+/// Reads native ownership without aliasing melee's mutable health/aura query.
 #[derive(SystemParam)]
 pub(crate) struct SummonDamageModifiers<'w, 's> {
     owners: Query<'w, 's, Ownership<'static>>,
@@ -34,8 +85,18 @@ impl SummonDamageModifiers<'_, '_> {
         self.owners
             .get(unit)
             .ok()
-            .and_then(owner)
-            .and_then(|owner| self.modifiers.get(owner).ok())
-            .map_or(1.0, |mods| mods.summon_damage_mult)
+            .and_then(owner_and_guardian)
+            .and_then(|(owner, guardian)| {
+                self.modifiers
+                    .get(owner)
+                    .ok()
+                    .map(|mods| owner_multiplier(mods, guardian))
+            })
+            .unwrap_or(1.0)
+    }
+
+    pub(crate) fn taken_multiplier(&self, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
+        let ownership = self.owners.get(unit).ok().and_then(owner_and_guardian);
+        guardian_taken_multiplier(ownership, auras)
     }
 }

@@ -104,7 +104,7 @@ fn foreign_intellect(world: &World, caster: Entity) -> f32 {
     });
     let modifiers = world
         .get::<StatModifiers>(caster)
-        .copied()
+        .cloned()
         .unwrap_or_default();
     // Preserve this server's existing flat-bonus → bonus-pct → total-pct order.
     let bonus = 1.0 + modifiers.primary_bonus_pct.intellect / 100.0;

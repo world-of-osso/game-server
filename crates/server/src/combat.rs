@@ -41,8 +41,6 @@ const UNIT_MISS_CHANCE_PCT: f32 = 5.0;
 /// Signed attacker dodge modifier (`Unit::GetUnitDodgeChance`, Unit.cpp2775).
 const MOD_ENEMY_DODGE: u32 = 251;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
-const MOD_EXPERTISE: u32 = 240;
-const EXPERTISE_PER_AVOIDANCE_PERCENT: f32 = 4.0;
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
 const ATTACK_DISPLAY_DELAY: f32 = 0.2;
@@ -685,7 +683,7 @@ fn auto_attack_unit(
         stats: snapshot.stats.as_ref(),
         haste_pct: snapshot.haste_pct,
         enemy_dodge_pct: snapshot.enemy_dodge_pct,
-        npc_expertise_pct: snapshot.npc_expertise_pct,
+        expertise_pct: snapshot.expertise_pct,
         creature: snapshot.creature,
         authored_attack_time: snapshot.authored_attack_time,
         creature_flags: snapshot.creature_flags.as_ref(),
@@ -744,7 +742,7 @@ struct SwingSnapshot {
     stats: Option<CharacterStats>,
     haste_pct: f32,
     enemy_dodge_pct: f32,
-    npc_expertise_pct: f32,
+    expertise_pct: f32,
     creature: bool,
     authored_attack_time: Option<CreatureAttackTime>,
     creature_flags: Option<crate::zones::CreatureFlagsExtra>,
@@ -778,12 +776,7 @@ fn snapshot_attacker(
         stats: stats.cloned(),
         haste_pct: stat_mods.map_or(0.0, |mods| mods.haste_pct),
         enemy_dodge_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_ENEMY_DODGE)),
-        npc_expertise_pct: if creature {
-            auras.map_or(0.0, |auras| auras.modifier(MOD_EXPERTISE))
-                / EXPERTISE_PER_AVOIDANCE_PERCENT
-        } else {
-            0.0
-        },
+        expertise_pct: crate::auras::combat_stats::expertise_reduction(auras, !creature),
         creature,
         authored_attack_time: attack_time.copied(),
         creature_flags: flags.copied(),
@@ -874,7 +867,7 @@ pub(crate) struct Attacker<'a> {
     /// Signed attacker aura251 sum, snapshotted before mutating victim auras.
     pub enemy_dodge_pct: f32,
     /// Signed NPC aura240/4 reduction; players do not use this expertise path.
-    pub npc_expertise_pct: f32,
+    pub expertise_pct: f32,
     /// A creature (`Npc`): it rolls the creature side of the hit table.
     pub creature: bool,
     pub authored_attack_time: Option<CreatureAttackTime>,
@@ -938,7 +931,7 @@ fn swing_damage(
     weapon: &WeaponDamage,
     hand: Hand,
     scaling: &UnitScaling,
-    target_mods: Option<&AuraStatMods>,
+    taken: f32,
     additional_mult: f32,
 ) -> f32 {
     let mut rng = rand::thread_rng();
@@ -956,20 +949,20 @@ fn swing_damage(
             None => creature_weapon_damage(scaling),
         }
     };
-    apply_swing_multipliers(base, attacker.mods, target_mods, additional_mult)
+    apply_swing_multipliers(base, attacker.mods, taken, additional_mult)
 }
 
 fn apply_swing_multipliers(
     base: f32,
     attacker_mods: Option<&AuraStatMods>,
-    target_mods: Option<&AuraStatMods>,
+    taken: f32,
     additional_mult: f32,
 ) -> f32 {
     const PHYSICAL: u32 = 1;
     let done = attacker_mods.map_or(1.0, |mods| {
         mods.damage_done(PHYSICAL) * mods.autoattack_damage_mult
     });
-    let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(PHYSICAL));
+    let taken = attacker_mods.map_or(taken, |mods| mods.bypass_damage_reduction(PHYSICAL, taken));
     (base * done * additional_mult * taken).max(0.0).round()
 }
 
@@ -1113,8 +1106,8 @@ fn read_outcome_chances(
             chances.block = chances.block.max(0.0);
         }
         chances.dodge =
-            (chances.dodge + attacker.enemy_dodge_pct - attacker.npc_expertise_pct).max(0.0);
-        chances.parry = (chances.parry - attacker.npc_expertise_pct).max(0.0);
+            (chances.dodge + attacker.enemy_dodge_pct - attacker.expertise_pct).max(0.0);
+        chances.parry = (chances.parry - attacker.expertise_pct).max(0.0);
     }
     if let (Victim::Creature { .. }, Some(flags)) = (victim, flags) {
         const NO_PARRY: u32 = 0x4;
@@ -1469,19 +1462,24 @@ fn try_swing(
         avoidance.1.as_deref(),
         context,
     );
+    let taken = target_mods.map_or(1.0, |mods| mods.damage_taken(1))
+        * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity)
+        * armor
+            .1
+            .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
     let armored = armor_mitigated(
         swing_damage(
             attacker,
             &weapon,
             hand,
             &attacker_scaling,
-            target_mods,
+            taken,
             context.summon_modifiers.multiplier(attacker.entity)
-                * versus
-                * crate::auras::melee_damage_from_caster(avoidance.1.as_deref(), attacker.entity),
-        ) * armor
-            .1
-            .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier),
+                * context
+                    .summon_modifiers
+                    .taken_multiplier(attacker.entity, avoidance.1.as_deref())
+                * versus,
+        ),
         target_armor(armor, &target, &attacker_scaling),
         &attacker_scaling,
         &target,

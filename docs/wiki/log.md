@@ -1,6 +1,12 @@
 ## 2026-10-20 — Transport-free Stockade simulator
 
 [Simulator](systems/dungeon-simulator.md): committed source graph143 packs/367 native walk edges and plain Bevy gameplay App. Graph census and isolated opening pack pass; full-route source-actor death/HP/mana/pull reporting exists, no boss clear. Route3 reproduced DPS lost during OOC hold; user clarified active-combat10s with dungeon/wipe reset, production correction committed pending GREEN. Combat RNG/batches/live acceptance remain open.
+## 2026-10-20 — Generic combat/stat aura consumers
+
+[Per-type source matrix and ledger](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20):12 generic consumers,4 explicit TC NYI gaps. Pushed ignored REDs first; corrected retired weapon ID, saturated armor and pre-owned expertise fixtures without changing native spell data.419 current mana clamps instead of scaling.316 accounts absorption but does not invent a script rescue. Final861d7edd5 targeted15 enabled PASS26.31s/0warnings, protocol600b755; no full suite or independent parent gate. Receipt-backed pinned sources supersede shifted citations from the broader TC tree; compared handler bodies are identical.
+## 2026-10-20 — Guardian aura split and Death Grip
+
+[Guardian damage](systems/auras.md#guardian-and-controlled-pet-damage--2026-10-20) separates531 guardians from429 controlled pets and matches victim380 to the guardian's owner; [Death Grip](systems/spell-casting.md#death-grip-and-destination-jumps--2026-10-20) binds native children and42/213 jump clocks/no-facing flag. Twelve ignored native tests first RED4PASS/8FAIL; owner-selection correction replaces invalid melee no-receipt with genuine10vs20 at `eee8013db`, same4PASS/8FAIL23.02s. Original380 Wound spell was an invalid IgnoreDamageTakenModifiers oracle; native208227 with real missile impact gives isolated1PASS/2FAIL28.71s before restoring the target consumer. Native49575 target64 radius15 lands3yd forward, not exact origin; corrected Death Grip5/5 already pass. Implemented/enabled at2304683e1: corrected13/13GREEN22.80s; six-name retained filters318PASS/1 missing-ground-envFAIL/2existing ignored226.67s, explicit-ground retry1PASS10.95s. Census/families preceded external shared sibling advancement; remaining integration pins private detached600b755. Merged28094f04e exposed RequeueSkirmish absent at600b755; parent explicitly superseded pin to private03cebdb. Final combined filters `pet guardian summon jump warlock hunter native_census_`:321PASS/0FAIL/2existing ignored171.38s, all13 census cases and native Command/Restoration included. Explicit ground env, three private path overrides; cargo fmt checkPASS/no warnings. Gate log `/home/osso/.worktrees/logs/census-grip-merged-03cebdb-gate.log`. Aura320 remains named **AURA_320_LABEL_SELECTOR_SOURCE_CONFLICT_70448**, not implemented.
 
 ## 2026-10-19 — Private native-proof purchase hold harness
 
@@ -3374,6 +3380,13 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Nested-all fixture](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) clones the existing canonical catalog, no new cache or map producer change. Same native test/four difficulty-prerequisite variants PASS before/after27.029→17.224s wall; CPU26.189→17.176s and peakRSS+52508KiB. Fresh apps/redb, persisted-reopen/foreign-character/refusal assertions unchanged. Code6122e8f0c pushed before after; independent lead integration pending.
 
+- 2026-10-20: Aura world/XP slice: sourced TC a352b1fa matrix, native ignored RED tests and server-state declarations; [coverage/gaps](systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+- 2026-10-20: Wired generic world/XP consumers after13 genuine native RED failures; corrected safe-fall clock remains pending its own RED. Client and TC-NULL gaps remain explicit.
+
+- 2026-10-20: Corrected native SafeFall1860 reaches numeric RED beside14GREEN; implemented144 summed landing-height reduction without changing base curve. Final targeted GREEN pending.
+
+- 2026-10-20: Aura world/XP native15/15GREEN29.01s atc9b7c3e59, no warnings; enabled unchanged tests. Source/per-type matrix and TCNULL/client/persistence/base-curve gaps retained; lead integration gates documented.
 ## 2026-10-20 — Crafting reagents from banks
 
 [Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.

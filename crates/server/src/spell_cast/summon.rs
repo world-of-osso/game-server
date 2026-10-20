@@ -73,7 +73,7 @@ impl SummonProperties {
         self.flags & JOIN_SUMMONER_SPAWN_GROUP != 0
     }
 
-    pub(super) fn is_guardian(self) -> bool {
+    pub(crate) fn is_guardian(self) -> bool {
         matches!(self.title, TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE)
             || (self.title == 0 && self.joins_summoner_spawn_group())
     }

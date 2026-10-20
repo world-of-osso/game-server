@@ -52,6 +52,10 @@ mod casting_restriction;
 mod casting_restriction_tests;
 #[cfg(test)]
 mod category_cooldown_tests;
+#[cfg(test)]
+mod census_death_grip_tests;
+#[cfg(test)]
+mod census_guardian_aura_tests;
 pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;

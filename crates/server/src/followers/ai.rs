@@ -260,23 +260,28 @@ pub(super) fn engaged_enemies(
         .get::<crate::combat::AutoAttack>(follower.owner)
         .map(|attack| attack.victim);
     let mut enemies: Vec<_> = world
-        .query::<(Entity, &Health, &InMap, Option<&CombatTarget>)>()
-        .iter(world)
-        .filter(|(_, health, other, _)| **other == map && health.current > 0.0)
-        .filter(|(enemy, _, _, target)| {
-            owner_victim == Some(*enemy)
-                || target
-                    .and_then(|target| target.0)
-                    .is_some_and(|victim| party.contains(&victim))
+        .resource::<crate::maps::units::MapUnits>()
+        .in_map(map)
+        .filter(|&enemy| {
+            world
+                .get::<Health>(enemy)
+                .is_some_and(|health| health.current > 0.0)
+        })
+        .map(|enemy| {
+            let victim = world.get::<CombatTarget>(enemy).and_then(|target| target.0);
+            (enemy, victim)
+        })
+        .filter(|&(enemy, victim)| {
+            owner_victim == Some(enemy)
+                || victim.is_some_and(|victim| party.contains(&victim))
                 || world
-                    .get::<shared::components::ThreatTable>(*enemy)
+                    .get::<shared::components::ThreatTable>(enemy)
                     .is_some_and(|threat| {
                         threat.entries().iter().any(|entry| {
                             party.iter().any(|member| member.to_bits() == entry.entity)
                         })
                     })
         })
-        .map(|(enemy, _, _, target)| (enemy, target.and_then(|target| target.0)))
         .collect();
     enemies.retain(|(enemy, _)| {
         crate::spell_cast::targets::relation_matches(

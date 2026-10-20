@@ -22,6 +22,7 @@ pub(crate) struct JumpOptions {
     pub unlimited_speed: bool,
     pub min_height: f32,
     pub max_height: f32,
+    pub no_facing_control: bool,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -32,6 +33,7 @@ pub(crate) struct JumpMovement {
     height: f32,
     duration_ms: u32,
     elapsed_ms: u32,
+    no_facing_control: bool,
 }
 
 type Jumpers = (
@@ -60,6 +62,7 @@ pub(crate) fn move_jump(
             unlimited_speed: false,
             min_height,
             max_height: MAX_JUMP_HEIGHT,
+            no_facing_control: false,
         },
     );
 }
@@ -117,6 +120,7 @@ fn calculate_jump(id: u32, from: Vec3, to: Vec3, options: JumpOptions) -> Option
         height,
         duration_ms,
         elapsed_ms: 0,
+        no_facing_control: options.no_facing_control,
     })
 }
 
@@ -185,8 +189,9 @@ fn step_jump(
     jump.elapsed_ms = (jump.elapsed_ms + dt_ms).min(jump.duration_ms);
     *position = spline_position(jump);
     let delta = jump.to - jump.from;
-    if let (Some(rotation), Some(facing)) =
-        (rotation, crate::creature_ai::facing_along(delta.x, delta.z))
+    if !jump.no_facing_control
+        && let (Some(rotation), Some(facing)) =
+            (rotation, crate::creature_ai::facing_along(delta.x, delta.z))
     {
         rotation.y = facing;
     }

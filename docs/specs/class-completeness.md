@@ -1,5 +1,16 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Generic combat/stat aura census slice — 2026-10-20
+
+Generic consumers cover57,103,145,240,269,316,354,404,405,419,422,463 with native70448 spell definitions. Preserve native masks, stacking, rating truncation, create-mana cost basis and reversible changes; do not introduce per-spell cases. Aura419 changes maximum mana without granting proportional current mana; removal only clamps. Aura316's generic absorption accounting must not invent death prevention.
+
+Named gaps remain explicit:
+- **TC_NYI_AURA_443**, **TC_NYI_AURA_220**, **TC_NYI_AURA_381**, **TC_NYI_AURA_382**: pinned TC declares these NYI/HandleNULL. Keep unsupported; do not claim a consumer.
+- **AURA316_SPELLSCRIPT_DEATH_PREVENTION_UNPORTED**: census20711,31230,31850,86949,114556,209258,404195,1265361 require individual sourced SpellScript qualification. Existing bounded31850 behavior stays intact; generic316 is not a substitute for any callback.
+
+Proof is bounded native consumer behavior, not complete ability/class/legal-loadout/UDP parity. Census22842's145 amount0 stays unchanged; native182775 amount50 supplies its nonzero oracle. No item-restricted240 source occurs in this census slice; weapon-equipment filtering outside these native sources remains unqualified. The server has no magical resistance pool for269 to modify.
+
+[Per-type pinned TC file:line citations, implementation and proof ledger](../wiki/systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20). Enabled targeted15/15 pass at861d7edd5; no full suite or independent parent gate claimed.
 ## Impending Victory consequence (active70448)
 
 - Successful ordinary202168 casts real self202166, then removes32216 from that caster only. Native202166 owns its30%-maximum-health payload, crit, overheal and triggered flags. Missing Victorious does not disable the heal; another Warrior's32216 is preserved.
@@ -192,7 +203,11 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [ ] Native aura142's physical-school percentage multiplies player gear/base armor and pet base armor, not armor contributed afterward by stats. Independent aura factors multiply; removal/expiry restores armor, ordinary NPCs do not gain base armor, and physical spell/melee damage use the same live pet modifier. Nonphysical base-resistance modeling remains separate.
 - [x] Aura466 multiplies player armor after base/gear percentages and stat-derived armor. Independent native factors multiply; removal/expiry recomputes armor, native zero values remain zero, and fractional stat armor is retained until final conversion.
 - [ ] Aura467 applies its authored percentage only to gear/flat stat bonuses, preserving create/base stats. Native stat indices select individual fields; removal restores those bonuses, and ordinary total-stat percentages apply after base plus modified bonus are combined.
-- [x] Aura429 multiplies direct spell and melee damage of the current owner's controlled pets and guardians, not that owner's personal damage or a stranger's summons. Removed modifiers stop affecting summons; copied source damage does not consume the owner modifier again.
+- [x] Aura429 multiplies the current owner's controlled pet damage only; aura531 multiplies guardian damage only, including signed reductions. Spell and melee paths use live ownership with mutually exclusive selection, never double-apply paired429/531 effects, preserve native Command/Restoration totals, and exclude the owner and strangers. Removal stops the modifier; copied source damage does not consume it again.
+- [x] Aura380 multiplies spell and melee damage received from the aura caster's own guardian, excluding controlled pets, players and foreign guardians; removal ends the bonus. Native IgnoreDamageTakenModifiers spells retain their exemption.
+- [x] Effects42 JUMP_DEST and213 JUMP_DEST_2 use the existing parabolic jump clock with native run-speed/amplitude and height bounds. Attr9 0x800000 preserves the mover's facing; absent that flag, existing facing behavior is unchanged. Target64 uses its native front radius (49575 lands3yd in front of the caster), not a fabricated exact-origin landing.
+- [x] Death Grip49576 launches owned243912 at the victim, victim-owned49575 back at the caster, then caster-owned51399 only with Blood137008. Rejected range/dead-target casts launch no children.
+- [ ] **AURA_320_LABEL_SELECTOR_SOURCE_CONFLICT_70448**: pinned sources disagree on aura320's SpellLabel selector. Keep unimplemented until the selector conflict is resolved; do not infer a label from another aura or certify census closure.
 - [ ] Native MasteryAffectsPoints adds raw mastery points times the authored effect coefficient before points modifiers. Self-owned flagged aura amounts follow stat/aura changes without restarting duration, stacks or tick phase; derived mastery percent is not substituted for raw points. Underivable Lycara point/percent conversion remains a gap.
 - [x] Apply native aura537 damage percentages only for matching label and aura owner.
 - [x] Apply aura457 haste only to its charge category; preserve running-clock progress and publish rate changes/replenishment without another cast.
@@ -377,4 +392,19 @@ Ordinary NPC melee-spell dodge uses native3% plus victim aura49 and1.5% per posi
 
 - [x] Aura270 multiplies incoming spell damage only for the aura caster and overlapping native school masks, using live amounts/stacks; removal and expiry remove the bonus. Existing IgnoreDamageTakenModifiers bypass remains in force.
 - [x] Native Haunt48181 effect1 increases the owner's actual Fireball damage by16%; foreign Haunt and physical-only Open Wounds188400 do not amplify Fire damage.
-- [ ] Haunt pet amplification381, unknown380, optional periodic/talent behavior and fresh UDP acceptance remain separate.
+- [x] Haunt48181's native380 effect amplifies only the aura caster's guardian damage, as specified above.
+- [ ] Haunt controlled-pet amplification381, optional periodic/talent behavior and fresh UDP acceptance remain separate.
+
+## Aura world/XP slice (active70448, 2026-10-20)
+
+Generic server consumers must use authored aura amounts, not spell-ID cases. Native269083 supplies200/291 at10;282559 supplies neither and must preserve baseline XP/money. Kill XP200 multiplies the individual share before rested XP. Quest291 applies each percentage sequentially, retaining integer truncation. Money348 selects Misc0 quests / Misc1 loot; Misc3/4 do not match these sources.
+
+Movement104/106/488 are distinct server permissions, retaining other same-type sources on removal. Swim58 uses strongest positive swim bonus, not run speed. SafeFall144 subtracts summed yards from landing height; preserve the existing server fall curve (not a claim of TC curve parity). Force485 uses the total percentage product. Tracking44 uses player-only creature-type bits. StoreReturn71 snapshots the player's actual map/pose on application and removes its entry on aura removal. DisplayPower179 uses authored Misc0 after form precedence, replacing earlier display auras.
+
+Named gaps: `PVP_AURA_646_649_TC_NULL` (all four TC handlers are NULL; do not reuse ordinary spellmods or change PvE), `WORLD_AURA_CLIENT_PROJECTION` (104/106/488 flags,44 tracking and485 movement-force projection need engine/protocol work), `AURA_235_188_408_CLIENT_ONLY` (native aura payload retained; no server gameplay effect), `AURA_373_TC_NULL_MOVEMENT` (native payload only; no invented forced-speed formula), `AURA_71_PERSISTENCE_AND_RETURN_EFFECT` (runtime origin only; persistence/return effect outside slice), `SAFE_FALL_BASE_CURVE_PARITY` (existing quadratic base curve differs from TC linear). No protocol/engine changes or class/census promotion.
+
+Source/proof matrix: [auras wiki](../wiki/systems/auras.md#aura-worldxp-native70448--2026-10-20).
+
+Server implementation now wires200/291/348,58,104/106/488/485/44/71/179 and client-only235/188/408 classification.373 and646–649 remain explicitly unhandled TC NULL gaps.144 subtracts the summed safe-fall yards in the existing landing path after its corrected numeric RED; server motion/wire projection is not claimed.
+
+Native targeted proof:15/15GREEN at c9b7c3e59; tests enabled afterwards with bodies unchanged.104/106/488/485/44 are server state, not certified motion/prediction/minimap integration;106 landing exemption remains unqualified. Named TC/client/persistence/base-curve gaps above remain open. No full-class or census promotion.

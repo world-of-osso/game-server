@@ -7,6 +7,8 @@
 //! cap 300 from tier 336). Bolt of Linen Cloth (2963) is learned with the line,
 //! takes 2 Linen Cloth (2589), casts 1.5 s, and is orange below rank 25.
 
+#[path = "profession/bank_reagents_native_fixture.rs"]
+mod bank_reagents_native_fixture;
 #[path = "crafting_orders/tests.rs"]
 mod crafting_order_tests;
 #[path = "profession/crafting_origin_tests.rs"]

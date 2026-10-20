@@ -23,6 +23,7 @@ pub(crate) mod augmentation;
 pub(crate) mod aura_state;
 pub(crate) mod base_armor;
 mod charred_warblades;
+pub(crate) mod combat_stats;
 pub(crate) mod damage_shield;
 #[cfg(test)]
 mod damage_shield_tests;
@@ -49,6 +50,7 @@ mod natures_guardian;
 mod periodic;
 pub mod procs;
 mod refresh;
+pub(crate) mod reward_mods;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -57,6 +59,9 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
 mod unit_state;
+pub(crate) mod world_state;
+#[cfg(test)]
+pub(crate) mod world_xp_tests;
 pub use invisibility::Invisibility;
 
 use std::collections::HashSet;
@@ -660,6 +665,20 @@ fn build_instance(
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
+    // TC a352b1fa Unit.cpp7725-7737: snapshot recipient422 once per shield.
+    const ATTR11_IGNORE_TARGET_ABSORB_MODIFIERS: u32 = 0x0008_0000;
+    if attributes(spell, 11) & ATTR11_IGNORE_TARGET_ABSORB_MODIFIERS == 0 {
+        let multiplier = world
+            .get::<AuraStatMods>(application.target)
+            .map_or(1.0, |mods| mods.absorb_taken_mult);
+        for effect in effects
+            .iter_mut()
+            .filter(|effect| effect.aura_type == handlers::SCHOOL_ABSORB)
+        {
+            effect.amount = (effect.amount * multiplier).round();
+            effect.absorb_remaining = effect.amount.max(0.0);
+        }
+    }
     let applied_mask = effects
         .iter()
         .fold(0, |mask, effect| mask | (1 << effect.index));
@@ -1028,6 +1047,7 @@ pub(crate) fn apply_aura_with_spell(
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
         }
+        world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
@@ -1307,15 +1327,40 @@ pub(crate) fn apply_attack_damage(
     if let Some(rescue) = find_death_prevention(world, unit, loss, school) {
         return commit_death_prevention(world, unit, rescue, loss);
     }
+    let absorbed_loss = overkill_absorb_amount(world, unit, loss, school);
+    // Generic316 reports absorption, but only a sourced script may prevent death.
     DamageCommit {
         lethal: world
             .get_mut::<shared::components::Health>(unit)
             .is_some_and(|mut health| crate::death::apply_health_damage(&mut health, loss)),
-        absorbed_loss: 0.0,
+        absorbed_loss,
     }
 }
 
+/// TC Unit.cpp1003-1074: generic default accounting, not Cheat Death's callback.
+fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -> f32 {
+    let Some(health) = world.get::<shared::components::Health>(unit) else {
+        return 0.0;
+    };
+    if health.current <= 0.0 || loss < health.current {
+        return 0.0;
+    }
+    let eligible = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+        auras.iter().flat_map(|aura| &aura.effects).any(|effect| {
+            effect.aura_type == handlers::SCHOOL_ABSORB_OVERKILL
+                && effect.misc_values[0] as u32 & school_or_physical(school) != 0
+                && if effect.amount > 0.0 {
+                    loss <= effect.amount
+                } else {
+                    loss < health.max * 2.0
+                }
+        })
+    });
+    if eligible { loss } else { 0.0 }
+}
+
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
     linked_summon::on_removed(world, unit, aura);
@@ -1469,6 +1514,9 @@ pub fn remove_instance(world: &mut World, unit: Entity, instance_id: u32, reason
 /// `update_character_stats` recomputes only when aura stats moved.
 pub fn auras_changed(world: &mut World, unit: Entity) {
     let previous_attack_time = crate::combat::read_creature_swing_time(world, unit);
+    let previous_threat = world
+        .get::<AuraStatMods>(unit)
+        .map_or(0.0, |mods| mods.temporary_threat);
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };
@@ -1493,14 +1541,21 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     }
     let current = world
         .get::<StatModifiers>(unit)
-        .copied()
+        .cloned()
         .unwrap_or_default();
     change_flat_health(world, unit, stats.max_health_flat - current.max_health_flat);
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
+    let current_threat = world
+        .get::<AuraStatMods>(unit)
+        .map_or(0.0, |mods| mods.temporary_threat);
+    if previous_threat != current_threat {
+        crate::creature_aggro::refresh_temporary_threat(world, unit);
+    }
     crate::combat::rescale_creature_swing_timers(world, unit, previous_attack_time);
     unit_state::reconcile(world, unit);
+    world_state::reconcile(world, unit);
     health_pct_trigger::reconcile(world, unit);
     crate::spell_cast::refresh_cast_movement_permission(world, unit);
 }
@@ -1659,11 +1714,15 @@ pub fn damage_taken_multiplier(
             })
             .product()
     });
-    taken
+    let taken = taken
         * versatility
         * from_caster
+        * summon_damage::taken_multiplier(world, attacker, world.get::<ActiveAuras>(target))
         * scripts::unstable_affliction_multiplier(world, attacker, target)
-        * scripts::outgoing_to_owner_multiplier(world, attacker, target)
+        * scripts::outgoing_to_owner_multiplier(world, attacker, target);
+    world.get::<AuraStatMods>(attacker).map_or(taken, |mods| {
+        mods.bypass_damage_reduction(school_mask, taken)
+    })
 }
 
 /// White-swing damage taken from `attacker`: every MOD_MELEE_DAMAGE_FROM_CASTER
@@ -2297,6 +2356,8 @@ fn receive_cancel_aura(world: &mut World) {
     }
 }
 
+#[cfg(test)]
+mod combat_stat_tests;
 #[cfg(test)]
 mod periodic_deadline_tests;
 #[cfg(test)]
