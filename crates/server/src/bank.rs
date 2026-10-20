@@ -224,9 +224,19 @@ impl Vault<'_, '_> {
                     name: tab.name.clone(),
                     icon: tab.icon,
                     deposit_flags: tab.deposit_flags,
-                    slots: bank_storage::tab_slots(tab, soulbound, |guid| {
-                        persistence::inventory_store::load_item_definition_source(self.db(), guid)
-                    }),
+                    slots: bank_storage::tab_slots(
+                        tab,
+                        soulbound,
+                        |guid| {
+                            persistence::inventory_store::load_item_definition_source(
+                                self.db(),
+                                guid,
+                            )
+                        },
+                        |guid| {
+                            persistence::inventory_store::load_item_crafting_origin(self.db(), guid)
+                        },
+                    ),
                 })
                 .collect(),
             next_tab_cost: self.prices.of(bank).get(data.tabs.len()).copied(),
