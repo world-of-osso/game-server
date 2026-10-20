@@ -57,6 +57,7 @@ fn start_server(cwd: &Path, ground_dir: Option<&Path>) -> Child {
     let mut command = Command::new(env!("CARGO_BIN_EXE_game-server"));
     command
         .current_dir(cwd)
+        .env("GAME_SERVER_BIND_IP", "127.0.0.1")
         .env("GAME_SERVER_PORT", free_udp_port().to_string())
         .env("GAME_SERVER_DB_PATH", cwd.join("game.redb"))
         .env("GAME_SERVER_ADMIN_SOCKET", cwd.join("admin.sock"))
