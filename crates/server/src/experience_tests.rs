@@ -355,3 +355,77 @@ fn kill_xp_spends_rested_xp_for_a_matching_bonus_and_quest_xp_does_not() {
         200
     );
 }
+
+#[test]
+#[ignore = "aura-world native RED/GREEN gate"]
+fn aura_world_kill_xp_enlisted_before_rested_and_honorless_control() {
+    let data = crate::test_data::world_data();
+    for (spell, boosted) in [(269083, true), (282559, false)] {
+        let mut app = award_app();
+        app.insert_resource(data.clone());
+        let auras = crate::auras::world_xp_tests::native_auras(spell);
+        let player = app
+            .world_mut()
+            .spawn((
+                Player {
+                    name: "XpAura".into(),
+                    race: 1,
+                    class: 1,
+                    appearance: default(),
+                },
+                ClientId(9),
+                Level(10),
+                Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                crate::maps::InMap::continent(0),
+                PlayerRestState::fixture(10, 1000),
+                auras,
+            ))
+            .id();
+        let npc = Npc {
+            template_id: 6,
+            name: "Kobold Vermin".into(),
+        };
+        let victim = victim_of(data, &npc, &UnitLevel(10), None).unwrap();
+        let base = kill_gain(10, &victim);
+        let expected = if boosted {
+            (base as f32 * 1.1) as u32
+        } else {
+            base
+        };
+        app.world_mut().spawn((
+            npc,
+            UnitLevel(10),
+            CreatureTap::tapped_by(9),
+            Health {
+                current: 0.0,
+                max: 100.0,
+            },
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            crate::maps::InMap::continent(0),
+            DeathState {
+                respawn_timer: 100.0,
+            },
+        ));
+        app.update();
+        assert_eq!(
+            load_xp(&app.world().resource::<GameDatabase>().db, 9),
+            expected * 2,
+            "native{spell}: XP before rested"
+        );
+        assert_eq!(
+            app.world()
+                .get::<PlayerRestState>(player)
+                .unwrap()
+                .rested_xp(),
+            1000 - expected
+        );
+    }
+}

@@ -56,6 +56,9 @@ pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
 mod unit_state;
+pub(crate) mod world_state;
+#[cfg(test)]
+pub(crate) mod world_xp_tests;
 pub use invisibility::Invisibility;
 
 use std::collections::HashSet;

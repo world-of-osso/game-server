@@ -587,3 +587,29 @@ Aura168 stores `(creature mask,multiplier)` pairs in `AuraStatMods`, combining m
 Native70391 Haunt48181 effect1 is aura270, amount16, school mask127. The shared victim multiplier handled family271 and label537 but omitted270, so Haunt applied normally without increasing the owner's damage. TC a352b1fa `Unit.cpp:7056–7059/8178–8181` matches both aura caster and incoming school. The same multiplier now handles270 using the existing amount/stack product and IgnoreDamageTakenModifiers boundary. Autoswings do not use this special-spell condition.
 
 Ordinary HostClient Haunt→Fireball reproduces the missing bonus (386 health loss, expected native16% boosted439–461); baseline/foreign/school exclusions and removal/expiry controls pass before the fix. `spell_cast/caster_school_damage_tests.rs` retains this boundary and two actual2000ms Corruption172→146739 ticks, each amplified by16%. Final targeted run at96785a2f passes4/0/0 (8.35s). [Contract](../../specs/class-completeness.md#caster-owned-school-damage-taken). Haunt381/380, optional periodic talents, full Affliction and rendered/UDP parity remain open.
+
+## Aura world/XP native70448 — 2026-10-20
+
+Source root `game-engine/data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa` is the locally receipted TC a352b1fa snapshot (not the adjacent unpinned tc-master-src tree). Initial commit adds ignored native behavior tests and server-state declarations only; no behavior implementation yet. Test filter `aura_world_ -- --ignored --test-threads=1` covers native flags/removal/overlap, tracking, force product, swim isolation, power display, return origin, XP/rested ordering, ordinary quest settlement and loot source filtering. Client-payload retention is an existing-behavior control, not a new gameplay consumer.
+
+| Aura | TC a352b1fa source file:line | Server contract / remaining boundary |
+|---|---|---|
+|200|KillRewarder.cpp158–160 (local pvp-progression-2026-10-16)|Individual kill share × total aura multiplier before rested|
+|291|Player.cpp14960–14969|Sequential AddPct on integer quest XP|
+|348|SpellAuraDefines.h435; SpellAuraEffects.cpp420|Misc0 quests /1 loot; other sources excluded|
+|646/647/648/649|SpellAuraEffects.cpp718/719/720/721; SpellAuraDefines.h733–736|`PVP_AURA_646_649_TC_NULL`: no implemented TC algorithm; remain unhandled|
+|104|SpellAuraEffects.cpp2884–2899|Server water-walking permission; client projection gap|
+|106|SpellAuraEffects.cpp2922–2937; Player.cpp27469–27471|Server hover permission / landing exemption; visual height projection gap|
+|235|SpellAuraEffects.cpp307|Clientside, authoritative native payload only|
+|488|SpellAuraEffects.cpp3182–3195|Server gravity permission; client projection gap|
+|144|Player.cpp27473–27476|Subtract summed safe-fall yards; existing base-curve parity gap|
+|58|Unit.cpp8826–8829|Strongest positive swim-speed bonus only|
+|373|SpellAuraEffects.cpp445|NULL; retain payload, forced-motion algorithm unqualified|
+|485|Unit.cpp14200–14228|Server total magnitude product; wire/client force application gap|
+|44|SpellAuraEffects.cpp2635–2648|Player-only bit (Misc0−1); minimap projection gap|
+|71|SpellAuraEffects.cpp6548–6561; Player.cpp2686–2704|Runtime spell-keyed map/pose snapshot; persistence/return-effect gap|
+|188|SpellAuraEffects.cpp260|Client UnitInRange only; do not alter actual healing range|
+|179|SpellAuraEffects.cpp4249–4261; Unit.cpp5779–5822|Replace prior179; forms precede authored display-power override|
+|408|SpellAuraEffects.cpp480|Clientside button count only; no fabricated server charge/resource behavior|
+
+[Contract and named gaps](../../specs/class-completeness.md#aura-worldxp-slice-active70448-2026-10-20). No spell special cases, client/protocol edits or native class completeness claim.

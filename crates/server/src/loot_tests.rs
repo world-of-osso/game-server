@@ -1057,3 +1057,31 @@ fn achievements_criteria_loot_item_counts_only_committed_loot_slots() {
             .contains_key(&5304)
     );
 }
+
+#[test]
+#[ignore = "aura-world native RED/GREEN gate"]
+fn aura_world_loot_city_of_gold_not_quest_enlisted_money() {
+    for (spell, expected) in [(291619, 1020), (269083, 1000)] {
+        let mut h = harness(false).unwrap();
+        let auras = crate::auras::world_xp_tests::native_auras(spell);
+        h.app.world_mut().entity_mut(h.looter.player).insert(auras);
+        let corpse = h.kill_kobold();
+        h.app.world_mut().entity_mut(corpse).insert(CorpseLoot {
+            looters: [(
+                h.looter.character_id,
+                vec![Some(LootContent::Money { copper: 1000 })],
+            )]
+            .into(),
+        });
+        let before = h.inventory().gold;
+        h.open(corpse, false);
+        h.take_slot(corpse, 0);
+        assert_eq!(
+            h.inventory().gold - before,
+            expected,
+            "native{spell} loot Misc1 only"
+        );
+        h.take_slot(corpse, 0);
+        assert_eq!(h.inventory().gold - before, expected, "no replay");
+    }
+}

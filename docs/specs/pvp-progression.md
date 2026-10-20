@@ -197,3 +197,7 @@ Private native proof uses diagnostics-owned world.db and fresh redb, fb_pvp2/Pvp
 Persist a separate per-character `lifetime_honorable_kills` count in PvP progress. New and pre-existing characters start at0 when no count has been recorded; never backfill from achievement35, Honor XP, wallet balances or scoreboard statistics. This is the named project tracking-start policy, not a claim to recover untracked historical kills.
 
 At the existing eligible world-HK recipient boundary, increment and persist this count before evaluating achievement113 (TC Player6752–6753). Zero Honor XP does not suppress the count. Rejected/nonlethal/dead replay and unrelated recipients cannot increment it. Normal character load restores it; login projects the absolute current value without replaying a kill. No BG/arena eligibility policy is added. See [achievement projection](dungeon-achievements.md#lifetime-honorable-kills113).
+
+## War Mode native XP aura consumers
+
+Enlisted269083's authored200/291 +10% must modify actual kill and quest XP once;200 precedes rested XP. Honorless282559 has no such aura and leaves baseline unchanged. Quest gold348 uses only Misc0. This adds no War Mode activation/eligibility logic or PvP damage formula. [Generic contract](class-completeness.md#aura-worldxp-slice-active70448-2026-10-20).
