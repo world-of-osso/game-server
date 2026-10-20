@@ -14,6 +14,7 @@ Generic world interrupts are excluded: `AURA_INTERRUPT_LEAVE_ENTER_WORLD_SEMANTI
 |---|---|---|---|
 |36bfc2ea0 / red-command.json, red.stdout.log, red.stderr.log|`bg_preparation_aura_ --include-ignored --test-threads2`|6 genuine failures (ACK2/start2/exit2),7 controls PASS;13cases/11.98s|Observed before production edits; no setup failures|
 |31dc2bb27 / green-command.json, green.stdout.log, green.stderr.log|Same13 native cases, protocol7f9bd7c|13PASS/0FAIL/0ignored,12.32s; no compiler warnings|Productionb0a123256; later enabling removes only six ignore attributes. Master56f39fe57 adds autorepeat/stun/fear paths, not these cost/lifecycle paths|
+|6d03ade8b / retained-command.json, retained.stdout.log, retained.stderr.log|`maps::tests::battleground_nodes::deserter:: --skip preparation_aura:: --test-threads2`|76PASS/0FAIL/0ignored,18.89s; no compiler warnings|Current relevant Rust after master merge, excluding the already-proven new13 to avoid duplicate execution|
 
 Native qualification applies the complete authored aura through AuraApplication: Fireball133 Mana cost20 at base2000 and SinisterStrike1752 Energy cost45 become zero; normal removal restores exact values. Native charge-plan affordability also changes with empty pools. This proves computed cost/admission, not physical cast execution.
 
@@ -21,4 +22,4 @@ Controls cover arena32727/no44521, pending decline, late InProgress arrival, ref
 
 The RED command exceeded Pyrun's synchronous budget during a cold dependency build (19m24s). Existing detached job01a157bd-0d39-77eb-9f75-1be3ecc9d866 was observed to completion, never rerun for logs. No live runtime or UDP/render/deployment evidence.
 
-Production consumer/spec committed after genuine RED, then all13 passed before six regressions were enabled. Current master merged56f39fe57. Targeted retained controls and Lead final integration/check/fmt remain pending; no duplicate broad gates.
+Production consumer/spec committed after genuine RED, then all13 passed before six regressions were enabled. Current master merged56f39fe57. Separate retained76 also pass:89 distinct cases across two scoped runs, not one89-test execution. Changed Rust was formatted and manually audited for control flow, nesting, state mutation and fallback/suppression additions; none introduced. Lead final integration/check/fmt remain pending; no duplicate broad gates.
