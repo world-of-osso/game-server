@@ -38,6 +38,7 @@ pub(crate) mod forecast;
 pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;
+mod item_requirements;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
@@ -1177,7 +1178,7 @@ pub enum RemoveReason {
     ChannelEnded,
     /// Stacks, charges or absorb points used up.
     Consumed,
-    /// The passive spell is no longer known.
+    /// The passive spell is no longer known, or its required equipment is gone.
     Unlearned,
     CasterGone,
     /// The creature evaded (`RemoveEvadeAuras`).
@@ -1999,7 +2000,7 @@ fn init_unit_auras(world: &mut World, missing: &mut UnitsMissingAuras) {
     }
 }
 
-/// Owners whose knowledge or actual map changed since the last passive sync.
+/// Owners whose knowledge, actual map or equipment changed since the last passive sync.
 #[derive(Resource, Debug, Default)]
 struct PendingPassiveSync(Vec<Entity>);
 
@@ -2009,7 +2010,11 @@ type ChangedPassiveOwners<'w, 's> = Query<
     Entity,
     (
         With<KnownSpells>,
-        Or<(Changed<KnownSpells>, Changed<crate::maps::InMap>)>,
+        Or<(
+            Changed<KnownSpells>,
+            Changed<crate::maps::InMap>,
+            Changed<crate::stats::EquippedItems>,
+        )>,
     ),
 >;
 
@@ -2037,6 +2042,7 @@ pub fn sync_passives(world: &mut World, unit: Entity, source: AuraSource, spells
         .filter_map(|&id| lookup_spell(world, id))
         .filter(|spell| is_passive(spell) && aura_effect_mask(spell) != 0)
         .filter(|spell| passive_map_allowed(world, unit, spell))
+        .filter(|spell| item_requirements::passive_items_fit(world, unit, spell))
         .collect();
     let ids: Vec<u32> = passives.iter().map(|spell| spell.id).collect();
     remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
@@ -2300,6 +2306,8 @@ mod toy_effects_tests;
 
 #[cfg(test)]
 mod agony_tests;
+#[cfg(test)]
+mod armor_specialization_tests;
 #[cfg(test)]
 mod augmentation_tests;
 #[cfg(test)]
