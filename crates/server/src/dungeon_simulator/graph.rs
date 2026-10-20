@@ -60,7 +60,7 @@ impl Space {
         let mut visited = BTreeSet::new();
         while let Some((&node, &distance)) = distances
             .iter()
-            .filter(|(node, _)| !visited.contains(node))
+            .filter(|(node, _)| !visited.contains(*node))
             .min_by(|a, b| a.1.total_cmp(b.1).then(a.0.cmp(b.0)))
         {
             if node == goal {
