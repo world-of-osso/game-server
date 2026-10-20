@@ -26,6 +26,10 @@ Successful Swiftmend18562 with actual learned158478 grants native114108 to the c
 
 Native48438 periodic heals use `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`: `c(t) = native_coefficient + decay/2 - decay*elapsedFraction`, with `decay = 0.07*(1-native382559percentage/100)` when Unstoppable Growth is actually learned, else0.07. Keep Retail70448's native0.481 coefficient, native period, full duration and natural expiry. Use each tick's scheduled time, not the update frame's wall time. SimC76f8118 `sc_druid.cpp:6611–6635` supplies only the explicitly approved shape; its historical0.175 and TrinityCore's legacy curve must not replace native data. Absolute Retail shape remains uncertified. This slice covers real level42 decline, level43's native40%-less normalized decay, and finite native ticks/expiry; target selection/caps, Tree of Life and other talent interactions are excluded.
 
+## Restoration Omen and Clearcasting
+
+Actual learned113043 rolls its native effect0 percentage (70448 value4) only on its caster's real periodic33763 healing, triggering native16870. Native DB ProcChance100 is admission metadata, not a substitute for that effect-amount roll (TC a352b1fa `spell_druid.cpp:1871–1882`; SimC76f8118 `sc_druid.cpp:6247,11532–11535`). Clearcasting's existing native16870 modifier makes the next Regrowth8936 free; consume the caster-owned buff when that Regrowth successfully lands, preserving the composed Soul-of-the-Forest hit hook. Unrelated Rejuvenation must neither consume nor refresh Clearcasting. Retain ordinary mana, regeneration, costs, timing and spell-modifier behavior. Natural acquisition tests use a confidence bound derived from native chance, never a gameplay timer or fake buff/RNG/resource grant. Moment of Clarity155577, extra charges, healing bonus392220, other Omen variants and global proc changes are excluded.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.

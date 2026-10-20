@@ -22,6 +22,8 @@ mod batch7;
 mod batch8;
 mod batch9;
 mod chrono_flame;
+mod clearcasting;
+pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
 pub(super) use germination::redirect_rejuvenation;
 pub(crate) mod prayer_of_mending;
@@ -1189,9 +1191,8 @@ pub type HitHook = fn(&mut World, Entity, Entity, u8);
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
-        soul_of_the_forest::REGROWTH | soul_of_the_forest::REJUVENATION => {
-            Some(soul_of_the_forest::consume_after_heal)
-        }
+        soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
+        soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),
         batch13::MORTAL_STRIKE => Some(batch13::apply_mortal_wounds),
         batch3::GARROTE => Some(batch3::garrote),
         batch5::DISINTEGRATE => Some(batch5::disintegrate),
