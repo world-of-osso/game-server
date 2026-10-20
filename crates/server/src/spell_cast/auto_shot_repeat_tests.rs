@@ -154,7 +154,8 @@ fn class_completeness_native_auto_shot_out_of_range_pauses_without_cancelling() 
     );
     move_npc(&mut h, near);
     // The timer stayed ready; the retained repeat fires without a new cast.
-    let resumed = shots_over(&mut h, interval.end() + 2);
+    // Shorter than one interval, so the following repeat stays outside the window.
+    let resumed = shots_over(&mut h, *interval.start());
     assert_eq!(resumed.len(), 1, "back in range: {resumed:?}");
     assert!(resumed[0] < 3, "ready timer fires at once: {resumed:?}");
 }
