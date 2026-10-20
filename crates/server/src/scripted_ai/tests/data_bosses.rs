@@ -87,6 +87,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
+#[path = "nethekurse.rs"]
+mod nethekurse;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
