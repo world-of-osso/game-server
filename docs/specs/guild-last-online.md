@@ -24,7 +24,7 @@ Persist actual observed character logout authority, not guessed historical dates
 
 ## Known gaps (current cycle)
 
-- [ ] Actual authority RED observed after real disconnect/save/despawn and closed DB/new-app reopen. Focused GREEN1/1 passes (266s compile,0.98s test, no warnings), including distinct observed times, repeated queries, unknown rest/admin history and online suppression; proven test enabled. Coordinated P/S/E landing and both-skin native disconnect/readback/reconnect proof remain pending.
+None within the approved slice. gl728 landed the coordinated cohort; actual authenticated disconnect, both-skin recency, reconnect and fresh-server/client same-DB readback were accepted. See [native acceptance](../wiki/systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19). Exact timestamp bounds, distinct times, repeated-query stability, unknown rest/admin history and recipient isolation retain automated boundary proof, not extra native cases.
 
 ## Out of scope
 
