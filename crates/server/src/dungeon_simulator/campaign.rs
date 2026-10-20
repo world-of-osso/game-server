@@ -51,6 +51,45 @@ pub(super) struct Report {
     pub terminal_units: serde_json::Value,
 }
 
+#[test]
+fn spawned_normal_population_allows_existing_fight_tank_movement() {
+    let _rng_scope = crate::random::seed_scope(34);
+    let mut run = spawn_run(34).unwrap();
+    let target = run.actors[&20375718];
+    let position = *run.app.world().get::<Position>(target).unwrap();
+    let tank = run.party.tank;
+    let members: Vec<_> = run.members().collect();
+    for unit in members {
+        run.app.world_mut().entity_mut(unit).insert(Position {
+            x: position.x - 2.0,
+            ..position
+        });
+    }
+    {
+        let mut data = run
+            .app
+            .world_mut()
+            .resource_mut::<crate::world_data::WorldData>();
+        let index = data
+            .spawns
+            .iter()
+            .position(|spawn| spawn.guid == 20375718)
+            .unwrap();
+        data.spawns_by_map.insert(34, vec![index]);
+    }
+    run.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::networking::CombatTarget(Some(target)));
+    crate::creature_aggro::add_threat(run.app.world_mut(), target, tank, 1.0);
+    crate::followers::pull_history::sample_all(run.app.world_mut());
+    assert_eq!(
+        crate::followers::simulator::inspect_tank_movement(run.app.world_mut(), tank),
+        Ok(Some(true)),
+        "native existing-fight admission must consume the spawned Normal population without missing source metadata"
+    );
+}
+
 struct Run {
     app: App,
     graph: Graph,
@@ -181,7 +220,9 @@ impl Run {
             "observation_wall_seconds": timings[0].as_secs_f64(),
             "control_wall_seconds": timings[1].as_secs_f64(),
             "update_wall_seconds": timings[2].as_secs_f64(),
-            "live_entities": self.app.world().entities().len(),
+            "allocated_entity_slots": self.app.world().entities().len(),
+            "live_entities": self.app.world().entities().count_spawned(),
+            "source_map_actors": self.actors.len(),
             "observed_events": self.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len(),
             "samples": self.report.samples.len(), "memory": super::diagnostics::read_process_memory()})
     }

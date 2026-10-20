@@ -8,6 +8,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 - [x] Freeze map-34 Normal spawns grouped by the tank planner's source formation identity into `content/dungeons/stockade-34.json`; retain source GUIDs, entries and 2D positions.
 - [ ] Extract inter-pack walk distances once using the existing nav query. Runtime movement consumes only the frozen graph; aggro and range use 2D positions.
+- [ ] Spawn through the production map-population path, preserving its Normal difficulty, formation, pool and source-identity semantics; a hand-built population must not bypass those tags.
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
 - [ ] Clear every Stockade boss in seconds of CPU, targeting at least 100 simulated seconds per wall-second. Report ticks, setup/update/control/observation wall costs, simulation ratio, live entity/event counts and process memory in periodic checkpoints. Report cleared/wiped, failed pack, HP/mana traces and pull decisions; terminal source-unit state must make stalls diagnosable. Unrelated NPC fights/regen and unexecuted movement requests do not establish party progress.
 - [ ] Batch N seeded runs and summarize per-pack wipe rate. Report runs reaching each pack as the denominator, wipes separately from all failed clears (including stalls/blocks/timeouts), and keep each run's HP/mana/pull trace. A batch that executed successfully is not a clear unless all runs cleared.
@@ -36,6 +37,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - `dungeon_simulator::one_pack_runs_real_gameplay_without_transport`: isolated native pack death with real positive damage events (GREEN; execute from repository root).
 - `dungeon_simulator::full_stockade_clears_all_three_bosses`: full-route completion and three boss deaths (RED).
 - `dungeon_simulator::batch::batch_summary_counts_wipes_per_reached_pack_and_retains_stalls`: concrete aggregation with a clear, wipe and stall (RED observed; GREEN pending).
+- `dungeon_simulator::campaign::spawned_normal_population_allows_existing_fight_tank_movement`: native existing-fight consumer accepts spawned population metadata (RED pending).
 - `random::same_seed_replays_native_random_draws`: repeated native draw sequences and different-seed control (GREEN).
 - `followers::pull_history_tests::tank_pull_history_preserves_active_combat_window_across_idle_and_resets_on_wipe`: real combat/death/OOC ordering, active-window rollover and wipe reset (GREEN; full history family5/5).
 
