@@ -5,6 +5,10 @@
 ## 2026-10-20 — Spell cooldown persistence
 
 [Contract](../specs/spell-cooldown-persistence.md): player spell/category cooldowns persist as wallclock deadlines at logout and replay as `SpellCooldownUpdate` at world entry (TC SpellHistory SaveToDB/LoadFromDB/SendSpellHistory). RED e9b2860dc/cca7855fc failed at relog replay for Prismatic Sphere28027 and Berserker Rage18499 (in-session rejection already held); GREEN passes in session, after relog and after restart, plus load-time pruning.
+## 2026-10-20 — Armor specialization equipped armor
+
+[Item requirements](systems/auras.md#armor-specialization-equipment--2026-10-20): ignored RED pushed first (9b073510a, rebased ae2683f3b); three genuine failures at the aura-absent assertion, full-plate control passes. Fix b1a250fb2: player Attr8 armor passives need all eight armor slots to fit (Paladin loadout164 plate, Druid leather chest 72689 negative). GREEN 826/0, 4 pre-existing ignores, 252.73s: auras::, stats, followers::passive_stats, class_progression, inventory, combat::tests, class_completeness. No existing test changed. Remaining item-requirement gaps in the [spec](../../specs/player-damage.md#known-gaps-current-cycle).
+
 ## 2026-10-19 — Omen and one-use Clearcasting
 
 [Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
@@ -3365,3 +3369,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Nested achievement fixture catalog reuse
 
 [Nested-all fixture](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) clones the existing canonical catalog, no new cache or map producer change. Same native test/four difficulty-prerequisite variants PASS before/after27.029→17.224s wall; CPU26.189→17.176s and peakRSS+52508KiB. Fresh apps/redb, persisted-reopen/foreign-character/refusal assertions unchanged. Code6122e8f0c pushed before after; independent lead integration pending.
+
+## 2026-10-20 — Crafting reagents from banks
+
+[Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.

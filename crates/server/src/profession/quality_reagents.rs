@@ -60,22 +60,19 @@ fn validate_owned_allocation(
         .ok_or("Authored reagent catalog unavailable")?;
     with_bags(world, player, |bags| {
         let model = bags.load()?;
+        let banks = bags.load_banks();
+        let owned_count = |item| model.bag_count(Retail, item) + banks.count(item);
         let owned: BTreeMap<_, _> = request
             .allocations
             .iter()
-            .map(|allocation| {
-                (
-                    allocation.item_id,
-                    model.bag_count(Retail, allocation.item_id),
-                )
-            })
+            .map(|allocation| (allocation.item_id, owned_count(allocation.item_id)))
             .collect();
         catalog.validate(request.spell_id, &request.allocations, &owned)?;
         let data = world
             .get_resource::<super::ProfessionData>()
             .ok_or("Profession requirements unavailable")?;
         for &(item, needed) in data.reagents(request.spell_id) {
-            if model.bag_count(Retail, item) < needed {
+            if owned_count(item) < needed {
                 return Err(format!("Insufficient required reagent {item}"));
             }
         }
