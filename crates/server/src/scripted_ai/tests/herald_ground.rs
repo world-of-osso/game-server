@@ -218,6 +218,12 @@ fn assert_dispatch_windows(
 
 fn assert_ground_parents(difficulty: u32) {
     let (mut h, map, nazan, vazruden, other, _) = reach_fall(difficulty);
+    // Fireball, Cone and Roar share category1152: an unseeded first Fireball/Cone
+    // roll can legitimately lock every Roar (OnCooldown). StdRng0 rolls
+    // Fireball3656ms/Cone7735ms after the first Roar2000ms request and1500ms cast.
+    h.app.world_mut().entity_mut(nazan).insert(
+        crate::scripted_ai::tests::cast_admission::GroundCombatSeed(0),
+    );
     qualify_parents(&h);
     let fireball = if difficulty == 2 { 36920 } else { 34653 };
     let cone = if difficulty == 2 { 36921 } else { 30926 };
@@ -311,6 +317,10 @@ fn assert_ground_parents(difficulty: u32) {
         assert!(
             (3.95..=4.0).contains(&first_roar.time),
             "source2s ground clock, including same-tick50ms advancement only when victim exists"
+        );
+        assert!(
+            first_roar.result.is_ok(),
+            "seeded first Roar precedes the shared1152 category lock"
         );
         assert!(saw_fear, "actual native aura7 must fear a real player");
     } else {

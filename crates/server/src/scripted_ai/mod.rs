@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 pub(crate) mod azure_vault;
+mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
 pub(crate) mod caster_chase;
@@ -319,6 +320,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if hellfire_ramparts::is_creature_script(script_name) {
         return hellfire_ramparts::creature_ai(world, creature);
     }
+    if blood_furnace::is_creature_script(script_name) {
+        return blood_furnace::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -338,6 +342,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
+        || blood_furnace::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
@@ -911,6 +916,16 @@ impl Ctx<'_> {
     /// The map copy's `InstanceScript` (`me->GetInstanceScript()`).
     pub fn map(&self) -> Option<InMap> {
         self.world.get::<InMap>(self.me).copied()
+    }
+
+    /// `DUNGEON_MODE(normal, heroic)`: the Heroic value in a difficulty2 copy.
+    pub fn dungeon_mode(&self, normal: u32, heroic: u32) -> u32 {
+        let map = self.map().expect("dungeon script actor map");
+        if crate::zones::map_difficulty_id(self.world, map) == 2 {
+            heroic
+        } else {
+            normal
+        }
     }
 }
 
