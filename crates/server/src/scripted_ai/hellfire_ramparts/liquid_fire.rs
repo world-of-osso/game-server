@@ -12,7 +12,7 @@ const TRIGGER_LIFETIME_MS: u32 = 1000;
 
 pub(crate) fn source_spell(
     entry: u32,
-    go_type: u32,
+    go_type: u8,
     ai_name: &str,
     script_name: &str,
     spell: i64,
