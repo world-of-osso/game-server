@@ -93,16 +93,16 @@ PARTIAL_GAPS = {
         'ordinary/native fight, loot and persistence unproved'],
     'boss_noxxion': [
         'source Toxic Volley21687, Uppercut22916 and Summon Dummy21708 passive/uninteractible window with triggered21707 five13456 spawns supported',
-        'binding is copy-only; ordinary/native clear, knockback movement, loot and persistence unproved'],
+        'ordinary/native clear, knockback movement, loot and persistence unproved'],
     'boss_celebras_the_cursed': [
         'source Wrath21807, Entangling Roots12747 and Corrupt Forces21968 summon13743, death summon13716 supported',
-        'binding is copy-only; ordinary/native fight, loot and persistence unproved'],
+        'ordinary/native fight, loot and persistence unproved'],
     'boss_landslide': [
         'source Knock Away18670, Trample5568 and below50 Landslide21808 then30-40s repeats; reset re-arms once',
-        'binding is copy-only; ordinary/native fight, loot and persistence unproved'],
+        'ordinary/native fight, loot and persistence unproved'],
     'boss_princess_theradras': [
         'source Dust Field21909, Boulder21832, Thrash3391 dispatch and Repulsive Gaze21869; death summon Zaetar12238',
-        'Thrash extra-attacks effect19 unsupported; binding is copy-only; ordinary/native fight, loot, persistence and spirit quest/gossip unproved'],
+        'Thrash extra-attacks effect19 unsupported; ordinary/native fight, loot, persistence and spirit quest/gossip unproved'],
 }
 PORTS = {'boss_hogger': [86604, 86620, 86736],
          'boss_lord_overheat': [12466, 86633, 86636],
