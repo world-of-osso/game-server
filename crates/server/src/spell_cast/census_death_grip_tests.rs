@@ -75,7 +75,12 @@ fn native_census_death_grip_direct_native213_uses_destination_jump_clock() {
     );
     super::creature_cast(h.app.world_mut(), mover, JUMP, Some(h.caster), true)
         .expect("native213 aliases TC EffectJumpDest42, not unsupported or instant teleport");
-    assert_jump_and_land(&mut h, mover, origin);
+    // Native49575 target64 offsets3yd in front of the target (radius row15).
+    let landing = Position {
+        x: origin.x + 3.0,
+        ..origin
+    };
+    assert_jump_and_land(&mut h, mover, landing);
     assert_eq!(position(&h, h.caster), origin);
     assert_eq!(h.health(mover), 5000.0);
     assert_eq!(h.app.world().get::<Rotation>(mover).unwrap().y, facing);
@@ -117,7 +122,11 @@ fn native_census_death_grip_nonblood_launches_owned_visual_and_reversed_jump_wit
         &[(caster, VISUAL, Some(victim)), (victim, JUMP, Some(caster))]
     );
     assert!(!crate::auras::has_aura(h.app.world(), victim, TAUNT));
-    assert_jump_and_land(&mut h, victim, origin);
+    let landing = Position {
+        x: origin.x + 3.0,
+        ..origin
+    };
+    assert_jump_and_land(&mut h, victim, landing);
     assert_eq!(position(&h, caster), origin);
     assert_eq!(h.health(caster), 1000.0);
     assert_eq!(h.health(victim), 5000.0);

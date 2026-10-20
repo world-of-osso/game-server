@@ -11,14 +11,19 @@ use shared::protocol::CombatLogKind;
 const RAISE_DEAD: u32 = 46585;
 const SUMMON_IMP: u32 = 688;
 const WOUND: u32 = 209140;
-const CHARGED: u32 = 149328;
+const MUSKET_BARRAGE: u32 = 208227;
 const FERAL: u32 = 137011;
 const UNHOLY: u32 = 137007;
 const DESTRUCTION: u32 = 137046;
 const HAUNT: u32 = 48181;
 
 fn fixture() -> Harness {
-    let mut h = harness(Vec::new(), &[RAISE_DEAD, SUMMON_IMP, WOUND, CHARGED], 9).unwrap();
+    let mut h = harness(
+        Vec::new(),
+        &[RAISE_DEAD, SUMMON_IMP, WOUND, MUSKET_BARRAGE],
+        9,
+    )
+    .unwrap();
     let source = world_db().unwrap();
     let conn = rusqlite::Connection::open_with_flags(
         &source.powers_db,
@@ -199,8 +204,8 @@ fn native_census_guardian_380_matches_actual_guardian_owner_not_pet_or_player() 
     let imp = pet(&mut h);
     let target = h.npc;
     apply_effect(&mut h, owner, target, HAUNT, 3); // Actual native380 amount16.
-    damage_with_spell(&mut h, ghoul, CHARGED, 1.16);
-    damage_with_spell(&mut h, imp, CHARGED, 1.0);
+    damage_with_spell(&mut h, ghoul, MUSKET_BARRAGE, 1.16);
+    damage_with_spell(&mut h, imp, MUSKET_BARRAGE, 1.0);
 }
 
 #[test]
@@ -211,12 +216,12 @@ fn native_census_guardian_380_does_not_match_foreign_aura_caster_and_removal_end
     let target = h.npc;
     let other = super::test_harness::spawn_player(&mut h.app, 9, 0.0);
     apply_effect(&mut h, other, target, HAUNT, 3);
-    damage_with_spell(&mut h, ghoul, CHARGED, 1.0);
+    damage_with_spell(&mut h, ghoul, MUSKET_BARRAGE, 1.0);
     crate::auras::remove_auras(h.app.world_mut(), target, RemoveReason::Cancelled, |aura| {
         aura.spell_id == HAUNT
     });
     apply_effect(&mut h, owner, target, HAUNT, 3);
-    damage_with_spell(&mut h, ghoul, CHARGED, 1.16);
+    damage_with_spell(&mut h, ghoul, MUSKET_BARRAGE, 1.16);
 }
 
 #[test]
@@ -230,7 +235,7 @@ fn native_census_guardian_380_preserves_native_ignore_taken_attribute() {
         0
     );
     assert_eq!(
-        super::attributes(world_db().unwrap().store.get(CHARGED).unwrap(), 4) & 0x100,
+        super::attributes(world_db().unwrap().store.get(MUSKET_BARRAGE).unwrap(), 4) & 0x100,
         0
     );
     apply_effect(&mut h, owner, target, HAUNT, 3);
