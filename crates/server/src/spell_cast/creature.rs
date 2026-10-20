@@ -44,7 +44,7 @@ pub(crate) fn creature_cast(
     // Bool FULL_MASK has no triggering aura: TC CheckCast permits a dead caster.
     super::aura_spell_restrictions::check_caster(world, caster, &spell)?;
     let explicit = validate_target(world, caster, &spell, explicit, Sight::Start)?;
-    super::aura_spell_restrictions::check_target(world, explicit, &spell)?;
+    super::aura_spell_restrictions::check_target(world, caster, explicit, &spell)?;
     let plan = plan_targets(world, caster, &spell, explicit, false)?;
     log_event(
         world,

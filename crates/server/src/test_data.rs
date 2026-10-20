@@ -81,6 +81,52 @@ fn native_fixture_copies_do_not_share_mutable_catalogs_or_creatures() {
 }
 
 #[test]
+fn native_selected_creatures_keep_source_stats_and_isolate_live_apps() {
+    use crate::spell_cast::test_harness::load_native_creature_world;
+    use bevy::prelude::App;
+
+    let entries = [40, 209057, 209072];
+    let mut first = App::new();
+    let mut sibling = App::new();
+    first.insert_resource(load_native_creature_world(&entries));
+    sibling.insert_resource(load_native_creature_world(&entries));
+    let source = world_data();
+    let original = &source.templates[&40];
+    {
+        let mut local = first
+            .world_mut()
+            .resource_mut::<crate::world_data::WorldData>();
+        assert_eq!(local.templates.len(), entries.len());
+        assert!(local.spawns.is_empty());
+        assert!(local.difficulty_templates.is_empty());
+        let template = local.templates.get_mut(&40).unwrap();
+        assert_eq!(template.name, original.name);
+        assert_eq!(template.armor, original.armor);
+        assert_eq!(template.models.len(), original.models.len());
+        assert_eq!(
+            template.tuning.as_ref().unwrap().stats,
+            original.tuning.as_ref().unwrap().stats
+        );
+        template.name = "first app only".into();
+        template.models.clear();
+        template.tuning = None;
+        local.templates.remove(&209072);
+        local.expected_stats.by_level.clear();
+    }
+    let other = sibling.world().resource::<crate::world_data::WorldData>();
+    assert_eq!(other.templates[&40].name, original.name);
+    assert_eq!(other.templates[&40].models.len(), original.models.len());
+    assert!(other.templates[&40].tuning.is_some());
+    assert!(other.templates.contains_key(&209072));
+    assert_eq!(
+        other.expected_stats.by_level,
+        source.expected_stats.by_level
+    );
+    assert_eq!(world_data().templates[&40].name, original.name);
+    assert!(world_data().templates[&40].tuning.is_some());
+}
+
+#[test]
 fn prepared_class_fixture_remains_read_only_and_app_mutations_are_isolated() {
     let prepared = crate::spell_cast::test_harness::prepare_class_world();
     let conn = rusqlite::Connection::open_with_flags(

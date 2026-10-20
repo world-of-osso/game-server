@@ -56,6 +56,20 @@ Onbccfa428 (requestedbda55ef5+c86bb318, merged currentmaster4b4e017f), ordinary 
 
 The serial instrumented diagnostic at400adbd3 was117.06s; flags, master revision and host load differ, so it is not a controlled speedup ratio. The earlier executor/query/catalog experiments remain separately parked and are not merged into this fixture-only candidate. Evidence: `arena-four-workers-{build,native-green}.log/.json` and `arena-four-workers-cpu-samples.json`. Full-suite integration and timing under other contention remain lead-owned.
 
+## Selected native follower metadata (2026-10-19)
+
+`spell_cast::test_harness::load_native_creature_world` previously built every template's level arrays before retaining requested entries. It now clones only requested templates from the existing `test_data::world_data()` view, retaining their immutable `Arc<LevelStats>` and cloning `ExpectedStats`. All other returned world fields still use their original defaults. `followers::profile_behavior_tests` clones complete classes from the existing spell fixture instead of reloading them. No new canonical cache, app sharing or navigation sharing is introduced; prepared encounter inputs still require their own authority.
+
+Matching serial cohorts compare base7cd9667a8 with code0fc15ec61, both on protocol03580cc. Canonical protocol moved during implementation, so the after build uses an authorized detached03580cc checkout, not the newer canonical source. One app-isolation characterization passes before and after: tuned Kobold40 plus Garrick209057/Crenna209072 remain selected, while edits to one live app's name/models/tuning/template set/ExpectedStats leave its sibling and canonical input unchanged.
+
+| Cohort | Before/after test wall | Before/after process CPU | Before/after peak RSS KiB | Preserved coverage |
+|---|---:|---:|---:|---|
+| Baked corners |84.169/70.698s|83.641/69.518s|1128656/1118916|1353 corners, zero qualified, no path errors|
+| Authored origins, two tests |379.821/37.465s|339.822/37.195s|1135952/1087204|144 origins, same four qualified, no violations/errors|
+| `followers::kit_*` |515.198/68.450s|475.463/66.884s|1022284/1146772|36 pass, three unchanged pre-existing ignores|
+
+CPU/RSS cover the entire child process, including captured diagnostics; corner process wall additionally contains output emission (109.001/101.030s), excluded from its test wall. Origin process wall is380.274/37.565s; kit process wall515.352/68.536s. Host contention and cold canonical initialization vary: these observations are not a guaranteed parallel gate reduction. Kits retain more canonical input in memory (peak +124488KiB); the fixture CPU reduction is not free memory reuse. Full raw output, serial start/finish events, `/proc` samples and resource receipts are under `/home/osso/.worktrees/logs/wow_formats-gate-timing/phase-a-{before,after}-{corners,origins,kits}/`. No assertions,50ms ticks, difficulties, native routes or events changed.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.

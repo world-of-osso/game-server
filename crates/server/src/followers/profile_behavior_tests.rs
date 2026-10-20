@@ -29,8 +29,7 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     let mut h = harness_with_plugins(vec![], &[], 8, false, configure).unwrap();
     // Full native metadata includes actual form/passive/trigger dependencies.
     h.app.insert_resource(world_db().unwrap().store.clone());
-    h.app
-        .insert_resource(crate::spell_info::load_class_spells(&db).unwrap());
+    h.app.insert_resource(world_db().unwrap().classes.clone());
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[entry]);
     if let Some(mut data) = h
         .app

@@ -19,6 +19,7 @@
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
 pub(crate) mod augmentation;
+pub(crate) mod aura_state;
 pub(crate) mod base_armor;
 mod charred_warblades;
 pub(crate) mod damage_shield;
