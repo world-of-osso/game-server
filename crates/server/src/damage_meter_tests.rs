@@ -382,8 +382,15 @@ fn damage_meter_melee_damage_delays_frostbolt_launch_by_ten_ticks() {
     let health_before = h.health(caster);
 
     h.cast_and_deliver(FROSTBOLT, Some(npc));
-    let original_duration = h.app.world().get::<CastState>(caster).unwrap().duration;
+    let cast = h.app.world().get::<CastState>(caster).unwrap();
+    let original_duration = cast.duration;
     assert_eq!(original_duration, 1.75);
+    let observed = h.app.world().resource::<Time<Fixed>>().elapsed();
+    let elapsed_ms = (f64::from(cast.elapsed) * 1000.0).round() as u64;
+    let started = observed - Duration::from_millis(elapsed_ms);
+    let launch_at = started + Duration::from_millis(2250);
+    let tick = h.app.world().resource::<Time<Fixed>>().timestep();
+    assert_eq!(tick, Duration::from_millis(50));
     // The real NPC swing arrives at frame 20, 0.9 s into the second cast.
     h.advance(17);
     // The swing can crit; pushback depends on positive damage, not its amount.
@@ -406,29 +413,21 @@ fn damage_meter_melee_damage_delays_frostbolt_launch_by_ten_ticks() {
     // Native duration stays fixed; rewound progress postpones the real launch.
     assert_eq!(cast.duration, original_duration);
 
-    // Without pushback it launches at frame 38. A damaging melee swing adds
-    // 500 ms (TrinityCore a352b1fa Spell::Delayed): ten 50 ms simulation ticks.
-    h.advance(18);
-    assert!(h.app.world().get::<CastState>(caster).is_some());
-    h.advance(9);
-    println!(
-        "Frostbolt olddeadline at{:?}, state{:?}, launches{:?}",
-        h.app.world().resource::<Time<Fixed>>().elapsed(),
-        h.app.world().get::<CastState>(caster),
-        h.inbox
-            .log
-            .iter()
-            .filter(|event| event.kind == CombatLogKind::CastSuccess)
-            .collect::<Vec<_>>()
-    );
-    assert!(h.app.world().get::<CastState>(caster).is_some());
-    assert!(
-        !h.inbox
-            .log
-            .iter()
-            .any(|event| event.kind == CombatLogKind::CastSuccess)
+    // Source1750ms + real500ms pushback =2250ms /45 progress ticks.
+    // The old float oracle waited a46th tick; loopback delivery is not cast time.
+    while h.app.world().resource::<Time<Fixed>>().elapsed() + tick < launch_at {
+        h.advance(1);
+        assert!(h.app.world().get::<CastState>(caster).is_some());
+        assert!(h.inbox.log.iter().all(|event| {
+            event.kind != CombatLogKind::CastSuccess || event.spell_id != Some(FROSTBOLT)
+        }));
+    }
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - started,
+        Duration::from_millis(2200)
     );
     h.advance(1);
+    assert_eq!(h.app.world().resource::<Time<Fixed>>().elapsed(), launch_at);
     assert!(h.app.world().get::<CastState>(caster).is_none());
     let launches = h
         .inbox
