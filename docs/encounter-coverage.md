@@ -4,6 +4,10 @@
 
 `GO_NOT_SELECTABLE_FLAG_UNMODELLED`: Fel Iron MakeActive requires a consumed native selectability flag, but global loading/refusal would also require existing unlock consumers outside this encounter. Chest work stopped without implementation. [Read-only census, source semantics and concrete Isle banner hazard](wiki/investigations/go-not-selectable-flag.md).
 
+## Vazruden actual slay speech — 2026-10-19
+
+Native level10/class1 stat producer supplies1110HP; autonomous17537 melee gives actual attributed player death/corpse, qualification1PASS42.42s. Pushed ignored2RED/1control55.54s plus shared owner baseline1PASS59.78s precede the sole runtime change, unfiltered KilledUnit→Talk2. Four full native/boundary cases4d2f642e4 GREEN79.39s before enabling; retained qualification makes a five-case composite. Native nonlethal/other killer, unfiltered NPC/corpse replay, actual summon ownership, separate real ownedHound reward-owner negative and copy audience pass. Unit::Kill controls explicitly HARNESS SETUP; no HP assignment/forced cast/hit or balance/native-audio/loot/persistence claim. [Contract/proof](specs/ramparts-herald.md#vazruden-slay-speech); independent gate pending.
+
 ## Herald flying Liquid Fire — 2026-10-19
 
 Natural victim/random Normal+Heroic admission qualification2PASS64.88s FIRST; pushed ignored4b11af1e1→four genuine missing actual-impact-frame child launches200.85s. Production adds only four flying IDs to existing Fireball hit hook; all four full native endpointsd75c051e5 GREEN287.96s/exit0: missile travel before impact, new hit-unit self-child/freshGO rather than old victim fields, unchanged native sourceGO pulses/ordinary damage/lifetimes/copy. Four cases enabled; extracted ground/source/refusal cohort6PASS183.95s ate0e53be51 plus retained natural qualification2PASS make a twelve-case composite. Independent gate pending. [Contract/proof](specs/ramparts-herald.md#flying-liquid-fire). Native/balance/new flight algorithms/Revenge/re-entry/persistence/loot excluded.

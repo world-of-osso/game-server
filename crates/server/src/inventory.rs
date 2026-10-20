@@ -185,7 +185,7 @@ pub(crate) fn grant_item_with_origin(
         vendor_sell_price: goods.sell_price,
         unique_auction: false,
     };
-    if let Some(origin) = origin {
+    if let Some(origin) = origin.filter(|_| template.records_crafting_origin()) {
         model.record_crafting_origin(item.item_guid, origin);
     }
     let mut mint = || persistence::next_id(db, "item_instance");
@@ -199,6 +199,20 @@ pub(crate) fn grant_item_with_origin(
         .map_err(|error| format!("{error:?}"))?;
     save_inventory_record(db, character_id, &model.into_record());
     Ok(goods.name.clone())
+}
+
+/// A stored item's crafting origin; legacy rows on stackable items are ignored
+/// (CRAFTING_ORIGIN_NOT_RECORDED_ON_STACKABLE_ITEMS).
+pub(crate) fn stored_crafting_origin(
+    db: &Database,
+    templates: &ItemTemplates,
+    item: &persistence::InventoryItemData,
+) -> Option<shared::protocol::CraftingOrigin> {
+    let source = persistence::inventory_store::load_item_definition_source(db, item.item_guid);
+    templates
+        .get(source, item.item_id)
+        .filter(|template| template.records_crafting_origin())?;
+    persistence::inventory_store::load_item_crafting_origin(db, item.item_guid)
 }
 
 /// Empty bag cells once every owned item is placed; 0 when the record is missing.

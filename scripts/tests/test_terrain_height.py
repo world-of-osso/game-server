@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 SCRIPT = Path(__file__).resolve().parents[1] / "terrain_height.py"
 SIZE = 100.0 / 3.0
 UNIT = SIZE / 8.0
@@ -57,7 +58,11 @@ class TerrainHeightTest(unittest.TestCase):
     def sample(self, data, row=2.5, col=3.5, tile_row=40, tile_col=15):
         x = ORIGIN_X - 10 * SIZE - row * UNIT
         y = ORIGIN_Y - 8 * SIZE - col * UNIT
-        return self.sampler.sample_adt_height(data, x, y, tile_row, tile_col)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "root.adt"
+            path.write_bytes(data)
+            adt = self.sampler.read_adt_height(path)
+        return self.sampler.sample_adt_height(adt, x, y, tile_row, tile_col)
 
     def test_all_four_triangles_use_center_and_correct_axes(self):
         data = chunk(b"MVER", struct.pack("<I", 18)) + terrain(heights=fan_heights())
@@ -111,16 +116,30 @@ class TerrainHeightTest(unittest.TestCase):
             self.sample(terrain(ix=9, heights=fan_heights()))
 
     def test_truncated_framing_rejected(self):
-        for data in [
-            b"KN",
-            terrain(heights=fan_heights())[:-1],
-            chunk(b"MCNK", bytes(127)),
+        whole = terrain(heights=fan_heights())
+        for data, message in [
+            (b"KN", "truncated chunk header at byte 0"),
+            (whole[:-1], "truncated b'MCNK' payload at byte 0"),
+            (chunk(b"MCNK", bytes(127)), r"truncated MCNK header \(need 128 bytes\)"),
+            (whole + b"M", f"truncated chunk header at byte {len(whole)}"),
         ]:
             with (
                 self.subTest(length=len(data)),
-                self.assertRaisesRegex(ValueError, "truncated|header"),
+                self.assertRaisesRegex(ValueError, message),
             ):
                 self.sample(data)
+
+    def test_missing_cli_names_the_pinned_install_command(self):
+        dump = self.sampler.wow_formats_dump
+        installed = dump.BINARY
+        dump.BINARY = Path("/nonexistent/wow-formats-dump")
+        try:
+            with self.assertRaisesRegex(
+                ValueError, f"cargo install --locked .* --rev {dump.REV}"
+            ):
+                self.sampler.read_adt_height(Path("/nonexistent/root.adt"))
+        finally:
+            dump.BINARY = installed
 
     def test_nonfinite_world_coordinates_and_invalid_tile_rejected(self):
         for x, y, row, col in [

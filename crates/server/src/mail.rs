@@ -121,7 +121,12 @@ pub(crate) fn pending_senders(mails: &[MailData], now: u64) -> Vec<String> {
     senders
 }
 
-fn header(db: &Database, mail: &MailData, soulbound: &HashSet<u64>) -> MailHeader {
+fn header(
+    db: &Database,
+    templates: &ItemTemplates,
+    mail: &MailData,
+    soulbound: &HashSet<u64>,
+) -> MailHeader {
     MailHeader {
         mail_id: mail.mail_id,
         sender: mail.sender.name().to_owned(),
@@ -144,9 +149,10 @@ fn header(db: &Database, mail: &MailData, soulbound: &HashSet<u64>) -> MailHeade
                     count: attached.item.stack_count,
                     durability: None,
                     soulbound: soulbound.contains(&attached.item.item_guid),
-                    crafting_origin: persistence::inventory_store::load_item_crafting_origin(
+                    crafting_origin: crate::inventory::stored_crafting_origin(
                         db,
-                        attached.item.item_guid,
+                        templates,
+                        &attached.item,
                     ),
                 },
                 name: attached.item.name.clone(),
@@ -161,7 +167,12 @@ fn header(db: &Database, mail: &MailData, soulbound: &HashSet<u64>) -> MailHeade
     }
 }
 
-pub(crate) fn mailbox_contents(db: &Database, character_id: u64, object: u64) -> MailboxContents {
+pub(crate) fn mailbox_contents(
+    db: &Database,
+    templates: &ItemTemplates,
+    character_id: u64,
+    object: u64,
+) -> MailboxContents {
     let now = unix_now();
     let mails = load_mailbox(db, character_id);
     let guids = mails
@@ -172,7 +183,7 @@ pub(crate) fn mailbox_contents(db: &Database, character_id: u64, object: u64) ->
         object,
         mails: inbox(&mails, now)
             .into_iter()
-            .map(|mail| header(db, mail, &soulbound))
+            .map(|mail| header(db, templates, mail, &soulbound))
             .collect(),
         now,
     }
@@ -595,8 +606,10 @@ impl MailDesk<'_, '_> {
     }
 
     fn send_contents(&mut self, connection: Entity, character_id: u64, object: Entity) {
-        let Some(db) = self.db.as_ref() else { return };
-        let contents = mailbox_contents(&db.db, character_id, object.to_bits());
+        let Some((db, templates)) = self.stores() else {
+            return;
+        };
+        let contents = mailbox_contents(db, templates, character_id, object.to_bits());
         if let Ok(mut sender) = self.contents.get_mut(connection) {
             sender.send::<MailChannel>(contents);
         }
