@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Impending Victory consequence (active70448)
+
+- Successful ordinary202168 casts real self202166, then removes32216 from that caster only. Native202166 owns its30%-maximum-health payload, crit, overheal and triggered flags. Missing Victorious does not disable the heal; another Warrior's32216 is preserved.
+- Preserve202168 native AP0.589999974/variance0.05,10Rage cost without Victorious,25s recovery and1500ms GCD. Actual32216's matching A108 -100% cost modifier makes the root free, including at0Rage. Rejected0Rage without32216 and rejected cooldown with reapplied32216 cannot heal or consume that aura. Natural recovery permits another ordinary cast.
+- **VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED** — native32216 direct spell application and20s natural lifetime qualify removal only, not kill-producer parity. Do not invent a kill consumer or aura. Victory Rush34428/override lifecycle, kill cooldown reset, other talents, equipment/legal-loadout/full class/rotation/UDP/census remain unqualified.
+- Use existing AfterCast, source FULL-trigger helper and aura removal only, preserving actual Warrior64382 CastState/owned completion. No new API, state, timer, wire or native HP/power/regen/combat/RNG/clock writes. [Implementation/proof](../wiki/systems/spell-casting.md#impending-victory-consequence--2026-10-19).
 ## Invigorating Fury consequence (active70448)
 
 - Ordinary Enraged Regeneration184364 with actual caster aura383468 casts real385174 once after success. Native385174 self selection,10% maximum-health amount, CANT_CRIT and overheal remain authoritative; no amount override from the talent dummy.

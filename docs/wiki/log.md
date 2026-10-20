@@ -2017,6 +2017,7 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+-2026-10-19: Impending Victory202168→202166 then own32216 removal: five native qualifications4+1 first, pushed ignored69af7bb76→fiveRED/one control14.11s; minimal existing AfterCast/FULL-trigger/remove consumerf041d6b70→fresh ignored sixGREEN13.06s/0warnings before enabling; initial eleven-case composite then masterdfdd71578 merged d1af4b8a7→fresh targeted elevenGREEN14.64s/0warnings; lead gate pending. VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED/direct-native32216 removal-only boundary preserved. See [spell casting](systems/spell-casting.md#impending-victory-consequence--2026-10-19).
 -2026-10-19: Invigorating Fury184364+383468→385174 qualified native payload/8vs11s/defense/recovery/actual Warrior cast preservation3PASS; pushed ignored788ff0e68→3RED/3controls; existing AfterCast/limited helper consumer4a5aaa555→fresh ignored6GREEN25.43s/0warnings; enabled after GREEN, retained3qualification forms nine-case composite; lead integration pending. See [spell casting](systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
 - 2026-10-13 — [Recovery rates](systems/auras.md#cooldown-recovery-rates): native286 start/apply/remove/refresh/expiry, owning spell attribution for category-only timers, real Rapid Fire/Sprint/Hot Hand controls and current owner updates; full ability/global-time/native-rendered parity remains open.
