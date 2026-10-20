@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 pub(crate) mod azure_vault;
+mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
 pub(crate) mod caster_chase;
@@ -319,6 +320,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if hellfire_ramparts::is_creature_script(script_name) {
         return hellfire_ramparts::creature_ai(world, creature);
     }
+    if blood_furnace::is_creature_script(script_name) {
+        return blood_furnace::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -338,6 +342,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
+        || blood_furnace::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {
