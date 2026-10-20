@@ -1,6 +1,6 @@
 ## 2026-10-20 — Generic census healing, label mobility and energize
 
-[Generic next](systems/auras.md#census-generic-next--2026-10-20): pushed ignored native137/307/354 RED498eeb521 gives4FAIL/2controlsPASS; shared generic consumers added after RED. GREEN pending.470 explicitly TC NULL; no fabricated timer scaling or per-spell scripts.
+[Generic next](systems/auras.md#census-generic-next--2026-10-20): initial RED498eeb521 was invalid (limited fixture store omitted native applied/triggered IDs). Corrected ignored68f31ad3d pushed with consumers reverted gives6RED and253 baseline probe receipts; restored6c76aead4 gives unchanged6GREEN plus253-receipt probe PASS178.44s before enabling. All14 affected root generic warnings clear (354eight,307four,137two), across12 specs; this is not full ability/spec parity.470 explicitly TC NULL; no fabricated timer scaling or per-spell scripts.
 
 ## 2026-10-20 — Guardian aura split and Death Grip
 

@@ -27,7 +27,6 @@ fn apply_native(h: &mut Harness, id: u32, effect_mask: u32) {
 }
 
 #[test]
-#[ignore = "RED census-next137: percent energize missing"]
 fn census_next137_native_mana_uses_target_max_and_logs_overflow() {
     let mut h = harness(Vec::new(), &[5405], 8).unwrap();
     let spell = world_db().unwrap().store.get(5405).unwrap();
@@ -51,7 +50,6 @@ fn census_next137_native_mana_uses_target_max_and_logs_overflow() {
 }
 
 #[test]
-#[ignore = "RED census-next137: percent energize missing"]
 fn census_next137_native_energy_uses_raw_pool_and_dead_target_is_untouched() {
     let mut h = harness(Vec::new(), &[55316], 4).unwrap();
     h.app
@@ -73,7 +71,6 @@ fn census_next137_native_energy_uses_raw_pool_and_dead_target_is_untouched() {
 }
 
 #[test]
-#[ignore = "RED census-next307: label mobility missing"]
 fn census_next307_native_label_allows_foreign_family_and_removal_interrupts() {
     let mut h = harness(Vec::new(), &[133, 343012], 8).unwrap();
     let aura = world_db().unwrap().store.get(343012).unwrap();
@@ -131,7 +128,6 @@ fn census_next307_native_label_allows_foreign_family_and_removal_interrupts() {
 }
 
 #[test]
-#[ignore = "RED census-next307: label mobility missing"]
 fn census_next307_label_mismatch_does_not_grant_permission() {
     let mut h = harness(Vec::new(), &[133, 295263], 8).unwrap();
     // Native295263 selects661, unlike Fireball's native labels17/16/292.
@@ -178,7 +174,6 @@ fn heal_fixture(h: &mut Harness, spell_id: u32, periodic: bool, health_pct: f32)
 }
 
 #[test]
-#[ignore = "RED census-next354: missing-health healing missing"]
 fn census_next354_native_regenesis_scales_live_missing_health_and_removes() {
     let mut h = harness(Vec::new(), &[383191, 774], 11).unwrap();
     apply_native(&mut h, 383191, 1);
@@ -196,7 +191,6 @@ fn census_next354_native_regenesis_scales_live_missing_health_and_removes() {
 }
 
 #[test]
-#[ignore = "RED census-next354: missing-health healing missing"]
 fn census_next354_native_class_mask_and_family_exclusions() {
     let mut h = harness(Vec::new(), &[383191, 8936, 8004], 11).unwrap();
     apply_native(&mut h, 383191, 1);
