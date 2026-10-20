@@ -52,7 +52,6 @@ fn nethekurse_yells(h: &Harness, boss: Entity, group: u8) -> usize {
 }
 
 #[test]
-#[ignore = "RED: Nethekurse TC script not ported"]
 fn encounter_coverage_nethekurse_aggro_all_alive() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = nethekurse_copy(difficulty);
@@ -141,7 +140,6 @@ fn encounter_coverage_nethekurse_native_inputs_qualify() {
 }
 
 #[test]
-#[ignore = "pending source combat proof"]
 fn encounter_coverage_nethekurse_rotation_and_native_damage() {
     for difficulty in [1, 2] {
         let (mut h, boss, _) = nethekurse_copy(difficulty);
@@ -181,7 +179,6 @@ fn encounter_coverage_nethekurse_rotation_and_native_damage() {
 }
 
 #[test]
-#[ignore = "pending incoming25% source proof"]
 fn encounter_coverage_nethekurse_dark_spin_strict_crossing_once() {
     let (mut h, boss, _) = nethekurse_copy(1);
     observe_admissions(&mut h, boss);
@@ -224,7 +221,6 @@ fn encounter_coverage_nethekurse_dark_spin_strict_crossing_once() {
 }
 
 #[test]
-#[ignore = "pending lifecycle source proof"]
 fn encounter_coverage_nethekurse_death_credit_and_silent_corpse() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = nethekurse_copy(difficulty);
@@ -265,7 +261,6 @@ fn encounter_coverage_nethekurse_death_credit_and_silent_corpse() {
 }
 
 #[test]
-#[ignore = "pending actual killing boundary proof"]
 fn encounter_coverage_nethekurse_slay_player_and_npc() {
     for player_victim in [true, false] {
         let (mut h, boss, map) = nethekurse_copy(1);
