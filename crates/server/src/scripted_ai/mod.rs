@@ -31,6 +31,7 @@ pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
 pub(crate) mod nethekurse;
+pub(crate) mod nethekurse_intro;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
@@ -66,7 +67,10 @@ pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
 
 /// `gameobject_template.ScriptName`s with a ported `GameObjectAI`.
 pub(crate) fn is_game_object_script(script_name: &str) -> bool {
-    script_name == kings_rest::SERPENTINE_SEAL_SCRIPT
+    matches!(
+        script_name,
+        kings_rest::SERPENTINE_SEAL_SCRIPT | nethekurse_intro::DOOR_SCRIPT
+    )
 }
 
 /// `GameObjectAI::OnGossipHello` of the object's ported script.
@@ -76,6 +80,8 @@ pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object
     };
     if script.0 == kings_rest::SERPENTINE_SEAL_SCRIPT {
         kings_rest::serpentine_seal_gossip_hello(world, player, object);
+    } else if script.0 == nethekurse_intro::DOOR_SCRIPT {
+        nethekurse_intro::door_gossip_hello(world, object);
     }
 }
 
@@ -108,6 +114,7 @@ impl Plugin for ScriptedAiPlugin {
                     bossmod::advance_schedules,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
+                    nethekurse_intro::detect_entries,
                     update_creature_ai,
                 )
                     .chain()

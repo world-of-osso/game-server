@@ -309,7 +309,14 @@ pub(crate) fn filter_shadow_sear(
     {
         return;
     }
+    // TC caps the area-entry selector, not the separate TARGET_UNIT_CASTER slot.
+    let caster = explicit.expect("qualified self cast");
+    let includes_caster = targets.contains(&caster);
+    targets.retain(|&target| target != caster);
     use rand::seq::SliceRandom;
     targets.shuffle(&mut rand::thread_rng());
     targets.truncate(2);
+    if includes_caster {
+        targets.push(caster);
+    }
 }

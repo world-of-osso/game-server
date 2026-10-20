@@ -103,6 +103,7 @@ fn decode_encounter_inputs(
     inputs.push(crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).unwrap());
     inputs.push(crate::spell_cast::area_trigger::load_aura_field_catalog(&conn).unwrap());
     inputs.push(crate::scripted_ai::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap());
+    inputs.push(crate::scripted_ai::nethekurse_intro::load_trigger(&conn).unwrap());
     inputs.push(crate::scripted_ai::kings_rest::load_gold_model_reaches(&conn).unwrap());
     inputs.push(crate::scripted_ai::waypoint_path::load_script_paths(&conn).unwrap());
     inputs.push(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
