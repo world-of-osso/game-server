@@ -183,7 +183,7 @@ impl AuraStatMods {
         Self::school_mult(&self.damage_taken_mult, school_mask)
     }
 
-    /// TC Unit.cpp7083-7096/8239-8254: scale a reduction, never a vulnerability.
+    /// TC a352b1fa Unit.cpp7081-7094/8237-8252: scale a reduction, not a vulnerability.
     pub fn bypass_damage_reduction(&self, school_mask: u32, taken: f32) -> f32 {
         if taken >= 1.0 {
             return taken;

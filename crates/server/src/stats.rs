@@ -138,8 +138,8 @@ pub struct CharacterStats {
     /// Effective ratings (gear + modifiers).
     pub ratings: CombatRatings,
     pub max_health: f32,
-    /// gtBaseMP; 0 for classes without mana. Max mana equals it and
-    /// `PowerCostPct` mana costs are a percentage of it.
+    /// Create mana (gtBaseMP), 0 for classes without mana. `PowerCostPct`
+    /// costs use this unmodified basis, not the effective maximum.
     pub base_mana: f32,
     /// Effective mana maximum after aura419's BASE_PCT modifier.
     pub max_mana: f32,
@@ -349,9 +349,7 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
     (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
-/// Retail stats for `input`, with aura `mods` folded in. `None` for a class
-/// or level outside the tables (1..=13, 1..=90).
-/// TC Player.cpp5239-5247: sequential integer rating changes, then base crit conversion.
+/// TC Player.cpp5271-5279: sequential integer rating changes, then base crit conversion.
 fn modified_ratings(base: CombatRatings, mods: &StatModifiers) -> CombatRatings {
     let mut ratings = base;
     for &(mask, percent) in &mods.rating_percent_mods {
@@ -384,6 +382,8 @@ fn rating_fields(ratings: &mut CombatRatings) -> [(u32, &mut f32); 10] {
     ]
 }
 
+/// Retail stats for `input`, with aura `mods` folded in. `None` outside
+/// the class (1..=13) and level (1..=90) tables.
 pub fn compute_character_stats(
     input: &StatInputs,
     mods: Option<&StatModifiers>,

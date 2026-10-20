@@ -660,7 +660,7 @@ fn build_instance(
         })
         .map(|effect| build_effect(world, caster, spell, effect, now))
         .collect();
-    // TC Unit.cpp7727-7739: snapshot recipient422 once per newly received shield.
+    // TC a352b1fa Unit.cpp7725-7737: snapshot recipient422 once per shield.
     const ATTR11_IGNORE_TARGET_ABSORB_MODIFIERS: u32 = 0x0008_0000;
     if attributes(spell, 11) & ATTR11_IGNORE_TARGET_ABSORB_MODIFIERS == 0 {
         let multiplier = world

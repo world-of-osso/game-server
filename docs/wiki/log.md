@@ -1,6 +1,6 @@
-## 2026-10-20 — Generic combat/stat aura slice
+## 2026-10-20 — Generic combat/stat aura consumers
 
-Ignored native regression first batch405/463/419/404/145; source-backed NYI gaps443/220/381/382 retained. [Status and TC citations](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20). RED execution pending.
+[Per-type source matrix and ledger](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20):12 generic consumers,4 explicit TC NYI gaps. Pushed ignored REDs first; corrected retired weapon ID, saturated armor and pre-owned expertise fixtures without changing native spell data.419 current mana clamps instead of scaling.316 accounts absorption but does not invent a script rescue. Final861d7edd5 targeted15 enabled PASS26.31s/0warnings, protocol600b755; no full suite or independent parent gate. Receipt-backed pinned sources supersede shifted citations from the broader TC tree; compared handler bodies are identical.
 
 ## 2026-10-19 — Ordinary quest max-level bonus
 
@@ -3325,19 +3325,3 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).
-
-Generic aura-stat second RED batch: native450831 spell-only57,383191 masked missing-health354,1160 signed armor-ignore269,105805 player240,391571→17 shield422,586 temporary103. Source: TC `SpellAuraEffects.cpp:4461-4471,3962-3973`; `Unit.cpp:1712-1716,7505-7509,7727-7739`; `ThreatManager.cpp:773-790`. All ignored; execution pending capacity admission.
-
-Aura316 generic contract (TC `Unit.cpp:1003-1074`): lethal/school/limit-qualified overkill absorption defaults to full damage accounting but does not prevent death. **AURA316_SPELLSCRIPT_DEATH_PREVENTION_UNPORTED** lists census20711,31230,31850,86949,114556,209258,404195,1265361: full spell parity requires each sourced TC callback; existing bounded31850 binding is retained, not promoted. No generic invulnerability. Native31230/86949 regression plus nonlethal/exact2×max controls are ignored pending RED.
-
-First behavioral RED atde8854a14:13 cases, nine intended missing-consumer failures, one316 control PASS, three fixture failures (removed78 twice; armor constants absent). Corrected controls use native12294, imported ExpectedStat armor constants and explicit spell context; additional269 signed-reduction oracle uses native33206/40%. TC `Unit.cpp:7083-7096,8239-8254` also scales existing damage reductions, not only armor. No production behavior changed in fixture correction.
-
-First runtime group implements405/463/419/404/145/422/103/316 after their native REDs: ordered integer rating operations, reversible threat projection, recipient shield snapshot and lethal overkill accounting. StatModifiers is Clone rather than Copy to retain arbitrary ordered405 effects without a cap or rounding loss; existing callers clone explicitly.419 keeps create-mana costs separate from effective maximum.145 oracle uses native integer health truncation. Tests remain ignored pending targeted GREEN;57/240/269 fixture corrections still need valid RED.
-
-Aura354 now reads live recipient missing-health fraction and native family/effect masks for direct and periodic healing, composing independent factors. TC `Unit.cpp:7505-7509`, `SpellInfo.cpp:1979-1990`. Native383191/157982 RED6000≠6100 observed before implementation. First runtime compile exposed one additional old StatModifiers copy in base-armor test; changed to explicit clone. All tests still ignored pending GREEN.
-
-46e119752 targeted proof:14 ignored run explicitly gives10GREEN/4RED26.61s; corrected57 shows0≠2.5,240 dodge3≠2.25,269 armor149 unchanged and reduction0.6≠0.52. Implemented these three generic readers: spell-only crit, integral player expertise shared with white swings/forecast, and source-masked/floored armor plus reduction bypass. TC `StatSystem.cpp:720-721,777-803`, `Unit.cpp:1712-1716,7083-7096,8239-8254`.269 has no magical resistance pool to modify in this Retail server. Added419 current-pool RED: TC `Unit.cpp:10151-10173` clamps rather than rescales; other stats mana ratio policy must remain unchanged.
-
-5c7069b6f native15 gives12PASS/3FAIL16.76s.240 fixture already owned its passive before baseline (2.25), now clears known/aura before measurement.269 armor3000/3600 saturated85% mitigation; corrected300/360 and removed its armor consumer to obtain a valid fresh RED before reimplementation.419 current pool erroneously rescaled526 instead of500 plus natural regen; new paired control preserves native regen rather than disabling it, and maximum-only stat changes now clamp current per TC SetMaxPower10151-10173. No GREEN claim yet.
-
-2975ee8eb targeted15 gives14PASS/1valid armor269 RED24.35s (278 unchanged at armor300); restored generic family-masked per-effect floor only after that RED. All15 regressions now enabled, final targeted GREEN pending. Previous interrupted mixed2 run has no preserved output and is not proof; mixed3 is the explicit retained replacement.

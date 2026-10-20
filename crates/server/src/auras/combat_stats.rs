@@ -15,7 +15,7 @@ pub(crate) fn expertise_reduction(auras: Option<&ActiveAuras>, player: bool) -> 
     expertise / 4.0
 }
 
-/// SpellInfo.cpp1979-1990: family0 and an empty mask are wildcards.
+/// TC a352b1fa SpellInfo.cpp1974-1985: family0 and an empty mask are wildcards.
 fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInfo) -> bool {
     if aura.class_set == 0 {
         return true;
@@ -52,7 +52,7 @@ pub(crate) fn armor_after_ignore(
     })
 }
 
-/// Unit.cpp7505-7509: each matched354 scales by the recipient's live missing HP.
+/// TC a352b1fa Unit.cpp7503-7507: each matched354 uses live missing HP.
 pub(crate) fn healing_multiplier(
     world: &World,
     caster: Entity,
