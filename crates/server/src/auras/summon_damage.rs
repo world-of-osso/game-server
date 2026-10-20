@@ -69,10 +69,6 @@ pub(crate) fn multiplier(world: &World, unit: Entity) -> f32 {
         .unwrap_or(1.0)
 }
 
-pub(crate) fn taken_multiplier(world: &World, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
-    guardian_taken_multiplier(ownership(world, unit), auras)
-}
-
 /// Reads native ownership without aliasing melee's mutable health/aura query.
 #[derive(SystemParam)]
 pub(crate) struct SummonDamageModifiers<'w, 's> {

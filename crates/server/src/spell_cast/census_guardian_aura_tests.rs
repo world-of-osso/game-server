@@ -11,13 +11,14 @@ use shared::protocol::CombatLogKind;
 const RAISE_DEAD: u32 = 46585;
 const SUMMON_IMP: u32 = 688;
 const WOUND: u32 = 209140;
+const CHARGED: u32 = 149328;
 const FERAL: u32 = 137011;
 const UNHOLY: u32 = 137007;
 const DESTRUCTION: u32 = 137046;
 const HAUNT: u32 = 48181;
 
 fn fixture() -> Harness {
-    let mut h = harness(Vec::new(), &[RAISE_DEAD, SUMMON_IMP, WOUND], 9).unwrap();
+    let mut h = harness(Vec::new(), &[RAISE_DEAD, SUMMON_IMP, WOUND, CHARGED], 9).unwrap();
     let source = world_db().unwrap();
     let conn = rusqlite::Connection::open_with_flags(
         &source.powers_db,
@@ -110,22 +111,26 @@ fn apply_effect(h: &mut Harness, caster: Entity, target: Entity, spell: u32, ind
 }
 
 fn damage(h: &mut Harness, actor: Entity, multiplier: f32) {
+    damage_with_spell(h, actor, WOUND, multiplier);
+}
+
+fn damage_with_spell(h: &mut Harness, actor: Entity, spell: u32, multiplier: f32) {
     let target = h.npc;
     let before = h.health(target);
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
-    super::creature_cast(h.app.world_mut(), actor, WOUND, Some(target), false).unwrap();
+    super::creature_cast(h.app.world_mut(), actor, spell, Some(target), false).unwrap();
     finish_cast(h, actor);
     let hits: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[start..]
         .iter()
         .filter(|event| {
-            event.spell_id == Some(WOUND)
+            event.spell_id == Some(spell)
                 && event.kind == CombatLogKind::Damage
                 && event.source == Some(actor.to_bits())
                 && event.target == Some(target.to_bits())
         })
         .cloned()
         .collect();
-    assert_eq!(hits.len(), 1, "actual native800 wound must land:{hits:?}");
+    assert_eq!(hits.len(), 1, "actual native800 spell must land:{hits:?}");
     let hit = &hits[0];
     let crit = if hit.crit { 2.0 } else { 1.0 };
     let source = crate::level_scaling::UnitScaling::of(h.app.world(), actor);
@@ -194,8 +199,8 @@ fn native_census_guardian_380_matches_actual_guardian_owner_not_pet_or_player() 
     let imp = pet(&mut h);
     let target = h.npc;
     apply_effect(&mut h, owner, target, HAUNT, 3); // Actual native380 amount16.
-    damage(&mut h, ghoul, 1.16);
-    damage(&mut h, imp, 1.0);
+    damage_with_spell(&mut h, ghoul, CHARGED, 1.16);
+    damage_with_spell(&mut h, imp, CHARGED, 1.0);
 }
 
 #[test]
@@ -206,12 +211,30 @@ fn native_census_guardian_380_does_not_match_foreign_aura_caster_and_removal_end
     let target = h.npc;
     let other = super::test_harness::spawn_player(&mut h.app, 9, 0.0);
     apply_effect(&mut h, other, target, HAUNT, 3);
-    damage(&mut h, ghoul, 1.0);
+    damage_with_spell(&mut h, ghoul, CHARGED, 1.0);
     crate::auras::remove_auras(h.app.world_mut(), target, RemoveReason::Cancelled, |aura| {
         aura.spell_id == HAUNT
     });
     apply_effect(&mut h, owner, target, HAUNT, 3);
-    damage(&mut h, ghoul, 1.16);
+    damage_with_spell(&mut h, ghoul, CHARGED, 1.16);
+}
+
+#[test]
+fn native_census_guardian_380_preserves_native_ignore_taken_attribute() {
+    let mut h = fixture();
+    let owner = h.caster;
+    let ghoul = guardian(&mut h, owner);
+    let target = h.npc;
+    assert_ne!(
+        super::attributes(world_db().unwrap().store.get(WOUND).unwrap(), 4) & 0x100,
+        0
+    );
+    assert_eq!(
+        super::attributes(world_db().unwrap().store.get(CHARGED).unwrap(), 4) & 0x100,
+        0
+    );
+    apply_effect(&mut h, owner, target, HAUNT, 3);
+    damage(&mut h, ghoul, 1.0);
 }
 
 #[test]

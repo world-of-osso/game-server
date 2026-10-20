@@ -84,8 +84,8 @@ enum Selector {
     AreaAroundDest(Relation),
     ///38 UNIT_NEARBY_ENTRY: nearest qualifying unit in the spell's range.
     NearbyEntry,
-    /// Area center = the explicit target's position, the radius behind it.
-    DestTargetBack,
+    ///64/65: explicit target position offset by the native radius and direction.
+    DestTargetOffset(f32),
     /// The live channel's destination, else its target's current position.
     ChannelDestination,
     /// The caster's channel target.
@@ -148,7 +148,8 @@ fn selector(id: u32) -> Option<Selector> {
         38 => Selector::NearbyEntry,
         28 => Selector::DynObj(Enemy),
         29 => Selector::DynObj(Ally),
-        65 => Selector::DestTargetBack,
+        64 => Selector::DestTargetOffset(0.0),
+        65 => Selector::DestTargetOffset(std::f32::consts::PI),
         76 => Selector::ChannelDestination,
         77 => Selector::ChannelTarget,
         92 => Selector::Summoner,
@@ -184,7 +185,7 @@ pub fn explicit_requirement<'a>(
         .flat_map(|effect| effect.implicit_targets)
         .find_map(|id| match selector(id)? {
             Selector::Explicit(relation) | Selector::CenterExplicit(relation) => Some(relation),
-            Selector::DestTargetBack => Some(Relation::Any),
+            Selector::DestTargetOffset(_) => Some(Relation::Any),
             _ => None,
         })
 }
@@ -454,8 +455,9 @@ pub fn select_targets(
             Selector::CenterExplicit(_) => {
                 center = explicit.and_then(|target| position(world, target));
             }
-            Selector::DestTargetBack => {
-                center = explicit.and_then(|target| behind(world, target, radius(effect, slot)));
+            Selector::DestTargetOffset(angle) => {
+                center = explicit
+                    .and_then(|target| target_offset(world, target, radius(effect, slot), angle));
             }
             Selector::CasterRandom => {
                 center = Some(random_destination(caster_pos, effect, slot));
@@ -1031,11 +1033,10 @@ pub(crate) fn in_front_arc(victim: Vec3, attacker: Vec3, orientation: f32) -> bo
     forward.dot(attacker - victim) >= 0.0
 }
 
-/// `dist` yards behind `target` (`TARGET_DEST_TARGET_BACK`: `CalcDirectionAngle` pi
-/// from the target's facing), at the target's height.
-fn behind(world: &World, target: Entity, dist: f32) -> Option<Vec3> {
+/// Native target-relative front/back offset, at the target's height.
+fn target_offset(world: &World, target: Entity, dist: f32, angle: f32) -> Option<Vec3> {
     let pos = position(world, target)?;
-    let angle = orientation(world, target) + std::f32::consts::PI;
+    let angle = orientation(world, target) + angle;
     // WoW (x, y) offsets are Bevy (x, -z).
     Some(Vec3::new(
         pos.x + dist * angle.cos(),
@@ -1185,9 +1186,8 @@ pub fn effect_dest(
                 )
             }),
             Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
-            Selector::DestTargetBack => {
-                explicit.and_then(|target| behind(world, target, radius(effect, slot)))
-            }
+            Selector::DestTargetOffset(angle) => explicit
+                .and_then(|target| target_offset(world, target, radius(effect, slot), angle)),
             Selector::CasterOffset(angle) => {
                 let distance = radius(effect, slot);
                 let distance = clamp_player_front_distance(world, caster, id, distance);
