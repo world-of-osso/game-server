@@ -192,7 +192,6 @@ fn observe_next_heal(level: u8, spell_id: u32, empowered: bool) -> HealObservati
 }
 
 #[test]
-#[ignore = "SOUL_OF_FOREST_NATIVE_PROC: genuine untalented level20 control"]
 fn follower_soul_of_forest_level20_swiftmend_does_not_grant_buff() {
     let (mut h, caster) = at_level(CRENNA, 20, |_| {});
     assert!(!crate::auras::has_aura(h.app.world(), caster, TALENT));
@@ -211,7 +210,6 @@ fn follower_soul_of_forest_level20_swiftmend_does_not_grant_buff() {
 }
 
 #[test]
-#[ignore = "SOUL_OF_FOREST_NATIVE_PROC: actual learned level21 Swiftmend caster buff"]
 fn follower_soul_of_forest_level21_swiftmend_grants_caster_buff() {
     let (mut h, caster) = at_level(CRENNA, 21, |_| {});
     assert!(crate::auras::has_aura(h.app.world(), caster, TALENT));
@@ -230,7 +228,6 @@ fn follower_soul_of_forest_level21_swiftmend_grants_caster_buff() {
 }
 
 #[test]
-#[ignore = "SOUL_OF_FOREST_NATIVE_PROC: next eligible native heal consumes and snapshots60pct"]
 fn follower_soul_of_forest_next_regrowth_and_rejuvenation_use_native60pct() {
     for spell in [REGROWTH, REJUVENATION] {
         let control = observe_next_heal(20, spell, false);
