@@ -1,3 +1,7 @@
+## 2026-10-20 — Transport-free Stockade simulator
+
+[Simulator](systems/dungeon-simulator.md): committed source graph143 packs/367 native walk edges and plain Bevy gameplay App. Graph census and isolated opening pack pass; full-route source-actor death/HP/mana/pull reporting exists, no boss clear. Route3 reproduced DPS lost during OOC hold; user clarified active-combat10s with dungeon/wipe reset, production correction committed pending GREEN. Combat RNG/batches/live acceptance remain open.
+
 ## 2026-10-19 — Private native-proof purchase hold harness
 
 [Hook and proof status](investigations/server-tick-lag.md#native-proof-purchase-hold-test-only-harness): explicitly approved non-default debug Cargo feature holds only the existing FIFO purchase/checkout work behind private files, keeping UDP live and the10s timeout unchanged. Pushed-first process cases reached two genuine missing-hold assertions; fixed30s watchdog refuses without charge and release builds are rejected. Feature7/default2 GREEN; parent persistence/check/fmt gate pending. Release guard source-inspected, not a release-hook build; no tracing or native runtime used.
