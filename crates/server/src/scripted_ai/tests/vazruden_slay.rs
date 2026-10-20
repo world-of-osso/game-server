@@ -211,6 +211,46 @@ fn encounter_coverage_vazruden_slay_nonlethal_then_other_killer_stays_silent() {
 }
 
 #[test]
+#[ignore = "shared production Unit::Kill must notify actual owned killer, not reward owner"]
+fn encounter_coverage_vazruden_slay_shared_owned_killer_does_not_notify_owner() {
+    // Shared attribution control uses actual Omor30707 -> owned17540, not
+    // an invented minion/owner component on Vazruden, who has no such source summon.
+    let (mut h, owner, hound, _) = super::omor_slay::ordinary_hound_fixture();
+    h.app.init_resource::<ObservedCombatEvents>();
+    apply_native_low_level_stats(&mut h);
+    let player = h.player();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::UnitSummonedBy>(hound)
+            .unwrap()
+            .0,
+        owner.to_bits()
+    );
+    // HARNESS SETUP: real Unit::Kill from the actual owned minion; no HP write,
+    // fabricated KilledUnit callback or forced spell/hit outcome.
+    crate::combat::kill_unit(h.app.world_mut(), hound, player);
+    h.advance(0.05);
+    assert!(
+        h.app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.source == Some(hound.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.kind == CombatLogKind::Death
+            })
+    );
+    assert_eq!(
+        super::omor_slay::slay_count(&h, owner),
+        0,
+        "reward ownership does not redirect actual killer AI speech"
+    );
+}
+
+#[test]
 fn encounter_coverage_vazruden_slay_ordinary_lethal_qualification() {
     let _ = ordinary_lethal_fixture();
 }
