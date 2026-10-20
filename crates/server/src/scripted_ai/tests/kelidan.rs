@@ -199,13 +199,6 @@ fn encounter_coverage_kelidan_native_spell_admissions_qualify() {
         assert!(h.has_aura(boss, EVOCATION));
         assert!(h.has_aura(partner, STAR_BEAM));
 
-        crate::spell_cast::creature_cast(h.app.world_mut(), boss, BURNING_NOVA, None, false)
-            .expect("ordinary self Burning Nova");
-        h.advance(0.5);
-        assert!(h.has_aura(boss, BURNING_NOVA), "5s self stun aura");
-        h.advance(5.0);
-        assert!(!h.has_aura(boss, BURNING_NOVA), "stun expires");
-
         let nova = if difficulty == 2 {
             FIRE_NOVA_H
         } else {
@@ -227,6 +220,14 @@ fn encounter_coverage_kelidan_native_spell_admissions_qualify() {
         if difficulty == 2 {
             assert_eq!(observed_casts(&h, boss, VORTEX), 1, "Vortex resolves");
         }
+
+        // After the direct admissions: the ported aura script casts on expiry.
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, BURNING_NOVA, None, false)
+            .expect("ordinary self Burning Nova");
+        h.advance(0.5);
+        assert!(h.has_aura(boss, BURNING_NOVA), "5s self stun aura");
+        h.advance(5.0);
+        assert!(!h.has_aura(boss, BURNING_NOVA), "stun expires");
     }
 }
 
@@ -503,7 +504,10 @@ fn encounter_coverage_kelidan_heroic_volley_absent_without_substitute() {
 #[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_burning_nova_aura_script_casts_vortex_and_fire_nova() {
     for difficulty in [1, 2] {
-        let (mut h, boss, _) = released(difficulty);
+        // Dormant Keli'dan casts nothing that could hold the stimulus InProgress.
+        let (mut h, _) = kelidan_copy(difficulty);
+        let boss = h.creatures_of(KELIDAN)[0];
+        h.advance(0.5);
         h.app.init_resource::<ObservedCombatEvents>();
         let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, BURNING_NOVA, None, false)
@@ -557,6 +561,7 @@ fn encounter_coverage_kelidan_burning_nova_aura_script_casts_vortex_and_fire_nov
 #[ignore = "RED: Keli'dan port pending"]
 fn encounter_coverage_kelidan_slay_and_death_speech_with_credit() {
     let (mut h, boss, _) = released(1);
+    super::omor_slay::install_player_death_transition(&mut h);
     let player = h.player();
     // HARNESS SETUP: production Unit::Kill attributes the player's death to Keli'dan.
     crate::combat::kill_unit(h.app.world_mut(), boss, player);
