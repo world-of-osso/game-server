@@ -83,6 +83,8 @@ mod omor;
 mod omor_pushback;
 #[path = "omor_slay.rs"]
 mod omor_slay;
+#[path = "the_maker.rs"]
+mod the_maker;
 #[path = "theradras.rs"]
 mod theradras;
 #[path = "vyletongue.rs"]
@@ -312,7 +314,10 @@ fn encounter_fixture(
             std::collections::HashMap::from([(map_id, wdt)]),
         ));
     }
-    maps.raid_creature_encounters.insert((map_id, entry), bit);
+    // Blood Furnace has no installed creature binding; its BossAI must come from the script.
+    if map_id != 542 {
+        maps.raid_creature_encounters.insert((map_id, entry), bit);
+    }
     if map_id == 43 {
         // Source-authenticated Wailing Normal bindings (producer profiles), fixture-only.
         for (entry, bit) in [
