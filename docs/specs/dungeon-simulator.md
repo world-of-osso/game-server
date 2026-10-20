@@ -20,6 +20,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 ## Implementation inventory
 
 - `crates/server/src/dungeon_simulator/mod.rs`: targeted qualification entry points.
+- `crates/server/src/random.rs`: explicit test-only seeded scope over unchanged native rand distributions; normal production execution reexports rand unchanged. Gameplay RNG call sites share this scope, and simulator schedules run single-threaded.
 - `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and native source spawning.
 - `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller and HP/mana/pull/death report.
 - `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.

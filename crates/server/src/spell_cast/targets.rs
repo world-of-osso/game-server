@@ -24,6 +24,7 @@
 //! UNIT_TARGET_RAID and 118 UNIT_TARGET_ALLY_OR_RAID to the ally target.
 //! Every other ID is unsupported and fails the cast.
 
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
 use shared::components::{Health, Player, Position, Rotation, UnitFactionTemplate};

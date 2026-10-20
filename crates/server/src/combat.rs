@@ -1,3 +1,4 @@
+use crate::random as rand;
 use bevy::ecs::system::SystemParam;
 use std::collections::HashMap;
 

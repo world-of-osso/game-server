@@ -12,6 +12,7 @@
 //! `crate::auras::apply_aura`.
 //! See `docs/wiki/systems/spell-casting.md`.
 
+use crate::random as rand;
 #[cfg(test)]
 mod achievement_damage_tests;
 #[cfg(test)]

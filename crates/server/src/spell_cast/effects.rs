@@ -22,6 +22,7 @@
 //! weapon type (SimC `action_t::calculate_weapon_damage`). Main-hand damage is
 //! `CharacterStats.main_hand` (`item_stats.rs`), unarmed 1-2 at 2.0 s.
 
+use crate::random as rand;
 use std::collections::HashSet;
 
 use bevy::prelude::*;

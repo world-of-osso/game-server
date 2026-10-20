@@ -1,5 +1,6 @@
 //! TC a352b1fa SmartScript.cpp ATTACK_START49 and SET_IMMUNE_NPC145.
 use super::*;
+use crate::random as rand;
 use rand::seq::SliceRandom;
 use shared::components::{Health, UnitFlags};
 

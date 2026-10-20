@@ -3,6 +3,7 @@
 //! the same time run in the order they were scheduled (`std::multimap`).
 //! Phases, groups and series are not ported: no Stockade script uses them.
 
+use crate::random as rand;
 use rand::Rng;
 
 #[derive(Debug, Default, Clone)]

@@ -1,6 +1,7 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+use crate::random as rand;
 mod batch10;
 mod batch11;
 mod batch12;

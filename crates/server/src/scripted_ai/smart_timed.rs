@@ -1,5 +1,6 @@
 //! TrinityCore a352b1fa SmartScript::SetTimedActionList / UpdateTimer.
 use super::*;
+use crate::random as rand;
 
 fn roll_initial_delay(event: &SmartEvent) -> u32 {
     let [min, max, ..] = event.event_params;

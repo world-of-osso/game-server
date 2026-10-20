@@ -61,6 +61,7 @@ struct Run {
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
+    let _rng_scope = crate::random::seed_scope(seed);
     let started = std::time::Instant::now();
     let mut run = spawn_run(seed)?;
     for tick in 0..MAX_TICKS {

@@ -1,4 +1,5 @@
 //! Manually clocked gameplay App. No server, protocol, replication or socket plugins.
+use bevy::ecs::schedule::ScheduleLabel;
 use bevy::prelude::*;
 use rand::{SeedableRng, rngs::StdRng};
 use shared::components::Position;
@@ -64,6 +65,17 @@ pub(super) fn build_app() -> App {
             .chain()
             .after(crate::followers::update_ai),
     );
+    for label in [
+        Startup.intern(),
+        FixedPreUpdate.intern(),
+        FixedUpdate.intern(),
+        FixedPostUpdate.intern(),
+        Update.intern(),
+    ] {
+        app.edit_schedule(label, |schedule| {
+            schedule.set_executor_kind(bevy::ecs::schedule::ExecutorKind::SingleThreaded);
+        });
+    }
     app.finish();
     app.cleanup();
     app.update();

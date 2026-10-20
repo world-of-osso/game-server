@@ -2,6 +2,7 @@
 //! (Object.cpp:1857-1935), Unit::MeleeSpellHitResult (Unit.cpp:2610-2675).
 //! Aura 288 ignores hit direction; only 287 supplies deflection chance.
 
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::protocol::{CombatLogKind, MissKind};
 
