@@ -73,7 +73,7 @@ pub(super) fn build_app() -> App {
         Update.intern(),
     ] {
         app.edit_schedule(label, |schedule| {
-            schedule.set_executor_kind(bevy::ecs::schedule::ExecutorKind::SingleThreaded);
+            schedule.set_executor(bevy::ecs::schedule::SingleThreadedExecutor::new());
         });
     }
     app.finish();

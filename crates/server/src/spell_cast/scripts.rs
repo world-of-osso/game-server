@@ -1249,8 +1249,8 @@ fn frostbolt_chilled(world: &mut World, caster: Entity, target: Entity, depth: u
 
 #[cfg(test)]
 mod tests {
-    use rand::SeedableRng;
-    use rand::rngs::StdRng;
+    use ::rand::SeedableRng;
+    use ::rand::rngs::StdRng;
 
     use super::*;
     use crate::spell_info::SpellEffect;
