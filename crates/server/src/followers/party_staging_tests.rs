@@ -111,6 +111,7 @@ fn admin_follower_staging_refuses_active_encounter_without_moving_members() {
                 handled_area_triggers: Default::default(),
                 data: Default::default(),
                 ramparts_sentry_deaths: 0,
+                ramparts_reset_delays: Vec::new(),
             },
         )])));
     assert!(
