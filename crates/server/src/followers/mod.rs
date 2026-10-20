@@ -185,6 +185,8 @@ mod kit_interrupt_tests;
 #[cfg(test)]
 mod kit_source_tests;
 #[cfg(test)]
+mod kit_swiftmend_consumption_tests;
+#[cfg(test)]
 mod kit_swiftmend_tests;
 #[cfg(test)]
 mod kit_tests;

@@ -10,7 +10,7 @@ The ordinary-match readiness check previously called `BgInstance::start` as soon
 
 ## Proof boundary
 
-Native channel regressions cover concrete/Random roster arrival and objective refusal through the preparation interval. Source-backed gate fixtures exercise map-copy collision/animation/lifetime. The [proof ledger](../../handoffs/pvp-bg-preparation-proof-ledger.md) separates partial retained cohorts, prerequisite failures and final focused passes; Lead final integration remains pending. CPU-only evidence does not establish UDP delivery, rendered collision or deployment. Preparation44521 and resource reset remain a separate slice.
+Native channel regressions cover concrete/Random roster arrival and objective refusal through the preparation interval. Source-backed gate fixtures exercise map-copy collision/animation/lifetime. The [proof ledger](../../handoffs/pvp-bg-preparation-proof-ledger.md) separates partial retained cohorts, prerequisite failures and final focused passes; Lead final integration remains pending. CPU-only evidence does not establish UDP delivery, rendered collision or deployment. Resource/reset policy remains separate. Preparation44521 now has a bounded role lifecycle: successful ordinary Waiting ACK uses normal AuraApplication; the natural start clears accepted/current-copy actors after the PvP state borrow is released; successful ordinary exit uses the existing BG cleanup boundary. It never invokes arena resets. Native cost/affordability and lifecycle receipts are tracked in the [aura ledger](../../handoffs/pvp-bg-preparation-aura-proof-ledger.md). `AURA_INTERRUPT_LEAVE_ENTER_WORLD_SEMANTICS_UNQUALIFIED` excludes generic map-entry/removal, persistence and logout aura purges.
 
 ## Sources
 

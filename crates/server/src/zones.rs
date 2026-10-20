@@ -1001,6 +1001,7 @@ mod tests {
             npc_flags: 0,
             speed_walk: 1.0,
             speed_run: 1.0,
+            base_attack_time_ms: 2_000,
             health_modifier: health_mod,
             unit_class: 1,
             expansion: 0,
@@ -1150,7 +1151,7 @@ mod tests {
                 ContentTuningID INTEGER, HealthScalingExpansion INTEGER, LevelScalingDeltaMin INTEGER,
                 LevelScalingDeltaMax INTEGER, DamageModifier REAL, ArmorModifier REAL, subname TEXT,
                 ManaModifier REAL, unit_flags2 INTEGER, RegenHealth INTEGER, family INTEGER,
-                type_flags INTEGER);
+                type_flags INTEGER, BaseAttackTime INTEGER NOT NULL);
              CREATE TABLE content_pool_template (entry INTEGER NOT NULL PRIMARY KEY,
                 max_limit INTEGER NOT NULL, description TEXT);
              CREATE TABLE content_pool_members (type INTEGER NOT NULL, spawnId INTEGER NOT NULL,
@@ -1219,10 +1220,11 @@ mod tests {
             3.0 * std::f32::consts::FRAC_PI_2,
             1.606,
         ];
+        // Orientation-only synthetic actors retain TC's2000ms unit default.
         for (index, angle) in angles.iter().enumerate() {
             let entry = 100 + index as u32;
             conn.execute(
-                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1,0,0)",
+                "INSERT INTO content_creature_template VALUES (?1,1,1,1,0,1.0,1.0,'Loup — Écorché',0,0,1.0,1,0,1.14,'',1,20.0,0,0,0,0,0,1.0,1.0,'',1.0,0,1,0,0,2000)",
                 [entry],
             )
             .unwrap();

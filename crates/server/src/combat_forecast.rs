@@ -160,6 +160,7 @@ fn read_attacker(world: &World, enemy: Entity) -> Result<Attacker<'_>, String> {
         npc_expertise_pct: auras.map_or(0.0, |auras| auras.modifier(MOD_EXPERTISE))
             / EXPERTISE_PER_AVOIDANCE_PERCENT,
         creature: true,
+        authored_attack_time: world.get::<super::CreatureAttackTime>(enemy).copied(),
         creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(enemy),
         temp_summoner: world
             .get::<crate::zones::TempSummon>(enemy)

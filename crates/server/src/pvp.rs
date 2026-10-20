@@ -209,14 +209,38 @@ fn read_player_battleground(world: &World, player: Entity) -> Option<&InvitedBat
     Some(matched)
 }
 
-/// TC Battleground.cpp1038 AddPlayer runs only after successful WorldPortAck.
-pub(crate) fn dismount_battleground_arrival(world: &mut World, player: Entity) {
-    let ordinary_battleground =
-        read_player_battleground(world, player).is_some_and(|matched| matched.arena.is_none());
-    if !ordinary_battleground {
-        return;
-    }
+const BATTLEGROUND_PREPARATION_SPELL: u32 = 44521;
+
+/// TC Battleground.cpp1038/1054–1056: AddPlayer runs only after successful ACK.
+pub(crate) fn prepare_battleground_arrival(world: &mut World, player: Entity) {
+    let preparing = read_player_battleground(world, player)
+        .filter(|matched| matched.arena.is_none())
+        .map(|matched| matched.instance.phase == BgPhase::Waiting);
+    let Some(preparing) = preparing else { return };
     remove_battleground_mount_auras(world, player);
+    if preparing {
+        crate::auras::apply_aura(
+            world,
+            &crate::auras::AuraApplication {
+                caster: player,
+                target: player,
+                spell_id: BATTLEGROUND_PREPARATION_SPELL,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+    }
+}
+
+/// Preparation's BG role ends at natural start (TC Battleground.cpp444) or BG exit.
+/// General world-entry/removal interrupt semantics remain separately unqualified.
+fn clear_battleground_preparation(world: &mut World, player: Entity) {
+    crate::auras::remove_auras(
+        world,
+        player,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == BATTLEGROUND_PREPARATION_SPELL,
+    );
 }
 
 /// TC Battleground.cpp834/1038: normal aura removal also clears mount display/speed.

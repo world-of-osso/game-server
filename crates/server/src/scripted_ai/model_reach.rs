@@ -9,6 +9,7 @@ const PLAYER_COMBAT_REACH: f32 = 1.5;
 /// `creature_model_info.CombatReach` by display, from the prepared
 /// `encounter_creature_model_info` rows (scripts/encounter_model_geometry.py).
 #[derive(Resource)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct ModelReaches(pub(crate) HashMap<u32, f32>);
 
 pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {

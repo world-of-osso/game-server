@@ -34,6 +34,10 @@ Health and damage
 - [x] Any damage a tuned creature deals, swings and spells alike, is multiplied by (base DPS at the target's level ÷ base DPS at its own level) (Unit::DealDamageMods, Unit.cpp:814-815; GetDamageMultiplierForTarget, Creature.cpp:3198-3206).
 - [x] Untuned creatures keep `creature_classlevelstats` health and the flat 10-damage swing. Players swing their weapon ([player damage](player-damage.md)).
 
+Ordinary NPC white-swing timing
+- [x] Source-spawned ordinary NPCs use their template `BaseAttackTime`, not a universal two-second cadence. An unset0 value uses TC's2000ms unit default (ObjectMgr.cpp1056–1057);1500ms Prowler118 and3000ms Murloc Warrior171 must produce those intervals within one simulation tick.
+- [x] NPC haste uses TC's signed attack-time factors and preserves remaining swing progress when the aura changes. Existing attack/cast-time multipliers remain applied. Player and Spirit Wolf weapon clocks, controlled-pet clocks and per-hit damage formulas remain unchanged by this cadence slice.
+
 Per-player rules
 - [x] Kill XP uses the creature's level against each player: the killer, and every group member for the group's grey test and the highest non-grey member (Trinity::XP::Gain, Formulas.h:190; KillRewarder, KillRewarder.cpp:110).
 - [x] The aggro radius compares the player's level with the creature's level against that player (Creature::GetAttackDistance, Creature.cpp:2175-2177).
@@ -98,7 +102,7 @@ Client
 
 - [ ] Resolve the reported Northshire native-stat display/combat block at the client/runtime boundary. Current Godot `targeting.rs` projects levels and health per viewer (client commit `ec4a6eff`); server real-spawn regressions pass, so native `npc-info` values alone do not reproduce the block.
 - [ ] Creature attack power is not modelled. Creature armor is ExpectedStat CreatureArmor ([player damage](player-damage.md)).
-- [ ] Creature attack speed is the server's flat 2 s, not `BaseAttackTime`.
+- [x] Seven enabled native cadence/haste/progress/source-zero/combined-rate controls pass within combat228/0 at45cb4a824/protocol50517c9. At fixture-only ac3db20a9, creature/zones/world-data/startup242/0 and disjoint scripted/encounter/SpiritWolf/pet-control380/0 plus two private-ground2/0 complete the requested family proof. Existing ignores remain; no deployment claim.
 - [ ] Nameplates show no level. Retail's default nameplates show none either. Unit tooltips are the npctooltip branch's, which calls `level_for_viewer`.
 - [ ] Kill reputation still uses the template's `max(minlevel, maxlevel)`. That matches the scaled level except for creatures with a negative delta.
 - [ ] Mythic+ seasons are not modelled: ContentTuningXExpected rows with a `MinMythicPlusSeasonID` never apply, and rows with only a maximum season always do. No map 0 tuning uses either.

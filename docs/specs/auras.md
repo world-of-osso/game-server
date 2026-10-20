@@ -10,6 +10,10 @@ TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable state
 
 With actual learned155675, ordinary774 must apply native155777 instead when its caster already owns774 and has no own155777, or when own155777 has less remaining time than own774. Otherwise apply/refresh774 normally. Compare only that caster's actual aura deadlines, retaining the other instance's absolute expiry. Untalented casts must remain single774 refreshes. Source: SimC76f8118 `sc_druid.cpp:6487–6518`; child155777 uses its native periodic heal effects/duration. Preserve ordinary parent costs, GCD, cast receipt and generic aura behavior; no timer/amount overrides, Swiftmend interaction or global stacking changes.
 
+## Swiftmend own-HoT consumption
+
+On a successful native18562 hit, consume exactly one HoT owned by that caster from the actual hit patient, in Regrowth8936 → Wild Growth48438 → Rejuvenation774 order (SimC76f8118 `swiftmend_t::impact`). Preserve other casters' instances and lower-priority HoTs. Actual learned native Verdant Infusion392410 disables consumption; no fabricated talent grants or aura removals. This hook retains ordinary healing/cost/timing/eligibility and does not implement the consumed-HoT bonus healing, which remains a named unimplemented effect outside this slice.
+
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.

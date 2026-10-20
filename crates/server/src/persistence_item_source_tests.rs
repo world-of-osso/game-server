@@ -35,6 +35,7 @@ fn record(name: &str, guid: u64) -> InventoryRecord {
         bag_slots: vec![],
         nonvisual_equipped: Vec::new(),
         instances: HashMap::from([(guid, ItemInstanceData { soulbound: false })]),
+        crafting_origins: HashMap::new(),
         item_durability: HashMap::new(),
         definition_sources: HashMap::new(),
         appearance_account: None,

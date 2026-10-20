@@ -119,17 +119,46 @@ fn polymorphed(h: &Harness) -> bool {
     has_aura(h.app.world(), h.npc, POLYMORPH)
 }
 
-/// The kobold attacks the mage (`AttackStart`) until one swing has landed.
+/// Wait for a real owned swing attempt, including a legitimate miss.
 fn kobold_attacks(h: &mut Harness) {
     let (npc, caster) = (h.npc, h.caster);
+    let first_event = h.inbox.log.len();
     crate::creature_aggro::attack_start(h.app.world_mut(), npc, caster);
     for _ in 0..100 {
         h.advance(1);
-        if h.health(h.caster) < 1000.0 {
+        let swung = h.inbox.log[first_event..].iter().any(|event| {
+            event.source == Some(npc.to_bits())
+                && event.target == Some(caster.to_bits())
+                && event.spell_id.is_none()
+                && matches!(
+                    event.kind,
+                    shared::protocol::CombatLogKind::Damage
+                        | shared::protocol::CombatLogKind::Miss(_)
+                )
+        });
+        if swung {
+            assert_eq!(
+                h.app.world().get::<CreatureState>(npc),
+                Some(&CreatureState::Pursuing {
+                    target: caster.to_bits()
+                })
+            );
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::creature_aggro::CurrentVictim>(npc)
+                    .and_then(|victim| victim.target),
+                Some(caster)
+            );
             return;
         }
     }
-    panic!("the kobold never hit the mage");
+    panic!(
+        "the kobold never attempted a swing at the mage; actual events={:?}; state={:?}; fixed_time={:?}",
+        h.inbox.log,
+        h.app.world().get::<CreatureState>(h.npc),
+        h.app.world().resource::<Time<Fixed>>().elapsed()
+    );
 }
 
 /// Let Polymorph finish, including up to two 500 ms damage pushbacks.
@@ -465,6 +494,40 @@ fn evading_spy_keeps_its_damage_until_home_then_regenerates_a_third_every_2_seco
         return;
     };
     kobold_attacks(&mut h);
+    assert_spy_evades_and_regenerates(&mut h, max_health);
+}
+
+#[test]
+fn polymorph_native_forced_miss_engagement_still_evades_and_regenerates() {
+    let (mut h, max_health) = spy_harness().unwrap();
+    h.cast_and_deliver(EVASIVE_MANEUVERS, Some(h.caster));
+    h.advance(3);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(has_aura(h.app.world(), h.caster, EVASIVE_MANEUVERS));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .modifier(184),
+        -200.0
+    );
+    kobold_attacks(&mut h);
+    assert_eq!(
+        h.health(h.caster),
+        1000.0,
+        "native misses do not reduce mage health"
+    );
+    assert!(h.inbox.log.iter().any(|event| {
+        event.source == Some(h.npc.to_bits())
+            && event.target == Some(h.caster.to_bits())
+            && event.spell_id.is_none()
+            && event.kind == shared::protocol::CombatLogKind::Miss(shared::protocol::MissKind::Miss)
+    }));
+    assert_spy_evades_and_regenerates(&mut h, max_health);
+}
+
+fn assert_spy_evades_and_regenerates(h: &mut Harness, max_health: f32) {
     // Its home is 10 yd away: 1.7 s of running back at 6 yd/s.
     h.app.world_mut().get_mut::<SpawnPoint>(h.npc).unwrap().x += 10.0;
     let wounded = (max_health / 10.0).floor();

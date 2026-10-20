@@ -70,6 +70,29 @@ Matching serial cohorts compare base7cd9667a8 with code0fc15ec61, both on protoc
 
 CPU/RSS cover the entire child process, including captured diagnostics; corner process wall additionally contains output emission (109.001/101.030s), excluded from its test wall. Origin process wall is380.274/37.565s; kit process wall515.352/68.536s. Host contention and cold canonical initialization vary: these observations are not a guaranteed parallel gate reduction. Kits retain more canonical input in memory (peak +124488KiB); the fixture CPU reduction is not free memory reuse. Full raw output, serial start/finish events, `/proc` samples and resource receipts are under `/home/osso/.worktrees/logs/wow_formats-gate-timing/phase-a-{before,after}-{corners,origins,kits}/`. No assertions,50ms ticks, difficulties, native routes or events changed.
 
+## Fully prepared encounter inputs (2026-10-19)
+
+`scripted_ai::tests::data_bosses::prepared_inputs` retains only decoded immutable resources after a complete copy-only producer finishes. Its process-local key includes producer identity, selected entry/map and population mode; difficulty-specific spawning still runs separately in each app against the complete difficulty-template catalog. The authored single-actor row is decoded from the same prepared copy, cloned and assigned the requesting difficulty before normal spawning. Every installation clones resources; existing immutable `Arc` level/path/script data remains read-only or uses existing copy-on-write mutation. No Bevy app, world, entity, SQLite connection, temporary database or navigation query is cached. Canonical fixture inputs are not added to this cache.
+
+The type-erased resource-copy list keeps the existing private resource types private: construction records each original loader explicitly, and installation only clones its captured resource into the app. Metadata types gain test-only `Clone`, including initially empty mutable area memberships; mutable app edits cannot reach retained inputs. Herald INTRO2 has a distinct completed composite key: base Herald preparation, Nazan summon preparation and server-side spell import all finish before world/spell resources are retained. `prepare_encounter_database` itself remains a fresh-copy API for callers that need to mutate their own database. No existing assertions, event order, ticks, difficulty variants or censuses are removed.
+
+### Phase B matched observations
+
+Base09cbaf988 and implementationf504ae535 use the same frozen protocol0399f8b. All six serial cohorts retain identical test/status lists:28 pass plus the original authenticated-bake Ragefire ignore on each side. A separate new test keeps Normal Herald, Heroic Omor and Heroic Herald apps alive together, mutates the Normal app's world/spell resources and reloads Normal inputs; sibling and cached authority remain unchanged. This characterization passes both before125.17s and after190.43s; those characterization invocations are excluded from the matched timing cohorts.
+
+| Cohort | Before/after process wall | Before/after process CPU | Before/after peak RSS KiB |
+|---|---:|---:|---:|
+| Omor slay6 |171.555/44.840s|143.406/36.703s|1065500/1419560|
+| Ragefire completion3 |85.536/143.534s|70.505/58.755s|1052560/1316864|
+| Azure Rune8 |250.486/74.411s|197.079/53.306s|1007612/1384572|
+| Telash return4 |186.337/64.391s|115.250/52.713s|1043944/1369008|
+| Herald intro/damage3 |159.393/53.812s|136.679/46.852s|1385400/1806788|
+| Herald min1 four cases |212.425/65.007s|164.643/60.311s|1404984/1799132|
+
+Ragefire isolated cold wall regressed despite lower CPU: the cohort uses each prepared profile for the first time, so no repeated-profile savings are claimed there. Samples/receipts retain the measured I/O and contention rather than replacing that result with a retry. Every cohort's peak RSS increases because decoded resources live until process exit; these isolated peaks are not a bound for a gate retaining every profile. First-load imports, per-app clones and native simulation still run. Serial wall savings are not guaranteed parallel-gate savings.
+
+Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/phase-b-{before,after}-{omor,ragefire,azure-rune,azure-return,herald-intro,herald-min1}/`; aggregate `wow_formats-phase-b-measured-comparison.json`. Per-test start/finish flushes are separately observed for every enabled case. Package check passes90s with no warnings; format/diff checks pass. Broader merged-master integration remains lead-owned.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.
