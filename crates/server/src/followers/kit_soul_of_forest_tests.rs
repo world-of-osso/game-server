@@ -238,6 +238,13 @@ fn follower_soul_of_forest_next_regrowth_and_rejuvenation_use_native60pct() {
         let (control_low, control_high) = control.ordinary_bounds;
         let (talent_low, talent_high) = empowered.ordinary_bounds;
         let multiplier = empowered.native_buff_multiplier;
+        println!(
+            "SOUL_HEAL spell={spell} untalented20={} native20={:?} empowered21={} native21={:?} multiplier={multiplier}",
+            control.amount_without_crit,
+            control.ordinary_bounds,
+            empowered.amount_without_crit,
+            empowered.ordinary_bounds
+        );
         // Native rounding is at most half a health point. Actor levels/stats
         // differ naturally; compare real receipts using each native baseline.
         assert!((control_low - 0.5..=control_high + 0.5).contains(&control.amount_without_crit));
