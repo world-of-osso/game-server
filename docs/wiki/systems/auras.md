@@ -613,3 +613,5 @@ Source root `game-engine/data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa`
 |408|SpellAuraEffects.cpp480|Clientside button count only; no fabricated server charge/resource behavior|
 
 [Contract and named gaps](../../specs/class-completeness.md#aura-worldxp-slice-active70448-2026-10-20). No spell special cases, client/protocol edits or native class completeness claim.
+
+RED `d9cbac593`: corrected runtime gate `--bin game-server aura_world_ -- --ignored --test-threads=1` ran15:1 existing-payload control PASS,13 genuine missing-consumer failures and1 SafeFall fixture failure (wall-clock dt had not landed). Initial `--lib` matched0 and is not proof. Corrected SafeFall fixture uses manual50ms before retesting. Runtime log `/tmp/aura-world-red-bin.log`.

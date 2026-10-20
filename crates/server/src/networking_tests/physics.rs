@@ -1074,6 +1074,9 @@ fn a_player_the_server_flies_is_left_out_of_gravity() {
 #[ignore = "aura-world native RED/GREEN gate"]
 fn aura_world_safe_fall_1860_reduces_landing_height_seventeen_yards() {
     let mut app = setup_app_with_time();
+    app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+        std::time::Duration::from_millis(50),
+    ));
     app.insert_resource(crate::terrain_height::test_helpers::flat_ground(
         100.0, 100.0, 50.0,
     ));
