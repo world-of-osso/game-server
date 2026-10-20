@@ -54,7 +54,7 @@ pub(super) struct Report {
 #[test]
 fn spawned_normal_population_allows_existing_fight_tank_movement() {
     let _rng_scope = crate::random::seed_scope(34);
-    let mut run = spawn_run(34).unwrap();
+    let mut run = spawn_run(34, &mut None).unwrap();
     let target = run.actors[&20375718];
     let position = *run.app.world().get::<Position>(target).unwrap();
     let tank = run.party.tank;

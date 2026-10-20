@@ -124,12 +124,17 @@ fn load_gameplay_data(app: &mut App) {
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
     app.insert_resource(spells);
     app.insert_resource(classes);
-    app.insert_resource(crate::item_stats::load_item_scaling_tables(&db).unwrap());
+    app.insert_resource(
+        crate::item_stats::load_item_scaling_tables(&crate::test_data::world_db_path()).unwrap(),
+    );
     app.insert_resource(crate::faction::load_faction_templates(&db).unwrap());
     app.insert_resource(crate::maps::store::load_map_store(&db).unwrap());
     app.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
     app.insert_resource(crate::unit_creature_type::load_race_types(&db).unwrap());
-    app.insert_resource(crate::conditions::load_spell_target_conditions(&db).unwrap());
+    app.insert_resource(
+        crate::conditions::load_spell_target_conditions(&crate::test_data::world_db_path())
+            .unwrap(),
+    );
 }
 
 pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
