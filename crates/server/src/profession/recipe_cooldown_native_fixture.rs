@@ -40,9 +40,14 @@ fn seed_private_recipe_cooldown_fixture() {
         let (account_id, _) =
             persistence_accounts::register_account(&database, account, "fbtest").unwrap();
         let (id, mut character) =
-            persistence::create_character(&database, account_id, name, 1, 1).unwrap();
+            persistence::create_character(&database, account_id, name, 1, 2).unwrap();
         character.level = 10;
+        // The accepted provenance seed's Stormwind spot (Simon Tanner, creature guid 79727).
+        character.x = -8724.3;
+        character.y = 475.3;
+        character.z = 98.7;
         persistence::save_character(&database, id, &character);
+        crate::maps::persistence::save_character_map(&database, id, 0);
         persistence::save_professions(&database, id, &professions);
         // Three spheres' worth of shards (4 each) and the category-41 Runed Fel Iron Rod.
         for item in [(22449, 12), (22461, 1)] {
