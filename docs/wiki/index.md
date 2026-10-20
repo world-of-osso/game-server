@@ -924,3 +924,6 @@ Debug logs and root cause analyses.
 
 - [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.
 - [Canonical toy spell reuse](investigations/slow-native-test-fixtures.md#canonical-toy-spell-reuse) — existing full spell-store copies at two fixture sites;213/213 unchanged cases before/after, five affected tests131s faster, whole-family contention regression disclosed.
+- [Loa spell-store reuse](investigations/slow-native-test-fixtures.md#loa-canonical-spell-store-follow-up) — seven unchanged cases/1800s+3600s timelines; matched wall132.283→99.566s, CPU127.577→98.679s, peak RSS+36500KiB; no new cache.
+
+- [Nested achievement catalog reuse](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) — existing canonical catalog copies; all four difficulty/prerequisite/persistence variants preserved, matched wall27.029→17.224s, CPU26.189→17.176s, peak RSS+52508KiB.

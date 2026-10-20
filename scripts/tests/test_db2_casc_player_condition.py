@@ -9,13 +9,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import db2_casc
 
-SOURCE = Path(os.environ["PLAYER_CONDITION_DB2"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("PLAYER_CONDITION_DB2")
 SHA256 = "b7ba11a5d3f6bf1770ea5be475b460e509f9c0275df06ae7e37aaf8849bb2522"
 # Decoded columns: ID list first, then stored fields 48 MovementFlags (array pallet),
 # 49 WeaponSubclassMask and 56 ContentTuningID (scalar pallets).
 COLUMNS = (49, 50, 57)
 
 
+@requires_env("PLAYER_CONDITION_DB2")
 class PlayerConditionPalletOrderTest(unittest.TestCase):
     def test_scalar_pallets_are_read_before_the_earlier_declared_array_pallet(self):
         data = SOURCE.read_bytes()

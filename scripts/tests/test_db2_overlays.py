@@ -17,9 +17,11 @@ sys.path.insert(0, str(SCRIPTS))
 import db2
 import zephras_content
 
-SOURCE = Path(os.environ["FOREVER_DB2_SOURCE"])
+from tests.fixture_env import env_path, requires_env
+SOURCE = env_path("FOREVER_DB2_SOURCE")
 
 
+@requires_env("FOREVER_DB2_SOURCE")
 class Db2OverlayTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
