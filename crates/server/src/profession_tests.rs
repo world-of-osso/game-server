@@ -1526,6 +1526,76 @@ fn queued_crafts_stop_when_the_linen_runs_out() {
     );
 }
 
+/// One bank tab holding `count` Linen Cloth.
+fn linen_bank(h: &Harness, count: u32) -> persistence::banks::BankData {
+    let mut tab = crate::bank_storage::BankTabData::new("Reagents".into());
+    tab.slots[0] = Some(InventoryItemData {
+        item_guid: persistence::next_id(h.db(), "item_instance"),
+        item_id: LINEN_CLOTH,
+        name: "Linen Cloth".into(),
+        quality: 1,
+        required_level: 0,
+        stack_count: count,
+        vendor_sell_price: 0,
+        unique_auction: false,
+    });
+    persistence::banks::BankData {
+        tabs: vec![tab],
+        ..Default::default()
+    }
+}
+
+fn linen_in(bank: &persistence::banks::BankData) -> u32 {
+    bank.tabs
+        .iter()
+        .flat_map(|tab| tab.slots.iter().flatten())
+        .filter(|item| item.item_id == LINEN_CLOTH)
+        .map(|item| item.stack_count)
+        .sum()
+}
+
+/// Retail `ItemUtil.GetCraftingReagentCount` counts bags, the character bank
+/// and the Warband bank; reagents are consumed in project policy
+/// CRAFTING_REAGENT_CONSUMPTION_ORDER_BAGS_THEN_REAGENT_BANK_THEN_BANK_THEN_WARBAND.
+#[test]
+#[ignore = "RED: CRAFTING_REAGENTS_FROM_BANK"]
+fn crafting_consumes_reagents_from_bags_then_character_bank_then_warband_bank() {
+    use persistence::banks::{BankOwner, load_account_bank, load_character_bank, save_bank_move};
+    let Some(mut h) = harness(10) else { return };
+    h.learn_tailoring();
+    h.give(LINEN_CLOTH, "Linen Cloth", 1);
+    let character_bank = linen_bank(&h, 2);
+    let warband_bank = linen_bank(&h, 5);
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Character(h.character_id, &character_bank),
+        None,
+    );
+    // The harness connection authenticates account 1.
+    save_bank_move(
+        h.db(),
+        h.character_id,
+        BankOwner::Account(1, &warband_bank),
+        None,
+    );
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(BOLT_ITEM), 1);
+    assert_eq!(h.bag_count(LINEN_CLOTH), 0);
+    assert_eq!(linen_in(&load_character_bank(h.db(), h.character_id)), 1);
+    assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 5);
+
+    h.craft(BOLT_OF_LINEN_CLOTH, 1);
+    h.finish_crafting();
+    assert!(h.take::<CastFailed>().is_empty());
+    assert_eq!(h.bag_count(BOLT_ITEM), 2);
+    assert_eq!(linen_in(&load_character_bank(h.db(), h.character_id)), 0);
+    assert_eq!(linen_in(&load_account_bank(h.db(), 1)), 4);
+}
+
 #[test]
 fn stopping_the_cast_cancels_the_remaining_crafts() {
     let Some(mut h) = harness(10) else { return };
