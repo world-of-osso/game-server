@@ -1,6 +1,15 @@
 //! Transport-free dungeon qualification, driven by the server test executable.
 use std::path::Path;
 
+fn run_first_pack() -> Result<(), String> {
+    Err("transport-free one-pack gameplay runner is not implemented".into())
+}
+
+#[test]
+fn one_pack_runs_real_gameplay_without_transport() {
+    run_first_pack().expect("one pack cleared by real gameplay in a plain Bevy App");
+}
+
 #[test]
 fn frozen_stockade_graph_covers_native_formations() {
     let path =
