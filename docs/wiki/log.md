@@ -1,3 +1,14 @@
+## 2026-10-19 — Lifebloom near-expiration refresh bloom
+
+[Source and proof boundary](investigations/follower-data.md#lifebloom-near-expiration-refresh-bloom--2026-10-19): native33763 tooltip names near-expiry refresh33778; explicit `LIFEBLOOM_REFRESH_BLOOM_THRESHOLD_SIMC` sources inclusive30% from SimC76f8118. Initial protocol mismatch is compile-only, then actual native7e5091e7e gives1PASS/1FAIL23.15s: late ordinary refresh retains HoT/extends deadline but missing33778. Minimal pre-aura-application old-own-deadline hook plus visibility correction4c3723efd gives unchanged two+retained lifecycle/swap/tank6GREEN16.25s/zero warnings, then enabledf952. Native costs/periods/global refresh unchanged; latest master/Wild Growth mergea51c preserves both specs, independent final gate pending.
+
+## 2026-10-19 — Wild Growth native-coefficient falloff policy
+
+[Source and proof boundary](investigations/follower-data.md#wild-growth-native-coefficient-falloff-policy--2026-10-19): explicit `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`, never legacy0.175/TC curve; absolute Retail shape uncertified. Pushed3ignored1fb0e4983 gives1PASS/2FAIL23.67s: native42 constant62×7 genuine decline RED,43 relative check blocked by same baseline prerequisite, natural expiry PASS. Minimal48438-only scheduled-deadline multipliere930 plus landed master merge43e0 gives unchanged3GREEN20.54s/no warnings:42 actual65→57,43 normalized native40%-less and unchanged seven-tick expiry. Enabled only afterward3327; final independent lead gate pending.
+
+## 2026-10-19 — Vazruden actual slay speech
+
+[Bounded slay](systems/boss-scripts.md#vazruden-slay-speech--2026-10-19): unrealistic1M buffer did not qualify lethal180s; approved native level10/class1 stat producer1110HP gives ordinary17537 melee death/corpse, qualification1PASS42.42s. Pushed ignoredfdeea2RED/1control55.54s plus real ownedHound reward-owner baseline1PASS59.78s; sole unfiltered killed_unit→Talk2 hook4d2f gives fourGREEN79.39s before enabling. Five-case composite with retained qualification, independent gate pending. Controls use approved production Unit::Kill HARNESS SETUP, no HP shortcuts/fabricated hooks or owners; no source timer/ability/native-audio/loot/persistence change.
 ## 2026-10-19 — Fel Iron chest flag preflight blocked
 
 [GO_NOT_SELECTABLE_FLAG_UNMODELLED](investigations/go-not-selectable-flag.md) records the read-only placement/interaction census and existing Isle keep-banner unlock hazard. Fel Iron MakeActive stopped before implementation; raw census attached from the separate engine data evidence tree. No server/protocol/client flag semantics or chest behavior changed.
@@ -37,6 +48,10 @@
 ## 2026-10-19 — Herald real evade ingress RED
 
 [Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation→four full endpoint GREEN67.43s atb549ffbaf after correcting fresh default-reaction oracle. Source exact deadline/alive identity/count/patrol/min1/fresh natural intro pass; tests enabled, independent gate pending; no canonical data/flag changes.
+
+## 2026-10-19 — Nature's Guardian native RED and named binding
+
+[Baseline](systems/auras.md#natures-guardian-baseline--2026-10-19): three-case qualification COMPOSITE FIRST (two retained PASS including actual player-cast preservation/native45s expiry/exact350340; corrected native2000ms wound observation single PASS17.53s). Pushed ignored823c414e4 genuine5RED/3controls21.36s; named30884 hooks use existing limited cooldown path then source-costed heal path. Strict threshold/no custom state/timer/API or HP/RNG/clock edits. First behavior7PASS/1idle-HP-oracleFAIL28.82s; diagnostic61805c213 proves seven natural20HP out-of-combat regeneration ticks/unchanged native heal count. Explicitly approved TEST-only continuous-combat correction retains initial26 hits/native45s and uses actual damage/heals for final HP, with no state/timer writes or runtime change. Corrected single case2c608090c1GREEN26.41s: actual expiry47.2/proc47.8/newCD92.8,46 ordinary hits/actual damage1260/healing800/finalHP540. Other7PASS retained; only then eight enabled. Eight behavior7+1 plus qualification3 is eleven-case COMPOSITE, not one batch; runtimebed0f8b2d unchanged/lead gate pending.248 remains DEFERRED.
 
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 
@@ -3296,10 +3311,12 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.
 
+- [Canonical toy spell reuse](investigations/slow-native-test-fixtures.md#canonical-toy-spell-reuse) — existing full spell-store copies at two fixture sites;213/213 unchanged cases before/after, five affected tests131s faster, whole-family contention regression disclosed.
 ## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
 
 [Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
 
+- [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.
 ## 2026-10-19 — Native Abundance five-own-HoT threshold
 
 [Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).

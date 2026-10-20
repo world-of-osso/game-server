@@ -10,6 +10,7 @@ Installed-build local CASC PerksActivity/PerksVendorItem rows and Mainline Blizz
 - [x] Atomic paid collection grants, receipt-bounded refunds, one frozen item and source-backed capital interaction.
 - [x] Retail cart checkout commits the complete selected offer list, Tender charge and per-item receipts atomically; any rejected offer leaves every charge/grant unchanged. Each receipt retains the existing individual refund policy and survives reopen. Batch publication sends each changed collection family once and includes every affected vendor/collection-alias row in the partial reply.
 - [x] Trading Post requests settle current monthly gameplay credit without publishing an unsolicited full Adventure Guide snapshot ahead of the vendor reply.
+- [ ] Every Query/Purchase/Checkout/Refund/Freeze/Balance snapshot identifies the request's actual reply kind, including refusal and persistence-error replies. Preserve existing FIFO/authority behavior; no request ID or client-side kind inference.
 - [x] Zero-duration refund default leaves refund unavailable until an explicit policy is approved; no duration guessed.
 - [x] Vendor replies evaluate existing item class/race/level restrictions for the querying player, carrying optional `usable` state for the source filter. Missing item/player facts remain unknown; usability is not a new purchase restriction.
 - [x] Item icons follow C_Item.GetItemIconByID: lowest-order authored ItemModifiedAppearance → ItemAppearance.DefaultIconFileDataID; items without an appearance icon use their authored Item.IconFileDataID. Empty direct item icons must not erase available base-appearance icons.
@@ -49,6 +50,7 @@ Private-server setup only, on the existing admin socket (`GAME_SERVER_ADMIN_SOCK
 
 - `trading_post_store::tests::trading_post_thresholds_once_per_account_month_survive_database_reopen`.
 - `trading_post_store::tests::trading_post_purchase_atomic_collection_grants_and_refund_survive_reopen`: all four collection stores, duplicate/insufficient-funds refusal, zero-duration/expiry/repeated refund and database reopen.
+- `trading_post_reply_kinds_identify_reads_and_refused_actions`: real typed reads and refused actions preserve all actual reply kinds; the shared request helper also checks kinds on existing successful operations.
 - `trading_post_tests.rs`: real gameplay death credit/Tender/midnight reset, real message dispatch and sourced vendor gossip, paid purchase/refund refusal/distance closure. Cart wire test refuses unknown offers without partial charge, publishes all paid rows and one final appearance update, then refunds both receipts.
 - `trading_post_store::tests::trading_post_checkout_*`: durable two-product checkout, per-item refunds after database reopen, late owned/duplicate-offer rollback and empty-cart refusal.
 - `trading_post_tests.rs` `trading_post_admin_tender_and_refund_window_enable_wire_refund`: admin grant by username (unknown account refused), administrator window, real wire purchase/refund restoring Tender and revoking the appearance.

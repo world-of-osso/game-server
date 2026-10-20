@@ -185,6 +185,8 @@ mod kit_germination_tests;
 #[cfg(test)]
 mod kit_interrupt_tests;
 #[cfg(test)]
+mod kit_lifebloom_refresh_tests;
+#[cfg(test)]
 mod kit_soul_of_forest_tests;
 #[cfg(test)]
 mod kit_source_tests;
@@ -196,6 +198,8 @@ mod kit_swiftmend_tests;
 mod kit_tests;
 #[cfg(test)]
 mod kit_utility_tests;
+#[cfg(test)]
+mod kit_wild_growth_tests;
 #[cfg(test)]
 pub(crate) mod native_fixture;
 #[cfg(test)]

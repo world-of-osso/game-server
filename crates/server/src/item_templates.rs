@@ -48,6 +48,14 @@ pub struct ItemTemplate {
     pub equip_limit: Option<EquipLimit>,
 }
 
+impl ItemTemplate {
+    /// CRAFTING_ORIGIN_NOT_RECORDED_ON_STACKABLE_ITEMS: stackable commodities carry no
+    /// crafter identity, so only max-stack-1 items keep a crafting origin.
+    pub fn records_crafting_origin(&self) -> bool {
+        self.max_stack <= 1
+    }
+}
+
 /// An item's on-use `ItemEffect`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OnUseSpell {

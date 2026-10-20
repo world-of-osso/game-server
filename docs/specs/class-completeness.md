@@ -6,6 +6,12 @@
 - Missing, unlearned or another Warrior's talent cannot enable this caster. A rejected root recast cannot heal. Retain root native8s duration, -30% all-school damage taken and120s cooldown/noGCD;383468's existing masked+3000ms modifier gives11s.
 - Use only existing AfterCast and qualified limited IGNORE_CAST_IN_PROGRESS path, preserving actual in-progress Warrior64382 state and owned completion. No new state, timer, trigger API or native HP/regen/RNG/clock changes. Wider Bloodthirst/talent behavior, equipment/legal-loadout, full class, rotation, UDP and census parity are unqualified. [Implementation/proof](../wiki/systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
+## Nature's Guardian baseline (active70448)
+
+- Actual passive30884 effect0 requires current action-target health strictly below its native35% threshold, not equality, and absent native445698 cooldown. Preserve native proc eligibility/chance; do not add a positive-damage predicate or lethal-rescue rule.
+- Apply real self445698 before real31616 healing. Retain native45000ms cooldown aura, native40%-maximum-health heal, native costs and ordinary healing pipeline. Use the existing limited IGNORE_CAST_IN_PROGRESS path for445698 without replacing a player's in-progress cast; preserve full-mask-minus-power/reagent semantics for31616. No new trigger API, component, timer, wire field or generic A4 dispatch.
+- Existing cooldown suppresses repeat procs; natural expiry permits the next eligible event. Passive removal/missing passive and independent owners preserve attribution. This is not Guardian Spirit/Ardent Defender or a lethal-hit rescue; native HP/amounts/RNG/swing clocks remain authoritative. Other talents/forms, full Shaman/legal-loadout/nativeUDP/census promotion remain unqualified. [Implementation/proof](../wiki/systems/auras.md#natures-guardian-baseline--2026-10-19).
+
 ## Spirit Wolf baseline (active70448)
 
 - Ghost Wolf2645 plus actual talent260878 starts real260882 regardless of which parent was applied first. With either parent absent, this binding must not start the child.

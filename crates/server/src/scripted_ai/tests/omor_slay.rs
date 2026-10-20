@@ -28,7 +28,7 @@ pub(super) fn install_player_death_transition(h: &mut Harness) {
     );
 }
 
-fn ordinary_hound_fixture() -> (Harness, Entity, Entity, InMap) {
+pub(super) fn ordinary_hound_fixture() -> (Harness, Entity, Entity, InMap) {
     let (mut h, boss, map) = super::omor::summon_speech_fixture();
     install_player_death_transition(&mut h);
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30707, Some(boss), false)
@@ -48,7 +48,7 @@ fn ordinary_hound_fixture() -> (Harness, Entity, Entity, InMap) {
     (h, boss, hound, map)
 }
 
-fn slay_count(h: &Harness, boss: Entity) -> usize {
+pub(super) fn slay_count(h: &Harness, boss: Entity) -> usize {
     let texts = &h.app.world().resource::<CreatureTexts>().groups[&17308][&3];
     let name = &h
         .app
