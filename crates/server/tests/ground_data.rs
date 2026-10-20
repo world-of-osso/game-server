@@ -46,6 +46,14 @@ fn start_server(cwd: &Path, ground_dir: Option<&Path>) -> Child {
         )
         .unwrap();
     }
+    let content = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../content");
+    for name in [
+        "trading-post-monthly-catalog.json",
+        "quest-reward-bonus.json",
+    ] {
+        std::fs::copy(content.join(name), cwd.join("data").join(name))
+            .unwrap_or_else(|error| panic!("Stage tracked startup catalog {name}: {error}"));
+    }
     let mut command = Command::new(env!("CARGO_BIN_EXE_game-server"));
     command
         .current_dir(cwd)

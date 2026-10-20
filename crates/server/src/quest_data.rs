@@ -565,8 +565,16 @@ struct ContentNames {
 #[test]
 #[ignore = "requires WORLD_POPULATION_DB pointing to a promoted private copy"]
 fn zone_population_real_copy_loads_quests_givers_and_objectives() {
-    let path = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
-    let db = load_quest_db(Path::new(&path)).expect("promoted quest content loads");
+    let source = std::env::var("WORLD_POPULATION_DB").expect("promoted copy path");
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("world.db");
+    std::os::unix::fs::symlink(std::fs::canonicalize(source).unwrap(), &path).unwrap();
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../content/quest-reward-bonus.json"),
+        directory.path().join("quest-reward-bonus.json"),
+    )
+    .expect("stage tracked catalog beside the private promoted world copy");
+    let db = load_quest_db(&path).expect("promoted quest content loads");
     for (id, title, giver) in [
         (36626, "Host Howell", 86065),
         (48677, "Wicker Worship", 127296),
