@@ -116,6 +116,61 @@ fn tank_pull_history_measures_effective_native_damage_and_heal_over_ten_seconds(
 }
 
 #[test]
+fn tank_pull_history_preserves_active_combat_window_across_idle_and_resets_on_wipe() {
+    let (mut h, tank) = fixture();
+    let owner = h.caster;
+    let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        shared::components::ThreatTable::default(),
+        shared::components::Position {
+            x: 100.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    ));
+    assert!(damage(&mut h, owner, enemy, 1.0) > 0.0);
+    advance_samples(&mut h, 180);
+    assert!(damage(&mut h, owner, enemy, 100.0) > 0.0);
+    h.app.world_mut().get_mut::<Health>(tank).unwrap().current -= 50.0;
+    assert_eq!(heal(&mut h, owner, tank, 1000.0), 50.0);
+    advance_samples(&mut h, 22);
+    damage(&mut h, owner, enemy, 100_000.0);
+    advance_samples(&mut h, 1);
+    let fought = pull_history::snapshot(h.app.world(), owner).unwrap();
+    assert!(fought.group_dps.is_some_and(|rate| rate > 0.0));
+    assert_eq!(fought.completed_fights, 1);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::CombatStatus>(owner)
+            .unwrap()
+            .0
+    );
+    advance_samples(&mut h, 240);
+    let idle = pull_history::snapshot(h.app.world(), owner).unwrap();
+    assert_eq!(
+        idle.group_dps, fought.group_dps,
+        "route3: an idle forecast/recovery hold must not erase active-fight damage"
+    );
+    assert_eq!(idle.healer_hps, fought.healer_hps);
+    assert_eq!(idle.observation_seconds, fought.observation_seconds);
+    let cleared = idle.cleared_spawns;
+    for member in [owner, tank] {
+        crate::combat::kill_unit(h.app.world_mut(), enemy, member);
+    }
+    advance_samples(&mut h, 1);
+    let wiped = pull_history::snapshot(h.app.world(), owner).unwrap();
+    assert_eq!(wiped.group_dps, None);
+    assert_eq!(wiped.healer_hps, None);
+    assert_eq!(wiped.observation_seconds, 0.0);
+    assert_eq!(wiped.completed_fights, 0);
+    assert_eq!(
+        wiped.cleared_spawns, cleared,
+        "wipe resets measurement, not observed spawn deaths in the same dungeon copy"
+    );
+}
+
+#[test]
 fn tank_pull_history_requires_every_members_complete_five_second_health_history() {
     let (mut h, tank) = fixture();
     advance_samples(&mut h, 90);
