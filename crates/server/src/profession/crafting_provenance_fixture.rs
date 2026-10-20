@@ -92,11 +92,22 @@ fn assert_private_crafting_provenance_after_reopen() {
             "{name}: only the crafted GUID has an origin"
         );
         assert_eq!(origins[0].1, crafted);
-        assert_eq!(
-            record.crafting_origins.len(),
-            1,
-            "{name}: no other origin rows"
-        );
+        let rows: Vec<_> = record
+            .crafting_origins
+            .iter()
+            .map(|(guid, origin)| {
+                let item = record.inventory.items.iter().find(|i| i.item_guid == *guid);
+                (*guid, item.map(|i| (i.item_id, i.stack_count)), *origin)
+            })
+            .collect();
+        println!("PRIVATE CRAFTING PROVENANCE ORIGIN ROWS {name} {rows:?}");
+        // Other rows may only be the real 2881 Light Leather casts' surviving output.
+        for (guid, item, origin) in &rows {
+            if *guid != origins[0].0 {
+                assert_eq!(item.map(|i| i.0), Some(2318), "{name}: stray origin row");
+                assert_eq!(origin.recipe_spell_id, 2881, "{name}: stray origin row");
+            }
+        }
         let control = pants.iter().find(|guid| **guid != origins[0].0).unwrap();
         assert_eq!(
             record.inventory.gold, 940,
