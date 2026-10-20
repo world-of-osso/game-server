@@ -25,6 +25,7 @@ pub(super) fn inspect_unit(world: &World, guid: Option<u32>, actor: Entity) -> s
         "follow": format!("{:?}", world.get::<crate::creature_ai::FollowOwner>(actor)),
         "reach": world.get::<crate::followers::FollowerReach>(actor).map(|reach| reach.0),
         "flags": world.get::<shared::components::UnitFlags>(actor).map(|flags| flags.0),
+        "combat_refs": format!("{:?}", world.get::<crate::combat_refs::CombatRefs>(actor)),
         "threat": threat, "auras": auras})
 }
 

@@ -90,6 +90,25 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
     );
 }
 
+#[test]
+fn sampling_retains_a_member_after_native_dead_summon_despawn() {
+    let mut run = spawn_run(2, &mut None).unwrap();
+    let member = run.party.members[1];
+    crate::combat::kill_unit(run.app.world_mut(), run.party.owner, member);
+    for _ in 0..1202 {
+        run.app.update();
+    }
+    assert!(
+        run.app.world().get_entity(member).is_err(),
+        "native corpse decay must actually despawn the dead follower"
+    );
+    assert!(
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run.sample())).is_ok(),
+        "a native dead summon is reportable, not a batch-aborting panic"
+    );
+    assert_eq!(run.report.samples.last().unwrap().members.len(), 5);
+}
+
 struct Run {
     app: App,
     graph: Graph,
