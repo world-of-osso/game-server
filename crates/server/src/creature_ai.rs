@@ -1708,6 +1708,13 @@ pub(crate) fn return_to_spawn_system(
         queues.apply(entity, &mut pos, bearing, stride);
         if reached {
             *state = CreatureState::Idle;
+            commands.queue(move |world: &mut World| {
+                crate::scripted_ai::dispatch(
+                    world,
+                    entity,
+                    crate::scripted_ai::Hook::JustReachedHome,
+                );
+            });
             if let Some(mut mana) = mana
                 && mana.current != mana.max
             {

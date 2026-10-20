@@ -331,7 +331,22 @@ SAI clock fixtures retain150ms dispatch grace and100ms protected sampling guards
 - [x] Evade resets the encounter; a re-pull re-arms Talk0 and the beaker schedule.
 - [ ] `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`: Domination30923 needs player charm (aura6) and more than one threat player; not scheduled.
 - [ ] `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`: Maker doors181811/181812/181815 DoorData state.
-- [ ] `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`: canonical world data has no542/543 creature bindings; tests use the fixture-only ordinal binding, as Ramparts does.
-- Broggok (lever MakeActive, `GO_NOT_SELECTABLE_FLAG_UNMODELLED`), Keli'dan, prisoner waves, sound, loot, persistence and native presentation are out of scope.
+- [x] `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED` retired: canonical world data publishes the542/543 creature bindings (2026-10-20) and tests use them.
+- Broggok (lever MakeActive, `GO_NOT_SELECTABLE_FLAG_UNMODELLED`), prisoner waves, sound, loot, persistence and native presentation are out of scope.
 
 Proof: `scripted_ai/tests/the_maker.rs`.
+
+## Blood Furnace Keli'dan source boundary
+
+- [x] Pinned TC a352b1fa `boss_kelidan_the_breaker.cpp`: 17377 under `instance_blood_furnace`; TC DATA_KELIDAN ordinal2 = installed DungeonEncounter1923 bit1.
+- [x] JustAppeared: ImmuneToNPC, Uninteractible and Passive, self Evocation30935, `SpawnGroupSpawn`360–364. Those manual groups are withheld from copy fill; each holds one Shadowmoon Channeler17653 with StringId `KelidansShadowmoonChanneler1`–`5`.
+- [x] Channelers: Star Beam30888 at the partner (1→4, 2→3, 3→5, 4→2, 5→1, within100yd) 10s after appearing or reaching home, retried each second while absent or evading. Combat: Talk0, 15% Talk1, Shadow Bolt `DUNGEON_MODE(12739,15472)` 0–5s/10–15s, Mark of Shadow30937 at a random threat target without it 5–15s/5–15s, tasks waiting while casting. Corpse delay3s. Death notifies Keli'dan ChannelerDies; reaching home notifies his reset.
+- [x] The fifth channeler death clears his flags, makes him aggressive and zones in the copy. Engage: Talk0, interrupt, volley `DUNGEON_MODE(17228,40070)` 0–2s/15–25s, Corruption30938 5–10s/10–15s, Burning Nova30940 10–20s/25–35s. SpellHit(30940) Talk1; KilledUnit Talk2 for any victim; JustDied completes1923 bit1, then Talk3.
+- [x] Burning Nova AuraScript: Heroic AfterApply triggers Vortex37370; AfterRemove casts an ordinary Fire Nova33775, Heroic37371.
+- [x] JustReachedHome: dormant again, Evocation after5s, channeler groups respawned (living members kept, dead ones replaced).
+- [x] `KELIDAN_HEROIC_VOLLEY_40070_ABSENT_70448`: retail DB2 has no40070, so the Heroic volley casts nothing and no substitute spell is used.
+- [ ] The source banish-immunity toggle around Burning Nova is not modelled; it brackets an instant self cast whose stun aura already applies.
+- [ ] `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`: Keli'dan exit door181823 and final exit181766 DoorData state.
+- Broggok, loot, persistence, native presentation and an autonomous full clear are out of scope.
+
+Proof: `scripted_ai/tests/kelidan.rs`.
