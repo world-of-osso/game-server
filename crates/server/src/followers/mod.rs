@@ -199,6 +199,8 @@ mod kit_swiftmend_tests;
 #[cfg(test)]
 mod kit_tests;
 #[cfg(test)]
+mod kit_tranquil_mind_tests;
+#[cfg(test)]
 mod kit_utility_tests;
 #[cfg(test)]
 mod kit_wild_growth_tests;

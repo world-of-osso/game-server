@@ -17,7 +17,7 @@ const REGROWTH: u32 = 8936;
 const REJUVENATION: u32 = 774;
 const ACQUISITION_MISS_BUDGET: f64 = 1e-6;
 
-fn own_aura(h: &Harness, caster: Entity, spell: u32) -> Option<AuraInstance> {
+pub(super) fn own_aura(h: &Harness, caster: Entity, spell: u32) -> Option<AuraInstance> {
     h.app
         .world()
         .get::<ActiveAuras>(caster)?
@@ -26,14 +26,14 @@ fn own_aura(h: &Harness, caster: Entity, spell: u32) -> Option<AuraInstance> {
         .cloned()
 }
 
-fn frame_seconds(h: &Harness) -> f64 {
+pub(super) fn frame_seconds(h: &Harness) -> f64 {
     match h.app.world().resource::<TimeUpdateStrategy>() {
         TimeUpdateStrategy::ManualDuration(frame) => frame.as_secs_f64(),
         _ => panic!("natural proc qualification needs deterministic frame duration"),
     }
 }
 
-fn mana_cost(h: &Harness, caster: Entity, spell: u32) -> f32 {
+pub(super) fn mana_cost(h: &Harness, caster: Entity, spell: u32) -> f32 {
     let world = h.app.world();
     let spell = world.resource::<SpellStore>().get(spell).unwrap();
     spell_costs(world, caster, spell)
@@ -45,7 +45,7 @@ fn mana_cost(h: &Harness, caster: Entity, spell: u32) -> f32 {
         .sum()
 }
 
-fn wait_for_gcd(h: &mut Harness, caster: Entity, spell: u32) {
+pub(super) fn wait_for_gcd(h: &mut Harness, caster: Entity, spell: u32) {
     loop {
         let world = h.app.world();
         let spell = world.resource::<SpellStore>().get(spell).unwrap();
@@ -59,7 +59,7 @@ fn wait_for_gcd(h: &mut Harness, caster: Entity, spell: u32) {
     }
 }
 
-fn complete_real_cast(h: &mut Harness, caster: Entity, spell: u32) {
+pub(super) fn complete_real_cast(h: &mut Harness, caster: Entity, spell: u32) {
     wait_for_gcd(h, caster, spell);
     let start = h.inbox.go.len();
     creature_cast(h.app.world_mut(), caster, spell, Some(caster), false).unwrap();
