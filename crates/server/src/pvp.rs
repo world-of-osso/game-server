@@ -100,7 +100,8 @@ pub(crate) mod random_bg;
 
 #[path = "pvp_reconnect.rs"]
 pub(crate) mod reconnect;
-use pvp_leave::process_battleground_leave_requests;
+pub(crate) use pvp_leave::{PendingSkirmishRequeue, queue_skirmish_again};
+use pvp_leave::{process_battleground_leave_requests, process_skirmish_requeue_requests};
 #[path = "pvp_objective.rs"]
 mod pvp_objective;
 pub(crate) use pvp_objective::use_battleground_object;
@@ -533,7 +534,11 @@ impl Plugin for PvpPlugin {
         );
         app.add_systems(
             PostUpdate,
-            reconnect::expire_offline_players.after(process_battleground_leave_requests),
+            process_skirmish_requeue_requests.after(process_battleground_leave_requests),
+        );
+        app.add_systems(
+            PostUpdate,
+            reconnect::expire_offline_players.after(process_skirmish_requeue_requests),
         );
         app.add_systems(
             PostUpdate,
