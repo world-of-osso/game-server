@@ -121,6 +121,10 @@ Matching full `toys:: --test-threads=1 --format=pretty` runs compare base3373553
 
 The five directly affected tests improve244.738→113.634s combined (131.103s): transmitted-object lifecycles113.962→64.136s; four facing tests130.776→49.498s. The208 unaffected tests grow2001.814→2563.669s, overwhelming that local saving. Lead accepted that unaffected growth as host contention, not the two-site change; these receipts do not quantify its separate phases. Results were not rerun to select a better outcome. Evidence: `/home/osso/.worktrees/logs/wow_formats-gate-timing/toys-{before,after}/` and aggregate `wow_formats-toys-comparison.json`.
 
+### Loa canonical spell-store follow-up
+
+Both [Loa fixture helpers](../../../crates/server/src/toys_loa_cosmetic_tests.rs) now clone the same existing canonical `world_db().store` instead of reparsing it. This adds no cache and preserves all seven cases, app ownership and the ordinary1800s aura/3600s recovery timelines. No lifecycle tick, cancellation, learning or persisted-use assertion changes.
+
 ## Related
 
 - [Server tick lag](server-tick-lag.md) — distinct runtime/FIFO work; no release acceptance follows from faster tests.
