@@ -3249,7 +3249,7 @@ fn battleground<'a>(h: &'a Harness, who: &Traveler) -> &'a BattlegroundSnapshot 
 }
 
 /// Wait the real preparation interval without changing the caller's cast/frame timing.
-fn advance_source_preparation(h: &mut Harness) {
+pub(super) fn advance_source_preparation(h: &mut Harness) {
     let fixed_step = h.app.world().resource::<Time<Fixed>>().timestep();
     let max_delta = h.app.world().resource::<Time<Virtual>>().max_delta();
     let strategy = h

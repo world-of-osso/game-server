@@ -905,14 +905,22 @@ fn native_flag_match_in_world(
     let mut state = PvpServerState::default();
     state.battleground_matches.insert(17, invitation);
     world.insert_resource(state);
-    // Objective receipts below begin after the ordinary first-arrival clock.
+    advance_native_preparation(&mut world);
+    (world, players, file)
+}
+
+fn advance_native_preparation(world: &mut World) {
+    let previous_delta = world.resource::<Time<Fixed>>().delta();
     for _ in 0..=121 {
-        pvp_objective::update_battleground_objectives(&mut world);
+        pvp_objective::update_battleground_objectives(world);
         world
             .resource_mut::<Time<Fixed>>()
             .advance_by(std::time::Duration::from_secs(1));
     }
-    (world, players, file)
+    // Preparation must not seed a later objective fixture with a one-second tick.
+    world
+        .resource_mut::<Time<Fixed>>()
+        .advance_by(previous_delta);
 }
 
 #[test]
