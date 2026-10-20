@@ -65,6 +65,8 @@ mod herald_intro2;
 mod herald_min1;
 #[path = "herald_pair.rs"]
 mod herald_pair;
+#[path = "herald_reset.rs"]
+mod herald_reset;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
@@ -2686,7 +2688,11 @@ fn encounter_coverage_slagmaw_spits_five_then_submerges_and_teleports() {
     let tick = h.app.world().resource::<Time<Fixed>>().timestep();
     let cast = h.app.world().get::<CastState>(boss).unwrap();
     assert_eq!(cast.duration, 3.0, "DB2 CastingTimeIndex14");
-    let remaining = Duration::from_secs_f32(cast.duration - cast.elapsed);
+    // Replicated seconds are views of source integer-ms timers. 3.0-.05 as
+    // f32 is2.950000048: its48ns tail is not an authored completion deadline.
+    let duration_ms = (f64::from(cast.duration) * 1000.0).round() as u64;
+    let elapsed_ms = (f64::from(cast.elapsed) * 1000.0).round() as u64;
+    let remaining = Duration::from_millis(duration_ms - elapsed_ms);
     let now = h.app.world().resource::<Time<Fixed>>().elapsed();
     let complete_by = now + remaining + tick;
     // Preserve the original fourth-spit checkpoint, independent of this flight check.

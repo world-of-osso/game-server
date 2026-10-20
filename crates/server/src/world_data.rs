@@ -231,6 +231,8 @@ pub struct WorldData {
     /// Members of the manual spawn groups ported scripts spawn (`SpawnGroupSpawn`),
     /// keyed by group; copy fill withholds them.
     pub(crate) script_spawn_groups: HashMap<u32, Vec<u32>>,
+    /// Ordinary groups scripts reset with ignoreRespawn; never withheld at copy fill.
+    pub(crate) reset_spawn_groups: HashMap<u32, Vec<u32>>,
 }
 
 impl WorldData {
@@ -298,8 +300,10 @@ pub fn load_world_data(path: &Path) -> WorldData {
     let spawn_string_ids =
         load_spawn_string_ids(&conn).expect("Failed to load TDB creature.StringId");
     let script_spawn_groups =
-        load_script_spawn_groups(&conn, crate::scripted_ai::SCRIPT_SPAWN_GROUPS)
+        load_script_spawn_groups(&conn, crate::scripted_ai::SCRIPT_SPAWN_GROUPS, true)
             .expect("Failed to load script-owned TDB spawn groups");
+    let reset_spawn_groups = load_script_spawn_groups(&conn, &[357], false)
+        .expect("Failed to load reset-owned TDB spawn groups");
 
     info!(
         "WorldData loaded: {} templates, {} spawns, {} maps, {} waypoint paths, {} addons, {} formation members",
@@ -334,6 +338,7 @@ pub fn load_world_data(path: &Path) -> WorldData {
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
+        reset_spawn_groups,
     }
 }
 
@@ -371,21 +376,23 @@ pub(crate) fn load_spawn_string_ids(conn: &Connection) -> rusqlite::Result<HashM
 pub(crate) fn load_script_spawn_groups(
     conn: &Connection,
     groups: &[u32],
+    manual_only: bool,
 ) -> rusqlite::Result<HashMap<u32, Vec<u32>>> {
     let mut query = conn.prepare(
         "SELECT creature.guid FROM tdb_spawn_group grp
          JOIN tdb_spawn_group_template template USING(groupId)
          JOIN content_creature creature ON creature.guid = grp.spawnId + ?2
-         WHERE grp.groupId = ?1 AND grp.spawnType = 0 AND template.groupFlags & 4",
+         WHERE grp.groupId = ?1 AND grp.spawnType = 0
+          AND (?3 = 0 OR template.groupFlags & 4)",
     )?;
     groups
         .iter()
         .map(|&group| {
             let guids = query
-                .query_map([group, TDB_GUID_OFFSET], |row| row.get(0))?
+                .query_map(params![group, TDB_GUID_OFFSET, manual_only], |row| row.get(0))?
                 .collect::<rusqlite::Result<Vec<u32>>>()?;
             if guids.is_empty() {
-                error!("script spawn group {group} has no manual-spawn content creatures");
+                error!("script spawn group {group} has no matching content creatures (manual_only={manual_only})");
             }
             Ok((group, guids))
         })

@@ -163,19 +163,22 @@ fn decode_encounter_inputs(
         .unwrap()
         .map(Result::unwrap)
         .collect();
-    let (template_string_ids, spawn_string_ids, script_spawn_groups) = if populate {
-        (
-            crate::world_data::load_template_string_ids(&conn).unwrap(),
-            crate::world_data::load_spawn_string_ids(&conn).unwrap(),
-            crate::world_data::load_script_spawn_groups(
-                &conn,
-                crate::scripted_ai::SCRIPT_SPAWN_GROUPS,
+    let (template_string_ids, spawn_string_ids, script_spawn_groups, reset_spawn_groups) =
+        if populate {
+            (
+                crate::world_data::load_template_string_ids(&conn).unwrap(),
+                crate::world_data::load_spawn_string_ids(&conn).unwrap(),
+                crate::world_data::load_script_spawn_groups(
+                    &conn,
+                    crate::scripted_ai::SCRIPT_SPAWN_GROUPS,
+                    true,
+                )
+                .unwrap(),
+                crate::world_data::load_script_spawn_groups(&conn, &[357], false).unwrap(),
             )
-            .unwrap(),
-        )
-    } else {
-        Default::default()
-    };
+        } else {
+            Default::default()
+        };
     inputs.push(WorldData {
         templates,
         difficulty_templates,
@@ -184,6 +187,7 @@ fn decode_encounter_inputs(
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,
+        reset_spawn_groups,
         // The Azure intro depends on the real non-following tender formation.
         formations: if populate && map_id == 2515 {
             crate::test_data::world_data().formations.clone()

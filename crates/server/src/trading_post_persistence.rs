@@ -61,6 +61,15 @@ pub(super) fn prepare_action(
         return Ok(Action::Read);
     }
     active_vendor(world, connection, player)?;
+    match request {
+        TradingPostRequest::Refund { vendor_item_id } => {
+            return Ok(Action::Refund(*vendor_item_id));
+        }
+        TradingPostRequest::Freeze {
+            vendor_item_id: None,
+        } => return Ok(Action::Freeze(None)),
+        _ => {}
+    }
     let catalog = world
         .resource::<catalog::Catalog>()
         .0
@@ -204,7 +213,17 @@ fn execute_and_snapshot(
     catalog: Option<catalog::CatalogData>,
     month: i64,
 ) -> Result<Completed, String> {
-    let result = action.and_then(|action| execute_action(db, account, action, snapshot.now_unix));
+    let before = store::load(db, account);
+    if let Some(gap) = catalog
+        .as_ref()
+        .and_then(|catalog| catalog.monthly.at(snapshot.now_unix).gap())
+    {
+        snapshot.source_gaps.push(gap);
+    }
+    let result = action.and_then(|action| {
+        validate_membership(&action, catalog.as_ref(), &before, snapshot.now_unix)?;
+        execute_action(db, account, action, snapshot.now_unix)
+    });
     // The reply's rollover settlement is ordered too; never commit it on the tick.
     let state = store::settle(db, account, month, 0, &[]);
     snapshot.tender = state.tender;
@@ -220,11 +239,40 @@ fn execute_and_snapshot(
         }
     };
     if (snapshot.catalog_complete || !changed.is_empty())
-        && let Some(catalog) = catalog
+        && let Some(mut catalog) = catalog
     {
+        let membership = catalog.monthly.at(snapshot.now_unix);
+        catalog
+            .items
+            .retain(|id, _| membership.contains(*id, state.frozen));
         snapshot.items = collection_rows(db, account, &catalog, &state, snapshot.now_unix);
     }
     Ok(Completed { snapshot, changed })
+}
+
+fn validate_membership(
+    action: &Action,
+    catalog: Option<&catalog::CatalogData>,
+    state: &store::State,
+    now: i64,
+) -> Result<(), String> {
+    let vendors: Vec<_> = match action {
+        Action::Read | Action::Refund(_) | Action::Freeze(None) => return Ok(()),
+        Action::Purchase(offer) => vec![offer.vendor],
+        Action::Checkout(offers) => offers.iter().map(|offer| offer.vendor).collect(),
+        Action::Freeze(Some(vendor)) => vec![*vendor],
+    };
+    let catalog = catalog.ok_or("Trading Post monthly catalog unavailable.")?;
+    let membership = catalog.monthly.at(now);
+    if let Some(vendor) = vendors
+        .iter()
+        .find(|vendor| !membership.contains(**vendor, state.frozen))
+    {
+        return Err(format!(
+            "Trading Post item {vendor} is not available in this month or frozen slot."
+        ));
+    }
+    Ok(())
 }
 
 pub(super) fn flush_replies(world: &mut World) {
