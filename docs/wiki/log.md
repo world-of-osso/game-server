@@ -3265,3 +3265,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Swiftmend own-HoT hit consumption
 
 [Native/source scope](investigations/follower-data.md#swiftmend-own-hot-consumption--2026-10-19): pushed3ignoredtests064663f5f BEFOREproduction; actual17consumption/order2RED+32nativeVerdantPASS→f389onhit3GREEN17.62s. Enable3andaddforeign774instancepreservationcontrol; nobonusheal/cost/timer/priority/globalstacking changes. Integratedproof/leadgatepending.
+
+## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
+
+[Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
