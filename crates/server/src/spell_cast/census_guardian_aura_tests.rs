@@ -125,6 +125,22 @@ fn damage_with_spell(h: &mut Harness, actor: Entity, spell: u32, multiplier: f32
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
     super::creature_cast(h.app.world_mut(), actor, spell, Some(target), false).unwrap();
     finish_cast(h, actor);
+    // Native208227 travels at35yd/s. Observe its real impact, not just cast end;
+    // the unchanged4s bound covers its100yd maximum without editing the clock.
+    for _ in 0..80 {
+        let impacted = h.app.world().resource::<ObservedCombatEvents>().0[start..]
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(spell)
+                    && event.source == Some(actor.to_bits())
+                    && event.target == Some(target.to_bits())
+                    && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+            });
+        if impacted {
+            break;
+        }
+        h.advance(1);
+    }
     let hits: Vec<_> = h.app.world().resource::<ObservedCombatEvents>().0[start..]
         .iter()
         .filter(|event| {
