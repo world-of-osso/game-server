@@ -138,9 +138,11 @@ fn assert_modified_cadence(spell_id: u32, amount: f32, factor: f64) {
     assert_eq!(source_cadence_ms(118), 1500);
     let (mut h, npc) = cadence_fixture(118, &[spell_id]);
     apply_native_haste(&mut h, npc, spell_id, amount);
-    h.advance(200);
+    // Native246 lasts6000ms: measure only its first5000ms, not expired swings.
+    h.advance(100);
+    assert!(crate::auras::has_aura(h.app.world(), npc, spell_id));
     let times = observed_white_swing_times(&h, npc);
-    assert!(times.len() >= 3, "only {times:?}");
+    assert!(times.len() >= 2, "only {times:?}");
     let expected = 1.5 * factor;
     for pair in times.windows(2) {
         let interval = pair[1] - pair[0];
