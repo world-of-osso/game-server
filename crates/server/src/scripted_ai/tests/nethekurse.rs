@@ -300,6 +300,13 @@ fn populated_nethekurse(difficulty: u32) -> (Harness, Entity, InMap, Vec<Entity>
         true,
     );
     let boss = h.creatures_of(NETHEKURSE)[0];
+    // HARNESS SETUP: a listener outside proximity aggro but inside native yell range.
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 100.0,
+        ..position
+    });
     let peons = h
         .creatures_of(17083)
         .into_iter()
@@ -376,4 +383,25 @@ fn encounter_coverage_nethekurse_non_event_peons_do_not_count_and_some_alive_spe
         0,
         "ordinary convert was not counted"
     );
+}
+
+#[test]
+#[ignore = "RED: event convert engagement line not ported"]
+fn encounter_coverage_nethekurse_event_peon_engagement_notifies_boss() {
+    let (mut h, boss, _, peons) = populated_nethekurse(1);
+    let peon = peons[0];
+    let position = *h.app.world().get::<Position>(peon).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(peon);
+    h.advance(0.2);
+    assert_eq!(
+        nethekurse_yells(&h, boss, 6),
+        1,
+        "source ACTION_PEON_ENGAGED Talk6"
+    );
+    assert_eq!(nethekurse_yells(&h, boss, 3), 0, "boss not pulled directly");
 }
