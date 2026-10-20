@@ -23,6 +23,14 @@ fn nethekurse_copy(difficulty: u32) -> (Harness, Entity, InMap) {
         crate::line_of_sight::LineOfSight::load(&directory.join("los"))
             .expect("authentic eye tables"),
     );
+    // HARNESS SETUP: move the isolated entrant into range only after fixture startup.
+    // Like the landed source fixtures, no autonomous pull may precede observation.
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
