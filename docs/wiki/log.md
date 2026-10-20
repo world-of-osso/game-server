@@ -1,3 +1,7 @@
+## 2026-10-19 — Omen and one-use Clearcasting
+
+[Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
+
 ## 2026-10-19 — Wild Growth native-coefficient falloff policy
 
 [Source and proof boundary](investigations/follower-data.md#wild-growth-native-coefficient-falloff-policy--2026-10-19): explicit `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFICIENT`, never legacy0.175/TC curve; absolute Retail shape uncertified. Pushed3ignored1fb0e4983 gives1PASS/2FAIL23.67s: native42 constant62×7 genuine decline RED,43 relative check blocked by same baseline prerequisite, natural expiry PASS. Minimal48438-only scheduled-deadline multipliere930 plus landed master merge43e0 gives unchanged3GREEN20.54s/no warnings:42 actual65→57,43 normalized native40%-less and unchanged seven-tick expiry. Enabled only afterward3327; final independent lead gate pending.
