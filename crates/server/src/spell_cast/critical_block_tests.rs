@@ -423,13 +423,39 @@ fn class_completeness_native_critical_block_chance_is_read_at_missile_impact() {
             source: AuraSource::Cast,
         },
     );
-    // Native2500ms cast +400ms flight; loopback3frames makes the3s buff
-    // expire after launch but before impact, without changing spell metadata.
+    let applied_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    let expiry = applied_at + std::time::Duration::from_millis(3000);
+    // Native2500ms +400ms flight originally hit at the3000ms aura-expiry tick.
+    // One real50ms frame before requesting puts impact strictly after expiry;
+    // do not retain the old float cast's accidental extra50ms as fixture setup.
+    h.advance(1);
     start_damage_spell(&mut h, defender, 19434);
     wait_for_aimed_launch(&mut h);
+    let launched_at = h.app.world().resource::<Time<Fixed>>().elapsed();
+    assert!(launched_at < expiry, "native buff must still cover launch");
+    let impact_at = launched_at + std::time::Duration::from_millis(400);
+    assert!(
+        expiry < impact_at,
+        "expiry must precede impact, not share its tick"
+    );
     assert!(crate::auras::has_aura(h.app.world(), defender, 203524));
     assert!(aimed_damage(&h, defender).is_empty());
-    h.advance(12);
+    let mut observed_impact = None;
+    for _ in 0..12 {
+        h.advance(1);
+        let now = h.app.world().resource::<Time<Fixed>>().elapsed();
+        let hits = aimed_damage(&h, defender);
+        if now == expiry {
+            assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
+            assert!(hits.is_empty(), "buff must expire before any actual damage");
+        }
+        if !hits.is_empty() {
+            observed_impact.get_or_insert(now);
+            assert!(now > expiry);
+            assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
+        }
+    }
+    assert_eq!(observed_impact, Some(impact_at));
     assert!(!crate::auras::has_aura(h.app.world(), defender, 203524));
     let hits = aimed_damage(&h, defender);
     assert_eq!(hits.len(), 1);

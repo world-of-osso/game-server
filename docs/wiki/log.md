@@ -1,9 +1,29 @@
 ## 2026-10-19 — Auto Shot75 autorepeat
 
 [AutoRepeat](systems/spell-casting.md#auto-shot-autorepeat--2026-10-19): ignored RED606c6ead2/2ded8d38e pushed first; four genuine failures (one shot, no repeat). Fix997d00e04 repeats on the ranged timer (rifle73000 delay3000/haste), no GCD; moving keeps it, out of range skips, StopSpellCast/first stun/fear/confuse cancel via `stop_all_casts`. Resume-window oracle correctedcbf8c8d9d (window included the next legitimate repeat). Stun test RED-proven by reverting only its call (exit101 at the cancel assertion). GREEN169/0,3 pre-existing LOS ignores,66.96s: auto_shot, Dark Luck75, defensives, autoattack range, attack speed, combat::tests, dummy, control stop, fear/confuse/stun. Gaps in [spec](../../specs/player-damage.md#known-gaps-current-cycle).
+## 2026-10-19 — Herald fixture-only admitted Roar seed
+
+[Ground diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hc729's three legitimate category-cooldown refusals leave the1500ms probe without an admitted cast. Approved actor-local fixture seed0 at natural release gives authored initial Fireball3656ms/Cone7735ms, after Roar2000ms plus1500ms cast. EventMap clock/queue, source ranges/repeats/admission and production RNG remain unchanged; exact expiry oracle retained. Three independent native stability executions7eff0e0fa/protocolfc37 pass36.11s/37.75s/41.14s, each actual first Roar3.95 admitted/exact1450/1500ms AI expiry; initial compile-only visibility failure excluded. Independent changed-family gate/co-landing pending.
+
+## 2026-10-19 — Herald native cast millisecond root fix
+
+[Captured root cause](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hr705 Cone38.65→53.70/Roar52.15+1500ms=53.65 isolates shared float progress1.4999996 after30×50ms. Pushed ignored actual native AI regressionbdb50ac74 fails39.30s; shared normal/channel/pushback3RED +nearest-ms control precede integer-ms runtimebb18da9. Shared53GREEN; strict native1450/1500ms endpoint50.60s plus six retained native ground/Omor pushback controls105.21s. Nearest-ms conversion/public f32 wire/pushback/source windows retained; no epsilon or broad rerun. Engine has no shared tick caller. Paired protocol/server independent gate/co-landing pending; original docs-only1a5 closure held.
+
+## 2026-10-19 — Herald ground timing diagnostic capture
+
+[Standing diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): original full-workspace Heroic36921 late repeat remains unreproduced after actual same-CPU load1PASS118.34s and small shared-process/six-thread7PASS49.68s. Approved permanent pre-assert spell/Roar dump and test-only opt-in actual AI/cast clocks added; single expanded module261PASS/2private-Azure-envFAIL/6ignored811.19s did not reproduce; subsequent hr705 isolated the shared cast-progress defect above. No assertion/source timer/RNG changes; standing diagnostic retained.
+
+## 2026-10-19 — Herald real evade ingress RED
+
+[Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation→four full endpoint GREEN67.43s atb549ffbaf after correcting fresh default-reaction oracle. Source exact deadline/alive identity/count/patrol/min1/fresh natural intro pass; tests enabled, independent gate pending; no canonical data/flag changes.
+
+## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
+
+[Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
 
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
+[Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. First consumer attempt6PASS/2FAIL20.25s exposes source-invalid two-child/no-in-flight-arrival oracles. Approved separate oracle correction cites SpellMisc144253 Attributes_5=8704/0x200 initial tick and child Speed90/LaunchDelay0.75; native0/3/6 dispatches and already-launched missile preserved,180-frame window unchanged. Corrected ignoredc27aad3788GREEN18.15s/0warnings, then eight enabled; qualification3PASS67.67s retained separately (eleven-case composite). er723 landed d53e8f2b8, gate/check/fmt0;248 remains DEFERRED.
 [Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. First consumer attempt6PASS/2FAIL20.25s exposes source-invalid two-child/no-in-flight-arrival oracles. Approved separate oracle correction cites SpellMisc144253 Attributes_5=8704/0x200 initial tick and child Speed90/LaunchDelay0.75; native0/3/6 dispatches and already-launched missile preserved,180-frame window unchanged. Corrected ignoredc27aad3788GREEN18.15s/0warnings, then eight enabled; qualification3PASS67.67s retained separately (eleven-case composite). Independent lead integration pending;248 remains DEFERRED.
 ## 2026-10-19 — Aura343 white-swing vulnerability
 
@@ -3222,6 +3242,16 @@ Actual protocol1, both-skin UI1 and native HostClient server1 pass after their o
 
 gz709 landed protocol724ec71/serverb15526d95/engine79b33ab93; two authenticated actors prove typed `/gleader`, immediate rank/permission refresh and same-private-DB fresh-server/client master settings in both skins. Six inspected original PNGs published; historical original unchanged, owned actors/slice stopped and window cleared. See the voluntary leadership transfer system section for exact evidence and proof exclusions.
 
+## 2026-10-19 — Actor-owned periodic-damage maintenance
+
+[Source and native proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19): SimC76f8118actor-specificMoonfire semantics confirmed; ordinarydual164812caster/tick+ownrecastcontrolsPASS/foreignsuppressionRED. PeriodicdamageAttack-onlycasterfilteref0603bb1 gives4nativePASS20.11s includingforeignHoTunchanged. Enabled3provedqualifications; integratedkit/stackingcontrols andleadgatepending. No globalhas_aura/timer/priority/movement/pet/planner edits.
 ## 2026-10-19 — Last Online authority implementation
 
 After pushed ignored tests and actual disconnect/save/despawn→closed DB/new-app query RED, added disconnect-only character logout persistence and optional raw guild timestamp. Rest/admin timestamps are not reused or backfilled. Focused GREEN/coordinated landing/native pending; see guild lifecycle Last Online section.
+
+## 2026-10-19 — Actor-owned DoT integrated proof
+
+[Exact scope/proof](investigations/follower-data.md#actor-owned-periodic-damage-maintenance--2026-10-19):6a82516ac integratedkit_+nativeperiodic/coexistence60PASS/0FAIL/1explicitfile-writingexportignored45.05s/compile5m20s, check1m55s/fmt/diffPASS, zero warnings. Allfournewnativecasesenabled, sourceSimC76f8118receiptretained; foreignHoT/globalhas_auraunchanged. Pushed; independentmo730queued(allfollowers/auras/pets+AzureENV/check/fmt). No redundantlocalrun.
+## 2026-10-19 — Last Online native acceptance
+
+gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated actors prove observed disconnect/recency, genuine reconnect and same-private-DB fresh-server/client offline readback in both skins; six inspected original PNGs published. Historical original unchanged; owned actors/slice stopped, UDP5891 unbound and window cleared. [Exact native evidence and automated-only boundaries](systems/guild-lifecycle.md#last-online-native-acceptance-2026-10-19); no backfilled epochs or audio/clean-exit repair claim.

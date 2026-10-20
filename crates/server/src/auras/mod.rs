@@ -49,6 +49,7 @@ mod refresh;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
+mod spirit_wolf;
 pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;
@@ -2326,6 +2327,8 @@ mod guardian_spirit_tests;
 mod monster_rising_tests;
 #[cfg(test)]
 mod power_strike_tests;
+#[cfg(test)]
+mod spirit_wolf_tests;
 #[cfg(test)]
 mod tiger_dash_tests;
 #[cfg(test)]

@@ -177,6 +177,8 @@ pub(crate) fn fixture_hazard_escape(world: &mut World, unit: Entity) -> bool {
     hazards::escape(world, unit)
 }
 #[cfg(test)]
+mod kit_dot_ownership_tests;
+#[cfg(test)]
 mod kit_interrupt_tests;
 #[cfg(test)]
 mod kit_source_tests;
