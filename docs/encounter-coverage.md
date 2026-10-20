@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Fel Iron chest activation blocked
+
+`GO_NOT_SELECTABLE_FLAG_UNMODELLED`: Fel Iron MakeActive requires a consumed native selectability flag, but global loading/refusal would also require existing unlock consumers outside this encounter. Chest work stopped without implementation. [Read-only census, source semantics and concrete Isle banner hazard](wiki/investigations/go-not-selectable-flag.md).
+
 ## Herald flying Liquid Fire — 2026-10-19
 
 Natural victim/random Normal+Heroic admission qualification2PASS64.88s FIRST; pushed ignored4b11af1e1→four genuine missing actual-impact-frame child launches200.85s. Production adds only four flying IDs to existing Fireball hit hook; all four full native endpointsd75c051e5 GREEN287.96s/exit0: missile travel before impact, new hit-unit self-child/freshGO rather than old victim fields, unchanged native sourceGO pulses/ordinary damage/lifetimes/copy. Four cases enabled; extracted ground/source/refusal cohort6PASS183.95s ate0e53be51 plus retained natural qualification2PASS make a twelve-case composite. Independent gate pending. [Contract/proof](specs/ramparts-herald.md#flying-liquid-fire). Native/balance/new flight algorithms/Revenge/re-entry/persistence/loot excluded.

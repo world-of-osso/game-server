@@ -16,6 +16,7 @@
 //! without a positive applied effect. Hidden: passive or
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
+mod abundance;
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
 pub(crate) mod augmentation;
@@ -43,6 +44,7 @@ pub(crate) mod mastery;
 mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
+mod natures_guardian;
 mod periodic;
 pub mod procs;
 mod refresh;
@@ -2328,6 +2330,8 @@ mod guardian_spirit_controls;
 mod guardian_spirit_tests;
 #[cfg(test)]
 mod monster_rising_tests;
+#[cfg(test)]
+mod natures_guardian_tests;
 #[cfg(test)]
 mod power_strike_tests;
 #[cfg(test)]
