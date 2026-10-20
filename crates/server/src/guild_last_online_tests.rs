@@ -146,7 +146,6 @@ fn disconnect(app: &mut App, connection: Entity, player: Entity) -> (u64, u64) {
 }
 
 #[test]
-#[ignore = "RED first: real disconnect and reopen must precede logout authority assertion"]
 fn guild_last_online_real_disconnect_reopen_preserves_distinct_times_and_unknown_history() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("presence.redb");

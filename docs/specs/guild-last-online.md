@@ -20,11 +20,11 @@ Persist actual observed character logout authority, not guessed historical dates
 
 ## Tests asserting this spec
 
-- `guild_last_online_real_disconnect_reopen_preserves_distinct_times_and_unknown_history` (ignored RED pushed first).
+- `guild_last_online_real_disconnect_reopen_preserves_distinct_times_and_unknown_history` (enabled after actual disconnect/reopen authority RED→GREEN).
 
 ## Known gaps (current cycle)
 
-- [ ] Actual authority RED observed after real disconnect/save/despawn and closed DB/new-app reopen. Implementation committed; focused GREEN, coordinated P/S/E landing and both-skin native disconnect/readback/reconnect proof pending.
+- [ ] Actual authority RED observed after real disconnect/save/despawn and closed DB/new-app reopen. Focused GREEN1/1 passes (266s compile,0.98s test, no warnings), including distinct observed times, repeated queries, unknown rest/admin history and online suppression; proven test enabled. Coordinated P/S/E landing and both-skin native disconnect/readback/reconnect proof remain pending.
 
 ## Out of scope
 
