@@ -18,6 +18,7 @@ Transport-free Stockade qualification runs real gameplay systems in a plain Bevy
 ## Implementation inventory
 
 - `crates/server/src/dungeon_simulator/mod.rs`: source graph qualification; gameplay runner pending.
+- `crates/server/src/dungeon_simulator/graph.rs`: typed frozen graph and explicit one-time native-nav extraction; minimum spanning forest plus four nearest neighbours per pack.
 
 ## Tests asserting this spec
 

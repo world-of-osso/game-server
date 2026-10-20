@@ -1,5 +1,5 @@
 //! Transport-free dungeon qualification, driven by the server test executable.
-use std::path::Path;
+mod graph;
 
 fn run_first_pack() -> Result<(), String> {
     Err("transport-free one-pack gameplay runner is not implemented".into())
@@ -12,12 +12,9 @@ fn one_pack_runs_real_gameplay_without_transport() {
 
 #[test]
 fn frozen_stockade_graph_covers_native_formations() {
-    let path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../content/dungeons/stockade-34.json");
-    let text = std::fs::read_to_string(&path).expect("frozen Stockade pack graph");
-    let graph: serde_json::Value = serde_json::from_str(&text).unwrap();
-    assert_eq!(graph["map_id"], 34);
-    let nodes = graph["packs"].as_array().unwrap();
+    let graph = graph::read_graph().expect("frozen Stockade pack graph");
+    assert_eq!(graph.map_id, 34);
+    let nodes = &graph.packs;
     let data = crate::test_data::world_data();
     let mut expected = std::collections::BTreeMap::<u32, Vec<u32>>::new();
     for &index in &data.spawns_by_map[&34] {
@@ -34,14 +31,9 @@ fn frozen_stockade_graph_covers_native_formations() {
     let actual: std::collections::BTreeMap<u32, Vec<u32>> = nodes
         .iter()
         .map(|node| {
-            let mut members: Vec<u32> = node["spawns"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|spawn| spawn["guid"].as_u64().unwrap() as u32)
-                .collect();
+            let mut members: Vec<u32> = node.spawns.iter().map(|spawn| spawn.guid).collect();
             members.sort_unstable();
-            (node["id"].as_u64().unwrap() as u32, members)
+            (node.id, members)
         })
         .collect();
     for members in expected.values_mut() {
@@ -51,5 +43,5 @@ fn frozen_stockade_graph_covers_native_formations() {
         actual, expected,
         "source formations, never proximity clusters"
     );
-    assert!(!graph["edges"].as_array().unwrap().is_empty());
+    assert!(!graph.edges.is_empty());
 }
