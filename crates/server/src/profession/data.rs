@@ -390,7 +390,7 @@ fn load_abilities(conn: &Connection) -> rusqlite::Result<Vec<Ability>> {
     )?;
     let rows = statement.query_map(params![], |row| {
         Ok(Ability {
-            id: uint(row, 12)?,
+            id: uint(row, 11)?,
             spell: uint(row, 0)?,
             skill_line: uint(row, 1)?,
             skillup_line: uint(row, 2)?,
