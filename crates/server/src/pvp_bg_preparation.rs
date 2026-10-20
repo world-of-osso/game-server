@@ -70,7 +70,7 @@ const GATES: &[(u32, u32, GateAction)] = &[
     (2106, 242273, OpenAndDespawn(3.0)),
     (2106, 352709, OpenAndDespawn(3.0)),
     (2106, 352710, OpenAndDespawn(3.0)),
-    // ArathiBasin/arathi_basin.cpp:336–354 (start event).
+    // ArathiBasin/battleground_arathi_basin.cpp:336–354 (start event).
     (2107, 322273, OpenAndDespawn(3.0)),
     (2107, 322274, OpenAndDespawn(3.0)),
     (2107, 180322, Remove),
