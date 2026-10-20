@@ -575,6 +575,7 @@ fn battleground_response_is_owned_idempotent_and_scoped_to_the_invitation() {
         17,
         InvitedBattleground {
             instance: BgInstance::from_match(&matched, &template),
+            preparation: Default::default(),
             accepted: BTreeSet::new(),
             map: None,
             origins: BTreeMap::new(),
@@ -883,6 +884,7 @@ fn native_flag_match_in_world(
     };
     let invitation = InvitedBattleground {
         instance: BgInstance::from_match(&matched, &template),
+        preparation: Default::default(),
         accepted: players.iter().map(|p| p.0).collect(),
         map: Some(map),
         origins: BTreeMap::new(),

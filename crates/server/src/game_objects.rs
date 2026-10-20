@@ -61,13 +61,14 @@ const SPAWN_QUERY: &str = "SELECT g.guid, g.id, g.position_x, g.position_y, g.po
      WHERE g.spawnDifficulties <> '0' OR t.type IN (?1, ?2, ?3, ?4, ?5, ?6, 3, 10, 50) \
      OR (g.map IN (SELECT map_id FROM arena_map) AND t.type IN (0,6,35))";
 
-/// Battleground objective spawns use difficulty 0; the shared rules name each one.
+/// Battleground objectives and source preparation gates use difficulty 0.
 fn battleground_objective_clause() -> String {
     shared::battleground::all_templates()
         .iter()
         .flat_map(|template| {
             shared::battleground::objective_object_entries(template.map_id)
                 .into_iter()
+                .chain(crate::pvp::bg_preparation::gate_entries(template.map_id))
                 .map(move |entry| format!(" OR (g.map = {} AND g.id = {entry})", template.map_id))
         })
         .collect()
