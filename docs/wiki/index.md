@@ -915,4 +915,5 @@ Debug logs and root cause analyses.
 
 - [Prepared encounter fixture inputs](investigations/slow-native-test-fixtures.md#fully-prepared-encounter-inputs-2026-10-19) — complete immutable producer/composite profiles, independent resource copies, cross-profile/difficulty isolation;28 unchanged cases and matched wall/CPU/RSS, including cold Ragefire regression and retained-memory cost.
 
+- [Promoted battleground world reuse](investigations/slow-native-test-fixtures.md#promoted-battleground-world-reuse) — exact30/628 decoded promotion profiles cloned per app; two-live-app/cache isolation and unchanged9Alterac cases pass, wall292.732→35.023s with +97088KiB peak RSS.
 - [Canonical toy spell reuse](investigations/slow-native-test-fixtures.md#canonical-toy-spell-reuse) — existing full spell-store copies at two fixture sites;213/213 unchanged cases before/after, five affected tests131s faster, whole-family contention regression disclosed.
