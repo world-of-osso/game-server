@@ -206,7 +206,7 @@ fn encounter_coverage_omrogg_native_spell_admissions_qualify() {
             observed_casts(&h, boss, BURNING_MAUL_HIT),
             h.has_aura(boss, maul),
             h.health(player),
-            crate::creature_threat::current_victim(h.app.world_mut(), boss)
+            crate::creature_aggro::current_victim(h.app.world_mut(), boss)
                 .map(|unit| unit == player),
         );
         assert!(
