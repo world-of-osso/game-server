@@ -129,6 +129,9 @@ const BLOODTHIRST: u32 = 23_881;
 const BLOODTHIRST_HEAL: u32 = 117_313;
 const RAMPAGE: u32 = 184_367;
 const ENRAGE: u32 = 184_362;
+const ENRAGED_REGENERATION: u32 = 184_364;
+const INVIGORATING_FURY: u32 = 383_468;
+const INVIGORATING_FURY_HEAL: u32 = 385_174;
 const HOLY_SHOCK: u32 = 20_473;
 const HOLY_SHOCK_DAMAGE: u32 = 25_912;
 const HOLY_SHOCK_HEAL: u32 = 25_914;
@@ -419,6 +422,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
             Some(crate::scripted_ai::azure_vault::return_after_absolute_zero)
         }
@@ -449,6 +453,19 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         batch7::VERDANT_EMBRACE => Some(batch7::heal_panacea),
         _ => shared::skyriding::ability_impulse(spell_id)
             .map(|_| crate::skyriding::flap as AfterCastHook),
+    }
+}
+
+/// TC a352b1fa spell_warrior.cpp1380–1405: AfterCast with IGNORE_CAST_IN_PROGRESS,
+/// not FULL_MASK. Native385174 owns its self target and10% max-health payload.
+fn cast_invigorating_fury_heal(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    if !crate::auras::has_aura(world, caster, INVIGORATING_FURY) {
+        return;
+    }
+    if let Err(reason) =
+        super::creature_cast_ignoring_in_progress(world, caster, INVIGORATING_FURY_HEAL, None)
+    {
+        warn!(?caster, ?reason, "Invigorating Fury385174 cast refused");
     }
 }
 

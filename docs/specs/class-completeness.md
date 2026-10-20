@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Invigorating Fury consequence (active70448)
+
+- Ordinary Enraged Regeneration184364 with actual caster aura383468 casts real385174 once after success. Native385174 self selection,10% maximum-health amount, CANT_CRIT and overheal remain authoritative; no amount override from the talent dummy.
+- Missing, unlearned or another Warrior's talent cannot enable this caster. A rejected root recast cannot heal. Retain root native8s duration, -30% all-school damage taken and120s cooldown/noGCD;383468's existing masked+3000ms modifier gives11s.
+- Use only existing AfterCast and qualified limited IGNORE_CAST_IN_PROGRESS path, preserving actual in-progress Warrior64382 state and owned completion. No new state, timer, trigger API or native HP/regen/RNG/clock changes. Wider Bloodthirst/talent behavior, equipment/legal-loadout, full class, rotation, UDP and census parity are unqualified. [Implementation/proof](../wiki/systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
+
 ## Spirit Wolf baseline (active70448)
 
 - Ghost Wolf2645 plus actual talent260878 starts real260882 regardless of which parent was applied first. With either parent absent, this binding must not start the child.
