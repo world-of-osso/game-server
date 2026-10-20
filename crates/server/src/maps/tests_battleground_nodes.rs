@@ -453,7 +453,13 @@ fn alterac_channel_cross_faction_team_fights_enemy_not_own_captain_and_restores_
         .send::<PvpChannel>(LeaveBattleground {
             match_id: entered.match_id,
         });
-    h.receive_pvp_updates(5);
+    let leave = h.receive_pvp_updates(5).remove(&actor.connection);
+    // The faction assertions below depend on this leave having actually returned.
+    let returned = leave.iter().flatten().any(|update| {
+        update.error.is_none()
+            && update.message.as_deref() == Some("returned to battleground origin")
+    });
+    assert!(returned, "successful native leave: {leave:?}");
     assert_eq!(
         h.app
             .world()
