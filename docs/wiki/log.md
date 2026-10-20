@@ -1,3 +1,7 @@
+## 2026-10-19 — Herald fixture-only admitted Roar seed
+
+[Ground diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hc729's three legitimate category-cooldown refusals leave the1500ms probe without an admitted cast. Approved actor-local fixture seed0 at natural release gives authored initial Fireball3656ms/Cone7735ms, after Roar2000ms plus1500ms cast. EventMap clock/queue, source ranges/repeats/admission and production RNG remain unchanged; exact expiry oracle retained. Three-run stability proof pending.
+
 ## 2026-10-19 — Herald native cast millisecond root fix
 
 [Captured root cause](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hr705 Cone38.65→53.70/Roar52.15+1500ms=53.65 isolates shared float progress1.4999996 after30×50ms. Pushed ignored actual native AI regressionbdb50ac74 fails39.30s; shared normal/channel/pushback3RED +nearest-ms control precede integer-ms runtimebb18da9. Shared53GREEN; strict native1450/1500ms endpoint50.60s plus six retained native ground/Omor pushback controls105.21s. Nearest-ms conversion/public f32 wire/pushback/source windows retained; no epsilon or broad rerun. Engine has no shared tick caller. Paired protocol/server independent gate/co-landing pending; original docs-only1a5 closure held.

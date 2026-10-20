@@ -17,6 +17,10 @@ pub(super) struct CastAdmissions {
     pub entries: Vec<Admission>,
 }
 
+/// One actor's fixture RNG seed, applied only at natural ground release.
+#[derive(Component)]
+pub(super) struct GroundCombatSeed(pub u64);
+
 /// Opt-in fixture evidence; never installed in production or ordinary test apps.
 #[derive(Resource)]
 pub(super) struct AiTickTrace {

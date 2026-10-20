@@ -116,6 +116,13 @@ impl EventMap {
         Some(event_id)
     }
 
+    /// Seed only fixture randomness, preserving the clock and pending source events.
+    #[cfg(test)]
+    pub(crate) fn seed_rng(&mut self, seed: u64) {
+        use rand::SeedableRng;
+        self.rng = Some(rand::rngs::StdRng::seed_from_u64(seed));
+    }
+
     /// Exact EventMap clock for opt-in fixture evidence; never advances it.
     #[cfg(test)]
     pub(crate) fn elapsed_ms(&self) -> u64 {

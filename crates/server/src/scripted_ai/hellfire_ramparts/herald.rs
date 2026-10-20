@@ -192,6 +192,13 @@ impl HeraldIntro {
         ctx.set_react_state(ReactState::Aggressive);
         ctx.do_cast_self(LOGIC_TIMER);
         ctx.world.entity_mut(ctx.me).remove::<HeraldUnkillable>();
+        #[cfg(test)]
+        if let Some(seed) = ctx
+            .world
+            .get::<super::super::tests::cast_admission::GroundCombatSeed>(ctx.me)
+        {
+            self.boss.events.seed_rng(seed.0);
+        }
         self.boss.events.schedule_range(FIREBALL_GROUND, 0, 5_000);
         self.boss.events.schedule_range(CONE_OF_FIRE, 0, 10_000);
         let map = ctx.map().expect("registered Ramparts actor map");

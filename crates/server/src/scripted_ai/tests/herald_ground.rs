@@ -349,6 +349,11 @@ fn assert_ground_parents(difficulty: u32) {
 #[test]
 fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
     let (mut h, _, nazan, _, _, _) = reach_fall(2);
+    // StdRng0 yields authored initial Fireball3656ms/Cone7735ms rolls,
+    // both after the first Roar2000ms request and its ordinary1500ms cast.
+    h.app.world_mut().entity_mut(nazan).insert(
+        crate::scripted_ai::tests::cast_admission::GroundCombatSeed(0),
+    );
     let origin = h.app.world().resource::<CastAdmissions>().origin;
     h.app.insert_resource(AiTickTrace {
         actor: nazan,
@@ -356,9 +361,9 @@ fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
         frames: Vec::new(),
     });
     let mut started = None;
-    // Initial Roar can be refused by the native shared category. Observe the
-    // same112s source window as the parent fixture; never override admission.
-    for _ in 0..2240 {
+    // Fixture-only combat RNG starts at natural release; real source ranges
+    // place competing first requests after Roar, without bypassing admission.
+    for _ in 0..100 {
         h.advance(0.05);
         let accepted_roar = h
             .app
@@ -376,7 +381,7 @@ fn encounter_coverage_herald_ground_roar_cast_1500ms_ai_deadline() {
         "native1500ms setup admissions: {:?}",
         h.app.world().resource::<CastAdmissions>().entries
     );
-    let started = started.expect("actual ordinary Roar admission within112s source window");
+    let started = started.expect("seeded source rolls admit ordinary first Roar");
     let first = h
         .app
         .world()
