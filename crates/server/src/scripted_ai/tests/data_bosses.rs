@@ -82,6 +82,10 @@ mod theradras;
 #[path = "vyletongue.rs"]
 mod vyletongue;
 
+#[path = "prepared_input_tests.rs"]
+mod prepared_input_tests;
+#[path = "prepared_inputs.rs"]
+mod prepared_inputs;
 #[path = "ragefire_completion.rs"]
 mod ragefire_completion;
 
@@ -291,143 +295,8 @@ fn encounter_fixture(
     if let Some(catalog) = catalog {
         app.insert_resource(catalog);
     }
-    let prepared = match entry {
-        234648 => Some(prepare_encounter_database("kystia")),
-        135322 => Some(prepare_encounter_database("golden-serpent")),
-        ADAROGG => Some(prepare_encounter_database("adarogg")),
-        SLAGMAW => Some(prepare_encounter_database("slagmaw")),
-        13282 => Some(prepare_encounter_database("noxxion")),
-        12225 => Some(prepare_encounter_database("celebras")),
-        12201 => Some(prepare_encounter_database("theradras")),
-        17306 => Some(prepare_encounter_database("gargolmar")),
-        17308 => Some(prepare_encounter_database("omor")),
-        186737 => Some(prepare_encounter_database("telash")),
-        _ => None,
-    };
-    let path = prepared
-        .as_ref()
-        .map_or_else(world_db_path, |(_, path)| path.clone());
-    let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    app.insert_resource(crate::conditions::load_spell_target_conditions(&path).unwrap());
-    app.insert_resource(super::super::kings_rest::load_molten_gold_areas(&conn).unwrap());
-    app.insert_resource(super::super::kings_rest::load_gust_slash_shape(&conn).unwrap());
-    app.insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&conn).unwrap());
-    app.insert_resource(
-        super::super::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap(),
-    );
-    app.insert_resource(super::super::kings_rest::load_gold_model_reaches(&conn).unwrap());
-    app.insert_resource(super::super::waypoint_path::load_script_paths(&conn).unwrap());
-    app.insert_resource(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
-    app.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
-    // Prepared copies have distinct imported authority; only canonical input is cached.
-    let canonical = prepared.is_none().then(crate::test_data::world_data);
-    let expected = canonical.map_or_else(
-        || crate::world_data::load_expected_stats(&conn),
-        |data| data.expected_stats.clone(),
-    );
-    let spawns: Vec<_> = if populate {
-        crate::world_data::load_spawns(&conn)
-            .into_iter()
-            .filter(|spawn| u32::from(spawn.map) == map_id)
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let mut templates = canonical.map_or_else(
-        || crate::world_data::load_templates(&conn, &expected),
-        |data| data.templates.clone(),
-    );
-    templates.retain(|id, _| {
-        *id == entry
-            || (entry == 234648 && [234660, 255050].contains(id))
-            || (entry == 135322 && [135406, 137020].contains(id))
-            || (entry == ADAROGG && *id == DEMONIC_LEAP)
-            || (entry == 7800 && *id == 7915)
-            || (entry == 13282 && *id == 13456)
-            || (entry == 12225 && [13743, 13716].contains(id))
-            || (entry == 12203 && *id == 11783)
-            || (entry == 12201 && *id == 12238)
-            || (entry == 17306 && *id == 17309)
-            || (entry == 17308 && *id == 17540)
-            || (entry == 186737 && *id == 197204)
-            || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
-            || spawns.iter().any(|spawn| spawn.template_entry == *id)
-    });
-    let difficulty_templates = if let Some(data) = canonical {
-        data.difficulty_templates
-            .iter()
-            .filter(|((entry, _), _)| templates.contains_key(entry))
-            .map(|(key, template)| (*key, template.clone()))
-            .collect()
-    } else {
-        crate::world_data::load_template_models(&conn, &mut templates);
-        crate::world_data::load_difficulty_templates(&conn, &expected, &templates)
-    };
-    let hp = conn
-        .prepare("SELECT level,class,basehp0,basehp1,basehp2 FROM creature_classlevelstats")
-        .unwrap()
-        .query_map([], |row| {
-            Ok((
-                (row.get(0)?, row.get(1)?),
-                [row.get(2)?, row.get(3)?, row.get(4)?],
-            ))
-        })
-        .unwrap()
-        .map(Result::unwrap)
-        .collect();
-    let (template_string_ids, spawn_string_ids, script_spawn_groups) = if populate {
-        (
-            crate::world_data::load_template_string_ids(&conn).unwrap(),
-            crate::world_data::load_spawn_string_ids(&conn).unwrap(),
-            crate::world_data::load_script_spawn_groups(&conn, super::super::SCRIPT_SPAWN_GROUPS)
-                .unwrap(),
-        )
-    } else {
-        Default::default()
-    };
-    app.insert_resource(WorldData {
-        templates,
-        difficulty_templates,
-        spawns_by_map: crate::world_data::build_spawns_by_map(&spawns),
-        spawns,
-        template_string_ids,
-        spawn_string_ids,
-        script_spawn_groups,
-        // The Azure intro depends on the real non-following tender formation.
-        formations: if populate && map_id == 2515 {
-            crate::test_data::world_data().formations.clone()
-        } else {
-            Default::default()
-        },
-        addons: crate::world_data::load_spawn_addons(&conn),
-        template_addons: crate::world_data::load_template_addons(&conn),
-        class_level_base_hp: hp,
-        class_level_base_mana: data.base_mana.clone(),
-        expected_stats: expected,
-        summon_levels: crate::world_data::summon_levels::SummonLevels::load(&conn).unwrap(),
-        jump_charge_params: crate::spell_cast::jump_charge::load_params(&conn).unwrap(),
-        ..Default::default()
-    });
-    let mut scripts = smart_ai::load_smart_scripts(&path).unwrap();
-    if [3674, 3669, 3670].contains(&entry) {
-        // Pin the successful branch of the authored80% chance; keep the
-        // selected source timer, spell and target. Production is unchanged.
-        for row in std::sync::Arc::make_mut(scripts.0.get_mut(&entry).unwrap()) {
-            if row.action_type == 11 && row.chance == 80 {
-                row.chance = 100;
-            }
-        }
-    }
-    // Use production's complete DB2 store, including absence of legacy SAI IDs.
-    // A script's unknown spell must fail normal admission, not panic the fixture.
-    let all = crate::spell_cast::test_harness::world_db().unwrap();
-    let mut store = all.store.clone();
-    if [17306, 17308].contains(&entry) || store.get(119297).is_none() {
-        // Production's loader over the prepared copy's server-side tables.
-        store.append_serverside(&conn).unwrap();
-    }
-    app.insert_resource(store);
-    app.insert_resource(scripts);
+    let inputs = prepared_inputs::encounter_inputs(entry, map_id, populate);
+    inputs.install(&mut app);
     let mut maps = data.maps.clone();
     if entry == 234648 {
         // Mirror Image and Blink resolve their authored ground destinations.
@@ -511,7 +380,8 @@ fn encounter_fixture(
         // 500 yards east of the Serpent's spawn, outside every aggro radius.
         (None, [-565.97, 2641.51, 796.115, std::f32::consts::PI])
     } else {
-        let (boss, spawn) = spawn_authored_actor(&mut app, &conn, entry, map, difficulty);
+        let (boss, spawn) =
+            spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 17306, 17308,
         ]
@@ -556,6 +426,21 @@ fn encounter_fixture(
     (h, boss, map)
 }
 
+fn load_authored_spawn(
+    conn: &Connection,
+    entry: u32,
+    map_id: u32,
+    difficulty: u32,
+) -> CreatureSpawn {
+    conn.query_row(
+        "SELECT guid,position_x,position_y,position_z,orientation,spawntimesecs FROM content_creature WHERE id1=? AND map=? ORDER BY guid LIMIT 1",
+        [entry, map_id], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: entry,
+            map: map_id as u16, zone_id: 0, position_x: row.get(1)?, position_y: row.get(2)?,
+            position_z: row.get(3)?, orientation: row.get(4)?, spawntimesecs: row.get(5)?,
+            wander_distance: 0.0, movement_type: 0, display_id: None, unit_flags: None,
+            spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap()
+}
+
 fn spawn_authored_actor(
     app: &mut App,
     conn: &Connection,
@@ -563,13 +448,17 @@ fn spawn_authored_actor(
     map: InMap,
     difficulty: u32,
 ) -> (Entity, CreatureSpawn) {
-    let spawn = conn.query_row(
-        "SELECT guid,position_x,position_y,position_z,orientation,spawntimesecs FROM content_creature WHERE id1=? AND map=? ORDER BY guid LIMIT 1",
-        [entry, map.map_id], |row| Ok(CreatureSpawn { guid: row.get(0)?, template_entry: entry,
-            map: map.map_id as u16, zone_id: 0, position_x: row.get(1)?, position_y: row.get(2)?,
-            position_z: row.get(3)?, orientation: row.get(4)?, spawntimesecs: row.get(5)?,
-            wander_distance: 0.0, movement_type: 0, display_id: None, unit_flags: None,
-            spawn_difficulties: vec![difficulty], equipment_id: 0 })).unwrap();
+    let spawn = load_authored_spawn(conn, entry, map.map_id, difficulty);
+    spawn_prepared_actor(app, spawn, map, difficulty)
+}
+
+fn spawn_prepared_actor(
+    app: &mut App,
+    spawn: CreatureSpawn,
+    map: InMap,
+    difficulty: u32,
+) -> (Entity, CreatureSpawn) {
+    let entry = spawn.template_entry;
     let wd = app.world().resource::<WorldData>();
     let mut queue = bevy::ecs::world::CommandQueue::default();
     let mut commands = Commands::new(&mut queue, app.world());

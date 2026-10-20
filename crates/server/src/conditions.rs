@@ -50,6 +50,7 @@ struct Condition {
 
 /// Implicit target conditions: (spell, effect index) -> conditions.
 #[derive(Resource, Debug, Default)]
+#[cfg_attr(test, derive(Clone))]
 pub(crate) struct SpellTargetConditions(HashMap<(u32, u8), Vec<Condition>>);
 
 impl SpellTargetConditions {
