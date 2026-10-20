@@ -382,7 +382,7 @@ impl BossScript for HeraldIntro {
                 ctx.do_cast_self(39_427);
                 self.boss.events.repeat_range(40_000, 50_000);
             }
-            // Ground77 hooks live in liquid_fire; flying-family children remain unimplemented.
+            // Fireball/Cone77 hit hooks and the source GO AI live in liquid_fire.
             _ => unreachable!("unknown Herald combat event{event}"),
         }
     }

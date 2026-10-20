@@ -55,6 +55,8 @@ mod herald_call;
 mod herald_damage;
 #[path = "herald_fall.rs"]
 mod herald_fall;
+#[path = "herald_flying_liquid_fire.rs"]
+mod herald_flying_liquid_fire;
 #[path = "herald_ground.rs"]
 mod herald_ground;
 #[path = "herald_intro.rs"]
@@ -83,6 +85,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "theradras.rs"]
 mod theradras;
+#[path = "vazruden_slay.rs"]
+mod vazruden_slay;
 #[path = "vyletongue.rs"]
 mod vyletongue;
 

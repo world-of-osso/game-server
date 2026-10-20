@@ -92,6 +92,7 @@ fn prepare(h: &mut Harness, now: i64) {
     ));
 }
 fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot {
+    let reply_kind = command.reply_kind();
     h.app
         .world_mut()
         .get_mut::<MessageSender<TradingPostRequest>>(h.connection)
@@ -113,7 +114,66 @@ fn request(h: &mut Harness, command: TradingPostRequest) -> TradingPostSnapshot 
     // Host routing fills receivers after First; let the collection inbox consume
     // the same committed reply before callers inspect both message types.
     h.app.update();
-    replies.pop().expect("Trading Post server reply")
+    let reply = replies.pop().expect("Trading Post server reply");
+    assert_eq!(reply.reply_kind, reply_kind);
+    reply
+}
+
+#[test]
+fn trading_post_reply_kinds_identify_reads_and_refused_actions() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let mut h = crate::bank_test_harness::harness_at(file.path(), "Replykind").unwrap();
+    prepare(&mut h, 1790812900);
+    let cases = [
+        (TradingPostRequest::Query, TradingPostReplyKind::Query),
+        (TradingPostRequest::Balance, TradingPostReplyKind::Balance),
+        (
+            TradingPostRequest::Purchase {
+                vendor_item_id: u32::MAX,
+            },
+            TradingPostReplyKind::Purchase,
+        ),
+        (
+            TradingPostRequest::Checkout {
+                vendor_item_ids: vec![u32::MAX],
+            },
+            TradingPostReplyKind::Checkout,
+        ),
+        (
+            TradingPostRequest::Refund {
+                vendor_item_id: u32::MAX,
+            },
+            TradingPostReplyKind::Refund,
+        ),
+        (
+            TradingPostRequest::Freeze {
+                vendor_item_id: Some(u32::MAX),
+            },
+            TradingPostReplyKind::Freeze,
+        ),
+        (
+            TradingPostRequest::Freeze {
+                vendor_item_id: None,
+            },
+            TradingPostReplyKind::Freeze,
+        ),
+    ];
+    for (command, expected) in cases {
+        let reply = request(&mut h, command);
+        assert_eq!(reply.reply_kind, expected);
+        assert_eq!(reply.tender, 0);
+        if matches!(
+            expected,
+            TradingPostReplyKind::Query | TradingPostReplyKind::Balance
+        ) {
+            assert!(reply.error.is_none());
+        } else {
+            assert!(
+                reply.error.is_some(),
+                "No active vendor can authorize this action"
+            );
+        }
+    }
 }
 
 #[test]

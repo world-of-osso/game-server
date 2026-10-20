@@ -276,6 +276,9 @@ pub(super) fn snapshot_periodic_amount(
     effect: &crate::spell_info::SpellEffect,
     amount: f32,
 ) -> f32 {
+    let amount = crate::spell_cast::scripts::snapshot_soul_of_the_forest(
+        world, caster, spell, effect, amount,
+    );
     if spell.id == RAKE_BLEED && effect.index == 0 {
         crate::spell_cast::scripts::rake_bleed_snapshot(world, caster, amount)
     } else {
@@ -327,9 +330,11 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    super::abundance::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
+    super::natures_guardian::register(&mut scripts);
     scripts.0.insert(
         super::fel_devastation::FEL_DEVASTATION,
         AuraScript {

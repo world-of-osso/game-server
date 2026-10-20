@@ -6,9 +6,21 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).
 
+## Germination Rejuvenation routing
+
+With actual learned155675, ordinary774 must apply native155777 instead when its caster already owns774 and has no own155777, or when own155777 has less remaining time than own774. Otherwise apply/refresh774 normally. Compare only that caster's actual aura deadlines, retaining the other instance's absolute expiry. Untalented casts must remain single774 refreshes. Source: SimC76f8118 `sc_druid.cpp:6487–6518`; child155777 uses its native periodic heal effects/duration. Preserve ordinary parent costs, GCD, cast receipt and generic aura behavior; no timer/amount overrides, Swiftmend interaction or global stacking changes.
+
 ## Swiftmend own-HoT consumption
 
 On a successful native18562 hit, consume exactly one HoT owned by that caster from the actual hit patient, in Regrowth8936 → Wild Growth48438 → Rejuvenation774 order (SimC76f8118 `swiftmend_t::impact`). Preserve other casters' instances and lower-priority HoTs. Actual learned native Verdant Infusion392410 disables consumption; no fabricated talent grants or aura removals. This hook retains ordinary healing/cost/timing/eligibility and does not implement the consumed-HoT bonus healing, which remains a named unimplemented effect outside this slice.
+
+## Abundance native threshold
+
+Actual learned207383 grants one native207640 buff only while the caster has at least the native threshold of own primary Rejuvenation774 auras active (70448 effect0 threshold5, buff CumulativeAura1). Reconcile on ordinary774 application/removal; natural expiry below the threshold removes the buff. Preserve native207640 cost/crit effects and duration, without old TC per-Rejuvenation stack increments. Germination counting, duplicate-refresh semantics and other-caster policy changes are outside this slice.
+
+## Restoration Soul of the Forest
+
+Successful Swiftmend18562 with actual learned158478 grants native114108 to the caster, not the healed patient. The next Regrowth8936 or Rejuvenation774 consumes the buff after resolving its effects. Use the buff's actual effect0 percentage (native60), as SimC76f8118's persistent multiplier: direct Regrowth healing and the affected periodic-heal snapshot gain the bonus, which remains on that snapshot after buff removal. Never reread the live buff to amplify old periodic ticks. Germination's Rejuvenation child uses the same sourced snapshot rule; parent774 retains consumption/cost ownership. Untalented casts and unrelated heals stay unchanged. Extra targets392302 and other Soul-of-Forest variants are excluded.
 
 ## What it must do
 

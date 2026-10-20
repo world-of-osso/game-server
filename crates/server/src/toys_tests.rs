@@ -1303,8 +1303,7 @@ fn toyfx4_transmitted_objects_spawn_at_data_destinations_and_expire() {
         .unwrap();
         h.app
             .insert_resource(crate::meeting_stone::load_meeting_stone_data(&conn).unwrap());
-        h.app
-            .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+        h.app.insert_resource(world_db().unwrap().store.clone());
         h.app
             .world_mut()
             .entity_mut(h.caster)
@@ -4274,13 +4273,7 @@ fn toyfx21_all_69_source_roots_reject_real_northshire_and_absent_terrain_before_
 
 fn facing25_fixture(path: &std::path::Path, item: u32) -> (Harness, Entity) {
     let (mut h, character) = setup(path);
-    let conn = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    h.app
-        .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
+    h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
         .world_mut()
         .entity_mut(h.caster)
