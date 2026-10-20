@@ -166,6 +166,21 @@ fn ordinary_quest_bonus_at_player_cap_pays_authored_money_once_and_survives_reop
 }
 
 #[test]
+#[ignore = "required bonus catalog must fail startup explicitly when missing"]
+fn ordinary_quest_bonus_missing_runtime_catalog_is_an_explicit_load_error() {
+    let directory = tempfile::tempdir().unwrap();
+    let world = directory.path().join("world.db");
+    std::os::unix::fs::symlink(crate::test_data::world_db_path(), &world).unwrap();
+    let error = crate::quest_data::load_quest_db(&world)
+        .err()
+        .expect("missing required quest-reward-bonus.json must not load with zero bonuses");
+    assert!(
+        error.to_string().contains("quest-reward-bonus.json"),
+        "{error}"
+    );
+}
+
+#[test]
 #[ignore = "control bundled with native bonus RED"]
 fn ordinary_quest_bonus_below_player_cap_above_quest_ceiling_keeps_base_money() {
     ordinary_bonus_turn_in(crate::experience::MAX_LEVEL - 1, BASE_COPPER);
