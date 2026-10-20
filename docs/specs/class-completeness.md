@@ -3,7 +3,7 @@
 ## Earthen Rage baseline (active70448)
 
 - Native Elemental talent170374 records its owner's latest actual harmful-spell action target and casts real self170377. Selection changes and melee swings do not retarget or activate it;170379 must not retrigger it.
-- Native170377 effect0 ticks every3000ms for6000ms, casting real170379 at that remembered target only while the original caster retains170374. Preserve native damage coefficient/variance, expiry and ordinary spell damage resolution. Missing/despawned targets never select a substitute.
+- Native170377 effect0 retains SpellMisc144253 Attributes_5=8704, including0x200 EXTRA_INITIAL_PERIOD: ticks at0/3000/6000ms, casting real170379 at that remembered target only while the original caster retains170374. Preserve native damage coefficient/variance, expiry and ordinary spell damage resolution. Missing/despawned targets never select a substitute.
 - Keep one spell-specific transient target Entity per passive caster, clear it on passive removal, and isolate multiple owners. No persistence, wire fields, generic proc framework or fallback targeting. Other Shaman talents/overloads, legal loadouts, full class and UDP parity remain unqualified. [Implementation/proof](../wiki/systems/auras.md#earthen-rage-baseline--2026-10-19).
 
 ## Named native-input gap (active70448)

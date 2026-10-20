@@ -1,6 +1,6 @@
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
-[Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. GREEN/lead integration pending;248 remains DEFERRED.
+[Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. First consumer attempt6PASS/2FAIL20.25s exposes source-invalid two-child/no-in-flight-arrival oracles. Approved separate oracle correction cites SpellMisc144253 Attributes_5=8704/0x200 initial tick and child Speed90/LaunchDelay0.75; native0/3/6 dispatches and already-launched missile preserved,180-frame window unchanged. Corrected GREEN/lead integration pending;248 remains DEFERRED.
 
 ## 2026-10-19 — Aura248 native-input gap
 

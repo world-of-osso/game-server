@@ -191,15 +191,38 @@ fn native_earthen_rage_direct_damage_child_payload_is_qualified() {
 
 #[test]
 #[ignore = "behavioral RED before native Earthen Rage proc consumer"]
-fn native_earthen_rage_ordinary_damage_procs_self_aura_and_two_scheduled_children() {
+fn native_earthen_rage_ordinary_damage_procs_self_aura_and_three_scheduled_children() {
     let mut h = fixture();
     let (source, target) = (h.caster, h.npc);
     cast_lightning(&mut h, target);
     let expiry = proc_expiry(&h, source);
+    let store = h.app.world().resource::<SpellStore>();
+    // Native SpellMisc144253: 8704 includes EXTRA_INITIAL_PERIOD (0x200).
+    let periodic_misc = store.get(PERIODIC).unwrap().misc.as_ref().unwrap();
+    assert_eq!(periodic_misc.attributes[5], 8704);
+    assert_ne!(periodic_misc.attributes[5] & 0x200, 0);
+    // Native170379 flight is not canceled by removing the passive.
+    let child_misc = store.get(DAMAGE).unwrap().misc.as_ref().unwrap();
+    assert_eq!(child_misc.speed, 90.0);
+    assert_eq!(child_misc.launch_delay, 0.75);
+    let flight = 0.75 + 5.0 / 90.0;
     assert!(observed(&h, DAMAGE, source).is_empty());
-    h.advance(180);
+    let mut arrivals = Vec::new();
+    for _ in 0..180 {
+        h.advance(1);
+        let count = observed(&h, DAMAGE, source).len();
+        if count > arrivals.len() {
+            assert_eq!(count, arrivals.len() + 1);
+            arrivals.push(h.app.world().resource::<Time>().elapsed_secs_f64() - (expiry - 6.0));
+        }
+    }
+    assert_eq!(arrivals.len(), 3, "{arrivals:?}");
+    for (arrival, dispatch) in arrivals.iter().zip([0.0, 3.0, 6.0]) {
+        let expected_arrival = dispatch + flight;
+        assert!((arrival - expected_arrival).abs() <= 0.15, "{arrivals:?}");
+    }
     let children = observed(&h, DAMAGE, source);
-    assert_eq!(children.len(), 2, "{children:?}");
+    assert_eq!(children.len(), 3, "{children:?}");
     assert!(
         children
             .iter()
@@ -209,7 +232,7 @@ fn native_earthen_rage_ordinary_damage_procs_self_aura_and_two_scheduled_childre
     assert!(h.app.world().resource::<Time>().elapsed_secs_f64() > expiry);
     assert!(!super::has_aura(h.app.world(), source, PERIODIC));
     h.advance(120);
-    assert_eq!(observed(&h, DAMAGE, source).len(), 2);
+    assert_eq!(observed(&h, DAMAGE, source).len(), 3);
 }
 
 #[test]
@@ -283,7 +306,14 @@ fn native_earthen_rage_passive_removal_stops_pending_child_dispatch() {
     cast_lightning(&mut h, target);
     let _ = proc_expiry(&h, source);
     remove_passive(&mut h);
+    // Drain only the native initial child already in flight: Speed90,
+    // LaunchDelay0.75;20 ordinary50ms frames remain before the next3s tick.
+    h.advance(20);
     let before = observed(&h, DAMAGE, source).len();
+    assert_eq!(
+        before, 1,
+        "initial native missile must survive passive removal"
+    );
     h.advance(180);
     assert_eq!(observed(&h, DAMAGE, source).len(), before);
 }
