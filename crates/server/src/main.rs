@@ -114,6 +114,8 @@ mod quest_rules;
 mod quest_time;
 mod quest_view;
 mod race_class;
+#[cfg(test)]
+mod random;
 mod raid_history;
 mod renown;
 mod reputation;
