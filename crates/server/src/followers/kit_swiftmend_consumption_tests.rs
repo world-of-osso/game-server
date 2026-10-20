@@ -66,7 +66,35 @@ fn cast_native_swiftmend_and_observe_heal(h: &mut Harness, healer: Entity) {
 }
 
 #[test]
-#[ignore = "SWIFTMEND_OWN_HOT_CONSUMPTION: qualify level17 ordinary native boundary"]
+fn follower_swiftmend_consumption_preserves_another_casters_rejuvenation() {
+    let (mut h, healer) = at_level(CRENNA, 17, |_| {});
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(healer)
+        .unwrap()
+        .profile
+        .clone();
+    let other = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let owner = h.caster;
+    super::spawning::initialize(h.app.world_mut(), owner, other, profile).unwrap();
+    creature_cast(h.app.world_mut(), other, REJUVENATION, Some(healer), false).unwrap();
+    wait_for_native_cast_and_gcd(&mut h, other);
+    apply_own_hot(&mut h, healer, REJUVENATION);
+    cast_native_swiftmend_and_observe_heal(&mut h, healer);
+    assert!(!owns_hot(&h, healer, REJUVENATION));
+    assert!(
+        h.app
+            .world()
+            .get::<ActiveAuras>(healer)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == REJUVENATION && aura.caster == other),
+        "consumption must leave the other caster's actual instance intact"
+    );
+}
+
+#[test]
 fn follower_swiftmend_consumption_level17_consumes_own_rejuvenation() {
     let (mut h, healer) = at_level(CRENNA, 17, |_| {});
     assert!(!crate::auras::has_aura(
@@ -83,7 +111,6 @@ fn follower_swiftmend_consumption_level17_consumes_own_rejuvenation() {
 }
 
 #[test]
-#[ignore = "SWIFTMEND_OWN_HOT_CONSUMPTION: actual native learned Verdant exception"]
 fn follower_swiftmend_consumption_level32_native_verdant_preserves_rejuvenation() {
     let (mut h, healer) = at_level(CRENNA, 32, |_| {});
     assert!(crate::auras::has_aura(
@@ -100,7 +127,6 @@ fn follower_swiftmend_consumption_level32_native_verdant_preserves_rejuvenation(
 }
 
 #[test]
-#[ignore = "SWIFTMEND_OWN_HOT_CONSUMPTION: source Regrowth before Rejuvenation"]
 fn follower_swiftmend_consumption_level17_consumes_regrowth_before_rejuvenation() {
     let (mut h, healer) = at_level(CRENNA, 17, |_| {});
     assert!(!crate::auras::has_aura(
