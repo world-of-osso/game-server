@@ -1,5 +1,9 @@
 # Hosted encounter coverage
 
+## Blood Furnace The Maker — 2026-10-20
+
+Source17381 Talk0/Heroic40059 victim beaker5–15/10–20s with actual damage and knockback, player-only slay Talk1, death Talk2 plus1922 bit0 credit, evade re-arm. Qualification2PASS39.74s→pushed ignored5RED36.78s→minimal GREEN5/5 29.90s, tests enabled. Named gaps: `MAKER_NORMAL_BEAKER_30925_ABSENT_70448`, `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`, `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`, `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`. [Contract](specs/boss-scripts.md#blood-furnace-the-maker-source-boundary); independent gate pending.
+
 ## Fel Iron chest activation blocked
 
 `GO_NOT_SELECTABLE_FLAG_UNMODELLED`: Fel Iron MakeActive requires a consumed native selectability flag, but global loading/refusal would also require existing unlock consumers outside this encounter. Chest work stopped without implementation. [Read-only census, source semantics and concrete Isle banner hazard](wiki/investigations/go-not-selectable-flag.md).

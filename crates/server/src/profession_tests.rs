@@ -11,6 +11,8 @@
 mod crafting_order_tests;
 #[path = "profession/crafting_origin_tests.rs"]
 mod crafting_origin_tests;
+#[path = "profession/spell_cooldown_persistence_tests.rs"]
+mod spell_cooldown_persistence_tests;
 
 #[test]
 fn achievements_criteria_native_known_spell_marker_gates_recipe_facts_and_reopens() {
@@ -546,8 +548,8 @@ use shared::components::{CharacterAppearance, Health, Level, Npc, Position, Unit
 use shared::protocol::{
     CastFailed, CombatChannel, CraftRecipe, InteractNpc, InteractionChannel, InteractionKind,
     InteractionOpened, NpcFlags, ProtocolPlugin, SelectGossipOption, SpellCastIntent,
-    StopSpellCast, TrainerBuyFailed, TrainerBuySpell, TrainerChannel, TrainerFailReason,
-    TrainerList, TrainerServiceState,
+    SpellCooldownUpdate, StopSpellCast, TrainerBuyFailed, TrainerBuySpell, TrainerChannel,
+    TrainerFailReason, TrainerList, TrainerServiceState,
 };
 use shared::spell_data::CastFailReason;
 
@@ -624,13 +626,15 @@ struct Harness {
     character_id: u64,
     player: Entity,
     connection: Entity,
+    level: u8,
 }
 
 fn harness(level: u8) -> Option<Harness> {
     harness_with(level, |_| {})
 }
 
-fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
+/// The profession server app over `world.db`, without a character.
+fn harness_app(extra: impl FnOnce(&mut App)) -> Option<(App, Connection)> {
     let path = world_db_path()?;
     let data = world_db()?;
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
@@ -645,6 +649,7 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     add_inbox::<TrainerBuyFailed>(&mut app);
     add_inbox::<ProfessionSnapshot>(&mut app);
     add_inbox::<CastFailed>(&mut app);
+    add_inbox::<SpellCooldownUpdate>(&mut app);
     app.insert_resource(world_db_faction_templates()?);
     app.insert_resource(load_gossip_catalog(&conn).unwrap());
     app.insert_resource(load_item_templates(&path).unwrap());
@@ -674,9 +679,29 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
     app.insert_resource(SpellStore::fixture(spells));
     app.insert_resource(power_table(data));
     app.insert_resource(class_spells(data));
+    Some((app, conn))
+}
+
+fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
+    let (mut app, conn) = harness_app(extra)?;
     let db = &app.world().resource::<GameDatabase>().db;
     let (character_id, _) =
         persistence::create_character(db, 1, "Crafter", 1, 1).expect("create character");
+    let (player, connection) = enter_world(&mut app, character_id, level);
+    Some(Harness {
+        app,
+        conn,
+        character_id,
+        player,
+        connection,
+        level,
+    })
+}
+
+/// Spawn the character's player, with its saved professions, and an in-world connection.
+fn enter_world(app: &mut App, character_id: u64, level: u8) -> (Entity, Entity) {
+    let professions =
+        persistence::load_professions(&app.world().resource::<GameDatabase>().db, character_id);
     let player = app
         .world_mut()
         .spawn((
@@ -700,7 +725,7 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
             UnitFactionTemplate(HUMAN_TEMPLATE),
             crate::maps::InMap::continent(0),
             Moving(false),
-            PlayerProfessions::default(),
+            professions,
         ))
         .id();
     let connection = app
@@ -726,17 +751,12 @@ fn harness_with(level: u8, extra: impl FnOnce(&mut App)) -> Option<Harness> {
                 pair::<CastFailed>(),
                 pair::<SpellCastIntent>(),
                 pair::<StopSpellCast>(),
+                pair::<SpellCooldownUpdate>(),
             ),
         ))
         .id();
     app.update();
-    Some(Harness {
-        app,
-        conn,
-        character_id,
-        player,
-        connection,
-    })
+    (player, connection)
 }
 
 impl Harness {

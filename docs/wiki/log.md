@@ -1,3 +1,17 @@
+## 2026-10-20 — Spell cooldown persistence
+
+[Contract](../specs/spell-cooldown-persistence.md): player spell/category cooldowns persist as wallclock deadlines at logout and replay as `SpellCooldownUpdate` at world entry (TC SpellHistory SaveToDB/LoadFromDB/SendSpellHistory). RED e9b2860dc/cca7855fc failed at relog replay for Prismatic Sphere28027 and Berserker Rage18499 (in-session rejection already held); GREEN passes in session, after relog and after restart, plus load-time pruning.
+## 2026-10-19 — Omen and one-use Clearcasting
+
+[Native inputs and proof boundary](investigations/follower-data.md#omen-of-clarity-and-one-use-clearcasting--2026-10-19): actual learned15/native4%113043→16870, zero native charges with existing free-Regrowth modifier. Pushed three ignored cases0544ff450 give1PASS/2FAIL15.29s: buff never consumed, unrelated Rejuvenation refreshes it;15/15 tick/deadline changes plus generic DB100 reader expose missing native effect-chance check. Only113043 own-periodic33763/native4% check and composed next-Regrowth consumption added54d83ff56; unchanged3GREEN19.98s/zero warnings before enabling976f. Real acquisition48 eligible ticks each under derived339 confidence bound; no RNG distribution certification or fake inputs. Latest unrelated master merge2a7573d02; final independent gate pending.
+
+## 2026-10-19 — Tranquil Mind two-stack Clearcasting
+
+[Native source and proof](investigations/follower-data.md#tranquil-mind-two-stack-clearcasting--2026-10-19): actual25 native403521s3 chance5%/s1 op37+1 cap; existing generic cap already passes actual24 repeated procs/25 third proc. Pushedc4aa native3 gives2PASS/1FAIL28.55s: two earned stacks→first free Regrowth wrongly removes both. Minimal2b8f chooses native5% and existing spend_stack; unchanged3GREEN17.68s/zero warnings proves2→1→0 then actual paid Regrowth before enablingf43b. Binomial bounds cover multiple late-enough natural procs per finite native lifetime, not a frequency certificate/gameplay timer. Clearcasting index/investigation merge conflict resolved retaining both sides; requested merged Clearcasting3PASS16.04s atcd1bbe, then Tranquil rebased onto that tip with four patch-equivalent commits. Independent final gate pending.
+
+## 2026-10-20 — Blood Furnace The Maker
+
+[The Maker17381](systems/boss-scripts.md#blood-furnace-the-maker--2026-10-20) ported on BossAi(0) with `Ctx::dungeon_mode` consolidation; qualification, pushed ignored RED, GREEN5/5 before enabling. Read-only trace found no canonical542/543 creature bindings (`RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED`).
 ## 2026-10-20 — db2_casc scalar-first pallet order
 
 [Decoder notes](../db2-casc-sparse.md#fixed-record-decoding):
@@ -1994,6 +2008,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 [Typed invisibility](systems/auras.md#typed-invisibility-and-spell-area-eligibility-2026-10-11): real32727/type4 preparation exposed reciprocity incorrectly hiding game objects. Pinned TC Object.cpp:1003 excludes non-units; source-channel Cage/Interest reproduces the boundary while preserving unit detection and invisible-object checks.
 
 # Wiki Log
+
+-2026-10-19: Invigorating Fury184364+383468→385174 qualified native payload/8vs11s/defense/recovery/actual Warrior cast preservation3PASS; pushed ignored788ff0e68→3RED/3controls; existing AfterCast/limited helper consumer4a5aaa555→fresh ignored6GREEN25.43s/0warnings; enabled after GREEN, retained3qualification forms nine-case composite; lead integration pending. See [spell casting](systems/spell-casting.md#invigorating-fury-consequence--2026-10-19).
 
 - 2026-10-13 — [Recovery rates](systems/auras.md#cooldown-recovery-rates): native286 start/apply/remove/refresh/expiry, owning spell attribution for category-only timers, real Rapid Fire/Sprint/Hot Hand controls and current owner updates; full ability/global-time/native-rendered parity remains open.
 - 2026-10-13 — [Map instance type](systems/dungeon-achievements.md#map-instance-type-verified-2026-10-13): exact authored122 map membership, native arena/BG killing-blow/reward/queued-death RED/GREEN and cross-type/persistence controls; +4 statistics, missing raid-death18 unclaimed.
