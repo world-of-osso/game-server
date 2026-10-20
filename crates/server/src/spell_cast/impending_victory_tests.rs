@@ -168,7 +168,7 @@ fn native_impending_victory_root_uses_real_charge_rage_and_native_recovery() {
         .iter()
         .find(|event| {
             event.spell_id == Some(ROOT)
-                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
         })
         .unwrap();
     if hit.kind == CombatLogKind::Damage {
