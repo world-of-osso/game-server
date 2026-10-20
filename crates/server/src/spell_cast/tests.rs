@@ -262,28 +262,46 @@ fn cast_time_spell_completes_after_its_cast_time() {
     h.cast_and_deliver(FIREBALL, Some(h.npc));
     let cast = h.app.world().get::<CastState>(h.caster).expect("cast bar");
     assert_eq!(cast.duration, 1.75);
-    println!(
-        "native Fireball received at{:?}, state{cast:?}",
-        h.app.world().resource::<Time<Fixed>>().elapsed()
-    );
+    let tick = h.app.world().resource::<Time<Fixed>>().timestep();
+    assert_eq!(tick, std::time::Duration::from_millis(50));
+    let observed = h.app.world().resource::<Time<Fixed>>().elapsed();
+    let elapsed_ms = (f64::from(cast.elapsed) * 1000.0).round() as u64;
+    let started = observed - std::time::Duration::from_millis(elapsed_ms);
+    let launch_at = started + std::time::Duration::from_millis(1750);
     assert_eq!(
         h.app.world().get::<Mana>(h.caster).unwrap().current,
         10_000.0
     );
-    h.advance(30);
-    assert!(h.app.world().get::<CastState>(h.caster).unwrap().elapsed < 1.75);
-    assert_eq!(h.health(h.npc), 5000.0);
-    h.advance(10);
+    while h.app.world().resource::<Time<Fixed>>().elapsed() + tick < launch_at {
+        h.advance(1);
+        assert!(h.app.world().get::<CastState>(h.caster).is_some());
+        assert_eq!(
+            h.app.world().get::<Mana>(h.caster).unwrap().current,
+            10_000.0
+        );
+        assert_eq!(h.health(h.npc), 5000.0);
+        assert!(
+            h.inbox
+                .log
+                .iter()
+                .all(|event| event.kind != CombatLogKind::CastSuccess)
+        );
+    }
+    assert_eq!(
+        h.app.world().resource::<Time<Fixed>>().elapsed() - started,
+        std::time::Duration::from_millis(1700)
+    );
+    h.advance(1);
+    assert_eq!(h.app.world().resource::<Time<Fixed>>().elapsed(), launch_at);
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
+    assert_eq!(
+        h.app.world().get::<Mana>(h.caster).unwrap().current,
+        9_900.0
+    );
     // SP coefficient 3.8812 × spell power 100 = 388, ± 2.5% variance.
     assert!(varied(388.12).contains(&(5000.0 - h.health(h.npc))));
-    // 1% of base mana (100) spent on completion, then at most 0.25 s of 1%/s regen.
-    let mana = h.app.world().get::<Mana>(h.caster).unwrap().current;
-    println!(
-        "native Fireball final at{:?}, mana{mana}",
-        h.app.world().resource::<Time<Fixed>>().elapsed()
-    );
-    assert!((9_900.0..=9_925.0).contains(&mana), "mana {mana}");
+    // Source1750ms =35 progress ticks, not the old float36th tick. Cost is
+    // observed on the actual launch frame, before a later regen can mask it.
     let kinds: Vec<_> = std::mem::take(&mut h.inbox.log)
         .into_iter()
         .map(|e| e.kind)
