@@ -49,6 +49,7 @@ mod refresh;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
+mod spirit_wolf;
 pub mod stat_mods;
 pub(crate) mod stealth;
 pub(crate) mod summon_damage;

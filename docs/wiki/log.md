@@ -1,3 +1,7 @@
+## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
+
+[Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. GREEN/lead gate pending;248 remains DEFERRED.
+
 ## 2026-10-19 — Earthen Rage native RED and consumer
 
 [Named baseline](systems/auras.md#earthen-rage-baseline--2026-10-19): qualification3PASS67.67s FIRST; ignored6ae2239e1 pushed before genuine5RED/3controls17.89s. Existing A4/A226 hooks plus one passive-caster target Entity dispatch native children; target removed with passive, no selection fallback/framework/wire. First consumer attempt6PASS/2FAIL20.25s exposes source-invalid two-child/no-in-flight-arrival oracles. Approved separate oracle correction cites SpellMisc144253 Attributes_5=8704/0x200 initial tick and child Speed90/LaunchDelay0.75; native0/3/6 dispatches and already-launched missile preserved,180-frame window unchanged. Corrected ignoredc27aad3788GREEN18.15s/0warnings, then eight enabled; qualification3PASS67.67s retained separately (eleven-case composite). er723 landed d53e8f2b8, gate/check/fmt0;248 remains DEFERRED.
