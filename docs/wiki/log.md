@@ -1,3 +1,7 @@
+## 2026-10-19 — Fel Iron chest flag preflight blocked
+
+[GO_NOT_SELECTABLE_FLAG_UNMODELLED](investigations/go-not-selectable-flag.md) records the read-only placement/interaction census and existing Isle keep-banner unlock hazard. Fel Iron MakeActive stopped before implementation; raw census attached from the separate engine data evidence tree. No server/protocol/client flag semantics or chest behavior changed.
+
 ## 2026-10-19 — Herald flying Liquid Fire
 
 [Flying actual-impact boundary](systems/boss-scripts.md#herald-flying-liquid-fire--2026-10-19): qualification73bc2PASS64.88s establishes natural victim/random admission and positive impacts in Normal/Heroic FIRST. Pushed ignored4b11→four genuineRED200.85s; production adds only four IDs to existing Fireball hit hookd75c→four full nativeGREEN287.96s before enabling. Actual frame-local child/freshGO prevents stale victim-field acceptance; source GO lifecycle/damage/copy oracle reused unchanged. Retained natural qualification2PASS plus extracted ground/source/refusal6PASS183.95s ate0e53 completes a twelve-case composite; independent gate pending. No broader flight/native/balance/loot/persistence claim.
@@ -3293,3 +3297,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-19 — Resto Soul of the Forest proc and persistent numeric healing
 
 [Exact source and numeric proof](investigations/follower-data.md#restoration-soul-of-the-forest-next-heal-snapshot--2026-10-19): learned21missing114108RED/untalented20controlPASS→native3GREEN23.33s/zero warnings. Actual Regrowth normalized355→565 with distinctnative20/21baselines; Rejuvperiodic61→100, nativeeffect60% snapshot/next-hitconsumption. No injectedbuff/stats or392302targets. Enabled3afterGREEN93488e9b1; broader independentgatependingaftergm748.
+
+## 2026-10-19 — Native Abundance five-own-HoT threshold
+
+[Exact authority/native proof](investigations/follower-data.md#abundance-native-five-hot-threshold--2026-10-19): current70448threshold5/single-stack overrides olderTCstacking/SimCNYI. Native68controlPASS/69fifthgrantRED/expiryprereqblocked→apply/remove reconciliation3GREEN25.08s/zero warnings aftermasterad852. Enabled099e949e0; no Germination counting/cost-critnumericcertification/globaltimer change. Independentab759queued(druidfamilies+Abundance/check/AZEXIT/fmt).
