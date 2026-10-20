@@ -1,3 +1,19 @@
+## 2026-10-19 — Herald fixture-only admitted Roar seed
+
+[Ground diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hc729's three legitimate category-cooldown refusals leave the1500ms probe without an admitted cast. Approved actor-local fixture seed0 at natural release gives authored initial Fireball3656ms/Cone7735ms, after Roar2000ms plus1500ms cast. EventMap clock/queue, source ranges/repeats/admission and production RNG remain unchanged; exact expiry oracle retained. Three independent native stability executions7eff0e0fa/protocolfc37 pass36.11s/37.75s/41.14s, each actual first Roar3.95 admitted/exact1450/1500ms AI expiry; initial compile-only visibility failure excluded. Independent changed-family gate/co-landing pending.
+
+## 2026-10-19 — Herald native cast millisecond root fix
+
+[Captured root cause](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): hr705 Cone38.65→53.70/Roar52.15+1500ms=53.65 isolates shared float progress1.4999996 after30×50ms. Pushed ignored actual native AI regressionbdb50ac74 fails39.30s; shared normal/channel/pushback3RED +nearest-ms control precede integer-ms runtimebb18da9. Shared53GREEN; strict native1450/1500ms endpoint50.60s plus six retained native ground/Omor pushback controls105.21s. Nearest-ms conversion/public f32 wire/pushback/source windows retained; no epsilon or broad rerun. Engine has no shared tick caller. Paired protocol/server independent gate/co-landing pending; original docs-only1a5 closure held.
+
+## 2026-10-19 — Herald ground timing diagnostic capture
+
+[Standing diagnostic boundary](systems/boss-scripts.md#herald-ground-timing-diagnostic-boundary--2026-10-19): original full-workspace Heroic36921 late repeat remains unreproduced after actual same-CPU load1PASS118.34s and small shared-process/six-thread7PASS49.68s. Approved permanent pre-assert spell/Roar dump and test-only opt-in actual AI/cast clocks added; single expanded module261PASS/2private-Azure-envFAIL/6ignored811.19s did not reproduce; subsequent hr705 isolated the shared cast-progress defect above. No assertion/source timer/RNG changes; standing diagnostic retained.
+
+## 2026-10-19 — Herald real evade ingress RED
+
+[Loaded-copy reset contract](systems/boss-scripts.md#herald-loaded-copy-evadereset-boundary--2026-10-19): ignored RED first; native group357/wipe HARNESS SETUP plus ordinary boss-damage death control2PASS/four genuine missingFAIL RED121.66s. Real source despawn/FAIL hooks ported before next reset-boundary proof. Ingress8985f8af3→four genuine group-restoration RED110.75s. Independent copyclock/ordinary group357 ignoreRespawn operation→four full endpoint GREEN67.43s atb549ffbaf after correcting fresh default-reaction oracle. Source exact deadline/alive identity/count/patrol/min1/fresh natural intro pass; tests enabled, independent gate pending; no canonical data/flag changes.
+
 ## 2026-10-19 — Spirit Wolf native RED and lifecycle hooks
 
 [Named baseline](systems/auras.md#spirit-wolf-baseline--2026-10-19): accepted active70448 receipt-matching inputs; qualification64cf5318e2PASS25.00s FIRST/exact1/2/3/4s cap4/movement1.2/real800damage, then pushed ignoredb8b6e3f036RED/2controls32.08s. Apply/remove hooks only on2645/260878 dispatch real260882 and clear260882/260881; no new state/timer/periodic/wire. Fresh ignored2d5ed1cfc8GREEN19.76s/0warnings, then eight enabled; qualification2PASS25.00s retained separately (ten-case composite). Independent lead gate pending;248 remains DEFERRED.
