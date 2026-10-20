@@ -232,7 +232,6 @@ fn apply_native_low_level_stats(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED: The Maker17381 script not ported"]
 fn encounter_coverage_maker_heroic_aggro_speech_and_beaker_schedule() {
     let (mut h, boss, _) = pull_maker(2);
     let player = h.player();
@@ -267,7 +266,6 @@ fn encounter_coverage_maker_heroic_aggro_speech_and_beaker_schedule() {
 }
 
 #[test]
-#[ignore = "RED: The Maker17381 script not ported"]
 fn encounter_coverage_maker_normal_beaker_absent_without_substitute() {
     let (mut h, boss, map) = pull_maker(1);
     h.advance(60.0);
@@ -284,7 +282,6 @@ fn encounter_coverage_maker_normal_beaker_absent_without_substitute() {
 }
 
 #[test]
-#[ignore = "RED: The Maker17381 script not ported"]
 fn encounter_coverage_maker_slay_speaks_for_autonomous_player_kill() {
     let (mut h, boss, _) = maker_copy(1);
     super::omor_slay::install_player_death_transition(&mut h);
@@ -339,7 +336,6 @@ fn encounter_coverage_maker_slay_ignores_npc_victim() {
 }
 
 #[test]
-#[ignore = "RED: The Maker17381 script not ported"]
 fn encounter_coverage_maker_death_speech_and_credit() {
     let (mut h, boss, map) = pull_maker(2);
     h.advance(1.0);
@@ -377,7 +373,6 @@ fn encounter_coverage_maker_death_speech_and_credit() {
 }
 
 #[test]
-#[ignore = "RED: The Maker17381 script not ported"]
 fn encounter_coverage_maker_evade_rearms_aggro_and_beaker() {
     let (mut h, boss, map) = pull_maker(2);
     let first = cast_times(&mut h, boss, HEROIC_BEAKER, 15.2);
