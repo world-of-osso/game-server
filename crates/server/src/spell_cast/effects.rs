@@ -22,6 +22,10 @@
 //! weapon type (SimC `action_t::calculate_weapon_damage`). Main-hand damage is
 //! `CharacterStats.main_hand` (`item_stats.rs`), unarmed 1-2 at 2.0 s.
 
+#[cfg(test)]
+#[path = "aura_stat_spell_tests.rs"]
+mod aura_stat_spell_tests;
+
 use std::collections::HashSet;
 
 use bevy::prelude::*;
@@ -64,6 +68,7 @@ pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
+pub const EFFECT_ENERGIZE_PCT: u32 = 137;
 pub const EFFECT_FORCE_CAST: u32 = 140;
 /// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA: u32 = 164;
@@ -73,6 +78,7 @@ pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
 pub const EFFECT_LEAP: u32 = 29;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 pub const EFFECT_ATTACK_ME: u32 = 114;
+pub const EFFECT_SANCTUARY_2: u32 = 176;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
@@ -96,6 +102,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_INSTAKILL => instakill,
+        EFFECT_SANCTUARY_2 => super::sanctuary::apply,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,
@@ -109,6 +116,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
             crate::death::resurrection::send_offer
         }
         EFFECT_ENERGIZE => energize,
+        EFFECT_ENERGIZE_PCT => energize_pct,
         41 => super::teleport::jump_to_unit,
         96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
@@ -633,7 +641,13 @@ fn reduced_by_armor(spell: &SpellInfo) -> bool {
 
 /// The target's armor against the caster: a creature's own armor at the
 /// caster's level, a player's gear armor.
-fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> f32 {
+fn armor_reduced(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    amount: f32,
+    spell: &SpellInfo,
+) -> f32 {
     let (caster_scaling, target_scaling) = (
         UnitScaling::of(world, caster),
         UnitScaling::of(world, target),
@@ -655,6 +669,7 @@ fn armor_reduced(world: &World, caster: Entity, target: Entity, amount: f32) -> 
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
         armor,
@@ -710,7 +725,18 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
             let base = world
                 .get::<CharacterStats>(caster)
                 .map_or(0.0, |stats| stats.crit_pct);
-            spell_mods::modify(world, caster, spell, SpellModOp::CritChance, base)
+            let spell_bonus = if uses_weapon_crit_bonus_order(spell) {
+                0.0
+            } else {
+                stat_mods(world, caster).map_or(0.0, |mods| mods.spell_crit_pct)
+            };
+            spell_mods::modify(
+                world,
+                caster,
+                spell,
+                SpellModOp::CritChance,
+                base + spell_bonus,
+            )
         });
     let modifier = if takes_melee_crit_modifier(spell) {
         world
@@ -1186,7 +1212,7 @@ fn deal_damage_and_report(
     let amount = if super::attributes(ctx.spell, 4) & ATTR4_IGNORE_DAMAGE_TAKEN_MODIFIERS == 0
         && reduced_by_armor(ctx.spell)
     {
-        armor_reduced(world, ctx.caster, target, amount)
+        armor_reduced(world, ctx.caster, target, amount, ctx.spell)
     } else {
         amount
     };
@@ -1391,7 +1417,8 @@ pub fn apply_heal(
     periodic: bool,
 ) {
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
-        * versatility_multiplier(world, ctx.caster);
+        * versatility_multiplier(world, ctx.caster)
+        * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
     let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
@@ -1654,6 +1681,28 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         0.0
     };
     energize_unit(world, ctx, target, power, amount + bonus, false);
+}
+
+/// TC EffectEnergizePct (a352b1fa SpellEffects.cpp1619): target maximum,
+/// raw power units, truncated before the ordinary energize/overflow pipeline.
+fn energize_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if !world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return;
+    }
+    let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
+        return;
+    };
+    let Some((_, max)) =
+        super::powers::power_value(world, target, power).filter(|(_, max)| *max > 0.0)
+    else {
+        return;
+    };
+    let percent = modded_base_points(world, ctx.caster, ctx.spell, effect);
+    let amount = (max * percent / 100.0).trunc();
+    energize_unit(world, ctx, target, power, amount, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.

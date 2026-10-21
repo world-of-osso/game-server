@@ -148,11 +148,20 @@ pub fn rune_cooldown_secs(
 
 /// Recharge runes and mirror the ready count (and the pool max) into the Runes pool.
 pub(super) fn regenerate_runes(
+    mut commands: Commands,
     time: Res<Time>,
-    mut units: Query<(&mut Runes, &mut PowerPools), Without<GridDormant>>,
+    mut units: Query<
+        (
+            Entity,
+            &mut Runes,
+            &mut PowerPools,
+            Option<&crate::auras::ActiveAuras>,
+        ),
+        Without<GridDormant>,
+    >,
 ) {
     let dt = time.delta_secs();
-    for (mut runes, mut pools) in &mut units {
+    for (unit, mut runes, mut pools, auras) in &mut units {
         let Some(pool) = pools.bypass_change_detection().get_mut(PowerType::Runes) else {
             continue;
         };
@@ -160,7 +169,14 @@ pub(super) fn regenerate_runes(
         if !runes.order.is_empty() {
             runes.bypass_change_detection().regenerate(dt);
         }
+        let old = pool.current;
         pool.current = runes.ready() as f32;
+        crate::auras::power_amount_trigger::queue_regenerated(
+            &mut commands,
+            unit,
+            auras,
+            (PowerType::Runes, old, pool.current),
+        );
     }
 }
 

@@ -330,7 +330,12 @@ fn spellpower_override_retribution_passive_uses_attack_power() {
     assert_eq!(stats.attack_power, 33.0);
     assert_eq!(stats.spell_power, 32.0);
 
-    let mut mods = *h.app.world().get::<StatModifiers>(h.caster).unwrap();
+    let mut mods = h
+        .app
+        .world()
+        .get::<StatModifiers>(h.caster)
+        .unwrap()
+        .clone();
     mods.primary_flat = UnitStats {
         strength: 67.0,
         ..default()
