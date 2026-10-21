@@ -351,7 +351,7 @@ mod tests {
             },
         );
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1297382));
-        // TC a352b1fa SpellAuraEffects.cpp4962 passes a nonzero linked amount as BP0.
+        // TC a352b1fa SpellAuraEffects.cpp5316–5320 passes a nonzero linked amount as BP0.
         let child = h
             .app
             .world()

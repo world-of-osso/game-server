@@ -89,6 +89,17 @@ actions+=/judgment,if=holy_power<5
             {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1},
         ])
 
+    def test_selected_tiered_talents_use_allocated_entries_not_consumed_debug_rank(self):
+        rows = [
+            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2, "max_ranks": 2},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1, "max_ranks": 1},
+        ]
+        selected = PARITY.parse_selected_talents(json.dumps(rows))
+        self.assertEqual(selected, [
+            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1},
+        ])
+
     def test_missing_selected_talent_metadata_does_not_become_default_talents(self):
         with self.assertRaisesRegex(ValueError, "selected talent"):
             PARITY.parse_selected_talents("SimulationCraft initialized without debug metadata")
