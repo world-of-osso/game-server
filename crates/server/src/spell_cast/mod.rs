@@ -155,6 +155,8 @@ mod dummy_tests;
 pub mod effects;
 mod empower;
 #[cfg(test)]
+mod empower_input_tests;
+#[cfg(test)]
 mod excluded_aura_spell_tests;
 #[cfg(test)]
 mod excluded_caster_type_tests;

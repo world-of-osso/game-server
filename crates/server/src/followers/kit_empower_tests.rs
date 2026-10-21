@@ -196,7 +196,6 @@ fn native_empower_scouring_present_dispels_enemy_magic_buff() {
 }
 
 #[test]
-#[ignore = "RED: cancelled empower retains its normal spell cooldown and omits finish GCD"]
 fn native_empower_cancel_resets_surge_cooldown_without_release_damage() {
     let (mut h, caster) = prepare(21);
     let target = h.npc;
@@ -244,7 +243,6 @@ fn native_empower_cancel_resets_surge_cooldown_without_release_damage() {
 }
 
 #[test]
-#[ignore = "RED: follower holds single-target Fire Breath to max instead of APL rank1"]
 fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
     let (mut h, caster) = prepare(21);
     let mut begun = false;
