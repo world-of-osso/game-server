@@ -8,6 +8,9 @@ from retail_content import QUEST_COLUMNS, QUEST_MONEY_DIFFICULTIES
 DREAMWALK = 193753
 TRACKING_QUEST = 39174
 TRACKING_EVENT_FLAG = 0x400
+# Runtime bonus money is a separate required catalog, not a content table column.
+PUBLISHED_COLUMNS = {target: source for target, source in QUEST_COLUMNS.items()
+                     if target != "RewardBonusMoney"}
 
 
 def render_sql(conn):
@@ -25,8 +28,8 @@ def render_sql(conn):
 
 
 def render_insert():
-    targets = ", ".join(QUEST_COLUMNS)
-    sources = ", ".join(f"q.{column}" for column in QUEST_COLUMNS.values())
+    targets = ", ".join(PUBLISHED_COLUMNS)
+    sources = ", ".join(f"q.{column}" for column in PUBLISHED_COLUMNS.values())
     difficulty = "CASE q.RewardMoneyDifficulty " + " ".join(
         f"WHEN {n} THEN m.Difficulty_{n}" for n in range(QUEST_MONEY_DIFFICULTIES)) + " ELSE 0 END"
     # Same native columns, scaling level and money calculation as retail_content.insert_quest_templates.
@@ -42,7 +45,7 @@ LEFT JOIN quest_money_reward m ON m.ID=l.maxlevel
 WHERE q.ID={TRACKING_QUEST}
     AND NOT EXISTS(SELECT 1 FROM content_quest_template existing WHERE existing.ID=q.ID);
 COMMIT;
-SELECT ID, LogTitle, Flags, ContentTuningID, RewardBonusMoney
+SELECT ID, LogTitle, Flags, ContentTuningID
 FROM content_quest_template WHERE ID={TRACKING_QUEST};
 """
 

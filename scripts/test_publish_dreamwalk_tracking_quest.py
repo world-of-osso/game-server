@@ -41,8 +41,9 @@ class PublicationTests(unittest.TestCase):
             sql = render_sql(conn)
             conn.executescript(sql)
             self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template WHERE ID=?", (QUEST,)).fetchone()[0], 1)
-            targets = ",".join(QUEST_COLUMNS)
-            sources = ",".join(QUEST_COLUMNS.values())
+            expected = {target: source for target, source in QUEST_COLUMNS.items() if target != "RewardBonusMoney"}
+            targets = ",".join(expected)
+            sources = ",".join(expected.values())
             self.assertEqual(
                 conn.execute(f"SELECT {targets} FROM content_quest_template WHERE ID=?", (QUEST,)).fetchone(),
                 conn.execute(f"SELECT {sources} FROM tdb_quest_template WHERE ID=?", (QUEST,)).fetchone(),
