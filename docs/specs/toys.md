@@ -16,7 +16,7 @@ Do not add these three Toy rows until a real contract is established and approve
 ## Flag of Ownership source script
 
 - [x] Port TC a352b1fa `spell_item.cpp:3603–3641` for38578/51640 only: choose one random enemy player body in the source area, exclude NPCs/living/allied/out-of-range bodies, emit BroadcastText28008 with the selected owner, then trigger51657.
-- [x] Child51657 preserves the authored190589/display7953 wild flag, corpse destination, native60000ms aura/object lifetime and item recovery. Existing stored player corpses are authoritative; no invented corpse entities or modern flag aliases.
+- [x] Child51657 preserves the authored190589/display7953 wild flag, corpse destination, native60000ms aura/object lifetime and item recovery. Auras allowed while dead still expire naturally; the death-persistence flag does not make finite auras permanent. Existing stored player corpses are authoritative; no invented corpse entities or modern flag aliases.
 - [x] With no valid body, fail before root SpellGo/cooldown. Internal `NoValidTargets` maps to existing protocol `NoTarget` with detail, without changing frozen protocol03cebdb.
 
 The pure zero-payload Gadgetzan23453 teleport remains refused. Piccolo's current182346 has no proved source binding to TC's legacy17512 and remains a named gap. Native visuals and offline corpse discovery are not certified by server CPU fixtures.
