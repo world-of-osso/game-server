@@ -2,6 +2,7 @@
 //! quiet distance28..43, surface-collision destination, LOS200ms/path100ms retry,
 //! navmesh-only path≤30yd, running then800..1500ms pause. Owner control is lost.
 use super::{AuraStatMods, Feared};
+use crate::random as rand;
 use crate::{
     maps::InMap,
     navigation::{Corners, Goal, Navigation},

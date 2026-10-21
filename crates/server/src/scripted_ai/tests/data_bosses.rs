@@ -101,6 +101,8 @@ mod porung;
 mod the_maker;
 #[path = "theradras.rs"]
 mod theradras;
+#[path = "umbrelskul.rs"]
+mod umbrelskul;
 #[path = "vazruden_slay.rs"]
 mod vazruden_slay;
 #[path = "vyletongue.rs"]

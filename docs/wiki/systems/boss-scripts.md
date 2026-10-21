@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Umbrelskul partial Lua clock — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#umbrelskul-lua-clock-partial-boundary). Lead-approved LittleWigs2777a9d/native70448 partial port186738/2584. Dragon Strike first7.4s and next8.4s Normal/Follower or15.3s Mythic countdown starts only after actual native successful cast; cancelled casts have no invented retry. Crystalline Roar directly requests native384699 at12.2s/repeat23.1s or105.6s, using actual line129/width10 and5s casting. Source-unspecified384696 selector/energy/Brittle/crystals remain named gaps; no full Retail phase claim.
+
+Ignored REDa8b2e4c39 genuinely observes first-Strike0vs1; two native input/direct+periodic qualifications pass first. Partial78bd2a595 plus native tests87fad0cf7 give7/7PASS44.00s: Normal1/Follower205/Mythic23 real clocks, actual direct/periodic/line damage, native casting overlap, cancellation boundary, evade rearm,2584 completionbit2 independent of saved ordinal3, copy isolation and corpse silence. All enabled only after GREEN. Source-copy producer1PASS3.332s preserves stats/difficulties/addons/models/population/credit, idempotence and source-drift rejection. `--encounter umbrelskul` installs explicitly local Lua-backed binding only; canonical publication/final gate lead-owned. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/umbrelskul-*`.
+
 ## Azureblade partial Lua clock — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#azureblade-lua-clock-partial-boundary). Lead explicitly authorized LittleWigs2777a9d `Azureblade.lua` schedules with native70448 targets/effects despite missing TC AI. Initial image3.3/14.6s, cleave5.2/13.4s, orb10.6/15.8s each stop after source first-phase count2. Native cast time remains1/2/2.5s; second Cleave waits for actual Image casting, not widened source deadlines. Energy/center/Overwhelming phase and Image AI remain named gaps, not invented clocks or Retail parity.
