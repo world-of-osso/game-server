@@ -495,5 +495,41 @@ class PrimaryActorTests(unittest.TestCase):
                          [(61408,1443,0,694,1343,38759),(61412,1444,1,695,1321,42101),(61528,1446,3,697,1345,42100)])
 
 
+    def test_porung_primary_keeps_three_bosses_and_excludes_shared_display_actor(self):
+        import encounter_cpp_bindings as bindings
+        primary, _ = bindings.PROFILES['porung']
+        self.db.executescript('''
+            ALTER TABLE tdb_creature_template ADD COLUMN AIName TEXT DEFAULT '';
+            CREATE TABLE tdb_creature(guid INTEGER,id INTEGER,map INTEGER,spawnDifficulties TEXT);
+            INSERT INTO dungeon_encounter VALUES(1935,540,0);
+            INSERT INTO tdb_creature_template(entry,ScriptName,AIName) VALUES
+                (20923,'','SmartAI'),(17461,'','SmartAI');
+            INSERT INTO tdb_creature VALUES(34038,20923,540,'2');
+            INSERT INTO raid_encounter_creature VALUES
+                (540,16807,1936,1,566,1143,16628),
+                (540,16809,1937,2,568,1145,18031),
+                (540,16808,1938,3,569,1146,19799);
+        ''')
+        for _ in range(2):
+            self.db.executescript(binding_sql(prepare_bindings(self.db,[primary])))
+        self.assertEqual(self.db.execute(
+            'SELECT creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id '
+            'FROM raid_encounter_creature WHERE map_id=540 ORDER BY bit').fetchall(),[
+                (20923,1935,0,728,1394,17725),(16807,1936,1,566,1143,16628),
+                (16809,1937,2,568,1145,18031),(16808,1938,3,569,1146,19799)])
+        self.assertEqual(self.db.execute('SELECT count(*) FROM raid_encounter_creature WHERE creature_entry=17461').fetchone()[0],0)
+        self.assertEqual(self.db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=409').fetchall(),[(12118,)])
+        before = self.db.execute('SELECT * FROM raid_encounter_creature ORDER BY map_id,creature_entry').fetchall()
+        self.db.execute("UPDATE tdb_creature SET spawnDifficulties='1,2' WHERE guid=34038")
+        with self.assertRaisesRegex(ValueError,'creature spawn identity'):
+            prepare_bindings(self.db,[primary])
+        self.assertEqual(self.db.execute('SELECT * FROM raid_encounter_creature ORDER BY map_id,creature_entry').fetchall(),before)
+        self.db.execute("UPDATE tdb_creature SET spawnDifficulties='2' WHERE guid=34038")
+        self.db.execute("UPDATE tdb_creature_template SET AIName='' WHERE entry=20923")
+        with self.assertRaisesRegex(ValueError,'creature AI identity'):
+            prepare_bindings(self.db,[primary])
+        self.assertEqual(self.db.execute('SELECT * FROM raid_encounter_creature ORDER BY map_id,creature_entry').fetchall(),before)
+
+
 if __name__ == '__main__':
     unittest.main()

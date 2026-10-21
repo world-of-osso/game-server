@@ -64,6 +64,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         17308 => Some("omor"),
         16807 => Some("nethekurse"),
         16808 => Some("kargath"),
+        20923 => Some("porung"),
         186737 => Some("telash"),
         _ => None,
     };
@@ -100,6 +101,10 @@ fn decode_encounter_inputs(
     let data = data().expect("world.db fixture");
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    if entry == 20923 {
+        // The authenticated primary binding belongs to this prepared copy, not canonical data.
+        inputs.push(crate::maps::store::load_map_store(&conn).unwrap());
+    }
     inputs.push(crate::conditions::load_spell_target_conditions(&path).unwrap());
     inputs.push(crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn).unwrap());
     inputs.push(crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).unwrap());
