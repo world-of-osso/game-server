@@ -1,6 +1,6 @@
 ## 2026-10-21 — Generic falling-turn ability
 
-[Toys](systems/toys.md#generic-turn-while-falling-ability-2026-10-21): source aura409 owns movement bit39 and survives real input/overlapping aura removal. RED4→corrected5GREEN includes real Kite60s/Plume10s legal-area lifecycles and neutral-faction scenery regression;13 retained movement/FeatherFall/census controls passed earlier. Pipeline514→516. No protocol/native-steering claim; post-master proof pending. All-toy scope no longer has a five-item minimum.
+[Toys](systems/toys.md#generic-turn-while-falling-ability-2026-10-21): source aura409 owns movement bit39 and survives real input/overlapping aura removal. RED4→corrected5GREEN includes real Kite60s/Plume10s legal-area lifecycles and neutral-faction scenery regression;13 retained movement/FeatherFall/census controls passed earlier. Pipeline514→516. No protocol/native-steering claim; post-masterff190cb1c focused16/16PASS58.55s, canonical census516, checkEXIT0 with inherited follower warning. All-toy scope no longer has a five-item minimum.
 
 ## 2026-10-21 — Default TempSummon title census
 
