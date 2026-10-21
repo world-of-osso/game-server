@@ -311,6 +311,24 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
         }),
         chain_multiplier: 1.0,
     };
+    // UseCreatureLevel0x100 must retain the same real template's native birth level,
+    // not inherit this level10 caster. Observe it independently through ordinary spawn.
+    let native = crate::zones::summon_creature(h.app.world_mut(), h.caster, 53453, [0.0; 4])
+        .expect("published native Green Balloon template");
+    let native_level = *h
+        .app
+        .world()
+        .get::<shared::components::UnitLevel>(native)
+        .unwrap();
+    assert_ne!(
+        native_level.0,
+        h.app
+            .world()
+            .get::<shared::components::Level>(h.caster)
+            .unwrap()
+            .0
+    );
+    crate::zones::unsummon(h.app.world_mut(), native);
     super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
     let first = {
         let world = h.app.world_mut();
@@ -351,8 +369,11 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
             .display_id,
         38340
     );
-    // Companion level scaling is a separate contract, not an unconditional level1.
-    // TC TemporarySummon.cpp240–253 clamps owner level against source scaling.
+    assert_eq!(
+        world.get::<shared::components::UnitLevel>(summon),
+        Some(&native_level),
+        "UseCreatureLevel must preserve native source birth instead of caster level"
+    );
     assert!(
         world
             .get::<super::summon::SummonedCreature>(summon)
