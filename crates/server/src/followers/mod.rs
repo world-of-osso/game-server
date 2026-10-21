@@ -6,6 +6,8 @@ mod kit;
 mod kit_ai;
 mod kit_area;
 mod kit_interrupt;
+#[cfg(test)]
+mod utility_policy_tests;
 mod pack_identity;
 mod party;
 mod pull_admission;
