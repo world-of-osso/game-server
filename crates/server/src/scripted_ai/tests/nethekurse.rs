@@ -629,10 +629,19 @@ fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consump
         );
         assert_eq!(templates[&17471].script_name, "npc_lesser_shadow_fissure");
         assert!(h.creatures_of(18370).is_empty());
+        observe_admissions(&mut h, boss);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30745, Some(boss), false)
             .expect("native ordinary Target Fissures");
         h.advance(0.2);
         let fissures = h.creatures_of(18370);
+        eprintln!(
+            "NETHEKURSE wild difficulty{difficulty} child={:?} gos={:?}",
+            h.app
+                .world()
+                .resource::<crate::scripted_ai::tests::cast_admission::CastAdmissions>()
+                .entries,
+            spell_gos(&h, boss, 30744)
+        );
         assert_eq!(
             fissures.len(),
             1,
