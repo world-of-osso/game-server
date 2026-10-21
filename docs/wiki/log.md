@@ -1,3 +1,7 @@
+## 2026-10-21 — Frozen boss-path corridor
+
+[Native corridor qualification](systems/dungeon-simulator.md#boss-path-corridor-qualification-2026-10-21): actual party-radius captures, deterministic Stockade99→59/Azure179→66 pulls and seven focused route tests GREEN. Native Felguard evade-arrival RED reproduced; shared reset/frozen travel implemented, fresh native and seeded qualification pending.
+
 ## 2026-10-21 — Azure translocation policy
 
 [Source book gossip and qualified endpoint derivation](systems/azure-translocation.md): nine directed links from13 source books, including authenticated AreaPOI7116 in the final component; missing ActionSets remain named. Native ingress three REDs before implementation; GREEN pending.

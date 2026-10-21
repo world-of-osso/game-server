@@ -1739,9 +1739,7 @@ pub(crate) fn return_home_position(
     )
 }
 
-/// Shared native home arrival; physical and frozen-edge movers call this only at home.
-pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
-    world.entity_mut(entity).insert(CreatureState::Idle);
+fn restore_home_resources(world: &mut World, entity: Entity) -> bool {
     if let Some(mut mana) = world.get_mut::<shared::components::Mana>(entity)
         && mana.current != mana.max
     {
@@ -1758,9 +1756,13 @@ pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
         health.current = health.max;
         replicate = true;
     }
-    if let Some(auras) = world.get::<crate::zones::SpawnAddonAuras>(entity) {
-        let auras = crate::zones::AddonAuras(auras.0.clone());
-        world.entity_mut(entity).insert(auras);
+    replicate
+}
+
+fn restore_home_pose(world: &mut World, entity: Entity) -> bool {
+    let mut replicate = false;
+    if let Some(mut motion) = world.get_mut::<CreatureMotion>(entity) {
+        replicate |= motion.set_if_neq(CreatureMotion::Still);
     }
     if let Some(spawn_pose) = world.get::<crate::zones::SpawnPose>(entity) {
         let spawn_pose = spawn_pose.0;
@@ -1768,10 +1770,26 @@ pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
             replicate |= pose.set_if_neq(spawn_pose);
         }
     }
-    if replicate && let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+    replicate
+}
+
+/// Shared native home arrival; physical and frozen-edge movers call this only at home.
+pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
+    world.entity_mut(entity).insert(CreatureState::Idle);
+    let resources_changed = restore_home_resources(world, entity);
+    let pose_changed = restore_home_pose(world, entity);
+    if (resources_changed || pose_changed)
+        && let Some(queue) = world.get_resource::<ReplicationDirtyQueue>()
+    {
         queue.mark(entity);
     }
+    let addon_auras = world
+        .get::<crate::zones::SpawnAddonAuras>(entity)
+        .map(|auras| crate::zones::AddonAuras(auras.0.clone()));
     crate::scripted_ai::dispatch(world, entity, crate::scripted_ai::Hook::JustReachedHome);
+    if let Some(auras) = addon_auras {
+        world.entity_mut(entity).insert(auras);
+    }
 }
 
 #[cfg(test)]

@@ -8,7 +8,15 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 ## Azure graph
 
-`content/dungeons/azure-vault-2515.json` retains225 Normal source actors in214 native formation packs plus authored AreaPOI7116 as an empty topology node. Qualified staged navigation supplies540 walk-distance edges; [the shared production book policy](azure-translocation.md) supplies nine directed teleport links. Authored179-hostile-pack route follows Leymor→Azureblade→Telash→Umbrelskul. Two off-route source actors29001897/29001912 are nav-unreachable and remain named, not connected synthetically. Runtime uses `DUNGEON_SIMULATOR_MAP=2515`, native difficulty205, Normal population projection and `DUNGEON_SIMULATOR_LEVEL=70` (MapDifficulty5417→ContentTuning2155 range10–70). Default five profiles remain unchanged. Seeded clear proof pending.
+`content/dungeons/azure-vault-2515.json` retains225 Normal source actors in214 native formation packs plus authored AreaPOI7116 as an empty topology node. Qualified staged navigation supplies540 walk-distance edges; [the shared production book policy](azure-translocation.md) supplies nine directed teleport links. Frozen66-pull boss-path corridor follows Leymor→Azureblade→Telash→Umbrelskul; native acquisition spheres and explicit Leymor gates determine pulls rather than the former179-pack all-hostile traversal. Two off-route source actors29001897/29001912 are nav-unreachable and remain named, not connected synthetically. Runtime uses `DUNGEON_SIMULATOR_MAP=2515`, native difficulty205, Normal population projection and `DUNGEON_SIMULATOR_LEVEL=70` (MapDifficulty5417→ContentTuning2155 range10–70). Default five profiles remain unchanged. Seeded clear proof pending.
+
+## Boss-path corridor qualification —2026-10-21
+
+`FOLLOWER_ROUTE_BOSS_PATH_CORRIDOR` uses deterministic shortest frozen paths through sourced boss order, includes native eligible acquisition-sphere intersections and explicit boss gates, and never exposes intermediate space across directed book hops. `scripts/freeze_follower_route.py` consumes frozen native profiles (`*-corridor-inputs.json`) plus `route-requirements.json`; source population changes require recapture. Native profiles capture maximum radius across the actual default party at Stockade32/Azure70, not guessed aggression distances.
+
+Data commits507a7393f/70383c5a1 reduce Stockade99→59 pulls (40 removed, none added), preserving Moloch→Hogger→Overheat; boss steps25/44/58. Azure179→66 pulls (115 removed,2 added) reaches Leymor at23 rather than51; subsequent bosses42/64/65. Seven focused route tests pass, including real boss order/Leymor-first-floor checks and five algorithm cases. Fresh seeded qualification remains pending; older batches below cover older routes only.
+
+The native Felguard last-hit/evade fixture reproduces a separate simulator defect: after40 simulated seconds the actor remains `Returning` because frozen movement had no home destination/arrival. Fix9451e194d adds frozen-edge home travel using native HomePosition→ScriptedPath.home→SpawnPoint priority and shares native resource/addon/pose/home-hook reset. Targeted GREEN and native arrival controls remain pending.
 
 ## Native-height acceptance and Azure baseline —2026-10-21
 

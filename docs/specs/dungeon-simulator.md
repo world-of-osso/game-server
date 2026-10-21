@@ -40,7 +40,11 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 ## Authored route
 
-Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-source 2D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.
+Stockade's committed `route` lists a unique59-pull boss-path corridor and full3D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). Azure's route lists66 pulls. Deterministic authoring uses shortest frozen boss paths, native acquisition spheres and sourced gates; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.
+
+## Native evade movement
+
+Evading actors must travel frozen edges at their native speed to the native home destination (explicit HomePosition, then escort home, then spawn). Arrival must leave Returning, stop motion, restore home facing and run the same native mana/health/addon/pose/JustReachedHome behavior as production; regenerating actors do not receive an invented instant full heal. No runtime physical-navigation system may be installed to satisfy arrival.
 
 ## Native pet utility
 
