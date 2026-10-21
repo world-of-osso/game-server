@@ -95,6 +95,15 @@ impl SummonDamageModifiers<'_, '_> {
             .unwrap_or(1.0)
     }
 
+    pub(crate) fn pet_melee_time_multiplier(&self, unit: Entity) -> f32 {
+        let Some((owner, false)) = self.owners.get(unit).ok().and_then(owner_and_guardian) else {
+            return 1.0;
+        };
+        self.modifiers
+            .get(owner)
+            .map_or(1.0, |mods| mods.pet_melee_time_mult)
+    }
+
     pub(crate) fn taken_multiplier(&self, unit: Entity, auras: Option<&ActiveAuras>) -> f32 {
         let ownership = self.owners.get(unit).ok().and_then(owner_and_guardian);
         guardian_taken_multiplier(ownership, auras)

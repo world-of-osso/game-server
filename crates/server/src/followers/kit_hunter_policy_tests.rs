@@ -92,9 +92,9 @@ fn rotation_fidelity_253_level32_prepares_native_simc_default_duck_via_call_pet(
 }
 
 /// Observe two completed swing clocks; misses also count as real attack attempts.
-fn pet_swing_frames(
+fn melee_swing_frames(
     h: &mut crate::spell_cast::test_harness::Harness,
-    pet: bevy::prelude::Entity,
+    unit: bevy::prelude::Entity,
 ) -> usize {
     let start = h
         .app
@@ -111,7 +111,7 @@ fn pet_swing_frames(
             .range(0.0, f64::MAX)
             .iter()
             .skip(start)
-            .filter(|entry| entry.event.attacker == pet.to_bits() && entry.event.spell_id == 0)
+            .filter(|entry| entry.event.attacker == unit.to_bits() && entry.event.spell_id == 0)
             .count();
         if count > observed {
             if let Some(first) = first {
@@ -121,7 +121,7 @@ fn pet_swing_frames(
             observed = count;
         }
     }
-    panic!("native pet did not produce two melee attempts");
+    panic!("native unit{unit} did not produce two melee attempts");
 }
 
 #[test]
@@ -169,14 +169,24 @@ fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
         .world_mut()
         .entity_mut(pet)
         .insert((position, crate::combat::AutoAttack::new(target)));
-    let accelerated = pet_swing_frames(&mut h, pet);
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::combat::AutoAttack::new(target));
+    let owner_with_frenzy = melee_swing_frames(&mut h, caster);
+    let accelerated = melee_swing_frames(&mut h, pet);
     crate::auras::remove_auras(
         h.app.world_mut(),
         caster,
         crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == FRENZY,
     );
-    let ordinary = pet_swing_frames(&mut h, pet);
+    let ordinary = melee_swing_frames(&mut h, pet);
+    assert_eq!(
+        melee_swing_frames(&mut h, caster),
+        owner_with_frenzy,
+        "owner Frenzy must modify only the pet's attack clock"
+    );
     let expected = ordinary as f32 / (1.0 + amount / 100.0);
     assert!(
         (accelerated as f32 - expected).abs() <= 1.0,
