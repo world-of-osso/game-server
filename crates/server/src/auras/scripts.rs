@@ -224,6 +224,8 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
         || (spell_id == 109186 && effect_index == 0)
+        || (spell_id == 200183 && effect_index == 0)
+        || (spell_id == 390994 && effect_index == 1)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)

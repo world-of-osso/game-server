@@ -39,8 +39,96 @@ pub(super) trait HolyTriageView {
     fn safe_to_channel(&self) -> bool;
 }
 
-pub(super) fn decide(_context: &impl HolyTriageView) -> Option<HolyDecision> {
-    None
+// Named project thresholds, never sourced spell mechanics.
+const SURGE_HEALTH: f32 = 0.90;
+const MENDING_HEALTH: f32 = 0.95;
+const HYMN_HEALTH: f32 = 0.55;
+const APOTHEOSIS_HEALTH: f32 = 0.65;
+const GROUP_PRESSURE_COUNT: usize = 3;
+
+pub(super) fn decide(context: &impl HolyTriageView) -> Option<HolyDecision> {
+    [
+        choose_surge(context),
+        choose_sanctify(context),
+        choose_hymn(context),
+        choose_apotheosis(context),
+        choose_mending(context),
+    ]
+    .into_iter()
+    .flatten()
+    .next()
+}
+
+fn candidate(context: &impl HolyTriageView, spell: u32, target: Entity) -> Option<HolyDecision> {
+    context
+        .candidates()
+        .iter()
+        .copied()
+        .find(|candidate| candidate.spell == spell && candidate.target == target)
+}
+
+fn injured_candidate(
+    context: &impl HolyTriageView,
+    spell: u32,
+    threshold: f32,
+) -> Option<HolyDecision> {
+    context
+        .patients()
+        .iter()
+        .filter(|patient| patient.health_fraction < threshold)
+        .find_map(|patient| candidate(context, spell, patient.unit))
+}
+
+fn group_pressure(context: &impl HolyTriageView, threshold: f32) -> bool {
+    context
+        .patients()
+        .iter()
+        .filter(|patient| patient.health_fraction < threshold)
+        .count()
+        >= GROUP_PRESSURE_COUNT
+}
+
+fn choose_surge(context: &impl HolyTriageView) -> Option<HolyDecision> {
+    context
+        .surge_active()
+        .then(|| injured_candidate(context, FLASH_HEAL, SURGE_HEALTH))
+        .flatten()
+}
+
+fn choose_sanctify(context: &impl HolyTriageView) -> Option<HolyDecision> {
+    context
+        .clusters()
+        .iter()
+        .filter(|cluster| cluster.spell == SANCTIFY && cluster.injured >= GROUP_PRESSURE_COUNT)
+        .filter_map(|cluster| {
+            candidate(context, SANCTIFY, cluster.center).map(|action| (cluster.injured, action))
+        })
+        .max_by_key(|(injured, _)| *injured)
+        .map(|(_, action)| action)
+}
+
+fn choose_hymn(context: &impl HolyTriageView) -> Option<HolyDecision> {
+    if context.safe_to_channel() && group_pressure(context, HYMN_HEALTH) {
+        candidate(context, DIVINE_HYMN, context.caster())
+    } else {
+        None
+    }
+}
+
+fn choose_apotheosis(context: &impl HolyTriageView) -> Option<HolyDecision> {
+    if context.words_depleted() && group_pressure(context, APOTHEOSIS_HEALTH) {
+        candidate(context, APOTHEOSIS, context.caster())
+    } else {
+        None
+    }
+}
+
+fn choose_mending(context: &impl HolyTriageView) -> Option<HolyDecision> {
+    if context.owned_mending_active() {
+        None
+    } else {
+        injured_candidate(context, PRAYER_OF_MENDING, MENDING_HEALTH)
+    }
 }
 
 #[cfg(test)]

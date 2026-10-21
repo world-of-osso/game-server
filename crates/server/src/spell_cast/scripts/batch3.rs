@@ -64,8 +64,10 @@ pub(super) fn thunder_clap(world: &mut World, caster: Entity, target: Entity, de
 pub(super) fn flash_heal(world: &mut World, caster: Entity, _spell: &SpellInfo) {
     if world.resource::<SpellStore>().get(SERENITY).is_some() {
         let seconds = script_effect_value(world, caster, SERENITY, 1);
-        reduce_cooldown(world, caster, SERENITY, f64::from(seconds));
+        let seconds = super::holy_priest::holy_word_reduction(world, caster, seconds);
+        reduce_cooldown(world, caster, SERENITY, seconds);
     }
+    super::holy_priest::spend_surge(world, caster);
 }
 
 /// 2948: strictly below s2% health, before the hit deals damage.

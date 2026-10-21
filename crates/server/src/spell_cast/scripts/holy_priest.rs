@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::auras::procs::AuraEvent;
 use crate::auras::scripts::{AuraScript, AuraScripts};
-use crate::auras::{AuraInstance, has_aura};
+use crate::auras::{ActiveAuras, AuraInstance, has_aura};
 use crate::spell_info::{SpellInfo, SpellStore};
 
 pub(crate) const APOTHEOSIS: u32 = 200183;
@@ -75,4 +75,46 @@ pub(super) fn restore_holy_words(world: &mut World, priest: Entity, _spell: &Spe
     for category in categories {
         crate::spell_cast::restore_charges(world, priest, category, count);
     }
+}
+
+/// Native200183s1 amplifies reductions, not the passage of recharge time.
+pub(super) fn holy_word_reduction(world: &World, priest: Entity, seconds: f32) -> f64 {
+    let bonus = world
+        .get::<ActiveAuras>(priest)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == APOTHEOSIS && aura.caster == priest)
+        })
+        .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
+        .map_or(0.0, |effect| effect.amount);
+    f64::from(seconds * (1.0 + bonus / 100.0))
+}
+
+/// A successful Flash consumes one existing native use before queued heal events
+/// can grant another proc. Failed/cancelled casts never reach AfterCast.
+pub(super) fn spend_surge(world: &mut World, priest: Entity) {
+    let instance = world
+        .get::<ActiveAuras>(priest)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == SURGE_BUFF && aura.caster == priest)
+        })
+        .map(|aura| aura.instance_id);
+    if let Some(instance) = instance {
+        crate::auras::spend_stack(world, priest, instance);
+    }
+}
+
+/// Native390994s2 names Prayer of Mending casts, not its damage-triggered bounces.
+pub(super) fn reduce_word_on_mending(world: &mut World, priest: Entity, _spell: &SpellInfo) {
+    const VOICE_OF_HARMONY: u32 = 390994;
+    const SERENITY: u32 = 2050;
+    if !has_aura(world, priest, VOICE_OF_HARMONY) {
+        return;
+    }
+    let seconds = super::script_effect_value(world, priest, VOICE_OF_HARMONY, 1);
+    let seconds = holy_word_reduction(world, priest, seconds);
+    super::reduce_cooldown(world, priest, SERENITY, seconds);
 }

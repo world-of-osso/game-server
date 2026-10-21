@@ -474,6 +474,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
         holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
+        prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
