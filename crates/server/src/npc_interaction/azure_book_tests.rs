@@ -96,6 +96,32 @@ fn azure_translocation_book_gossip_moves_to_four_authored_receiving_books() {
 }
 
 #[test]
+fn azure_translocation_final_book_uses_qualified_authored_poi_inside_umbrelskul_component() {
+    let mut h = fixture();
+    let copy = *h.app.world().get::<InMap>(h.player).unwrap();
+    let book = h.spawn_real_npc(194715, 1.0);
+    h.app.world_mut().entity_mut(book).insert(copy);
+    h.app.world_mut().entity_mut(h.player).insert(copy);
+    h.interact(book);
+    let events = h.take::<InteractionOpened>();
+    let InteractionKind::Gossip(menu) = &events.last().unwrap().kind else {
+        panic!("book gossip")
+    };
+    assert!(menu.text.contains("Sindragosa's Lament"));
+    h.select(
+        book,
+        menu.options
+            .first()
+            .expect("native Proceed onward")
+            .option_id,
+    );
+    let at = h.app.world().get::<Position>(h.player).unwrap();
+    // Authenticated70448 AreaPOI7116, not a guessed boss offset.
+    assert_eq!((at.x, at.y, at.z), (-5364.33008, 157.716995, -1035.76001));
+    assert_eq!(h.app.world().get::<InMap>(h.player), Some(&copy));
+}
+
+#[test]
 fn azure_translocation_book_selection_revalidates_source_range() {
     let mut h = fixture();
     let copy = *h.app.world().get::<InMap>(h.player).unwrap();
@@ -117,8 +143,8 @@ fn azure_translocation_book_selection_revalidates_source_range() {
     h.select(book, option);
     assert_eq!(*h.app.world().get::<Position>(h.player).unwrap(), before);
     assert!(
-        h.take::<InteractionFailed>()
+        h.take::<InteractionClosed>()
             .iter()
-            .any(|event| event.error == InteractionError::TooFarAway)
+            .any(|event| event.npc == book.to_bits())
     );
 }

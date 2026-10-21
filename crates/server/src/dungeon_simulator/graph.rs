@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
+#[path = "azure_extraction.rs"]
+mod azure_extraction;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Spawn {
     pub guid: u32,
@@ -38,6 +41,8 @@ pub(super) struct Graph {
     pub entrance_pack: u32,
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
+    #[serde(default)]
+    pub teleports: Vec<Edge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
 }
@@ -123,9 +128,9 @@ pub(super) fn read_graph() -> Result<Graph, String> {
     serde_json::from_slice(&bytes).map_err(|error| format!("parse {}: {error}", path.display()))
 }
 
-fn source_packs(data: &crate::world_data::WorldData) -> Vec<Pack> {
+fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {
     let mut packs = BTreeMap::<u32, Vec<Spawn>>::new();
-    for &index in &data.spawns_by_map[&34] {
+    for &index in &data.spawns_by_map[&map_id] {
         let spawn = &data.spawns[index];
         if !spawn.spawns_at(crate::maps::store::DIFFICULTY_NORMAL) {
             continue;
@@ -159,16 +164,20 @@ fn source_packs(data: &crate::world_data::WorldData) -> Vec<Pack> {
 }
 
 fn source_point(data: &crate::world_data::WorldData, guid: u32) -> Vec3 {
+    if guid == 7116 {
+        // Authenticated70448 AreaPOI7116; qualified inside Umbrelskul's component.
+        return Vec3::new(-5364.33008, 157.716995, -1035.76001);
+    }
     let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
     Vec3::new(spawn.position_x, spawn.position_z, -spawn.position_y)
 }
 
-fn query_edges(data: &crate::world_data::WorldData, packs: &[Pack]) -> Vec<Edge> {
-    let directory = crate::test_data::world_db_path()
-        .parent()
-        .unwrap()
-        .join("ground/navmesh/34");
-    let mut nav = ::navigation::NavigationMap::open(&directory).expect("source map34 nav bake");
+fn query_edges(
+    data: &crate::world_data::WorldData,
+    packs: &[Pack],
+    directory: &std::path::Path,
+) -> Vec<Edge> {
+    let mut nav = ::navigation::NavigationMap::open(directory).expect("qualified source nav bake");
     let mut edges = Vec::new();
     for (index, from) in packs.iter().enumerate() {
         for to in &packs[index + 1..] {
@@ -324,7 +333,7 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
 #[ignore = "explicit one-time extraction from native world.db and nav bake"]
 fn extract_stockade_graph() {
     let data = crate::test_data::world_data();
-    let packs = source_packs(data);
+    let packs = source_packs(data, 34);
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -344,7 +353,11 @@ fn extract_stockade_graph() {
         })
         .unwrap()
         .id;
-    let edges = select_edges(&packs, query_edges(data, &packs));
+    let directory = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("ground/navmesh/34");
+    let edges = select_edges(&packs, query_edges(data, &packs, &directory));
     let graph = Graph {
         map_id: 34,
         entrance: [entrance.x, entrance.z],
@@ -353,6 +366,7 @@ fn extract_stockade_graph() {
         route: read_graph()
             .expect("preserve the authored pull route during graph extraction")
             .route,
+        teleports: Vec::new(),
         packs,
         edges,
     };

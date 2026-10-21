@@ -53,6 +53,33 @@ pub(super) struct Report {
 }
 
 #[test]
+#[ignore = "explicit Azure2515/205 environment qualification"]
+fn azure_simulator_uses_requested_follower_copy_and_native_population() {
+    let run = spawn_run(1, &mut None).unwrap();
+    let world = run.app.world();
+    let copy = *world.get::<crate::maps::InMap>(run.party.owner).unwrap();
+    assert_eq!(
+        copy.map_id, 2515,
+        "requested Azure map, never Stockade substitution"
+    );
+    assert_eq!(
+        world
+            .get::<crate::maps::DungeonDifficulty>(run.party.owner)
+            .unwrap()
+            .0,
+        205
+    );
+    for entry in [186644, 186739, 186737, 186738] {
+        assert!(
+            run.actors.values().any(|actor| world
+                .get::<shared::components::Npc>(*actor)
+                .is_some_and(|npc| npc.template_id == entry)),
+            "native boss{entry} must spawn"
+        );
+    }
+}
+
+#[test]
 fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
     let mut expected = [209057, 209072, 209053, 209059, 209065];
     if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
@@ -509,10 +536,7 @@ fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
         x: center.x + 20.0,
         ..center
     });
-    for (react, should_follow) in [
-        (ReactState::Aggressive, false),
-        (ReactState::Passive, true),
-    ] {
+    for (react, should_follow) in [(ReactState::Aggressive, false), (ReactState::Passive, true)] {
         run.app
             .world_mut()
             .entity_mut(watcher)
