@@ -194,6 +194,8 @@ fn startup_load_item_scaling_tables(mut commands: Commands) {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .expect("open native item-instance tables");
     commands.insert_resource(crate::stats::NativeItemInstances {
+        effects: server::item_instance::load::load_item_effect_tables(&conn)
+            .expect("load native ItemEffect and ItemXItemEffect tables"),
         bonuses: server::item_instance::load::load_bonus_tables(&conn)
             .expect("load native ItemBonus and scaling tables; run scripts/item_instance_data.py"),
         enchants: server::item_instance::load::load_enchantment_tables(&conn).expect(

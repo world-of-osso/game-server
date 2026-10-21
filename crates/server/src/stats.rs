@@ -48,6 +48,7 @@ pub struct EquippedItemModifiers {
 pub struct NativeItemInstances {
     pub bonuses: server::item_instance::bonuses::ItemBonusTables,
     pub enchants: server::item_instance::enchants::EnchantmentTables,
+    pub effects: server::item_instance::effects::ItemEffectTables,
 }
 
 /// Aura stat changes across create/base, bonus and total stages. Absent means none.

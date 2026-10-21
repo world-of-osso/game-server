@@ -149,6 +149,7 @@ impl Plugin for AuraPlugin {
                     init_unit_auras,
                     mount::apply_flight_style,
                     sync_passive_auras,
+                    crate::equipment_effects::sync_equipment_effects,
                     update_auras,
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,

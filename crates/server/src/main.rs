@@ -38,6 +38,7 @@ mod duel;
 mod durability;
 mod economy;
 mod equipment_admin_types;
+mod equipment_effects;
 mod experience;
 mod faction;
 mod faction_reaction;
