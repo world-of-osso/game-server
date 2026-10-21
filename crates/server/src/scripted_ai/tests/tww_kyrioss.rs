@@ -40,6 +40,16 @@ fn assert_cast(h: &Harness, boss: Entity, spell: u32, duration: f32) {
     assert_eq!(cast.duration, duration, "unaltered native70448 cast time");
 }
 
+fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
+    // Combat logs go only to source/target owners; a self-cast NPC has neither.
+    // SpellGo is the observable completion packet sent to actual caster observers.
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == boss.to_bits() && go.spell_id == spell)
+        .count()
+}
+
 fn first_clock(difficulty: u32) {
     let (mut h, boss, map) = fixture(difficulty);
     assert_eq!(
@@ -51,18 +61,18 @@ fn first_clock(difficulty: u32) {
     h.advance(0.2);
     assert_cast(&h, boss, THUNDER, 2.5);
     h.advance(4.1);
-    assert_eq!(h.casts(0, boss, THUNDER), 1);
+    assert_eq!(completed_casts(&h, boss, THUNDER), 1);
     assert!(h.app.world().get::<CastState>(boss).is_none());
     h.advance(0.2);
     assert_cast(&h, boss, WILD, 3.0);
     h.advance(6.35);
-    assert_eq!(h.casts(0, boss, WILD), 1);
+    assert_eq!(completed_casts(&h, boss, WILD), 1);
     assert!(h.app.world().get::<CastState>(boss).is_none());
     h.advance(0.3);
     assert_cast(&h, boss, TORRENT, 4.0);
     let before = h.health(h.player()).current;
     h.advance(7.5);
-    assert_eq!(h.casts(0, boss, TORRENT), 1);
+    assert_eq!(completed_casts(&h, boss, TORRENT), 1);
     assert!(
         h.inbox(0)
             .log
@@ -100,13 +110,13 @@ fn first_clock(difficulty: u32) {
 fn repeat_and_reset(difficulty: u32) {
     let (mut h, boss, map) = fixture(difficulty);
     h.advance(47.45);
-    assert_eq!(h.casts(0, boss, THUNDER), 1);
-    assert_eq!(h.casts(0, boss, WILD), 1);
+    assert_eq!(completed_casts(&h, boss, THUNDER), 1);
+    assert_eq!(completed_casts(&h, boss, WILD), 1);
     assert!(h.app.world().get::<CastState>(boss).is_none());
     h.advance(0.2);
     assert_cast(&h, boss, THUNDER, 2.5);
     h.advance(3.0);
-    assert_eq!(h.casts(0, boss, THUNDER), 2);
+    assert_eq!(completed_casts(&h, boss, THUNDER), 2);
     assert!(h.app.world().get::<CastState>(boss).is_none());
     h.advance(0.2);
     assert_cast(&h, boss, WILD, 3.0);
@@ -128,7 +138,7 @@ fn repeat_and_reset(difficulty: u32) {
     h.advance(0.2);
     assert_cast(&h, boss, THUNDER, 2.5);
     assert_eq!(
-        h.casts(0, boss, THUNDER),
+        completed_casts(&h, boss, THUNDER),
         2,
         "new pull has not completed its first cast yet"
     );
