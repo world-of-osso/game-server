@@ -9,6 +9,28 @@
 #include "dbc/trait_data.hpp"
 #include <fstream>
 
+static void write_selected_traits(std::ostream &output,
+                                  const player_t &player) {
+  output << "[\n";
+  bool first = true;
+  for (const auto &[tree, entry, rank] : player.player_traits) {
+    if (rank == 0)
+      continue;
+    const auto *trait = trait_data_t::find(entry, player.dbc->ptr);
+    if (!trait || trait->id_trait_node_entry != entry ||
+        rank > trait->max_ranks)
+      throw std::runtime_error("Invalid selected native trait entry/rank");
+    if (!first)
+      output << ",\n";
+    first = false;
+    output << fmt::format(
+        R"({{"tree":"{}","node_id":{},"entry_id":{},"ranks":{},"max_ranks":{}}})",
+        util::talent_tree_string(tree), trait->id_node, entry, rank,
+        trait->max_ranks);
+  }
+  output << "\n]\n";
+}
+
 int main(int argc, char **argv) {
   if (argc != 3) {
     fmt::print(stderr,
@@ -34,25 +56,7 @@ int main(int argc, char **argv) {
           "Selected-trait export requires exactly one player");
     std::ofstream output(argv[1]);
     output.exceptions(std::ios::badbit | std::ios::failbit);
-    output << "[\n";
-    bool first = true;
-    const auto *player = sim.player_no_pet_list.front();
-    for (const auto &[tree, entry, rank] : player->player_traits) {
-      if (rank == 0)
-        continue;
-      const auto *trait = trait_data_t::find(entry, player->dbc->ptr);
-      if (!trait || trait->id_trait_node_entry != entry ||
-          rank > trait->max_ranks)
-        throw std::runtime_error("Invalid selected native trait entry/rank");
-      if (!first)
-        output << ",\n";
-      first = false;
-      output << fmt::format(
-          R"({{"tree":"{}","node_id":{},"entry_id":{},"ranks":{},"max_ranks":{}}})",
-          util::talent_tree_string(tree), trait->id_node, entry, rank,
-          trait->max_ranks);
-    }
-    output << "\n]\n";
+    write_selected_traits(output, *sim.player_no_pet_list.front());
     return 0;
   } catch (const std::exception &error) {
     fmt::print(stderr, "Selected-trait export: {}\n", error.what());
