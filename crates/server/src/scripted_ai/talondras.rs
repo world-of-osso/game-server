@@ -30,6 +30,8 @@ impl CreatureAi for Talondras {
         self.boss.just_engaged_with(ctx);
         // Healer-only Lua bars filter alerts, not native spell targets. The
         // role/stun/energy context remains named; no Orb first time is invented.
+        // TALONDRAS_LUA_DB2_CATEGORY_1152_CONFLICT preserves ordinary native
+        // rejections where these Lua clocks collide with shared category3s/5s.
         self.boss.events.schedule(SHARDS, 4_500);
         self.boss.events.schedule(STOMP, 5_100);
     }

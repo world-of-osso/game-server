@@ -23,6 +23,23 @@ fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
         .count()
 }
 
+fn assert_native_admission(attempt: &super::cast_admission::Admission, expected_success: bool) {
+    if expected_success {
+        assert!(
+            attempt.result.is_ok(),
+            "ordinary native success {attempt:?}"
+        );
+    } else {
+        assert!(
+            matches!(
+                &attempt.result,
+                Err(crate::spell_cast::CastFailure::OnCooldown)
+            ),
+            "native1152 rejection {attempt:?}"
+        );
+    }
+}
+
 #[test]
 fn encounter_coverage_talondras_native_stomp_damage_qualifies() {
     for difficulty in [1, 205] {
@@ -87,12 +104,40 @@ fn encounter_coverage_talondras_native_shards_direct_and_periodic_qualify() {
 #[ignore = "RED: Talondras current Lua-clock port absent"]
 fn encounter_coverage_talondras_first_stomp_uses_current_lua_clock() {
     let (mut h, boss, _) = talondras_copy(205);
+    let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+    h.app
+        .insert_resource(super::cast_admission::CastAdmissions {
+            actor: boss,
+            origin,
+            entries: Vec::new(),
+        });
     h.engage(boss);
     h.advance(8.0);
+    let attempts = &h
+        .app
+        .world()
+        .resource::<super::cast_admission::CastAdmissions>()
+        .entries;
+    let stomps: Vec<_> = attempts.iter().filter(|a| a.spell == STOMP).collect();
+    assert_eq!(stomps.len(), 1, "current Lua5.1s request must exist");
+    assert!((stomps[0].time - 5.1).abs() <= 0.1);
+    assert!(
+        matches!(
+            &stomps[0].result,
+            Err(crate::spell_cast::CastFailure::OnCooldown)
+        ),
+        "native shared1152 category is not bypassed"
+    );
+    assert_eq!(
+        cast_count(&h, boss, STOMP),
+        0,
+        "TALONDRAS_LUA_DB2_CATEGORY_1152_CONFLICT"
+    );
+    h.advance(12.0);
     assert_eq!(
         cast_count(&h, boss, STOMP),
         1,
-        "current Lua5.1s request/native2s cast"
+        "next sourced17.2s request is natively ready"
     );
 }
 
@@ -121,10 +166,14 @@ fn encounter_coverage_talondras_ongoing_native_lanes_damage_copy_credit_and_corp
                 &[
                     4.5, 14.2, 23.9, 33.6, 43.4, 53.1, 62.8, 72.5, 82.2, 91.9, 101.6,
                 ][..],
+                &[
+                    true, true, false, false, false, true, true, true, false, false, true,
+                ][..],
             ),
             (
                 STOMP,
                 &[5.1, 17.2, 29.3, 41.4, 53.5, 65.6, 77.7, 89.8, 101.9][..],
+                &[false, true, true, true, false, false, true, true, false][..],
             ),
         ];
         assert_eq!(
@@ -132,20 +181,23 @@ fn encounter_coverage_talondras_ongoing_native_lanes_damage_copy_credit_and_corp
             20,
             "only current sourced Normal/Follower lanes"
         );
-        for (spell, times) in lanes {
+        // Parent-approved partial boundary: preserve native category1152 and
+        // prove every acceptance/rejection, not20 fabricated successful casts.
+        for (spell, times, accepted) in lanes {
             let actual: Vec<_> = attempts.iter().filter(|a| a.spell == spell).collect();
             assert_eq!(actual.len(), times.len(), "ongoing native lane{spell}");
-            for (attempt, time) in actual.iter().zip(times) {
-                assert!(attempt.result.is_ok(), "native admission {attempt:?}");
+            for ((attempt, time), accepted) in actual.iter().zip(times).zip(accepted) {
+                assert_native_admission(attempt, *accepted);
                 assert!(
                     (attempt.time - *time).abs() <= 0.15,
                     "native occupancy/source order {attempt:?} expected{time}"
                 );
             }
+            let successes = accepted.iter().filter(|&&value| value).count();
             assert_eq!(
                 cast_count(&h, boss, spell),
-                times.len(),
-                "actual native SpellGo{spell}"
+                successes,
+                "only accepted native requests emit SpellGo{spell}"
             );
             assert!(
                 h.inbox(0)
@@ -218,8 +270,8 @@ fn encounter_coverage_talondras_ongoing_native_lanes_damage_copy_credit_and_corp
 fn encounter_coverage_talondras_evade_rearms_without_credit() {
     let (mut h, boss, map) = talondras_copy(205);
     h.engage(boss);
-    h.advance(12.0);
-    assert_eq!(cast_count(&h, boss, SHARDS), 1);
+    h.advance(20.0);
+    assert_eq!(cast_count(&h, boss, SHARDS), 2);
     assert_eq!(cast_count(&h, boss, STOMP), 1);
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
     assert_eq!(
@@ -235,11 +287,11 @@ fn encounter_coverage_talondras_evade_rearms_without_credit() {
     );
     h.engage(boss);
     h.advance(4.2);
-    assert_eq!(cast_count(&h, boss, SHARDS), 1, "no early reset Shards");
+    assert_eq!(cast_count(&h, boss, SHARDS), 2, "no early reset Shards");
     h.advance(2.5);
     assert_eq!(
         cast_count(&h, boss, SHARDS),
-        2,
+        3,
         "native home/re-engage restores4.5s first Shards"
     );
 }

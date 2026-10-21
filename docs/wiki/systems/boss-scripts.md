@@ -2,6 +2,8 @@
 
 ## Talondras current Lua partial — 2026-10-21
 
+Native5-case atd7822ebc9:2qualificationPASS/3timerFAIL60.43s exposed category1152 (Shards3s/Stomp5s), not a source target/actor failure. Parent explicitly approves `TALONDRAS_LUA_DB2_CATEGORY_1152_CONFLICT`: retain all20sourced requests and prove the exact native accepted/OnCooldown outcomes rather than fabricate20successful casts. Initial5.1s Stomp cannot complete; its request must exist and be rejected, followed by actual17.2s native Stomp. TC a352b1fa `SpellHistory.cpp` IsReady263–275, StartCooldown381–391, HasCooldown678–694 and GetCooldownDurations1135–1142 enforce category readiness without a creature exemption. Source clocks/flags/native data stay unchanged. Revised native proof pending; source-copy3testsPASS3.239s retained.
+
 [Contract](../../specs/boss-scripts.md#talondras-current-lua-partial). Current LittleWigs2777a9d `Dragonflight/UldamanLegacyOfTyr/SentinelTalondras.lua` explicitly registers184124/2557; no TC a352b1fa2451 AI exists. Native70448 Shards372718 has actual directdamage/10sDOT/2speriod and Stomp372701 area damage/knockback/2scast. Source TDB model109735 remains; Journal actor5356/display106790 identifies journal presentation, not a guessed replacement model. Actual source addons remain unmodified. IgnoredRED4ef8ce37a precedes port: two native Normal1/Follower205 damage qualificationsPASS, firstStomp0vs1 genuineFAIL47.25s. Current partial uses4.5→9.7 and5.1→12.1 clocks, preserves unknown role/stun/Orb-initial/energy contexts as named gaps; no Normal/Follower Titanic first request. Producer/native expanded proof pending.
 
 ## Bromach current Lua partial — 2026-10-21

@@ -2,6 +2,8 @@
 
 ## Talondras current Lua partial
 
+- Explicit parent-approved boundary `TALONDRAS_LUA_DB2_CATEGORY_1152_CONFLICT`: keep all sourced requests and ordinary native category cooldowns. DB2 Shards3s/Stomp5s share1152, so first5.1s Stomp is denied after4.5s Shards; later requests mix accepted/OnCooldown outcomes. Prove exact accepted/denied requests and real damage/reset/credit, never clear cooldowns or use triggered flags without an authored TC boss script. TC a352b1fa `SpellHistory.cpp:263–275,381–391,678–694,1135–1142` is the common creature/player category path.
+
 - Current LittleWigs2777a9d `SentinelTalondras.lua` explicitly binds184124↔2557/map2451bit2. Normal1 and Follower205 use Shards372718 first4.5/repeat9.7s and Stomp372701 first5.1/repeat12.1s; native70448 owns direct/DOT/area/knockback effects and cast occupancy. BigWigs `Normal()` includes205; no non-Normal Titanic30.4s request is invented here.
 - `TALONDRAS_ROLE_STUN_TIMELINE_CONTEXT`, `TALONDRAS_ORB_INITIAL_CLOCK_GAP` and `TALONDRAS_INEXORABLE_ENERGY_PHASE_SCRIPT_GAP` retain unavailable alert-role/stun correction/Orb first-time/energy/stacks/transitions. Current victim is native explicit-enemy default for Shards; no guessed random selector. Preserve real template addons372717/372600/372775/372778.
 - Producer `--encounter talondras` changes only local ScriptName and primary binding (Journal2484/5356/display106790). Keep actual TDB/runtime model109735, actor stats/flags/addons/population/difficulties unchanged; never substitute journal thumbnail for the runtime model or manufacture205 rows. Require native Normal/Follower clocks/damage/reset/copy-credit proof; full Orb/energy fight remains uncertified.
