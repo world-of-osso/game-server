@@ -5,7 +5,6 @@ const DEATH: u32 = 32379;
 const FLASH_HEAL: u32 = 2061;
 
 #[test]
-#[ignore = "RED: native execute E3 is consumed but census reports unsupported77"]
 fn census_e77_priest_native_execute_consumes_carrier_without_hiding_unmatched_slots() {
     let mut h = harness(Vec::new(), &[DEATH, FLASH_HEAL, 46968], 5).unwrap();
     h.app.insert_resource(world_db().unwrap().store.clone());

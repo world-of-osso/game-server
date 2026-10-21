@@ -1041,3 +1041,5 @@ Named gap `FERAL_SPIRIT_INTRINSIC_AP_SOURCE`: archive pet_levelstats has2715 row
 ## Census effect77 — 2026-10-20
 
 Pinned TC a352b1fa `spell_dk_subduing_grasp` binds Gorefiend's Grasp108199E1 to caster-owned454822→454824 via limited IGNORE_CAST_IN_PROGRESS, not FULL_MASK. E0 pull remains unmatched and unhandled; no whole-spell census promotion. Native learned-own/absent/foreign talent cases: corrected ignored RED1FAIL/2PASS→GREEN3PASS20.71s before enabling. See [all44 root mappings and exact per-spec deltas](../../diagnostics/census-e77-70448.md).
+
+Priest32379E3 is consumed execute data (TC CalcDamage4483–4487), not an effect dispatch. Existing native E2/E3 arithmetic qualified with real damage/heal threshold crossing, RED only for unsupported-slot diagnostic→GREEN; unmatched Shockwave E1 still reports. Classifier changes diagnostics only, no generic77 binding.
