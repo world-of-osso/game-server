@@ -83,6 +83,11 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
 pub(crate) fn is_visual_aura(spell: &SpellInfo, effect: &SpellEffect) -> bool {
     let expected_amount = match (spell.id, effect.index) {
         (127803 | 128150, 0) => 1.0,
+        // Exact70448 seasonal pennants: ordinary model/race-sex visual selection,
+        // authored amount1 is not a generic zero-payload dummy exemption.
+        (412530 | 412912 | 425994 | 430508 | 456798 | 460082 | 460083 | 1217166 | 1233142, 0) => {
+            1.0
+        }
         (128151 | 128152 | 1220867, 0) => 0.0,
         // TC taunt-flag script casts51657: native sixty-second corpse marker;
         // the sibling effect76 creates the actual authored flag object.

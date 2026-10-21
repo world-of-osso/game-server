@@ -1,3 +1,7 @@
+## 2026-10-21 — Exact seasonal pennant aura slots
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): nine exact source amount1/selfaura4 identities, permanent duration/120s ItemEffect. Complete331rows26tables/nine resident models/81visualselectors/nine race-sex conditions. Actual nineUseToy RED9/Compass controlPASS67.87s precedes exact amount-aware slot admission, not zero-dummy broadening. GREEN/census pending; nativeart/full120sreuse/acquisition excluded.
+
 ## 2026-10-21 — Sourced Fast-Growing Seed visual
 
 [Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact210411/425503 source121rows26tables/four resident ordinary models, zero-payload self aura4. Actual peaceful-cast and combat-refusal RED2/driftcontrolPASS68.28s precedes one strict registry entry. Source3s cast/30s aura/60s recovery/natural reuse and combat refusal pass7/7 (66.86s) at396438a45/masterc6bc60006, with Kite/Ribbon and Gadgetzan controls. Census521→522 exactly210411, check/fmt pass with inherited unused-function warning; no native growth-animation or gameplay plant claim.
