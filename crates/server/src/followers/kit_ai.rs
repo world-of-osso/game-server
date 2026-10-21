@@ -53,6 +53,23 @@ pub(super) fn update(
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }
+    let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
+    if super::utility_interrupt::try_party(world, follower.owner, party, &candidates) {
+        return true;
+    }
+    for entry in entries
+        .iter()
+        .filter(|entry| is_generic_utility(entry.slot))
+    {
+        let target = if entry.slot == Slot::Control {
+            candidates.first().copied()
+        } else {
+            enemy
+        };
+        if try_entry(world, unit, follower, party, target, &enemies, entry) {
+            return true;
+        }
+    }
     let triage = (follower.profile.role == shared::group::GroupRole::Healer)
         .then(|| super::healer_triage::update(world, unit, follower, party, &entries));
     if triage.as_ref().is_some_and(|outcome| outcome.acted) {
@@ -61,9 +78,10 @@ pub(super) fn update(
     if super::utility::try_support(world, unit, follower, party, &enemies) {
         return true;
     }
-    let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
-    let mut interrupt_attempted = false;
-    for entry in &entries {
+    for entry in entries
+        .iter()
+        .filter(|entry| !is_generic_utility(entry.slot))
+    {
         let policy_owned = triage.as_ref().is_some_and(|outcome| {
             outcome.owned.contains(&entry.spell_id)
                 || super::healer_triage::manages(entry)
@@ -72,46 +90,7 @@ pub(super) fn update(
         if policy_owned {
             continue;
         }
-        let interrupt_entry = super::kit_interrupt::is_interrupt_entry(
-            entry,
-            world.resource::<crate::spell_info::SpellStore>(),
-        );
-        let pet_interrupt = follower.profile.spec_id == 266;
-        if !interrupt_attempted && (interrupt_entry || pet_interrupt || entry.slot == Slot::Control)
-        {
-            interrupt_attempted = true;
-            if super::utility_interrupt::try_party(world, follower.owner, party, &candidates) {
-                return true;
-            }
-        }
-        if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
-            continue;
-        }
-        let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
-            Ok(spell) => spell,
-            Err(error) => {
-                debug!(
-                    ?unit,
-                    base = entry.spell_id,
-                    ?error,
-                    "Follower action unavailable"
-                );
-                continue;
-            }
-        };
-        let mut entry = entry.clone();
-        entry.spell_id = spell_id;
-        let entry_enemy = if entry.slot == Slot::Control {
-            candidates.first().copied()
-        } else {
-            enemy
-        };
-        let Some(target) = select_target(world, unit, party, entry_enemy, &entry) else {
-            continue;
-        };
-        if conditions_met(world, unit, target, party, &enemies, &entry)
-            && attempt_cast(world, unit, target, follower, &entry)
-        {
+        if try_entry(world, unit, follower, party, enemy, &enemies, entry) {
             return true;
         }
     }
@@ -126,6 +105,43 @@ pub(super) fn update(
         ai::hold_combat(world, unit);
     }
     true
+}
+
+fn is_generic_utility(slot: Slot) -> bool {
+    matches!(slot, Slot::Defensive | Slot::Dispel | Slot::Control)
+}
+
+fn try_entry(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+    enemy: Option<Entity>,
+    enemies: &[(Entity, Option<Entity>)],
+    entry: &Entry,
+) -> bool {
+    if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
+        return false;
+    }
+    let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
+        Ok(spell) => spell,
+        Err(error) => {
+            debug!(
+                ?unit,
+                base = entry.spell_id,
+                ?error,
+                "Follower action unavailable"
+            );
+            return false;
+        }
+    };
+    let mut entry = entry.clone();
+    entry.spell_id = spell_id;
+    let Some(target) = select_target(world, unit, party, enemy, &entry) else {
+        return false;
+    };
+    conditions_met(world, unit, target, party, enemies, &entry)
+        && attempt_cast(world, unit, target, follower, &entry)
 }
 
 fn health_fraction(world: &World, unit: Entity) -> Option<f32> {
@@ -325,6 +341,11 @@ fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
 }
 
 fn health_allows(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
+    // Generic defensives already passed the observed3s death/active-protection
+    // admission above; a second legacy50% gate would contradict that policy.
+    if entry.slot == Slot::Defensive {
+        return true;
+    }
     if entry.conditions.tank_defensive_sequence {
         return super::tank_defense::allows(world, unit, health_fraction(world, unit));
     }
