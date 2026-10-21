@@ -45,6 +45,10 @@ const CONTRACT_GAPS: &[(u32, &str)] = &[
     (116689, "source seating interaction"),
     (172924, "source wormhole interaction"),
     (122126, "source weighted invisible-display contract"),
+    // toyfx11 retains opt-in party/viewer world-effect contracts, not just actors.
+    (198206, "source party-viewer world-effect interaction"),
+    (198264, "source party-viewer world-effect interaction"),
+    (210975, "source party-viewer world-effect interaction"),
 ];
 
 pub(super) fn load(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, BTreeSet<String>>> {

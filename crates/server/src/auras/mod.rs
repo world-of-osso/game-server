@@ -2177,14 +2177,16 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
     let now = aura_now(world);
     let units = units_with_auras(world, units);
     for unit in units {
-        if !targets::is_alive(world, unit) {
+        if targets::is_alive(world, unit) {
+            state_interrupts(world, unit);
+            crate::spell_cast::toy_area::remove_outside_auras(world, unit);
+            remove_casterless(world, unit);
+            periodic::run_due_ticks(world, unit, now);
+        } else {
             remove_on_death(world, unit);
-            continue;
         }
-        state_interrupts(world, unit);
-        crate::spell_cast::toy_area::remove_outside_auras(world, unit);
-        remove_casterless(world, unit);
-        periodic::run_due_ticks(world, unit, now);
+        // TC Unit.cpp438/2969–2973 updates/expires owned auras even on dead units.
+        // ALLOW_AURA_WHILE_DEAD preserves an aura on death, not past its duration.
         remove_auras(world, unit, RemoveReason::Expired, |aura| {
             aura.expires_at.is_some_and(|at| at <= now)
         });

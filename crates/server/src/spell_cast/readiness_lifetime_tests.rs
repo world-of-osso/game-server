@@ -17,8 +17,10 @@ struct ReadinessProbe {
 }
 
 impl ReadinessProbe {
-    fn start(spell: u32, class: u8, recovery_ms: u32) -> Self {
-        let mut harness = harness(Vec::new(), &[spell], class).unwrap();
+    fn start(mut harness: Harness, spell: u32, recovery_ms: u32) -> Self {
+        // Finish setup and catch up the real clock before consuming its charge.
+        harness.app.insert_resource(TimeUpdateStrategy::Automatic);
+        harness.advance(1);
         harness.cast_and_deliver(spell, Some(harness.npc));
         assert!(
             harness.inbox.failed.is_empty(),
@@ -30,7 +32,6 @@ impl ReadinessProbe {
         assert_eq!(charge.recharge_ms, recovery_ms);
         harness.inbox.log.clear();
         harness.inbox.failed.clear();
-        harness.app.insert_resource(TimeUpdateStrategy::Automatic);
         Self {
             harness,
             spell,
@@ -79,8 +80,11 @@ impl ReadinessProbe {
 #[test]
 fn native_readiness_real_sixty_second_owner_lifetime_survives_slow_frames() {
     // Active70391 SpellCategories1072/47749 → SpellCategory1680/1612.
-    let mut overpower = ReadinessProbe::start(7384, 1, 12_000);
-    let mut glaive = ReadinessProbe::start(185123, 12, 9_000);
+    // Neither charge may age while the other fixture loads canonical data.
+    let overpower = harness(Vec::new(), &[7384], 1).unwrap();
+    let glaive = harness(Vec::new(), &[185123], 12).unwrap();
+    let mut overpower = ReadinessProbe::start(overpower, 7384, 12_000);
+    let mut glaive = ReadinessProbe::start(glaive, 185123, 9_000);
     let started = Instant::now();
     let mut checked_gcd = false;
     while started.elapsed() < Duration::from_secs(60) {
