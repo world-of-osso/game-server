@@ -94,6 +94,12 @@ impl SummonProperties {
         }
     }
 
+    /// Minion ownership and EffectSummonType's ordinary Ally SetOwnerGUID;
+    /// a plain Wild TempSummon's summoner is not its source owner.
+    pub(crate) fn has_source_owner(self) -> bool {
+        self.is_minion() || self.control == CONTROL_ALLY
+    }
+
     /// TC EffectSummonType's default title branch and Map::SummonCreature's
     /// UNIT_MASK_SUMMON. A title label alone is not a distinct control/runtime.
     /// Joined spawn groups select the separate guardian route, not this branch.

@@ -56,6 +56,10 @@ A dummy aura counts as satisfied at server scope only when all four conditions h
 
 No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
 
+## Source-owned temporary summon targets
+
+- [ ] Implicit-target condition33 target0/other-target1/relationOwnedBy3 compares the real cast's caster with source ownership of represented temporary summons. Minion and ordinary Ally ownership qualify; an ordinary Wild summoner alone does not. Existing object-entry/StringId conditions, source radius and map-copy boundaries remain effective. Corrected real Coyote51149 selection RED observed; GREEN pending. Other ownership representations are not certified by this bounded mechanism.
+
 ## Exact seasonal pennant aura slots
 
 - [x] Obsidian206267/412530, Crimson206343/412912, Verdant210497/425994, Draconic211869/430508, Forged225933/456798, Unbound Legend227538/460082, Unbound Strategist227539/460083, Prized235519/1217166 and Astral242636/1233142 preserve authored self aura4 slot0 amount1, indefinite duration and120000ms item recovery.
