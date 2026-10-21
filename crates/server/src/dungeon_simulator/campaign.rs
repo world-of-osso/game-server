@@ -112,7 +112,7 @@ fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
                 .get::<shared::components::UnitLevel>(unit)
                 .unwrap()
                 .0,
-            u16::from(level)
+            level
         );
         assert!(
             run.app.world().get::<Health>(unit).unwrap().max > 0.0,
