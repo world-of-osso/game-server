@@ -1,7 +1,7 @@
 //! FOLLOWER_HEALER_TRIAGE_POLICY: project decisions over native spell execution.
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
-use shared::components::{Health, Mana, Position};
+use shared::components::{Health, Mana};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::VecDeque;
 
@@ -38,11 +38,8 @@ pub(super) struct Patient {
     pub missing_health: f32,
     pub incoming_per_second: f32,
     pub periodic_remaining: f32,
-    pub absorb_remaining: f32,
-    pub projected_death_seconds: f32,
     pub score: f32,
     pub emergency: bool,
-    pub position: Option<Vec3>,
 }
 
 #[derive(Clone, Debug)]
@@ -58,35 +55,13 @@ pub(super) struct TriageContext<'a> {
     pub world: &'a World,
     pub caster: Entity,
     pub follower: &'a Follower,
-    pub party: &'a [Entity],
     pub entries: &'a [Entry],
     pub patients: Vec<Patient>,
     pub candidates: Vec<Candidate>,
     pub mana_fraction: Option<f32>,
-    pub safe_to_dps: bool,
 }
 
 impl TriageContext<'_> {
-    pub fn entry(&self, spell_id: u32) -> Option<&Entry> {
-        self.entries.iter().find(|entry| entry.spell_id == spell_id)
-    }
-
-    pub fn own_aura(&self, spell_id: u32) -> Option<&crate::auras::AuraInstance> {
-        self.world
-            .get::<crate::auras::ActiveAuras>(self.caster)?
-            .iter()
-            .find(|aura| aura.spell_id == spell_id && aura.caster == self.caster)
-    }
-
-    pub fn ready(&self, spell_id: u32) -> bool {
-        self.entry(spell_id).is_some()
-            && self
-                .world
-                .resource::<SpellStore>()
-                .get(spell_id)
-                .is_some_and(|spell| ready(self.world, self.caster, spell))
-    }
-
     pub fn best_candidate(&self, owned: SpellSet) -> Option<Decision> {
         self.candidates
             .iter()
@@ -209,13 +184,8 @@ pub(super) fn read_patient(world: &World, target: Entity) -> Option<Patient> {
         missing_health: missing,
         incoming_per_second: incoming,
         periodic_remaining: periodic,
-        absorb_remaining: absorb,
-        projected_death_seconds: death,
         score: uncovered / health.max * weight,
         emergency: death <= EMERGENCY_SECONDS || health.current / health.max <= EMERGENCY_HEALTH,
-        position: world
-            .get::<Position>(target)
-            .map(|at| Vec3::new(at.x, at.y, at.z)),
     })
 }
 
@@ -376,7 +346,6 @@ pub(super) fn update(
         world,
         caster,
         follower,
-        party,
         entries,
         patients,
         candidates: Vec::new(),
@@ -384,7 +353,6 @@ pub(super) fn update(
             .get::<Mana>(caster)
             .filter(|mana| mana.max > 0.0)
             .map(|mana| mana.current / mana.max),
-        safe_to_dps: safe,
     };
     ctx.candidates = read_candidates(&ctx);
     let (decision, owned) = match super::healer_policy::decide(&ctx) {
