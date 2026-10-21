@@ -299,6 +299,23 @@ fn healer_triage_scripted_deadline_prepares_full_health_tank() {
         boss,
         crate::scripted_ai::Hook::JustEngagedWith(tank),
     );
+    let deadlines = |h: &Harness| {
+        crate::scripted_ai::read_scheduled_damage(h.app.world(), boss)
+            .into_iter()
+            .map(|event| (event.spell_id, event.request_in_ms))
+            .collect::<Vec<_>>()
+    };
+    let before = deadlines(&h);
+    assert!(
+        before
+            .iter()
+            .any(|(spell, time)| *spell == 86604 && (3000..=4000).contains(time))
+    );
+    assert!(
+        before
+            .iter()
+            .any(|(spell, time)| *spell == 86620 && (1000..=2000).contains(time))
+    );
     super::super::healer_triage::update(
         h.app.world_mut(),
         healer,
@@ -309,6 +326,16 @@ fn healer_triage_scripted_deadline_prepares_full_health_tank() {
     assert!(
         crate::auras::has_aura(h.app.world(), tank, 33763),
         "actual Hogger1–4s EventMap damage deadlines must permit full-health tank preparation"
+    );
+    assert_eq!(
+        deadlines(&h),
+        before,
+        "triage observations never advance native timers"
+    );
+    crate::scripted_ai::dispatch(h.app.world_mut(), boss, crate::scripted_ai::Hook::Reset);
+    assert!(
+        deadlines(&h).is_empty(),
+        "real Reset removes preparation deadlines"
     );
 }
 
