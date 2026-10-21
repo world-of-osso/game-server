@@ -16,7 +16,7 @@ Do not add these three Toy rows until a real contract is established and approve
 ## Census-driven generic effect160
 
 - [x] Native effect160 (`FORCE_CAST_2`) queues a normal cast by the hit unit toward the original caster after the parent's SpellGo, preserving the child's ordinary cast time, resource/cooldown and crowd-control checks (TC a352b1fa `SpellEffects.cpp:851–892`). No per-toy script or cosmetic whitelist substitutes for this generic dispatch.
-- [ ] Spore-Bound Essence203852/402642 must complete its own root use before the forced402636 cast begins, preserve the source2000ms child cast, apply the source300000ms transform202340/display88121, expire naturally and retain item cooldown.
+- [x] Spore-Bound Essence203852/402642 must complete its own root use before the forced402636 cast begins, preserve the source2000ms child cast, apply the source300000ms transform202340/display88121, expire naturally and retain item cooldown.
 
 Full catalog diagnostics distinguish pipeline-admissibility from complete toy lifecycle/native presentation. A handled root is not proof that arbitrary dummy scripts or missing summon definitions work.
 

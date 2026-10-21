@@ -3418,3 +3418,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: Kargath pinned source/native149 and eleven-case proof ingested;30738 delayed-selector incompatibility and source actor publication gaps explicit.
 
 - 2026-10-20: Porung authenticated Heroic primary/unchanged native SmartAI and six-case composite proof ingested; stale No Repeat comment and real Normal-only same-display counterexample documented.
+
+## 2026-10-21 — Toy census generic force casts
+
+[Source and proof](systems/toys.md#census-driven-generic-force-casts-2026-10-21): effect160 generic normal queued target→caster cast gives421→423/1173 pipeline admission. Behavioral RED2/one control→GREEN3; native timing/CC and actual Spore learning/2s cast/5min expiry/cooldown, nine existing effect64 controls retained. Brulfist movement/native presentation remain unproved; dummy/scripts and missing data stay explicit.

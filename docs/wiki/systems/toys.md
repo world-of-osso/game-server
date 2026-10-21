@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Census-driven generic force casts (2026-10-21)
+
+[Contract](../../specs/toys.md#census-driven-generic-effect160): the current Full1166+seven70448 catalog has421→423/1173 pipeline-admissible toys after generic effect160 (`FORCE_CAST_2`) dispatch. TC a352b1fa `SpellEffects.cpp:851–892` queues a normal cast by the hit unit at the original caster, after the parent SpellGo. Reuse the existing pending-cast queue, but preserve normal cast time, readiness and CC checks rather than effect64's costed-trigger policy. No per-toy script or dummy whitelist added.
+
+Behavioral RED2/one control precedes implementation81721548d. Corrected native Hitching Post fixture starts outside combat (the shared combat harness otherwise rightly refuses peaceful mounting). Current49150da7f GREEN3 covers native reversed ownership/source1.5s cast, actual stun refusal and real Spore-Bound Essence203852 learning/use→source2s child402636→display88121→natural5min restoration with item cooldown retained. Nine existing native effect64 queue/order/cost/target controls pass. Census adds only140336 Brulfist Idol and203852, zero removals; Brulfist movement and native presentation remain unproved at this checkpoint.
+
+Evidence: engine `data/diagnostics/toys-census-2026-10-21/{census.json,by-cause.md,force160-delta.json}` plus RED/GREEN/regression logs. Graphs preserve every raw all-difficulty DB2 TriggerSpell reference separately from runtime blocker classification; a script-owned/static reference is not automatically an executing edge. The752→750 remaining blockers include script/dummy, summon definitions/control, targets and other handlers; no full1166 lifecycle/native parity claim.
+
 ## Natural shared hearthstone charge coverage (2026-10-18)
 
 [Current proof scope](../../toy-effects14-coverage.md#natural-shared-hearthstone-charge-coverage-green-first-execution-2026-10-18), [contract](../../specs/toys.md#natural-shared-hearthstone-charge-coverage): tt653211/0/check/fmt landed stationary timer coveragea989c0f3b. Final toy test/docs slice covers281136/281615 in both directions: ordinary30min shared2309 recovery allows sibling10s cast, spends its only charge and blocks original. Observed completion bounds/normal50ms updates, no private deadline/reset/clock edits. First execution7adfb7b03 GREEN4/0/78.45s covers both new directions and both retained initial/missing-bind controls. Existing machinery works; no runtime repair/fabricated RED. Lead integration/landing pending; accepted sourced boundary/gaps/native exclusions unchanged.
