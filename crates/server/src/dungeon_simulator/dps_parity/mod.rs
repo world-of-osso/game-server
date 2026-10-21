@@ -47,7 +47,8 @@ fn read_reference(spec_id: u32) -> Result<(inputs::Profile, Vec<inputs::Allocate
     if profile.spec_id != spec_id {
         return Err("reference spec identity mismatch".into());
     }
-    let traits = inputs::read_json(&directory.join(format!("{spec_id}.selected-traits.json")))?;
+    let traits =
+        inputs::read_json(&directory.join(format!("{spec_id}.selected-traits-active.json")))?;
     Ok((profile, traits))
 }
 

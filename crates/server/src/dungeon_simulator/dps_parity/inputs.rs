@@ -46,6 +46,7 @@ pub(super) struct AllocatedTrait {
     pub node_id: u32,
     pub entry_id: u32,
     pub ranks: u32,
+    pub active_ranks: u32,
 }
 
 pub(super) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
@@ -144,12 +145,19 @@ pub(super) fn install_traits(
 ) -> Result<(), String> {
     let follower = world.get::<crate::followers::Follower>(unit).unwrap();
     let level = world.get::<shared::components::Level>(unit).unwrap().0;
+    if allocated
+        .iter()
+        .any(|entry| entry.active_ranks > entry.ranks)
+    {
+        return Err("active trait ranks exceed exported allocations".into());
+    }
     let purchases: Vec<_> = allocated
         .iter()
+        .filter(|entry| entry.active_ranks > 0)
         .map(|entry| crate::trait_config::Purchase {
             node_id: entry.node_id,
             entry_id: entry.entry_id,
-            ranks: entry.ranks,
+            ranks: entry.active_ranks,
         })
         .collect();
     let (known, traits) = crate::class_progression::evaluate_reference_traits(

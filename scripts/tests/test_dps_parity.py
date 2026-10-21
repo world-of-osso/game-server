@@ -1,7 +1,6 @@
 """Profile instance identities are never replaced by base items or fabricated stats."""
 import importlib.util
 import json
-import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -79,29 +78,28 @@ actions+=/judgment,if=holy_power<5
 
     def test_selected_talents_keep_source_node_entry_and_rank_not_name_guesses(self):
         selected = PARITY.parse_selected_talents(json.dumps([
-            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1},
-            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2, "max_ranks": 2},
-            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1, "max_ranks": 1},
-            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1},
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
+            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2, "max_ranks": 2, "active_ranks": 2},
+            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
         ]))
         self.assertEqual(selected, [
-            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1},
-            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2},
-            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1},
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "active_ranks": 1},
+            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2, "active_ranks": 2},
+            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1, "active_ranks": 1},
         ])
 
     def test_selected_tiered_talents_use_allocated_entries_not_consumed_debug_rank(self):
         rows = [
-            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2, "max_ranks": 2},
-            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1, "max_ranks": 1},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2, "max_ranks": 2, "active_ranks": 2},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
         ]
         selected = PARITY.parse_selected_talents(json.dumps(rows))
         self.assertEqual(selected, [
-            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2},
-            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2, "active_ranks": 2},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1, "active_ranks": 1},
         ])
 
-    @unittest.skipUnless(os.environ.get("DPS_PARITY_EFFECTIVE_TRAITS"), "opt-in effective-rank RED")
     def test_selected_metadata_keeps_disabled_hero_allocation_and_effective_rank(self):
         # Pinned Feral allocates Wildshape Mastery in hero21 while selecting22;
         # create_talent_obj disables that allocation without deleting player_traits.

@@ -71,17 +71,20 @@ def parse_selected_talents(metadata):
     if not isinstance(records, list) or not records:
         raise ValueError("No selected talent records from pinned SimC")
     selected = {}
-    required = {"tree", "node_id", "entry_id", "ranks", "max_ranks"}
+    required = {"tree", "node_id", "entry_id", "ranks", "max_ranks", "active_ranks"}
     for row in records:
         if not isinstance(row, dict) or not required.issubset(row):
             raise ValueError(f"Incomplete selected talent record: {row!r}")
         if not isinstance(row["tree"], str) or not row["tree"]:
             raise ValueError(f"Invalid selected talent tree: {row!r}")
-        if any(type(row[key]) is not int or row[key] <= 0 for key in required - {"tree"}):
+        if any(type(row[key]) is not int or row[key] <= 0
+               for key in required - {"tree", "active_ranks"}):
             raise ValueError(f"Invalid selected talent identity/rank: {row!r}")
         if row["ranks"] > row["max_ranks"]:
             raise ValueError(f"Invalid selected talent rank: {row!r}")
-        value = {key: row[key] for key in ("tree", "node_id", "entry_id", "ranks")}
+        if type(row["active_ranks"]) is not int or not 0 <= row["active_ranks"] <= row["ranks"]:
+            raise ValueError(f"Invalid active talent rank: {row!r}")
+        value = {key: row[key] for key in ("tree", "node_id", "entry_id", "ranks", "active_ranks")}
         key = (row["node_id"], row["entry_id"])
         if key in selected and selected[key] != value:
             raise ValueError(f"Conflicting selected talent records for {key}")

@@ -24,9 +24,9 @@ static void write_selected_traits(std::ostream &output,
       output << ",\n";
     first = false;
     output << fmt::format(
-        R"({{"tree":"{}","node_id":{},"entry_id":{},"ranks":{},"max_ranks":{}}})",
+        R"({{"tree":"{}","node_id":{},"entry_id":{},"ranks":{},"max_ranks":{},"active_ranks":{}}})",
         util::talent_tree_string(tree), trait->id_node, entry, rank,
-        trait->max_ranks);
+        trait->max_ranks, player.find_talent_spell(entry).rank());
   }
   output << "\n]\n";
 }
