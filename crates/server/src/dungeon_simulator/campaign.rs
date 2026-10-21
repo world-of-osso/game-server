@@ -95,7 +95,7 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 fn scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast() {
     let _rng_scope = crate::random::seed_scope(3);
     let mut run = spawn_run(3, &mut None).unwrap();
-    for _ in 0..3 {
+    for _ in 0..400 {
         run.app.update();
     }
     let tank = run.party.tank;
@@ -126,17 +126,14 @@ fn scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast() {
 fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
     let _rng_scope = crate::random::seed_scope(3);
     let mut run = spawn_run(3, &mut None).unwrap();
-    for _ in 0..3 {
+    for _ in 0..400 {
         run.app.update();
     }
     let tank = run.party.tank;
     let first = run.actors[&20375759];
-    crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, first);
-    crate::followers::update_ai(run.app.world_mut());
-    run.app.update();
+    crate::combat::deal_direct_damage(run.app.world_mut(), tank, first, 100.0);
     crate::combat::kill_unit(run.app.world_mut(), tank, first);
     run.app.update();
-    crate::followers::update_ai(run.app.world_mut());
     let next = std::collections::BTreeSet::from([20375765]);
     let decision = crate::followers::simulator::pull(run.app.world_mut(), tank, &next);
     assert!(
