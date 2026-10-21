@@ -673,8 +673,20 @@ fn holy_policy_native90_purify_removes_real_magic_during_triage_pressure() {
         fraction(&group, target) < 1.0,
         "the real periodic damage must land before AI admission"
     );
-    uses_spell(&mut group.h, group.priest, 527);
+    let patient = super::healer_triage::read_patient(group.h.app.world(), target).unwrap();
+    assert!(!patient.emergency && fraction(&group, target) > 0.95);
+    let start = group.h.inbox.go.len();
+    super::update_ai(group.h.app.world_mut());
     group.h.advance(5);
+    let first = group.h.inbox.go[start..]
+        .iter()
+        .find(|event| event.caster == group.priest.to_bits())
+        .map(|event| event.spell_id);
+    assert_eq!(
+        first,
+        Some(527),
+        "actual non-emergency Magic must be dispelled before a paid heal"
+    );
     assert!(!has_aura(group.h.app.world(), target, MAGIC_DOT));
 }
 

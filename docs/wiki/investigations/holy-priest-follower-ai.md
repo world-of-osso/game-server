@@ -118,6 +118,13 @@ The fixture now uses real `create_companion_party`, actual follower online recor
 and the owner's test ClientId; its membership and coverage proof remains pending.
 No production policy change or individual-buff workaround.
 
+Qualification now also covers real Holy Fire/Smite/Nova and native offensive
+safety inputs. A new PoH opportunity case spends Apotheosis and Words through
+ordinary casts/expiry before real moderate group damage. The existing Purify case
+now checks its first decision on a non-emergency Magic patient above95%HP; the
+earlier eventual-removal GREEN did not establish priority over an unnecessary
+paid heal. These added/strengthened cases remain unqualified, not assumed bugs.
+
 ## Named selected-kit gaps
 
 Verified source inspection at66f0b1d6b: these numeric spell IDs have no class-specific
