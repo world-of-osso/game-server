@@ -129,6 +129,60 @@ fn owner_scaled_firebolt(level: u8) -> (f32, f32, i32) {
 }
 
 #[test]
+fn rotation_fidelity_wild_imp_hand_of_guldan_spawns_three_native_actors() {
+    let (mut h, owner) = warlock(32);
+    let target = h.npc;
+    let shards = crate::spell_cast::powers::power_value(
+        h.app.world(),
+        owner,
+        shared::components::PowerType::SoulShards,
+    )
+    .unwrap()
+    .0;
+    assert!(
+        shards >= 30.0,
+        "native default three shards, never injected"
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), owner, 105174, Some(target), false)
+        .expect("ordinary native three-shard Hand of Guldan");
+    h.advance(100);
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(owner.to_bits())
+                && event.spell_id == Some(86040)
+                && event.kind == CombatLogKind::Damage
+        }),
+        "actual meteor must land before qualifying its missing summons"
+    );
+    let world = h.app.world_mut();
+    let imps: Vec<_> = world
+        .query::<(Entity, &SummonedCreature)>()
+        .iter(world)
+        .filter(|(_, summon)| summon.owner == owner && summon.spell_id == 104317)
+        .map(|(actor, _)| actor)
+        .collect();
+    assert_eq!(
+        imps.len(),
+        3,
+        "native fixed30raw shard cost and sourced one Imp per shard"
+    );
+    for imp in imps {
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::components::Npc>(imp)
+                .unwrap()
+                .template_id,
+            55659
+        );
+        assert!(
+            first_firebolt(&mut h, imp).is_some(),
+            "each real Imp must attack its owner's target"
+        );
+    }
+}
+
+#[test]
 fn rotation_fidelity_wild_imp_firebolt_scales_with_actual_native_owner_spell_power() {
     let low = owner_scaled_firebolt(32);
     let high = owner_scaled_firebolt(40);
