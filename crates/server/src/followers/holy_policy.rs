@@ -92,12 +92,7 @@ fn ready(ctx: &TriageContext<'_>, spell_id: u32, target: Entity) -> bool {
     let Some(entry) = ctx.entries.iter().find(|entry| entry.spell_id == spell_id) else {
         return false;
     };
-    let Some(spell) = ctx.world.resource::<SpellStore>().get(spell_id) else {
-        return false;
-    };
-    super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, target, entry)
-        && spell_cast::read_healer_recovery(ctx.world, ctx.caster, spell).is_ok()
-        && spell_cast::spell_costs(ctx.world, ctx.caster, spell).is_ok()
+    ctx.ready(spell_id) && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, target, entry)
 }
 
 fn health_fraction(ctx: &TriageContext<'_>, target: Entity) -> Option<f32> {

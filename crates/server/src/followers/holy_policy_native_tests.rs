@@ -350,6 +350,25 @@ fn holy_policy_native90_mending_keeps_the_owned_bounced_ward() {
 }
 
 #[test]
+fn holy_policy_native90_imminent_death_above_hp_threshold_receives_guardian_spirit() {
+    let mut group = native_group();
+    for _ in 0..7 {
+        let enemy = group.h.npc;
+        creature_cast(group.h.app.world_mut(), enemy, BURST_OF_HATRED, None, false).unwrap();
+        group.h.advance(20);
+    }
+    let threatened = group.members.iter().any(|&member| {
+        let patient = super::healer_triage::read_patient(group.h.app.world(), member).unwrap();
+        fraction(&group, member) > 0.25 && patient.projected_death_seconds <= 3.0
+    });
+    assert!(
+        threatened,
+        "native fast damage must threaten death above the HP cutoff"
+    );
+    uses_spell(&mut group.h, group.priest, 47788);
+}
+
+#[test]
 fn holy_policy_native90_critical_patient_receives_guardian_spirit() {
     let mut group = native_group();
     apply_pressure(&mut group, 9);
