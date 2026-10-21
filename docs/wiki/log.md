@@ -1,6 +1,6 @@
 ## 2026-10-20 — Kelidan and Skull Bash load flakes
 
-[Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.
+[Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. At97398c587/protocol03cebdb: each exact case10/10 under4 same-core hogs (490.887s, hogs stopped); full filters684PASS/0FAIL/20existingignored (679standard +1privatefrontal +4privatefrozen); check/fmt0, no warnings. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.
 
 ## 2026-10-20 — Earthen Rage authored variance oracle
 
