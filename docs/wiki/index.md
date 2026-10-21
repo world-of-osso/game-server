@@ -935,3 +935,5 @@ Debug logs and root cause analyses.
 - [Nested achievement catalog reuse](investigations/slow-native-test-fixtures.md#nested-achievement-canonical-catalog-reuse) — existing canonical catalog copies; all four difficulty/prerequisite/persistence variants preserved, matched wall27.029→17.224s, CPU26.189→17.176s, peak RSS+52508KiB.
 
 - [Aura world/XP native70448](systems/auras.md#aura-worldxp-native70448--2026-10-20) — generic200/291/348 reward consumers,144/58/179 consumers and server-only world flags; native15GREEN, explicit TCNULL/client gaps.
+
+- [Census effect77](systems/spell-casting.md#census-effect77--2026-10-20) —44-root source mapping, Subduing Grasp E1 partial port; unmatched slots stay named gaps.

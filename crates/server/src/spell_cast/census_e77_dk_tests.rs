@@ -40,7 +40,6 @@ fn assert_no_debuff(h: &Harness) {
 }
 
 #[test]
-#[ignore = "RED: census-e77 DK Subduing Grasp effect1 not bound"]
 fn census_e77_dk_own_native_talent_applies_owned_subduing_grasp() {
     let mut h = fixture(true);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, TALENT));
@@ -65,7 +64,6 @@ fn census_e77_dk_own_native_talent_applies_owned_subduing_grasp() {
 }
 
 #[test]
-#[ignore = "RED batch control: no talent must not apply debuff"]
 fn census_e77_dk_no_talent_does_not_apply_subduing_grasp() {
     let mut h = fixture(false);
     cast_grasp(&mut h);
@@ -73,7 +71,6 @@ fn census_e77_dk_no_talent_does_not_apply_subduing_grasp() {
 }
 
 #[test]
-#[ignore = "RED batch control: foreign talent must not apply debuff"]
 fn census_e77_dk_foreign_talent_does_not_apply_subduing_grasp() {
     let mut h = fixture(false);
     super::creature_cast(h.app.world_mut(), h.npc, TALENT, Some(h.npc), true).unwrap();
