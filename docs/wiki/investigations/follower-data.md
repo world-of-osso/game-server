@@ -2,7 +2,7 @@
 
 ### Fixed-cost Hand of Guldan Imp bridge — 2026-10-21
 
-At4001a8594 the ordinary105174 cast has native default30raw Soul Shards and its86040 meteor lands, but zero104317 actors instead of three (genuine1RED10.84s/zero warnings). The fixed native book exposes root effect0 count3, matching30raw/DisplayModifier10. Meteor execute now schedules three104317 FULL-trigger callbacks on the existing queued-cast lifetime path; cumulative1–2ms delays follow current SimC76f8118 actions2730–2756, not obsolete180ms spacing. Actual guardian targeting/binding/SP remain ordinary production behavior. GREEN pending; frame quantization is not sub-frame timing proof, and variable-spend/free-count/Core/exhaustion/Tyrant behavior remains unproved.
+At4001a8594 the ordinary105174 cast has native default30raw Soul Shards and its86040 meteor lands, but zero104317 actors instead of three (genuine1RED10.84s/zero warnings). The fixed native book exposes root effect0 count3, matching30raw/DisplayModifier10. Meteor execute now schedules three104317 FULL-trigger callbacks on the existing queued-cast lifetime path; cumulative1–2ms delays follow current SimC76f8118 actions2730–2756, not obsolete180ms spacing. Actual guardian targeting/binding/SP remain ordinary production behavior. Atc7bf9ed75 native3GREEN26.52s/zero warnings proves ordinary HoG meteor plus three real attacking Imps and retained direct binding/SP; existing three-shard meteor/area1GREEN4.91s. Frame quantization is not sub-frame timing proof, and variable-spend/free-count/Core/exhaustion/Tyrant behavior remains unproved.
 
 
 ### Wild Imp binding and owner SP — 2026-10-21
