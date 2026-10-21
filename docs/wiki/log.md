@@ -3516,3 +3516,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): merged1c4df4250 native21PASS26.07s/0warnings/fmtPASS, including real two-use ComboBreaker and StatsPlugin LastStand46/47; full APL/healer import remain open.
 
 - 2026-10-21: Landed healer reader/horizon wired into [tank rotation policy](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21); removed None shim, preserving healer scheduling and major ordering.
+
+- 2026-10-21: [Bo32 finite target](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21): traced actual ToD kill before lower-priority BoK; preserve source order/window, separate strong-target BoK and weak-target execute oracles.

@@ -43,22 +43,9 @@ fn wounded(h: &mut Harness, unit: Entity, fraction: f32) {
 }
 
 pub(super) fn uses_spell(h: &mut Harness, unit: Entity, spell: u32) {
-    let mut previous_casts = 0;
-    for frame in 0..600 {
+    for _ in 0..600 {
         update_ai(h.app.world_mut());
         h.advance(1);
-        if spell == 100784 {
-            let count = h
-                .inbox
-                .go
-                .iter()
-                .filter(|event| event.caster == unit.to_bits())
-                .count();
-            if count != previous_casts || frame == 599 {
-                trace_bo_state(h, unit, frame);
-                previous_casts = count;
-            }
-        }
         if h.inbox
             .go
             .iter()
@@ -153,54 +140,52 @@ fn follower_kit_kybel32_verdant_embrace() {
     uses_spell(&mut h, unit, 360995);
 }
 
-fn trace_bo_state(h: &Harness, unit: Entity, frame: usize) {
-    let world = h.app.world();
-    let costs: Vec<_> = [113656, 392983, 107428, 322109, 100784, 100780]
-        .into_iter()
-        .map(|spell_id| {
-            let spell = world
-                .resource::<crate::spell_info::SpellStore>()
-                .get(spell_id)
-                .unwrap();
-            (
-                spell_id,
-                crate::spell_cast::applicable_costs(world, unit, spell),
-            )
-        })
-        .collect();
-    let life: Vec<_> = h
-        .inbox
-        .log
-        .iter()
-        .filter(|event| {
-            event.target == Some(h.npc.to_bits())
-                && matches!(
-                    event.kind,
-                    shared::protocol::CombatLogKind::Damage
-                        | shared::protocol::CombatLogKind::Death
-                )
-        })
-        .collect();
-    println!(
-        "BO_STATE frame={frame} time={} unit_health={:?} target_health={:?} powers={:?} costs={costs:?} casts={:?} target_life={life:?}",
-        crate::auras::aura_now(world),
-        world.get::<Health>(unit),
-        world.get::<Health>(h.npc),
-        world.get::<crate::spell_cast::powers::PowerPools>(unit),
-        h.inbox
-            .go
-            .iter()
-            .filter(|event| event.caster == unit.to_bits())
-            .map(|event| event.spell_id)
-            .collect::<Vec<_>>()
-    );
-}
-
 #[test]
 fn follower_kit_bo32_blackout_kick() {
     let (mut h, unit) = level32(227734);
-    trace_bo_state(&h, unit, 0);
+    // This test needs a living Chi-spender target, not a creature eligible for
+    // ToD's legitimate earlier execute (SimC76f8118 APL269, class2674–2703).
+    let stronger_health = h.app.world().get::<Health>(unit).unwrap().max * 2.0;
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: stronger_health,
+        max: stronger_health,
+    });
     uses_spell(&mut h, unit, 100784);
+}
+
+#[test]
+fn follower_kit_bo32_selects_touch_of_death_before_blackout_on_weaker_creature() {
+    let (mut h, unit) = level32(227734);
+    assert!(
+        h.health(h.npc) < h.app.world().get::<Health>(unit).unwrap().max,
+        "native weaker-creature execute precondition"
+    );
+    uses_spell(&mut h, unit, 322109);
+    let casts: Vec<_> = h
+        .inbox
+        .go
+        .iter()
+        .filter(|event| event.caster == unit.to_bits())
+        .map(|event| event.spell_id)
+        .collect();
+    let execute = casts.iter().position(|spell| *spell == 322109).unwrap();
+    assert!(
+        !casts[..execute].contains(&100784),
+        "non-Patchwerk APL selects eligible ToD before lower-priority BoK: {casts:?}"
+    );
+    let landed = h.inbox.log.iter().any(|event| {
+        event.source == Some(unit.to_bits())
+            && event.target == Some(h.npc.to_bits())
+            && event.spell_id == Some(322109)
+            && event.kind == shared::protocol::CombatLogKind::Damage
+    });
+    if landed {
+        assert_eq!(
+            h.health(h.npc),
+            0.0,
+            "landed native execute kills the weaker fixture target"
+        );
+    }
 }
 
 #[test]

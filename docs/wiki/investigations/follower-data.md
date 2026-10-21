@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Windwalker finite-target starter test — 2026-10-21
+
+The Bo32 Blackout Kick test used a finite5000HP Kobold while Bo had7840maxHP. With v4, Zenith80 precedes eligible TouchOfDeath111, then BoK120; canonical's old BoK110 preceded ToD110 by spell ID. Loaded native trace41764af04 shows Zenith at0.25s, ToD7840damage/2875overkill and real targetDeath at0.30s, then no living enemy for the remaining30s. BoK is genuinely free under Zenith (native3Chi−rank2−Zenith1), but lower priority than the valid execute. This was a policy-input/oracle mismatch, not a frame-time stall; isolated/master comparisons used canonical rather than v4.
+
+Pinned SimC76f8118 APL269 places eligible non-Patchwerk ToD before BoK; class2674–2703 permits a weaker creature and deals caster-max-health damage. Keep production order and the600-frame test window. BoK coverage now uses an explicitly stronger non-executable target; a separate weaker-target case preserves ToD-before-BoK and checks its landed native kill without forcing a hit. Trace: engine `data/diagnostics/rotation-fidelity-2026-10-21/bok-native-loaded-trace.log`. Patched-copy GREEN pending.
+
 ## Rotation proc lifetimes — 2026-10-21
 
 After healer-ai landed on mastered677e53e, tank sequencing imports the real `healer_triage::read_patient` and shared `EMERGENCY_SECONDS`. The None-only shim and local horizon copy are removed. The merge retains healer-owned scheduling and tank major cooldown ordering; its integration gate is pending.
