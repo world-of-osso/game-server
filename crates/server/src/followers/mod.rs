@@ -216,6 +216,8 @@ mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
 #[cfg(test)]
+mod rotation_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod utility_tests;
