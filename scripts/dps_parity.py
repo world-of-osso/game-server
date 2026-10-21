@@ -6,6 +6,7 @@ Manifest generation only; it does not claim equal gear or measured DPS.
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 
@@ -111,9 +112,36 @@ def normalize_simc(report):
             "buffs": {buff["name"]: buff.get("uptime", 0) for buff in player["buffs"]}}
 
 
+def flatten_stat_sheet(sheet):
+    values = {}
+    for section in ("attribute", "stats"):
+        for stat, value in sheet.get(section, {}).items():
+            name = f"{section}.{stat}"
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"Stat {name} must be a finite number: {value!r}")
+            values[name] = value
+    return values
+
+
+def compare_stat_value(name, reference, server):
+    row = {"stat": name, "reference": reference, "server": server,
+           "delta_pct": None, "flag": True}
+    if reference is None:
+        return dict(row, status="missing_reference")
+    if server is None:
+        return dict(row, status="missing_server")
+    if reference == 0 and server != 0:
+        return dict(row, status="zero_reference")
+    delta = (server - reference) * 100 / abs(reference) if reference else 0.0
+    return dict(row, delta_pct=delta, flag=abs(delta) > 5, status="measured")
+
+
 def compare_stat_sheets(reference, server):
     """Compare identically-unitized attribute/stats maps; absent data is not zero."""
-    return []
+    reference = flatten_stat_sheet(reference)
+    server = flatten_stat_sheet(server)
+    return [compare_stat_value(name, reference.get(name), server.get(name))
+            for name in sorted(reference.keys() | server.keys())]
 
 
 def build_simc_arguments(profile, mode, output):
