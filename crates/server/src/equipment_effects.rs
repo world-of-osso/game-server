@@ -328,6 +328,16 @@ mod tests {
             },
         );
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1297382));
+        // TC a352b1fa SpellAuraEffects.cpp4962 passes a nonzero linked amount as BP0.
+        let child = h
+            .app
+            .world()
+            .get::<ActiveAuras>(h.caster)
+            .unwrap()
+            .iter()
+            .find(|aura| aura.spell_id == 1295897)
+            .expect("native nonzero LINKED_2 must apply its child");
+        assert_eq!(child.effects[0].amount, 50.0);
         h.app
             .world_mut()
             .get_mut::<EquippedItemModifiers>(h.caster)
@@ -338,5 +348,6 @@ mod tests {
             .clear();
         h.advance(2);
         assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1297382));
+        assert!(!crate::auras::has_aura(h.app.world(), h.caster, 1295897));
     }
 }
