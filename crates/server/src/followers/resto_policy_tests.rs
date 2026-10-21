@@ -604,6 +604,50 @@ fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
 }
 
 #[test]
+fn resto_policy_native_efflo_pulse_caps_injured_targets_and_prioritizes_group_player() {
+    let (mut h, healer, party) = native_efflo_party();
+    let center = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(party[2])
+        .unwrap();
+    let owner = h.caster;
+    h.app.world_mut().entity_mut(owner).insert(center);
+    h.app.world_mut().entity_mut(healer).insert(center);
+    damage(&mut h, owner, 0.35);
+    let first = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 81269, Some(party[2]), false)
+        .unwrap();
+    h.advance(1);
+    let healed = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(81269)
+                && event.source == Some(healer.to_bits())
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        healed.len(),
+        3,
+        "native child caps its five eligible allies at three"
+    );
+    assert!(healed.iter().all(|event| event.overflow < event.amount));
+    assert!(
+        healed
+            .iter()
+            .any(|event| event.target == Some(owner.to_bits())),
+        "injured actual group player has priority over tied injured NPC allies"
+    );
+    assert!(
+        !healed
+            .iter()
+            .any(|event| event.target == Some(healer.to_bits())),
+        "full-health healer must not displace four available injured allies"
+    );
+}
+
+#[test]
 fn resto_policy_native_efflo_recast_removes_previous_source_area_trigger() {
     let (mut h, healer, party) = native_efflo_party();
     crate::spell_cast::creature_cast(h.app.world_mut(), healer, 145205, Some(party[2]), false)
