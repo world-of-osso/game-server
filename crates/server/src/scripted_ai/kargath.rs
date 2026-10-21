@@ -80,6 +80,12 @@ impl Kargath {
             self.dance_count = 0;
             return;
         }
+        Self::cast_dance_step(ctx);
+        self.boss.events.schedule(EVENT_BLADE_DANCE, 500);
+        self.dance_count += 1;
+    }
+
+    fn cast_dance_step(ctx: &mut Ctx) {
         ctx.world
             .get_mut::<BladeDanceTargets>(ctx.me)
             .expect("Kargath target list")
@@ -109,8 +115,6 @@ impl Kargath {
             ctx.do_cast_at(Some(target), BLADE_DANCE_CHARGE, false);
             ctx.do_cast_self(BLADE_DANCE);
         }
-        self.boss.events.schedule(EVENT_BLADE_DANCE, 500);
-        self.dance_count += 1;
     }
 
     fn check_leash(&mut self, ctx: &mut Ctx) -> bool {
