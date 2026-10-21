@@ -279,8 +279,13 @@ impl InteractionWorld<'_, '_> {
             .get(object)
             .map_err(|_| InteractionError::InvalidTarget)?;
         let role = match info.go_type {
-            // Only buttons with a ported GameObjectAI; generic door/button use is not modelled.
-            crate::game_objects::GAMEOBJECT_TYPE_BUTTON if scripted && !in_use => ObjectUse::Script,
+            // Only ported GameObjectAI scripts; generic door/button use is not modelled.
+            crate::game_objects::GAMEOBJECT_TYPE_DOOR
+            | crate::game_objects::GAMEOBJECT_TYPE_BUTTON
+                if scripted && !in_use =>
+            {
+                ObjectUse::Script
+            }
             crate::game_objects::GAMEOBJECT_TYPE_TRAP if seaforium => ObjectUse::Seaforium,
             GAMEOBJECT_TYPE_GUILD_BANK => {
                 // Installed Mobile Banking tooltip: guild members at Friendly1168

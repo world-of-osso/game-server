@@ -152,6 +152,8 @@ pub struct WaypointState {
     /// `current_index` was reached; the next leg starts when the delay ends.
     pub arrived: bool,
     pub delay_remaining: f32,
+    /// TC default-slot WaypointMovementGenerator::Pause(timer), without losing its node.
+    pub pause_remaining_ms: u32,
     pub speed_walk: f32,
     pub speed_run: f32,
     /// Bevy (x, z) the current leg started from.
@@ -167,6 +169,7 @@ impl WaypointState {
             current_index: 0,
             arrived: false,
             delay_remaining: 0.0,
+            pause_remaining_ms: 0,
             speed_walk,
             speed_run,
             leg_origin: origin,
@@ -509,6 +512,22 @@ pub fn move_toward(x: f32, y: f32, tx: f32, ty: f32, step: f32) -> (bool, f32, f
 
 // -- Waypoint logic --
 
+/// TC Unit::PauseMovement(timer, default slot, forced) stops the current spline;
+/// WaypointMovementGenerator::Pause replaces its wait timer, preserving its node.
+pub(crate) fn pause_waypoint(world: &mut World, actor: Entity, duration_ms: u32) {
+    let Some(mut state) = world.get_mut::<WaypointState>(actor) else {
+        return;
+    };
+    state.pause_remaining_ms = duration_ms;
+    state.delay_remaining = 0.0;
+    if let Some(mut motion) = world.get_mut::<CreatureMotion>(actor) {
+        *motion = CreatureMotion::Still;
+    }
+    if let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+        queue.mark(actor);
+    }
+}
+
 fn waypoint_system(
     time: Res<Time>,
     world_data: Res<WorldData>,
@@ -531,6 +550,14 @@ fn waypoint_system(
     for (entity, mut pos, mut state, creature_state, map, bearing) in &mut query {
         state.moved = 0.0;
         if matches!(creature_state, Some(s) if !s.is_idle()) {
+            continue;
+        }
+        if state.pause_remaining_ms > 0 {
+            state.pause_remaining_ms = state
+                .pause_remaining_ms
+                .saturating_sub(time.delta().as_millis() as u32);
+            let at = *pos;
+            queues.apply(entity, &mut pos, bearing, Stride::still(at));
             continue;
         }
         let Some(path) = world_data.waypoints.get(&state.path_id) else {

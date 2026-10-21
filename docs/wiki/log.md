@@ -1,3 +1,6 @@
+## 2026-10-20 — Census resource/state/duration/sanctuary
+
+[Source matrix](systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20): generic245/262/396/176, no new scripts/protocol. Ignored REDs pushed before consumers;262 corrected from uncomputed health state to actual Swiftmend15. TC NULL220/443 and absent phasing167/viewpoint72 remain explicit gaps. Native12GREEN31.37s before enabling; merge3e1add814→8922af04b retains137/307;67targetedPASS35.88s/check/fmt with zero warnings. Native670 unique receipts preserve source passives and91 selected affected memberships:34 owned family warnings clear across18 specs (262×11/396×6/245×4/176×13),57 named-gap memberships retain warnings. Interrupted96 complete receipts retained plus574 remaining PASS366.39s; exact manifest coverage verified, no whole-spec parity claim.
 ## 2026-10-20 — Generic census healing, label mobility and energize
 
 [Generic next](systems/auras.md#census-generic-next--2026-10-20): initial RED498eeb521 was invalid (limited fixture store omitted native applied/triggered IDs). Corrected ignored68f31ad3d pushed with consumers reverted gives6RED and253 baseline probe receipts; restored6c76aead4 gives unchanged6GREEN plus253-receipt probe PASS178.44s before enabling. Earlier14-root warning delta includes354eight now inherited from merged master27743876c; duplicate354 consumer removed, existing master wildcard behavior retained. Merged bde34597a15PASS215.50s includes six cases, retained eight330 controls and253-receipt probe; check/fmtPASS, no warnings. Branch-owned delta is307four and137two across six specs; this is not full ability/spec parity.470 explicitly TC NULL; no fabricated timer scaling or per-spell scripts.
@@ -3391,3 +3394,12 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-20 — Crafting reagents from banks
 
 [Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.
+
+- 2026-10-20: mapped44 census effect77 roots/125memberships; native Subduing Grasp E1 RED→GREEN3; no generic77 registration or full Grasp promotion.
+
+- 2026-10-20: qualified native Priest32379 execute carrier E3 and retained unmatched-slot warning; one ignored RED→GREEN before enabling.
+
+- 2026-10-20: ported TC Earthquake OnHit E1 native5%/once-per-owned-field knockdown; native2GREEN after ignored RED, no generic77 dispatch.
+- 2026-10-20: Nethekurse native combat and authentic StringId peon callback proof ingested into [boss scripts](systems/boss-scripts.md#shattered-halls-nethekurse-2026-10-20); source gaps explicit.
+
+- 2026-10-20: Nethekurse source-backed remainder/native wild+patrol+Reset proof added; COMPOSITE17GREEN, canonical fissure publication and absent native/create-properties gaps retained.
