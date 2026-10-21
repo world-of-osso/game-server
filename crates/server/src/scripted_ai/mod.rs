@@ -42,6 +42,7 @@ pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
+mod scripted_alerts;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
@@ -259,6 +260,10 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
+    /// Only explicitly sourced boss-mod-Lua scripts opt into real-clock alerts.
+    fn encounter_schedule(&self) -> Option<&EventMap> {
+        None
+    }
     /// Read-only script requests, not impact-time or damage-amount predictions.
     fn scheduled_damage(&self) -> Vec<ScheduledDamage> {
         Vec::new()
@@ -658,6 +663,9 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::QuestAccepted { player, quest_id } => ai.quest_accepted(&mut ctx, player, quest_id),
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
         Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
+    }
+    if let Some(events) = ai.encounter_schedule() {
+        scripted_alerts::publish_schedule(ctx.world, me, events);
     }
 }
 

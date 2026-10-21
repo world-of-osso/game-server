@@ -1,6 +1,6 @@
 # Boss-mod alert data
 
-Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred SmartAI cooldowns. Source Lua is parsed as data only. [Import/runtime](../wiki/systems/bossmod-data.md), [current coverage and proof](../bossmod-data-coverage.md).
+Boss alerts use authored DBM, BigWigs/LittleWigs and EXBoss data, not inferred SmartAI cooldowns. Explicit current-Retail boss-mod-Lua-backed scripted encounters (Kokia, Melidrussa, Kyrioss, Doragosa, Azureblade, Umbrelskul) publish selected EventMap requests rather than independent imported clocks; source warning colors/text remain authoritative. TDB SmartAI-only timers stay excluded without explicit sourced mapping. Source Lua is parsed as data only. [Import/runtime](../wiki/systems/bossmod-data.md), [current coverage and proof](../bossmod-data-coverage.md).
 
 ## What it must do
 

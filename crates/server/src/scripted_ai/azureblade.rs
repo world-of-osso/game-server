@@ -38,6 +38,10 @@ fn repeat_lua_event(events: &mut EventMap, remaining: &mut u8, interval_ms: u64)
 }
 
 impl CreatureAi for Azureblade {
+    fn encounter_schedule(&self) -> Option<&super::EventMap> {
+        Some(&self.boss.events)
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
     }

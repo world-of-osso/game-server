@@ -40,7 +40,7 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
         })
         .expect("actual Kokia schedule must publish without an imported addon catalog");
     assert_eq!(timers.len(), 3);
-    for (spell, duration) in [(372864, 8000), (372107, 19000), (SEARING_BLOWS, 28000)] {
+    for (spell, duration) in [(372864, 8000), (372110, 19000), (SEARING_BLOWS, 28000)] {
         let timer = timers.iter().find(|timer| timer.spell_id == spell).unwrap();
         assert_eq!(timer.duration_ms, duration);
         assert!((duration - 100..=duration).contains(&timer.remaining_ms));
@@ -51,11 +51,11 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
             .iter()
             .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
     );
-    h.advance(20.0);
-    assert!(cast_count(&h, boss, 372864) > 0);
+    h.advance(32.0);
+    assert!(cast_count(&h, boss, SEARING_BLOWS) > 0);
     assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
-        EncounterTimelineEvent::Cast { caster, spell_id: 372864, warning_text, .. }
-        if *caster == boss.to_bits() && warning_text.contains("Ritual of Blazebinding"))));
+        EncounterTimelineEvent::Cast { caster, spell_id: SEARING_BLOWS, warning_text, .. }
+        if *caster == boss.to_bits() && warning_text == "Searing Blows (1)")));
     assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
         EncounterTimelineEvent::Timers { timers, .. }
         if timers.iter().any(|timer| timer.spell_id == 372864 && timer.duration_ms == 40000))));

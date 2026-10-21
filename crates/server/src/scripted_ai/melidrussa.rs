@@ -39,6 +39,10 @@ fn repeat_source_order(events: &mut EventMap, step: &mut usize, repeats: &[u64])
 }
 
 impl CreatureAi for Melidrussa {
+    fn encounter_schedule(&self) -> Option<&super::EventMap> {
+        Some(&self.boss.events)
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
     }
