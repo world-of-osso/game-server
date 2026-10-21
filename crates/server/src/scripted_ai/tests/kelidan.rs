@@ -642,7 +642,10 @@ fn encounter_coverage_kelidan_channeler_combat_speech_bolt_and_mark() {
         watch(&mut h, &[actor]);
         // HARNESS SETUP: direct threat on channeler1.
         crate::creature_aggro::add_threat(h.app.world_mut(), actor, player, 1.0);
-        let events = observe(&mut h, 16.0);
+        // The task is due by15s, but the not-casting validator can hold it
+        // behind a3s Shadow Bolt. Sample the entire already-admitted window.
+        let mark_deadline = 15.2 + 3.0;
+        let events = observe(&mut h, mark_deadline);
         assert_eq!(spoken(&h, actor, CHANNELER, 0), 1, "JustEngagedWith Talk0");
         let bolt = if difficulty == 2 {
             SHADOW_BOLT_H
@@ -666,7 +669,7 @@ fn encounter_coverage_kelidan_channeler_combat_speech_bolt_and_mark() {
             !marks.is_empty()
                 && marks[0].target == Some(player.to_bits())
                 && marks[0].at >= 5.0
-                && marks[0].at <= 15.2 + 3.0,
+                && marks[0].at <= mark_deadline,
             "Mark of Shadow5-15s at a player without it; difficulty={difficulty}; events={events:?}"
         );
     }
