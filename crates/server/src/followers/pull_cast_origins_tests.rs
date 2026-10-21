@@ -47,7 +47,13 @@ fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
             "before":before.details,"after":after.details}),
         );
     }
-    json!({"qualified_boundaries":qualified,"violation_ticks":violations,"boundaries":boundaries})
+    let events =
+        &f.h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+    let tail: Vec<_> = events.iter().rev().take(24).collect();
+    json!({"qualified_boundaries":qualified,"violation_ticks":violations,"boundaries":boundaries,"recent_events":tail})
 }
 
 struct OriginProbe {
