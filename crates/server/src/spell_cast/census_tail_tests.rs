@@ -366,6 +366,149 @@ fn census_tail_298_native_asphyxiate_remains_when_ordinary_stun_is_removed() {
     assert_stun_state(&h, false, false);
 }
 
+const SHIMMER: u32 = 212_653;
+
+fn set_tail_moving(h: &mut Harness) {
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::Moving>(h.caster)
+        .unwrap()
+        .0 = true;
+}
+
+#[test]
+#[ignore = "RED:377 grants movement across native spell families and refreshes active casts"]
+fn census_tail_377_native_shimmer_updates_active_fireball_and_removal_interrupts() {
+    let mut h = harness(Vec::new(), &[SHIMMER, FIREBALL], 8).unwrap();
+    h.cast_and_deliver(FIREBALL, Some(h.npc));
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .unwrap()
+            .cast_while_moving
+    );
+    let caster = h.caster;
+    hit_native(&mut h, SHIMMER, 1, caster);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .cast_while_moving
+    );
+    set_tail_moving(&mut h);
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_some()
+    );
+    remove_flight_aura(&mut h, caster, SHIMMER);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .cast_while_moving
+    );
+    h.advance(1);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+    );
+}
+
+#[test]
+#[ignore = "RED:377 admits foreign-family native Lightning Bolt while moving until native650ms expiry"]
+fn census_tail_377_native_shimmer_allows_foreign_family_then_expires() {
+    const LIGHTNING_BOLT: u32 = 188_196;
+    let mut h = harness(Vec::new(), &[SHIMMER, LIGHTNING_BOLT], 7).unwrap();
+    let caster = h.caster;
+    hit_native(&mut h, SHIMMER, 1, caster);
+    set_tail_moving(&mut h);
+    h.cast_and_deliver(LIGHTNING_BOLT, Some(h.npc));
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .cast_while_moving
+    );
+    h.advance(20);
+    assert!(!crate::auras::has_aura(h.app.world(), caster, SHIMMER));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+    );
+    assert!(h.inbox.go.iter().all(|go| go.spell_id != LIGHTNING_BOLT));
+}
+
+#[test]
+#[ignore = "RED:377 permits native Disintegrate channel and preserves ownership"]
+fn census_tail_377_native_shimmer_updates_channel_only_on_its_recipient() {
+    const DISINTEGRATE: u32 = 356_995;
+    let mut h = harness(Vec::new(), &[SHIMMER, DISINTEGRATE, 370898], 13).unwrap();
+    h.set_power(PowerType::Essence, 5.0);
+    h.cast_and_deliver(DISINTEGRATE, Some(h.npc));
+    let caster = h.caster;
+    let npc = h.npc;
+    hit_native(&mut h, SHIMMER, 1, npc);
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .cast_while_moving
+    );
+    hit_native(&mut h, SHIMMER, 1, caster);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .cast_while_moving
+    );
+    set_tail_moving(&mut h);
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_some()
+    );
+    remove_flight_aura(&mut h, caster, SHIMMER);
+    h.advance(1);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+    );
+    assert!(crate::auras::has_aura(h.app.world(), npc, SHIMMER));
+}
+
+#[test]
+#[ignore = "RED control: actual Opening attr13 excludes native377 permission"]
+fn census_tail_377_native_prohibition_attribute_wins_over_all_spell_aura() {
+    let mut h = harness(Vec::new(), &[SHIMMER, FIREBALL, 21651], 8).unwrap();
+    let caster = h.caster;
+    hit_native(&mut h, SHIMMER, 1, caster);
+    let opening = world_db().unwrap().store.get(21651).unwrap();
+    assert!(!super::aura_allows_moving(h.app.world(), caster, opening));
+    assert!(super::aura_allows_moving(
+        h.app.world(),
+        caster,
+        world_db().unwrap().store.get(FIREBALL).unwrap()
+    ));
+}
+
 fn rewarded(h: &Harness, character: u64) -> bool {
     persistence::quest_store::load_quest_log(
         &h.app.world().resource::<GameDatabase>().db,
