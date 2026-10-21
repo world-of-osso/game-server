@@ -130,3 +130,5 @@ Tree activation alone is not throughput qualification. TC a352b1fa SpellAuraEffe
 After genuine attacked-healer RED, Barkskin joins the owned defensive selector before throughput and external Ironbark. Both retain actual authored HP/attacked/missing-aura conditions and native readiness; self rows cannot select another patient. No damage reduction is synthesized. Qualification pending.
 
 After genuine level33 second-HoT RED, learned Germination can select ordinary774 for stable uncovered demand with an owned primary but absent owned secondary. Only the project primary-missing predicate is waived; native checks, authored HP threshold, costs and native774→155777 execution remain authoritative. No secondary aura or talent is granted directly. Qualification pending.
+
+After genuine recast/old-entity RED, native145205 area creation removes only its caster’s prior145205 area triggers before the replacement is created. Other casters and native summons are not deleted. This implements the source effect2 area lifecycle; qualification pending.

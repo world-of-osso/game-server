@@ -44,6 +44,22 @@ pub(super) fn initialize_new_summons(
     }
 }
 
+/// TC145205 effect2 launch removes only that caster's previous area trigger.
+pub(super) fn remove_previous_area_trigger(world: &mut World, caster: Entity, spell: u32) {
+    if spell != EFFLORESCENCE {
+        return;
+    }
+    let previous = world
+        .query::<(Entity, &super::area_trigger::SpellAreaTrigger)>()
+        .iter(world)
+        .filter(|(_, field)| field.caster == caster && field.spell_id == spell)
+        .map(|(unit, _)| unit)
+        .collect::<Vec<_>>();
+    for unit in previous {
+        world.despawn(unit);
+    }
+}
+
 /// Source uses only DONT_REPORT_CAST_ERROR, not FULL_MASK: retain native checks.
 pub(crate) fn pulse(
     world: &mut World,

@@ -55,6 +55,7 @@ pub struct SpellAreaTrigger {
 }
 
 pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect) {
+    super::efflorescence::remove_previous_area_trigger(world, ctx.caster, ctx.spell.id);
     let Some(dest) = ctx.dest else {
         warn!(
             "Spell {}: area trigger {} has no destination",
