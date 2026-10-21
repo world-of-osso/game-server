@@ -1,7 +1,6 @@
 //! Decisions over learned native Crenna spells under actual damage pressure.
 use super::*;
 use crate::auras::{ActiveAuras, AuraInstance, aura_now};
-use crate::spell_cast::effects::{EffectCtx, deal_damage};
 use crate::spell_cast::test_harness::Harness;
 use crate::spell_info::SpellStore;
 use shared::casting::CastType;
@@ -21,24 +20,20 @@ fn damage(h: &mut Harness, target: Entity, fraction: f32) {
     let health = h.app.world().get::<Health>(target).unwrap();
     let before = health.current;
     let amount = health.max * fraction;
-    let spell = h
-        .app
-        .world()
-        .resource::<SpellStore>()
-        .get(133)
-        .unwrap()
-        .clone();
-    let ctx = EffectCtx {
-        caster: h.npc,
-        spell: &spell,
-        depth: 0,
-        dest: None,
-        chain_multiplier: 1.0,
-    };
-    deal_damage(h.app.world_mut(), &ctx, target, amount, false, false);
+    let source = crate::level_scaling::UnitScaling::of(h.app.world(), h.npc);
+    let recipient = crate::level_scaling::UnitScaling::of(h.app.world(), target);
+    let health_per_damage = crate::level_scaling::health_loss(&source, &recipient, 1.0);
+    assert!(health_per_damage > 0.0);
+    let enemy = h.npc;
+    crate::combat::deal_direct_damage(h.app.world_mut(), enemy, target, amount / health_per_damage);
+    let actual = before - h.health(target);
     assert!(
-        h.health(target) < before && h.health(target) > 0.0,
-        "native damage pressure must injure without killing"
+        h.health(target) > 0.0,
+        "native pressure must not kill its fixture patient"
+    );
+    assert!(
+        (actual - amount).abs() <= amount * 0.001 + 1.0,
+        "native pressure must reach the requested recipient-health deficit: {actual} vs {amount}"
     );
 }
 
@@ -49,12 +44,9 @@ fn decide(h: &mut Harness, healer: Entity, party: &[Entity]) {
 
 #[test]
 fn resto_policy_late_tank_lifebloom_refresh_uses_native_bloom() {
-    let (mut h, healer) = super::super::kit_tests::level32(209072);
-    let tank = h.caster;
-    h.app
-        .world_mut()
-        .entity_mut(tank)
-        .insert(crate::class_progression::ActiveSpec(66));
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    let tank = party[2];
+    assert!(super::is_tank(h.app.world(), tank));
     crate::spell_cast::creature_cast(h.app.world_mut(), healer, 33763, Some(tank), false).unwrap();
     h.advance(1);
     let old = own_aura(&h, healer, tank, 33763).unwrap();
@@ -84,14 +76,22 @@ fn resto_policy_late_tank_lifebloom_refresh_uses_native_bloom() {
 
 #[test]
 fn resto_policy_ironbark_protects_actually_attacked_tank_before_filler() {
-    let (mut h, healer) = super::super::kit_tests::level32(209072);
-    let tank = h.caster;
-    h.app
-        .world_mut()
-        .entity_mut(tank)
-        .insert(crate::class_progression::ActiveSpec(66));
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    let tank = party[2];
+    assert!(super::is_tank(h.app.world(), tank));
     let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+    ));
     crate::creature_aggro::add_threat(h.app.world_mut(), enemy, tank, 100.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(enemy)
+            .and_then(|target| target.0),
+        Some(tank)
+    );
     damage(&mut h, tank, 0.6);
     decide(&mut h, healer, &[tank, healer]);
     assert!(
@@ -176,6 +176,13 @@ fn resto_policy_native_channel_is_unsafe_when_caster_forecast_dies_before_finish
     for target in party {
         damage(&mut h, target, 0.45);
     }
+    let risk = super::super::healer_triage::read_patient(h.app.world(), healer).unwrap();
+    let spell = h.app.world().resource::<SpellStore>().get(740).unwrap();
+    let duration = crate::spell_cast::duration_ms(h.app.world(), healer, spell) as f32 / 1000.0;
+    assert!(
+        risk.projected_death_seconds < duration,
+        "native pressure must establish unsafe channel survival before testing admission"
+    );
     let rows = h
         .app
         .world()
