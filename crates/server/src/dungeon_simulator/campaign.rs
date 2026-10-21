@@ -639,6 +639,55 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
     assert!(absent.position.is_none());
 }
 
+#[test]
+#[ignore = "explicit alternate-roster qualification; use Bo/Lantha party entries"]
+fn alternate_roster_attackers_participate_in_the_first_native_fight() {
+    let _scope = crate::random::seed_scope(11);
+    let mut run = spawn_run(11, &mut None).unwrap();
+    for _ in 0..600 {
+        run.control().unwrap();
+        run.app.update();
+    }
+    for actor in run.members() {
+        println!(
+            "ACTOR {}",
+            super::diagnostics::inspect_unit(run.app.world(), None, actor)
+        );
+    }
+    let monk = run
+        .party
+        .members
+        .iter()
+        .copied()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<crate::followers::Follower>(*unit)
+                .is_some_and(|follower| follower.profile.spec_id == 269)
+        })
+        .expect("fixture requires explicit Bo party entry");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let dealt_damage = |unit: Entity| {
+        events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == Some(unit.to_bits())
+                && event.amount > 0
+        })
+    };
+    assert!(
+        dealt_damage(run.party.tank),
+        "real native engagement must occur before asserting attacker participation"
+    );
+    assert!(
+        dealt_damage(monk),
+        "Bo must pursue and execute native attacks in the actual opening fight, not remain idle for the whole campaign"
+    );
+}
+
 struct Run {
     app: App,
     graph: Graph,
