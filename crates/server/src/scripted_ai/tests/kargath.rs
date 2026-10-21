@@ -57,7 +57,6 @@ fn kargath_yells(h: &Harness, boss: Entity, group: u8) -> usize {
 }
 
 #[test]
-#[ignore = "RED: Kargath source script not ported"]
 fn encounter_coverage_kargath_aggro_speech_and_native_encounter() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = kargath_copy(difficulty);
@@ -204,7 +203,6 @@ fn encounter_coverage_kargath_native_blade_dance_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "pending source group/MoveRandom behavior proof"]
 fn encounter_coverage_kargath_authored_groups_arrive_then_assassins_wander_unengaged() {
     let (mut h, boss, _) = kargath_copy(1);
     stand_near_kargath(&mut h, boss);
@@ -260,7 +258,6 @@ fn encounter_coverage_kargath_authored_groups_arrive_then_assassins_wander_uneng
 }
 
 #[test]
-#[ignore = "pending literal native selector conflict and source clock proof"]
 fn encounter_coverage_kargath_source_dance_clock_preserves_native_selector_gap() {
     for difficulty in [1, 2] {
         let (mut h, boss, _) = kargath_copy(difficulty);
@@ -331,7 +328,6 @@ fn encounter_coverage_kargath_source_dance_clock_preserves_native_selector_gap()
 }
 
 #[test]
-#[ignore = "pending exact20s missing-spell portal cycle proof"]
 fn encounter_coverage_kargath_portal_keeps_source_order_without_fake_adds() {
     let (mut h, boss, _) = kargath_copy(1);
     stand_near_kargath(&mut h, boss);
@@ -376,7 +372,6 @@ fn encounter_coverage_kargath_portal_keeps_source_order_without_fake_adds() {
 }
 
 #[test]
-#[ignore = "pending strict40yd plus sourced reach leash proof"]
 fn encounter_coverage_kargath_leash_subtracts_native_combat_reach() {
     let (mut h, boss, map) = kargath_copy(1);
     stand_near_kargath(&mut h, boss);
@@ -426,7 +421,6 @@ fn encounter_coverage_kargath_leash_subtracts_native_combat_reach() {
 }
 
 #[test]
-#[ignore = "pending source death cleanup and1938 credit proof"]
 fn encounter_coverage_kargath_death_speech_credit_and_owned_summon_cleanup() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = kargath_copy(difficulty);
@@ -464,7 +458,6 @@ fn encounter_coverage_kargath_death_speech_credit_and_owned_summon_cleanup() {
 }
 
 #[test]
-#[ignore = "RED: native destination charge149 has no movement implementation"]
 fn encounter_coverage_kargath_native_destination_charge_moves_to_actual_marker() {
     let (mut h, boss, _) = kargath_copy(1);
     let start = *h.app.world().get::<Position>(boss).unwrap();
@@ -514,7 +507,6 @@ fn encounter_coverage_kargath_native_destination_charge_moves_to_actual_marker()
 }
 
 #[test]
-#[ignore = "pending actual player-only Kargath slay boundary proof"]
 fn encounter_coverage_kargath_slay_speaks_only_for_actual_player_kills() {
     for player_victim in [true, false] {
         let (mut h, boss, _) = kargath_copy(1);
