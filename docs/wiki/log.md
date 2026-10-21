@@ -1,6 +1,10 @@
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
+## 2026-10-21 — Melidrussa current Retail partial
+
+[Melidrussa](systems/boss-scripts.md#melidrussa-current-retail-partial--2026-10-21): ignored nativeHail RED→currentRetail native-child/source-order lanes→5GREEN77.74s atbcc2dc5cf, Normal/Follower140s ongoing damage/copy credit/reset/corpse. Source producer1PASS6.140s authenticates2609/map2521bit1 and localLua binding without actor-data edits. Master mergedb7f618873 afterward; no fresh postmerge certification (capacity held9minutes), final gate/publication lead-owned. Timeline condition/selector/Whelp gaps retained.
+
 ## 2026-10-21 — Umbrelskul partial Lua-clock port
 
 [Umbrelskul](systems/boss-scripts.md#umbrelskul-partial-lua-clock--2026-10-21): ignored firstStrikeRED a8b2e4c39 precedes78bd2a595 partial source. Native7GREEN44.00s at87fad0cf7, including Normal/Follower/Mythic source branches, success-only DragonStrike repeat/cancel, native line+periodic damage, reset and isolated2584bit2. Sourcecopy producer1PASS3.332s; local binding only, all world inputs preserved. Energy/Brittle/crystals/upstream selector remain named gaps; publication/final gate lead-owned.
