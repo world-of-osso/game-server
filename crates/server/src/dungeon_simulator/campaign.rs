@@ -92,6 +92,49 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 }
 
 #[test]
+#[ignore = "opening footprint regression; explicit RED before generic admission diagnosis"]
+fn opening_admission_does_not_recruit_unprojected_source_packs() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    for _ in 0..600 {
+        run.control().unwrap();
+        run.app.update();
+        let Some(opening) = run.report.pulls.first() else {
+            continue;
+        };
+        let admitted = &run
+            .graph
+            .packs
+            .iter()
+            .find(|pack| pack.id == opening.pack)
+            .unwrap()
+            .spawns;
+        let unexpected: Vec<_> = run
+            .actors
+            .iter()
+            .filter(|(guid, actor)| {
+                !admitted.iter().any(|spawn| spawn.guid == **guid)
+                    && run
+                        .app
+                        .world()
+                        .get::<CombatStatus>(**actor)
+                        .is_some_and(|status| status.0)
+            })
+            .map(|(guid, actor)| {
+                super::diagnostics::inspect_unit(run.app.world(), Some(*guid), *actor)
+            })
+            .collect();
+        assert!(
+            unexpected.is_empty(),
+            "single-pack bootstrap recruited unprojected sources at {}s; owner={:?}; tank={:?}; unexpected={unexpected:?}",
+            run.now(),
+            run.app.world().get::<Position>(run.party.owner),
+            run.app.world().get::<Position>(run.party.tank)
+        );
+    }
+}
+
+#[test]
 fn sampling_retains_a_member_after_native_dead_summon_despawn() {
     let mut run = spawn_run(2, &mut None).unwrap();
     let member = run.party.members[1];
