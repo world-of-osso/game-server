@@ -22,6 +22,10 @@ fn fixture(difficulty: u32) -> (Harness, Entity, InMap) {
     let mut position = *h.app.world().get::<Position>(boss).unwrap();
     position.x += 3.0;
     h.app.world_mut().entity_mut(player).insert(position);
+    // Production interest owns packet recipients; this headless app has no interest plugin.
+    let mut visibility = crate::interest::NetworkVisibility::default();
+    visibility.gain_visibility(h.players[0].1);
+    h.app.world_mut().entity_mut(boss).insert(visibility);
     h.engage(boss);
     (h, boss, map)
 }
