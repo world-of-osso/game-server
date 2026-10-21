@@ -1,6 +1,7 @@
 ## 2026-10-21 — Default TempSummon title census
 
 [Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; stressed repetition proof remains pending.
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 ## 2026-10-21 — Follower205 source audits
 
 [Generic difficulty chain](systems/level-scaling.md#creature-difficulty-fallback--2026-10-21): pinned70448/TDB1210/TCa352b1fa prove205→1→0, template CT precedence and ExpectedStat mods; existing178 content205 rows are40 Normal/138 base projections, not raw205 observations. Native Vault Rune197204 temporary spawn reproduces missing LevelScaling (403a8357b,1FAIL17.83s); generic template and regional-delta chain implemented, GREEN pending. Read-only all27-map source inventory records650 nonboss candidates,23 source-bound/627 unbound and10 absent populations; helpers/phases retained, not a hostile-mechanics completion claim. Evidence in engine `data/diagnostics/follower-dungeons-2026-10-21/`.
