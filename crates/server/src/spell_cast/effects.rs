@@ -1325,6 +1325,12 @@ fn deal_damage_and_report(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    if !periodic && !resolved_source && ctx.depth == 0 {
+        super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit);
+    }
+    if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
+        super::scripts::roll_flame_shock_tick(world, ctx.caster);
+    }
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.
     // A fully absorbed damage effect still landed. Preserve that target in
