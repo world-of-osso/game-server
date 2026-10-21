@@ -73,3 +73,24 @@ Drink audit verified local `follower_spec_kit`: Fire63 has utility190336, minimu
 After recovery accounting, batch5 at1cf5605d4 executes all10seeds to the3600sim_s bound:0clears/0wipes/0stalls/0blocks/0bosses,40–43Polymorph casts per seed. Total36,000sim_s/319.69wall=112.61×. Native hold protects118; Moloch regenerates, then Meredy re-casts the same control at the next scripted cast after expiry. No tuning of damage, costs, timers or native10%-maxHP break budget is justified. Pinned native template CreatureImmunitiesId=0 and boss script provide no Polymorph-immunity override.
 
 An isolated real Moloch/full-five-kit regression reproduces the offending last-enemy Polymorph (RED1vs0 at f2eb2d4cc,5.07s), with actual86726 channel success as the control opportunity. Kit admission now excludes damage-breakable control only when exactly one enemy is engaged; kicks/nonbreakable stuns remain unchanged, as do protection/expiry of existing CC. Metadata uses the same AnyDamageMask as live aura protection. Multi-enemy Mage/Monk control fixtures retain their real interrupt→spent-kick→control behavior with a second engaged native actor. GREEN and new full batch pending.
+
+## Native leader and encounter state gaps after batch6
+
+CC fix4976ac6e1 passes the isolated Moloch regression plus retained CC families:12PASS20.88s. Batch6 then kills Moloch in6/10seeds; seeds7/10 also kill46254. No complete clear yet:0wipes,3stalls,5blocks,2timeouts,14,957.9sim_s/177.62wall=84.21×.
+
+|Seed|Outcome|Boss receipts|Observed cause|
+|---|---|---|---|
+|1|stall|46383|All companions recover, Austin stays7581/7840HP|
+|2|block|none|Vanish at54299/134429HP treated as InvalidTarget opening|
+|3|block|none|Vanish at53788/134429HP treated as InvalidTarget opening|
+|4|block|none|Vanish at54308/134429HP treated as InvalidTarget opening|
+|5|block|none|Vanish at54356/134429HP treated as InvalidTarget opening|
+|6|block|46383|Dead/despawned Garrick, no route anchor; recovery/res gap remains|
+|7|timeout|46383,46254|Further movement/recovery diagnosis pending|
+|8|stall|46383|All companions recover, Austin stays7565/7840HP|
+|9|stall|46383|All companions recover, Austin stays7376/7840HP|
+|10|timeout|46383,46254|Further movement/recovery diagnosis pending|
+
+Austin was manually given PowerPools by the follower initializer before native `init_player_powers`. Its Without<PowerPools> query consequently never installed PlayerHealthRegen. The native wound→OOC test reproduces7740!=7840 (RED5a9341f6c). The seam now invokes that actual production system before profile initialization, instead of copying a timer/formula or granting health. GREEN pending.
+
+Moloch retains real health during55964 and temporarily clears combat/attackability. Those are not Death receipts or a cleared encounter. First Vanish fixture initially checked before party combat flags settled; its corrected boundary waits for native Vanish plus party OOC. Engagement retention regression remains in progress.

@@ -1,5 +1,6 @@
 //! Explicit transport-free simulator seam; real initializer and kit controller.
 use super::*;
+use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Level, Player, Position, UnitFactionTemplate};
 
 #[derive(Component)]
@@ -42,6 +43,13 @@ pub(crate) fn spawn_party(
             shared::components::UnitPowers::default(),
         ))
         .id();
+    // Run native Player initialization before the profile installs PowerPools;
+    // otherwise its Without<PowerPools> query never installs health regeneration.
+    world
+        .run_system_once(crate::spell_cast::powers::init_player_powers)
+        .map_err(|error| {
+            format!("initialize simulator leader through native player powers: {error}")
+        })?;
     spawning::initialize(world, owner, owner, leader.clone())?;
     world
         .entity_mut(owner)
