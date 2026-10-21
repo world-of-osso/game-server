@@ -87,6 +87,8 @@ mod kargath;
 mod kelidan;
 #[path = "landslide.rs"]
 mod landslide;
+#[path = "lost_dwarves.rs"]
+mod lost_dwarves;
 #[path = "maraudon.rs"]
 mod maraudon;
 #[path = "nethekurse.rs"]

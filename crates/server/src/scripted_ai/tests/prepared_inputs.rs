@@ -154,6 +154,7 @@ fn decode_encounter_inputs(
             || (entry == 17381 && *id == 17370)
             || (entry == 186737 && *id == 197204)
             || (entry == 186739 && *id == 190187)
+            || ([184580, 184581, 184582].contains(&entry) && [184580, 184581, 184582].contains(id))
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
