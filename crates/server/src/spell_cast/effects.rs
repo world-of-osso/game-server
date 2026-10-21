@@ -70,6 +70,8 @@ pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const EFFECT_ENERGIZE_PCT: u32 = 137;
 pub const EFFECT_FORCE_CAST: u32 = 140;
+/// TC SpellEffects.cpp3995, SPELL_EFFECT_CHARGE_DEST.
+pub const EFFECT_CHARGE_DEST: u32 = 149;
 /// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA: u32 = 164;
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
@@ -194,6 +196,7 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
     Some(match effect_id {
         super::disenchant::EFFECT_DISENCHANT => super::disenchant::effect_disenchant,
         42 | 213 => super::jump_charge::jump_to_effect_destination,
+        EFFECT_CHARGE_DEST => super::charge::hit_destination,
         254 => super::jump_charge::jump_to_destination,
         crate::game_objects::summoned::EFFECT_TRANSMITTED => {
             crate::game_objects::summoned::spawn_transmitted

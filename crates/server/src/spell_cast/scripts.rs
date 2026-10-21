@@ -246,6 +246,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (30_926 | 36_921, 1) => Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::cone_hit),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
         (30745, 0) => Some(crate::scripted_ai::nethekurse::cast_target_fissure),
+        (30738, 0) => Some(crate::scripted_ai::kargath::collect_dance_target),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }

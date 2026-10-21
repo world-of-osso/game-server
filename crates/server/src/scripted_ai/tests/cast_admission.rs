@@ -88,14 +88,14 @@ pub(in crate::scripted_ai) fn record(
         return;
     }
     let time = (world.resource::<Time>().elapsed_secs_f64() - observer.origin) as f32;
-    let spell = world
-        .resource::<SpellStore>()
-        .get(spell_id)
-        .expect("observed source spell");
+    let spell = world.resource::<SpellStore>().get(spell_id);
     let now = crate::spell_cast::history_now(world);
-    let on_cooldown = world
-        .get::<SpellHistory>(caster)
-        .is_some_and(|history| history.on_cooldown(spell, now));
+    // UnknownSpell is itself observed evidence for named native-build gaps.
+    let on_cooldown = spell.is_some_and(|spell| {
+        world
+            .get::<SpellHistory>(caster)
+            .is_some_and(|history| history.on_cooldown(spell, now))
+    });
     world
         .resource_mut::<CastAdmissions>()
         .entries
