@@ -184,6 +184,49 @@ fn petbattle_pvp_policy_xp_only_living_participants_of_winner_and_persists() {
     assert_eq!(saved, *journal);
 }
 
+#[test]
+#[ignore = "RED: same-frame FIFO requeue must preserve join order"]
+fn petbattle_pvp_policy_fifo_decline_preserves_same_frame_join_order() {
+    let mut app = app();
+    let a = player(&mut app, 41).0;
+    let b = player(&mut app, 42).0;
+    let c = player(&mut app, 43).0;
+    for owner in [a, b, c] {
+        queue_request(app.world_mut(), owner, PetBattleQueueRequest::Join).unwrap();
+    }
+    propose_matches(app.world_mut());
+    let id = *app
+        .world()
+        .resource::<Matchmaker>()
+        .proposals
+        .keys()
+        .next()
+        .unwrap();
+    assert_eq!(
+        app.world().resource::<Matchmaker>().proposals[&id].owners,
+        [a, b]
+    );
+    queue_request(
+        app.world_mut(),
+        b,
+        PetBattleQueueRequest::Decline { proposal_id: id },
+    )
+    .unwrap();
+    propose_matches(app.world_mut());
+    let proposal = app
+        .world()
+        .resource::<Matchmaker>()
+        .proposals
+        .values()
+        .next()
+        .unwrap();
+    assert_eq!(
+        proposal.owners,
+        [a, c],
+        "requeued earlier owner stays ahead of same-frame later joins"
+    );
+}
+
 fn app() -> App {
     build_app(false)
 }
