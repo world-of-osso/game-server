@@ -73,6 +73,7 @@ fn count_natural_refreshes(
 
 fn earn_qualified_stack_block(level: u8, needed_procs: usize) -> (Harness, Entity) {
     let (mut h, caster) = at_level(CRENNA, level, |_| {});
+    crate::auras::observations::start(h.app.world_mut(), caster);
     let talented = has_aura(h.app.world(), caster, TRANQUIL_MIND);
     assert_eq!(talented, level == 25);
     assert_eq!(native_effect(&h, TRANQUIL_MIND, 0), 1.0);
@@ -154,6 +155,12 @@ fn follower_tranquil_mind_level24_natural_refreshes_preserve_one_stack_cap() {
 fn follower_tranquil_mind_level25_third_natural_proc_does_not_exceed_two() {
     let (h, caster) = earn_qualified_stack_block(25, 3);
     assert_eq!(own_aura(&h, caster, CLEARCASTING).unwrap().stacks, 2);
+    let usage = crate::auras::observations::snapshot(h.app.world());
+    let row = &usage["16870"];
+    assert!(row["applications"].as_u64().unwrap() >= 3);
+    assert!(row["charges_gained"].as_u64().unwrap() >= 2);
+    assert!(row["overcap_refreshes"].as_u64().unwrap() >= 1);
+    assert_eq!(row["consumed"], 0);
 }
 
 #[test]
@@ -169,6 +176,9 @@ fn follower_tranquil_mind_two_native_stacks_consume_one_per_free_regrowth() {
             actual, remaining,
             "each completed free Regrowth consumes one actual stack"
         );
+        let usage = crate::auras::observations::snapshot(h.app.world());
+        assert_eq!(usage["16870"]["consumed"], u64::from(2 - remaining));
+        assert_eq!(usage["16870"]["remaining_charges"], u64::from(remaining));
     }
     assert!(mana_cost(&h, caster, REGROWTH) > 0.0);
     wait_for_gcd(&mut h, caster, REGROWTH);

@@ -264,3 +264,36 @@ fn follower_soul_of_forest_next_regrowth_and_rejuvenation_use_native60pct() {
         );
     }
 }
+
+fn observed_native_soul() -> (Harness, Entity) {
+    let (mut h, caster) = at_level(CRENNA, 21, |_| {});
+    crate::auras::observations::start(h.app.world_mut(), caster);
+    cast_setup_swiftmend(&mut h, caster, caster);
+    let usage = crate::auras::observations::snapshot(h.app.world());
+    assert_eq!(usage["114108"]["applications"], 1);
+    assert_eq!(usage["114108"]["charges_gained"], 1);
+    assert_eq!(usage["114108"]["consumed"], 0);
+    (h, caster)
+}
+
+#[test]
+fn follower_soul_observer_counts_native_empowered_regrowth_consumption() {
+    let (mut h, caster) = observed_native_soul();
+    super::kit_clearcasting_tests::complete_real_cast(&mut h, caster, REGROWTH);
+    let usage = crate::auras::observations::snapshot(h.app.world());
+    assert_eq!(usage["114108"]["consumed"], 1);
+    assert_eq!(usage["114108"]["expired"], 0);
+    assert_eq!(usage["114108"]["remaining_charges"], 0);
+}
+
+#[test]
+fn follower_soul_observer_distinguishes_native_expiry_from_consumption() {
+    let (mut h, caster) = observed_native_soul();
+    while crate::auras::has_aura(h.app.world(), caster, SOUL_OF_THE_FOREST) {
+        h.advance(1);
+    }
+    let usage = crate::auras::observations::snapshot(h.app.world());
+    assert_eq!(usage["114108"]["consumed"], 0);
+    assert_eq!(usage["114108"]["expired"], 1);
+    assert_eq!(usage["114108"]["remaining_charges"], 0);
+}
