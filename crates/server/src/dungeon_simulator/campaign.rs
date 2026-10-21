@@ -132,6 +132,14 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
     let mut run = spawn_run(3, &mut None).unwrap();
     assert_eq!(run.graph.map_id, 2515);
     let stalker = run.actors[&29001806];
+    let owner = run.party.owner;
+    let geometry =
+        super::diagnostics::inspect_aggro_pair(run.app.world_mut(), stalker, owner).unwrap();
+    println!(
+        "STALKER_INGRESS source29001806={} owner={} native_geometry={geometry}",
+        stalker.to_bits(),
+        owner.to_bits()
+    );
     let members: Vec<_> = run.members().collect();
     for _ in 0..160 {
         run.app.update();
@@ -171,6 +179,15 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
     }
     let valid = run.actors[&29001791];
     let tank = run.party.tank;
+    assert!(
+        crate::spell_cast::targets::relation_matches(
+            run.app.world(),
+            tank,
+            valid,
+            crate::spell_cast::targets::Relation::Enemy
+        ),
+        "native clearable-enemy control"
+    );
     crate::combat::deal_direct_damage(run.app.world_mut(), tank, valid, 100.0);
     assert!(
         crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
