@@ -22,14 +22,9 @@ struct AnimosityProgress {
     effectiveness: f32,
 }
 
-/// SimC4648–4681: each successful empower extends the same Dragonrage less.
-fn extend_dragonrage(world: &mut World, caster: Entity) {
-    let Some(auras) = world.get::<ActiveAuras>(caster) else {
-        return;
-    };
-    let Some(passive) = auras.iter().find(|aura| aura.spell_id == ANIMOSITY) else {
-        return;
-    };
+fn read_animosity(world: &World, caster: Entity) -> Option<(u32, f32, f32)> {
+    let auras = world.get::<ActiveAuras>(caster)?;
+    let passive = auras.iter().find(|aura| aura.spell_id == ANIMOSITY)?;
     let extension = passive
         .effects
         .iter()
@@ -42,13 +37,17 @@ fn extend_dragonrage(world: &mut World, caster: Entity) {
         .find(|effect| effect.index == 1)
         .expect("native Animosity effectiveness effect1")
         .amount;
-    let Some(rage) = auras
+    let rage = auras
         .iter()
-        .find(|aura| aura.spell_id == DRAGONRAGE && aura.caster == caster)
-    else {
+        .find(|aura| aura.spell_id == DRAGONRAGE && aura.caster == caster)?;
+    Some((rage.instance_id, extension, reduction))
+}
+
+/// SimC4648–4681: each successful empower extends the same Dragonrage less.
+fn extend_dragonrage(world: &mut World, caster: Entity) {
+    let Some((instance, extension, reduction)) = read_animosity(world, caster) else {
         return;
     };
-    let instance = rage.instance_id;
     let effectiveness = world
         .get::<AnimosityProgress>(caster)
         .filter(|progress| progress.dragonrage_instance == instance)
