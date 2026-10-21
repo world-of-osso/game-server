@@ -91,7 +91,9 @@ impl CreatureAi for Dwarf {
         let at_threshold = ctx.world.get::<Health>(ctx.me).is_some_and(|health| {
             health.current > 0.0 && health.current <= health.max * SURRENDER_FRACTION
         });
-        if at_threshold {
+        // A wipe restores peers while native MoveTargetedHome still owns them.
+        // Their old low health is not a new in-combat surrender condition.
+        if ctx.is_engaged() && at_threshold {
             self.boss.events.reset();
             surrender(ctx, self.boss.boss_id);
             return;
