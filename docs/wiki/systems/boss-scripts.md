@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Kokia current Retail partial — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#kokia-current-retail-partial-boundary). Current Retail LittleWigs2777a9d source-order lanes: Ritual372864 first8/repeat40s; current372110 names ordinary372107 child, first19s then20/19 alternation; Searing372858 first28/repeat40s. Native Any25 victim aura23 produces actual372859 weapon damage; Boulder retains2.5s casting and existing-destination87 caster default. No old7.3/14.5/21.6 timing or fabricated legacy372863/1309540/Firestorm chain.
+
+Ignored native first-Searing REDb76425282 (two input/real-damage qualificationsPASS) precedes065cf3fc9 partial. At d1af8bded, native5/5PASS78.66s:140s ongoing Normal1/Follower20514 accepted native requests, actual periodic weapon damage, reset/rearmed19→20 lane, isolated2606bit0/copy credit and corpse silence. All enabled afterGREEN. Source-copy unit1PASS12.435s authenticates pinned TC primary +70448 journal/native-child fields, preserves stats/difficulties/models/addons/population/other bindings, and rejects drift. `--encounter kokia` publishes primary/localLua binding only; lead owns canonical/final gate. Conditional timeline count, Ritual selector/summon, Boulder projectile and Wounds-script boundaries remain named gaps, not full-fight claims. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/kokia-*`.
+
 ## Melidrussa current Retail partial — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#melidrussa-current-retail-partial-boundary). Current LittleWigs2777a9d Retail wrappers1307297/1307308 name native396044/1311543 children. Explicit lead policy uses first5/15s and ongoing source-order Normal/Follower lanes Hailburst24/22/25s, Chillstorm24/32/25s (Mythic lists24s), retaining `MELIDRUSSA_TIMELINE_CONDITION_CONTEXT`. No legacy6.8/12.1 timers, invented selectors or instant child casts. Actual Hailburst keeps3s casting/area enemy damage; downstream Chillstorm/Hailbombs dummy selectors and Whelp phase remain named gaps.
