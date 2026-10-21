@@ -113,6 +113,33 @@ actions+=/judgment,if=holy_power<5
         self.assertAlmostEqual(rows[0]["share_pct"], 100 / 3)
         self.assertEqual(result["buffs"], {"test_buff": 25.0})
 
+    def test_stats_first_comparison_flags_strictly_over_five_percent(self):
+        rows = PARITY.compare_stat_sheets(
+            {"attribute": {"strength": 100}, "stats": {"attack_power": 200, "crit_rating": 40}},
+            {"attribute": {"strength": 110}, "stats": {"attack_power": 190, "crit_rating": 40}})
+        self.assertEqual(rows, [
+            {"stat": "attribute.strength", "reference": 100, "server": 110,
+             "delta_pct": 10.0, "flag": True, "status": "measured"},
+            {"stat": "stats.attack_power", "reference": 200, "server": 190,
+             "delta_pct": -5.0, "flag": False, "status": "measured"},
+            {"stat": "stats.crit_rating", "reference": 40, "server": 40,
+             "delta_pct": 0.0, "flag": False, "status": "measured"},
+        ])
+
+    def test_missing_and_zero_reference_stats_never_become_fake_percentages(self):
+        rows = PARITY.compare_stat_sheets(
+            {"attribute": {"intellect": 100}, "stats": {"attack_power": 0, "spell_power": 0}},
+            {"attribute": {"agility": 50}, "stats": {"attack_power": 25, "spell_power": 0}})
+        self.assertEqual([row["status"] for row in rows],
+                         ["missing_reference", "missing_server", "zero_reference", "measured"])
+        self.assertEqual([row["delta_pct"] for row in rows], [None, None, None, 0.0])
+        self.assertEqual([row["flag"] for row in rows], [True, True, True, False])
+
+    def test_nonfinite_stats_fail_explicitly_before_delta_classification(self):
+        with self.assertRaisesRegex(ValueError, "finite"):
+            PARITY.compare_stat_sheets({"stats": {"attack_power": 10}},
+                                      {"stats": {"attack_power": float("nan")}})
+
     def test_malformed_gear_fails_instead_of_dropping_identity(self):
         with self.assertRaisesRegex(ValueError, "item.*id"):
             PARITY.parse_profile('mage="Fire"\nhead=made_up,enchant_id=7961\n')

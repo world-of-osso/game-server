@@ -111,6 +111,11 @@ def normalize_simc(report):
             "buffs": {buff["name"]: buff.get("uptime", 0) for buff in player["buffs"]}}
 
 
+def compare_stat_sheets(reference, server):
+    """Compare identically-unitized attribute/stats maps; absent data is not zero."""
+    return []
+
+
 def build_simc_arguments(profile, mode, output):
     if mode not in {"single", "three"}:
         raise ValueError(f"Unknown parity scenario: {mode}")
