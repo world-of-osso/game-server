@@ -53,7 +53,7 @@ fn penetration_fixture() -> Harness {
 
 #[test]
 #[ignore = "RED: native280 player armor penetration with victim-level cap"]
-fn census_tail_280_native_warriors_instinct_changes_physical_mitigation_then_removes() {
+fn census_tail_280_native_martial_precision_changes_physical_mitigation_then_removes() {
     let mut h = penetration_fixture();
     let spell = world_db().unwrap().store.get(12294).unwrap();
     for (level, effective_armor) in [(10, 1870.0), (60, 1760.0)] {
