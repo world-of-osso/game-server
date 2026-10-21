@@ -417,91 +417,72 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
 }
 
 #[test]
-fn opening_admission_does_not_recruit_unprojected_source_packs() {
+fn opening_accidental_pack_is_killed_and_skipped_in_authored_route() {
+    let subscriber = bevy::log::tracing_subscriber::fmt()
+        .with_env_filter("game_server::creature_sight=debug,game_server::creature_aggro=debug")
+        .with_test_writer()
+        .finish();
+    let _logger = bevy::log::tracing::subscriber::set_default(subscriber);
     let _rng_scope = crate::random::seed_scope(7);
     let mut run = spawn_run(7, &mut None).unwrap();
-    for _ in 0..600 {
+    let accidental = run.actors[&20375760];
+    let mut acquired = false;
+    for _ in 0..4000 {
         run.control().unwrap();
-        let previous = serde_json::json!({
-            "owner": super::diagnostics::inspect_unit(run.app.world(), None, run.party.owner),
-            "tank": super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank),
-            "owner_move_intent": run.app.world().get::<MoveIntent>(run.party.owner).map(|intent| [intent.0.x, intent.0.z]),
-            "opening_spell": crate::followers::simulator::opening_spell(run.app.world(), run.party.tank),
-        });
         run.app.update();
-        let Some(opening) = run.report.pulls.first() else {
-            continue;
-        };
-        let admitted = &run
-            .graph
-            .packs
-            .iter()
-            .find(|pack| pack.id == opening.pack)
-            .unwrap()
-            .spawns;
+        if !acquired
+            && run
+                .app
+                .world()
+                .get::<CombatStatus>(accidental)
+                .is_some_and(|status| status.0)
+        {
+            acquired = true;
+            assert!(
+                !run.report.pulls.iter().any(|pull| pull.pack == 20375760),
+                "native accidental engagement precedes any planned pull for that pack"
+            );
+            let healer = run.party.members[1];
+            println!(
+                "ACCIDENTAL_ACQUISITION at={} enemy={} healer={}",
+                run.now(),
+                super::diagnostics::inspect_unit(run.app.world(), Some(20375760), accidental),
+                super::diagnostics::inspect_unit(run.app.world(), None, healer)
+            );
+        }
         let events = &run
             .app
             .world()
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
             .0;
-        let opening_died = admitted.iter().all(|spawn| {
-            events.iter().any(|event| {
-                event.kind == shared::protocol::CombatLogKind::Death
-                    && event.target == Some(run.actors[&spawn.guid].to_bits())
-            })
+        let died = events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(accidental.to_bits())
         });
-        let unexpected: Vec<_> = run
-            .actors
-            .iter()
-            .filter(|(guid, actor)| {
-                !admitted.iter().any(|spawn| spawn.guid == **guid)
-                    && run
-                        .app
-                        .world()
-                        .get::<CombatStatus>(**actor)
-                        .is_some_and(|status| status.0)
-            })
-            .map(|(guid, actor)| {
-                super::diagnostics::inspect_unit(run.app.world(), Some(*guid), *actor)
-            })
-            .collect();
-        let mut aggro = Vec::new();
-        if !unexpected.is_empty() {
-            let acquired: Vec<_> = run
-                .actors
-                .values()
-                .copied()
-                .filter(|actor| {
-                    run.app
-                        .world()
-                        .get::<CombatStatus>(*actor)
-                        .is_some_and(|status| status.0)
-                })
-                .collect();
-            for actor in acquired {
-                aggro.push(super::diagnostics::inspect_aggro_pair(
-                    run.app.world_mut(),
-                    actor,
-                    run.party.tank,
-                ));
-            }
+        if !died {
+            continue;
         }
-        let aggro = serde_json::to_value(aggro).unwrap();
+        assert!(acquired, "actually observe the accidental fight");
         assert!(
-            unexpected.is_empty(),
-            "single-pack bootstrap recruited unprojected sources at {}s; previous={previous}; aggro={aggro}; owner={:?}; tank={:?}; unexpected={unexpected:?}",
-            run.now(),
-            run.app.world().get::<Position>(run.party.owner),
-            run.app.world().get::<Position>(run.party.tank)
+            events.iter().any(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.target == Some(accidental.to_bits())
+                    && event.amount > event.overflow.max(0)
+            ),
+            "party must actually fight, not just wait for a missing actor"
         );
-        if opening_died {
-            return;
-        }
+        assert_ne!(
+            run.next_pack().unwrap().0,
+            20375760,
+            "an accidental pack's actual Death skips its authored route step"
+        );
+        assert!(
+            !run.report.pulls.iter().any(|pull| pull.pack == 20375760),
+            "do not record a planned pull for the already-handled accidental pack"
+        );
+        return;
     }
-    assert!(
-        !run.report.pulls.is_empty(),
-        "fixture must actually attempt its opening pull"
-    );
+    panic!("native accidental opening pack must be fought and killed within200sim_s");
 }
 
 #[test]
