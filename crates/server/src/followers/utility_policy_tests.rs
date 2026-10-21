@@ -140,6 +140,8 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
     // The native simulator leader's controller receives this exact temporary
     // profile after initialization removes its stored Follower component.
     follower.owner = unit;
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     utility_tests::start_enemy_fireball(&mut h, unit);
     let enemy = h.npc;
     h.app
@@ -156,29 +158,15 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
             .get::<shared::casting::CastState>(enemy)
             .is_some()
     );
-    let can_interrupt = crate::spell_cast::can_interrupt_cast(h.app.world(), unit, enemy);
-    let admitted = super::kit_ai::update(h.app.world_mut(), unit, &follower, &[unit], Some(enemy));
+    super::kit_ai::update(h.app.world_mut(), unit, &follower, &[unit], Some(enemy));
     h.advance(3);
-    let interrupted = h.inbox.log.iter().any(|event| {
-        event.kind == CombatLogKind::Interrupt
-            && event.source == Some(unit.to_bits())
-            && event.target == Some(enemy.to_bits())
-    });
-    if !interrupted {
-        let direct = crate::spell_cast::creature_cast_interrupting_self(
-            h.app.world_mut(),
-            unit,
-            2139,
-            Some(enemy),
-        );
-        eprintln!(
-            "explicit-profile debug can_interrupt={can_interrupt} admitted={admitted} direct={direct:?} go={:?} failed={:?}",
-            h.inbox.go, h.inbox.failed
-        );
-    }
+    // Read actual engine events before owner routing: this actor is intentionally
+    // outside the original fixture owner's party/delivery boundary.
     assert!(
-        h.inbox
-            .log
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
             .iter()
             .any(|event| event.kind == CombatLogKind::Interrupt
                 && event.source == Some(unit.to_bits())
