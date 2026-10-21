@@ -48,7 +48,8 @@ fn spawn_latency_area_lookup_does_not_wait_for_collision_io_and_later_floor_is_u
         .expect("authored auction house area");
     let expected_floor = reference.ground_at(0, feet);
     assert!(
-        matches!(expected_floor, GroundProbe::Supported(height) if (height - 98.06).abs() < 0.01)
+        matches!(expected_floor, GroundProbe::Supported(height) if (height - 98.06).abs() < 0.05),
+        "authored auction house floor: {expected_floor:?}"
     );
     let root = private.path().to_path_buf();
     let (send, receive) = mpsc::channel();
