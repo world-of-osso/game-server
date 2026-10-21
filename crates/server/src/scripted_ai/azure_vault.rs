@@ -80,7 +80,10 @@ const SPROUT_GROUP_ORIGINS: [(f32, f32, f32); 7] = [
 const EVENT_LEY_LINE_SPROUTS: u32 = 2;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, LEYMOR_SCRIPT | TELASH_SCRIPT | SPROUT_SCRIPT)
+    matches!(
+        name,
+        LEYMOR_SCRIPT | TELASH_SCRIPT | SPROUT_SCRIPT | super::azureblade::SCRIPT
+    )
 }
 
 pub(super) fn creature_ai(
@@ -98,6 +101,7 @@ pub(super) fn creature_ai(
     }
     let boss = super::instance_script::bound_boss(world, actor)?;
     match script_name {
+        super::azureblade::SCRIPT => Some(super::azureblade::creature_ai(boss)),
         LEYMOR_SCRIPT => Some(Box::new(Leymor {
             boss,
             tasks: super::EventMap::default(),

@@ -1,5 +1,21 @@
 # Boss scripts
 
+## Azureblade Lua-clock partial boundary
+
+- Lead explicitly approves a partial Lua-clock combat port for Azureblade186739/map2515, prioritizing follower205. LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `Dragonflight/TheAzureVault/Azureblade.lua` supplies schedules/counts; this is not TC combat or full Retail-phase parity.
+- Literal initial request clocks: Summon Draconic Image384223 at3.3s, Arcane Cleave372222 at5.2s, Ancient Orb385578 at10.6s. Lua first-phase counters bound each to two requests, repeats14.6/13.4/15.8s respectively. Native casts/cooldowns remain ordinary; due events wait while casting. Requests rejected by native admission get no invented retry policy.
+- Native70448 supplies target104 destination-facing cone/radius/damage for372222, self140→373658 missile32→373582 summon28/190187/property64 for384223, explicit enemy6 + destination87/caster-front47/AT for385578. Explicit hostile requests select the current victim; native selectors retain area/child destinations. No hard-coded radius, damage, summon location or alternate spell.
+- `encounter_summons.py --encounter azureblade` prepares only independent copies: authenticate blank TDB186739 source binding, install explicitly local Lua-backed `boss_azureblade`, import actual190187 base/models + authored Normal1/Mythic23 rows. Do not manufacture205 stats or assert TDB supplied this script name. Preserve installed Azure saved ordinal1/encounter2585 despite DB2 bit3.
+- Named gaps: `AZUREBLADE_ENERGY_PHASE_UNSOURCED` (energy initialization/drain, Draconic Ritual/center movement, Overwhelming Energy and four-illusion phase/recovery), `AZUREBLADE_IMAGE_AI_UNSOURCED` (190187 has no authored AI), `AZUREBLADE_ORB_AREA_BEHAVIOR_UNPROVEN` (native AT only unless separately proven). Lua approximate32.9/61.7s energy countdowns do not fabricate those missing mechanics. Native child summons/initial rotation/lifecycle require targeted proof; whole-fight/follower clear/visual/loot/persistence remain unproved.
+
+## Blood Furnace Broggok source boundary
+
+- Broggok17380 uses pinned TC a352b1fa `boss_broggok.cpp`, published1924/map542bit2 (source ordinal1), ordinary70448 spell admission and map-copy lifecycle.
+- Appearance is passive/uninteractible. Source intro action1738000 attempts26837, then Talk0 after2s. Release1738001 restores aggression/selectability immediately, then Talk1/MovePath1381150 after5s; path completion zones into combat. Lever/prisoner instance ingress requires separate behavioral proof; direct action-hook fixtures do not certify ingress.
+- Engagement attempts26838 and schedules self Slime Spray30913 first5–15s/repeat10–15s, Poison Bolt30917 first0–5s/repeat10–15s, Poison Cloud30916 first5–20s/repeat10–25s. Events wait while casting and use ordinary admission, not instant policies.
+- Preserve source empty JustSummoned override: no summon tracking, forced combat or boss-reset/death cleanup. Inherited BossAI reset/death updates only this copy's primary state/credit.
+- Named gaps: `BROGGOK_POISON_BOLT_30917_ABSENT_70448`, `BROGGOK_SUMMON_TRIGGER_26837_ABSENT_70448`, `BROGGOK_DESPAWN_TRIGGER_26838_ABSENT_70448`, `BROGGOK_POISON_AURA_30914_ABSENT_70448`, `BROGGOK_POISON_AURA_38462_ABSENT_70448`. Native30916 is effect179/AT33896, not historical17662; historical cloud damage/radius scaling is not fabricated. `BROGGOK_PRISONER_STRINGS_AND_GROUPS_ABSENT_TDB1210`: source-required BroggokPrisoner StringIds and groups402–405 absent; no guessed wave memberships. `BROGGOK_RELEASE_PATH_UNPROVEN`: path1381150 final orientation is unsupported and map542 has no local navigation bake. Native area behavior, prisoner/lever ingress, full-instance/loot/persistence remain unproved until their own gates.
+
 ## Encounter coverage continuation — 2026-10-12
 
 - [x] Census every hosted DungeonEncounter difficulty record and Journal-only encounter, preserving unknown/ambiguous identities and separating structural admissions from behavioral proof: [coverage](../encounter-coverage.md).
