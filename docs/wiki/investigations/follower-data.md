@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Tyrant native alternative summon admission — 2026-10-21
+
+Atc07c8a6ae ordinary265187 emits SpellGo but no actor at32 (1RED11.00s/zero warnings). Native4255 is control1/title36/flags0x80e82 including JoinSummonerSpawnGroup. TC a352b1fa SpellEffects.cpp1947–1952 routes that flag to SummonGuardian before examining Title, so restricting joined guardians to title0 incorrectly rejected it. The shared supported/guardian checks now follow that actual ordering without replacing properties. Pinned SimC pets1513 selects native effect0 creature135002 before learned1250921 Antoran Armaments35 and effect3 creature250289 afterwards, never both. Actual32/35 actor-count GREEN pending. This proves neither attack binding/SP nor Tyrant damage/extension/orchestration. Both template/model families already exist authentically; no copy publication needed for this admission slice.
+
+
 ### Natural idle Imp expiry — 2026-10-21
 
 At236fa94e1 actual21idle native Imps survive39s, emit no Firebolt and expire after their native40s, but earn no Core (1genuineRED13.93s/zero warnings). Exact104317/55659 native deadline expiry now invokes the same learned Demoniac/capped PRD path as Energy exhaustion before ordinary removal. Map/owner cleanup before the deadline does not invoke this expiry hook; other summons are unchanged. At5ac8bb740 native7GREEN39.22s/zero warnings plus retained guardians11GREEN10.20s confirms this boundary; this closes a separate natural-demise boundary, not Implosion/Power Siphon/Tyrant parity.

@@ -1,5 +1,8 @@
 # Temporary guardian actors and damage transfer
 
+SummonProperties JoinSummonerSpawnGroup routes wild/allied control to the guardian path before title classification, including native Tyrant4255/title36. Native265187 selects only effect0/135002 before learned1250921 Antoran Armaments and only effect3/250289 afterwards; do not spawn both alternative effects or alter their native properties. Tyrant attack/SP and orchestration require separate proof.
+
+
 Temporary summoned actors use `spell_cast/{summon,guardian}.rs`; incoming damage sharing lives in `auras/damage_transfer.rs`. [Runtime and source boundaries](../wiki/systems/spell-casting.md#guardian-actors-and-damage-transfer).
 
 ## What it must do

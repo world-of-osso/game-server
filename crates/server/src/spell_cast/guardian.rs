@@ -11,6 +11,20 @@ use super::summon::SummonedCreature;
 #[path = "guardian_core.rs"]
 pub(super) mod core;
 
+const SUMMON_DEMONIC_TYRANT: u32 = 265187;
+const ANTORAN_ARMAMENTS: u32 = 1250921;
+
+/// SimC76f8118 pets1513: Antoran Armaments selects the alternative native root effect.
+pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    if spell != SUMMON_DEMONIC_TYRANT || !matches!(index, 0 | 3) {
+        return true;
+    }
+    let antoran = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(ANTORAN_ARMAMENTS));
+    (index == 3) == antoran
+}
+
 #[derive(Resource, Default)]
 pub struct GuardianSpells {
     pub spells: HashMap<u32, Vec<u32>>,

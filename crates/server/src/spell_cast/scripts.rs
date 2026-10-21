@@ -110,6 +110,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
         && batch23::effect_enabled(world, caster, spell, index)
+        && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
