@@ -77,6 +77,22 @@ impl TriageContext<'_> {
                 .is_some_and(|spell| ready(self.world, self.caster, spell))
     }
 
+    pub fn own_aura_on(
+        &self,
+        target: Entity,
+        spell_id: u32,
+    ) -> Option<&crate::auras::AuraInstance> {
+        let now = crate::auras::aura_now(self.world);
+        self.world
+            .get::<crate::auras::ActiveAuras>(target)?
+            .iter()
+            .find(|aura| {
+                aura.spell_id == spell_id
+                    && aura.caster == self.caster
+                    && aura.expires_at.is_none_or(|expiry| expiry > now)
+            })
+    }
+
     pub fn best_candidate(&self, owned: SpellSet) -> Option<Decision> {
         self.candidates
             .iter()

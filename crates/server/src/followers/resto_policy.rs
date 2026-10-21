@@ -5,6 +5,9 @@ use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
 
 const IRONBARK: u32 = 102342;
 const SWIFTMEND: u32 = 18562;
+const LIFEBLOOM: u32 = 33763;
+// Matches the qualified native bloom-on-refresh window; durations remain native.
+const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
 const UTILITY_REBIRTH: u32 = 20484;
 const OWNED: SpellSet = &[
@@ -22,6 +25,7 @@ const OWNED: SpellSet = &[
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
     let decision = choose_ironbark(ctx)
         .or_else(|| choose_urgent_swiftmend(ctx))
+        .or_else(|| choose_lifebloom(ctx))
         .or_else(|| ranked_maintenance(ctx));
     match decision {
         Some(decision) => SpecVerdict::Cast {
@@ -123,4 +127,31 @@ fn routine_heal_allowed(ctx: &TriageContext<'_>, decision: Decision) -> bool {
                 restriction.target_aura_state,
             ) == Some(true)
         })
+}
+
+fn choose_lifebloom(ctx: &TriageContext<'_>) -> Option<Decision> {
+    if !ctx.ready(LIFEBLOOM) || ctx.patients.iter().any(|patient| patient.emergency) {
+        return None;
+    }
+    let tank = ctx
+        .patients
+        .iter()
+        .find(|patient| super::kit_ai::is_tank(ctx.world, patient.entity))?;
+    let preparing = ctx.preparing(tank.entity);
+    let threatened = tank.missing_health > 0.0 || tank.incoming_per_second > 0.0 || preparing;
+    let aura = ctx.own_aura_on(tank.entity, LIFEBLOOM);
+    if (!threatened && aura.is_none()) || (!threatened && ctx.enemies.is_empty()) {
+        return None;
+    }
+    let due = aura.is_none_or(|aura| {
+        aura.expires_at.is_some_and(|expiry| {
+            expiry - crate::auras::aura_now(ctx.world)
+                <= f64::from(aura.duration_ms) / 1000.0 * LIFEBLOOM_REFRESH_FRACTION
+        })
+    });
+    due.then_some(Decision {
+        spell_id: LIFEBLOOM,
+        target: tank.entity,
+        urgent: false,
+    })
 }
