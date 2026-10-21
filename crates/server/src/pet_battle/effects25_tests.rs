@@ -116,29 +116,33 @@ fn pet_battle_last_hit_power_pct_respects_misses_and_real_wall_blocks() {
                 .iter()
                 .any(|event| matches!(event, Event::Miss { .. }))
         );
-        initial.teams[1].pets[0].abilities = [479, 110, 123];
-        let (mut shielded, _) = initial
+        let (mut prior_hit, _) = initial
+            .step(
+                &catalog,
+                [Action::Pass, Action::Ability(110)],
+                &mut Fixed(500000),
+            )
+            .unwrap();
+        prior_hit.teams[1].pets[0].abilities = [479, 110, 123];
+        let (shielded, _) = prior_hit
             .step(
                 &catalog,
                 [Action::Pass, Action::Ability(479)],
                 &mut Fixed(500000),
             )
             .unwrap();
-        shielded.teams[0].pets[0].stats.speed = 50;
         let (blocked, events) = shielded
             .step(
                 &catalog,
-                [Action::Ability(ability), Action::Ability(110)],
+                [Action::Ability(ability), Action::Pass],
                 &mut Fixed(500000),
             )
             .unwrap();
-        assert_eq!(damage(&events), [120]);
+        assert!(damage(&events).is_empty());
+        assert_eq!(blocked.teams[0].pets[0].health, 9880);
         assert_eq!(blocked.teams[1].pets[0].health, 10000);
-        assert!(
-            events
-                .iter()
-                .any(|event| matches!(event, Event::Immune { .. }))
-        );
+        assert_eq!(blocked.auras.len(), 1);
+        assert_eq!(blocked.auras[0].charges, 1);
     }
 }
 
