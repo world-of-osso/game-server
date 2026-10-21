@@ -237,3 +237,36 @@ fn encounter_coverage_lost_dwarves_threshold_stops_casts_without_faction_or_flag
         0
     );
 }
+
+#[test]
+fn encounter_coverage_lost_dwarves_evade_restores_partial_surrender_progress() {
+    let (mut h, baelog, map) = dwarf_copy(DWARVES[0], 205);
+    let conn =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (eric, _) = spawn_authored_actor(&mut h.app, &conn, DWARVES[1], map, 205);
+    h.engage(baelog);
+    h.hit_pct(baelog, 200.0);
+    h.advance(0.1);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(baelog)
+            .is_none()
+    );
+    assert!(!h.app.world().get::<CombatStatus>(baelog).unwrap().0);
+    h.engage(eric);
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), eric);
+    h.advance(14.0);
+    assert!(
+        cast_count(&h, baelog, 369563) > 0,
+        "native home/health recovery and reset restore unsurrendered combat clocks"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0,
+        "partial surrender cannot survive wipe as completed credit"
+    );
+}
