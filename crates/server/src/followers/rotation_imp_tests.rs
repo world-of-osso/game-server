@@ -185,6 +185,44 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
 }
 
 #[test]
+fn rotation_fidelity_tyrant_native_variant_follows_learned_antoran_armaments() {
+    // SimC76f8118 pets1513: effect1 normally, effect4 only with Antoran Armaments.
+    for (level, expected, antoran) in [(32, 135002, false), (35, 250289, true)] {
+        let (mut h, owner) = warlock(level);
+        assert_eq!(
+            h.app
+                .world()
+                .get::<crate::class_progression::KnownSpells>(owner)
+                .unwrap()
+                .contains(1250921),
+            antoran,
+            "native Antoran learned35"
+        );
+        crate::spell_cast::creature_cast(h.app.world_mut(), owner, 265187, Some(owner), false)
+            .expect("ordinary learned native Tyrant summon");
+        h.advance(80);
+        assert!(
+            h.inbox
+                .go
+                .iter()
+                .any(|event| event.caster == owner.to_bits() && event.spell_id == 265187)
+        );
+        let world = h.app.world_mut();
+        let entries: Vec<_> = world
+            .query::<(&SummonedCreature, &shared::components::Npc)>()
+            .iter(world)
+            .filter(|(summon, _)| summon.owner == owner && summon.spell_id == 265187)
+            .map(|(_, npc)| npc.template_id)
+            .collect();
+        assert_eq!(
+            entries,
+            vec![expected],
+            "one sourced Tyrant variant, never both native alternative effects, level={level}"
+        );
+    }
+}
+
+#[test]
 fn rotation_fidelity_wild_imp_native_idle_expiry_also_rolls_natural_core() {
     let (mut h, owner) = warlock(32);
     let imps: Vec<_> = (0..21).map(|_| summon_imp(&mut h, owner)).collect();
