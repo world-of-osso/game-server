@@ -59,3 +59,13 @@ Initial base c6be257c5, frozen protocol03cebdb. Own simulator baseline e479f2de9
 - [[follower-data]]
 - [[dungeon-simulator]]
 - [[spell-casting]]
+
+## Gate regression continuation (GREEN pending)
+
+Gateha847 exposed real policy regressions beyond the initial core tests. Latest context+starvation native replay leaves Ironbark/Rejuvenation/eligible-HoT Swiftmend and simulator mana-fixture cases RED; Henry's native Magic dispel is GREEN after the topped-start fix. Evidence: `*-latest-red.log` under the healer diagnostics directory.
+
+Ironbark is not a zero-throughput heal: its class decision now observes the authored attacked/health/missing-aura conditions and native readiness before ordinary healing. Shared `Patient.projected_death_seconds` is restored and prioritizes the most threatened eligible defensive recipient; Holy can reuse that exact forecast. `TriageContext.ready(spell_id)` reads learned rows plus native cooldowns/charges/school/costs, ignoring only transient GCD.
+
+Swiftmend urgent admission retains its authored HP window and native target restriction, even when forecast HoTs would cover the deficit later. Routine cost ranking only spends Swiftmend when the actual native prerequisite state exists; it does not exploit the controlled-caster owner waiver to replace Rejuvenation on a70%-HP un-HoTed owner. Ordinary direct spell execution and that native waiver are unchanged.
+
+The OOC mana-progress fixture previously cast a normal direct Regrowth on an already-full caster. Required topped-cast cancellation prevented the spend, so its intended recovery precondition never occurred. It now casts a learned native instant Mark1126 and asserts actual mana expenditure before retaining the unchanged60-second recovery/stall observations; no damage, fake mana grant or altered production recovery is introduced.

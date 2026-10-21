@@ -1,14 +1,111 @@
 //! Restoration105 owns its healing rows; no return to the old HP ladder.
-use super::healer_triage::{SpecVerdict, SpellSet, TriageContext};
+use shared::components::Health;
 
-const OWNED: SpellSet = &[8936, 18562, 774, 33763, 48438, 740, 145205, 102342];
+use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
+
+const IRONBARK: u32 = 102342;
+const SWIFTMEND: u32 = 18562;
+const OWNED: SpellSet = &[8936, 18562, 774, 33763, 48438, 740, 145205, IRONBARK];
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
-    match ctx.best_candidate(OWNED) {
+    let decision = choose_ironbark(ctx)
+        .or_else(|| choose_urgent_swiftmend(ctx))
+        .or_else(|| ranked_maintenance(ctx));
+    match decision {
         Some(decision) => SpecVerdict::Cast {
             decision,
             owned: OWNED,
         },
         None => SpecVerdict::Defer { owned: OWNED },
     }
+}
+
+fn choose_ironbark(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == IRONBARK)?;
+    let threshold = entry.conditions.health_below?;
+    if !ctx.ready(IRONBARK) {
+        return None;
+    }
+    let target = ctx
+        .patients
+        .iter()
+        .filter(|patient| {
+            let below = ctx
+                .world
+                .get::<Health>(patient.entity)
+                .is_some_and(|health| health.current < health.max * threshold);
+            below
+                && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
+                && super::kit_ai::combat_allows(
+                    ctx.world,
+                    ctx.caster,
+                    patient.entity,
+                    &ctx.enemies,
+                    entry,
+                )
+        })
+        .min_by(|left, right| {
+            left.projected_death_seconds
+                .total_cmp(&right.projected_death_seconds)
+        })?;
+    Some(Decision {
+        spell_id: IRONBARK,
+        target: target.entity,
+        urgent: true,
+    })
+}
+
+fn choose_urgent_swiftmend(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == SWIFTMEND)?;
+    let threshold = entry.conditions.health_below?;
+    if !ctx.ready(SWIFTMEND) {
+        return None;
+    }
+    let target = ctx.patients.iter().find(|patient| {
+        ctx.world
+            .get::<Health>(patient.entity)
+            .is_some_and(|health| health.current < health.max * threshold)
+            && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
+    })?;
+    Some(Decision {
+        spell_id: SWIFTMEND,
+        target: target.entity,
+        urgent: true,
+    })
+}
+
+fn ranked_maintenance(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let first = ctx.best_candidate(OWNED)?;
+    if routine_heal_allowed(ctx, first) {
+        return Some(first);
+    }
+    ctx.candidates
+        .iter()
+        .map(|candidate| candidate.decision)
+        .find(|decision| OWNED.contains(&decision.spell_id) && routine_heal_allowed(ctx, *decision))
+}
+
+fn routine_heal_allowed(ctx: &TriageContext<'_>, decision: Decision) -> bool {
+    if decision.spell_id != SWIFTMEND {
+        return true;
+    }
+    // Do not spend the native owner-only prerequisite waiver for routine upkeep.
+    // The urgent authored row above still uses the unmodified native target check.
+    ctx.world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(SWIFTMEND)
+        .and_then(|spell| spell.aura_restrictions.as_ref())
+        .is_some_and(|restriction| {
+            crate::auras::aura_state::read_computed_state(
+                ctx.world,
+                decision.target,
+                restriction.target_aura_state,
+            ) == Some(true)
+        })
 }

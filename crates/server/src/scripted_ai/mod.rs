@@ -30,6 +30,7 @@ pub mod instance_script;
 pub(crate) mod jump_movement;
 pub(crate) mod kargath;
 pub mod kings_rest;
+mod kokia;
 pub(crate) mod maraudon;
 mod melidrussa;
 pub(crate) mod model_reach;

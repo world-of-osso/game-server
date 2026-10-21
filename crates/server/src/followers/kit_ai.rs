@@ -288,7 +288,7 @@ fn maintenance_aura_present(
         })
 }
 
-fn combat_allows(
+pub(super) fn combat_allows(
     world: &World,
     unit: Entity,
     target: Entity,
