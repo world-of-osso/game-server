@@ -3420,3 +3420,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: Porung authenticated Heroic primary/unchanged native SmartAI and six-case composite proof ingested; stale No Repeat comment and real Normal-only same-display counterexample documented.
 
 - 2026-10-21: property363 current-health team damage and explicit percentage-convention policy; actual70448 census distinguishes registered handlers from recursive admission.
+
+- 2026-10-21: property362 same-species healing, shared370 identity counter and current70448 census1904/1043.

@@ -1,3 +1,4 @@
+- [Pet-battle Species Heal](systems/pet-battle-engine.md#species-heal--2026-10-21) — generic362 shares370 roster identity counting; real2260 RED/GREEN and ordinary healing preserved.
 - [Pet-battle current-health effects](systems/pet-battle-engine.md#current-health-percentage-effects--2026-10-21) — generic363 team routing, actual-victim leech and named engine-percentage policy; no Retail arithmetic certification.
 - [Encounter fixture determinism](systems/boss-scripts.md#encounter-fixture-determinism--2026-10-20) — shared BossAi seed before automatic aggro; Maker request-versus-impact clock and Gargolmar application-relative oracle, production timers unchanged.
 - [Public creature startup latency](investigations/public-spawn-startup-latency.md) — release phase/profile receipts, bounded ground I/O overlap and area-only collision deferral; actual FIFO RED→GREEN, retained floor/tuning gate; idle cadence is not loaded sakuin20tps proof.

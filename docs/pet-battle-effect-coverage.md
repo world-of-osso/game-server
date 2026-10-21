@@ -1,3 +1,7 @@
+## Species Heal362 — 2026-10-21
+
+Source70448 ability2260/effect4061 has10base points,100accuracy,+2points per additional same-species teammate and0variance. Generic362 adds the roster bonus before ordinary healing. The shared identity counter preserves existing370 behavior: exclude caster/enemies, include same-species dead reserves, never infer species from family. Literal roster wording is not independent Retail death-count proof. Real362 RED4→GREEN4 covers both teams/all active slots/0–2matches, dead reserves, accuracy, cap, modifiers and no critical/variance draw. Retained370 regression5PASS. Census **1904/2829 rows,1043graphs;69registered/35defined-used unregistered**, plus undefined0. One added row/root2260; no removals. Native/owned acquisition and full Retail arithmetic are not certified. Source/census/RED/GREEN artifacts: requested `petbattle-effects-census-2026-10-21/` directory.
+
 ## Current-health percentages and fresh census — 2026-10-21
 
 Master a953bdb2c has **67 registered of104 defined-used properties,37 without handlers**, not92; undefined0 is an additional referenced sentinel. Actual validator:1885/2829 rows,1040/1404 ability records. Registry coverage is not full implementation. Local70448 five-table source census and Rust admission are saved under `game-engine/data/diagnostics/petbattle-effects-census-2026-10-21/` with distinct direct-ability ranking, effect rows, ability IDs, admitted rows and source hashes. Canonical world.db agrees with the five CSV projections after CRLF/LF normalization in ability text.
