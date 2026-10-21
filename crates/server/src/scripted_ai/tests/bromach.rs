@@ -60,7 +60,6 @@ fn encounter_coverage_bromach_native_slam_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "RED: current Bromach Lua-clock port absent"]
 fn encounter_coverage_bromach_first_call_of_the_deep_uses_current_lua_clock() {
     let (mut h, boss, _) = bromach_copy(205);
     h.engage(boss);
