@@ -1,6 +1,6 @@
 ## 2026-10-21 — Source-eligible DH contemplation visuals
 
-[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact143544/219708+143545/219871, sourceDH mask2048 preserved, zero-payload permanent aura/30s recovery. Complete138rows28tables/three resident models/four race-sex conditions. RealNightElfDH learn/UseToy RED2/Compass controlPASS45.49s precedes two strict registry entries; GREEN/class/drift/census pending. No nativeanimation/full30sreuse/acquisition claim.
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact143544/219708+143545/219871, sourceDH mask2048 preserved, zero-payload permanent aura/30s recovery. Complete138rows28tables/three resident models/four race-sex conditions. RealNightElfDH learn/UseToy RED2/Compass controlPASS45.49s precedes two strict registry entries; fd491dbb6/masterc6bc60006 GREEN9/9 (68.52s), including wrong-class/four drift refusals, census and three source-visual/Gadgetzan controls. Census531→533 exactly143544/143545; check/fmt pass with inherited unused-function warning. No nativeanimation/full30sreuse/acquisition claim.
 
 ## 2026-10-21 — Exact seasonal pennant aura slots
 
