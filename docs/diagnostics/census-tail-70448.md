@@ -15,6 +15,12 @@ Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diag
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Effect16 QUEST_COMPLETE
+
+TC `SpellEffects.cpp:3765–3793` completes native exploration/event quests only when active, or native tracking-event flags even without visible log entries; already-rewarded quests are not replayed. Generic handler delegates to existing `quest::persist_scripted_quest_result` with the actual hit player and native MiscValue, preserving production persistence/dirty notifications.
+
+Ignored RED65cd8e660: native Dreamwalk193753 effect1→tracking quest39174, selected native effect through `resolve_effects` (not unrelated teleport siblings),1PASS/1FAIL26.85s. Missing persisted tracking reward fails; NPC-target exclusion control passes. Test also covers redb close/reopen and replay exclusion. `/home/osso/.worktrees/logs/census-tail/16-red.log`. GREEN pending.
+
 ## Aura94 INTERRUPT_REGEN
 
 Native17057 Bear Form, index1 zero amount. TC `Entities/Unit/StatSystem.cpp:931–937` selects combat regeneration while aura exists without changing actual combat status. Runtime now selects the interrupted power rate for non-NPC actors, retaining real combat state/timestamps, power-trigger processing and normal removal behavior. Mana's existing identical peace/combat formula is unchanged.
