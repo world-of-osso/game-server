@@ -16,7 +16,7 @@ const DAMAGE_WINDOW_SECONDS: f64 = 10.0;
 const MIN_RATE_WINDOW_SECONDS: f64 = 1.0;
 const TANK_WEIGHT: f32 = 1.25;
 const EMERGENCY_HEALTH: f32 = 0.25;
-const LOW_MANA: f32 = 0.30;
+pub(super) const LOW_MANA: f32 = 0.30;
 
 pub(super) type SpellSet = &'static [u32];
 
@@ -407,6 +407,9 @@ pub(super) fn update(
         .filter(|candidate| !owned.contains(&candidate.decision.spell_id))
         .map(|candidate| candidate.decision)
         .collect::<Vec<_>>();
+    if !safe {
+        cancel_unsafe_damage_cast(world, caster);
+    }
     let acted = decision
         .into_iter()
         .chain(fallback)
@@ -415,6 +418,16 @@ pub(super) fn update(
         acted: acted || world.get::<CastState>(caster).is_some(),
         owned,
         safe_to_dps: safe,
+    }
+}
+
+fn cancel_unsafe_damage_cast(world: &mut World, caster: Entity) {
+    let hostile = world
+        .get::<CastState>(caster)
+        .and_then(|cast| Entity::try_from_bits(cast.target))
+        .is_some_and(|target| spell_cast::targets::is_hostile(world, caster, target));
+    if hostile {
+        spell_cast::cancel_cast(world, caster);
     }
 }
 
