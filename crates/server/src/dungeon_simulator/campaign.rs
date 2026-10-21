@@ -132,11 +132,11 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
     let tank = run.party.tank;
     let first = run.actors[&20375759];
     crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, first);
-    crate::followers::pull_history::sample_all(run.app.world_mut());
+    crate::followers::update_ai(run.app.world_mut());
     run.app.update();
     crate::combat::kill_unit(run.app.world_mut(), tank, first);
     run.app.update();
-    crate::followers::pull_history::sample_all(run.app.world_mut());
+    crate::followers::update_ai(run.app.world_mut());
     let next = std::collections::BTreeSet::from([20375765]);
     let decision = crate::followers::simulator::pull(run.app.world_mut(), tank, &next);
     assert!(
