@@ -18,6 +18,7 @@ Server-owned static AreaTriggers from TDB `areatrigger`, `areatrigger_create_pro
 ## Implementation inventory
 
 - `crates/server/src/world_area_triggers.rs`: static identities and map content.
+- `crates/server/src/world_area_triggers/catalog.rs`: composite source joins and static-mode validation.
 - `crates/server/src/maps/store.rs`: source catalog.
 - `crates/server/src/maps/transfer.rs`: transfer/login content path.
 - `crates/server/src/maps/mod.rs`: hosted world creation and map teardown.

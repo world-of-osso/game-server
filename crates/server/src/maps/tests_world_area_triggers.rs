@@ -80,7 +80,7 @@ fn exercise_barrier(difficulty: u32) {
         (area.shape, area.shape_data),
         (0, [20.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     );
-    assert_eq!(area.visual_spell, 449122);
+    assert_eq!(area.visual_spell, Some(449122));
     assert!(close(
         wow(h.app.world().get::<Position>(first_barrier).unwrap()),
         source.position

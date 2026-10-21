@@ -377,6 +377,9 @@ pub(crate) fn queue_map_content(
 ) {
     let map = content.map;
     let difficulty_id = content.difficulty_id;
+    commands.queue(move |world: &mut World| {
+        crate::world_area_triggers::spawn_map(world, map, difficulty_id);
+    });
     if let Some(world_data) = world_data {
         crate::zones::spawn_map_creatures(commands, world_data, content, true, ground);
     }
