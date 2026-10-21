@@ -391,28 +391,7 @@ impl Encounter {
             if pet.level >= MAX_LEVEL || gained == 0 {
                 continue;
             }
-            pet.xp += gained;
-            while pet.level < MAX_LEVEL {
-                let threshold = catalog
-                    .next_level_xp
-                    .get(&pet.level)
-                    .ok_or("missing pet XP game-table level")?;
-                if pet.xp < *threshold {
-                    break;
-                }
-                pet.xp -= threshold;
-                pet.level += 1;
-            }
-            if pet.level == MAX_LEVEL {
-                pet.xp = 0;
-            }
-            rewards.push(BattlePetXpReward {
-                instance_id: guid,
-                xp_gained: gained,
-                level: pet.level,
-                xp: pet.xp,
-                next_level_xp: catalog.next_level_xp[&pet.level],
-            });
+            rewards.push(grant_pet_xp(catalog, pet, gained)?);
         }
         *journal = updated;
         Ok(rewards)
@@ -539,6 +518,34 @@ fn earned_xp(level: u8, opponent: u8) -> u32 {
     // base=(own+9)*(enemy-own+5), wild multiplier1.5, no old Legion +2 cap.
     let difference = (i32::from(opponent) - i32::from(level) + 5).max(0) as u32;
     (u32::from(level) + 9) * difference * 3 / 2
+}
+fn grant_pet_xp(
+    catalog: &WildCatalog,
+    pet: &mut OwnedPet,
+    gained: u32,
+) -> Result<BattlePetXpReward, String> {
+    pet.xp += gained;
+    while pet.level < MAX_LEVEL {
+        let threshold = catalog
+            .next_level_xp
+            .get(&pet.level)
+            .ok_or("missing pet XP game-table level")?;
+        if pet.xp < *threshold {
+            break;
+        }
+        pet.xp -= threshold;
+        pet.level += 1;
+    }
+    if pet.level == MAX_LEVEL {
+        pet.xp = 0;
+    }
+    Ok(BattlePetXpReward {
+        instance_id: pet.id,
+        xp_gained: gained,
+        level: pet.level,
+        xp: pet.xp,
+        next_level_xp: catalog.next_level_xp[&pet.level],
+    })
 }
 fn combat_feedback(event: &Event) -> Option<BattleCombatFeedback> {
     let (target, text, healing) = match event {
