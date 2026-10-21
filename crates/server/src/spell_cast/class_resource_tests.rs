@@ -604,6 +604,11 @@ fn replication_forms_send_energy_regen_and_combat_dependent_rage_decay() {
 fn census_tail_94_native_bear_form_retains_idle_rage_until_removed() {
     const BEAR_RAGE: u32 = 17_057;
     let mut h = harness(Vec::new(), &[BEAR_RAGE], DRUID).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = false;
     h.advance(80);
     h.cast_and_deliver(BEAR_RAGE, None);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, BEAR_RAGE));
