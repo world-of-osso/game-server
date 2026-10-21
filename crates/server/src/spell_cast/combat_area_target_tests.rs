@@ -9,6 +9,14 @@ fn fixture() -> (Harness, Entity) {
         .expect("native combat-area spell data");
     // Put the untouched unit nearer than the engaged one: filter before target caps.
     let untouched = spawn_npc(&mut h.app, 1.0);
+    let mode = crate::test_data::world_data().templates[&6].aggro_mode;
+    {
+        let mut commands = h.app.world_mut().commands();
+        for unit in [h.npc, untouched] {
+            crate::creature_aggro::insert_aggro_components(&mut commands.entity(unit), mode);
+        }
+    }
+    h.app.world_mut().flush();
     crate::combat_refs::set_in_combat_with(h.app.world_mut(), h.caster, h.npc);
     (h, untouched)
 }
