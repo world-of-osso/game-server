@@ -16,7 +16,17 @@ fn shield_duel(mastery_points: f32) -> (Harness, Entity) {
 fn shield_duel_for_class(mastery_points: f32, caster_class: u8) -> (Harness, Entity) {
     let mut h = harness(
         Vec::new(),
-        &[CRITICAL_BLOCK, 203524, 1464, 17, 853, 7384, 51723, 19434],
+        &[
+            CRITICAL_BLOCK,
+            MARTIAL_EXPERT,
+            203524,
+            1464,
+            17,
+            853,
+            7384,
+            51723,
+            19434,
+        ],
         caster_class,
     )
     .unwrap();
@@ -123,6 +133,113 @@ fn blocked_swing(h: &mut Harness, defender: Entity) -> (i32, i32, bool) {
         }
     }
     panic!("no real blocked swing in six seconds: {:?}", h.inbox.log);
+}
+
+const MARTIAL_EXPERT: u32 = 429_638;
+
+fn apply_martial_expert(h: &mut Harness, unit: Entity) {
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: MARTIAL_EXPERT,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+}
+
+fn martial_block_duel(critical: bool) -> (Harness, Entity) {
+    let (mut h, defender) = shield_duel(if critical { 100.0 } else { 0.0 });
+    let constant = h
+        .app
+        .world()
+        .resource::<crate::level_scaling::ArmorConstants>()
+        .at(10)
+        .unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(defender)
+        .unwrap()
+        .defense
+        .shield_block = constant / 3.0;
+    apply_mastery(&mut h, defender);
+    (h, defender)
+}
+
+#[test]
+#[ignore = "RED:638 scales attacker-owned critical block amount after truncation"]
+fn census_tail_638_native_attacker_martial_expert_scales_critical_auto_block_then_removes() {
+    let (mut h, defender) = martial_block_duel(true);
+    let caster = h.caster;
+    apply_martial_expert(&mut h, caster);
+    // 333×25%→83, doubled166, native+20%→199; remaining134.
+    assert_eq!(blocked_swing(&mut h, defender), (134, 199, false));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == MARTIAL_EXPERT,
+    );
+    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+}
+
+#[test]
+#[ignore = "RED control: literalTC638 owner is attacker, not critical-blocking victim"]
+fn census_tail_638_native_defender_martial_expert_is_not_attacker_modifier() {
+    let (mut h, defender) = martial_block_duel(true);
+    apply_martial_expert(&mut h, defender);
+    assert_eq!(blocked_swing(&mut h, defender), (167, 166, false));
+}
+
+#[test]
+#[ignore = "RED control:638 never amplifies ordinary noncritical block"]
+fn census_tail_638_native_attacker_modifier_leaves_ordinary_block_unchanged() {
+    let (mut h, defender) = martial_block_duel(false);
+    let caster = h.caster;
+    apply_martial_expert(&mut h, caster);
+    assert_eq!(blocked_swing(&mut h, defender), (250, 83, false));
+}
+
+#[test]
+#[ignore = "RED:638 also scales native melee-spell critical block percentage"]
+fn census_tail_638_native_attacker_martial_expert_scales_slam_block() {
+    let (mut h, defender) = martial_block_duel(true);
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::class_progression::KnownSpells::fixture(vec![1464]));
+    h.app
+        .world_mut()
+        .get_mut::<CharacterStats>(caster)
+        .unwrap()
+        .attack_power = 100.0;
+    apply_martial_expert(&mut h, caster);
+    for _ in 0..20 {
+        h.inbox = Inbox::default();
+        h.set_power(shared::components::PowerType::Rage, 1000.0);
+        h.cast_and_deliver(1464, Some(defender));
+        h.advance(45);
+        if let Some(hit) = h.inbox.log.iter().find(|event| {
+            event.spell_id == Some(1464) && event.kind == CombatLogKind::Damage && event.blocked > 0
+        }) {
+            let before_block = hit.amount + hit.blocked;
+            assert_eq!(
+                hit.blocked,
+                (before_block as f32 * 0.60).trunc() as i32,
+                "actual native Slam block receipt{hit:?}"
+            );
+            assert!(!hit.crit);
+            return;
+        }
+        assert!(
+            h.health(defender) > 0.0,
+            "fixture recipient must survive qualification"
+        );
+    }
+    panic!("no blocked native Slam in20 actual attempts");
 }
 
 #[test]
