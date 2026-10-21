@@ -13,6 +13,13 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Generic summon dependency closure
+
+- [x] Content generation imports authentic TDB creature dependencies of every Toy on-use spell, including recursive normal-difficulty `EffectTriggerSpell` links, not only aura428 or a hand-selected scenery list. Cycles terminate without suppressing other roots; no world spawns or fabricated source rows are added.
+- [x] Reapplying the producer preserves existing content and source models/addons. Missing TDB identities remain gaps. Importing a template does not implement its script, interaction, vehicle/possession category or native presentation.
+
+The runtime still applies SummonProperties/target/script preflight. Prepared-copy census admission is distinct from behavior-complete toys, and canonical data publication remains separate.
+
 ## Census-driven generic effect160
 
 - [x] Native effect160 (`FORCE_CAST_2`) queues a normal cast by the hit unit toward the original caster after the parent's SpellGo, preserving the child's ordinary cast time, resource/cooldown and crowd-control checks (TC a352b1fa `SpellEffects.cpp:851–892`). No per-toy script or cosmetic whitelist substitutes for this generic dispatch.

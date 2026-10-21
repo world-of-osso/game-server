@@ -36,7 +36,10 @@ class ToySceneryImportTests(unittest.TestCase):
                                 "--db", str(path)], check=True, capture_output=True, text=True)
             with closing(sqlite3.connect(path)) as conn, conn:
                 after = set(conn.execute("SELECT entry FROM content_creature_template"))
-                self.assertEqual(after - before, {(entry,) for entry in ENTRIES} - before)
+                self.assertTrue(({(entry,) for entry in ENTRIES} - before) <= (after - before))
+                source_entries = set(conn.execute("SELECT entry FROM tdb_creature_template"))
+                self.assertTrue((after - before) <= source_entries)
+                self.assertTrue({(51337,), (60383,)} <= after)
                 actual_models = conn.execute(f"""SELECT * FROM content_creature_template_model
                     WHERE CreatureID IN ({ENTRY_PARAMS}) ORDER BY CreatureID, Idx""", ENTRIES).fetchall()
                 self.assertEqual(actual_models, source_models)
