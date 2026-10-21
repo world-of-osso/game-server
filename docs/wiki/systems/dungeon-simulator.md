@@ -2,6 +2,12 @@
 
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
+## Required-boss phase hold —2026-10-21
+
+A source can be alive but currently unattackable without counting as a completed boss. The route still selects other pullable packs first. If no such pack remains and a required boss actor is alive, the controller holds rather than returning an incomplete-boss error; when attackability returns, normal route selection resumes. An absent boss with no native Death receipt remains an error. No boss credit is fabricated.
+
+The native Moloch damage→55964 Vanish→party CombatStop fixture reproduced the incorrect no-pack error at13610f262 (8.05s) andab6b77925 (12.41s), frozenDB SHA256`40d95b0a21a243edcf12dc9a1fa1ca56ad4b45f2828026622d609d62fab5cca5`, protocol03cebdb. Separate native controls prove other pullable packs take precedence and an absent boss cannot become an endless hold. Fix15447ad03 uses required boss entries from the frozen graph; focused GREEN remains pending. [Contract](../../specs/dungeon-simulator.md#authored-route).
+
 ## Frozen geometry
 
 `content/dungeons/stockade-34.json` contains 143 Normal source packs and 367 native-query walk-distance edges (70 KB). Pack identity matches source formations, never proximity clusters. Extraction retains a minimum spanning forest plus four nearest neighbours; every node is connected. Only the explicitly ignored extraction test opens the nav bake. Native source heights now remain intact for every graph (approved2026-10-21). Frozen node/entrance heights drive full3D nearest-node selection; native range/aggro retain floor separation. Travel consumes source speeds and frozen edge distances, not straight-line endpoint distance. Samples store Bevy[x,y,z]. No runtime navmesh, ground, LOS or physics is installed.

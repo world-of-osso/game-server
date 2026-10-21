@@ -1,3 +1,7 @@
+## 2026-10-21 — Required-boss phase hold
+
+[Native Moloch Vanish boundary](systems/dungeon-simulator.md#required-boss-phase-hold-2026-10-21): genuine no-next-pack error RED reproduced; required-boss alive→hold fix15447ad03 committed, other-pullable and absent-boss native controls pass pre-fix. Focused GREEN and fresh seeded acceptance pending. No geometry implementation duplicated; shared model-default work remains lead-owned.
+
 ## 2026-10-21 — Frozen boss-path corridor
 
 [Native corridor qualification](systems/dungeon-simulator.md#boss-path-corridor-qualification-2026-10-21): actual party-radius captures, deterministic Stockade99→59/Azure179→66 pulls and seven focused route tests GREEN. Native Felguard evade-arrival RED reproduced; shared reset/frozen travel implemented, fresh native and seeded qualification pending.
