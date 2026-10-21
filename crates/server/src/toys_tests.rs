@@ -62,6 +62,8 @@ mod stone_whistle;
 mod summon_closure;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_visual_census_tests.rs"]
+mod visual_census;
 #[path = "toys_waywatcher_tests.rs"]
 mod waywatcher;
 #[path = "toys_ysera_tests.rs"]
