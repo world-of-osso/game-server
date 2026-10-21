@@ -3453,3 +3453,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Holy257/Henry215011 selected70448 inventory and source corrections; native Surge/Apotheosis2RED9f32cff77; candidate00848e6cd awaiting targeted proof. See [[holy-priest-follower-ai]].
 
 - 2026-10-21: Holy core at66f0:6pure+4Henry+4Word+2observer GREEN; natural2-use half-cost/one-use and requested/applied counters. New native group/threat failures are fixture missing class-level stats, not behavioral REDs. Named selected-script gaps recorded in [[holy-priest-follower-ai]].
+
+- 2026-10-21: e959 native103 HenryFade/MeredyMirrorImage2genuineRED6.32s; Player-only temporary-threat gate identified. Genericlisted-unit fix pendingGREEN; group-owner stat-query shape corrected separately. [[holy-priest-follower-ai]].

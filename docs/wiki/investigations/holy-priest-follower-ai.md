@@ -71,6 +71,22 @@ Before/after seed comparisons must use the same override. The detached simulator
 checkout's target symlinks only to this agent's own Holy target; no target copy or
 cross-agent target sharing. Capacity admission still gates every build/run.
 
+## NPC temporary-threat reproduction
+
+At e95989467, both authentic ordinary casts applied their real103 aura but failed
+to change the native current victim: Henry586 and Meredy55342 kept the1000-threat
+NPC reference instead of the500-threat Player reference. These are genuine REDs,
+not the earlier construction failures (`holy-threat-fixture-v3.log`,2FAIL6.32s).
+The shared `temporary_threat` reader returned zero for every non-Player. Removing
+that restriction applies the existing native flat modifier to every listed unit;
+raw threat and the existing expiry/reselection path remain untouched. GREEN is
+pending. Mirror Image's unimplemented guardian consequence is outside this control.
+
+The group setup then reached a second distinct boundary: the fixed-stat player
+harness omitted UnitStats/CombatRatings/DerivedStats, so StatsPlugin's query never
+matched the owner even with Level90. The fixture must use the ordinary stat-entry
+shape and derived native health, not manufacture larger health or SP values.
+
 ## Named selected-kit gaps
 
 Verified source inspection at66f0b1d6b: these numeric spell IDs have no class-specific
