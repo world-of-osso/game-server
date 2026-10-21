@@ -221,6 +221,61 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
 }
 
 #[test]
+#[ignore = "explicit Stockade corridor seed2 native isolated leader death reproduction"]
+fn stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_run(2, &mut None).unwrap();
+    let earth = run.actors[&20375677];
+    let mut diagnosed = false;
+    for _ in 0..42000 {
+        run.control().unwrap();
+        run.app.update();
+        let owner_health = run
+            .app
+            .world()
+            .get::<shared::components::Health>(run.party.owner)
+            .unwrap();
+        if !diagnosed
+            && owner_health.current < owner_health.max / 2.0
+            && run
+                .app
+                .world()
+                .get::<CombatStatus>(earth)
+                .is_some_and(|status| status.0)
+        {
+            diagnosed = true;
+            let tank = super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank);
+            println!("ISOLATED_LEADER at={} tank={tank:?}", run.now());
+            println!(
+                "TANK_MOVEMENT {:?}",
+                crate::followers::simulator::inspect_tank_movement(
+                    run.app.world_mut(),
+                    run.party.tank
+                )
+            );
+            let decision = crate::followers::simulator::inspect_follower_decision(
+                run.app.world_mut(),
+                run.party.tank,
+            );
+            println!("TANK_DECISION {decision}");
+            let healer = crate::followers::simulator::inspect_follower_decision(
+                run.app.world_mut(),
+                run.party.members[1],
+            );
+            println!("HEALER_DECISION {healer}");
+        }
+        assert!(
+            crate::spell_cast::targets::is_alive(run.app.world(), run.party.owner),
+            "native party must accompany the corridor approach, not leave the leader dying alone"
+        );
+        if run.finished() {
+            return;
+        }
+    }
+    panic!("seed2 must complete within its historical2100sim_s failure boundary");
+}
+
+#[test]
 #[ignore = "explicit Stockade32 roster with native230861 Demonology follower"]
 fn native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival() {
     let _rng_scope = crate::random::seed_scope(12);
