@@ -1,3 +1,14 @@
+## 2026-10-21 — Default TempSummon title census
+
+[Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; stressed repetition proof remains pending.
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
+## 2026-10-21 — Follower205 source audits
+
+[Generic difficulty chain](systems/level-scaling.md#creature-difficulty-fallback--2026-10-21): pinned70448/TDB1210/TCa352b1fa prove205→1→0, template CT precedence and ExpectedStat mods; existing178 content205 rows are40 Normal/138 base projections, not raw205 observations. Native Vault Rune197204 temporary spawn reproduces missing LevelScaling (403a8357b,1FAIL17.83s); generic template and regional-delta chain implemented, GREEN pending. Read-only all27-map source inventory records650 nonboss candidates,23 source-bound/627 unbound and10 absent populations; helpers/phases retained, not a hostile-mechanics completion claim. Evidence in engine `data/diagnostics/follower-dungeons-2026-10-21/`.
+## 2026-10-21 — Kokia current Retail partial
+
+[Kokia](systems/boss-scripts.md#kokia-current-retail-partial--2026-10-21): ignored firstSearingRED precedes currentRetail partial065cf3fc9. Native5/5GREEN78.66s atd1af8bded proves Normal/Follower140s ongoing lanes, native aura23 weapon damage/reset/source-order rearm/isolated2606bit0/corpse. Producer1PASS12.435s; authenticated primary/localLua binding only, all actor inputs retained. No legacy timing or unsourced Ritual/Firestorm/projectile forwarding; conditional context and final gate/publication remain explicit.
+
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
@@ -3454,6 +3465,18 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Generic toy summon dependency closure
 
 [Source and proof](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21):151 missing-template/55 control split; producer RED→GREEN4, marker/actual trophy GREEN3 and retained census/mailbox proofs. Prepared423→506 (86 additions/three corrected gaps); canonical420 pending lead publication.206 templates/280 models/one addon inserted with no existing-row changes. Global markers and existing contracts preserved; sole Katy exemption has real mailbox proof.
+
+## 2026-10-21 — Flag of Ownership and finite dead-owner auras
+
+[Source and proof](systems/toys.md#flag-of-ownership-source-script-and-dead-aura-expiry-2026-10-21): exact TC51640 script, real enemy deaths/selection/flag/aura/targeted emote/natural60s expiry and reuse. Generic dead-aura early continue reproduced independently with23113, then fixed without enabling dead periodic ticks. Eight-case composite plus check/fmt; canonical published506→507. Full-trigger child packet and receiver-lifetime fixture assumptions corrected without weakening effects/emote proof. No native/offline corpse claim.
+
+## 2026-10-21 — Source-complete toy visual server rule
+
+[Rule and proof](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): two unconditioned cosmetic contracts/114 authored rows/24 source tables, strict zero-payload pipeline. Actual learn/apply/owner replication/cancel RED2→GREEN3; source durations/recovery and four metadata refusals, invariants retained. Canonical507→509;379 original dummy identities split into proved/current-script/identity and named contract gaps. No blanket dummy or native playback claim; check/fmt/census/refusal PASS.
+
+## 2026-10-21 — Published companion fixture reconciliation
+
+[Checkpoint](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): ty835 exposes stale53453 absence. Replaced synthetic3141/25305 fixture with unmodified99104 effect28/canonical3141/actual53453 source identity and lifecycle assertions;206-ID Rust/Python scan finds no other stale absence. Focused proof is pending fair capacity admission; no GREEN claim at this push.
 - 2026-10-20: property363 current-health team damage and explicit percentage-convention policy; actual70448 census distinguishes registered handlers from recursive admission.
 
 - 2026-10-20: property362 same-species healing, shared370 identity counter and current70448 census1904/1043.
@@ -3461,3 +3484,8 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: property140 real785/787 stack-duration refresh; explicit786 pad-follow gap avoids silently admitting an incomplete parent.
 
 - 2026-10-20: property197 actual last-hit Power percentages, data-over-prose conflict note, real997/2432 RED/GREEN and1908/1046 census.
+
+- 2026-10-21: Academy current Retail partial: Doragosa native ignoredRED→COMPOSITE6GREEN Normal1/Follower205, explicit native projectile flight, ongoing lanes/credit/reset/corpse. Ancient/Crawth immunity ingress remains blocked; Vexamus placement source gap. See [boss scripts](systems/boss-scripts.md#academy-current-retail-partial--2026-10-21).
+## 2026-10-21 — TWW Rookery Kyrioss
+
+[Source boundary/proof](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21): pushed ignored RED first; source-explicit LittleWigs schedules and native70448 cast/effect pipeline; Normal/Follower COMPOSITE4GREEN plus producer3PASS. Self-cast SpellGo and exact peer404468 provenance avoid fabricated log delivery. Dummy children, Torrent phase/repeat and Dash controller remain named gaps; canonical publication lead-owned.

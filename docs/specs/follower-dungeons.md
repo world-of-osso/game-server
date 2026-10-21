@@ -232,3 +232,7 @@ Sourced passive and noncombat/movement/explicit utility spells remain inventorie
 Local70448 SpellMisc/SpellEffect rows and pinned TC a352b1fa SharedDefines/SpellInfo/paladin/druid scripts expose no recognized combat-only flag for these two selectors. The bounded source audit and exact local-row hashes are retained in `aoe-combat-policy-source.json` in the Stockade diagnostic ledger; no Retail-parity claim is made for the explicit project policy.
 
 Lingering damage after an enemy's native Death (for example Hogger86604) remains real damage but cannot reinsert the dead caster into active enemies or reopen a cleared encounter. Temporary living-enemy invisibility/OOC still must not count as death.
+
+## Native-sight-safe non-tank positioning
+
+Idle follow and combat/heal approach choices for non-tank followers must not cross an unpulled aggressive hostile's native sight circle. Use actual same-copy live hostile positions and native per-recipient attack distance, including both model reaches and level scaling; no pack-specific offsets or fixed fake radii. Hold an unsafe approach while continuing native casts that are valid from the safe current position. The tank retains its pull planner. Actual accidental combat still takes precedence and already-dead packs are skipped in the authored route.

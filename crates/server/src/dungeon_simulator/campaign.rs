@@ -53,6 +53,75 @@ pub(super) struct Report {
 }
 
 #[test]
+fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
+    let mut expected = [209057, 209072, 209053, 209059, 209065];
+    if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
+        expected = entries
+            .split(',')
+            .map(|entry| entry.trim().parse::<u32>().unwrap())
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("five requested native profiles");
+    }
+    if let Ok(healer) = std::env::var("DUNGEON_SIMULATOR_HEALER_ENTRY") {
+        expected[1] = healer.parse().unwrap();
+    }
+    let level: u8 = std::env::var("DUNGEON_SIMULATOR_LEVEL")
+        .map(|value| value.parse().unwrap())
+        .unwrap_or(32);
+    let run = spawn_run(1, &mut None).unwrap();
+    for (unit, entry) in run.party.members.iter().zip(expected[..4].iter()) {
+        let follower = run
+            .app
+            .world()
+            .get::<crate::followers::Follower>(*unit)
+            .unwrap();
+        assert_eq!(
+            follower.profile.entry, *entry,
+            "actual spawned native follower profile"
+        );
+    }
+    let leader = run
+        .app
+        .world()
+        .resource::<crate::followers::FollowerCatalog>()
+        .profiles
+        .iter()
+        .find(|profile| profile.entry == expected[4])
+        .unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::class_progression::ActiveSpec>(run.party.owner)
+            .unwrap()
+            .0,
+        leader.spec_id
+    );
+    for unit in run.members() {
+        assert_eq!(
+            run.app
+                .world()
+                .get::<shared::components::Level>(unit)
+                .unwrap()
+                .0,
+            level
+        );
+        assert_eq!(
+            run.app
+                .world()
+                .get::<shared::components::UnitLevel>(unit)
+                .unwrap()
+                .0,
+            level
+        );
+        assert!(
+            run.app.world().get::<Health>(unit).unwrap().max > 0.0,
+            "real native stat initialization"
+        );
+    }
+}
+
+#[test]
 fn spawned_normal_population_allows_existing_fight_tank_movement() {
     let _rng_scope = crate::random::seed_scope(34);
     let mut run = spawn_run(34, &mut None).unwrap();
@@ -417,6 +486,91 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
 }
 
 #[test]
+fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
+    use crate::creature_ai::{CreatureState, FollowOwner};
+    use crate::scripted_ai::ReactState;
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let watcher = run.actors[&20375760];
+    let healer = run.party.members[1];
+    let owner = run.party.owner;
+    let center = *run.app.world().get::<Position>(watcher).unwrap();
+    for actor in run.actors.values() {
+        run.app
+            .world_mut()
+            .entity_mut(*actor)
+            .insert(ReactState::Passive);
+    }
+    run.app.world_mut().entity_mut(healer).insert(Position {
+        x: center.x - 20.0,
+        ..center
+    });
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: center.x + 20.0,
+        ..center
+    });
+    for (react, should_follow) in [(ReactState::Aggressive, false), (ReactState::Passive, true)] {
+        run.app
+            .world_mut()
+            .entity_mut(watcher)
+            .insert((react, CreatureState::Idle));
+        crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        assert_eq!(
+            run.app.world().get::<FollowOwner>(healer).is_some(),
+            should_follow,
+            "native20375760 {react:?}: only aggressive idle sight may block regroup"
+        );
+    }
+}
+
+#[test]
+fn non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let watcher = run.actors[&20375760];
+    let opening = run.actors[&20375759];
+    let healer = run.party.members[1];
+    let geometry =
+        super::diagnostics::inspect_aggro_pair(run.app.world_mut(), watcher, healer).unwrap();
+    let radius = geometry["npc_acquisition_radius"].as_f64().unwrap() as f32;
+    assert_eq!(
+        radius, 16.0,
+        "native31-to32 acquisition includes Crenna's3yd reach"
+    );
+    for _ in 0..4000 {
+        run.control().unwrap();
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(opening.to_bits())
+        }) {
+            return;
+        }
+        let from = *run.app.world().get::<Position>(watcher).unwrap();
+        let to = *run.app.world().get::<Position>(healer).unwrap();
+        let distance = (from.x - to.x).hypot(from.z - to.z);
+        assert!(
+            distance >= radius,
+            "non-tank healer entered unpulled20375760 native sight: {distance}<{radius} at{}s",
+            run.now()
+        );
+        assert!(
+            !run.app
+                .world()
+                .get::<CombatStatus>(watcher)
+                .is_some_and(|status| status.0),
+            "healer positioning must not recruit the unpulled watcher"
+        );
+    }
+    panic!("opening pack must actually die, not just hold the complete party forever");
+}
+
+#[test]
 fn opening_accidental_pack_is_killed_and_skipped_in_authored_route() {
     let subscriber = bevy::log::tracing_subscriber::fmt()
         .with_env_filter("game_server::creature_sight=debug,game_server::creature_aggro=debug")
@@ -429,6 +583,15 @@ fn opening_accidental_pack_is_killed_and_skipped_in_authored_route() {
     let mut acquired = false;
     for _ in 0..4000 {
         run.control().unwrap();
+        if run.report.pulls.len() == 1 && !acquired {
+            // Deliberate external accidental attack still uses native threat/combat;
+            // safe autonomous positioning must not erase its recovery coverage.
+            crate::creature_aggro::attack_start(
+                run.app.world_mut(),
+                accidental,
+                run.party.members[1],
+            );
+        }
         run.app.update();
         if !acquired
             && run
