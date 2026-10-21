@@ -61,3 +61,7 @@ Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-so
 
 - Runtime navmesh, terrain, LOS, ground, physics, Godot, server process, UDP/lightyear transport and client connections.
 - Simulator success alone is not live 3D acceptance.
+
+## Parallel seed runner
+
+`scripts/run-dungeon-simulator.py --jobs N` starts one independent native test process per seed, with at mostN active. Default jobs is bounded by requested seeds and half the estimated idle CPU capacity, at least1. Every process receives the same explicit seed regardless of concurrency and writes into the shared output directory. Per-seed logs retain native output. After every worker exits, merge all reports into an ordered `summary.json` with native reached-pack/wipe/failure accounting and total batch wall time. Preserve failed-clear reports; failed workers or missing reports must fail the command, never reuse old successful receipts. Catalogs remain process-local; parallel execution does not claim cross-process reuse.
