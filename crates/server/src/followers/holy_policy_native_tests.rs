@@ -1,5 +1,5 @@
 //! Real 70448 percentage damage on a native level90 group, not a trivial Stockade overlevel.
-use super::kit_clearcasting_tests::{complete_real_cast, own_aura};
+use super::kit_clearcasting_tests::{complete_real_cast, mana_cost, own_aura};
 use super::kit_tests::{at_level, uses_spell};
 use crate::auras::{ActiveAuras, has_aura};
 use crate::spell_cast::creature_cast;
@@ -346,6 +346,91 @@ fn holy_policy_native90_mending_keeps_the_owned_bounced_ward() {
         casts(&group, 33076),
         1,
         "root33076 absence must not overwrite41635 on another holder"
+    );
+}
+
+#[test]
+fn holy_policy_native90_guardian_rescues_an_actual_npc_once() {
+    let mut group = native_group();
+    apply_pressure(&mut group, 9);
+    uses_spell(&mut group.h, group.priest, 47788);
+    let protected = group
+        .members
+        .iter()
+        .copied()
+        .find(|&member| has_aura(group.h.app.world(), member, 47788))
+        .unwrap();
+    assert!(
+        group
+            .h
+            .app
+            .world()
+            .get::<super::Follower>(protected)
+            .is_some()
+    );
+    let enemy = group.h.npc;
+    // Native Bite123483 is one100%-max-health physical hit, no power/cast time.
+    // Ordinary native avoidance/armor remain intact; no hit or pool is replaced.
+    for _ in 0..20 {
+        creature_cast(
+            group.h.app.world_mut(),
+            enemy,
+            123483,
+            Some(protected),
+            false,
+        )
+        .unwrap();
+        group.h.advance(3);
+        if !has_aura(group.h.app.world(), protected, 47788) {
+            break;
+        }
+    }
+    assert!(!has_aura(group.h.app.world(), protected, 47788));
+    assert!(fraction(&group, protected) > 0.0);
+    assert!(
+        group
+            .h
+            .app
+            .world()
+            .resource::<ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(|event| {
+                event.spell_id == Some(48153)
+                    && event.kind == CombatLogKind::Heal
+                    && event.target == Some(protected.to_bits())
+                    && event.amount > event.overflow
+            })
+    );
+    for _ in 0..20 {
+        creature_cast(
+            group.h.app.world_mut(),
+            enemy,
+            123483,
+            Some(protected),
+            false,
+        )
+        .unwrap();
+        group.h.advance(3);
+        if fraction(&group, protected) == 0.0 {
+            return;
+        }
+    }
+    panic!("the same native hits must kill after the one-shot guardian is consumed");
+}
+
+#[test]
+fn holy_policy_native90_apotheosis_uses_native_word_discount_not_free_words() {
+    let mut group = native_group();
+    let priest = group.priest;
+    let paid = mana_cost(&group.h, priest, 2050);
+    complete_real_cast(&mut group.h, priest, 200183);
+    let discounted = mana_cost(&group.h, priest, 2050);
+    assert!(discounted > 0.0);
+    let expected = paid * 0.30;
+    assert!(
+        (discounted - expected).abs() < 0.001,
+        "native70% discount, not a free Word"
     );
 }
 
