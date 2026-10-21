@@ -1,3 +1,7 @@
+## 2026-10-21 — Native follower duration/admission boundaries
+
+[Rotation slices](investigations/follower-data.md#rotation-duration-and-admission-slices--2026-10-21): nativec09cba90010GREEN/6RED9.67s; resource-unit gates and four carries pass, new timer/major/LastStand/Cat boundaries fail. Cat source48629's missing applied-aura precondition and actual3-target setup proved before adapter. Source-qualified adapter/refresh/conditional LastStand and project sequencing committed, GREEN pending.14producerPASS; canonical publication, full proc/snapshot and simulator acceptance open.
+
 ## 2026-10-21 — Follower rotation inventory qualification
 
 [Cast-action projection](investigations/follower-data.md#rotation-cast-action-projection--2026-10-21): missing HoG/Demonbolt/Berserk cast actions reproduced from actual70448 default export; source-qualified parent projection and native Incarnation replacement give5combined producerPASS ate085f02fb. Native WW dummy build/rotation acceptance pending; no full-parity claim. Bloodtalons absence, passive Last Stand and modified Tiger Palm Chi recorded.
