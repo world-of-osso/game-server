@@ -23,6 +23,11 @@ class SimcScenarioTests(unittest.TestCase):
                         "iterations=1", "item_db_source=local"],
                        cwd=directory, check=True, timeout=120)
         report = json.loads(Path(f"{prefix}.three.json").read_text())["sim"]
-        self.assertEqual(len(report["targets"]), 3, "actual main target plus two adds")
+        # SimC serializes enemy pets' debuffs under their main target, not as
+        # separate top-level targets. Positive uptime proves actual recipients.
+        recipients = {buff["target"] for target in report["targets"]
+                      for buff in target["buffs"] if buff.get("uptime", 0) > 0}
+        self.assertEqual(recipients, {"Fluffy_Pillow", "1", "2"},
+                         "actual main target and both adds must receive effects")
         self.assertTrue(any(event["type"] == "adds" for event in report.get("raid_events", [])))
         self.assertEqual(report["players"][0]["collected_data"]["fight_length"]["mean"], 300.0)
