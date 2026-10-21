@@ -23,6 +23,7 @@ fn spawn_latency_area_lookup_does_not_wait_for_collision_io_and_later_floor_is_u
     let terrain = private.path().join("terrain");
     std::fs::create_dir(&terrain).unwrap();
     symlink(source.join("models"), private.path().join("models")).unwrap();
+    symlink(source.join("los"), private.path().join("los")).unwrap();
     let wdt = std::fs::read(source.join("terrain/775971.wdt")).unwrap();
     let feet = Vec3::new(-8820.0, 98.1, -660.0);
     let (row, col) = bevy_to_tile(feet.x, feet.z);

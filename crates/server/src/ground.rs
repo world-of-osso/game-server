@@ -247,6 +247,7 @@ impl GroundMap {
     /// (`terrain/<fdid>.wdt|adt`, `models/<fdid>.wmo`, with why when one does not parse):
     /// its WDT, then each MAID tile's root and `_obj0` ADT and the WMO roots and groups
     /// the WDT or the `_obj0` MODF place. `NO_WDT` for a map without one.
+    #[cfg(test)]
     pub fn missing_files(&self, map_id: u32) -> Vec<String> {
         missing_ground_files(&self.data_dir, self.wdts.get(&map_id).copied())
     }
@@ -870,24 +871,34 @@ fn check_spawned_ground(
     spawned: impl IntoIterator<Item = u32>,
     gaps: &HashSet<(u32, String)>,
 ) -> SpawnedGroundCheck {
-    // Independent read-only map walks share Bevy's bounded I/O pool, not one serial
-    // critical path. Fold sorted results so refusal and known-gap ordering stays stable.
-    let pool = bevy::tasks::IoTaskPool::get_or_init(|| {
-        bevy::tasks::TaskPoolBuilder::new().num_threads(4).build()
+    // Bevy is deliberately single-threaded here. Overlap only these independent
+    // startup file walks, with at most four workers that join before spawning.
+    let mut maps: Vec<_> = spawned.into_iter().collect();
+    maps.sort_unstable();
+    let data_dir = &ground.data_dir;
+    let wdts = &ground.wdts;
+    let results = std::thread::scope(|scope| {
+        let workers: Vec<_> = maps
+            .chunks(maps.len().div_ceil(4).max(1))
+            .map(|maps| {
+                scope.spawn(move || {
+                    maps.iter()
+                        .map(|&map| {
+                            let started = std::time::Instant::now();
+                            let missing = missing_ground_files(data_dir, wdts.get(&map).copied());
+                            debug!("Ground validation map {map}: {:?}", started.elapsed());
+                            (map, missing)
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        // Join in source-map order so refusal and known-gap diagnostics stay stable.
+        workers
+            .into_iter()
+            .flat_map(|worker| worker.join().expect("ground validation worker panicked"))
+            .collect::<Vec<_>>()
     });
-    let mut results = pool.scope(|scope| {
-        for map in spawned {
-            let data_dir = &ground.data_dir;
-            let wdt = ground.wdts.get(&map).copied();
-            scope.spawn(async move {
-                let started = std::time::Instant::now();
-                let missing = missing_ground_files(data_dir, wdt);
-                debug!("Ground validation map {map}: {:?}", started.elapsed());
-                (map, missing)
-            });
-        }
-    });
-    results.sort_unstable_by_key(|(map, _)| *map);
     let mut check = SpawnedGroundCheck::default();
     for (map, missing) in results {
         let mut gap = false;
