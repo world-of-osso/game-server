@@ -127,10 +127,10 @@ impl MovementChanges {
 /// client reports (`HandleMovementOpcode` → `UpdatePosition(pos)`), as far as its speed
 /// covers in the movement time its bank grants, at a height `terrain` allows
 /// (docs/specs/player-height.md). Without `terrain` the height stays the server's.
-pub(super) fn apply_movement_input(
+pub(super) fn apply_movement_input<F: bevy::ecs::query::QueryFilter>(
     input: &PlayerInput,
     player_entity: Entity,
-    players: &mut Query<PlayerMovement, MovableUnit>,
+    players: &mut Query<PlayerMovement, F>,
     clocks: &mut MovementClocks,
     mut terrain: Option<(&mut GroundMap, InMap)>,
 ) -> MovementChanges {
