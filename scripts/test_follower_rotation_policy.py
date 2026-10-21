@@ -1,6 +1,9 @@
 """Serialized rotation-policy contract, sourced from SimC76f8118 (not its70391 coefficients)."""
+import json
+from pathlib import Path
+import sqlite3
 import unittest
-from scripts.follower_spec_kits import combat_policy
+from scripts.follower_spec_kits import combat_policy, kit_rows
 
 
 class WindwalkerRotationPolicyTests(unittest.TestCase):
@@ -25,6 +28,22 @@ class WindwalkerRotationPolicyTests(unittest.TestCase):
     def test_other_specs_do_not_gain_combo_restrictions(self):
         _, _, conditions = combat_policy(66, 'Judgment', 275779, [], [])
         self.assertNotIn('no_repeat_group', conditions)
+
+
+class DemonologyActionProjectionTests(unittest.TestCase):
+    def test_native_talents_enable_cast_actions_only_at_their_actual_levels(self):
+        root = Path(__file__).resolve().parents[1]
+        export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
+        source = json.loads(export.read_text())
+        selected = [row for row in source['loadouts'] if row['spec_id'] == 266 and row['level'] in (10, 11, 14, 15)]
+        self.assertEqual(len(selected), 4)
+        with sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
+            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        available = lambda spell, level: any(row[0] == 266 and row[1] == spell and row[2] <= level <= row[3] and row[4] == 'attack' for row in rows)
+        self.assertFalse(available(105174, 10))
+        self.assertTrue(available(105174, 11), 'SimC init245-247 maps native1250273 to actual cast105174')
+        self.assertFalse(available(264178, 14))
+        self.assertTrue(available(264178, 15), 'SimC init249-250 maps native426115 to actual cast264178')
 
 
 if __name__ == '__main__':
