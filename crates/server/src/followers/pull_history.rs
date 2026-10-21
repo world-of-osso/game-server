@@ -247,7 +247,7 @@ struct EventObservation {
 
 struct EventInput<'a> {
     event: &'a CombatLogEvent,
-    source: Option<Entity>,
+    living_source: Option<Entity>,
     target: Entity,
     guid: Option<u32>,
     now: f64,
@@ -305,7 +305,7 @@ pub(crate) fn record_event(world: &mut World, event: &CombatLogEvent) {
     }
     let input = EventInput {
         event,
-        source,
+        living_source: source.filter(|source| crate::spell_cast::targets::is_alive(world, *source)),
         target,
         guid,
         now: read_time(world),
@@ -361,7 +361,9 @@ fn observe_damage(
             healing: 0.0,
         });
     } else if observation.target_member && !observation.source_member {
-        if let Some(source) = input.source {
+        // Lingering periodic damage remains real after its caster dies, but a
+        // dead source cannot reopen the encounter already closed by Death.
+        if let Some(source) = input.living_source {
             history.active_enemies.insert(source);
             history.in_combat = true;
         }
