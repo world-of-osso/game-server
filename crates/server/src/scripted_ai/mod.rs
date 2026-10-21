@@ -111,6 +111,9 @@ impl Plugin for ScriptedAiPlugin {
                     update_creature_ai,
                 )
                     .chain()
+                    // TC Creature::Update runs Unit::Update before AIUpdateTick.
+                    // A new AI cast starts aging on the following server tick.
+                    .after(crate::spell_cast::advance_casts)
                     .after(crate::creature_aggro::update_victim_system)
                     .before(crate::creature_ai::chase_system)
                     .before(crate::combat::auto_attack_system),

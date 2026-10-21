@@ -207,6 +207,29 @@ fn assert_beaker_window(times: &[f32], first: (f32, f32)) {
 }
 
 #[test]
+fn encounter_fixture_cast_progress_starts_after_admission_tick() {
+    for _ in 0..4 {
+        let (mut h, boss, _) = maker_copy(2);
+        for _ in 0..400 {
+            h.advance(0.05);
+            if let Some(cast) = h.app.world().get::<CastState>(boss) {
+                assert_eq!(cast.spell_id, HEROIC_BEAKER);
+                assert_eq!(
+                    cast.elapsed, 0.0,
+                    "new cast cannot consume the admission tick"
+                );
+                h.advance(0.45);
+                assert!(h.app.world().get::<CastState>(boss).is_some());
+                h.advance(0.05);
+                assert!(h.app.world().get::<CastState>(boss).is_none());
+                break;
+            }
+        }
+        assert!(!spell_gos(&h, boss, HEROIC_BEAKER).is_empty());
+    }
+}
+
+#[test]
 fn encounter_fixture_seed_precedes_automatic_aggro() {
     let (mut first, first_boss, _) = maker_copy(2);
     let first_times = cast_times(&mut first, first_boss, HEROIC_BEAKER, 60.0);
@@ -247,8 +270,9 @@ fn encounter_coverage_maker_heroic_aggro_speech_and_beaker_schedule() {
     assert_eq!(starts.len(), times.len(), "every admitted cast completes");
     for (start, impact) in starts.iter().zip(&times) {
         let cast_time = impact - start;
-        assert!(
-            (cast_time - 0.5).abs() <= 0.05,
+        assert_eq!(
+            (cast_time * 1000.0).round() as u32,
+            500,
             "native500ms cast: {cast_time}"
         );
     }

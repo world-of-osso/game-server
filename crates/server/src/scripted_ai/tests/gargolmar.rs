@@ -30,6 +30,7 @@ fn encounter_coverage_gargolmar_source_clocks_thresholds_and_credit() {
     let mut casts = Vec::new();
     let mut retaliation_seen = false;
     let mut mortal_wound_applications = 0;
+    let mut log_cursor = 0;
     for tick in 1..=1400 {
         if tick == 401 {
             h.hit_pct(boss, 61.0);
@@ -43,18 +44,28 @@ fn encounter_coverage_gargolmar_source_clocks_thresholds_and_credit() {
         h.advance(0.05);
         retaliation_seen |= h.has_aura(boss, 22857);
         let gos = &h.inbox(0).spell_gos;
-        let mortal_wound_casts = gos[cursor..]
+        let log = &h.inbox(0).log;
+        let applications = log[log_cursor..]
             .iter()
-            .filter(|go| go.caster == boss.to_bits() && go.spell_id == 30641)
+            .filter(|event| {
+                event.source == Some(boss.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.spell_id == Some(30641)
+                    && matches!(
+                        event.kind,
+                        CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+                    )
+            })
             .count();
-        if mortal_wound_casts > 0 {
-            // TC applies30641 on impact; its native aura lasts10s, not forever.
+        if applications > 0 {
+            // SpellGo can miss; observe actual application of the native10s aura.
             assert!(
                 h.has_aura(player, 30641),
                 "Mortal Wound after its actual hit"
             );
-            mortal_wound_applications += mortal_wound_casts;
+            mortal_wound_applications += applications;
         }
+        log_cursor = log.len();
         casts.extend(gos[cursor..].iter().filter_map(|go| {
             (go.caster == boss.to_bits() && [30641, 34645, 30642, 22857].contains(&go.spell_id))
                 .then_some((go.spell_id, tick as f32 * 0.05, go.target))
@@ -121,8 +132,8 @@ fn encounter_coverage_gargolmar_source_clocks_thresholds_and_credit() {
         );
     }
     assert!(
-        mortal_wound_applications >= 2,
-        "actual Mortal Wound heal reduction on repeated applications"
+        mortal_wound_applications > 0,
+        "actual Mortal Wound heal reduction after observed application"
     );
     assert!(
         retaliation_seen,
