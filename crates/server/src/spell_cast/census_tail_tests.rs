@@ -734,6 +734,64 @@ fn census_tail_67_native_lay_on_hands_does_not_heal_dead_target() {
     assert_eq!(h.health(target), 0.0);
 }
 
+const SOULSTONE: u32 = 20_707;
+
+fn soulstone_targets(
+    h: &mut Harness,
+    index: u8,
+    target: Option<Entity>,
+) -> Result<Vec<Entity>, u32> {
+    let spell = world_db().unwrap().store.get(SOULSTONE).unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == index)
+        .unwrap();
+    super::targets::select_targets(h.app.world_mut(), h.caster, target, spell, effect, 0, false)
+}
+
+#[test]
+#[ignore = "RED: nativeSoulstone121 selects explicit friendly corpse owner"]
+fn census_tail_121_native_soulstone_selects_dead_ally_for_corpse_lane() {
+    let mut h = harness(Vec::new(), &[SOULSTONE, 5], 9).unwrap();
+    let ally = spawn_player(&mut h.app, 5, 3.0);
+    hit_native(&mut h, 5, 0, ally);
+    assert_eq!(h.health(ally), 0.0);
+    assert_eq!(soulstone_targets(&mut h, 2, Some(ally)), Ok(vec![ally]));
+}
+
+#[test]
+#[ignore = "RED: nativeSoulstone121 refuses living while21 retains living ally"]
+fn census_tail_121_native_soulstone_preserves_distinct_living_and_corpse_lanes() {
+    let mut h = harness(Vec::new(), &[SOULSTONE], 9).unwrap();
+    let ally = spawn_player(&mut h.app, 5, 3.0);
+    assert!(h.health(ally) > 0.0);
+    assert_eq!(soulstone_targets(&mut h, 2, Some(ally)), Ok(Vec::new()));
+    assert_eq!(soulstone_targets(&mut h, 3, Some(ally)), Ok(vec![ally]));
+}
+
+#[test]
+#[ignore = "RED:121 refuses deadhostile and missing explicit without self fallback"]
+fn census_tail_121_native_soulstone_does_not_select_hostile_or_missing_corpse() {
+    let mut h = harness(Vec::new(), &[SOULSTONE, 5], 9).unwrap();
+    let enemy = h.npc;
+    hit_native(&mut h, 5, 0, enemy);
+    assert_eq!(h.health(enemy), 0.0);
+    assert_eq!(soulstone_targets(&mut h, 2, Some(enemy)), Ok(Vec::new()));
+    assert_eq!(soulstone_targets(&mut h, 2, None), Ok(Vec::new()));
+}
+
+#[test]
+#[ignore = "RED: realSoulstonelivingcast plans121empty and21ally without unsupportedtarget"]
+fn census_tail_121_native_soulstone_ordinary_living_cast_no_longer_rejects_selector() {
+    let mut h = harness(Vec::new(), &[SOULSTONE], 9).unwrap();
+    let ally = spawn_player(&mut h.app, 5, 3.0);
+    h.cast_and_deliver(SOULSTONE, Some(ally));
+    h.advance(100);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(h.inbox.go.iter().any(|go| go.spell_id == SOULSTONE));
+}
+
 fn rewarded(h: &Harness, character: u64) -> bool {
     persistence::quest_store::load_quest_log(
         &h.app.world().resource::<GameDatabase>().db,
