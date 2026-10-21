@@ -79,6 +79,11 @@ Hymn. Apotheosis precedes the channel when both qualify. A channel is refused fo
 shared emergency patients or an authored near-term hit on Henry. Sanctify needs
 three injured members inside the shared native-radius cluster. Fortitude waits
 for calm shared triage and casts once around Henry when any party buff is missing.
+Prayer of Healing requires at least three actually injured recipients inside its
+native primary-centered cluster. Sum their existing effective-healing estimates
+and compare aggregate healing per native mana against available ordinary direct
+heals; choose the best useful cluster before PoM upkeep, after Surge/Words and
+throughput cooldown decisions. No invented coefficient or map-wide injury count.
 These are project decisions, not DB2 magnitudes. Owned cooldown/upkeep rows stay
 owned even when no native admission is available; ordinary direct healing remains
 available through the shared generic candidate ranking.

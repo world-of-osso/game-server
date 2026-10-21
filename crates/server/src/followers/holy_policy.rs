@@ -8,6 +8,7 @@ use crate::spell_cast::{self, CastFailure};
 use crate::spell_info::SpellStore;
 
 const FLASH_HEAL: u32 = 2061;
+const PRAYER_OF_HEALING: u32 = 596;
 const PRAYER_OF_MENDING: u32 = 33076;
 const SANCTIFY: u32 = 34861;
 const DIVINE_HYMN: u32 = 64843;
@@ -34,6 +35,7 @@ const OWNED: SpellSet = &[
     FADE,
     MASS_DISPEL,
     PURIFY,
+    PRAYER_OF_HEALING,
 ];
 const POLICY_SPELLS: &[u32] = &[
     FLASH_HEAL,
@@ -73,6 +75,7 @@ struct PolicySnapshot {
     mending: bool,
     depleted: bool,
     channel: bool,
+    group_heal: Option<HolyDecision>,
 }
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
@@ -269,6 +272,7 @@ fn read_snapshot(ctx: &TriageContext<'_>) -> PolicySnapshot {
         depleted: words_depleted(ctx),
         channel: !ctx.patients.iter().any(|patient| patient.emergency)
             && !ctx.preparing(ctx.caster),
+        group_heal: choose_prayer_of_healing(ctx),
     }
 }
 
@@ -283,6 +287,45 @@ fn read_candidates(ctx: &TriageContext<'_>, spell: u32) -> Vec<HolyDecision> {
         .filter(|&target| ready(ctx, spell, target))
         .map(|target| HolyDecision { spell, target })
         .collect()
+}
+
+fn choose_prayer_of_healing(ctx: &TriageContext<'_>) -> Option<HolyDecision> {
+    let direct_efficiency = ctx
+        .candidates
+        .iter()
+        .filter(|candidate| !OWNED.contains(&candidate.decision.spell_id))
+        .map(|candidate| candidate.effective_healing / candidate.mana_cost.max(f32::MIN_POSITIVE))
+        .max_by(f32::total_cmp)
+        .unwrap_or(0.0);
+    ctx.candidates
+        .iter()
+        .filter(|candidate| candidate.decision.spell_id == PRAYER_OF_HEALING)
+        .filter_map(|candidate| {
+            let cluster = ctx.injury_cluster(PRAYER_OF_HEALING, candidate.decision.target)?;
+            if cluster.members.len() < GROUP_PRESSURE_COUNT {
+                return None;
+            }
+            let healing: f32 = ctx
+                .candidates
+                .iter()
+                .filter(|member| {
+                    member.decision.spell_id == PRAYER_OF_HEALING
+                        && cluster.members.contains(&member.decision.target)
+                })
+                .map(|member| member.effective_healing)
+                .sum();
+            let efficiency = healing / candidate.mana_cost.max(f32::MIN_POSITIVE);
+            (efficiency > direct_efficiency).then_some((efficiency, candidate.decision.target))
+        })
+        .max_by(|left, right| {
+            left.0
+                .total_cmp(&right.0)
+                .then_with(|| right.1.to_bits().cmp(&left.1.to_bits()))
+        })
+        .map(|(_, target)| HolyDecision {
+            spell: PRAYER_OF_HEALING,
+            target,
+        })
 }
 
 fn words_depleted(ctx: &TriageContext<'_>) -> bool {
@@ -315,6 +358,7 @@ fn select_action(context: &PolicySnapshot) -> Option<HolyDecision> {
         choose_sanctify(context),
         choose_apotheosis(context),
         choose_hymn(context),
+        context.group_heal,
         choose_mending(context),
     ]
     .into_iter()
@@ -412,6 +456,7 @@ mod tests {
                 mending: false,
                 depleted: false,
                 channel: true,
+                group_heal: None,
             }
         }
 

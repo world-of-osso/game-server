@@ -133,6 +133,16 @@ heals. Native kit eligibility retains Magic/Disease types and ordinary spell
 admission. Ignored first-action regression is pushed before this change; GREEN
 execution pending.
 
+PoH ranking root cause: shared candidates estimate one recipient, making native596
+look smaller and more expensive than2061 despite its real multi-patient footprint.
+Holy now owns596, sums the existing effective estimates for injured members of
+each native primary-centered cluster, and compares healing per native mana with
+available ordinary direct heals. Three injured recipients are required; best
+cluster ties use entity identity. Surge/Words and throughput cooldowns precede
+this choice, PoM upkeep follows it. No shared-ranking change, synthetic healing
+or additional spell metadata. Ignored native opportunity regression predates
+implementation; GREEN execution pending.
+
 ## Named selected-kit gaps
 
 Verified source inspection at66f0b1d6b: these numeric spell IDs have no class-specific
