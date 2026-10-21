@@ -1,4 +1,5 @@
 //! Explicit transport-free simulator seam; real initializer and kit controller.
+pub(crate) use super::catalog::load_catalog as load_parity_catalog;
 use super::*;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Level, Player, Position, UnitFactionTemplate};

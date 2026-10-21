@@ -53,7 +53,7 @@ fn read_reference(spec_id: u32) -> Result<(inputs::Profile, Vec<inputs::Allocate
 fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
     let mut app = super::runtime::build_app();
-    inputs::install_item_catalogs(&mut app)?;
+    inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
     let level = profile
         .level

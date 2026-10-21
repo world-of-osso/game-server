@@ -82,13 +82,16 @@ pub(super) fn slot(name: &str) -> Result<EquipmentSlot, String> {
     }
 }
 
-pub(super) fn install_item_catalogs(app: &mut App) -> Result<(), String> {
+pub(super) fn install_reference_catalogs(app: &mut App) -> Result<(), String> {
     let path = std::env::var_os("DPS_PARITY_WORLD_DB")
         .map(PathBuf::from)
         .ok_or("DPS_PARITY_WORLD_DB must name the private native database")?;
     let db =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .map_err(|error| format!("open private database {}: {error}", path.display()))?;
+    let followers = crate::followers::simulator::load_parity_catalog(&db)
+        .map_err(|error| format!("load private follower catalog: {error}"))?;
+    app.insert_resource(followers);
     let native = load_native_catalogs(&db)?;
     app.insert_resource(native);
     app.insert_resource(
