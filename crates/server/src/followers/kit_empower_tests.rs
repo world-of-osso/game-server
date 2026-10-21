@@ -276,7 +276,6 @@ fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
 }
 
 #[test]
-#[ignore = "RED: successful native empowers do not extend Dragonrage through Animosity"]
 fn native_empower_animosity_extends_dragonrage_with_native_diminishing_effectiveness() {
     let (mut h, caster) = prepare(90);
     let animosity = h
