@@ -49,7 +49,8 @@ pub fn bake_collected(
                 (63 - tile.1) * SUBDIVISIONS + col,
                 tile.0 * SUBDIVISIONS + row,
             );
-            let packet = bake_subtile(triangles, &obstacles, water, min, coords)?;
+            let packet = bake_subtile(triangles, &obstacles, water, min, coords)
+                .map_err(|error| format!("tile {tile:?}, Detour subtile {coords:?}: {error}"))?;
             if !packet.is_empty() {
                 packets.push(packet);
             }
@@ -246,10 +247,9 @@ impl RecastBuild {
                 ),
                 "contours",
             )?;
-            require(
-                rcBuildPolyMesh(self.context, self.contours, 6, self.mesh),
-                "polygon mesh",
-            )?;
+            if !rcBuildPolyMesh(self.context, self.contours, 6, self.mesh) {
+                return Err(self.polygon_mesh_failure());
+            }
             if (*self.mesh).npolys > 0 {
                 require(
                     rcBuildPolyMeshDetail(
@@ -265,6 +265,37 @@ impl RecastBuild {
             }
         }
         Ok(())
+    }
+
+    fn polygon_mesh_failure(&self) -> String {
+        // SAFETY: contour construction succeeded; Recast owns these arrays.
+        let (contours, mesh) = unsafe { (&*self.contours, &*self.mesh) };
+        let contours = if contours.nconts > 0 {
+            unsafe { std::slice::from_raw_parts(contours.conts, contours.nconts as usize) }
+        } else {
+            &[]
+        };
+        let vertices: i32 = contours
+            .iter()
+            .filter(|c| c.nverts >= 3)
+            .map(|c| c.nverts)
+            .sum();
+        let triangles: i32 = contours
+            .iter()
+            .filter(|c| c.nverts >= 3)
+            .map(|c| c.nverts - 2)
+            .sum();
+        let limit = if vertices >= 0xfffe {
+            "contour vertex capacity: maxVertices >= 0xfffe"
+        } else {
+            "internal polygonization/allocation failure (not contour vertex capacity)"
+        };
+        format!(
+            "Recast polygon mesh failed: {limit}; contour_vertices={vertices}, triangle_capacity={triangles}, contours={}, mesh_vertices={}, mesh_polygons={}, nvp=6",
+            contours.len(),
+            mesh.nverts,
+            mesh.npolys,
+        )
     }
 
     fn encode_detour(&self, coords: (u32, u32)) -> Result<Vec<u8>, String> {
