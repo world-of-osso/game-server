@@ -11,6 +11,8 @@ use shared::protocol::CombatLogKind;
 const HENRY: u32 = 215011;
 /// Native165/10% max-health, source-centered enemy area; no fabricated spell row.
 const BURST_OF_HATRED: u32 = 124257;
+/// Native NPC Shadow Word: Pain has fixed72/3s, unlike SP-only player589.
+const MAGIC_DOT: u32 = 17146;
 /// Fixture pressure spacing, not a claim about a Retail encounter timer.
 const PRESSURE_FRAMES: usize = 100;
 
@@ -188,16 +190,23 @@ fn holy_policy_native90_purify_removes_real_magic_during_triage_pressure() {
     let mut group = native_group();
     let target = group.members[2];
     let enemy = group.h.npc;
-    creature_cast(group.h.app.world_mut(), enemy, 589, Some(target), false).unwrap();
+    creature_cast(
+        group.h.app.world_mut(),
+        enemy,
+        MAGIC_DOT,
+        Some(target),
+        false,
+    )
+    .unwrap();
     group.h.advance(75);
-    assert!(has_aura(group.h.app.world(), target, 589));
+    assert!(has_aura(group.h.app.world(), target, MAGIC_DOT));
     assert!(
         fraction(&group, target) < 1.0,
         "the real periodic damage must land before AI admission"
     );
     uses_spell(&mut group.h, group.priest, 527);
     group.h.advance(5);
-    assert!(!has_aura(group.h.app.world(), target, 589));
+    assert!(!has_aura(group.h.app.world(), target, MAGIC_DOT));
 }
 
 #[test]
