@@ -56,12 +56,11 @@ fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> Spel
         .clone();
     let span = crate::auras::has_aura(world, caster, ETERNITYS_SPAN);
     let targets = i32::from(rank) * if span { 2 } else { 1 };
-    child
-        .effects
-        .iter_mut()
-        .find(|effect| effect.index == 1 && effect.effect == 2)
-        .expect("native Eternity Surge school damage1")
-        .chain_targets = targets;
+    // SimC's recipient count is action-wide. TC741–781 shares the native
+    // Dummy0 and damage1 selection: its leading Dummy must carry the cap too.
+    for effect in &mut child.effects {
+        effect.chain_targets = targets;
+    }
     child.cast_empower_level = Some(rank);
     child
 }
