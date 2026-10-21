@@ -46,5 +46,21 @@ class DemonologyActionProjectionTests(unittest.TestCase):
         self.assertTrue(available(264178, 15), 'SimC init249-250 maps native426115 to actual cast264178')
 
 
+class FeralActionProjectionTests(unittest.TestCase):
+    def test_berserk_visible_action_yields_to_native_incarnation_override(self):
+        root = Path(__file__).resolve().parents[1]
+        export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
+        source = json.loads(export.read_text())
+        selected = [row for row in source['loadouts'] if row['spec_id'] == 103 and row['level'] in (28, 29, 58, 59)]
+        with sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
+            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        available = lambda spell, level: any(row[0] == 103 and row[1] == spell and row[2] <= level <= row[3] and row[4] == 'buff' for row in rows)
+        self.assertFalse(available(106951, 28))
+        self.assertTrue(available(106951, 29), 'native343223 VisibleSpellID106951, SimC spec.berserk_cat')
+        self.assertTrue(available(106951, 58))
+        self.assertFalse(available(106951, 59), 'native102543 overrides106951')
+        self.assertTrue(available(102543, 59))
+
+
 if __name__ == '__main__':
     unittest.main()
