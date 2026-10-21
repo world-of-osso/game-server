@@ -4,6 +4,7 @@
 - [Rotation duration/admission slices](investigations/follower-data.md#rotation-duration-and-admission-slices--2026-10-21) — native10GREEN/6newRED; sourced carry/pooling, native Cat override proof; new windows/defenses GREEN and simulator acceptance pending.
 - [Rotation cast-action projection](investigations/follower-data.md#rotation-cast-action-projection--2026-10-21) — native learned Demo/Feral parents expose omitted cast actions; producer5PASS only, native rotation acceptance pending.
 
+- [Bromach current Lua partial](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21) — ignoredRED→native5GREEN Normal/Follower, actual source Quaking Totems, ongoing clocks/Slam damage/cancel/reset/credit; Tremor/selector gaps explicit.
 - [Lost Dwarves Lua surrender](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21) — ignored clocks/living-surrender RED→native7GREEN Normal/Follower; all-three credit, native regen/reset rearm, source flags/faction preserved; boat/visuals/selector gaps explicit.
 - [Native item-instance stats](systems/character-stats.md#instance-properties--2026-10-21) — GUID bonus/level/enchant/gem state, native table resolution and modifier-only stats refresh; persistence integration and DPS parity gates remain open.
 - [Follower healer triage](systems/follower-healer-triage.md) — native risk/cost/ownership, real Hogger deadlines and injury clusters; six gate regressions corrected,285+1 native GREEN; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md), full policy/benchmarks pending.
