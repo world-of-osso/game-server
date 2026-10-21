@@ -354,9 +354,9 @@ fn encounter_fixture(
             std::collections::HashMap::from([(map_id, wdt)]),
         ));
     }
-    // Shattered Halls/Ramparts/Blood Furnace use published world data. Azure
-    // already has saved compatibility ordinals: do not mislabel those as DB2 bits.
-    if ![540, 542, 543, 2515].contains(&map_id) {
+    // Published/prepared primaries retain imported DB2 bits. Azure already has
+    // saved compatibility ordinals: do not mislabel those as DB2 bits.
+    if ![540, 542, 543, 2515, 2521].contains(&map_id) {
         maps.raid_creature_encounters.insert((map_id, entry), bit);
     }
     if map_id == 43 {
