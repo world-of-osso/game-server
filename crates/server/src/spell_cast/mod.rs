@@ -65,6 +65,8 @@ mod census_generic_next_tests;
 #[cfg(test)]
 mod census_guardian_aura_tests;
 #[cfg(test)]
+mod census_tail_tests;
+#[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
 #[cfg(test)]
@@ -947,7 +949,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1656,6 +1658,7 @@ enum StartCheck {
     Native,
     IgnoreCastInProgress,
     TankHealCapability,
+    HealerDecision,
 }
 
 fn validate_start(
@@ -1873,6 +1876,15 @@ fn validate_history(
     Ok(())
 }
 
+/// Native cooldown/charge/school state, without spending or waiting on GCD.
+pub(crate) fn read_healer_recovery(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    validate_history(world, caster, spell, StartCheck::HealerDecision)
+}
+
 fn permits_transient_gcd(
     world: &World,
     caster: Entity,
@@ -1880,6 +1892,9 @@ fn permits_transient_gcd(
     check: StartCheck,
     ready_at: f64,
 ) -> bool {
+    if check == StartCheck::HealerDecision {
+        return true;
+    }
     if check != StartCheck::TankHealCapability {
         return false;
     }
@@ -2161,6 +2176,9 @@ fn begin_validated_cast(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    let mut admitted = spell.clone();
+    admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
+    let spell = &admitted;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
@@ -2483,7 +2501,7 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
-    effects::check_power_drain_inputs(world, caster, spell)?;
+    effects::check_expected_power_inputs(world, caster, spell)?;
     if open_lock::is_item_cast(spell) {
         return Ok(spell
             .effects

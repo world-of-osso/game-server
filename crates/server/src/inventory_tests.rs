@@ -416,50 +416,63 @@ fn nonvisual_equipment_trinket_swap_and_unequip_preserve_guids() {
 }
 
 #[test]
-fn nonvisual_equipment_unique_ring_rejects_second_without_mutation() {
-    let mut app = setup_app(persistence::temp_database());
-    add_nonvisual_templates(&mut app);
-    let client = spawn_client(&mut app, 93, "Uniquewearer");
-    grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
-    grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
-    enter_world(&mut app, &client);
-    request(
-        &mut app,
-        &client,
-        SwapItem {
-            from: bag(3),
-            to: equipped_location(EquipmentSlot::Finger1),
-        },
-    );
-    assert!(received::<InventoryError>(&mut app, &client).is_empty());
-    let before = load_model(
-        db(&app),
-        app.world().resource::<ItemTemplates>(),
-        client.character_id,
-    )
-    .unwrap()
-    .view();
-    request(
-        &mut app,
-        &client,
-        SwapItem {
-            from: bag(4),
-            to: equipped_location(EquipmentSlot::Finger2),
-        },
-    );
-    let errors = received::<InventoryError>(&mut app, &client);
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].reason, InventoryErrorReason::ItemUniqueEquippable);
-    assert_eq!(
-        load_model(
+fn item_instance_unique_ring_rejects_differently_enchanted_second_without_mutation() {
+    for enchant in [0, 7967] {
+        let mut app = setup_app(persistence::temp_database());
+        add_nonvisual_templates(&mut app);
+        let client = spawn_client(&mut app, 93, "Uniquewearer");
+        grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
+        let second = grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
+        let txn = db(&app).begin_write().unwrap();
+        ::server::item_instance::store::write_modifiers(
+            &txn,
+            second,
+            &::server::item_instance::ItemInstanceModifiers {
+                enchant,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        txn.commit().unwrap();
+        enter_world(&mut app, &client);
+        request(
+            &mut app,
+            &client,
+            SwapItem {
+                from: bag(3),
+                to: equipped_location(EquipmentSlot::Finger1),
+            },
+        );
+        assert!(received::<InventoryError>(&mut app, &client).is_empty());
+        let before = load_model(
             db(&app),
             app.world().resource::<ItemTemplates>(),
-            client.character_id
+            client.character_id,
         )
         .unwrap()
-        .view(),
-        before
-    );
+        .view();
+        request(
+            &mut app,
+            &client,
+            SwapItem {
+                from: bag(4),
+                to: equipped_location(EquipmentSlot::Finger2),
+            },
+        );
+        let errors = received::<InventoryError>(&mut app, &client);
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].reason, InventoryErrorReason::ItemUniqueEquippable);
+        assert_eq!(
+            load_model(
+                db(&app),
+                app.world().resource::<ItemTemplates>(),
+                client.character_id
+            )
+            .unwrap()
+            .view(),
+            before
+        );
+    }
 }
 
 #[test]

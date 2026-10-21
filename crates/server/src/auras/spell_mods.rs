@@ -235,6 +235,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
+                && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
                 && aura
                     .effects
                     .iter()
@@ -250,7 +251,8 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
-///53390/117828 grant accumulated next-spell uses with one native proc charge.
+///53390/117828/359618 grant accumulated uses with one native proc charge.
+///Essence Burst: SimC76f8118 sc_evoker.cpp3238 decrements one stack per spender.
 ///Keep that charge while another stack remains; final use follows normal removal.
 fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
@@ -259,7 +261,7 @@ fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool
     let Some(aura) = auras.get_mut(instance) else {
         return false;
     };
-    if !matches!(aura.spell_id, 53390 | 117828) || aura.stacks <= 1 {
+    if !matches!(aura.spell_id, 53390 | 117828 | 359618) || aura.stacks <= 1 {
         return false;
     }
     aura.stacks -= 1;
