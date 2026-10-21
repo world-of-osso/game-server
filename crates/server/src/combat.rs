@@ -1313,10 +1313,13 @@ fn roll_critical_block_damage(
     auras: Option<&crate::auras::ActiveAuras>,
     damage: f32,
     blocked: f32,
+    attacker_mods: Option<&AuraStatMods>,
 ) -> (f32, f32) {
     if roll_critical_block(auras) {
-        // Autoswings double AFTER the ordinary block amount was truncated.
-        (damage - blocked, blocked * 2.0)
+        // TC doubles the truncated block, then applies the attacker's638 multiplier.
+        let multiplier = attacker_mods.map_or(1.0, |mods| mods.critical_block_amount_mult);
+        let critical_blocked = (blocked * 2.0 * multiplier).trunc();
+        (damage - (critical_blocked - blocked), critical_blocked)
     } else {
         (damage, blocked)
     }
@@ -1539,7 +1542,12 @@ fn try_swing(
         blocked_pct(victim, &attacker_scaling, &target, context.armor_constants),
     );
     let (outcome_damage, blocked) = if kind == MeleeOutcome::Block && !immune {
-        roll_critical_block_damage(avoidance.1.as_deref(), outcome_damage, blocked)
+        roll_critical_block_damage(
+            avoidance.1.as_deref(),
+            outcome_damage,
+            blocked,
+            attacker.mods,
+        )
     } else {
         (outcome_damage, blocked)
     };

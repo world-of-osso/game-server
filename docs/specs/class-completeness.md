@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Critical-block amount slice — 2026-10-21
+
+- Preserve literal pinned TC owner-side semantics: victim253 determines whether a block is critical, while attacker638 multiplies the critical-block amount. Do not silently reinterpret native429638 Martial Expert as a defender-owned multiplier based on its name.
+- Autoswings double already-truncated ordinary blocked damage, then multiply/truncate638. Physical spells double the integral blocked percentage, multiply/truncate638, then compute/cap blocked damage. Ordinary blocks, critical strikes and other actors remain unaffected; removal restores prior amount. This qualifies pinned arithmetic, not independent Retail owner-side parity. [Source and native receipts](../diagnostics/census-tail-70448.md).
+
 ## Explicit corpse-ally selector slice — 2026-10-21
 
 - Selector121 selects only the explicitly supplied dead friendly unit. A missing, living, non-unit or hostile recipient yields no selection, not caster fallback. Preserve the ordinary ally lane21 for living Soulstone20707 recipients.

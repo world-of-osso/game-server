@@ -1121,7 +1121,10 @@ fn mechanic_damage_multiplier(
 fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
     let mut percent = spell_block_percent(world, ctx.caster, target).trunc();
     if crate::combat::roll_critical_block(world.get::<crate::auras::ActiveAuras>(target)) {
-        percent *= 2.0;
+        // TC Unit.cpp1248 reads638 on the attacker, not the blocking recipient.
+        let multiplier =
+            stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.critical_block_amount_mult);
+        percent = (percent * 2.0 * multiplier).trunc();
     }
     let blocked = (amount * percent / 100.0).trunc().min(amount);
     (amount - blocked, blocked)

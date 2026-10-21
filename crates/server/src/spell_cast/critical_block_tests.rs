@@ -169,7 +169,6 @@ fn martial_block_duel(critical: bool) -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "RED:638 scales attacker-owned critical block amount after truncation"]
 fn census_tail_638_native_attacker_martial_expert_scales_critical_auto_block_then_removes() {
     let (mut h, defender) = martial_block_duel(true);
     let caster = h.caster;
@@ -186,7 +185,6 @@ fn census_tail_638_native_attacker_martial_expert_scales_critical_auto_block_the
 }
 
 #[test]
-#[ignore = "RED control: literalTC638 owner is attacker, not critical-blocking victim"]
 fn census_tail_638_native_defender_martial_expert_is_not_attacker_modifier() {
     let (mut h, defender) = martial_block_duel(true);
     apply_martial_expert(&mut h, defender);
@@ -194,7 +192,6 @@ fn census_tail_638_native_defender_martial_expert_is_not_attacker_modifier() {
 }
 
 #[test]
-#[ignore = "RED control:638 never amplifies ordinary noncritical block"]
 fn census_tail_638_native_attacker_modifier_leaves_ordinary_block_unchanged() {
     let (mut h, defender) = martial_block_duel(false);
     let caster = h.caster;
@@ -203,7 +200,6 @@ fn census_tail_638_native_attacker_modifier_leaves_ordinary_block_unchanged() {
 }
 
 #[test]
-#[ignore = "RED:638 also scales native melee-spell critical block percentage"]
 fn census_tail_638_native_attacker_martial_expert_scales_slam_block() {
     let (mut h, defender) = martial_block_duel(true);
     let caster = h.caster;

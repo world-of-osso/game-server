@@ -24,6 +24,8 @@ pub struct AuraStatMods {
     pub damage_done_mult: [f32; SCHOOL_COUNT],
     /// Native280 sum; Player-only, clamped when physical armor is reduced.
     pub armor_penetration_pct: f32,
+    /// TC Unit.cpp1248/1468: attacker-owned638, only when victim blocks critically.
+    pub critical_block_amount_mult: f32,
     ///168: (creature-type mask, percent multiplier), independent of school.
     pub damage_done_versus_mods: Vec<(u32, f32)>,
     /// MOD_DAMAGE_PERCENT_TAKEN 87 per school bit.
@@ -116,6 +118,7 @@ impl Default for AuraStatMods {
         Self {
             damage_done_mult: [1.0; SCHOOL_COUNT],
             armor_penetration_pct: 0.0,
+            critical_block_amount_mult: 1.0,
             damage_done_versus_mods: Vec::new(),
             damage_taken_mult: [1.0; SCHOOL_COUNT],
             critical_damage_mods: Vec::new(),
@@ -586,6 +589,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 }
             }
             MOD_ARMOR_PENETRATION_PCT => combat.armor_penetration_pct += amount,
+            MOD_CRITICAL_BLOCK_AMOUNT => combat.critical_block_amount_mult *= pct(amount),
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
             MOD_INCREASE_SWIM_SPEED => acc.fastest_swim = acc.fastest_swim.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),

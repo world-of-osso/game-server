@@ -316,6 +316,8 @@ pub const CAST_WHILE_WALKING: u32 = 330;
 pub const CAST_WHILE_WALKING_ALL: u32 = 377;
 /// TC additive global mana-cost percentage, after ordinary spell mods.
 pub const MOD_MANA_COST_PCT: u32 = 423;
+/// Pinned TC reads this multiplier from the attacker during a critical block.
+pub const MOD_CRITICAL_BLOCK_AMOUNT: u32 = 638;
 /// TC Unit::CanCastSpellWhileMoving: Misc0 SpellLabel, no family mask.
 pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
@@ -480,7 +482,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_ATTACK_POWER_PCT
         | MOD_RANGED_ATTACK_POWER_PCT
         | MOD_DAMAGE_DONE_VERSUS
-        | MOD_ARMOR_PENETRATION_PCT => StatMod,
+        | MOD_ARMOR_PENETRATION_PCT
+        | MOD_CRITICAL_BLOCK_AMOUNT => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL

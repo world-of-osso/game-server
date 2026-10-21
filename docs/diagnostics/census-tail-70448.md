@@ -43,13 +43,19 @@ At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compil
 
 **AURA_157_TC_NULL_NO_CONSUMER**: native400533 authors157. TC `SpellAuraEffects.cpp:229` dispatches HandleNULL; do not reinterpret the name as429 controlled-pet or531 guardian damage. Existing pet/guardian consumers are separate native aura types, not an implementation of157.
 
-**638 qualification remains open**: only native429638 Martial Expert supplies+20. Pinned `Unit.cpp:1248,1468` multiplies638 from `this` attacker, whereas critical-block chance comes from victim; enclosing method1332–1335 explicitly assigns Attacker=this/Target=victim. This counterintuitive owner side is reported to lead and not silently replaced by a defensive-description interpretation. No638 marker, raw stat or incomplete consumer has been added.
+**638 owner-side qualification**: only native429638 Martial Expert supplies+20. Pinned `Unit.cpp:1248,1468` multiplies638 from `this` attacker, whereas critical-block chance comes from victim; enclosing method1332–1335 explicitly assigns Attacker=this/Target=victim. This counterintuitive owner side is reported to lead and preserved literally, not silently replaced by a defensive-description interpretation. See the bounded arithmetic proof below; independent Retail owner-side parity remains unqualified.
 
 ## Existing subsystem boundary
 
 **POSSESS_CHARM_SYSTEM_ABSENT**: aura2 Mind Control605 and aura6 Dominate Mind205364 require TC `HandleModPossess`/`HandleModCharm` (`SpellAuraEffects.cpp:3238–3262,3303–3315`) and `SetCharmedBy`/`RemoveCharmedBy`. Server has no corresponding relationship/control lifecycle. `PetCharm` (`pet_control.rs:90`) stores an existing pet's command/react/action bar, not arbitrary charm or possession; pet actions resolve an already-owned pet. Existing `scripted_ai/blood_furnace.rs` explicitly retains `MAKER_DOMINATION_CHARM_UNIMPLEMENTED` for aura6. Do not build a new subsystem for this census.
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
+
+## Aura638 CRITICAL_BLOCK_AMOUNT
+
+Use pinned TC owner-side qualification above. Native429638 index1+20 feeds real AuraStatMods and actual autoswing/physical-spell critical blocks, not a marker. Ordinary victim253 chance and native block order remain unchanged. Auto integer blocked damage doubles, then multiplies/truncates638; spell integer blocked percentage doubles, then multiplies/truncates638 before its existing full-block cap. Native+10 critical-damage sibling is not applied in these selected-effect tests.
+
+Ignored RED4f168a62d gives2PASS/2FAIL16.70s: actual333 weapon/25% shield critical block remains166 blocked/167 damage rather than199/134 with attacker638; native1464 Slam remains50% blocked instead60%. Victim-owned638 and noncritical-block controls already pass. Actual native mastery76857 supplies guaranteed critical-block chance through the existing mastery reader; no fake spell or forced RNG. Tests retain removal and actual cast/swing logs. `/home/osso/.worktrees/logs/census-tail/638-red.log`, compile1m32s/no warnings. Minimal consumer and enabled four cases committed; GREEN pending. This is literal a352b1fa parity, not a claim that independent Retail uses that counterintuitive owner side.
 
 ## Target121 CORPSE_TARGET_ALLY
 
