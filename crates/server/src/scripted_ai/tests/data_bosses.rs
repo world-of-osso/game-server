@@ -49,6 +49,8 @@ mod bromach;
 mod celebras;
 #[path = "crawth.rs"]
 mod crawth;
+#[path = "deios.rs"]
+mod deios;
 #[path = "doragosa.rs"]
 mod doragosa;
 #[path = "emberon.rs"]
