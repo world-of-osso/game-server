@@ -68,6 +68,7 @@ pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
+pub const EFFECT_ENERGIZE_PCT: u32 = 137;
 pub const EFFECT_FORCE_CAST: u32 = 140;
 /// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA: u32 = 164;
@@ -115,6 +116,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
             crate::death::resurrection::send_offer
         }
         EFFECT_ENERGIZE => energize,
+        EFFECT_ENERGIZE_PCT => energize_pct,
         41 => super::teleport::jump_to_unit,
         96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
@@ -1679,6 +1681,28 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         0.0
     };
     energize_unit(world, ctx, target, power, amount + bonus, false);
+}
+
+/// TC EffectEnergizePct (a352b1fa SpellEffects.cpp1619): target maximum,
+/// raw power units, truncated before the ordinary energize/overflow pipeline.
+fn energize_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if !world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return;
+    }
+    let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
+        return;
+    };
+    let Some((_, max)) =
+        super::powers::power_value(world, target, power).filter(|(_, max)| *max > 0.0)
+    else {
+        return;
+    };
+    let percent = modded_base_points(world, ctx.caster, ctx.spell, effect);
+    let amount = (max * percent / 100.0).trunc();
+    energize_unit(world, ctx, target, power, amount, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.

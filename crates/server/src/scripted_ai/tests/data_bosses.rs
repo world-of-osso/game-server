@@ -77,6 +77,8 @@ mod kelidan;
 mod landslide;
 #[path = "maraudon.rs"]
 mod maraudon;
+#[path = "nethekurse.rs"]
+mod nethekurse;
 #[path = "noxxion.rs"]
 mod noxxion;
 #[path = "omor.rs"]
@@ -419,7 +421,7 @@ fn encounter_fixture(
         let (boss, spawn) =
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
-            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 17306, 17308,
+            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
