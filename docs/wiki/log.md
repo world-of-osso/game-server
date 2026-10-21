@@ -2,6 +2,13 @@
 
 [Native cadence](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): native20% owner passive reaches actual controlled-pet melee interval, not owner/guardian clocks. Genuine41-vs41-frame RED→four hunter GREEN55.74s, two native speed/cast-time controls GREEN33.27s; six proc/four selection controls also pass on the scoped canonical backup. [Pet-preparation failure](investigations/follower-data.md#pet-preparation-failure-starvation--2026-10-21) reports once and leaves native healing/attacks available; Exhilaration's native level9 oracle retained.
 
+## 2026-10-21 — Native follower duration/admission boundaries
+
+[Rotation slices](investigations/follower-data.md#rotation-duration-and-admission-slices--2026-10-21): nativec09cba90010GREEN/6RED9.67s; resource-unit gates and four carries pass, new timer/major/LastStand/Cat boundaries fail. Cat source48629's missing applied-aura precondition and actual3-target setup proved before adapter. Source-qualified adapter/refresh/conditional LastStand and project sequencing committed, GREEN pending.14producerPASS; canonical publication, full proc/snapshot and simulator acceptance open.
+
+## 2026-10-21 — Follower rotation inventory qualification
+
+[Cast-action projection](investigations/follower-data.md#rotation-cast-action-projection--2026-10-21): missing HoG/Demonbolt/Berserk cast actions reproduced from actual70448 default export; source-qualified parent projection and native Incarnation replacement give5combined producerPASS ate085f02fb. Native WW dummy build/rotation acceptance pending; no full-parity claim. Bloodtalons absence, passive Last Stand and modified Tiger Palm Chi recorded.
 ## 2026-10-21 — Scoped rotation kit publication
 
 [Scoped producer](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): three CLI RED→GREEN cases, stable-key11-update four-spec delta on a fresh canonical copy, unrelated specs/tables preserved. Actual composition exposes raw v4 rowid overwrites: required order v4 then A, with both-order receipts. Inherited dummy fixtures omit StatsPlugin; damage numbers are action/resource evidence, not production DPS.
@@ -3522,5 +3529,16 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Source boundary/proof](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21): pushed ignored RED first; source-explicit LittleWigs schedules and native70448 cast/effect pipeline; Normal/Follower COMPOSITE4GREEN plus producer3PASS. Self-cast SpellGo and exact peer404468 provenance avoid fabricated log delivery. Dummy children, Torrent phase/repeat and Dash controller remain named gaps; canonical publication lead-owned.
 
+- 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): native TF and WW fourRED→GREEN; retained refresh/defense/form20PASS, LastStand source-attribution oracle corrected; full measurements remain open.
+
+- 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): merged1c4df4250 native21PASS26.07s/0warnings/fmtPASS, including real two-use ComboBreaker and StatsPlugin LastStand46/47; full APL/healer import remain open.
+
+- 2026-10-21: Landed healer reader/horizon wired into [tank rotation policy](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21); removed None shim, preserving healer scheduling and major ordering.
+
+- 2026-10-21: [Bo32 finite target](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21): traced actual ToD kill before lower-priority BoK; preserve source order/window, separate strong-target BoK and weak-target execute oracles.
+
+- 2026-10-21: [Scoped rotation deltas](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21): generator now preserves unowned specs and emits primary keys;22PythonGREEN, actual a3 both-order proof and keyed replay copy, no canonical writes.
 - 2026-10-21: Ordered generic148 destination/direct-ray subset; eightRED→eightGREEN and retained144 composite152GREEN, all enabled; source dispatch correction and explicit Detour/force-location gaps recorded in [[spell-casting]].
 - 2026-10-21: Lost Dwarves currentLua/70448 partial plus explicit living10% surrender policy: ignoredRED→native7GREEN Normal/Follower; all-three isolatedcredit, preservedflags/faction, nativehealth-regen/reset restoration and old-pull credit exclusion. Sourceproducer onlybinds3authoredactors. [Boss scripts](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21).
+
+- 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).

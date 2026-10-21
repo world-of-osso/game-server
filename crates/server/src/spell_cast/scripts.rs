@@ -2,6 +2,8 @@
 //! spell's DB2 effects do not carry.
 
 use crate::random as rand;
+
+mod after_cast_auras;
 mod batch10;
 mod batch11;
 mod batch12;
@@ -40,8 +42,11 @@ mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
+mod windwalker;
+
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
+pub(crate) use windwalker::ordinary_combo_cast;
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
@@ -524,6 +529,9 @@ pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = after_cast_auras::hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
@@ -1348,6 +1356,8 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        100780 => Some(windwalker::tiger_palm_hit),
+
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
         soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
