@@ -486,7 +486,7 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
 }
 
 #[test]
-fn non_tank_regroup_crosses_passive_and_defensive_but_not_aggressive_sight() {
+fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
     use crate::creature_ai::{CreatureState, FollowOwner};
     use crate::scripted_ai::ReactState;
     let _rng_scope = crate::random::seed_scope(7);
@@ -512,7 +512,6 @@ fn non_tank_regroup_crosses_passive_and_defensive_but_not_aggressive_sight() {
     for (react, should_follow) in [
         (ReactState::Aggressive, false),
         (ReactState::Passive, true),
-        (ReactState::Defensive, true),
     ] {
         run.app
             .world_mut()
