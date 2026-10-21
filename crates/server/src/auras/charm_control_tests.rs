@@ -251,6 +251,37 @@ fn charm_control_native_205364_retains_damage_but_31865_breaks_from_native_flags
 }
 
 #[test]
+#[ignore = "RED: possessed unit must inherit its charmer's valid duel opponent"]
+fn charm_control_native_605_attack_order_uses_charmer_duel_permission() {
+    let mut h = fixture();
+    let opponent = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 4.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::duel::DuelOpponent(opponent));
+    h.app
+        .world_mut()
+        .entity_mut(opponent)
+        .insert(crate::duel::DuelOpponent(h.caster));
+    let before = h.health(opponent);
+    apply(&mut h, 605);
+    order(&mut h, COMMAND_ATTACK, Some(opponent));
+    h.advance(240);
+    assert!(
+        h.health(opponent) < before,
+        "a possessed Kobold must attack the Human priest's legal Human duel opponent"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(h.npc)
+            .unwrap()
+            .victim,
+        opponent
+    );
+}
+
+#[test]
 #[ignore = "RED: TDB native Imp spell3110 is not on the charm bar"]
 fn charm_control_native_1098_uses_authentic_imp_tdb_spell_slots() {
     let mut h = fixture_for(9);
