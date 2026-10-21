@@ -505,6 +505,128 @@ fn census_tail_377_native_prohibition_attribute_wins_over_all_spell_aura() {
     ));
 }
 
+const MANA_CONFLUENCE: u32 = 1_270_845;
+const HEART_OF_THE_WILD: u32 = 108_294;
+const MANA_BREAK: u32 = 203_704;
+const FORGEBORNE_REVERIES: u32 = 327_140;
+
+fn mana_cost_fixture() -> Harness {
+    let mut h = harness(
+        Vec::new(),
+        &[
+            MANA_CONFLUENCE,
+            HEART_OF_THE_WILD,
+            MANA_BREAK,
+            FORGEBORNE_REVERIES,
+            FIREBALL,
+            1752,
+        ],
+        8,
+    )
+    .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
+    h.advance(3);
+    let caster = h.caster;
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |_| true,
+    );
+    h
+}
+
+fn native_mana_cost(h: &Harness) -> f32 {
+    let spell = world_db().unwrap().store.get(FIREBALL).unwrap();
+    super::applicable_costs(h.app.world(), h.caster, spell)
+        .unwrap()
+        .into_iter()
+        .find_map(|(pool, amount, _)| {
+            (pool == super::CostPool::Power(PowerType::Mana)).then_some(amount)
+        })
+        .unwrap()
+}
+
+fn pay_fireball_cost(h: &mut Harness, expected: f32) {
+    let spell = world_db().unwrap().store.get(FIREBALL).unwrap();
+    let costs = super::spell_costs(h.app.world(), h.caster, spell).unwrap();
+    let before = h.app.world().get::<Mana>(h.caster).unwrap().current;
+    super::spend_costs(h.app.world_mut(), h.caster, &costs);
+    assert_eq!(
+        h.app.world().get::<Mana>(h.caster).unwrap().current,
+        before - expected
+    );
+}
+
+#[test]
+#[ignore = "RED: native423 reduces actual mana payment and removal restores it"]
+fn census_tail_423_native_mana_confluence_changes_paid_cost_then_restores() {
+    let mut h = mana_cost_fixture();
+    let baseline = native_mana_cost(&h);
+    assert!(baseline > 0.0);
+    let caster = h.caster;
+    hit_native(&mut h, MANA_CONFLUENCE, 0, caster);
+    pay_fireball_cost(&mut h, (baseline * 0.95).trunc());
+    remove_flight_aura(&mut h, caster, MANA_CONFLUENCE);
+    pay_fireball_cost(&mut h, baseline);
+}
+
+#[test]
+#[ignore = "RED: native423 percentages add before integer mana payment"]
+fn census_tail_423_native_independent_percentages_add_instead_of_multiply() {
+    let mut h = mana_cost_fixture();
+    let baseline = native_mana_cost(&h);
+    let caster = h.caster;
+    hit_native(&mut h, MANA_CONFLUENCE, 0, caster);
+    hit_native(&mut h, HEART_OF_THE_WILD, 2, caster);
+    hit_native(&mut h, MANA_BREAK, 2, caster);
+    assert!(crate::auras::has_aura(h.app.world(), caster, MANA_BREAK));
+    pay_fireball_cost(&mut h, (baseline * 0.75).trunc());
+}
+
+#[test]
+#[ignore = "RED: native423 below-100 percent never becomes a mana grant"]
+fn census_tail_423_native_full_reduction_clamps_cost_sign_without_credit() {
+    let mut h = mana_cost_fixture();
+    let caster = h.caster;
+    hit_native(&mut h, FORGEBORNE_REVERIES, 4, caster);
+    hit_native(&mut h, MANA_CONFLUENCE, 0, caster);
+    pay_fireball_cost(&mut h, 0.0);
+    remove_flight_aura(&mut h, caster, MANA_CONFLUENCE);
+    pay_fireball_cost(&mut h, 0.0);
+}
+
+#[test]
+#[ignore = "RED control: native423 does not reduce real Energy cost or another caster"]
+fn census_tail_423_native_mana_modifier_leaves_other_powers_and_owners_unchanged() {
+    let mut h = mana_cost_fixture();
+    h.set_power(PowerType::Energy, 100.0);
+    let spell = world_db().unwrap().store.get(1752).unwrap();
+    let before = super::applicable_costs(h.app.world(), h.caster, spell).unwrap();
+    let baseline_mana = native_mana_cost(&h);
+    let npc = h.npc;
+    hit_native(&mut h, MANA_CONFLUENCE, 0, npc);
+    assert_eq!(native_mana_cost(&h), baseline_mana);
+    let caster = h.caster;
+    hit_native(&mut h, MANA_CONFLUENCE, 0, caster);
+    assert_eq!(
+        super::applicable_costs(h.app.world(), caster, spell).unwrap(),
+        before
+    );
+    let costs = super::spell_costs(h.app.world(), caster, spell).unwrap();
+    let expected = costs
+        .iter()
+        .filter_map(|(pool, amount)| {
+            (*pool == super::CostPool::Power(PowerType::Energy)).then_some(*amount)
+        })
+        .sum::<f32>();
+    super::spend_costs(h.app.world_mut(), caster, &costs);
+    assert_eq!(h.power(PowerType::Energy), 100.0 - expected);
+}
+
 fn rewarded(h: &Harness, character: u64) -> bool {
     persistence::quest_store::load_quest_log(
         &h.app.world().resource::<GameDatabase>().db,
