@@ -9,7 +9,7 @@ const MAP: InMap = InMap {
     map_id: 2669,
     instance_id: 1,
 };
-const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814];
+const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814, 448480];
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(Vec::new(), IDS, 1).expect("native spell fixture");
@@ -79,6 +79,12 @@ fn destination(h: &mut Harness, spell_id: u32, effect: usize) -> Dest {
 #[ignore = "target148 ordered native destination RED"]
 fn native_target148_target_enemy_then_towards_caster() {
     let (mut h, origin) = scene();
+    // Face perpendicular to the destination/caster line:148 follows that line, not facing.
+    h.app.world_mut().entity_mut(h.caster).insert(Rotation {
+        x: 0.0,
+        y: std::f32::consts::PI,
+        z: 0.0,
+    });
     let actual = destination(&mut h, 196884, 1); // Feral Lunge [53,148], native radius2.
     assert_endpoint(&mut h, actual, origin, 2.0);
 }
@@ -138,5 +144,18 @@ fn native_target148_area_enemy_selection_uses_modified_center() {
         units,
         vec![near],
         "center must shift20 toward the caster; original target is outside10"
+    );
+}
+
+#[test]
+#[ignore = "target148 ordered native destination RED"]
+fn native_target148_force_location_has_named_geometry_gap() {
+    let (mut h, _) = scene();
+    let spell = world_db().unwrap().store.get(448480).unwrap().clone(); // Actual [138,148], force-location attribute.
+    let result = plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), false);
+    assert!(
+        matches!(result, Err(CastFailure::Unsupported(ref reason))
+        if reason.contains("SPELL_DEST_FORCE_LOCATION_MAX_HEIGHT_ABSENT")),
+        "native force-location must not silently use direct-ray geometry: {result:?}"
     );
 }
