@@ -308,9 +308,33 @@ def import_herald_actors(connection):
     return [entry for entry, _ in sources]
 
 
+def import_nethekurse_fissures(connection):
+    """TC boss_nethekurse: actual base0 and Heroic2 fissures, no placements."""
+    for entry, script in [(17471, 'npc_lesser_shadow_fissure'), (18370, 'npc_wild_shadow_fissure')]:
+        identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?', (entry,)).fetchone()
+        difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=? ORDER BY DifficultyID', (entry,)).fetchall()
+        if identity != ('', script) or difficulties != [(0,), (2,)]:
+            raise ValueError(f'Nethekurse fissure{entry} source identity changed')
+    replace_source_base_templates(connection, [17471, 18370])
+    project_difficulty(connection, 17471, 2)
+    # Like Nazan CT0, these level1 cache bounds are placeholders. Actual spell
+    # summons resolve their level from the source summoner/map, never these bounds.
+    written = connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
+        (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
+         LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
+         DamageModifier,lootid,mingold,maxgold)
+        SELECT Entry,DifficultyID,1,1,health_expansion(HealthScalingExpansion),ContentTuningID,
+            HealthScalingExpansion,LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,
+            ManaModifier,ArmorModifier,DamageModifier,LootID,GoldMin,GoldMax
+        FROM tdb_creature_template_difficulty WHERE Entry=18370 AND DifficultyID=2 AND ContentTuningID=0''').rowcount
+    if written != 1:
+        raise ValueError('Wild Shadow Fissure18370 missing source Heroic2 CT0 row')
+    return [17471, 18370]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -326,6 +350,8 @@ def main():
                 entries = [import_demonic_leap_template(conn)]
             elif args.encounter == 'omor':
                 entries = import_fiendish_hound(conn)
+            elif args.encounter == 'nethekurse':
+                entries = import_nethekurse_fissures(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
