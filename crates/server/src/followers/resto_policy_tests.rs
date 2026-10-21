@@ -562,6 +562,48 @@ fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
 }
 
 #[test]
+fn resto_policy_native_efflo_recast_removes_previous_source_area_trigger() {
+    let (mut h, healer, party) = native_efflo_party();
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 145205, Some(party[2]), false)
+        .unwrap();
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 145205);
+    let previous = {
+        let world = h.app.world_mut();
+        let fields = world
+            .query::<(Entity, &crate::spell_cast::area_trigger::SpellAreaTrigger)>()
+            .iter(world)
+            .filter(|(_, field)| field.caster == healer && field.spell_id == 145205)
+            .map(|(unit, _)| unit)
+            .collect::<Vec<_>>();
+        assert_eq!(fields.len(), 1);
+        fields[0]
+    };
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Position>(party[2])
+        .unwrap()
+        .x = 18.0;
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 145205, Some(party[2]), false)
+        .unwrap();
+    h.advance(1);
+    let world = h.app.world_mut();
+    assert!(
+        world.get_entity(previous).is_err(),
+        "source145205 effect2 removes the old caster-owned area trigger before creating the new one"
+    );
+    let fields = world
+        .query::<(
+            &crate::spell_cast::area_trigger::SpellAreaTrigger,
+            &shared::components::Position,
+        )>()
+        .iter(world)
+        .filter(|(field, _)| field.caster == healer && field.spell_id == 145205)
+        .map(|(_, at)| at.x)
+        .collect::<Vec<_>>();
+    assert_eq!(fields, vec![18.0]);
+}
+
+#[test]
 fn resto_policy_admits_native_efflo_for_stable_cluster_without_direct_heal_effect() {
     let (mut h, healer, party) = native_efflo_party();
     let until = aura_now(h.app.world()) + 3.5;

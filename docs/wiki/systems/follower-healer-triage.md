@@ -122,3 +122,5 @@ The bounded before/after summon snapshot represents the source's per-cast Execut
 New Efflo AI admission fixture keeps actual clustered damage stable (recent rate below emergency threshold), isolates the learned native145205 row and requires an actual summon. This separates native script healing from the common estimator’s zero direct-heal metadata rejection; RED not run yet, no selector implementation added.
 
 Additional depth qualification now explicitly covers learned level13 Barkskin on its actually attacked healer, level33 Germination second owned HoT under stable uncovered native pressure, and level70 Tree of Life after a real native Tranquility channel/cooldown. These tests are unrun RED candidates; no corresponding policy implementation is present yet. Rebirth remains utility-owned, Convoke remains absent rather than granted.
+
+Efflo recast lifecycle now has an unrun native fixture: two ordinary casts, real GCD, actual prior area-trigger entity, moved placement and exactly one current owned area trigger. It qualifies TC145205 effect2 old-area removal separately from81262 healing and AI admission. No cleanup implementation before RED.
