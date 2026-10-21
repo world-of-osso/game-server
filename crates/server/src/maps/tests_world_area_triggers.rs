@@ -183,12 +183,10 @@ fn world_static_areatrigger_hosted_continent_has_authored_source_population() {
 }
 
 #[test]
-#[ignore = "RED: world-static AreaTrigger spawns have no runtime map-entry path"]
 fn world_static_areatrigger_orator_barrier_normal_entry_isolation_and_teardown() {
     exercise_barrier(1);
 }
 #[test]
-#[ignore = "RED: world-static AreaTrigger spawns have no runtime map-entry path"]
 fn world_static_areatrigger_orator_barrier_follower205_entry_isolation_and_teardown() {
     exercise_barrier(205);
 }

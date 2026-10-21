@@ -4,11 +4,11 @@ Server-owned static AreaTriggers from TDB `areatrigger`, `areatrigger_create_pro
 
 ## What it must do
 
-- [ ] Ordinary instance transfer and login content creation spawn each map's authored static AreaTriggers in that exact copy, preserving the spawn/properties/template identities and both custom namespaces.
-- [ ] Preserve authored position, facing, shape and visual-spell identity. Do not cast the visual spell as an invented gameplay effect or manufacture placements, statistics or difficulty rows.
-- [ ] Use the existing source-population difficulty policy, including Follower205→Normal1 projection without changing TDB rows.
-- [ ] Static spawns live indefinitely, belong to their map rather than a caster/aura and disappear when their map copy unloads. Occupied copies remain isolated; a new copy gets fresh entities.
-- [ ] The authentic Orator bridge barrier98/property84(custom)/template35803(native) exists after ordinary NewWorld/WorldPortAck in Normal1 and Follower205. Its source sphere radius20 and visual449122 remain intact.
+- [x] Ordinary instance transfer and login content creation spawn each map's authored static AreaTriggers in that exact copy, preserving the spawn/properties/template identities and both custom namespaces.
+- [x] Preserve authored position, facing, shape and visual-spell identity. Do not cast the visual spell as an invented gameplay effect or manufacture placements, statistics or difficulty rows.
+- [x] Use the existing source-population difficulty policy, including Follower205→Normal1 projection without changing TDB rows.
+- [x] Static spawns live indefinitely, belong to their map rather than a caster/aura and disappear when their map copy unloads. Occupied copies remain isolated; a new copy gets fresh entities.
+- [x] The authentic Orator bridge barrier98/property84(custom)/template35803(native) exists after ordinary NewWorld/WorldPortAck in Normal1 and Follower205. Its source sphere radius20 and visual449122 remain intact.
 
 ## How it works
 
