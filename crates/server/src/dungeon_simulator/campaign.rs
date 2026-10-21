@@ -221,6 +221,42 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
 }
 
 #[test]
+#[ignore = "explicit Azure70 native gate-first-member death and remaining formation approach"]
+fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    let first = run.actors[&29001816];
+    let remaining = run.actors[&29001823];
+    for _ in 0..50000 {
+        run.control().unwrap();
+        run.app.update();
+        if !crate::spell_cast::targets::is_alive(run.app.world(), first) {
+            assert!(crate::spell_cast::targets::is_alive(
+                run.app.world(),
+                remaining
+            ));
+            let point = |world: &World, actor| {
+                let position = world.get::<Position>(actor).unwrap();
+                Vec3::new(position.x, position.y, position.z)
+            };
+            let target = point(run.app.world(), remaining);
+            let before = point(run.app.world(), run.party.owner).distance(target);
+            for _ in 0..400 {
+                run.control().unwrap();
+                run.app.update();
+            }
+            let after = point(run.app.world(), run.party.owner).distance(target);
+            assert!(
+                after < before - 2.0,
+                "after actual first gate Death, approach the living same-formation member: before={before}, after={after}"
+            );
+            return;
+        }
+    }
+    panic!("actual seeded corridor must reach and kill the first gate member");
+}
+
+#[test]
 #[ignore = "explicit Stockade corridor seed2 native isolated leader death reproduction"]
 fn stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader() {
     let _rng_scope = crate::random::seed_scope(2);
