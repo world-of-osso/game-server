@@ -13,12 +13,36 @@ pub(crate) struct ModelGeometry {
     pub combat_reach: f32,
 }
 
+impl ModelGeometry {
+    pub(crate) fn scaled(self, scale: f32) -> Self {
+        Self {
+            bounding_radius: self.bounding_radius * scale,
+            combat_reach: self.combat_reach * scale,
+        }
+    }
+}
+
+pub(crate) const PLAYER_MODEL_GEOMETRY: ModelGeometry = ModelGeometry {
+    bounding_radius: DEFAULT_PLAYER_BOUNDING_RADIUS,
+    combat_reach: DEFAULT_PLAYER_COMBAT_REACH,
+};
+
 /// Actual creature_model_info rows plus native70448 player-race display identity.
 #[derive(Resource)]
 #[cfg_attr(test, derive(Clone))]
 pub(crate) struct ModelReaches {
     pub source: HashMap<u32, ModelGeometry>,
     player_race_displays: HashSet<u32>,
+}
+
+impl ModelReaches {
+    pub(crate) fn creature_geometry(&self, display: u32, follower: bool) -> Option<ModelGeometry> {
+        if follower && self.player_race_displays.contains(&display) {
+            Some(PLAYER_MODEL_GEOMETRY)
+        } else {
+            self.source.get(&display).copied()
+        }
+    }
 }
 
 pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
@@ -52,29 +76,15 @@ pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Resul
 /// Ordinary NPCs and non-player-race followers still require exact model-info.
 pub(crate) fn model_geometry(world: &World, unit: Entity) -> Option<ModelGeometry> {
     let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
-    let player = world.get::<Player>(unit).is_some();
-    let follower_player_race = if world.get::<crate::followers::Follower>(unit).is_some() {
-        let display = world.get::<ModelDisplay>(unit)?.display_id;
-        world
-            .get_resource::<ModelReaches>()?
-            .player_race_displays
-            .contains(&display)
-    } else {
-        false
-    };
-    let geometry = if player || follower_player_race {
-        ModelGeometry {
-            bounding_radius: DEFAULT_PLAYER_BOUNDING_RADIUS,
-            combat_reach: DEFAULT_PLAYER_COMBAT_REACH,
-        }
-    } else {
-        let display = world.get::<ModelDisplay>(unit)?.display_id;
-        *world.get_resource::<ModelReaches>()?.source.get(&display)?
-    };
-    Some(ModelGeometry {
-        bounding_radius: geometry.bounding_radius * scale,
-        combat_reach: geometry.combat_reach * scale,
-    })
+    if world.get::<Player>(unit).is_some() {
+        return Some(PLAYER_MODEL_GEOMETRY.scaled(scale));
+    }
+    let follower = world.get::<crate::followers::Follower>(unit).is_some();
+    let display = world.get::<ModelDisplay>(unit)?.display_id;
+    world
+        .get_resource::<ModelReaches>()?
+        .creature_geometry(display, follower)
+        .map(|geometry| geometry.scaled(scale))
 }
 
 pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
