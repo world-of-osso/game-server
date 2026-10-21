@@ -32,7 +32,7 @@ fn wait_for_native_cast_and_gcd(h: &mut Harness, caster: Entity) {
     panic!("ordinary native cast/GCD did not finish");
 }
 
-fn cast_setup_swiftmend(h: &mut Harness, caster: Entity, patient: Entity) {
+pub(super) fn cast_setup_swiftmend(h: &mut Harness, caster: Entity, patient: Entity) {
     creature_cast(
         h.app.world_mut(),
         caster,

@@ -14,7 +14,7 @@ const ABUNDANCE: u32 = 207640;
 const REJUVENATION: u32 = 774;
 const FRIENDS: &[u32] = &[209057, 209059, 209065];
 
-fn add_native_friend(h: &mut Harness, entry: u32) -> Entity {
+pub(super) fn add_native_friend(h: &mut Harness, entry: u32) -> Entity {
     let profile = h
         .app
         .world()
@@ -81,7 +81,7 @@ fn own_count(h: &Harness, caster: Entity, patients: &[Entity]) -> usize {
         .count()
 }
 
-fn cast_real_rejuvenation(h: &mut Harness, caster: Entity, target: Entity) {
+pub(super) fn cast_real_rejuvenation(h: &mut Harness, caster: Entity, target: Entity) {
     creature_cast(h.app.world_mut(), caster, REJUVENATION, Some(target), false).unwrap();
     for _ in 0..200 {
         h.advance(1);

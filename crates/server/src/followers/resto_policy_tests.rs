@@ -203,3 +203,144 @@ fn resto_policy_native_channel_is_unsafe_when_caster_forecast_dies_before_finish
         "actual recent damage predicts caster death before native channel ends; do not start the channel"
     );
 }
+
+#[test]
+fn resto_policy_swiftmend_soul_is_spent_on_useful_empowered_regrowth() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    let tank = party[2];
+    super::super::kit_soul_of_forest_tests::cast_setup_swiftmend(&mut h, healer, tank);
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 33763, Some(tank), false).unwrap();
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 8936);
+    assert!(
+        own_aura(&h, healer, healer, 114108).is_some(),
+        "SotF must come from the real Swiftmend"
+    );
+    let health = h.app.world().get::<Health>(tank).unwrap();
+    let fraction = health.current / health.max - 0.2;
+    damage(&mut h, tank, fraction);
+    let first = h.inbox.log.len();
+    for _ in 0..100 {
+        decide(&mut h, healer, &party);
+        h.advance(1);
+        if h.inbox.log[first..].iter().any(|event| {
+            event.spell_id == Some(8936)
+                && event.kind == CombatLogKind::Heal
+                && event.source == Some(healer.to_bits())
+        }) {
+            break;
+        }
+    }
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .any(|event| event.spell_id == Some(8936)
+                && event.kind == CombatLogKind::Heal
+                && event.target == Some(tank.to_bits())
+                && event.source == Some(healer.to_bits())
+                && event.overflow < event.amount),
+        "AI must spend the earned native Soul buff on a useful supported Regrowth, not a topped patient or unsupported Wild Growth bonus"
+    );
+    assert!(own_aura(&h, healer, healer, 114108).is_none());
+}
+
+#[test]
+fn resto_policy_native_abundance_fifth_primary_hot_enables_discount() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(69);
+    let threshold = own_aura(&h, healer, healer, 207383)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(threshold, party.len() as f32);
+    for &target in &party[..4] {
+        super::super::kit_abundance_tests::cast_real_rejuvenation(&mut h, healer, target);
+    }
+    assert!(
+        own_aura(&h, healer, healer, 207640).is_none(),
+        "four native primary HoTs must not fake old stacked Abundance"
+    );
+    let regular = super::super::kit_clearcasting_tests::mana_cost(&h, healer, 8936);
+    damage(&mut h, party[4], 0.1);
+    decide(&mut h, healer, &party);
+    let buff = own_aura(&h, healer, healer, 207640)
+        .expect("useful fifth primary Rejuvenation should activate the native threshold buff");
+    assert_eq!(buff.stacks, 1);
+    assert_eq!(
+        party
+            .iter()
+            .filter(|target| own_aura(&h, healer, **target, 774).is_some())
+            .count(),
+        5
+    );
+    assert!(
+        super::super::kit_clearcasting_tests::mana_cost(&h, healer, 8936) < regular,
+        "discount must come from native207640, not a policy mana grant"
+    );
+}
+
+#[test]
+fn resto_policy_marks_every_living_native_party_member_before_safe_filler() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    for _ in 0..200 {
+        decide(&mut h, healer, &party);
+        h.advance(1);
+        if party
+            .iter()
+            .all(|target| crate::auras::has_aura(h.app.world(), *target, 1126))
+        {
+            return;
+        }
+    }
+    let missing: Vec<_> = party
+        .iter()
+        .filter(|target| !crate::auras::has_aura(h.app.world(), **target, 1126))
+        .collect();
+    panic!(
+        "native Mark of the Wild maintenance must cover the real party before damage filler; missing {missing:?}"
+    );
+}
+
+#[test]
+fn resto_policy_stops_admitted_damage_when_recent_pressure_is_temporarily_topped() {
+    let (mut h, healer) = super::super::kit_tests::level32(209072);
+    let target = h.caster;
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 1126, Some(healer), false).unwrap();
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 5176);
+    let heal_budget = [774, 8936]
+        .into_iter()
+        .map(|spell| super::super::kit_clearcasting_tests::mana_cost(&h, healer, spell))
+        .fold(f32::INFINITY, f32::min)
+        * 0.5;
+    let enemy = h.npc;
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 5176, Some(enemy), false).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_some_and(|cast| cast.spell_id == 5176)
+    );
+    h.app.world_mut().get_mut::<Mana>(healer).unwrap().current = heal_budget;
+    damage(&mut h, target, 0.2);
+    let other = super::super::kit_abundance_tests::add_native_friend(&mut h, 209072);
+    crate::spell_cast::creature_cast(h.app.world_mut(), other, 18562, Some(target), false).unwrap();
+    let health = h.app.world().get::<Health>(target).unwrap();
+    assert_eq!(
+        health.current, health.max,
+        "other native healer must top the pressured recipient"
+    );
+    let risk = super::super::healer_triage::read_patient(h.app.world(), target).unwrap();
+    assert!(
+        risk.score > 0.0,
+        "recent actual damage remains unsafe despite the top-up"
+    );
+    decide(&mut h, healer, &[target, healer]);
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_none_or(|cast| cast.spell_id != 5176),
+        "no affordable heal is not permission to continue an unsafe admitted damage cast"
+    );
+}
