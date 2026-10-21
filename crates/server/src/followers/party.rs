@@ -548,6 +548,46 @@ mod copy_tests {
     }
 
     #[test]
+    #[ignore = "party follower portrait RED; enable after native/headless GREEN"]
+    fn party_follower_roster_keeps_actual_template_heads_after_interest_is_lost() {
+        let (mut app, owner, run) = fixture();
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let expected: Vec<_> = run.members.iter().map(|&unit| {
+            let profile = &app.world().get::<Follower>(unit).unwrap().profile;
+            let display_id: u32 = db.query_row(
+                "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx LIMIT 1",
+                [profile.entry],
+                |row| row.get(0),
+            ).unwrap();
+            let name = profile.name.clone();
+            app.world_mut().entity_mut(unit).insert(shared::components::ModelDisplay { display_id });
+            (name, display_id)
+        }).collect();
+        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
+        let groups = app.world().resource::<GroupRegistry>();
+        let group = groups.group_id_of(30).unwrap();
+        let roster = groups.build_roster(group, &OnlineView::new()).unwrap();
+        assert_eq!(roster.members.len(), 5);
+        for (name, display_id) in expected {
+            let member = roster
+                .members
+                .iter()
+                .find(|member| member.name == name)
+                .unwrap();
+            assert_eq!(member.entity, None);
+            let portrait = serde_json::to_value(&member.portrait).unwrap();
+            assert_eq!(
+                portrait["creature_display_id"], display_id,
+                "real follower head: {name}"
+            );
+        }
+    }
+
+    #[test]
     fn follower_copy_group_formation_keeps_same_map_teleport_in_the_admitted_copy() {
         let (mut app, owner, run) = fixture();
         let admitted = *app.world().get::<InMap>(owner).unwrap();
