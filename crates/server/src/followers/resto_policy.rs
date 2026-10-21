@@ -13,6 +13,7 @@ const NATURES_CURE: u32 = 88423;
 const INNERVATE: u32 = 29166;
 const TRANQUILITY: u32 = 740;
 const EFFLORESCENCE: u32 = 145205;
+const TREE_OF_LIFE: u32 = 33891;
 const REJUVENATION: u32 = 774;
 const ABUNDANCE: u32 = 207383;
 const ABUNDANCE_DISCOUNT: u32 = 207640;
@@ -32,6 +33,7 @@ const OWNED: SpellSet = &[
     145205,
     IRONBARK,
     BARKSKIN,
+    TREE_OF_LIFE,
     UTILITY_REBIRTH,
     NATURES_SWIFTNESS,
     NATURES_CURE,
@@ -44,6 +46,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_swift_regrowth(ctx))
         .or_else(|| choose_urgent_swiftmend(ctx))
         .or_else(|| choose_tranquility(ctx))
+        .or_else(|| choose_tree_of_life(ctx))
         .or_else(|| choose_natures_swiftness(ctx))
         .or_else(|| choose_natures_cure(ctx))
         .or_else(|| choose_innervate(ctx))
@@ -314,6 +317,26 @@ fn choose_abundance_rejuvenation(ctx: &TriageContext<'_>) -> Option<Decision> {
         .iter()
         .find(|candidate| candidate.decision.spell_id == REJUVENATION)
         .map(|candidate| candidate.decision)
+}
+
+fn choose_tree_of_life(ctx: &TriageContext<'_>) -> Option<Decision> {
+    if !ctx.ready(TREE_OF_LIFE) || ctx.own_aura_on(ctx.caster, TREE_OF_LIFE).is_some() {
+        return None;
+    }
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == TRANQUILITY)?;
+    let cluster = ctx.injury_cluster(TRANQUILITY, ctx.caster)?;
+    let injured = injured_cluster_members(ctx, entry, cluster);
+    if injured.len() < entry.conditions.min_injured || useful_friendly_cast_in_progress(ctx) {
+        return None;
+    }
+    Some(Decision {
+        spell_id: TREE_OF_LIFE,
+        target: ctx.caster,
+        urgent: false,
+    })
 }
 
 fn choose_efflorescence(ctx: &TriageContext<'_>) -> Option<Decision> {
