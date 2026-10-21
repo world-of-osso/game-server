@@ -54,11 +54,28 @@ pub(super) fn update(
                 return true;
             }
         }
-        let Some(target) = select_target(world, unit, party, enemy, entry) else {
+        if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
+            continue;
+        }
+        let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
+            Ok(spell) => spell,
+            Err(error) => {
+                debug!(
+                    ?unit,
+                    base = entry.spell_id,
+                    ?error,
+                    "Follower action unavailable"
+                );
+                continue;
+            }
+        };
+        let mut entry = entry.clone();
+        entry.spell_id = spell_id;
+        let Some(target) = select_target(world, unit, party, enemy, &entry) else {
             continue;
         };
-        if conditions_met(world, unit, target, party, &enemies, entry)
-            && attempt_cast(world, unit, target, follower, entry)
+        if conditions_met(world, unit, target, party, &enemies, &entry)
+            && attempt_cast(world, unit, target, follower, &entry)
         {
             return true;
         }

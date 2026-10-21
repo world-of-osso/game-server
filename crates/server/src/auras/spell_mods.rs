@@ -102,12 +102,17 @@ pub(crate) fn class_mask_affects(
     effect: &AuraEffectState,
     spell: &SpellInfo,
 ) -> bool {
+    class_mask_matches(aura.class_set, &effect.class_mask, spell)
+}
+
+/// Same native mask relation for an unapplied source record (e.g. form overrides).
+pub(crate) fn class_mask_matches(class_set: u32, mask: &[u32; 4], spell: &SpellInfo) -> bool {
     let Some(options) = spell.class_options.as_ref() else {
         return false;
     };
-    aura.class_set != 0
-        && options.spell_class_set == aura.class_set
-        && (0..4).any(|word| options.spell_class_mask[word] & effect.class_mask[word] != 0)
+    class_set != 0
+        && options.spell_class_set == class_set
+        && (0..4).any(|word| options.spell_class_mask[word] & mask[word] != 0)
 }
 
 /// `Unit::HasAuraTypeWithAffectMask` (Unit.cpp:4852-4858): `unit` has an `aura_type`

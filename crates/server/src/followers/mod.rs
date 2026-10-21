@@ -6,6 +6,7 @@ mod kit;
 mod kit_ai;
 mod kit_area;
 mod kit_interrupt;
+mod kit_overrides;
 mod pack_identity;
 mod party;
 mod pull_admission;
