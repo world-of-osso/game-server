@@ -185,6 +185,35 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
 }
 
 #[test]
+fn rotation_fidelity_tyrant_base_actor_uses_sourced_native_demonfire() {
+    let (mut h, owner) = warlock(32);
+    crate::spell_cast::creature_cast(h.app.world_mut(), owner, 265187, Some(owner), false)
+        .expect("actual learned native Tyrant summon");
+    h.advance(80);
+    let world = h.app.world_mut();
+    let tyrant = world
+        .query::<(Entity, &SummonedCreature, &shared::components::Npc)>()
+        .iter(world)
+        .find(|(_, summon, npc)| {
+            summon.owner == owner && summon.spell_id == 265187 && npc.template_id == 135002
+        })
+        .map(|(actor, _, _)| actor)
+        .expect("actual base135002 Tyrant");
+    for _ in 0..200 {
+        h.advance(1);
+        if h.inbox.log.iter().any(|event| {
+            event.source == Some(tyrant.to_bits())
+                && event.spell_id == Some(270481)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }) {
+            return;
+        }
+    }
+    panic!("actual base Tyrant must deal sourced270481 Demonfire damage; no Imp substitution");
+}
+
+#[test]
 fn rotation_fidelity_tyrant_native_variant_follows_learned_antoran_armaments() {
     // SimC76f8118 pets1513: effect1 normally, effect4 only with Antoran Armaments.
     for (level, expected, antoran) in [(32, 135002, false), (35, 250289, true)] {
