@@ -40,6 +40,7 @@ pub(super) struct Patient {
     pub periodic_remaining: f32,
     pub score: f32,
     pub emergency: bool,
+    pub projected_death_seconds: f32,
     pub position: Option<Vec3>,
 }
 
@@ -62,9 +63,20 @@ pub(super) struct TriageContext<'a> {
     pub mana_fraction: Option<f32>,
     pub upcoming: Vec<super::healer_context::UpcomingDamage>,
     pub clusters: Vec<super::healer_context::InjuryCluster>,
+    pub enemies: Vec<(Entity, Option<Entity>)>,
 }
 
 impl TriageContext<'_> {
+    /// Learned native cooldown/charges/school and costs; ignores only transient GCD.
+    pub fn ready(&self, spell_id: u32) -> bool {
+        self.entries.iter().any(|entry| entry.spell_id == spell_id)
+            && self
+                .world
+                .resource::<SpellStore>()
+                .get(spell_id)
+                .is_some_and(|spell| ready(self.world, self.caster, spell))
+    }
+
     pub fn best_candidate(&self, owned: SpellSet) -> Option<Decision> {
         self.candidates
             .iter()
@@ -189,6 +201,7 @@ pub(super) fn read_patient(world: &World, target: Entity) -> Option<Patient> {
         periodic_remaining: periodic,
         score: uncovered / health.max * weight,
         emergency: death <= EMERGENCY_SECONDS || health.current / health.max <= EMERGENCY_HEALTH,
+        projected_death_seconds: death,
         position: super::healer_context::position(world, target),
     })
 }
@@ -239,9 +252,7 @@ fn read_candidate(ctx: &TriageContext<'_>, entry: &Entry, patient: &Patient) -> 
         return None;
     }
     let spell = ctx.world.resource::<SpellStore>().get(entry.spell_id)?;
-    if !ready(ctx.world, ctx.caster, spell)
-        || (patient.missing_health == 0.0 && normal_direct_heal(spell))
-    {
+    if !ctx.ready(entry.spell_id) || (patient.missing_health == 0.0 && normal_direct_heal(spell)) {
         return None;
     }
     let healing = estimate_healing(ctx.world, ctx.caster, spell);
@@ -360,6 +371,7 @@ pub(super) fn update(
         candidates: Vec::new(),
         upcoming,
         clusters,
+        enemies,
         mana_fraction: world
             .get::<Mana>(caster)
             .filter(|mana| mana.max > 0.0)
