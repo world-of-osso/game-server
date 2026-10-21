@@ -43,7 +43,7 @@ Native48438 periodic heals use `WILD_GROWTH_FALLOFF_SIMC_SHAPE_ON_NATIVE_COEFFIC
 
 ## Devastation Essence Burst
 
-Completed Azure Strike362969 and Living Flame361469 roll once from their actual active native375721/376872 effect0 percentage, respectively, and trigger359618 on the caster (TC a352b1fa `spell_evoker.cpp:322–350`). During actual Dragonrage375087 use its native effect1 chance100 (SimC76f8118 `sc_evoker.cpp:5625,7011`). Ordinary native cost modifiers/charges remain responsible for the free spender; no synthetic proc masks or follower-AI grants. Extra-stack consumption and additional talent consequences require separate proof.
+Completed Azure Strike362969 and Living Flame361469 roll once from their actual active native375721/376872 effect0 percentage, respectively, and trigger359618 on the caster (TC a352b1fa `spell_evoker.cpp:322–350`). During actual Dragonrage375087 use its native effect1 chance100 (SimC76f8118 `sc_evoker.cpp:5625,7011`). Ordinary native cost modifiers/charges remain responsible for the free spender; no synthetic proc masks or follower-AI grants. Native375722 adds one maximum359618 stack. Disintegrate356995 and Pyre357211 each consume exactly one earned stack, preserving the remaining instance/deadline and one proc charge until the final use (SimC76f8118 `sc_evoker.cpp:3238`). Additional talent consequences remain unproven.
 
 ## Restoration Omen and Clearcasting
 

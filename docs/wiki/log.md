@@ -1,6 +1,6 @@
 ## 2026-10-21 — DPS native proc consequences
 
-[Source and boundaries](investigations/follower-data.md#dps-native-proc-consequences--2026-10-21): native70448 selected rows requalified, committed5cases yield4 causal REDs/1 existing control. Shared Essence Burst AfterCast script added; GREEN pending, extra-stack use not yet proven. Duck fixture missing import is not behavioral RED; Fire/Shaman/pet/rotation metrics remain open.
+[Source and boundaries](investigations/follower-data.md#dps-native-proc-consequences--2026-10-21): native70448 selected rows requalified, committed5cases yield4 causal REDs/1 existing control. Shared Essence Burst AfterCast script makes original one-use case GREEN; two earned native stacks reproduce first-spender whole-buff removal (0 versus1). Extend existing accumulated-use rule only to359618; two-spender GREEN pending. Duck fixture missing import is not behavioral RED; Fire/Shaman/pet/rotation metrics remain open.
 
 ## 2026-10-21 — Azureblade partial Lua-clock port
 
