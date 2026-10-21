@@ -113,6 +113,8 @@ mod omor_slay;
 mod omrogg;
 #[path = "porung.rs"]
 mod porung;
+#[path = "talondras.rs"]
+mod talondras;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
