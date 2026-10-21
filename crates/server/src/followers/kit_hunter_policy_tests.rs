@@ -1,7 +1,7 @@
 //! FOLLOWER_HUNTER_PET_SIMC_DEFAULT: real native125 Waterfowl, ordinary Call Pet.
 use super::kit_tests::at_level;
 use crate::hunter_pet::{HunterPet, HunterPetPlugin, PetStable, summoned_pet};
-use shared::components::{Level, Npc};
+use shared::components::{Npc, UnitLevel};
 
 const AUSTIN: u32 = 209065;
 const NATIVE_DUCK: u32 = 174884;
@@ -49,7 +49,7 @@ fn check_native_duck(level: u8) {
         h.app.world().get::<Npc>(pet).unwrap().template_id,
         NATIVE_DUCK
     );
-    assert_eq!(h.app.world().get::<Level>(pet).unwrap().0, level);
+    assert_eq!(h.app.world().get::<UnitLevel>(pet).unwrap().0, level);
     let stable = h.app.world().get::<PetStable>(caster).unwrap();
     assert_eq!(
         stable.character_id, None,
