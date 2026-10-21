@@ -468,3 +468,77 @@ fn conversation_runtime_orator_missing_creator_does_not_borrow_another_copy() {
     );
     assert!(area(&mut scene.h, scene.other_map, 266).is_some());
 }
+
+fn wire_updates(h: &mut Harness, who: &Traveler) -> Vec<shared::protocol::ConversationUpdate> {
+    h.app
+        .world_mut()
+        .get_mut::<MessageReceiver<shared::protocol::ConversationUpdate>>(who.connection)
+        .unwrap()
+        .receive()
+        .collect()
+}
+
+fn wire_delivery(difficulty: u32) {
+    let mut scene = scene(difficulty, 267);
+    for who in [&scene.owner, &scene.peer, &scene.outsider] {
+        scene
+            .h
+            .app
+            .world_mut()
+            .entity_mut(who.connection)
+            .insert(pair::<shared::protocol::ConversationUpdate>());
+    }
+    scene.h.advance(2);
+    for who in [&scene.owner, &scene.peer, &scene.outsider] {
+        wire_updates(&mut scene.h, who);
+    }
+    enter_authored_shape(&mut scene, 267);
+    let owner = wire_updates(&mut scene.h, &scene.owner);
+    assert_eq!(
+        owner.len(),
+        1,
+        "source ingress must deliver one actual reliable owner snapshot"
+    );
+    assert_eq!(
+        (owner[0].map_id, owner[0].instance_id),
+        (CITY, scene.map.instance_id)
+    );
+    assert_eq!(owner[0].conversations.len(), 1);
+    assert_eq!(owner[0].conversations[0].entry, 24643);
+    assert_eq!(
+        owner[0].conversations[0].private_owner,
+        scene.owner.player.to_bits()
+    );
+    assert!(
+        wire_updates(&mut scene.h, &scene.peer).is_empty(),
+        "same-copy peer receives no private conversation message"
+    );
+    assert!(
+        wire_updates(&mut scene.h, &scene.outsider).is_empty(),
+        "other-copy connection receives no private message"
+    );
+    scene.h.advance(2);
+    assert!(
+        wire_updates(&mut scene.h, &scene.owner).is_empty(),
+        "stable source set is not republished every tick"
+    );
+    scene.h.advance(205);
+    let cleared = wire_updates(&mut scene.h, &scene.owner);
+    assert_eq!(
+        cleared.len(),
+        1,
+        "natural expiry delivers one authoritative clear"
+    );
+    assert!(cleared[0].conversations.is_empty());
+    assert!(wire_updates(&mut scene.h, &scene.peer).is_empty());
+}
+#[test]
+#[ignore = "RED: conversation payload is not delivered to owning connection"]
+fn conversation_wire_orator_normal_private_delivery_and_expiry() {
+    wire_delivery(1);
+}
+#[test]
+#[ignore = "RED: conversation payload is not delivered to owning connection"]
+fn conversation_wire_orator_follower205_private_delivery_and_expiry() {
+    wire_delivery(205);
+}
