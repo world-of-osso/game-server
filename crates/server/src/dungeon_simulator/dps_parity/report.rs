@@ -30,8 +30,20 @@ pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Va
     let events = &world
         .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0;
+    let damage: i64 = events
+        .iter()
+        .filter(|event| is_target_damage(event, targets))
+        .map(|event| i64::from(event.amount))
+        .sum();
     json!({"actor": inspect(actor), "owner": inspect(owner), "targets": target_states,
-        "first_events": events.iter().take(16).collect::<Vec<_>>()})
+        "damage_to_targets": damage, "first_events": events.iter().take(16).collect::<Vec<_>>()})
+}
+
+fn is_target_damage(event: &shared::protocol::CombatLogEvent, targets: &[Entity]) -> bool {
+    let dummy = event
+        .target
+        .is_some_and(|target| targets.iter().any(|unit| unit.to_bits() == target));
+    dummy && event.kind == CombatLogKind::Damage
 }
 
 pub(super) fn sample_buffs(world: &World, actor: Entity, counts: &mut BTreeMap<u32, u32>) {

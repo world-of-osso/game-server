@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use std::time::Instant;
 
 const TICKS: u32 = 6_000;
+const LAST_30S_START: u32 = TICKS - 600;
 const DUMMY_ENTRY: u32 = 31_146;
 
 struct Run {
@@ -124,7 +125,7 @@ fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>, Vec<Value>) {
     for tick in 1..=TICKS {
         run.app.update();
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
-        if matches!(tick, 1 | 20 | TICKS) {
+        if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
             samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
         }
     }
@@ -187,6 +188,18 @@ fn dps_parity_native_bis_dummy_records_300s() {
         report["combat"]["total_damage"].as_u64().unwrap() > 0,
         "actual production kit must deal damage; full report {}",
         file.display()
+    );
+    let samples = report["engagement_samples"].as_array().unwrap();
+    let end_damage = samples.last().unwrap()["damage_to_targets"]
+        .as_i64()
+        .unwrap();
+    let last_30s_damage = end_damage
+        - samples[samples.len() - 2]["damage_to_targets"]
+            .as_i64()
+            .unwrap();
+    assert!(
+        last_30s_damage > 0,
+        "fixture must sustain actual damage in the final30s, not merely land first-tick hits"
     );
     eprintln!(
         "NATIVE_DPS spec{spec} targets{count}: {}",
