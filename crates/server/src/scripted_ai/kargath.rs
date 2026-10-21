@@ -85,6 +85,16 @@ impl Kargath {
             .expect("Kargath target list")
             .0
             .clear();
+        #[cfg(test)]
+        if ctx.is_casting() {
+            // UnitAI::DoCast reports SPELL_FAILED_SPELL_IN_PROGRESS; Ctx short-circuits it.
+            super::tests::cast_admission::record(
+                ctx.world,
+                ctx.me,
+                BLADE_DANCE_TARGETING,
+                &Err(crate::spell_cast::CastFailure::InProgress),
+            );
+        }
         ctx.do_cast_self(BLADE_DANCE_TARGETING);
         // KARGATH_SELECTOR_30738_NATIVE_CAST1000_SYNCHRONOUS_READ_GAP:
         // source reads immediately; never fake instant/triggered native targeting.
