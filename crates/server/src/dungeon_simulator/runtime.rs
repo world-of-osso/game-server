@@ -75,6 +75,38 @@ fn native_evade_at_home_completes_ordinary_return_lifecycle() {
     );
 }
 
+#[test]
+fn native_evade_walks_frozen_home_route_before_completing_return() {
+    let mut app = build_app();
+    let copy = create_copy(&mut app);
+    let actors = spawn_population(&mut app, copy);
+    let actor = actors[&20375744];
+    let home = *app.world().get::<Position>(actor).unwrap();
+    crate::creature_aggro::enter_evade_mode(app.world_mut(), actor);
+    app.world_mut().entity_mut(actor).insert(Position {
+        x: home.x + 4.0,
+        ..home
+    });
+    app.update();
+    let first_step = *app.world().get::<Position>(actor).unwrap();
+    assert!(
+        first_step.x < home.x + 4.0,
+        "Returning must enter the frozen movement adapter"
+    );
+    assert!(
+        first_step.x > home.x,
+        "returning four yards cannot teleport home in one50ms tick"
+    );
+    for _ in 0..80 {
+        app.update();
+    }
+    assert_eq!(*app.world().get::<Position>(actor).unwrap(), home);
+    assert_eq!(
+        app.world().get::<crate::creature_ai::CreatureState>(actor),
+        Some(&crate::creature_ai::CreatureState::Idle)
+    );
+}
+
 pub(super) fn build_app() -> App {
     build_cached_app(&mut None)
 }
