@@ -674,5 +674,85 @@ fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consump
             h.app.world().get::<shared::components::Level>(boss),
             "actual summon level, not CT0 cache placeholder1"
         );
+        // HARNESS SETUP: the entrant steps into the actual source-created fissure.
+        let position = *h.app.world().get::<Position>(fissure).unwrap();
+        let player = h.player();
+        h.app.world_mut().entity_mut(player).insert(position);
+        let before = h.health(player).current;
+        h.advance(2.2);
+        assert!(
+            h.inbox(0).log.iter().any(|event| {
+                event.source == Some(fissure.to_bits())
+                    && event.target == Some(player.to_bits())
+                    && event.spell_id == Some(32251)
+                    && event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+            }),
+            "actual native Consumption32250→32251 damages the entrant"
+        );
+        assert!(h.health(player).current < before);
     }
+}
+
+#[test]
+#[ignore = "pending native source Reset count/spin proof"]
+fn encounter_coverage_nethekurse_evade_keeps_peon_count_and_rearms_dark_spin() {
+    let (mut h, boss, map, peons) = populated_nethekurse(1);
+    observe_admissions(&mut h, boss);
+    h.hit_pct(peons[0], 200.0);
+    h.advance(0.2);
+    let player = h.player();
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 3.0,
+        ..position
+    });
+    h.engage(boss);
+    h.advance(0.2);
+    assert_eq!(nethekurse_yells(&h, boss, 4), 1);
+    h.hit_pct(boss, 76.0);
+    h.advance(0.2);
+    assert_eq!(requested_times(&h, 30502).len(), 1);
+    // HARNESS SETUP: remove proximity reacquisition before the real evade/home.
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: position.x + 500.0,
+        ..position
+    });
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    for _ in 0..400 {
+        h.advance(0.05);
+        if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+            != Some(&crate::creature_ai::CreatureState::Returning)
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, NETHEKURSE_BIT),
+        Some(EncounterState::NotStarted)
+    );
+    assert_eq!(
+        h.health(boss).current,
+        h.health(boss).max,
+        "ordinary evade restores native health"
+    );
+    let home = *h.app.world().get::<Position>(boss).unwrap();
+    h.app.world_mut().entity_mut(player).insert(Position {
+        x: home.x + 3.0,
+        ..home
+    });
+    h.engage(boss);
+    h.advance(0.2);
+    assert_eq!(
+        nethekurse_yells(&h, boss, 4),
+        2,
+        "Reset preserves the one dead event convert"
+    );
+    h.hit_pct(boss, 76.0);
+    h.advance(0.2);
+    assert_eq!(
+        requested_times(&h, 30502).len(),
+        2,
+        "Reset re-arms incoming25% trigger"
+    );
 }
