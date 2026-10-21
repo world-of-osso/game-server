@@ -15,8 +15,7 @@ fn player_empower() -> Harness {
         MessageSender::<ReleaseEmpowerSpell>::default(),
         MessageReceiver::<ReleaseEmpowerSpell>::default(),
     ));
-    h.cast(FIRE_BREATH, Some(h.caster));
-    h.advance(1);
+    h.cast_and_deliver(FIRE_BREATH, Some(h.caster));
     assert!(h.app.world().get::<CastState>(h.caster).is_some());
     h
 }
@@ -77,7 +76,7 @@ fn native_empower_input_wrong_spell_does_not_release_and_stop_never_fires() {
         .get_mut::<MessageSender<StopSpellCast>>(h.connection)
         .unwrap()
         .send::<CombatChannel>(StopSpellCast);
-    h.advance(1);
+    h.advance(3);
     assert!(h.app.world().get::<CastState>(h.caster).is_none());
     h.advance(80);
     assert!(
