@@ -168,6 +168,69 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
         h.app.world().get_entity(imp).is_err(),
         "exhausted Imp must demise before its independent native40s expiry"
     );
+    let outcomes = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(imp.to_bits())
+                && event.spell_id == Some(104318)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .count();
+    assert_eq!(
+        outcomes, casts,
+        "last in-flight bolt must resolve before source retirement"
+    );
+}
+
+#[test]
+fn rotation_fidelity_wild_imp_demise_naturally_earns_and_spends_demonic_core() {
+    let (mut h, owner) = warlock(32);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(owner)
+            .unwrap()
+            .contains(426115),
+        "actual learned Demoniac driver"
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), owner, 264173));
+    // Pinned SimC init1261–1265/hpp1070: natural fade PRD hardcap21.
+    let imps: Vec<_> = (0..21).map(|_| summon_imp(&mut h, owner)).collect();
+    h.advance(500);
+    assert!(
+        imps.iter()
+            .all(|imp| h.app.world().get_entity(*imp).is_err()),
+        "all21real native actors must exhaust naturally before testing the proc"
+    );
+    let core_stacks = |world: &World| {
+        world
+            .get::<crate::auras::ActiveAuras>(owner)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 264173))
+            .map_or(0, |aura| aura.stacks)
+    };
+    let before = core_stacks(h.app.world());
+    assert!(
+        before > 0,
+        "21natural fades must earn Core through sourced PRD, no injected aura/RNG"
+    );
+    let target = h.npc;
+    crate::spell_cast::creature_cast(h.app.world_mut(), owner, 264178, Some(target), false)
+        .expect("ordinary Demonbolt admitted with actual earned Core");
+    h.advance(1);
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|event| event.caster == owner.to_bits() && event.spell_id == 264178),
+        "Core must make the actual native Demonbolt instant"
+    );
+    assert_eq!(
+        core_stacks(h.app.world()),
+        before - 1,
+        "one actual Demonbolt consumes one earned Core use"
+    );
 }
 
 #[test]
