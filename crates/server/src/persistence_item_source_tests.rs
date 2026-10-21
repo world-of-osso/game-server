@@ -180,10 +180,10 @@ fn item_instance_inventory_record_hydrates_guid_modifiers_after_database_reopen(
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = Database::create(file.path()).unwrap();
     super::super::create_tables(&db);
-    let record = native_equipped_record(41);
+    let initial = native_equipped_record(41);
     let modifiers = native_modifiers();
     let txn = db.begin_write().unwrap();
-    write_inventory_record(&txn, 1, &record);
+    write_inventory_record(&txn, 1, &initial);
     server::item_instance::store::write_modifiers(&txn, 41, &modifiers).unwrap();
     txn.commit().unwrap();
     drop(db);
