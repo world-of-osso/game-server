@@ -59,3 +59,15 @@ Initial base c6be257c5, frozen protocol03cebdb. Own simulator baseline e479f2de9
 - [[follower-data]]
 - [[dungeon-simulator]]
 - [[spell-casting]]
+
+## Gate regression continuation (native GREEN)
+
+Gateha847 exposed real policy regressions beyond the initial core tests. A context+starvation native replay retained five RED cases (Ironbark, Rejuvenation, no-reapply setup, eligible-HoT Swiftmend and the mana fixture); Henry's Magic dispel was already GREEN after the topped-start fix. The corrected six-case replay plus common regressions gives15PASS/0FAIL/1 NS-depth ignore24.05s (`gate-regressions-targeted.log`).
+
+After merging masterff190cb1 into finite5cf87d561 (integrated simulatorT486527611/P03ceb), requested `followers::` and `dungeon_simulator::campaign::` filters give285PASS/0FAIL/9 existing-or-next-depth ignores206.38s, threads4. Leymor runs separately with the lead-qualified private2515 asset view/receipt and gives1PASS17.46s, threads1. Scoped sim server checkPASS8.61s; only the lead-excluded13179-owned `has_uncleared_fight` warning remains, with no unused triage API. Changed-source format checkPASS; delta readability audited directly, no suppression. Evidence: `regression-full-followers-campaign.log`, `regression-leymor-private-assets.log`, `regression-final-check.log` under `data/diagnostics/healer-ai-2026-10-21/`. This does not qualify the unimplemented Restoration-depth/paired-benchmark slices.
+
+Ironbark is not a zero-throughput heal: its class decision now observes the authored attacked/health/missing-aura conditions and native readiness before ordinary healing. Shared `Patient.projected_death_seconds` is restored and prioritizes the most threatened eligible defensive recipient; Holy can reuse that exact forecast. `TriageContext.ready(spell_id)` reads learned rows plus native cooldowns/charges/school/costs, ignoring only transient GCD.
+
+Swiftmend urgent admission retains its authored HP window and native target restriction, even when forecast HoTs would cover the deficit later. Routine cost ranking only spends Swiftmend when the actual native prerequisite state exists; it does not exploit the controlled-caster owner waiver to replace Rejuvenation on a70%-HP un-HoTed owner. Ordinary direct spell execution and that native waiver are unchanged.
+
+The OOC mana-progress fixture previously cast a normal direct Regrowth on an already-full caster. Required topped-cast cancellation prevented the spend, so its intended recovery precondition never occurred. It now casts a learned native instant Mark1126 and asserts actual mana expenditure before retaining the unchanged60-second recovery/stall observations; no damage, fake mana grant or altered production recovery is introduced.
