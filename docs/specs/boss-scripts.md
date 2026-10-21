@@ -1,5 +1,12 @@
 # Boss scripts
 
+## TWW City of Threads — Orator source boundary
+
+- Orator216619/encounter2907/map2669bit1 uses pinned TC a352b1fa `CityOfThreads/boss_orator_krix_vizk.cpp`, existing authentic TDB placement/template/binding and ordinary70448 effects. Source ordinal0 is not the persistent native bit1. Normal1 and Follower205 are required behavioral gates.
+- Appearance casts454689 and sets native Energy0. Engage casts434691, initializes counters1/1/0, schedules Energy1s, Subjugate434722 at4500ms and Terrorize selector434808 at9400ms. Subjugate repeats17100/12000ms alternating; Terrorize8100/21100ms alternating. Due events wait during native casts. Energy adds4, alternating1200/800ms; full100 requests434829 then polls6s later. Native aura removal resets Energy0; no guessed phase timer.
+- Selector434808 effect0 casts434779 at its actual selected hit unit with only IGNORE_CAST_IN_PROGRESS/DONT_REPORT; retain3s native cast time, caster restrictions, costs and cooldowns. Periodic440310 effect0 casts434710 from the original caster, then434712 from bearer to caster. Periodic434829 effect0 casts434832; all removals cast434923 from bearer and reset creature Energy0. Never replace source flags with instant/full-trigger policies.
+- Slay speech is Player-only. Death gives copy-local primary credit. Evade uses source `_DespawnAtEvade` default30s and FAIL, not invented instant healing/reset. Native override display-power527, conversation ingress, death-barrier35803 removal, Chains area entry/exit/pull motion and Lingering scale/area actions need separate proof. Mythic Shadows/Doubt motion is not Normal/Follower acceptance.
+
 ## TWW Rookery — Kyrioss source boundary
 
 - Map2648 primary209230/encounter2816/bit0 runs explicitly named `littlewigs_kyrioss`; TC a352b1fa has no Rookery script. `encounter_summons.py --encounter kyrioss` binds independent copies only, validates native identity, preserves TDB stats/population/difficulty rows and unrelated bosses; lead owns publication.

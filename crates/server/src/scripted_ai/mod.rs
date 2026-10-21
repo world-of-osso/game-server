@@ -21,6 +21,7 @@ pub mod boss_ai;
 pub mod bossmod;
 mod broggok;
 pub(crate) mod caster_chase;
+pub(crate) mod city_of_threads;
 pub mod creature_text;
 pub mod event_map;
 pub(crate) mod hellfire_ramparts;
@@ -104,6 +105,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, kings_rest::register_aura_scripts)
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(Startup, azure_vault::register_aura_scripts)
+            .add_systems(Startup, city_of_threads::register_aura_scripts)
             .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
@@ -324,6 +326,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }
+    if script_name == city_of_threads::ORATOR_SCRIPT {
+        return city_of_threads::creature_ai(world, creature);
+    }
     if script_name == tww_rookery::KYRIOSS_SCRIPT {
         return tww_rookery::creature_ai(world, creature);
     }
@@ -384,6 +389,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || nethekurse::is_creature_script(script_name)
         || kargath::is_creature_script(script_name)
         || script_name == tww_rookery::KYRIOSS_SCRIPT
+        || script_name == city_of_threads::ORATOR_SCRIPT
     {
         Some(script_name.to_owned())
     } else {

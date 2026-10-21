@@ -159,7 +159,8 @@ fn energy(difficulty: u32) {
     h.advance(0.1);
     assert_eq!(
         get_boss_state(h.app.world_mut(), map, 1),
-        Some(EncounterState::NotStarted)
+        Some(EncounterState::Fail),
+        "TC ScriptedCreature::_DespawnAtEvade defaults30s and marks FAIL"
     );
 }
 
