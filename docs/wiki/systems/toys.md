@@ -2,11 +2,19 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Native default TempSummon titles (2026-10-21)
+
+TC a352b1fa `SpellEffects.cpp:1957–2024` and `Object.cpp:1191–1265` dispatch non-special Wild/Ally titles through ordinary TempSummon. Implementation1c09a35d7 shares that decision between admission and spawning; joined spawn groups and explicit guardian/companion/totem/vehicle paths remain separate. Construct7/Name27/new61 are labels, not unsupported control mechanisms.
+
+Canonical pipeline509→514, exactly168667/192485/258135/258136/267472, zero removals. Real learning/UseToy produces the source models/actors, ownership/map and natural2/5/11-minute expiry without guardian/follow classification. Gnomatic retains its Gnome restriction and two actors. Party/viewer198206/198264/210975 remain explicit interaction gaps. Actor-only proof does not establish gifts/combat, clone stacking, jumpable collision, native pixels or scripts.
+
+RED6 precedes implementation. Corrected actual-use fixtures submit cursor coordinates only for authored target87, not native target47. Postmerge67820e8cc proof11PASS covers all five lifecycles, census/negative contracts, three property controls, signed-title loading and owner-map removal. Its companion failure is separately corrected below; it is not counted as a passing12-case run. Evidence: default-title-postmerge-green.log.
+
 ## Published companion fixture reconciliation (2026-10-21)
 
-Lead gate ty835 found the old53453-absence fixture stale after the206-template publication. Testbca871e63 now uses actual canonical SummonProperties3141 (Control1/Companion5/slot6/flags256), the unmodified native99104 effect28 and creature53453/display38340 instead of substituted25305/synthetic flags. Assertions cover birth identity/level, follow designation, PC/NPC immunity, permanent lifetime passage, slot replacement, permanent source lifetime and removal when owner leaves the map. This does not admit Toy69895's unimplemented target43/dummy4 or certify physical following/native pixels. The first full-cast fixture revision overreached that existing mechanism boundary and was corrected before claiming proof.
+Lead gate ty835 found the old53453-absence fixture stale after the206-template publication. Testbca871e63 now uses actual canonical SummonProperties3141 (Control1/Companion5/slot6/flags256), the unmodified native99104 effect28 and creature53453/display38340 instead of substituted25305/synthetic flags. Assertions cover birth identity, follow designation, PC/NPC immunity, permanent lifetime passage, slot replacement, permanent source lifetime and removal when owner leaves the map. NPCs carry UnitLevel, not player Level. The old unconditional level1 assertion was unsourced and removed: source TemporarySummon.cpp240–253 clamps owner level against scaling. Companion level parity remains unproved; production leveling was not changed. This does not admit Toy69895's unimplemented target43/dummy4 or certify physical following/native pixels. The first full-cast fixture revision overreached that existing mechanism boundary and was corrected before claiming proof.
 
-The206 published IDs were scanned across all Rust/Python sources (23 matching lines/11 files); no other stale absence assertion was found. Focused proof pending capacity admission; this checkpoint is pushed for the lead's regate, not claimed GREEN. Evidence: published206-all-code-mentions.jsonl in current toy diagnostics.
+The206 published IDs were scanned across all Rust/Python sources (23 matching lines/11 files); no other stale absence assertion was found. Corrected native-effect companion fixture PASS at4321f1bed with readiness control PASS2 in companion-readiness-green.log. Earlier full-cast/Level/level1 failures remain recorded, not rewritten as passes. Evidence: published206-all-code-mentions.jsonl in current toy diagnostics.
 
 ## Source-complete visual-only server census rule (2026-10-21)
 

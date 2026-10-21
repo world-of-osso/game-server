@@ -1,3 +1,7 @@
+## 2026-10-21 — Default TempSummon title census
+
+[Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; stressed repetition proof remains pending.
+
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
