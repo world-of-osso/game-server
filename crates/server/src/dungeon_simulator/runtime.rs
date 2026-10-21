@@ -68,6 +68,7 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
         crate::creature_scripts::CreatureScriptsPlugin,
         crate::scripted_ai::ScriptedAiPlugin,
         crate::followers::FollowerPlugin,
+        crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
     app.init_resource::<crate::maps::InstanceManager>();
