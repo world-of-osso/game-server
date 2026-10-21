@@ -77,6 +77,7 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
         _ => 1,
     };
     h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = race;
+    equip_native_armor(h, spec.class);
     h.app.world_mut().entity_mut(h.npc).insert((
         Level(80),
         Health {
@@ -91,6 +92,41 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     h.advance(3);
     fill_resources(h);
     h.inbox = Inbox::default();
+}
+
+/// Item/ItemSparse 70448: complete Mystical, Scaled Leather, Glimmering Mail,
+/// and Templar sets. No synthesized item templates or passive aura applications.
+fn equip_native_armor(h: &mut Harness, class: u8) {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    use shared::protocol::EquipmentSlot::*;
+    let ids = match class {
+        5 | 8 | 9 => [10175, 10172, 10181, 10180, 10177, 10179, 10173, 10176],
+        4 | 10 | 11 | 12 => [10406, 9834, 9835, 9827, 9833, 9828, 9829, 9832],
+        3 | 7 | 13 => [6389, 6388, 4071, 4712, 6386, 4073, 6387, 4072],
+        1 | 2 | 6 => [10168, 10170, 10164, 10166, 10169, 10167, 10171, 10165],
+        _ => panic!("no native census armor set for class {class}"),
+    };
+    let slots = [Head, Shoulder, Chest, Waist, Legs, Feet, Wrist, Hands];
+    let player = h.app.world().get::<Player>(h.caster).unwrap();
+    let catalog = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    for id in ids {
+        let item = catalog
+            .get(Retail, id)
+            .expect("native armor item definition");
+        assert!(item.allows(class, player.race) && item.required_level <= 80);
+    }
+    let items = slots
+        .into_iter()
+        .zip(ids)
+        .map(|(slot, id)| (slot, Retail, id))
+        .collect();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems { items });
 }
 
 fn fill_resources(h: &mut Harness) {
@@ -134,6 +170,17 @@ fn choose_case_target(h: &mut Harness, spell: &crate::spell_info::SpellInfo) -> 
         ally
     } else if hostile {
         h.npc
+    } else if super::attributes(spell, 1) & 0x0008_0000 != 0 {
+        // SPELL_ATTR1_EXCLUDE_CASTER rejects explicit self before area selection.
+        let ally = spawn_player(&mut h.app, 1, 3.0);
+        h.app.world_mut().entity_mut(ally).insert((
+            Level(80),
+            Health {
+                current: 500_000.0,
+                max: 1_000_000.0,
+            },
+        ));
+        ally
     } else {
         h.caster
     };
@@ -342,6 +389,16 @@ fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
     let data = world_db().unwrap();
     let mut h = harness(Vec::new(), &[], class).unwrap();
     h.app.insert_resource(data.store.clone());
+    static ITEMS: std::sync::OnceLock<crate::item_templates::ItemTemplates> =
+        std::sync::OnceLock::new();
+    h.app.insert_resource(
+        ITEMS
+            .get_or_init(|| {
+                crate::item_templates::load_item_templates(&data.powers_db)
+                    .expect("production item catalogs")
+            })
+            .clone(),
+    );
     h.app
         .insert_resource(crate::world_data::load_world_data(world_path));
     // Cargo executes tests from the crate directory; production's relative
@@ -533,6 +590,58 @@ fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
             .destination,
         destinations.0[&(3567, 0)],
     );
+}
+
+#[test]
+fn class_completeness_probe_fixture_refresh_equips_native_armor_for_passives() {
+    let prepared = prepare_class_world();
+    for (class, spec_id, id) in [
+        (8, 62, 89744),
+        (11, 103, 86092),
+        (7, 262, 86100),
+        (1, 71, 86101),
+    ] {
+        let mut h = census_harness(class, &prepared.path());
+        let spec = Spec {
+            id: spec_id,
+            class,
+            spells: Vec::new(),
+        };
+        let row = Spell {
+            id,
+            passive: true,
+            origin: vec!["SpecializationSpells/mastery".into()],
+        };
+        let receipt = record_case(&mut h, &spec, &row);
+        assert_eq!(receipt["passive_applied"], true, "{receipt}");
+    }
+}
+
+#[test]
+fn class_completeness_probe_fixture_refresh_exclude_caster_uses_eligible_ally() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(2, &prepared.path());
+    let spec = Spec {
+        id: 70,
+        class: 2,
+        spells: Vec::new(),
+    };
+    let row = Spell {
+        id: 6940,
+        passive: false,
+        origin: vec!["talent".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &row);
+    assert_eq!(receipt["failed"], json!([]), "{receipt}");
+    assert!(
+        h.app
+            .world_mut()
+            .query::<(Entity, &crate::auras::ActiveAuras)>()
+            .iter(h.app.world())
+            .any(|(entity, auras)| entity != h.caster
+                && auras.iter().any(|aura| aura.spell_id == 6940))
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 6940));
 }
 
 #[test]
