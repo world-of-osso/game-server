@@ -92,6 +92,68 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 }
 
 #[test]
+fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
+    let _rng_scope = crate::random::seed_scope(4);
+    let mut run = spawn_run(4, &mut None).unwrap();
+    let boss = run.actors[&20375766];
+    for (&guid, &actor) in &run.actors {
+        if guid != 20375766 {
+            run.app.world_mut().despawn(actor);
+        }
+    }
+    {
+        let mut data = run
+            .app
+            .world_mut()
+            .resource_mut::<crate::world_data::WorldData>();
+        let index = data
+            .spawns
+            .iter()
+            .position(|spawn| spawn.guid == 20375766)
+            .unwrap();
+        data.spawns_by_map.insert(34, vec![index]);
+    }
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let members: Vec<_> = run.members().collect();
+    for member in members {
+        run.app.world_mut().entity_mut(member).insert(Position {
+            x: at.x - 2.0,
+            ..at
+        });
+    }
+    crate::combat::deal_direct_damage(run.app.world_mut(), run.party.tank, boss, 100.0);
+    for _ in 0..1200 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events
+            .iter()
+            .any(|event| event.source == Some(boss.to_bits())
+                && event.kind == shared::protocol::CombatLogKind::CastStart),
+        "real scripted boss must create control opportunities"
+    );
+    let sheep = events
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::CastSuccess
+                && event.spell_id == Some(118)
+        })
+        .count();
+    assert_eq!(
+        sheep, 0,
+        "kit control must not indefinitely suspend the sole engaged enemy and let it regenerate"
+    );
+}
+
+#[test]
 fn stationary_full_party_still_stalls_without_any_progress() {
     let _rng_scope = crate::random::seed_scope(1);
     let mut run = spawn_run(1, &mut None).unwrap();
