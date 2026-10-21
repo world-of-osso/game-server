@@ -18,6 +18,13 @@ All eleven `follower_profiles` use only their level-available selected70448/serv
 
 Census: `game-engine/data/diagnostics/follower-utility-2026-10-21/census.md`, reproducible with `scripts/follower_utility_census.py`; all level intervals and direct effect facts retained in `census.json`. Pet interrupt uses the actual summoned Felguard's learned Axe Toss, never a player spell grant. Hunter pet actions require a real pet; no guessed pet/family/stable selection. Travel, forms, portals, ritual/item creation and other manually chosen abilities are inventoried but not made autonomous merely because they are non-rotation spells.
 
+## Named native-mechanic gaps
+
+- `SHUJA_LUST_NOT_LEARNED_70448`: neither Bloodlust nor Heroism is in the selected Elemental loadout. Time Warp/Fury remain available to the learned Mage/Evoker.
+- `SOULSTONE_CORPSE_CHILD_UNLINKED_70448`:20707 triggers dummy6203, not resurrect95750. The utility layer does not invent that missing script link or claim Soulstone battle-res support.
+- `DIVINE_STEED_DUMMY_UNIMPLEMENTED`:190784 has only effect3; description references221883 but the ordinary backend has no wrapper implementation. Do not consume this no-op as a pursuit speed ability.
+- Fear5782 is also dummy-only in70448; direct metadata cannot classify it as a stopping aura. Native118,853 and learned stopping controls provide the actual control/danger fixtures. Inventory does not fill missing spell mechanics by name.
+
 ## Proof
 
 - [ ] Native behavior regressions: `follower_utility_policy` filter, RED before implementation, GREEN after.

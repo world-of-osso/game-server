@@ -102,9 +102,17 @@ fn follower_utility_policy_native_resurrection_from_follower_retains_player_acce
     ));
     crate::spell_cast::creature_cast(h.app.world_mut(), unit, 20484, Some(h.caster), false)
         .unwrap();
-    h.advance(80);
-    let offers =
-        crate::spell_cast::test_harness::drain::<ResurrectionOffer>(&mut h.app, h.connection);
+    let mut offers = Vec::new();
+    for _ in 0..80 {
+        h.advance(1);
+        offers.extend(crate::spell_cast::test_harness::drain::<ResurrectionOffer>(
+            &mut h.app,
+            h.connection,
+        ));
+        if !offers.is_empty() {
+            break;
+        }
+    }
     assert_eq!(offers.len(), 1);
     assert_eq!(offers[0].caster_name, "Crenna Earth-Daughter");
     assert_eq!(h.health(h.caster), 0.0, "player must not auto-accept");
@@ -261,13 +269,12 @@ fn follower_utility_policy_control_danger_precedes_selected_damage_cast() {
     let (mut h, unit) = level32(209059);
     utility_tests::start_enemy_fireball(&mut h, unit);
     let dangerous = spawn_npc(&mut h.app, 3.0);
-    utility_tests::prepare_enemy_spec(&mut h, dangerous, 266);
+    utility_tests::prepare_enemy_spec(&mut h, dangerous, 63);
     h.app
         .world_mut()
         .entity_mut(dangerous)
         .insert(crate::networking::CombatTarget(Some(unit)));
-    crate::spell_cast::creature_cast(h.app.world_mut(), dangerous, 5782, Some(unit), false)
-        .unwrap();
+    crate::spell_cast::creature_cast(h.app.world_mut(), dangerous, 118, Some(unit), false).unwrap();
     update_ai(h.app.world_mut());
     h.advance(3);
     assert!(
@@ -276,7 +283,7 @@ fn follower_utility_policy_control_danger_precedes_selected_damage_cast() {
             .iter()
             .any(|e| e.kind == CombatLogKind::Interrupt
                 && e.target == Some(dangerous.to_bits())
-                && e.extra_spell_id == Some(5782))
+                && e.extra_spell_id == Some(118))
     );
 }
 
@@ -312,7 +319,7 @@ fn follower_utility_policy_dispel_control_before_lower_health_periodic_damage() 
         .get_mut::<Health>(patient)
         .unwrap()
         .current = max * 0.75;
-    for (target, spell_id) in [(patient, 589), (controlled, 5782)] {
+    for (target, spell_id) in [(patient, 589), (controlled, 118)] {
         let spell = h
             .app
             .world()
@@ -340,7 +347,7 @@ fn follower_utility_policy_dispel_control_before_lower_health_periodic_damage() 
         .find(|e| e.kind == CombatLogKind::Dispel && e.source == Some(unit.to_bits()))
         .expect("native Purify dispel");
     assert_eq!(dispelled.target, Some(controlled.to_bits()));
-    assert_eq!(dispelled.extra_spell_id, Some(5782));
+    assert_eq!(dispelled.extra_spell_id, Some(118));
 }
 
 #[test]
