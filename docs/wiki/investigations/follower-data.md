@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## DPS native proc consequences — 2026-10-21
+
+Native70448 requalification compares22 Spell,33 Effect,7 AuraOptions and22 ClassOptions selected rows with authenticated CSVs: no differences. Actual195283 Hot Streak is Effect3, not historical44448 aura;375721/376872 and77756 have no proc-options rows. Preserve generic eligibility. Existing Omen positive control passes; these missing class consequences need scripts, not global proc loosening.
+
+At f195942ed the exact native proc filter gives1PASS/4FAIL22.47s: guaranteed Dragonrage/Azure does not grant359618,59 real Flame Shock ticks grant no77762, mid-hardcast Surge is consumed, and a real Fire Blast crit grants no48107. The Hot-Streak-mid-hardcast preservation control already passes. Duck tests currently stop at missing imported174884 and are not behavioral REDs.
+
+[Essence Burst script](../../../crates/server/src/spell_cast/scripts/essence_burst.rs) registers shared AfterCast hooks using actual active talent chance and native Dragonrage effect1, following TC a352b1fa `spell_evoker.cpp:322–350` plus SimC76f8118 `sc_evoker.cpp:5625,7011`. First earned-buff/free-spender GREEN pending; extra-stack consumption remains separately unproven. [Contract](../../specs/auras.md#devastation-essence-burst). Evidence: engine `data/diagnostics/rotation-fidelity-2026-10-21/{native-proc-red.log,native-duck-red.log,rotation-a2-native-requalification.json}`. No full-spec acceptance.
+
 ## Tranquil Mind two-stack Clearcasting — 2026-10-19
 
 Actual native70448 default105 first learns Tranquil Mind403521 at25, absent24. Tooltip sets Omen's chance **to** effect3/index2 value5%, not +5%; native1050702 supplies that dummy amount. Effect1050510/index0 is Aura107/op37 MaxAuraStacks+1, mask3=262144 matching Clearcasting16870; its native cap1 therefore becomes2 through the existing generic modifier reader. SimC76f8118 `sc_druid.cpp:10577` registers the talent but supplies no additional behavior authority here. Native tooltip/data are authoritative. Index1 mana-regeneration numeric certification and other extra-charge talents remain excluded.

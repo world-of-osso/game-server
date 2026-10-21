@@ -1,7 +1,6 @@
 //! FOLLOWER_HUNTER_PET_SIMC_DEFAULT: real native125 Waterfowl, ordinary Call Pet.
 use super::kit_tests::at_level;
 use crate::hunter_pet::{HunterPet, HunterPetPlugin, PetStable, summoned_pet};
-use bevy::prelude::*;
 use shared::components::{Level, Npc};
 
 const AUSTIN: u32 = 209065;
