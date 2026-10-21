@@ -1,6 +1,6 @@
 ## 2026-10-21 — Sourced Obsidian Battle Horn visual
 
-[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact204687/406077 source85rows28tables/two resident models/race visual conditions, selfzero aura4. Realcast/combat RED2/driftcontrolPASS38.25s precedes one strict registry entry. Peaceful500ms cast/5s aura/60s recovery/naturalreuse GREEN pending; no nativeaudio/inventedaggro claim.
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact204687/406077 source85rows28tables/two resident models/race visual conditions, selfzero aura4. Realcast/combat RED2/driftcontrolPASS38.25s precedes one strict registry entry. 179ba7731/masterc6bc60006 GREEN7/7 (101.04s), peaceful500ms cast/noearlyeffects/5s naturalexpiry/60s naturalrecovery+reuse, combat/drift/cancel/invariants and retained controls. Census533→534 exactly204687; check/fmt pass with inherited unused-function warning. No nativeaudio/inventedaggro claim.
 
 ## 2026-10-21 — Source-eligible DH contemplation visuals
 
