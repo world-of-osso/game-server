@@ -117,9 +117,17 @@ pub(super) fn initialize(
     if let Some(spec) = kit_spec {
         // Native spell scripts read this literal field (e.g. Demonology's
         // Shadow Bolt generator); the follower remains an NPC, never a Player.
-        world
-            .entity_mut(unit)
-            .insert(shared::components::ActiveSpec(spec));
+        let known = world
+            .resource::<super::FollowerCatalog>()
+            .kits
+            .iter()
+            .filter(|entry| entry.available(spec, level))
+            .map(|entry| entry.spell_id)
+            .collect();
+        world.entity_mut(unit).insert((
+            shared::components::ActiveSpec(spec),
+            crate::class_progression::KnownSpells::from_baseline(known),
+        ));
     }
     crate::auras::sync_passives(world, unit, crate::auras::AuraSource::KnownSpell, &passives);
     if form != 0 {

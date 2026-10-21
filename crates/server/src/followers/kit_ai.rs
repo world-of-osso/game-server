@@ -281,9 +281,10 @@ fn health_and_auras_allow(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
-    if condition
-        .required_aura
-        .is_some_and(|aura| !crate::auras::has_aura(world, unit, aura))
+    if [condition.required_aura, condition.required_self_aura]
+        .into_iter()
+        .flatten()
+        .any(|aura| !crate::auras::has_aura(world, unit, aura))
     {
         return false;
     }
@@ -301,6 +302,12 @@ fn health_and_auras_allow(
         target
     };
     if !maintenance_allows(world, unit, aura_target, entry) {
+        return false;
+    }
+    if condition
+        .refreshable_aura
+        .is_some_and(|aura| !own_aura_refreshable(world, unit, aura_target, aura))
+    {
         return false;
     }
     if condition.exclusive_aura
@@ -356,6 +363,26 @@ fn refresh_window_seconds(
             "choose one aura refresh time unit".into(),
         )),
     }
+}
+
+/// SimC76f8118 action.cpp4630–4635: pandemic refreshable at inclusive30%.
+fn own_aura_refreshable(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
+    const PANDEMIC_FRACTION: f64 = 0.3;
+    let active = world
+        .get::<crate::auras::ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == spell && aura.caster == caster)
+        });
+    let Some(aura) = active else {
+        return true;
+    };
+    let Some(expiry) = aura.expires_at else {
+        return false;
+    };
+    let remaining = expiry - crate::auras::aura_now(world);
+    remaining <= f64::from(aura.duration_ms) / 1000.0 * PANDEMIC_FRACTION
 }
 
 fn maintenance_aura_present(

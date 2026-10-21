@@ -22,6 +22,18 @@ Player-owned followers retain their existing applied auras through evade, includ
 
 Additional user-approved workaround (2026-10-11): follower difficulty205 runs reuse the same dungeon's Normal-difficulty creature/game-object population and authored Normal entrance. Queue, party and instance identity remain205; creatures retain205 template/loot selection. No synthetic coordinates, spawn-tag widening or automatic alternate population path. Retire this bridge when local205 populations and authored entrances are complete. Ruby Life Pools2436/map2521 is the live candidate:304 Normal creature rows, entrance100030 and first boss Melidrussa188252.
 
+## Selected DPS rotation decisions
+
+For native selected books of262/63/1467, retain these bounded SimC76f8118 decisions without claiming full APL parity: Elemental maintains its own188389 Flame Shock using available470411/470057 at the inclusive30% refresh threshold before area/filler spells; Fire uses Pyroblast/Flamestrike only with actual self48108 and otherwise reaches Fireball, not Arcane Explosion filler; Devastation puts native Fire Breath/Eternity Surge and Essence spenders ahead of Azure/Living Flame filler and maintains Bronze using its actual Evoker child381758. Actual learned availability, costs, GCDs, cooldowns, target checks and native damage remain authoritative. Other APL variables, movement, trinkets/external buffs, unavailable talents and exact damage parity remain open. [Source/proof](../wiki/investigations/follower-data.md#dps-native-proc-consequences--2026-10-21).
+
+Kit publication must preserve unrelated specializations. Each scoped delta must reproduce the prepared intervals on a fresh canonical database copy, retain native interval identities and provide source/output/SQL hashes plus the changed interval keys. Validate composition with other pending kit publications before canonical application.
+
+## Hunter pet source policy
+
+`FOLLOWER_HUNTER_PET_SIMC_DEFAULT` selects native tameable Waterfowl/Duck174884 for spec253 Austin, following SimC76f8118 `sc_hunter.cpp:1052` (lead-approved2026-10-21). This is a named policy, not an authored Retail Austin-pet claim. Normal content import must include that TDB template/model without adding world spawns or fabricating stats. Runtime must provision a real runtime-only StoredPet/PetStable with no player/character identity, then cast actual learned Call Pet883 through the ordinary controlled-pet path. Native family/default specialization, level scaling and pet abilities remain authoritative; no arbitrary direct pet spawn or historical Barbed Shot Frenzy stacks.
+
+Failed or unavailable pet preparation must report the failure once per follower and leave other kit actions available; a hunter without a pet still heals and attacks. Successful pet preparation retains ordinary native cast legality.
+
 ## What it must do
 
 ### Reference preparation
@@ -214,6 +226,12 @@ Aura maintenance may refresh at an inclusive absolute remaining-time boundary or
 Named native refresh rules use sourced generic duration carry without changing amounts, costs or periodic phase: Rip1079/Rake155722 preserve up to30% of the fresh duration (never shorten a longer existing DoT); Shield Block132404 adds the fresh duration; SoTR132403 adds it capped at three fresh durations. Source: SimC76f8118 action.cpp4612, sc_warrior.cpp7196 and sc_paladin.cpp2864–2876. Other aura refresh rules remain unchanged.
 
 `FOLLOWER_TANK_DEFENSIVE_SEQUENCING` is explicit project policy: never overlap two manually selected tank majors; prefer the shorter caster-modified native cooldown. With positive observed incoming damage, trigger at the healer framework's shared projected-death horizon (currently3s); without a projection, retain HP<50%. Use the shared healer_triage::read_patient and EMERGENCY_SECONDS rather than introducing a second estimator. Native Last Stand1243659→12975 remains Shield Wall's automatic consequence, not an invented manual major. AfterCast source bindings read the learned passive's actual aura42 trigger child; they must not grant an absent talent, invent health amounts or rewrite global proc masks to fit this one spell. Last Stand must heal once by its actual native maximum-health increase.
+
+### Rotation refreshability
+
+Kit `refreshable_aura` tests the selected target's caster-owned aura: absent is refreshable; a finite active aura is refreshable at inclusive remaining <=30% of its native effective duration; a permanent aura is not. This explicitly selected Pandemic predicate follows SimC76f8118 `action.cpp:4630–4635`; it does not change periodic application timers, grant a spell, or silently replace existing missing-only conditions. Other refresh models need their own sourced semantics.
+
+Headless rotation qualification measures120s against one and three nonattacking high-health test dummies using native level90 spellbooks, plus one level32 smoke per spec. Reports separate native cast counts, damage including an actual owned pet, per-target DoT uptime and gained/consumed/expired procs. Zero gains give an undefined consumption ratio, not100%. Existing Hunter pet selection remains an explicit gap, never a guessed pet.
 
 ### Shared interrupt contract
 

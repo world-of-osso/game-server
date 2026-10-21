@@ -268,6 +268,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
+                && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
                 && aura
                     .effects
                     .iter()
@@ -292,7 +293,9 @@ fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool
     let Some(aura) = auras.get_mut(instance) else {
         return false;
     };
-    if !STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) || aura.stacks <= 1 {
+    if !(STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) || aura.spell_id == 359618)
+        || aura.stacks <= 1
+    {
         return false;
     }
     aura.stacks -= 1;

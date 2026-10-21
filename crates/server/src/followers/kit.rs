@@ -54,6 +54,9 @@ pub(super) struct Conditions {
     pub tank_defensive_sequence: bool,
     pub no_repeat_group: Vec<u32>,
     pub resources: Vec<ResourceCondition>,
+
+    pub required_self_aura: Option<u32>,
+    pub refreshable_aura: Option<u32>,
     pub min_enemies: usize,
     pub min_injured: usize,
     pub attacked: bool,

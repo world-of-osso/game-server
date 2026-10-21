@@ -26,9 +26,14 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+mod hot_streak;
+mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
+pub(super) use hot_streak::record_fire_hit;
+pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
 mod soul_of_the_forest;
@@ -37,6 +42,8 @@ pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direc
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
 mod windwalker;
+
+mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
 pub(crate) use windwalker::ordinary_combo_cast;
 
@@ -244,6 +251,7 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
         (20_538, 0) => Some(hate_to_zero),
@@ -393,7 +401,7 @@ pub fn crit_chance(world: &World, caster: Entity, target: Entity, spell_id: u32)
         }
         batch3::SCORCH => batch3::scorch_crit(world, caster, target),
         batch12::GARGOYLE_STRIKE => batch12::gargoyle_crit(world, caster),
-        FIRE_BLAST | batch5::CHAOS_BOLT => Some(100.0),
+        FIRE_BLAST | batch5::CHAOS_BOLT | voltaic_blaze::DAMAGE => Some(100.0),
         batch5::LAVA_BURST_DAMAGE => batch5::lava_burst_crit(world, target),
         _ => None,
     }
@@ -475,6 +483,35 @@ fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -
     }
 }
 
+/// TC's m_appliedMods marker: only a native cast-time modifier present at admission.
+pub(super) fn snapshot_proc_modifiers(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Vec<u32> {
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
+        return Vec::new();
+    };
+    auras
+        .iter()
+        .filter(|aura| {
+            matches!(aura.spell_id, hot_streak::HOT_STREAK | lava_surge::PROC)
+                && aura.effects.iter().any(|effect| {
+                    effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
+                        && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+                })
+        })
+        .map(|aura| aura.instance_id)
+        .collect()
+}
+
+pub(crate) fn preserve_unadmitted_proc(
+    spell: &SpellInfo,
+    aura: &crate::auras::AuraInstance,
+) -> bool {
+    aura.spell_id == lava_surge::PROC && !spell.cast_proc_mods.contains(&aura.instance_id)
+}
+
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
@@ -483,6 +520,13 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
+            Some(essence_burst::roll_essence_burst)
+        }
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
+            Some(hot_streak::consume_admitted_hot_streak)
+        }
+        lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
@@ -557,6 +601,7 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
     }
     match (spell_id, effect_index) {
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
+        (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::limit_targets),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
         (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
@@ -1290,6 +1335,7 @@ pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Enti
 
 pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
     match spell_id {
+        voltaic_blaze::DAMAGE => Some(voltaic_blaze::schedule_flame_shock),
         77_478 => Some(batch9::cast_earthquake_knockdown),
         _ => None,
     }
@@ -1298,6 +1344,8 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
         100780 => Some(windwalker::tiger_palm_hit),
+
+        lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
         soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
         soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),
