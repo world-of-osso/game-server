@@ -133,6 +133,64 @@ fn authored_route_skips_observed_accidental_deaths_without_reordering_the_rest()
     );
 }
 
+#[test]
+fn native_hogger_bleed_after_death_does_not_reopen_a_cleared_fight() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_run(2, &mut None).unwrap();
+    let boss = run.actors[&20375720];
+    for (&guid, &actor) in &run.actors {
+        if guid != 20375720 {
+            run.app.world_mut().despawn(actor);
+        }
+    }
+    let at = *run.app.world().get::<Position>(boss).unwrap();
+    let members: Vec<_> = run.members().collect();
+    for member in members {
+        run.app.world_mut().entity_mut(member).insert(Position {
+            x: at.x - 2.0,
+            ..at
+        });
+    }
+    let tank = run.party.tank;
+    crate::spell_cast::creature_cast(run.app.world_mut(), boss, 86604, Some(tank), true)
+        .expect("native Hogger Vicious Slice");
+    assert!(crate::auras::has_aura(run.app.world(), tank, 86604));
+    crate::combat::kill_unit(run.app.world_mut(), tank, boss);
+    assert!(!crate::followers::simulator::has_uncleared_fight(
+        run.app.world(),
+        run.party.owner
+    ));
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let death = events
+        .iter()
+        .position(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(boss.to_bits())
+        })
+        .expect("actual boss Death");
+    assert!(
+        events[death + 1..].iter().any(|event| event.kind
+            == shared::protocol::CombatLogKind::Damage
+            && event.source == Some(boss.to_bits())
+            && event.target == Some(tank.to_bits())
+            && event.spell_id == Some(86604)
+            && event.periodic
+            && event.amount > 0),
+        "real lingering bleed must still damage after its source died"
+    );
+    assert!(
+        !crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "a dead boss's lingering damage must not reinsert it into observed active enemies"
+    );
+}
+
 fn spawn_isolated_moloch(seed: u64) -> Run {
     let mut run = spawn_run(seed, &mut None).unwrap();
     let boss = run.actors[&20375766];
