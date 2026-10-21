@@ -1,4 +1,5 @@
 """Serialized rotation-policy contract, sourced from SimC76f8118 (not its70391 coefficients)."""
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -37,7 +38,7 @@ class DemonologyActionProjectionTests(unittest.TestCase):
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] == 266 and row['level'] in (10, 11, 14, 15)]
         self.assertEqual(len(selected), 4)
-        with sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
+        with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
             rows, _, _ = kit_rows(db, dict(loadouts=selected))
         available = lambda spell, level: any(row[0] == 266 and row[1] == spell and row[2] <= level <= row[3] and row[4] == 'attack' for row in rows)
         self.assertFalse(available(105174, 10))
@@ -52,7 +53,7 @@ class FeralActionProjectionTests(unittest.TestCase):
         export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] == 103 and row['level'] in (28, 29, 58, 59)]
-        with sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
+        with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
             rows, _, _ = kit_rows(db, dict(loadouts=selected))
         available = lambda spell, level: any(row[0] == 103 and row[1] == spell and row[2] <= level <= row[3] and row[4] == 'buff' for row in rows)
         self.assertFalse(available(106951, 28))
@@ -89,7 +90,7 @@ class RotationRefreshAndDefensePolicyTests(unittest.TestCase):
         export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] in (66, 73, 103) and row['level'] == 32]
-        with sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
+        with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
             rows, _, _ = kit_rows(db, dict(loadouts=selected))
         conditions = {(row[0], row[1]): json.loads(row[6]) for row in rows}
         self.assertNotIn('missing_aura', conditions[66, 53600])

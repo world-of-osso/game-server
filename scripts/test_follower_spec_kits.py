@@ -1,4 +1,5 @@
 """Copy-only follower-kit producer behavioral tests against native 70448 inputs."""
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -64,7 +65,7 @@ class FollowerKitProducerTests(unittest.TestCase):
                 original_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
             result = subprocess.run(self.command(output, receipt, diff), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            with sqlite3.connect(output) as db:
+            with closing(sqlite3.connect(output)) as db:
                 for spec, spells in [(66, [633, 53600, 26573, 85673]), (105, [774, 18562, 102342, 33763])]:
                     rows = db.execute('SELECT spell_id FROM follower_spec_kit WHERE spec_id=? AND min_level<=32 AND max_level>=32', (spec,)).fetchall()
                     self.assertTrue(set(spells).issubset({row[0] for row in rows}), (spec, rows))
@@ -88,10 +89,10 @@ class FollowerKitProducerTests(unittest.TestCase):
             self.assertEqual(report['changed_tables'], ['follower_spec_kit'] if delta.strip() else [])
             # The input can already contain published core kits. Replay the real
             # SQL delta instead of assuming it must CREATE an absent table.
-            with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True) as original, sqlite3.connect(root / 'replayed.db') as replayed:
+            with closing(sqlite3.connect(source.as_uri() + '?mode=ro', uri=True)) as original, closing(sqlite3.connect(root / 'replayed.db')) as replayed:
                 original.backup(replayed)
                 replayed.executescript(delta)
-                with sqlite3.connect(output) as expected:
+                with closing(sqlite3.connect(output)) as expected:
                     self.assertEqual(replayed.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall(), expected.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall())
             with source.open('rb') as stream:
                 self.assertEqual(hashlib.file_digest(stream, 'sha256').hexdigest(), original_sha)
@@ -109,7 +110,7 @@ class FollowerKitProducerTests(unittest.TestCase):
             second = root / 'second.db'
             result = subprocess.run(self.command(second, root / 'second.json', root / 'second.sql', first, source_path), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            with sqlite3.connect(first) as before, sqlite3.connect(second) as after:
+            with closing(sqlite3.connect(first)) as before, closing(sqlite3.connect(second)) as after:
                 self.assertEqual(before.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall(), after.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall())
                 self.assertEqual(before.execute('SELECT * FROM follower_profiles ORDER BY entry').fetchall(), after.execute('SELECT * FROM follower_profiles ORDER BY entry').fetchall())
             self.assertEqual((root / 'second.sql').read_text(), '')
@@ -133,8 +134,8 @@ class FollowerKitProducerTests(unittest.TestCase):
                 WHERE spec_id=262 AND spell_id=470411 AND min_level=3;'''
             def rows(db):
                 return db.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall()
-            with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True) as native:
-                with sqlite3.connect(root / 'owned-first.db') as first, sqlite3.connect(root / 'peer-first.db') as second:
+            with closing(sqlite3.connect(source.as_uri() + '?mode=ro', uri=True)) as native:
+                with closing(sqlite3.connect(root / 'owned-first.db')) as first, closing(sqlite3.connect(root / 'peer-first.db')) as second:
                     native.backup(first)
                     native.backup(second)
                     first.executescript(delta)
@@ -143,13 +144,13 @@ class FollowerKitProducerTests(unittest.TestCase):
                     second.executescript(delta)
                     self.assertEqual(rows(first), rows(second), 'disjoint stable-key deltas must commute')
                     expected = rows(first)
-                with sqlite3.connect(root / 'peer-only.db') as peer_only:
+                with closing(sqlite3.connect(root / 'peer-only.db')) as peer_only:
                     native.backup(peer_only)
                     peer_only.executescript(peer)
                     self.assertEqual([row for row in expected if row[0] not in owned],
                                      [row for row in rows(peer_only) if row[0] not in owned],
                                      'our delta must not rewrite any other spec')
-            with sqlite3.connect(root / 'owned.db') as prepared:
+            with closing(sqlite3.connect(root / 'owned.db')) as prepared:
                 self.assertEqual([row for row in expected if row[0] in owned],
                                  [row for row in rows(prepared) if row[0] in owned])
             self.assertNotIn('rowid', delta.lower(), 'published SQL contract uses stable native primary keys')
