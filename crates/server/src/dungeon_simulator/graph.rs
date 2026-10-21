@@ -273,6 +273,54 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
 }
 
 #[test]
+fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_route() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../content/dungeons/azure-vault-2515.json");
+    let bytes = std::fs::read(&path).expect("frozen Azure2515/205 graph");
+    let graph: Graph = serde_json::from_slice(&bytes).unwrap();
+    let data = crate::test_data::world_data();
+    let expected: BTreeSet<_> = data.spawns_by_map[&2515]
+        .iter()
+        .map(|index| &data.spawns[*index])
+        .filter(|spawn| spawn.spawns_at(crate::followers::population_difficulty(205)))
+        .map(|spawn| spawn.guid)
+        .collect();
+    let actual: BTreeSet<_> = graph
+        .packs
+        .iter()
+        .flat_map(|pack| &pack.spawns)
+        .map(|spawn| spawn.guid)
+        .collect();
+    assert_eq!(graph.map_id, 2515);
+    assert_eq!(
+        actual, expected,
+        "complete native205 alias uses Normal source population"
+    );
+    assert!(!graph.edges.is_empty(), "real frozen navigation distances");
+    assert_eq!(
+        graph.route.first().unwrap().pack,
+        4294739577,
+        "actual live opening Conjured Lasher"
+    );
+    let mut route_ids = BTreeSet::new();
+    for step in &graph.route {
+        assert!(
+            route_ids.insert(step.pack),
+            "no repeated authored pull step"
+        );
+        assert!(step.anchor.into_iter().all(f32::is_finite));
+        assert!(graph.packs.iter().any(|pack| pack.id == step.pack));
+    }
+    for boss in [186644, 186739, 186737, 186738] {
+        assert!(
+            graph.packs.iter().any(|pack| route_ids.contains(&pack.id)
+                && pack.spawns.iter().any(|spawn| spawn.entry == boss)),
+            "authored route must include boss{boss}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "explicit one-time extraction from native world.db and nav bake"]
 fn extract_stockade_graph() {
     let data = crate::test_data::world_data();
