@@ -30,6 +30,8 @@ For native selected books of262/63/1467, retain these bounded SimC76f8118 decisi
 
 `FOLLOWER_HUNTER_PET_SIMC_DEFAULT` selects native tameable Waterfowl/Duck174884 for spec253 Austin, following SimC76f8118 `sc_hunter.cpp:1052` (lead-approved2026-10-21). This is a named policy, not an authored Retail Austin-pet claim. Normal content import must include that TDB template/model without adding world spawns or fabricating stats. Runtime must provision a real runtime-only StoredPet/PetStable with no player/character identity, then cast actual learned Call Pet883 through the ordinary controlled-pet path. Native family/default specialization, level scaling and pet abilities remain authoritative; no arbitrary direct pet spawn or historical Barbed Shot Frenzy stacks.
 
+Failed or unavailable pet preparation must report the failure once per follower and leave other kit actions available; a hunter without a pet still heals and attacks. Successful pet preparation retains ordinary native cast legality.
+
 ## What it must do
 
 ### Reference preparation

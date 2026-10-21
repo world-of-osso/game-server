@@ -133,6 +133,22 @@ pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
     crate::pet_control::order_companion_pet(world, unit, target);
 }
 
+#[derive(Component)]
+struct PetPreparationFailureReported;
+
+fn report_pet_preparation_failure(
+    world: &mut World,
+    unit: Entity,
+    failure: impl std::fmt::Display,
+) {
+    if world.get::<PetPreparationFailureReported>(unit).is_none() {
+        error!(
+            "Follower {unit} cannot prepare native pet: {failure}; continuing its other kit actions"
+        );
+        world.entity_mut(unit).insert(PetPreparationFailureReported);
+    }
+}
+
 pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
     if crate::hunter_pet::summoned_pet(world, unit).is_some() {
         return false;
@@ -141,15 +157,16 @@ pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) 
         266 => 30146, // The native Demonology summon names its own creature.
         253 => {
             if let Err(error) = crate::hunter_pet::provision_follower_duck(world, unit) {
-                error!("Follower {unit} cannot provision policy duck: {error}");
-                return true;
+                report_pet_preparation_failure(world, unit, error);
+                return false;
             }
             883 // Ordinary Call Pet reads the actual provisioned stable slot.
         }
         _ => return false,
     };
     if let Err(failure) = crate::spell_cast::creature_cast(world, unit, spell, Some(unit), false) {
-        warn!("Follower {unit} cannot prepare native pet with spell{spell}: {failure:?}");
+        report_pet_preparation_failure(world, unit, format_args!("spell{spell}: {failure:?}"));
+        return false;
     }
     true
 }
