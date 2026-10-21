@@ -469,17 +469,43 @@ fn conversation_runtime_orator_missing_creator_does_not_borrow_another_copy() {
     assert!(area(&mut scene.h, scene.other_map, 266).is_some());
 }
 
+#[derive(Resource, Default)]
+struct WireInbox(std::collections::HashMap<Entity, Vec<shared::protocol::ConversationUpdate>>);
+
+fn collect_wire(
+    mut receivers: Query<(
+        Entity,
+        &mut MessageReceiver<shared::protocol::ConversationUpdate>,
+    )>,
+    mut inbox: ResMut<WireInbox>,
+) {
+    for (connection, mut receiver) in &mut receivers {
+        inbox
+            .0
+            .entry(connection)
+            .or_default()
+            .extend(receiver.receive());
+    }
+}
+
 fn wire_updates(h: &mut Harness, who: &Traveler) -> Vec<shared::protocol::ConversationUpdate> {
     h.app
         .world_mut()
-        .get_mut::<MessageReceiver<shared::protocol::ConversationUpdate>>(who.connection)
-        .unwrap()
-        .receive()
-        .collect()
+        .resource_mut::<WireInbox>()
+        .0
+        .remove(&who.connection)
+        .unwrap_or_default()
 }
 
 fn wire_delivery(difficulty: u32) {
     let mut scene = scene(difficulty, 267);
+    // Lightyear receivers retain one frame. Observe every frame just like the
+    // real network relay, rather than reading after a multi-frame fixture walk.
+    scene
+        .h
+        .app
+        .init_resource::<WireInbox>()
+        .add_systems(Last, collect_wire);
     for who in [&scene.owner, &scene.peer, &scene.outsider] {
         scene
             .h
