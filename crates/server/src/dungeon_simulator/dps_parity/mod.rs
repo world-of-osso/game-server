@@ -14,6 +14,7 @@ struct Run {
     app: App,
     actor: Entity,
     targets: Vec<Entity>,
+    target_waves: Vec<Value>,
     profile: inputs::Profile,
     gaps: Vec<String>,
 }
@@ -66,6 +67,9 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, &traits)?;
     let targets = spawn_targets(&mut app, actor, count)?;
+    let target_waves = vec![
+        json!({"at": 0.0, "entities": targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>()}),
+    ];
     for _ in 0..4 {
         app.update();
     }
@@ -74,6 +78,7 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
         app,
         actor,
         targets,
+        target_waves,
         profile,
         gaps,
     })
@@ -157,6 +162,7 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "stats_before": before, "stats_after": report::stats(run.app.world(), run.actor),
         "targets_before": targets, "targets_after": target_snapshot(&run),
+        "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.targets),
         "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
     )
@@ -190,6 +196,45 @@ fn dps_parity_native_bis_dummy_records_300s() {
         "actual production kit must deal damage; full report {}",
         file.display()
     );
+    if count == 3 {
+        let waves = report["target_waves"].as_array().unwrap();
+        assert_eq!(
+            waves.len(),
+            10,
+            "two adds must retire and respawn every30s across300s"
+        );
+        let main = waves[0]["entities"][0].as_u64().unwrap();
+        let mut adds = std::collections::BTreeSet::new();
+        for (index, wave) in waves.iter().enumerate() {
+            assert_eq!(wave["at"].as_f64().unwrap(), index as f64 * 30.0);
+            assert_eq!(
+                wave["entities"][0].as_u64().unwrap(),
+                main,
+                "main dummy must persist"
+            );
+            for add in wave["entities"].as_array().unwrap().iter().skip(1) {
+                assert!(
+                    adds.insert(add.as_u64().unwrap()),
+                    "retired add identity must not be reused"
+                );
+            }
+        }
+        assert_eq!(adds.len(), 20);
+    }
+    if matches!(spec, 253 | 266) {
+        assert_eq!(
+            report["pet"]["present"], true,
+            "native pet-class execution requires its authored pet"
+        );
+        assert!(
+            !report["pet"]["casts"].as_array().unwrap().is_empty(),
+            "real pet must execute its learned casts"
+        );
+        assert!(
+            report["pet"]["damage"].as_i64().unwrap() > 0,
+            "real pet must damage the dummy"
+        );
+    }
     let samples = report["engagement_samples"].as_array().unwrap();
     assert_eq!(
         samples[0]["actor_is_player"], false,

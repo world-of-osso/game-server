@@ -49,6 +49,33 @@ fn is_target_damage(event: &shared::protocol::CombatLogEvent, targets: &[Entity]
     dummy && event.kind == CombatLogKind::Damage
 }
 
+pub(super) fn pet(world: &World, actor: Entity, targets: &[Entity]) -> Value {
+    let Some(pet) = crate::hunter_pet::summoned_pet(world, actor) else {
+        return json!({"present": false});
+    };
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let owned: Vec<_> = events
+        .iter()
+        .filter(|event| event.source == Some(pet.to_bits()))
+        .collect();
+    let casts: Vec<_> = owned
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::CastSuccess)
+        .filter_map(|event| event.spell_id)
+        .collect();
+    let damage: i64 = owned
+        .iter()
+        .filter(|event| is_target_damage(event, targets))
+        .map(|event| i64::from(event.amount))
+        .sum();
+    json!({"present": true, "entity": pet.to_bits(), "casts": casts, "damage": damage,
+        "entry": world.get::<shared::components::Npc>(pet).map(|npc| npc.template_id),
+        "level": world.get::<shared::components::UnitLevel>(pet).map(|level| level.0),
+        "action_bar": world.get::<crate::pet_control::PetCharm>(pet).map(|charm| charm.action_bar)})
+}
+
 pub(super) fn sample_buffs(world: &World, actor: Entity, counts: &mut BTreeMap<u32, u32>) {
     if let Some(auras) = world.get::<crate::auras::ActiveAuras>(actor) {
         for aura in auras.iter() {
