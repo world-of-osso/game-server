@@ -65,6 +65,8 @@ mod census_generic_next_tests;
 #[cfg(test)]
 mod census_guardian_aura_tests;
 #[cfg(test)]
+mod census_tail_tests;
+#[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
 #[cfg(test)]
@@ -947,7 +949,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1656,6 +1658,7 @@ enum StartCheck {
     Native,
     IgnoreCastInProgress,
     TankHealCapability,
+    HealerDecision,
 }
 
 fn validate_start(
@@ -1873,6 +1876,15 @@ fn validate_history(
     Ok(())
 }
 
+/// Native cooldown/charge/school state, without spending or waiting on GCD.
+pub(crate) fn read_healer_recovery(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    validate_history(world, caster, spell, StartCheck::HealerDecision)
+}
+
 fn permits_transient_gcd(
     world: &World,
     caster: Entity,
@@ -1880,6 +1892,9 @@ fn permits_transient_gcd(
     check: StartCheck,
     ready_at: f64,
 ) -> bool {
+    if check == StartCheck::HealerDecision {
+        return true;
+    }
     if check != StartCheck::TankHealCapability {
         return false;
     }
@@ -2562,6 +2577,7 @@ fn plan_targets(
             });
             continue;
         }
+        targets::check_destination_support(spell)?;
         let leader = target_group_leader(world, spell, index);
         let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
@@ -2603,7 +2619,10 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        let ordered_destination = effect.implicit_targets.contains(&148);
+        let dest = if ordered_destination {
+            targets::effect_destination(world, caster, explicit, spell, effect)?
+        } else if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             spell.cast_destination.map(|point| targets::Dest {
                 position: Vec3::from_array(point),
                 orientation: targets::orientation(world, caster),
@@ -2611,7 +2630,11 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
-        let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        let mut dest = if ordered_destination {
+            dest
+        } else {
+            targets::ground_destination(world, caster, effect, dest)?
+        };
         if effect.implicit_targets.contains(&32) {
             dest = targets::caster_summon_ground_destination(world, caster, spell, dest)?;
         }
@@ -3674,6 +3697,8 @@ mod rezrtap_tests;
 mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
+#[cfg(test)]
+mod target148_tests;
 #[cfg(test)]
 mod target32_grounding_tests;
 #[cfg(test)]

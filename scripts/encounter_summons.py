@@ -474,6 +474,38 @@ def import_kokia(connection):
     return [189232]
 
 
+def import_lost_dwarves(connection):
+    """Bind the three Lua-authenticated actors to2555; preserve source actor data."""
+    import encounter_cpp_bindings
+    profiles = [
+        (184580,'Olaf',5349,105883,9004388),
+        (184581,'Baelog',5348,105887,9004390),
+        (184582,'Eric "The Swift"',5347,105884,9004392),
+    ]
+    bindings = []
+    for entry, name, actor, display, guid in profiles:
+        primary = dict(map_id=2451, entry=entry, encounter_id=2555, bit=0,
+                       script='', ai='', journal_id=2475, actor_id=actor, display_id=display,
+                       spawn_guid=guid, spawn_difficulties='2,8,23,1')
+        bindings.extend(encounter_cpp_bindings.prepare_bindings(connection, [primary]))
+        runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags,faction FROM content_creature_template WHERE entry=?',(entry,)).fetchone()
+        if runtime not in [(name,'','',64,16),(name,'','boss_lost_dwarves',64,16)]:
+            raise ValueError(f'Lost Dwarf{entry} runtime identity/flags/faction changed')
+        model = connection.execute('SELECT count(*) FROM tdb_creature_template_model WHERE CreatureID=? AND CreatureDisplayID=?',(entry,display)).fetchone()[0]
+        if model != 1:
+            raise ValueError(f'Lost Dwarf{entry} source journal model changed')
+    effect = connection.execute('SELECT Effect,ImplicitTarget_0,EffectTriggerSpell FROM spell_effect WHERE SpellID=369791 AND DifficultyID=0 AND EffectIndex=0').fetchone()
+    if effect != (149,138,369792):
+        raise ValueError('Lost Dwarves native Skullcracker identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', bindings)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_lost_dwarves' WHERE entry IN(184580,184581,184582)")
+    return [184580,184581,184582]
+
+
 def import_porung_binding(connection):
     """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
     import encounter_cpp_bindings
@@ -512,7 +544,7 @@ def import_kyrioss_schedule(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -548,6 +580,8 @@ def main():
                 entries = import_melidrussa(conn)
             elif args.encounter == 'kokia':
                 entries = import_kokia(conn)
+            elif args.encounter == 'lost-dwarves':
+                entries = import_lost_dwarves(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
