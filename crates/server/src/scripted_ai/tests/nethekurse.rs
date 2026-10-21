@@ -633,6 +633,18 @@ fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consump
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30745, Some(boss), false)
             .expect("native ordinary Target Fissures");
         h.advance(0.2);
+        assert!(
+            h.creatures_of(18370).is_empty(),
+            "native30744 casts for3000ms, not triggered/instant"
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(boss)
+                .map(|cast| cast.spell_id),
+            Some(30744)
+        );
+        h.advance(3.0);
         let fissures = h.creatures_of(18370);
         eprintln!(
             "NETHEKURSE wild difficulty{difficulty} child={:?} gos={:?}",
