@@ -266,16 +266,19 @@ fn choose_tranquility(ctx: &TriageContext<'_>) -> Option<Decision> {
     if !ctx.ready(TRANQUILITY) || !channel_is_safe(ctx, TRANQUILITY) {
         return None;
     }
-    let patient = ctx.patients.iter().find(|patient| {
-        let enough_injured = ctx
-            .injury_cluster(TRANQUILITY, patient.entity)
-            .is_some_and(|cluster| cluster.members.len() >= entry.conditions.min_injured);
-        enough_injured
-            && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
-    })?;
+    let cluster = ctx.injury_cluster(TRANQUILITY, ctx.caster)?;
+    let injured = cluster
+        .members
+        .iter()
+        .filter_map(|unit| ctx.world.get::<Health>(*unit))
+        .filter(|health| health.current < health.max * entry.conditions.health_below.unwrap_or(1.0))
+        .count();
+    if injured < entry.conditions.min_injured {
+        return None;
+    }
     Some(Decision {
         spell_id: TRANQUILITY,
-        target: patient.entity,
+        target: ctx.caster,
         urgent: false,
     })
 }
