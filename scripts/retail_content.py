@@ -310,7 +310,9 @@ WHERE e.DifficultyID=0 AND e.Effect=28 AND e.EffectMiscValue_0>0
 UNION SELECT entry FROM tdb_creature_template WHERE entry IN {TOY_SCENERY_SUMMON_ENTRIES}"""
 
 
-CLASS_SUMMON_ENTRIES = """WITH RECURSIVE class_line AS (
+# Approved SimC76f8118 sc_hunter.cpp1052 default, not an authored Austin pet.
+FOLLOWER_HUNTER_PET_SIMC_DEFAULT = 174884
+CLASS_SUMMON_ENTRIES = f"""WITH RECURSIVE class_line AS (
     SELECT l.ID, c.ID AS class_id FROM skill_line l JOIN chr_classes c
       ON c.Name_lang=l.DisplayName_lang WHERE l.CategoryID=7 AND c.ID BETWEEN 1 AND 13
 ), roots(id) AS (
@@ -332,7 +334,8 @@ CLASS_SUMMON_ENTRIES = """WITH RECURSIVE class_line AS (
       WHERE e.DifficultyID=0 AND e.EffectTriggerSpell>0
 )
 SELECT e.EffectMiscValue_0 FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
-WHERE e.DifficultyID=0 AND e.Effect IN (28,56) AND e.EffectMiscValue_0>0"""
+WHERE e.DifficultyID=0 AND e.Effect IN (28,56) AND e.EffectMiscValue_0>0
+UNION SELECT entry FROM tdb_creature_template WHERE entry={FOLLOWER_HUNTER_PET_SIMC_DEFAULT}"""
 
 
 def insert_tdb_templates(conn, entries, *, replace_legacy=False):

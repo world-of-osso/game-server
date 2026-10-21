@@ -15,7 +15,10 @@ pub(super) fn check_destination(
         check_ground_point(world, caster, spell)?;
     }
     for effect in &spell.effects {
-        if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        if effect.effect == 254
+            && effect.implicit_targets.contains(&87)
+            && !effect.implicit_targets.contains(&148)
+        {
             check_ground_point(world, caster, spell)?;
         }
         if !matches!(effect.effect, 15 | 252 | 29) {

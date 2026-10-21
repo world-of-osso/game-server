@@ -23,6 +23,7 @@ mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
 mod broggok;
+mod bromach;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 mod doragosa;
@@ -33,6 +34,7 @@ pub(crate) mod jump_movement;
 pub(crate) mod kargath;
 pub mod kings_rest;
 mod kokia;
+mod lost_dwarves;
 pub(crate) mod maraudon;
 mod melidrussa;
 pub(crate) mod model_reach;
@@ -361,6 +363,12 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if script_name == bromach::SCRIPT {
+        return bromach::creature_ai(world, creature);
+    }
+    if script_name == lost_dwarves::SCRIPT {
+        return lost_dwarves::creature_ai(world, creature);
+    }
     if algethar_academy::is_creature_script(script_name) {
         return algethar_academy::creature_ai(world, creature, script_name);
     }
@@ -417,6 +425,8 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || azure_vault::is_creature_script(script_name)
         || algethar_academy::is_creature_script(script_name)
         || ruby_life_pools::is_creature_script(script_name)
+        || script_name == lost_dwarves::SCRIPT
+        || script_name == bromach::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
@@ -666,13 +676,16 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
 pub(crate) fn limit_scripted_loss(
     name: Option<&CreatureScriptName>,
     herald_unkillable: bool,
-    health: f32,
+    health: &Health,
     loss: f32,
 ) -> f32 {
+    if name.is_some_and(|name| name.0 == lost_dwarves::SCRIPT) {
+        return lost_dwarves::limit_loss(health, loss);
+    }
     let animated_gold = name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT);
     let protected = herald_unkillable || animated_gold;
-    if protected && loss >= health {
-        (health - 1.0).max(0.0)
+    if protected && loss >= health.current {
+        (health.current - 1.0).max(0.0)
     } else {
         loss
     }

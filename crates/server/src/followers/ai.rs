@@ -133,19 +133,42 @@ pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
     crate::pet_control::order_companion_pet(world, unit, target);
 }
 
+#[derive(Component)]
+struct PetPreparationFailureReported;
+
+fn report_pet_preparation_failure(
+    world: &mut World,
+    unit: Entity,
+    failure: impl std::fmt::Display,
+) {
+    if world.get::<PetPreparationFailureReported>(unit).is_none() {
+        error!(
+            "Follower {unit} cannot prepare native pet: {failure}; continuing its other kit actions"
+        );
+        world.entity_mut(unit).insert(PetPreparationFailureReported);
+    }
+}
+
 pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
-    // The approved player-spec bridge's Demonology summon names its own creature
-    // in SpellEffect; Hunter's empty stable never receives a guessed pet.
-    if follower.profile.spec_id != 266 || crate::hunter_pet::summoned_pet(world, unit).is_some() {
+    if crate::hunter_pet::summoned_pet(world, unit).is_some() {
         return false;
     }
-    match crate::spell_cast::creature_cast(world, unit, 30146, Some(unit), false) {
-        Ok(()) => true,
-        Err(failure) => {
-            warn!("Follower {unit} cannot prepare authored Felguard: {failure:?}");
-            true
+    let spell = match follower.profile.spec_id {
+        266 => 30146, // The native Demonology summon names its own creature.
+        253 => {
+            if let Err(error) = crate::hunter_pet::provision_follower_duck(world, unit) {
+                report_pet_preparation_failure(world, unit, error);
+                return false;
+            }
+            883 // Ordinary Call Pet reads the actual provisioned stable slot.
         }
+        _ => return false,
+    };
+    if let Err(failure) = crate::spell_cast::creature_cast(world, unit, spell, Some(unit), false) {
+        report_pet_preparation_failure(world, unit, format_args!("spell{spell}: {failure:?}"));
+        return false;
     }
+    true
 }
 
 fn heal_party_member(
