@@ -99,8 +99,18 @@ fn rotation_fidelity_last_stand_is_only_the_native_learned_shield_wall_consequen
             learned,
             "actual native passive availability is the prerequisite, not a granted proc"
         );
+        let log_start = h.inbox.log.len();
         creature_cast(h.app.world_mut(), unit, 871, Some(unit), false).unwrap();
+        let immediate = h.app.world().get::<Health>(unit).unwrap().clone();
         h.advance(3);
+        println!(
+            "LAST_STAND level={level} before_max={before} wounded={wounded} immediate={immediate:?} final={:?} own_events={:?}",
+            h.app.world().get::<Health>(unit),
+            h.inbox.log[log_start..]
+                .iter()
+                .filter(|event| event.target == Some(unit.to_bits()))
+                .collect::<Vec<_>>()
+        );
         assert!(has_aura(h.app.world(), unit, 871), "real Shield Wall");
         assert_eq!(
             has_aura(h.app.world(), unit, 12975),
