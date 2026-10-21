@@ -1,3 +1,4 @@
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 -2026-10-20: [Stockade simulator](systems/dungeon-simulator.md):50/50seeded clears; cwd-independent test catalogs, actualCounterspell-aware refusal oracle;278case Cargo gate passes except waived privateAzure asset prerequisite.
 -2026-10-20: [Stockade simulator](systems/dungeon-simulator.md): authored99pull route, production combat-only Divine Toll/Starfall policy and postmortem Hogger bleed history fix; first10/10seeded clears,96.37× run-inclusive,100×/live gates open.
 ## 2026-10-20 — Transport-free Stockade simulator

@@ -46,24 +46,7 @@ fn approach_enters_unpulled_sight(
     let watchers: Vec<_> = world
         .resource::<crate::maps::units::MapUnits>()
         .in_map(map)
-        .filter(|watcher| {
-            world
-                .get::<crate::creature_aggro::AggroRange>(*watcher)
-                .is_some()
-        })
-        .filter(|watcher| {
-            world
-                .get::<Health>(*watcher)
-                .is_some_and(|health| health.current > 0.0)
-        })
-        .filter(|watcher| {
-            world
-                .get::<crate::creature_ai::CreatureState>(*watcher)
-                .is_some_and(|state| state.is_idle())
-        })
-        .filter(|watcher| {
-            targets::relation_matches(world, unit, *watcher, targets::Relation::Enemy)
-        })
+        .filter(|watcher| is_unpulled_hostile(world, unit, *watcher))
         .collect();
     let mut geometry = SystemState::<AggroDistance>::new(world);
     for watcher in watchers {
@@ -74,4 +57,20 @@ fn approach_enters_unpulled_sight(
         }
     }
     Ok(false)
+}
+
+fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {
+    let aggressive = world
+        .get::<crate::creature_aggro::AggroRange>(watcher)
+        .is_some();
+    let alive = world
+        .get::<Health>(watcher)
+        .is_some_and(|health| health.current > 0.0);
+    let idle = world
+        .get::<crate::creature_ai::CreatureState>(watcher)
+        .is_some_and(|state| state.is_idle());
+    aggressive
+        && alive
+        && idle
+        && targets::relation_matches(world, unit, watcher, targets::Relation::Enemy)
 }
