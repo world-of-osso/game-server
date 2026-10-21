@@ -1,20 +1,47 @@
 # Native item-instance DPS parity
 
-## Requirements
+Compare native70448 server combat with shipped MID1 SimulationCraft76f8118 profiles. Sources: `scripts/dps_parity.py`, `scripts/item_instance_data.py`, `crates/server/src/item_instance.rs`; [character stats](../wiki/systems/character-stats.md) describes the existing production stat path.
 
-- [ ] Item instances retain bonus lists, an optional explicit item level, permanent enchant and gem item IDs by GUID, with backward-compatible redb storage. Crafted stat selections must survive where the shipped profile specifies them.
+## What it must do
+
+### Equipment
+
+- [ ] Instances retain bonus lists, an optional explicit item level, permanent enchant and gem item IDs by GUID, with backward-compatible redb storage. Crafted stat selections survive where the profile specifies them.
 - [ ] Equipment stats resolve native70448 ItemBonus, ItemSparse, RandPropPoints and Midnight scaling/configuration tables, including stat allocation, sockets and enchant/gem effects. Unsupported effects are named gaps, never invented stats.
-- [ ] A headless300s follower dummy harness consumes the exact shipped MID1 profile gear through the production gear/stat path and supported talents/consumables, on one target and a clearly specified three-target DungeonSlice-like setup.
+- [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
+- [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly.
+
+### Measurement
+
+- [ ] A headless300s follower dummy harness consumes exact profile gear through the production stat path and supported talents/consumables, on one target and a specified three-target DungeonSlice-like setup.
 - [ ] Reports compare primary/crit/haste/mastery/versatility/AP/SP first, then action counts/average hit/damage share and buff uptimes. Flag every delta>5% and classify stats/gear, coefficients, missing proc/aura or rotation/decision.
-- [ ] Compare SimC70391 and native70448 effect rows before attributing a coefficient mismatch to a server bug. Rotation/decision changes remain lead-owned.
-- [ ] Reference all11 requested specs66/73/105/257/262/63/253/1467/269/266/103. Missing shipped105/257 healer profiles are explicit HPS-reference gaps, not synthetic BiS profiles.
+- [x] SimC action normalization includes direct and periodic amounts without double-counting parent compound totals.
+- [ ] Compare SimC70391 and native70448 effect rows before attributing a coefficient mismatch to a server bug. Rotation/decision edits remain lead-owned.
+- [ ] Cover specs66/73/105/257/262/63/253/1467/269/266/103. Missing105/257 shipped healer profiles remain explicit HPS-reference gaps, not synthetic BiS profiles. Report first-three and all-spec summaries to the lead.
 
-## Inputs and proof
+## How it works
 
-Official SimulationCraft76f8118cf3f7f41dad20708e8328e1f4ab2deebc, CLI-only local build. Native read-only exports `game-engine/data/db2/12.1.5.70448/`; no re-export, package install or canonical data mutation. Canonical producer application belongs to the lead.
+- [Character stats and gear](../wiki/systems/character-stats.md#gear).
+- [Inventory](../wiki/systems/inventory.md).
 
-`scripts/item_instance_data.py` imports eight native tables into a supplied existing SQLite copy, preserving signed values and recording source hashes/build. Two behavior tests prove replacement/idempotence and rollback on duplicate identities. This proves the producer only, not item-instance runtime support.
+## Implementation inventory
 
-`scripts/dps_parity.py` extracts exact shipped MID1 item identities, modifiers, talents, consumables and action text into manifests; parsing tests cover identity preservation and missing-item rejection. It does not simulate or claim gear equality.
+- `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
+- `scripts/dps_parity.py` — shipped MID1 profile extraction and SimC action normalization.
+- `crates/server/src/item_instance.rs` — item-instance runtime API/test scaffold; behavior implementation remains pending.
 
-Evidence: `game-engine/data/diagnostics/dps-parity-2026-10-21/`. SimC's embedded data is70391; the server uses70448 throughout.
+## Tests asserting this spec
+
+- `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
+- `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, missing-ID rejection and direct/periodic action accounting.
+- `crates/server/src/item_instance.rs::tests` — item-level budget/weapon-damage and invalid-level regressions; RED compilation pending, not claimed passing.
+
+## Known gaps (current cycle)
+
+- [ ] Runtime instance bonus/enchant/gem derivation and backward-compatible persistence.
+- [ ] Real300s server dummy execution and equal-gear parity reports.
+- [ ] Shipped105/257 healer BiS/HPS references are absent upstream.
+
+## Out of scope
+
+Rotation/decision implementation belongs to the lead/rotation agents. No system install, native-table re-export, canonical data mutation or protocol change without demonstrated need. Reference SimC is the official local CLI-only source build at76f8118cf3f7f41dad20708e8328e1f4ab2deebc (embedded70391); server inputs remain70448. Durable evidence lives in `game-engine/data/diagnostics/dps-parity-2026-10-21/`.

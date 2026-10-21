@@ -20,9 +20,18 @@ pub fn item_instance_stats(
     instance: &ItemInstanceModifiers,
     tables: &ItemScalingTables,
 ) -> Result<ItemStats, String> {
-    let _ = instance;
+    let mut resolved = *item;
+    if let Some(level) = instance.item_level_override {
+        if level == 0 || !tables.rand_prop_points.contains_key(&level) {
+            return Err(format!("item level {level} has no native stat budget"));
+        }
+        resolved.item_level = level;
+        if let Some((era, _)) = &tables.squish {
+            resolved.squish_era = *era;
+        }
+    }
     Ok(shared::item_scaling::item_stats(
-        item,
+        &resolved,
         inventory_type,
         tables,
     ))
