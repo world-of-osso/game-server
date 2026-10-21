@@ -434,6 +434,9 @@ pub(crate) fn regenerate_powers(
     for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags, pet_focus) in
         &mut units
     {
+        // TC Player::GetPowerRegen: aura94 selects combat rates, not combat state.
+        let aura_interrupts_regen = npc.is_none()
+            && auras.is_some_and(|auras| auras.has_type(crate::auras::handlers::INTERRUPT_REGEN));
         let auras = auras
             .filter(|auras| auras.has_type(crate::auras::handlers::TRIGGER_SPELL_ON_POWER_AMOUNT));
         if !read_creature_power_regeneration(npc, flags, world_data.as_deref()) {
@@ -497,7 +500,14 @@ pub(crate) fn regenerate_powers(
                 regen_peace: info.regen_peace * multiplier + flat_per_sec,
                 ..*info
             };
-            let step = regen_step(pool.current, pool.max, &rates, in_combat, out_of_combat_ms);
+            let interrupted = in_combat || aura_interrupts_regen;
+            let step = regen_step(
+                pool.current,
+                pool.max,
+                &rates,
+                interrupted,
+                out_of_combat_ms,
+            );
             let Some((rate, limit)) = step else {
                 pool.regen_per_sec = 0.0;
                 continue;

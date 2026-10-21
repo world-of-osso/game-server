@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Lost Dwarves Lua surrender policy
+
+- Current LittleWigs2777a9d `TheLostDwarves.lua` authenticates map2451/2555 and Baelog184581, Eric184582, Olaf184580. Outgoing requests use native70448 and current listed repeat durations in source order. `LOST_DWARVES_TIMELINE_PHASE_CONTEXT` retains unavailable per-phase counts/boat/energy context; no old alternate schedule.
+- Explicit parent policy `LOST_DWARVES_SURRENDER_AT_10PCT_LUA`: each actor reaching10% stops clocks and exits combat through native evade/stop. Precommit incoming loss is capped at floor(10% max health), preventing lethal crossing; all three remain alive. Suppress re-engagement by dropping the surrendered actor's threat list, not by inventing faction/flags. Only all three surrendered actors in the same copy mark2555 Done/bit0 credit; never credit a single death. A partial wipe resets surrender progress but restores threat only after actual native home/regen crosses10%, preventing immediate re-surrender; never fabricate healing or reset delays.
+- Real source stats/models/difficulties/population stay unchanged. `encounter_summons.py --encounter lost-dwarves` only installs all three authenticated bindings and explicitly local Lua script. `LOST_DWARVES_FRIENDLY_FACTION_GAP`, `LOST_DWARVES_BOAT_SCRIPT_GAP`, `LOST_DWARVES_SURRENDER_VISUAL_GAP` and `LOST_DWARVES_SKULLCRACKER_DEST_SELECTOR_GAP` remain explicit; no guessed faction, boat actors or targeted jump destinations. Native implicit ground target138 remains the caster-ground default.
+
 ## Academy current Retail partial boundary
 
 - Doragosa190609/2565/bit3 uses current Retail Missiles373326 initial7/repeat10, Astral Blast1282251 initial9/repeat12, Bomb374343 initial/repeat14, Vacuum388822 initial/repeat28. Explicitly canceled6.5s Blast bars never cast; native cast serialization delays due requests. Retain `DORAGOSA_TIMELINE_CONDITION_CONTEXT`, `DORAGOSA_BOMB_SELECTOR_GAP` and `DORAGOSA_OVERWHELMING_RIFT_SCRIPT_GAP`; no legacy Breath374361 or guessed bomb targets/rifts. `--encounter doragosa` only installs local binding; authored spawn9001231, flags64, stats/models/difficulties unchanged.
