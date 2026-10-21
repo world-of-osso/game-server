@@ -233,9 +233,11 @@ fn follower_utility_policy_rotates_ready_party_kicks() {
     h.advance(600);
     utility_tests::start_enemy_fireball(&mut h, first);
     let party = [h.caster, first, second];
+    let follower = h.app.world().get::<super::Follower>(first).unwrap().clone();
     assert!(super::utility_interrupt::try_party(
         h.app.world_mut(),
-        h.caster,
+        first,
+        &follower,
         &party,
         &[target]
     ));

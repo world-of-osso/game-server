@@ -85,15 +85,21 @@ pub(super) fn ordered_casts(world: &World, enemies: &[(Entity, Option<Entity>)])
 
 pub(super) fn try_party(
     world: &mut World,
-    owner: Entity,
+    executing: Entity,
+    context: &Follower,
     party: &[Entity],
     candidates: &[Entity],
 ) -> bool {
+    let owner = context.owner;
     let last = world.get::<LastKick>(owner).map(|last| last.0.to_bits());
     let mut members: Vec<_> = party
         .iter()
         .filter_map(|unit| {
-            let follower = world.get::<Follower>(*unit)?;
+            let follower = if *unit == executing {
+                context
+            } else {
+                world.get::<Follower>(*unit)?
+            };
             crate::spell_cast::targets::is_alive(world, *unit)
                 .then_some((*unit, follower.profile.clone()))
         })
@@ -106,6 +112,7 @@ pub(super) fn try_party(
     });
     for (unit, profile) in members {
         if super::kit_interrupt::try_interrupt_candidates(world, unit, &profile, candidates) {
+            world.entity_mut(owner).insert(LastKick(unit));
             return true;
         }
     }

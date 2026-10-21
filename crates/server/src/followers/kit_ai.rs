@@ -54,7 +54,7 @@ pub(super) fn update(
         return true;
     }
     let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
-    if super::utility_interrupt::try_party(world, follower.owner, party, &candidates) {
+    if super::utility_interrupt::try_party(world, unit, follower, party, &candidates) {
         return true;
     }
     for entry in entries

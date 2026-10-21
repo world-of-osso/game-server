@@ -35,3 +35,7 @@ The metrics reader counts actual party/owned-pet Interrupt events, hostile dange
 
 - [[follower-data]] — source provenance and prior native fixtures.
 - [[dungeon-simulator]] — transport-free harness and its acceptance boundary.
+
+## Explicitly controlled native profile identity
+
+A controller may execute an initialized native profile without a stored NPC `Follower` component (the simulator leader is a native Player). Party kick selection includes the current explicitly supplied profile while discovering other companions from their real stored components. It does not infer profiles for arbitrary players. The prior lookup dropped the leader kick: matched seed1 recorded5baseline owner Interrupts and0candidate, and a native component-boundary regression genuinely fails1/5.36s at1f3acc19a. Initial candidate comparison is retained as failed evidence; corrected requalification and20-seed outcomes remain pending.
