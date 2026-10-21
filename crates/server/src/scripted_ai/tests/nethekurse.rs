@@ -404,7 +404,6 @@ fn encounter_coverage_nethekurse_event_peon_engagement_notifies_boss() {
 }
 
 #[test]
-#[ignore = "RED: source intro taunts not ported"]
 fn encounter_coverage_nethekurse_intro_reentry_keeps_one_source_taunt_chain() {
     let (mut h, boss, _, _) = populated_nethekurse(1);
     observe_admissions(&mut h, boss);
@@ -497,7 +496,6 @@ fn taunt_requests(h: &Harness) -> usize {
 }
 
 #[test]
-#[ignore = "RED: source sewer trigger4347 not ported"]
 fn encounter_coverage_nethekurse_sewer_trigger_uses_authored_geometry() {
     let (mut h, boss, _, _) = populated_nethekurse(1);
     observe_admissions(&mut h, boss);
@@ -537,7 +535,6 @@ fn encounter_coverage_nethekurse_sewer_trigger_uses_authored_geometry() {
 }
 
 #[test]
-#[ignore = "RED: source chamber door OnGossipHello not ported"]
 fn encounter_coverage_nethekurse_chamber_door_real_use_starts_intro() {
     let (mut h, boss, map, _) = populated_nethekurse(1);
     observe_admissions(&mut h, boss);
