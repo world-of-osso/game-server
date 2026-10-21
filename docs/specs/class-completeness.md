@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Explicit corpse-ally selector slice — 2026-10-21
+
+- Selector121 selects only the explicitly supplied dead friendly unit. A missing, living, non-unit or hostile recipient yields no selection, not caster fallback. Preserve the ordinary ally lane21 for living Soulstone20707 recipients.
+- Use existing explicit relation validation and dead-unit owner entities, as existing resurrection targeting does. This certifies native20707 effect2/121 selection and preserves ordinary living cast admission, not corpse-GUID protocol, body-position routing or complete Soulstone scripts. [Native source and proof](../diagnostics/census-tail-70448.md).
+
 ## Maximum-health healing effect slice — 2026-10-21
 
 - Native67 effect value0 selects caster maximum HP; nonzero selects recipient missing HP. It heals living recipients only and preserves caster health, native crit restrictions, ordinary heal logs/overheal and healing-threat delivery.

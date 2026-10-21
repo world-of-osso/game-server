@@ -41,6 +41,12 @@ Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/oss
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Target121 CORPSE_TARGET_ALLY
+
+TC `SharedDefines.h:3080`/`SpellInfo.cpp:369` define explicit target-reference corpse-ally; `Spell.cpp:9382–9389` refuses living units for corpse object type. Native20707 Soulstone authors effect2 DUMMY/121 and effect3 DUMMY/21, distinct dead and ordinary ally lanes. Register a separate explicit corpse-ally selector, relation requirement and noncaster target classification; no fallback to self or unrestricted21 alias. Existing runtime selects dead units by their owner Entity like current resurrection; separate corpse-GUID/body-position protocol is not newly implemented.
+
+Ignored RED8ad961c4a: `census_tail_121 --include-ignored`1PASS/3FAIL22.83s. Real native5 kills a friendly player or hostile NPC;121 returns Err121 instead of the dead ally/empty hostile/missing results. Living121 also errors instead of empty while native21 must retain that living ally. Ordinary20707 living cast already passes (diagnostic dummy warning is not a cast refusal), retained as a control. `/home/osso/.worktrees/logs/census-tail/121-red.log`; compile1m58s/no warnings. Minimal selector/enabled cases committed; GREEN pending. No complete Soulstone resurrection/script-parity claim.
+
 ## Effect67 HEAL_MAX_HEALTH
 
 TC `SpellEffects.cpp:2966–2987` requires a living recipient; zero integral effect value takes caster maximum HP, nonzero takes recipient missing HP. No SpellHealingBonusDone/Taken calls. `Spell.cpp:2879–2892` then resolves native crit restrictions and shared healing delivery. Reuse existing resolved-heal/log/overheal/threat path, not ordinary modified healing or a new subsystem.
