@@ -188,37 +188,8 @@ fn calculate_winner_xp(
             .sum();
         let gained = total / eligible.len() as u32;
         if gained != 0 {
-            rewards.push(grant_xp(catalog, pet, gained)?);
+            rewards.push(grant_pet_xp(catalog, pet, gained)?);
         }
     }
     Ok(rewards)
-}
-
-fn grant_xp(
-    catalog: &WildCatalog,
-    pet: &mut OwnedPet,
-    gained: u32,
-) -> Result<BattlePetXpReward, String> {
-    pet.xp += gained;
-    while pet.level < MAX_LEVEL {
-        let threshold = catalog
-            .next_level_xp
-            .get(&pet.level)
-            .ok_or("missing pet XP game-table level")?;
-        if pet.xp < *threshold {
-            break;
-        }
-        pet.xp -= threshold;
-        pet.level += 1;
-    }
-    if pet.level == MAX_LEVEL {
-        pet.xp = 0;
-    }
-    Ok(BattlePetXpReward {
-        instance_id: pet.id,
-        xp_gained: gained,
-        level: pet.level,
-        xp: pet.xp,
-        next_level_xp: catalog.next_level_xp[&pet.level],
-    })
 }
