@@ -370,6 +370,31 @@ fn prepare_native_charge_target(h: &mut Harness) {
         .insert((ModelDisplay { display_id }, UnitScale(scale)));
 }
 
+/// Each ordinary cast rolls its own native child221514 defense. Compare motion
+/// to that execution's outcome, not to a second independent random roll.
+fn assert_native_skull_bash_motion(h: &Harness, unit: Entity, before: Position) {
+    let after = *h.app.world().get::<Position>(unit).unwrap();
+    let missed = h.inbox.log.iter().any(|event| {
+        event.source == Some(unit.to_bits())
+            && event.spell_id == Some(221514)
+            && matches!(event.kind, CombatLogKind::Miss(_))
+    });
+    if missed {
+        assert_eq!(after, before, "a defended charge must not move its caster");
+        return;
+    }
+    assert_ne!(after, before, "an undefended native charge must move");
+    let target = h.app.world().get::<Position>(h.npc).unwrap();
+    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), h.npc)
+        .expect("native model reach, not a guessed default");
+    let distance =
+        Vec3::new(after.x, after.y, after.z).distance(Vec3::new(target.x, target.y, target.z));
+    assert!(
+        (distance - reach).abs() < 0.001,
+        "native charge stops at the target's source reach"
+    );
+}
+
 #[test]
 fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
     let (mut h, unit) = level32(232800);
@@ -378,9 +403,6 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
     utility_tests::prepare_enemy_spec(&mut h, enemy, 63);
     crate::spell_cast::creature_cast(h.app.world_mut(), enemy, 133, Some(unit), false).unwrap();
     let before = *h.app.world().get::<Position>(unit).unwrap();
-    let target = *h.app.world().get::<Position>(enemy).unwrap();
-    let reach = crate::scripted_ai::model_reach::combat_reach(h.app.world(), enemy)
-        .expect("native model reach, not a guessed default");
     let intent = read_movement_intent(&h, unit);
     assert!(try_candidates(&mut h, unit, &[enemy]));
     assert_eq!(
@@ -394,17 +416,7 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
         "picker does not teleport or move directly"
     );
     h.advance(20);
-    let after = *h.app.world().get::<Position>(unit).unwrap();
-    assert_ne!(
-        after, before,
-        "normal sourced charge must progress through spell execution"
-    );
-    let distance =
-        Vec3::new(after.x, after.y, after.z).distance(Vec3::new(target.x, target.y, target.z));
-    assert!(
-        (distance - reach).abs() < 0.001,
-        "native charge stops at the target's source reach"
-    );
+    assert_native_skull_bash_motion(&h, unit, before);
     assert_eq!(
         h.inbox
             .go
@@ -413,8 +425,8 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
             .count(),
         1
     );
-    // Full-mask children intentionally emit no CastSuccess event. Compare the
-    // actual motion with an ordinary parent cast, not an invented wire message.
+    // Full-mask children intentionally emit no CastSuccess event. Qualify the
+    // ordinary parent against the same outcome-aware motion contract.
     let (mut native, native_unit) = level32(232800);
     prepare_native_charge_target(&mut native);
     let native_enemy = native.npc;
@@ -427,6 +439,7 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
         false,
     )
     .unwrap();
+    let native_before = *native.app.world().get::<Position>(native_unit).unwrap();
     let native_intent = read_movement_intent(&native, native_unit);
     crate::spell_cast::creature_cast(
         native.app.world_mut(),
@@ -438,13 +451,7 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
     .unwrap();
     assert_eq!(read_movement_intent(&native, native_unit), native_intent);
     native.advance(20);
-    assert_eq!(
-        *native.app.world().get::<Position>(native_unit).unwrap(),
-        after,
-        "picker motion must equal ordinary sourced spell execution; picker={:?}; native={:?}",
-        h.inbox.log,
-        native.inbox.log
-    );
+    assert_native_skull_bash_motion(&native, native_unit, native_before);
     assert!(
         h.inbox
             .log
