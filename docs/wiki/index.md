@@ -1,3 +1,4 @@
+- [Model geometry](systems/model-geometry.md) — explicit scaled TC player defaults for missing native model-info; authored geometry wins, native aggro/radius proof in progress.
 - [Academy current Retail partial](systems/boss-scripts.md#academy-current-retail-partial--2026-10-21) — Doragosa ignoredRED→COMPOSITE6GREEN Normal/Follower, current lanes/native flight/credit/reset; Ancient/Crawth immunity ingress and Vexamus placement remain named gaps.
 - [TWW Rookery Kyrioss](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21) — source-explicit LittleWigs/native70448 clocks, COMPOSITE4GREEN Normal/Follower; producer and named dummy/phase/Dash gaps, publication pending.
 - [Published companion fixture](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21) — ty835 stale53453 absence replaced with real99104/3141/53453 lifecycle;206-ID source scan clean, focused proof pending capacity.

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use shared::components::{ModelDisplay, Npc, Player, UnitScale};
 
 use crate::auras::{ActiveAuras, handlers::MOD_DETECTED_RANGE};
-use crate::scripted_ai::model_reach::ModelReaches;
+use crate::scripted_ai::model_reach::{ModelReaches, creature_combat_reach};
 use crate::world_data::WorldData;
 
 const BASE_ATTACK_DISTANCE: f32 = 15.0;
@@ -132,14 +132,9 @@ impl AggroDistance<'_, '_> {
         if player {
             return Some(PLAYER_COMBAT_REACH * scale);
         }
-        let reach = display.and_then(|display| self.models.as_deref()?.0.get(&display.display_id));
-        if reach.is_none() {
-            error!(
-                ?unit,
-                "Cannot evaluate creature aggro: authored model combat reach is missing"
-            );
-        }
-        reach.map(|reach| reach * scale)
+        let display = display?;
+        let models = self.models.as_deref()?;
+        Some(creature_combat_reach(models, display.display_id, scale))
     }
 }
 

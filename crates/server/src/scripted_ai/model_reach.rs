@@ -1,4 +1,5 @@
-//! Unit combat reach (TC a352b1fa `Unit::GetCombatReach`) from source model info.
+//! Authored unit reach and the approved `MISSING_MODEL_INFO_TC_PLAYER_DEFAULTS_SCALED`
+//! project policy. TC a352b1fa supplies the default dimensions, not missing-row admission.
 use bevy::prelude::*;
 use shared::components::{ModelDisplay, Player, Position, UnitScale};
 use std::collections::HashMap;
@@ -19,16 +20,27 @@ pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Resul
     Ok(ModelReaches(rows.collect::<rusqlite::Result<_>>()?))
 }
 
-/// A player's default reach, or a creature's model reach (`Creature::SetDisplayId`);
-/// both times its object scale. `None` for a creature display without source model info.
+/// Authored model reach wins; an actual display missing model-info uses the approved
+/// TC player default. `UnitScale` already includes creature and display scale.
+pub(crate) fn creature_combat_reach(models: &ModelReaches, display: u32, scale: f32) -> f32 {
+    models
+        .0
+        .get(&display)
+        .copied()
+        .unwrap_or(PLAYER_COMBAT_REACH)
+        * scale
+}
+
+/// A player's default reach, or a creature's authored/project-default reach.
+/// Missing display identity or an uninitialized source catalog remains unavailable.
 pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
     let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
     if world.get::<Player>(unit).is_some() {
         return Some(PLAYER_COMBAT_REACH * scale);
     }
     let display = world.get::<ModelDisplay>(unit)?.display_id;
-    let reach = world.get_resource::<ModelReaches>()?.0.get(&display)?;
-    Some(reach * scale)
+    let models = world.get_resource::<ModelReaches>()?;
+    Some(creature_combat_reach(models, display, scale))
 }
 
 /// `WorldObject::GetDistance(obj)` (Object.cpp:430): exact 3D distance minus both
