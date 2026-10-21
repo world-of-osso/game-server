@@ -125,6 +125,7 @@ fn encounter_coverage_azureblade_native_bounded_rotation_and_image_chain() {
                     .resource::<SpellStore>()
                     .get(IMAGE)
                     .unwrap()
+                    .misc
                     .cast_time
                     .unwrap()
                     .base_ms as f32
