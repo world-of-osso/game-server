@@ -3,7 +3,7 @@ use super::*;
 /// Advance authoritative time without wall-clock sleeping.
 fn elapse(app: &mut App, millis: u64) {
     app.world_mut()
-        .resource_mut::<Time>()
+        .resource_mut::<Time<bevy::time::Real>>()
         .advance_by(std::time::Duration::from_millis(millis));
     receive_queue(app.world_mut());
 }

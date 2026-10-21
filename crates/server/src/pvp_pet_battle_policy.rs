@@ -9,7 +9,7 @@ const PET_BATTLE_PVP_MATCHMAKING: (u64, u64) = (3, 10);
 const PET_BATTLE_PVP_XP: fn(u8, u8) -> u32 = earned_xp;
 
 pub(super) fn now(world: &World) -> Duration {
-    world.resource::<Time>().elapsed()
+    world.resource::<Time<bevy::time::Real>>().elapsed()
 }
 
 pub(super) fn sort_queue_by_wait(world: &mut World) {
