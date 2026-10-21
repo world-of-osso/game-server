@@ -75,6 +75,34 @@ fn in_front(yaw: f32, offset: Vec3) -> bool {
     relative_angle.abs() <= std::f32::consts::FRAC_PI_2
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_model_info_radius_scales_defaults_and_preserves_authored_radius() {
+        let mut world = World::new();
+        world.insert_resource(super::super::toy_requirements::fixture());
+        let missing = world
+            .spawn((ModelDisplay { display_id: 124440 }, UnitScale(10.0)))
+            .id();
+        assert_eq!(bounding_radius(&world, missing).unwrap(), 0.389 * 10.0);
+        let sourced = world
+            .spawn((ModelDisplay { display_id: 42247 }, UnitScale(2.0)))
+            .id();
+        assert_eq!(bounding_radius(&world, sourced).unwrap(), 12.0);
+        let caster = world.spawn(crate::maps::InMap::continent(0)).id();
+        world
+            .entity_mut(missing)
+            .insert(crate::maps::InMap::continent(0));
+        assert!(check_boundary(&world, caster, missing, 9.0).is_ok());
+        assert!(matches!(
+            check_boundary(&world, caster, missing, 16.0),
+            Err(CastFailure::NotInFront)
+        ));
+    }
+}
+
 fn check_boundary(
     world: &World,
     caster: Entity,
