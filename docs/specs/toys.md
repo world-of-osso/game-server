@@ -20,6 +20,8 @@ Do not add these three Toy rows until a real contract is established and approve
 
 The runtime still applies SummonProperties/target/script preflight. Prepared-copy census admission is distinct from behavior-complete toys, and canonical data publication remains separate.
 
+Global source interaction markers refuse summoned toys even after template import: nonzero NPC flags, spellclick rows, SmartAI rows, VehicleId, or gameobject summon/use effects in their normal-difficulty trigger closure. Explicit existing toyfx spittoon88387, brew88579, beanbag193478, wormhole198156 and fireworks219387 contracts remain named gaps. Only the proven Katy156833/261602 mailbox marker is exempt, through `toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry`; other/new markers still refuse. Vargoth118191's unproved gossip is a named gap. Blank script names and item names never establish actor-only status.
+
 ## Census-driven generic effect160
 
 - [x] Native effect160 (`FORCE_CAST_2`) queues a normal cast by the hit unit toward the original caster after the parent's SpellGo, preserving the child's ordinary cast time, resource/cooldown and crowd-control checks (TC a352b1fa `SpellEffects.cpp:851–892`). No per-toy script or cosmetic whitelist substitutes for this generic dispatch.

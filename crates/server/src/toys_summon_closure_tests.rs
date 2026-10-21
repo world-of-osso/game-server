@@ -144,7 +144,13 @@ fn toy_coverage_summon_closure_actual_trophy_use_spawns_both_authored_actors_and
         assert!(h.app.world().get_entity(*actor).is_err());
     }
     assert_eq!(
-        activate(&mut h, 186501)[0].error.as_deref(),
+        activate_at(
+            &mut h,
+            186501,
+            Some([destination.x, destination.y, destination.z])
+        )[0]
+        .error
+        .as_deref(),
         Some("OnCooldown")
     );
 }
