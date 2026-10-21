@@ -382,6 +382,34 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
 }
 
 #[test]
+#[ignore = "explicit native simulator-leader unsafe approach across idle Stockade sources"]
+fn simulator_leader_does_not_pursue_through_unpulled_native_sight() {
+    let _rng_scope = crate::random::seed_scope(28);
+    let mut run = spawn_run(28, &mut None).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let owner = run.party.owner;
+    let origin = *run.app.world().get::<Position>(owner).unwrap();
+    let enemy = run.actors[&20375735];
+    // Native source coordinates put idle20375698/20375677 on this approach.
+    // Engage the actual Slag Fury without moving the party or granting spells.
+    crate::creature_aggro::attack_start(run.app.world_mut(), enemy, owner);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    println!(
+        "LEADER_APPROACH {}",
+        super::diagnostics::inspect_unit(run.app.world(), None, owner)
+    );
+    assert_eq!(
+        run.app.world().get::<Position>(owner).unwrap(),
+        &origin,
+        "the autonomous leader must respect the same idle native sight hold as non-tank followers"
+    );
+}
+
+#[test]
 #[ignore = "explicit current Stockade32 seed28 native Slag Fury isolated-leader Death"]
 fn stockade_seed_twenty_eight_keeps_the_native_leader_alive_through_the_route() {
     let report = run(28).unwrap();
