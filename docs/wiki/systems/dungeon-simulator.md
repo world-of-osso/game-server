@@ -16,7 +16,7 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 Data commits507a7393f/70383c5a1 reduce Stockade99→59 pulls (40 removed, none added), preserving Moloch→Hogger→Overheat; boss steps25/44/58. Azure179→66 pulls (115 removed,2 added) reaches Leymor at23 rather than51; subsequent bosses42/64/65. Seven focused route tests pass, including real boss order/Leymor-first-floor checks and five algorithm cases. Fresh seeded qualification remains pending; older batches below cover older routes only.
 
-The native Felguard last-hit/evade fixture reproduces a separate simulator defect: after40 simulated seconds the actor remains `Returning` because frozen movement had no home destination/arrival. Fix9451e194d adds frozen-edge home travel using native HomePosition→ScriptedPath.home→SpawnPoint priority and shares native resource/addon/pose/home-hook reset. Targeted GREEN and native arrival controls remain pending.
+The native Felguard last-hit/evade fixture reproduces a separate simulator defect: after40 simulated seconds the actor remains `Returning` because frozen movement had no home destination/arrival. Fix9451e194d adds frozen-edge home travel using native HomePosition→ScriptedPath.home→SpawnPoint priority and shares native resource/addon/pose/home-hook reset. Revision092a20a42 gives actual Felguard evade/home/Idle/Still GREEN11.57s, retained native return-to-spawn5GREEN and graph/census4GREEN. Native build5m47s exits0 without warnings. Seeded route qualification remains pending.
 
 ## Native-height acceptance and Azure baseline —2026-10-21
 
