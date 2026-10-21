@@ -142,6 +142,14 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
     follower.owner = unit;
     utility_tests::start_enemy_fireball(&mut h, unit);
     let enemy = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(enemy)
+        .insert(crate::networking::CombatTarget(Some(unit)));
+    assert_eq!(
+        super::ai::engaged_enemies(h.app.world_mut(), &follower, unit, &[unit]).len(),
+        1
+    );
     assert!(
         h.app
             .world()
