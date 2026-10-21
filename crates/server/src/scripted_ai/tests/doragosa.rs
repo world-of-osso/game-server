@@ -77,7 +77,6 @@ fn encounter_coverage_doragosa_ordinary_native_missiles_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "RED: current Retail Doragosa Lua-clock port absent"]
 fn encounter_coverage_doragosa_first_missiles_uses_current_retail_clock() {
     let (mut h, boss, _) = doragosa_copy(205);
     h.engage(boss);
