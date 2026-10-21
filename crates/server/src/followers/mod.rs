@@ -6,8 +6,6 @@ mod kit;
 mod kit_ai;
 mod kit_area;
 mod kit_interrupt;
-#[cfg(test)]
-mod utility_policy_tests;
 mod pack_identity;
 mod party;
 mod pull_admission;
@@ -50,6 +48,8 @@ mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
+#[cfg(test)]
+mod utility_policy_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
