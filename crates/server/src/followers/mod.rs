@@ -2,6 +2,8 @@
 mod ai;
 mod catalog;
 mod hazards;
+#[cfg(test)]
+mod holy_priest_tests;
 mod kit;
 mod kit_ai;
 mod kit_area;
