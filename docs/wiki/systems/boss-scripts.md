@@ -1,5 +1,11 @@
 # Boss scripts
 
+## TWW City of Threads Orator — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#tww-city-of-threads--orator-source-boundary). Source TC a352b1fa `boss_orator_krix_vizk.cpp`; existing216619/2907/map2669bit1 binding/spawn/template. Ignored RED3147cf93a genuinely fails native Energy initialization and4500ms Subjugate; source67a01c239 gives4GREEN33.43s (`orator-native-green1.log`): Normal/Follower1250ms Subjugate damage, real selector434808→3000ms Terrorize434779 damage, source0/+4 alternating1200/800ms Energy→100→434829→actual434832 periodic damage/removalEnergy0, copy-local death credit and default30s evade/FAIL. Source flags retain costs, cast times, aura checks and cooldowns; no instant replacement. No database changes required for this installed primary.
+
+Chains395/property31997 is native Shape5 disk, inner10/outer80, height30 with Z offset10; existing sphere-only aura backend rejects it. Lingering434923/property32026 is a source-scripted sphere with6000ms1→18 override-scale curve and Player-only entry/exit434926. These area backends, Chains native148 pull, death barrier35803, conversations and display-power527 remain separate remainder work;4GREEN is core proof, not whole-boss/native-clear certification. Exact area/core TC sources and per-actor receipts live in game-engine `data/diagnostics/follower-dungeons-2026-10-21/`.
+
 ## TWW Rookery Kyrioss — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#tww-rookery--kyrioss-source-boundary). No TC a352b1fa Rookery AI exists. `tww_rookery.rs` explicitly implements LittleWigs2777a9d5 schedules for primary209230/2816/map2648bit0 using native70448 cast times, targets and effects. First Thunder1214325/5.1s, Wild474018/9.4s and actual Torrent1214315/16s; warning444123 is not cast. Accepted Thunder/Wild starts own their source first42.5/41.3s and alternating15.8/40s repeats. Reset clears counters/clocks. `encounter_summons.py --encounter kyrioss` prepares only the explicit `littlewigs_kyrioss` binding on an independent database; no new stats, spawns or205 rows. Lead owns publication.

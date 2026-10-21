@@ -9,7 +9,7 @@ const TERRORIZE_SELECTOR: u32 = 434808;
 const TERRORIZE: u32 = 434779;
 const INDOCTRINATION: u32 = 434829;
 
-fn fixture(difficulty: u32) -> (Harness, Entity, InMap) {
+pub(super) fn fixture(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = encounter_fixture(
         ORATOR,
         2669,
@@ -26,7 +26,7 @@ fn fixture(difficulty: u32) -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
-fn pull(h: &mut Harness, boss: Entity) {
+pub(super) fn pull(h: &mut Harness, boss: Entity) {
     let player = h.player();
     let mut position = *h.app.world().get::<Position>(boss).unwrap();
     position.x += 3.0;
@@ -34,7 +34,7 @@ fn pull(h: &mut Harness, boss: Entity) {
     h.engage(boss);
 }
 
-fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
+pub(super) fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
     h.inbox(0)
         .spell_gos
         .iter()
@@ -165,22 +165,18 @@ fn energy(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "RED first: TC Orator combat is unported"]
 fn encounter_coverage_tww_orator_normal_native_rotation_and_credit() {
     rotation(1);
 }
 #[test]
-#[ignore = "RED first: TC Orator combat is unported"]
 fn encounter_coverage_tww_orator_follower205_native_rotation_and_credit() {
     rotation(205);
 }
 #[test]
-#[ignore = "RED first: TC Orator Energy/Indoctrination is unported"]
 fn encounter_coverage_tww_orator_normal_native_energy_and_indoctrination() {
     energy(1);
 }
 #[test]
-#[ignore = "RED first: TC Orator Energy/Indoctrination is unported"]
 fn encounter_coverage_tww_orator_follower205_native_energy_and_indoctrination() {
     energy(205);
 }
