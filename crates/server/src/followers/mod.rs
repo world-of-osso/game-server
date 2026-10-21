@@ -2,6 +2,7 @@
 mod ai;
 mod catalog;
 mod hazards;
+mod healer_context;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;

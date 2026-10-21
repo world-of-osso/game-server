@@ -40,6 +40,7 @@ pub(super) struct Patient {
     pub periodic_remaining: f32,
     pub score: f32,
     pub emergency: bool,
+    pub position: Option<Vec3>,
 }
 
 #[derive(Clone, Debug)]
@@ -59,6 +60,8 @@ pub(super) struct TriageContext<'a> {
     pub patients: Vec<Patient>,
     pub candidates: Vec<Candidate>,
     pub mana_fraction: Option<f32>,
+    pub upcoming: Vec<super::healer_context::UpcomingDamage>,
+    pub clusters: Vec<super::healer_context::InjuryCluster>,
 }
 
 impl TriageContext<'_> {
@@ -186,6 +189,7 @@ pub(super) fn read_patient(world: &World, target: Entity) -> Option<Patient> {
         periodic_remaining: periodic,
         score: uncovered / health.max * weight,
         emergency: death <= EMERGENCY_SECONDS || health.current / health.max <= EMERGENCY_HEALTH,
+        position: super::healer_context::position(world, target),
     })
 }
 
@@ -221,17 +225,16 @@ fn read_candidates(ctx: &TriageContext<'_>) -> Vec<Candidate> {
 }
 
 fn read_candidate(ctx: &TriageContext<'_>, entry: &Entry, patient: &Patient) -> Option<Candidate> {
-    if patient.score <= 0.0
+    let preparing = entry.slot == Slot::Hot && ctx.preparing(patient.entity);
+    if (patient.score <= 0.0 && !preparing)
         || !kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
     {
         return None;
     }
-    let enough_injured = ctx
-        .patients
-        .iter()
-        .filter(|patient| patient.score > 0.0)
-        .count()
-        >= entry.conditions.min_injured;
+    let enough_injured = entry.conditions.min_injured == 0
+        || ctx
+            .injury_cluster(entry.spell_id, patient.entity)
+            .is_some_and(|cluster| cluster.members.len() >= entry.conditions.min_injured);
     if !enough_injured {
         return None;
     }
@@ -249,8 +252,12 @@ fn read_candidate(ctx: &TriageContext<'_>, entry: &Entry, patient: &Patient) -> 
         .filter(|(pool, _)| *pool == CostPool::Power(shared::components::PowerType::Mana))
         .map(|(_, amount)| amount.max(0.0))
         .sum();
-    let need = patient.missing_health + patient.incoming_per_second * EMERGENCY_SECONDS
-        - patient.periodic_remaining;
+    let need = if preparing {
+        healing
+    } else {
+        patient.missing_health + patient.incoming_per_second * EMERGENCY_SECONDS
+            - patient.periodic_remaining
+    };
     Some(Candidate {
         decision: Decision {
             spell_id: entry.spell_id,
@@ -326,6 +333,7 @@ pub(super) fn update(
     entries: &[Entry],
 ) -> Outcome {
     cancel_topped_cast(world, caster);
+    let enemies = ai::engaged_enemies(world, follower, caster, party);
     let mut patients: Vec<_> = party
         .iter()
         .copied()
@@ -339,9 +347,8 @@ pub(super) fn update(
             .then_with(|| right.score.total_cmp(&left.score))
             .then_with(|| left.entity.to_bits().cmp(&right.entity.to_bits()))
     });
-    let safe = patients
-        .iter()
-        .all(|patient| patient.score == 0.0 && !patient.emergency);
+    let upcoming = super::healer_context::read_upcoming(world, &enemies, &patients);
+    let clusters = super::healer_context::read_clusters(world, caster, entries, &patients);
     let mut ctx = TriageContext {
         world,
         caster,
@@ -349,11 +356,16 @@ pub(super) fn update(
         entries,
         patients,
         candidates: Vec::new(),
+        upcoming,
+        clusters,
         mana_fraction: world
             .get::<Mana>(caster)
             .filter(|mana| mana.max > 0.0)
             .map(|mana| mana.current / mana.max),
     };
+    let safe = ctx.patients.iter().all(|patient| {
+        patient.score == 0.0 && !patient.emergency && !ctx.preparing(patient.entity)
+    });
     ctx.candidates = read_candidates(&ctx);
     let (decision, owned) = match super::healer_policy::decide(&ctx) {
         SpecVerdict::Cast { decision, owned } => (Some(decision), owned),

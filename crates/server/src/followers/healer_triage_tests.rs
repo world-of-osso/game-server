@@ -254,7 +254,6 @@ fn healer_triage_topped_patient_cancels_native_direct_cast_before_mana_spend() {
 }
 
 #[test]
-#[ignore = "next shared slice: real scripted-damage preparation"]
 fn healer_triage_scripted_deadline_prepares_full_health_tank() {
     let (mut h, healer) = fixture();
     let tank = h.caster;
@@ -314,7 +313,6 @@ fn healer_triage_scripted_deadline_prepares_full_health_tank() {
 }
 
 #[test]
-#[ignore = "next shared slice: native-radius injury clusters"]
 fn healer_triage_native_radius_rejects_scattered_injury_then_accepts_stack() {
     let (mut h, healer) = super::super::kit_tests::at_level(209072, 40, |_| {});
     let anchor = h.caster;
