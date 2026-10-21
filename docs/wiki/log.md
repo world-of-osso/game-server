@@ -1,3 +1,7 @@
+## 2026-10-21 — Surviving formation native admission
+
+[Native first191164 Death→living-member admission](systems/dungeon-simulator.md#surviving-formation-admission-boundary-2026-10-21): corrected initial-admission ordering gives genuine missing-GUID RED5.89s→two native GREEN22.52s. Candidate51c652a82/frozen40d95b0 retainsStockade10/10;Azure0/10 but6Leymor Deaths, no missing-leader refusals. In-range full-mana Crenna is actively healing before tank Death; no inactivity/balance inference.
+
 ## 2026-10-21 — Required-boss phase hold
 
 [Native Moloch Vanish boundary](systems/dungeon-simulator.md#required-boss-phase-hold-2026-10-21): genuine no-next-pack error RED reproduced; required-boss alive→hold fix15447ad03 committed, other-pullable and absent-boss native controls pass pre-fix. Focused GREEN and fresh seeded acceptance pending. No geometry implementation duplicated; shared model-default work remains lead-owned.
