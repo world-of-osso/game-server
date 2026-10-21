@@ -1,5 +1,21 @@
 # Boss scripts
 
+## Umbrelskul Lua-clock partial boundary
+
+- Explicit lead-approved partial Lua-clock/native70448 port: Umbrelskul186738/map2515, saved ordinal3/encounter2584/native completionbit2. LittleWigs2777a9d `Dragonflight/TheAzureVault/Umbrelskul.lua` supplies ability countdowns, not a complete executable TC script.
+- Dragon Strike384978: initial7.4s ordinary victim request, native2.5s casting/direct damage/periodic aura/threat effects. Lua schedules its next8.4s Normal/Follower or15.3s Mythic countdown only on actual successful cast; interrupted attempts must not produce a fabricated success or retry.
+- Crystalline Roar384699: direct native damage-ability request at Lua12.2s countdown, then23.1s Normal/Follower or105.6s Mythic request countdowns, waiting for active native casting. Native target25 and caster-line129/radius/width/damage remain authoritative. This partial direct ability request does not claim upstream384696 dummy/target-selection scripting.
+- Named gaps: `UMBRELSKUL_ENERGY_PHASE_UNSOURCED` (Arcane Eruption385075 and Unleashed Destruction385399/388804 energy logic), `UMBRELSKUL_BRITTLE_CRYSTALS_UNSOURCED` (health/181089/386746/crystal spawn and Fracture), `UMBRELSKUL_ROAR_SELECTOR_UNSOURCED` (384696→384699 source script unavailable). Do not infer dummy forwarding or new summons from spell names/base-point IDs alone.
+- `encounter_summons.py --encounter umbrelskul` authenticates blank TDB source identity and installs explicitly local `boss_umbrelskul` on independent copies only; preserve all actor/difficulty/addon/model/population/credit data. No synthetic follower205 row. Native scheduled damage/reset/isolated credit require proof; no full encounter/follower/native clear/loot/persistence claim.
+
+## Azureblade Lua-clock partial boundary
+
+- Lead explicitly approves a partial Lua-clock combat port for Azureblade186739/map2515, prioritizing follower205. LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `Dragonflight/TheAzureVault/Azureblade.lua` supplies schedules/counts; this is not TC combat or full Retail-phase parity.
+- Literal initial request clocks: Summon Draconic Image384223 at3.3s, Arcane Cleave372222 at5.2s, Ancient Orb385578 at10.6s. Lua first-phase counters bound each to two requests, repeats14.6/13.4/15.8s respectively. Native casts/cooldowns remain ordinary; due events wait while casting. Requests rejected by native admission get no invented retry policy.
+- Native70448 supplies target104 destination-facing cone/radius/damage for372222, self140→373658 missile32→373582 summon28/190187/property64 for384223, explicit enemy6 + destination87/caster-front47/AT for385578. Explicit hostile requests select the current victim; native selectors retain area/child destinations. No hard-coded radius, damage, summon location or alternate spell.
+- `encounter_summons.py --encounter azureblade` prepares only independent copies: authenticate blank TDB186739 source binding, install explicitly local Lua-backed `boss_azureblade`, import actual190187 base/models + authored Normal1/Mythic23 rows. Do not manufacture205 stats or assert TDB supplied this script name. Preserve installed Azure saved ordinal1/encounter2585 despite DB2 bit3.
+- Named gaps: `AZUREBLADE_ENERGY_PHASE_UNSOURCED` (energy initialization/drain, Draconic Ritual/center movement, Overwhelming Energy and four-illusion phase/recovery), `AZUREBLADE_IMAGE_AI_UNSOURCED` (190187 has no authored AI), `AZUREBLADE_ORB_AREA_BEHAVIOR_UNPROVEN` (native AT only unless separately proven). Lua approximate32.9/61.7s energy countdowns do not fabricate those missing mechanics. Native child summons/initial rotation/lifecycle require targeted proof; whole-fight/follower clear/visual/loot/persistence remain unproved.
+
 ## Blood Furnace Broggok source boundary
 
 - Broggok17380 uses pinned TC a352b1fa `boss_broggok.cpp`, published1924/map542bit2 (source ordinal1), ordinary70448 spell admission and map-copy lifecycle.

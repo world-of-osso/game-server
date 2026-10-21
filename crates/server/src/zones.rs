@@ -1,3 +1,4 @@
+use crate::random as rand;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{

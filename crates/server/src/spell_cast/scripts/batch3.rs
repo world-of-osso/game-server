@@ -1,4 +1,5 @@
 //! Bounded scripts derived from local Retail 12.1.0.69933 tooltip/effect rows.
+use crate::random as rand;
 use bevy::prelude::*;
 
 use super::{reduce_cooldown, script_effect_value};
