@@ -5,10 +5,13 @@ use shared::components::PowerType;
 
 use super::{ActiveAuras, AuraEffectState, AuraInstance, handlers};
 
+const GAIN: i32 = 0;
+const LOSS: i32 = 1;
+
 fn reaches_threshold(direction: i32, old: Option<f32>, new: f32, threshold: f32) -> bool {
     match direction {
-        0 => old.is_none_or(|old| old < threshold) && new >= threshold,
-        1 => old.is_none_or(|old| old > threshold) && new <= threshold,
+        GAIN => old.is_none_or(|old| old < threshold) && new >= threshold,
+        LOSS => old.is_none_or(|old| old > threshold) && new <= threshold,
         // TC's switch falls through for other directions.
         _ => true,
     }

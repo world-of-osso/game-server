@@ -77,6 +77,7 @@ pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
 pub const EFFECT_LEAP: u32 = 29;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 pub const EFFECT_ATTACK_ME: u32 = 114;
+pub const EFFECT_SANCTUARY_2: u32 = 176;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
@@ -100,7 +101,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_INSTAKILL => instakill,
-        176 => super::sanctuary::apply,
+        EFFECT_SANCTUARY_2 => super::sanctuary::apply,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,

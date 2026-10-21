@@ -71,7 +71,6 @@ fn hostile_duration(h: &mut Harness, id: u32) -> u32 {
 }
 
 #[test]
-#[ignore = "RED: generic245 dispel duration consumer"]
 fn census_three_245_native_magic_reduction_and_removal() {
     let mut h = fixture(8, &[205708, 235450]);
     let baseline = hostile_duration(&mut h, 205708);
@@ -84,7 +83,6 @@ fn census_three_245_native_magic_reduction_and_removal() {
 }
 
 #[test]
-#[ignore = "RED: generic245 additive matching dispel modifiers"]
 fn census_three_245_native_modifiers_sum_without_changing_positive_duration() {
     let mut h = fixture(8, &[205708, 235450, 454842, 774]);
     let baseline = hostile_duration(&mut h, 205708);
@@ -116,7 +114,6 @@ fn census_three_245_native_modifiers_sum_without_changing_positive_duration() {
 }
 
 #[test]
-#[ignore = "RED:262 existing masked state consumer lacks support recognition"]
 fn census_three_262_native_masked_state_permission_has_no_unknown_warning() {
     let mut h = fixture(11, &[391528, 18562]);
     let swiftmend = world_db().unwrap().store.get(18562).unwrap();
@@ -142,7 +139,6 @@ fn census_three_262_native_masked_state_permission_has_no_unknown_warning() {
 }
 
 #[test]
-#[ignore = "RED:396 raw-power upward crossing consumer"]
 fn census_three_396_native_arcane_charge_crossing_not_percent_or_repeated_gain() {
     let mut h = fixture(8, &[190427, 36032]);
     remove(&mut h, 190427);
@@ -169,7 +165,6 @@ fn census_three_396_native_arcane_charge_crossing_not_percent_or_repeated_gain()
 }
 
 #[test]
-#[ignore = "RED:396 inclusive application-time check"]
 fn census_three_396_native_application_at_exact_amount_triggers_once() {
     let mut h = fixture(8, &[190427, 36032]);
     remove(&mut h, 190427);
@@ -185,7 +180,6 @@ fn census_three_396_native_application_at_exact_amount_triggers_once() {
 }
 
 #[test]
-#[ignore = "RED:396 native energy loss/refill crossing"]
 fn census_three_396_native_loss_casts_authored_energy_child() {
     let mut h = fixture(4, &[469779, 381623]);
     apply(&mut h, 469779, 1);
@@ -197,7 +191,6 @@ fn census_three_396_native_loss_casts_authored_energy_child() {
 }
 
 #[test]
-#[ignore = "RED:396 native gain from ordinary resource regeneration"]
 fn census_three_396_native_regeneration_crossing_and_refresh_control() {
     let mut h = fixture(4, &[409462, 409463]);
     super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -1.0).unwrap();
@@ -220,7 +213,6 @@ fn engage(h: &mut Harness, attacker: Entity, victim: Entity, threat: f32) {
 }
 
 #[test]
-#[ignore = "RED:176 native sanctuary outside dungeons ends PvE combat"]
 fn census_three_176_native_player_world_combat_stop() {
     let mut h = fixture(4, &[98877]);
     let npc = h.npc;
@@ -251,7 +243,6 @@ fn census_three_176_native_player_world_combat_stop() {
 }
 
 #[test]
-#[ignore = "RED:176 native nonplayer sanctuary zeros only its own threat reference"]
 fn census_three_176_native_nonplayer_resets_target_threat_not_entire_table() {
     let mut h = fixture(4, &[98877]);
     let attacker = super::test_harness::spawn_npc(&mut h.app, 4.0);
@@ -294,7 +285,6 @@ fn census_three_176_native_nonplayer_resets_target_threat_not_entire_table() {
 }
 
 #[test]
-#[ignore = "RED:176 player dungeon uses target-only threat reset"]
 fn census_three_176_native_dungeon_player_preserves_combat_reference() {
     let mut h = fixture(4, &[98877]);
     let npc = h.npc;
@@ -332,7 +322,6 @@ fn census_three_176_native_dungeon_player_preserves_combat_reference() {
 }
 
 #[test]
-#[ignore = "RED:176 PvP combat is suppressed one-sided and resumes on interaction"]
 fn census_three_176_native_pvp_suppression_preserves_opponents_reference() {
     let mut h = fixture(4, &[98877]);
     let opponent = super::test_harness::spawn_player(&mut h.app, 1, 4.0);
@@ -364,7 +353,6 @@ fn census_three_176_native_pvp_suppression_preserves_opponents_reference() {
 }
 
 #[test]
-#[ignore = "RED:176 sanctuary fizzles harmful missiles launched before sanctuary"]
 fn census_three_176_native_sanctuary_fizzles_inflight_frostbolt_only() {
     let mut h = fixture(8, &[116, 228597, 98877]);
     h.app
