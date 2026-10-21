@@ -61,6 +61,37 @@ def parse_profile(text):
     return profile
 
 
+def sample_mean(value):
+    return value["mean"] if isinstance(value, dict) else value
+
+
+def flatten_actions(stats, actor):
+    for action in stats:
+        if action["type"] == "damage":
+            damage = sample_mean(action.get("actual_amount", 0))
+            hits = sample_mean(action.get("num_direct_results", 0))
+            hits += sample_mean(action.get("num_tick_results", 0))
+            yield {"actor": actor, "spell_id": action.get("id"), "name": action["name"],
+                   "count": sample_mean(action["num_executes"]), "hits": hits,
+                   "damage": damage, "average_hit": damage / hits if hits else 0}
+        yield from flatten_actions(action.get("children", []), actor)
+
+
+def normalize_simc(report):
+    player, = report["sim"]["players"]
+    collected = player["collected_data"]
+    actions = list(flatten_actions(player["stats"], "player"))
+    for pet, stats in player.get("stats_pets", {}).items():
+        actions.extend(flatten_actions(stats, pet))
+    total = sum(row["damage"] for row in actions)
+    for row in actions:
+        row["share_pct"] = row["damage"] / total * 100 if total else 0
+    return {"dps": sample_mean(collected["dps"]),
+            "hps": sample_mean(collected.get("hps", 0)),
+            "stats": collected["buffed_stats"], "actions": actions,
+            "buffs": {buff["name"]: buff.get("uptime", 0) for buff in player["buffs"]}}
+
+
 def write_manifests(simc, output):
     output.mkdir(parents=True, exist_ok=True)
     for spec, suffix in SPECS.items():

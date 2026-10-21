@@ -33,6 +33,26 @@ actions+=/judgment,if=holy_power<5
         self.assertEqual(profile["equipment"][1]["item_level_override"], 344)
         self.assertEqual(profile["actions"], ["actions=auto_attack", "actions+=/judgment,if=holy_power<5"])
 
+    def test_action_damage_does_not_double_count_compound_children(self):
+        report = {"sim": {"players": [{"collected_data": {
+            "dps": {"mean": 10}, "hps": {"mean": 0},
+            "buffed_stats": {"attribute": {"strength": 100}, "stats": {"crit_pct": 0.25}}},
+            "stats": [{"id": 1, "name": "parent", "type": "damage",
+                       "num_executes": {"mean": 2}, "compound_amount": 300,
+                       "actual_amount": {"mean": 100}, "num_direct_results": {"mean": 2},
+                       "children": [{"id": 2, "name": "periodic", "type": "damage",
+                                     "num_executes": {"mean": 0}, "compound_amount": 200,
+                                     "actual_amount": {"mean": 200}, "num_tick_results": {"mean": 4}}]}],
+            "buffs": [{"name": "test_buff", "uptime": 25.0}]}]}}
+        result = PARITY.normalize_simc(report)
+        self.assertEqual(result.get("dps"), 10)
+        rows = result["actions"]
+        self.assertEqual(sum(row["damage"] for row in rows), 300)
+        self.assertEqual(rows[0]["average_hit"], 50)
+        self.assertEqual(rows[1]["average_hit"], 50)
+        self.assertAlmostEqual(rows[0]["share_pct"], 100 / 3)
+        self.assertEqual(result["buffs"], {"test_buff": 25.0})
+
     def test_malformed_gear_fails_instead_of_dropping_identity(self):
         with self.assertRaisesRegex(ValueError, "item.*id"):
             PARITY.parse_profile('mage="Fire"\nhead=made_up,enchant_id=7961\n')
