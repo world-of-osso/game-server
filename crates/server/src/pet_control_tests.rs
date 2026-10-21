@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use rusqlite::{Connection, OpenFlags};
-use shared::components::{PowerType, UnitPowers, UnitSummonedBy};
+use shared::components::{PowerType, UnitFactionTemplate, UnitPowers, UnitSummonedBy};
 use shared::protocol::{CombatChannel, CombatLogKind};
 
 use super::*;

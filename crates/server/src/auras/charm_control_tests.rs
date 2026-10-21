@@ -147,6 +147,14 @@ fn charm_control_native_605_routes_input_to_npc_not_priest_and_rejects_old_epoch
         moved,
         "stale body input cannot move possessed unit"
     );
+    let far_enemy = spawn_npc(&mut h.app, 20.0);
+    order(&mut h, COMMAND_ATTACK, Some(far_enemy));
+    h.advance(20);
+    assert_eq!(
+        *h.app.world().get::<Position>(h.npc).unwrap(),
+        moved,
+        "PossessedAI attacks on command but must not autonomously chase"
+    );
     order(&mut h, COMMAND_ABANDON, None);
     assert!(!has_aura(h.app.world(), h.npc, 605));
     assert!(h.app.world().get::<UnitCharm>(h.npc).is_none());
@@ -322,6 +330,66 @@ fn charm_control_native_605_attack_order_uses_charmer_duel_permission() {
             .unwrap()
             .victim,
         opponent
+    );
+    // TC Unit.cpp930-932 protects the duel from its opponent's controlled creature
+    // too. Exercise the actual post-hit spell damage boundary without a hit roll.
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(opponent)
+        .unwrap()
+        .current = 10.0;
+    let fireball = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(133)
+        .unwrap()
+        .clone();
+    crate::spell_cast::effects::deal_damage(
+        h.app.world_mut(),
+        &crate::spell_cast::effects::EffectCtx {
+            caster: h.npc,
+            spell: &fireball,
+            depth: 0,
+            dest: None,
+            chain_multiplier: 1.0,
+        },
+        opponent,
+        100.0,
+        false,
+        false,
+    );
+    assert_eq!(
+        h.health(opponent),
+        1.0,
+        "controlled-creature duel damage must not kill"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::duel::DuelDefeated>(opponent)
+            .is_some()
+    );
+    h.app
+        .world_mut()
+        .entity_mut(opponent)
+        .remove::<crate::duel::DuelDefeated>();
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(opponent)
+        .unwrap()
+        .current = 10.0;
+    h.advance(480);
+    assert_eq!(
+        h.health(opponent),
+        1.0,
+        "controlled-creature melee must also preserve the duelist"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::duel::DuelDefeated>(opponent)
+            .is_some()
     );
 }
 

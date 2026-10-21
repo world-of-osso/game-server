@@ -55,15 +55,23 @@ pub(crate) fn relation_between(
 fn match_state(state: Option<&PlayerPvpState>) -> Option<&shared::protocol::BattlegroundSnapshot> {
     state.and_then(|state| state.battleground.as_ref())
 }
-pub(crate) fn relation(world: &World, attacker: Entity, victim: Entity) -> Option<ArenaRelation> {
-    let controller = |entity| match world.get::<UnitSummonedBy>(entity) {
+/// TC GetControllingPlayer: a charm's controller precedes summon ownership. The
+/// entity without either relationship remains its own permission principal.
+pub(crate) fn controller(world: &World, entity: Entity) -> Entity {
+    if let Some(charm) = world.get::<shared::components::UnitCharm>(entity) {
+        return Entity::try_from_bits(charm.charmer).expect("server-owned charm controller");
+    }
+    match world.get::<UnitSummonedBy>(entity) {
         Some(owner) => Entity::try_from_bits(owner.0).expect("server-owned summon controller"),
         None => crate::game_objects::seaforium_bombs::find_caster_controller(world, entity)
             .unwrap_or(entity),
-    };
+    }
+}
+
+pub(crate) fn relation(world: &World, attacker: Entity, victim: Entity) -> Option<ArenaRelation> {
     relation_between(
-        world.get::<PlayerPvpState>(controller(attacker)),
-        world.get::<PlayerPvpState>(controller(victim)),
+        world.get::<PlayerPvpState>(controller(world, attacker)),
+        world.get::<PlayerPvpState>(controller(world, victim)),
         world.get::<InMap>(attacker).copied(),
         world.get::<InMap>(victim).copied(),
     )

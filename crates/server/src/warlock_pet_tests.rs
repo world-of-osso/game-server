@@ -4,7 +4,7 @@ use std::path::Path;
 use lightyear::prelude::{MessageReceiver, MessageSender};
 use rusqlite::{Connection, OpenFlags};
 use shared::components::{
-    Level, ModelDisplay, Npc, PowerType, UnitLevel, UnitPowers, UnitSummonedBy,
+    Level, ModelDisplay, Npc, PowerType, UnitFactionTemplate, UnitLevel, UnitPowers, UnitSummonedBy,
 };
 use shared::protocol::{CombatChannel, CombatLogKind};
 

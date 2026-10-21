@@ -345,6 +345,8 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
 }
 
 fn dueling(world: &World, caster: Entity, target: Entity) -> bool {
+    let caster = crate::pvp::arena_combat::controller(world, caster);
+    let target = crate::pvp::arena_combat::controller(world, target);
     crate::duel::dueling(world.get::<crate::duel::DuelOpponent>(caster), target)
 }
 

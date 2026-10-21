@@ -292,18 +292,24 @@ impl AttackRules<'_, '_> {
             })
     }
 
+    fn controller(&self, entity: Entity) -> Entity {
+        if let Ok(charm) = self.charms.get(entity) {
+            return charm.owner;
+        }
+        match self.summon_owners.get(entity) {
+            Ok(owner) => Entity::try_from_bits(owner.0).expect("server-owned summon controller"),
+            Err(_) => entity,
+        }
+    }
+
     fn arena_relation(
         &self,
         attacker: Entity,
         victim: Entity,
     ) -> Option<crate::pvp::arena_combat::ArenaRelation> {
-        let controller = |entity| match self.summon_owners.get(entity) {
-            Ok(owner) => Entity::try_from_bits(owner.0).expect("server-owned summon controller"),
-            Err(_) => entity,
-        };
         crate::pvp::arena_combat::relation_between(
-            self.arenas.get(controller(attacker)).ok(),
-            self.arenas.get(controller(victim)).ok(),
+            self.arenas.get(self.controller(attacker)).ok(),
+            self.arenas.get(self.controller(victim)).ok(),
             self.maps.get(attacker).copied().ok(),
             self.maps.get(victim).copied().ok(),
         )
@@ -318,8 +324,8 @@ impl AttackRules<'_, '_> {
             .is_ok_and(|flags| !flags.can_be_attacked_by(player_controlled));
         let dueling = self
             .factions
-            .get(attacker)
-            .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, victim));
+            .get(self.controller(attacker))
+            .is_ok_and(|(_, _, opponent)| crate::duel::dueling(opponent, self.controller(victim)));
         let permitted = match self.arena_relation(attacker, victim) {
             Some(relation) => matches!(
                 relation,
@@ -407,7 +413,7 @@ fn process_attack_messages(
     }
     for (mut receiver, link) in &mut stops {
         let player = link.0;
-        if receiver.receive().count() > 0 {
+        if receiver.receive().count() > 0 && !rules.body_inactive(player) {
             commands.queue(move |world: &mut World| attack_stop(world, player));
         }
     }
@@ -1868,7 +1874,7 @@ fn commit_melee_loss(
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
     let (loss, defeated) = crate::duel::duel_health_loss(
         world.get::<crate::duel::DuelOpponent>(victim),
-        attacker,
+        crate::pvp::arena_combat::controller(world, attacker),
         before,
         limit_unkillable_loss(before, scripted_loss, protected),
     );

@@ -8,6 +8,10 @@ Application stops casts and combat, clears the old threat projection, dismounts,
 
 Possessed input reuses PlayerInput with the controlled unit's epoch and existing server movement bank/terrain policy. Ordinary charm does not redirect the charmer's mover. An independently controlled player's own connection cannot drive that player while charmed. Aura cancellation/removal restores identity and control; pet abandon releases rather than despawns a charmed unit. Existing aura duration/channel/interrupt machinery remains authoritative.
 
+## Attack authority
+
+Pet/charm attacks use the canonical spell-target enemy predicate, including duel/arena rules, rather than a second faction-only check. Permission controllers resolve UnitCharm before summon ownership; movement/range positions remain the actual unit's. Both melee and spell nonlethal-duel checks use the controlling principal (TC Unit.cpp930–932). A charmed player's original connection cannot stop the NPC-charmer's active melee. Actual dealer identity remains the controlled unit in combat events.
+
 ## Native70448 source qualification
 
 605 Mind Control effect0=aura2;205364 Dominate Mind,1098 Subjugate Demon and30923 Domination effect0=aura6.605 and30923 have aura interrupt flags0/0;205364 and1098 have0/65536 (TC SpellAuraInterruptFlags2::SeamlessTransfer,NYI), not damage-break flags.51514 Hex has56/60/260/321 and is excluded. No synthetic damage-break bit or class-name whitelist.

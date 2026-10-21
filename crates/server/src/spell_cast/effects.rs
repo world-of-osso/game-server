@@ -1262,7 +1262,7 @@ fn deal_damage_and_report(
     );
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
         duel.as_ref(),
-        ctx.caster,
+        crate::pvp::arena_combat::controller(world, ctx.caster),
         before,
         crate::combat::limit_unkillable_loss(
             before,

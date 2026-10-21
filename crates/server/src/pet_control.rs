@@ -36,7 +36,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, ReplicationDirtyQueue};
 use rusqlite::{Connection, OpenFlags};
-use shared::components::{Health, Mounted, Player, Position, UnitFactionTemplate, UnitFlags};
+use shared::components::{Health, Mounted, Position, UnitFlags};
 use shared::protocol::{
     ACT_COMMAND, ACT_DISABLED, ACT_ENABLED, ACT_PASSIVE, ACT_REACTION, COMMAND_ABANDON,
     COMMAND_ATTACK, COMMAND_FOLLOW, COMMAND_MOVE_TO, COMMAND_STAY, PET_ACTION_BAR_SLOTS, PetAction,
@@ -46,7 +46,6 @@ use shared::protocol::{
 
 use crate::combat::AutoAttack;
 use crate::creature_ai::{FollowOwner, PetMotion};
-use crate::faction::{FactionTemplates, UnitFaction};
 use crate::hunter_pet::{HunterPet, summoned_pet};
 use crate::networking::{CombatTarget, PlayerLink};
 
@@ -805,32 +804,16 @@ fn is_dead(world: &World, unit: Entity) -> bool {
         .is_none_or(|health| health.current <= 0.0)
 }
 
-/// `WorldObject::IsValidAttackTarget` as far as modelled: alive, attackable, a hostile
-/// faction.
+/// Use the same permission principal/duel/arena/faction predicate as spells, not a
+/// second pet-only faction check that rejects the charmer's legal player opponents.
 fn valid_attack_target(world: &World, attacker: Entity, target: Entity) -> bool {
-    if attacker == target || is_dead(world, target) {
-        return false;
-    }
-    if world
-        .get::<UnitFlags>(target)
-        .is_some_and(|flags| !flags.is_selectable() || !flags.is_attackable())
-    {
-        return false;
-    }
-    let Some(templates) = world.get_resource::<FactionTemplates>() else {
-        return false;
-    };
-    let faction = |unit: Entity| UnitFaction {
-        template: world
-            .get::<UnitFactionTemplate>(unit)
-            .map_or(0, |template| template.0),
-        is_player: crate::faction::player_affected(
-            world.get::<Player>(unit).is_some()
-                && world.get::<shared::components::UnitCharm>(unit).is_none(),
-            world.get::<UnitFlags>(unit),
-        ),
-    };
-    templates.can_attack(faction(attacker), faction(target))
+    !is_dead(world, target)
+        && crate::spell_cast::targets::relation_matches(
+            world,
+            attacker,
+            target,
+            crate::spell_cast::targets::Relation::Enemy,
+        )
 }
 
 fn distance(world: &World, a: Entity, b: Entity) -> Option<f32> {
