@@ -1,3 +1,7 @@
+## 2026-10-21 — Native Frenzy and petless hunter kit
+
+[Native cadence](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): native20% owner passive reaches actual controlled-pet melee interval, not owner/guardian clocks. Genuine41-vs41-frame RED→four hunter GREEN55.74s, two native speed/cast-time controls GREEN33.27s; six proc/four selection controls also pass on the scoped canonical backup. [Pet-preparation failure](investigations/follower-data.md#pet-preparation-failure-starvation--2026-10-21) reports once and leaves native healing/attacks available; Exhilaration's native level9 oracle retained.
+
 ## 2026-10-21 — Scoped rotation kit publication
 
 [Scoped producer](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): three CLI RED→GREEN cases, stable-key11-update four-spec delta on a fresh canonical copy, unrelated specs/tables preserved. Actual composition exposes raw v4 rowid overwrites: required order v4 then A, with both-order receipts. Inherited dummy fixtures omit StatsPlugin; damage numbers are action/resource evidence, not production DPS.
