@@ -9,6 +9,7 @@ use crate::spell_info::{SpellInfo, SpellStore};
 const FIRE_DAMAGE: u32 = 357209;
 const SURGE_DAMAGE: u32 = 359077;
 const BLAST_FURNACE: u32 = 375510;
+const SCOURING_FLAME: u32 = 378438;
 const ETERNITYS_SPAN: u32 = 375757;
 const BASE_FIRE_TICKS: u32 = 10;
 const CONVERTED_TICKS_PER_RANK: u32 = 3;
@@ -19,6 +20,15 @@ fn read_native_aura_amount(world: &World, caster: Entity, spell: u32) -> f32 {
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == spell))
         .and_then(|aura| aura.effects.iter().find(|effect| effect.index == 0))
         .map_or(0.0, |effect| effect.amount)
+}
+
+fn filter_scouring_effect(world: &World, caster: Entity, child: &mut SpellInfo) {
+    // TC648–675 gates the dispel; native70448 moved it to effect5 and fixes its count at2.
+    if !crate::auras::has_aura(world, caster, SCOURING_FLAME) {
+        child
+            .effects
+            .retain(|effect| effect.effect != crate::spell_cast::effects::EFFECT_DISPEL);
+    }
 }
 
 fn build_fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
@@ -45,6 +55,7 @@ fn build_fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellIn
     duration.duration_ms = (ticks * period_ms) as i32;
     duration.max_duration_ms = duration.duration_ms;
     child.cast_empower_level = Some(rank);
+    filter_scouring_effect(world, caster, &mut child);
     child
 }
 
