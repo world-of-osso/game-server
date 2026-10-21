@@ -57,6 +57,23 @@ actions+=/judgment,if=holy_power<5
         self.assertEqual(profile["equipment"][1]["item_level_override"], 344)
         self.assertEqual(profile["actions"], ["actions=auto_attack", "actions+=/judgment,if=holy_power<5"])
 
+    def test_selected_talents_keep_source_node_entry_and_rank_not_name_guesses(self):
+        selected = PARITY.parse_selected_talents('''0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
+0.000 Parity adding specialization talent Shield (node=103002 entry=128002 rank=2/2)
+0.000 Parity adding hero talent Light (node=103003 entry=128003 rank=1/1)
+0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
+0.000 Parity ordinary spell damage 200
+''')
+        self.assertEqual(selected, [
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1},
+            {"tree": "specialization", "node_id": 103002, "entry_id": 128002, "ranks": 2},
+            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1},
+        ])
+
+    def test_missing_selected_talent_metadata_does_not_become_default_talents(self):
+        with self.assertRaisesRegex(ValueError, "selected talent"):
+            PARITY.parse_selected_talents("SimulationCraft initialized without debug metadata")
+
     def test_action_damage_does_not_double_count_compound_children(self):
         report = {"sim": {"players": [{"collected_data": {
             "dps": {"mean": 10}, "hps": {"mean": 0},

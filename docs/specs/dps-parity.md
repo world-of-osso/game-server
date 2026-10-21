@@ -10,7 +10,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] Equipment stats resolve native70448 ItemBonus, ItemSparse, RandPropPoints and Midnight scaling/configuration tables, including stat allocation, sockets and enchant/gem effects. Unsupported effects are named gaps, never invented stats.
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly.
-- [ ] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
+- [x] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
+- [ ] Selected-talent metadata preserves SimC's printed node IDs, entry IDs and ranks; absent metadata must not silently become a default build.
 
 ### Measurement
 
@@ -35,7 +36,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ## Tests asserting this spec
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
-- `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, missing-ID rejection and direct/periodic action accounting.
+- `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata and direct/periodic action accounting.
 - `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
 - `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six passing native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions; runtime wiring remains pending.
 - `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration regression; genuine RED recorded before loader implementation, GREEN pending.

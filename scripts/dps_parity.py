@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 
 SPECS = {
     66: "Paladin_Protection", 73: "Warrior_Protection", 105: None, 257: None,
@@ -59,6 +60,24 @@ def parse_profile(text):
         else:
             profile[key] = value
     return profile
+
+
+def parse_selected_talents(debug_text):
+    # Pinned player.cpp2872 emits exact trait identities during profile decoding.
+    pattern = re.compile(r"adding (\S+) talent .*? \(node=(\d+) entry=(\d+) rank=(\d+)/(\d+)\)")
+    selected = {}
+    for match in pattern.finditer(debug_text):
+        tree, node, entry, rank, maximum = match.groups()
+        if not 0 < int(rank) <= int(maximum):
+            raise ValueError(f"Invalid selected talent rank: {match.group()}")
+        value = {"tree": tree, "node_id": int(node), "entry_id": int(entry), "ranks": int(rank)}
+        key = (int(node), int(entry))
+        if key in selected and selected[key] != value:
+            raise ValueError(f"Conflicting selected talent records for node {node}, entry {entry}")
+        selected[key] = value
+    if not selected:
+        raise ValueError("No selected talent metadata in the SimC debug output")
+    return [selected[key] for key in sorted(selected)]
 
 
 def sample_mean(value):
