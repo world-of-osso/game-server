@@ -46,8 +46,23 @@ def policy(slot, priority, target='enemy', **conditions):
     return slot, priority, dict(target=target, **conditions)
 
 
+# SimC76f8118 sc_monk.cpp:325-377 and apl_monk.cpp:264-294,300-325.
+# IDs resolve to these actions in native70448; no SimC70391 numeric spell data.
+WINDWALKER_COMBO_ACTIONS = (100780, 100784, 107428, 113656, 101546, 392983, 322109)
+WINDWALKER_PRIORITIES = {
+    113656: 105, 392983: 106, 107428: 110, 322109: 111,
+    101546: 115, 100784: 120, 100780: 150,
+}
+
+
 def combat_policy(spec, name, spell, dispel_effects, control_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
+    if spec == 269 and spell in WINDWALKER_COMBO_ACTIONS:
+        conditions = dict(no_repeat_group=list(WINDWALKER_COMBO_ACTIONS))
+        if name == 'Spinning Crane Kick':
+            return policy('aoe', WINDWALKER_PRIORITIES[spell],
+                          min_enemies=3, source_center=True, **conditions)
+        return policy('attack', WINDWALKER_PRIORITIES[spell], **conditions)
     if dispel_effects and name in {'Cleanse Toxins', "Nature's Cure", 'Remove Corruption', 'Purify', 'Purify Disease', 'Remove Curse', 'Expunge', 'Cauterizing Flame', 'Dispel Magic', 'Purge', 'Soothe'}:
         return policy('dispel', 42, 'party')
     if control_effects and name in {'Polymorph', 'Hammer of Justice', 'Leg Sweep', 'Paralysis', 'Fear', 'Hex'}:
