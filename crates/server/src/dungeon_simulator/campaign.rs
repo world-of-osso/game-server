@@ -321,6 +321,13 @@ fn native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival() {
         Vec3::new(at.x, at.y, at.z).distance(Vec3::new(home.x, home.y, home.z)) < 0.0001,
         "actual frozen travel must reach home"
     );
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::CreatureMotion>(enemy),
+        Some(&shared::components::CreatureMotion::Still),
+        "native home arrival must stop replicated movement"
+    );
     assert!(
         !run.app
             .world()
