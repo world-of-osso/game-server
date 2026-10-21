@@ -51,6 +51,8 @@ mod celebras;
 mod crawth;
 #[path = "doragosa.rs"]
 mod doragosa;
+#[path = "emberon.rs"]
+mod emberon;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]
