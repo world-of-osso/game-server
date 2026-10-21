@@ -1,14 +1,14 @@
 # PvP pet battle project policies
 
-Verified: 2026-10-21. [Contract](../../specs/petbattle-pvp.md). Implementation pending; behavioral RED tests prepared.
+Verified: 2026-10-21. [Contract](../../specs/petbattle-pvp.md). Six policy REDs passed after implementation; same-frame FIFO requeue RED reproduced separately and correction pending GREEN.
 
 ## Explicit project policy, not Retail numerical authority
 
 Lead decision on 2026-10-21 supplies the previously unsourced rules:
 
 - **PET_BATTLE_PVP_TIMERS:** proposal, initial selection, ordinary decision and faint-replacement windows are each30seconds. Proposal nonresponders decline/leave; accepted opponents retain their queue wait. Initial timeout keeps the current lead; ordinary timeout passes; replacement picks the first living slot. Three consecutive ordinary turn timeouts forfeit; a submitted ordinary decision resets that owner's streak.
-- **PET_BATTLE_PVP_MATCHMAKING:** FIFO pairing, average team-level distance at most3, widening by1 per10seconds waiting. No rating. Compare integer team-level sums to avoid rounded averages. Older waiting participant's allowance controls pairing; earliest compatible opponent wins.
-- **PET_BATTLE_PVP_XP:** reuse existing wild XP calculation against opponent levels, living participating winners only. Losers/dead/nonparticipating/max-level pets receive no XP. Multi-opponent aggregation is being confirmed with lead; no separate Retail reward claim.
+- **PET_BATTLE_PVP_MATCHMAKING:** FIFO pairing, average team-level distance at most3, widening by1 per10seconds waiting. No rating. Compare integer team-level sums to avoid rounded averages. Older waiting participant's allowance controls pairing; earliest compatible opponent wins. A monotonic join ticket preserves FIFO for same-frame joins after a proposal is declined or expires.
+- **PET_BATTLE_PVP_XP:** reuse existing wild XP calculation against opponent levels, living participating winners only. Losers/dead/nonparticipating/max-level pets receive no XP. Sum the existing formula over every opposing pet's level, then divide among eligible winners (lead explicitly confirmed). No separate Retail reward claim.
 
 The `BattlePet*`70448 tables provide authentic species/abilities/states, not these timer or matchmaking constants. No table mutation or invented pet data is authorized.
 

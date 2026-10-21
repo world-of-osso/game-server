@@ -182,6 +182,44 @@ fn petbattle_pvp_policy_xp_only_living_participants_of_winner_and_persists() {
     );
     let saved = crate::battle_pets::load_journal(&app.world().resource::<GameDatabase>().db, 41);
     assert_eq!(saved, *journal);
+    app.update();
+    let connection = connection(app.world_mut(), a).unwrap();
+    let messages: Vec<_> = app
+        .world_mut()
+        .get_mut::<MessageReceiver<WildPetBattleUpdate>>(connection)
+        .unwrap()
+        .receive()
+        .collect();
+    let rewards = messages
+        .iter()
+        .find_map(|message| match message {
+            WildPetBattleUpdate::End {
+                outcome: WildPetBattleOutcome::Won,
+                rewards,
+                ..
+            } => Some(rewards),
+            _ => None,
+        })
+        .expect("winner receives terminal XP receipt");
+    assert_eq!(rewards.len(), 1);
+    assert_eq!((rewards[0].instance_id, rewards[0].xp_gained), (410, 225));
+    assert!(
+        advance(
+            app.world_mut(),
+            b,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round: 1,
+                action: WildPetBattleAction::Forfeit,
+            }
+        )
+        .is_err(),
+        "duplicate terminal request cannot award XP twice"
+    );
+    assert_eq!(
+        crate::battle_pets::load_journal(&app.world().resource::<GameDatabase>().db, 41),
+        saved
+    );
 }
 
 #[test]

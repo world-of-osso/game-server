@@ -7,7 +7,8 @@ use policy::*;
 #[derive(Resource, Default)]
 struct Matchmaker {
     queued: Vec<Entity>,
-    queued_at: BTreeMap<Entity, std::time::Duration>,
+    queued_at: BTreeMap<Entity, (std::time::Duration, u64)>,
+    next_queue_ticket: u64,
     proposals: BTreeMap<u64, Proposal>,
     battles: BTreeMap<u64, PvpBattle>,
 }
@@ -131,11 +132,13 @@ fn queue_request(
                 return Err("account already queued or in a pet battle".into());
             }
             let joined_at = now(world);
-            world
-                .resource_mut::<Matchmaker>()
-                .queued_at
-                .insert(owner, joined_at);
-            world.resource_mut::<Matchmaker>().queued.push(owner);
+            {
+                let mut matches = world.resource_mut::<Matchmaker>();
+                let ticket = matches.next_queue_ticket;
+                matches.next_queue_ticket += 1;
+                matches.queued_at.insert(owner, (joined_at, ticket));
+                matches.queued.push(owner);
+            }
             send_queue(world, owner, PetBattleQueueState::Queued, None);
         }
         PetBattleQueueRequest::Leave => cancel_queue(world, owner),

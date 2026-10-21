@@ -21,7 +21,7 @@ pub(super) fn sort_queue_by_wait(world: &mut World) {
 }
 
 pub(super) fn compatible_levels(world: &World, owner: Entity, a: u16, b: u16) -> bool {
-    let joined = world.resource::<Matchmaker>().queued_at[&owner];
+    let joined = world.resource::<Matchmaker>().queued_at[&owner].0;
     let waited = now(world).saturating_sub(joined).as_secs();
     let (base, widening_seconds) = PET_BATTLE_PVP_MATCHMAKING;
     let tolerance = base + waited / widening_seconds;
