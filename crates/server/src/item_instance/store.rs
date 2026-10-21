@@ -22,7 +22,11 @@ pub fn write_modifiers(
 
 pub fn load_modifiers(db: &Database, guid: u64) -> StoreResult<ItemInstanceModifiers> {
     let txn = db.begin_read()?;
-    let table = txn.open_table(ITEM_MODIFIERS)?;
+    let table = match txn.open_table(ITEM_MODIFIERS) {
+        Ok(table) => table,
+        Err(redb::TableError::TableDoesNotExist(_)) => return Ok(ItemInstanceModifiers::default()),
+        Err(error) => return Err(error.into()),
+    };
     match table.get(guid)? {
         Some(row) => Ok(bitcode::decode(row.value())?),
         None => Ok(ItemInstanceModifiers::default()),
