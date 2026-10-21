@@ -1,5 +1,6 @@
 //! Read the native item-instance tables published by scripts/item_instance_data.py.
 use super::bonuses::{ItemBonus, ItemBonusTables, OffsetCurve, ScalingConfig};
+use super::enchants::EnchantmentTables;
 use rusqlite::{Connection, Row};
 use std::collections::HashMap;
 
@@ -35,6 +36,10 @@ pub fn load_bonus_tables(conn: &Connection) -> rusqlite::Result<ItemBonusTables>
         )?,
         curves: load_curves(conn)?,
     })
+}
+
+pub fn load_enchantment_tables(_conn: &Connection) -> rusqlite::Result<EnchantmentTables> {
+    Ok(EnchantmentTables::default())
 }
 
 fn load_map<T>(
@@ -83,6 +88,27 @@ mod tests {
     use super::super::bonuses::apply_item_bonuses;
     use super::*;
     use shared::item_scaling::ItemScaling;
+
+    #[test]
+    fn item_instance_sqlite_native_gem_and_scaled_enchant_rows_reach_item_stats() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE spell_item_enchantment (ID INTEGER PRIMARY KEY,ScalingClass INTEGER,MinLevel INTEGER,MaxLevel INTEGER,Effect_0 INTEGER,Effect_1 INTEGER,Effect_2 INTEGER,EffectPointsMin_0 INTEGER,EffectPointsMin_1 INTEGER,EffectPointsMin_2 INTEGER,EffectArg_0 INTEGER,EffectArg_1 INTEGER,EffectArg_2 INTEGER,EffectScalingPoints_0 REAL,EffectScalingPoints_1 REAL,EffectScalingPoints_2 REAL);
+          INSERT INTO spell_item_enchantment VALUES(7987,-7,0,80,5,0,0,0,0,0,71,0,0,1.48670006,0,0),(8157,-7,0,80,5,5,0,0,0,0,32,40,0,0.475744992,0.208138004,0);
+          CREATE TABLE gem_properties(ID INTEGER PRIMARY KEY,Enchant_ID INTEGER,Type INTEGER);
+          INSERT INTO gem_properties VALUES(4400,8157,14);
+          CREATE TABLE item_sparse(ID INTEGER PRIMARY KEY,Gem_properties INTEGER);
+          INSERT INTO item_sparse VALUES(240910,4400);").unwrap();
+        let tables = load_enchantment_tables(&conn).unwrap();
+        let gem = super::super::enchants::gem_stats(240910, 90, &tables);
+        assert!(
+            gem.is_ok(),
+            "native ItemSparse/GemProperties join must reach its enchantment"
+        );
+        assert_eq!(gem.unwrap().stats.secondary.crit, 16.0);
+        let chest = super::super::enchants::enchantment_stats(7987, 90, &tables);
+        assert!(chest.is_ok());
+        assert_eq!(chest.unwrap().stats.primary.strength, 50.0);
+    }
 
     #[test]
     fn item_instance_sqlite_native_config_and_rank_rows_resolve_mid1_bracers_level() {
