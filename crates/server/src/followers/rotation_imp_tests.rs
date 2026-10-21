@@ -129,6 +129,48 @@ fn owner_scaled_firebolt(level: u8) -> (f32, f32, i32) {
 }
 
 #[test]
+fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_despawns() {
+    let (mut h, owner) = warlock(32);
+    let imp = summon_imp(&mut h, owner);
+    let initial = crate::spell_cast::powers::power_value(
+        h.app.world(),
+        imp,
+        shared::components::PowerType::Energy,
+    )
+    .unwrap()
+    .0;
+    let cost = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap()
+        .power_costs
+        .iter()
+        .find(|cost| cost.power_type == shared::components::PowerType::Energy as i32)
+        .unwrap()
+        .mana_cost as f32;
+    assert_eq!(initial, 100.0, "native Energy pool and pinned Imp base100");
+    assert_eq!(cost, 20.0, "native104318 Energy cost");
+    h.advance(500); //25s is before native104317's40s lifetime.
+    let casts = h
+        .inbox
+        .go
+        .iter()
+        .filter(|event| event.caster == imp.to_bits() && event.spell_id == 104318)
+        .count();
+    assert_eq!(
+        casts,
+        (initial / cost) as usize,
+        "SimC disables Imp regen; exhaustion budget comes from native100/20, not guessed bolts"
+    );
+    assert!(
+        h.app.world().get_entity(imp).is_err(),
+        "exhausted Imp must demise before its independent native40s expiry"
+    );
+}
+
+#[test]
 fn rotation_fidelity_wild_imp_hand_of_guldan_spawns_three_native_actors() {
     let (mut h, owner) = warlock(32);
     let target = h.npc;
