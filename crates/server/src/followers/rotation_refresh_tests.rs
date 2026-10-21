@@ -245,7 +245,7 @@ fn rotation_fidelity_demonology_does_not_waste_demonbolt_at_shard_cap() {
     );
 }
 
-fn landed_rake_refresh() -> Option<(AuraInstance, AuraInstance)> {
+fn landed_rake_refresh() -> Option<(Harness, Entity, AuraInstance)> {
     let (mut h, unit) = native_dummy(232800);
     let target = h.npc;
     cast_native(&mut h, unit, 1822, target);
@@ -253,20 +253,109 @@ fn landed_rake_refresh() -> Option<(AuraInstance, AuraInstance)> {
     let old = wait_for_pandemic(&mut h, unit, target, 155722);
     let start = h.inbox.log.len();
     cast_native(&mut h, unit, 1822, target);
-    observed_refresh(&h, start, unit, target, 155722).then(|| (old, aura(&h, unit, target, 155722)))
+    observed_refresh(&h, start, unit, target, 155722).then_some((h, unit, old))
 }
 
 #[test]
 fn rotation_fidelity_rake_pandemic_carries_actual_owned_remainder() {
     // Native misses are not refreshes. Require a real AuraRefreshed receipt,
     // retrying whole natural lifecycles rather than granting a hit or resource.
-    let (old, refreshed) = (0..8)
+    let (h, unit, old) = (0..8)
         .find_map(|_| landed_rake_refresh())
         .expect("eight native Rake lifecycles yielded no landed refresh");
+    let refreshed = aura(&h, unit, h.npc, 155722);
     let expected = old.expires_at.unwrap() + f64::from(old.duration_ms) / 1_000.0;
     assert!(
         (refreshed.expires_at.unwrap() - expected).abs() < 0.10,
         "native Rake must carry remaining duration: old={old:?} refreshed={refreshed:?}"
+    );
+}
+
+#[test]
+fn rotation_fidelity_rake_refresh_window_uses_fresh_not_carried_duration() {
+    let (mut h, unit, old) = (0..8)
+        .find_map(|_| landed_rake_refresh())
+        .expect("native landed Rake refresh required");
+    let target = h.npc;
+    let refreshed = aura(&h, unit, target, 155722);
+    let full = f64::from(old.duration_ms) / 1_000.0;
+    let entry = super::kit::Entry {
+        spec_id: 103,
+        spell_id: 1822,
+        min_level: 10,
+        max_level: 90,
+        slot: super::kit::Slot::Attack,
+        conditions: super::kit::Conditions {
+            missing_aura: Some(155722),
+            refresh_fraction: Some(0.30),
+            ..Default::default()
+        },
+    };
+    let fraction = f64::from(entry.conditions.refresh_fraction.unwrap());
+    let wrong_window = f64::from(refreshed.duration_ms) / 1_000.0 * fraction;
+    let right_window = full * fraction;
+    assert!(
+        wrong_window > right_window,
+        "native refresh must first prove duration carry"
+    );
+    let outside = (wrong_window + right_window) / 2.0;
+    let wait = refreshed.expires_at.unwrap() - aura_now(h.app.world()) - outside;
+    h.advance((wait * 20.0).floor() as usize);
+    assert!(
+        !super::kit_ai::conditions_met(h.app.world_mut(), unit, target, &[], &[], &entry),
+        "carried time must not inflate the next Pandemic window"
+    );
+    let remaining = aura(&h, unit, target, 155722).expires_at.unwrap() - aura_now(h.app.world());
+    h.advance(((remaining - right_window) * 20.0).ceil() as usize + 1);
+    assert!(
+        super::kit_ai::conditions_met(h.app.world_mut(), unit, target, &[], &[], &entry),
+        "owned Rake must become refreshable at native fresh-duration30%"
+    );
+}
+
+#[test]
+fn rotation_fidelity_shield_block_refreshes_within_sourced_ten_seconds() {
+    let (mut h, unit) = native_dummy(215517);
+    let target = h.npc;
+    bank_power(
+        &mut h,
+        unit,
+        PowerType::Rage,
+        &[(23922, target), (6343, target)],
+    );
+    cast_native(&mut h, unit, 2565, unit);
+    cast_native(&mut h, unit, 2565, unit);
+    let entry = super::kit::Entry {
+        spec_id: 73,
+        spell_id: 2565,
+        min_level: 6,
+        max_level: 90,
+        slot: super::kit::Slot::Mitigation,
+        conditions: super::kit::Conditions {
+            target: super::kit::Target::SelfUnit,
+            missing_aura: Some(132404),
+            refresh_seconds: Some(10.0),
+            ..Default::default()
+        },
+    };
+    let until = f64::from(entry.conditions.refresh_seconds.unwrap());
+    let remaining = aura(&h, unit, unit, 132404).expires_at.unwrap() - aura_now(h.app.world());
+    assert!(
+        remaining > until,
+        "two native blocks must have accumulated first"
+    );
+    assert!(!super::kit_ai::conditions_met(
+        h.app.world_mut(),
+        unit,
+        unit,
+        &[],
+        &[],
+        &entry
+    ));
+    h.advance(((remaining - until) * 20.0).ceil() as usize + 1);
+    assert!(
+        super::kit_ai::conditions_met(h.app.world_mut(), unit, unit, &[], &[], &entry),
+        "SimC Shield Block remains<=10 is not missing-only maintenance"
     );
 }
 
