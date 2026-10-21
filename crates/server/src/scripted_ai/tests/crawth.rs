@@ -54,7 +54,7 @@ fn encounter_coverage_crawth_native_peck_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "RED: current Retail Crawth Lua-clock port absent"]
+#[ignore = "CRAWTH_PC_IMMUNITY_INGRESS_UNSOURCED: native threat engagement blocked; no port claimed"]
 fn encounter_coverage_crawth_first_peck_uses_current_retail_clock() {
     let (mut h, boss, _) = crawth_copy(205);
     h.engage(boss);

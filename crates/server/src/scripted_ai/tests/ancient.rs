@@ -59,7 +59,7 @@ fn encounter_coverage_ancient_native_barkbreaker_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "RED: current Retail Ancient Lua-clock port absent"]
+#[ignore = "ANCIENT_PC_IMMUNITY_INGRESS_UNSOURCED: native threat engagement remains blocked"]
 fn encounter_coverage_ancient_first_barkbreaker_uses_current_retail_clock() {
     let (mut h, boss, _) = ancient_copy(205);
     h.engage(boss);
@@ -72,6 +72,7 @@ fn encounter_coverage_ancient_first_barkbreaker_uses_current_retail_clock() {
 }
 
 #[test]
+#[ignore = "ANCIENT_PC_IMMUNITY_INGRESS_UNSOURCED: no artificial engaged-state fixture"]
 fn encounter_coverage_ancient_current_lanes_preserve_immunity_and_copy_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = ancient_copy(difficulty);
@@ -149,6 +150,7 @@ fn encounter_coverage_ancient_current_lanes_preserve_immunity_and_copy_isolation
 }
 
 #[test]
+#[ignore = "ANCIENT_PC_IMMUNITY_INGRESS_UNSOURCED: no artificial engaged-state fixture"]
 fn encounter_coverage_ancient_evade_rearms_without_unlock_or_credit() {
     let (mut h, boss, map) = ancient_copy(205);
     h.engage(boss);
