@@ -105,6 +105,20 @@ fn player_motion_airborne_jump_keeps_origin_until_touchdown() {
     assert_eq!(motion(&app, player), PlayerMotion(0));
 }
 
+/// The server owns aura409's bit39; client input must not erase that ability.
+#[test]
+fn toy_coverage_turn_falling_owner_bit_survives_real_input_receive_and_stop() {
+    const CAN_TURN_WHILE_FALLING: u64 = 0x0000_0080_0000_0000;
+    let (mut app, player, connection) = receiver_app();
+    app.world_mut()
+        .entity_mut(player)
+        .insert(PlayerMotion(CAN_TURN_WHILE_FALLING));
+    deliver_and_tick(&mut app, connection, vec![input(wire_direction(1.0, 0.0))]);
+    assert!(motion(&app, player).contains(CAN_TURN_WHILE_FALLING | PlayerMotion::FORWARD));
+    deliver_and_tick(&mut app, connection, vec![input([0.0; 3])]);
+    assert_eq!(motion(&app, player), PlayerMotion(CAN_TURN_WHILE_FALLING));
+}
+
 #[test]
 fn spawned_player_stands_still() {
     let (app, player, _) = receiver_app();

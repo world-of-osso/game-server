@@ -13,6 +13,14 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Turn while falling
+
+- [x] Aura409 preserves the source turn-while-falling ability in existing replicated PlayerMotion bit39 (`0x0000008000000000`), without changing the protocol schema. Apply and removal reconcile the current aura set; removing one owner must not clear another owner's ability or unrelated movement flags.
+- [x] Real PlayerInput direction/stop reports preserve this server-owned ability. Ordinary expiry clears it after the last owner ends.
+- [x] Rocfeather Skyhorn Kite131811/196768 and Hearty Dragon Plume182729/340077 retain their authored feather fall and native60s/10s lifetimes through actual learning/UseToy. No per-toy script substitutes for the generic aura mechanism.
+
+Sources: TC a352b1fa `SpellAuraEffects.cpp:2969–2983`, `Unit.cpp:13933–13961`, `MovementInfo.h:71`. This server-state boundary does not certify native steering, rendering, or all other contracts on mixed-aura toys.
+
 ## Native default TempSummon title dispatch
 
 - [x] Ordinary Wild/Ally titles use TC a352b1fa's default TempSummon branch unless they select an explicit guardian/companion/totem/vehicle path or joined spawn-group route (`SpellEffects.cpp:1957–2024`, `Object.cpp:1191–1265`). A Construct7/Name27/new61 label is not itself a missing control implementation.
