@@ -47,6 +47,8 @@ mod mechanic_duration;
 pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod natures_guardian;
+#[cfg(test)]
+pub(crate) mod observations;
 mod periodic;
 pub(crate) mod power_amount_trigger;
 pub mod procs;
@@ -1024,6 +1026,8 @@ pub(crate) fn apply_aura_with_spell(
     let shared_slot = shares_stack_slot_between_casters(spell);
     let previous_rate =
         crate::spell_cast::recovery_rate::capture_previous_rate_aura(world, target, &instance);
+    #[cfg(test)]
+    let observed_previous = observations::previous_stacks(world, target, &instance);
     let stacking = world
         .get_mut::<ActiveAuras>(target)
         .expect("aura components ensured")
@@ -1042,6 +1046,8 @@ pub(crate) fn apply_aura_with_spell(
         .and_then(|auras| auras.get(id))
         .cloned()
         .expect("aura just stored");
+    #[cfg(test)]
+    observations::applied(world, &aura, observed_previous);
     if kind == CombatLogKind::AuraApplied {
         crate::achievement::record_gain_aura(world, target, aura.spell_id);
         crate::quest::record_gain_aura(world, target, spell.id);
@@ -1362,6 +1368,8 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    #[cfg(test)]
+    observations::removed(world, unit, aura, reason);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
@@ -1502,7 +1510,11 @@ pub(crate) fn spend_stack(world: &mut World, unit: Entity, instance_id: u32) {
     if aura.stacks <= 1 {
         remove_instance(world, unit, instance_id, RemoveReason::Consumed);
     } else {
+        #[cfg(test)]
+        let observed = (aura.caster, aura.spell_id);
         aura.stacks -= 1;
+        #[cfg(test)]
+        observations::spent_stack(world, unit, observed.0, observed.1);
         auras_changed(world, unit);
     }
 }
