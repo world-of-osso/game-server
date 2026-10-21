@@ -20,6 +20,8 @@ mod default_summons;
 mod disguises;
 #[path = "toys_dragon_head_tests.rs"]
 mod dragon_head;
+#[path = "toys_falling_turn_tests.rs"]
+mod falling_turn;
 #[path = "toys_flag_tests.rs"]
 mod flag;
 #[path = "toys_flute_tests.rs"]
