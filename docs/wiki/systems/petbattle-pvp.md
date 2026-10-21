@@ -1,6 +1,6 @@
 # PvP pet battle project policies
 
-Verified: 2026-10-21. [Contract](../../specs/petbattle-pvp.md). Nine targeted policy tests PASS at487ad01a6, including the separately reproduced same-frame FIFO requeue RED. Ordinary test execution is re-enabled after this GREEN.
+Verified: 2026-10-21. [Contract](../../specs/petbattle-pvp.md). Nine targeted policy tests PASS at487ad01a6, including the separately reproduced same-frame FIFO requeue RED; ordinary execution re-enabled. After master integration and shared wild/PvP XP advancement extraction (`fe1953968`),20 bounded PvP/wild-XP tests are covered:19 passed together; the achievement-zone fixture initially lacked `GAME_SERVER_GROUND_DIR`, then passed alone using the real engine asset directory. No source correction or repeated passing tests. Cargo fmt/check pass; check retains the unrelated existing `followers/pull_history.rs::has_uncleared_fight` warning. Native proof pending.
 
 ## Explicit project policy, not Retail numerical authority
 
