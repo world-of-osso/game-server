@@ -83,5 +83,27 @@ class RotationResourcePolicyTests(unittest.TestCase):
         self.assertEqual(conditions.get('resources'), [dict(power='SoulShards', min=3)])
 
 
+class RotationRefreshAndDefensePolicyTests(unittest.TestCase):
+    def test_feral_uses_fresh_pandemic_window(self):
+        for name, spell in [('Rip', 1079), ('Rake', 1822)]:
+            with self.subTest(spell=spell):
+                self.assertEqual(combat_policy(103, name, spell, [], [])[2].get('refresh_fraction'), 0.30)
+
+    def test_shield_block_tracks_native_aura_and_ten_second_window(self):
+        conditions = combat_policy(73, 'Shield Block', 2565, [], [])[2]
+        self.assertEqual((conditions.get('missing_aura'), conditions.get('refresh_seconds')), (132404, 10))
+
+    def test_shield_of_righteous_is_a_damage_spender_even_with_armor_up(self):
+        conditions = combat_policy(66, 'Shield of the Righteous', 53600, [], [])[2]
+        self.assertEqual((conditions.get('attacked', False), conditions.get('missing_aura')), (False, None))
+
+    def test_tank_majors_share_named_sequencing_without_duplicate_aura_gate(self):
+        for spec, name, spell in [(66, 'Ardent Defender', 31850), (66, 'Guardian of Ancient Kings', 86659), (73, 'Shield Wall', 871)]:
+            with self.subTest(spell=spell):
+                _, priority, conditions = combat_policy(spec, name, spell, [], [])
+                actual = (priority, conditions.get('health_below'), conditions.get('attacked'), conditions.get('tank_defensive_sequence'), conditions.get('missing_aura'))
+                self.assertEqual(actual, (30, 0.5, True, True, None))
+
+
 if __name__ == '__main__':
     unittest.main()
