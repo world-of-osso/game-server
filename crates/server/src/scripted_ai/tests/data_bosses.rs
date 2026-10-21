@@ -91,6 +91,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
+#[path = "porung.rs"]
+mod porung;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
@@ -334,7 +336,8 @@ fn encounter_fixture(
     }
     let inputs = prepared_inputs::encounter_inputs(entry, map_id, populate);
     inputs.install(&mut app);
-    let mut maps = data.maps.clone();
+    // Keep producer-authenticated map/binding inputs already installed in this app.
+    let mut maps = app.world().resource::<MapStore>().clone();
     if entry == 234648 {
         // Mirror Image and Blink resolve their authored ground destinations.
         let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;

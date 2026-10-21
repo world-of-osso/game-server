@@ -51,6 +51,11 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     h.npc = spawn_npc(&mut h.app, 3.0);
     let mut known = source_passives(spec);
     known.push(spell.id);
+    known.extend(prerequisite_events(spell.id));
+    if spell.id == 1244258 {
+        // Chomp's native description names the passive controller1244292.
+        known.push(1244292);
+    }
     if let Some((form_spell, _)) = select_form_prerequisite(spec, spell, &world_db().unwrap().store)
     {
         known.push(form_spell);
@@ -77,6 +82,7 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
         _ => 1,
     };
     h.app.world_mut().get_mut::<Player>(h.caster).unwrap().race = race;
+    equip_native_armor(h, spec.class);
     h.app.world_mut().entity_mut(h.npc).insert((
         Level(80),
         Health {
@@ -91,6 +97,41 @@ fn spawn_case(h: &mut Harness, spec: &Spec, spell: &Spell) {
     h.advance(3);
     fill_resources(h);
     h.inbox = Inbox::default();
+}
+
+/// Item/ItemSparse 70448: complete Mystical, Scaled Leather, Glimmering Mail,
+/// and Templar sets. No synthesized item templates or passive aura applications.
+fn equip_native_armor(h: &mut Harness, class: u8) {
+    use shared::item_data::ItemDefinitionSource::Retail;
+    use shared::protocol::EquipmentSlot::*;
+    let ids = match class {
+        5 | 8 | 9 => [10175, 10172, 10181, 10180, 10177, 10179, 10173, 10176],
+        4 | 10 | 11 | 12 => [10406, 9834, 9835, 9827, 9833, 9828, 9829, 9832],
+        3 | 7 | 13 => [6389, 6388, 4071, 4712, 6386, 4073, 6387, 4072],
+        1 | 2 | 6 => [10168, 10170, 10164, 10166, 10169, 10167, 10171, 10165],
+        _ => panic!("no native census armor set for class {class}"),
+    };
+    let slots = [Head, Shoulder, Chest, Waist, Legs, Feet, Wrist, Hands];
+    let player = h.app.world().get::<Player>(h.caster).unwrap();
+    let catalog = h
+        .app
+        .world()
+        .resource::<crate::item_templates::ItemTemplates>();
+    for id in ids {
+        let item = catalog
+            .get(Retail, id)
+            .expect("native armor item definition");
+        assert!(item.allows(class, player.race) && item.required_level <= 80);
+    }
+    let items = slots
+        .into_iter()
+        .zip(ids)
+        .map(|(slot, id)| (slot, Retail, id))
+        .collect();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::stats::EquippedItems { items });
 }
 
 fn fill_resources(h: &mut Harness) {
@@ -134,6 +175,17 @@ fn choose_case_target(h: &mut Harness, spell: &crate::spell_info::SpellInfo) -> 
         ally
     } else if hostile {
         h.npc
+    } else if super::attributes(spell, 1) & 0x0008_0000 != 0 {
+        // SPELL_ATTR1_EXCLUDE_CASTER rejects explicit self before area selection.
+        let ally = spawn_player(&mut h.app, 1, 3.0);
+        h.app.world_mut().entity_mut(ally).insert((
+            Level(80),
+            Health {
+                current: 500_000.0,
+                max: 1_000_000.0,
+            },
+        ));
+        ally
     } else {
         h.caster
     };
@@ -148,11 +200,13 @@ fn send_case_cast(
 ) {
     let (min, max) = super::targets::spell_range(spell, hostile);
     let distance = (min + 0.5).max(3.0).min(max.max(3.0));
-    h.app.world_mut().entity_mut(h.npc).insert(Position {
-        x: distance,
-        y: 0.0,
-        z: 0.0,
-    });
+    if target != h.caster {
+        h.app.world_mut().entity_mut(target).insert(Position {
+            x: distance,
+            y: 0.0,
+            z: 0.0,
+        });
+    }
     if super::attributes(spell, 0) & super::SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0 {
         h.app
             .world_mut()
@@ -274,9 +328,98 @@ fn cast_form_prerequisite(h: &mut Harness, spec: &Spec, row: &Spell) -> Option<V
     Some(receipt)
 }
 
+fn missing_store_receipt(spec: &Spec, id: u32) -> Value {
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut counts = serde_json::Map::new();
+    for (table, key) in [
+        ("spell_name", "ID"),
+        ("spell", "ID"),
+        ("spell_misc", "SpellID"),
+        ("spell_effect", "SpellID"),
+        ("tdb_serverside_spell", "Id"),
+    ] {
+        let query = format!("SELECT COUNT(*) FROM {table} WHERE {key}=?1");
+        let count: u32 = conn.query_row(&query, [id], |r| r.get(0)).unwrap();
+        counts.insert(table.into(), json!(count));
+    }
+    json!({"spec": spec.id, "spell": id, "missing_store": true,
+        "source_rows": counts, "store_loader": "spell_info::load_spell_data (production)"})
+}
+
+/// Preceding player actions, never casts of hidden enabling auras. These may
+/// expose an absent producer; a successful action alone does not certify its proc.
+fn prerequisite_events(root: u32) -> &'static [u32] {
+    match root {
+        5143 => &[30451], // Clearcasting baseline; actual Arcane Blast mana spend.
+        119898 => &[688], // Command Demon: summon a real Imp.
+        152175 => &[107428, 113656], // Both native cooldowns before Dragon Punch.
+        196277 | 264130 => &[105174], // Hand of Gul'dan, not a fabricated Wild Imp.
+        196447 => &[348], // TC a352b1fa spell_warl_channel_demonfire_activator.
+        247454 => &[203782], // Shear description: shatter a Lesser Soul Fragment.
+        1244258 => &[5221, 5221], // Chomp controller: actual Cat energy expenditure.
+        _ => &[],
+    }
+}
+
+fn cast_preceding_event(h: &mut Harness, id: u32) -> Value {
+    let spell = world_db()
+        .unwrap()
+        .store
+        .get(id)
+        .expect("native preceding event");
+    let before = resources(h);
+    let (target, hostile) = choose_case_target(h, spell);
+    send_case_cast(h, spell, target, hostile);
+    let misc = spell.misc.as_ref();
+    let cast_ms = misc
+        .and_then(|m| m.cast_time)
+        .map_or(0, |c| c.base_ms.max(0));
+    let channel_ms = misc
+        .filter(|m| m.attributes[1] & 0x44 != 0)
+        .and_then(|m| m.duration)
+        .map_or(0, |d| d.duration_ms.max(0));
+    // Finish the native cast/channel, delivery and the ordinary GCD.
+    h.advance((cast_ms.max(channel_ms) as usize / 50) + 43);
+    let receipt = json!({"spell": id, "failed": h.inbox.failed, "go": h.inbox.go,
+        "combat_log": h.inbox.log, "resources_before": before, "resources_after": resources(h),
+        "aura_warnings": crate::auras::take_unhandled_auras(h.app.world_mut()),
+        "effect_warnings": h.app.world().resource::<super::effects::UnhandledEffects>().0});
+    h.inbox = Inbox::default();
+    h.app
+        .world_mut()
+        .resource_mut::<super::effects::UnhandledEffects>()
+        .0
+        .clear();
+    receipt
+}
+
+fn prepare_caster_aura(h: &mut Harness, spell: &crate::spell_info::SpellInfo) -> Option<Value> {
+    let restrictions = spell.aura_restrictions.as_ref()?;
+    if restrictions.caster_aura_spell == 0 && restrictions.exclude_caster_aura_spell == 0 {
+        return None;
+    }
+    let required = restrictions.caster_aura_spell;
+    let excluded = restrictions.exclude_caster_aura_spell;
+    let required_before = crate::auras::has_aura(h.app.world(), h.caster, required);
+    let events: Vec<_> = prerequisite_events(spell.id)
+        .iter()
+        .map(|&id| cast_preceding_event(h, id))
+        .collect();
+    Some(json!({"required": required, "excluded": excluded,
+        "required_before": required_before,
+        "required_after": crate::auras::has_aura(h.app.world(), h.caster, required),
+        "excluded_after": crate::auras::has_aura(h.app.world(), h.caster, excluded),
+        "admitted": super::aura_spell_restrictions::check_caster(h.app.world(), h.caster, spell).is_ok(),
+        "events": events}))
+}
+
 fn record_case(h: &mut Harness, spec: &Spec, row: &Spell) -> Value {
     let Some(spell) = world_db().unwrap().store.get(row.id).cloned() else {
-        return json!({"spec": spec.id, "spell": row.id, "missing_store": true});
+        return missing_store_receipt(spec, row.id);
     };
     spawn_case(h, spec, row);
     record_spawned_case(h, spec, row, &spell)
@@ -296,6 +439,7 @@ fn record_spawned_case(
         .0
         .clear();
     let form_prerequisite = cast_form_prerequisite(h, spec, row);
+    let caster_aura_prerequisite = prepare_caster_aura(h, spell);
     let before = resources(h);
     if !row.passive {
         cast_case(h, spell);
@@ -319,6 +463,8 @@ fn record_spawned_case(
         .map(|(_, form)| form);
     json!({"spec": spec.id, "spell": row.id, "passive": row.passive,
         "passive_applied": applied, "form_prerequisite": form_prerequisite, "form_after": form_after,
+        "caster_aura_prerequisite": caster_aura_prerequisite,
+        "equipped_armor": h.app.world().get::<crate::stats::EquippedItems>(h.caster).unwrap().items,
         "failed": h.inbox.failed, "go": h.inbox.go,
         "baseline_aura_warnings": baseline_warnings, "aura_warnings": warnings,
         "effect_warnings": effects, "resources_before": before, "resources_after": after,
@@ -342,6 +488,16 @@ fn census_harness(class: u8, world_path: &std::path::Path) -> Harness {
     let data = world_db().unwrap();
     let mut h = harness(Vec::new(), &[], class).unwrap();
     h.app.insert_resource(data.store.clone());
+    static ITEMS: std::sync::OnceLock<crate::item_templates::ItemTemplates> =
+        std::sync::OnceLock::new();
+    h.app.insert_resource(
+        ITEMS
+            .get_or_init(|| {
+                crate::item_templates::load_item_templates(&data.powers_db)
+                    .expect("production item catalogs")
+            })
+            .clone(),
+    );
     h.app
         .insert_resource(crate::world_data::load_world_data(world_path));
     // Cargo executes tests from the crate directory; production's relative
@@ -533,6 +689,116 @@ fn class_completeness_probe_native_city_destination_is_not_a_fixture_failure() {
             .destination,
         destinations.0[&(3567, 0)],
     );
+}
+
+#[test]
+fn class_completeness_probe_fixture_refresh_equips_native_armor_for_passives() {
+    let prepared = prepare_class_world();
+    for (class, spec_id, id) in [
+        (8, 62, 89744),
+        (11, 103, 86092),
+        (7, 262, 86100),
+        (1, 71, 86101),
+    ] {
+        let mut h = census_harness(class, &prepared.path());
+        let spec = Spec {
+            id: spec_id,
+            class,
+            spells: Vec::new(),
+        };
+        let row = Spell {
+            id,
+            passive: true,
+            origin: vec!["SpecializationSpells/mastery".into()],
+        };
+        let receipt = record_case(&mut h, &spec, &row);
+        assert_eq!(receipt["passive_applied"], true, "{receipt}");
+    }
+}
+
+#[test]
+fn class_completeness_probe_fixture_refresh_exclude_caster_uses_eligible_ally() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(2, &prepared.path());
+    let spec = Spec {
+        id: 70,
+        class: 2,
+        spells: Vec::new(),
+    };
+    let row = Spell {
+        id: 6940,
+        passive: false,
+        origin: vec!["talent".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &row);
+    assert_eq!(receipt["failed"], json!([]), "{receipt}");
+    assert!(
+        h.app
+            .world_mut()
+            .query::<(Entity, &crate::auras::ActiveAuras)>()
+            .iter(h.app.world())
+            .any(|(entity, auras)| entity != h.caster
+                && auras.iter().any(|aura| aura.spell_id == 6940))
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), h.caster, 6940));
+}
+
+#[test]
+fn class_completeness_probe_fixture_refresh_records_actual_preceding_events() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(9, &prepared.path());
+    let spec = Spec {
+        id: 267,
+        class: 9,
+        spells: Vec::new(),
+    };
+    let row = Spell {
+        id: 196447,
+        passive: false,
+        origin: vec!["talent".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &row);
+    let prerequisite = &receipt["caster_aura_prerequisite"];
+    assert_eq!(prerequisite["required"], 228312, "{receipt}");
+    let event = &prerequisite["events"][0];
+    assert_eq!(event["spell"], 348, "{receipt}");
+    assert_eq!(event["failed"], json!([]), "{receipt}");
+    assert!(!event["go"].as_array().unwrap().is_empty(), "{receipt}");
+    assert!(
+        event["combat_log"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|log| log["spell_id"] == 348),
+        "{receipt}"
+    );
+    // Do not force the enabling aura if the actual Immolate path omits it.
+    let observed = crate::auras::has_aura(h.app.world(), h.caster, 228312);
+    assert_eq!(prerequisite["required_after"], observed, "{receipt}");
+}
+
+#[test]
+fn class_completeness_probe_fixture_refresh_distinguishes_absent_native_definition() {
+    let prepared = prepare_class_world();
+    let mut h = census_harness(8, &prepared.path());
+    let spec = Spec {
+        id: 62,
+        class: 8,
+        spells: Vec::new(),
+    };
+    let row = Spell {
+        id: 30482,
+        passive: true,
+        origin: vec!["SkillLineAbility".into()],
+    };
+    let receipt = record_case(&mut h, &spec, &row);
+    assert_eq!(receipt["missing_store"], true, "{receipt}");
+    assert_eq!(receipt["source_rows"]["spell_name"], 0, "{receipt}");
+    assert_eq!(
+        receipt["source_rows"]["tdb_serverside_spell"], 0,
+        "{receipt}"
+    );
+    assert_eq!(receipt["source_rows"]["spell_effect"], 0, "{receipt}");
 }
 
 #[test]
