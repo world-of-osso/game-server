@@ -32,7 +32,7 @@
 
 ## Known gaps (current cycle)
 
-- [ ] Framework, policy hook, implementation and RED→GREEN proof in progress.
+- [ ] Complete Restoration policy depth and paired simulator metrics beyond the qualified common framework/native cooldown slice.
 - [ ] `FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`: absent from local105 kit.
 - [ ] `FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: current native bonus supports Regrowth/Rejuvenation/Germination only.
 

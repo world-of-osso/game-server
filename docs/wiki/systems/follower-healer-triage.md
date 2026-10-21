@@ -60,9 +60,11 @@ Initial base c6be257c5, frozen protocol03cebdb. Own simulator baseline e479f2de9
 - [[dungeon-simulator]]
 - [[spell-casting]]
 
-## Gate regression continuation (GREEN pending)
+## Gate regression continuation (native GREEN)
 
-Gateha847 exposed real policy regressions beyond the initial core tests. Latest context+starvation native replay leaves Ironbark/Rejuvenation/eligible-HoT Swiftmend and simulator mana-fixture cases RED; Henry's native Magic dispel is GREEN after the topped-start fix. Evidence: `*-latest-red.log` under the healer diagnostics directory.
+Gateha847 exposed real policy regressions beyond the initial core tests. A context+starvation native replay retained five RED cases (Ironbark, Rejuvenation, no-reapply setup, eligible-HoT Swiftmend and the mana fixture); Henry's Magic dispel was already GREEN after the topped-start fix. The corrected six-case replay plus common regressions gives15PASS/0FAIL/1 NS-depth ignore24.05s (`gate-regressions-targeted.log`).
+
+After merging masterff190cb1 into finite5cf87d561 (integrated simulatorT486527611/P03ceb), requested `followers::` and `dungeon_simulator::campaign::` filters give285PASS/0FAIL/9 existing-or-next-depth ignores206.38s, threads4. Leymor runs separately with the lead-qualified private2515 asset view/receipt and gives1PASS17.46s, threads1. Scoped sim server checkPASS8.61s; only the lead-excluded13179-owned `has_uncleared_fight` warning remains, with no unused triage API. Changed-source format checkPASS; delta readability audited directly, no suppression. Evidence: `regression-full-followers-campaign.log`, `regression-leymor-private-assets.log`, `regression-final-check.log` under `data/diagnostics/healer-ai-2026-10-21/`. This does not qualify the unimplemented Restoration-depth/paired-benchmark slices.
 
 Ironbark is not a zero-throughput heal: its class decision now observes the authored attacked/health/missing-aura conditions and native readiness before ordinary healing. Shared `Patient.projected_death_seconds` is restored and prioritizes the most threatened eligible defensive recipient; Holy can reuse that exact forecast. `TriageContext.ready(spell_id)` reads learned rows plus native cooldowns/charges/school/costs, ignoring only transient GCD.
 

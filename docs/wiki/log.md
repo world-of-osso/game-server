@@ -1,3 +1,7 @@
+## 2026-10-21 — Healer framework native qualification
+
+[Healer triage](systems/follower-healer-triage.md): native risk/cost/owned hook, topped-start starvation RED→GREEN, actual Hogger read-only deadlines/Reset and native-radius scatter/stack controls. Gateha847 exposed five residual priority/fixture failures; authored Ironbark and urgent/routine Swiftmend decisions plus actual paid OOC fixture resolve them, Henry dispel retained. Six-case+core15GREEN; masterff190 integration requested followers/campaign285GREEN206.38s plus private-asset Leymor1GREEN17.46s; scoped check/format PASS, sole13179-owned helper warning excluded perlead. Shared death forecast/native readiness restored for Holy. Full Crenna depth and paired20-seed metrics remain pending.
+
 ## 2026-10-21 — Follower healer triage design
 
 [FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
