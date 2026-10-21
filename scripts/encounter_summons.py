@@ -440,6 +440,40 @@ def import_doragosa(connection):
     return [190609]
 
 
+def import_melidrussa(connection):
+    """Current Retail Lua child requests and TC-authenticated primary, no new stats."""
+    import encounter_cpp_bindings
+    runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=188252').fetchone()
+    if runtime not in [('Melidrussa Chillworn','',''), ('Melidrussa Chillworn','','boss_melidrussa_chillworn')]:
+        raise ValueError('Melidrussa runtime binding conflicts with local Lua port')
+    for wrapper, child in [(1307297,396044),(1307308,1311543)]:
+        effect = connection.execute('SELECT Effect,EffectTriggerSpell FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0',(wrapper,)).fetchone()
+        if effect != (3,child):
+            raise ValueError(f'Melidrussa native wrapper{wrapper} child changed')
+    primary, _ = encounter_cpp_bindings.PROFILES['melidrussa']
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    connection.executescript(encounter_cpp_bindings.binding_sql(rows))
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_melidrussa_chillworn' WHERE entry=188252")
+    return [188252]
+
+
+def import_kokia(connection):
+    """Current Retail local Lua port and authenticated primary, no actor edits."""
+    import encounter_cpp_bindings
+    runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=189232').fetchone()
+    if runtime not in [('Kokia Blazehoof','',''), ('Kokia Blazehoof','','boss_kokia_blazehoof')]:
+        raise ValueError('Kokia runtime binding conflicts with local Lua port')
+    for spell, expected in [(372864,(3,0,0)),(372110,(3,0,372107)),(372858,(6,23,372859))]:
+        effect = connection.execute('SELECT Effect,EffectAura,EffectTriggerSpell FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0',(spell,)).fetchone()
+        if effect != expected:
+            raise ValueError(f'Kokia native current effect/child{spell} changed')
+    primary, _ = encounter_cpp_bindings.PROFILES['kokia']
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    connection.executescript(encounter_cpp_bindings.binding_sql(rows))
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_kokia_blazehoof' WHERE entry=189232")
+    return [189232]
+
+
 def import_porung_binding(connection):
     """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
     import encounter_cpp_bindings
@@ -451,7 +485,7 @@ def import_porung_binding(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -481,6 +515,10 @@ def main():
                 entries = import_ancient(conn)
             elif args.encounter == 'doragosa':
                 entries = import_doragosa(conn)
+            elif args.encounter == 'melidrussa':
+                entries = import_melidrussa(conn)
+            elif args.encounter == 'kokia':
+                entries = import_kokia(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':

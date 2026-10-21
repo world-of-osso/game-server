@@ -1,3 +1,18 @@
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
+## 2026-10-21 — Follower205 source audits
+
+[Generic difficulty chain](systems/level-scaling.md#creature-difficulty-fallback--2026-10-21): pinned70448/TDB1210/TCa352b1fa prove205→1→0, template CT precedence and ExpectedStat mods; existing178 content205 rows are40 Normal/138 base projections, not raw205 observations. Native Vault Rune197204 temporary spawn reproduces missing LevelScaling (403a8357b,1FAIL17.83s); generic template and regional-delta chain implemented, GREEN pending. Read-only all27-map source inventory records650 nonboss candidates,23 source-bound/627 unbound and10 absent populations; helpers/phases retained, not a hostile-mechanics completion claim. Evidence in engine `data/diagnostics/follower-dungeons-2026-10-21/`.
+## 2026-10-21 — Kokia current Retail partial
+
+[Kokia](systems/boss-scripts.md#kokia-current-retail-partial--2026-10-21): ignored firstSearingRED precedes currentRetail partial065cf3fc9. Native5/5GREEN78.66s atd1af8bded proves Normal/Follower140s ongoing lanes, native aura23 weapon damage/reset/source-order rearm/isolated2606bit0/corpse. Producer1PASS12.435s; authenticated primary/localLua binding only, all actor inputs retained. No legacy timing or unsourced Ritual/Firestorm/projectile forwarding; conditional context and final gate/publication remain explicit.
+
+## 2026-10-21 — Follower population source audit
+
+[All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
+## 2026-10-21 — Melidrussa current Retail partial
+
+[Melidrussa](systems/boss-scripts.md#melidrussa-current-retail-partial--2026-10-21): ignored nativeHail RED→currentRetail native-child/source-order lanes→5GREEN77.74s atbcc2dc5cf, Normal/Follower140s ongoing damage/copy credit/reset/corpse. Source producer1PASS6.140s authenticates2609/map2521bit1 and localLua binding without actor-data edits. Master mergedb7f618873 afterward; no fresh postmerge certification (capacity held9minutes), final gate/publication lead-owned. Timeline condition/selector/Whelp gaps retained.
+
 ## 2026-10-21 — Umbrelskul partial Lua-clock port
 
 [Umbrelskul](systems/boss-scripts.md#umbrelskul-partial-lua-clock--2026-10-21): ignored firstStrikeRED a8b2e4c39 precedes78bd2a595 partial source. Native7GREEN44.00s at87fad0cf7, including Normal/Follower/Mythic source branches, success-only DragonStrike repeat/cancel, native line+periodic damage, reset and isolated2584bit2. Sourcecopy producer1PASS3.332s; local binding only, all world inputs preserved. Energy/Brittle/crystals/upstream selector remain named gaps; publication/final gate lead-owned.
