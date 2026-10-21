@@ -1,4 +1,5 @@
 //! Per-GUID equipment modifiers, independent of the legacy inventory and wire ABI.
+pub mod bonuses;
 use serde::{Deserialize, Serialize};
 use shared::item_scaling::{ItemScaling, ItemScalingTables, ItemStats};
 
