@@ -308,9 +308,65 @@ def import_herald_actors(connection):
     return [entry for entry, _ in sources]
 
 
+def import_nethekurse_fissures(connection):
+    """TC boss_nethekurse: actual base0 and Heroic2 fissures, no placements."""
+    for entry, script in [(17471, 'npc_lesser_shadow_fissure'), (18370, 'npc_wild_shadow_fissure')]:
+        identity = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=?', (entry,)).fetchone()
+        difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=? ORDER BY DifficultyID', (entry,)).fetchall()
+        if identity != ('', script) or difficulties != [(0,), (2,)]:
+            raise ValueError(f'Nethekurse fissure{entry} source identity changed')
+    replace_source_base_templates(connection, [17471, 18370])
+    project_difficulty(connection, 17471, 2)
+    # Like Nazan CT0, these level1 cache bounds are placeholders. Actual spell
+    # summons resolve their level from the source summoner/map, never these bounds.
+    written = connection.execute('''INSERT OR REPLACE INTO content_creature_template_difficulty
+        (entry,DifficultyID,minlevel,maxlevel,exp,ContentTuningID,HealthScalingExpansion,
+         LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,ManaModifier,ArmorModifier,
+         DamageModifier,lootid,mingold,maxgold)
+        SELECT Entry,DifficultyID,1,1,health_expansion(HealthScalingExpansion),ContentTuningID,
+            HealthScalingExpansion,LevelScalingDeltaMin,LevelScalingDeltaMax,HealthModifier,
+            ManaModifier,ArmorModifier,DamageModifier,LootID,GoldMin,GoldMax
+        FROM tdb_creature_template_difficulty WHERE Entry=18370 AND DifficultyID=2 AND ContentTuningID=0''').rowcount
+    if written != 1:
+        raise ValueError('Wild Shadow Fissure18370 missing source Heroic2 CT0 row')
+    return [17471, 18370]
+
+
+def import_kargath_actors(connection):
+    """Pinned Kargath groups0/1 and native Blade Dance marker authority."""
+    identities = connection.execute('SELECT entry,AIName,ScriptName FROM tdb_creature_template WHERE entry IN(17611,17695,20709) ORDER BY entry').fetchall()
+    if identities != [(17611, '', 'npc_warchiefs_portal'), (17695, 'SmartAI', ''), (20709, '', '')]:
+        raise ValueError('Kargath source actor identities changed')
+    difficulties = connection.execute('SELECT Entry,DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty WHERE Entry IN(17611,17695,20709) ORDER BY Entry,DifficultyID').fetchall()
+    if difficulties != [(17611,0,231),(17695,0,231),(17695,2,1075),(20709,0,231)]:
+        raise ValueError('Kargath source actor difficulties changed')
+    groups = connection.execute('SELECT groupId,entry,summonType,summonTime,count(*) FROM tdb_creature_summon_groups WHERE summonerId=16808 AND summonerType=0 GROUP BY groupId,entry,summonType,summonTime ORDER BY groupId').fetchall()
+    if groups != [(0,17611,8,0,1),(1,17695,7,300000,4)]:
+        raise ValueError('Kargath source summon groups changed')
+    entries = [17611,17695,20709]
+    replace_source_base_templates(connection, entries)
+    # Remove only unauthored legacy difficulty projections; do not manufacture Normal1.
+    connection.execute('''DELETE FROM content_creature_template_difficulty
+        WHERE entry IN(17611,17695,20709) AND NOT EXISTS(
+            SELECT 1 FROM tdb_creature_template_difficulty source
+            WHERE source.Entry=content_creature_template_difficulty.entry
+              AND source.DifficultyID=content_creature_template_difficulty.DifficultyID)''')
+    project_difficulty(connection,17695,2)
+    return entries
+
+
+def import_porung_binding(connection):
+    """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
+    import encounter_cpp_bindings
+    primary, _ = encounter_cpp_bindings.PROFILES['porung']
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    connection.executescript(encounter_cpp_bindings.binding_sql(rows))
+    return [primary['entry']]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -326,6 +382,12 @@ def main():
                 entries = [import_demonic_leap_template(conn)]
             elif args.encounter == 'omor':
                 entries = import_fiendish_hound(conn)
+            elif args.encounter == 'nethekurse':
+                entries = import_nethekurse_fissures(conn)
+            elif args.encounter == 'kargath':
+                entries = import_kargath_actors(conn)
+            elif args.encounter == 'porung':
+                entries = import_porung_binding(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':

@@ -26,11 +26,14 @@ pub mod event_map;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
+pub(crate) mod kargath;
 pub mod kings_rest;
 pub(crate) mod maraudon;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
+pub(crate) mod nethekurse;
+pub(crate) mod nethekurse_intro;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
@@ -66,7 +69,10 @@ pub(crate) const SCRIPT_SPAWN_GROUPS: &[u32] = &[
 
 /// `gameobject_template.ScriptName`s with a ported `GameObjectAI`.
 pub(crate) fn is_game_object_script(script_name: &str) -> bool {
-    script_name == kings_rest::SERPENTINE_SEAL_SCRIPT
+    matches!(
+        script_name,
+        kings_rest::SERPENTINE_SEAL_SCRIPT | nethekurse_intro::DOOR_SCRIPT
+    )
 }
 
 /// `GameObjectAI::OnGossipHello` of the object's ported script.
@@ -76,6 +82,8 @@ pub(crate) fn game_object_gossip_hello(world: &mut World, player: Entity, object
     };
     if script.0 == kings_rest::SERPENTINE_SEAL_SCRIPT {
         kings_rest::serpentine_seal_gossip_hello(world, player, object);
+    } else if script.0 == nethekurse_intro::DOOR_SCRIPT {
+        nethekurse_intro::door_gossip_hello(world, object);
     }
 }
 
@@ -108,9 +116,13 @@ impl Plugin for ScriptedAiPlugin {
                     bossmod::advance_schedules,
                     init_creature_ai,
                     ragefire_chasm::intro_triggers::detect_entries,
+                    nethekurse_intro::detect_entries,
                     update_creature_ai,
                 )
                     .chain()
+                    // TC Creature::Update runs Unit::Update before AIUpdateTick.
+                    // A new AI cast starts aging on the following server tick.
+                    .after(crate::spell_cast::advance_casts)
                     .after(crate::creature_aggro::update_victim_system)
                     .before(crate::creature_ai::chase_system)
                     .before(crate::combat::auto_attack_system),
@@ -338,6 +350,12 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if shattered_halls::is_creature_script(script_name) {
         return shattered_halls::creature_ai(world, creature);
     }
+    if nethekurse::is_creature_script(script_name) {
+        return nethekurse::creature_ai(world, creature);
+    }
+    if kargath::is_creature_script(script_name) {
+        return kargath::creature_ai(world, creature);
+    }
     the_stockade::creature_ai(world, creature, script_name)
 }
 
@@ -359,6 +377,8 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
+        || nethekurse::is_creature_script(script_name)
+        || kargath::is_creature_script(script_name)
     {
         Some(script_name.to_owned())
     } else {

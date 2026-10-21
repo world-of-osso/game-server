@@ -184,6 +184,29 @@ fn death_grip(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     }
 }
 
+/// TC a352b1fa spell_dk.cpp1328-1358: Gorefiend's Grasp E1 only.
+/// The unrelated E0 pull has no matching source script and remains a named gap.
+fn cast_subduing_grasp(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    const SUBDUING_GRASP_TALENT: u32 = 454_822;
+    const SUBDUING_GRASP_DEBUFF: u32 = 454_824;
+    if !crate::auras::has_aura(world, caster, SUBDUING_GRASP_TALENT) {
+        return;
+    }
+    if let Err(reason) = super::creature_cast_ignoring_in_progress(
+        world,
+        caster,
+        SUBDUING_GRASP_DEBUFF,
+        Some(target),
+    ) {
+        warn!(
+            ?caster,
+            ?target,
+            ?reason,
+            "Subduing Grasp454824 cast refused"
+        );
+    }
+}
+
 /// Source OnDestinationTargetSelect hooks, keyed by spell/effect/target selector.
 pub(super) fn relocate_destination(
     spell_id: u32,
@@ -204,9 +227,18 @@ pub(super) fn relocate_destination(
     }
 }
 
+/// Source scripts read these77 values without registering an effect hit hook.
+/// This classifies consumed data only; it must not select targets or dispatch a no-op.
+pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
+    // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
+    // spell_shaman.cpp1015-1027: OnHit reads knockdown chance E1.
+    matches!((spell_id, effect_index), (32_379, 3) | (77_478, 1))
+}
+
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (49_576, 0) => Some(death_grip),
+        (108_199, 1) => Some(cast_subduing_grasp),
         (20_538, 0) => Some(hate_to_zero),
         (30_693, 0) => Some(crate::scripted_ai::hellfire_ramparts::call_nazan),
         (30_691 | 32_491 | 33_793 | 33_794 | 34_653 | 36_920, 1) => {
@@ -214,6 +246,8 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         }
         (30_926 | 36_921, 1) => Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::cone_hit),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
+        (30745, 0) => Some(crate::scripted_ai::nethekurse::cast_target_fissure),
+        (30738, 0) => Some(crate::scripted_ai::kargath::collect_dance_target),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }
@@ -515,6 +549,8 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
+        (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
+        (30745, 0) => Some(crate::scripted_ai::nethekurse::filter_target_fissures),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),
         _ => None,
     }
@@ -1236,6 +1272,16 @@ fn pick_azure_strike_targets(
 
 /// `SpellHitFn`: runs once per unit the spell lands on, after its effects resolved there.
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
+
+/// OnHit scripts that need per-cast metadata (including original field identity).
+pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
+
+pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    match spell_id {
+        77_478 => Some(batch9::cast_earthquake_knockdown),
+        _ => None,
+    }
+}
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {

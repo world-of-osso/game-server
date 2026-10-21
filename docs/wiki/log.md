@@ -2,6 +2,28 @@
 ## 2026-10-20 — Transport-free Stockade simulator
 
 [Simulator](systems/dungeon-simulator.md): committed source graph143 packs/367 native walk edges and plain Bevy gameplay App. Graph census and isolated opening pack pass; full-route source-actor death/HP/mana/pull reporting exists, no boss clear. Route3 reproduced DPS lost during OOC hold; user clarified active-combat10s with dungeon/wipe reset, production correction committed pending GREEN. Combat RNG scoped replay/history family later GREEN. Optimized catalog reuse allocation/state-reset RED→GREEN6.39s; native dead-follower corpse despawn sampling RED→GREEN11.23s. Full seeds1–10 at2fa2b68d5/P03cebdb:0clears,2wipes,3stalls,3timeouts,2blocks; table/root observations in simulator page. No ≥100× consistency or live qualification. Complete native combat-event serialization added to diagnose causes. User later approved named ready single-pack/boss policies: native RED2→GREEN2 at aefef7da6; batch4 exposes false recovery stalls rather than measurement/boss refusal. Party-resource progress correction and sourced refreshment-consumer gap are recorded in the simulator page.
+## 2026-10-20 — Kelidan and Skull Bash load flakes
+
+[Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. At97398c587/protocol03cebdb: each exact case10/10 under4 same-core hogs (490.887s, hogs stopped); full filters684PASS/0FAIL/20existingignored (679standard +1privatefrontal +4privatefrozen); check/fmt0, no warnings. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.
+
+## 2026-10-20 — Earthen Rage authored variance oracle
+
+[Native bounds](systems/auras.md#earthen-rage-baseline--2026-10-19): gate-e7824 observed43/44/43;100SP×0.42471 with±2.5% native variance rounds41–44, not41–43. Only the oracle derives correct rounded endpoints; production/RNG/timers unchanged. Gate failure is RED evidence; native family12/12GREEN20.90s and10/10 same-core CPU-load repetitions at ac61a1f16. No runtime changes.
+
+## 2026-10-20 — Encounter fixture determinism
+
+[Root cause](systems/boss-scripts.md#encounter-fixture-determinism--2026-10-20): clocks already manual50ms; Maker fixture auto-engages before its late per-test seed. Two-app schedule regression RED precedes shared BossAi-reset fixture seeding. Source5–15s describes cast requests, not500ms-later impacts; Gargolmar aura presence is now checked on actual application instead of arbitrary70s. Production cast-order regression then exposed newly admitted casts already aged50ms: ScriptedAiPlugin now runs after advance_casts, matching TC Creature::Update order; exact500ms regression passes. Full scripted_ai coverage408standard+2private-AzurePASS/0FAIL/12existingignored. Final ac61a1f16 stress: Maker10/10, Gargolmar10/10, Earthen10/10 under four same-core CPU hogs in921.516s, no failures; load processes stopped.
+## 2026-10-20 — Public creature startup latency
+
+[Investigation](investigations/public-spawn-startup-latency.md): measured optimized release process/bind/applied-spawn phases on a full private world copy, profiled filesystem validation, reproduced both real I/O boundaries before changing them, and retained floor/metadata/level tuning. Bounded scoped startup workers and terrain-only metadata queries preserve population and single-threaded ECS scheduling. Exact before/after artifacts, noisy reverse-order captures, focused gates and loaded20tps exclusions live in the investigation.
+
+## 2026-10-20 — Census resource/state/duration/sanctuary
+
+[Source matrix](systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20): generic245/262/396/176, no new scripts/protocol. Ignored REDs pushed before consumers;262 corrected from uncomputed health state to actual Swiftmend15. TC NULL220/443 and absent phasing167/viewpoint72 remain explicit gaps. Native12GREEN31.37s before enabling; merge3e1add814→8922af04b retains137/307;67targetedPASS35.88s/check/fmt with zero warnings. Native670 unique receipts preserve source passives and91 selected affected memberships:34 owned family warnings clear across18 specs (262×11/396×6/245×4/176×13),57 named-gap memberships retain warnings. Interrupted96 complete receipts retained plus574 remaining PASS366.39s; exact manifest coverage verified, no whole-spec parity claim.
+## 2026-10-20 — Generic census healing, label mobility and energize
+
+[Generic next](systems/auras.md#census-generic-next--2026-10-20): initial RED498eeb521 was invalid (limited fixture store omitted native applied/triggered IDs). Corrected ignored68f31ad3d pushed with consumers reverted gives6RED and253 baseline probe receipts; restored6c76aead4 gives unchanged6GREEN plus253-receipt probe PASS178.44s before enabling. Earlier14-root warning delta includes354eight now inherited from merged master27743876c; duplicate354 consumer removed, existing master wildcard behavior retained. Merged bde34597a15PASS215.50s includes six cases, retained eight330 controls and253-receipt probe; check/fmtPASS, no warnings. Branch-owned delta is307four and137two across six specs; this is not full ability/spec parity.470 explicitly TC NULL; no fabricated timer scaling or per-spell scripts.
+
 ## 2026-10-20 — Generic combat/stat aura consumers
 
 [Per-type source matrix and ledger](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20):12 generic consumers,4 explicit TC NYI gaps. Pushed ignored REDs first; corrected retired weapon ID, saturated armor and pre-owned expertise fixtures without changing native spell data.419 current mana clamps instead of scaling.316 accounts absorption but does not invent a script rescue. Final861d7edd5 targeted15 enabled PASS26.31s/0warnings, protocol600b755; no full suite or independent parent gate. Receipt-backed pinned sources supersede shifted citations from the broader TC tree; compared handler bodies are identical.
@@ -3391,3 +3413,16 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-20 — Crafting reagents from banks
 
 [Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.
+
+- 2026-10-20: mapped44 census effect77 roots/125memberships; native Subduing Grasp E1 RED→GREEN3; no generic77 registration or full Grasp promotion.
+
+- 2026-10-20: qualified native Priest32379 execute carrier E3 and retained unmatched-slot warning; one ignored RED→GREEN before enabling.
+
+- 2026-10-20: ported TC Earthquake OnHit E1 native5%/once-per-owned-field knockdown; native2GREEN after ignored RED, no generic77 dispatch.
+- 2026-10-20: Nethekurse native combat and authentic StringId peon callback proof ingested into [boss scripts](systems/boss-scripts.md#shattered-halls-nethekurse-2026-10-20); source gaps explicit.
+
+- 2026-10-20: Nethekurse source-backed remainder/native wild+patrol+Reset proof added; COMPOSITE17GREEN, canonical fissure publication and absent native/create-properties gaps retained.
+
+- 2026-10-20: Kargath pinned source/native149 and eleven-case proof ingested;30738 delayed-selector incompatibility and source actor publication gaps explicit.
+
+- 2026-10-20: Porung authenticated Heroic primary/unchanged native SmartAI and six-case composite proof ingested; stale No Repeat comment and real Normal-only same-display counterexample documented.

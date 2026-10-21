@@ -71,12 +71,16 @@ mod herald_min1;
 mod herald_pair;
 #[path = "herald_reset.rs"]
 mod herald_reset;
+#[path = "kargath.rs"]
+mod kargath;
 #[path = "kelidan.rs"]
 mod kelidan;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
 mod maraudon;
+#[path = "nethekurse.rs"]
+mod nethekurse;
 #[path = "noxxion.rs"]
 mod noxxion;
 #[path = "omor.rs"]
@@ -87,6 +91,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
+#[path = "porung.rs"]
+mod porung;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
@@ -330,7 +336,8 @@ fn encounter_fixture(
     }
     let inputs = prepared_inputs::encounter_inputs(entry, map_id, populate);
     inputs.install(&mut app);
-    let mut maps = data.maps.clone();
+    // Keep producer-authenticated map/binding inputs already installed in this app.
+    let mut maps = app.world().resource::<MapStore>().clone();
     if entry == 234648 {
         // Mirror Image and Blink resolve their authored ground destinations.
         let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
@@ -419,7 +426,7 @@ fn encounter_fixture(
         let (boss, spawn) =
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
-            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 17306, 17308,
+            ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)

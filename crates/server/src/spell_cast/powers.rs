@@ -240,7 +240,15 @@ pub fn change_power(
 ) -> Option<f32> {
     let (current, max) = power_value(world, entity, power)?;
     if power == PowerType::Runes && world.get::<super::runes::Runes>(entity).is_some() {
-        return Some(change_runes(world, entity, delta));
+        let changed = change_runes(world, entity, delta);
+        crate::auras::power_amount_trigger::on_changed(
+            world,
+            entity,
+            power,
+            current,
+            current + changed,
+        );
+        return Some(changed);
     }
     let next = (current + delta).clamp(0.0, max);
     if power == PowerType::Mana {
@@ -248,6 +256,7 @@ pub fn change_power(
     } else {
         world.get_mut::<PowerPools>(entity)?.get_mut(power)?.current = next;
     }
+    crate::auras::power_amount_trigger::on_changed(world, entity, power, current, next);
     Some(next - current)
 }
 
@@ -387,8 +396,10 @@ type RegenQuery<'w, 's> = Query<
     'w,
     's,
     (
+        Entity,
         &'static mut PowerPools,
         Option<&'static mut Mana>,
+        Option<&'static crate::auras::ActiveAuras>,
         Option<&'static CombatStatus>,
         Option<&'static crate::auras::AuraStatMods>,
         Option<&'static crate::stats::CharacterStats>,
@@ -409,6 +420,7 @@ type RegenQuery<'w, 's> = Query<
 /// mana, scaled by the same multiplier. Dead players do not regenerate
 /// (`Player::Update` calls `RegenerateAll` only `IsAlive()`, Player.cpp:1026-1030).
 pub(crate) fn regenerate_powers(
+    mut commands: Commands,
     time: Res<Time>,
     table: Option<Res<PowerTypeTable>>,
     world_data: Option<Res<WorldData>>,
@@ -419,7 +431,11 @@ pub(crate) fn regenerate_powers(
     };
     let dt = time.delta_secs();
     let now = time.elapsed_secs_f64();
-    for (mut pools, mana, combat, mods, stats, death, npc, flags, pet_focus) in &mut units {
+    for (unit, mut pools, mana, auras, combat, mods, stats, death, npc, flags, pet_focus) in
+        &mut units
+    {
+        let auras = auras
+            .filter(|auras| auras.has_type(crate::auras::handlers::TRIGGER_SPELL_ON_POWER_AMOUNT));
         if !read_creature_power_regeneration(npc, flags, world_data.as_deref()) {
             continue;
         }
@@ -429,12 +445,21 @@ pub(crate) fn regenerate_powers(
         let regen_mult = |power: PowerType| mods.map_or(1.0, |mods| mods.power_regen(power as i32));
         let has_pet_focus = pet_focus.is_some();
         if let Some(mut timer) = pet_focus {
+            let old = pools.get(PowerType::Focus).map(|pool| pool.current);
             regenerate_pet_focus(
                 &mut pools,
                 &mut timer,
                 time.delta(),
                 regen_mult(PowerType::Focus),
             );
+            if let (Some(old), Some(pool)) = (old, pools.get(PowerType::Focus)) {
+                crate::auras::power_amount_trigger::queue_regenerated(
+                    &mut commands,
+                    unit,
+                    auras,
+                    (PowerType::Focus, old, pool.current),
+                );
+            }
         }
         let in_combat = combat.is_some_and(|status| status.0);
         if in_combat {
@@ -477,6 +502,7 @@ pub(crate) fn regenerate_powers(
                 pool.regen_per_sec = 0.0;
                 continue;
             };
+            let old = pool.current;
             let next = pool.current + rate * dt;
             pool.current = if rate > 0.0 {
                 next.min(limit)
@@ -484,6 +510,12 @@ pub(crate) fn regenerate_powers(
                 next.max(limit)
             };
             pool.regen_per_sec = if pool.current == limit { 0.0 } else { rate };
+            crate::auras::power_amount_trigger::queue_regenerated(
+                &mut commands,
+                unit,
+                auras,
+                (pool.power, old, pool.current),
+            );
         }
         let mut mana_rate = 0.0;
         if let Some(mut mana) = mana
@@ -497,7 +529,14 @@ pub(crate) fn regenerate_powers(
                 mods.map_or(0.0, |mods| mods.power_regen_flat(PowerType::Mana as i32));
             mana_rate = base_mana * MANA_REGEN_BASE_PCT_PER_SEC * regen_mult(PowerType::Mana)
                 + flat_mana_regen / 5.0;
+            let old = mana.current;
             mana.current = (mana.current + mana_rate * dt).min(mana.max);
+            crate::auras::power_amount_trigger::queue_regenerated(
+                &mut commands,
+                unit,
+                auras,
+                (PowerType::Mana, old, mana.current),
+            );
             if mana.current == mana.max {
                 mana_rate = 0.0;
             }

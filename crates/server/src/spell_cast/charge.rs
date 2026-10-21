@@ -1,4 +1,4 @@
-//! TC a352b1fa EffectCharge: launch movement, hit after spline duration.
+//! TC a352b1fa EffectCharge/EffectChargeDest: launch movement, sourced hit delay.
 //! Two-point movement subset, matching the existing direct point generator.
 //! Obstacle-generated paths are not implemented.
 use super::{effects::EffectCtx, *};
@@ -18,30 +18,72 @@ pub(crate) struct ChargeMovement {
     finished: bool,
 }
 
+pub(super) enum ChargeDelay {
+    Unit { target: Entity, milliseconds: u64 },
+    Destination { milliseconds: u64 },
+}
+
 pub(super) fn launch(
     world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
     plan: &TargetPlan,
-) -> Result<Option<(Entity, u64)>, String> {
-    let Some(effect) = plan
-        .iter()
-        .find(|planned| spell.effects[planned.index].effect == 96)
-    else {
+) -> Result<Option<ChargeDelay>, String> {
+    let Some(planned) = plan.iter().find(|planned| {
+        matches!(
+            spell.effects[planned.index].effect,
+            96 | effects::EFFECT_CHARGE_DEST
+        )
+    }) else {
         return Ok(None);
     };
-    let target = *effect.units.first().ok_or("charge has no unit target")?;
-    let from = targets::position(world, caster).ok_or("charge caster has no position")?;
-    let target_position =
-        targets::position(world, target).ok_or("charge target has no position")?;
-    let reach = crate::scripted_ai::model_reach::combat_reach(world, target)
-        .ok_or("charge target has no sourced combat reach")?;
-    let (movement, speed) = calculate_movement(from, target_position, reach, spell, now(world));
-    let duration_ms = movement.duration_ms;
+    let (movement, speed, delay) = if spell.effects[planned.index].effect == 96 {
+        prepare_unit_charge(world, caster, spell, planned)?
+    } else {
+        prepare_destination_charge(world, caster, spell, planned)?
+    };
     world
         .entity_mut(caster)
         .insert((movement, CreatureMotion::Run, MovementSpeed(speed)));
-    Ok(Some((target, duration_ms)))
+    Ok(Some(delay))
+}
+
+fn prepare_unit_charge(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    planned: &PlannedEffect,
+) -> Result<(ChargeMovement, f32, ChargeDelay), String> {
+    let target = *planned.units.first().ok_or("charge has no unit target")?;
+    let from = targets::position(world, caster).ok_or("charge caster has no position")?;
+    let position = targets::position(world, target).ok_or("charge target has no position")?;
+    let reach = crate::scripted_ai::model_reach::combat_reach(world, target)
+        .ok_or("charge target has no sourced combat reach")?;
+    let (movement, speed) = calculate_movement(from, position, reach, spell, now(world));
+    let delay = ChargeDelay::Unit {
+        target,
+        milliseconds: movement.duration_ms,
+    };
+    Ok((movement, speed, delay))
+}
+
+fn prepare_destination_charge(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    planned: &PlannedEffect,
+) -> Result<(ChargeMovement, f32, ChargeDelay), String> {
+    let from =
+        targets::position(world, caster).ok_or("destination charge caster has no position")?;
+    let destination = planned
+        .dest
+        .ok_or("destination charge has no destination")?;
+    let (movement, speed) =
+        calculate_destination_movement(from, destination.position, spell, now(world));
+    let delay = ChargeDelay::Destination {
+        milliseconds: movement.duration_ms,
+    };
+    Ok((movement, speed, delay))
 }
 
 fn calculate_movement(
@@ -53,6 +95,15 @@ fn calculate_movement(
 ) -> (ChargeMovement, f32) {
     let toward_caster = Vec3::new(from.x - target.x, 0.0, from.z - target.z).normalize_or_zero();
     let to = target + toward_caster * reach;
+    calculate_destination_movement(from, to, spell, started)
+}
+
+fn calculate_destination_movement(
+    from: Vec3,
+    to: Vec3,
+    spell: &SpellInfo,
+    started: f64,
+) -> (ChargeMovement, f32) {
     let distance = from.distance(to);
     let authored_speed = spell.misc.as_ref().map_or(0.0, |misc| misc.speed);
     let speed_is_delay = attributes(spell, 9) & SPEED_IS_DELAY != 0;
@@ -179,6 +230,25 @@ pub(super) fn hit(
             ctx.caster,
             effect.trigger_spell,
             Some(target),
+            ctx.depth + 1,
+        );
+    }
+}
+
+/// TC EffectChargeDest HIT: optional child at the authored destination after flight.
+pub(super) fn hit_destination(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &crate::spell_info::SpellEffect,
+) {
+    if effect.trigger_spell != 0
+        && let Some(destination) = ctx.dest
+    {
+        super::cast_triggered_at_destination(
+            world,
+            ctx.caster,
+            effect.trigger_spell,
+            destination.position,
             ctx.depth + 1,
         );
     }

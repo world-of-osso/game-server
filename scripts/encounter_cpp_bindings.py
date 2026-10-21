@@ -302,11 +302,24 @@ HERALD_SOURCES = {
     "Outland/HellfireCitadel/HellfireRamparts/instance_hellfire_ramparts.cpp": "7f907d01ba05818b1dd4f2e945353433569f56a79773722f5d05a622009af49e",
     "Outland/HellfireCitadel/HellfireRamparts/boss_vazruden_the_herald.cpp": "7a79dab1f28d5915d77c4d972c5f8f611e95a8bed5640374a490fc73a0806bba",
 }
+# Header NPC_BLOOD_GUARD_PORUNG20923 and instance encounter1935 disambiguate
+# the shared17725 display from Shattered Hand Blood Guard17461.
+PORUNG_PRIMARY = dict(
+    map_id=540, entry=20923, encounter_id=1935, bit=0,
+    script="", ai="SmartAI", journal_id=728, actor_id=1394, display_id=17725,
+    spawn_guid=34038, spawn_difficulties="2", retail_build="12.1.5.70448",
+)
+PORUNG_SOURCES = {
+    "Outland/HellfireCitadel/ShatteredHalls/shattered_halls.h": "9327cbd528c9ccf1280cbf69052ee85393fb976b649d6325ee02ea9bf1a7a4b3",
+    "Outland/HellfireCitadel/ShatteredHalls/instance_shattered_halls.cpp": "df983cfb054a895f2563dd00a1ece3312906998f5e0dc2d53cd3667bad31ed39",
+}
+
 HERALD_RETAIL_BUILD = "12.1.5.70448"
 HERALD_CREDIT_POLICY = "ENCOUNTER_CREDIT_FROM_RETAIL_DUNGEONENCOUNTER"
 HERALD_IDENTITY_GAP = "HERALD_RETAIL_IDENTITY_GAP"
 
 PROFILES = {
+    "porung": (PORUNG_PRIMARY, PORUNG_SOURCES),
     "omor": (OMOR_PRIMARY, OMOR_SOURCES),
     "gargolmar": (GARGOLMAR_PRIMARY, GARGOLMAR_SOURCES),
     "theradras": (THERADRAS_PRIMARY, THERADRAS_SOURCES),
@@ -370,6 +383,14 @@ def prepare_bindings(connection, bindings):
             ).fetchone()
             if source_ai != (binding["ai"],):
                 raise ValueError(f"creature AI identity changed: {binding['entry']}")
+        if "spawn_guid" in binding:
+            spawns = connection.execute(
+                'SELECT guid,map,spawnDifficulties FROM tdb_creature WHERE id=? ORDER BY guid',
+                (binding['entry'],),
+            ).fetchall()
+            expected = [(binding['spawn_guid'],binding['map_id'],binding['spawn_difficulties'])]
+            if spawns != expected:
+                raise ValueError(f"creature spawn identity changed: {binding['entry']}")
         existing = connection.execute(
             "SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?",
             (binding["map_id"], binding["entry"]),
@@ -493,6 +514,8 @@ def read_binding_arguments():
 def main():
     args = read_binding_arguments()
     primary, sources = PROFILES[args.encounter]
+    if 'retail_build' in primary and args.journal_build != primary['retail_build']:
+        raise ValueError(f"expected Retail {primary['retail_build']}, got {args.journal_build}")
     validate_source_files(args.tc_dir, sources)
     identity_report = {}
     if args.encounter == 'herald':

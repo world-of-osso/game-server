@@ -76,6 +76,30 @@ fn matching_duration_modifiers(auras: &ActiveAuras, mechanic_mask: u64) -> i32 {
     (total as i32).min(strongest as i32)
 }
 
+fn matching_dispel_modifier(auras: &ActiveAuras, dispel: u32) -> i32 {
+    let total: f32 = auras
+        .iter()
+        .flat_map(|aura| {
+            aura.effects
+                .iter()
+                .filter(move |effect| {
+                    effect.aura_type == handlers::MOD_AURA_DURATION_BY_DISPEL
+                        && effect.misc_values[0] == dispel as i32
+                })
+                .map(move |effect| effect.amount * aura.stack_multiplier())
+        })
+        .sum();
+    // Object.cpp1765 selects min(sum245, strongest negative246); unsupported246
+    // remains a named gap rather than acquiring invented positive-duration rules.
+    (total as i32).min(0)
+}
+
+fn add_percent(duration: u32, percent: i32) -> u32 {
+    // Util.h AddPct truncates the integer delta, not the final multiplied duration.
+    let delta = (duration as f32 * percent as f32 / 100.0) as i64;
+    (i64::from(duration) + delta).max(0) as u32
+}
+
 pub(super) fn modify_duration(
     world: &World,
     application: &AuraApplication,
@@ -99,7 +123,10 @@ pub(super) fn modify_duration(
     };
     let mask = applied_mechanic_mask(spell, application.effect_mask);
     let percent = matching_duration_modifiers(auras, mask);
-    // Util.h AddPct truncates the integer delta, not the final multiplied duration.
-    let delta = (duration as f32 * percent as f32 / 100.0) as i64;
-    (i64::from(duration) + delta).max(0) as u32
+    let duration = add_percent(duration, percent);
+    let dispel = spell
+        .categories
+        .as_ref()
+        .map_or(0, |category| category.dispel_type);
+    add_percent(duration, matching_dispel_modifier(auras, dispel))
 }

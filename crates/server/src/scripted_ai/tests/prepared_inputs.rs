@@ -62,6 +62,9 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         12201 => Some("theradras"),
         17306 => Some("gargolmar"),
         17308 => Some("omor"),
+        16807 => Some("nethekurse"),
+        16808 => Some("kargath"),
+        20923 => Some("porung"),
         186737 => Some("telash"),
         _ => None,
     };
@@ -98,11 +101,16 @@ fn decode_encounter_inputs(
     let data = data().expect("world.db fixture");
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    if entry == 20923 {
+        // The authenticated primary binding belongs to this prepared copy, not canonical data.
+        inputs.push(crate::maps::store::load_map_store(&conn).unwrap());
+    }
     inputs.push(crate::conditions::load_spell_target_conditions(&path).unwrap());
     inputs.push(crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn).unwrap());
     inputs.push(crate::scripted_ai::kings_rest::load_gust_slash_shape(&conn).unwrap());
     inputs.push(crate::spell_cast::area_trigger::load_aura_field_catalog(&conn).unwrap());
     inputs.push(crate::scripted_ai::ragefire_chasm::intro_triggers::load_triggers(&conn).unwrap());
+    inputs.push(crate::scripted_ai::nethekurse_intro::load_trigger(&conn).unwrap());
     inputs.push(crate::scripted_ai::kings_rest::load_gold_model_reaches(&conn).unwrap());
     inputs.push(crate::scripted_ai::waypoint_path::load_script_paths(&conn).unwrap());
     inputs.push(crate::spell_cast::summon::load_summon_properties(&conn).unwrap());
@@ -137,6 +145,8 @@ fn decode_encounter_inputs(
             || (entry == 12201 && *id == 12238)
             || (entry == 17306 && *id == 17309)
             || (entry == 17308 && *id == 17540)
+            || (entry == 16807 && [17471, 18370].contains(id))
+            || (entry == 16808 && [17611, 17695, 20709].contains(id))
             || (entry == 17381 && *id == 17370)
             || (entry == 186737 && *id == 197204)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
@@ -189,6 +199,13 @@ fn decode_encounter_inputs(
         spawn_string_ids,
         script_spawn_groups,
         reset_spawn_groups,
+        // Nethekurse's source reactions pause the real default patrol. The
+        // fissure-only producer leaves this canonical path catalog unchanged.
+        waypoints: if entry == 16807 && populate {
+            crate::test_data::world_data().waypoints.clone()
+        } else {
+            Default::default()
+        },
         // The Azure intro depends on the real non-following tender formation.
         formations: if populate && map_id == 2515 {
             crate::test_data::world_data().formations.clone()

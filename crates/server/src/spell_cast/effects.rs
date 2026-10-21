@@ -69,7 +69,10 @@ pub const EFFECT_TRIGGER_SPELL: u32 = 64;
 pub const EFFECT_INTERRUPT_CAST: u32 = 68;
 pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
+pub const EFFECT_ENERGIZE_PCT: u32 = 137;
 pub const EFFECT_FORCE_CAST: u32 = 140;
+/// TC SpellEffects.cpp3995, SPELL_EFFECT_CHARGE_DEST.
+pub const EFFECT_CHARGE_DEST: u32 = 149;
 /// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
 pub const EFFECT_REMOVE_AURA: u32 = 164;
 pub const EFFECT_REMOVE_AURA_2: u32 = 203;
@@ -78,6 +81,7 @@ pub const EFFECT_TELEPORT_UNITS_LEGACY: u32 = 15;
 pub const EFFECT_LEAP: u32 = 29;
 pub const EFFECT_MODIFY_CHARGES: u32 = 293;
 pub const EFFECT_ATTACK_ME: u32 = 114;
+pub const EFFECT_SANCTUARY_2: u32 = 176;
 
 /// Triggered spells may trigger further spells up to this depth.
 pub const MAX_TRIGGER_DEPTH: u8 = 3;
@@ -101,6 +105,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_INSTAKILL => instakill,
+        EFFECT_SANCTUARY_2 => super::sanctuary::apply,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,
@@ -114,6 +119,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
             crate::death::resurrection::send_offer
         }
         EFFECT_ENERGIZE => energize,
+        EFFECT_ENERGIZE_PCT => energize_pct,
         41 => super::teleport::jump_to_unit,
         96 => super::charge::hit,
         98 | 144 => super::knockback::knock_back,
@@ -191,6 +197,7 @@ pub fn cast_handler(effect_id: u32) -> Option<CastEffectHandler> {
     Some(match effect_id {
         super::disenchant::EFFECT_DISENCHANT => super::disenchant::effect_disenchant,
         42 | 213 => super::jump_charge::jump_to_effect_destination,
+        EFFECT_CHARGE_DEST => super::charge::hit_destination,
         254 => super::jump_charge::jump_to_destination,
         crate::game_objects::summoned::EFFECT_TRANSMITTED => {
             crate::game_objects::summoned::spawn_transmitted
@@ -1678,6 +1685,28 @@ fn energize(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: En
         0.0
     };
     energize_unit(world, ctx, target, power, amount + bonus, false);
+}
+
+/// TC EffectEnergizePct (a352b1fa SpellEffects.cpp1619): target maximum,
+/// raw power units, truncated before the ordinary energize/overflow pipeline.
+fn energize_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if !world
+        .get::<Health>(target)
+        .is_some_and(|health| health.current > 0.0)
+    {
+        return;
+    }
+    let Some(power) = PowerType::from_db(effect.misc_values[0]) else {
+        return;
+    };
+    let Some((_, max)) =
+        super::powers::power_value(world, target, power).filter(|(_, max)| *max > 0.0)
+    else {
+        return;
+    };
+    let percent = modded_base_points(world, ctx.caster, ctx.spell, effect);
+    let amount = (max * percent / 100.0).trunc();
+    energize_unit(world, ctx, target, power, amount, false);
 }
 
 /// Add `amount` raw units of `power`, clamped; logs Energize with the excess.

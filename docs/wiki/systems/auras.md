@@ -1,5 +1,47 @@
 # Auras
 
+## Census generic resource, state, duration and sanctuary — 2026-10-20
+
+|Family|Native behavior / boundary|Pinned TC a352b1fa source|
+|---|---|---|
+|262|Recognize existing family-mask state exemption;391528→Swiftmend18562 proves computed15, recipient ownership and removal; no fabricated state2/13 predicate.|`SpellAuraEffects.cpp334`, `Unit.cpp6163–6188`|
+|396|Raw-power apply and strict-old/inclusive-new crossings; native190427/36032,469779/381623 and409462/409463; costs/gains/regeneration share one consumer. Refresh does not reapply.|`SpellAuraEffects.cpp5369–5394`, `Unit.cpp10174–10218`|
+|245|Native235450−25% and454842−35% matching dispel; additive target sum after mechanic reduction, beneficial auras unchanged.|`Object.cpp1725–1770`, `SpellAuraEffects.cpp317`|
+|176|World player ends PvE combat and suppresses own PvP side; dungeon/nonplayer zeros only target threat, preserving references/other threat. Native98877 and actual in-flight116 prove cutoff; later missiles still land.|`SpellEffects.cpp3215–3243`, `Unit.cpp6029–6055`, `Spell.cpp2810`|
+
+Named gaps retained, not falsely registered as consumers:
+- `AURA_220_TC_NULL_NYI`, `AURA_443_TC_NULL_NYI`: `SpellAuraDefines.h307/530`, `SpellAuraEffects.cpp292/515`; see [original census qualification](../../specs/class-completeness.md#generic-combatstat-aura-census-slice--2026-10-20).
+- `PHASING_SYSTEM_ABSENT` (effect167): `SpellEffects.cpp5741–5749` calls `PhasingHandler::OnConditionChange`; no current server phase system. Lead explicitly excluded building one here.
+- `FARSIGHT_VIEWPOINT_PROTOCOL_ABSENT` (effect72): `SpellEffects.cpp2302–2325` requires a dynamic-object viewpoint and client protocol; protocol remains03cebdb by lead direction.
+- `SANCTUARY_IGNORE_STATIC_FLAG_UNIMPORTED`: TC `Creature.h354` reads StaticFlags2&0x200. Runtime content templates omit this field; world.db TDB has zero matching rows, so no native nonzero qualification exists. No invented static flag API or data.
+
+Sources: receipt-backed engine `data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa/`; supplemental exact pinned tree `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/tc-source-a352b1fa/TrinityCore-a352b1fa/` for `Spell.cpp`, `Creature.h`, `PhasingHandler` and `Unit::CombatStop`. Runtime implementation stays inside existing server pipeline; no scripts or protocol changes.
+
+Proof ledger: ignored RED pushed first a010a4310, seven numeric/combat failures; corrected262 native computed15 fixture1cff85bc8 gives genuine warning RED (the pre-existing state exemption already passes). Initial Hammer-of-Wrath oracle was rejected because state2 deliberately remains uncomputed. Logs: engine `data/diagnostics/census-3-2026-10-20/red{,262}.log`. At7309111d4 all12 native cases GREEN31.37s before enabling. After merging master3e1add814 (retaining137/307) as8922af04b, the12 plus retained duration/missile/combat-reference/regeneration/rune/resource cases give67PASS/0FAIL35.88s; `cargo check --locked -p server --bin game-server` and `cargo fmt --all --check` PASS, zero warnings. Readability inspected locally; no delegation; lead owns integration gate.
+
+### Per-spec census delta
+
+Identical native membership replay preserves all source-passive context:670 unique receipts across35 relevant specs,91 originally affected memberships. Session interruption left96 complete receipts for five specs; these were retained, not rerun. Remaining574 receipts/30specs finish in366.39s; exact manifest coverage/uniqueness verified across both files. Current91 selected cases have zero admission failures. This is a **family-warning delta**, not full-spec/rotation certification or promotion of other unresolved effects.
+
+|Specs|Owned root-family warnings cleared per spec|
+|---|---:|
+|62|4|
+|66|3|
+|63,64,65,70,102,103,104,105,259,260,261|2|
+|250,251,252,265,266|1|
+|All other22 specs|0|
+
+Total34→0:262 eleven memberships,396 six,245 four,176 thirteen. No inherited354/137/307 gains are credited. Retained gap warnings:443 thirty-seven,220 twelve,167 four,72 four. Machine evidence and every affected spell/spec pair: engine `data/diagnostics/census-3-2026-10-20/delta.json`; receipts `runtime.jsonl` and `runtime-part2.jsonl`. Test filter covering every implemented family: `census_three`; retained filter set: `census_three mechanic_duration_tests missiles_tests combat_refs::tests regen_tests spell_cast::runes::tests class_resource_tests`.
+## Census generic next — 2026-10-20
+
+The shared effect dispatcher adds137 `energize_pct`, reading the target's actual maximum raw pool and passing the truncated percentage gain to existing `energize_unit`. `aura_allows_moving` extends330's family-mask path with307's independent Misc0 SpellLabel selection; existing aura reconciliation updates active casts on apply/remove/expiry. Master27743876c already supplies354 in `combat_stats::healing_multiplier`; the duplicate354 implementation was removed during merge, keeping exactly that inherited consumer and its wildcard semantics. Two retained numeric354 tests qualify that shared boundary. New branch-owned families are only137 and307. No per-spell hooks, new components or protocol changes.
+
+Sources: allowed pinned TC a352b1fa `SpellEffects.cpp1619–1640`, `Unit.cpp3298–3313/7503–7507`, `SpellAuraEffects.cpp379/426/542`; all under engine `data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa`. Authored70448 world.db rows5405 (137 mana25%),55316 (137 energy100%),343012 (307 label16),295263 (307 label661),383191 (354 Rejuvenation10%, Tranquility20%) supply tests; fixture incoming100 healing isolates multiplier, not a claim of native heal size.
+
+Initial RED498eeb521 and first GREEN141b412f9 were invalid: the limited harness store omitted applied/triggered native IDs. Corrected selection plus fixture-store assertions were pushed as ignored68f31ad3d with the new consumers reverted; six genuine REDs then fail (four power/movement/heal consequences, two unknown-warning selector controls). The identical253-receipt affected probe also runs on that baseline. Restored6c76aead4 yields six unchanged-body GREEN plus probe PASS178.44s, after which tests are enabled. These are direct shared-consumer tests for354 with fixed incoming100, not production native heal-size or fresh UDP qualification.
+
+Identical affected manifest retains source passives and14 selected memberships across12 specs. Root generic warnings clear14→0 (354eight,307four,137two); no admission failures. Spec264 gains3 warning-free roots; specs65/102/105/252/262/263/267/268/269/270/581 each gain1. This earlier premerge14-root delta includes eight354 memberships now inherited from master27743876c, not delivered by this branch. At merged bde34597a,15/15 pass215.50s (six census numeric/selector cases, eight retained330 controls, same253-receipt probe), check and fmt check pass without warnings. Branch-owned coverage is six roots:307 for specs102/262/263/264 and137 for specs252/267. Each gains one generic-warning-free root. This is a bounded generic-warning delta, not full spell/spec parity. Durable receipts/report: engine `data/diagnostics/census-next-2026-10-20/{baseline-runtime.jsonl,green-runtime.jsonl,per-spec-delta.md,coverage-delta.json}`; corrected RED/GREEN logs alongside. `AURA_470_TC_NULL_TIME_RATE_BY_LABEL` remains unsupported because the pinned TC handler is NULL;373 already has the same NULL gap,188/235/408 are already client-only,285 already has linked lifecycle. Other candidates262/396/245 and effects176/167/72 remain untouched;269/103/463/404 are inherited from the generic combat/stat slice, not claimed here. [Contract](../../specs/class-completeness.md#census-generic-healing-movement-and-energize-active70448-2026-10-20).
+
 ## Generic combat/stat aura census slice — 2026-10-20
 
 Twelve generic consumers; four explicitly unsupported TC NYIs. [Contract and named gaps](../../specs/class-completeness.md#generic-combatstat-aura-census-slice--2026-10-20). No spell-ID branches were added to these consumers; existing named bindings are preserved.
@@ -86,6 +128,8 @@ Source: TC a352b1fa `spell_shaman.cpp2480–2510` and enum94/137–139; native70
 Qualification64cf5318e FIRST2PASS25.00s/0warnings: ordinary2645 form16/movement1.3, KnownSpell260878/A4/amount50; independently cast260882 yields exact1/2/3/4s growth/cap4/permanent child, movement1.2 and ordinary NPC314616 damage800/HP200 without HP/RNG/clock/native-data edits. This is data-boundary qualification, not parent-chain proof. Pushed ignoredb8b6e3f03 then yields genuine6FAIL/2controlsPASS32.08s/0warnings: both parent orderings fail to start260882. Minimal hooks2d5ed1cfc follow that RED. Fresh same eight ignored behavior cases pass8/8 in19.76s,0warnings (172.24s including compile), then all eight are enabled. They cover both parent orders, natural stacking/cap, combined movement1.56/ordinary incoming800 damage, missing parents, removing either parent, fresh re-entry and two ordinary player owners. Retained qualification2PASS25.00s plus fresh behavior8GREEN19.76s is a ten-case composite, not a single ten-case run. Independent lead integration remains pending. Receipts: engine `data/diagnostics/class-coverage-b-2026-10-17/spirit-wolf-*`. [Contract](../../specs/class-completeness.md#spirit-wolf-baseline-active70448).
 
 ## Earthen Rage baseline — 2026-10-19
+
+2026-10-20 gate flake: `earthen_rage_tests.rs` accepted only41–43 damage, but native170379 effect241705 gives100SP×0.424710006 with5% variance (±2.5%), i.e.41.409225–43.532775, which rounds to41–44. Gate `gate-e7824-srv.log:1545` observed valid43/44/43 and failed only the amount bound, not0/3/6s scheduling. Oracle now derives rounded endpoints from unchanged native coefficient/variance and fixture SP; boundary regression includes44 and excludes40/45. No production, timer, RNG, coefficient or arbitrary tolerance change. Native family12/12PASS20.90s and10/10 under same-core artificial CPU load at ac61a1f16; the boundary control accepts44 and rejects40/45.
 
 `earthen_rage.rs` binds170374's existing A4 proc hooks and170377's effect0 A226 periodic hook. One private `EarthenRageTarget(Entity)` on each passive caster mirrors TC's passive AuraScript target GUID; actual action events replace it and passive removal clears it. Real self170377 and targeted170379 casts retain the native3000ms period/6000ms expiry and child SP0.424710006/variance0.05. SpellMisc144253 Attributes_5=8704 includes0x200 EXTRA_INITIAL_PERIOD, so native dispatches occur at0/3/6s; child Speed90/LaunchDelay0.75 means an already-dispatched initial missile survives passive removal. The first consumer attempt6PASS/2FAIL20.25s exposed source-invalid two-child/no-in-flight-arrival oracles, not a runtime defect. Lead explicitly approved correcting only those two oracles, retaining native parameters/RNG/HP and the180-frame window; Corrected ignored behavior atc27aad378 passes8/8 in18.15s,0warnings (364.07s including compile); only then all eight tests are enabled. Together with retained preconsumer qualification3PASS67.67s this is an eleven-case composite, not a single eleven-case run. er723 landed d53e8f2b8 with gate/check/fmt0. Periodic lookup requires the original passive and a surviving remembered entity; current selection is not a substitute.
 
