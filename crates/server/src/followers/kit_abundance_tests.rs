@@ -88,7 +88,7 @@ fn join_native_party(h: &mut Harness, members: &[Entity]) {
             level: h
                 .app
                 .world()
-                .get::<shared::components::UnitLevel>(owner)
+                .get::<shared::components::Level>(owner)
                 .unwrap()
                 .0,
             portrait: default(),
@@ -105,7 +105,7 @@ fn join_native_party(h: &mut Harness, members: &[Entity]) {
             let level = h
                 .app
                 .world()
-                .get::<shared::components::UnitLevel>(unit)
+                .get::<shared::components::Level>(unit)
                 .unwrap()
                 .0;
             let id = super::Follower::member_id(unit);
