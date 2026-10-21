@@ -2176,6 +2176,9 @@ fn begin_validated_cast(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    let mut admitted = spell.clone();
+    admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
+    let spell = &admitted;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
@@ -2574,6 +2577,7 @@ fn plan_targets(
             });
             continue;
         }
+        targets::check_destination_support(spell)?;
         let leader = target_group_leader(world, spell, index);
         let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
@@ -2615,7 +2619,10 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        let ordered_destination = effect.implicit_targets.contains(&148);
+        let dest = if ordered_destination {
+            targets::effect_destination(world, caster, explicit, spell, effect)?
+        } else if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             spell.cast_destination.map(|point| targets::Dest {
                 position: Vec3::from_array(point),
                 orientation: targets::orientation(world, caster),
@@ -2623,7 +2630,11 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
-        let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        let mut dest = if ordered_destination {
+            dest
+        } else {
+            targets::ground_destination(world, caster, effect, dest)?
+        };
         if effect.implicit_targets.contains(&32) {
             dest = targets::caster_summon_ground_destination(world, caster, spell, dest)?;
         }
@@ -3686,6 +3697,8 @@ mod rezrtap_tests;
 mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
+#[cfg(test)]
+mod target148_tests;
 #[cfg(test)]
 mod target32_grounding_tests;
 #[cfg(test)]
