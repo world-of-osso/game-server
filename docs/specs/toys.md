@@ -59,7 +59,7 @@ No generic dummy executor or new per-toy script is added. Pure zero payload does
 ## Source-owned temporary summon targets
 
 - [x] Implicit-target condition33 target0/other-target1/relationOwnedBy3 compares the real cast's caster with source ownership of represented temporary summons. Minion and ordinary Ally ownership qualify; an ordinary Wild summoner alone does not. Existing object-entry/StringId conditions, source radius and map-copy boundaries remain effective. Corrected real Coyote51149 selection and legacy/current entry control pass2/2. Other ownership representations are not certified by this bounded mechanism.
-- [ ] Don Carlos' Famous Hat134019/52172 retains the source permanent marker and real51149→28267/25265 companion. Removing the Hat aura casts its computed authored amount52173; that source child unsummons only its condition-selected temporary creatures. Root/child/owned-entry condition drift refuses before use. Real cancellation/reuse/category1476 recovery and other-owner/unowned controls pending. Native hat rendering, physical follow and companion-level parity are separate.
+- [x] Don Carlos' Famous Hat134019/52172 retains the source permanent marker and real51149→28267/25265 companion. Removing the Hat aura casts its computed authored amount52173; that source child unsummons only its condition-selected temporary creatures. Root/child/owned-entry condition drift refuses before use. Real cancellation/reuse/category1476 recovery and other-owner/unowned controls proved. Native hat rendering, physical follow and companion-level parity are separate.
 
 ## Exact seasonal pennant aura slots
 
