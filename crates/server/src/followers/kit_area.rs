@@ -50,10 +50,88 @@ pub(super) fn allows(
             .get::<Health>(unit)
             .is_some_and(|health| health.current > 0.0)
             && position(world, unit).is_some_and(|at| center.distance(at) <= radius)
-            && targets::relation_matches(world, caster, unit, Relation::Enemy)
-            && (!enemies.iter().any(|(enemy, _)| *enemy == unit)
-                || crate::auras::has_breakable_by_damage_cc(world, unit))
+            && violates_engagement(world, caster, unit, enemies)
     })
+}
+
+/// A zero min-enemy threshold is not permission to recruit implicit area targets.
+/// Use native selection before hit rolls; buff/self rows can still select enemies.
+pub(super) fn preserves_implicit_area_engagement(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    enemies: &[(Entity, Option<Entity>)],
+    entry: &Entry,
+) -> bool {
+    let spell = {
+        let store = world.resource::<SpellStore>();
+        let Some(spell) = store.get(entry.spell_id) else {
+            debug!(
+                spell = entry.spell_id,
+                "Cannot project follower spell without native metadata"
+            );
+            return false;
+        };
+        if !spell
+            .effects
+            .iter()
+            .any(|effect| is_implicit_area_effect(spell, effect))
+        {
+            return true;
+        }
+        spell.clone()
+    };
+    for effect in spell
+        .effects
+        .iter()
+        .filter(|effect| is_implicit_area_effect(&spell, effect))
+    {
+        let selected = match targets::select_targets(
+            world,
+            caster,
+            Some(target),
+            &spell,
+            effect,
+            crate::spell_cast::max_targets(&spell),
+            false,
+        ) {
+            Ok(units) => units,
+            Err(id) => {
+                debug!(
+                    spell = spell.id,
+                    selector = id,
+                    "Follower implicit-area projection is unsupported"
+                );
+                return false;
+            }
+        };
+        if selected
+            .into_iter()
+            .any(|unit| violates_engagement(world, caster, unit, enemies))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+fn is_implicit_area_effect(
+    spell: &crate::spell_info::SpellInfo,
+    effect: &crate::spell_info::SpellEffect,
+) -> bool {
+    crate::spell_cast::selects_targets(spell, effect)
+        && targets::shared_selection_checks_radius(effect)
+}
+
+fn violates_engagement(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    enemies: &[(Entity, Option<Entity>)],
+) -> bool {
+    targets::relation_matches(world, caster, target, Relation::Enemy)
+        && (!enemies.iter().any(|(enemy, _)| *enemy == target)
+            || crate::auras::has_breakable_by_damage_cc(world, target))
 }
 
 fn spell_radius(world: &World, caster: Entity, entry: &Entry) -> Option<f32> {

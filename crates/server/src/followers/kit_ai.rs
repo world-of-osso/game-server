@@ -175,8 +175,11 @@ pub(super) fn conditions_met(
         .count()
         >= condition.min_injured;
     enough_injured
-        && (condition.min_enemies == 0
-            || super::kit_area::allows(world, unit, target, enemies, entry))
+        && if condition.min_enemies == 0 {
+            super::kit_area::preserves_implicit_area_engagement(world, unit, target, enemies, entry)
+        } else {
+            super::kit_area::allows(world, unit, target, enemies, entry)
+        }
 }
 
 fn health_and_auras_allow(

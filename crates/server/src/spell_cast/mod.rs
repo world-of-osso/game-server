@@ -972,7 +972,7 @@ fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info
 /// A `SPELL_EFFECT_DUMMY` effect does nothing itself but selects its targets, which the
 /// spell then hits (`CreatureAI::SpellHit`); one at an unmodelled implicit target selects
 /// nothing instead of failing the cast.
-fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+pub(crate) fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
@@ -981,7 +981,7 @@ fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
-fn max_targets(spell: &SpellInfo) -> u32 {
+pub(crate) fn max_targets(spell: &SpellInfo) -> u32 {
     spell
         .target_restrictions
         .as_ref()
@@ -2946,18 +2946,6 @@ fn push_hit_events(
         // Spell::DoSpellHitOnUnit (Spell.cpp:2879-2882): a spell landing on a
         // unit the caster can attack starts combat with it.
         if targets::relation_matches(world, caster, target, Relation::Enemy) {
-            #[cfg(test)]
-            if world
-                .get::<crate::zones::CreatureOrigin>(target)
-                .is_some_and(|origin| origin.guid == 20375705)
-                && world.get::<crate::creature_ai::CreatureState>(target)
-                    == Some(&crate::creature_ai::CreatureState::Idle)
-            {
-                eprintln!(
-                    "STOCKADE_ZERO_THREAT_SPELL spell={} plan={plan:?}",
-                    spell.id
-                );
-            }
             crate::creature_aggro::add_threat(world, target, caster, 0.0);
             if attacks_with(world, spell) {
                 crate::stand_state::stand_on_hostile_spell(world, target, attributes(spell, 3));
