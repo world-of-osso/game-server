@@ -110,22 +110,18 @@ fn lingering(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "RED first: Orator source native disk area is unsupported"]
 fn encounter_coverage_tww_orator_normal_chains_native_disk_entry_damage_exit() {
     chains(1);
 }
 #[test]
-#[ignore = "RED first: Orator source native disk area is unsupported"]
 fn encounter_coverage_tww_orator_follower205_chains_native_disk_entry_damage_exit() {
     chains(205);
 }
 #[test]
-#[ignore = "RED first: Orator source growing Lingering area is unsupported"]
 fn encounter_coverage_tww_orator_normal_lingering_native_growth_damage_exit() {
     lingering(1);
 }
 #[test]
-#[ignore = "RED first: Orator source growing Lingering area is unsupported"]
 fn encounter_coverage_tww_orator_follower205_lingering_native_growth_damage_exit() {
     lingering(205);
 }

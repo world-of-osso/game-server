@@ -1,4 +1,4 @@
-- [TWW City of Threads Orator](systems/boss-scripts.md#tww-city-of-threads-orator--2026-10-21) — Normal/Follower native core4GREEN; source disk/growing-area RED and explicit Player-only remainder, area GREEN pending.
+- [TWW City of Threads Orator](systems/boss-scripts.md#tww-city-of-threads-orator--2026-10-21) — post-master Native8GREEN Normal/Follower source Energy/combat/disk/growing Player-only areas; native148 pull/ingress/presentation remain explicit.
 - [TWW Rookery Kyrioss](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21) — source-explicit LittleWigs/native70448 clocks, COMPOSITE4GREEN Normal/Follower; producer and named dummy/phase/Dash gaps, publication pending.
 - [Creature difficulty fallback](systems/level-scaling.md#creature-difficulty-fallback--2026-10-21) — source205→1→0; native Vault Rune CT0-vs2156 RED, generic template/regional-delta chain implemented; GREEN pending, no fabricated205 packages.
 - [Follower population sources](investigations/follower-data.md#follower-population-source-audit--2026-10-21) — all27 build70448 maps audited; copy-only source projection, explicit population/entrance gaps, actual catalog coverage.

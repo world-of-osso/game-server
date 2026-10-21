@@ -111,6 +111,8 @@ mod tww_kyrioss;
 mod tww_orator;
 #[path = "tww_orator_areas.rs"]
 mod tww_orator_areas;
+#[path = "tww_orator_pull.rs"]
+mod tww_orator_pull;
 #[path = "umbrelskul.rs"]
 mod umbrelskul;
 #[path = "vazruden_slay.rs"]

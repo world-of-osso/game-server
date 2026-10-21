@@ -3472,7 +3472,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 ## 2026-10-21 — TWW City of Threads Orator
 
-[Core/area source boundary](systems/boss-scripts.md#tww-city-of-threads-orator--2026-10-21): ignored core4RED→native4GREEN33.43s at67a01c239; source Energy, ordinary delayed selector child and damage/copy-local lifecycle. Ignored area4RED7658d5007 fails authored disk entry and sphere growth; Player-only source field controllers use exact TDB shapes, with no generic NPC hazard substitution. Area GREEN pending.
+[Core/area source boundary](systems/boss-scripts.md#tww-city-of-threads-orator--2026-10-21): ignored core4RED→native4GREEN33.43s at67a01c239; source Energy, ordinary delayed selector child and damage/copy-local lifecycle. Ignored area4RED7658d5007 fails authored disk entry and sphere growth; Player-only source field controllers use exact TDB shapes, with no generic NPC hazard substitution. Post-masterd0120b0d5 native8GREEN47.35s atd165d5d76 (`orator-area-core-green1.log`) covers both areas plus retained core4; all enabled after proof. Native148 pull endpoint/ground remains next source boundary.
 
 ## 2026-10-21 — TWW Rookery Kyrioss
 
