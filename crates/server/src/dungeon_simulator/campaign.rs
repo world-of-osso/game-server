@@ -121,6 +121,73 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
 }
 
 #[test]
+#[ignore = "explicit Azure2515/205 native sight/history qualification"]
+fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
+    let subscriber = bevy::log::tracing_subscriber::fmt()
+        .with_env_filter("game_server::creature_sight=debug,game_server::creature_aggro=debug")
+        .with_test_writer()
+        .finish();
+    let _logger = bevy::log::tracing::subscriber::set_default(subscriber);
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let stalker = run.actors[&29001806];
+    let members: Vec<_> = run.members().collect();
+    for _ in 0..160 {
+        run.app.update();
+    }
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    assert!(
+        events.iter().any(
+            |event| event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+                && event.source == Some(stalker.to_bits())
+                && event
+                    .target
+                    .is_some_and(|target| members.iter().any(|member| member.to_bits() == target))
+        ),
+        "native sight source must actually damage the party before any opener"
+    );
+    assert!(
+        !events.iter().any(
+            |event| event.kind == shared::protocol::CombatLogKind::Damage
+                && event
+                    .source
+                    .is_some_and(|source| members.iter().any(|member| member.to_bits() == source))
+        ),
+        "no party opener, formation pull or party harm recruited this source"
+    );
+    for member in &members {
+        assert!(!crate::spell_cast::targets::relation_matches(
+            run.app.world(),
+            *member,
+            stalker,
+            crate::spell_cast::targets::Relation::Enemy
+        ));
+    }
+    let valid = run.actors[&29001791];
+    let tank = run.party.tank;
+    crate::combat::deal_direct_damage(run.app.world_mut(), tank, valid, 100.0);
+    assert!(
+        crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "clearable enemy positive control"
+    );
+    crate::combat::kill_unit(run.app.world_mut(), tank, valid);
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        stalker
+    ));
+    assert!(
+        !crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "alive but invalid attack targets cannot keep a cleared party held forever"
+    );
+}
+
+#[test]
 fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
     let mut expected = [209057, 209072, 209053, 209059, 209065];
     if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
