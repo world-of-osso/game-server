@@ -1,6 +1,6 @@
 ## 2026-10-21 — Sourced Fast-Growing Seed visual
 
-[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact210411/425503 source121rows26tables/four resident ordinary models, zero-payload self aura4. Actual peaceful-cast and combat-refusal RED2/driftcontrolPASS68.28s precedes one strict registry entry. Source3s cast/30s aura/60s recovery and natural reuse verification pending; no native growth-animation or gameplay plant claim.
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact210411/425503 source121rows26tables/four resident ordinary models, zero-payload self aura4. Actual peaceful-cast and combat-refusal RED2/driftcontrolPASS68.28s precedes one strict registry entry. Source3s cast/30s aura/60s recovery/natural reuse and combat refusal pass7/7 (66.86s) at396438a45/masterc6bc60006, with Kite/Ribbon and Gadgetzan controls. Census521→522 exactly210411, check/fmt pass with inherited unused-function warning; no native growth-animation or gameplay plant claim.
 
 ## 2026-10-21 — Sourced Kite/Ribbon visual pair
 
