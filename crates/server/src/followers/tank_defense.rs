@@ -1,6 +1,7 @@
 //! FOLLOWER_TANK_DEFENSIVE_SEQUENCING: explicit project policy, not a Retail APL.
 use bevy::prelude::*;
 
+use super::healer_triage::{EMERGENCY_SECONDS, read_patient};
 use super::kit::Entry;
 use crate::auras::{
     ActiveAuras,
@@ -11,20 +12,7 @@ use crate::spell_info::SpellStore;
 const MANUAL_MAJORS: &[u32] = &[31850, 86659, 871];
 const FALLBACK_HEALTH: f32 = 0.50;
 
-// Temporary API-shaped shim: healer-ai is not on master yet. No fabricated
-// estimator. Replace these definitions with the real read_patient/Patient import
-// after the lead lands healer-ai; its shared horizon is currently3seconds.
-struct Patient {
-    incoming_per_second: f32,
-    projected_death_seconds: f32,
-}
-fn read_patient(_world: &World, _target: Entity) -> Option<Patient> {
-    None
-}
-
 fn major_emergency(health: f32, projection: Option<(f32, f32)>) -> bool {
-    // Same documented horizon as healer-ai; import its constant when it lands.
-    const EMERGENCY_SECONDS: f32 = 3.0;
     match projection {
         Some((incoming, death_seconds)) if incoming > 0.0 => death_seconds <= EMERGENCY_SECONDS,
         _ => health < FALLBACK_HEALTH,

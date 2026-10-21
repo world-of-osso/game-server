@@ -5,10 +5,23 @@
 ## 2026-10-21 — Follower rotation inventory qualification
 
 [Cast-action projection](investigations/follower-data.md#rotation-cast-action-projection--2026-10-21): missing HoG/Demonbolt/Berserk cast actions reproduced from actual70448 default export; source-qualified parent projection and native Incarnation replacement give5combined producerPASS ate085f02fb. Native WW dummy build/rotation acceptance pending; no full-parity claim. Bloodtalons absence, passive Last Stand and modified Tiger Palm Chi recorded.
+## 2026-10-21 — Healer framework native qualification
+
+[Healer triage](systems/follower-healer-triage.md): native risk/cost/owned hook, topped-start starvation RED→GREEN, actual Hogger read-only deadlines/Reset and native-radius scatter/stack controls. Gateha847 exposed five residual priority/fixture failures; authored Ironbark and urgent/routine Swiftmend decisions plus actual paid OOC fixture resolve them, Henry dispel retained. Six-case+core15GREEN; masterff190 integration requested followers/campaign285GREEN206.38s plus private-asset Leymor1GREEN17.46s; scoped check/format PASS, sole13179-owned helper warning excluded perlead. Shared death forecast/native readiness restored for Holy. Full Crenna depth and paired20-seed metrics remain pending.
+
+## 2026-10-21 — Follower healer triage design
+
+[FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
+## 2026-10-21 — PvP pet battle policies
+
+[Explicit unsourced project policy](systems/petbattle-pvp.md): monotonic authoritative deadlines, default choices/streak forfeit, FIFO level widening and preserved join tickets, exact living-participant winner XP persistence/receipt. RED6 plus same-frame FIFO RED1 → GREEN9; native proof pending, no protocol change or Retail numerical-parity claim.
+## 2026-10-21 — Generic falling-turn ability
+
+[Toys](systems/toys.md#generic-turn-while-falling-ability-2026-10-21): source aura409 owns movement bit39 and survives real input/overlapping aura removal. RED4→corrected5GREEN includes real Kite60s/Plume10s legal-area lifecycles and neutral-faction scenery regression;13 retained movement/FeatherFall/census controls passed earlier. Pipeline514→516. No protocol/native-steering claim; post-masterff190cb1c focused16/16PASS58.55s, canonical census516, checkEXIT0 with inherited follower warning. All-toy scope no longer has a five-item minimum.
 
 ## 2026-10-21 — Default TempSummon title census
 
-[Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; stressed repetition proof remains pending.
+[Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; ten consecutive60-second tests PASS with four busy loops pinned to the same four cores; all hog processes confirmed stopped. No runtime readiness change.
 -2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 ## 2026-10-21 — Follower205 source audits
 
@@ -3501,3 +3514,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): native TF and WW fourRED→GREEN; retained refresh/defense/form20PASS, LastStand source-attribution oracle corrected; full measurements remain open.
 
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): merged1c4df4250 native21PASS26.07s/0warnings/fmtPASS, including real two-use ComboBreaker and StatsPlugin LastStand46/47; full APL/healer import remain open.
+
+- 2026-10-21: Landed healer reader/horizon wired into [tank rotation policy](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21); removed None shim, preserving healer scheduling and major ordering.

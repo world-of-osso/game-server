@@ -65,11 +65,15 @@ fn violates_engagement(
             || crate::auras::has_breakable_by_damage_cc(world, target))
 }
 
-fn spell_radius(world: &World, caster: Entity, entry: &Entry) -> Option<f32> {
-    let scripted = crate::spell_cast::scripts::ground_pulse_radius(world, caster, entry.spell_id);
+pub(super) fn spell_radius(world: &World, caster: Entity, entry: &Entry) -> Option<f32> {
+    radius_for_spell(world, caster, entry.spell_id)
+}
+
+pub(super) fn radius_for_spell(world: &World, caster: Entity, spell_id: u32) -> Option<f32> {
+    let scripted = crate::spell_cast::scripts::ground_pulse_radius(world, caster, spell_id);
     let metadata = world
         .resource::<SpellStore>()
-        .get(entry.spell_id)
+        .get(spell_id)
         .and_then(|spell| {
             spell
                 .effects
