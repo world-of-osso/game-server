@@ -41,6 +41,7 @@ pub(crate) struct PendingSpellHits(Vec<PendingHit>);
 #[derive(Debug)]
 struct PendingHit {
     due: f64,
+    launched: f64,
     caster: Entity,
     spell: Arc<SpellInfo>,
     depth: u8,
@@ -117,7 +118,7 @@ pub(super) fn launch(
     let mut snapshot = None;
     for (delay, landing) in landings(world, plan, reflected, &delays, destination_delay) {
         if delay == 0 {
-            land_now(world, caster, spell, depth, landing);
+            land_now(world, caster, spell, depth, landing, launched);
             continue;
         }
         world
@@ -125,6 +126,7 @@ pub(super) fn launch(
             .0
             .push(PendingHit {
                 due: launched + delay as f64 / 1000.0,
+                launched,
                 caster,
                 spell: Arc::clone(snapshot.get_or_insert_with(|| Arc::new(spell.clone()))),
                 depth,
@@ -153,11 +155,25 @@ pub(super) fn resolve_due_hits(world: &mut World) {
         if world.get_entity(hit.caster).is_err() {
             continue;
         }
-        land_now(world, hit.caster, &hit.spell, hit.depth, hit.landing);
+        land_now(
+            world,
+            hit.caster,
+            &hit.spell,
+            hit.depth,
+            hit.landing,
+            hit.launched,
+        );
     }
 }
 
-fn land_now(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8, landing: Landing) {
+fn land_now(
+    world: &mut World,
+    caster: Entity,
+    spell: &SpellInfo,
+    depth: u8,
+    landing: Landing,
+    launched: f64,
+) {
     match landing {
         Landing::Units {
             plan,
@@ -165,7 +181,10 @@ fn land_now(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8, lan
         } => {
             let reachable: Vec<Entity> = alive_at_launch
                 .iter()
-                .filter(|&&(unit, alive)| reachable(world, unit, alive))
+                .filter(|&&(unit, alive)| {
+                    reachable(world, unit, alive)
+                        && !super::sanctuary::blocks_hit(world, unit, spell, launched)
+                })
                 .map(|&(unit, _)| unit)
                 .collect();
             let plan = plan
@@ -186,7 +205,9 @@ fn land_now(world: &mut World, caster: Entity, spell: &SpellInfo, depth: u8, lan
             alive_at_launch,
             plan,
         } => {
-            if !reachable(world, reflector, alive_at_launch) {
+            if !reachable(world, reflector, alive_at_launch)
+                || super::sanctuary::blocks_hit(world, caster, spell, launched)
+            {
                 return;
             }
             // `PreprocessTarget` engages the target, which is still the reflector.

@@ -69,6 +69,8 @@ pub enum AuraKind {
     CastRestriction,
     /// Receiver-side finite harmful aura duration (`mechanic_duration`).
     MechanicDuration,
+    /// Absolute resource thresholds, on application and resource changes.
+    PowerTrigger,
     /// Target detection-distance modifier read by `creature_aggro::AggroDistance`.
     DetectedRange,
     /// Award-time XP and source-filtered money modifiers.
@@ -306,6 +308,9 @@ pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
 pub const DISABLE_CASTING_EXCEPT_ABILITIES: u32 = 263;
 pub const DISABLE_ATTACKING_EXCEPT_ABILITIES: u32 = 264;
+pub const ABILITY_IGNORE_AURASTATE: u32 = 262;
+pub const TRIGGER_SPELL_ON_POWER_AMOUNT: u32 = 396;
+pub const MOD_AURA_DURATION_BY_DISPEL: u32 = 245;
 pub const MECHANIC_DURATION_MOD: u32 = 232;
 pub const MECHANIC_DURATION_MOD_NOT_STACK: u32 = 234;
 pub const OVERRIDE_SUMMONED_OBJECT: u32 = 258;
@@ -360,11 +365,15 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED | LINKED_2 => Linked,
         CAST_WHILE_WALKING | CAST_WHILE_WALKING_BY_SPELL_LABEL => CastMovement,
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
+        ABILITY_IGNORE_AURASTATE => CastRestriction,
+        TRIGGER_SPELL_ON_POWER_AMOUNT => PowerTrigger,
         DISABLE_CASTING_EXCEPT_ABILITIES
         | DISABLE_ATTACKING_EXCEPT_ABILITIES
         | PREVENT_INTERRUPT
         | ALLOW_INTERRUPT_SPELL => CastRestriction,
-        MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK => MechanicDuration,
+        MECHANIC_DURATION_MOD | MECHANIC_DURATION_MOD_NOT_STACK | MOD_AURA_DURATION_BY_DISPEL => {
+            MechanicDuration
+        }
         MOD_DETECTED_RANGE => DetectedRange,
         ANIM_REPLACEMENT_SET | OVERRIDE_ACTIONBAR_SPELLS | OVERRIDE_SPELLS => Override,
         MOD_STUN | MOD_PACIFY | MOD_SILENCE | MOD_PACIFY_SILENCE | MOD_NO_ACTIONS => CastBlock,

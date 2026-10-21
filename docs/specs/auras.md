@@ -2,6 +2,17 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Census generic resource/state/duration slice (2026-10-20)
+
+Pinned TC a352b1fa and native70448, without spell-ID branches:
+- Aura262 recognizes the existing caster/family-mask state exemption; unknown computed states remain unknown, not invented health-state gates.
+- Aura396 checks native raw power MiscValue0 against effect amount: gain MiscValue1=0 and loss=1; application includes equality, later changes require strict-old/inclusive-new crossing. Costs, gains and ordinary regeneration use the same consumer. Refresh is not another application; casts use the aura recipient as caster and target.
+- Aura245 sums target modifiers matching the harmful spell's dispel type after mechanic duration modification, truncating the integer delta. Beneficial/permanent auras and NoTargetDurationMod retain native duration. Positive-only modifiers cannot extend duration under TC's min-with-zero rule. Aura246 remains unsupported.
+- Effect176 shares native sanctuary behavior: world-player PvE combat ends and own PvP side is suppressed; dungeon players/nonplayers retain references with only their threat zeroed. Harmful missiles launched at/before sanctuary fizzle silently unless native Attr8 IgnoreSanctuary; later/beneficial spells remain valid. Creature IgnoreSanctuary static-flag import remains an explicit unsupported input, not fabricated data.
+- Aura220/443 TC NULL/NYI and effects167 phasing/72 viewpoint-protocol stay named gaps. Do not erase their warnings or invent leech, school substitution, phasing or farsight behavior.
+
+[Source matrix, remaining dependencies and proof](../wiki/systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20).
+
 ## Computed target aura state
 
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).

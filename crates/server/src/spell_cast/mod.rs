@@ -57,6 +57,8 @@ mod census_death_grip_tests;
 mod census_generic_next_tests;
 #[cfg(test)]
 mod census_guardian_aura_tests;
+#[cfg(test)]
+mod census_three_tests;
 pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
@@ -164,6 +166,7 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
 mod interruptibility_rule_tests;
