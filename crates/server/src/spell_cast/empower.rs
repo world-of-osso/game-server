@@ -1,7 +1,9 @@
 //! Native empower progress, separate from ordinary channel completion.
 //! TC a352b1fa Spell.cpp4019–4038/4303–4344; Spell.h88–89.
 use bevy::prelude::*;
+use lightyear::prelude::MessageReceiver;
 use shared::casting::CastState;
+use shared::protocol::ReleaseEmpowerSpell;
 
 use super::{CastFailure, PendingCastSpell, scripts};
 use crate::spell_info::{SpellInfo, SpellStore};
@@ -91,6 +93,38 @@ pub(super) fn begin(
         paid_costs,
     });
     Ok(())
+}
+
+/// TC SpellHandler.cpp386–398: release only the authenticated owner's matching empower.
+pub(super) fn receive_release_requests(world: &mut World) {
+    let mut receivers = world.query::<(
+        &mut MessageReceiver<ReleaseEmpowerSpell>,
+        Option<&crate::networking::PlayerLink>,
+        Has<crate::auth::Authenticated>,
+        Has<crate::auth::InWorld>,
+    )>();
+    let mut releases = Vec::new();
+    for (mut receiver, link, auth, in_world) in receivers.iter_mut(world) {
+        for request in receiver.receive() {
+            if let Some(link) = link.filter(|_| auth && in_world) {
+                releases.push((link.0, request.spell_id));
+            } else {
+                warn!("Empower release rejected: no authenticated in-world owner");
+            }
+        }
+    }
+    for (caster, spell) in releases {
+        request_release(world, caster, spell);
+    }
+}
+
+fn request_release(world: &mut World, caster: Entity, spell: u32) {
+    let matches = world
+        .get::<CastState>(caster)
+        .is_some_and(|cast| cast.spell_id == spell);
+    if matches && let Some(mut progress) = world.get_mut::<EmpowerProgress>(caster) {
+        progress.release_requested = true;
+    }
 }
 
 fn should_release(

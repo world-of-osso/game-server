@@ -371,7 +371,12 @@ impl Plugin for SpellCastPlugin {
             .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
-                (receive_cast_requests, receive_stop_requests).chain(),
+                (
+                    receive_cast_requests,
+                    empower::receive_release_requests,
+                    receive_stop_requests,
+                )
+                    .chain(),
             )
             .add_systems(Update, history_store::queue_restore)
             .add_systems(

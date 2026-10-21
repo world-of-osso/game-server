@@ -64,6 +64,23 @@ fn native_empower_input_early_release_waits_for_stage_one_then_fires() {
 }
 
 #[test]
+#[ignore = "control: unauthenticated peers cannot release a live owner empower"]
+fn native_empower_input_unauthenticated_release_preserves_active_cast() {
+    let mut h = player_empower();
+    h.app
+        .world_mut()
+        .entity_mut(h.connection)
+        .remove::<crate::auth::Authenticated>();
+    release(&mut h, FIRE_BREATH);
+    h.advance(25);
+    assert!(!fire_damage(&h));
+    assert!(
+        h.app.world().get::<CastState>(h.caster).is_some(),
+        "untrusted peer input must not release the owner's active empower"
+    );
+}
+
+#[test]
 #[ignore = "control: wrong-spell release is ignored and StopSpellCast remains cancellation"]
 fn native_empower_input_wrong_spell_does_not_release_and_stop_never_fires() {
     let mut h = player_empower();
