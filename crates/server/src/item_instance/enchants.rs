@@ -260,6 +260,37 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "native type4 scaling/clamp controls; run explicitly before enabling"]
+    fn item_instance_native_armor_enchant_truncates_and_preserves_unscaled_amounts() {
+        let mut tables = native();
+        // Native70448 entries18/85, not fabricated scaling coefficients.
+        for (id, coefficient, scaling_class, max_level, points, expected) in
+            [(18, 0.129999995, -1, 25, 32, 1.0), (85, 0.0, 0, 0, 3, 3.0)]
+        {
+            tables.enchants.insert(
+                id,
+                Enchantment {
+                    effects: [
+                        EnchantEffect {
+                            kind: 4,
+                            argument: 0,
+                            coefficient,
+                            points,
+                        },
+                        EnchantEffect::default(),
+                        EnchantEffect::default(),
+                    ],
+                    scaling_class,
+                    min_level: 0,
+                    max_level,
+                },
+            );
+            let stats = enchantment_stats(id, 90, &tables).unwrap().stats;
+            assert_eq!(stats.secondary.armor, expected);
+        }
+    }
+
+    #[test]
     fn item_instance_unknown_gem_and_enchant_are_explicit_errors() {
         assert!(gem_stats(999999, 90, &native()).is_err());
         assert!(enchantment_stats(999999, 90, &native()).is_err());
