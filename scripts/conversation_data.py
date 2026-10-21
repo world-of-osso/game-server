@@ -92,5 +92,19 @@ def table_ddl(table, columns):
 
 def import_tables(connection, tables):
     with connection:
-        for table, (columns, _) in tables.items():
+        if not connection.in_transaction:
+            connection.execute('BEGIN IMMEDIATE')
+        for table, (columns, rows) in tables.items():
             connection.execute(table_ddl(table, columns))
+            connection.execute(f'DELETE FROM "{table}"')
+            names = ','.join(f'"{name}"' for name in columns)
+            placeholders = ','.join('?' for _ in columns)
+            connection.executemany(f'INSERT INTO "{table}" ({names}) VALUES ({placeholders})', rows)
+            actual = connection.execute(f'SELECT {names} FROM "{table}"').fetchall()
+            if sorted(actual) != sorted(rows):
+                raise ValueError(f'{table}: imported rows differ from source')
+        connection.execute('CREATE TABLE IF NOT EXISTS db2_build (table_name TEXT PRIMARY KEY, build TEXT NOT NULL)')
+        for name in CSV_TABLES:
+            connection.execute('INSERT INTO db2_build VALUES (?,?) ON CONFLICT(table_name) DO UPDATE SET build=excluded.build',
+                               (name, BUILD))
+    return {name: len(rows) for name, (_, rows) in tables.items()}
