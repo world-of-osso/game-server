@@ -65,6 +65,8 @@ mod census_generic_next_tests;
 #[cfg(test)]
 mod census_guardian_aura_tests;
 #[cfg(test)]
+mod census_tail_tests;
+#[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
 #[cfg(test)]
@@ -646,6 +648,9 @@ impl ChargeState {
 /// Per-unit cooldown state in real elapsed server seconds (`history_now`).
 #[derive(Component, Debug, Clone, Default)]
 pub struct SpellHistory {
+    /// Ordinary successful casts only; triggered children and failed requests do not advance it.
+    successful_casts: HashMap<u32, u64>,
+    cast_sequence: u64,
     spell_ready_at: HashMap<u32, f64>,
     category_ready_at: HashMap<u32, f64>,
     /// Native spell that last started each category timer, for masked rate changes.
@@ -661,6 +666,24 @@ pub struct SpellHistory {
 }
 
 impl SpellHistory {
+    /// Most recent successful action within an explicit policy group.
+    pub(crate) fn last_cast_in(&self, group: &[u32]) -> Option<u32> {
+        group
+            .iter()
+            .filter_map(|spell| {
+                self.successful_casts
+                    .get(spell)
+                    .map(|order| (*spell, *order))
+            })
+            .max_by_key(|(_, order)| *order)
+            .map(|(spell, _)| spell)
+    }
+
+    fn record_successful_cast(&mut self, spell: u32) {
+        self.cast_sequence += 1;
+        self.successful_casts.insert(spell, self.cast_sequence);
+    }
+
     fn school_locked(&self, school_mask: u32, now: f64) -> bool {
         (0..7).any(|bit| school_mask & (1 << bit) != 0 && self.school_locked_until[bit] > now)
     }
@@ -947,7 +970,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1664,6 +1687,7 @@ enum StartCheck {
     Native,
     IgnoreCastInProgress,
     TankHealCapability,
+    HealerDecision,
 }
 
 fn validate_start(
@@ -1881,6 +1905,15 @@ fn validate_history(
     Ok(())
 }
 
+/// Native cooldown/charge/school state, without spending or waiting on GCD.
+pub(crate) fn read_healer_recovery(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    validate_history(world, caster, spell, StartCheck::HealerDecision)
+}
+
 fn permits_transient_gcd(
     world: &World,
     caster: Entity,
@@ -1888,6 +1921,9 @@ fn permits_transient_gcd(
     check: StartCheck,
     ready_at: f64,
 ) -> bool {
+    if check == StartCheck::HealerDecision {
+        return true;
+    }
     if check != StartCheck::TankHealCapability {
         return false;
     }
@@ -2169,6 +2205,9 @@ fn begin_validated_cast(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    let mut admitted = spell.clone();
+    admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
+    let spell = &admitted;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
@@ -2369,6 +2408,11 @@ pub(crate) fn execute_cast(
     }
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
+    scripts::ordinary_combo_cast(world, caster, spell);
+    world
+        .get_mut::<SpellHistory>(caster)
+        .expect("ordinary successful cast initialized its history")
+        .record_successful_cast(spell.id);
     log_event(
         world,
         cast_event(caster, explicit, spell, CombatLogKind::CastSuccess),
@@ -2491,7 +2535,7 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
-    effects::check_power_drain_inputs(world, caster, spell)?;
+    effects::check_expected_power_inputs(world, caster, spell)?;
     if open_lock::is_item_cast(spell) {
         return Ok(spell
             .effects
@@ -2567,6 +2611,7 @@ fn plan_targets(
             });
             continue;
         }
+        targets::check_destination_support(spell)?;
         let leader = target_group_leader(world, spell, index);
         let mut units = match selected.iter().find(|(selected, _)| *selected == leader) {
             Some((_, units)) => units.clone(),
@@ -2608,7 +2653,10 @@ fn plan_targets(
         } else {
             Vec::new()
         };
-        let dest = if effect.effect == 254 && effect.implicit_targets.contains(&87) {
+        let ordered_destination = effect.implicit_targets.contains(&148);
+        let dest = if ordered_destination {
+            targets::effect_destination(world, caster, explicit, spell, effect)?
+        } else if effect.effect == 254 && effect.implicit_targets.contains(&87) {
             spell.cast_destination.map(|point| targets::Dest {
                 position: Vec3::from_array(point),
                 orientation: targets::orientation(world, caster),
@@ -2616,7 +2664,11 @@ fn plan_targets(
         } else {
             targets::effect_dest(world, caster, explicit, effect, spell.cast_destination)
         };
-        let mut dest = targets::ground_destination(world, caster, effect, dest)?;
+        let mut dest = if ordered_destination {
+            dest
+        } else {
+            targets::ground_destination(world, caster, effect, dest)?
+        };
         if effect.implicit_targets.contains(&32) {
             dest = targets::caster_summon_ground_destination(world, caster, spell, dest)?;
         }
@@ -3679,6 +3731,8 @@ mod rezrtap_tests;
 mod rogue_stealth_tests;
 #[cfg(test)]
 mod source_cast_flags_tests;
+#[cfg(test)]
+mod target148_tests;
 #[cfg(test)]
 mod target32_grounding_tests;
 #[cfg(test)]

@@ -341,6 +341,8 @@ pub const MOD_MOVEMENT_FORCE_MAGNITUDE: u32 = 485;
 pub const TRACK_CREATURES: u32 = 44;
 pub const STORE_TELEPORT_RETURN_POINT: u32 = 71;
 pub const MOD_UI_HEALING_RANGE: u32 = 188;
+/// TC Player::GetPowerRegen selects the interrupted rate while present.
+pub const INTERRUPT_REGEN: u32 = 94;
 pub const MOD_POWER_DISPLAY: u32 = 179;
 pub const SET_ACTION_BUTTON_SPELL_COUNT: u32 = 408;
 
@@ -402,6 +404,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | SAFE_FALL
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
+        | INTERRUPT_REGEN
         | MOD_HEALING_PCT
         | MOD_SPEED_ALWAYS
         | USE_NORMAL_MOVEMENT_SPEED

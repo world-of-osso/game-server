@@ -2,10 +2,24 @@
 mod ai;
 mod catalog;
 mod hazards;
+mod healer_context;
+mod healer_policy;
+mod healer_triage;
+mod holy_policy;
 mod kit;
 mod kit_ai;
 mod kit_area;
+#[cfg(test)]
+mod kit_hunter_policy_tests;
 mod kit_interrupt;
+mod kit_overrides;
+
+#[cfg(test)]
+mod kit_proc_fidelity_tests;
+#[cfg(test)]
+mod kit_rotation_fidelity_tests;
+#[cfg(test)]
+mod kit_rotation_tests;
 mod pack_identity;
 mod party;
 mod positioning;
@@ -43,10 +57,14 @@ mod pull_sources;
 mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
+mod resto_policy;
+#[cfg(test)]
+mod rotation_dummy_tests;
 #[cfg(test)]
 pub(crate) mod simulator;
 mod spawning;
 mod stockade_diagnostic;
+mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
@@ -54,6 +72,9 @@ mod tank_planner_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
+
+#[cfg(test)]
+mod group_buff_tests;
 
 pub(crate) use ai::FollowerReach;
 pub(crate) use catalog::FollowerCatalog;
@@ -218,6 +239,16 @@ mod passive_stats_tests;
 mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
+#[cfg(test)]
+mod rotation_defense_tests;
+#[cfg(test)]
+mod rotation_override_tests;
+#[cfg(test)]
+mod rotation_proc_tests;
+#[cfg(test)]
+mod rotation_refresh_tests;
+#[cfg(test)]
+mod rotation_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

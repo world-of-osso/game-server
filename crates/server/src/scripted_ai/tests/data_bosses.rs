@@ -43,6 +43,8 @@ mod azure_telash;
 mod azure_telash_return;
 #[path = "broggok.rs"]
 mod broggok;
+#[path = "bromach.rs"]
+mod bromach;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "crawth.rs"]
@@ -89,10 +91,14 @@ mod kelidan;
 mod kokia;
 #[path = "landslide.rs"]
 mod landslide;
+#[path = "lost_dwarves.rs"]
+mod lost_dwarves;
 #[path = "maraudon.rs"]
 mod maraudon;
 #[path = "melidrussa.rs"]
 mod melidrussa;
+#[path = "native_target148.rs"]
+mod native_target148;
 #[path = "nethekurse.rs"]
 mod nethekurse;
 #[path = "noxxion.rs"]
@@ -446,7 +452,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230,
+            209230, 216619,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)

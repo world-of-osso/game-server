@@ -1,0 +1,48 @@
+# Class census tail — 70448
+
+Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diagnostics/class-census-70448-2026-10-21/{by-cause,fixture-delta,per-spec-matrix}.md`;7071PASS/756FAIL of7827 memberships. Dispatch certification is not full-ability parity.
+
+## Named gaps
+
+| Cause | Roots | Disposition and evidence |
+|---|---|---|
+|285 LINKED_2 nonzero|371905,388491,388511,392221,471492,427775|Existing source conflict retained by lead decision2026-10-21. [Prior native matrix](../class-completeness2.md#zero-amount-linked-auras--batch25). Do not copy parent positive BP0 over70448 negative child values; do not invent sign or scaling rules.|
+|483 SUPPRESS_TRANSFORMS|164862 Flap,188499 Blade Dance|**AURA_483_TC_NULL_NYI**. TC `SpellAuraEffects.cpp:555` dispatches HandleNULL; `SpellAuraDefines.h:570` explicitly marks NYI. Complete `src/server` search finds only those declarations, no consumer. Five memberships remain partial; no marker handler or invented transform behavior.|
+
+**AURA_120_151_VIS_FLAGS_PROTOCOL_ABSENT**: native61648 Aspect of the Chameleon (aura120) requires client-facing `UNIT_VIS_FLAGS_UNTRACKABLE` (`SpellAuraEffects.cpp:2693–2710`); native19885 Track Hidden (aura151) requires player-local `PLAYER_LOCAL_FLAG_TRACK_STEALTHED` (`SpellAuraEffects.cpp:2650–2670`). Pinned handlers do not implement a server detection algorithm. Existing protocol has neither field; server WorldAuraState's44 tracking mask likewise explicitly lacks client projection. Lead2026-10-21 names this boundary; no unused booleans or warning-only marker handler. Six memberships remain partial.
+
+**AURA_355_TC_NULL_NYI**: native1714 Curse of Tongues authors aura355 amount−30. TC `SpellAuraEffects.cpp:427` dispatches HandleNULL; `SpellAuraDefines.h:442` explicitly marks NYI. Complete `src/server` search finds no consumer. Do not substitute aura65/216 casting-speed algorithms or reinterpret the native amount; three memberships remain partial.
+
+**AURA_232_POSITIVE_DURATION_SOURCE_CONFLICT_70448**: native372048 Oppressing Roar authors seventeen aura232 effects of+50 with mechanic selectors. Existing [duration contract](../specs/class-completeness.md) and `auras/mechanic_duration.rs` retain positive-only fields as source gaps. TC `Object.cpp:1750–1758` takes min(sum232,strongest negative234), so standalone+50 cannot extend a duration; no372048 hook exists in pinned TC scripts. Do not invent positive extension or silently certify the ignored authored magnitude.
+
+## Existing subsystem boundary
+
+**POSSESS_CHARM_SYSTEM_ABSENT**: aura2 Mind Control605 and aura6 Dominate Mind205364 require TC `HandleModPossess`/`HandleModCharm` (`SpellAuraEffects.cpp:3238–3262,3303–3315`) and `SetCharmedBy`/`RemoveCharmedBy`. Server has no corresponding relationship/control lifecycle. `PetCharm` (`pet_control.rs:90`) stores an existing pet's command/react/action bar, not arbitrary charm or possession; pet actions resolve an already-owned pet. Existing `scripted_ai/blood_furnace.rs` explicitly retains `MAKER_DOMINATION_CHARM_UNIMPLEMENTED` for aura6. Do not build a new subsystem for this census.
+
+Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
+
+## Effect62 POWER_BURN
+
+TC `SpellEffects.cpp:1220–1243` burns the living target's matching primary power and converts actual lost power using CalcValueMultiplier (Amplitude, not ChainAmplitude), with no caster credit. TC `SpellInfo.cpp:883–885` requires ExpectedStat PlayerMana for Mana62; reuse the existing effect8 native amount loader and admission validation. EffectPowerBurn does not call SpellDamageBonusDone/Taken; retain ordinary crit/armor/resilience/absorb/resist handling without inventing source/taken bonuses.
+
+Ignored REDebf86f93a gives2PASS/2FAIL21.94s. Corrected actual UnitLevel/expected_stat fixture22ac7ede0 plus real Barkskin damage-exclusion controlf1acfd987 gives2PASS/3FAIL31.75s before implementation. Native22568 Ferocious Bite index1 Energy75 remains75 instead50; Wilt23772 with only3 Mana does not burn it. Dead-target/wrong-primary controls pass. `62-red-native-inputs.log` retains corrected proof. GREEN3644d1f27: unchanged enabled `census_tail_62` five cases5PASS/0FAIL/0ignored16.63s; native compile9m34s. `/home/osso/.worktrees/logs/census-tail/62-green.log`. Existing unrelated `followers/pull_history.rs:214 has_uncleared_fight` dead-code warning retained for lead; no census-tail warning. Primary mismatch/dead exclusion, actual pool clamp/zero-amplitude Energy and Mana amplitude2/Barkskin exclusion all proven.
+
+## Priority target118 ALLY_OR_RAID
+
+TC `Spell.cpp:1393–1401` expands around the explicit unit only when caster and target share a party/raid. Native21562 Fortitude supplies radius100; ordinary explicit-friendly admission range is preserved by the selector's Ally requirement (`Spell.cpp:1105`). Generic expansion reuses living/friendly/same-copy area selection, group membership, caps and center sight checks. Actual follower parties share GroupRegistry but use `Follower::member_id`; resolve that identity before ordinary summoned-unit ownership so non-roster followers cannot inherit their owner's membership.
+
+Ignored RED208a0bdbb refined6d905360c: `census_tail_118 --include-ignored`,1PASS/3FAIL20.11s. Five-player target-centered expansion fails; dead/far/copy exclusion case lacks caster buff; native Henry215011 fails to buff the companion roster. Ungrouped-target-only control passes. Real follower profiles loaded from native catalog; summoned ownership and a same-owner non-roster follower reproduce the production boundary. `/home/osso/.worktrees/logs/census-tail/118-red.log`. GREENbfa50fd49: unchanged native four cases4PASS/0FAIL32.04s, no warnings; compile3m04s. `118-green.log` retains output. Lead notified for13119's Holy policy dependency; integration gate remains lead-owned.
+
+## Effect16 QUEST_COMPLETE
+
+TC `SpellEffects.cpp:3765–3793` completes native exploration/event quests only when active, or native tracking-event flags even without visible log entries; already-rewarded quests are not replayed. Generic handler delegates to existing `quest::persist_scripted_quest_result` with the actual hit player and native MiscValue, preserving production persistence/dirty notifications.
+
+Ignored RED65cd8e660: native Dreamwalk193753 effect1→tracking quest39174, selected native effect through `resolve_effects` (not unrelated teleport siblings),1PASS/1FAIL26.85s. Missing persisted tracking reward fails; NPC-target exclusion control passes. Test also covers redb close/reopen and replay exclusion. `/home/osso/.worktrees/logs/census-tail/16-red.log`. Handler e73367de4 does not yet close this root: focused attempted GREEN1PASS/1FAIL40.31s (`16-green.log`) exposes **EFFECT16_NATIVE_TRACKING_QUEST_UNPUBLISHED**. Native39174 exists in `tdb_quest_template` (Flags0x2000400) but is absent `content_quest_template`, which production `load_quest_db` reads. No canonical mutation. Per lead, the native reward test is temporarily ignored with this exact gap name while publication is pending.
+
+Producer `scripts/publish_dreamwalk_tracking_quest.py --source <world.db> --output <publication.sql>` reads native source read-only and emits a one-row, idempotent SQL transaction for39174. Uses existing `retail_content.QUEST_COLUMNS`, scaling-level and money rules; no AzerothCore reward substitution. Native39174 bonus money is0; runtime keeps its separate required JSON bonus catalog rather than adding a content-table column. Rejects absent native Dreamwalk effect16/QuestV2/tracking flag or newly nonzero bonus money. Producer RED0b73a6e83 reports0!=1; final147e5b2e0 twoGREEN0.042s compares actual native values after publication in isolated in-memory tables, replays publication without duplicates and rejects a missing native effect link. SQL and logs: `/home/osso/.worktrees/logs/census-tail/{publish-dreamwalk.sql,16-producer-green2.log}`. Lead applied native39174 to canonical data2026-10-21; this agent verified the published row read-only after the atomic replacement. Test re-enabled0fc00ef26; focused `census_tail_16` now2GREEN/0FAIL/0ignored51.59s after publication, including redb close/reopen, already-rewarded replay exclusion and NPC-hit exclusion. `/home/osso/.worktrees/logs/census-tail/16-green-published.log`; no warnings, merged Rust compile5m19s. Named unpublished-quest gap closed for this native row.
+
+## Aura94 INTERRUPT_REGEN
+
+Native17057 Bear Form, index1 zero amount. TC `Entities/Unit/StatSystem.cpp:931–937` selects combat regeneration while aura exists without changing actual combat status. Runtime now selects the interrupted power rate for non-NPC actors, retaining real combat state/timestamps, power-trigger processing and normal removal behavior. Mana's existing identical peace/combat formula is unchanged.
+
+Ignored RED pushed6e390095d; idle precondition corrected5a04d17b1 before cold server compilation. Focused `census_tail_94_native_bear_form_retains_idle_rage_until_removed` produced0PASS/1FAIL: actual native cast granted249.375 Rage at observation, then fell to236.875 after1s despite its aura94. Test also requires replicated rate0 and native−12.5/s decay restored on removal. Cold compile25m53s, test15.58s; `/home/osso/.worktrees/logs/census-tail/94-red.log`. GREEN195b39001: unchanged focused test1PASS/0FAIL17.32s; incremental compile1m23s. `/home/osso/.worktrees/logs/census-tail/94-green.log`. No whole-ability/census promotion claim yet.

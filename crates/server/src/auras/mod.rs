@@ -599,6 +599,31 @@ fn duration_ms(world: &World, application: &AuraApplication, spell: &SpellInfo) 
     mechanic_duration::modify_duration(world, application, spell, duration)
 }
 
+/// Fresh maximum duration through the same caster/target modifier path as apply.
+/// A carried refresh duration is not the next cast's Pandemic threshold.
+pub(crate) fn maximum_duration_ms(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell_id: u32,
+) -> Option<u32> {
+    let mut spell = world.resource::<SpellStore>().get(spell_id)?.clone();
+    let duration = spell.misc.as_mut()?.duration.as_mut()?;
+    if duration.max_duration_ms <= 0 {
+        return None;
+    }
+    duration.duration_ms = duration.max_duration_ms;
+    duration.per_resource_ms = 0;
+    let application = AuraApplication {
+        caster,
+        target,
+        spell_id,
+        effect_mask: u32::MAX,
+        source: AuraSource::Cast,
+    };
+    Some(duration_ms(world, &application, &spell))
+}
+
 fn build_effect(
     world: &World,
     caster: Entity,
