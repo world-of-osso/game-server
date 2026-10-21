@@ -742,27 +742,31 @@ fn compute_native_instance_stats(
     )
     .unwrap_or_else(|error| panic!("resolve equipped item stats: {error}"));
     let mut blocks = vec![stats.block];
-    blocks.extend(instance_enchant_blocks(properties, level, &native.enchants));
+    blocks.extend(
+        instance_enchant_contributions(properties, level, &native.enchants)
+            .into_iter()
+            .map(|contribution| contribution.stats),
+    );
     let (primary, secondary) = sum_equipment_stats(&blocks);
     stats.block = ItemStatBlock { primary, secondary };
     stats
 }
 
-fn instance_enchant_blocks(
+pub(crate) fn instance_enchant_contributions(
     properties: &server::item_instance::ItemInstanceModifiers,
     level: u8,
     tables: &server::item_instance::enchants::EnchantmentTables,
-) -> Vec<ItemStatBlock> {
+) -> Vec<server::item_instance::enchants::EnchantContribution> {
     use server::item_instance::enchants::{enchantment_stats, gem_stats};
     let enchant = enchantment_stats(properties.enchant, level, tables)
         .unwrap_or_else(|error| panic!("resolve equipped enchant: {error}"));
-    let mut blocks = vec![enchant.stats];
+    let mut contributions = vec![enchant];
     for &gem in &properties.gems {
         let contribution = gem_stats(gem, level, tables)
             .unwrap_or_else(|error| panic!("resolve equipped gem {gem}: {error}"));
-        blocks.push(contribution.stats);
+        contributions.push(contribution);
     }
-    blocks
+    contributions
 }
 
 #[derive(Default)]

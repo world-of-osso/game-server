@@ -177,6 +177,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Native on-equip/enchant spell owned by this physical equipment slot.
+    Equipment(shared::protocol::EquipmentSlot),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }

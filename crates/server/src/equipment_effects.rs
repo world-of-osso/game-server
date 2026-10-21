@@ -1,7 +1,173 @@
 //! Equipped native item/enchant spells follow the ordinary aura lifecycle.
+use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
+use crate::spell_info::{SpellInfo, SpellStore};
+use crate::stats::{EquippedItemModifiers, EquippedItems, NativeItemInstances};
 use bevy::prelude::*;
+use server::item_instance::{ItemInstanceModifiers, bonuses, effects};
+use shared::components::Level;
+use shared::item_data::ItemDefinitionSource;
+use shared::protocol::EquipmentSlot;
 
-pub(crate) fn sync_equipment_effects(_world: &mut World) {}
+const ON_EQUIP: u8 = 1;
+
+type ChangedEquipment = QueryState<
+    Entity,
+    (
+        With<EquippedItems>,
+        With<EquippedItemModifiers>,
+        Or<(
+            Changed<EquippedItems>,
+            Changed<EquippedItemModifiers>,
+            Changed<Level>,
+        )>,
+    ),
+>;
+
+pub(crate) fn sync_equipment_effects(world: &mut World, changed: &mut ChangedEquipment) {
+    let units: Vec<Entity> = changed.iter(world).collect();
+    for unit in units {
+        let desired = equipped_spells(world, unit);
+        crate::auras::remove_auras(world, unit, RemoveReason::Unlearned, |aura| {
+            let AuraSource::Equipment(slot) = aura.source else {
+                return false;
+            };
+            !desired
+                .iter()
+                .any(|(key, spell)| *key == slot && spell.id == aura.spell_id)
+        });
+        for (slot, spell) in desired {
+            apply_missing_equipment_aura(world, unit, slot, &spell);
+        }
+    }
+}
+
+fn equipped_spells(world: &World, unit: Entity) -> Vec<(EquipmentSlot, SpellInfo)> {
+    let equipped = world
+        .get::<EquippedItems>(unit)
+        .expect("equipped catalog identities");
+    let modifiers = world
+        .get::<EquippedItemModifiers>(unit)
+        .expect("equipped instance projection");
+    let level = world.get::<Level>(unit).expect("equipment owner level").0;
+    equipped
+        .items
+        .iter()
+        .filter(|(_, source, _)| *source == ItemDefinitionSource::Retail)
+        .flat_map(|&(slot, _, item_id)| {
+            let properties = modifiers
+                .items
+                .iter()
+                .find(|(key, _)| *key == slot)
+                .map(|(_, state)| state.clone())
+                .unwrap_or_default();
+            resolve_slot_spells(world, slot, item_id, &properties, level)
+        })
+        .collect()
+}
+
+fn resolve_slot_spells(
+    world: &World,
+    slot: EquipmentSlot,
+    item_id: u32,
+    properties: &ItemInstanceModifiers,
+    level: u8,
+) -> Vec<(EquipmentSlot, SpellInfo)> {
+    let (item_level, bonus_effects) = resolve_item_level_and_effects(world, item_id, properties);
+    let ids = equipped_spell_ids(world, item_id, &bonus_effects, properties, level);
+    ids.into_iter()
+        .map(|id| {
+            let mut spell = world
+                .resource::<SpellStore>()
+                .get(id)
+                .cloned()
+                .unwrap_or_else(|| panic!("equipped item {item_id} spell {id} absent"));
+            spell.cast_item_level = Some(item_level);
+            (slot, spell)
+        })
+        .collect()
+}
+
+fn resolve_item_level_and_effects(
+    world: &World,
+    item_id: u32,
+    properties: &ItemInstanceModifiers,
+) -> (u16, Vec<u32>) {
+    let native = world.resource::<NativeItemInstances>();
+    let templates = world.resource::<crate::item_templates::ItemTemplates>();
+    let template = templates
+        .get(ItemDefinitionSource::Retail, item_id)
+        .unwrap_or_else(|| panic!("native equipped item {item_id} absent"));
+    let modified =
+        bonuses::apply_item_bonuses(&template.scaling, &properties.bonus_list, &native.bonuses)
+            .unwrap_or_else(|error| panic!("equipped item {item_id} bonuses: {error}"));
+    let item_level = server::item_instance::item_instance_stats(
+        &modified.scaling,
+        template.inventory_type,
+        properties,
+        world.resource::<crate::item_stats::ItemScalingTables>(),
+    )
+    .unwrap_or_else(|error| panic!("equipped item {item_id} level: {error}"))
+    .item_level;
+    (item_level, modified.effect_ids)
+}
+
+fn equipped_spell_ids(
+    world: &World,
+    item_id: u32,
+    bonus_effects: &[u32],
+    properties: &ItemInstanceModifiers,
+    level: u8,
+) -> Vec<u32> {
+    let native = world.resource::<NativeItemInstances>();
+    let mut ids: Vec<u32> = effects::equipped_item_effects(item_id, bonus_effects, &native.effects)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .into_iter()
+        .filter(|effect| effect.trigger == ON_EQUIP)
+        .map(|effect| effect.spell_id)
+        .collect();
+    ids.extend(
+        crate::stats::instance_enchant_contributions(properties, level, &native.enchants)
+            .into_iter()
+            .flat_map(|contribution| contribution.equip_spells),
+    );
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}
+
+fn apply_missing_equipment_aura(
+    world: &mut World,
+    unit: Entity,
+    slot: EquipmentSlot,
+    spell: &SpellInfo,
+) {
+    let source = AuraSource::Equipment(slot);
+    let applied = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == spell.id && aura.source == source)
+    });
+    if applied {
+        return;
+    }
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    assert_ne!(
+        effect_mask, 0,
+        "native equip spell {} has no applicable aura effects",
+        spell.id
+    );
+    crate::auras::apply_aura_with_spell(
+        world,
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id: spell.id,
+            effect_mask,
+            source,
+        },
+        spell,
+    );
+}
 
 #[cfg(test)]
 mod tests {
