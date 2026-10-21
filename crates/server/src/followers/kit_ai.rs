@@ -10,6 +10,10 @@ use crate::networking::CombatTarget;
 
 const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
 
+#[cfg(test)]
+#[path = "healer_triage_tests.rs"]
+mod healer_triage_tests;
+
 pub(super) fn update(
     world: &mut World,
     unit: Entity,
