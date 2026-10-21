@@ -275,6 +275,19 @@ fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
     );
 }
 
+fn complete_empower(h: &mut Harness, caster: Entity, base: u32) {
+    let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+    let target = if base == FIRE_BREATH { caster } else { h.npc };
+    super::kit_proc_fidelity_tests::complete_cast(h, caster, spell, target);
+    for _ in 0..100 {
+        h.advance(1);
+        if h.app.world().get::<CastState>(caster).is_none() {
+            return;
+        }
+    }
+    panic!("native empower{spell} did not finish");
+}
+
 #[test]
 fn native_empower_animosity_extends_dragonrage_with_native_diminishing_effectiveness() {
     let (mut h, caster) = prepare(90);
@@ -302,15 +315,7 @@ fn native_empower_animosity_extends_dragonrage_with_native_diminishing_effective
     let mut effectiveness = 1.0;
     for base in [FIRE_BREATH, ETERNITY_SURGE] {
         let before = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
-        let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
-        let target = if base == FIRE_BREATH { caster } else { h.npc };
-        super::kit_proc_fidelity_tests::complete_cast(&mut h, caster, spell, target);
-        for _ in 0..100 {
-            h.advance(1);
-            if h.app.world().get::<CastState>(caster).is_none() {
-                break;
-            }
-        }
+        complete_empower(&mut h, caster, base);
         let after = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
         let extended_ms = (after.expires_at.unwrap() - before.expires_at.unwrap()) * 1000.0;
         let expected = extension_ms * effectiveness;
@@ -320,6 +325,80 @@ fn native_empower_animosity_extends_dragonrage_with_native_diminishing_effective
         );
         assert_eq!(before.instance_id, after.instance_id);
         effectiveness *= 1.0 - reduction / 100.0;
+    }
+}
+
+#[test]
+fn native_empower_animosity_new_dragonrage_instance_restores_full_effectiveness() {
+    let (mut h, caster) = prepare(90);
+    super::kit_proc_fidelity_tests::complete_cast(&mut h, caster, 375087, caster);
+    let first = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
+    complete_empower(&mut h, caster, FIRE_BREATH);
+    // Let the actual first Dragonrage expire and the native Fire Breath charge recover.
+    h.advance(600);
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 375087));
+    // Controlled native buff application isolates per-instance script state;
+    // this does not claim the ordinary Dragonrage cooldown is already ready.
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 375087, Some(caster), 1);
+    let before = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
+    assert_ne!(before.instance_id, first.instance_id);
+    let passive = super::kit_clearcasting_tests::own_aura(&h, caster, 375797).unwrap();
+    let expected = passive
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    complete_empower(&mut h, caster, FIRE_BREATH);
+    let after = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
+    let extended = (after.expires_at.unwrap() - before.expires_at.unwrap()) * 1000.0;
+    assert!(
+        (extended - f64::from(expected)).abs() <= 1.0,
+        "new native Dragonrage instance must receive full Animosity again"
+    );
+}
+
+#[test]
+fn native_empower_blast_furnace_preserves_extra_dot_seconds_at_ranks_one_and_three() {
+    for level in [43, 44] {
+        for (stage, base_ms) in [(1, 20_000), (3, 8_000)] {
+            let (mut h, caster) = prepare(level);
+            let furnace = super::kit_clearcasting_tests::own_aura(&h, caster, 375510);
+            assert_eq!(
+                furnace.is_some(),
+                level == 44,
+                "fixture must use the actual native Blast Furnace learn boundary"
+            );
+            let extra_seconds = furnace.as_ref().map_or(0.0, |aura| {
+                aura.effects
+                    .iter()
+                    .find(|effect| effect.index == 0)
+                    .unwrap()
+                    .amount
+            });
+            crate::spell_cast::creature_cast_empowered(
+                h.app.world_mut(),
+                caster,
+                FIRE_BREATH,
+                Some(caster),
+                stage,
+            )
+            .unwrap();
+            h.advance(100);
+            let dot = h
+                .app
+                .world()
+                .get::<ActiveAuras>(h.npc)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == FIRE_DAMAGE && aura.caster == caster)
+                .unwrap();
+            assert_eq!(
+                dot.duration_ms,
+                base_ms + (extra_seconds * 1000.0) as u32,
+                "native Blast Furnace must extend the remaining rank{stage} DoT without changing its tick clock"
+            );
+        }
     }
 }
 
