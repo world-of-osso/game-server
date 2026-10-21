@@ -13,6 +13,14 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Native default TempSummon title dispatch
+
+- [x] Ordinary Wild/Ally titles use TC a352b1fa's default TempSummon branch unless they select an explicit guardian/companion/totem/vehicle path or joined spawn-group route (`SpellEffects.cpp:1957–2024`, `Object.cpp:1191–1265`). A Construct7/Name27/new61 label is not itself a missing control implementation.
+- [x] Source-native168667/298926,192485/373230,258135/1262837,258136/1262850 and267472/1280448 admit actor-only use under the global source-marker policy. No per-toy script is added. Existing198206/198264/210975 opt-in party/viewer world-effect contracts remain named gaps.
+- [x] Real source-eligible use must produce the exact source actors/models in the owner's map, without guardian/follow classification, and preserve natural source2/5/11-minute actor lifetime. Projector's Gnome restriction remains enforced.
+
+Actor-only admission does not certify Blingtron gifts/combat, clone stacking, jumpable collision geometry, native rendering, or unresolved scripts. Totem/vehicle/possession and other blocked action contracts do not acquire support merely from this title dispatch.
+
 ## Server-scope visual-only census rule
 
 A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and real CancelAura removes it. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.
