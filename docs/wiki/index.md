@@ -1,4 +1,4 @@
-- [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — complete88-row70448 inventory,16 core qualifications GREEN, named script gaps; native decision/threat qualification pending.
+- [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — bounded43GREEN/1shared PoH lifetime RED, full frozen80-report comparisons; no clears/overall-quality claim, Azure deaths25→34,18 named script gaps retained.
 - [Follower healer triage](systems/follower-healer-triage.md) — named project policy design, pending behavioral proof; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md).
 - [Azure translocation](systems/azure-translocation.md) — explicit book/POI endpoint policy, source gossip derivation, staged-nav components and native interaction RED/GREEN ledger.
 - [Follower healer triage](systems/follower-healer-triage.md) — native risk/cost/ownership, real Hogger deadlines and injury clusters; six gate regressions corrected,285+1 native GREEN; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md), full policy/benchmarks pending.

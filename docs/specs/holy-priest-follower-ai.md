@@ -94,20 +94,21 @@ available through the shared generic candidate ranking.
 
 ## Consequence coverage required
 
-| Feature | Native consequence / proof obligation | Initial state |
+| Feature | Native consequence / proof obligation | Bounded proof status |
 |---|---|---|
 | Flash Heal → Serenity | native2050 effect1 reduction6sec | Existing native tests |
 | PoH → Sanctify | native34861 effect2 reduction6sec | Existing native tests |
 | Surge | natural8% acquisition, instant/half-cost, one use, cap2 | Native Henry4GREEN66f0; missing-mana talent remains a named gap |
-| Prayer of Mending | real41635 damage heal33110 and delayed155793 bounce | Existing native tests; upkeep decision missing |
+| Prayer of Mending | real41635 damage heal33110 and delayed155793 bounce | Native90 owned bounced-ward upkeep GREEN; supporting selected synergies retain named gaps |
 | Voice of Harmony | learned390994 PoM → Serenity reduction4sec | Native cast qualification GREEN66f0, including unlearned control |
 | Apotheosis | restore native Holy Words;200% enhanced reduction;70% mana discount | Reset/amplification GREEN66f0; group timing GREEN4b0; native nonfree70% Word discount GREEN775 |
 | Ultimate Serenity | native replacement and real nearby healing1250581 | PoH→Serenity CDR GREEN66f0; nearby healing remains unqualified |
 | Guardian Spirit | actual death prevention, one-shot rescue and expiry | HP/forecast policy GREEN775; nativeNPC one-shot rescue and later death GREENd71; earlier player expiry tests retained |
-| Divine Hymn | actual channel/ticks/recipient selection and safe timing | Timing unqualified |
-| Fortitude/Purify | party upkeep / native effect38 eligibility | Purify realMagic GREEN4b0; Fortitude regression enabled after common target118 fix, integration proof pending |
+| Divine Hymn | actual channel/ticks/recipient selection and safe timing | Actual injured3+ native ticks and pressure decision GREEN |
+| Fortitude/Purify | party upkeep / native effect38 eligibility | Formal-party target118 coverage and first527 before non-emergency paid healing GREENd765 |
 | Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Generic Fade/Meredy103 suppression and expiry GREENf53; FadeAI/groupMagic REDd71→GREENeaa with negative footprint/victim controls. Leap77 blocked; special72734 potency unqualified |
-| Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
+| Damage weaving | no unsafe offense while injury demands healing | Holy Fire→Smite and native self-Nova damage plus injury/fresh-pack/Polymorph controls GREENd765 |
+| Prayer of Healing decisions | aggregate native-radius effective healing / mana; actual596 group healing | Henry-only native consequence GREEN; original full-party anchor-cancellation RED retained below |
 | Remaining selected passives | exact native modifiers or explicit named script gaps | See [named gaps](../wiki/investigations/holy-priest-follower-ai.md#named-selected-kit-gaps); not runtime-complete |
 
 ### Known integration blocker

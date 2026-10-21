@@ -172,6 +172,49 @@ and safety controls pass at0de4fe1af: all five weave cases GREEN, including
 actual Holy Fire→Smite damage, Nova on three engaged enemies, and incoming-damage,
 fresh-pack and real Polymorph vetoes. The full-party PoH case alone remains RED.
 
+## Frozen native and cohort qualification at d765e1901
+
+Six bounded Holy namespaces give **43PASS/0FAIL/1namedignored in41.70sec**.
+The44th case is the original full-party596 lifetime RED above, not waived or
+replaced. Production differs from baseline027798898 only in `holy_policy.rs`;
+shared triage, observers, simulator31f288baf, common655258480 and protocol03cebdb
+are identical. Same uncommitted sim serveropt1/deps3 override; frozen SQLiteSHA256
+874178ece3c6d41e738d915329ffdf84d50a206450e2529daeb4eadd6b4a8b5d plus read-only
+DB2/gametables/rootJSON manifest. Roster209057,215011,209053,209059,209065;
+seeds1–20/jobs2 each side, Stockade34/1/level32 and Azure2515/205/level70.
+All80 reports/context validations complete; provisional drifted baselines excluded.
+
+| Metric | Stockade before→after | Azure before→after |
+|---|---|---|
+| Clears / party deaths / Henry deaths | 0→0 /25→25 /0→0 | 0→0 /25→34 /0→0 |
+| Henry-source overheal | 68.338806%→68.405532% | 39.008917%→43.658042% |
+| Whole-party-source overheal | 18.649303%→18.221189% | 30.521694%→27.986640% |
+| Serenity applied/requested seconds | 5072.55/5490→5098.05/5522 | 13332/13332→14638/14642 |
+| Surge uses/effective gains | 109/112→87/95 | 220/223→250/253 |
+| route/pull/death/sim blockers | 0/1/16/3→0/1/15/4 | 0/0/20/0→0/0/20/0 |
+
+**No overall-quality improvement or route-completion/live proof.** Azure deaths
+and Henry overheal worsen; party-source overheal improves. Native596 launches0→11,
+PoM0→149, Fade0→128 and Guardian0→3 in Azure, demonstrating real decisions, not
+full-run success. Simulated exposure differs: Stockade50074.75→52788.3sec,
+Azure8608.2→11946.8sec. Differently truncated totals are not fixed-duration
+throughput. Guardian48153 heals are self-sourced by the protected recipient;
+party totals include them without silently attributing ally rescues to Henry.
+
+Native0.5sec mana curves remain separate CSVs; median run-minimum fractions
+Stockade0.741566→0.706916 and Azure0.777966→0.624797. After Stockade non-death
+seeds7/11/16/17/18 show Henry no cast/full4430mana,99–118yd from tank. Observations
+only, not an established route root cause; generic simulator fixes remain13179-owned.
+
+Engine diagnostics `holy-priest-2026-10-21/frozen-comparison-report.md` holds exact
+raw numerators, mana/exposure summaries and coverage matrix;
+`comparison-{stockade,azure}/comparison.json` holds summarize.py outputs with
+blocker evidence/lineage, each beside `before-mana.csv` and `after-mana.csv`.
+Raw20-seed directories, scope/validation receipts, archived executables and SHA
+receipts remain unchanged. `holy-freeze-{build,targeted}.log` and
+`freeze-native-scope.json` identify exact native filters/revision. Lead final
+check/readability/integration gate pending; bounded tip is not full goal completion.
+
 ## Named selected-kit gaps
 
 Verified source inspection at66f0b1d6b: these numeric spell IDs have no class-specific

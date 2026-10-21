@@ -1,3 +1,7 @@
+## 2026-10-21 — Holy frozen policy qualification
+
+[Holy Priest](investigations/holy-priest-follower-ai.md#frozen-native-and-cohort-qualification-at-d765e1901): native d76543PASS/1named shared PoH anchor-cancellation RED41.70s; real Purify-first, aggregate596 selection/consequence and self-targetNova/safety qualified. Frozen4×20 reports/context validations complete with same catalog/profile/roster; onlyHoly production diff. Stockade deaths25→25, Azure25→34, no clears; both-source overheal/mana/CDR/procs and route/pull/death/sim taxonomy preserved. No overall-quality/live/goal-completion claim; lead gate and common lifetime blocker remain.
+
 ## 2026-10-21 — Holy native policy boundary
 
 [Holy Priest](investigations/holy-priest-follower-ai.md): native temporary-threat2GREEN and native90 damage/stat controlGREEN atf53b75c0b; six policy REDs justify the real-context adapter. Integration GREEN pending; target118 Fortitude coverage ignored pending generic correction, never replaced by individual buffs.
