@@ -351,6 +351,29 @@ fn follower_utility_policy_dispel_control_before_lower_health_periodic_damage() 
 }
 
 #[test]
+fn follower_utility_policy_raid_buff_rejects_combat_status_without_an_enemy() {
+    let (mut h, unit) = level32(209059);
+    let entry = h
+        .app
+        .world()
+        .resource::<super::FollowerCatalog>()
+        .kits
+        .iter()
+        .find(|entry| entry.spec_id == 63 && entry.spell_id == 1459)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .insert(shared::components::CombatStatus(true));
+    let party = [h.caster, unit];
+    assert!(
+        !super::kit_ai::conditions_met(h.app.world_mut(), unit, unit, &party, &[], &entry),
+        "an empty candidate list is not proof that a party member left combat"
+    );
+}
+
+#[test]
 fn follower_utility_policy_raid_buff_waits_for_out_of_combat() {
     let (mut h, unit) = level32(209059);
     for _ in 0..5 {
