@@ -65,7 +65,8 @@ with the implementing tests. No claim that a threshold is sourced from DB2.
 
 ### V1 project thresholds and ownership
 
-Guardian Spirit protects patients below20% health; Desperate Prayer uses Henry's
+Guardian Spirit protects patients below20% health or within the shared3sec
+projected-death window; Desperate Prayer uses Henry's
 below50% health plus observed incoming damage. Shared urgent direct-heal candidates
 precede routine throughput/upkeep. Surge selects below90%, PoM below95%, and group
 pressure requires three actual patients:65% for depleted-Word Apotheosis,55% for

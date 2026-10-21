@@ -96,8 +96,14 @@ row). This setup failure is not a Purify policy RED.
 
 The production Holy adapter now reads real patients, source-radius clusters,
 native recovery/cost admission and owned41635 wards. Its cooldown/maintenance
-ownership prevents generic rows undoing a refused choice. Integration GREEN is
-pending. Fortitude coverage stays explicitly ignored until the separately owned
+ownership prevents generic rows undoing a refused choice. At4b0d483c2, six native decisions GREEN14.72sec. At694de6f59, expanded
+qualification yields11GREEN, one Fortitude ignore and one genuine RED: seven
+native10% hits at1sec spacing predict death within3sec while patients remain
+above25%HP, but the old20%-only Guardian rule never casts it. Guardian now also
+uses the shared projected-death deadline; that exact GREEN remains pending.
+Earned-Surge priority, effective native32 Sanctify, spread-cluster refusal and
+full-health cooldown conservation are native GREEN controls. Fortitude coverage
+stays explicitly ignored until the separately owned
 native target118 raid expansion lands; no individual-buff workaround.
 
 ## Named selected-kit gaps

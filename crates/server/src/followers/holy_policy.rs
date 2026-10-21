@@ -1,5 +1,5 @@
 //! HOLY_PRIEST_TRIAGE_V1: project decisions over source-valid shared triage inputs.
-use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
+use super::healer_triage::{Decision, EMERGENCY_SECONDS, SpecVerdict, SpellSet, TriageContext};
 use bevy::prelude::Entity;
 use shared::components::Health;
 
@@ -110,7 +110,8 @@ fn own_aura(ctx: &TriageContext<'_>, target: Entity, spell: u32) -> bool {
 
 fn choose_guardian(ctx: &TriageContext<'_>) -> Option<Decision> {
     ctx.patients.iter().find_map(|patient| {
-        let critical = health_fraction(ctx, patient.entity)? < GUARDIAN_HEALTH;
+        let critical = health_fraction(ctx, patient.entity)? < GUARDIAN_HEALTH
+            || patient.projected_death_seconds <= EMERGENCY_SECONDS;
         (critical && ready(ctx, GUARDIAN_SPIRIT, patient.entity)).then_some(Decision {
             spell_id: GUARDIAN_SPIRIT,
             target: patient.entity,
