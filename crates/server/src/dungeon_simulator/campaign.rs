@@ -353,8 +353,15 @@ fn native_mana_recovery_is_party_progress_without_damage_or_movement() {
     }
     run.last_progress = run.now();
     let healer = run.party.members[1];
-    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 8936, Some(healer), false)
+    let before = run.app.world().get::<Mana>(healer).unwrap().current;
+    // An already-full normal direct heal is intentionally cancelled by healer AI.
+    // Spend through a learned native instant buff instead, without damage or injury.
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 1126, Some(healer), false)
         .unwrap();
+    assert!(
+        run.app.world().get::<Mana>(healer).unwrap().current < before,
+        "native recovery fixture must actually spend mana before measuring progress"
+    );
     for _ in 0..1201 {
         run.app.update();
         assert!(
