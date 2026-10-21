@@ -38,15 +38,26 @@ fn native_dummy(entry: u32) -> (Harness, Entity) {
     (h, unit)
 }
 
-fn aura(h: &Harness, unit: Entity, target: Entity, spell: u32) -> AuraInstance {
+fn find_aura(h: &Harness, unit: Entity, target: Entity, spell: u32) -> Option<AuraInstance> {
     h.app
         .world()
-        .get::<ActiveAuras>(target)
-        .unwrap()
+        .get::<ActiveAuras>(target)?
         .iter()
         .find(|aura| aura.spell_id == spell && aura.caster == unit)
-        .unwrap_or_else(|| panic!("native owned aura {spell} missing"))
-        .clone()
+        .cloned()
+}
+
+fn aura(h: &Harness, unit: Entity, target: Entity, spell: u32) -> AuraInstance {
+    find_aura(h, unit, target, spell).unwrap_or_else(|| panic!("native owned aura {spell} missing"))
+}
+
+fn observed_refresh(h: &Harness, start: usize, unit: Entity, target: Entity, spell: u32) -> bool {
+    h.inbox.log[start..].iter().any(|event| {
+        event.source == Some(unit.to_bits())
+            && event.target == Some(target.to_bits())
+            && event.spell_id == Some(spell)
+            && event.kind == shared::protocol::CombatLogKind::AuraRefreshed
+    })
 }
 
 fn retryable(failure: &CastFailure) -> bool {
@@ -234,14 +245,24 @@ fn rotation_fidelity_demonology_does_not_waste_demonbolt_at_shard_cap() {
     );
 }
 
-#[test]
-fn rotation_fidelity_rake_pandemic_carries_actual_owned_remainder() {
+fn landed_rake_refresh() -> Option<(AuraInstance, AuraInstance)> {
     let (mut h, unit) = native_dummy(232800);
     let target = h.npc;
     cast_native(&mut h, unit, 1822, target);
+    find_aura(&h, unit, target, 155722)?;
     let old = wait_for_pandemic(&mut h, unit, target, 155722);
+    let start = h.inbox.log.len();
     cast_native(&mut h, unit, 1822, target);
-    let refreshed = aura(&h, unit, target, 155722);
+    observed_refresh(&h, start, unit, target, 155722).then(|| (old, aura(&h, unit, target, 155722)))
+}
+
+#[test]
+fn rotation_fidelity_rake_pandemic_carries_actual_owned_remainder() {
+    // Native misses are not refreshes. Require a real AuraRefreshed receipt,
+    // retrying whole natural lifecycles rather than granting a hit or resource.
+    let (old, refreshed) = (0..8)
+        .find_map(|_| landed_rake_refresh())
+        .expect("eight native Rake lifecycles yielded no landed refresh");
     let expected = old.expires_at.unwrap() + f64::from(old.duration_ms) / 1_000.0;
     assert!(
         (refreshed.expires_at.unwrap() - expected).abs() < 0.10,
@@ -249,8 +270,7 @@ fn rotation_fidelity_rake_pandemic_carries_actual_owned_remainder() {
     );
 }
 
-#[test]
-fn rotation_fidelity_rip_pandemic_carries_five_point_duration() {
+fn landed_rip_refresh() -> Option<(AuraInstance, AuraInstance)> {
     let (mut h, unit) = native_dummy(232800);
     let target = h.npc;
     bank_power(
@@ -260,6 +280,7 @@ fn rotation_fidelity_rip_pandemic_carries_five_point_duration() {
         &[(1822, target), (5221, target)],
     );
     cast_native(&mut h, unit, 1079, target);
+    find_aura(&h, unit, target, 1079)?;
     bank_power(
         &mut h,
         unit,
@@ -267,8 +288,16 @@ fn rotation_fidelity_rip_pandemic_carries_five_point_duration() {
         &[(5217, unit), (1822, target), (5221, target)],
     );
     let old = wait_for_pandemic(&mut h, unit, target, 1079);
+    let start = h.inbox.log.len();
     cast_native(&mut h, unit, 1079, target);
-    let refreshed = aura(&h, unit, target, 1079);
+    observed_refresh(&h, start, unit, target, 1079).then(|| (old, aura(&h, unit, target, 1079)))
+}
+
+#[test]
+fn rotation_fidelity_rip_pandemic_carries_five_point_duration() {
+    let (old, refreshed) = (0..8)
+        .find_map(|_| landed_rip_refresh())
+        .expect("eight native five-point Rip lifecycles yielded no landed refresh");
     let expected = old.expires_at.unwrap() + f64::from(old.duration_ms) / 1_000.0;
     assert!(
         (refreshed.expires_at.unwrap() - expected).abs() < 0.10,
