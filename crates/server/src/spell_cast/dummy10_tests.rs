@@ -148,15 +148,34 @@ fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() 
         harness_with_native_enemy_dodge_reduction(Vec::new(), &[196884, 215802], 7).unwrap();
     h.app
         .insert_resource(crate::test_data::world_data().clone());
-    let before = *h.app.world().get::<Position>(h.caster).unwrap();
+    // Target148 now consumes collision/ground during ordinary planning. Keep the
+    // native254 refusal/bite oracle, with real geometry rather than an unloaded origin.
+    let origin = super::target148_tests::place_on_native_ground(&mut h);
+    // The real LOS eye table needs Kobold Vermin's display, as in LOS cast fixtures.
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::ModelDisplay { display_id: 10913 });
+    let before = Position {
+        x: origin.x + 10.0,
+        ..origin
+    };
+    h.app.world_mut().entity_mut(h.caster).insert(before);
     let mana_before = super::powers::power_value(h.app.world(), h.caster, PowerType::Mana)
         .expect("native Mana component prerequisite");
-    h.app.world_mut().entity_mut(h.npc).insert(Position {
-        x: 10.0,
-        y: 0.0,
-        z: 0.0,
-    });
     let other = spawn_npc(&mut h.app, 6.0);
+    let map = *h.app.world().get::<crate::maps::InMap>(h.npc).unwrap();
+    h.app.world_mut().entity_mut(other).insert((
+        Position {
+            x: origin.x + 6.0,
+            ..origin
+        },
+        map,
+    ));
+    assert!(
+        crate::line_of_sight::sees_in_world(h.app.world(), h.caster, h.npc),
+        "native source geometry must admit ordinary parent casting"
+    );
     h.cast_and_deliver(196884, Some(h.npc));
     h.advance(12);
     landed(&h);

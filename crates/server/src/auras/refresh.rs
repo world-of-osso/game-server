@@ -8,12 +8,28 @@ const SHADOW_WORD_MADNESS: u32 = 335467;
 const BARBED_SHOT: u32 = 217200;
 const IGNORE_PAIN: u32 = 190456;
 const PROTECTION_WARRIOR: u32 = 73;
+const SHIELD_BLOCK: u32 = 132404;
+const SHIELD_OF_THE_RIGHTEOUS: u32 = 132403;
+const RIP: u32 = 1079;
+const RAKE: u32 = 155722;
+
+#[derive(Clone, Copy)]
+enum DurationCarry {
+    Pandemic,
+    Extend,
+    CappedExtend(u32),
+}
 
 pub(super) fn prepare_application(world: &mut World, target: Entity, new: &mut AuraInstance) {
     match new.spell_id {
         SHADOW_WORD_MADNESS => roll_remaining_damage(world, target, new),
         BARBED_SHOT => roll_barbed_damage(world, target, new),
         IGNORE_PAIN => accumulate_ignore_pain(world, target, new),
+        RIP | RAKE => carry_duration(world, target, new, DurationCarry::Pandemic),
+        SHIELD_BLOCK => carry_duration(world, target, new, DurationCarry::Extend),
+        SHIELD_OF_THE_RIGHTEOUS => {
+            carry_duration(world, target, new, DurationCarry::CappedExtend(3));
+        }
         _ => {}
     }
 }
@@ -26,6 +42,30 @@ fn previous(world: &World, target: Entity, new: &AuraInstance) -> Option<AuraIns
             old.spell_id == new.spell_id && old.caster == new.caster && old.source == new.source
         })
         .cloned()
+}
+
+/// SimC76f8118: action.cpp4612 Pandemic; sc_warrior.cpp7196 Extend;
+/// sc_paladin.cpp2870 caps SoTR at three freshly calculated native durations.
+/// Snapshot amounts and existing periodic phase remain owned by refresh_from.
+fn carry_duration(world: &World, target: Entity, new: &mut AuraInstance, rule: DurationCarry) {
+    let Some(old) = previous(world, target, new) else {
+        return;
+    };
+    let Some((old_expiry, _)) = old.expires_at.zip(new.expires_at) else {
+        return;
+    };
+    let now = aura_now(world);
+    let remaining = (old_expiry - now).max(0.0);
+    let duration = f64::from(new.duration_ms) / 1_000.0;
+    let refreshed = match rule {
+        DurationCarry::Pandemic => remaining.max(duration + remaining.min(duration * 0.30)),
+        DurationCarry::Extend => duration + remaining,
+        DurationCarry::CappedExtend(count) => {
+            (duration + remaining).min(duration * f64::from(count))
+        }
+    };
+    new.duration_ms = (refreshed * 1_000.0).round() as u32;
+    new.expires_at = Some(now + refreshed);
 }
 
 /// Count scheduled ticks, including a tick exactly at expiry, without altering phase.
