@@ -4,7 +4,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ## Published companion fixture reconciliation (2026-10-21)
 
-Lead gate ty835 found the old53453-absence fixture stale after the206-template publication. Testbca871e63 now uses actual canonical SummonProperties3141 (Control1/Companion5/slot6/flags256), real native99104 casts and creature53453/display38340 instead of substituted25305/synthetic flags. Assertions cover birth identity/level, follow designation, PC/NPC immunity, natural GCD passage, slot replacement, permanent source lifetime and removal when owner leaves the map. This does not admit Toy69895's unbound dummy4 or certify physical following/native pixels.
+Lead gate ty835 found the old53453-absence fixture stale after the206-template publication. Testbca871e63 now uses actual canonical SummonProperties3141 (Control1/Companion5/slot6/flags256), the unmodified native99104 effect28 and creature53453/display38340 instead of substituted25305/synthetic flags. Assertions cover birth identity/level, follow designation, PC/NPC immunity, permanent lifetime passage, slot replacement, permanent source lifetime and removal when owner leaves the map. This does not admit Toy69895's unimplemented target43/dummy4 or certify physical following/native pixels. The first full-cast fixture revision overreached that existing mechanism boundary and was corrected before claiming proof.
 
 The206 published IDs were scanned across all Rust/Python sources (23 matching lines/11 files); no other stale absence assertion was found. Focused proof pending capacity admission; this checkpoint is pushed for the lead's regate, not claimed GREEN. Evidence: published206-all-code-mentions.jsonl in current toy diagnostics.
 

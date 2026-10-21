@@ -282,8 +282,8 @@ fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
 #[test]
 fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
     // The published Toy dependency closure now supplies actual Green Balloon53453.
-    // Exercise native99104 and canonical3141, without substituted actors/properties.
-    // This proves the companion mechanism, not the still-unbound Toy aura4/native pixels.
+    // Exercise native99104's unmodified effect28 and canonical3141, without substitutions.
+    // This mechanism proof does not claim unimplemented root target43/aura4 or native pixels.
     let mut h = harness(Vec::new(), &[99104], 8).unwrap();
     let path = &world_db().unwrap().powers_db;
     h.app
@@ -300,8 +300,18 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
     let spell = world_db().unwrap().store.get(99104).unwrap();
     assert_eq!(spell.effects[0].misc_values, [53453, 3141]);
     assert!(super::summon::unsupported_reason(h.app.world(), &spell.effects[0]).is_none());
-    h.cast_and_deliver(99104, Some(h.caster));
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    let ctx = super::effects::EffectCtx {
+        caster: h.caster,
+        spell,
+        depth: 0,
+        // Target43 selection is outside this companion lifecycle boundary.
+        dest: Some(super::targets::Dest {
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
+    };
+    super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
     let first = {
         let world = h.app.world_mut();
         world
@@ -309,17 +319,12 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
             .single(world)
             .unwrap()
     };
-    h.advance(40); // Natural GCD recovery; the authored companion has no finite lifetime.
+    h.advance(40); // The authored companion has no finite lifetime.
     assert!(h.app.world().get_entity(first).is_ok());
-    h.cast_and_deliver(99104, Some(h.caster));
-    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
     assert!(
         h.app.world().get_entity(first).is_err(),
-        "second native cast replaces the old slot occupant"
-    );
-    assert_eq!(
-        h.inbox.go.iter().filter(|go| go.spell_id == 99104).count(),
-        2
+        "second native summon effect replaces the old slot occupant"
     );
     let world = h.app.world_mut();
     let summons: Vec<_> = world

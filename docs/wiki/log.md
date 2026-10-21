@@ -3437,4 +3437,4 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 ## 2026-10-21 — Published companion fixture reconciliation
 
-[Checkpoint](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): ty835 exposes stale53453 absence. Replaced synthetic3141/25305 fixture with native99104/canonical3141/actual53453 source identity and lifecycle assertions;206-ID Rust/Python scan finds no other stale absence. Focused proof is pending fair capacity admission; no GREEN claim at this push.
+[Checkpoint](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): ty835 exposes stale53453 absence. Replaced synthetic3141/25305 fixture with unmodified99104 effect28/canonical3141/actual53453 source identity and lifecycle assertions;206-ID Rust/Python scan finds no other stale absence. Focused proof is pending fair capacity admission; no GREEN claim at this push.
