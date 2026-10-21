@@ -1462,10 +1462,15 @@ impl Run {
         let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
         let to = Vec3::new(target_position.x, target_position.y, target_position.z);
         if from.distance(to) > range {
+            let approach = if self.actors.get(&pack_id) == Some(&target) {
+                Vec3::from_array(step.anchor)
+            } else {
+                to
+            };
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .insert(MoveIntent(Vec3::from_array(step.anchor)));
+                .insert(MoveIntent(approach));
             return Ok(());
         }
         self.app
