@@ -214,6 +214,48 @@ fn resto_policy_high_level_tranquility_channels_for_stacked_group_pressure() {
 }
 
 #[test]
+fn resto_policy_native_tree_form_boosts_make_real_regrowth_instant_and_end_with_form() {
+    let (mut h, healer) = super::super::kit_tests::at_level(209072, 70, |_| {});
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 33891, Some(healer), false)
+        .unwrap();
+    assert!(own_aura(&h, healer, healer, 33891).is_some());
+    assert!(
+        own_aura(&h, healer, healer, 5420).is_some()
+            && own_aura(&h, healer, healer, 81097).is_some(),
+        "TC form2 adds its real5420/81097 boosts, not just the33891 visual/form aura"
+    );
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 8936);
+    damage(&mut h, healer, 0.25);
+    let before = h.health(healer);
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 8936, Some(healer), false).unwrap();
+    assert!(h.app.world().get::<CastState>(healer).is_none());
+    assert!(
+        h.health(healer) > before,
+        "boosted native Regrowth must heal immediately"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        healer,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 33891,
+    );
+    assert!(
+        own_aura(&h, healer, healer, 5420).is_none()
+            && own_aura(&h, healer, healer, 81097).is_none()
+    );
+    super::super::kit_clearcasting_tests::wait_for_gcd(&mut h, healer, 8936);
+    damage(&mut h, healer, 0.1);
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 8936, Some(healer), false).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_some_and(|cast| cast.spell_id == 8936 && cast.cast_type == CastType::Normal),
+        "leaving the native form must restore ordinary Regrowth cast time"
+    );
+}
+
+#[test]
 fn resto_policy_learned_tree_sustains_group_pressure_after_native_tranquility_cooldown() {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(70);
     crate::spell_cast::creature_cast(h.app.world_mut(), healer, 740, Some(healer), false).unwrap();
