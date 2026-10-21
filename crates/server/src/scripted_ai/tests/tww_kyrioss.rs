@@ -93,6 +93,55 @@ fn first_clock(difficulty: u32) {
     assert!(h.inbox(1).ends.is_empty());
 }
 
+fn repeat_and_reset(difficulty: u32) {
+    let (mut h, boss, map) = fixture(difficulty);
+    h.advance(47.45);
+    assert_eq!(h.casts(0, boss, THUNDER), 1);
+    assert_eq!(h.casts(0, boss, WILD), 1);
+    assert!(h.app.world().get::<CastState>(boss).is_none());
+    h.advance(0.2);
+    assert_cast(&h, boss, THUNDER, 2.5);
+    h.advance(3.0);
+    assert_eq!(h.casts(0, boss, THUNDER), 2);
+    assert!(h.app.world().get::<CastState>(boss).is_none());
+    h.advance(0.2);
+    assert_cast(&h, boss, WILD, 3.0);
+    let player = h.player();
+    h.app.world_mut().get_mut::<Position>(player).unwrap().x += 500.0;
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(5.5);
+    assert_eq!(
+        get_boss_state(h.app.world_mut(), map, 0),
+        Some(EncounterState::NotStarted)
+    );
+    assert!(h.app.world().get::<CastState>(boss).is_none());
+    let mut near = *h.app.world().get::<Position>(boss).unwrap();
+    near.x += 3.0;
+    h.app.world_mut().entity_mut(player).insert(near);
+    h.engage(boss);
+    h.advance(4.95);
+    assert!(h.app.world().get::<CastState>(boss).is_none());
+    h.advance(0.2);
+    assert_cast(&h, boss, THUNDER, 2.5);
+    assert_eq!(
+        h.casts(0, boss, THUNDER),
+        2,
+        "new pull has not completed its first cast yet"
+    );
+}
+
+#[test]
+#[ignore = "Kyrioss source repeat/reset proof pending"]
+fn encounter_coverage_tww_kyrioss_normal_cast_start_relative_repeat_and_reset() {
+    repeat_and_reset(1);
+}
+
+#[test]
+#[ignore = "Kyrioss source repeat/reset proof pending"]
+fn encounter_coverage_tww_kyrioss_follower205_cast_start_relative_repeat_and_reset() {
+    repeat_and_reset(205);
+}
+
 #[test]
 #[ignore = "RED first: Kyrioss has no sourced combat schedule port yet"]
 fn encounter_coverage_tww_kyrioss_normal_first_clock_native_torrent_and_credit() {
