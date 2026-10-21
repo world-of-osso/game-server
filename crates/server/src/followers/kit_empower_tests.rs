@@ -276,6 +276,55 @@ fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
 }
 
 #[test]
+#[ignore = "RED: successful native empowers do not extend Dragonrage through Animosity"]
+fn native_empower_animosity_extends_dragonrage_with_native_diminishing_effectiveness() {
+    let (mut h, caster) = prepare(90);
+    let animosity = h
+        .app
+        .world()
+        .get::<ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 375797)
+        .unwrap();
+    let extension_ms = animosity
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let reduction = animosity
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .unwrap()
+        .amount;
+    super::kit_proc_fidelity_tests::complete_cast(&mut h, caster, 375087, caster);
+    let mut effectiveness = 1.0;
+    for base in [FIRE_BREATH, ETERNITY_SURGE] {
+        let before = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
+        let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+        let target = if base == FIRE_BREATH { caster } else { h.npc };
+        super::kit_proc_fidelity_tests::complete_cast(&mut h, caster, spell, target);
+        for _ in 0..100 {
+            h.advance(1);
+            if h.app.world().get::<CastState>(caster).is_none() {
+                break;
+            }
+        }
+        let after = super::kit_clearcasting_tests::own_aura(&h, caster, 375087).unwrap();
+        let extended_ms = (after.expires_at.unwrap() - before.expires_at.unwrap()) * 1000.0;
+        let expected = extension_ms * effectiveness;
+        assert!(
+            (extended_ms - f64::from(expected)).abs() <= 1.0,
+            "actual empower must extend the same Dragonrage by native{expected}ms, got{extended_ms}"
+        );
+        assert_eq!(before.instance_id, after.instance_id);
+        effectiveness *= 1.0 - reduction / 100.0;
+    }
+}
+
+#[test]
 fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
