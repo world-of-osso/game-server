@@ -236,7 +236,9 @@ fn read_candidate(ctx: &TriageContext<'_>, entry: &Entry, patient: &Patient) -> 
         return None;
     }
     let spell = ctx.world.resource::<SpellStore>().get(entry.spell_id)?;
-    if !ready(ctx.world, ctx.caster, spell) {
+    if !ready(ctx.world, ctx.caster, spell)
+        || (patient.missing_health == 0.0 && normal_direct_heal(spell))
+    {
         return None;
     }
     let healing = estimate_healing(ctx.world, ctx.caster, spell);
@@ -376,6 +378,10 @@ pub(super) fn update(
     }
 }
 
+fn normal_direct_heal(spell: &SpellInfo) -> bool {
+    !spell_cast::is_channeled(spell) && spell.effects.iter().any(|effect| effect.effect == 10)
+}
+
 fn cancel_topped_cast(world: &mut World, caster: Entity) {
     let Some(cast) = world.get::<CastState>(caster) else {
         return;
@@ -386,7 +392,7 @@ fn cancel_topped_cast(world: &mut World, caster: Entity) {
     let direct_heal = world
         .resource::<SpellStore>()
         .get(cast.spell_id)
-        .is_some_and(|spell| spell.effects.iter().any(|effect| effect.effect == 10));
+        .is_some_and(normal_direct_heal);
     let topped = Entity::try_from_bits(cast.target)
         .and_then(|target| world.get::<Health>(target))
         .is_none_or(|health| health.current <= 0.0 || health.current >= health.max);
