@@ -1,8 +1,11 @@
 """Actual pinned TDB and70448 conversation rows, not invented dialogue/actors."""
 import json
+import os
 from pathlib import Path
 import sys
 import sqlite3
+import subprocess
+import tempfile
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1]
@@ -50,6 +53,44 @@ class ConversationDataTests(unittest.TestCase):
                 self.assertEqual(connection.execute(f'SELECT count(*) FROM "{table}"').fetchone()[0], len(rows))
             self.assertEqual(connection.execute('SELECT table_name,build FROM db2_build ORDER BY table_name').fetchall(),
                              [('BroadcastTextDuration', conversation_data.BUILD), ('ConversationLine', conversation_data.BUILD)])
+
+    def test_publication_sql_replays_exact_source_rows_and_preserves_other_state(self):
+        with tempfile.TemporaryDirectory() as directory, sqlite3.connect(':memory:') as connection:
+            connection.execute('CREATE TABLE unrelated (value TEXT)')
+            connection.execute("INSERT INTO unrelated VALUES ('keep')")
+            connection.commit()
+            path = Path(directory) / 'conversations.sql'
+            conversation_data.write_sql(path, self.tables)
+            connection.executescript(path.read_text())
+            # The SQL database schema/data is the external publication contract.
+            actual = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertEqual(actual, set(self.tables) | {'db2_build', 'unrelated'})
+            for table, (_, rows) in self.tables.items():
+                imported = connection.execute(f'SELECT * FROM "{table}"').fetchall()
+                self.assertEqual(sorted(imported), sorted(rows))
+            self.assertEqual(connection.execute('SELECT value FROM unrelated').fetchall(), [('keep',)])
+
+    def test_cli_refuses_canonical_publication_before_reading_source(self):
+        # Copy the real entrypoint into an owned mock checkout; never risk the actual
+        # canonical database while testing a publication refusal.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / 'scripts/conversation_data.py'
+            script.parent.mkdir()
+            script.write_bytes((SCRIPTS / 'conversation_data.py').read_bytes())
+            database = root / 'data/world.db'
+            database.parent.mkdir()
+            with sqlite3.connect(database) as connection:
+                connection.execute('CREATE TABLE sentinel (value TEXT)')
+                connection.execute("INSERT INTO sentinel VALUES ('keep')")
+            environment = dict(os.environ, PYTHONPATH=str(SCRIPTS))
+            result = subprocess.run([sys.executable, str(script), '--db', str(database)],
+                                    capture_output=True, text=True, env=environment, check=False)
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn('canonical', result.stderr)
+            self.assertIn('lead-owned', result.stderr)
+            with sqlite3.connect(database) as connection:
+                self.assertEqual(connection.execute('SELECT value FROM sentinel').fetchall(), [('keep',)])
 
 
 if __name__ == '__main__':

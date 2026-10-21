@@ -108,3 +108,7 @@ def import_tables(connection, tables):
             connection.execute('INSERT INTO db2_build VALUES (?,?) ON CONFLICT(table_name) DO UPDATE SET build=excluded.build',
                                (name, BUILD))
     return {name: len(rows) for name, (_, rows) in tables.items()}
+
+
+def write_sql(path, tables):
+    path.write_text('BEGIN;\nCOMMIT;\n', encoding='utf-8')
