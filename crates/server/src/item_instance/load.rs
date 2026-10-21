@@ -1,6 +1,6 @@
 //! Read the native item-instance tables published by scripts/item_instance_data.py.
 use super::bonuses::{ItemBonus, ItemBonusTables, OffsetCurve, ScalingConfig};
-use super::enchants::EnchantmentTables;
+use super::enchants::{EnchantEffect, Enchantment, EnchantmentTables};
 use rusqlite::{Connection, Row};
 use std::collections::HashMap;
 
@@ -38,8 +38,51 @@ pub fn load_bonus_tables(conn: &Connection) -> rusqlite::Result<ItemBonusTables>
     })
 }
 
-pub fn load_enchantment_tables(_conn: &Connection) -> rusqlite::Result<EnchantmentTables> {
-    Ok(EnchantmentTables::default())
+pub fn load_enchantment_tables(conn: &Connection) -> rusqlite::Result<EnchantmentTables> {
+    let effects: Vec<String> = (0..3)
+        .flat_map(|index| {
+            [
+                format!("Effect_{index}"),
+                format!("EffectPointsMin_{index}"),
+                format!("EffectArg_{index}"),
+                format!("EffectScalingPoints_{index}"),
+            ]
+        })
+        .collect();
+    let sql = format!(
+        "SELECT ID,ScalingClass,MinLevel,MaxLevel,{} FROM spell_item_enchantment",
+        effects.join(",")
+    );
+    Ok(EnchantmentTables {
+        enchants: load_map(conn, &sql, read_enchantment)?,
+        gems: load_map(
+            conn,
+            "SELECT item.ID,gem.Enchant_ID FROM item_sparse item JOIN gem_properties gem ON item.Gem_properties=gem.ID WHERE item.Gem_properties<>0",
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?,
+    })
+}
+
+fn read_enchantment(row: &Row) -> rusqlite::Result<(u32, Enchantment)> {
+    let mut effects = [EnchantEffect::default(); 3];
+    for (index, effect) in effects.iter_mut().enumerate() {
+        let first = 4 + index * 4;
+        *effect = EnchantEffect {
+            kind: row.get(first)?,
+            points: row.get(first + 1)?,
+            argument: row.get(first + 2)?,
+            coefficient: row.get(first + 3)?,
+        };
+    }
+    Ok((
+        row.get(0)?,
+        Enchantment {
+            effects,
+            scaling_class: row.get(1)?,
+            min_level: row.get(2)?,
+            max_level: row.get(3)?,
+        },
+    ))
 }
 
 fn load_map<T>(
