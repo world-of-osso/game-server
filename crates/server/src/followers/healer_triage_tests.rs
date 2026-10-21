@@ -77,7 +77,13 @@ fn healer_triage_recent_incoming_damage_beats_idle_missing_health() {
 fn healer_triage_remaining_native_hot_avoids_duplicate_healing() {
     let (mut h, healer) = fixture();
     let protected = h.caster;
-    crate::spell_cast::try_cast_triggered(h.app.world_mut(), healer, 774, Some(protected)).unwrap();
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        healer,
+        774,
+        Some(protected),
+        1
+    ));
     let tick = h
         .app
         .world()
@@ -111,7 +117,13 @@ fn healer_triage_remaining_native_hot_avoids_duplicate_healing() {
 fn healer_triage_low_mana_prefers_available_efficient_native_swiftmend() {
     let (mut h, healer) = fixture();
     let target = h.caster;
-    crate::spell_cast::try_cast_triggered(h.app.world_mut(), healer, 774, Some(target)).unwrap();
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        healer,
+        774,
+        Some(target),
+        1
+    ));
     h.app.world_mut().entity_mut(target).insert(Health {
         current: 70_000.0,
         max: 100_000.0,
