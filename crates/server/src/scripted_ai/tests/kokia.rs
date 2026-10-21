@@ -87,7 +87,7 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
     let count = h.inbox(0).timeline.len();
     let pulls = h.inbox(0).starts.len();
     let player = h.player();
-    h.app.world_mut().get_mut::<Position>(player).unwrap().0 += Vec3::splat(1000.0);
+    h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
     h.advance(10.0);
     assert_eq!(
         h.inbox(0).starts.len(),
