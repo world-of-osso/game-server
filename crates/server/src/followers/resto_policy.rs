@@ -12,6 +12,7 @@ const REGROWTH: u32 = 8936;
 const NATURES_CURE: u32 = 88423;
 const INNERVATE: u32 = 29166;
 const TRANQUILITY: u32 = 740;
+const EFFLORESCENCE: u32 = 145205;
 const REJUVENATION: u32 = 774;
 const ABUNDANCE: u32 = 207383;
 const ABUNDANCE_DISCOUNT: u32 = 207640;
@@ -46,6 +47,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_natures_swiftness(ctx))
         .or_else(|| choose_natures_cure(ctx))
         .or_else(|| choose_innervate(ctx))
+        .or_else(|| choose_efflorescence(ctx))
         .or_else(|| choose_abundance_rejuvenation(ctx))
         .or_else(|| choose_lifebloom(ctx))
         .or_else(|| choose_germination(ctx))
@@ -134,7 +136,10 @@ fn ranked_maintenance(ctx: &TriageContext<'_>) -> Option<Decision> {
 }
 
 fn routine_heal_allowed(ctx: &TriageContext<'_>, decision: Decision) -> bool {
-    if matches!(decision.spell_id, UTILITY_REBIRTH | TRANQUILITY) {
+    if matches!(
+        decision.spell_id,
+        UTILITY_REBIRTH | TRANQUILITY | EFFLORESCENCE
+    ) {
         return false;
     }
     if decision.spell_id != SWIFTMEND {
@@ -311,6 +316,89 @@ fn choose_abundance_rejuvenation(ctx: &TriageContext<'_>) -> Option<Decision> {
         .map(|candidate| candidate.decision)
 }
 
+fn choose_efflorescence(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == EFFLORESCENCE)?;
+    if !ctx.ready(EFFLORESCENCE) || ctx.patients.iter().any(|patient| patient.emergency) {
+        return None;
+    }
+    let radius = super::kit_area::radius_for_spell(ctx.world, ctx.caster, EFFLORESCENCE)?;
+    let patient = ctx.patients.iter().find(|patient| {
+        let Some(cluster) = ctx.injury_cluster(EFFLORESCENCE, patient.entity) else {
+            return false;
+        };
+        let injured = injured_cluster_members(ctx, entry, cluster);
+        let enough = injured.len() >= entry.conditions.min_injured;
+        enough
+            && !efflo_covers_patients(ctx, &injured, radius)
+            && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
+    })?;
+    Some(Decision {
+        spell_id: EFFLORESCENCE,
+        target: patient.entity,
+        urgent: false,
+    })
+}
+
+fn injured_cluster_members(
+    ctx: &TriageContext<'_>,
+    entry: &super::kit::Entry,
+    cluster: &super::healer_context::InjuryCluster,
+) -> Vec<bevy::prelude::Entity> {
+    let threshold = entry.conditions.health_below.unwrap_or(1.0);
+    cluster
+        .members
+        .iter()
+        .copied()
+        .filter(|unit| {
+            ctx.world
+                .get::<Health>(*unit)
+                .is_some_and(|health| health.current < health.max * threshold)
+        })
+        .collect()
+}
+
+fn efflo_covers_patients(
+    ctx: &TriageContext<'_>,
+    patients: &[bevy::prelude::Entity],
+    radius: f32,
+) -> bool {
+    let Some(map) = ctx.world.get::<crate::maps::InMap>(ctx.caster) else {
+        return false;
+    };
+    ctx.world
+        .resource::<crate::maps::units::MapUnits>()
+        .in_map(*map)
+        .any(|unit| {
+            let owned = ctx
+                .world
+                .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+                .is_some_and(|summon| {
+                    summon.owner == ctx.caster && summon.spell_id == EFFLORESCENCE
+                });
+            let active =
+                crate::auras::has_aura(ctx.world, unit, crate::spell_cast::efflorescence::DUMMY);
+            owned && active && field_contains_patients(ctx, unit, patients, radius)
+        })
+}
+
+fn field_contains_patients(
+    ctx: &TriageContext<'_>,
+    field: bevy::prelude::Entity,
+    patients: &[bevy::prelude::Entity],
+    radius: f32,
+) -> bool {
+    let Some(center) = super::healer_context::position(ctx.world, field) else {
+        return false;
+    };
+    patients.iter().all(|unit| {
+        super::healer_context::position(ctx.world, *unit)
+            .is_some_and(|at| center.distance(at) <= radius)
+    })
+}
+
 fn choose_tranquility(ctx: &TriageContext<'_>) -> Option<Decision> {
     let entry = ctx
         .entries
@@ -320,13 +408,7 @@ fn choose_tranquility(ctx: &TriageContext<'_>) -> Option<Decision> {
         return None;
     }
     let cluster = ctx.injury_cluster(TRANQUILITY, ctx.caster)?;
-    let injured = cluster
-        .members
-        .iter()
-        .filter_map(|unit| ctx.world.get::<Health>(*unit))
-        .filter(|health| health.current < health.max * entry.conditions.health_below.unwrap_or(1.0))
-        .count();
-    if injured < entry.conditions.min_injured {
+    if injured_cluster_members(ctx, entry, cluster).len() < entry.conditions.min_injured {
         return None;
     }
     Some(Decision {
