@@ -11,6 +11,9 @@ const REGROWTH: u32 = 8936;
 const NATURES_CURE: u32 = 88423;
 const INNERVATE: u32 = 29166;
 const TRANQUILITY: u32 = 740;
+const REJUVENATION: u32 = 774;
+const ABUNDANCE: u32 = 207383;
+const ABUNDANCE_DISCOUNT: u32 = 207640;
 // Matches the qualified native bloom-on-refresh window; durations remain native.
 const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
@@ -38,6 +41,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_natures_swiftness(ctx))
         .or_else(|| choose_natures_cure(ctx))
         .or_else(|| choose_innervate(ctx))
+        .or_else(|| choose_abundance_rejuvenation(ctx))
         .or_else(|| choose_lifebloom(ctx))
         .or_else(|| ranked_maintenance(ctx));
     match decision {
@@ -228,6 +232,30 @@ fn useful_friendly_cast_in_progress(ctx: &TriageContext<'_>) -> bool {
         .is_some_and(|target| {
             !crate::spell_cast::targets::is_hostile(ctx.world, ctx.caster, target)
         })
+}
+
+fn choose_abundance_rejuvenation(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let threshold = ctx
+        .own_aura_on(ctx.caster, ABUNDANCE)?
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)?
+        .amount;
+    if !ctx.ready(REJUVENATION) || ctx.own_aura_on(ctx.caster, ABUNDANCE_DISCOUNT).is_some() {
+        return None;
+    }
+    let active = ctx
+        .patients
+        .iter()
+        .filter(|patient| ctx.own_aura_on(patient.entity, REJUVENATION).is_some())
+        .count() as f32;
+    if active >= threshold || active + 1.0 < threshold {
+        return None;
+    }
+    ctx.candidates
+        .iter()
+        .find(|candidate| candidate.decision.spell_id == REJUVENATION)
+        .map(|candidate| candidate.decision)
 }
 
 fn choose_tranquility(ctx: &TriageContext<'_>) -> Option<Decision> {
