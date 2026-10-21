@@ -230,6 +230,7 @@ pub(super) fn relocate_destination(
 /// This classifies consumed data only; it must not select targets or dispatch a no-op.
 pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
     // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
+    // spell_shaman.cpp1015-1027: OnHit reads knockdown chance E1.
     matches!((spell_id, effect_index), (32_379, 3) | (77_478, 1))
 }
 
