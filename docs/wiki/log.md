@@ -1,6 +1,9 @@
 ## 2026-10-21 — Native item-instance stats foundation
 
 [Instance properties](systems/character-stats.md#instance-properties--2026-10-21): additive GUID storage preserves legacy bytes; native bonus/configuration, capped enchant and GemProperties resolution feeds slot-bound stats.15 library cases pass; actual native271468/7987 modifier-only RED687vs737→GREEN with retained Arcane control. Two real inventory hydration/projection REDs now pass in the24-case library/main integration proof. Type23/base ItemEffect identity resolution adds3RED→18libraryGREEN; equip proc/aura execution and300s parity remain open. Canonical producer application is lead-owned; no deployment or DPS-parity claim.
+## 2026-10-21 — Popcorn and Burning Blade Banner source visuals
+
+[Toys](systems/toys.md#popcorn-and-burning-blade-banner-visual-only-source-slice-2026-10-21): complete70448 graph102rows/29tables; strict source-only admissions162539/168014,516→518. RED2/control1→7GREEN147.26s proves real owner apply/replicate/CancelAura/recovery/invariants and eight metadata-drift refusals; Gadgetzan still refused. After master23c6f091d merge, feature/drift3/3PASS93.58s; checkEXIT0 with inherited follower warning,fmtEXIT0. No native/full-hour reuse claim.
 
 ## 2026-10-21 — Healer framework native qualification
 
