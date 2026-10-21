@@ -37,6 +37,8 @@ mod azure_sprouts;
 mod azure_telash;
 #[path = "azure_telash_return.rs"]
 mod azure_telash_return;
+#[path = "broggok.rs"]
+mod broggok;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "gargolmar.rs"]
