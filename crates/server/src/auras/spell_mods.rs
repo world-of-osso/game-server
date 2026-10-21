@@ -235,6 +235,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
+                && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
                 && aura
                     .effects
                     .iter()

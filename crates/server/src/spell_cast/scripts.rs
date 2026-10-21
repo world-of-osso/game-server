@@ -27,8 +27,10 @@ mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
 mod hot_streak;
+mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
 pub(super) use hot_streak::record_fire_hit;
+pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
 mod soul_of_the_forest;
@@ -482,7 +484,7 @@ pub(super) fn snapshot_proc_modifiers(
     auras
         .iter()
         .filter(|aura| {
-            aura.spell_id == hot_streak::HOT_STREAK
+            matches!(aura.spell_id, hot_streak::HOT_STREAK | lava_surge::PROC)
                 && aura.effects.iter().any(|effect| {
                     effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
                         && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
@@ -490,6 +492,13 @@ pub(super) fn snapshot_proc_modifiers(
         })
         .map(|aura| aura.instance_id)
         .collect()
+}
+
+pub(crate) fn preserve_unadmitted_proc(
+    spell: &SpellInfo,
+    aura: &crate::auras::AuraInstance,
+) -> bool {
+    aura.spell_id == lava_surge::PROC && !spell.cast_proc_mods.contains(&aura.instance_id)
 }
 
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
@@ -503,6 +512,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
             Some(hot_streak::consume_admitted_hot_streak)
         }
+        lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {
@@ -1315,6 +1325,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
         soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
         soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),
