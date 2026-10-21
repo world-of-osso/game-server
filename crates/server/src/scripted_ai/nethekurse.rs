@@ -80,7 +80,7 @@ impl Nethekurse {
         {
             queue.mark(ctx.me);
         }
-        // NETHEKURSE_WAYPOINT_PAUSE_UNIMPLEMENTED: TC also pauses patrol5s.
+        crate::creature_ai::pause_waypoint(ctx.world, ctx.me, PEON_REACTION_MS as u32);
         self.peon_event_on_cooldown = true;
         self.boss
             .events
