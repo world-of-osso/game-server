@@ -23,6 +23,7 @@ mod collection;
 mod combat;
 mod combat_refs;
 mod conditions;
+mod conversations;
 mod crafting_orders;
 mod creature_aggro;
 mod creature_ai;

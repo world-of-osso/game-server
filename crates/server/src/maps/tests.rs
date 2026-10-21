@@ -532,6 +532,8 @@ fn map_store() -> Option<&'static MapStore> {
 
 #[path = "tests_battleground_nodes.rs"]
 mod battleground_nodes;
+#[path = "tests_conversations.rs"]
+mod conversations;
 #[path = "tests_skirmish_requeue.rs"]
 mod skirmish_requeue;
 #[path = "tests_world_area_triggers.rs"]
