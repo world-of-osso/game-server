@@ -515,7 +515,7 @@ fn update_charm(world: &mut World, pet: Entity, change: impl FnOnce(&mut PetChar
 }
 
 /// `PetAI::UpdateAI` for every pet.
-fn pet_ai_system(world: &mut World) {
+pub(crate) fn pet_ai_system(world: &mut World) {
     let pets: Vec<_> = world
         .query_filtered::<(
             Entity,

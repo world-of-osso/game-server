@@ -29,6 +29,12 @@ fn maker_copy(difficulty: u32) -> (Harness, Entity, InMap) {
 fn charm_control_native_maker_30923_charms_a_player_only_with_multiple_player_threats() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = pull_maker(difficulty);
+        // The production server installs PetControlPlugin; this isolated boss harness
+        // has no pets, so install its same AI consumer for the charmed player.
+        h.app.add_systems(
+            FixedUpdate,
+            crate::pet_control::pet_ai_system.after(crate::combat::auto_attack_system),
+        );
         let at = *h.app.world().get::<Position>(h.player()).unwrap();
         let (x, y, z) = crate::terrain_height::bevy_to_wow(at.x + 1.0, at.y, at.z);
         let (second, connection) = spawn_player(&mut h.app, map, [x, y, z, 0.0], 3);
@@ -73,6 +79,23 @@ fn charm_control_native_maker_30923_charms_a_player_only_with_multiple_player_th
                 .get::<shared::components::MovementControl>(player)
                 .unwrap()
                 .controlled
+        );
+        let victim = if player == h.player() {
+            second
+        } else {
+            h.player()
+        };
+        h.advance(3.0);
+        assert!(
+            h.players
+                .iter()
+                .any(|(_, _, inbox)| inbox.log.iter().any(|event| {
+                    event.kind == shared::protocol::CombatLogKind::Damage
+                        && event.source == Some(player.to_bits())
+                        && event.target == Some(victim.to_bits())
+                        && event.amount > 0
+                })),
+            "Maker-controlled player must actually strike the remaining party member"
         );
         crate::auras::remove_auras(
             h.app.world_mut(),
