@@ -18,6 +18,12 @@ All eleven `follower_profiles` use only their level-available selected70448/serv
 
 Census: `game-engine/data/diagnostics/follower-utility-2026-10-21/census.md`, reproducible with `scripts/follower_utility_census.py`; all level intervals and direct effect facts retained in `census.json`. Pet interrupt uses the actual summoned Felguard's learned Axe Toss, never a player spell grant. Hunter pet actions require a real pet; no guessed pet/family/stable selection. Travel, forms, portals, ritual/item creation and other manually chosen abilities are inventoried but not made autonomous merely because they are non-rotation spells.
 
+## Player-race follower model geometry
+
+`FOLLOWER_PLAYER_RACE_MODEL_REACH_TC_PLAYER_DEFAULTS` is explicit project policy. A unit must be an actual follower and its70448 `CreatureDisplayInfo.ExtendedDisplayInfoID` must be nonzero. Only then use TC a352b1fa `src/server/game/Entities/Object/ObjectDefines.h:39-40`: `DEFAULT_PLAYER_BOUNDING_RADIUS = 0.388999998569489f`, `DEFAULT_PLAYER_COMBAT_REACH = 1.5f`, multiplied by the unit's scale. TC's player scale path applies these constants; applying them to these follower character models is the named project decision, not an invented TDB row. This rule takes precedence over creature-model sizing for qualified followers. Ordinary NPCs and unqualified/unknown follower displays still require exact authored geometry; no guessed1.5 exception.
+
+Bo's real first-fight pursuit/attack regression must pass in the ordinary2D gameplay app. The policy belongs to the production model lookup and is identical in baseline/candidate. All five missing source displays116316,121275,121277,121289,122612 have their nonzero ExtendedDisplayInfoID independently matched to the local70448 CSV; receipt `geometry-policy-source.json` records hashes and exact rows. `scripts/follower_model_geometry.py` separately emits native missing-used-display SQL and unresolved-source receipts, without modifying canonical world.db or publishing policy constants as source rows.
+
 ## Named native-mechanic gaps
 
 - `SHUJA_LUST_NOT_LEARNED_70448`: neither Bloodlust nor Heroism is in the selected Elemental loadout. Time Warp/Fury remain available to the learned Mage/Evoker.

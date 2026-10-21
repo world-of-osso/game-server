@@ -1,38 +1,87 @@
-//! Unit combat reach (TC a352b1fa `Unit::GetCombatReach`) from source model info.
+//! Native model geometry and the named follower player-race sizing policy.
 use bevy::prelude::*;
 use shared::components::{ModelDisplay, Player, Position, UnitScale};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-/// `DEFAULT_PLAYER_COMBAT_REACH`, scaled by `Player::SetObjectScale` (Player.cpp:1577).
-const PLAYER_COMBAT_REACH: f32 = 1.5;
+// TC a352b1fa src/server/game/Entities/Object/ObjectDefines.h:39-40.
+const DEFAULT_PLAYER_BOUNDING_RADIUS: f32 = 0.389;
+const DEFAULT_PLAYER_COMBAT_REACH: f32 = 1.5;
 
-/// `creature_model_info.CombatReach` by display, from the prepared
-/// `encounter_creature_model_info` rows (scripts/encounter_model_geometry.py).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct ModelGeometry {
+    pub bounding_radius: f32,
+    pub combat_reach: f32,
+}
+
+/// Actual creature_model_info rows plus native70448 player-race display identity.
 #[derive(Resource)]
 #[cfg_attr(test, derive(Clone))]
-pub(crate) struct ModelReaches(pub(crate) HashMap<u32, f32>);
+pub(crate) struct ModelReaches {
+    pub source: HashMap<u32, ModelGeometry>,
+    player_race_displays: HashSet<u32>,
+}
 
 pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Result<ModelReaches> {
-    let mut statement =
-        conn.prepare("SELECT DisplayID,CombatReach FROM encounter_creature_model_info")?;
-    let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
-    Ok(ModelReaches(rows.collect::<rusqlite::Result<_>>()?))
+    let mut models = conn.prepare(
+        "SELECT DisplayID,BoundingRadius,CombatReach FROM encounter_creature_model_info",
+    )?;
+    let source = models
+        .query_map([], |row| {
+            Ok((
+                row.get(0)?,
+                ModelGeometry {
+                    bounding_radius: row.get(1)?,
+                    combat_reach: row.get(2)?,
+                },
+            ))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut displays =
+        conn.prepare("SELECT ID FROM creature_display_info WHERE ExtendedDisplayInfoID != 0")?;
+    let player_race_displays = displays
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(ModelReaches {
+        source,
+        player_race_displays,
+    })
 }
 
-/// A player's default reach, or a creature's model reach (`Creature::SetDisplayId`);
-/// both times its object scale. `None` for a creature display without source model info.
-pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
+/// FOLLOWER_PLAYER_RACE_MODEL_REACH_TC_PLAYER_DEFAULTS: only actual followers
+/// with native ExtendedDisplayInfoID!=0 use the player's source constants.
+/// Ordinary NPCs and non-player-race followers still require exact model-info.
+pub(crate) fn model_geometry(world: &World, unit: Entity) -> Option<ModelGeometry> {
     let scale = world.get::<UnitScale>(unit).map_or(1.0, |scale| scale.0);
-    if world.get::<Player>(unit).is_some() {
-        return Some(PLAYER_COMBAT_REACH * scale);
-    }
-    let display = world.get::<ModelDisplay>(unit)?.display_id;
-    let reach = world.get_resource::<ModelReaches>()?.0.get(&display)?;
-    Some(reach * scale)
+    let player = world.get::<Player>(unit).is_some();
+    let follower_player_race = if world.get::<crate::followers::Follower>(unit).is_some() {
+        let display = world.get::<ModelDisplay>(unit)?.display_id;
+        world
+            .get_resource::<ModelReaches>()?
+            .player_race_displays
+            .contains(&display)
+    } else {
+        false
+    };
+    let geometry = if player || follower_player_race {
+        ModelGeometry {
+            bounding_radius: DEFAULT_PLAYER_BOUNDING_RADIUS,
+            combat_reach: DEFAULT_PLAYER_COMBAT_REACH,
+        }
+    } else {
+        let display = world.get::<ModelDisplay>(unit)?.display_id;
+        *world.get_resource::<ModelReaches>()?.source.get(&display)?
+    };
+    Some(ModelGeometry {
+        bounding_radius: geometry.bounding_radius * scale,
+        combat_reach: geometry.combat_reach * scale,
+    })
 }
 
-/// `WorldObject::GetDistance(obj)` (Object.cpp:430): exact 3D distance minus both
-/// combat reaches, floored at zero.
+pub(crate) fn combat_reach(world: &World, unit: Entity) -> Option<f32> {
+    model_geometry(world, unit).map(|geometry| geometry.combat_reach)
+}
+
+/// `WorldObject::GetDistance(obj)` (Object.cpp:430): exact3D minus both reaches.
 pub(crate) fn distance(world: &World, from: Entity, to: Entity) -> Option<f32> {
     let a = world.get::<Position>(from)?;
     let b = world.get::<Position>(to)?;
