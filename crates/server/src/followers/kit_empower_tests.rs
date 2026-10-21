@@ -87,7 +87,7 @@ fn native_empower_fire_breath_max_release_damages_and_keeps_rank_three_dot() {
     assert_eq!(dot.duration_ms, 8_000);
 }
 
-fn surge_targets(level: u8, enemies: usize) -> std::collections::BTreeSet<u64> {
+fn spawn_surge_fixture(level: u8, enemies: usize) -> (Harness, Entity) {
     let (mut h, caster) = prepare(level);
     assert_eq!(
         crate::auras::has_aura(h.app.world(), caster, 375757),
@@ -101,6 +101,11 @@ fn surge_targets(level: u8, enemies: usize) -> std::collections::BTreeSet<u64> {
             max: 1_000_000_000.0,
         });
     }
+    (h, caster)
+}
+
+fn observe_surge_targets(level: u8, enemies: usize) -> std::collections::BTreeSet<u64> {
+    let (mut h, caster) = spawn_surge_fixture(level, enemies);
     let target = h.npc;
     crate::spell_cast::creature_cast(
         h.app.world_mut(),
@@ -128,7 +133,7 @@ fn surge_targets(level: u8, enemies: usize) -> std::collections::BTreeSet<u64> {
 #[ignore = "RED: leading Dummy0 prevents rank recipient cap"]
 fn native_empower_eternity_surge_rank_three_hits_three_of_four_enemies() {
     assert_eq!(
-        surge_targets(21, 4).len(),
+        observe_surge_targets(21, 4).len(),
         3,
         "native rank3 limits359077 to3 targets without Eternity's Span"
     );
@@ -138,13 +143,13 @@ fn native_empower_eternity_surge_rank_three_hits_three_of_four_enemies() {
 #[ignore = "control: native Eternity's Span doubles rank recipients"]
 fn native_empower_eternity_span_rank_three_hits_six_of_seven_enemies() {
     assert_eq!(
-        surge_targets(32, 7).len(),
+        observe_surge_targets(32, 7).len(),
         6,
         "native375757 doubles actual rank3 recipients without fabricating damage"
     );
 }
 
-fn fire_breath_keeps_magic_buff(scouring: bool) -> bool {
+fn spawn_scouring_fixture(scouring: bool) -> (Harness, Entity) {
     let (mut h, caster) = prepare(21);
     let target = h.npc;
     crate::spell_cast::creature_cast(h.app.world_mut(), target, 21562, Some(target), true).unwrap();
@@ -161,6 +166,12 @@ fn fire_breath_keeps_magic_buff(scouring: bool) -> bool {
         crate::auras::has_aura(h.app.world(), caster, 378438),
         scouring
     );
+    (h, caster)
+}
+
+fn cast_fire_breath_and_check_magic_buff(scouring: bool) -> bool {
+    let (mut h, caster) = spawn_scouring_fixture(scouring);
+    let target = h.npc;
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIRE_BREATH, Some(caster), false)
         .unwrap();
     h.advance(90);
@@ -179,13 +190,13 @@ fn fire_breath_keeps_magic_buff(scouring: bool) -> bool {
 #[test]
 #[ignore = "RED: Fire Breath dispels without native Scouring Flame"]
 fn native_empower_scouring_absent_preserves_enemy_magic_buff() {
-    assert!(fire_breath_keeps_magic_buff(false));
+    assert!(cast_fire_breath_and_check_magic_buff(false));
 }
 
 #[test]
 #[ignore = "control: source-native Scouring Flame must retain actual dispel"]
 fn native_empower_scouring_present_dispels_enemy_magic_buff() {
-    assert!(!fire_breath_keeps_magic_buff(true));
+    assert!(!cast_fire_breath_and_check_magic_buff(true));
 }
 
 #[test]
