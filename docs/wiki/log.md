@@ -1,3 +1,9 @@
+## 2026-10-21 — Explicit empower input, Animosity and production-stat measurements
+
+[Native empower](investigations/follower-data.md#native-empower-pipeline--2026-10-21): selected-stage/cancel2GREEN33.47s; explicit authenticated player-release3GREEN18.52s and nine-case native integration24.32s. Matched186134 protocol/92b766 client has hold2PASS, wire1PASS, extension buildPASS; no physical key-up capture or stage UI claim. Native Animosity RED0-vs5000ms→GREEN5000/3750ms34.78s.
+
+[Production-stat metrics](investigations/follower-data.md#production-stat-dummy-measurements--2026-10-21): real1459 aura with620→620 Intellect proves missing StatsPlugin; constructor fix14PASS73.04s and initial/final sheets. Only affected Evoker3 cases refreshed after Animosity. Ungeared starter samples are not equal-gear SimC parity; Fire mastery endpoint growth remains a sourced, unqualified Feel-the-Burn eligibility/overlap gap.
+
 ## 2026-10-21 — Native empower release boundaries
 
 [Pipeline](investigations/follower-data.md#native-empower-pipeline--2026-10-21): four native REDs precede DB2-stage/TC maximum-hold implementation. Native Fire rank3 DoT, Surge3-of4/Span6-of7 and single-resolver Font dispatch pass; actual Fortitude dispel without Scouring gives new RED, then source gate2GREEN21.75s. Optional client stage UI remains excluded; explicit player release, selected-stage/cancel and quantitative damage remain open.
