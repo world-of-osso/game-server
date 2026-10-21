@@ -43,6 +43,8 @@ const KNOWN_GROUND_GAPS: &str = include_str!("ground_gaps.tsv");
 const NO_WDT: &str = "no WDT FileDataID";
 const TILE_SIZE: f32 = shared::navmesh::TILE_SIZE;
 const MAP_TILES: usize = 64;
+/// Bounded startup-only filesystem concurrency; never changes ECS scheduling.
+const GROUND_VALIDATION_WORKERS: usize = 4;
 /// `GridMap::getMinHeight` / `TerrainInfo::GetMinHeight` without flight bounds (no MFBO, or
 /// no grid at all as on a WMO-only map).
 const DEFAULT_MIN_HEIGHT: f32 = -500.0;
@@ -419,22 +421,24 @@ impl MapGround {
         if let Some(wmo) = &self.global_wmo {
             return probe_collision_height(feet, None, std::slice::from_ref(wmo), walkable_only);
         }
-        let coordinates = bevy_to_tile(feet.x, feet.z);
-        let Some(tile) = self.tile(coordinates) else {
+        let Some(tile) = self.load_collision_tile(bevy_to_tile(feet.x, feet.z)) else {
             return GroundProbe::Unloaded;
         };
-        if tile.wmos.is_none() {
+        let terrain = tile.terrain.height_at_bevy(feet.x, feet.z);
+        let wmos = tile.wmos.as_ref().expect("collision tile has loaded WMOs");
+        probe_collision_height(feet, terrain, wmos, walkable_only)
+    }
+
+    fn load_collision_tile(&mut self, coordinates: (u32, u32)) -> Option<&TileGround> {
+        if self.tile(coordinates)?.wmos.is_none() {
             let wmos = self.load_tile_wmos(coordinates);
             self.tiles
                 .get_mut(&coordinates)
-                .unwrap()
-                .as_mut()
-                .unwrap()
+                .and_then(Option::as_mut)
+                .expect("terrain tile stays loaded while its collision loads")
                 .wmos = Some(wmos);
         }
-        let tile = self.tiles[&coordinates].as_ref().unwrap();
-        let terrain = tile.terrain.height_at_bevy(feet.x, feet.z);
-        probe_collision_height(feet, terrain, tile.wmos.as_ref().unwrap(), walkable_only)
+        self.tiles[&coordinates].as_ref()
     }
 
     fn load_tile(&mut self, (row, col): (u32, u32)) -> Option<TileGround> {
@@ -871,34 +875,7 @@ fn check_spawned_ground(
     spawned: impl IntoIterator<Item = u32>,
     gaps: &HashSet<(u32, String)>,
 ) -> SpawnedGroundCheck {
-    // Bevy is deliberately single-threaded here. Overlap only these independent
-    // startup file walks, with at most four workers that join before spawning.
-    let mut maps: Vec<_> = spawned.into_iter().collect();
-    maps.sort_unstable();
-    let data_dir = &ground.data_dir;
-    let wdts = &ground.wdts;
-    let results = std::thread::scope(|scope| {
-        let workers: Vec<_> = maps
-            .chunks(maps.len().div_ceil(4).max(1))
-            .map(|maps| {
-                scope.spawn(move || {
-                    maps.iter()
-                        .map(|&map| {
-                            let started = std::time::Instant::now();
-                            let missing = missing_ground_files(data_dir, wdts.get(&map).copied());
-                            debug!("Ground validation map {map}: {:?}", started.elapsed());
-                            (map, missing)
-                        })
-                        .collect::<Vec<_>>()
-                })
-            })
-            .collect();
-        // Join in source-map order so refusal and known-gap diagnostics stay stable.
-        workers
-            .into_iter()
-            .flat_map(|worker| worker.join().expect("ground validation worker panicked"))
-            .collect::<Vec<_>>()
-    });
+    let results = read_spawned_ground_files(ground, spawned);
     let mut check = SpawnedGroundCheck::default();
     for (map, missing) in results {
         let mut gap = false;
@@ -915,6 +892,44 @@ fn check_spawned_ground(
         }
     }
     check
+}
+
+fn read_spawned_ground_files(
+    ground: &GroundMap,
+    spawned: impl IntoIterator<Item = u32>,
+) -> Vec<(u32, Vec<String>)> {
+    // Bevy stays single-threaded. Only independent startup file walks overlap.
+    let mut maps: Vec<_> = spawned.into_iter().collect();
+    maps.sort_unstable();
+    let chunk_size = maps.len().div_ceil(GROUND_VALIDATION_WORKERS).max(1);
+    let data_dir = &ground.data_dir;
+    let wdts = &ground.wdts;
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = maps
+            .chunks(chunk_size)
+            .map(|maps| scope.spawn(move || read_map_ground_files(data_dir, wdts, maps)))
+            .collect();
+        // Join in source-map order so refusal and known-gap diagnostics stay stable.
+        workers
+            .into_iter()
+            .flat_map(|worker| worker.join().expect("ground validation worker panicked"))
+            .collect()
+    })
+}
+
+fn read_map_ground_files(
+    data_dir: &Path,
+    wdts: &HashMap<u32, u32>,
+    maps: &[u32],
+) -> Vec<(u32, Vec<String>)> {
+    maps.iter()
+        .map(|&map| {
+            let started = std::time::Instant::now();
+            let missing = missing_ground_files(data_dir, wdts.get(&map).copied());
+            debug!("Ground validation map {map}: {:?}", started.elapsed());
+            (map, missing)
+        })
+        .collect()
 }
 
 #[cfg(test)]
