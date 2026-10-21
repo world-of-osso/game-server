@@ -84,7 +84,6 @@ fn encounter_coverage_azureblade_ordinary_cleave_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "AZUREBLADE_LUA_CLOCK_PORT_PENDING"]
 fn encounter_coverage_azureblade_first_cleave_uses_lua_clock() {
     let (mut h, boss, _) = azureblade_copy(205);
     h.engage(boss);

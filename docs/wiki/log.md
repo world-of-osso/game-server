@@ -1,3 +1,7 @@
+## 2026-10-21 — Azureblade partial Lua-clock port
+
+[Azureblade](systems/boss-scripts.md#azureblade-partial-lua-clock--2026-10-21): explicit lead-approved Lua schedule/native70448 target/effect port, not invented TC AI. Ignored firstcleaveRED→native5GREEN37.75s atf9ec0db16 including Normal1/Follower205/two actual190187 summons/reset/isolated2585bit3. Producer sourcecopy1PASS; source base/models+1/23 rows, no synthetic205/population/credit change. Native-ground and ordinal-versus-bit fixture repairs retain production semantics. Energy/phase/area/Image-AI gaps and canonical publication remain open.
+
 ## 2026-10-21 — Broggok core and encounter-gap audit
 
 [Broggok](systems/boss-scripts.md#blood-furnace-broggok--2026-10-21): ignored appearance RED precedes source port; actual70448 cone damage/Normal+Heroic clocks, intro/release speech and isolated reset/death give COMPOSITE5GREEN. Native absent IDs and authentic TDB prisoner/path/navigation gaps stay explicit; no fabricated memberships or historical cloud. Audit72encounters/13dungeons at engine `data/diagnostics/encounter-gaps-2026-10-21/report.md`; not native-clear certification.
