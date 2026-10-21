@@ -110,6 +110,8 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
                       source_center=name not in {'Chain Lightning', 'Azure Strike', 'Pyre'})
     if name in {'Moonfire', 'Sunfire', 'Flame Shock', 'Holy Fire', 'Barbed Shot', 'Rake', 'Rip', 'Corruption', 'Curse of Weakness', "Hunter's Mark"}:
         return policy('attack', 100, missing_aura=spell)
+    if name == "Hand of Gul'dan" and spec == 266:
+        return policy('attack', 110)
     if name in {"Avenger's Shield", 'Shield Slam', 'Lava Burst', 'Pyroblast', 'Fire Blast', 'Kill Command', 'Wild Thrash', 'Disintegrate', 'Fire Breath', 'Eternity Surge', 'Fists of Fury', 'Rising Sun Kick', 'Strike of the Windlord', 'Blackout Kick', 'Ferocious Bite', 'Demonbolt', 'Call Dreadstalkers', 'Summon Vilefiend', 'Demonic Strength', 'Execute', 'Touch of Death', 'Earth Shock'}:
         return policy('attack', 110)
     if name in {'Judgment', 'Crusader Strike', 'Blessed Hammer', 'Devastate', 'Wrath', 'Smite', 'Fireball', 'Lightning Bolt', 'Cobra Shot', 'Steady Shot', 'Living Flame', 'Tiger Palm', 'Shadow Bolt', 'Shred'}:
@@ -216,6 +218,20 @@ def read_description_reference_sources(db2, references):
     return evidence
 
 
+# SimC76f8118 engine/class_modules/warlock/sc_warlock_init.cpp:245-250.
+# Native70448 has the same talent/action identities; only those actually learned
+# in the selected native loadout enable the named cast actions.
+SIMC_TALENT_CAST_ACTIONS = {266: ((1250273, 105174), (426115, 264178))}
+
+
+def project_loadout_actions(loadout):
+    known = dict(loadout['known'])
+    for parent, action in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
+        if str(parent) in known:
+            known.setdefault(str(action), False)
+    return known
+
+
 def kit_rows(db, source):
     availability = defaultdict(list)
     description_links = {}
@@ -230,7 +246,7 @@ def kit_rows(db, source):
         controls[spell].append((target_a, target_b))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
-        for spell_text, passive in loadout['known'].items():
+        for spell_text, passive in project_loadout_actions(loadout).items():
             spell = int(spell_text)
             native = db.execute('SELECT n.Name_lang,COALESCE(l.SpellLevel,0) FROM spell_name n LEFT JOIN spell_levels l ON l.SpellID=n.ID AND l.DifficultyID=0 WHERE n.ID=?', (spell,)).fetchone()
             if not native:
