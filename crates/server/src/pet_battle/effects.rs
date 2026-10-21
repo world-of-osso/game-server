@@ -54,7 +54,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             150 | 168 => self.add_aura_effect(caster, target, effect),
             107 => self.fade_swap(caster, effect),
             67 => Ok(self.equalize_health(caster, target, effect)),
-            68 => self.percent_damage(caster, target, ability, effect),
+            68 | 197 => self.percent_damage(caster, target, ability, effect),
             363 => self.current_health_team_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
@@ -555,7 +555,10 @@ impl<R: BattleRng> Runtime<'_, R> {
         if caster != recipient && self.block_attack(recipient)? {
             return Ok(false);
         }
-        let health = if effect.property == 363 {
+        //PET_BATTLE_197_POWER_PCT_OF_LAST_HIT: the stored hit is already scaled.
+        let health = if effect.property == 197 {
+            self.state(caster, "Last_HitTaken")
+        } else if effect.property == 363 {
             self.battle.pet(recipient).health
         } else if effect.property == 62 {
             self.battle.pet(target).stats.health

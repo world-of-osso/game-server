@@ -4,6 +4,8 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 
 ## What it must do
 
+- [x] Execute generic197 as Last_HitTaken×Power/100 under `PET_BATTLE_197_POWER_PCT_OF_LAST_HIT`: actual997 Power100 and2432 Power150 retain existing type/floor/hit/mitigation handling without additional power/critical/variance rescaling. The stored hit includes the existing engine's last actual direct or periodic damage; do not invent a direct-only filter absent a DB2 field. DB2 values win over tooltip prose: preserve `PET_BATTLE_197_DESCRIPTION_POWER_CONFLICT` because2432's equal-last-hit wording disagrees with150. This is an explicit project policy, not independent Retail arithmetic proof.
+
 - [x] Execute generic140 by refreshing all existing matching aura stacks on the current target to authored NewDuration without reapplying states, changing caster or creating stacks. Real785/787 refreshes to3 rounds, independently of a new-stack miss. Keep786 rejected before RNG under `PET_BATTLE_BLISTERING_COLD_PAD_FOLLOW_UNPROVEN`: the785 pad's swap persistence/team-state migration is not proven. Direct785 aura-program tests are not journal/owned786 proof.
 
 - [x] Execute property362 Species Heal2260 using its authored10 base points and2 additional points for each other same-species teammate, before ordinary healing power/accuracy/variance/modifiers/cap. Count literal roster identities, including dead reserves, as existing370; do not infer species from family or count enemies/caster. This follows source roster wording, not independent Retail death-count certification.
