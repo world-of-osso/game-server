@@ -108,6 +108,41 @@ fn healer_triage_remaining_native_hot_avoids_duplicate_healing() {
 }
 
 #[test]
+fn healer_triage_low_mana_prefers_available_efficient_native_swiftmend() {
+    let (mut h, healer) = fixture();
+    let target = h.caster;
+    crate::spell_cast::try_cast_triggered(h.app.world_mut(), healer, 774, Some(target)).unwrap();
+    h.app.world_mut().entity_mut(target).insert(Health {
+        current: 70_000.0,
+        max: 100_000.0,
+    });
+    let cost = super::super::kit_clearcasting_tests::mana_cost(&h, healer, 18562);
+    let mut mana = h
+        .app
+        .world_mut()
+        .get_mut::<shared::components::Mana>(healer)
+        .unwrap();
+    assert!(cost * 2.0 < mana.max * 0.3);
+    mana.current = cost * 2.0;
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    let first = h.inbox.go.len();
+    update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[target, healer],
+        None,
+    );
+    h.advance(1);
+    assert!(
+        h.inbox.go[first..]
+            .iter()
+            .any(|cast| cast.caster == healer.to_bits() && cast.spell_id == 18562),
+        "available efficient Swiftmend must not be gated behind old40% HP ladder"
+    );
+}
+
+#[test]
 fn healer_triage_topped_patient_cancels_native_direct_cast_before_mana_spend() {
     let (mut h, healer) = fixture();
     let target = h.caster;
