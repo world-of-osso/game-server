@@ -338,9 +338,14 @@ fn wait_henry_cast(group: &mut GroupFixture, spell: u32) {
         .app
         .world()
         .get::<super::Follower>(group.priest)
-        .unwrap();
-    let enemies =
-        super::ai::engaged_enemies(group.h.app.world(), follower, group.priest, &group.members);
+        .unwrap()
+        .clone();
+    let enemies = super::ai::engaged_enemies(
+        group.h.app.world_mut(),
+        &follower,
+        group.priest,
+        &group.members,
+    );
     let actions: Vec<_> = group
         .h
         .inbox
