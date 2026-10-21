@@ -20,6 +20,8 @@ mod disguises;
 mod dragon_head;
 #[path = "toys_flute_tests.rs"]
 mod flute;
+#[path = "toys_force_cast_tests.rs"]
+mod force_cast;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
 #[path = "toys_forlorn_toll_tests.rs"]
