@@ -49,6 +49,23 @@ fn quest_fixture() -> (Harness, tempfile::TempDir, u64) {
 
 fn burn_fixture(cat: bool) -> Harness {
     let mut h = harness(Vec::new(), &[FEROCIOUS_BITE, CAT_FORM, WILT], 11).unwrap();
+    let level = h
+        .app
+        .world()
+        .get::<shared::components::Level>(h.caster)
+        .unwrap()
+        .0;
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::UnitLevel(level));
+    let source = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_creature_spell_stats(&source));
     if cat {
         h.cast_and_deliver(CAT_FORM, None);
         assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
