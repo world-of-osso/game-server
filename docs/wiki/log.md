@@ -1,6 +1,6 @@
 ## 2026-10-21 — Companion native-level flag counterexample
 
-[Toys](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): exact3141flag0x100 skips TC's owner-clamp block. Initial ordinary53453 birth1 oracle lacked terrain; ordinary temporary zone spawning skips source regional tuning and is a separate gap. Generic717a791a5 correctly refuses missing context. Corrected native99104 fixture uses actual map1220/area7558/tuning332/native45 versus caster10; Keg Pony/Stored Wisdom fixtures use real Northshire/native30. Source-based RED/GREEN pending; no invented min/max or whole99104cast claim.
+[Toys](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): exact3141flag0x100 skips TC's owner-clamp block. Initial ordinary53453 birth1 oracle lacked terrain; ordinary temporary zone spawning skips source regional tuning and is a separate gap. Generic717a791a5 correctly refuses missing context. Corrected native99104 fixture uses actual map1220/area7558/tuning332/native45 versus caster10; Keg Pony/Stored Wisdom fixtures use real Northshire/native30. Corrected RED10vs45→GREEN7/7 (49.30s) atf73b54cb7/master9eabe0146; check/fmt pass with inherited unused-function warning. Census519's +268455 comes from inherited mastere73367de4 effect16, not native-level support. No invented min/max or whole99104cast claim.
 
 ## 2026-10-21 — Scoped rotation kit publication
 
