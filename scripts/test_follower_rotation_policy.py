@@ -84,6 +84,21 @@ class RotationResourcePolicyTests(unittest.TestCase):
 
 
 class RotationRefreshAndDefensePolicyTests(unittest.TestCase):
+    def test_native_rows_preserve_child_and_retire_sotr_missing_only_gate(self):
+        root = Path(__file__).resolve().parents[1]
+        export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
+        source = json.loads(export.read_text())
+        selected = [row for row in source['loadouts'] if row['spec_id'] in (66, 73, 103) and row['level'] == 32]
+        with sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True) as db:
+            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        conditions = {(row[0], row[1]): json.loads(row[6]) for row in rows}
+        self.assertNotIn('missing_aura', conditions[66, 53600])
+        self.assertFalse(conditions[66, 53600].get('attacked', False))
+        self.assertEqual(conditions[73, 2565]['missing_aura'], 132404)
+        self.assertEqual(conditions[73, 2565]['refresh_seconds'], 10)
+        self.assertEqual(conditions[103, 1822]['missing_aura'], 155722)
+        self.assertEqual(conditions[103, 1822]['refresh_fraction'], 0.30)
+
     def test_feral_uses_fresh_pandemic_window(self):
         for name, spell in [('Rip', 1079), ('Rake', 1822)]:
             with self.subTest(spell=spell):

@@ -70,10 +70,20 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
     if spec == 103 and name in {'Rip', 'Ferocious Bite', 'Primal Wrath'}:
         resources = [dict(power='ComboPoints', min=5)]
         if name == 'Rip':
-            return policy('attack', 100, missing_aura=spell, resources=resources)
+            return policy('attack', 100, missing_aura=spell, refresh_fraction=0.30, resources=resources)
         if name == 'Primal Wrath':
             return policy('aoe', 90, min_enemies=2, source_center=True, resources=resources)
         return policy('attack', 110, resources=resources)
+    if spec == 103 and name == 'Rake':
+        return policy('attack', 100, missing_aura=spell, refresh_fraction=0.30)
+    if spec == 73 and name == 'Shield Block':
+        return policy('mitigation', 40, 'self', attacked=True,
+                      missing_aura=132404, refresh_seconds=10)
+    if spec == 66 and name == 'Shield of the Righteous':
+        return policy('mitigation', 40, min_enemies=1, source_center=True)
+    if spec in {66, 73} and name in {'Ardent Defender', 'Guardian of Ancient Kings', 'Shield Wall'}:
+        return policy('defensive', 30, 'self', health_below=0.50,
+                      attacked=True, tank_defensive_sequence=True)
     # Common combat branches in both pinned Demonology hero APLs. They are
     # starter-kit adaptations; missing hero-tree grants are never invented.
     if spec == 266 and name == 'Demonbolt':
@@ -288,17 +298,7 @@ def kit_rows(db, source):
                 link = description_links[spell]
                 rule[2]['missing_aura'] = link['child_spell_id']
                 reference_rows[(spec, spell)] = dict(spec_id=spec, **link)
-            # SoTR's armor aura is named literally by its source tooltip; the
-            # native effect64 children are NOT that armor aura.
-            if name == 'Shield of the Righteous' and not passive:
-                description = db.execute('SELECT Description_lang FROM spell WHERE ID=?', (spell,)).fetchone()[0]
-                references = {int(value) for value in re.findall(r'\$(\d+)[sd]', description)}
-                armor = [value for value in references if db.execute(
-                    'SELECT 1 FROM spell_name n JOIN spell_effect e ON e.SpellID=n.ID WHERE n.ID=? AND n.Name_lang=? AND e.EffectAura=268', (value, name)).fetchone()]
-                if len(armor) != 1:
-                    raise ValueError('SoTR tooltip must name exactly one native armor aura')
-                rule[2]['missing_aura'] = armor[0]
-            elif rule[2].get('missing_aura') == spell and not db.execute(
+            if rule[2].get('missing_aura') == spell and not db.execute(
                     'SELECT 1 FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND Effect=6', (spell,)).fetchone():
                 children = db.execute('''SELECT DISTINCT e.EffectTriggerSpell FROM spell_effect e
                     JOIN spell_effect child ON child.SpellID=e.EffectTriggerSpell AND child.DifficultyID=0 AND child.Effect=6
