@@ -92,6 +92,8 @@ fn rotation_fidelity_last_stand_is_only_the_native_learned_shield_wall_consequen
     for (level, learned) in [(46, false), (47, true)] {
         let (mut h, unit) = at_level(215517, level, |_| {});
         let before = h.app.world().get::<Health>(unit).unwrap().max;
+        let wounded = before * 0.50;
+        h.app.world_mut().get_mut::<Health>(unit).unwrap().current = wounded;
         assert_eq!(
             has_aura(h.app.world(), unit, 1243659),
             learned,
@@ -110,6 +112,12 @@ fn rotation_fidelity_last_stand_is_only_the_native_learned_shield_wall_consequen
             after > before,
             learned,
             "actual Last Stand max-health consequence"
+        );
+        let expected_health = wounded + (after - before);
+        assert!(
+            (h.health(unit) - expected_health).abs() <= 1.0,
+            "native12975 must heal by its actual max-health gain, once; level={level}, before={wounded}, expected={expected_health}, actual={}",
+            h.health(unit)
         );
     }
 }
