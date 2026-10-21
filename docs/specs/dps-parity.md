@@ -13,7 +13,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [x] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
 - [ ] Native base-item, bonus-added and enchant equip spells use the production aura path; unequipping an item or removing a modifier removes only its owned equip aura and linked child. Item-level changes replace stale aura amounts. Native LINKED/LINKED_2 zero amounts preserve child BP0; nonzero parent amounts override child BP0, with matching removal (TrinityCore a352b1fa `SpellAuraEffects.cpp5299–5335`).
 - [ ] Instance-sensitive stack merging must not weaken catalog-based unique-equipped restrictions; different enchants do not permit a duplicate unique item.
-- [ ] Selected-talent metadata preserves SimC's printed node IDs, entry IDs and ranks; absent metadata must not silently become a default build.
+- [ ] Selected-talent metadata preserves SimC's allocated node IDs, entry IDs and ranks, including each entry of a tiered node; absent metadata must not silently become a default build. The pinned debug log consumes tiered ranks before printing, so metadata comes from actual `player_traits` via the separate diagnostic CLI wrapper, not that log.
 
 ### Measurement
 
@@ -32,7 +32,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ## Implementation inventory
 
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
-- `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction and SimC action normalization.
+- `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction, allocated-trait JSON validation and SimC action/stat normalization.
+- `scripts/simc_selected_traits.cpp` — diagnostic CLI wrapper around unchanged76f8118 engine objects; not the reference DPS executable. It replaces only the CLI entry object to inspect actual `player_traits` after one0.1s metadata iteration. Retire when the official CLI emits lossless allocated-trait metadata.
 - `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution, consumed by production equipment Stats.
 - `crates/server/src/item_instance/{bonuses,effects,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state. Type23 preserves ItemEffect IDs; base/bonus resolution retains native spell IDs, trigger types and cooldown sentinels. Equip-proc execution is not yet integrated.
 - `crates/server/src/stats.rs` — production stat consumer of slot-bound instance properties.

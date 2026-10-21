@@ -8,7 +8,6 @@ import hashlib
 import json
 import math
 from pathlib import Path
-import re
 
 SPECS = {
     66: "Paladin_Protection", 73: "Warrior_Protection", 105: None, 257: None,
@@ -63,21 +62,30 @@ def parse_profile(text):
     return profile
 
 
-def parse_selected_talents(debug_text):
-    # Pinned player.cpp2872 emits exact trait identities during profile decoding.
-    pattern = re.compile(r"adding (\S+) talent .*? \(node=(\d+) entry=(\d+) rank=(\d+)/(\d+)\)")
+def parse_selected_talents(metadata):
+    # Read actual player_traits, not player.cpp2872's consumed tiered-node rank.
+    try:
+        records = json.loads(metadata)
+    except json.JSONDecodeError as error:
+        raise ValueError("No selected talent JSON metadata from pinned SimC") from error
+    if not isinstance(records, list) or not records:
+        raise ValueError("No selected talent records from pinned SimC")
     selected = {}
-    for match in pattern.finditer(debug_text):
-        tree, node, entry, rank, maximum = match.groups()
-        if not 0 < int(rank) <= int(maximum):
-            raise ValueError(f"Invalid selected talent rank: {match.group()}")
-        value = {"tree": tree, "node_id": int(node), "entry_id": int(entry), "ranks": int(rank)}
-        key = (int(node), int(entry))
+    required = {"tree", "node_id", "entry_id", "ranks", "max_ranks"}
+    for row in records:
+        if not isinstance(row, dict) or not required.issubset(row):
+            raise ValueError(f"Incomplete selected talent record: {row!r}")
+        if not isinstance(row["tree"], str) or not row["tree"]:
+            raise ValueError(f"Invalid selected talent tree: {row!r}")
+        if any(type(row[key]) is not int or row[key] <= 0 for key in required - {"tree"}):
+            raise ValueError(f"Invalid selected talent identity/rank: {row!r}")
+        if row["ranks"] > row["max_ranks"]:
+            raise ValueError(f"Invalid selected talent rank: {row!r}")
+        value = {key: row[key] for key in ("tree", "node_id", "entry_id", "ranks")}
+        key = (row["node_id"], row["entry_id"])
         if key in selected and selected[key] != value:
-            raise ValueError(f"Conflicting selected talent records for node {node}, entry {entry}")
+            raise ValueError(f"Conflicting selected talent records for {key}")
         selected[key] = value
-    if not selected:
-        raise ValueError("No selected talent metadata in the SimC debug output")
     return [selected[key] for key in sorted(selected)]
 
 

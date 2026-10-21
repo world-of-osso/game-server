@@ -77,15 +77,15 @@ actions+=/judgment,if=holy_power<5
         self.assertIn("json=/evidence/66.three.json", packs)
 
     def test_selected_talents_keep_source_node_entry_and_rank_not_name_guesses(self):
-        selected = PARITY.parse_selected_talents('''0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
-0.000 Parity adding specialization talent Shield (node=103002 entry=128002 rank=2/2)
-0.000 Parity adding hero talent Light (node=103003 entry=128003 rank=1/1)
-0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
-0.000 Parity ordinary spell damage 200
-''')
+        selected = PARITY.parse_selected_talents(json.dumps([
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1},
+            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2, "max_ranks": 2},
+            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1, "max_ranks": 1},
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1},
+        ]))
         self.assertEqual(selected, [
             {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1},
-            {"tree": "specialization", "node_id": 103002, "entry_id": 128002, "ranks": 2},
+            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2},
             {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1},
         ])
 
