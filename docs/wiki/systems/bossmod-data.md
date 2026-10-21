@@ -41,7 +41,13 @@ BigWigs color→severity is the documented UI translation cyan/green/blue/yellow
 
 `bossmod_authority` selects the sole addon with schedulable timers for an encounter. Conflicting schedules abort import rather than choosing an arbitrary priority. `bossmod_binding` joins declared map/NPC/encounter IDs against DB2 and local TDB spawns only in the copied database.
 
-Server `scripted_ai::bossmod` loads that catalog, maintains independent alert countdowns and consumes central authoritative CombatLog CastStart/CastSuccess at the authored boundary. SmartAI/EventMap still execute combat, but do not supply alert clocks or blanket Low warnings. Cast messages carry required rendered `warning_text`; the client renders that text verbatim with the validated spell icon. Lifecycle messages and snapshots retain the ordered, copy-scoped encounter channel.
+Server `scripted_ai::bossmod` loads that catalog, maintains independent alert countdowns and consumes central authoritative CombatLog CastStart/CastSuccess at the authored boundary. Explicit current-Retail boss-mod-Lua-backed scripts instead project their real EventMap requests through `scripted_alerts`: Kokia, Melidrussa, Kyrioss, Doragosa, Azureblade and Umbrelskul opt in through `CreatureAi::encounter_schedule`. Their actual repeat/cancel/dispatch state supplies snapshots; their independent imported clocks are bypassed, including stale legacy catalog rows. TDB SmartAI-only clocks remain excluded without a sourced mapping; no blanket Low warnings are emitted. Cast messages carry required rendered `warning_text`; the client renders that text verbatim with the validated spell icon. Lifecycle messages and snapshots retain the ordered, copy-scoped encounter channel.
+
+## Scripted clock continuation — 2026-10-21
+
+The current-Lua opt-in preserves addon warning colors, counted labels and enUS rename constants, sending warnings only at actual accepted cast admission (native CastStart for timed casts, CastSuccess for instant casts). Missing dynamic/native text remains absent: Kokia Ritual target-message text, Kyrioss444034 phase warning and Umbrelskul role/target-dependent Strike warning. This is not full addon option/role-filter parity.
+
+Canonical world.db had no catalog tables; importer documentation/receipts prescribe private copies, not automatic publication. Retained2026-10-11 Kokia catalog uses legacy7.3/14.5/21.6s clocks; it must not overwrite current scripted8/19/28s requests. RED proves the missing actual Kokia snapshots; GREEN/native proof pending.
 
 ## Zevrim root cause and native proof
 

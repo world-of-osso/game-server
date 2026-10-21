@@ -1,3 +1,7 @@
+## 2026-10-21 — Actual scripted boss alert clocks
+
+[Boss alerts](systems/bossmod-data.md#scripted-clock-continuation--2026-10-21): explicit six current-Lua scripts publish selected EventMap requests with source labels/colors/counts; other SmartAI-only clocks stay excluded. Canonical catalog absent; retained private Kokia legacy clocks cannot supply current requests. Real Kokia missing-snapshot RED recorded; GREEN/native pending.
+
 ## 2026-10-21 — Healer framework native qualification
 
 [Healer triage](systems/follower-healer-triage.md): native risk/cost/owned hook, topped-start starvation RED→GREEN, actual Hogger read-only deadlines/Reset and native-radius scatter/stack controls. Gateha847 exposed five residual priority/fixture failures; authored Ironbark and urgent/routine Swiftmend decisions plus actual paid OOC fixture resolve them, Henry dispel retained. Six-case+core15GREEN; masterff190 integration requested followers/campaign285GREEN206.38s plus private-asset Leymor1GREEN17.46s; scoped check/format PASS, sole13179-owned helper warning excluded perlead. Shared death forecast/native readiness restored for Holy. Full Crenna depth and paired20-seed metrics remain pending.
