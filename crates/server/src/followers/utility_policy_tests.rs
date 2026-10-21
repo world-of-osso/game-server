@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use shared::components::{Health, Level, Npc, Position};
 use shared::protocol::CombatLogKind;
 
-fn add_follower(h: &mut Harness, entry: u32) -> Entity {
+pub(super) fn add_follower(h: &mut Harness, entry: u32) -> Entity {
     let catalog = h.app.world().resource::<super::FollowerCatalog>();
     let profile = catalog
         .profiles
