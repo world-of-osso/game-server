@@ -1,3 +1,7 @@
+## 2026-10-21 — Umbrelskul partial Lua-clock port
+
+[Umbrelskul](systems/boss-scripts.md#umbrelskul-partial-lua-clock--2026-10-21): ignored firstStrikeRED a8b2e4c39 precedes78bd2a595 partial source. Native7GREEN44.00s at87fad0cf7, including Normal/Follower/Mythic source branches, success-only DragonStrike repeat/cancel, native line+periodic damage, reset and isolated2584bit2. Sourcecopy producer1PASS3.332s; local binding only, all world inputs preserved. Energy/Brittle/crystals/upstream selector remain named gaps; publication/final gate lead-owned.
+
 ## 2026-10-21 — Azureblade partial Lua-clock port
 
 [Azureblade](systems/boss-scripts.md#azureblade-partial-lua-clock--2026-10-21): explicit lead-approved Lua schedule/native70448 target/effect port, not invented TC AI. Ignored firstcleaveRED→native5GREEN37.75s atf9ec0db16 including Normal1/Follower205/two actual190187 summons/reset/isolated2585bit3. Producer sourcecopy1PASS; source base/models+1/23 rows, no synthetic205/population/credit change. Native-ground and ordinal-versus-bit fixture repairs retain production semantics. Energy/phase/area/Image-AI gaps and canonical publication remain open.

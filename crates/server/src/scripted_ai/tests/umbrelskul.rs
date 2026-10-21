@@ -90,7 +90,6 @@ fn encounter_coverage_umbrelskul_ordinary_strike_damage_and_periodic_qualify() {
 }
 
 #[test]
-#[ignore = "UMBRELSKUL_LUA_CLOCK_PORT_PENDING"]
 fn encounter_coverage_umbrelskul_first_strike_uses_lua_clock() {
     let (mut h, boss, _) = umbrelskul_copy(205);
     h.engage(boss);
