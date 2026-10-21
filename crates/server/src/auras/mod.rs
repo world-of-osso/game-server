@@ -17,6 +17,8 @@
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 mod abundance;
+#[cfg(test)]
+mod charm_tests;
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
 pub(crate) mod augmentation;
