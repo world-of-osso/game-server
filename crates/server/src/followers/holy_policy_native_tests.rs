@@ -261,6 +261,226 @@ fn holy_policy_native32_spread_patients_do_not_spend_sanctify() {
     );
 }
 
+fn engage_weave_enemies(group: &mut GroupFixture, count: usize) -> Vec<Entity> {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let source = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
+    let display_id = source.templates[&6].models[0].display_id;
+    group
+        .h
+        .app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(source.templates);
+    group
+        .h
+        .app
+        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+    let mut enemies = vec![group.h.npc];
+    for index in 1..count {
+        enemies.push(crate::spell_cast::test_harness::spawn_npc(
+            &mut group.h.app,
+            index as f32,
+        ));
+    }
+    let owner = group.h.caster;
+    // Keep native melee actors outside owner swing range, inside Henry's Nova.
+    // No health, power, cast chance or damage amount is substituted.
+    group
+        .h
+        .app
+        .world_mut()
+        .get_mut::<Position>(owner)
+        .unwrap()
+        .x = -40.0;
+    for &enemy in &enemies {
+        group.h.app.world_mut().entity_mut(enemy).insert((
+            Level(90),
+            UnitLevel(90),
+            shared::components::ModelDisplay { display_id },
+            shared::components::ThreatTable::default(),
+            crate::creature_ai::CreatureState::Idle,
+        ));
+        crate::creature_aggro::add_threat(group.h.app.world_mut(), enemy, owner, 1000.0);
+    }
+    enemies
+}
+
+fn step_henry(group: &mut GroupFixture) {
+    let priest = group.priest;
+    let follower = group
+        .h
+        .app
+        .world()
+        .get::<super::Follower>(priest)
+        .unwrap()
+        .clone();
+    // Exercise the production controller without unrelated DPS killing the fixture.
+    super::ai::update_follower(group.h.app.world_mut(), priest, &follower);
+    group.h.advance(1);
+}
+
+fn wait_henry_cast(group: &mut GroupFixture, spell: u32) {
+    let start = casts(group, spell);
+    for _ in 0..240 {
+        step_henry(group);
+        if casts(group, spell) > start {
+            group.h.advance(3);
+            return;
+        }
+    }
+    panic!("Henry never launched native offensive spell {spell}");
+}
+
+fn effectively_damaged(group: &GroupFixture, spell: u32, target: Entity) -> bool {
+    group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .any(|event| {
+            event.source == Some(group.priest.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(spell)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        })
+}
+
+#[test]
+fn holy_weave_native90_holy_fire_then_smite_deal_real_damage_when_safe() {
+    let _rng = crate::random::seed_scope(257);
+    let mut group = native_group();
+    engage_weave_enemies(&mut group, 1);
+    let first = group.h.npc;
+    wait_henry_cast(&mut group, 14914);
+    assert!(effectively_damaged(&group, 14914, first));
+    let next = crate::spell_cast::test_harness::spawn_npc(&mut group.h.app, 3.0);
+    group.h.npc = next;
+    engage_weave_enemies(&mut group, 1);
+    wait_henry_cast(&mut group, 585);
+    assert!(effectively_damaged(&group, 585, next));
+}
+
+#[test]
+fn holy_weave_native90_nova_reaches_three_real_engaged_enemies() {
+    let _rng = crate::random::seed_scope(257);
+    let mut group = native_group();
+    let enemies = engage_weave_enemies(&mut group, 3);
+    wait_henry_cast(&mut group, 132157);
+    let outcomes: std::collections::BTreeSet<_> = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(group.priest.to_bits())
+                && event.spell_id == Some(132157)
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        })
+        .filter_map(|event| event.target)
+        .collect();
+    assert!(
+        enemies
+            .iter()
+            .all(|enemy| outcomes.contains(&enemy.to_bits())),
+        "ordinary misses still prove actual native footprint selection"
+    );
+    assert!(
+        enemies
+            .iter()
+            .any(|&enemy| effectively_damaged(&group, 132157, enemy))
+    );
+}
+
+#[test]
+fn holy_weave_native90_incoming_group_damage_prevents_offense() {
+    let mut group = native_group();
+    apply_pressure(&mut group, 6);
+    engage_weave_enemies(&mut group, 1);
+    let start = group.h.inbox.go.len();
+    for _ in 0..20 {
+        step_henry(&mut group);
+    }
+    let actions: Vec<_> = group.h.inbox.go[start..]
+        .iter()
+        .filter(|event| event.caster == group.priest.to_bits())
+        .collect();
+    assert!(
+        !actions.is_empty(),
+        "native healing controller must actually act"
+    );
+    assert!(
+        actions
+            .iter()
+            .all(|event| !matches!(event.spell_id, 14914 | 585 | 132157))
+    );
+    assert!(
+        group
+            .members
+            .iter()
+            .any(|&member| fraction(&group, member) < 0.9)
+    );
+}
+
+#[test]
+fn holy_weave_native90_nova_does_not_recruit_a_fresh_nearby_enemy() {
+    let _rng = crate::random::seed_scope(257);
+    let mut group = native_group();
+    engage_weave_enemies(&mut group, 3);
+    let fresh = crate::spell_cast::test_harness::spawn_npc(&mut group.h.app, 2.5);
+    let health = group.h.app.world().get::<Health>(fresh).unwrap().current;
+    wait_henry_cast(&mut group, 14914);
+    assert_eq!(casts(&group, 132157), 0);
+    assert_eq!(
+        group.h.app.world().get::<Health>(fresh).unwrap().current,
+        health
+    );
+}
+
+#[test]
+fn holy_weave_native90_nova_preserves_real_polymorph() {
+    let _rng = crate::random::seed_scope(257);
+    let mut group = native_group();
+    let enemies = engage_weave_enemies(&mut group, 4);
+    let protected = enemies[3];
+    let mage = group
+        .members
+        .iter()
+        .copied()
+        .find(|&member| {
+            group
+                .h
+                .app
+                .world()
+                .get::<super::Follower>(member)
+                .is_some_and(|follower| follower.profile.entry == 209059)
+        })
+        .unwrap();
+    for _ in 0..10 {
+        creature_cast(group.h.app.world_mut(), mage, 118, Some(protected), false).unwrap();
+        group.h.advance(80);
+        if has_aura(group.h.app.world(), protected, 118) {
+            break;
+        }
+    }
+    assert!(has_aura(group.h.app.world(), protected, 118));
+    wait_henry_cast(&mut group, 14914);
+    assert_eq!(casts(&group, 132157), 0);
+    assert!(
+        has_aura(group.h.app.world(), protected, 118),
+        "native breakable CC must survive Henry's weave"
+    );
+}
+
 #[test]
 fn holy_policy_native90_full_health_does_not_spend_throughput_cooldowns() {
     let mut group = native_group();
