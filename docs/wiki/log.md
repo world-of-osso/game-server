@@ -1,3 +1,7 @@
+## 2026-10-21 — Native empower release boundaries
+
+[Pipeline](investigations/follower-data.md#native-empower-pipeline--2026-10-21): four native REDs precede DB2-stage/TC maximum-hold implementation. Native Fire rank3 DoT, Surge3-of4/Span6-of7 and single-resolver Font dispatch pass; actual Fortitude dispel without Scouring gives new RED, then source gate2GREEN21.75s. Optional client stage UI remains excluded; explicit player release, selected-stage/cancel and quantitative damage remain open.
+
 ## 2026-10-21 — Native Frenzy and petless hunter kit
 
 [Native cadence](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): native20% owner passive reaches actual controlled-pet melee interval, not owner/guardian clocks. Genuine41-vs41-frame RED→four hunter GREEN55.74s, two native speed/cast-time controls GREEN33.27s; six proc/four selection controls also pass on the scoped canonical backup. [Pet-preparation failure](investigations/follower-data.md#pet-preparation-failure-starvation--2026-10-21) reports once and leaves native healing/attacks available; Exhilaration's native level9 oracle retained.
