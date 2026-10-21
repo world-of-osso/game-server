@@ -46,6 +46,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
 - `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions. Owned inventory hydration/projection is additionally proved at the persistence/Stats boundary.
 - `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration and enchant/gem join regressions; both passed within the 15-case library proof.
+- `crates/server/src/spell_cast/linked_aura_tests.rs` — native zero/nonzero BP0, caster ownership, stacks/removal and trigger-depth controls. Nonzero parent10/8 overrides child-1/-1000 rather than rejecting the link.
+- `crates/server/src/equipment_effects.rs::tests` — actual base/bonus/enchant equip-aura lifecycle and item-level replacement; enchant8039 records the resolved scaled parent/child amount, not just its zero DB2 base points.
 - `crates/server/src/stats_instance_tests.rs` — actual StatsPlugin modifier-only change on native chest 271468/enchant 7987; genuine RED missed +50 Strength before consumer wiring; subsequent native GREEN and unchanged legacy Arcane control passed.
 
 ## Known gaps (current cycle)

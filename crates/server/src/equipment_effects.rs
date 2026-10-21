@@ -252,7 +252,8 @@ mod tests {
     #[test]
     fn item_instance_equipment_enchant_removal_keeps_base_aura_and_removes_linked_child() {
         let mut h = native_harness();
-        // Native8039 -> linked parent1236742 -> actual child1241710.
+        // Native8039 -> parent1236742: authored BP0 but item-scaled coefficient
+        // 0.509610593/ScalingClass-1; its resolved nonzero amount links1241710.
         equip(
             &mut h,
             EquipmentSlot::MainHand,
@@ -278,6 +279,23 @@ mod tests {
                 .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
                 .0
         );
+        let active = h.app.world().get::<ActiveAuras>(h.caster).unwrap();
+        let amount = |id| {
+            active
+                .iter()
+                .find(|aura| aura.spell_id == id)
+                .unwrap()
+                .effects[0]
+                .amount
+        };
+        let parent_amount = amount(1236742);
+        let child_amount = amount(1241710);
+        assert!(
+            parent_amount > 0.0,
+            "native item scaling resolves nonzero BP0"
+        );
+        assert_eq!(child_amount, parent_amount);
+        eprintln!("Native8039 linked1236742→1241710: parent={parent_amount}, child={child_amount}");
         h.app
             .world_mut()
             .get_mut::<EquippedItemModifiers>(h.caster)
