@@ -1,3 +1,4 @@
+- [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
 ## 2026-10-21 — Native follower duration/admission boundaries
 
 [Rotation slices](investigations/follower-data.md#rotation-duration-and-admission-slices--2026-10-21): nativec09cba90010GREEN/6RED9.67s; resource-unit gates and four carries pass, new timer/major/LastStand/Cat boundaries fail. Cat source48629's missing applied-aura precondition and actual3-target setup proved before adapter. Source-qualified adapter/refresh/conditional LastStand and project sequencing committed, GREEN pending.14producerPASS; canonical publication, full proc/snapshot and simulator acceptance open.
