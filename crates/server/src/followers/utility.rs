@@ -16,7 +16,8 @@ const DUNGEON_BOSS_FLAG: u32 = 0x1000_0000;
 const WORLD_BOSS_FLAG: u32 = 0x4;
 const RAID_BUFFS: &[u32] = &[1126, 1459, 21562, 6673, 462854, 364342];
 const LUST: &[u32] = &[2825, 32182, 80353, 390386];
-const RESURRECTIONS: &[u32] = &[20484, 391054, 20707];
+// Soulstone20707/6203 has no native trigger edge to a resurrection effect.
+const RESURRECTIONS: &[u32] = &[20484, 391054];
 const EXHAUSTION: &[u32] = &[57723, 57724, 80354, 264689, 390435];
 
 #[derive(Component)]
@@ -315,9 +316,8 @@ pub(super) fn try_movement(
     if distance <= reach {
         return false;
     }
-    let ids = [
-        100, 385952, 190784, 252216, 1850, 186257, 58875, 116841, 358267,
-    ];
+    // Divine Steed190784 is an unimplemented dummy wrapper, not a speed aura.
+    let ids = [100, 385952, 252216, 1850, 186257, 58875, 116841, 358267];
     for spell in learned(world, unit, follower, &ids) {
         if crate::auras::has_aura(world, unit, spell) {
             continue;
