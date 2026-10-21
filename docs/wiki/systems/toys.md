@@ -2,6 +2,16 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Flag of Ownership source script and dead-aura expiry (2026-10-21)
+
+[Contract](../../specs/toys.md#flag-of-ownership-source-script): TC a352b1fa `spell_item.cpp:3603–3641` owns only38578/51640: select one random enemy player body, text-emote28008 at that owner, trigger51657. The source child creates wild GO190589/display7953 and its zero-payload60s corpse-marker aura. Source-only target93 is admitted only for the exact root signature, not as a generic dummy/modern flag alias. Stored player corpses use the existing authoritative PlayerDeathState representation; offline corpse discovery/native pixels remain unproved.
+
+Original actual-death/use RED2 precedes source porta430806e0. Four controls prove no-valid-body refusal before SpellGo/cooldown, exact-one selection among two real deaths, root metadata drift refusal and continued Gadgetzan23453 dummy refusal. Actual lifecycle proves real kill→corpse→root selected-hit SpellGo→one source flag/corpse aura→targeted authored emote→natural60s removal→natural60s item recovery/reuse. Full-mask child effects are observed directly, not through a nonexistent separate child SpellGo. Emote proof uses existing PostUpdate ToyChatCapture; late receiver reads had lost ephemeral messages, with no production routing/index change.
+
+The lifecycle exposed a generic runtime bug: update_auras continued immediately after remove_on_death, so finite ALLOW_AURA_WHILE_DEAD auras never expired. Independent real23113 six-second slow/death case RED at8b6f0face confirms it beyond the flag; ordinary774 still ends on death. Minimal b2cdfd486 preserves death removal/no dead periodic ticks but expires remaining finite auras, matching TC `Unit.cpp:438,2969–2973`. Native dead-aura and two alive periodic/expiry controls pass. Eight-case composite proof: seven cases PASS in flag51640-green5.log, then final actual lifecycle PASS at5c7f46e5e after correcting its oracle to authentic ItemEffect7814 recovery60000ms; no runtime changes afterb2cdfd486. Check/fmt PASS, zero compiler warnings.
+
+Current published canonical census506→507/1173, added38578 only. Source emote/selection/expiry fixes are server CPU proof, not native rendered/audio or every toy lifecycle. Earlier summon publication is now confirmed by the lead (serverd0a478da2,206 templates/280 models/one addon). Exact census, raw graphs/script edge51640→51657 and proof logs remain engine `data/diagnostics/toys-census-2026-10-21/`.
+
 ## Generic summon dependencies and source interaction markers (2026-10-21)
 
 [Contract](../../specs/toys.md#generic-summon-dependency-closure): original206 effect28 blockers partition into151 missing-template toys and55 unsupported-control/title toys; no missing SummonProperties. The producer only imported one aura428 hop plus audited scenery. It now resolves every Toy on-use normal-difficulty TriggerSpell closure with cycle-safe UNION, preserving authentic TDB templates/models/addons; no world spawns or fabricated identities.

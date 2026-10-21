@@ -3426,3 +3426,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Generic toy summon dependency closure
 
 [Source and proof](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21):151 missing-template/55 control split; producer RED→GREEN4, marker/actual trophy GREEN3 and retained census/mailbox proofs. Prepared423→506 (86 additions/three corrected gaps); canonical420 pending lead publication.206 templates/280 models/one addon inserted with no existing-row changes. Global markers and existing contracts preserved; sole Katy exemption has real mailbox proof.
+
+## 2026-10-21 — Flag of Ownership and finite dead-owner auras
+
+[Source and proof](systems/toys.md#flag-of-ownership-source-script-and-dead-aura-expiry-2026-10-21): exact TC51640 script, real enemy deaths/selection/flag/aura/targeted emote/natural60s expiry and reuse. Generic dead-aura early continue reproduced independently with23113, then fixed without enabling dead periodic ticks. Eight-case composite plus check/fmt; canonical published506→507. Full-trigger child packet and receiver-lifetime fixture assumptions corrected without weakening effects/emote proof. No native/offline corpse claim.
