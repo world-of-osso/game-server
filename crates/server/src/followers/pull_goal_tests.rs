@@ -375,7 +375,7 @@ fn tank_first_pull_native_endpoint_footprints_require_multiple_packs() {
 }
 
 #[test]
-fn tank_owner_pacing_entrance_route_preserves_native_reserve_refusal() {
+fn tank_owner_pacing_entrance_route_refuses_multiple_packs_and_preserves_native_reserve() {
     let mut f = measured_fixture();
     let history = pull_history::snapshot(f.h.app.world(), f.h.caster).unwrap();
     let route = pull_route::inspect_route(
@@ -392,7 +392,11 @@ fn tank_owner_pacing_entrance_route_preserves_native_reserve_refusal() {
         route.pack_count, 23,
         "current authored entrance route footprint"
     );
-    assert_eq!(candidate_budget(&mut f), Decision::Wait(Reason::Reserve));
+    assert_eq!(
+        candidate_budget(&mut f),
+        Decision::Wait(Reason::FirstSinglePack),
+        "a cleared party may pull one pack, not the23-pack entrance footprint"
+    );
     let (forecast, reserve, _) =
         pull_admission::read_forecast_health(f.h.app.world_mut(), f.tank, &route.spawns, 1)
             .unwrap();
