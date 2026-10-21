@@ -127,6 +127,26 @@ fn exercise_barrier(difficulty: u32) {
 }
 
 #[test]
+#[ignore = "RED: hosted continents do not create sourced world-static AreaTriggers"]
+fn world_static_areatrigger_hosted_continent_has_authored_source_population() {
+    let mut h = harness().expect("real map/admission catalog");
+    let mut ids: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(&InMap, &WorldAreaTrigger)>()
+        .iter(h.app.world())
+        .filter(|(map, _)| **map == STORMWIND)
+        .map(|(_, area)| area.spawn_id)
+        .collect();
+    ids.sort_unstable();
+    assert_eq!(
+        ids,
+        vec![1, 2, 4, 21, 24, 55, 202, 206, 281, 282, 290],
+        "the eleven actual TDB map0/difficulty0 spawns, not a barrier-specific spawn path"
+    );
+}
+
+#[test]
 #[ignore = "RED: world-static AreaTrigger spawns have no runtime map-entry path"]
 fn world_static_areatrigger_orator_barrier_normal_entry_isolation_and_teardown() {
     exercise_barrier(1);
