@@ -259,10 +259,7 @@ fn health_and_auras_allow(
     } else {
         target
     };
-    if condition
-        .missing_aura
-        .is_some_and(|aura| maintenance_aura_present(world, unit, aura_target, entry.slot, aura))
-    {
+    if !maintenance_allows(world, unit, aura_target, entry) {
         return false;
     }
     if condition.exclusive_aura
@@ -277,13 +274,56 @@ fn health_and_auras_allow(
     true
 }
 
+fn maintenance_allows(world: &World, caster: Entity, target: Entity, entry: &Entry) -> bool {
+    let Some(aura) = entry.conditions.missing_aura else {
+        return true;
+    };
+    match maintenance_aura_present(world, caster, target, entry, aura) {
+        Ok(present) => !present,
+        Err(error) => {
+            debug!(?caster, aura, ?error, "Follower aura forecast unavailable");
+            false
+        }
+    }
+}
+
+fn refresh_window_seconds(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    entry: &Entry,
+    aura: u32,
+) -> Result<Option<f64>, crate::spell_cast::CastFailure> {
+    use crate::spell_cast::CastFailure;
+    match (
+        entry.conditions.refresh_seconds,
+        entry.conditions.refresh_fraction,
+    ) {
+        (None, None) => Ok(None),
+        (Some(seconds), None) => Ok(Some(f64::from(seconds))),
+        (None, Some(fraction)) => {
+            let full = crate::auras::maximum_duration_ms(world, caster, target, aura).ok_or_else(
+                || {
+                    CastFailure::Unsupported(format!(
+                        "aura {aura} has no native finite full duration"
+                    ))
+                },
+            )?;
+            Ok(Some(f64::from(full) / 1_000.0 * f64::from(fraction)))
+        }
+        (Some(_), Some(_)) => Err(CastFailure::Unsupported(
+            "choose one aura refresh time unit".into(),
+        )),
+    }
+}
+
 fn maintenance_aura_present(
     world: &World,
     caster: Entity,
     target: Entity,
-    slot: Slot,
+    entry: &Entry,
     aura: u32,
-) -> bool {
+) -> Result<bool, crate::spell_cast::CastFailure> {
     let periodic_damage = world
         .resource::<crate::spell_info::SpellStore>()
         .get(aura)
@@ -293,17 +333,24 @@ fn maintenance_aura_present(
                     && effect.aura == crate::auras::PERIODIC_DAMAGE_AURA
             })
         });
-    if slot != Slot::Attack || !periodic_damage {
-        return crate::auras::has_aura(world, target, aura);
-    }
+    let owned = entry.slot == Slot::Attack && periodic_damage;
+    let window = refresh_window_seconds(world, caster, target, entry, aura)?;
+    let now = crate::auras::aura_now(world);
     // SimC76f8118 sc_druid.cpp13833: target.get_dot("moonfire", &source).
-    world
+    Ok(world
         .get::<crate::auras::ActiveAuras>(target)
         .is_some_and(|auras| {
             auras
                 .iter()
-                .any(|active| active.spell_id == aura && active.caster == caster)
-        })
+                .filter(|active| {
+                    let owner_matches = !owned || active.caster == caster;
+                    active.spell_id == aura && owner_matches
+                })
+                .any(|active| match window {
+                    None => true,
+                    Some(window) => active.expires_at.is_none_or(|expiry| expiry - now > window),
+                })
+        }))
 }
 
 fn combat_allows(
