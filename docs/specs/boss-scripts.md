@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Emberon current Lua partial
+
+- Producer `--encounter emberon` installs only local `boss_emberon` and primary184422/2558/map2451bit3 (Journal2476/5404/display107816). Keep source spawn9004496, actual model107816, addon369101, stats/flags/population/difficulties and native spell data unchanged; no fabricated205 rows.
+- Current LittleWigs2777a9d `Emberon.lua:53–65,99–106,120–143,167–191` supplies Normal1/Follower205 initial Clap3690614.5s, Embers36911012.1s, Purging36899038.5s; source repeats23/11.7s have counts2/3 before phase,2/4 after. Resume after phase with Embers1.2s/Clap5.4s/nextPurging37.7s. Below10% disables future Purging and removes normal-lane count limits.
+- Explicit parent policy `EMBERON_NORMAL_PURGING_24P3S_LUA`: end the ordinary native indefinite368990 channel24.3s from cast start for Normal1/Follower205 only, following Lua105–106 fixed-time comment/CastBar; do not modify DB2 duration/effects. Other difficulties, energy/center movement/wards/add-controller, Unstable Embers dummy369116 consequences and absent native395681 periodic child remain named gaps. Require genuine native RED→GREEN clocks/channel/periodic damage/reset/copy-credit proof before enabling combat tests.
+
 ## Talondras current Lua partial
 
 - Explicit parent-approved boundary `TALONDRAS_LUA_DB2_CATEGORY_1152_CONFLICT`: keep all sourced requests and ordinary native category cooldowns. DB2 Shards3s/Stomp5s share1152, so first5.1s Stomp is denied after4.5s Shards; later requests mix accepted/OnCooldown outcomes. Prove exact accepted/denied requests and real damage/reset/credit, never clear cooldowns or use triggered flags without an authored TC boss script. TC a352b1fa `SpellHistory.cpp:263–275,381–391,678–694,1135–1142` is the common creature/player category path.

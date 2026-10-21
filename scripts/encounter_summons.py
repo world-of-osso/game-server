@@ -566,6 +566,30 @@ def import_talondras(connection):
     return [184124]
 
 
+def import_emberon(connection):
+    """Lua184422↔2558 identity only; preserve native indefinite channel and actor."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2451, entry=184422, encounter_id=2558, bit=3,
+                   script='', ai='', journal_id=2476, actor_id=5404, display_id=107816,
+                   spawn_guid=9004496, spawn_difficulties='2,8,23,1')
+    bindings = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=184422').fetchone()
+    if runtime not in [('Emberon','','',64),('Emberon','','boss_emberon',64)]:
+        raise ValueError('Emberon runtime identity or flags changed')
+    native = connection.execute('''SELECT EffectIndex,Effect,EffectAura,EffectAuraPeriod,EffectTriggerSpell
+        FROM spell_effect WHERE SpellID=368990 AND DifficultyID=0 AND EffectIndex IN(1,3)
+        ORDER BY EffectIndex''').fetchall()
+    if native != [(1,6,23,3000,369025),(3,6,23,3000,395681)]:
+        raise ValueError('Emberon native periodic channel identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', bindings)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_emberon' WHERE entry=184422")
+    return [184422]
+
+
 def import_porung_binding(connection):
     """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
     import encounter_cpp_bindings
@@ -604,7 +628,7 @@ def import_kyrioss_schedule(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -646,6 +670,8 @@ def main():
                 entries = import_bromach(conn)
             elif args.encounter == 'talondras':
                 entries = import_talondras(conn)
+            elif args.encounter == 'emberon':
+                entries = import_emberon(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
