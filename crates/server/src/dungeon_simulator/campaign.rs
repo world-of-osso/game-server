@@ -486,6 +486,48 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
 }
 
 #[test]
+fn non_tank_regroup_crosses_passive_and_defensive_but_not_aggressive_sight() {
+    use crate::creature_ai::{CreatureState, FollowOwner};
+    use crate::scripted_ai::ReactState;
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let watcher = run.actors[&20375760];
+    let healer = run.party.members[1];
+    let owner = run.party.owner;
+    let center = *run.app.world().get::<Position>(watcher).unwrap();
+    for actor in run.actors.values() {
+        run.app
+            .world_mut()
+            .entity_mut(*actor)
+            .insert(ReactState::Passive);
+    }
+    run.app.world_mut().entity_mut(healer).insert(Position {
+        x: center.x - 20.0,
+        ..center
+    });
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: center.x + 20.0,
+        ..center
+    });
+    for (react, should_follow) in [
+        (ReactState::Aggressive, false),
+        (ReactState::Passive, true),
+        (ReactState::Defensive, true),
+    ] {
+        run.app
+            .world_mut()
+            .entity_mut(watcher)
+            .insert((react, CreatureState::Idle));
+        crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        assert_eq!(
+            run.app.world().get::<FollowOwner>(healer).is_some(),
+            should_follow,
+            "native20375760 {react:?}: only aggressive idle sight may block regroup"
+        );
+    }
+}
+
+#[test]
 fn non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius() {
     let _rng_scope = crate::random::seed_scope(7);
     let mut run = spawn_run(7, &mut None).unwrap();
