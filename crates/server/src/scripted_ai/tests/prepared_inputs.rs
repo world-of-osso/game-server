@@ -62,6 +62,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         12201 => Some("theradras"),
         17306 => Some("gargolmar"),
         17308 => Some("omor"),
+        16807 => Some("nethekurse"),
         186737 => Some("telash"),
         _ => None,
     };
@@ -138,6 +139,7 @@ fn decode_encounter_inputs(
             || (entry == 12201 && *id == 12238)
             || (entry == 17306 && *id == 17309)
             || (entry == 17308 && *id == 17540)
+            || (entry == 16807 && [17471, 18370].contains(id))
             || (entry == 17381 && *id == 17370)
             || (entry == 186737 && *id == 197204)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))

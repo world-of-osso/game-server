@@ -588,3 +588,70 @@ fn encounter_coverage_nethekurse_shadow_sear_caps_two_authentic_event_targets() 
         "native StringId condition excludes ordinary converts"
     );
 }
+
+#[test]
+#[ignore = "RED: source default-slot patrol pause not ported"]
+fn encounter_coverage_nethekurse_peon_reaction_pauses_authored_patrol_five_seconds() {
+    let (mut h, boss, _, peons) = populated_nethekurse(1);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_ai::WaypointState>(boss)
+            .is_some(),
+        "authored20578530 patrol"
+    );
+    h.hit_pct(peons[0], 200.0);
+    h.advance(0.2);
+    let paused = *h.app.world().get::<Position>(boss).unwrap();
+    h.advance(4.6);
+    assert_eq!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        paused,
+        "source PauseMovement5000"
+    );
+    h.advance(0.6);
+    assert_ne!(
+        *h.app.world().get::<Position>(boss).unwrap(),
+        paused,
+        "source timed pause expires and patrol resumes"
+    );
+}
+
+#[test]
+#[ignore = "RED: Target Fissures30745 child and wild fissure script not ported"]
+fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consumption() {
+    for difficulty in [1, 2] {
+        let (mut h, boss, map, _) = populated_nethekurse(difficulty);
+        let templates = &h.app.world().resource::<WorldData>().templates;
+        assert_eq!(
+            templates[&18370].script_name, "npc_wild_shadow_fissure",
+            "actual TDB base0, not legacy unbound actor"
+        );
+        assert_eq!(templates[&17471].script_name, "npc_lesser_shadow_fissure");
+        assert!(h.creatures_of(18370).is_empty());
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30745, Some(boss), false)
+            .expect("native ordinary Target Fissures");
+        h.advance(0.2);
+        let fissures = h.creatures_of(18370);
+        assert_eq!(
+            fissures.len(),
+            1,
+            "source selects one event convert and casts30744 normally"
+        );
+        let fissure = fissures[0];
+        assert_eq!(h.app.world().get::<InMap>(fissure), Some(&map));
+        assert_eq!(
+            h.app.world().get::<crate::scripted_ai::ReactState>(fissure),
+            Some(&crate::scripted_ai::ReactState::Passive)
+        );
+        assert!(
+            h.has_aura(fissure, 32250),
+            "JustAppeared native Consumption"
+        );
+        assert_eq!(
+            h.app.world().get::<shared::components::Level>(fissure),
+            h.app.world().get::<shared::components::Level>(boss),
+            "actual summon level, not CT0 cache placeholder1"
+        );
+    }
+}
