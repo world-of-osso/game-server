@@ -17,6 +17,23 @@ fn prepare(entry: u32) -> (Harness, Entity) {
 
 fn complete_cast(h: &mut Harness, caster: Entity, spell: u32, target: Entity) {
     wait_for_gcd(h, caster, spell);
+    // Native Fire Blast has a separate500ms cooldown even with spare charges.
+    for _ in 0..200 {
+        let world = h.app.world();
+        let info = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell)
+            .unwrap();
+        let cooling_down = world
+            .get::<crate::spell_cast::SpellHistory>(caster)
+            .is_some_and(|history| {
+                history.on_cooldown(info, crate::spell_cast::history_now(world))
+            });
+        if !cooling_down {
+            break;
+        }
+        h.advance(1);
+    }
     let first = h.inbox.go.len();
     creature_cast(h.app.world_mut(), caster, spell, Some(target), false).unwrap();
     for _ in 0..200 {
