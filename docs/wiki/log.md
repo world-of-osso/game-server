@@ -1,3 +1,7 @@
+## 2026-10-21 — Broggok core and encounter-gap audit
+
+[Broggok](systems/boss-scripts.md#blood-furnace-broggok--2026-10-21): ignored appearance RED precedes source port; actual70448 cone damage/Normal+Heroic clocks, intro/release speech and isolated reset/death give COMPOSITE5GREEN. Native absent IDs and authentic TDB prisoner/path/navigation gaps stay explicit; no fabricated memberships or historical cloud. Audit72encounters/13dungeons at engine `data/diagnostics/encounter-gaps-2026-10-21/report.md`; not native-clear certification.
+
 ## 2026-10-20 — Kelidan and Skull Bash load flakes
 
 [Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. At97398c587/protocol03cebdb: each exact case10/10 under4 same-core hogs (490.887s, hogs stopped); full filters684PASS/0FAIL/20existingignored (679standard +1privatefrontal +4privatefrozen); check/fmt0, no warnings. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.

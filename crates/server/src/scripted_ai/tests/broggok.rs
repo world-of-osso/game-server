@@ -59,7 +59,6 @@ fn encounter_coverage_broggok_native_inputs_qualify() {
 }
 
 #[test]
-#[ignore = "BROGGOK_SOURCE_PORT_PENDING: JustAppeared passive/uninteractible"]
 fn encounter_coverage_broggok_appears_dormant_in_both_difficulties() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = broggok_copy(difficulty);

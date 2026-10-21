@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Blood Furnace Broggok — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#blood-furnace-broggok-source-boundary). TC a352b1fa `boss_broggok.cpp`17380/1924/map542bit2. Ignored REDec2d35c10 genuinely fails appearance selectability; source9262fafd6 restores passive/uninteractible appearance, exact intro/release action clocks, ordinary self-cast rotation and inherited reset/death. Source JustSummoned deliberately does not track summons. Native30913 cone damage and both difficulties' first/repeat windows pass;30916 is current effect179/AT33896, never a fabricated historical summon.
+
+Core proof COMPOSITE5GREEN: four cases ata0e0e82ae (`broggok-core-green.log`) plus actual-SpellGo lifecycle atda039eb9d (`broggok-lifecycle-green.log`,19.75s). Self-cast CastSuccess is not delivered to the player; the corrected lifecycle observer uses actual owned SpellGo, no runtime/timer change. Filter `encounter_coverage_broggok_`; detached protocol03cebdb. Evidence and72-encounter audit: game-engine `data/diagnostics/encounter-gaps-2026-10-21/`.
+
+Named native absences:30917/26837/26838/30914/38462. Ingress remains blocked: TDB1210 has no BroggokPrisoner StringIds or groups402–405 required by this TC source; no fabricated memberships. Path1381150 has authored final orientation unsupported by current MovePath and no local542 navigation bake. Lever/prisoner ingress, historical cloud damage/radius, full encounter/native/loot/persistence are not certified. Published primary binding already exists; no canonical database mutation or new producer.
+
 ## Encounter fixture determinism — 2026-10-20
 
 The shared `stockade_app_with` harness already uses manual50ms real-time updates and a50ms fixed step; CPU stalls do not advance simulation. Its `EncounterSeed(0)` now seeds each BossAi EventMap during reset and, for scripts without Reset overrides, before JustEngagedWith schedules events. Independent apps own independent streams. Explicit ground-phase seeds remain available for fixtures exercising specific roll combinations; production RNG is unchanged.
