@@ -13,7 +13,7 @@ const ETERNITYS_SPAN: u32 = 375757;
 const BASE_FIRE_TICKS: u32 = 10;
 const CONVERTED_TICKS_PER_RANK: u32 = 3;
 
-fn native_aura_amount(world: &World, caster: Entity, spell: u32) -> f32 {
+fn read_native_aura_amount(world: &World, caster: Entity, spell: u32) -> f32 {
     world
         .get::<ActiveAuras>(caster)
         .and_then(|auras| auras.iter().find(|aura| aura.spell_id == spell))
@@ -21,7 +21,7 @@ fn native_aura_amount(world: &World, caster: Entity, spell: u32) -> f32 {
         .map_or(0.0, |effect| effect.amount)
 }
 
-fn fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
+fn build_fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
     let mut child = world
         .resource::<SpellStore>()
         .get(FIRE_DAMAGE)
@@ -34,7 +34,7 @@ fn fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
         .expect("native Fire Breath periodic effect1")
         .aura_period_ms;
     let bonus_ticks =
-        native_aura_amount(world, caster, BLAST_FURNACE) / (period_ms as f32 / 1000.0);
+        read_native_aura_amount(world, caster, BLAST_FURNACE) / (period_ms as f32 / 1000.0);
     let ticks =
         BASE_FIRE_TICKS - CONVERTED_TICKS_PER_RANK * u32::from(rank - 1) + bonus_ticks as u32;
     let duration = child
@@ -48,7 +48,7 @@ fn fire_breath_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
     child
 }
 
-fn eternity_surge_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
+fn build_eternity_surge_release(world: &World, caster: Entity, rank: u8) -> SpellInfo {
     let mut child = world
         .resource::<SpellStore>()
         .get(SURGE_DAMAGE)
@@ -76,8 +76,8 @@ pub(super) fn release(
         .cast_empower_level
         .expect("empower pipeline supplies its completed stage");
     let child = match spell.id {
-        357208 | 382266 => fire_breath_release(world, caster, rank),
-        359073 | 382411 => eternity_surge_release(world, caster, rank),
+        357208 | 382266 => build_fire_breath_release(world, caster, rank),
+        359073 | 382411 => build_eternity_surge_release(world, caster, rank),
         _ => unreachable!("qualified empower handler registration"),
     };
     // TC uses IGNORE_CAST_IN_PROGRESS, not FULL_MASK: preserve normal damage procs.

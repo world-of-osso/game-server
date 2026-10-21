@@ -24,7 +24,11 @@ impl EmpowerProgress {
     }
 }
 
-fn stage_ends(world: &World, caster: Entity, spell: &SpellInfo) -> Result<Vec<u32>, CastFailure> {
+fn compute_stage_ends(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<Vec<u32>, CastFailure> {
     let original = spell
         .misc
         .as_ref()
@@ -64,7 +68,7 @@ pub(super) fn begin(
             spell.id
         )));
     }
-    let stage_ends_ms = stage_ends(world, caster, spell)?;
+    let stage_ends_ms = compute_stage_ends(world, caster, spell)?;
     let total = stage_ends_ms
         .last()
         .copied()
@@ -107,31 +111,34 @@ pub(super) fn advance(world: &mut World, caster: Entity, dt: f32) -> bool {
     if world.get::<EmpowerProgress>(caster).is_none() {
         return false;
     }
-    let (elapsed_ms, total_ms, target) = {
-        let mut cast = world
-            .get_mut::<CastState>(caster)
-            .expect("empower owns a channel");
-        cast.tick(dt);
-        (
-            (cast.elapsed * 1000.0).round() as u32,
-            (cast.duration * 1000.0).round() as u32,
-            (cast.target != 0)
-                .then_some(cast.target)
-                .and_then(Entity::try_from_bits),
-        )
-    };
-    super::mark_dirty(world, caster);
+    let (elapsed_ms, total_ms, target) = advance_channel_clock(world, caster, dt);
     let progress = world.get::<EmpowerProgress>(caster).unwrap();
-    let mut spell = world
+    let pending = world
         .get::<PendingCastSpell>(caster)
-        .expect("empower retains its admitted spell")
-        .spell
-        .clone();
-    if should_release(progress, &spell, elapsed_ms, total_ms) {
-        spell.cast_empower_level = Some(progress.completed_stages(elapsed_ms));
-        finish(world, caster, &spell, target);
+        .expect("empower retains its admitted spell");
+    if !should_release(progress, &pending.spell, elapsed_ms, total_ms) {
+        return true;
     }
+    let mut spell = pending.spell.clone();
+    spell.cast_empower_level = Some(progress.completed_stages(elapsed_ms));
+    finish(world, caster, &spell, target);
     true
+}
+
+fn advance_channel_clock(world: &mut World, caster: Entity, dt: f32) -> (u32, u32, Option<Entity>) {
+    let mut cast = world
+        .get_mut::<CastState>(caster)
+        .expect("empower owns a channel");
+    cast.tick(dt);
+    let clock = (
+        (cast.elapsed * 1000.0).round() as u32,
+        (cast.duration * 1000.0).round() as u32,
+        (cast.target != 0)
+            .then_some(cast.target)
+            .and_then(Entity::try_from_bits),
+    );
+    super::mark_dirty(world, caster);
+    clock
 }
 
 fn finish(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<Entity>) {
