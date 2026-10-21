@@ -40,7 +40,7 @@ pub(super) fn update(world: &mut World) {
     }
 }
 
-fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
+pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follower) {
     escape_pet_hazard(world, unit);
     if super::hazards::escape(world, unit) {
         return;

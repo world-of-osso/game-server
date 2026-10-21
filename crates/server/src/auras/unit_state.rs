@@ -14,6 +14,7 @@
 //!   (`ObjectMgr::ChooseDisplayId`); else a MOD_SHAPESHIFT 36 form shows its model
 //!   (`shapeshift`); with neither left the native display returns.
 
+use crate::random as rand;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{ModelDisplay, Position, UnitFlags, UnitFlags2};

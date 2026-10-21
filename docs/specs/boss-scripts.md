@@ -1,5 +1,26 @@
 # Boss scripts
 
+## Dragonflight current-Retail Lua policy
+
+- User follower priority: Ruby Life Pools2521 → Algethar Academy2526 → Uldaman2451, then other Dragonflight dungeons after their source population lands. War Within is excluded from this task.
+- Explicit lead instruction: use current Retail Lua, not legacy handlers. Where Retail uses timeline conditionals unavailable to this server, keep ongoing requests by consuming the Lua's listed durations in source order and record the unexecutable condition context as a named gap. This is a declared partial scheduling policy, not claimed execution of Blizzard's timeline.
+- Take ordinary child spell requests, implicit targets, radii, triggers and effects from70448. Missing selectors become named gaps; do not invent alternate IDs, targets, effects, stats or follower205 difficulty rows. Require native Normal1 and Follower205 behavior proof per boss.
+
+## Melidrussa current-Retail partial boundary
+
+- Local Lua-backed188252/2609/map2521bit1. TC a352b1fa header/instance authenticate the primary (source ordinal0), not a boss AI. Current LittleWigs2777a9d Retail wrappers1307297/1307308 identify native children396044/1311543; old6.8/12.1 legacy clocks are not used.
+- Initial child requests5s Hailburst/15s Chillstorm. Per explicit lead scheduling policy, cycle listed Normal/Follower per-ability condition order: Hailburst24→22→25s and Chillstorm24→32→25s; Mythic lists24s for each. `MELIDRUSSA_TIMELINE_CONDITION_CONTEXT` retains the unavailable shared-count/phase/recovery conditions. Native casts wait normally; Hailburst keeps3s casting/area enemy damage.
+- `encounter_summons.py --encounter melidrussa` authenticates native wrapper→child metadata, blank TDB source identity, source spawn9001489/difficulties and TC/DB2 primary; prepare2609/map2521bit1 binding and explicitly local `boss_melidrussa_chillworn` on independent copies. Preserve stats/difficulties/models/addons/population and unrelated credit. Never grant Infused Whelp primary credit or create205 stats.
+- Named gaps: `MELIDRUSSA_CHILLSTORM_SELECTOR_UNSCRIPTED` (1311543→372851 selector/aura chain), `MELIDRUSSA_HAILBOMBS_SELECTOR_UNSCRIPTED` (396042 dummy→missile placement), `MELIDRUSSA_WHELP_PHASE_UNSOURCED` (Whelps/Bulwark/Frost Overload transitions). Native implicit targets are defaults; no guessed single-target/aura/summon forwarding. Whole encounter/follower clear/native visuals/loot/persistence remain unproved.
+
+## Umbrelskul Lua-clock partial boundary
+
+- Explicit lead-approved partial Lua-clock/native70448 port: Umbrelskul186738/map2515, saved ordinal3/encounter2584/native completionbit2. LittleWigs2777a9d `Dragonflight/TheAzureVault/Umbrelskul.lua` supplies ability countdowns, not a complete executable TC script.
+- Dragon Strike384978: initial7.4s ordinary victim request, native2.5s casting/direct damage/periodic aura/threat effects. Lua schedules its next8.4s Normal/Follower or15.3s Mythic countdown only on actual successful cast; interrupted attempts must not produce a fabricated success or retry.
+- Crystalline Roar384699: direct native damage-ability request at Lua12.2s countdown, then23.1s Normal/Follower or105.6s Mythic request countdowns, waiting for active native casting. Native target25 and caster-line129/radius/width/damage remain authoritative. This partial direct ability request does not claim upstream384696 dummy/target-selection scripting.
+- Named gaps: `UMBRELSKUL_ENERGY_PHASE_UNSOURCED` (Arcane Eruption385075 and Unleashed Destruction385399/388804 energy logic), `UMBRELSKUL_BRITTLE_CRYSTALS_UNSOURCED` (health/181089/386746/crystal spawn and Fracture), `UMBRELSKUL_ROAR_SELECTOR_UNSOURCED` (384696→384699 source script unavailable). Do not infer dummy forwarding or new summons from spell names/base-point IDs alone.
+- `encounter_summons.py --encounter umbrelskul` authenticates blank TDB source identity and installs explicitly local `boss_umbrelskul` on independent copies only; preserve all actor/difficulty/addon/model/population/credit data. No synthetic follower205 row. Native scheduled damage/reset/isolated credit require proof; no full encounter/follower/native clear/loot/persistence claim.
+
 ## Azureblade Lua-clock partial boundary
 
 - Lead explicitly approves a partial Lua-clock combat port for Azureblade186739/map2515, prioritizing follower205. LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `Dragonflight/TheAzureVault/Azureblade.lua` supplies schedules/counts; this is not TC combat or full Retail-phase parity.

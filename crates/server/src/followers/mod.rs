@@ -42,6 +42,8 @@ mod pull_sources;
 mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
+#[cfg(test)]
+pub(crate) mod simulator;
 mod spawning;
 mod stockade_diagnostic;
 mod tank_frontal;
