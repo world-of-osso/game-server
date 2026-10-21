@@ -39,11 +39,149 @@ pub fn apply_item_bonuses(
     bonus_list: &[u32],
     tables: &ItemBonusTables,
 ) -> Result<BonusResult, String> {
-    let _ = (bonus_list, tables);
-    Ok(BonusResult {
+    let mut result = BonusResult {
         scaling: *item,
         sockets: Vec::new(),
-    })
+    };
+    let mut midnight_scaling = false;
+    for bonus in ordered_entries(bonus_list, tables)? {
+        match bonus.kind {
+            1 if !midnight_scaling => adjust_level(&mut result.scaling, bonus.values[0])?,
+            2 => add_allocation(&mut result.scaling, bonus.values)?,
+            3 => {
+                result.scaling.quality = u8::try_from(bonus.values[0]).map_err(|e| e.to_string())?
+            }
+            6 => add_sockets(&mut result, bonus.values)?,
+            25 => replace_crafted_stat(&mut result.scaling, bonus.values[0])?,
+            49 => {
+                apply_scaling_config(&mut result.scaling, bonus.values[0], tables)?;
+                midnight_scaling = true;
+            }
+            52 => adjust_level(&mut result.scaling, bonus.values[0])?,
+            _ => {}
+        }
+    }
+    Ok(result)
+}
+
+fn ordered_entries<'a>(
+    ids: &[u32],
+    tables: &'a ItemBonusTables,
+) -> Result<Vec<&'a ItemBonus>, String> {
+    let mut ordered = ids.to_vec();
+    for id in &ordered {
+        if !tables.entries.contains_key(id) {
+            return Err(format!("ItemBonusList {id} has no native rows"));
+        }
+    }
+    // SimC76f8118 sc_item_data.cpp540: crafting/post-squish deltas go last.
+    ordered.sort_by_key(|id| {
+        let late = tables.entries[id]
+            .iter()
+            .any(|entry| matches!(entry.kind, 52 | 53));
+        (late, *id)
+    });
+    Ok(ordered
+        .into_iter()
+        .flat_map(|id| &tables.entries[&id])
+        .collect())
+}
+
+fn adjust_level(item: &mut ItemScaling, delta: i32) -> Result<(), String> {
+    let level = i32::from(item.item_level) + delta;
+    item.item_level = u16::try_from(level).map_err(|e| format!("item level {level}: {e}"))?;
+    if item.item_level == 0 {
+        return Err("item bonus produced item level zero".into());
+    }
+    Ok(())
+}
+
+fn add_allocation(item: &mut ItemScaling, values: [i32; 4]) -> Result<(), String> {
+    let stat = i8::try_from(values[0]).map_err(|e| e.to_string())?;
+    let existing = item.stats.iter().position(|entry| entry.stat == stat);
+    let vacant = item.stats.iter().position(|entry| entry.stat <= 0);
+    let index = existing
+        .or(vacant)
+        .ok_or("item has no free native stat allocation slot")?;
+    let entry = &mut item.stats[index];
+    entry.stat = stat;
+    entry.allocation = entry
+        .allocation
+        .checked_add(values[1])
+        .ok_or("item stat allocation overflow")?;
+    Ok(())
+}
+
+fn add_sockets(result: &mut BonusResult, values: [i32; 4]) -> Result<(), String> {
+    let count = usize::try_from(values[0]).map_err(|e| e.to_string())?;
+    let color = u32::try_from(values[1]).map_err(|e| e.to_string())?;
+    if result.sockets.len() + count > 3 {
+        return Err("ItemBonus exceeds three native gem socket fields".into());
+    }
+    result.sockets.extend(std::iter::repeat_n(color, count));
+    Ok(())
+}
+
+fn replace_crafted_stat(item: &mut ItemScaling, value: i32) -> Result<(), String> {
+    let stat = i8::try_from(value).map_err(|e| e.to_string())?;
+    let Some(old) = item
+        .stats
+        .iter()
+        .find(|entry| matches!(entry.stat, 24 | 25))
+        .map(|entry| entry.stat)
+    else {
+        return Ok(());
+    };
+    for entry in &mut item.stats {
+        if entry.stat == old {
+            entry.stat = stat;
+        }
+    }
+    Ok(())
+}
+
+fn apply_scaling_config(
+    item: &mut ItemScaling,
+    id: i32,
+    tables: &ItemBonusTables,
+) -> Result<(), String> {
+    let config = tables
+        .scaling_configs
+        .get(&(id as u32))
+        .ok_or_else(|| format!("ItemScalingConfig {id} absent"))?;
+    let offset = tables
+        .offset_curves
+        .get(&config.offset_curve)
+        .ok_or_else(|| format!("ItemOffsetCurve {} absent", config.offset_curve))?;
+    let curve_id = if config.squish_era < 2 {
+        92181
+    } else {
+        offset.curve
+    };
+    let curve = tables
+        .curves
+        .get(&curve_id)
+        .ok_or_else(|| format!("item curve {curve_id} absent"))?;
+    let level =
+        interpolate_curve(curve, f64::from(config.item_level))?.round() as i32 + offset.offset;
+    item.item_level =
+        u16::try_from(level).map_err(|e| format!("scaled item level {level}: {e}"))?;
+    item.squish_era = 2;
+    Ok(())
+}
+
+fn interpolate_curve(points: &[(f64, f64)], x: f64) -> Result<f64, String> {
+    let first = points.first().ok_or("item scaling curve has no points")?;
+    let upper = points.partition_point(|point| point.0 <= x);
+    if upper == 0 {
+        return Ok(first.1);
+    }
+    if upper == points.len() {
+        return Ok(points[upper - 1].1);
+    }
+    let (x0, y0) = points[upper - 1];
+    let (x1, y1) = points[upper];
+    Ok(y0 + (y1 - y0) * (x - x0) / (x1 - x0))
 }
 
 #[cfg(test)]
