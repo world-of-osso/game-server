@@ -19,7 +19,7 @@ Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege
 
 TC `SpellEffects.cpp:3765–3793` completes native exploration/event quests only when active, or native tracking-event flags even without visible log entries; already-rewarded quests are not replayed. Generic handler delegates to existing `quest::persist_scripted_quest_result` with the actual hit player and native MiscValue, preserving production persistence/dirty notifications.
 
-Ignored RED65cd8e660: native Dreamwalk193753 effect1→tracking quest39174, selected native effect through `resolve_effects` (not unrelated teleport siblings),1PASS/1FAIL26.85s. Missing persisted tracking reward fails; NPC-target exclusion control passes. Test also covers redb close/reopen and replay exclusion. `/home/osso/.worktrees/logs/census-tail/16-red.log`. GREEN pending.
+Ignored RED65cd8e660: native Dreamwalk193753 effect1→tracking quest39174, selected native effect through `resolve_effects` (not unrelated teleport siblings),1PASS/1FAIL26.85s. Missing persisted tracking reward fails; NPC-target exclusion control passes. Test also covers redb close/reopen and replay exclusion. `/home/osso/.worktrees/logs/census-tail/16-red.log`. Handler e73367de4 does not yet close this root: focused attempted GREEN1PASS/1FAIL40.31s (`16-green.log`) exposes **EFFECT16_NATIVE_TRACKING_QUEST_UNPUBLISHED**. Native39174 exists in `tdb_quest_template` (Flags0x2000400) but is absent `content_quest_template`, which production `load_quest_db` reads. No canonical mutation; producer/private-copy proof pending after priority118.
 
 ## Aura94 INTERRUPT_REGEN
 
