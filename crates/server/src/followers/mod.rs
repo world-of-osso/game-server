@@ -60,6 +60,9 @@ mod tank_planner_tests;
 use bevy::prelude::*;
 use shared::group::GroupRole;
 
+#[cfg(test)]
+mod group_buff_tests;
+
 pub(crate) use ai::FollowerReach;
 pub(crate) use catalog::FollowerCatalog;
 pub(crate) use party::{queue_player, stage_follower_party};
