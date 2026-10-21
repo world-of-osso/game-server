@@ -377,7 +377,6 @@ fn set_tail_moving(h: &mut Harness) {
 }
 
 #[test]
-#[ignore = "RED:377 grants movement across native spell families and refreshes active casts"]
 fn census_tail_377_native_shimmer_updates_active_fireball_and_removal_interrupts() {
     let mut h = harness(Vec::new(), &[SHIMMER, FIREBALL], 8).unwrap();
     h.cast_and_deliver(FIREBALL, Some(h.npc));
@@ -423,7 +422,6 @@ fn census_tail_377_native_shimmer_updates_active_fireball_and_removal_interrupts
 }
 
 #[test]
-#[ignore = "RED:377 admits foreign-family native Lightning Bolt while moving until native650ms expiry"]
 fn census_tail_377_native_shimmer_allows_foreign_family_then_expires() {
     const LIGHTNING_BOLT: u32 = 188_196;
     let mut h = harness(Vec::new(), &[SHIMMER, LIGHTNING_BOLT], 7).unwrap();
@@ -451,7 +449,6 @@ fn census_tail_377_native_shimmer_allows_foreign_family_then_expires() {
 }
 
 #[test]
-#[ignore = "RED:377 permits native Disintegrate channel and preserves ownership"]
 fn census_tail_377_native_shimmer_updates_channel_only_on_its_recipient() {
     const DISINTEGRATE: u32 = 356_995;
     let mut h = harness(Vec::new(), &[SHIMMER, DISINTEGRATE, 370898], 13).unwrap();
@@ -495,7 +492,6 @@ fn census_tail_377_native_shimmer_updates_channel_only_on_its_recipient() {
 }
 
 #[test]
-#[ignore = "RED control: actual Opening attr13 excludes native377 permission"]
 fn census_tail_377_native_prohibition_attribute_wins_over_all_spell_aura() {
     let mut h = harness(Vec::new(), &[SHIMMER, FIREBALL, 21651], 8).unwrap();
     let caster = h.caster;

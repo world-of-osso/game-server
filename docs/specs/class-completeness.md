@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Global cast movement aura slice — 2026-10-21
+
+- Native377 grants cast/channel movement without a family/label/amount constraint, except native attr13 movement-prohibition. Existing cast refresh, channel movement and removal/expiry logic remain authoritative.
+- Native212653 Shimmer650ms must update active Fireball, admit moving foreign-family Lightning Bolt and preserve existing Disintegrate channel until removed/expired; another recipient's aura cannot grant permission. Do not alter Blink/teleport behavior. [Native source and proof](../diagnostics/census-tail-70448.md).
+
 ## Asphyxiate generic stun/gravity slice — 2026-10-21
 
 - Native298 must share12's stun consumers: stop the first active cast, block non-allowed casts, stop movement and expose stunned status to existing combat/AI readers. Native221562 also retains existing shared gravity-disable state.

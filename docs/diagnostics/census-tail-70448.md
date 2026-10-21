@@ -27,6 +27,12 @@ Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/oss
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura377 CAST_WHILE_WALKING_ALL
+
+TC `Unit.cpp:3298–3313`: attribute13 `DO_NOT_ALLOW_DISABLE_MOVEMENT_INTERRUPT` wins, then330 mask/377 presence/307 label grant movement. Real212653 Shimmer index1 authors377 amount0, native duration650ms; permission is presence-only across spell families. Register existing CastMovement kind and extend existing permission reader, preserving cast/channel refresh/removal/expiry. No teleport changes.
+
+Ignored RED5ad0dfd17 gives0PASS/4FAIL18.18s. Active native Fireball never updates permission; moving foreign-family188196 rejects; native356995 channel remains immobile; real Opening21651 attr13 exclusion passes but Fireball positive comparison fails. Tests also assert natural650ms expiry interrupts before completion and foreign recipient remains independent. `/home/osso/.worktrees/logs/census-tail/377-red.log`, compile3m57s/no warnings. Minimal implementation and unchanged enabled tests committed; GREEN pending.
+
 ## Aura298 STUN_DISABLE_GRAVITY
 
 Native221562 Asphyxiate authors298 at index0. TC `SpellAuraEffects.cpp:3209–3222` applies ordinary stunned control plus shared gravity-disable retention. Existing runtime WorldAuraState already recognized298 for gravity but omitted every ordinary stun consumer. Extend native stun classification to298 for active-cast stop, cast admission, immobility, autoattack/AI stun readers and sitting-break lifecycle; reuse existing shared gravity state. No new control, wire, movement or threat subsystem.

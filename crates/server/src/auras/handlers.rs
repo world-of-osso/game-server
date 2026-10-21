@@ -313,6 +313,7 @@ pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const MOD_RESISTANCE_PCT: u32 = 101;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
+pub const CAST_WHILE_WALKING_ALL: u32 = 377;
 /// TC Unit::CanCastSpellWhileMoving: Misc0 SpellLabel, no family mask.
 pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
@@ -375,7 +376,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED_SUMMON => LinkedSummon,
         CREATE_AREATRIGGER => AreaTrigger,
         LINKED | LINKED_2 => Linked,
-        CAST_WHILE_WALKING | CAST_WHILE_WALKING_BY_SPELL_LABEL => CastMovement,
+        CAST_WHILE_WALKING | CAST_WHILE_WALKING_BY_SPELL_LABEL | CAST_WHILE_WALKING_ALL => {
+            CastMovement
+        }
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
         ABILITY_IGNORE_AURASTATE => CastRestriction,
         TRIGGER_SPELL_ON_POWER_AMOUNT => PowerTrigger,
