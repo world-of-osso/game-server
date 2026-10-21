@@ -126,6 +126,8 @@ fn encounter_coverage_azureblade_native_bounded_rotation_and_image_chain() {
                     .get(IMAGE)
                     .unwrap()
                     .misc
+                    .as_ref()
+                    .unwrap()
                     .cast_time
                     .unwrap()
                     .base_ms as f32
