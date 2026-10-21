@@ -3,6 +3,8 @@ use super::*;
 
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
+#[path = "azure_blade.rs"]
+mod azure_blade;
 #[path = "azure_combat.rs"]
 mod azure_combat;
 #[path = "azure_explosive_brand.rs"]
@@ -77,10 +79,14 @@ mod herald_reset;
 mod kargath;
 #[path = "kelidan.rs"]
 mod kelidan;
+#[path = "kokia.rs"]
+mod kokia;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
 mod maraudon;
+#[path = "melidrussa.rs"]
+mod melidrussa;
 #[path = "nethekurse.rs"]
 mod nethekurse;
 #[path = "noxxion.rs"]
@@ -101,6 +107,8 @@ mod the_maker;
 mod theradras;
 #[path = "tww_kyrioss.rs"]
 mod tww_kyrioss;
+#[path = "umbrelskul.rs"]
+mod umbrelskul;
 #[path = "vazruden_slay.rs"]
 mod vazruden_slay;
 #[path = "vyletongue.rs"]
@@ -350,8 +358,9 @@ fn encounter_fixture(
             std::collections::HashMap::from([(map_id, wdt)]),
         ));
     }
-    // Shattered Halls, Ramparts and Blood Furnace bindings are published world data.
-    if ![540, 542, 543].contains(&map_id) {
+    // Published/prepared primaries retain imported DB2 bits. Azure already has
+    // saved compatibility ordinals: do not mislabel those as DB2 bits.
+    if ![540, 542, 543, 2515, 2521].contains(&map_id) {
         maps.raid_creature_encounters.insert((map_id, entry), bit);
     }
     if map_id == 43 {

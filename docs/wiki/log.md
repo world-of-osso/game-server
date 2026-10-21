@@ -1,3 +1,31 @@
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
+## 2026-10-21 — Follower205 source audits
+
+[Generic difficulty chain](systems/level-scaling.md#creature-difficulty-fallback--2026-10-21): pinned70448/TDB1210/TCa352b1fa prove205→1→0, template CT precedence and ExpectedStat mods; existing178 content205 rows are40 Normal/138 base projections, not raw205 observations. Native Vault Rune197204 temporary spawn reproduces missing LevelScaling (403a8357b,1FAIL17.83s); generic template and regional-delta chain implemented, GREEN pending. Read-only all27-map source inventory records650 nonboss candidates,23 source-bound/627 unbound and10 absent populations; helpers/phases retained, not a hostile-mechanics completion claim. Evidence in engine `data/diagnostics/follower-dungeons-2026-10-21/`.
+## 2026-10-21 — Kokia current Retail partial
+
+[Kokia](systems/boss-scripts.md#kokia-current-retail-partial--2026-10-21): ignored firstSearingRED precedes currentRetail partial065cf3fc9. Native5/5GREEN78.66s atd1af8bded proves Normal/Follower140s ongoing lanes, native aura23 weapon damage/reset/source-order rearm/isolated2606bit0/corpse. Producer1PASS12.435s; authenticated primary/localLua binding only, all actor inputs retained. No legacy timing or unsourced Ritual/Firestorm/projectile forwarding; conditional context and final gate/publication remain explicit.
+
+## 2026-10-21 — Follower population source audit
+
+[All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
+## 2026-10-21 — Melidrussa current Retail partial
+
+[Melidrussa](systems/boss-scripts.md#melidrussa-current-retail-partial--2026-10-21): ignored nativeHail RED→currentRetail native-child/source-order lanes→5GREEN77.74s atbcc2dc5cf, Normal/Follower140s ongoing damage/copy credit/reset/corpse. Source producer1PASS6.140s authenticates2609/map2521bit1 and localLua binding without actor-data edits. Master mergedb7f618873 afterward; no fresh postmerge certification (capacity held9minutes), final gate/publication lead-owned. Timeline condition/selector/Whelp gaps retained.
+
+## 2026-10-21 — Umbrelskul partial Lua-clock port
+
+[Umbrelskul](systems/boss-scripts.md#umbrelskul-partial-lua-clock--2026-10-21): ignored firstStrikeRED a8b2e4c39 precedes78bd2a595 partial source. Native7GREEN44.00s at87fad0cf7, including Normal/Follower/Mythic source branches, success-only DragonStrike repeat/cancel, native line+periodic damage, reset and isolated2584bit2. Sourcecopy producer1PASS3.332s; local binding only, all world inputs preserved. Energy/Brittle/crystals/upstream selector remain named gaps; publication/final gate lead-owned.
+
+-2026-10-20: [Stockade simulator](systems/dungeon-simulator.md):50/50seeded clears; cwd-independent test catalogs, actualCounterspell-aware refusal oracle;278case Cargo gate passes except waived privateAzure asset prerequisite.
+-2026-10-20: [Stockade simulator](systems/dungeon-simulator.md): authored99pull route, production combat-only Divine Toll/Starfall policy and postmortem Hogger bleed history fix; first10/10seeded clears,96.37× run-inclusive,100×/live gates open.
+## 2026-10-20 — Transport-free Stockade simulator
+
+[Simulator](systems/dungeon-simulator.md): committed source graph143 packs/367 native walk edges and plain Bevy gameplay App. Graph census and isolated opening pack pass; full-route source-actor death/HP/mana/pull reporting exists, no boss clear. Route3 reproduced DPS lost during OOC hold; user clarified active-combat10s with dungeon/wipe reset, production correction committed pending GREEN. Combat RNG scoped replay/history family later GREEN. Optimized catalog reuse allocation/state-reset RED→GREEN6.39s; native dead-follower corpse despawn sampling RED→GREEN11.23s. Full seeds1–10 at2fa2b68d5/P03cebdb:0clears,2wipes,3stalls,3timeouts,2blocks; table/root observations in simulator page. No ≥100× consistency or live qualification. Complete native combat-event serialization added to diagnose causes. User later approved named ready single-pack/boss policies: native RED2→GREEN2 at aefef7da6; batch4 exposes false recovery stalls rather than measurement/boss refusal. Party-resource progress correction and sourced refreshment-consumer gap are recorded in the simulator page.
+## 2026-10-21 — Azureblade partial Lua-clock port
+
+[Azureblade](systems/boss-scripts.md#azureblade-partial-lua-clock--2026-10-21): explicit lead-approved Lua schedule/native70448 target/effect port, not invented TC AI. Ignored firstcleaveRED→native5GREEN37.75s atf9ec0db16 including Normal1/Follower205/two actual190187 summons/reset/isolated2585bit3. Producer sourcecopy1PASS; source base/models+1/23 rows, no synthetic205/population/credit change. Native-ground and ordinal-versus-bit fixture repairs retain production semantics. Energy/phase/area/Image-AI gaps and canonical publication remain open.
+
 ## 2026-10-21 — Broggok core and encounter-gap audit
 
 [Broggok](systems/boss-scripts.md#blood-furnace-broggok--2026-10-21): ignored appearance RED precedes source port; actual70448 cone damage/Normal+Heroic clocks, intro/release speech and isolated reset/death give COMPOSITE5GREEN. Native absent IDs and authentic TDB prisoner/path/navigation gaps stay explicit; no fabricated memberships or historical cloud. Audit72encounters/13dungeons at engine `data/diagnostics/encounter-gaps-2026-10-21/report.md`; not native-clear certification.
