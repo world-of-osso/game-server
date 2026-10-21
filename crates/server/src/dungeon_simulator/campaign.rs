@@ -92,6 +92,45 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 }
 
 #[test]
+fn stationary_full_party_still_stalls_without_any_progress() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    run.last_progress = run.now();
+    assert!(!run.stalled());
+    for _ in 0..1201 {
+        run.app.update();
+    }
+    assert!(
+        run.stalled(),
+        "full resources must not manufacture progress"
+    );
+}
+
+#[test]
+fn native_mana_recovery_is_party_progress_without_damage_or_movement() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    run.last_progress = run.now();
+    let healer = run.party.members[1];
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 8936, Some(healer), false)
+        .unwrap();
+    for _ in 0..1201 {
+        run.app.update();
+        assert!(
+            !run.stalled(),
+            "native OOC resource recovery must refresh party progress: {}",
+            run.report.detail
+        );
+    }
+}
+
+#[test]
 fn scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast() {
     let _rng_scope = crate::random::seed_scope(3);
     let mut run = spawn_run(3, &mut None).unwrap();
