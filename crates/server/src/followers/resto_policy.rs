@@ -4,6 +4,7 @@ use shared::components::Health;
 use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
 
 const IRONBARK: u32 = 102342;
+const BARKSKIN: u32 = 22812;
 const SWIFTMEND: u32 = 18562;
 const LIFEBLOOM: u32 = 33763;
 const NATURES_SWIFTNESS: u32 = 132158;
@@ -27,6 +28,7 @@ const OWNED: SpellSet = &[
     740,
     145205,
     IRONBARK,
+    BARKSKIN,
     UTILITY_REBIRTH,
     NATURES_SWIFTNESS,
     NATURES_CURE,
@@ -34,7 +36,8 @@ const OWNED: SpellSet = &[
 ];
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
-    let decision = choose_ironbark(ctx)
+    let decision = choose_defensive(ctx, BARKSKIN)
+        .or_else(|| choose_defensive(ctx, IRONBARK))
         .or_else(|| choose_swift_regrowth(ctx))
         .or_else(|| choose_urgent_swiftmend(ctx))
         .or_else(|| choose_tranquility(ctx))
@@ -53,13 +56,13 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
     }
 }
 
-fn choose_ironbark(ctx: &TriageContext<'_>) -> Option<Decision> {
+fn choose_defensive(ctx: &TriageContext<'_>, spell_id: u32) -> Option<Decision> {
     let entry = ctx
         .entries
         .iter()
-        .find(|entry| entry.spell_id == IRONBARK)?;
+        .find(|entry| entry.spell_id == spell_id)?;
     let threshold = entry.conditions.health_below?;
-    if !ctx.ready(IRONBARK) {
+    if !ctx.ready(spell_id) {
         return None;
     }
     let target = ctx
@@ -70,7 +73,10 @@ fn choose_ironbark(ctx: &TriageContext<'_>) -> Option<Decision> {
                 .world
                 .get::<Health>(patient.entity)
                 .is_some_and(|health| health.current < health.max * threshold);
+            let allowed_target = entry.conditions.target != super::kit::Target::SelfUnit
+                || patient.entity == ctx.caster;
             below
+                && allowed_target
                 && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
                 && super::kit_ai::combat_allows(
                     ctx.world,
@@ -85,7 +91,7 @@ fn choose_ironbark(ctx: &TriageContext<'_>) -> Option<Decision> {
                 .total_cmp(&right.projected_death_seconds)
         })?;
     Some(Decision {
-        spell_id: IRONBARK,
+        spell_id,
         target: target.entity,
         urgent: true,
     })

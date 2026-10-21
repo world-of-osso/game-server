@@ -126,3 +126,5 @@ Additional depth qualification now explicitly covers learned level13 Barkskin on
 Efflo recast lifecycle now has an unrun native fixture: two ordinary casts, real GCD, actual prior area-trigger entity, moved placement and exactly one current owned area trigger. It qualifies TC145205 effect2 old-area removal separately from81262 healing and AI admission. No cleanup implementation before RED.
 
 Tree activation alone is not throughput qualification. TC a352b1fa SpellAuraEffects.cpp1436–1530 gives form2 actual5420/81097 boost auras; local70448 rows provide their spell modifiers. A new unrun fixture requires real immediate Regrowth healing with those native boosts, then ordinary cast time and removed boosts after leaving form. No percentages, spellbook grants, or replacement buff may be fabricated; native-effect RED precedes implementation.
+
+After genuine attacked-healer RED, Barkskin joins the owned defensive selector before throughput and external Ironbark. Both retain actual authored HP/attacked/missing-aura conditions and native readiness; self rows cannot select another patient. No damage reduction is synthesized. Qualification pending.
