@@ -69,12 +69,12 @@ The [native producer](../../../scripts/item_instance_data.py) reads the existing
 
 | Resolution | Current coverage |
 |---|---|
-| ItemBonus | Types1/2/3/6/25/49/52: level delta, allocation, quality, sockets, crafted-stat replacement, Midnight config and crafting level. Other gameplay types remain unqualified. |
+| ItemBonus | Types1/2/3/6/25/49/52: level delta, allocation, quality, sockets, crafted-stat replacement, Midnight config and crafting level. Type23 retains ItemEffect IDs; the SQLite resolver joins base/bonus effect IDs to real spell/trigger/cooldown fields. Execution remains open. |
 | Explicit level / crafted choices | Existing RandPropPoints/weapon formula; no repeated legacy squish. Placeholders24/25 are replaced in order, never split into invented allocations. |
 | Enchants / gems | Native type5 stats use the existing gtSpellScaling data and native level cap; GemProperties resolves the enchant. Type3 spell IDs are preserved by the resolver, but automatic equip-aura/proc execution remains open. |
-| Inventory / stats | GUID persistence, owned projection, initial/delta delivery and modifier-only StatsPlugin refresh. Persistence integration GREEN remains pending at this branch milestone. |
+| Inventory / stats | GUID persistence, owned projection, initial/delta delivery and modifier-only StatsPlugin refresh. Owned GUID hydration/projection passed after their genuine REDs, alongside modifier-only Stats and legacy source controls. |
 
-Proof:15 library regressions pass; the actual native chest271468/enchant7987 modifier-only boundary failed687 versus737 before consumer wiring, then passed alongside the unchanged level20 Arcane gear control. Two subsequent native GUID-hydration/projection cases gave genuine RED before their implementation. This is not DPS parity or a deployment claim; [the parity contract](../../specs/dps-parity.md) tracks the remaining harness and measurements.
+Proof:18 library regressions pass (including three missing-effect RED→GREEN cases); the actual native chest271468/enchant7987 modifier-only boundary failed687 versus737 before consumer wiring, then passed alongside the unchanged level20 Arcane gear control. Two subsequent native GUID-hydration/projection cases gave genuine RED before implementation, then passed in the24-case library/main integration run. This is not DPS parity or a deployment claim; [the parity contract](../../specs/dps-parity.md) tracks the remaining harness and measurements.
 
 Sources: [instance resolver](../../../crates/server/src/item_instance.rs), [bonus/enchant loaders](../../../crates/server/src/item_instance/load.rs), [GUID store](../../../crates/server/src/item_instance/store.rs), [inventory model](../../../crates/server/src/inventory_model.rs), [stat consumer](../../../crates/server/src/stats.rs). Pinned behavior reference: SimC76f8118 `sc_item_data.cpp` and `item.cpp1740`.
 
@@ -153,8 +153,8 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 ### Gear
 
-- **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. ItemBonus/bonus-tree levels are not applied.
-- **Not modeled:** sockets and gems, enchants, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
+- **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. Explicit instance bonus lists use the qualified types [above](#instance-properties--2026-10-21); automatic bonus-tree/drop-context selection remains absent.
+- **Not modeled:** automatic equip-aura/proc execution, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Explicit gem/enchant stats use the qualified instance path [above](#instance-properties--2026-10-21). Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
 - **Admin grant:** `grant-equipment` writes equipment without the inventory change queue, so an online player's `EquippedItems` updates at the next inventory change or relog.
 
 ### Other

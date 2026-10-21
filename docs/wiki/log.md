@@ -1,6 +1,6 @@
 ## 2026-10-21 — Native item-instance stats foundation
 
-[Instance properties](systems/character-stats.md#instance-properties--2026-10-21): additive GUID storage preserves legacy bytes; native bonus/configuration, capped enchant and GemProperties resolution feeds slot-bound stats.15 library cases pass; actual native271468/7987 modifier-only RED687vs737→GREEN with retained Arcane control. Two real inventory hydration/projection REDs precede their implementation; integration GREEN, equip proc/aura execution and300s parity remain open. Canonical producer application is lead-owned; no deployment or DPS-parity claim.
+[Instance properties](systems/character-stats.md#instance-properties--2026-10-21): additive GUID storage preserves legacy bytes; native bonus/configuration, capped enchant and GemProperties resolution feeds slot-bound stats.15 library cases pass; actual native271468/7987 modifier-only RED687vs737→GREEN with retained Arcane control. Two real inventory hydration/projection REDs now pass in the24-case library/main integration proof. Type23/base ItemEffect identity resolution adds3RED→18libraryGREEN; equip proc/aura execution and300s parity remain open. Canonical producer application is lead-owned; no deployment or DPS-parity claim.
 
 ## 2026-10-21 — Azureblade partial Lua-clock port
 
