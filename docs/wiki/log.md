@@ -1,3 +1,7 @@
+## 2026-10-21 — Follower population source audit
+
+[All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
+
 ## 2026-10-21 — Broggok core and encounter-gap audit
 
 [Broggok](systems/boss-scripts.md#blood-furnace-broggok--2026-10-21): ignored appearance RED precedes source port; actual70448 cone damage/Normal+Heroic clocks, intro/release speech and isolated reset/death give COMPOSITE5GREEN. Native absent IDs and authentic TDB prisoner/path/navigation gaps stay explicit; no fabricated memberships or historical cloud. Audit72encounters/13dungeons at engine `data/diagnostics/encounter-gaps-2026-10-21/report.md`; not native-clear certification.
