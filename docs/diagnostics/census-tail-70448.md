@@ -45,7 +45,7 @@ Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege
 
 TC `SpellEffects.cpp:2966–2987` requires a living recipient; zero integral effect value takes caster maximum HP, nonzero takes recipient missing HP. No SpellHealingBonusDone/Taken calls. `Spell.cpp:2879–2892` then resolves native crit restrictions and shared healing delivery. Reuse existing resolved-heal/log/overheal/threat path, not ordinary modified healing or a new subsystem.
 
-Ignored RED734754e61: `census_tail_67_native --include-ignored`1PASS/3FAIL17.24s. Native633 castermax1000 and recipient500/5000 remains500 instead1500; native17683 BP1 remains500 instead5000. Native106457 +20% done/115804−50% taken case must still heal1000. Dead recipient control passes. Tests also verify unchanged caster HP and actual native633 noncrit1000/500 overheal log. `/home/osso/.worktrees/logs/census-tail/67-red.log`; compile1m58s/no warnings. Minimal consumer/enabled tests committed; GREEN pending. No claim for Lay on Hands secondary effects/scripts.
+Ignored RED734754e61: `census_tail_67_native --include-ignored`1PASS/3FAIL17.24s. Native633 castermax1000 and recipient500/5000 remains500 instead1500; native17683 BP1 remains500 instead5000. Native106457 +20% done/115804−50% taken case must still heal1000. Dead recipient control passes. Tests also verify unchanged caster HP and actual native633 noncrit1000/500 overheal log. `/home/osso/.worktrees/logs/census-tail/67-red.log`; compile1m58s/no warnings. GREENe91e195c3: unchanged enabled four cases4PASS/0FAIL/0ignored17.55s; compile2m00s/no warnings. `/home/osso/.worktrees/logs/census-tail/67-green.log`. No claim for Lay on Hands secondary effects/scripts.
 
 ## Aura423 MANA_COST_PCT
 
