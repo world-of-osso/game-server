@@ -205,6 +205,15 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    let party_in_combat = party.iter().any(|member| {
+        world.get::<InMap>(*member) == world.get::<InMap>(unit)
+            && world
+                .get::<shared::components::CombatStatus>(*member)
+                .is_some_and(|status| status.0)
+    });
+    if super::utility::is_raid_buff(entry.spell_id) && party_in_combat {
+        return false;
+    }
     if entry.slot == Slot::Defensive
         && (!super::utility::projected_death(world, target)
             || super::utility::active_defensive(world, target))

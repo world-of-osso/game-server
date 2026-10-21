@@ -28,7 +28,7 @@ Bo's real first-fight pursuit/attack regression must pass in the ordinary2D game
 
 - `SHUJA_LUST_NOT_LEARNED_70448`: neither Bloodlust nor Heroism is in the selected Elemental loadout. Time Warp/Fury remain available to the learned Mage/Evoker.
 - `SOULSTONE_CORPSE_CHILD_UNLINKED_70448`:20707 triggers dummy6203, not resurrect95750. The utility layer does not invent that missing script link or claim Soulstone battle-res support.
-- `DIVINE_STEED_DUMMY_UNIMPLEMENTED`:190784 has only effect3; description references221883 but the ordinary backend has no wrapper implementation. Do not consume this no-op as a pursuit speed ability.
+- `DUMMY_PURSUIT_MOTION_UNIMPLEMENTED`: Divine Steed190784, Charge100 and Shield Charge385952 have no executed native motion in the current ordinary backend. Steed's description references221883; Charge100 can still grant its native Rage. Do not count accepted casts as movement or invent wrapper-child links.
 - Fear5782 is also dummy-only in70448; direct metadata cannot classify it as a stopping aura. Native118,853 and learned stopping controls provide the actual control/danger fixtures. Inventory does not fill missing spell mechanics by name.
 
 ## Proof

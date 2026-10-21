@@ -1,3 +1,7 @@
+## 2026-10-21 — Follower utility and scoped geometry
+
+[Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.

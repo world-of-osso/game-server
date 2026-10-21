@@ -96,26 +96,17 @@ pub(super) fn active_defensive(world: &World, target: Entity) -> bool {
 
 pub(super) fn normalize_entry(mut entry: Entry) -> Entry {
     let id = entry.spell_id;
-    match id {
-        642 | 23920 | 110959 | 414658 => {
-            entry.slot = Slot::Defensive;
-            entry.conditions.target = Target::SelfUnit;
+    if let Some((slot, target)) = classify_manual_utility(id) {
+        entry.slot = slot;
+        entry.conditions.target = target;
+        if slot == Slot::Defensive {
             entry.conditions.missing_aura = Some(id);
-        }
-        1022 | 6940 | 204018 | 97462 => {
-            entry.slot = Slot::Defensive;
-            entry.conditions.target = Target::Party;
-            entry.conditions.missing_aura = Some(id);
-        }
-        8122 | 6789 | 30283 | 115750 => {
-            entry.slot = Slot::Control;
-            entry.conditions.target = Target::Enemy;
+        } else {
             entry.conditions.requires_cast = true;
             entry.conditions.source_center = matches!(id, 8122 | 115750);
             entry.conditions.min_enemies =
                 usize::from(entry.conditions.source_center || id == 30283);
         }
-        _ => {}
     }
     if is_raid_buff(id) {
         entry.conditions.target = Target::Party;
@@ -125,6 +116,15 @@ pub(super) fn normalize_entry(mut entry: Entry) -> Entry {
         entry.conditions.attacked = false;
     }
     entry
+}
+
+fn classify_manual_utility(spell: u32) -> Option<(Slot, Target)> {
+    match spell {
+        642 | 23920 | 110959 | 414658 => Some((Slot::Defensive, Target::SelfUnit)),
+        1022 | 6940 | 204018 | 97462 => Some((Slot::Defensive, Target::Party)),
+        8122 | 6789 | 30283 | 115750 => Some((Slot::Control, Target::Enemy)),
+        _ => None,
+    }
 }
 
 /// Learned intervals remain authoritative; no scheduler spell grants.
@@ -193,24 +193,26 @@ fn res_reserved(world: &World, target: Entity) -> bool {
         })
 }
 
+fn battle_res_candidate(world: &World, unit: Entity, target: Entity) -> bool {
+    world.get::<InMap>(target) == world.get::<InMap>(unit)
+        && world
+            .get::<Health>(target)
+            .is_some_and(|health| health.current <= 0.0)
+        && matches!(
+            role(world, target),
+            Some(GroupRole::Healer | GroupRole::Tank)
+        )
+        && !res_reserved(world, target)
+        && world
+            .get::<crate::death::resurrection::PendingResurrection>(target)
+            .is_none()
+}
+
 fn try_battle_res(world: &mut World, unit: Entity, follower: &Follower, party: &[Entity]) -> bool {
     let target = party
         .iter()
         .copied()
-        .filter(|target| {
-            world.get::<InMap>(*target) == world.get::<InMap>(unit)
-                && world
-                    .get::<Health>(*target)
-                    .is_some_and(|health| health.current <= 0.0)
-                && matches!(
-                    role(world, *target),
-                    Some(GroupRole::Healer | GroupRole::Tank)
-                )
-                && !res_reserved(world, *target)
-                && world
-                    .get::<crate::death::resurrection::PendingResurrection>(*target)
-                    .is_none()
-        })
+        .filter(|target| battle_res_candidate(world, unit, *target))
         .min_by_key(|target| {
             (
                 role(world, *target) != Some(GroupRole::Healer),
@@ -244,11 +246,9 @@ fn is_boss(world: &World, unit: Entity) -> bool {
         })
 }
 
-fn try_lust(
+fn update_boss_pull(
     world: &mut World,
-    unit: Entity,
-    follower: &Follower,
-    party: &[Entity],
+    owner: Entity,
     enemies: &[(Entity, Option<Entity>)],
 ) -> bool {
     let Some(boss) = enemies
@@ -256,28 +256,41 @@ fn try_lust(
         .map(|(enemy, _)| *enemy)
         .find(|enemy| is_boss(world, *enemy))
     else {
-        world.entity_mut(follower.owner).remove::<BossPull>();
+        world.entity_mut(owner).remove::<BossPull>();
         return false;
     };
     let now = world.resource::<Time>().elapsed_secs_f64();
     if world
-        .get::<BossPull>(follower.owner)
+        .get::<BossPull>(owner)
         .is_none_or(|pull| pull.boss != boss)
     {
-        world.entity_mut(follower.owner).insert(BossPull {
+        world.entity_mut(owner).insert(BossPull {
             boss,
             started: now,
             lust_used: false,
         });
     }
-    let pull = world.get::<BossPull>(follower.owner).unwrap();
+    let pull = world.get::<BossPull>(owner).unwrap();
+    !pull.lust_used && now - pull.started <= BOSS_PULL_SECONDS
+}
+
+fn try_lust(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+    enemies: &[(Entity, Option<Entity>)],
+) -> bool {
+    if !update_boss_pull(world, follower.owner, enemies) {
+        return false;
+    }
     let exhausted = party.iter().any(|member| {
         EXHAUSTION
             .iter()
             .chain(LUST)
             .any(|aura| crate::auras::has_aura(world, *member, *aura))
     });
-    if pull.lust_used || now - pull.started > BOSS_PULL_SECONDS || exhausted {
+    if exhausted {
         return false;
     }
     for spell in learned(world, unit, follower, LUST) {
@@ -296,24 +309,10 @@ pub(super) fn try_movement(
     follower: &Follower,
     attack: u32,
 ) -> bool {
-    let pursuing = matches!(world.get::<crate::creature_ai::CreatureState>(unit), Some(crate::creature_ai::CreatureState::Pursuing { target: moving }) if *moving == target.to_bits());
-    if !pursuing || crate::auras::has_breakable_by_damage_cc(world, target) {
-        return false;
-    }
-    let Some(distance) = distance(world, unit, target) else {
+    let Some(reach) = read_attack_reach(world, attack, follower.profile.melee) else {
         return false;
     };
-    let reach = if follower.profile.melee {
-        super::ai::MELEE_REACH
-    } else {
-        world
-            .resource::<SpellStore>()
-            .get(attack)
-            .and_then(|spell| spell.misc.as_ref())
-            .and_then(|misc| misc.range)
-            .map_or(f32::INFINITY, |range| range.max_hostile)
-    };
-    if distance <= reach {
+    if !pursuit_is_out_of_range(world, unit, target, reach) {
         return false;
     }
     // Dummy-only Steed/Charge/Shield Charge wrappers do not execute movement.
@@ -327,6 +326,26 @@ pub(super) fn try_movement(
         }
     }
     false
+}
+
+fn read_attack_reach(world: &World, spell: u32, melee: bool) -> Option<f32> {
+    if melee {
+        return Some(super::ai::MELEE_REACH);
+    }
+    world
+        .resource::<SpellStore>()
+        .get(spell)?
+        .misc
+        .as_ref()?
+        .range
+        .map(|range| range.max_hostile)
+}
+
+fn pursuit_is_out_of_range(world: &World, unit: Entity, target: Entity, reach: f32) -> bool {
+    let pursuing = matches!(world.get::<crate::creature_ai::CreatureState>(unit), Some(crate::creature_ai::CreatureState::Pursuing { target: moving }) if *moving == target.to_bits());
+    pursuing
+        && !crate::auras::has_breakable_by_damage_cc(world, target)
+        && distance(world, unit, target).is_some_and(|distance| distance > reach)
 }
 
 fn distance(world: &World, unit: Entity, target: Entity) -> Option<f32> {

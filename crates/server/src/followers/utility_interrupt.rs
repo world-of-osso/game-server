@@ -3,7 +3,6 @@ use super::Follower;
 use crate::spell_info::{SpellInfo, SpellStore};
 use bevy::prelude::*;
 use shared::casting::CastState;
-use std::cmp::Reverse;
 use std::collections::BTreeSet;
 
 #[derive(Component)]
@@ -77,9 +76,8 @@ pub(super) fn ordered_casts(world: &World, enemies: &[(Entity, Option<Entity>)])
         })
         .collect();
     casts.sort_by(|a, b| {
-        (Reverse(a.1), a.2)
-            .partial_cmp(&(Reverse(b.1), b.2))
-            .unwrap_or(std::cmp::Ordering::Equal)
+        b.1.cmp(&a.1)
+            .then_with(|| a.2.total_cmp(&b.2))
             .then_with(|| a.0.to_bits().cmp(&b.0.to_bits()))
     });
     casts.into_iter().map(|(enemy, _, _)| enemy).collect()

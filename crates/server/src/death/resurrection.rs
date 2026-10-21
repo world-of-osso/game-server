@@ -60,17 +60,21 @@ pub(crate) fn send_offer(world: &mut World, ctx: &EffectCtx, effect: &SpellEffec
 
 /// FOLLOWER_UTILITY_POLICY: a party companion accepts the ordinary native effect.
 /// Never resurrect arbitrary NPCs or cross-owner/copy follower corpses.
-fn resurrect_follower(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+fn follower_corpse_eligible(world: &World, caster: Entity, target: Entity) -> bool {
     let follower = world.get::<crate::followers::Follower>(target).unwrap();
     let caster_owner = world
-        .get::<crate::followers::Follower>(ctx.caster)
-        .map_or(ctx.caster, |caster| caster.owner);
+        .get::<crate::followers::Follower>(caster)
+        .map_or(caster, |follower| follower.owner);
     let same_party = follower.owner == caster_owner;
-    let same_map = world.get::<InMap>(target) == world.get::<InMap>(ctx.caster);
+    let same_map = world.get::<InMap>(target) == world.get::<InMap>(caster);
     let dead = world
         .get::<Health>(target)
         .is_some_and(|health| health.current <= 0.0);
-    if !same_party || !same_map || !dead {
+    same_party && same_map && dead
+}
+
+fn resurrect_follower(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if !follower_corpse_eligible(world, ctx.caster, target) {
         return;
     }
     let Some(pending) = build_offer(world, ctx, effect, target) else {
@@ -80,17 +84,21 @@ fn resurrect_follower(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, 
         .entity_mut(target)
         .remove::<(crate::combat::DeathState, crate::combat::Corpse)>()
         .insert((pending.position, crate::creature_ai::CreatureState::Idle));
-    if let Some(mut health) = world.get_mut::<Health>(target) {
-        health.current = pending.health.min(health.max);
-    }
-    if let Some(mut mana) = world.get_mut::<Mana>(target) {
-        mana.current = pending.mana.min(mana.max);
-    }
+    restore_vitals(world, target, &pending);
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(target);
     }
     if pending.aura != 0 {
         crate::spell_cast::cast_triggered(world, target, pending.aura, Some(target), 0);
+    }
+}
+
+fn restore_vitals(world: &mut World, target: Entity, pending: &PendingResurrection) {
+    if let Some(mut health) = world.get_mut::<Health>(target) {
+        health.current = pending.health.min(health.max);
+    }
+    if let Some(mut mana) = world.get_mut::<Mana>(target) {
+        mana.current = pending.mana.min(mana.max);
     }
 }
 
@@ -203,12 +211,7 @@ fn apply_resurrection(world: &mut World, player: Entity, pending: &PendingResurr
     world
         .entity_mut(player)
         .insert((pending.position, PlayerDeathState::default()));
-    if let Some(mut health) = world.get_mut::<Health>(player) {
-        health.current = pending.health.min(health.max);
-    }
-    if let Some(mut mana) = world.get_mut::<Mana>(player) {
-        mana.current = pending.mana.min(mana.max);
-    }
+    restore_vitals(world, player, pending);
     crate::teleport::teleported_in(world, player);
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(player);
