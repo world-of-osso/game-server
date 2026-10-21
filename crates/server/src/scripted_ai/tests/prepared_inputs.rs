@@ -69,6 +69,8 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         186737 => Some("telash"),
         186739 => Some("azureblade"),
         186738 => Some("umbrelskul"),
+        196482 => Some("ancient"),
+        190609 => Some("doragosa"),
         188252 => Some("melidrussa"),
         189232 => Some("kokia"),
         _ => None,
@@ -106,7 +108,7 @@ fn decode_encounter_inputs(
     let data = data().expect("world.db fixture");
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    if [20923, 188252, 189232].contains(&entry) {
+    if [20923, 196482, 190609, 188252, 189232].contains(&entry) {
         // The authenticated primary binding belongs to this prepared copy, not canonical data.
         inputs.push(crate::maps::store::load_map_store(&conn).unwrap());
     }

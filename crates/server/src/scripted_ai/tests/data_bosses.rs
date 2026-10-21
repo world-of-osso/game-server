@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "ancient.rs"]
+mod ancient;
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
 #[path = "azure_blade.rs"]
@@ -43,6 +45,10 @@ mod azure_telash_return;
 mod broggok;
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "crawth.rs"]
+mod crawth;
+#[path = "doragosa.rs"]
+mod doragosa;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]

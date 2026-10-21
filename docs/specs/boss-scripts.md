@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Academy current Retail partial boundary
+
+- Doragosa190609/2565/bit3 uses current Retail Missiles373326 initial7/repeat10, Astral Blast1282251 initial9/repeat12, Bomb374343 initial/repeat14, Vacuum388822 initial/repeat28. Explicitly canceled6.5s Blast bars never cast; native cast serialization delays due requests. Retain `DORAGOSA_TIMELINE_CONDITION_CONTEXT`, `DORAGOSA_BOMB_SELECTOR_GAP` and `DORAGOSA_OVERWHELMING_RIFT_SCRIPT_GAP`; no legacy Breath374361 or guessed bomb targets/rifts. `--encounter doragosa` only installs local binding; authored spawn9001231, flags64, stats/models/difficulties unchanged.
+
+- Ancient196482/2563/map2526/bit1 uses current Retail LittleWigs2777a9d durations: Barkbreaker388544 initial9 then28/29 in order, Germinate388796 initial18/repeat33, Branch Out388623 initial/repeat30, Burst Forth388923 initial54/repeat55. Native70448 targets/effects remain authoritative. No legacy OnEngage schedules.
+- Parent initially authorized outgoing-cast fixtures via threat engagement while retaining Ancient/Crawth source immunity832. Actual immunity derives AggroMode::Passive and prevents can_engage; final decision retains `ANCIENT_PC_IMMUNITY_INGRESS_UNSOURCED`/`CRAWTH_PC_IMMUNITY_INGRESS_UNSOURCED` without artificial fixture state. Ancient port timers remain blocked/unproven; Crawth port is deferred. `ACADEMY_ANCIENT_UNLOCK_SOURCE_GAP` and `ACADEMY_ANCIENT_ORDINARY_KILL_CREDIT_GAP` remain; no flag removal or full-clear claim. `ACADEMY_TIMELINE_CONDITION_CONTEXT` covers canceled/random Normal bars, energy and paused/removed timeline events; source-listed durations still continue in order.
+- `ACADEMY_ANCIENT_GERMINATE_SELECTOR_GAP` and `ACADEMY_ANCIENT_BRANCH_SELECTOR_GAP`: native dummy388797/388623 has no authored child/summon selector. Never invent lashers/branches/placements. Producer `encounter_summons.py --encounter ancient` binds only the authenticated source primary and local Lua script; no stats/population/models/addons/difficulty edits.
+- `ACADEMY_VEXAMUS_COMBAT_ACTOR_SOURCE_GAP`:194181 has no TDB spawn/group. Native387448 summons194181/property64 but no authored TC/SAI caster ingress. Placement deferred; no guessed coordinates or actor alias.
 ## TWW Rookery — Kyrioss source boundary
 
 - Map2648 primary209230/encounter2816/bit0 runs explicitly named `littlewigs_kyrioss`; TC a352b1fa has no Rookery script. `encounter_summons.py --encounter kyrioss` binds independent copies only, validates native identity, preserves TDB stats/population/difficulty rows and unrelated bosses; lead owns publication.
