@@ -11,6 +11,21 @@ const ANCIENT_ORB: u32 = 385578;
 
 fn azureblade_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(AZUREBLADE, MAP, ORDINAL, difficulty, None);
+    let wdt = h.app.world().resource::<MapStore>().maps[&MAP].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(MAP, wdt)]),
+    ));
+    let position = *h.app.world().get::<Position>(boss).unwrap();
+    let probe = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_in(map, Vec3::new(position.x, position.y, position.z));
+    assert!(
+        matches!(probe, crate::ground::GroundProbe::Supported(_)),
+        "native Azureblade floor prerequisite: {probe:?}"
+    );
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
