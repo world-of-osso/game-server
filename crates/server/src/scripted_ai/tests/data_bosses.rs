@@ -101,6 +101,8 @@ mod the_maker;
 mod theradras;
 #[path = "tww_kyrioss.rs"]
 mod tww_kyrioss;
+#[path = "tww_orator.rs"]
+mod tww_orator;
 #[path = "vazruden_slay.rs"]
 mod vazruden_slay;
 #[path = "vyletongue.rs"]
@@ -431,7 +433,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230,
+            209230, 216619,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
