@@ -3434,3 +3434,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Source-complete toy visual server rule
 
 [Rule and proof](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): two unconditioned cosmetic contracts/114 authored rows/24 source tables, strict zero-payload pipeline. Actual learn/apply/owner replication/cancel RED2→GREEN3; source durations/recovery and four metadata refusals, invariants retained. Canonical507→509;379 original dummy identities split into proved/current-script/identity and named contract gaps. No blanket dummy or native playback claim; check/fmt/census/refusal PASS.
+
+## 2026-10-21 — Published companion fixture reconciliation
+
+[Checkpoint](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): ty835 exposes stale53453 absence. Replaced synthetic3141/25305 fixture with native99104/canonical3141/actual53453 source identity and lifecycle assertions;206-ID Rust/Python scan finds no other stale absence. Focused proof is pending fair capacity admission; no GREEN claim at this push.
