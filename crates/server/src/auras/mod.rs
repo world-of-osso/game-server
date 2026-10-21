@@ -357,7 +357,7 @@ impl ActiveAuras {
 
     /// Under a `SPELL_AURA_MOD_STUN` effect (AzerothCore `UNIT_STATE_STUNNED`).
     pub fn is_stunned(&self) -> bool {
-        self.has_type(handlers::MOD_STUN)
+        self.has_type(handlers::MOD_STUN) || self.has_type(handlers::MOD_STUN_DISABLE_GRAVITY)
     }
 
     /// Under a `SPELL_AURA_MOD_CONFUSE` effect (TrinityCore `UNIT_STATE_CONFUSED`).
@@ -1101,9 +1101,12 @@ pub(crate) fn apply_aura_with_spell(
 }
 
 fn stuns(aura: &AuraInstance) -> bool {
-    aura.effects
-        .iter()
-        .any(|effect| effect.aura_type == handlers::MOD_STUN)
+    aura.effects.iter().any(|effect| {
+        matches!(
+            effect.aura_type,
+            handlers::MOD_STUN | handlers::MOD_STUN_DISABLE_GRAVITY
+        )
+    })
 }
 
 /// TC Unit::SetControlled(UNIT_STATE_STUNNED) stops the current cast only when
@@ -1870,7 +1873,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
         .categories
         .as_ref()
         .map_or(0, |categories| categories.prevention_type);
-    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_STUNNED == 0 && has(&[handlers::MOD_STUN]) {
+    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_STUNNED == 0
+        && has(&[handlers::MOD_STUN, handlers::MOD_STUN_DISABLE_GRAVITY])
+    {
         return Some(CastBlock::Stunned);
     }
     if prevention & PREVENTION_SILENCE != 0

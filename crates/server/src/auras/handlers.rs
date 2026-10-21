@@ -221,6 +221,8 @@ pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
 /// TC Unit.cpp1725: Player-only physical armor penetration.
 pub const MOD_ARMOR_PENETRATION_PCT: u32 = 280;
+/// TC HandleAuraModStunAndDisableGravity.
+pub const MOD_STUN_DISABLE_GRAVITY: u32 = 298;
 pub const MOD_INCREASE_VEHICLE_FLIGHT_SPEED: u32 = 206;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_INCREASE_FLIGHT_SPEED: u32 = 208;
@@ -486,6 +488,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | WATER_WALK
         | HOVER
         | DISABLE_GRAVITY
+        | MOD_STUN_DISABLE_GRAVITY
         | MOD_MOVEMENT_FORCE_MAGNITUDE
         | TRACK_CREATURES
         | STORE_TELEPORT_RETURN_POINT

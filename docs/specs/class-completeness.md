@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Asphyxiate generic stun/gravity slice — 2026-10-21
+
+- Native298 must share12's stun consumers: stop the first active cast, block non-allowed casts, stop movement and expose stunned status to existing combat/AI readers. Native221562 also retains existing shared gravity-disable state.
+- Removing either source cannot release another298/12 stun or488 gravity source; removing the last restores ordinary state. No new client projection or creature floating/threat subsystem is claimed. [Native tests and source](../diagnostics/census-tail-70448.md).
+
 ## Generic armor-penetration census slice — 2026-10-21
 
 - Native280 sums on Players only, clamps0–100 at physical armor reduction and applies to the TC victim-level penetrable-armor cap, not all armor. Preserve native mitigation and reversible removal; controlled NPCs gain no Player-only penetration.

@@ -608,7 +608,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_MOUNTED_FLIGHT_SPEED_ALWAYS => acc.always_flight *= pct(amount),
             MOD_FLIGHT_SPEED_NOT_STACK => acc.flight_not_stack = acc.flight_not_stack.max(amount),
             MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),
-            MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
+            MOD_ROOT | MOD_ROOT_2 | MOD_STUN | MOD_STUN_DISABLE_GRAVITY => acc.immobile = true,
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,
             MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
             MOD_MELEE_HASTE_3 => combat.attack_time_mult *= time_percent_mod(amount),

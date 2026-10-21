@@ -315,7 +315,6 @@ fn assert_stun_state(h: &Harness, stunned: bool, gravity: bool) {
 }
 
 #[test]
-#[ignore = "RED:298 must stop an actual active cast and block while applied"]
 fn census_tail_298_native_asphyxiate_stops_cast_and_releases_stun_gravity() {
     let mut h = stun_fixture();
     h.cast_and_deliver(FIREBALL, Some(h.npc));
@@ -340,7 +339,6 @@ fn census_tail_298_native_asphyxiate_stops_cast_and_releases_stun_gravity() {
 }
 
 #[test]
-#[ignore = "RED: removing298 retains native488 gravity and independent12 stun"]
 fn census_tail_298_native_removal_preserves_other_stun_and_gravity_sources() {
     let mut h = stun_fixture();
     let caster = h.caster;
@@ -357,7 +355,6 @@ fn census_tail_298_native_removal_preserves_other_stun_and_gravity_sources() {
 }
 
 #[test]
-#[ignore = "RED: removing ordinary12 cannot release active298 stun"]
 fn census_tail_298_native_asphyxiate_remains_when_ordinary_stun_is_removed() {
     let mut h = stun_fixture();
     let caster = h.caster;

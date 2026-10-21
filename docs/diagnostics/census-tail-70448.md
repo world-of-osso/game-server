@@ -2,6 +2,12 @@
 
 Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diagnostics/class-census-70448-2026-10-21/{by-cause,fixture-delta,per-spec-matrix}.md`;7071PASS/756FAIL of7827 memberships. Dispatch certification is not full-ability parity.
 
+## Refreshed census after five table causes
+
+Probe at merged89fdf21ac:1PASS/0FAIL851.63s, exit0, exactly7827 memberships/40 specs. Frozen fixture classification recomputed against every baseline status: **7090PASS/737FAIL**, versus7071/756. Owned94/16/62/206/280 warnings disappear and18 memberships promote; three additional Glide promotions are inherited, not this branch's work. Two newly observed failures remain explicit:102/202770 Fury of Elune `SPELL_DEST_FORCE_LOCATION_MAX_HEIGHT_ABSENT`,263/196884 Feral Lunge `implicit target148 not supported`. These target148 admission boundaries appeared after merging master; no adjacent implementation or silent baseline adjustment.
+
+Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/osso/.worktrees/logs/census-tail/data/diagnostics/class-census-tail-2026-10-21/`: exact command/protocol, full native receipts, frozen classified cases, delta, cause ranking, per-spec matrix and exit/log. Producer `/home/osso/.worktrees/logs/census-tail/analyze-tail.py` only reads canonical source. Initial interrupted235-row run retained separately and not counted; complete retry used the already-compiled89fdf21ac executable under agent-run with capacity ADD. Checkout later033c72a79 adds only ignored298 tests, absent from that existing executable. Dispatch success remains bounded, not full ability parity.
+
 ## Named gaps
 
 | Cause | Roots | Disposition and evidence |
@@ -20,6 +26,12 @@ Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diag
 **POSSESS_CHARM_SYSTEM_ABSENT**: aura2 Mind Control605 and aura6 Dominate Mind205364 require TC `HandleModPossess`/`HandleModCharm` (`SpellAuraEffects.cpp:3238–3262,3303–3315`) and `SetCharmedBy`/`RemoveCharmedBy`. Server has no corresponding relationship/control lifecycle. `PetCharm` (`pet_control.rs:90`) stores an existing pet's command/react/action bar, not arbitrary charm or possession; pet actions resolve an already-owned pet. Existing `scripted_ai/blood_furnace.rs` explicitly retains `MAKER_DOMINATION_CHARM_UNIMPLEMENTED` for aura6. Do not build a new subsystem for this census.
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
+
+## Aura298 STUN_DISABLE_GRAVITY
+
+Native221562 Asphyxiate authors298 at index0. TC `SpellAuraEffects.cpp:3209–3222` applies ordinary stunned control plus shared gravity-disable retention. Existing runtime WorldAuraState already recognized298 for gravity but omitted every ordinary stun consumer. Extend native stun classification to298 for active-cast stop, cast admission, immobility, autoattack/AI stun readers and sitting-break lifecycle; reuse existing shared gravity state. No new control, wire, movement or threat subsystem.
+
+Ignored RED033c72a79 `census_tail_298 --include-ignored`:1PASS/2FAIL13.94s. Real Fireball stays active after Asphyxiate; removing native853 leaves298 present but `is_stunned=false`. Independent488+12 overlap control already passes. Three native cases retain speed0/cast blocker and mixed-source removal checks. `/home/osso/.worktrees/logs/census-tail/298-red.log`; compile8m06s/no warnings. Minimal consumer changes and enabled tests committed; GREEN pending. Gravity client projection, creature template floating and threat suppression are not newly qualified by this bounded existing-state slice.
 
 ## Aura280 ARMOR_PENETRATION_PCT
 
