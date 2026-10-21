@@ -483,9 +483,14 @@ fn follower_utility_policy_battle_res_prefers_dead_healer() {
 fn follower_utility_policy_movement_buff_for_distant_pursuit() {
     let (mut h, unit) = at_level(215240, 32, |_| {});
     h.app.world_mut().get_mut::<Position>(h.npc).unwrap().x = 80.0;
-    for _ in 0..10 {
+    // The independently landed rotation may first admit native Dragonrage375087.
+    // Allow its real GCD before ordinary attack selection establishes pursuit.
+    for _ in 0..120 {
         update_ai(h.app.world_mut());
         h.advance(1);
+        if cast_count(&h, 358267) > 0 {
+            break;
+        }
     }
     assert_eq!(
         cast_count(&h, 358267),
