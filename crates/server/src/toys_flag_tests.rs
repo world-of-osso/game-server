@@ -13,6 +13,8 @@ fn flag_harness(path: &std::path::Path) -> (Harness, u64) {
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     bevy::app::Plugin::build(&crate::death::DeathPlugin, &mut h.app);
+    h.app.init_resource::<ToyChatCapture>();
+    h.app.add_systems(PostUpdate, capture_toy_chat);
     h.app.world_mut().entity_mut(h.connection).insert((
         MessageSender::<ChatMessage>::default(),
         MessageReceiver::<ChatMessage>::default(),
@@ -97,7 +99,7 @@ fn toy_coverage_flag51640_actual_enemy_death_plants_one_source_flag_and_expires(
     );
     // Full-mask child casts use the ordinary triggered path: prove their actual
     // object/aura effects above, not a separate child SpellGo packet.
-    let emotes = drain::<ChatMessage>(&mut h.app, h.connection);
+    let emotes = &h.app.world().resource::<ToyChatCapture>().0[&h.connection];
     assert!(
         emotes.iter().any(|m| m.channel == ChatType::Emote
             && m.content.contains("Fallenorc")
