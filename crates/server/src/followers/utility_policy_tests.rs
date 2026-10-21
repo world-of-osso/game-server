@@ -129,6 +129,39 @@ fn follower_utility_policy_native_resurrection_from_follower_retains_player_acce
 }
 
 #[test]
+fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_stored_follower() {
+    let (mut h, unit) = at_level(209059, 10, |_| {});
+    let mut follower = h
+        .app
+        .world_mut()
+        .entity_mut(unit)
+        .take::<super::Follower>()
+        .unwrap();
+    // The native simulator leader's controller receives this exact temporary
+    // profile after initialization removes its stored Follower component.
+    follower.owner = unit;
+    utility_tests::start_enemy_fireball(&mut h, unit);
+    let enemy = h.npc;
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(enemy)
+            .is_some()
+    );
+    super::kit_ai::update(h.app.world_mut(), unit, &follower, &[unit], Some(enemy));
+    h.advance(3);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Interrupt
+                && event.source == Some(unit.to_bits())
+                && event.target == Some(enemy.to_bits())),
+        "an explicitly executing native profile must not lose its learned Counterspell solely because it is not a stored NPC Follower"
+    );
+}
+
+#[test]
 fn follower_utility_policy_delayed_shield_does_not_spend_a_second_kick() {
     let (mut h, first) = at_level(209057, 26, |_| {});
     let second = add_follower(&mut h, 215240);
