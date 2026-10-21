@@ -102,6 +102,50 @@ fn pet_battle_current_health_mind_games_costs_each_friendly_slot_without_family_
 }
 
 #[test]
+fn pet_battle_current_health_torment_blocked_victims_do_not_leech_previous_damage() {
+    let catalog = catalog();
+    let mut initial = battle(&catalog, 9, 9, [2263, 479, 123]);
+    initial.teams[0].pets[0].health = 1000;
+    let (shielded, _) = initial
+        .step(
+            &catalog,
+            [Action::Pass, Action::Ability(479)],
+            &mut Fixed(500000),
+        )
+        .unwrap();
+    let (after, events) = use_ability(&shielded, &catalog, 2263);
+    assert_eq!(damage(&events), [2000]);
+    assert_eq!(after.teams[0].pets[0].health, 3000);
+    assert_eq!(
+        after.teams[1].pets.each_ref().map(|pet| pet.health),
+        [10000, 10000, 8000]
+    );
+    assert!(after.auras.is_empty());
+}
+
+#[test]
+fn pet_battle_current_health_torment_floors_tiny_hits_without_power_crit_or_variance_draws() {
+    let catalog = catalog();
+    let mut initial = battle(&catalog, 9, 9, [2263, 110, 123]);
+    initial.teams[0].pets[0].health = 1000;
+    initial.teams[0].pets[0].stats.speed = 200;
+    initial.teams[0].pets[0].stats.power = 10000;
+    initial.teams[0].pets[0]
+        .states
+        .insert(catalog.state_id("Last_HitDealt").unwrap(), 333);
+    for pet in &mut initial.teams[1].pets {
+        pet.health = 1;
+    }
+    let (after, events) = initial
+        .step(&catalog, [Action::Ability(2263), Action::Pass], &mut NoDraw)
+        .unwrap();
+    assert_eq!(damage(&events), [0; 3]);
+    assert_eq!(after.teams[0].pets[0].health, 1000);
+    assert_eq!(after.teams[1].pets.each_ref().map(|pet| pet.health), [1; 3]);
+    assert_eq!(after.outcome, None);
+}
+
+#[test]
 fn pet_battle_current_health_torment_selector_variant_remains_explicit_gap() {
     let catalog = catalog();
     let initial = battle(&catalog, 9, 9, [2292, 110, 123]);

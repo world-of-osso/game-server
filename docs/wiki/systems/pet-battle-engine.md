@@ -2,6 +2,12 @@
 
 Standalone `server::pet_battle` library, consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
 
+## Current-health percentage effects — 2026-10-21
+
+Property363 executes authored current-health percentages for distinct team members. Torment2263 addresses the active enemy then other slots; Mind Games: Health2388 addresses its own team. The ordinal counts363 rows, not interleaved leech rows. Each attempted victim clears Last_HitDealt first: dead, missed or shielded victims cannot repeat an earlier heal. Torment2292 still rejects unsupported156 before RNG.
+
+`PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION` explicitly adopts existing percentage-damage flooring, hostile type scaling, accuracy/blocks and damage/passive handling; own-team costs are untyped. Project policy, not independent Retail arithmetic/mitigation proof. Journal-card normalization stays unchanged. Sources: local70448 BattlePetAbility2263/2292/2388 descriptions, BattlePetAbilityTurn, BattlePetEffectProperties363 and their effects4077–4082/4175–4180/4303–4304/4453–4455. Real-root tests cover active-slot pairs, current versus maximum HP, actual-victim leech, misses/dead/shielded victims, hostile type policy and own-team conservation. See [contract](../../specs/pet-battle-engine.md) and [coverage](../../pet-battle-effect-coverage.md).
+
 ## Content
 
 `Catalog::load_world_db` strictly loads ten battle SQLite tables. Missing schemas, invalid types, conflicting known state values and dangling turn/ability/aura references return contextual errors. Identical species4597 speed-state rows are deduplicated; undefined species-state rows (35 in this export) remain in `unresolved_states`. No runtime CSV fallback. Tests copy the ten battle tables from shipped `data/world.db` into isolated in-memory SQLite; no server-local CSV export dependency or mutation of shipped data. No data is committed.
