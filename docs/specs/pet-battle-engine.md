@@ -4,6 +4,8 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 
 ## What it must do
 
+- [x] Execute property362 Species Heal2260 using its authored10 base points and2 additional points for each other same-species teammate, before ordinary healing power/accuracy/variance/modifiers/cap. Count literal roster identities, including dead reserves, as existing370; do not infer species from family or count enemies/caster. This follows source roster wording, not independent Retail death-count certification.
+
 - [x] Execute property363 current-health percentages for Torment2263 and Mind Games: Health2388 across active/other team slots from their authored rows; reset per-victim leech context before every attempt. Torment2292's property156 selector remains rejected. `PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION` explicitly adopts existing percentage-damage flooring, hostile family scaling, hit/block and damage/passive handling; friendly-team costs are untyped. This project policy is not independent Retail arithmetic/mitigation proof. Preserve `PET_BATTLE_PAD_USES_JOURNAL_CARD_NORMALIZATION` unchanged.
 
 - [x] Load the ten requested battle DB2 tables through its own strict SQLite loader, with test-only local-CASC CSV fixtures and no journal-code dependency/runtime CSV fallback.

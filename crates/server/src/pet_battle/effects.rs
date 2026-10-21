@@ -83,6 +83,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             75 | 76 | 77 => self.charged_damage(caster, target, ability, effect),
             370 => self.damage_with_species_bonus(caster, target, ability, effect),
+            362 => self.heal_with_species_bonus(caster, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
                 let caster_speed = self.speed(caster);
@@ -367,6 +368,23 @@ impl<R: BattleRng> Runtime<'_, R> {
             )),
         }
     }
+    fn same_species_reserve_count(&self, caster: PetRef) -> i32 {
+        let species = self.battle.pet(caster).species;
+        self.battle.teams[caster.team]
+            .pets
+            .iter()
+            .enumerate()
+            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
+            .count() as i32
+    }
+    fn heal_with_species_bonus(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let mut healing = effect.clone();
+        healing.property = 23;
+        healing.params[0] += self.same_species_reserve_count(caster) * effect.params[2];
+        healing.params[2] = effect.params[3];
+        healing.params[3] = 0;
+        self.heal_effect(caster, &healing)
+    }
     fn damage_with_species_bonus(
         &mut self,
         caster: PetRef,
@@ -374,13 +392,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         ability: u32,
         effect: &Effect,
     ) -> Result<bool, String> {
-        let species = self.battle.pet(caster).species;
-        let matching_reserves = self.battle.teams[caster.team]
-            .pets
-            .iter()
-            .enumerate()
-            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
-            .count() as i32;
+        let matching_reserves = self.same_species_reserve_count(caster);
         let mut damage = effect.clone();
         damage.property = 24;
         damage.params[0] += matching_reserves * effect.params[2];

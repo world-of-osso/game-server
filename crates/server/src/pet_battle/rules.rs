@@ -90,6 +90,7 @@ pub fn supported_property(property: u32) -> bool {
             | 223
             | 194
             | 363
+            | 362
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -448,6 +449,7 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         79 | 157 | 177 => catalog.states.contains_key(&(p[0] as u32)),
         28 => effect.aura != 0 && p[2] >= -1 && p[4..].iter().all(|v| *v == 0),
         68 => p[2..].iter().all(|v| *v == 0),
+        362 => p[0] >= 0 && p[2] >= 0 && p[3] >= 0 && p[4..].iter().all(|v| *v == 0),
         363 => {
             matches!(catalog.turns[&effect.turn].ability, 2263 | 2292 | 2388)
                 && (0..=100).contains(&p[0])
