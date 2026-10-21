@@ -27,7 +27,7 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 
 ## Implementation inventory
 
-- `scripts/conversation_data.py`: pinned local source reads and owned-copy import.
+- `scripts/conversation_data.py`: pinned local source reads, owned-copy import, receipt-preserving report and replayable SQL publication artifact.
 
 ## Tests asserting this spec
 

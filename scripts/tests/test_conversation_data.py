@@ -58,13 +58,18 @@ class ConversationDataTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, sqlite3.connect(':memory:') as connection:
             connection.execute('CREATE TABLE unrelated (value TEXT)')
             connection.execute("INSERT INTO unrelated VALUES ('keep')")
+            connection.execute('CREATE TABLE db2_build (table_name TEXT PRIMARY KEY, build TEXT NOT NULL)')
+            connection.execute('INSERT INTO db2_build VALUES (?,?)', ('SpellEffect', conversation_data.BUILD))
             connection.commit()
             path = Path(directory) / 'conversations.sql'
             conversation_data.write_sql(path, self.tables)
             connection.executescript(path.read_text())
+            connection.executescript(path.read_text())  # Publication is safely repeatable.
             # The SQL database schema/data is the external publication contract.
             actual = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertEqual(actual, set(self.tables) | {'db2_build', 'unrelated'})
+            self.assertEqual(connection.execute('SELECT build FROM db2_build WHERE table_name=?', ('SpellEffect',)).fetchone(),
+                             (conversation_data.BUILD,))
             for table, (_, rows) in self.tables.items():
                 imported = connection.execute(f'SELECT * FROM "{table}"').fetchall()
                 self.assertEqual(sorted(imported), sorted(rows))

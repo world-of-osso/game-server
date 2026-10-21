@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Local TDB/70448 conversation source ingress; canonical publication is lead-owned."""
+import argparse
 import csv
 import hashlib
 import json
 from pathlib import Path
+import sqlite3
 
 from mysql_dump import dump_rows
 
@@ -111,4 +113,42 @@ def import_tables(connection, tables):
 
 
 def write_sql(path, tables):
-    path.write_text('BEGIN;\nCOMMIT;\n', encoding='utf-8')
+    with sqlite3.connect(':memory:') as encoder, path.open('w', encoding='utf-8') as output:
+        output.write('BEGIN IMMEDIATE;\n')
+        for table, (columns, rows) in tables.items():
+            output.write(table_ddl(table, columns) + ';\n')
+            output.write(f'DELETE FROM "{table}";\n')
+            quoted_columns = ','.join(f'"{name}"' for name in columns)
+            quote = 'SELECT ' + ','.join('quote(?)' for _ in columns)
+            for row in rows:
+                values = ','.join(encoder.execute(quote, row).fetchone())
+                output.write(f'INSERT INTO "{table}" ({quoted_columns}) VALUES ({values});\n')
+        output.write('CREATE TABLE IF NOT EXISTS db2_build (table_name TEXT PRIMARY KEY, build TEXT NOT NULL);\n')
+        for name in CSV_TABLES:
+            output.write(f"INSERT INTO db2_build VALUES ('{name}','{BUILD}') ON CONFLICT(table_name) DO UPDATE SET build=excluded.build;\n")
+        output.write('COMMIT;\n')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source', type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument('--csv-dir', type=Path, default=DEFAULT_CSV)
+    parser.add_argument('--db', type=Path, required=True, help='existing owned SQLite copy')
+    parser.add_argument('--sql', type=Path, help='reviewed SQL publication artifact')
+    args = parser.parse_args()
+    if args.db.resolve() == (ROOT / 'data/world.db').resolve():
+        parser.error('canonical world.db publication is lead-owned; use an owned copy')
+    tables = read_source_tables(args.source, args.csv_dir)
+    with sqlite3.connect(args.db.resolve().as_uri() + '?mode=rw', uri=True) as connection:
+        counts = import_tables(connection, tables)
+    if args.sql is not None:
+        write_sql(args.sql, tables)
+    receipts = json.loads((args.csv_dir / 'receipt.json').read_text())
+    report = {'source': str(args.source.resolve()), 'build': BUILD, 'tables': counts,
+              'fingerprints': {name: fingerprint(rows) for name, (_, rows) in tables.items()},
+              'csv_receipts': {name: receipts['tables'][name] for name in CSV_TABLES}}
+    print(json.dumps(report, sort_keys=True))
+
+
+if __name__ == '__main__':
+    main()
