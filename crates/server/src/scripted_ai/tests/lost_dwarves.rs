@@ -31,6 +31,7 @@ fn encounter_coverage_lost_dwarves_native_cleave_damage_qualifies() {
         let (mut h, boss, _) = dwarf_copy(DWARVES[0], difficulty);
         let player = h.player();
         h.engage(boss);
+        h.advance(0.05);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 369563, Some(player), false)
             .expect("native369563");
         h.advance(4.5);
@@ -256,7 +257,21 @@ fn encounter_coverage_lost_dwarves_evade_restores_partial_surrender_progress() {
     assert!(!h.app.world().get::<CombatStatus>(baelog).unwrap().0);
     h.engage(eric);
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), eric);
-    h.advance(14.0);
+    for tick in 0..28 {
+        h.advance(0.5);
+        eprintln!(
+            "DWARF RESET tick{tick} state={:?} health={:?} threat={} combat={:?}",
+            h.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(baelog),
+            h.health(baelog),
+            h.app
+                .world()
+                .get::<shared::components::ThreatTable>(baelog)
+                .is_some(),
+            h.app.world().get::<CombatStatus>(baelog)
+        );
+    }
     assert!(
         cast_count(&h, baelog, 369563) > 0,
         "native home/health recovery and reset restore unsurrendered combat clocks"
