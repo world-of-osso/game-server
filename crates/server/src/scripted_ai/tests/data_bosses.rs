@@ -91,6 +91,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
+#[path = "porung.rs"]
+mod porung;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
