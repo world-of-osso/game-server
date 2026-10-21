@@ -73,7 +73,7 @@ def read_reports(output, seeds):
             report = json.loads(path.read_text())
             if report["seed"] != seed:
                 raise ValueError(f"expected seed{seed}, found{report['seed']}")
-            reports.append(report)
+            reports.append({key: report[key] for key in ("seed", "status", "failed_pack", "pulls")})
         except (OSError, ValueError, KeyError) as error:
             errors.append({"seed": seed, "error": str(error)})
             print(f"Seed{seed} report unavailable at {path}: {error}", file=sys.stderr)
