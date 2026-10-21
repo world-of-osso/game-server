@@ -3494,4 +3494,4 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Source boundary/proof](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21): pushed ignored RED first; source-explicit LittleWigs schedules and native70448 cast/effect pipeline; Normal/Follower COMPOSITE4GREEN plus producer3PASS. Self-cast SpellGo and exact peer404468 provenance avoid fabricated log delivery. Dummy children, Torrent phase/repeat and Dash controller remain named gaps; canonical publication lead-owned.
 
-- 2026-10-21: Ordered generic148 destination/direct-ray subset; eight native RED failures, source dispatch correction and explicit Detour/force-location gaps recorded in [[spell-casting]]. GREEN pending.
+- 2026-10-21: Ordered generic148 destination/direct-ray subset; eightRED→eightGREEN and retained144 composite152GREEN, all enabled; source dispatch correction and explicit Detour/force-location gaps recorded in [[spell-casting]].
