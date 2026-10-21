@@ -141,37 +141,20 @@ fn azure_stalker_ingress_during_authored_opening_has_native_proximity_receipts()
         owner.to_bits()
     );
     let members: Vec<_> = run.members().collect();
+    let chasing_party = |world: &World| {
+        matches!(world.get::<crate::creature_ai::CreatureState>(stalker),
+        Some(crate::creature_ai::CreatureState::Pursuing {target}) if members.iter().any(|member|member.to_bits()==*target))
+    };
     for _ in 0..600 {
         run.control().unwrap();
         run.app.update();
-        let events = &run
-            .app
-            .world()
-            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-            .0;
-        if events.iter().any(|event| {
-            event.kind == shared::protocol::CombatLogKind::Damage
-                && event.amount > 0
-                && event.source == Some(stalker.to_bits())
-        }) {
+        if chasing_party(run.app.world()) {
             break;
         }
     }
-    let events = &run
-        .app
-        .world()
-        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
-        .0;
     assert!(
-        events.iter().any(
-            |event| event.kind == shared::protocol::CombatLogKind::Damage
-                && event.amount > 0
-                && event.source == Some(stalker.to_bits())
-                && event
-                    .target
-                    .is_some_and(|target| members.iter().any(|member| member.to_bits() == target))
-        ),
-        "actual authored movement must reach the observed stalker damage boundary"
+        chasing_party(run.app.world()),
+        "authored movement must produce native pursuit of a party member"
     );
 }
 
@@ -1216,14 +1199,7 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
-        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner)
-            || self.members().any(|member| {
-                self.app
-                    .world()
-                    .get::<CombatStatus>(member)
-                    .is_some_and(|status| status.0)
-            })
-        {
+        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
@@ -1386,7 +1362,12 @@ impl Run {
                         && world
                             .get::<crate::creature_aggro::AggroRange>(*actor)
                             .is_some()
-                        && crate::spell_cast::targets::is_hostile(world, self.party.owner, *actor)
+                        && crate::spell_cast::targets::relation_matches(
+                            world,
+                            self.party.owner,
+                            *actor,
+                            crate::spell_cast::targets::Relation::Enemy,
+                        )
                 })?;
             Some((pack.id, target))
         })

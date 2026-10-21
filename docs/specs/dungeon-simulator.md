@@ -23,6 +23,12 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Run Azure seeds1–10 with `--jobs`, unchanged Garrick/Crenna/Shuja/Meredy/Austin roster and native205 ContentTuning2155 maximum level70; report every clear/wipe/stall/block and root cause.
 - [x] Rerun Stockade seeds1–10 after generic source-height preservation: native-height batch12 all10 clear/30boss Deaths/0failures.
 
+## Clearable opponents
+
+- [ ] Use the ordinary native enemy-target relation for every party member: an alive source that no living same-copy member can attack must not hold the history or next-pull controller forever. Do not mark it dead or invent a per-entry passive exclusion.
+- [ ] Preserve pre-impact combat holds for valid native combat references, even before the first damage event. Unattackable-only references do not veto clear readiness.
+- [ ] Preserve actual damage/healing measurements, fatal-hit output and observed Death receipts while filtering clearable-opponent identity.
+
 ## Authored route
 
 Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-source 2D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.

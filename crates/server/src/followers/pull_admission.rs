@@ -52,11 +52,7 @@ fn read_cleared_single_pull(
     projected: &BTreeSet<u32>,
     difficulty: u32,
 ) -> Result<Option<Decision>, String> {
-    let fighting = run.party.iter().any(|unit| {
-        world
-            .get::<shared::components::CombatStatus>(*unit)
-            .is_some_and(|status| status.0)
-    });
+    let fighting = pull_history::has_attackable_combat(world, &run.party);
     if fighting || !ai::engaged_enemies(world, &run.follower, tank, &run.party).is_empty() {
         return Ok(None);
     }

@@ -211,9 +211,38 @@ fn current_history(world: &World, owner: Entity) -> Option<&PullHistory> {
     (history.map == map && history.members == members).then_some(history)
 }
 
+/// Native target validity, not faction hostility alone: an uninteractible source
+/// can attack the party without being an enemy the party can clear. Target HP is
+/// intentionally not checked here: fatal-hit output precedes the observed Death.
+fn party_can_attack(world: &World, party: &[Entity], enemy: Entity) -> bool {
+    party.iter().any(|member| {
+        crate::spell_cast::targets::is_alive(world, *member)
+            && crate::spell_cast::targets::same_map(world, *member, enemy)
+            && crate::spell_cast::targets::relation_matches(
+                world,
+                *member,
+                enemy,
+                crate::spell_cast::targets::Relation::Enemy,
+            )
+    })
+}
+
+pub(super) fn has_attackable_combat(world: &World, party: &[Entity]) -> bool {
+    party
+        .iter()
+        .flat_map(|member| crate::combat_refs::active_opponents(world, *member))
+        .any(|enemy| party_can_attack(world, party, enemy))
+}
+
 #[cfg(test)]
 pub(super) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
-    current_history(world, owner).is_some_and(|history| !history.active_enemies.is_empty())
+    current_history(world, owner).is_some_and(|history| {
+        has_attackable_combat(world, &history.members)
+            || history
+                .active_enemies
+                .iter()
+                .any(|enemy| party_can_attack(world, &history.members, *enemy))
+    })
 }
 
 pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
@@ -227,7 +256,12 @@ pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
         completed_fights: history.completed_fights,
         party_stable: history.party_stable(now),
         cleared_spawns: history.cleared_spawns.clone(),
-        active_enemies: history.active_enemies.clone(),
+        active_enemies: history
+            .active_enemies
+            .iter()
+            .copied()
+            .filter(|enemy| party_can_attack(world, &history.members, *enemy))
+            .collect(),
     })
 }
 
@@ -242,6 +276,8 @@ struct EventObservation {
     owner: Entity,
     source_member: bool,
     target_member: bool,
+    source_attackable: bool,
+    target_attackable: bool,
     healthy: bool,
     in_combat: bool,
 }
@@ -259,6 +295,7 @@ fn read_event_parties(
     map: InMap,
     source: Option<Entity>,
     target: Entity,
+    living_source: Option<Entity>,
 ) -> Vec<EventObservation> {
     world
         .query::<(Entity, &PullHistory)>()
@@ -268,6 +305,9 @@ fn read_event_parties(
             owner,
             source_member: source.is_some_and(|source| history.members.contains(&source)),
             target_member: history.members.contains(&target),
+            source_attackable: living_source
+                .is_some_and(|source| party_can_attack(world, &history.members, source)),
+            target_attackable: party_can_attack(world, &history.members, target),
             healthy: party_healthy(world, &history.members, map),
             in_combat: history.members.iter().any(|member| {
                 world
@@ -300,13 +340,15 @@ pub(crate) fn record_event(world: &mut World, event: &CombatLogEvent) {
     let guid = world
         .get::<crate::zones::CreatureOrigin>(target)
         .map(|origin| origin.guid);
-    let observations = read_event_parties(world, map, credited, target);
+    let living_source =
+        source.filter(|source| crate::spell_cast::targets::is_alive(world, *source));
+    let observations = read_event_parties(world, map, credited, target, living_source);
     if observations.is_empty() {
         return;
     }
     let input = EventInput {
         event,
-        living_source: source.filter(|source| crate::spell_cast::targets::is_alive(world, *source)),
+        living_source,
         target,
         guid,
         now: read_time(world),
@@ -354,7 +396,9 @@ fn observe_damage(
     observation: &EventObservation,
 ) {
     if observation.source_member && !observation.target_member {
-        history.active_enemies.insert(input.target);
+        if observation.target_attackable {
+            history.active_enemies.insert(input.target);
+        }
         history.in_combat = true;
         history.output.push_back(OutputSample {
             at: history.combat_seconds,
@@ -364,7 +408,9 @@ fn observe_damage(
     } else if observation.target_member && !observation.source_member {
         // Lingering periodic damage remains real after its caster dies, but a
         // dead source cannot reopen the encounter already closed by Death.
-        if let Some(source) = input.living_source {
+        if observation.source_attackable
+            && let Some(source) = input.living_source
+        {
             history.active_enemies.insert(source);
             history.in_combat = true;
         }
