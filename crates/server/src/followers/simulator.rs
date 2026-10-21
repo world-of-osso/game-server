@@ -187,7 +187,21 @@ pub(crate) fn spawn_parity_attacker(
         .find(|profile| profile.spec_id == spec_id)
         .cloned()
         .ok_or_else(|| format!("native follower spec{spec_id} absent"))?;
-    let owner = world
+    let owner = spawn_parity_owner(world, level, copy);
+    let unit = spawning::spawn(world, owner, profile)?;
+    // advance_runs removes followers without a real or admitted diagnostic run.
+    world
+        .entity_mut(owner)
+        .insert(stockade_diagnostic::DiagnosticParty {
+            copy,
+            members: vec![unit],
+            player_role: shared::group::GroupRole::Dps,
+        });
+    Ok(unit)
+}
+
+fn spawn_parity_owner(world: &mut World, level: u8, copy: crate::maps::InMap) -> Entity {
+    world
         .spawn((
             Level(level),
             UnitFactionTemplate(1),
@@ -198,8 +212,7 @@ pub(crate) fn spawn_parity_attacker(
             },
             copy,
         ))
-        .id();
-    spawning::spawn(world, owner, profile)
+        .id()
 }
 
 pub(crate) fn update_leader(world: &mut World) {
