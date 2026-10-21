@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Fixed-cost Hand of Guldan Imp bridge — 2026-10-21
+
+At4001a8594 the ordinary105174 cast has native default30raw Soul Shards and its86040 meteor lands, but zero104317 actors instead of three (genuine1RED10.84s/zero warnings). The fixed native book exposes root effect0 count3, matching30raw/DisplayModifier10. Meteor execute now schedules three104317 FULL-trigger callbacks on the existing queued-cast lifetime path; cumulative1–2ms delays follow current SimC76f8118 actions2730–2756, not obsolete180ms spacing. Actual guardian targeting/binding/SP remain ordinary production behavior. GREEN pending; frame quantization is not sub-frame timing proof, and variable-spend/free-count/Core/exhaustion/Tyrant behavior remains unproved.
+
+
 ### Wild Imp binding and owner SP — 2026-10-21
 
 Corrected native104317/55659 tests reach genuine RED at a4f78a987: source-bound104318 deals2 versus expected16.3628 at ownerSP73.909706, and production binding never emits104318 (two failures17.45s). Source-qualified binding now selects104318 only for104317/55659. `WARLOCK_WILD_IMP_OWNER_SP_SIMC` uses constructor702–705 SP1.2, not overridden base19=1.0; coefficient remains native0.192177996. Other demons retain0.15SP and all existing AP/health behavior. Authenticated55659 template/model closure is prepared on copies only; canonical publication remains lead-owned. Native2GREEN25.48s/zero warnings at42f5f0cc7 proves actual Firebolt and level32→40 derived owner-SP scaling; retained guardians11GREEN13.66s, including unchanged Darkglare and ordinary Imp damage/lifetimes. HoG/Core/Tyrant lifecycle, energy-exhaustion demise and full Demo parity remain open.
