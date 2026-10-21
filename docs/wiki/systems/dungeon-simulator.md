@@ -10,6 +10,21 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 `content/dungeons/azure-vault-2515.json` retains225 Normal source actors in214 native formation packs plus authored AreaPOI7116 as an empty topology node. Qualified staged navigation supplies540 walk-distance edges; [the shared production book policy](azure-translocation.md) supplies nine directed teleport links. Authored179-hostile-pack route follows Leymor→Azureblade→Telash→Umbrelskul. Two off-route source actors29001897/29001912 are nav-unreachable and remain named, not connected synthetically. Runtime uses `DUNGEON_SIMULATOR_MAP=2515`, native difficulty205, Normal population projection and `DUNGEON_SIMULATOR_LEVEL=70` (MapDifficulty5417→ContentTuning2155 range10–70). Default five profiles remain unchanged. Seeded clear proof pending.
 
+## Native-height acceptance and Azure baseline —2026-10-21
+
+Revision`a4c03c0b7`, protocol03cebdb, optimized native executable. Stockade batch12/default five/level32/seeds1–10/`--jobs3`: **10clears,30boss Deaths,0wipe/stall/block/timeout**,371.463s total batch wall time. Both frozen graphs pass source-leader/entrance height equality checks; stacked floors and directed teleport refusal pass native fixtures. Source heights do not invalidate Stockade completion.
+
+Azure batch1/default five/level70/difficulty205/seeds1–10/`--jobs3`: **0clears,0wipes,10stalls,0blocks/timeouts,0boss Deaths**,220.861s total batch wall time. All ten native reports exist; worker101 reflects each failed-clear assertion, not a missing worker/report.
+
+| Seeds | Terminal cause | Failed pack |
+|---|---|---|
+|1,2,5,7,9|Four admitted members die; Meredy survives. Fatal sources include Arcane Tender29001796, Conjured Lasher29001801 and Global Affix Stalker29001806.|29001796|
+|3,4,6,8,10|All five survive; ready party remains held by alive, unattackable Global Affix Stalker history after combat flags disappear.|29001821|
+
+All ten runs contain actual171322 melee receipts (5–168 party hits). Source171322 carries uninteractible flag0x02000000, faction14, blank AI/script and flags_extra0. TC's watcher-side `CanStartAttack` does not reject uninteractibility; the party's target-side `IsValidAttackTarget` does. Do **not** invent a per-entry passive exclusion. Ordered follow-up: prove own-sight versus recruitment ingress, then native-validity-filtered history/clear logic with a clearable-enemy control. No stat tuning or budget-impossibility claim.
+
+Evidence under `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/`: `sim-batch12-native-heights/`, `azure-batch1/`, and the prior single-seed calibration `azure-native-probe1/`. The calibration is not the ten-seed proof. No book was reached; the [production endpoint policy](azure-translocation.md) passes native ingress/party tests but not full seeded traversal yet.
+
 ## Execution
 
 Build the filtered server test executable through `scripts/build-host.py --test -p server --bin game-server --profile sim --no-run`. Pass Cargo's printed executable to `scripts/run-dungeon-simulator.py --test-executable PATH --output DIRECTORY`, via `agent-run stockade` after capacity admission. The runner supplies repository-root working context because gameplay Startup loaders use `data/world.db`. It never launches a server or connects a client.

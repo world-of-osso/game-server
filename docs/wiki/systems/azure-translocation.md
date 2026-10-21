@@ -39,7 +39,7 @@ Native Translocate spells384106/384120/384347/384348/384349/384350/385983/385990
 
 ## Proof ledger
 
-- `41677f1ae`: actual native gossip/selection three REDs6.60s: menu0/no authored option/body. Range case reaches the same missing-menu boundary first.
+- `41677f1ae`: actual native gossip/selection three REDs6.60s: menu0/no authored option/body. Range case reaches the same missing-menu boundary first. `a4c03c0b7` six-case composite GREEN11.03s includes all three native book cases plus stacked-floor path selection, directed-edge refusal and Stockade source census. Azure native-copy/genuine-five-member-party two GREEN19.92s preserve HP/mana/copy. No live-pixel proof.
 - Graph missing-file RED → source census/authored four-boss route GREEN1.80s. Initial extraction215 packs (225 source actors plus a virtualPOI node),540 walk edges,9 policy links,179 hostile route steps. Source actors29001897/29001912 lack native nav reach and remain outside the authored route.
 - Artifacts: `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/azure-book-components.json`, `azure-final-poi-endpoint.json`, `azure-books-red.log`, `azure-graph-extraction.log`, `azure-graph-green.log`. No live clear claimed.
 

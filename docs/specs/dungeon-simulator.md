@@ -21,7 +21,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [x] Freeze the staged2515 native graph, complete Normal source population and an authored Leymor→Azureblade→Telash→Umbrelskul route. Difficulty205 retains its native Normal-population alias.
 - [ ] Execute the same [Azure translocation policy](azure-translocation.md) as production when the authored route crosses a disconnected component; freeze directed teleport edges, never invented walk connectors.
 - [ ] Run Azure seeds1–10 with `--jobs`, unchanged Garrick/Crenna/Shuja/Meredy/Austin roster and native205 ContentTuning2155 maximum level70; report every clear/wipe/stall/block and root cause.
-- [ ] Rerun Stockade seeds1–10 after generic source-height preservation.
+- [x] Rerun Stockade seeds1–10 after generic source-height preservation: native-height batch12 all10 clear/30boss Deaths/0failures.
 
 ## Authored route
 

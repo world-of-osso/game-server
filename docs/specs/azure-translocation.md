@@ -4,10 +4,10 @@ Azure Vault books expose their authored gossip and move the reader's same-copy p
 
 ## What it must do
 
-- [ ] Preserve source menu IDs, destination body text and the `Proceed onward.` choice for entries194602/194712/194713/194714/194715.
-- [ ] Revalidate ordinary interaction range and map identity before applying the option.
+- [x] Preserve source menu IDs, destination body text and the `Proceed onward.` choice for entries194602/194712/194713/194714/194715.
+- [x] Revalidate ordinary interaction range and map identity before applying the option.
 - [ ] Move the reader and living same-copy party members, followers and companion pets to the qualified receiver-book spawn, without changing resources or admitting a different copy.
-- [ ] For194715, use authenticated AreaPOI7116 inside Umbrelskul's nav component, as explicitly approved when no receiving book exists.
+- [x] For194715, use authenticated AreaPOI7116 inside Umbrelskul's nav component, as explicitly approved when no receiving book exists.
 - [ ] Freeze the same directed teleport links in the simulator graph; actors cannot walk a teleport as an ordinary path or traverse it backwards.
 
 ## How it works
@@ -30,7 +30,7 @@ Azure Vault books expose their authored gossip and move the reader's same-copy p
 ## Known gaps (current cycle)
 
 - [ ] `AZURE_TRANSLOCATION_ACTIONSET_DATA_UNAVAILABLE`: native gossip-to-spell bindings and server ActionSet definitions are absent. Endpoint policy is not a claim to have recovered them.
-- [ ] Native Green proof and seeded traversal qualification.
+- [ ] Seeded traversal qualification: native gossip/party proofs pass, but Azure batch1 stalls before the first boss and reaches no book.
 
 ## Out of scope
 
