@@ -35,7 +35,7 @@ fn assert_no_debuff(h: &Harness) {
             .resource::<ObservedCombatEvents>()
             .0
             .iter()
-            .all(|event| event.spell_id != DEBUFF)
+            .all(|event| event.spell_id != Some(DEBUFF))
     );
 }
 
@@ -57,10 +57,10 @@ fn census_e77_dk_own_native_talent_applies_owned_subduing_grasp() {
     assert!(aura.effects.iter().any(|effect| effect.aura_type == 269));
     let events = &h.app.world().resource::<ObservedCombatEvents>().0;
     assert!(events.iter().any(|event| {
-        event.spell_id == DEBUFF
+        event.spell_id == Some(DEBUFF)
             && event.kind == CombatLogKind::CastSuccess
-            && event.source == h.caster.to_bits()
-            && event.target == h.npc.to_bits()
+            && event.source == Some(h.caster.to_bits())
+            && event.target == Some(h.npc.to_bits())
     }));
 }
 
