@@ -46,8 +46,40 @@ def policy(slot, priority, target='enemy', **conditions):
     return slot, priority, dict(target=target, **conditions)
 
 
+def dps_rotation_policy(spec, name):
+    """Bounded SimC76f8118 decisions on the actual selected native70448 book."""
+    # mage.cpp210–224: Hot Streak spenders, otherwise Fireball; no Arcane Explosion.
+    if spec == 63 and name == 'Pyroblast':
+        return policy('attack', 110, required_self_aura=48108)
+    if spec == 63 and name == 'Flamestrike':
+        return policy('aoe', 85, min_enemies=3, ground=True, required_self_aura=48108)
+    if spec == 63 and name == 'Arcane Explosion':
+        return policy('utility', 1000)
+    # apl_shaman.cpp100–102: maintain own Flame Shock before filler/spenders.
+    if spec == 262 and name in {'Flame Shock', 'Voltaic Blaze'}:
+        return policy('attack', 84, refreshable_aura=188389)
+    # apl_evoker.cpp96–106: empowers/spenders precede Azure/Living Flame filler.
+    if spec == 1467:
+        if name == 'Fire Breath':
+            return policy('attack', 92)
+        if name == 'Eternity Surge':
+            return policy('attack', 94)
+        if name == 'Pyre':
+            return policy('aoe', 105, min_enemies=3)
+        if name == 'Azure Strike':
+            return policy('aoe', 160, min_enemies=3)
+        if name == 'Living Flame':
+            return policy('attack', 170)
+        if name == 'Blessing of the Bronze':
+            return policy('buff', 75, 'self', missing_aura=381758)
+    return None
+
+
 def combat_policy(spec, name, spell, dispel_effects, control_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
+    rotation = dps_rotation_policy(spec, name)
+    if rotation is not None:
+        return rotation
     if dispel_effects and name in {'Cleanse Toxins', "Nature's Cure", 'Remove Corruption', 'Purify', 'Purify Disease', 'Remove Curse', 'Expunge', 'Cauterizing Flame', 'Dispel Magic', 'Purge', 'Soothe'}:
         return policy('dispel', 42, 'party')
     if control_effects and name in {'Polymorph', 'Hammer of Justice', 'Leg Sweep', 'Paralysis', 'Fear', 'Hex'}:

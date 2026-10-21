@@ -38,6 +38,7 @@ pub(super) struct Conditions {
     pub target: Target,
     pub health_below: Option<f32>,
     pub missing_aura: Option<u32>,
+    pub required_self_aura: Option<u32>,
     pub refreshable_aura: Option<u32>,
     pub min_enemies: usize,
     pub min_injured: usize,
