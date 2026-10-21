@@ -8,6 +8,7 @@ const SWIFTMEND: u32 = 18562;
 const LIFEBLOOM: u32 = 33763;
 const NATURES_SWIFTNESS: u32 = 132158;
 const REGROWTH: u32 = 8936;
+const NATURES_CURE: u32 = 88423;
 // Matches the qualified native bloom-on-refresh window; durations remain native.
 const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
@@ -23,6 +24,7 @@ const OWNED: SpellSet = &[
     IRONBARK,
     UTILITY_REBIRTH,
     NATURES_SWIFTNESS,
+    NATURES_CURE,
 ];
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
@@ -30,6 +32,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_swift_regrowth(ctx))
         .or_else(|| choose_urgent_swiftmend(ctx))
         .or_else(|| choose_natures_swiftness(ctx))
+        .or_else(|| choose_natures_cure(ctx))
         .or_else(|| choose_lifebloom(ctx))
         .or_else(|| ranked_maintenance(ctx));
     match decision {
@@ -220,4 +223,22 @@ fn useful_friendly_cast_in_progress(ctx: &TriageContext<'_>) -> bool {
         .is_some_and(|target| {
             !crate::spell_cast::targets::is_hostile(ctx.world, ctx.caster, target)
         })
+}
+
+fn choose_natures_cure(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == NATURES_CURE)?;
+    if !ctx.ready(NATURES_CURE) {
+        return None;
+    }
+    let patient = ctx.patients.iter().find(|patient| {
+        super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
+    })?;
+    Some(Decision {
+        spell_id: NATURES_CURE,
+        target: patient.entity,
+        urgent: false,
+    })
 }
