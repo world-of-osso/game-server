@@ -7,6 +7,16 @@ use shared::casting::CastState;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
+fn add_other_engaged_enemy(h: &mut Harness, unit: bevy::prelude::Entity) {
+    let other = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 4.0);
+    let map = *h.app.world().get::<crate::maps::InMap>(unit).unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(other)
+        .insert((map, crate::networking::CombatTarget(Some(unit))));
+    crate::creature_aggro::add_threat(h.app.world_mut(), other, unit, 1.0);
+}
+
 pub(super) fn wait_for_native_school_unlock(h: &mut Harness, interrupt: u32) {
     let spell = h
         .app
@@ -254,6 +264,7 @@ fn follower_kit_utility_crenna_does_not_dispel_an_empty_patient() {
 #[test]
 fn follower_kit_utility_meredy_controls_caster_after_spent_counterspell() {
     let (mut h, unit) = level32(209059);
+    add_other_engaged_enemy(&mut h, unit);
     // Polymorph admits native creature types. The generic Kobold actor has no
     // template authority until this fixture loads its real row; never guess7.
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[6]);
@@ -309,6 +320,7 @@ fn follower_kit_utility_bo_controls_caster_after_spent_spear_hand() {
     const PARALYSIS: u32 = 115078;
     const LEG_SWEEP: u32 = 119381;
     let (mut h, unit) = level32(227734);
+    add_other_engaged_enemy(&mut h, unit);
     utility_tests::start_enemy_fireball(&mut h, unit);
     update_ai(h.app.world_mut());
     h.advance(3);

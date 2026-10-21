@@ -8,6 +8,7 @@
 //! The reflected copy cannot reflect again, and its immunity check against the caster
 //! (`CheckTarget`) is not modelled.
 
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::protocol::{CombatLogEvent, CombatLogKind, MissKind};
 

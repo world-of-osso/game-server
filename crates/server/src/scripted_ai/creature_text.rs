@@ -11,6 +11,7 @@
 //! that audience; gender-specific BroadcastText SoundKit overrides the text's Sound.
 //! Emotes and area, zone, world and personal ranges are not used by the ported scripts.
 
+use crate::random as rand;
 use std::collections::HashMap;
 use std::path::Path;
 

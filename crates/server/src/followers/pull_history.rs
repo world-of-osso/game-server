@@ -18,6 +18,7 @@ pub(super) struct Snapshot {
     pub completed_fights: u32,
     pub party_stable: bool,
     pub cleared_spawns: BTreeSet<u32>,
+    pub active_enemies: BTreeSet<Entity>,
 }
 
 #[derive(Clone, Copy)]
@@ -36,7 +37,10 @@ struct OutputSample {
 struct PullHistory {
     map: InMap,
     members: Vec<Entity>,
-    started: f64,
+    combat_seconds: f64,
+    last_observation: f64,
+    in_combat: bool,
+    wiped: bool,
     health: VecDeque<HealthSample>,
     output: VecDeque<OutputSample>,
     active_enemies: BTreeSet<Entity>,
@@ -49,7 +53,10 @@ impl PullHistory {
         Self {
             map,
             members,
-            started: now,
+            combat_seconds: 0.0,
+            last_observation: now,
+            in_combat: false,
+            wiped: false,
             health: VecDeque::new(),
             output: VecDeque::new(),
             active_enemies: BTreeSet::new(),
@@ -58,18 +65,36 @@ impl PullHistory {
         }
     }
 
+    fn observe_clock(&mut self, now: f64, in_combat: bool) {
+        if self.in_combat {
+            self.combat_seconds += (now - self.last_observation).max(0.0);
+        }
+        self.last_observation = now;
+        self.in_combat = in_combat;
+        while self
+            .output
+            .front()
+            .is_some_and(|sample| sample.at < self.combat_seconds - RATE_SECONDS)
+        {
+            self.output.pop_front();
+        }
+    }
+
+    fn reset_measurements(&mut self, now: f64) {
+        self.combat_seconds = 0.0;
+        self.last_observation = now;
+        self.in_combat = false;
+        self.health.clear();
+        self.output.clear();
+        self.active_enemies.clear();
+        self.completed_fights = 0;
+    }
+
     fn observe_health(&mut self, now: f64, healthy: bool) {
         self.health.push_back(HealthSample { at: now, healthy });
         // Retain the sample covering the left boundary, not an assumed healthy gap.
         while self.health.len() > 1 && self.health[1].at <= now - HEALTH_SECONDS {
             self.health.pop_front();
-        }
-        while self
-            .output
-            .front()
-            .is_some_and(|sample| sample.at < now - RATE_SECONDS)
-        {
-            self.output.pop_front();
         }
     }
 
@@ -82,14 +107,14 @@ impl PullHistory {
         complete && current && self.health.iter().all(|sample| sample.healthy)
     }
 
-    fn rates(&self, now: f64) -> Option<(f64, f64)> {
-        if now - self.started < RATE_SECONDS {
+    fn rates(&self) -> Option<(f64, f64)> {
+        if self.combat_seconds < RATE_SECONDS {
             return None;
         }
         let recent = self
             .output
             .iter()
-            .filter(|sample| sample.at >= now - RATE_SECONDS);
+            .filter(|sample| sample.at >= self.combat_seconds - RATE_SECONDS);
         let (damage, healing) = recent.fold((0.0, 0.0), |(damage, healing), sample| {
             (damage + sample.damage, healing + sample.healing)
         });
@@ -102,6 +127,7 @@ impl PullHistory {
         }
         if self.active_enemies.remove(&target) && self.active_enemies.is_empty() {
             self.completed_fights += 1;
+            self.in_combat = false;
         }
     }
 }
@@ -152,6 +178,16 @@ fn sample_party(world: &mut World, owner: Entity) {
     };
     let now = read_time(world);
     let healthy = party_healthy(world, &members, map);
+    let in_combat = members.iter().any(|member| {
+        world
+            .get::<shared::components::CombatStatus>(*member)
+            .is_some_and(|status| status.0)
+    });
+    let wiped = members.iter().all(|member| {
+        world
+            .get::<Health>(*member)
+            .is_some_and(|health| health.current <= 0.0)
+    });
     let same_run = world
         .get::<PullHistory>(owner)
         .is_some_and(|history| history.map == map && history.members == members);
@@ -160,27 +196,37 @@ fn sample_party(world: &mut World, owner: Entity) {
             .entity_mut(owner)
             .insert(PullHistory::new(map, members, now));
     }
-    world
-        .get_mut::<PullHistory>(owner)
-        .unwrap()
-        .observe_health(now, healthy);
+    let mut history = world.get_mut::<PullHistory>(owner).unwrap();
+    history.observe_clock(now, in_combat && !wiped);
+    if wiped && !history.wiped {
+        history.reset_measurements(now);
+    }
+    history.wiped = wiped;
+    history.observe_health(now, healthy);
+}
+
+fn current_history(world: &World, owner: Entity) -> Option<&PullHistory> {
+    let history = world.get::<PullHistory>(owner)?;
+    let (map, members) = read_current_party(world, owner)?;
+    (history.map == map && history.members == members).then_some(history)
+}
+
+pub(super) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
+    current_history(world, owner).is_some_and(|history| !history.active_enemies.is_empty())
 }
 
 pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
-    let history = world.get::<PullHistory>(owner)?;
-    let (map, members) = read_current_party(world, owner)?;
-    if history.map != map || history.members != members {
-        return None;
-    }
+    let history = current_history(world, owner)?;
     let now = read_time(world);
-    let rates = history.rates(now);
+    let rates = history.rates();
     Some(Snapshot {
-        observation_seconds: now - history.started,
+        observation_seconds: history.combat_seconds,
         group_dps: rates.map(|rates| rates.0),
         healer_hps: rates.map(|rates| rates.1),
         completed_fights: history.completed_fights,
         party_stable: history.party_stable(now),
         cleared_spawns: history.cleared_spawns.clone(),
+        active_enemies: history.active_enemies.clone(),
     })
 }
 
@@ -196,11 +242,12 @@ struct EventObservation {
     source_member: bool,
     target_member: bool,
     healthy: bool,
+    in_combat: bool,
 }
 
 struct EventInput<'a> {
     event: &'a CombatLogEvent,
-    source: Option<Entity>,
+    living_source: Option<Entity>,
     target: Entity,
     guid: Option<u32>,
     now: f64,
@@ -221,6 +268,11 @@ fn read_event_parties(
             source_member: source.is_some_and(|source| history.members.contains(&source)),
             target_member: history.members.contains(&target),
             healthy: party_healthy(world, &history.members, map),
+            in_combat: history.members.iter().any(|member| {
+                world
+                    .get::<shared::components::CombatStatus>(*member)
+                    .is_some_and(|status| status.0)
+            }),
         })
         .collect()
 }
@@ -228,6 +280,7 @@ fn read_event_parties(
 /// The ordinary log boundary observes damage/healing after native mitigation/clamping,
 /// and deaths before corpse cleanup; disappearance never enters this path as death.
 pub(crate) fn record_event(world: &mut World, event: &CombatLogEvent) {
+    super::healer_triage::record_damage(world, event);
     if !matches!(
         event.kind,
         CombatLogKind::Damage | CombatLogKind::Heal | CombatLogKind::Death
@@ -253,7 +306,7 @@ pub(crate) fn record_event(world: &mut World, event: &CombatLogEvent) {
     }
     let input = EventInput {
         event,
-        source,
+        living_source: source.filter(|source| crate::spell_cast::targets::is_alive(world, *source)),
         target,
         guid,
         now: read_time(world),
@@ -269,14 +322,17 @@ fn observe_event(
     input: &EventInput<'_>,
     observation: &EventObservation,
 ) {
+    history.observe_clock(input.now, observation.in_combat);
     if observation.target_member {
         history.observe_health(input.now, observation.healthy);
     }
     match input.event.kind {
         CombatLogKind::Damage => observe_damage(history, input, observation),
-        CombatLogKind::Heal if observation.source_member && observation.target_member => {
+        CombatLogKind::Heal
+            if observation.source_member && observation.target_member && history.in_combat =>
+        {
             history.output.push_back(OutputSample {
-                at: input.now,
+                at: history.combat_seconds,
                 damage: 0.0,
                 healing: effective(input.event),
             });
@@ -299,14 +355,18 @@ fn observe_damage(
 ) {
     if observation.source_member && !observation.target_member {
         history.active_enemies.insert(input.target);
+        history.in_combat = true;
         history.output.push_back(OutputSample {
-            at: input.now,
+            at: history.combat_seconds,
             damage: effective(input.event),
             healing: 0.0,
         });
     } else if observation.target_member && !observation.source_member {
-        if let Some(source) = input.source {
+        // Lingering periodic damage remains real after its caster dies, but a
+        // dead source cannot reopen the encounter already closed by Death.
+        if let Some(source) = input.living_source {
             history.active_enemies.insert(source);
+            history.in_combat = true;
         }
     }
 }

@@ -5,6 +5,7 @@
 //! not their persisted stable slot (several guardians can coexist with a pet).
 use super::effects::EffectCtx;
 use crate::maps::InMap;
+use crate::random as rand;
 use crate::spell_info::SpellEffect;
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -28,8 +29,12 @@ const CONTROL_PET: u32 = 2;
 const TITLE_PET: i32 = 1;
 const TITLE_GUARDIAN: i32 = 2;
 const TITLE_MINION: i32 = 3;
+const TITLE_TOTEM: i32 = 4;
 const TITLE_COMPANION: i32 = 5;
 const TITLE_RUNEBLADE: i32 = 6;
+const TITLE_VEHICLE: i32 = 9;
+const TITLE_MOUNT: i32 = 10;
+const TITLE_LIGHTWELL: i32 = 11;
 /// TC EffectSummonType/Map::SummonCreature use the default TempSummon branch.
 const TITLE_ASSISTANT: i32 = 35;
 const IMMUNE_TO_PC_AND_NPC: u32 = 0x100 | 0x200;
@@ -89,18 +94,41 @@ impl SummonProperties {
         }
     }
 
+    /// TC EffectSummonType's default title branch and Map::SummonCreature's
+    /// UNIT_MASK_SUMMON. A title label alone is not a distinct control/runtime.
+    /// Joined spawn groups select the separate guardian route, not this branch.
+    fn uses_default_lifecycle(self) -> bool {
+        let ordinary_control = matches!(self.control, CONTROL_WILD | CONTROL_ALLY);
+        let special_title = matches!(
+            self.title,
+            TITLE_PET
+                | TITLE_GUARDIAN
+                | TITLE_MINION
+                | TITLE_TOTEM
+                | TITLE_COMPANION
+                | TITLE_RUNEBLADE
+                | TITLE_VEHICLE
+                | TITLE_MOUNT
+                | TITLE_LIGHTWELL
+        );
+        ordinary_control && !self.joins_summoner_spawn_group() && !special_title
+    }
+
     pub(crate) fn is_supported(self) -> bool {
         match self.control {
             CONTROL_PET => true,
-            CONTROL_WILD | CONTROL_ALLY => matches!(
-                self.title,
-                0 | TITLE_PET
-                    | TITLE_GUARDIAN
-                    | TITLE_MINION
-                    | TITLE_COMPANION
-                    | TITLE_RUNEBLADE
-                    | TITLE_ASSISTANT
-            ),
+            CONTROL_WILD | CONTROL_ALLY => {
+                self.uses_default_lifecycle()
+                    || matches!(
+                        self.title,
+                        0 | TITLE_PET
+                            | TITLE_GUARDIAN
+                            | TITLE_MINION
+                            | TITLE_COMPANION
+                            | TITLE_RUNEBLADE
+                            | TITLE_ASSISTANT
+                    )
+            }
             _ => false, // Puppet/vehicle controls and specialized titles require their own runtime.
         }
     }
@@ -214,11 +242,7 @@ pub(super) fn summon_creature(world: &mut World, ctx: &EffectCtx, effect: &Spell
         return;
     };
     let entry = effect.misc_values[0] as u32;
-    let uses_default_lifecycle = matches!(
-        (properties.control, properties.title),
-        (CONTROL_WILD, 0) | (CONTROL_WILD | CONTROL_ALLY, TITLE_ASSISTANT)
-    );
-    if uses_default_lifecycle && !properties.is_guardian() {
+    if properties.uses_default_lifecycle() {
         let count = roll_summon_count(world, ctx, effect, properties_id);
         for index in 0..count {
             let destination = if index == 0 {
