@@ -3,7 +3,6 @@ use super::kit::{Conditions, Entry, Slot};
 use super::kit_tests::at_level;
 use crate::auras::{ActiveAuras, aura_now};
 use crate::spell_cast::creature_cast;
-use bevy::prelude::*;
 
 const SHUJA: u32 = 209053;
 const FLAME_SHOCK: u32 = 470411;
@@ -71,6 +70,14 @@ fn rotation_fidelity_262_refreshes_own_flame_shock_in_pandemic_window() {
 fn rotation_fidelity_262_foreign_flame_shock_is_not_own_refresh_state() {
     let (mut h, caster) = at_level(SHUJA, 32, |_| {});
     let other = crate::spell_cast::test_harness::spawn_npc(&mut h.app, 0.0);
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(caster)
+        .unwrap()
+        .profile
+        .clone();
+    super::spawning::initialize(h.app.world_mut(), h.caster, other, profile).unwrap();
     let target = h.npc;
     creature_cast(h.app.world_mut(), other, FLAME_SHOCK, Some(target), true).unwrap();
     h.advance(1);
