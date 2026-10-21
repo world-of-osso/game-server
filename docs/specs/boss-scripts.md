@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Umbrelskul Lua-clock partial boundary
+
+- Explicit lead-approved partial Lua-clock/native70448 port: Umbrelskul186738/map2515, saved ordinal3/encounter2584/native completionbit2. LittleWigs2777a9d `Dragonflight/TheAzureVault/Umbrelskul.lua` supplies ability countdowns, not a complete executable TC script.
+- Dragon Strike384978: initial7.4s ordinary victim request, native2.5s casting/direct damage/periodic aura/threat effects. Lua schedules its next8.4s Normal/Follower or15.3s Mythic countdown only on actual successful cast; interrupted attempts must not produce a fabricated success or retry.
+- Crystalline Roar384699: direct native damage-ability request at Lua12.2s countdown, then23.1s Normal/Follower or105.6s Mythic request countdowns, waiting for active native casting. Native target25 and caster-line129/radius/width/damage remain authoritative. This partial direct ability request does not claim upstream384696 dummy/target-selection scripting.
+- Named gaps: `UMBRELSKUL_ENERGY_PHASE_UNSOURCED` (Arcane Eruption385075 and Unleashed Destruction385399/388804 energy logic), `UMBRELSKUL_BRITTLE_CRYSTALS_UNSOURCED` (health/181089/386746/crystal spawn and Fracture), `UMBRELSKUL_ROAR_SELECTOR_UNSOURCED` (384696→384699 source script unavailable). Do not infer dummy forwarding or new summons from spell names/base-point IDs alone.
+- `encounter_summons.py --encounter umbrelskul` authenticates blank TDB source identity and installs explicitly local `boss_umbrelskul` on independent copies only; preserve all actor/difficulty/addon/model/population/credit data. No synthetic follower205 row. Native scheduled damage/reset/isolated credit require proof; no full encounter/follower/native clear/loot/persistence claim.
+
 ## Azureblade Lua-clock partial boundary
 
 - Lead explicitly approves a partial Lua-clock combat port for Azureblade186739/map2515, prioritizing follower205. LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `Dragonflight/TheAzureVault/Azureblade.lua` supplies schedules/counts; this is not TC combat or full Retail-phase parity.

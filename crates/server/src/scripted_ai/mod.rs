@@ -40,6 +40,7 @@ pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
+mod umbrelskul;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 
