@@ -50,6 +50,31 @@ pub(super) fn run_stockade(seed: u64) -> Result<usize, String> {
     Ok(report.bosses_killed.len())
 }
 
+#[test]
+fn native_evade_at_home_completes_ordinary_return_lifecycle() {
+    let mut app = build_app();
+    let copy = create_copy(&mut app);
+    let actors = spawn_population(&mut app, copy);
+    let actor = actors[&20375744]; // Actual Stockade Rumbling Earth from the stalled seed12.
+    crate::creature_aggro::enter_evade_mode(app.world_mut(), actor);
+    assert_eq!(
+        app.world().get::<crate::creature_ai::CreatureState>(actor),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+    app.update();
+    app.update();
+    assert!(
+        app.world()
+            .get::<shared::components::Health>(actor)
+            .is_some_and(|health| health.current > 0.0)
+    );
+    assert_ne!(
+        app.world().get::<crate::creature_ai::CreatureState>(actor),
+        Some(&crate::creature_ai::CreatureState::Returning),
+        "a real living actor already at its native home must complete return instead of permanently blocking the active-fight history"
+    );
+}
+
 pub(super) fn build_app() -> App {
     build_cached_app(&mut None)
 }
