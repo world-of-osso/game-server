@@ -80,3 +80,17 @@ def read_csv_tables(csv_dir):
 
 def read_source_tables(source=DEFAULT_SOURCE, csv_dir=DEFAULT_CSV):
     return {**read_tdb_tables(source), **read_csv_tables(csv_dir)}
+
+
+def table_ddl(table, columns):
+    primary = ('ConversationId', 'Idx') if table == 'tdb_conversation_actors' else (columns[0],)
+    declarations = [f'"{name}" ' + ('TEXT' if name == 'ScriptName' else 'INTEGER') + ' NOT NULL'
+                    for name in columns]
+    declarations.append('PRIMARY KEY (' + ','.join(f'"{name}"' for name in primary) + ')')
+    return f'CREATE TABLE IF NOT EXISTS "{table}" ({",".join(declarations)})'
+
+
+def import_tables(connection, tables):
+    with connection:
+        for table, (columns, _) in tables.items():
+            connection.execute(table_ddl(table, columns))
