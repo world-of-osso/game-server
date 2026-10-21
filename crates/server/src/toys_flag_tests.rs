@@ -111,7 +111,17 @@ fn toy_coverage_flag51640_actual_enemy_death_plants_one_source_flag_and_expires(
             && m.content.contains("Flag of Ownership")),
         "{emotes:?}"
     );
-    h.advance(1170);
+    assert!(
+        h.inbox
+            .cooldowns
+            .iter()
+            .any(|cd| cd.spell_id == 51640 && cd.duration_ms == 60_000 && !cd.is_gcd)
+    );
+    assert_eq!(
+        activate(&mut h, FLAG_OWNERSHIP)[0].error.as_deref(),
+        Some("OnCooldown")
+    );
+    h.advance(1160);
     assert!(h.app.world().get_entity(flag).is_ok());
     h.advance(40);
     assert!(h.app.world().get_entity(flag).is_err());
@@ -124,9 +134,12 @@ fn toy_coverage_flag51640_actual_enemy_death_plants_one_source_flag_and_expires(
             .iter()
             .any(|a| a.spell_id == 51657)
     );
+    // ItemEffect7814 recovers after60000ms, just like the child aura/object.
+    // Ordinary elapsed time permits reuse; no cooldown reset/deadline editing.
+    assert_eq!(activate(&mut h, FLAG_OWNERSHIP)[0].error, None);
     assert_eq!(
-        activate(&mut h, FLAG_OWNERSHIP)[0].error.as_deref(),
-        Some("OnCooldown")
+        h.inbox.go.iter().filter(|go| go.spell_id == 51640).count(),
+        2
     );
 }
 
