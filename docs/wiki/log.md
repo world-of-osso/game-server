@@ -1,3 +1,7 @@
+## 2026-10-21 — Kokia current Retail partial
+
+[Kokia](systems/boss-scripts.md#kokia-current-retail-partial--2026-10-21): ignored firstSearingRED precedes currentRetail partial065cf3fc9. Native5/5GREEN78.66s atd1af8bded proves Normal/Follower140s ongoing lanes, native aura23 weapon damage/reset/source-order rearm/isolated2606bit0/corpse. Producer1PASS12.435s; authenticated primary/localLua binding only, all actor inputs retained. No legacy timing or unsourced Ritual/Firestorm/projectile forwarding; conditional context and final gate/publication remain explicit.
+
 ## 2026-10-21 — Melidrussa current Retail partial
 
 [Melidrussa](systems/boss-scripts.md#melidrussa-current-retail-partial--2026-10-21): ignored nativeHail RED→currentRetail native-child/source-order lanes→5GREEN77.74s atbcc2dc5cf, Normal/Follower140s ongoing damage/copy credit/reset/corpse. Source producer1PASS6.140s authenticates2609/map2521bit1 and localLua binding without actor-data edits. Master mergedb7f618873 afterward; no fresh postmerge certification (capacity held9minutes), final gate/publication lead-owned. Timeline condition/selector/Whelp gaps retained.

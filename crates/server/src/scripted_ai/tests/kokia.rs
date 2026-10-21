@@ -77,7 +77,6 @@ fn encounter_coverage_kokia_native_searing_periodic_weapon_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "KOKIA_CURRENT_RETAIL_PORT_PENDING"]
 fn encounter_coverage_kokia_first_searing_blows_follows_current_retail_clock() {
     let (mut h, boss, _) = kokia_copy(205);
     h.engage(boss);
