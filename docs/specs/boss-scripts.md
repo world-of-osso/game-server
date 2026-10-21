@@ -1,5 +1,20 @@
 # Boss scripts
 
+## Academy current Retail partial boundary
+
+- Doragosa190609/2565/bit3 uses current Retail Missiles373326 initial7/repeat10, Astral Blast1282251 initial9/repeat12, Bomb374343 initial/repeat14, Vacuum388822 initial/repeat28. Explicitly canceled6.5s Blast bars never cast; native cast serialization delays due requests. Retain `DORAGOSA_TIMELINE_CONDITION_CONTEXT`, `DORAGOSA_BOMB_SELECTOR_GAP` and `DORAGOSA_OVERWHELMING_RIFT_SCRIPT_GAP`; no legacy Breath374361 or guessed bomb targets/rifts. `--encounter doragosa` only installs local binding; authored spawn9001231, flags64, stats/models/difficulties unchanged.
+
+- Ancient196482/2563/map2526/bit1 uses current Retail LittleWigs2777a9d durations: Barkbreaker388544 initial9 then28/29 in order, Germinate388796 initial18/repeat33, Branch Out388623 initial/repeat30, Burst Forth388923 initial54/repeat55. Native70448 targets/effects remain authoritative. No legacy OnEngage schedules.
+- Parent initially authorized outgoing-cast fixtures via threat engagement while retaining Ancient/Crawth source immunity832. Actual immunity derives AggroMode::Passive and prevents can_engage; final decision retains `ANCIENT_PC_IMMUNITY_INGRESS_UNSOURCED`/`CRAWTH_PC_IMMUNITY_INGRESS_UNSOURCED` without artificial fixture state. Ancient port timers remain blocked/unproven; Crawth port is deferred. `ACADEMY_ANCIENT_UNLOCK_SOURCE_GAP` and `ACADEMY_ANCIENT_ORDINARY_KILL_CREDIT_GAP` remain; no flag removal or full-clear claim. `ACADEMY_TIMELINE_CONDITION_CONTEXT` covers canceled/random Normal bars, energy and paused/removed timeline events; source-listed durations still continue in order.
+- `ACADEMY_ANCIENT_GERMINATE_SELECTOR_GAP` and `ACADEMY_ANCIENT_BRANCH_SELECTOR_GAP`: native dummy388797/388623 has no authored child/summon selector. Never invent lashers/branches/placements. Producer `encounter_summons.py --encounter ancient` binds only the authenticated source primary and local Lua script; no stats/population/models/addons/difficulty edits.
+- `ACADEMY_VEXAMUS_COMBAT_ACTOR_SOURCE_GAP`:194181 has no TDB spawn/group. Native387448 summons194181/property64 but no authored TC/SAI caster ingress. Placement deferred; no guessed coordinates or actor alias.
+## TWW Rookery — Kyrioss source boundary
+
+- Map2648 primary209230/encounter2816/bit0 runs explicitly named `littlewigs_kyrioss`; TC a352b1fa has no Rookery script. `encounter_summons.py --encounter kyrioss` binds independent copies only, validates native identity, preserves TDB stats/population/difficulty rows and unrelated bosses; lead owns publication.
+- LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `WarWithin/TheRookery/Kyrioss.lua` supplies first Crashing Thunder1214325 at5100ms, Wild Lightning474018 at9400ms and Torrent's actual cast1214315 at16000ms (444123 is the warning label). Use ordinary70448 cast times, implicit targets and effects in Normal1 and Follower205; no instant cast or manufactured205 template row.
+- Crashing/Wild repeats are relative to actual accepted cast starts: first42500/41300ms respectively, then15800/40000ms alternating. Rejected admission must not emit a successful cast or restart a repeat. Reset clears counters/clocks; death/credit remains copy-local.
+- Named gaps: `KYRIOSS_DUMMY_CHILDREN_UNSOURCED` (1214325/474018 native dummy effects do not establish their scripted child casts); `KYRIOSS_TORRENT_444034_PHASE_UNSOURCED` (native1214315 periodic1214323 does not prove the444034 event or authorize a guessed55.9s repeat); `KYRIOSS_DASH_CONTROLLER_UNSOURCED` (419870 exists but source endpoint/controller/landing actions are absent). No fabricated energy/stage actions, dummy substitutions, whole-fight, native-clear, navigation or budget certification.
+
 ## Dragonflight current-Retail Lua policy
 
 - User follower priority: Ruby Life Pools2521 → Algethar Academy2526 → Uldaman2451, then other Dragonflight dungeons after their source population lands. War Within is excluded from this task.
