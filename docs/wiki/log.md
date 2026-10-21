@@ -3427,3 +3427,18 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: Kargath pinned source/native149 and eleven-case proof ingested;30738 delayed-selector incompatibility and source actor publication gaps explicit.
 
 - 2026-10-20: Porung authenticated Heroic primary/unchanged native SmartAI and six-case composite proof ingested; stale No Repeat comment and real Normal-only same-display counterexample documented.
+
+## 2026-10-21 — Toy census generic force casts
+
+[Source and proof](systems/toys.md#census-driven-generic-force-casts-2026-10-21): effect160 generic normal queued target→caster cast gives421→423/1173 pipeline admission. Behavioral RED2/one control→GREEN3; native timing/CC and actual Spore learning/2s cast/5min expiry/cooldown, nine existing effect64 controls retained. Brulfist movement/native presentation remain unproved; dummy/scripts and missing data stay explicit.
+
+## 2026-10-21 — Generic toy summon dependency closure
+
+[Source and proof](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21):151 missing-template/55 control split; producer RED→GREEN4, marker/actual trophy GREEN3 and retained census/mailbox proofs. Prepared423→506 (86 additions/three corrected gaps); canonical420 pending lead publication.206 templates/280 models/one addon inserted with no existing-row changes. Global markers and existing contracts preserved; sole Katy exemption has real mailbox proof.
+- 2026-10-20: property363 current-health team damage and explicit percentage-convention policy; actual70448 census distinguishes registered handlers from recursive admission.
+
+- 2026-10-20: property362 same-species healing, shared370 identity counter and current70448 census1904/1043.
+
+- 2026-10-20: property140 real785/787 stack-duration refresh; explicit786 pad-follow gap avoids silently admitting an incomplete parent.
+
+- 2026-10-20: property197 actual last-hit Power percentages, data-over-prose conflict note, real997/2432 RED/GREEN and1908/1046 census.

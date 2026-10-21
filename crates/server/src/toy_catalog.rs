@@ -5,6 +5,9 @@ use rusqlite::Connection;
 use shared::protocol::ToySnapshot;
 use std::collections::{BTreeMap, BTreeSet};
 
+#[path = "toy_interaction.rs"]
+mod interaction;
+
 #[derive(Clone, Debug)]
 pub(crate) struct Toy {
     pub snapshot: ToySnapshot,
@@ -18,6 +21,7 @@ pub(crate) struct Toy {
 pub(crate) struct ToyCatalog(pub BTreeMap<u32, Toy>);
 
 pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
+    let interaction_gaps = interaction::load(conn)?;
     let mut query = conn.prepare(
         "SELECT t.ItemID, s.Display_lang, i.IconFileDataID, s.ExpansionID,
                 t.Flags, t.SourceTypeEnum, t.SourceText_lang, e.SpellID,
@@ -50,7 +54,7 @@ pub(crate) fn load(conn: &Connection) -> rusqlite::Result<ToyCatalog> {
             } else if spec.is_some_and(|id| id != 0) {
                 Some("toy specialization restriction not supported".into())
             } else {
-                None
+                interaction::unavailable(&interaction_gaps, r.get(0)?, spell_id)
             };
             Ok(Toy {
                 snapshot: ToySnapshot {

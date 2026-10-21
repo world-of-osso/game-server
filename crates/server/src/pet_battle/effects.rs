@@ -54,7 +54,8 @@ impl<R: BattleRng> Runtime<'_, R> {
             150 | 168 => self.add_aura_effect(caster, target, effect),
             107 => self.fade_swap(caster, effect),
             67 => Ok(self.equalize_health(caster, target, effect)),
-            68 => self.percent_damage(caster, target, ability, effect),
+            68 | 197 => self.percent_damage(caster, target, ability, effect),
+            363 => self.current_health_team_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
                     return Ok(false);
@@ -82,6 +83,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             }
             75 | 76 | 77 => self.charged_damage(caster, target, ability, effect),
             370 => self.damage_with_species_bonus(caster, target, ability, effect),
+            362 => self.heal_with_species_bonus(caster, effect),
             96 | 149 => self.damage_effect(caster, target, ability, effect),
             45 | 97 => {
                 let caster_speed = self.speed(caster);
@@ -159,6 +161,14 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             85 => self.reset_aura_state(p[0] as u32),
+            140 => {
+                for aura in &mut self.battle.auras {
+                    if aura.target == target && aura.ability == effect.aura {
+                        aura.remaining = p[0];
+                    }
+                }
+                Ok(true)
+            }
             112 => self.resurrect_reserve(caster, effect),
             111 => {
                 let pet = self.battle.pet_mut(caster);
@@ -366,6 +376,23 @@ impl<R: BattleRng> Runtime<'_, R> {
             )),
         }
     }
+    fn same_species_reserve_count(&self, caster: PetRef) -> i32 {
+        let species = self.battle.pet(caster).species;
+        self.battle.teams[caster.team]
+            .pets
+            .iter()
+            .enumerate()
+            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
+            .count() as i32
+    }
+    fn heal_with_species_bonus(&mut self, caster: PetRef, effect: &Effect) -> Result<bool, String> {
+        let mut healing = effect.clone();
+        healing.property = 23;
+        healing.params[0] += self.same_species_reserve_count(caster) * effect.params[2];
+        healing.params[2] = effect.params[3];
+        healing.params[3] = 0;
+        self.heal_effect(caster, &healing)
+    }
     fn damage_with_species_bonus(
         &mut self,
         caster: PetRef,
@@ -373,13 +400,7 @@ impl<R: BattleRng> Runtime<'_, R> {
         ability: u32,
         effect: &Effect,
     ) -> Result<bool, String> {
-        let species = self.battle.pet(caster).species;
-        let matching_reserves = self.battle.teams[caster.team]
-            .pets
-            .iter()
-            .enumerate()
-            .filter(|(slot, pet)| *slot != caster.slot && pet.species == species)
-            .count() as i32;
+        let matching_reserves = self.same_species_reserve_count(caster);
         let mut damage = effect.clone();
         damage.property = 24;
         damage.params[0] += matching_reserves * effect.params[2];
@@ -496,6 +517,26 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         Ok(true)
     }
+    fn current_health_team_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let order = self
+            .catalog
+            .turn_effects(effect.turn)
+            .into_iter()
+            .filter(|row| row.property == 363 && row.order <= effect.order)
+            .count() as u32;
+        let team_anchor = if ability == 2388 { caster } else { target };
+        let recipient = other_team_slot(team_anchor, order);
+        //Each following leech row belongs to this victim, including misses/dead reserves.
+        let last = self.catalog.state_id("Last_HitDealt")?;
+        self.battle.pet_mut(caster).states.insert(last, 0);
+        self.percent_damage(caster, recipient, ability, effect)
+    }
     fn percent_damage(
         &mut self,
         caster: PetRef,
@@ -514,7 +555,12 @@ impl<R: BattleRng> Runtime<'_, R> {
         if caster != recipient && self.block_attack(recipient)? {
             return Ok(false);
         }
-        let health = if effect.property == 62 {
+        //PET_BATTLE_197_POWER_PCT_OF_LAST_HIT: the stored hit is already scaled.
+        let health = if effect.property == 197 {
+            self.state(caster, "Last_HitTaken")
+        } else if effect.property == 363 {
+            self.battle.pet(recipient).health
+        } else if effect.property == 62 {
             self.battle.pet(target).stats.health
         } else if recipient == caster {
             self.battle.pet(caster).health
@@ -522,7 +568,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             self.battle.pet(caster).stats.health
         };
         let family = self.catalog.abilities[&ability].family;
-        let multiplier = if recipient == caster {
+        //PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION:
+        //hostile percentages retain type scaling; friendly costs are untyped.
+        let friendly_cost = effect.property == 363 && recipient.team == caster.team;
+        let multiplier = if recipient == caster || friendly_cost {
             1.0
         } else {
             type_multiplier(family as usize, self.battle.pet(recipient).family)?
