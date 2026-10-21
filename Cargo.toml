@@ -41,10 +41,3 @@ opt-level = 2
 
 [profile.dev.package.navigation]
 opt-level = 2
-
-# Optimized transport-free gameplay qualification; retain incremental rebuilds.
-[profile.sim]
-inherits = "dev"
-opt-level = 2
-debug = 0
-incremental = true

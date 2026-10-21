@@ -316,18 +316,13 @@ pub(super) fn try_movement(
     if distance <= reach {
         return false;
     }
-    // Divine Steed190784 is an unimplemented dummy wrapper, not a speed aura.
-    let ids = [100, 385952, 252216, 1850, 186257, 58875, 116841, 358267];
+    // Dummy-only Steed/Charge/Shield Charge wrappers do not execute movement.
+    let ids = [252216, 1850, 186257, 58875, 116841, 358267];
     for spell in learned(world, unit, follower, &ids) {
         if crate::auras::has_aura(world, unit, spell) {
             continue;
         }
-        let recipient = if matches!(spell, 100 | 385952) {
-            target
-        } else {
-            unit
-        };
-        if cast_utility(world, unit, spell, recipient, false) {
+        if cast_utility(world, unit, spell, unit, false) {
             return true;
         }
     }
