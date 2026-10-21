@@ -13,6 +13,10 @@ fn flag_harness(path: &std::path::Path) -> (Harness, u64) {
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
     bevy::app::Plugin::build(&crate::death::DeathPlugin, &mut h.app);
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<ChatMessage>::default(),
+        MessageReceiver::<ChatMessage>::default(),
+    ));
     h.app
         .add_systems(FixedUpdate, crate::game_objects::summoned::expire_objects);
     learn(&mut h, 1);
