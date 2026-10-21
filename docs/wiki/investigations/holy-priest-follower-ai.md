@@ -198,7 +198,14 @@ and Henry overheal worsen; party-source overheal improves. Native596 launches0�
 PoM0→149, Fade0→128 and Guardian0→3 in Azure, demonstrating real decisions, not
 full-run success. Simulated exposure differs: Stockade50074.75→52788.3sec,
 Azure8608.2→11946.8sec. Differently truncated totals are not fixed-duration
-throughput. Guardian48153 heals are self-sourced by the protected recipient;
+throughput. Native Death-event order places every additional Azure death after
+Garrick: before0pre/5post, after0pre/14post, with20tank deaths both sides.
+Native0.5sec samples bracket median tank-death upper bounds88→89simsec; median
+paired-seed delta+0.5sec. Median terminal delay after tank death266.65→548.55sec.
+Longer post-tank followup permits more secondary deaths; this neither erases the
+34versus25 total nor establishes direct healer-quality causality. Exact brackets
+and native event order: `azure-death-exposure-analysis.json` in the same diagnostics.
+Guardian48153 heals are self-sourced by the protected recipient;
 party totals include them without silently attributing ally rescues to Henry.
 
 Native0.5sec mana curves remain separate CSVs; median run-minimum fractions
