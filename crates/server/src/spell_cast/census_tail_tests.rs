@@ -52,7 +52,6 @@ fn rewarded(h: &Harness, character: u64) -> bool {
 }
 
 #[test]
-#[ignore = "EFFECT16_NATIVE_TRACKING_QUEST_UNPUBLISHED"]
 fn census_tail_16_native_dreamwalk_rewards_its_tracking_quest_and_persists() {
     let (mut h, directory, character) = quest_fixture();
     assert!(!rewarded(&h, character));
