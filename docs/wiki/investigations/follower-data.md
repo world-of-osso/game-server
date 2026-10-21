@@ -2,7 +2,7 @@
 
 ### Base Tyrant Demonfire binding — 2026-10-21
 
-At6a0ec7e69 actual learned265187 summons base135002 but emits no270481 damage (1genuineRED14.58s/zero warnings). Exact265187/135002 now binds native270481 from pinned SimC pets1520–1533. Actual cast time/cost/coefficient remain native; no substitute Imp/Firebolt, no fabricated cadence. GREEN pending. This is attack-binding proof only: base Tyrant still has existing generic demon inheritance rather than a newly approved actor-specific SP policy; Antoran250289 Burning Cleave, Demonic Power roster and orchestration remain open.
+At6a0ec7e69 actual learned265187 summons base135002 but emits no270481 damage (1genuineRED14.58s/zero warnings). Exact265187/135002 now binds native270481 from pinned SimC pets1520–1533. Actual cast time/cost/coefficient remain native; no substitute Imp/Firebolt, no fabricated cadence. Atf1a03c3c8 native2GREEN17.12s/zero warnings proves base270481 damage and retained32/35 single-variant admission. This is attack-binding proof only: base Tyrant still has existing generic demon inheritance rather than a newly approved actor-specific SP policy; Antoran250289 Burning Cleave, Demonic Power roster and orchestration remain open.
 
 
 ### Tyrant native alternative summon admission — 2026-10-21
