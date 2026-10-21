@@ -92,6 +92,11 @@ fn rotation_fidelity_last_stand_is_only_the_native_learned_shield_wall_consequen
     for (level, learned) in [(46, false), (47, true)] {
         let (mut h, unit) = at_level(215517, level, |_| {});
         let before = h.app.world().get::<Health>(unit).unwrap().max;
+        assert_eq!(
+            has_aura(h.app.world(), unit, 1243659),
+            learned,
+            "actual native passive availability is the prerequisite, not a granted proc"
+        );
         creature_cast(h.app.world_mut(), unit, 871, Some(unit), false).unwrap();
         h.advance(3);
         assert!(has_aura(h.app.world(), unit, 871), "real Shield Wall");

@@ -1,6 +1,7 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+mod after_cast_auras;
 mod batch10;
 mod batch11;
 mod batch12;
@@ -471,6 +472,9 @@ fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
+    if let Some(hook) = after_cast_auras::hook(spell_id) {
+        return Some(hook);
+    }
     match spell_id {
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
