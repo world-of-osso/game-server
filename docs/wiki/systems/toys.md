@@ -1053,7 +1053,7 @@ Pinned TC `SpellEffects.cpp`1890–1904 captures the private group GUID, and `Ob
 
 ### Signed summon title source boundary (2026-10-13)
 
-The current canonical import publishes SummonProperties3001.Title=-1. The old u32 loader aborted the entire store at that row, preventing unrelated source toys from casting. Pinned TC `DB2Structure.h`4318–4325 declares Title as int32; `SummonProperties.title` and title constants now preserve that signed representation. Unknown titles remain explicitly unsupported; the loader neither wraps the sentinel nor substitutes old data. Concrete3001/4493 loader regression accompanies the actual ten toy loader failures.
+The current canonical import publishes SummonProperties3001.Title=-1. The old u32 loader aborted the entire store at that row, preventing unrelated source toys from casting. Pinned TC `DB2Structure.h`4318–4325 declares Title as int32; `SummonProperties.title` and title constants now preserve that signed representation. The loader neither wraps the sentinel nor substitutes old data. Later guardian qualification established TC SpellEffects.cpp1947–1952 routes JoinSummonerSpawnGroup before Title: actual3001 flags4610 takes that guardian route despite Title=-1. This does not certify a new toy use or asset/behavior closure; unsupported categories without an implemented route remain refused. Concrete3001/4493 loader regression accompanies the actual ten toy loader failures.
 
 ## Wild variable-count summons (2026-10-14)
 
