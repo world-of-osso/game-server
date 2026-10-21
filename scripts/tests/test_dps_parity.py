@@ -1,6 +1,7 @@
 """Profile instance identities are never replaced by base items or fabricated stats."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -99,6 +100,16 @@ actions+=/judgment,if=holy_power<5
             {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2},
             {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1},
         ])
+
+    @unittest.skipUnless(os.environ.get("DPS_PARITY_EFFECTIVE_TRAITS"), "opt-in effective-rank RED")
+    def test_selected_metadata_keeps_disabled_hero_allocation_and_effective_rank(self):
+        # Pinned Feral allocates Wildshape Mastery in hero21 while selecting22;
+        # create_talent_obj disables that allocation without deleting player_traits.
+        row = {"tree": "hero", "node_id": 94610, "entry_id": 117207,
+               "ranks": 1, "max_ranks": 1, "active_ranks": 0}
+        self.assertEqual(PARITY.parse_selected_talents(json.dumps([row])), [
+            {"tree": "hero", "node_id": 94610, "entry_id": 117207,
+             "ranks": 1, "active_ranks": 0}])
 
     def test_missing_selected_talent_metadata_does_not_become_default_talents(self):
         with self.assertRaisesRegex(ValueError, "selected talent"):
