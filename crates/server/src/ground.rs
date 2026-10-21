@@ -869,6 +869,10 @@ mod m2_floor_tests;
 #[path = "ground_tests.rs"]
 mod tests;
 
+#[cfg(all(test, target_os = "linux"))]
+#[path = "ground/startup_latency_tests.rs"]
+mod startup_latency_tests;
+
 #[cfg(test)]
 #[path = "ground/format_metadata_tests.rs"]
 mod format_metadata_tests;
