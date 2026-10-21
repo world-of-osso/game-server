@@ -222,6 +222,8 @@ mod rotation_defense_tests;
 #[cfg(test)]
 mod rotation_override_tests;
 #[cfg(test)]
+mod rotation_proc_tests;
+#[cfg(test)]
 mod rotation_refresh_tests;
 #[cfg(test)]
 mod rotation_tests;
