@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Wild Imp binding and owner SP — 2026-10-21
+
+Corrected native104317/55659 tests reach genuine RED at a4f78a987: source-bound104318 deals2 versus expected16.3628 at ownerSP73.909706, and production binding never emits104318 (two failures17.45s). Source-qualified binding now selects104318 only for104317/55659. `WARLOCK_WILD_IMP_OWNER_SP_SIMC` uses constructor702–705 SP1.2, not overridden base19=1.0; coefficient remains native0.192177996. Other demons retain0.15SP and all existing AP/health behavior. Authenticated55659 template/model closure is prepared on copies only; canonical publication remains lead-owned. GREEN pending. HoG/Core/Tyrant lifecycle, energy-exhaustion demise and full Demo parity remain open.
+
+
 ### Font of Magic selection oracle — 2026-10-21
 
 Merged native selection casts382266/382411 rather than357208/359073 after learned411212 Font of Magic57. Native aura332 effects1077606/1077607 explicitly map those roots; this is valid action resolution, not Azure filler starvation. The max-level oracle now requires both replacement SpellGo receipts and the actual passive; a level56 control requires both unreplaced roots. Empowered release/damage remains unimplemented and is not certified by these selection tests.

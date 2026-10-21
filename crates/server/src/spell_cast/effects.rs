@@ -263,7 +263,14 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()
         {
-            return demon_power_stats(world, summon.owner);
+            let entry = world
+                .get::<shared::components::Npc>(unit)
+                .map(|npc| npc.template_id);
+            let spell_share = match (summon.spell_id, entry) {
+                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
+                _ => DEMON_OWNER_SPELL_POWER,
+            };
+            return demon_power_stats(world, summon.owner, spell_share);
         }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
@@ -274,7 +281,7 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(world, pet.owner);
+            return demon_power_stats(world, pet.owner, DEMON_OWNER_SPELL_POWER);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -292,17 +299,18 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
+/// The source-qualified Wild Imp uses its explicit SimC SP policy instead.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
-fn demon_power_stats(world: &World, owner: Entity) -> (f32, f32) {
+fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
     let power = world
         .get::<CharacterStats>(owner)
         .map_or(0.0, |stats| stats.spell_power.max(0.0));
-    (
-        power * DEMON_OWNER_SPELL_POWER,
-        power * DEMON_OWNER_ATTACK_POWER,
-    )
+    (power * spell_share, power * DEMON_OWNER_ATTACK_POWER)
 }
 
+// WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
+// Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
+const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
