@@ -22,12 +22,12 @@ Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-so
 
 ## Native evade/home lifecycle
 
-- [ ] Returning creatures consume frozen-edge travel to the same native explicit/escort/spawn home used by production. A displaced actor must move, not teleport; an actor already at home must not remain Returning.
-- [ ] On actual arrival, share ordinary Idle/mana/non-regenerating-health/addon/pose restoration and `JustReachedHome` dispatch with production. Do not clear pull history or fake native deaths to release a stalled fight.
+- [x] Returning creatures consume frozen-edge travel to the same native explicit/escort/spawn home used by production. A displaced actor must move, not teleport; an actor already at home must not remain Returning.
+- [x] On actual arrival, share ordinary Idle/mana/non-regenerating-health/addon/pose restoration and `JustReachedHome` dispatch with production. Do not clear pull history or fake native deaths to release a stalled fight.
 
 ## Native addon auras
 
-- [ ] Apply source creature/template addon auras at spawn and actual home return with production `zones::apply_addon_auras`, not copied simulator effect logic. Map34 native46263/19818,46381/10022,46405/55474 must retain real evade removal/restoration.
+- [x] Apply source creature/template addon auras at spawn and actual home return with production `zones::apply_addon_auras`, not copied simulator effect logic. Map34 native46263/19818,46381/10022,46405/55474 must retain real evade removal/restoration.
 
 ## Native pet utility
 
@@ -64,7 +64,7 @@ Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs norma
 
 - `dungeon_simulator::catalogs::seeded_apps_reuse_catalog_allocations_but_reset_dynamic_state`: exact spawn/spell allocation reuse with fresh clocks, actors and event queues (RED→GREEN6.39s).
 - `dungeon_simulator::campaign::sampling_retains_a_member_after_native_dead_summon_despawn`: actual kill→native corpse decay→absent actor sampling (RED→GREEN11.23s).
-- `dungeon_simulator::runtime::native_evade_at_home_completes_ordinary_return_lifecycle`, `native_evade_walks_frozen_home_route_before_completing_return`: actual authored Rumbling Earth20375744 native-home and displaced4yd return boundaries (both genuine RED at fcacd14e7; GREEN pending).
+- `dungeon_simulator::runtime::native_evade_at_home_completes_ordinary_return_lifecycle`, `native_evade_walks_frozen_home_route_before_completing_return`: actual authored Rumbling Earth20375744 native-home and displaced4yd return boundaries (both genuine RED at fcacd14e7; GREEN at21dee71c8, retained with addon fixtures at92ec650da).
 
 ## Known gaps (current cycle)
 
