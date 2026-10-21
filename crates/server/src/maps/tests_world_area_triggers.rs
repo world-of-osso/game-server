@@ -127,6 +127,42 @@ fn exercise_barrier(difficulty: u32) {
 }
 
 #[test]
+#[ignore = "RED: login-created copies do not create sourced world-static AreaTriggers"]
+fn world_static_areatrigger_login_copy_spawns_authored_ruby_area() {
+    let mut h = harness().expect("real map/admission catalog");
+    let location = h.app.world().resource::<MapStore>().safe_locs[&100030];
+    assert_eq!(location.map_id, 2521, "actual Ruby world-safe location");
+    let place = h
+        .app
+        .world_mut()
+        .run_system_once(move |mut commands: Commands, mut maps: LoginMaps| {
+            maps.resolve(
+                &mut commands,
+                9201,
+                1,
+                RaidDifficulty::default(),
+                location.map_id,
+                location.bevy_position(),
+            )
+        })
+        .unwrap()
+        .expect("ordinary authenticated dungeon login placement");
+    let ids: Vec<_> = h
+        .app
+        .world_mut()
+        .query::<(&InMap, &WorldAreaTrigger)>()
+        .iter(h.app.world())
+        .filter(|(map, _)| **map == place.map)
+        .map(|(_, area)| area.spawn_id)
+        .collect();
+    assert_eq!(
+        ids,
+        vec![20],
+        "actual TDB Ruby static spawn20 in the login-created copy"
+    );
+}
+
+#[test]
 #[ignore = "RED: hosted continents do not create sourced world-static AreaTriggers"]
 fn world_static_areatrigger_hosted_continent_has_authored_source_population() {
     let mut h = harness().expect("real map/admission catalog");
