@@ -45,6 +45,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     396236, 1232024, // Yennu's Kite, Chowdar's Favorite Ribbon: ordinary owner attachments.
     425503,  // Fast-Growing Seed: source3s planting cast/30s ordinary growth visual.
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
+    406077,  // Obsidian Battle Horn: source500ms peaceful cast/5s visual and sound.
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
     408067,  // B.B.F. Fist's selected-target animations/hand attachment
