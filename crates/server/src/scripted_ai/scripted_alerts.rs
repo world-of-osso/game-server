@@ -17,6 +17,7 @@ struct Ability {
     label: u32,
     warning: Option<EncounterSeverity>,
     counted: bool,
+    warning_name: Option<&'static str>,
 }
 
 const fn ability(
@@ -30,6 +31,14 @@ const fn ability(
         label,
         warning,
         counted,
+        warning_name: None,
+    }
+}
+
+const fn counted_rename(spell: u32, name: &'static str, warning: EncounterSeverity) -> Ability {
+    Ability {
+        warning_name: Some(name),
+        ..ability(spell, spell, Some(warning), true)
     }
 }
 
@@ -58,10 +67,10 @@ fn abilities(encounter: u32) -> Option<&'static [Ability]> {
         ],
         // EchoOfDoragosa.lua:184–245.
         2565 => &[
-            ability(373326, 373326, Some(Medium), true),
-            ability(1282251, 1282251, Some(Medium), true),
-            ability(374343, 374343, Some(Low), true),
-            ability(388822, 388822, Some(High), true),
+            counted_rename(373326, "Missiles", Medium),
+            counted_rename(1282251, "Tank Hit", Medium),
+            counted_rename(374343, "Bombs", Low),
+            counted_rename(388822, "Pull In", High),
         ],
         // Azureblade.lua:108–140.
         2585 => &[
@@ -176,11 +185,14 @@ fn select_cast_warning(
     if event.kind != boundary {
         return None;
     }
-    let name = store
-        .get(ability.label)
-        .expect("sourced encounter label")
-        .name
-        .clone();
+    let name = match ability.warning_name {
+        Some(name) => name.to_owned(),
+        None => store
+            .get(ability.label)
+            .expect("sourced encounter label")
+            .name
+            .clone(),
+    };
     Some((unit, map, ability, name))
 }
 

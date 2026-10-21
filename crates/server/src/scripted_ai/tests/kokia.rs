@@ -76,6 +76,65 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
 }
 
 #[test]
+fn boss_alerts_opted_lua_scripts_publish_real_initial_requests_only() {
+    use shared::protocol::EncounterTimelineEvent;
+    for (entry, map, ordinal, expected) in [
+        (188252, 2521, 1, &[(1307297, 5000), (1307308, 15000)][..]),
+        (
+            209230,
+            2648,
+            0,
+            &[(1214325, 5100), (474018, 9400), (444123, 16000)][..],
+        ),
+        (
+            190609,
+            2526,
+            3,
+            &[
+                (373326, 7000),
+                (1282251, 9000),
+                (374343, 14000),
+                (388822, 28000),
+            ][..],
+        ),
+        (
+            186739,
+            2515,
+            1,
+            &[(384223, 3300), (372222, 5200), (385578, 10600)][..],
+        ),
+        (186738, 2515, 3, &[(384978, 7400), (384699, 12200)][..]),
+    ] {
+        let (mut h, boss, _) = bound_boss_at_difficulty(entry, map, ordinal, 205, None);
+        h.engage(boss);
+        h.advance(0.1);
+        let timers = h
+            .inbox(0)
+            .timeline
+            .iter()
+            .find_map(|event| match event {
+                EncounterTimelineEvent::Timers { timers, .. } => Some(timers),
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("Lua-backed entry{entry} must publish its actual requests"));
+        assert_eq!(
+            timers.len(),
+            expected.len(),
+            "entry{entry}: no guessed extra mechanics"
+        );
+        for &(spell, duration) in expected {
+            let timer = timers
+                .iter()
+                .find(|timer| timer.spell_id == spell)
+                .unwrap_or_else(|| panic!("entry{entry} missing spell{spell}"));
+            assert_eq!(timer.duration_ms, duration);
+            assert!((duration - 100..=duration).contains(&timer.remaining_ms));
+        }
+        assert!(h.inbox(1).timeline.is_empty());
+    }
+}
+
+#[test]
 fn encounter_coverage_kokia_current_retail_inputs_qualify() {
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
