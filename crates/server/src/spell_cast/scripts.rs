@@ -26,7 +26,9 @@ mod clearcasting;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+mod hot_streak;
 pub(super) use germination::redirect_rejuvenation;
+pub(super) use hot_streak::record_fire_hit;
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
 mod soul_of_the_forest;
@@ -468,6 +470,28 @@ fn backstab_damage(world: &World, caster: Entity, target: Entity, amount: f32) -
     }
 }
 
+/// TC's m_appliedMods marker: only a native cast-time modifier present at admission.
+pub(super) fn snapshot_proc_modifiers(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Vec<u32> {
+    let Some(auras) = world.get::<crate::auras::ActiveAuras>(caster) else {
+        return Vec::new();
+    };
+    auras
+        .iter()
+        .filter(|aura| {
+            aura.spell_id == hot_streak::HOT_STREAK
+                && aura.effects.iter().any(|effect| {
+                    effect.misc_values[0] == crate::auras::SpellModOp::ChangeCastTime as i32
+                        && crate::auras::spell_mods::class_mask_affects(aura, effect, spell)
+                })
+        })
+        .map(|aura| aura.instance_id)
+        .collect()
+}
+
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
@@ -475,6 +499,9 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
+        }
+        hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
+            Some(hot_streak::consume_admitted_hot_streak)
         }
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),

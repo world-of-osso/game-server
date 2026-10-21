@@ -2150,6 +2150,9 @@ fn begin_validated_cast(
     spell: &SpellInfo,
     target: Option<Entity>,
 ) -> Result<(), CastFailure> {
+    let mut admitted = spell.clone();
+    admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
+    let spell = &admitted;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
