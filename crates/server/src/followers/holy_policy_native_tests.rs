@@ -5,7 +5,7 @@ use crate::auras::{ActiveAuras, has_aura};
 use crate::spell_cast::creature_cast;
 use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents};
 use bevy::prelude::*;
-use shared::components::{Health, Level};
+use shared::components::{Health, Level, UnitLevel};
 use shared::protocol::CombatLogKind;
 
 const HENRY: u32 = 215011;
@@ -26,6 +26,13 @@ fn native_group() -> GroupFixture {
         app.init_resource::<ObservedCombatEvents>();
     });
     let owner = h.caster;
+    h.app.world_mut().entity_mut(owner).insert(UnitLevel(90));
+    // This damage-only dummy's hit level matches the group. Native165 reads
+    // recipient maximum health; caster health/power are never substituted.
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((Level(90), UnitLevel(90)));
     crate::combat::attack_stop(h.app.world_mut(), owner);
     let mut members = vec![owner, priest];
     for entry in [209057, 209053, 209059] {
@@ -35,6 +42,7 @@ fn native_group() -> GroupFixture {
     h.advance(3);
     for &member in &members {
         assert_eq!(h.app.world().get::<Level>(member).unwrap().0, 90);
+        assert_eq!(h.app.world().get::<UnitLevel>(member).unwrap().0, 90);
         let health = h.app.world().get::<Health>(member).unwrap();
         assert!(
             health.max > 1000.0,
