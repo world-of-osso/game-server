@@ -56,6 +56,9 @@ impl Emberon {
         // EMBERON_NORMAL_PURGING_24P3S_LUA: Lua105–106 explicitly describes
         // Normal's fixed24.3s CastBar from SPELL_CAST_START. DB2 stays indefinite.
         crate::spell_cast::end_cast(ctx.world, ctx.me);
+        // Native Duration-1 keeps its aura without a CastState (start_channel
+        // rejects nonpositive duration). End that actual channel aura as well.
+        crate::auras::channel_ended(ctx.world, ctx.me, PURGING);
         self.phase_remaining_ms = None;
         self.boss.events.reset();
         self.claps_remaining = 2;

@@ -94,6 +94,13 @@ fn encounter_coverage_emberon_native_purging_periodic_and_indefinite_duration_qu
             .expect("ordinary native368990");
         h.advance(6.0);
         assert!(h.has_aura(boss, PURGING));
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(boss)
+                .is_none(),
+            "native indefinite channel is an aura without CastState"
+        );
         let first = damage_count(&h, boss, PURGING_DAMAGE);
         assert!(
             first > 0,
