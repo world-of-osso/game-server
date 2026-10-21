@@ -11,6 +11,7 @@
 //! their members still take pool slots: a picked gameobject counts against `max_limit`
 //! exactly as in PoolMgr, and is never despawned since nothing gathers it.
 
+use crate::random as rand;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use bevy::ecs::world::CommandQueue;

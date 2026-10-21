@@ -28,6 +28,7 @@
 //! (`HandleBreakableCCAuraProc`), runs the aura's script `on_proc`, then spends
 //! one charge.
 
+use crate::random as rand;
 use bevy::prelude::*;
 
 use super::handlers::{self, PROC_TRIGGER_SPELL, PROC_TRIGGER_SPELL_WITH_VALUE};

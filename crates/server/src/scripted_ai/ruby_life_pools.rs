@@ -1,11 +1,27 @@
-//! TC a352b1fa ruby_life_pools.cpp periodic aura hooks. Boss AIs are absent from
-//! this pinned source; no encounter schedules are invented here.
+//! TC a352b1fa ruby_life_pools.cpp periodic aura hooks and explicitly local
+//! current-Retail Lua-clock partial bosses. Pinned TC has no Ruby boss AI.
 use bevy::prelude::*;
 
 use crate::auras::{
     AuraInstance, handlers,
     scripts::{AuraScript, AuraScripts},
 };
+
+pub(super) fn is_creature_script(name: &str) -> bool {
+    name == super::melidrussa::SCRIPT
+}
+
+pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn super::CreatureAi>> {
+    let map = world.get::<crate::maps::InMap>(actor)?;
+    let maps = world.get_resource::<crate::maps::MapStore>()?;
+    if maps.instance_scripts.get(&map.map_id).map(String::as_str)
+        != Some("instance_ruby_life_pools")
+    {
+        return None;
+    }
+    let boss = super::instance_script::bound_boss(world, actor)?;
+    Some(super::melidrussa::creature_ai(boss))
+}
 
 const EXECUTED: u32 = 371652;
 const ICE_SHIELD_PERIODIC: u32 = 384933;
