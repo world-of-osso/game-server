@@ -185,6 +185,39 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
 }
 
 #[test]
+fn rotation_fidelity_wild_imp_native_idle_expiry_also_rolls_natural_core() {
+    let (mut h, owner) = warlock(32);
+    let imps: Vec<_> = (0..21).map(|_| summon_imp(&mut h, owner)).collect();
+    h.app
+        .world_mut()
+        .get_mut::<crate::networking::CombatTarget>(owner)
+        .unwrap()
+        .0 = None;
+    h.advance(780); //39s: retain native40s lifetime, no target or energy spending.
+    assert!(
+        imps.iter()
+            .all(|imp| h.app.world().get_entity(*imp).is_ok())
+    );
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|event| imps.iter().any(|imp| event.caster == imp.to_bits())
+                && event.spell_id == 104318)
+    );
+    h.advance(40);
+    assert!(
+        imps.iter()
+            .all(|imp| h.app.world().get_entity(*imp).is_err()),
+        "all actual native40s expiries must complete before checking Core"
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), owner, 264173),
+        "pinned natural-demise PRD includes expiry, not only Energy exhaustion"
+    );
+}
+
+#[test]
 fn rotation_fidelity_wild_imp_unlearned_demoniac_does_not_grant_core() {
     let (mut h, owner) = warlock(14);
     assert!(
