@@ -49,7 +49,10 @@ pub(crate) fn spawn_continent_creatures(
     world_data: Res<WorldData>,
     mut ground: Option<ResMut<crate::ground::GroundMap>>,
 ) {
+    let started = std::time::Instant::now();
+    let mut total = 0;
     for map_id in crate::maps::HOSTED_CONTINENTS {
+        let map_started = std::time::Instant::now();
         let count = spawn_map_creatures(
             &mut commands,
             &world_data,
@@ -57,8 +60,22 @@ pub(crate) fn spawn_continent_creatures(
             true,
             ground.as_deref_mut(),
         );
-        info!("Spawned {count} creatures on map {map_id}");
+        total += count;
+        info!(
+            "Spawned {count} creatures on map {map_id} in {:?}",
+            map_started.elapsed()
+        );
     }
+    info!(
+        "Public creature spawn preparation finished: {total} creatures in {:?}",
+        started.elapsed()
+    );
+    commands.queue(move |_: &mut World| {
+        info!(
+            "Public creature spawns ready: {total} creatures, all hosted maps applied in {:?}",
+            started.elapsed()
+        );
+    });
 }
 
 /// A map copy to fill: its difficulty (`Map::GetDifficultyID`, 0 on a continent) and

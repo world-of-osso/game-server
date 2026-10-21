@@ -1,3 +1,7 @@
+## 2026-10-20 — Public creature startup latency
+
+[Investigation](investigations/public-spawn-startup-latency.md): measured optimized release process/bind/applied-spawn phases on a full private world copy, profiled filesystem validation, reproduced both real I/O boundaries before changing them, and retained floor/metadata/level tuning. Bounded scoped startup workers and terrain-only metadata queries preserve population and single-threaded ECS scheduling. Exact before/after artifacts, noisy reverse-order captures, focused gates and loaded20tps exclusions live in the investigation.
+
 ## 2026-10-20 — Census resource/state/duration/sanctuary
 
 [Source matrix](systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20): generic245/262/396/176, no new scripts/protocol. Ignored REDs pushed before consumers;262 corrected from uncomputed health state to actual Swiftmend15. TC NULL220/443 and absent phasing167/viewpoint72 remain explicit gaps. Native12GREEN31.37s before enabling; merge3e1add814→8922af04b retains137/307;67targetedPASS35.88s/check/fmt with zero warnings. Native670 unique receipts preserve source passives and91 selected affected memberships:34 owned family warnings clear across18 specs (262×11/396×6/245×4/176×13),57 named-gap memberships retain warnings. Interrupted96 complete receipts retained plus574 remaining PASS366.39s; exact manifest coverage verified, no whole-spec parity claim.
