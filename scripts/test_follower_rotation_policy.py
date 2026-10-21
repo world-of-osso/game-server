@@ -62,5 +62,26 @@ class FeralActionProjectionTests(unittest.TestCase):
         self.assertTrue(available(102543, 59))
 
 
+class RotationResourcePolicyTests(unittest.TestCase):
+    def test_windwalker_tiger_palm_reserves_room_for_native_two_chi(self):
+        conditions = combat_policy(269, 'Tiger Palm', 100780, [], [])[2]
+        self.assertEqual(conditions.get('resources'), [dict(power='Chi', min_deficit=2)])
+
+    def test_feral_finishers_require_five_points(self):
+        for name, spell in [('Rip', 1079), ('Ferocious Bite', 22568), ('Primal Wrath', 285381)]:
+            with self.subTest(spell=spell):
+                conditions = combat_policy(103, name, spell, [], [])[2]
+                self.assertIn(dict(power='ComboPoints', min=5), conditions.get('resources', []))
+
+    def test_demonbolt_requires_real_core_and_shard_room(self):
+        conditions = combat_policy(266, 'Demonbolt', 264178, [], [])[2]
+        self.assertEqual(conditions.get('required_aura'), 264173)
+        self.assertEqual(conditions.get('resources'), [dict(power='SoulShards', below=4)])
+
+    def test_hand_of_guldan_banks_three_real_shards(self):
+        conditions = combat_policy(266, "Hand of Gul'dan", 105174, [], [])[2]
+        self.assertEqual(conditions.get('resources'), [dict(power='SoulShards', min=3)])
+
+
 if __name__ == '__main__':
     unittest.main()
