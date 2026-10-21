@@ -402,6 +402,90 @@ fn native_empower_blast_furnace_preserves_extra_dot_seconds_at_ranks_one_and_thr
     }
 }
 
+fn observe_fire_breath_damage(stage: u8) -> (f64, f64, f64, f32) {
+    let (mut h, caster) = prepare(21);
+    let world = h.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(FIRE_DAMAGE)
+        .unwrap();
+    let variance = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .variance
+        / 2.0;
+    let spell_power = world
+        .get::<crate::stats::CharacterStats>(caster)
+        .unwrap()
+        .spell_power;
+    assert_eq!(
+        world
+            .get::<crate::auras::AuraStatMods>(caster)
+            .unwrap()
+            .critical_damage(spell.school_mask()),
+        1.0,
+        "low-level native fixture must retain the ordinary200% critical-hit multiplier"
+    );
+    crate::spell_cast::creature_cast_empowered(
+        h.app.world_mut(),
+        caster,
+        FIRE_BREATH,
+        Some(caster),
+        stage,
+    )
+    .unwrap();
+    h.advance(120);
+    let hits: Vec<_> = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+                && event.spell_id == Some(FIRE_DAMAGE)
+                && event.kind == CombatLogKind::Damage
+        })
+        .collect();
+    let direct = hits.iter().find(|event| !event.periodic).unwrap();
+    let tick = hits.iter().find(|event| event.periodic).unwrap();
+    let normalize = |event: &shared::protocol::CombatLogEvent| {
+        f64::from(event.amount) / if event.crit { 2.0 } else { 1.0 }
+    };
+    (
+        normalize(direct),
+        normalize(tick),
+        f64::from(variance),
+        spell_power,
+    )
+}
+
+#[test]
+fn native_empower_higher_fire_ranks_convert_three_periodic_ticks_per_extra_stage() {
+    let (base_direct, tick, variance, power) = observe_fire_breath_damage(1);
+    for rank in [2, 3] {
+        let (direct, same_tick, same_variance, same_power) = observe_fire_breath_damage(rank);
+        assert_eq!(same_power, power);
+        assert_eq!(same_variance, variance);
+        assert!(
+            (same_tick - tick).abs() <= 1.0,
+            "upranking must not change periodic tick magnitude"
+        );
+        let converted = f64::from((rank - 1) * 3);
+        // Independent real tick oracle; native direct variance affects only its base hit.
+        // Each integer combat receipt contributes at most one point of rounding error.
+        let low =
+            (base_direct - 1.0) * (1.0 - variance) / (1.0 + variance) + converted * (tick - 1.0);
+        let high =
+            (base_direct + 1.0) * (1.0 + variance) / (1.0 - variance) + converted * (tick + 1.0);
+        assert!(
+            (low..=high).contains(&direct),
+            "rank{rank} actual{direct} must include{converted} native ticks in{low}..{high}"
+        );
+    }
+}
+
 #[test]
 fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
