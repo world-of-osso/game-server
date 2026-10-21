@@ -15,6 +15,8 @@ const TRANQUILITY: u32 = 740;
 const REJUVENATION: u32 = 774;
 const ABUNDANCE: u32 = 207383;
 const ABUNDANCE_DISCOUNT: u32 = 207640;
+const GERMINATION: u32 = 155675;
+const GERMINATION_HOT: u32 = 155777;
 // Matches the qualified native bloom-on-refresh window; durations remain native.
 const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
@@ -46,6 +48,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_innervate(ctx))
         .or_else(|| choose_abundance_rejuvenation(ctx))
         .or_else(|| choose_lifebloom(ctx))
+        .or_else(|| choose_germination(ctx))
         .or_else(|| ranked_maintenance(ctx));
     match decision {
         Some(decision) => SpecVerdict::Cast {
@@ -238,6 +241,50 @@ fn useful_friendly_cast_in_progress(ctx: &TriageContext<'_>) -> bool {
         .is_some_and(|target| {
             !crate::spell_cast::targets::is_hostile(ctx.world, ctx.caster, target)
         })
+}
+
+fn choose_germination(ctx: &TriageContext<'_>) -> Option<Decision> {
+    ctx.own_aura_on(ctx.caster, GERMINATION)?;
+    if !ctx.ready(REJUVENATION) {
+        return None;
+    }
+    let mut entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == REJUVENATION)?
+        .clone();
+    // Only the project primary-missing condition changes; native spell checks stay.
+    entry.conditions.missing_aura = None;
+    let patient = ctx
+        .patients
+        .iter()
+        .find(|patient| needs_germination(ctx, patient, &entry))?;
+    Some(Decision {
+        spell_id: REJUVENATION,
+        target: patient.entity,
+        urgent: false,
+    })
+}
+
+fn needs_germination(
+    ctx: &TriageContext<'_>,
+    patient: &super::healer_triage::Patient,
+    entry: &super::kit::Entry,
+) -> bool {
+    let needs_healing = patient.score > 0.0 && patient.missing_health > 0.0;
+    let stable_demand = needs_healing && !patient.emergency;
+    let primary = ctx.own_aura_on(patient.entity, REJUVENATION).is_some();
+    let secondary_missing = ctx.own_aura_on(patient.entity, GERMINATION_HOT).is_none();
+    let needs_secondary = primary && secondary_missing;
+    let below_threshold = ctx
+        .world
+        .get::<Health>(patient.entity)
+        .is_some_and(|health| {
+            health.current < health.max * entry.conditions.health_below.unwrap_or(1.0)
+        });
+    let eligible = below_threshold
+        && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry);
+    stable_demand && needs_secondary && eligible
 }
 
 fn choose_abundance_rejuvenation(ctx: &TriageContext<'_>) -> Option<Decision> {
