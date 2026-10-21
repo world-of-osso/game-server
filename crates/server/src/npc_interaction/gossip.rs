@@ -21,6 +21,7 @@ pub(crate) enum GossipAction {
     Submenu(u32),
     Role(NpcRole),
     Close,
+    AzureTranslocation,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,7 +97,14 @@ impl GossipCatalog {
             .iter()
             .filter(|option| flags.0 & option.npc_flag.0 != 0)
             .filter_map(|option| {
-                let action = option_action(option.option_type, option.action_menu_id)?;
+                let action = if super::azure_translocation::LINKS
+                    .iter()
+                    .any(|link| link.menu == menu_id)
+                {
+                    GossipAction::AzureTranslocation
+                } else {
+                    option_action(option.option_type, option.action_menu_id)?
+                };
                 Some((option.option_id, option.icon, option.text.clone(), action))
             })
             .collect();
@@ -239,6 +247,7 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
         })?
         .collect::<rusqlite::Result<_>>()?;
     load_crafting_broker_options(conn, &mut menus, &mut template_menus)?;
+    load_azure_book_options(conn, &mut menus, &mut template_menus)?;
     Ok(GossipCatalog {
         menus,
         template_menus,
@@ -247,6 +256,52 @@ pub fn load_gossip_catalog(conn: &Connection) -> rusqlite::Result<GossipCatalog>
             .cloned()
             .unwrap_or_default(),
     })
+}
+
+/// Preserve the books' script-only Proceed onward choice and destination body text.
+fn load_azure_book_options(
+    conn: &Connection,
+    menus: &mut HashMap<u32, GossipMenuData>,
+    templates: &mut HashMap<u32, u32>,
+) -> rusqlite::Result<()> {
+    let mut query = conn.prepare(
+        "SELECT g.MenuID,o.OptionID,o.OptionText,b.Text
+        FROM tdb_creature_template_gossip g
+        JOIN tdb_gossip_menu_option o ON o.MenuID=g.MenuID
+        JOIN tdb_gossip_menu m ON m.MenuID=g.MenuID
+        JOIN tdb_npc_text n ON n.ID=m.TextID
+        JOIN tdb_broadcast_text b ON b.ID=n.BroadcastTextID0
+        WHERE g.CreatureID=? AND g.MenuID=? ORDER BY o.OptionID",
+    )?;
+    for link in super::azure_translocation::LINKS {
+        let rows = query.query_map([link.entry, link.menu], |row| {
+            Ok((
+                row.get::<_, u32>(0)?,
+                row.get::<_, u32>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+            ))
+        })?;
+        for row in rows {
+            let (menu, option, text, body) = row?;
+            templates.insert(link.entry, menu);
+            menus.insert(
+                menu,
+                GossipMenuData {
+                    text: body,
+                    options: vec![GossipOptionData {
+                        option_id: option,
+                        icon: 0,
+                        text,
+                        option_type: 1,
+                        npc_flag: NpcFlags(NpcFlags::GOSSIP),
+                        action_menu_id: 0,
+                    }],
+                },
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Source Retail brokers retain their TDB customer-service choice, not a synthetic menu.

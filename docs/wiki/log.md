@@ -1,3 +1,7 @@
+## 2026-10-21 — Azure translocation policy
+
+[Source book gossip and qualified endpoint derivation](systems/azure-translocation.md): nine directed links from13 source books, including authenticated AreaPOI7116 in the final component; missing ActionSets remain named. Native ingress three REDs before implementation; GREEN pending.
+
 -2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 ## 2026-10-21 — Follower population source audit
 
