@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
           "Selected-trait export requires exactly one player");
     std::ofstream output(argv[1]);
     output.exceptions(std::ios::badbit | std::ios::failbit);
-    write_selected_traits(output, *sim.player_no_pet_list.front());
+    write_selected_traits(output, *sim.player_no_pet_list[0]);
     return 0;
   } catch (const std::exception &error) {
     fmt::print(stderr, "Selected-trait export: {}\n", error.what());
