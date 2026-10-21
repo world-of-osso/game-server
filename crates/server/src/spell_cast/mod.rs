@@ -153,6 +153,7 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+pub(crate) mod efflorescence;
 #[cfg(test)]
 mod excluded_aura_spell_tests;
 #[cfg(test)]
@@ -2403,7 +2404,9 @@ pub(crate) fn execute_cast(
             reflected: false,
         },
     );
+    let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     missiles::launch(world, caster, spell, plan, 0);
+    efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
@@ -2596,6 +2599,9 @@ fn plan_targets(
         };
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
+        }
+        if spell.id == efflorescence::HEAL && effect.index == 0 {
+            efflorescence::filter_heal_targets(world, caster, &mut units);
         }
         warrior_stuns::filter_storm_bolt_targets(
             world, caster, spell, effect, explicit, &mut units,

@@ -794,7 +794,7 @@ fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
 }
 
 /// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
-fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
+pub(super) fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
     if caster == target {
         return true;
     }
