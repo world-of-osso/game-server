@@ -156,6 +156,21 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
             Some((guid, data))
         })
         .collect();
+    let modifier_table = txn
+        .open_table(server::item_instance::store::ITEM_MODIFIERS)
+        .expect("open GUID item modifiers");
+    let item_modifiers = guids
+        .iter()
+        .filter_map(|&guid| {
+            let row = modifier_table
+                .get(guid)
+                .expect("read GUID item modifiers")?;
+            Some((
+                guid,
+                bitcode::decode(row.value()).expect("decode GUID item modifiers"),
+            ))
+        })
+        .collect();
     let origin_table = txn
         .open_table(ITEM_CRAFTING_ORIGINS)
         .expect("open crafting origins");
@@ -188,7 +203,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         bag_slots,
         instances,
         crafting_origins,
-        item_modifiers: HashMap::new(),
+        item_modifiers,
         item_durability,
         definition_sources,
         appearance_account: super::find_account_id_for_character(db, character_id),
@@ -375,5 +390,9 @@ pub(crate) fn write_inventory_record(
             .expect("write crafting origin");
     }
     drop(origins);
+    for (&guid, state) in &record.item_modifiers {
+        server::item_instance::store::write_modifiers(txn, guid, state)
+            .expect("write GUID item modifiers");
+    }
     super::charters::prune_destroyed_in(txn, character_id, record);
 }

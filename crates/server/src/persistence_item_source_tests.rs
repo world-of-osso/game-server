@@ -188,8 +188,41 @@ fn item_instance_inventory_record_hydrates_guid_modifiers_after_database_reopen(
     txn.commit().unwrap();
     drop(db);
     let db = Database::open(file.path()).unwrap();
-    let loaded = load_inventory_record(&db, 1).unwrap();
+    let mut loaded = load_inventory_record(&db, 1).unwrap();
     assert_eq!(loaded.item_modifiers.get(&41), Some(&modifiers));
+    let mut changed = modifiers.clone();
+    changed.item_level_override = Some(344);
+    loaded.item_modifiers.insert(41, changed.clone());
+    save_inventory_record(&db, 1, &loaded);
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    let mut sender = load_inventory_record(&db, 1).unwrap();
+    assert_eq!(sender.item_modifiers.get(&41), Some(&changed));
+    let mut receiver = record("ParityReceiver", 42);
+    receiver.inventory.items.clear();
+    receiver.character.class = 2;
+    receiver.character.race = 6;
+    receiver.character.level = 90;
+    receiver.equipped = std::mem::take(&mut sender.equipped);
+    let txn = db.begin_write().unwrap();
+    write_inventory_record(&txn, 1, &sender);
+    write_inventory_record(&txn, 2, &receiver);
+    txn.commit().unwrap();
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    assert_eq!(
+        load_inventory_record(&db, 2)
+            .unwrap()
+            .item_modifiers
+            .get(&41),
+        Some(&changed)
+    );
+    assert!(
+        load_inventory_record(&db, 1)
+            .unwrap()
+            .item_modifiers
+            .is_empty()
+    );
 }
 
 #[test]
