@@ -31,6 +31,128 @@ fn apply(h: &mut Harness, spell_id: u32, index: u32) {
     h.advance(2);
 }
 
+fn penetration_fixture() -> Harness {
+    let mut h = fixture(&[450990, 177112]);
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_expected_stats(&conn).armor_constants());
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::UnitLevel(80));
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((shared::components::UnitLevel(10), CreatureArmor(2000.0)));
+    h
+}
+
+#[test]
+#[ignore = "RED: native280 player armor penetration with victim-level cap"]
+fn census_tail_280_native_warriors_instinct_changes_physical_mitigation_then_removes() {
+    let mut h = penetration_fixture();
+    let spell = world_db().unwrap().store.get(12294).unwrap();
+    for (level, effective_armor) in [(10, 1870.0), (60, 1760.0)] {
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert((shared::components::UnitLevel(level), CreatureArmor(2000.0)));
+        let before = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
+        apply(&mut h, 450990, 0);
+        let after = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
+        assert!(
+            after > before,
+            "native12% must reduce armor: {after} vs {before}"
+        );
+        let caster = h.caster;
+        remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == 450990
+        });
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert(CreatureArmor(effective_armor));
+        assert_eq!(
+            after,
+            armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell)
+        );
+        h.app
+            .world_mut()
+            .entity_mut(h.npc)
+            .insert(CreatureArmor(2000.0));
+        assert_eq!(
+            before,
+            armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell)
+        );
+    }
+}
+
+#[test]
+#[ignore = "RED: native280 sums then clamps at100 without ignoring capped armor"]
+fn census_tail_280_native_hundred_percent_is_capped_and_does_not_stack_past_cap() {
+    let mut h = penetration_fixture();
+    let spell = world_db().unwrap().store.get(12294).unwrap();
+    apply(&mut h, 177112, 0);
+    let capped = armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell);
+    apply(&mut h, 450990, 0);
+    assert_eq!(
+        capped,
+        armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell)
+    );
+    assert!(
+        capped < 1000.0,
+        "100% penetrates the native cap, not all armor"
+    );
+    let caster = h.caster;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |_| true);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(CreatureArmor(2000.0 - 3250.0 / 3.0));
+    assert_eq!(
+        capped,
+        armor_reduced(h.app.world(), h.caster, h.npc, 1000.0, spell)
+    );
+}
+
+#[test]
+#[ignore = "RED control:280 is Player-only, even on controlled NPCs"]
+fn census_tail_280_native_npc_does_not_gain_player_armor_penetration() {
+    let mut h = penetration_fixture();
+    let npc = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(shared::components::UnitFlags(
+            crate::faction::UNIT_FLAG_PLAYER_CONTROLLED,
+        ));
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(CreatureArmor(2000.0));
+    let spell = world_db().unwrap().store.get(12294).unwrap();
+    let before = armor_reduced(h.app.world(), npc, h.caster, 1000.0, spell);
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.caster,
+            target: npc,
+            spell_id: 450990,
+            effect_mask: 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(h.app.world(), npc, 450990));
+    assert_eq!(
+        before,
+        armor_reduced(h.app.world(), npc, h.caster, 1000.0, spell)
+    );
+}
+
 #[test]
 fn aura_stat_native_57_changes_magic_crit_but_not_weapon_crit() {
     let mut h = fixture(&[450831]); //2.5 spell-only percentage points.
