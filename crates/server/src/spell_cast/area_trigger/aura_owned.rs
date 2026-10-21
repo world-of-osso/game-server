@@ -30,6 +30,22 @@ pub(crate) fn on_applied(world: &mut World, target: Entity, aura: &AuraInstance)
             );
             continue;
         };
+        if aura.spell_id == crate::scripted_ai::city_of_threads::CHAINS {
+            if effect.index != 0 || properties != 31997 {
+                warn!(
+                    properties,
+                    index = effect.index,
+                    "Orator Chains native source effect changed"
+                );
+                continue;
+            }
+            if let Err(reason) =
+                crate::scripted_ai::city_of_threads::areas::create_chains(world, target, aura)
+            {
+                warn!(?target, "Orator Chains field not created: {reason}");
+            }
+            continue;
+        }
         if let Err(reason) = create_field(world, target, aura, effect.index, properties) {
             warn!(
                 spell = aura.spell_id,
@@ -90,6 +106,9 @@ fn read_attachment(world: &World, caster: Entity, target: Entity) -> Option<(Pos
 }
 
 pub(crate) fn on_removed(world: &mut World, target: Entity, aura: &AuraInstance) {
+    if aura.spell_id == crate::scripted_ai::city_of_threads::CHAINS {
+        crate::scripted_ai::city_of_threads::areas::remove_chains(world, target, aura);
+    }
     let fields: Vec<_> = world
         .query::<(Entity, &AuraAreaTrigger)>()
         .iter(world)

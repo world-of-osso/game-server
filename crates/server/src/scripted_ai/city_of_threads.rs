@@ -1,5 +1,7 @@
 //! TC a352b1fa CityOfThreads/boss_orator_krix_vizk.cpp.
 //! Source event counters, Energy and Normal/Follower native spell hooks.
+pub(crate) mod areas;
+
 use bevy::prelude::*;
 use shared::components::{Npc, Player, PowerType};
 
@@ -14,7 +16,7 @@ use crate::spell_cast::powers::{self, PowerPools, PowerTypeTable};
 pub(super) const ORATOR_SCRIPT: &str = "boss_orator_krix_vizk";
 const ORATOR: u32 = 216619;
 const ORATION: u32 = 454689;
-const CHAINS: u32 = 434691;
+pub(crate) const CHAINS: u32 = 434691;
 const CHAINS_PERIODIC: u32 = 440310;
 const CHAINS_DAMAGE: u32 = 434710;
 const CHAINS_CHARGE: u32 = 434712;
@@ -24,7 +26,7 @@ const TERRORIZE: u32 = 434779;
 const SHADOWS_SELECTOR: u32 = 448560;
 const INDOCTRINATION: u32 = 434829;
 const INDOCTRINATION_DAMAGE: u32 = 434832;
-const LINGERING_INFLUENCE: u32 = 434923;
+pub(crate) const LINGERING_INFLUENCE: u32 = 434923;
 const EVENT_SUBJUGATE: u32 = 1;
 const EVENT_TERRORIZE: u32 = 2;
 const EVENT_SHADOWS: u32 = 3;

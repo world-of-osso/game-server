@@ -81,6 +81,28 @@ pub(super) fn create_area_trigger(world: &mut World, ctx: &EffectCtx, effect: &S
         }
         return;
     }
+    if ctx.spell.id == crate::scripted_ai::city_of_threads::LINGERING_INFLUENCE {
+        if effect.misc_values[0] != 32026 {
+            error!(
+                properties = effect.misc_values[0],
+                "Orator Lingering native source effect changed"
+            );
+            return;
+        }
+        let duration = super::duration_ms(world, ctx.caster, ctx.spell);
+        if let Err(reason) = crate::scripted_ai::city_of_threads::areas::create_lingering(
+            world,
+            ctx.caster,
+            dest.position,
+            duration,
+        ) {
+            warn!(
+                spell = ctx.spell.id,
+                "Orator Lingering field not created: {reason}"
+            );
+        }
+        return;
+    }
     let Some(map) = world.get::<InMap>(ctx.caster).copied() else {
         return;
     };

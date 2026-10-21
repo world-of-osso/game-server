@@ -106,11 +106,13 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, ruby_life_pools::register_aura_scripts)
             .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(Startup, city_of_threads::register_aura_scripts)
+            .add_systems(Startup, city_of_threads::areas::startup_load_catalog)
             .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(Startup, shattered_halls::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
+            .add_systems(FixedPostUpdate, city_of_threads::areas::update)
             .add_systems(FixedPreUpdate, jump_movement::release_finished_jumps)
             .add_systems(FixedPreUpdate, fall_movement::release_finished_falls)
             .add_systems(

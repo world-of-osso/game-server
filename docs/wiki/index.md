@@ -1,3 +1,4 @@
+- [TWW City of Threads Orator](systems/boss-scripts.md#tww-city-of-threads-orator--2026-10-21) — Normal/Follower native core4GREEN; source disk/growing-area RED and explicit Player-only remainder, area GREEN pending.
 - [TWW Rookery Kyrioss](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21) — source-explicit LittleWigs/native70448 clocks, COMPOSITE4GREEN Normal/Follower; producer and named dummy/phase/Dash gaps, publication pending.
 - [Pet-battle last-hit counters](systems/pet-battle-engine.md#last-hit-counter-percentages--2026-10-20) — generic197 follows DB2 Power100/150; tooltip disagreement stays a named note, not inferred arithmetic.
 - [Toy summon dependencies](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21) — largest cause151 missing templates fixed through source closure; prepared423→506, global marker gaps/Katy proof exemption; canonical publication pending.
