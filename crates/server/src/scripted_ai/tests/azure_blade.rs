@@ -79,3 +79,174 @@ fn encounter_coverage_azureblade_first_cleave_uses_lua_clock() {
         "Lua OnEngage5.2s request + actual native2s cast"
     );
 }
+
+#[test]
+fn encounter_coverage_azureblade_native_bounded_rotation_and_image_chain() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map) = azureblade_copy(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
+        h.engage(boss);
+        h.advance(45.0);
+        let attempts = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        eprintln!("AZUREBLADE difficulty{difficulty} actual attempts={attempts:?}");
+        for (spell, first, repeat) in [
+            (IMAGE, 3.3, 14.6),
+            (ARCANE_CLEAVE, 5.2, 13.4),
+            (ANCIENT_ORB, 10.6, 15.8),
+        ] {
+            let casts: Vec<_> = attempts
+                .iter()
+                .filter(|attempt| attempt.spell == spell)
+                .collect();
+            assert_eq!(casts.len(), 2, "Lua first-phase count2, spell{spell}");
+            assert!(
+                casts.iter().all(|attempt| attempt.result.is_ok()),
+                "ordinary native admission{spell}: {casts:?}"
+            );
+            assert!(
+                (casts[0].time - first).abs() <= 0.1,
+                "first source request{spell}: {casts:?}"
+            );
+            let due = first + repeat;
+            let expected_second = if spell == ARCANE_CLEAVE {
+                let image_cast = h
+                    .app
+                    .world()
+                    .resource::<SpellStore>()
+                    .get(IMAGE)
+                    .unwrap()
+                    .cast_time
+                    .unwrap()
+                    .base_ms as f32
+                    / 1000.0;
+                due.max(3.3 + 14.6 + image_cast)
+            } else {
+                due
+            };
+            assert!(
+                (casts[1].time - expected_second).abs() <= 0.1,
+                "source deadline/native casting wait{spell}: {casts:?}"
+            );
+            assert_eq!(
+                cast_count(&h, boss, spell),
+                2,
+                "actual native completions{spell}"
+            );
+        }
+        let images = h.creatures_of(190187);
+        assert_eq!(
+            images.len(),
+            2,
+            "ordinary384223→373658→373582 actual summons"
+        );
+        for image in images {
+            assert_eq!(h.app.world().get::<InMap>(image), Some(&map));
+            assert_eq!(
+                h.app
+                    .world()
+                    .get::<crate::zones::TempSummon>(image)
+                    .unwrap()
+                    .summoner,
+                boss
+            );
+        }
+        assert_eq!(
+            cast_count(&h, boss, 384132),
+            0,
+            "energy/phase mechanic is a named unsourced gap"
+        );
+        assert!(
+            h.inbox(1)
+                .spell_gos
+                .iter()
+                .all(|go| go.caster != boss.to_bits())
+        );
+        assert!(
+            h.inbox(0)
+                .starts
+                .iter()
+                .any(|start| start.encounter_id == 2585 && start.difficulty_id == difficulty)
+        );
+        assert!(h.inbox(1).starts.is_empty());
+        h.hit_pct(boss, 200.0);
+        h.advance(0.1);
+        assert!(
+            h.creatures_of(190187).is_empty(),
+            "generic BossAi death cleanup"
+        );
+        assert_eq!(
+            instance_script::get_boss_state(h.app.world_mut(), map, ORDINAL),
+            Some(EncounterState::Done)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1 << ORDINAL,
+            "preserved Azure saved ordinal, not DB2bit3"
+        );
+        assert_eq!(
+            h.inbox(0)
+                .ends
+                .iter()
+                .filter(|end| end.encounter_id == 2585 && end.success)
+                .count(),
+            1
+        );
+        assert!(h.inbox(1).ends.is_empty());
+        let before = cast_count(&h, boss, ARCANE_CLEAVE);
+        h.advance(30.0);
+        assert_eq!(
+            cast_count(&h, boss, ARCANE_CLEAVE),
+            before,
+            "corpse silence"
+        );
+    }
+}
+
+#[test]
+fn encounter_coverage_azureblade_evade_rearms_bounded_requests_without_credit() {
+    let (mut h, boss, map) = azureblade_copy(205);
+    h.engage(boss);
+    h.advance(9.0);
+    assert_eq!(h.creatures_of(190187).len(), 1);
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    assert!(h.creatures_of(190187).is_empty());
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, ORDINAL),
+        Some(EncounterState::NotStarted)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    let before = cast_count(&h, boss, ARCANE_CLEAVE);
+    h.engage(boss);
+    h.advance(5.0);
+    assert_eq!(
+        cast_count(&h, boss, ARCANE_CLEAVE),
+        before,
+        "no invented early cleave on reset"
+    );
+    h.advance(3.0);
+    assert_eq!(cast_count(&h, boss, ARCANE_CLEAVE), before + 1);
+    assert_eq!(
+        h.creatures_of(190187).len(),
+        1,
+        "fresh native image on repull"
+    );
+}
