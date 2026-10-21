@@ -113,16 +113,20 @@ fn target_snapshot(run: &Run) -> Vec<Value> {
         .collect()
 }
 
-fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>) {
+fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>, Vec<Value>) {
     let start_time = run
         .app
         .world()
         .resource::<Time<Virtual>>()
         .elapsed_secs_f64();
     let mut buffs = BTreeMap::new();
-    for _ in 0..TICKS {
+    let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
+    for tick in 1..=TICKS {
         run.app.update();
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
+        if matches!(tick, 1 | 20 | TICKS) {
+            samples.push(report::engagement(run.app.world(), run.actor, &run.targets));
+        }
     }
     let seconds = run
         .app
@@ -134,7 +138,7 @@ fn advance_combat(run: &mut Run) -> (f64, BTreeMap<u32, f64>) {
         .into_iter()
         .map(|(spell, ticks)| (spell, f64::from(ticks) * 100.0 / f64::from(TICKS)))
         .collect();
-    (seconds, buff_uptimes)
+    (seconds, buff_uptimes, samples)
 }
 
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
@@ -144,14 +148,14 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let targets = target_snapshot(&run);
     engage(&mut run);
     let started = Instant::now();
-    let (seconds, buff_uptimes) = advance_combat(&mut run);
+    let (seconds, buff_uptimes, engagement_samples) = advance_combat(&mut run);
     let combat = report::combat(run.app.world(), &run.targets, seconds);
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "stats_before": before, "stats_after": report::stats(run.app.world(), run.actor),
         "targets_before": targets, "targets_after": target_snapshot(&run),
-        "buff_uptime_pct": buff_uptimes, "gaps": run.gaps,
+        "buff_uptime_pct": buff_uptimes, "engagement_samples": engagement_samples, "gaps": run.gaps,
         "reference_race": run.profile.race, "server_build": 70448, "simc_build": 70391}),
     )
 }

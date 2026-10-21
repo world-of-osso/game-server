@@ -17,6 +17,23 @@ pub(super) fn stats(world: &World, actor: Entity) -> Value {
         "level": world.get::<shared::components::Level>(actor).unwrap().0})
 }
 
+pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Value {
+    let owner = world
+        .get::<crate::followers::Follower>(actor)
+        .unwrap()
+        .owner;
+    let inspect = |unit| super::super::diagnostics::inspect_unit(world, None, unit);
+    let target_states: Vec<_> = targets.iter().map(|&target| {
+        json!({"state": inspect(target), "can_attack": crate::spell_cast::targets::relation_matches(
+            world, actor, target, crate::spell_cast::targets::Relation::Enemy)})
+    }).collect();
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    json!({"actor": inspect(actor), "owner": inspect(owner), "targets": target_states,
+        "first_events": events.iter().take(16).collect::<Vec<_>>()})
+}
+
 pub(super) fn sample_buffs(world: &World, actor: Entity, counts: &mut BTreeMap<u32, u32>) {
     if let Some(auras) = world.get::<crate::auras::ActiveAuras>(actor) {
         for aura in auras.iter() {
