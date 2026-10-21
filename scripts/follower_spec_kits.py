@@ -59,10 +59,26 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
     if spec == 269 and spell in WINDWALKER_COMBO_ACTIONS:
         conditions = dict(no_repeat_group=list(WINDWALKER_COMBO_ACTIONS))
+        if name == 'Tiger Palm':
+            conditions['resources'] = [dict(power='Chi', min_deficit=2)]
         if name == 'Spinning Crane Kick':
             return policy('aoe', WINDWALKER_PRIORITIES[spell],
                           min_enemies=3, source_center=True, **conditions)
         return policy('attack', WINDWALKER_PRIORITIES[spell], **conditions)
+    # SimC76f8118 druid_feral.simc finisher/aoe_finisher; native default103
+    # has no Apex Predator's Craving talent, so no unearned proc exemption.
+    if spec == 103 and name in {'Rip', 'Ferocious Bite', 'Primal Wrath'}:
+        resources = [dict(power='ComboPoints', min=5)]
+        if name == 'Rip':
+            return policy('attack', 100, missing_aura=spell, resources=resources)
+        if name == 'Primal Wrath':
+            return policy('aoe', 90, min_enemies=2, source_center=True, resources=resources)
+        return policy('attack', 110, resources=resources)
+    # Common combat branches in both pinned Demonology hero APLs. They are
+    # starter-kit adaptations; missing hero-tree grants are never invented.
+    if spec == 266 and name == 'Demonbolt':
+        return policy('attack', 110, required_aura=264173,
+                      resources=[dict(power='SoulShards', below=4)])
     if dispel_effects and name in {'Cleanse Toxins', "Nature's Cure", 'Remove Corruption', 'Purify', 'Purify Disease', 'Remove Curse', 'Expunge', 'Cauterizing Flame', 'Dispel Magic', 'Purge', 'Soothe'}:
         return policy('dispel', 42, 'party')
     if control_effects and name in {'Polymorph', 'Hammer of Justice', 'Leg Sweep', 'Paralysis', 'Fear', 'Hex'}:
@@ -113,7 +129,7 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
     if name in {'Moonfire', 'Sunfire', 'Flame Shock', 'Holy Fire', 'Barbed Shot', 'Rake', 'Rip', 'Corruption', 'Curse of Weakness', "Hunter's Mark"}:
         return policy('attack', 100, missing_aura=spell)
     if name == "Hand of Gul'dan" and spec == 266:
-        return policy('attack', 110)
+        return policy('attack', 110, resources=[dict(power='SoulShards', min=3)])
     if name in {"Avenger's Shield", 'Shield Slam', 'Lava Burst', 'Pyroblast', 'Fire Blast', 'Kill Command', 'Wild Thrash', 'Disintegrate', 'Fire Breath', 'Eternity Surge', 'Fists of Fury', 'Rising Sun Kick', 'Strike of the Windlord', 'Blackout Kick', 'Ferocious Bite', 'Demonbolt', 'Call Dreadstalkers', 'Summon Vilefiend', 'Demonic Strength', 'Execute', 'Touch of Death', 'Earth Shock'}:
         return policy('attack', 110)
     if name in {'Judgment', 'Crusader Strike', 'Blessed Hammer', 'Devastate', 'Wrath', 'Smite', 'Fireball', 'Lightning Bolt', 'Cobra Shot', 'Steady Shot', 'Living Flame', 'Tiger Palm', 'Shadow Bolt', 'Shred'}:
