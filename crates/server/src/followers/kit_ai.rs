@@ -141,48 +141,42 @@ fn choose_patient(world: &World, unit: Entity, party: &[Entity], entry: &Entry) 
         .iter()
         .copied()
         .filter(|target| patient_is_eligible(world, unit, *target, entry));
-<<<<<<< HEAD
-    let by_health = eligible
-        .filter_map(|target| health_fraction(world, target).map(|fraction| (target, fraction)));
-    by_health
-        .min_by(|left, right| {
-            let harm = |target| {
-                if entry.slot == Slot::Dispel {
-                    super::utility_interrupt::dispel_harm(
-                        world,
-                        unit,
-                        target,
-                        &entry.conditions.dispel_types,
-                    )
-                } else {
-                    0
-                }
-            };
-            harm(right.0)
-                .cmp(&harm(left.0))
-                .then_with(|| left.1.total_cmp(&right.1))
-                .then_with(|| left.0.to_bits().cmp(&right.0.to_bits()))
-=======
-    let healer = world
-        .get::<Follower>(unit)
-        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
     let ranked = eligible.filter_map(|target| {
-        let fraction = health_fraction(world, target)?;
-        let score = if healer {
-            super::healer_triage::read_patient(world, target)?.score
-        } else {
-            1.0 - fraction
-        };
-        Some((target, score))
+        read_patient_priority(world, unit, target, entry).map(|priority| (target, priority))
     });
     ranked
         .max_by(|left, right| {
-            left.1
-                .total_cmp(&right.1)
-                .then_with(|| right.0.to_bits().cmp(&left.0.to_bits()))
->>>>>>> d907fad50
+            let (left_target, (left_harm, left_score)) = left;
+            let (right_target, (right_harm, right_score)) = right;
+            left_harm
+                .cmp(right_harm)
+                .then_with(|| left_score.total_cmp(right_score))
+                .then_with(|| right_target.to_bits().cmp(&left_target.to_bits()))
         })
         .map(|(target, _)| target)
+}
+
+fn read_patient_priority(
+    world: &World,
+    unit: Entity,
+    target: Entity,
+    entry: &Entry,
+) -> Option<(u8, f32)> {
+    let fraction = health_fraction(world, target)?;
+    let healer = world
+        .get::<Follower>(unit)
+        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
+    let score = if healer {
+        super::healer_triage::read_patient(world, target)?.score
+    } else {
+        1.0 - fraction
+    };
+    let harm = if entry.slot == Slot::Dispel {
+        super::utility_interrupt::dispel_harm(world, unit, target, &entry.conditions.dispel_types)
+    } else {
+        0
+    };
+    Some((harm, score))
 }
 
 pub(super) fn patient_is_eligible(

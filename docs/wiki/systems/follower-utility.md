@@ -12,7 +12,9 @@ Native selected spellbooks feed a generic project scheduler outside damage/heal 
 
 ## Geometry and simulator prerequisites
 
-Production `ModelReaches` stores authored geometry and the native set of player-race display IDs. World lookups and the `AggroDistance` SystemParam share one conditional creature-geometry decision. Only actual followers whose70448 ExtendedDisplayInfoID is nonzero use the authorized TC player constants. The missing ordinary-NPC inventory is a [separate finding](../investigations/ordinary-model-info-gap.md), not another sizing rule.
+Production sizing follows the shared [model-geometry policy](model-geometry.md). Authored rows win; actual displays missing model-info use the approved scaled TC player defaults in both world and proximity-aggro lookups. The former follower-only rule is removed. The [source inventory](../investigations/ordinary-model-info-gap.md) remains a source gap, not fabricated authored data.
+
+Healer triage retains its admitted action/ownership decision before generic support and kit execution. Utility dispel ranking compares removable dangerous control first, then the healer's existing uncovered-damage score (ordinary non-healers retain lowest-health ordering). This preserves both policies when integrating the independently landed healer changes.
 
 The isolated simulator also needs the actual production pet controller and its native level-up catalog. Pet definitions, not entity/command/cast state, move between cached worlds. The first/cached-world owned Felguard action-bar regression exposes genuine learned89766 rather than an invented player kick. The formerly idle Bo first-fight regression proves native pursuit and positive damage after geometry closure. Full seed11 then clears all three native Stockade bosses; that single replay is not the complete matched comparison.
 
