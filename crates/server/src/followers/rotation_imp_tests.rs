@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use shared::components::Health;
 use shared::protocol::CombatLogKind;
 
-fn prepared_world() -> crate::world_data::WorldData {
+pub(super) fn prepared_world() -> crate::world_data::WorldData {
     let root =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/wild-imp-fixtures");
     std::fs::create_dir_all(&root).unwrap();
