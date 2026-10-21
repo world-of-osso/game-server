@@ -277,6 +277,11 @@ pub(super) fn snapshot_periodic_amount(
     effect: &crate::spell_info::SpellEffect,
     amount: f32,
 ) -> f32 {
+    let amount = if effect.aura == super::PERIODIC_DAMAGE_AURA {
+        super::spell_mods::snapshot_periodic_amount(world, caster, spell, amount)
+    } else {
+        amount
+    };
     let amount = crate::spell_cast::scripts::snapshot_soul_of_the_forest(
         world, caster, spell, effect, amount,
     );

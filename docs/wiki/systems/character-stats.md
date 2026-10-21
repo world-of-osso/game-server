@@ -59,7 +59,24 @@ Rating units follow SimC `rating_t::init`: the game-table value is the rating ne
 
 The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, TrinityCore `BASE_MINDAMAGE`/`BASE_MAXDAMAGE`); an off-hand weapon is `CharacterStats.off_hand`. Auto-attacks swing both ([[player-damage]]). Spell weapon hits (effects 58, 121, 31) roll it and add AP / 6 × speed; 121 uses the normalized speed (dagger 1.7, one-hand 2.4, two-hand 3.3, ranged 2.8).
 
-`EquippedItems` holds `(EquipmentSlot, item_id)` of physically equipped items. The inventory sets it on world entry (`send_initial_inventory`) and after each item change (`send_inventory_deltas`), which triggers the recompute.
+`EquippedItems.items` holds `(EquipmentSlot, ItemDefinitionSource, item_id)` of physically equipped items. Inventory publishes it on world entry and deltas. `EquippedItemModifiers.items` separately carries slot-bound instance properties; changing only those properties also triggers the production recompute.
+
+### Instance properties — 2026-10-21
+
+The additive redb `item_modifiers` table stores bonus lists, explicit item-level overrides, permanent enchants, gem item IDs and crafted stat choices by GUID. Existing `item_instances` soulbound bytes and inventory/wire encodings are unchanged. `InventoryRecord.item_modifiers` hydrates only owned GUIDs; the inventory model preserves those properties and projects them alongside equipped catalog identities. Startup creates the new table for existing databases.
+
+The [native producer](../../../scripts/item_instance_data.py) reads the existing read-only 70448 exports into a supplied world database. Canonical publication remains lead-owned. The ordinary `scripts/db2.py import` invokes the same producer inside its existing transaction so native instance tables refresh with the core build. `ItemScalingPlugin` loads the new native bonus/enchantment resources; missing tables fail with the producer instruction.
+
+| Resolution | Current coverage |
+|---|---|
+| ItemBonus | Types1/2/3/6/25/49/52: level delta, allocation, quality, sockets, crafted-stat replacement, Midnight config and crafting level. Type23 retains ItemEffect IDs; the SQLite resolver joins base/bonus effect IDs to real spell/trigger/cooldown fields. Execution remains open. |
+| Explicit level / crafted choices | Existing RandPropPoints/weapon formula; no repeated legacy squish. Placeholders24/25 are replaced in order, never split into invented allocations. |
+| Enchants / gems | Native type5 stats use the existing gtSpellScaling data and native level cap; GemProperties resolves the enchant. Type3 spell IDs are preserved by the resolver, but automatic equip-aura/proc execution remains open. |
+| Inventory / stats | GUID persistence, owned projection, initial/delta delivery and modifier-only StatsPlugin refresh. Owned GUID hydration/projection passed after their genuine REDs, alongside modifier-only Stats and legacy source controls. |
+
+Proof:18 library regressions pass (including three missing-effect RED→GREEN cases); the actual native chest271468/enchant7987 modifier-only boundary failed687 versus737 before consumer wiring, then passed alongside the unchanged level20 Arcane gear control. Two subsequent native GUID-hydration/projection cases gave genuine RED before implementation, then passed in the24-case library/main integration run. This is not DPS parity or a deployment claim; [the parity contract](../../specs/dps-parity.md) tracks the remaining harness and measurements.
+
+Sources: [instance resolver](../../../crates/server/src/item_instance.rs), [bonus/enchant loaders](../../../crates/server/src/item_instance/load.rs), [GUID store](../../../crates/server/src/item_instance/store.rs), [inventory model](../../../crates/server/src/inventory_model.rs), [stat consumer](../../../crates/server/src/stats.rs). Pinned behavior reference: SimC76f8118 `sc_item_data.cpp` and `item.cpp1740`.
 
 **Checked against Retail tooltips** (Wowhead tooltip API, 2026-09-24):
 
@@ -136,8 +153,8 @@ The spawned `Health` comes from redb. The first recompute keeps the persisted ra
 
 ### Gear
 
-- **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. ItemBonus/bonus-tree levels are not applied.
-- **Not modeled:** sockets and gems, enchants, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
+- **Scaled item levels:** Wowhead shows some old items at a level other than ItemSparse `ItemLevel` (Vendetta 20 at 83, Riverpaw Leather Vest 6 at 80, Forlorn Breastplate 35 at 34). The source of that scaling (drop context bonus lists, ContentTuning, `PlayerLevelToItemLevelCurveID`) is not identified; the server uses the static, squished level. Explicit instance bonus lists use the qualified types [above](#instance-properties--2026-10-21); automatic bonus-tree/drop-context selection remains absent.
+- **Not modeled:** automatic equip-aura/proc execution, the effects of leech, avoidance and speed (only their sheet percentages), bonus armor, ranged swings. Explicit gem/enchant stats use the qualified instance path [above](#instance-properties--2026-10-21). Auto-attacks swing `main_hand` and `off_hand` ([[player-damage]]).
 - **Admin grant:** `grant-equipment` writes equipment without the inventory change queue, so an online player's `EquippedItems` updates at the next inventory change or relog.
 
 ### Other

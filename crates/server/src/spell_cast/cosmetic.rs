@@ -37,7 +37,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     302730, // Brewfest Chowdown Trophy's champion animation aura (visual88525)
     383065, // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
     // Audited build70448 complete model/positioner/animation/sound chains;
-    // source contracts only hold/refract a crystal or hold out a compass.
+    // no scripted/gameplay payload or alias inferred from the dummy slots.
+    202432, 295037, // Hot Buttered Popcorn, Banner of the Burning Blade.
     395705, 399041,  // Gleaming Arcanocrystal, Lost Compass (not Wayfinder's Compass).
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)
