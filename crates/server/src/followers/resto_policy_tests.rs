@@ -377,8 +377,7 @@ fn resto_policy_stops_admitted_damage_when_recent_pressure_is_temporarily_topped
     );
 }
 
-#[test]
-fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
+fn native_efflo_party() -> (Harness, Entity, [Entity; 5]) {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(40);
     let native = crate::spell_cast::test_harness::load_native_creature_world(&[47649]);
     assert!(
@@ -396,6 +395,17 @@ fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
         h.app.world_mut().entity_mut(target).insert(center);
         damage(&mut h, target, 0.35);
     }
+    (h, healer, party)
+}
+
+#[test]
+fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
+    let (mut h, healer, party) = native_efflo_party();
+    let center = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(party[2])
+        .unwrap();
     crate::spell_cast::creature_cast(h.app.world_mut(), healer, 145205, Some(party[2]), false)
         .expect("ordinary learned native Efflo cast");
     h.advance(1);
@@ -454,4 +464,41 @@ fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
             .iter()
             .any(|target| event.target == Some(target.to_bits()))
     }));
+}
+
+#[test]
+fn resto_policy_admits_native_efflo_for_stable_cluster_without_direct_heal_effect() {
+    let (mut h, healer, party) = native_efflo_party();
+    let until = aura_now(h.app.world()) + 3.5;
+    while aura_now(h.app.world()) < until {
+        h.advance(1);
+    }
+    for target in &party[2..] {
+        let patient = super::super::healer_triage::read_patient(h.app.world(), *target).unwrap();
+        assert!(
+            !patient.emergency && patient.missing_health > 0.0,
+            "native stable damage must exercise ordinary field admission, not an emergency exception"
+        );
+    }
+    let rows = h
+        .app
+        .world()
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| entry.available(105, 40) && entry.spell_id == 145205)
+        .cloned()
+        .collect::<Vec<_>>();
+    assert_eq!(rows.len(), 1);
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    super::super::healer_triage::update(h.app.world_mut(), healer, &follower, &party, &rows);
+    h.advance(1);
+    let world = h.app.world_mut();
+    assert!(
+        world
+            .query::<&crate::spell_cast::summon::SummonedCreature>()
+            .iter(world)
+            .any(|summon| summon.owner == healer && summon.spell_id == 145205),
+        "actual learned145205 must place its native healing field for stable clustered injuries; zero direct-heal metadata is not zero healing"
+    );
 }
