@@ -134,18 +134,24 @@ pub(super) fn order_pet_attack(world: &mut World, unit: Entity, enemy: Entity) {
 }
 
 pub(super) fn prepare_pet(world: &mut World, unit: Entity, follower: &Follower) -> bool {
-    // The approved player-spec bridge's Demonology summon names its own creature
-    // in SpellEffect; Hunter's empty stable never receives a guessed pet.
-    if follower.profile.spec_id != 266 || crate::hunter_pet::summoned_pet(world, unit).is_some() {
+    if crate::hunter_pet::summoned_pet(world, unit).is_some() {
         return false;
     }
-    match crate::spell_cast::creature_cast(world, unit, 30146, Some(unit), false) {
-        Ok(()) => true,
-        Err(failure) => {
-            warn!("Follower {unit} cannot prepare authored Felguard: {failure:?}");
-            true
+    let spell = match follower.profile.spec_id {
+        266 => 30146, // The native Demonology summon names its own creature.
+        253 => {
+            if let Err(error) = crate::hunter_pet::provision_follower_duck(world, unit) {
+                error!("Follower {unit} cannot provision policy duck: {error}");
+                return true;
+            }
+            883 // Ordinary Call Pet reads the actual provisioned stable slot.
         }
+        _ => return false,
+    };
+    if let Err(failure) = crate::spell_cast::creature_cast(world, unit, spell, Some(unit), false) {
+        warn!("Follower {unit} cannot prepare native pet with spell{spell}: {failure:?}");
     }
+    true
 }
 
 fn heal_party_member(

@@ -404,6 +404,46 @@ fn tamed_pet(world: &World, hunter: Entity, creature: Entity, npc: &Npc) -> Opti
     })
 }
 
+/// FOLLOWER_HUNTER_PET_SIMC_DEFAULT: SimC76f8118 sc_hunter.cpp1052 selects duck.
+/// Provision a normal runtime stable record; AI still casts learned Call Pet883.
+pub(crate) fn provision_follower_duck(
+    world: &mut World,
+    owner: Entity,
+) -> Result<(), &'static str> {
+    init_pet_stable(world, owner).ok_or("follower stable could not be initialized")?;
+    if world.get::<PetStable>(owner).unwrap().stored.active[0].is_some() {
+        return Ok(());
+    }
+    let stored = roll_follower_duck_record(world, owner)?;
+    world.get_mut::<PetStable>(owner).unwrap().stored.active[0] = Some(stored);
+    Ok(())
+}
+
+fn roll_follower_duck_record(world: &World, owner: Entity) -> Result<StoredPet, &'static str> {
+    const FOLLOWER_HUNTER_PET_SIMC_DEFAULT: u32 = 174884;
+    let data = world
+        .get_resource::<WorldData>()
+        .ok_or("follower pet world data missing")?;
+    let template = data
+        .template_for(FOLLOWER_HUNTER_PET_SIMC_DEFAULT, 0)
+        .ok_or("native follower duck174884 template missing; import the policy template")?;
+    if template.creature_type != 1 || template.type_flags & 1 == 0 || template.models.is_empty() {
+        return Err("native follower duck must retain tameable Beast identity and its model");
+    }
+    let specialization = default_pet_specialization(world, template.family)
+        .ok_or("native follower duck family has no default pet specialization")?;
+    Ok(StoredPet {
+        creature_entry: template.entry,
+        display_id: crate::zones::template_display_id(template, &mut rand::thread_rng()),
+        name: template.name.clone(),
+        level: world.get::<Level>(owner).expect("follower native level").0,
+        family: template.family,
+        react_state: REACT_PASSIVE,
+        health: None,
+        specialization: Some(specialization),
+    })
+}
+
 /// `Player::GetOrInitPetStable`: attach this character's pet storage once.
 pub(crate) fn init_pet_stable(world: &mut World, owner: Entity) -> Option<()> {
     if world.get::<PetStable>(owner).is_none() {
