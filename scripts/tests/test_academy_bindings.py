@@ -33,3 +33,19 @@ class AcademyBindingsTests(unittest.TestCase):
                 db.execute('UPDATE spell_effect SET EffectTriggerSpell=0 WHERE SpellID=388796')
                 with self.assertRaisesRegex(ValueError, 'native'):
                     encounter_summons.import_ancient(db)
+
+    def test_doragosa_binding_preserves_authored_actor_and_native_children(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro', uri=True) as source, sqlite3.connect(Path(directory)/'copy.sqlite') as db:
+                source.backup(db)
+                before = db.execute('SELECT * FROM content_creature WHERE map=2526').fetchall()
+                stats = db.execute('SELECT * FROM content_creature_template_difficulty WHERE entry=190609').fetchall()
+                for _ in range(2):
+                    self.assertEqual(encounter_summons.import_doragosa(db), [190609])
+                    self.assertEqual(db.execute('SELECT AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=190609').fetchone(), ('','boss_echo_of_doragosa',64))
+                    self.assertEqual(db.execute('SELECT * FROM content_creature WHERE map=2526').fetchall(), before)
+                    self.assertEqual(db.execute('SELECT * FROM content_creature_template_difficulty WHERE entry=190609').fetchall(), stats)
+                    self.assertEqual(db.execute('SELECT encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2526 AND creature_entry=190609').fetchone(), (2565,3,2514,5423,108925))
+                db.execute('UPDATE spell_effect SET EffectTriggerSpell=0 WHERE SpellID=1282251 AND EffectIndex=0')
+                with self.assertRaisesRegex(ValueError, 'native'):
+                    encounter_summons.import_doragosa(db)

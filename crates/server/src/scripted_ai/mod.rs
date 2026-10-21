@@ -25,6 +25,7 @@ pub mod bossmod;
 mod broggok;
 pub(crate) mod caster_chase;
 pub mod creature_text;
+mod doragosa;
 pub mod event_map;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
@@ -331,7 +332,7 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
         return azure_vault::creature_ai(world, creature, script_name);
     }
     if algethar_academy::is_creature_script(script_name) {
-        return algethar_academy::creature_ai(world, creature);
+        return algethar_academy::creature_ai(world, creature, script_name);
     }
     if murder_row::is_creature_script(script_name) {
         return murder_row::creature_ai(world, creature, script_name);

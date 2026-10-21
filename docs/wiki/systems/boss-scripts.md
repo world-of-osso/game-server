@@ -2,6 +2,8 @@
 
 ## Academy current Retail partial — 2026-10-21
 
+Doragosa current Retail `EchoOfDoragosa.lua` supplies7→10/9→12/14→14/28→28; excludes always-canceled6.5s Blast. Native1282251 effect32 explicitly selects1282252 and389011; no legacy Astral Breath. Native first-Missiles RED0vs1 and direct373326 damage qualified Normal1/Follower205; expanded combat/credit/reset proof pending. Producer `--encounter doragosa` binds only source190609. Bomb dummy-selector and Overwhelming Power→rift script remain named gaps.
+
 [Contract](../../specs/boss-scripts.md#academy-current-retail-partial-boundary). LittleWigs2777a9d `Dragonflight/AlgetharAcademy/OvergrownAncient.lua` current timeline supplies9→28/29,18→33,30→30,54→55 lanes, not legacy clocks. TC a352b1fa has no Academy scripts. Native70448 Barkbreaker damage+aura, Germinate periodic388797 dummy, Branch Out ground dummy and Burst Forth area damage remain unmodified. Local source-binding producer preserves source832 PC/NPC immunity and actual spawn9001232; fixtures prove outgoing casts only, not unlock or ordinary kill-credit. Native RED: first Barkbreaker0vs1; Normal1/Follower205 direct Barkbreaker damage+aura qualifies. Expanded GREEN pending. Source receipts: `game-engine/data/diagnostics/df-bosses-2026-10-21/academy-actor-source.json`; behavioral fixture `scripted_ai/tests/ancient.rs`.
 
 ## Umbrelskul partial Lua clock — 2026-10-21
