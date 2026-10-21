@@ -134,7 +134,13 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
     crate::combat::deal_direct_damage(run.app.world_mut(), run.party.tank, boss, max * 0.35);
     for _ in 0..600 {
         run.app.update();
-        if crate::auras::has_aura(run.app.world(), boss, 55964) {
+        let out_of_combat = run.members().all(|member| {
+            run.app
+                .world()
+                .get::<CombatStatus>(member)
+                .is_none_or(|status| !status.0)
+        });
+        if crate::auras::has_aura(run.app.world(), boss, 55964) && out_of_combat {
             assert!(run.app.world().get::<Health>(boss).unwrap().current > 0.0);
             assert!(!crate::spell_cast::targets::relation_matches(
                 run.app.world(),
