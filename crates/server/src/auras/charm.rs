@@ -6,9 +6,7 @@ use shared::components::{
     CreatureMotion, MovementControl, MovementSpeed, Player, PlayerMotion, Position, Rotation,
     UnitCharm, UnitFactionTemplate, UnitFlags, VerticalVelocity,
 };
-use shared::protocol::{
-    ACT_COMMAND, COMMAND_ATTACK, REACT_DEFENSIVE, REACT_PASSIVE, pet_action_button,
-};
+use shared::protocol::{REACT_DEFENSIVE, REACT_PASSIVE};
 
 use super::{AuraApplication, AuraInstance, RemoveReason, handlers};
 use crate::creature_ai::{FollowOwner, PetMotion};
@@ -76,9 +74,10 @@ pub(super) fn on_applied(world: &mut World, target: Entity, aura: &AuraInstance)
     reset_combat(world, target);
     super::mount::cancel_mount_aura(world, owner);
     super::mount::cancel_mount_aura(world, target);
-    install_control(world, target, &state);
+    let passives = install_control(world, target, &state);
     world.entity_mut(owner).insert(CharmedUnit(target));
     world.entity_mut(target).insert(state);
+    super::charm_spells::cast_passives(world, target, &passives);
     crate::pet_control::send_pet_spells(world, owner, target);
 }
 
@@ -110,7 +109,7 @@ fn capture_state(
     }
 }
 
-fn install_control(world: &mut World, target: Entity, state: &CharmState) {
+fn install_control(world: &mut World, target: Entity, state: &CharmState) -> Vec<u32> {
     let owner_faction = *world
         .get::<UnitFactionTemplate>(state.owner)
         .expect("validated charmer");
@@ -122,13 +121,7 @@ fn install_control(world: &mut World, target: Entity, state: &CharmState) {
     if state.possessed {
         flags |= POSSESSED_FLAG;
     }
-    let bar = if state.possessed || world.get::<Player>(target).is_some() {
-        let mut bar = [0; shared::protocol::PET_ACTION_BAR_SLOTS];
-        bar[0] = pet_action_button(COMMAND_ATTACK, ACT_COMMAND);
-        bar
-    } else {
-        crate::pet_control::pet_action_bar(&[], 0)
-    };
+    let (bar, passives) = super::charm_spells::build_bar(world, target, state.possessed);
     let react = if state.possessed {
         REACT_PASSIVE
     } else {
@@ -162,6 +155,7 @@ fn install_control(world: &mut World, target: Entity, state: &CharmState) {
     }
     crate::spell_cast::mark_dirty(world, target);
     crate::spell_cast::mark_dirty(world, state.owner);
+    passives
 }
 
 fn install_mover(world: &mut World, target: Entity) {
@@ -169,16 +163,20 @@ fn install_mover(world: &mut World, target: Entity) {
         .get::<Position>(target)
         .expect("charmed unit position")
         .y;
+    let speed = crate::creature_ai::BASE_RUN_SPEED
+        * world
+            .get::<super::AuraStatMods>(target)
+            .map_or(1.0, |mods| mods.movement_speed);
     let mut entity = world.entity_mut(target);
+    // Creature MovementSpeed is its last reported animation speed, initially0; a
+    // client mover needs the actual run speed before it can send its first input.
+    entity.insert(MovementSpeed(speed));
     if !entity.contains::<Rotation>() {
         entity.insert(Rotation {
             x: 0.0,
             y: 0.0,
             z: 0.0,
         });
-    }
-    if !entity.contains::<MovementSpeed>() {
-        entity.insert(MovementSpeed(7.0));
     }
     if !entity.contains::<PlayerMotion>() {
         entity.insert(PlayerMotion::default());
@@ -197,8 +195,14 @@ fn change_movement_control(world: &mut World, unit: Entity, controlled: bool) {
         .get::<MovementControl>(unit)
         .copied()
         .unwrap_or_default();
+    let owner_epoch = world
+        .get::<UnitCharm>(unit)
+        .filter(|charm| charm.possessed)
+        .and_then(|charm| Entity::try_from_bits(charm.charmer))
+        .and_then(|owner| world.get::<MovementControl>(owner))
+        .map_or(0, |control| control.epoch);
     world.entity_mut(unit).insert(MovementControl {
-        epoch: previous.epoch.wrapping_add(1),
+        epoch: previous.epoch.max(owner_epoch).wrapping_add(1),
         controlled,
     });
     world.entity_mut(unit).insert(PlayerMotion::default());

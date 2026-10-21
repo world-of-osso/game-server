@@ -286,7 +286,7 @@ impl AttackRules<'_, '_> {
             .map(|(template, is_player, _)| UnitFaction {
                 template: template.map_or(0, |template| template.0),
                 is_player: crate::faction::player_affected(
-                    is_player,
+                    is_player && !self.charms.contains(unit),
                     self.unit_flags.get(unit).ok(),
                 ),
             })

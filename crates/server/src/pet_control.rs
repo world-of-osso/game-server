@@ -73,7 +73,7 @@ pub struct PetControlPlugin;
 
 impl Plugin for PetControlPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_pet_levelup_spells_startup)
+        app.add_systems(Startup, load_pet_control_data_startup)
             .add_systems(
                 FixedUpdate,
                 (
@@ -125,7 +125,7 @@ impl PetCharm {
 
     /// The bar slot holding `spell` (`HasSpell`: the bar holds the pet's learned spells).
     pub(crate) fn spell_slot(&self, spell: u32) -> Option<usize> {
-        PET_SPELL_SLOTS.clone().find(|&slot| {
+        (0..PET_ACTION_BAR_SLOTS).find(|&slot| {
             let button = self.action_bar[slot];
             button != 0
                 && is_spell_button(pet_action_button_type(button))
@@ -135,9 +135,9 @@ impl PetCharm {
 
     /// `GetPetAutoSpellOnPos`: the spells on the bar with autocast on, in bar order.
     fn autocast_spells(&self) -> Vec<u32> {
-        PET_SPELL_SLOTS
-            .clone()
-            .map(|slot| self.action_bar[slot])
+        self.action_bar
+            .iter()
+            .copied()
             .filter(|&button| pet_action_button_type(button) == ACT_ENABLED)
             .map(pet_action_button_action)
             .collect()
@@ -209,19 +209,19 @@ fn bar_state(attr1: u32, attr9: u32) -> u8 {
     }
 }
 
-fn load_pet_levelup_spells_startup(mut commands: Commands) {
+fn load_pet_control_data_startup(mut commands: Commands) {
     let path = Path::new(crate::spell_info::WORLD_DB_PATH);
-    let spells = if path.exists() {
-        let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .expect("Failed to open world.db for pet spells");
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("Failed to open world.db for pet/charm spells");
+    commands.insert_resource(
         load_pet_levelup_spells(&conn).expect(
             "Failed to load pet level-up spells (creature_family: run scripts/db2.py import)",
-        )
-    } else {
-        warn!("world.db not found, pets learn no spells");
-        PetLevelupSpells::default()
-    };
-    commands.insert_resource(spells);
+        ),
+    );
+    commands.insert_resource(
+        crate::auras::charm_spells::load(&conn)
+            .expect("Failed to load TDB1210 tdb_creature_template_spell for charm bars"),
+    );
 }
 
 /// The bar of a new pet of `family` at `level`: `InitPetActionBar` with Retail's slots,
@@ -825,7 +825,8 @@ fn valid_attack_target(world: &World, attacker: Entity, target: Entity) -> bool 
             .get::<UnitFactionTemplate>(unit)
             .map_or(0, |template| template.0),
         is_player: crate::faction::player_affected(
-            world.get::<Player>(unit).is_some(),
+            world.get::<Player>(unit).is_some()
+                && world.get::<shared::components::UnitCharm>(unit).is_none(),
             world.get::<UnitFlags>(unit),
         ),
     };

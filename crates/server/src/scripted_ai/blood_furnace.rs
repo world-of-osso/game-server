@@ -19,6 +19,7 @@ const NPC_KELIDAN: u32 = 17377;
 const DATA_THE_MAKER: u32 = 0;
 /// TC DATA_KELIDAN is ordinal2; installed DB2 encounter1923 completes bit1.
 const DATA_KELIDAN: u32 = 1;
+const DOMINATION: u32 = 30923;
 const EXPLODING_BEAKER: u32 = 30925;
 const EXPLODING_BEAKER_H: u32 = 40059;
 
@@ -101,8 +102,7 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     }
 }
 
-/// `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`: Domination30923 needs player charm
-/// (aura6) and is not scheduled.
+/// Source30923 uses the generic aura6 lifecycle and charmed-player AI.
 struct TheMaker {
     boss: BossAi,
 }
@@ -125,6 +125,7 @@ impl CreatureAi for TheMaker {
         self.boss
             .events
             .schedule_range(EXPLODING_BEAKER, 5_000, 15_000);
+        self.boss.events.schedule_range(DOMINATION, 20_000, 30_000);
     }
 
     fn killed_unit(&mut self, ctx: &mut Ctx, victim: Entity) {
@@ -153,12 +154,40 @@ impl BossScript for TheMaker {
     }
 
     fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
-        if event == EXPLODING_BEAKER {
-            // MAKER_NORMAL_BEAKER_30925_ABSENT_70448: Normal resolves no SpellInfo.
-            ctx.do_cast_victim(ctx.dungeon_mode(EXPLODING_BEAKER, EXPLODING_BEAKER_H));
-            self.boss.events.repeat_range(10_000, 20_000);
+        match event {
+            DOMINATION => {
+                // TC GetThreatListPlayerCount > 1, then random player (including tank).
+                if maker_player_threat_count(ctx) > 1
+                    && let Some(target) = ctx.select_target_random(0.0, true)
+                {
+                    ctx.do_cast_at(Some(target), DOMINATION, false);
+                }
+                self.boss.events.repeat_range(20_000, 30_000);
+            }
+            EXPLODING_BEAKER => {
+                // MAKER_NORMAL_BEAKER_30925_ABSENT_70448: Normal resolves no SpellInfo.
+                ctx.do_cast_victim(ctx.dungeon_mode(EXPLODING_BEAKER, EXPLODING_BEAKER_H));
+                self.boss.events.repeat_range(10_000, 20_000);
+            }
+            _ => {}
         }
     }
+}
+
+fn maker_player_threat_count(ctx: &Ctx) -> usize {
+    ctx.world
+        .get::<shared::components::ThreatTable>(ctx.me)
+        .map_or(0, |table| {
+            table
+                .entries()
+                .iter()
+                .filter(|entry| {
+                    Entity::try_from_bits(entry.entity).is_some_and(|unit| {
+                        ctx.world.get::<shared::components::Player>(unit).is_some()
+                    })
+                })
+                .count()
+        })
 }
 
 /// 17377 - Keli'dan the Breaker: dormant until his five channelers die.

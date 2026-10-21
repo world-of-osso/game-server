@@ -25,6 +25,7 @@ pub(crate) mod base_armor;
 pub(crate) mod charm;
 #[cfg(test)]
 mod charm_control_tests;
+pub(crate) mod charm_spells;
 #[cfg(test)]
 mod charm_tests;
 mod charred_warblades;
@@ -119,7 +120,8 @@ pub struct AuraPlugin;
 
 impl Plugin for AuraPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<procs::PendingAuraEvents>()
+        app.init_resource::<charm_spells::CreatureCharmSpells>()
+            .init_resource::<procs::PendingAuraEvents>()
             .init_resource::<UnhandledAuras>()
             .init_resource::<scripts::AuraScripts>()
             .add_systems(

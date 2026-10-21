@@ -24,12 +24,13 @@ Generic aura2/6 control uses native70448 spells and TrinityCore a352b1fa `Unit::
 ## Tests asserting this spec
 
 - `crates/server/src/auras/charm_tests.rs`: native605 faction/combat/control/cancel;205364 follow/duration;1098/30923 ownership/refusal. Ignored RED pushed e2f48c726;0PASS/3FAIL on missing faction consumer. At0568cd86e, unchanged3GREEN/0FAIL32.74s;tests enabled.
+- `crates/server/src/auras/charm_control_tests.rs` and `scripted_ai/tests/the_maker.rs`: pushed ignored qualification4b1f5f944 gives2PASS/3FAIL19.48s: actual205364 pet melee and native205364/31865 damage flags PASS;1098 genuinely casts on nativeImp416 but3110 bar absent,605 idle speed0,Maker unscheduled are RED.
 
 ## Known gaps (current cycle)
 
 - [ ] Targeted GREEN and real client movement/control proof pending.
-- [ ] Load NPC spell slots from canonical `tdb_creature_template_spell` (TDB1210 CreatureID/Index/Spell/VerifiedBuild), preserving source order and TC passive/charmed restrictions. No invented loadouts for creatures without rows.
-- [ ] Maker native30923 scheduling not yet enabled; generic aura lifecycle first.
+- [ ] GREEN proof for loaded canonical `tdb_creature_template_spell` (TDB1210 CreatureID/Index/Spell/VerifiedBuild), source order, passive/charmed restrictions and native3110 action. Creatures without rows retain a per-creature named source gap; no invented loadouts.
+- [ ] GREEN proof for Maker native30923 source20–30s/repeat20–30s, multiple-player threat gate, actual charmed-player party damage, and solo exclusion (scheduling now implemented).
 
 ## Out of scope
 
