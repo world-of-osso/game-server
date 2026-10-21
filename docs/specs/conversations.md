@@ -29,7 +29,7 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 ## Implementation inventory
 
 - `scripts/conversation_data.py`: pinned local source reads, owned-copy import, receipt-preserving report and replayable SQL publication artifact.
-- `crates/server/src/conversations/{mod,catalog,ingress}.rs`: internal private payload, source catalog and finite source ingress scripts.
+- `crates/server/src/conversations/{mod,catalog,ingress,wire}.rs`: private source payload/catalog/ingress and reliable owner snapshots.
 - `crates/server/src/{main,world_data}.rs`: production plugin/catalog installation.
 
 ## Tests asserting this spec
