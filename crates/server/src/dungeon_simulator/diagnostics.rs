@@ -29,6 +29,46 @@ pub(super) fn inspect_unit(world: &World, guid: Option<u32>, actor: Entity) -> s
         "threat": threat, "auras": auras})
 }
 
+pub(super) fn inspect_aggro_pair(
+    world: &mut World,
+    watcher: Entity,
+    target: Entity,
+) -> Result<serde_json::Value, String> {
+    use shared::components::UnitLevel;
+    use shared::level_scaling::{LevelScaling, level_for_viewer};
+    let native = |unit| {
+        world
+            .get::<UnitLevel>(unit)
+            .copied()
+            .ok_or_else(|| format!("aggro diagnostic lacks level for {unit:?}"))
+    };
+    let watcher_level = native(watcher)?;
+    let target_level = native(target)?;
+    let seen_watcher = level_for_viewer(
+        watcher_level,
+        world.get::<LevelScaling>(watcher),
+        target_level.0,
+    );
+    let seen_target = level_for_viewer(
+        target_level,
+        world.get::<LevelScaling>(target),
+        watcher_level.0,
+    );
+    let mut state =
+        bevy::ecs::system::SystemState::<crate::creature_aggro::AggroDistance>::new(world);
+    let geometry = state
+        .get(world)
+        .map_err(|error| format!("aggro diagnostic parameters: {error:?}"))?;
+    Ok(
+        serde_json::json!({"watcher": watcher.to_bits(), "target": target.to_bits(),
+        "watcher_native_level": watcher_level.0, "target_native_level": target_level.0,
+        "watcher_seen_level": seen_watcher, "target_seen_level": seen_target,
+        "watcher_reach": geometry.combat_reach(watcher), "target_reach": geometry.combat_reach(target),
+        "npc_acquisition_radius": geometry.center_radius(watcher, target, seen_watcher, seen_target),
+        "projection_radius": geometry.center_radius(watcher, target, seen_watcher, target_level.0)}),
+    )
+}
+
 pub(super) fn read_process_memory() -> serde_json::Value {
     let status =
         std::fs::read_to_string("/proc/self/status").expect("read simulator process memory status");

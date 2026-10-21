@@ -317,12 +317,17 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
 }
 
 #[test]
-#[ignore = "opening footprint regression; explicit RED before generic admission diagnosis"]
 fn opening_admission_does_not_recruit_unprojected_source_packs() {
     let _rng_scope = crate::random::seed_scope(7);
     let mut run = spawn_run(7, &mut None).unwrap();
     for _ in 0..600 {
         run.control().unwrap();
+        let previous = serde_json::json!({
+            "owner": super::diagnostics::inspect_unit(run.app.world(), None, run.party.owner),
+            "tank": super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank),
+            "owner_move_intent": run.app.world().get::<MoveIntent>(run.party.owner).map(|intent| [intent.0.x, intent.0.z]),
+            "opening_spell": crate::followers::simulator::opening_spell(run.app.world(), run.party.tank),
+        });
         run.app.update();
         let Some(opening) = run.report.pulls.first() else {
             continue;
@@ -334,6 +339,17 @@ fn opening_admission_does_not_recruit_unprojected_source_packs() {
             .find(|pack| pack.id == opening.pack)
             .unwrap()
             .spawns;
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        let opening_died = admitted.iter().all(|spawn| {
+            events.iter().any(|event| {
+                event.kind == shared::protocol::CombatLogKind::Death
+                    && event.target == Some(run.actors[&spawn.guid].to_bits())
+            })
+        });
         let unexpected: Vec<_> = run
             .actors
             .iter()
@@ -349,14 +365,43 @@ fn opening_admission_does_not_recruit_unprojected_source_packs() {
                 super::diagnostics::inspect_unit(run.app.world(), Some(*guid), *actor)
             })
             .collect();
+        let mut aggro = Vec::new();
+        if !unexpected.is_empty() {
+            let acquired: Vec<_> = run
+                .actors
+                .values()
+                .copied()
+                .filter(|actor| {
+                    run.app
+                        .world()
+                        .get::<CombatStatus>(*actor)
+                        .is_some_and(|status| status.0)
+                })
+                .collect();
+            for actor in acquired {
+                aggro.push(super::diagnostics::inspect_aggro_pair(
+                    run.app.world_mut(),
+                    actor,
+                    run.party.tank,
+                ));
+            }
+        }
+        let aggro = serde_json::to_value(aggro).unwrap();
         assert!(
             unexpected.is_empty(),
-            "single-pack bootstrap recruited unprojected sources at {}s; owner={:?}; tank={:?}; unexpected={unexpected:?}",
+            "single-pack bootstrap recruited unprojected sources at {}s; previous={previous}; aggro={aggro}; owner={:?}; tank={:?}; unexpected={unexpected:?}",
             run.now(),
             run.app.world().get::<Position>(run.party.owner),
             run.app.world().get::<Position>(run.party.tank)
         );
+        if opening_died {
+            return;
+        }
     }
+    assert!(
+        !run.report.pulls.is_empty(),
+        "fixture must actually attempt its opening pull"
+    );
 }
 
 #[test]
