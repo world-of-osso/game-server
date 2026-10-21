@@ -3,6 +3,8 @@ use super::*;
 
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
+#[path = "azure_blade.rs"]
+mod azure_blade;
 #[path = "azure_combat.rs"]
 mod azure_combat;
 #[path = "azure_explosive_brand.rs"]
