@@ -376,7 +376,7 @@ fn effectively_damaged(group: &GroupFixture, spell: u32, target: Entity) -> bool
 }
 
 #[test]
-#[ignore = "f6c6fffd4 weave failure; target/hit boundary under diagnosis"]
+#[ignore = "Corrected native target-retention fixture; GREEN execution pending"]
 fn holy_weave_native90_holy_fire_then_smite_deal_real_damage_when_safe() {
     let _rng = crate::random::seed_scope(257);
     let mut group = native_group();
@@ -384,23 +384,8 @@ fn holy_weave_native90_holy_fire_then_smite_deal_real_damage_when_safe() {
     let first = group.h.npc;
     wait_henry_cast(&mut group, 14914);
     assert!(effectively_damaged(&group, 14914, first));
-    let next = crate::spell_cast::test_harness::spawn_npc(&mut group.h.app, 3.0);
-    group.h.npc = next;
-    engage_weave_enemies(&mut group, 1);
     wait_henry_cast(&mut group, 585);
-    let events: Vec<_> = group
-        .h
-        .app
-        .world()
-        .resource::<ObservedCombatEvents>()
-        .0
-        .iter()
-        .filter(|event| event.source == Some(group.priest.to_bits()) && event.spell_id == Some(585))
-        .collect();
-    assert!(
-        effectively_damaged(&group, 585, next),
-        "native Smite events: {events:?}; first={first:?}; next={next:?}"
-    );
+    assert!(effectively_damaged(&group, 585, first));
 }
 
 #[test]
@@ -692,7 +677,6 @@ fn holy_policy_native90_mass_dispel_clears_real_clustered_magic() {
 }
 
 #[test]
-#[ignore = "Holy dispel priority RED at f6c6fffd4; paid2050 precedes real527"]
 fn holy_policy_native90_purify_removes_real_magic_during_triage_pressure() {
     let mut group = native_group();
     let target = group.members[2];

@@ -131,7 +131,13 @@ therefore admits2050 before the available527. Holy now owns527 and selects the
 ranked actually dispellable patient after emergencies/MassDispel, before routine
 heals. Native kit eligibility retains Magic/Disease types and ordinary spell
 admission. Ignored first-action regression is pushed before this change; GREEN
-execution pending.
+execution at fcdcb79cd: first actual527 and aura removal GREEN. All43 including
+ignored give40PASS/3FAIL94.45s; remaining PoH and two weave boundaries below.
+
+Smite diagnostic proves real585 dealt2203 damage to the original engaged target364,
+not the fixture's freshly spawned374. Retaining the live original target is
+correct; the fixture must not demand an unsolicited target swap. Corrected test
+waits for Holy Fire then Smite damage on the same original enemy.
 
 PoH ranking root cause: shared candidates estimate one recipient, making native596
 look smaller and more expensive than2061 despite its real multi-patient footprint.
