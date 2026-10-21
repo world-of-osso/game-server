@@ -31,9 +31,11 @@ pub(crate) fn sync_equipment_effects(world: &mut World, changed: &mut ChangedEqu
             let AuraSource::Equipment(slot) = aura.source else {
                 return false;
             };
-            !desired
-                .iter()
-                .any(|(key, spell)| *key == slot && spell.id == aura.spell_id)
+            !desired.iter().any(|(key, spell)| {
+                *key == slot
+                    && spell.id == aura.spell_id
+                    && spell.cast_item_level == aura.cast_item_level
+            })
         });
         for (slot, spell) in desired {
             apply_missing_equipment_aura(world, unit, slot, &spell);
@@ -143,9 +145,11 @@ fn apply_missing_equipment_aura(
 ) {
     let source = AuraSource::Equipment(slot);
     let applied = world.get::<ActiveAuras>(unit).is_some_and(|auras| {
-        auras
-            .iter()
-            .any(|aura| aura.spell_id == spell.id && aura.source == source)
+        auras.iter().any(|aura| {
+            aura.spell_id == spell.id
+                && aura.source == source
+                && aura.cast_item_level == spell.cast_item_level
+        })
     });
     if applied {
         return;
@@ -190,6 +194,12 @@ mod tests {
         .unwrap();
         let mut h = harness(vec![], &[], 2).unwrap();
         h.app.insert_resource(world_db().unwrap().store.clone());
+        h.app
+            .init_resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>();
+        h.app
+            .world_mut()
+            .entity_mut(h.caster)
+            .insert(shared::components::UnitLevel(90));
         h.app.insert_resource(NativeItemInstances {
             bonuses: load::load_bonus_tables(&conn).unwrap(),
             enchants: load::load_enchantment_tables(&conn).unwrap(),
@@ -254,7 +264,20 @@ mod tests {
             },
         );
         assert!(crate::auras::has_aura(h.app.world(), h.caster, 1236742));
-        assert!(crate::auras::has_aura(h.app.world(), h.caster, 1241710));
+        assert!(
+            crate::auras::has_aura(h.app.world(), h.caster, 1241710),
+            "active={:?}; child_effects={:?}; triggered={:?}",
+            h.app.world().get::<ActiveAuras>(h.caster),
+            h.app
+                .world()
+                .resource::<SpellStore>()
+                .get(1241710)
+                .map(|spell| &spell.effects),
+            h.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedTriggeredCasts>()
+                .0
+        );
         h.app
             .world_mut()
             .get_mut::<EquippedItemModifiers>(h.caster)

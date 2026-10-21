@@ -239,6 +239,8 @@ pub struct AuraInstance {
     pub spell_id: u32,
     pub caster: Entity,
     pub source: AuraSource,
+    /// Item-level snapshot of the applied aura effects.
+    pub cast_item_level: Option<u16>,
     pub from_player: bool,
     pub effects: Vec<AuraEffectState>,
     /// Full duration in ms; 0 is permanent.
@@ -709,6 +711,7 @@ fn build_instance(
         spell_id: spell.id,
         caster,
         source: application.source,
+        cast_item_level: spell.cast_item_level,
         from_player: world.get::<Player>(caster).is_some(),
         effects,
         duration_ms,
@@ -756,7 +759,6 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
@@ -765,10 +767,8 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
                 .immunity
                 .as_ref()
                 .is_some_and(|definition| !definition.has_unmodeled_fields());
-        let handled = handlers::is_handled(effect.aura_type)
-            && supported_amount
-            && duration_supported
-            && immunity_supported;
+        let handled =
+            handlers::is_handled(effect.aura_type) && duration_supported && immunity_supported;
         if handled
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
@@ -800,12 +800,7 @@ fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
             )
         };
     }
-    if linked::is_linked(effect.aura_type) {
-        format!(
-            "nonzero linked amount {} for child {} remains a source gap",
-            effect.amount, effect.trigger_spell
-        )
-    } else if mechanic_duration::invalid_mechanic_source_gap(effect) {
+    if mechanic_duration::invalid_mechanic_source_gap(effect) {
         format!(
             "duration mechanic {} does not fit the pinned mask; source gap",
             effect.misc_values[0]

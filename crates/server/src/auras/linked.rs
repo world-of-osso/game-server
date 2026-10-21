@@ -1,4 +1,4 @@
-//! TC a352b1fa HandleAuraLinked. Nonzero parent amounts remain source gaps.
+//! TC a352b1fa HandleAuraLinked: preserve authored BP0 at zero; override at nonzero.
 use bevy::prelude::*;
 
 use super::{AuraEffectState, AuraInstance, handlers, lookup_spell};
@@ -8,10 +8,10 @@ pub(super) fn is_linked(aura_type: u32) -> bool {
     matches!(aura_type, handlers::LINKED | handlers::LINKED_2)
 }
 
-fn zero_amount_links(aura: &AuraInstance) -> impl Iterator<Item = &AuraEffectState> {
+fn linked_effects(aura: &AuraInstance) -> impl Iterator<Item = &AuraEffectState> {
     aura.effects
         .iter()
-        .filter(|effect| is_linked(effect.aura_type) && effect.amount == 0.0)
+        .filter(|effect| is_linked(effect.aura_type))
 }
 
 fn find_child_caster(
@@ -40,17 +40,27 @@ fn find_child_caster(
 }
 
 pub(super) fn on_applied(world: &mut World, target: Entity, aura: &AuraInstance) {
-    for effect in zero_amount_links(aura) {
+    for effect in linked_effects(aura) {
         let Some(caster) = find_child_caster(world, target, aura, effect.trigger_spell) else {
             continue;
         };
         let depth = spell_cast::next_trigger_depth(world);
-        spell_cast::cast_triggered(world, caster, effect.trigger_spell, Some(target), depth);
+        spell_cast::cast_triggered_with_overrides(
+            world,
+            caster,
+            effect.trigger_spell,
+            Some(target),
+            depth,
+            spell_cast::TriggeredSpellOverrides {
+                effect0_amount: (effect.amount != 0.0).then_some(effect.amount),
+                ..Default::default()
+            },
+        );
     }
 }
 
 pub(super) fn on_reapplied(world: &mut World, target: Entity, aura: &AuraInstance) {
-    for effect in zero_amount_links(aura) {
+    for effect in linked_effects(aura) {
         let Some(caster) = find_child_caster(world, target, aura, effect.trigger_spell) else {
             continue;
         };
@@ -88,7 +98,7 @@ fn synchronize_child_stacks(
 }
 
 pub(super) fn on_removed(world: &mut World, target: Entity, aura: &AuraInstance) {
-    for effect in zero_amount_links(aura) {
+    for effect in linked_effects(aura) {
         let Some(caster) = find_child_caster(world, target, aura, effect.trigger_spell) else {
             continue;
         };
