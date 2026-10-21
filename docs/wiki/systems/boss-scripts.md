@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Encounter fixture determinism — 2026-10-20
+
+The shared `stockade_app_with` harness already uses manual50ms real-time updates and a50ms fixed step; CPU stalls do not advance simulation. Its `EncounterSeed(0)` now seeds each BossAi EventMap during reset, before initial victim acquisition. Independent apps own independent streams. Explicit ground-phase seeds remain available for fixtures exercising specific roll combinations; production RNG is unchanged.
+
+Maker can acquire its nearby player during the fixture's first setup update, before `pull_maker` returns. Installing `GroundCombatSeed` afterward is too late: the first beaker event is already pending. The two-app regression reproduced different schedules14.85/34.7/53.7 versus14.55/32.5/49.3 before the shared seed. Also, TC's first5–15s window schedules **DoCastVictim**, not SpellGo; native40059 casts for500ms. The oracle now checks actual accepted requests against the unchanged source windows and separately checks completion after500ms. Gargolmar's30641 is checked at each actual application, not at arbitrary70s when a legal random repeat may leave its10s aura expired.
+
+Sources: [`tests.rs`](../../../crates/server/src/scripted_ai/tests.rs), [`boss_ai.rs`](../../../crates/server/src/scripted_ai/boss_ai.rs), [`the_maker.rs`](../../../crates/server/src/scripted_ai/tests/the_maker.rs), [`gargolmar.rs`](../../../crates/server/src/scripted_ai/tests/gargolmar.rs); TC a352b1fa [Maker47–79](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/scripts/Outland/HellfireCitadel/BloodFurnace/boss_the_maker.cpp#L47-L79) and [Gargolmar71–148](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/scripts/Outland/HellfireCitadel/HellfireRamparts/boss_watchkeeper_gargolmar.cpp#L71-L148). Under-load repeated/integration proof pending.
+
 ## Shattered Halls O'mrogg — 2026-10-20
 
 `scripted_ai/shattered_halls.rs` ports [Warbringer O'mrogg and his heads](../../specs/boss-scripts.md#shattered-halls-omrogg-source-boundary) on BossAi(2). The heads are separate spawned creatures; boss hooks dispatch `DoAction` to the copy's left head, whose AI queues TC's TaskScheduler sequences and makes the right head speak. Despawned heads stay in the world dead and hidden (`combat::despawn_creature`). The Burning Maul `AuraScript` swaps `EquipmentAppearance` through `WorldData.equipment`. Beatdown's AfterCast uses the new `creature_aggro::reset_all_threat` (TC `ResetAllThreat`): `ThreatTable::reset` clears the references instead, so it is not a substitute.

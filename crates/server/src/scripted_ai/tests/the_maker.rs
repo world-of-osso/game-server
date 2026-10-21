@@ -149,11 +149,6 @@ fn pull_maker(difficulty: u32) -> (Harness, Entity, InMap) {
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
-    // An unseeded first beaker roll near15s plus its500ms cast lands after the
-    // 15.2s observation window. Seed only the fixture's EventMap rolls.
-    h.app.world_mut().entity_mut(boss).insert(
-        crate::scripted_ai::tests::cast_admission::GroundCombatSeed(0),
-    );
     h.engage(boss);
     (h, boss, map)
 }
@@ -212,13 +207,51 @@ fn assert_beaker_window(times: &[f32], first: (f32, f32)) {
 }
 
 #[test]
+fn encounter_fixture_seed_precedes_automatic_aggro() {
+    let (mut first, first_boss, _) = maker_copy(2);
+    let first_times = cast_times(&mut first, first_boss, HEROIC_BEAKER, 60.0);
+    std::thread::sleep(Duration::from_millis(300));
+    let (mut second, second_boss, _) = maker_copy(2);
+    let second_times = cast_times(&mut second, second_boss, HEROIC_BEAKER, 60.0);
+    assert!(first_times.len() >= 3, "real heroic beaker casts");
+    assert_eq!(
+        first_times, second_times,
+        "fixture RNG must be seeded before the actor can acquire its victim"
+    );
+}
+
+#[test]
 fn encounter_coverage_maker_heroic_aggro_speech_and_beaker_schedule() {
     let (mut h, boss, _) = pull_maker(2);
     let player = h.player();
+    let origin = h.app.world().resource::<Time<Fixed>>().elapsed_secs_f64();
+    h.app.insert_resource(cast_admission::CastAdmissions {
+        actor: boss,
+        origin,
+        entries: Vec::new(),
+    });
     let times = cast_times(&mut h, boss, HEROIC_BEAKER, 60.0);
-    eprintln!("MAKER heroic beaker times={times:?}");
+    let starts: Vec<_> = h
+        .app
+        .world()
+        .resource::<cast_admission::CastAdmissions>()
+        .entries
+        .iter()
+        .filter(|entry| entry.spell == HEROIC_BEAKER && entry.result.is_ok())
+        .map(|entry| entry.time)
+        .collect();
+    eprintln!("MAKER heroic beaker starts={starts:?} impacts={times:?}");
     assert_eq!(count_yells(&h, boss, 0), 1, "JustEngagedWith Talk0 once");
-    assert_beaker_window(&times, (5.0, 15.0));
+    // TC schedules DoCastVictim at5–15s; SpellGo follows the native500ms cast.
+    assert_beaker_window(&starts, (5.0, 15.0));
+    assert_eq!(starts.len(), times.len(), "every admitted cast completes");
+    for (start, impact) in starts.iter().zip(&times) {
+        let cast_time = impact - start;
+        assert!(
+            (cast_time - 0.5).abs() <= 0.05,
+            "native500ms cast: {cast_time}"
+        );
+    }
     assert!(
         spell_gos(&h, boss, HEROIC_BEAKER)
             .iter()

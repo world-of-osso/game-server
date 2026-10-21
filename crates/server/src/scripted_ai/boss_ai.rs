@@ -63,6 +63,10 @@ impl BossAi {
             return;
         }
         self.events.reset();
+        #[cfg(test)]
+        if let Some(seed) = ctx.world.get_resource::<super::tests::EncounterSeed>() {
+            self.events.seed_rng(seed.0);
+        }
         self.summons.despawn_all(ctx.world);
         let Some(map) = ctx.map() else {
             return;

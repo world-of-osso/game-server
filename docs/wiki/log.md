@@ -1,3 +1,7 @@
+## 2026-10-20 — Encounter fixture determinism
+
+[Root cause](systems/boss-scripts.md#encounter-fixture-determinism--2026-10-20): clocks already manual50ms; Maker fixture auto-engages before its late per-test seed. Two-app schedule regression RED precedes shared BossAi-reset fixture seeding. Source5–15s describes cast requests, not500ms-later impacts; Gargolmar aura presence is now checked on actual application instead of arbitrary70s. Under-load repetitions and scripted_ai integration pending.
+
 ## 2026-10-20 — Generic census healing, label mobility and energize
 
 [Generic next](systems/auras.md#census-generic-next--2026-10-20): initial RED498eeb521 was invalid (limited fixture store omitted native applied/triggered IDs). Corrected ignored68f31ad3d pushed with consumers reverted gives6RED and253 baseline probe receipts; restored6c76aead4 gives unchanged6GREEN plus253-receipt probe PASS178.44s before enabling. Earlier14-root warning delta includes354eight now inherited from merged master27743876c; duplicate354 consumer removed, existing master wildcard behavior retained. Merged bde34597a15PASS215.50s includes six cases, retained eight330 controls and253-receipt probe; check/fmtPASS, no warnings. Branch-owned delta is307four and137two across six specs; this is not full ability/spec parity.470 explicitly TC NULL; no fabricated timer scaling or per-spell scripts.
