@@ -200,11 +200,13 @@ fn send_case_cast(
 ) {
     let (min, max) = super::targets::spell_range(spell, hostile);
     let distance = (min + 0.5).max(3.0).min(max.max(3.0));
-    h.app.world_mut().entity_mut(h.npc).insert(Position {
-        x: distance,
-        y: 0.0,
-        z: 0.0,
-    });
+    if target != h.caster {
+        h.app.world_mut().entity_mut(target).insert(Position {
+            x: distance,
+            y: 0.0,
+            z: 0.0,
+        });
+    }
     if super::attributes(spell, 0) & super::SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL != 0 {
         h.app
             .world_mut()
@@ -796,10 +798,7 @@ fn class_completeness_probe_fixture_refresh_distinguishes_absent_native_definiti
         receipt["source_rows"]["tdb_serverside_spell"], 0,
         "{receipt}"
     );
-    assert!(
-        receipt["source_rows"]["spell_effect"].as_u64().unwrap() > 0,
-        "{receipt}"
-    );
+    assert_eq!(receipt["source_rows"]["spell_effect"], 0, "{receipt}");
 }
 
 #[test]
