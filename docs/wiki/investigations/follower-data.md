@@ -16,7 +16,15 @@ At9bb23c9be new native selection/Voltaic tests give4RED20.44s: Fire never reache
 
 [Lava Surge script](../../../crates/server/src/spell_cast/scripts/lava_surge.rs) receives real188389 damage ticks, checks actual77756 and its native chance, and retains TC's per-passive normalized-tick counter across all own Flame Shocks within100 yards/same map. Native77762 hit restores one charge except during51505; after51505 completion restore the deferred charge and preserve any unadmitted77762 instance through the existing charged-mod consumer. This composes the same admission marker as Fire. Natural/in-flight exact GREEN atf5bd68593 (part of5PASS/1FireFAIL24.77s); full talent coverage and Voltaic Blaze/selection still open. [Contract](../../specs/auras.md#elemental-lava-surge).
 
+### Scoped rotation kit publication — 2026-10-21
+
+[`follower_kit_delta.py`](../../../scripts/follower_kit_delta.py) applies prepared policy values through `(spec_id,spell_id,min_level)` on a fresh read-only-source SQLite backup. Changed interval identities require requalification; other specs/tables remain unchanged. Three behavioral CLI tests cover reordered rowids, repeat application, preserved source/other specs/tables and refusal of missing intervals/existing outputs.
+
+For specs63/253/262/1467, canonical→a2-v2 changes11 of376 intervals (253 unchanged). Engine `data/diagnostics/rotation-fidelity-2026-10-21/{delta-a3.sql,receipt-a3.json,world-rotation-a3-canonical-patched.db}` is the publication/proof input. Logical v4 scopes66/73/103/266/269 are disjoint, but its raw `delta-v4.sql` rewrites rowids: applying it after A reverts8 Elemental/Evoker intervals. Apply **v4 then A**; both actual replay orders and SQL hashes are preserved in `rotation-a3-v4-composition-receipt.json`. Canonical publication stays lead-owned.
+
 ### Level90 native dummy measurements (120s, one sample each)
+
+**Action/resource evidence only, not production DPS:** these inherited fixtures use `computed_stats=false` and omit production `StatsPlugin`. Their damage numbers cannot support a SimC DPS comparison. New DPS measurements must enable the real stat producer.
 
 | Spec / targets | Baseline→candidate damage | Consumed / gained | Relevant sampled uptime |
 |---|---|---|---|
