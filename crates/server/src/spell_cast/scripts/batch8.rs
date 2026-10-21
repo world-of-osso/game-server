@@ -116,8 +116,9 @@ pub(super) fn provoke_plan(
 
 ///264178 names two whole shards;280127 carries20 raw units. TDB binds
 ///spell_warl_demonbolt's AfterCast, not each weapon/proc child or enemy hit.
-pub(super) fn demonbolt(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+pub(super) fn demonbolt(world: &mut World, caster: Entity, spell: &SpellInfo) {
     spell_cast::cast_triggered(world, caster, DEMONBOLT_ENERGIZE, Some(caster), 1);
+    spell_cast::guardian::core::consume_core(world, caster, spell);
 }
 ///Current Mainline187874 unconditionally names187878d for its enhancement.
 ///The older TDB script's two-target condition is not in this Retail tooltip.

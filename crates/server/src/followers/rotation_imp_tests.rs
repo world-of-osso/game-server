@@ -238,6 +238,23 @@ fn rotation_fidelity_wild_imp_demise_naturally_earns_and_spends_demonic_core() {
         before, 4,
         "84natural fades must earn native four-use Core cap through sourced PRD, no injected aura/RNG"
     );
+    let shards = crate::spell_cast::powers::power_value(
+        h.app.world(),
+        owner,
+        shared::components::PowerType::SoulShards,
+    )
+    .unwrap();
+    let energize = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(280127)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points;
     let target = h.npc;
     crate::spell_cast::creature_cast(h.app.world_mut(), owner, 264178, Some(target), false)
         .expect("ordinary Demonbolt admitted with actual earned Core");
@@ -253,6 +270,18 @@ fn rotation_fidelity_wild_imp_demise_naturally_earns_and_spends_demonic_core() {
         core_stacks(h.app.world()),
         before - 1,
         "one actual Demonbolt consumes one earned Core use"
+    );
+    let after_shards = crate::spell_cast::powers::power_value(
+        h.app.world(),
+        owner,
+        shared::components::PowerType::SoulShards,
+    )
+    .unwrap()
+    .0;
+    assert_eq!(
+        after_shards,
+        (shards.0 + energize).min(shards.1),
+        "Core consumption must preserve actual native280127 shard generation"
     );
 }
 
