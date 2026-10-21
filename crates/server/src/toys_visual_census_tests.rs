@@ -4,6 +4,8 @@ use super::*;
 use crate::auras::ActiveAuras;
 use shared::components::{Health, ModelDisplay, UnitAuras};
 
+#[path = "toys_pennant_visual_tests.rs"]
+mod pennant_visual;
 #[path = "toys_seed_visual_tests.rs"]
 mod seed_visual;
 
@@ -39,6 +41,15 @@ fn assert_cancellable_source_visual(item: u32, spell: u32, duration_ms: u32, rec
         .iter()
         .find(|a| a.spell_id == spell)
         .unwrap();
+    let source_amount = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap()
+        .effects[0]
+        .base_points;
+    assert_eq!(aura.effects[0].amount, source_amount);
     assert_eq!(aura.duration_ms, duration_ms);
     assert_eq!(aura.expires_at.is_none(), duration_ms == 0);
     assert!(
