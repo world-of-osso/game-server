@@ -50,7 +50,6 @@ fn encounter_coverage_lost_dwarves_native_cleave_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "RED: Lost Dwarves source clocks absent"]
 fn encounter_coverage_lost_dwarves_first_cleave_uses_current_lua_clock() {
     let (mut h, boss, _) = dwarf_copy(DWARVES[0], 205);
     h.engage(boss);
@@ -63,7 +62,6 @@ fn encounter_coverage_lost_dwarves_first_cleave_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "RED: LOST_DWARVES_SURRENDER_AT_10PCT_LUA completion absent"]
 fn encounter_coverage_lost_dwarves_overkill_surrenders_alive_and_all_three_grant_credit() {
     for difficulty in [1, 205] {
         let (mut h, baelog, map) = dwarf_copy(DWARVES[0], difficulty);

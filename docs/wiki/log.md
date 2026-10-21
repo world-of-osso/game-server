@@ -3489,3 +3489,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — TWW Rookery Kyrioss
 
 [Source boundary/proof](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21): pushed ignored RED first; source-explicit LittleWigs schedules and native70448 cast/effect pipeline; Normal/Follower COMPOSITE4GREEN plus producer3PASS. Self-cast SpellGo and exact peer404468 provenance avoid fabricated log delivery. Dummy children, Torrent phase/repeat and Dash controller remain named gaps; canonical publication lead-owned.
+
+- 2026-10-21: Lost Dwarves currentLua/70448 partial plus explicit living10% surrender policy: ignoredRED→native7GREEN Normal/Follower; all-three isolatedcredit, preservedflags/faction, nativehealth-regen/reset restoration and old-pull credit exclusion. Sourceproducer onlybinds3authoredactors. [Boss scripts](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21).
