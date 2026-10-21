@@ -22,6 +22,10 @@ Player-owned followers retain their existing applied auras through evade, includ
 
 Additional user-approved workaround (2026-10-11): follower difficulty205 runs reuse the same dungeon's Normal-difficulty creature/game-object population and authored Normal entrance. Queue, party and instance identity remain205; creatures retain205 template/loot selection. No synthetic coordinates, spawn-tag widening or automatic alternate population path. Retire this bridge when local205 populations and authored entrances are complete. Ruby Life Pools2436/map2521 is the live candidate:304 Normal creature rows, entrance100030 and first boss Melidrussa188252.
 
+## Hunter pet source policy
+
+`FOLLOWER_HUNTER_PET_SIMC_DEFAULT` selects native tameable Waterfowl/Duck174884 for spec253 Austin, following SimC76f8118 `sc_hunter.cpp:1052` (lead-approved2026-10-21). This is a named policy, not an authored Retail Austin-pet claim. Normal content import must include that TDB template/model without adding world spawns or fabricating stats. Runtime must provision a real runtime-only StoredPet/PetStable with no player/character identity, then cast actual learned Call Pet883 through the ordinary controlled-pet path. Native family/default specialization, level scaling and pet abilities remain authoritative; no arbitrary direct pet spawn or historical Barbed Shot Frenzy stacks.
+
 ## What it must do
 
 ### Reference preparation

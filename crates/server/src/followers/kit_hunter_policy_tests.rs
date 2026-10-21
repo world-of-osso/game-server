@@ -8,14 +8,14 @@ const NATIVE_DUCK: u32 = 174884;
 const WATERFOWL: u32 = 125;
 
 fn check_native_duck(level: u8) {
+    let prepared = crate::spell_cast::test_harness::prepare_class_world();
+    let data = prepared.world_data();
     let directory = tempfile::tempdir().unwrap();
     let db = redb::Database::create(directory.path().join("native-follower-duck.redb")).unwrap();
     crate::persistence::create_tables(&db);
     let (mut h, caster) = at_level(AUSTIN, level, |app| {
         app.insert_resource(crate::persistence::GameDatabase::new(db));
-        app.insert_resource(crate::spell_cast::test_harness::load_native_creature_world(
-            &[NATIVE_DUCK],
-        ));
+        app.insert_resource(data);
         app.add_plugins((
             HunterPetPlugin,
             crate::pet_control::PetControlPlugin,
