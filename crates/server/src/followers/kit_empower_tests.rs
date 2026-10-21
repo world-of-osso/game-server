@@ -487,6 +487,75 @@ fn native_empower_higher_fire_ranks_convert_three_periodic_ticks_per_extra_stage
 }
 
 #[test]
+fn native_empower_font_rank_four_releases_real_short_dot_and_eight_target_surge() {
+    for base in [FIRE_BREATH, ETERNITY_SURGE] {
+        let (mut h, caster) = spawn_surge_fixture(65, 9);
+        let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+        let target = if base == FIRE_BREATH { caster } else { h.npc };
+        crate::spell_cast::creature_cast_empowered(
+            h.app.world_mut(),
+            caster,
+            spell,
+            Some(target),
+            4,
+        )
+        .unwrap();
+        h.advance(100);
+        if base == FIRE_BREATH {
+            let dot = h
+                .app
+                .world()
+                .get::<ActiveAuras>(h.npc)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == FIRE_DAMAGE && aura.caster == caster)
+                .unwrap();
+            let furnace = super::kit_clearcasting_tests::own_aura(&h, caster, 375510).unwrap();
+            let extra = furnace
+                .effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .unwrap()
+                .amount;
+            assert_eq!(
+                dot.duration_ms,
+                2_000 + (extra * 1000.0) as u32,
+                "native rank4 leaves one periodic tick plus Blast Furnace"
+            );
+            assert!(
+                h.inbox
+                    .log
+                    .iter()
+                    .any(|event| event.source == Some(caster.to_bits())
+                        && event.target == Some(h.npc.to_bits())
+                        && event.spell_id == Some(FIRE_DAMAGE)
+                        && event.kind == CombatLogKind::Damage
+                        && !event.periodic
+                        && event.amount > 0)
+            );
+        } else {
+            let hits: std::collections::BTreeSet<_> = h
+                .inbox
+                .log
+                .iter()
+                .filter(|event| {
+                    event.source == Some(caster.to_bits())
+                        && event.spell_id == Some(SURGE_DAMAGE)
+                        && event.kind == CombatLogKind::Damage
+                        && event.amount > 0
+                })
+                .filter_map(|event| event.target)
+                .collect();
+            assert_eq!(
+                hits.len(),
+                8,
+                "native Font rank4 plus Eternity's Span hits8 of9 enemies"
+            );
+        }
+    }
+}
+
+#[test]
 fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
