@@ -382,6 +382,21 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
 }
 
 #[test]
+#[ignore = "explicit current Stockade32 seed28 native Slag Fury isolated-leader Death"]
+fn stockade_seed_twenty_eight_keeps_the_native_leader_alive_through_the_route() {
+    let report = run(28).unwrap();
+    runtime::write_report(&report).unwrap();
+    runtime::print_report(&report);
+    let owner = report.samples.last().unwrap().members.last().unwrap();
+    assert!(
+        owner.health.is_some_and(|health| health > 0.0),
+        "native owner must not die isolated from the admitted party: {}",
+        report.detail
+    );
+    assert_eq!(report.status, "cleared");
+}
+
+#[test]
 #[ignore = "explicit Stockade corridor seed2 native isolated leader death reproduction"]
 fn stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader() {
     let _rng_scope = crate::random::seed_scope(2);
