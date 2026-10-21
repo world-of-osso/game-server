@@ -230,7 +230,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "native8163 type4 armor reproduction; run explicitly before enabling"]
     fn item_instance_native_armor_enchant_keeps_primary_and_physical_resistance() {
         let mut tables = native();
         // Native70448 SpellItemEnchantment8163: type4/school0 and type5/hybrid72.
@@ -265,7 +264,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "native type4 scaling/clamp controls; run explicitly before enabling"]
     fn item_instance_native_armor_enchant_truncates_and_preserves_unscaled_amounts() {
         let mut tables = native();
         // Native70448 entries18/85, not fabricated scaling coefficients.
