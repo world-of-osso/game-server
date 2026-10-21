@@ -53,6 +53,7 @@ pub(super) fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
         add_native_friend(&mut h, FRIENDS[1]),
         add_native_friend(&mut h, FRIENDS[2]),
     ];
+    join_native_party(&mut h, &patients);
     let spell = h.app.world().resource::<SpellStore>().get(TALENT).unwrap();
     let threshold = spell
         .effects
@@ -63,6 +64,60 @@ pub(super) fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
     assert_eq!(threshold, 5.0);
     assert_eq!(patients.len(), threshold as usize);
     (h, healer, patients)
+}
+
+fn join_native_party(h: &mut Harness, members: &[Entity]) {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use shared::group::GroupRole;
+    let owner = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::persistence::ClientId(1));
+    let player = h
+        .app
+        .world()
+        .get::<shared::components::Player>(owner)
+        .unwrap();
+    let mut online = OnlineView::from([(
+        1,
+        OnlineMember {
+            entity: owner.to_bits(),
+            name: player.name.clone(),
+            class: player.class,
+            level: h
+                .app
+                .world()
+                .get::<shared::components::UnitLevel>(owner)
+                .unwrap()
+                .0,
+            portrait: default(),
+            dungeon_difficulty: 1,
+            raid_difficulty: default(),
+        },
+    )]);
+    let companions: Vec<_> = members
+        .iter()
+        .copied()
+        .filter(|unit| *unit != owner)
+        .map(|unit| {
+            let follower = h.app.world().get::<super::Follower>(unit).unwrap();
+            let level = h
+                .app
+                .world()
+                .get::<shared::components::UnitLevel>(unit)
+                .unwrap()
+                .0;
+            let id = super::Follower::member_id(unit);
+            online.insert(id, follower.online(unit, level, 1));
+            (id, follower.profile.role)
+        })
+        .collect();
+    let mut groups = GroupRegistry::default();
+    groups
+        .create_companion_party(1, GroupRole::Dps, &companions, &online)
+        .unwrap();
+    h.app.insert_resource(groups);
 }
 
 fn own_rejuvenation_expiry(h: &Harness, caster: Entity, target: Entity) -> Option<f64> {
