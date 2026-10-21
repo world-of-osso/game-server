@@ -479,9 +479,12 @@ impl InventoryModel {
     }
 
     fn same_definition(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
-        if left.item_id != right.item_id
-            || self.definition_source(left.item_guid) != self.definition_source(right.item_guid)
-        {
+        left.item_id == right.item_id
+            && self.definition_source(left.item_guid) == self.definition_source(right.item_guid)
+    }
+
+    fn same_stack_identity(&self, left: &InventoryItemData, right: &InventoryItemData) -> bool {
+        if !self.same_definition(left, right) {
             return false;
         }
         let empty = server::item_instance::ItemInstanceModifiers::default();
@@ -862,7 +865,7 @@ impl InventoryModel {
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. },
                 ItemLocation::Bag { .. } | ItemLocation::Bank { .. }
             )
-        ) && self.same_definition(source, target)
+        ) && self.same_stack_identity(source, target)
             && target.stack_count < self.max_stack(target)
     }
 
@@ -1309,7 +1312,7 @@ impl InventoryModel {
         }
         self.check_bag_type(to, source)?;
         if let Some(target) = self.get(to) {
-            let fits = self.same_definition(source, target)
+            let fits = self.same_stack_identity(source, target)
                 && target.stack_count + count <= self.max_stack(target);
             if !fits {
                 return Err(error(
@@ -1848,7 +1851,9 @@ impl InventoryModel {
         let max_stack = template.max_stack.max(1);
         let room_here = match self.get(location) {
             None => max_stack,
-            Some(other) if self.same_definition(other, &item) && other.stack_count < max_stack => {
+            Some(other)
+                if self.same_stack_identity(other, &item) && other.stack_count < max_stack =>
+            {
                 max_stack - other.stack_count
             }
             Some(_) => {
@@ -1903,7 +1908,7 @@ impl InventoryModel {
             .flat_map(|(_, cells)| cells)
             .map(|cell| match cell {
                 None => max_stack,
-                Some(other) if self.same_definition(other, item) => {
+                Some(other) if self.same_stack_identity(other, item) => {
                     max_stack.saturating_sub(other.stack_count)
                 }
                 Some(_) => 0,

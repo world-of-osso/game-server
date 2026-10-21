@@ -11,6 +11,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly.
 - [x] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
+- [ ] Instance-sensitive stack merging must not weaken catalog-based unique-equipped restrictions; different enchants do not permit a duplicate unique item.
 - [ ] Selected-talent metadata preserves SimC's printed node IDs, entry IDs and ranks; absent metadata must not silently become a default build.
 
 ### Measurement
