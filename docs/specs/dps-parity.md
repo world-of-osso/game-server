@@ -1,6 +1,6 @@
 # Native item-instance DPS parity
 
-Compare native70448 server combat with shipped MID1 SimulationCraft76f8118 profiles. Sources: `scripts/dps_parity.py`, `scripts/item_instance_data.py`, `crates/server/src/item_instance.rs`; [character stats](../wiki/systems/character-stats.md) describes the existing production stat path.
+Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 profiles; Evoker uses its explicitly approved prior-tier MID1 reference. Sources: `scripts/dps_parity.py`, `scripts/item_instance_data.py`, `crates/server/src/item_instance.rs`; [character stats](../wiki/systems/character-stats.md) describes the existing production stat path.
 
 ## What it must do
 
@@ -10,6 +10,7 @@ Compare native70448 server combat with shipped MID1 SimulationCraft76f8118 profi
 - [ ] Equipment stats resolve native70448 ItemBonus, ItemSparse, RandPropPoints and Midnight scaling/configuration tables, including stat allocation, sockets and enchant/gem effects. Unsupported effects are named gaps, never invented stats.
 - [x] The native-table producer preserves signed values, replaces only the requested table, supports repeated imports and rolls back a duplicate-ID failure without losing the prior table.
 - [x] Shipped profile manifests preserve exact item IDs, bonus lists, item-level overrides, enchants, gems, crafted stats, talents, consumables and action text. Missing item IDs fail explicitly.
+- [ ] Reference selection uses MID2 for the eight available DPS/tank profiles and prior-tier MID1 for Evoker, labelled `SIMC_DEVASTATION_MID2_PROFILE_ABSENT`; it never silently substitutes another tier.
 
 ### Measurement
 
@@ -27,7 +28,7 @@ Compare native70448 server combat with shipped MID1 SimulationCraft76f8118 profi
 ## Implementation inventory
 
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
-- `scripts/dps_parity.py` — shipped MID1 profile extraction and SimC action normalization.
+- `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction and SimC action normalization.
 - `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution; production equipment integration remains pending.
 - `crates/server/src/item_instance/{bonuses,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state.
 

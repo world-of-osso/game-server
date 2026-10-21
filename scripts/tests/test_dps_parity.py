@@ -1,6 +1,8 @@
 """Profile instance identities are never replaced by base items or fabricated stats."""
 import importlib.util
+import json
 from pathlib import Path
+import tempfile
 import unittest
 
 SPEC = importlib.util.spec_from_file_location(
@@ -10,6 +12,28 @@ SPEC.loader.exec_module(PARITY)
 
 
 class ParityProfileTests(unittest.TestCase):
+    def test_current_tier_manifests_use_mid2_and_label_prior_tier_evoker_gap(self):
+        suffixes = ["Paladin_Protection", "Warrior_Protection", "Shaman_Elemental", "Mage_Fire",
+                    "Hunter_Beast_Mastery", "Monk_Windwalker", "Warlock_Demonology", "Druid_Feral"]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for tier in ["MID1", "MID2"]:
+                folder = root / "profiles" / tier
+                folder.mkdir(parents=True)
+                names = suffixes + (["Evoker_Devastation"] if tier == "MID1" else [])
+                for suffix in names:
+                    actor = suffix.split("_")[0].lower()
+                    (folder / f"{tier}_{suffix}.simc").write_text(f'{actor}="{tier}_{suffix}"\nlevel=90\n')
+            output = root / "output"
+            PARITY.write_manifests(root, output)
+            paladin = json.loads((output / "66.profile.json").read_text())
+            evoker = json.loads((output / "1467.profile.json").read_text())
+            self.assertEqual(Path(paladin["profile"]).parent.name, "MID2")
+            self.assertEqual(evoker["reference_tier"], "MID1")
+            self.assertEqual(evoker["reference_gap"], "SIMC_DEVASTATION_MID2_PROFILE_ABSENT")
+            healer = json.loads((output / "105.profile.json").read_text())
+            self.assertIn("No shipped", healer["gap"])
+
     def test_extracts_native_item_instance_and_preserves_rotation_text(self):
         profile = PARITY.parse_profile('''paladin="MID1_Paladin_Protection"
 spec=protection

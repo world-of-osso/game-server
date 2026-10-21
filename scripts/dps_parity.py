@@ -98,11 +98,14 @@ def write_manifests(simc, output):
         if suffix is None:
             result = {"spec_id": spec, "gap": "No shipped current-tier healer profile; no HPS reference."}
         else:
-            source = simc / "profiles" / "MID1" / f"MID1_{suffix}.simc"
+            tier = "MID1" if spec == 1467 else "MID2"
+            source = simc / "profiles" / tier / f"{tier}_{suffix}.simc"
             payload = source.read_bytes()
             result = parse_profile(payload.decode())
-            result.update({"spec_id": spec, "profile": str(source),
+            result.update({"spec_id": spec, "profile": str(source), "reference_tier": tier,
                            "profile_sha256": hashlib.sha256(payload).hexdigest()})
+            if spec == 1467:
+                result["reference_gap"] = "SIMC_DEVASTATION_MID2_PROFILE_ABSENT"
         result.update({"simc_revision": "76f8118cf3f7f41dad20708e8328e1f4ab2deebc",
                        "simc_build": 70391, "server_build": 70448})
         (output / f"{spec}.profile.json").write_text(json.dumps(result, indent=2) + "\n")
