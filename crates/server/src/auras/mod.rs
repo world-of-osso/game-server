@@ -1990,7 +1990,7 @@ pub fn channel_ended(world: &mut World, caster: Entity, spell_id: u32) {
     }
 }
 
-fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
+pub(crate) fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
     !aura.passive
         && aura.dispel_type != 0
         && (dispel_type == DISPEL_ALL || u32::from(aura.dispel_type) == dispel_type)

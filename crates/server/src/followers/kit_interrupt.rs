@@ -20,9 +20,14 @@ pub(super) fn try_interrupt_candidates(
 ) -> bool {
     let spells = read_source_interrupt_spells(world, unit, profile);
     for &target in candidates {
-        if crate::auras::has_breakable_by_damage_cc(world, target) {
+        if crate::auras::has_breakable_by_damage_cc(world, target)
+            || super::utility_interrupt::reserved(world, target)
+        {
             continue;
         }
+        let Some(cast) = world.get::<shared::casting::CastState>(target).cloned() else {
+            continue;
+        };
         let accepted = match spells.as_deref() {
             Some(spells) if profile.spec_id != DEMONOLOGY_SPEC => {
                 crate::spell_cast::can_interrupt_cast(world, unit, target)
@@ -33,6 +38,7 @@ pub(super) fn try_interrupt_candidates(
             _ => interrupt_enemy(world, unit, target, profile.spec_id),
         };
         if accepted {
+            super::utility_interrupt::reserve(world, unit, target, &cast);
             return true;
         }
     }

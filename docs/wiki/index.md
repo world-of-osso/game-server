@@ -1,3 +1,5 @@
+- [Follower utility](systems/follower-utility.md) — generic native cast coordination/support, ordinary follower/player resurrection, scoped player-race geometry and matched-trace proof boundary.
+- [Ordinary model-info gap](investigations/ordinary-model-info-gap.md) —1051 used displays absent from native source; production consumer matrix, real spawned examples, no generic policy widening.
 - [Model geometry](systems/model-geometry.md) — explicit scaled TC player defaults for missing native model-info; authored geometry wins, native aggro/radius proof in progress.
 - [Scoped kit delta composition](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21) —20stable owned keys, actual a3 both-order replay,22PythonGREEN/no warnings; legacy rowid delta superseded.
 - [Windwalker finite-target starter oracle](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21) — v4 executes the weaker fixture before BoK; real0.30s kill, no frame-time stall or timeout widening; patched-copy GREEN pending.

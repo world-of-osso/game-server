@@ -1,3 +1,6 @@
+## 2026-10-21 — Follower utility and scoped geometry
+
+[Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
 ## 2026-10-21 — Native follower duration/admission boundaries
 
 [Rotation slices](investigations/follower-data.md#rotation-duration-and-admission-slices--2026-10-21): nativec09cba90010GREEN/6RED9.67s; resource-unit gates and four carries pass, new timer/major/LastStand/Cat boundaries fail. Cat source48629's missing applied-aura precondition and actual3-target setup proved before adapter. Source-qualified adapter/refresh/conditional LastStand and project sequencing committed, GREEN pending.14producerPASS; canonical publication, full proc/snapshot and simulator acceptance open.
@@ -3528,6 +3531,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Missing-model project geometry policy
 
 [Model geometry](systems/model-geometry.md): approved generic runtime defaults replace follower-only sizing; actual Champion124440 acquisition/scaled precedence RED2/5.15s. Source rows and effective scale preserved; radius and GREEN proof pending.
+
+## 2026-10-21 — Utility integration and reproducible pet census
+
+[Follower utility](systems/follower-utility.md): native healer triage ownership retained during utility integration; old follower-only sizing references/oracle replaced by shared model-geometry contract. Pet census producer now emits native family29 actions30213/30151/89766 with levels1/14/17 and explicit rotation/movement/stopping categories; Python2RED→2GREEN0.331s at77be85c3e. Six actual companion-party buff cases are committed, native RED pending capacity.
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): native TF and WW fourRED→GREEN; retained refresh/defense/form20PASS, LastStand source-attribution oracle corrected; full measurements remain open.
 
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): merged1c4df4250 native21PASS26.07s/0warnings/fmtPASS, including real two-use ComboBreaker and StatsPlugin LastStand46/47; full APL/healer import remain open.
