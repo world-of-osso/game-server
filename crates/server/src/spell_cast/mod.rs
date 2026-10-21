@@ -12,6 +12,7 @@
 //! `crate::auras::apply_aura`.
 //! See `docs/wiki/systems/spell-casting.md`.
 
+use crate::random as rand;
 #[cfg(test)]
 mod achievement_damage_tests;
 #[cfg(test)]
@@ -91,7 +92,7 @@ mod critical_block_tests;
 mod dead_cast_progress_tests;
 #[cfg(test)]
 mod dead_caster_channel_tests;
-mod disenchant;
+pub(crate) mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
 mod druid_transform;
@@ -235,7 +236,7 @@ mod minimum_speed_tests;
 mod missiles;
 #[cfg(test)]
 mod npc_dodge_tests;
-mod open_lock;
+pub(crate) mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]
@@ -322,6 +323,8 @@ mod arena_cooldown_tests;
 mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
+#[cfg(test)]
+mod combat_area_target_tests;
 pub(crate) mod homebind;
 pub(crate) mod jump_charge;
 mod knockback;
@@ -1005,7 +1008,7 @@ fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
-fn max_targets(spell: &SpellInfo) -> u32 {
+pub(crate) fn max_targets(spell: &SpellInfo) -> u32 {
     spell
         .target_restrictions
         .as_ref()

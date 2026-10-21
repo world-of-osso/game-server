@@ -314,11 +314,23 @@ PORUNG_SOURCES = {
     "Outland/HellfireCitadel/ShatteredHalls/instance_shattered_halls.cpp": "df983cfb054a895f2563dd00a1ece3312906998f5e0dc2d53cd3667bad31ed39",
 }
 
+# TC header/instance authenticate the primary, not a nonexistent C++ boss AI.
+MELIDRUSSA_PRIMARY = dict(
+    map_id=2521, entry=188252, encounter_id=2609, bit=1,
+    script="", ai="", journal_id=2488, actor_id=5358, display_id=106891,
+    spawn_guid=9001489, spawn_difficulties="1,2,8,23", retail_build="12.1.5.70448",
+)
+RUBY_SOURCES = {
+    "DragonIsles/RubyLifePools/ruby_life_pools.h": "7e33402fa5acaf55adfcf7fd774fecb377522d82f138da0c26e255c76e874070",
+    "DragonIsles/RubyLifePools/instance_ruby_life_pools.cpp": "0a6b5857df9ee918fa1a9c494ca0bb58119d4b91173e59f9ad074764b8ed9c7a",
+}
+
 HERALD_RETAIL_BUILD = "12.1.5.70448"
 HERALD_CREDIT_POLICY = "ENCOUNTER_CREDIT_FROM_RETAIL_DUNGEONENCOUNTER"
 HERALD_IDENTITY_GAP = "HERALD_RETAIL_IDENTITY_GAP"
 
 PROFILES = {
+    "melidrussa": (MELIDRUSSA_PRIMARY, RUBY_SOURCES),
     "porung": (PORUNG_PRIMARY, PORUNG_SOURCES),
     "omor": (OMOR_PRIMARY, OMOR_SOURCES),
     "gargolmar": (GARGOLMAR_PRIMARY, GARGOLMAR_SOURCES),

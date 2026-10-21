@@ -50,10 +50,19 @@ pub(super) fn allows(
             .get::<Health>(unit)
             .is_some_and(|health| health.current > 0.0)
             && position(world, unit).is_some_and(|at| center.distance(at) <= radius)
-            && targets::relation_matches(world, caster, unit, Relation::Enemy)
-            && (!enemies.iter().any(|(enemy, _)| *enemy == unit)
-                || crate::auras::has_breakable_by_damage_cc(world, unit))
+            && violates_engagement(world, caster, unit, enemies)
     })
+}
+
+fn violates_engagement(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    enemies: &[(Entity, Option<Entity>)],
+) -> bool {
+    targets::relation_matches(world, caster, target, Relation::Enemy)
+        && (!enemies.iter().any(|(enemy, _)| *enemy == target)
+            || crate::auras::has_breakable_by_damage_cc(world, target))
 }
 
 fn spell_radius(world: &World, caster: Entity, entry: &Entry) -> Option<f32> {

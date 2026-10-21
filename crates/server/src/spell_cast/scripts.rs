@@ -1,6 +1,7 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+use crate::random as rand;
 mod batch10;
 mod batch11;
 mod batch12;
@@ -1309,8 +1310,8 @@ fn frostbolt_chilled(world: &mut World, caster: Entity, target: Entity, depth: u
 
 #[cfg(test)]
 mod tests {
-    use rand::SeedableRng;
-    use rand::rngs::StdRng;
+    use ::rand::SeedableRng;
+    use ::rand::rngs::StdRng;
 
     use super::*;
     use crate::spell_info::SpellEffect;

@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Follower population source audit — 2026-10-21
+
+All27 local70448 MapDifficulty205 maps have matching LFG1/1/3 rows. TDB1210 has Normal creatures on17, authored Entrance safe locations on9; only maps2451/2515/2521/2526/2648 have both. The ten wholly absent populations and eighteen missing entrances are named individually in engine `data/diagnostics/follower-dungeons-2026-10-21/population.md`. Existing projection already includes every available Normal creature; no newly unlocked map is claimed.
+
+The authenticated full local70448 CSV receipt has Map/MapDifficulty/LFGDungeons/AreaTrigger, but no WorldSafeLocs or AreaTriggerTeleport. TDB teleport→safe-location links add no destinations on the missing maps. A trigger volume's position is not an authored destination/facing; neither that nor a spawn position may substitute for an entrance. These are local source gaps, not a catalog-query bug.
+
+[Copy-only producer](../../../scripts/follower_population.py) validates the four CSV hashes/build identity and reprojects TDB source rows without widening difficulty tags. It requires already-prepared runtime templates/relationships; unrelated loot/template/encounter imports stay outside scope. Existing source IDs/positions/facing are preserved. [Native catalog test](../../../crates/server/src/followers/catalog_tests.rs) removes all follower runtime creatures/entrances on a private full copy, runs the producer, and requires every source-complete map to reappear through actual `load_catalog`. [Python cases](../../../scripts/tests/test_follower_population.py) compare actual source placements/tags/entrances, exercise idempotence, copy/authentication rejection and atomic rollback. [Contract](../../specs/follower-dungeons.md#population-preparation-70448).
+
 ## Tranquil Mind two-stack Clearcasting — 2026-10-19
 
 Actual native70448 default105 first learns Tranquil Mind403521 at25, absent24. Tooltip sets Omen's chance **to** effect3/index2 value5%, not +5%; native1050702 supplies that dummy amount. Effect1050510/index0 is Aura107/op37 MaxAuraStacks+1, mask3=262144 matching Clearcasting16870; its native cap1 therefore becomes2 through the existing generic modifier reader. SimC76f8118 `sc_druid.cpp:10577` registers the talent but supplies no additional behavior authority here. Native tooltip/data are authoritative. Index1 mana-regeneration numeric certification and other extra-charge talents remain excluded.
@@ -99,6 +107,10 @@ At7938b558d combined all `followers::` (including `kit_`) plus target-aura/requi
 Test-only [native qualification](../../../crates/server/src/followers/kit_swiftmend_tests.rs) asserts70448 SpellAuraRestrictions15919/TargetAuraState15; the native18562 tooltip requires Regrowth, Wild Growth or Rejuvenation. Atdecf6a597, explicit ignored-test execution gives1PASS/2FAIL22.71s, compile3m57s/zero warnings. Ordinary18562 incorrectly accepts an injured patient with no HoT (`Ok(())` instead of `TargetAuraState`); ordinary real774 followed by18562 produces an actual heal (positive control PASS). With two injured patients, ordinary follower update heals the lower-health owner without a HoT rather than Crenna carrying her real774. That selection failure is downstream of the independently failing spell-backend prerequisite; no follower-only workaround or production change is authorized. All three tests remain explicitly ignored under named qualification gaps, not counted as default passing coverage. They wait actual native GCD, never clear recovery or manufacture aura state. No timers, coefficients, priorities, movement, pets or planner edits.
 
 Pushed test tipdecf6a597 on `follower-swiftmend-qualification`; log engine `data/diagnostics/follower-kits-2026-10-18/swiftmend-qualification-decf6a597.log`. Command: `cargo test --locked -p server --bin game-server follower_swiftmend_qualification_ -- --ignored --nocapture` through `agent-run follower-kits`. Backend ownership/fix authorization remains with lead; full-kit acceptance remains open.
+
+## Skull Bash motion oracle — 2026-10-20
+
+The picker/native comparison incorrectly equated two independent child221514 defense rolls. Repetition reproduced an accepted106839 parent with actual221514 `Miss(Miss)`, successful93985 interrupt, and unchanged position0. Motion assertions now use each execution's own logged child outcome: defended→unchanged; undefended→movement to the native target reach with the original0.001 tolerance. Missing movement without an actual miss still fails. No spell, hit roll, movement, cooldown or provider behavior changed. [Regression](../../../crates/server/src/followers/kit_interrupt_tests.rs), [native children](../../../crates/server/src/spell_cast/scripts.rs); RED evidence engine `data/diagnostics/load-flakes-2026-10-20/red-skull-events.log`.
 
 ## Priority-preserving interrupt provider — 2026-10-19
 

@@ -5,6 +5,7 @@
 //! not their persisted stable slot (several guardians can coexist with a pet).
 use super::effects::EffectCtx;
 use crate::maps::InMap;
+use crate::random as rand;
 use crate::spell_info::SpellEffect;
 use bevy::prelude::*;
 use lightyear::prelude::*;

@@ -15,10 +15,13 @@
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
 
+use crate::random as rand;
 pub(crate) mod azure_vault;
+mod azureblade;
 mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
+mod broggok;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 pub mod event_map;
@@ -28,6 +31,7 @@ pub(crate) mod jump_movement;
 pub(crate) mod kargath;
 pub mod kings_rest;
 pub(crate) mod maraudon;
+mod melidrussa;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
@@ -38,6 +42,7 @@ pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
+mod umbrelskul;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 
@@ -343,6 +348,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if hellfire_ramparts::is_creature_script(script_name) {
         return hellfire_ramparts::creature_ai(world, creature);
     }
+    if ruby_life_pools::is_creature_script(script_name) {
+        return ruby_life_pools::creature_ai(world, creature);
+    }
     if blood_furnace::is_creature_script(script_name) {
         return blood_furnace::creature_ai(world, creature);
     }
@@ -373,6 +381,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || wailing_caverns::is_creature_script(script_name)
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
+        || ruby_life_pools::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)

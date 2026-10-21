@@ -75,7 +75,7 @@ const ACTION_RESET_ENCOUNTER: i32 = 1;
 const MAX_CHANNELERS: u8 = 5;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, MAKER | KELIDAN | CHANNELER)
+    matches!(name, MAKER | KELIDAN | CHANNELER | super::broggok::SCRIPT)
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -96,6 +96,7 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
             dead_channelers: 0,
         })),
         CHANNELER => Some(Box::new(Channeler::default())),
+        super::broggok::SCRIPT => Some(super::broggok::creature_ai()),
         _ => None,
     }
 }
