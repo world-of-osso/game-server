@@ -298,7 +298,7 @@ fn follower_utility_policy_never_taunts_as_dps() {
 
 #[test]
 fn follower_utility_policy_no_damage_into_someone_elses_cc() {
-    let (mut h, unit) = spawn_profile_fixture_with_plugins(209059, |_| {});
+    let (mut h, unit, _) = spawn_profile_fixture_with_plugins(209059, |_| {});
     h.app.world_mut().get_mut::<Level>(h.caster).unwrap().0 = 32;
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
