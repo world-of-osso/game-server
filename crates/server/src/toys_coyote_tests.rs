@@ -16,7 +16,13 @@ fn install_coyote_sources(h: &mut Harness) {
 }
 
 fn summon_source_coyote(h: &mut Harness, owner: Entity) -> Entity {
-    crate::spell_cast::cast_triggered(h.app.world_mut(), owner, 51149, None, 0);
+    assert!(crate::spell_cast::try_cast_triggered(
+        h.app.world_mut(),
+        owner,
+        51149,
+        None,
+        0
+    ));
     h.advance(2);
     let world = h.app.world_mut();
     world
@@ -33,7 +39,7 @@ fn toy_coyote_owned_condition_selects_only_source_owner_not_other_summoner() {
     let (mut h, _) = setup(&dir.path().join("coyote-conditions.redb"));
     install_coyote_sources(&mut h);
     let owner = h.caster;
-    let other = h.npc;
+    let other = spawn_player(&mut h.app, 8, 5.0);
     let own = summon_source_coyote(&mut h, owner);
     let other_owned = summon_source_coyote(&mut h, other);
     // Ordinary TempSummon's summoner does not establish source GetOwnerGUID.
