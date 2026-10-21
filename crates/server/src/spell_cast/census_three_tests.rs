@@ -184,6 +184,33 @@ fn census_three_396_native_application_at_exact_amount_triggers_once() {
     assert_eq!(stacks(&h, 36032), 1);
 }
 
+#[test]
+#[ignore = "RED:396 native energy loss/refill crossing"]
+fn census_three_396_native_loss_casts_authored_energy_child() {
+    let mut h = fixture(4, &[469779, 381623]);
+    apply(&mut h, 469779, 1);
+    assert_eq!(h.power(PowerType::Energy), 100.0);
+    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -69.0).unwrap();
+    assert_eq!(h.power(PowerType::Energy), 31.0);
+    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -1.0).unwrap();
+    assert_eq!(h.power(PowerType::Energy), 100.0); // Actual child381623 restores100 raw.
+}
+
+#[test]
+#[ignore = "RED:396 native gain from ordinary resource regeneration"]
+fn census_three_396_native_regeneration_crossing_and_refresh_control() {
+    let mut h = fixture(4, &[409462, 409463]);
+    super::powers::change_power(h.app.world_mut(), h.caster, PowerType::Energy, -1.0).unwrap();
+    apply(&mut h, 409462, 1 << 1);
+    assert_eq!(stacks(&h, 409463), 0);
+    h.advance(4);
+    assert_eq!(stacks(&h, 409463), 1);
+    remove(&mut h, 409463);
+    apply(&mut h, 409462, 1 << 1); // Refresh is not AURA_EFFECT_HANDLE_REAL apply.
+    h.advance(3);
+    assert_eq!(stacks(&h, 409463), 0);
+}
+
 fn engage(h: &mut Harness, attacker: Entity, victim: Entity, threat: f32) {
     h.app.world_mut().entity_mut(attacker).insert((
         shared::components::ThreatTable::default(),
@@ -261,6 +288,76 @@ fn census_three_176_native_nonplayer_resets_target_threat_not_entire_table() {
         h.app
             .world()
             .get::<shared::components::CombatStatus>(victim)
+            .unwrap()
+            .0
+    );
+}
+
+#[test]
+#[ignore = "RED:176 player dungeon uses target-only threat reset"]
+fn census_three_176_native_dungeon_player_preserves_combat_reference() {
+    let mut h = fixture(4, &[98877]);
+    let npc = h.npc;
+    let player = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(crate::maps::InMap {
+            map_id: 33,
+            instance_id: 1,
+        });
+    h.app
+        .world_mut()
+        .entity_mut(npc)
+        .insert(crate::maps::InMap {
+            map_id: 33,
+            instance_id: 1,
+        });
+    engage(&mut h, npc, player, 100.0);
+    super::creature_cast(h.app.world_mut(), player, 98877, None, false).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(player)
+            .unwrap()
+            .0
+    );
+    let threat = h
+        .app
+        .world()
+        .get::<shared::components::ThreatTable>(npc)
+        .unwrap();
+    assert_eq!(threat.entries().len(), 1);
+    assert_eq!(threat.threat_for(player.to_bits()), 0.0);
+}
+
+#[test]
+#[ignore = "RED:176 PvP combat is suppressed one-sided and resumes on interaction"]
+fn census_three_176_native_pvp_suppression_preserves_opponents_reference() {
+    let mut h = fixture(4, &[98877]);
+    let opponent = super::test_harness::spawn_player(&mut h.app, 1, 4.0);
+    let player = h.caster;
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), player, opponent);
+    super::creature_cast(h.app.world_mut(), player, 98877, None, false).unwrap();
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::CombatStatus>(player)
+            .unwrap()
+            .0
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(opponent)
+            .unwrap()
+            .0
+    );
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), opponent, player);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(player)
             .unwrap()
             .0
     );

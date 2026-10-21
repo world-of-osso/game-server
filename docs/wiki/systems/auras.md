@@ -1,5 +1,24 @@
 # Auras
 
+## Census generic resource, state, duration and sanctuary — 2026-10-20
+
+|Family|Native behavior / boundary|Pinned TC a352b1fa source|
+|---|---|---|
+|262|Recognize existing family-mask state exemption;391528→Swiftmend18562 proves computed15, recipient ownership and removal; no fabricated state2/13 predicate.|`SpellAuraEffects.cpp334`, `Unit.cpp6163–6188`|
+|396|Raw-power apply and strict-old/inclusive-new crossings; native190427/36032,469779/381623 and409462/409463; costs/gains/regeneration share one consumer. Refresh does not reapply.|`SpellAuraEffects.cpp5369–5394`, `Unit.cpp10174–10218`|
+|245|Native235450−25% and454842−35% matching dispel; additive target sum after mechanic reduction, beneficial auras unchanged.|`Object.cpp1725–1770`, `SpellAuraEffects.cpp317`|
+|176|World player ends PvE combat and suppresses own PvP side; dungeon/nonplayer zeros only target threat, preserving references/other threat. Native98877 and actual in-flight116 prove cutoff; later missiles still land.|`SpellEffects.cpp3215–3243`, `Unit.cpp6029–6055`, `Spell.cpp2810`|
+
+Named gaps retained, not falsely registered as consumers:
+- `AURA_220_TC_NULL_NYI`, `AURA_443_TC_NULL_NYI`: `SpellAuraDefines.h307/530`, `SpellAuraEffects.cpp292/515`; see [original census qualification](../../specs/class-completeness.md#generic-combatstat-aura-census-slice--2026-10-20).
+- `PHASING_SYSTEM_ABSENT` (effect167): `SpellEffects.cpp5741–5749` calls `PhasingHandler::OnConditionChange`; no current server phase system. Lead explicitly excluded building one here.
+- `FARSIGHT_VIEWPOINT_PROTOCOL_ABSENT` (effect72): `SpellEffects.cpp2302–2325` requires a dynamic-object viewpoint and client protocol; protocol remains03cebdb by lead direction.
+- `SANCTUARY_IGNORE_STATIC_FLAG_UNIMPORTED`: TC `Creature.h354` reads StaticFlags2&0x200. Runtime content templates omit this field; world.db TDB has zero matching rows, so no native nonzero qualification exists. No invented static flag API or data.
+
+Sources: receipt-backed engine `data/diagnostics/arena-coverage-2026-10-12/tc-a352b1fa/`; supplemental exact pinned tree `/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/tc-source-a352b1fa/TrinityCore-a352b1fa/` for `Spell.cpp`, `Creature.h`, `PhasingHandler` and `Unit::CombatStop`. Runtime implementation stays inside existing server pipeline; no scripts or protocol changes.
+
+Proof ledger: ignored RED pushed first a010a4310, seven numeric/combat failures; corrected262 native computed15 fixture1cff85bc8 gives genuine warning RED (the pre-existing state exemption already passes). Initial Hammer-of-Wrath oracle was rejected because state2 deliberately remains uncomputed. Logs: engine `data/diagnostics/census-3-2026-10-20/red{,262}.log`. GREEN/integration and per-spec delta pending.
+
 ## Generic combat/stat aura census slice — 2026-10-20
 
 Twelve generic consumers; four explicitly unsupported TC NYIs. [Contract and named gaps](../../specs/class-completeness.md#generic-combatstat-aura-census-slice--2026-10-20). No spell-ID branches were added to these consumers; existing named bindings are preserved.

@@ -1,3 +1,7 @@
+## 2026-10-20 — Census resource/state/duration/sanctuary
+
+[Source matrix](systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20): generic245/262/396/176, no new scripts/protocol. Ignored REDs pushed before consumers;262 corrected from uncomputed health state to actual Swiftmend15. TC NULL220/443 and absent phasing167/viewpoint72 remain explicit gaps. Targeted GREEN pending.
+
 ## 2026-10-20 — Generic combat/stat aura consumers
 
 [Per-type source matrix and ledger](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20):12 generic consumers,4 explicit TC NYI gaps. Pushed ignored REDs first; corrected retired weapon ID, saturated armor and pre-owned expertise fixtures without changing native spell data.419 current mana clamps instead of scaling.316 accounts absorption but does not invent a script rescue. Final861d7edd5 targeted15 enabled PASS26.31s/0warnings, protocol600b755; no full suite or independent parent gate. Receipt-backed pinned sources supersede shifted citations from the broader TC tree; compared handler bodies are identical.

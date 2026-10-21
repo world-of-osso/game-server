@@ -164,6 +164,7 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
 mod interruptibility_rule_tests;

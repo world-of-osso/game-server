@@ -100,6 +100,7 @@ pub type EffectHandler = fn(&mut World, &EffectCtx, &SpellEffect, Entity);
 pub fn handler(effect_id: u32) -> Option<EffectHandler> {
     Some(match effect_id {
         EFFECT_INSTAKILL => instakill,
+        176 => super::sanctuary::apply,
         EFFECT_SCHOOL_DAMAGE => school_damage,
         EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT => damage_from_max_health_pct,
         33 | 95 => crate::gathering::effect_gather,
