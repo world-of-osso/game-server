@@ -20,6 +20,8 @@ Maps and dungeon copies share one Bevy `World`, partitioned by the `InMap { map_
 
 ### Public-spawn startup readiness
 
+Release measurements, profile receipts and behavior proofs: [[public-spawn-startup-latency]].
+
 UDP bind precedes `PostStartup` and is not population readiness. `ground::open_ground_map` validates every spawned map's required ground inputs using at most four scoped I/O threads (Bevy remains single-threaded); sorted results preserve missing-file and known-gap diagnostics. Validation still finishes before public spawning. `zones::spawn_continent_creatures` logs preparation per hosted map and queues its all-maps-ready log after the creature commands are applied, not when they are merely enqueued.
 
 Terrain area, liquid and flight-bound queries load ADT terrain without WMO collision. The first collision query loads the same tile's WMO placements/groups synchronously and caches them before answering; floor/height selection is unchanged. This avoids decoding collision solely to select regional spawn levels. Global-WMO maps retain their existing open path. No population, level rolls, spawn order, simulation frequency or navigation publication policy changes.
