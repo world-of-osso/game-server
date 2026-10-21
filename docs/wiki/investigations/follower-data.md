@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Font of Magic selection oracle — 2026-10-21
+
+Merged native selection casts382266/382411 rather than357208/359073 after learned411212 Font of Magic57. Native aura332 effects1077606/1077607 explicitly map those roots; this is valid action resolution, not Azure filler starvation. The max-level oracle now requires both replacement SpellGo receipts and the actual passive; a level56 control requires both unreplaced roots. Empowered release/damage remains unimplemented and is not certified by these selection tests.
+
+
 ## Scoped kit delta composition — 2026-10-21
 
 The producer now accepts `--spec-ids` and preserves all unowned kit rows in its copy. SQL comes from `sqldiff --primarykey --table follower_spec_kit`, wrapped only when actual changes exist; no rowids or table recreation. This fixes the automation, not merely one exported delta. A real disjoint262/470411 update failed composition before the fix; the producer/policy22-case batch now passes without SQLite resource warnings (connections explicitly closed).
