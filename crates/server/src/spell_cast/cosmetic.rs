@@ -78,6 +78,9 @@ pub(crate) fn is_visual_aura(spell: &SpellInfo, effect: &SpellEffect) -> bool {
     let expected_amount = match (spell.id, effect.index) {
         (127803 | 128150, 0) => 1.0,
         (128151 | 128152 | 1220867, 0) => 0.0,
+        // TC taunt-flag script casts51657: native sixty-second corpse marker;
+        // the sibling effect76 creates the actual authored flag object.
+        (51657, 1) => 0.0,
         _ => return false,
     };
     let dummy_aura = effect.effect == 6 && effect.aura == crate::auras::handlers::DUMMY;

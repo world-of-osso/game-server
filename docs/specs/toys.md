@@ -13,6 +13,14 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Flag of Ownership source script
+
+- [x] Port TC a352b1fa `spell_item.cpp:3603–3641` for38578/51640 only: choose one random enemy player body in the source area, exclude NPCs/living/allied/out-of-range bodies, emit BroadcastText28008 with the selected owner, then trigger51657.
+- [x] Child51657 preserves the authored190589/display7953 wild flag, corpse destination, native60000ms aura/object lifetime and item recovery. Existing stored player corpses are authoritative; no invented corpse entities or modern flag aliases.
+- [x] With no valid body, fail before root SpellGo/cooldown. Internal `NoValidTargets` maps to existing protocol `NoTarget` with detail, without changing frozen protocol03cebdb.
+
+The pure zero-payload Gadgetzan23453 teleport remains refused. Piccolo's current182346 has no proved source binding to TC's legacy17512 and remains a named gap. Native visuals and offline corpse discovery are not certified by server CPU fixtures.
+
 ## Generic summon dependency closure
 
 - [x] Content generation imports authentic TDB creature dependencies of every Toy on-use spell, including recursive normal-difficulty `EffectTriggerSpell` links, not only aura428 or a hand-selected scenery list. Cycles terminate without suppressing other roots; no world spawns or fabricated source rows are added.
