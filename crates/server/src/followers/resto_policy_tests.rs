@@ -344,3 +344,85 @@ fn resto_policy_stops_admitted_damage_when_recent_pressure_is_temporarily_topped
         "no affordable heal is not permission to continue an unsafe admitted damage cast"
     );
 }
+
+#[test]
+fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(40);
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[47649]);
+    assert!(
+        native.templates.contains_key(&47649),
+        "published native Efflo template required"
+    );
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    let center = shared::components::Position {
+        x: 12.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    for &target in &party[2..] {
+        h.app.world_mut().entity_mut(target).insert(center);
+        damage(&mut h, target, 0.35);
+    }
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 145205, Some(party[2]), false)
+        .expect("ordinary learned native Efflo cast");
+    h.advance(1);
+    let field = {
+        let world = h.app.world_mut();
+        world
+            .query::<(Entity, &crate::spell_cast::summon::SummonedCreature)>()
+            .iter(world)
+            .find(|(_, summon)| summon.owner == healer && summon.spell_id == 145205)
+            .map(|(unit, _)| unit)
+            .expect("native145205 must summon47649")
+    };
+    let at = h
+        .app
+        .world()
+        .get::<shared::components::Position>(field)
+        .unwrap();
+    assert_eq!((at.x, at.y, at.z), (center.x, center.y, center.z));
+    assert!(
+        own_aura(&h, field, field, 81262).is_some(),
+        "native summon must initialize its actual81262 periodic dummy aura"
+    );
+    let period_ms = h
+        .app
+        .world()
+        .resource::<SpellStore>()
+        .get(81262)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .aura_period_ms;
+    assert!(period_ms > 0);
+    let until = aura_now(h.app.world()) + f64::from(period_ms) / 1000.0;
+    let first = h.inbox.log.len();
+    while aura_now(h.app.world()) < until {
+        h.advance(1);
+    }
+    let useful = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(81269)
+                && event.source == Some(healer.to_bits())
+                && event.overflow < event.amount
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        useful.len(),
+        3,
+        "first native pulse must heal the three injured allies at its field"
+    );
+    assert!(useful.iter().all(|event| {
+        party[2..]
+            .iter()
+            .any(|target| event.target == Some(target.to_bits()))
+    }));
+}
