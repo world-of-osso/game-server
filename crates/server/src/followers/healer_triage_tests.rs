@@ -155,6 +155,78 @@ fn healer_triage_low_mana_prefers_available_efficient_native_swiftmend() {
 }
 
 #[test]
+fn healer_triage_resto_uses_natures_swiftness_before_emergency_regrowth() {
+    let (mut h, healer) = super::super::kit_tests::at_level(209072, 13, |_| {});
+    let target = h.caster;
+    let mut health = h.app.world_mut().get_mut::<Health>(target).unwrap();
+    health.current = health.max * 0.1;
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[target, healer],
+        None,
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), healer, 132158),
+        "learned native Nature's Swiftness must precede a life-saving cast-time heal"
+    );
+    super::super::kit_tests::uses_spell(&mut h, healer, 8936);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(8936)
+                && event.kind == shared::protocol::CombatLogKind::Heal)
+    );
+}
+
+#[test]
+fn healer_triage_resto_consumes_naturally_earned_clearcasting_on_useful_regrowth() {
+    let (mut h, healer) =
+        super::super::kit_clearcasting_tests::earn_native_clearcasting_at_level(32);
+    let buff = super::super::kit_clearcasting_tests::own_aura(&h, healer, 16870).unwrap();
+    assert_eq!(
+        super::super::kit_clearcasting_tests::mana_cost(&h, healer, 8936),
+        0.0
+    );
+    let mut health = h.app.world_mut().get_mut::<Health>(healer).unwrap();
+    health.current = health.max * 0.7;
+    let target = h.caster;
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[target, healer],
+        None,
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_some_and(|cast| cast.spell_id == 8936),
+        "free useful Regrowth must precede paid Rejuvenation and damage"
+    );
+    h.advance(60);
+    let remaining = super::super::kit_clearcasting_tests::own_aura(&h, healer, 16870)
+        .map_or(0, |aura| aura.stacks.max(1));
+    assert_eq!(remaining, buff.stacks.max(1) - 1);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(healer.to_bits())
+                && event.target == Some(healer.to_bits())
+                && event.spell_id == Some(8936)
+                && event.kind == shared::protocol::CombatLogKind::Heal)
+    );
+}
+
+#[test]
 fn healer_triage_topped_patient_cancels_native_direct_cast_before_mana_spend() {
     let (mut h, healer) = fixture();
     let target = h.caster;

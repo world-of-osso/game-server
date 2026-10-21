@@ -10,6 +10,12 @@
 - Prepare missing HoTs/absorbs inside a three-second window of an exposed actual encounter EventMap deadline, using the script's real spell/target semantics. No numeric damage forecast is synthesized. Unexposed timers remain a named coverage gap.
 - Pursue patients through native movement/range/LOS and existing hazard/native-sight safety. A blocked approach holds instead of crossing unpulled sight circles. Damage-weaving is allowed only while every living patient is covered and not projected into danger.
 
+## Shared specialization boundary (pending implementation)
+
+Common triage captures ranked patients/positions/projected death, native heal candidates, emergency state, safe-to-DPS and known upcoming scripted damage. A pure per-spec `decide(&TriageContext)` runs next, before generic ordered rows; read-only World/caster/party provide actual aura, cooldown and resource state.
+
+The contract is `SpecVerdict::Cast { decision, owned: SpellSet } | Defer { owned: SpellSet }`, where `SpellSet` is a static slice of spell IDs. Both outcomes retain ownership even if native casting refuses the chosen action: common candidate fallback and generic rows must skip owned spells. Returning no action must never resurrect an older missing-aura/HP-threshold row. Resto and Holy use the same dispatch boundary; no runtime trait-object registry is required.
+
 ## Restoration105 ownership
 
 Crenna209072 uses the whole local default follower kit, level gated; the census below is not a grant of all abilities at level32. Holy257 specialization decisions are maintained separately on the shared framework.
@@ -19,6 +25,8 @@ Supported mechanics to integrate: own Lifebloom maintenance and near-expiry bloo
 [Complete107-row native kit/talent/utility inventory](../reference/follower-resto-70448-kit.md), including exact learned level intervals and existing authored conditions.
 
 Convoke is **not present in Crenna's local105 kit**: `FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`. Do not add a spell solely because an example rotation mentions it. Current70448 Abundance207383 is a threshold-driven207640 buff, not old per-Rejuvenation stacks; see the native aura implementation. `FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: existing Soul-of-the-Forest script boosts Regrowth/Rejuvenation/Germination, not Wild Growth. AI must use supported empowered heals without pretending the missing Wild Growth multiplier exists.
+
+Additional native-consumer gaps found by source inspection (not yet behavioral qualification): `FOLLOWER_RESTO_NPC_RESURRECTION_OFFER_UNIMPLEMENTED` — `death/resurrection.rs::build_offer` requires a Player caster, while Crenna is an NPC; `FOLLOWER_RESTO_EFFLORESCENCE_HEALING_UNQUALIFIED` — native145205 summons47649, but no existing qualified Efflorescence healing consumer/placement fixture was found. Do not replace either with direct HP grants. Tree-of-Life/utility coverage remains pending native behavioral qualification; enumeration alone is not support.
 
 ## Evidence / limitations
 
