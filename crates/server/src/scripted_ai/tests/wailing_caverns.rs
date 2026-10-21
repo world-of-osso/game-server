@@ -205,7 +205,7 @@ fn cobrahn_timeline_does_not_fallback_to_smartai_without_addon_data() {
 }
 
 fn assert_authored_cobrahn_loot(path: &std::path::Path) {
-    use rand::SeedableRng;
+    use ::rand::SeedableRng;
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let tables = crate::loot::load_loot_tables(&conn).unwrap();
     let items = crate::item_templates::load_item_templates(path).unwrap();

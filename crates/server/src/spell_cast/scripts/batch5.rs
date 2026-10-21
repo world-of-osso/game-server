@@ -1,4 +1,5 @@
 //! Bounded scripts derived exclusively from local Mainline 12.1.0.69933 rows.
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::components::PowerType;
 

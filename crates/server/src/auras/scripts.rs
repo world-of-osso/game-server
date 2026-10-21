@@ -3,6 +3,7 @@
 //! apply and remove of that spell's auras, on its PERIODIC_DUMMY ticks and on
 //! its procs. Every hook receives the unit carrying the aura.
 
+use crate::random as rand;
 use std::collections::HashMap;
 
 use bevy::prelude::*;

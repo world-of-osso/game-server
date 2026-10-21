@@ -22,6 +22,8 @@
 ## Implementation inventory
 
 - `crates/server/src/followers/kit_ai.rs` — original kit executor and triage integration boundary.
+- `crates/server/src/followers/healer_context.rs` — exposed script deadlines and native-radius injury snapshots.
+- `crates/server/src/scripted_ai/{mod,event_map,the_stockade}.rs` — read-only scheduled-damage hook and actual Hogger deadline mapping.
 - `crates/server/src/followers/healer_triage_tests.rs` — native input/executor behavioral regressions.
 
 ## Tests asserting this spec

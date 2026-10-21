@@ -20,6 +20,13 @@ incremental = true
 [profile.dev.package."*"]
 opt-level = 2
 
+# Headless seeded batches need optimized gameplay while retaining native assertions.
+[profile.sim]
+inherits = "release"
+debug-assertions = true
+debug = 1
+incremental = true
+
 [patch."https://github.com/world-of-osso/shared-protocol.git"]
 shared = { path = "../shared-protocol" }
 

@@ -1,5 +1,6 @@
 //! Bounded Mainline paths: TDB1210 registrations, pinned TC a352b1fa hooks,
 //! and local 12.1.0.69933 descriptions/effects (see spell-dummy-scripts contract).
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::components::Health;
 

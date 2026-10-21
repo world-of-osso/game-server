@@ -1,7 +1,7 @@
 //! FOLLOWER_HEALER_TRIAGE_POLICY: project decisions over native spell execution.
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
-use shared::components::{Health, Mana, Position};
+use shared::components::{Health, Mana};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 use std::collections::VecDeque;
 
@@ -38,8 +38,6 @@ pub(super) struct Patient {
     pub missing_health: f32,
     pub incoming_per_second: f32,
     pub periodic_remaining: f32,
-    pub absorb_remaining: f32,
-    pub projected_death_seconds: f32,
     pub score: f32,
     pub emergency: bool,
     pub position: Option<Vec3>,
@@ -58,35 +56,15 @@ pub(super) struct TriageContext<'a> {
     pub world: &'a World,
     pub caster: Entity,
     pub follower: &'a Follower,
-    pub party: &'a [Entity],
     pub entries: &'a [Entry],
     pub patients: Vec<Patient>,
     pub candidates: Vec<Candidate>,
     pub mana_fraction: Option<f32>,
-    pub safe_to_dps: bool,
+    pub upcoming: Vec<super::healer_context::UpcomingDamage>,
+    pub clusters: Vec<super::healer_context::InjuryCluster>,
 }
 
 impl TriageContext<'_> {
-    pub fn entry(&self, spell_id: u32) -> Option<&Entry> {
-        self.entries.iter().find(|entry| entry.spell_id == spell_id)
-    }
-
-    pub fn own_aura(&self, spell_id: u32) -> Option<&crate::auras::AuraInstance> {
-        self.world
-            .get::<crate::auras::ActiveAuras>(self.caster)?
-            .iter()
-            .find(|aura| aura.spell_id == spell_id && aura.caster == self.caster)
-    }
-
-    pub fn ready(&self, spell_id: u32) -> bool {
-        self.entry(spell_id).is_some()
-            && self
-                .world
-                .resource::<SpellStore>()
-                .get(spell_id)
-                .is_some_and(|spell| ready(self.world, self.caster, spell))
-    }
-
     pub fn best_candidate(&self, owned: SpellSet) -> Option<Decision> {
         self.candidates
             .iter()
@@ -209,13 +187,9 @@ pub(super) fn read_patient(world: &World, target: Entity) -> Option<Patient> {
         missing_health: missing,
         incoming_per_second: incoming,
         periodic_remaining: periodic,
-        absorb_remaining: absorb,
-        projected_death_seconds: death,
         score: uncovered / health.max * weight,
         emergency: death <= EMERGENCY_SECONDS || health.current / health.max <= EMERGENCY_HEALTH,
-        position: world
-            .get::<Position>(target)
-            .map(|at| Vec3::new(at.x, at.y, at.z)),
+        position: super::healer_context::position(world, target),
     })
 }
 
@@ -251,22 +225,23 @@ fn read_candidates(ctx: &TriageContext<'_>) -> Vec<Candidate> {
 }
 
 fn read_candidate(ctx: &TriageContext<'_>, entry: &Entry, patient: &Patient) -> Option<Candidate> {
-    if patient.score <= 0.0
+    let preparing = entry.slot == Slot::Hot && ctx.preparing(patient.entity);
+    if (patient.score <= 0.0 && !preparing)
         || !kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
     {
         return None;
     }
-    let enough_injured = ctx
-        .patients
-        .iter()
-        .filter(|patient| patient.score > 0.0)
-        .count()
-        >= entry.conditions.min_injured;
+    let enough_injured = entry.conditions.min_injured == 0
+        || ctx
+            .injury_cluster(entry.spell_id, patient.entity)
+            .is_some_and(|cluster| cluster.members.len() >= entry.conditions.min_injured);
     if !enough_injured {
         return None;
     }
     let spell = ctx.world.resource::<SpellStore>().get(entry.spell_id)?;
-    if !ready(ctx.world, ctx.caster, spell) {
+    if !ready(ctx.world, ctx.caster, spell)
+        || (patient.missing_health == 0.0 && normal_direct_heal(spell))
+    {
         return None;
     }
     let healing = estimate_healing(ctx.world, ctx.caster, spell);
@@ -279,8 +254,12 @@ fn read_candidate(ctx: &TriageContext<'_>, entry: &Entry, patient: &Patient) -> 
         .filter(|(pool, _)| *pool == CostPool::Power(shared::components::PowerType::Mana))
         .map(|(_, amount)| amount.max(0.0))
         .sum();
-    let need = patient.missing_health + patient.incoming_per_second * EMERGENCY_SECONDS
-        - patient.periodic_remaining;
+    let need = if preparing {
+        healing
+    } else {
+        patient.missing_health + patient.incoming_per_second * EMERGENCY_SECONDS
+            - patient.periodic_remaining
+    };
     Some(Candidate {
         decision: Decision {
             spell_id: entry.spell_id,
@@ -356,6 +335,7 @@ pub(super) fn update(
     entries: &[Entry],
 ) -> Outcome {
     cancel_topped_cast(world, caster);
+    let enemies = ai::engaged_enemies(world, follower, caster, party);
     let mut patients: Vec<_> = party
         .iter()
         .copied()
@@ -369,23 +349,25 @@ pub(super) fn update(
             .then_with(|| right.score.total_cmp(&left.score))
             .then_with(|| left.entity.to_bits().cmp(&right.entity.to_bits()))
     });
-    let safe = patients
-        .iter()
-        .all(|patient| patient.score == 0.0 && !patient.emergency);
+    let upcoming = super::healer_context::read_upcoming(world, &enemies, &patients);
+    let clusters = super::healer_context::read_clusters(world, caster, entries, &patients);
     let mut ctx = TriageContext {
         world,
         caster,
         follower,
-        party,
         entries,
         patients,
         candidates: Vec::new(),
+        upcoming,
+        clusters,
         mana_fraction: world
             .get::<Mana>(caster)
             .filter(|mana| mana.max > 0.0)
             .map(|mana| mana.current / mana.max),
-        safe_to_dps: safe,
     };
+    let safe = ctx.patients.iter().all(|patient| {
+        patient.score == 0.0 && !patient.emergency && !ctx.preparing(patient.entity)
+    });
     ctx.candidates = read_candidates(&ctx);
     let (decision, owned) = match super::healer_policy::decide(&ctx) {
         SpecVerdict::Cast { decision, owned } => (Some(decision), owned),
@@ -408,6 +390,10 @@ pub(super) fn update(
     }
 }
 
+fn normal_direct_heal(spell: &SpellInfo) -> bool {
+    !spell_cast::is_channeled(spell) && spell.effects.iter().any(|effect| effect.effect == 10)
+}
+
 fn cancel_topped_cast(world: &mut World, caster: Entity) {
     let Some(cast) = world.get::<CastState>(caster) else {
         return;
@@ -418,7 +404,7 @@ fn cancel_topped_cast(world: &mut World, caster: Entity) {
     let direct_heal = world
         .resource::<SpellStore>()
         .get(cast.spell_id)
-        .is_some_and(|spell| spell.effects.iter().any(|effect| effect.effect == 10));
+        .is_some_and(normal_direct_heal);
     let topped = Entity::try_from_bits(cast.target)
         .and_then(|target| world.get::<Health>(target))
         .is_none_or(|health| health.current <= 0.0 || health.current >= health.max);
