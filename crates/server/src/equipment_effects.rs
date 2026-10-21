@@ -269,6 +269,50 @@ mod tests {
     }
 
     #[test]
+    fn item_instance_equipment_level_change_reapplies_native_rating_amount() {
+        let mut h = native_harness();
+        // Native250214 -> equip1250527 effect1 is an item-scaled rating aura,
+        // with Attributes11 SCALES_WITH_ITEM_LEVEL and zero variance.
+        equip(
+            &mut h,
+            EquipmentSlot::Trinket1,
+            250214,
+            ItemInstanceModifiers {
+                item_level_override: Some(100),
+                ..Default::default()
+            },
+        );
+        let amount = |h: &Harness| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(h.caster)
+                .unwrap()
+                .iter()
+                .find(|aura| aura.spell_id == 1250527)
+                .unwrap()
+                .effects
+                .iter()
+                .find(|effect| effect.index == 1)
+                .unwrap()
+                .amount
+        };
+        let initial = amount(&h);
+        assert!(initial > 0.0);
+        h.app
+            .world_mut()
+            .get_mut::<EquippedItemModifiers>(h.caster)
+            .unwrap()
+            .items[0]
+            .1
+            .item_level_override = Some(200);
+        h.advance(2);
+        assert!(
+            amount(&h) > initial,
+            "modifier-only item-level change must replace the stale native rating amount"
+        );
+    }
+
+    #[test]
     fn item_instance_equipment_mid2_bonus_spell_is_real_aura_not_fake_flat_stats() {
         let mut h = native_harness();
         // Shipped MID2 Fire offhand245769/list13771 -> effect234561/spell1297382.
