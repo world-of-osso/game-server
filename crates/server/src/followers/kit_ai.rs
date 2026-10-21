@@ -160,7 +160,8 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
-    if !health_and_auras_allow(world, unit, target, party, entry)
+    if !action_history_allows(world, unit, entry)
+        || !health_and_auras_allow(world, unit, target, party, entry)
         || !combat_allows(world, unit, target, enemies, entry)
     {
         return false;
@@ -177,6 +178,13 @@ pub(super) fn conditions_met(
     enough_injured
         && (condition.min_enemies == 0
             || super::kit_area::allows(world, unit, target, enemies, entry))
+}
+
+fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
+    world
+        .get::<crate::spell_cast::SpellHistory>(unit)
+        .and_then(|history| history.last_cast_in(&entry.conditions.no_repeat_group))
+        != Some(entry.spell_id)
 }
 
 fn health_and_auras_allow(

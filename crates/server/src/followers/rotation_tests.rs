@@ -9,6 +9,38 @@ use std::collections::BTreeMap;
 
 const COMBO_ACTIONS: &[u32] = &[100780, 100784, 107428, 113656, 101546, 392983, 322109];
 
+#[test]
+fn rotation_fidelity_feral_cooldown_requires_actual_tigers_fury() {
+    let (mut h, unit) = level32(232800);
+    let entry = kit::Entry {
+        spec_id: 103,
+        spell_id: 106951,
+        min_level: 29,
+        max_level: 58,
+        slot: kit::Slot::Buff,
+        conditions: kit::Conditions {
+            target: kit::Target::SelfUnit,
+            required_aura: Some(5217),
+            ..Default::default()
+        },
+    };
+    assert!(
+        !kit_ai::conditions_met(h.app.world_mut(), unit, unit, &[], &[], &entry),
+        "SimC Feral cooldown list aligns Berserk with active Tiger's Fury"
+    );
+    let fury = entry.conditions.required_aura.unwrap();
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, fury, Some(unit), false).unwrap();
+    assert!(crate::auras::has_aura(h.app.world(), unit, fury));
+    assert!(kit_ai::conditions_met(
+        h.app.world_mut(),
+        unit,
+        unit,
+        &[],
+        &[],
+        &entry
+    ));
+}
+
 fn dummy(h: &mut Harness, entity: Entity) {
     // Explicit nonlethal training dummy fixture; never modifies actor damage/resources.
     h.app.world_mut().entity_mut(entity).insert(Health {
