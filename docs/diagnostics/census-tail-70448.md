@@ -8,6 +8,10 @@ Probe at merged89fdf21ac:1PASS/0FAIL851.63s, exit0, exactly7827 memberships/40 s
 
 Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/osso/.worktrees/logs/census-tail/data/diagnostics/class-census-tail-2026-10-21/`: exact command/protocol, full native receipts, frozen classified cases, delta, cause ranking, per-spec matrix and exit/log. Producer `/home/osso/.worktrees/logs/census-tail/analyze-tail.py` only reads canonical source. Initial interrupted235-row run retained separately and not counted; complete retry used the already-compiled89fdf21ac executable under agent-run with capacity ADD. Checkout later033c72a79 adds only ignored298 tests, absent from that existing executable. Dispatch success remains bounded, not full ability parity.
 
+### Second five-cause refresh
+
+At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compiled-binary probe1PASS/0FAIL884.09s/exit0,7827 exact: **7104PASS/723FAIL**, versus first7090/737. All ten owned cause warning counts are0. New298/377/423/67/121 yield15 membership promotions. One additional observed FAIL is72/23881 Bloodthirst: this receipt contains native184362 Enrage AuraApplied plus443/458 warnings; the first has no Enrage event. Existing `scripts.rs:1103–1107` rolls native30% on Bloodthirst; no scripts/procs source change exists between89fdf21ac and a7eaa7ef5. This stochastic exposure is retained, not hidden by rerunning or counted as a new branch behavior regression. Relative frozen7071/756,36 promotions/3 observed regressions include the prior two target148 boundaries. Isolated `round-2/` preserves full command/protocol/receipts/classified cases/delta/log/exit beside the first artifacts; canonical publication remains lead-owned.
+
 ## Named gaps
 
 | Cause | Roots | Disposition and evidence |
