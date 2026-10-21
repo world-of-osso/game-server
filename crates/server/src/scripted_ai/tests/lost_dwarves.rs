@@ -111,6 +111,8 @@ fn encounter_coverage_lost_dwarves_overkill_surrenders_alive_and_all_three_grant
 #[test]
 fn encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completions() {
     for difficulty in [1, 205] {
+        // Native Bulwark Attributes1/0x40 channels for12s; its occupancy delays
+        // Olaf's due Shield/Longboat requests without changing source repeats.
         for (entry, lanes) in [
             (
                 184581,
@@ -130,9 +132,9 @@ fn encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completion
             (
                 184580,
                 vec![
-                    (369677, vec![12.1, 29.1, 58.9, 75.9, 105.7, 122.7]),
+                    (369677, vec![12.1, 31.2, 63.1, 80.1, 110.0]),
                     (369602, vec![17.2, 51.1, 85.8, 119.7]),
-                    (375924, vec![24.8, 103.6]),
+                    (375924, vec![29.2, 108.0]),
                 ],
             ),
         ] {
