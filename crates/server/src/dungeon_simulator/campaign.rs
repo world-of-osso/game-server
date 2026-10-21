@@ -220,10 +220,7 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
     );
 }
 
-#[test]
-#[ignore = "explicit Azure70 native gate-first-member death and remaining formation approach"]
-fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies() {
-    let _rng_scope = crate::random::seed_scope(3);
+fn spawn_azure_gate_after_first_member_death() -> Run {
     let mut run = spawn_run(3, &mut None).unwrap();
     let first = run.actors[&29001816];
     let remaining = run.actors[&29001823];
@@ -250,6 +247,15 @@ fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies
         remaining
     ));
     assert_eq!(run.next_pack().unwrap().1, remaining);
+    run
+}
+
+#[test]
+#[ignore = "explicit Azure70 native gate-first-member death and remaining formation approach"]
+fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_azure_gate_after_first_member_death();
+    let remaining = run.actors[&29001823];
     let point = |world: &World, actor| {
         let position = world.get::<Position>(actor).unwrap();
         Vec3::new(position.x, position.y, position.z)
@@ -265,6 +271,38 @@ fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies
         after < before - 2.0,
         "after actual first gate Death, approach the living same-formation member: before={before}, after={after}"
     );
+}
+
+#[test]
+#[ignore = "explicit Azure70 native first191164 Death then living-member admission"]
+fn azure_remaining_formation_member_reaches_native_admission_after_leader_death() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_azure_gate_after_first_member_death();
+    let remaining = run.actors[&29001823];
+    let at = *run.app.world().get::<Position>(remaining).unwrap();
+    let members: Vec<_> = run.members().collect();
+    for member in members {
+        run.app.world_mut().entity_mut(member).insert(at);
+    }
+    run.control().unwrap();
+    let pull = run
+        .report
+        .pulls
+        .last()
+        .expect("native surviving-member admission decision");
+    assert_eq!(
+        pull.pack, 29001816,
+        "source formation identity remains unchanged"
+    );
+    assert!(
+        !pull.decision.starts_with("Unavailable:"),
+        "native leader Death must not leave a missing projected GUID in the living member's pull: {}",
+        pull.decision
+    );
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        remaining
+    ));
 }
 
 #[test]
