@@ -24,6 +24,8 @@ pub(crate) mod aura_state;
 pub(crate) mod base_armor;
 pub(crate) mod charm;
 #[cfg(test)]
+mod charm_control_tests;
+#[cfg(test)]
 mod charm_tests;
 mod charred_warblades;
 pub(crate) mod combat_stats;
