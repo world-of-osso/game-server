@@ -91,9 +91,12 @@ fn encounter_coverage_bromach_ongoing_source_lanes_native_totems_damage_and_cred
             .resource::<super::cast_admission::CastAdmissions>()
             .entries;
         eprintln!("BROMACH difficulty{difficulty} {attempts:?}");
+        // advance_casts dispatches success before this tick's EventMap update:
+        // success-only repeats use the previous50ms AI-clock sample. Casting
+        // occupancy still serializes the pending Bloodlust/Call deadlines.
         let lanes = [
             (CALL, &[5.1, 36.4, 74.2, 103.3][..]),
-            (SLAM, &[12.1, 32.9, 64.4, 82.6, 114.1, 133.6][..]),
+            (SLAM, &[12.1, 32.9, 64.35, 82.5, 113.95, 133.6][..]),
             (382303, &[20.4, 50.7, 90.8, 121.1][..]),
             (369754, &[27.9, 58.2, 98.3, 128.6][..]),
         ];
