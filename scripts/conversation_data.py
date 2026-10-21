@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local TDB/70448 conversation source ingress; canonical publication is lead-owned."""
 import argparse
+from contextlib import closing
 import csv
 import hashlib
 import json
@@ -113,7 +114,7 @@ def import_tables(connection, tables):
 
 
 def write_sql(path, tables):
-    with sqlite3.connect(':memory:') as encoder, path.open('w', encoding='utf-8') as output:
+    with closing(sqlite3.connect(':memory:')) as encoder, path.open('w', encoding='utf-8') as output:
         output.write('BEGIN IMMEDIATE;\n')
         for table, (columns, rows) in tables.items():
             output.write(table_ddl(table, columns) + ';\n')
@@ -139,7 +140,7 @@ def main():
     if args.db.resolve() == (ROOT / 'data/world.db').resolve():
         parser.error('canonical world.db publication is lead-owned; use an owned copy')
     tables = read_source_tables(args.source, args.csv_dir)
-    with sqlite3.connect(args.db.resolve().as_uri() + '?mode=rw', uri=True) as connection:
+    with closing(sqlite3.connect(args.db.resolve().as_uri() + '?mode=rw', uri=True)) as connection:
         counts = import_tables(connection, tables)
     if args.sql is not None:
         write_sql(args.sql, tables)

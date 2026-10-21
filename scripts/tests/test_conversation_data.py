@@ -1,4 +1,5 @@
 """Actual pinned TDB and70448 conversation rows, not invented dialogue/actors."""
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -38,7 +39,7 @@ class ConversationDataTests(unittest.TestCase):
                          [259911, 259917, 259918])
 
     def test_import_copies_native_rows_without_replacing_other_tables(self):
-        with sqlite3.connect(':memory:') as connection:
+        with closing(sqlite3.connect(':memory:')) as connection:
             connection.execute('CREATE TABLE unrelated (value TEXT)')
             connection.execute("INSERT INTO unrelated VALUES ('keep')")
             conversation_data.import_tables(connection, self.tables)
@@ -55,7 +56,7 @@ class ConversationDataTests(unittest.TestCase):
                              [('BroadcastTextDuration', conversation_data.BUILD), ('ConversationLine', conversation_data.BUILD)])
 
     def test_publication_sql_replays_exact_source_rows_and_preserves_other_state(self):
-        with tempfile.TemporaryDirectory() as directory, sqlite3.connect(':memory:') as connection:
+        with tempfile.TemporaryDirectory() as directory, closing(sqlite3.connect(':memory:')) as connection:
             connection.execute('CREATE TABLE unrelated (value TEXT)')
             connection.execute("INSERT INTO unrelated VALUES ('keep')")
             connection.execute('CREATE TABLE db2_build (table_name TEXT PRIMARY KEY, build TEXT NOT NULL)')
@@ -85,16 +86,17 @@ class ConversationDataTests(unittest.TestCase):
             script.write_bytes((SCRIPTS / 'conversation_data.py').read_bytes())
             database = root / 'data/world.db'
             database.parent.mkdir()
-            with sqlite3.connect(database) as connection:
+            with closing(sqlite3.connect(database)) as connection:
                 connection.execute('CREATE TABLE sentinel (value TEXT)')
                 connection.execute("INSERT INTO sentinel VALUES ('keep')")
+                connection.commit()
             environment = dict(os.environ, PYTHONPATH=str(SCRIPTS))
             result = subprocess.run([sys.executable, str(script), '--db', str(database)],
                                     capture_output=True, text=True, env=environment, check=False)
             self.assertEqual(result.returncode, 2, result.stderr)
             self.assertIn('canonical', result.stderr)
             self.assertIn('lead-owned', result.stderr)
-            with sqlite3.connect(database) as connection:
+            with closing(sqlite3.connect(database)) as connection:
                 self.assertEqual(connection.execute('SELECT value FROM sentinel').fetchall(), [('keep',)])
 
 
