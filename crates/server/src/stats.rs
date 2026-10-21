@@ -38,6 +38,18 @@ pub struct EquippedItems {
     pub items: Vec<(EquipmentSlot, shared::item_data::ItemDefinitionSource, u32)>,
 }
 
+/// Instance attributes follow the equipped GUID independently of its catalog identity.
+#[derive(Component, Debug, Clone, Default, PartialEq)]
+pub struct EquippedItemModifiers {
+    pub items: Vec<(EquipmentSlot, server::item_instance::ItemInstanceModifiers)>,
+}
+
+#[derive(Resource, Default)]
+pub struct NativeItemInstances {
+    pub bonuses: server::item_instance::bonuses::ItemBonusTables,
+    pub enchants: server::item_instance::enchants::EnchantmentTables,
+}
+
 /// Aura stat changes across create/base, bonus and total stages. Absent means none.
 /// Percent fields store 10.0 for +10%; aura handlers compose their modifiers.
 #[derive(Component, Debug, Clone, Default, PartialEq)]
@@ -882,3 +894,7 @@ pub(crate) fn update_character_stats(
 #[cfg(test)]
 #[path = "stats_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "stats_instance_tests.rs"]
+mod instance_tests;
