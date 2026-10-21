@@ -376,7 +376,6 @@ fn effectively_damaged(group: &GroupFixture, spell: u32, target: Entity) -> bool
 }
 
 #[test]
-#[ignore = "Corrected native target-retention fixture; GREEN execution pending"]
 fn holy_weave_native90_holy_fire_then_smite_deal_real_damage_when_safe() {
     let _rng = crate::random::seed_scope(257);
     let mut group = native_group();
@@ -389,7 +388,6 @@ fn holy_weave_native90_holy_fire_then_smite_deal_real_damage_when_safe() {
 }
 
 #[test]
-#[ignore = "f6c6fffd4 weave failure; native AoE admission under diagnosis"]
 fn holy_weave_native90_nova_reaches_three_real_engaged_enemies() {
     let _rng = crate::random::seed_scope(257);
     let mut group = native_group();

@@ -466,6 +466,10 @@ fn execute(world: &mut World, caster: Entity, follower: &Follower, decision: Dec
     match result {
         Ok(()) | Err(spell_cast::CastFailure::OnGlobalCooldown) => true,
         Err(error) => {
+            #[cfg(test)]
+            if decision.spell_id == 596 {
+                eprintln!("Holy native596 refused: decision={decision:?}, error={error:?}");
+            }
             debug!(
                 ?caster,
                 spell = decision.spell_id,
