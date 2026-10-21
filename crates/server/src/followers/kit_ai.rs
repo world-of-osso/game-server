@@ -550,6 +550,9 @@ fn attempt_cast(
     follower: &Follower,
     entry: &Entry,
 ) -> bool {
+    // Native6673 is caster-centered target56/range0; missing party members
+    // choose maintenance, but must not become its explicit range-checked target.
+    let target = if entry.spell_id == 6673 { unit } else { target };
     // An already admitted heal must finish; selecting it again is not a new
     // emergency. Re-starting it each tick would consume no mana and heal nobody.
     if world

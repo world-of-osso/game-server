@@ -408,7 +408,16 @@ fn follower_utility_policy_projected_death_uses_defensive_above_half_health() {
     assert_eq!(
         cast_count(&h, 871),
         1,
-        "projected death inside3s must trigger at60%HP"
+        "projected death inside3s must trigger at60%HP; projected={} major_allows={} active={} casts={:?}",
+        super::utility::projected_death(h.app.world(), unit),
+        super::tank_defense::allows(h.app.world(), unit, Some(0.60)),
+        super::utility::active_defensive(h.app.world(), unit),
+        h.inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits())
+            .map(|go| go.spell_id)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -478,7 +487,20 @@ fn follower_utility_policy_movement_buff_for_distant_pursuit() {
         update_ai(h.app.world_mut());
         h.advance(1);
     }
-    assert_eq!(cast_count(&h, 358267), 1);
+    assert_eq!(
+        cast_count(&h, 358267),
+        1,
+        "state={:?} cast={:?} target={:?} casts={:?}",
+        h.app.world().get::<crate::creature_ai::CreatureState>(unit),
+        h.app.world().get::<shared::casting::CastState>(unit),
+        h.app.world().get::<crate::networking::CombatTarget>(unit),
+        h.inbox
+            .go
+            .iter()
+            .filter(|go| go.caster == unit.to_bits())
+            .map(|go| go.spell_id)
+            .collect::<Vec<_>>()
+    );
     assert!(crate::auras::has_aura(h.app.world(), unit, 358267));
 }
 
