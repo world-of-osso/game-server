@@ -63,7 +63,8 @@ pub enum GroundProbe {
 
 struct TileGround {
     terrain: TerrainHeightMap,
-    wmos: Vec<WmoCollision>,
+    /// Area/liquid/flight-bound queries need terrain, not WMO collision.
+    wmos: Option<Vec<WmoCollision>>,
     /// Root ADT MFBO minimum corner heights (flight bounds), in file order.
     flight_min: Option<[i16; 9]>,
 }
@@ -123,7 +124,7 @@ impl GroundMap {
             tile,
             Some(TileGround {
                 terrain,
-                wmos: Vec::new(),
+                wmos: Some(Vec::new()),
                 flight_min: None,
             }),
         );
@@ -153,7 +154,7 @@ impl GroundMap {
                 tile,
                 Some(TileGround {
                     terrain,
-                    wmos: Vec::new(),
+                    wmos: Some(Vec::new()),
                     flight_min: None,
                 }),
             );
@@ -247,16 +248,7 @@ impl GroundMap {
     /// its WDT, then each MAID tile's root and `_obj0` ADT and the WMO roots and groups
     /// the WDT or the `_obj0` MODF place. `NO_WDT` for a map without one.
     pub fn missing_files(&self, map_id: u32) -> Vec<String> {
-        let mut check = FileCheck {
-            data_dir: &self.data_dir,
-            missing: Vec::new(),
-            wmos: HashSet::new(),
-        };
-        match self.wdts.get(&map_id) {
-            Some(&wdt) if wdt != 0 => check.map(wdt),
-            _ => check.missing.push(NO_WDT.into()),
-        }
-        check.missing
+        missing_ground_files(&self.data_dir, self.wdts.get(&map_id).copied())
     }
 
     /// Ground under `feet` (Bevy space) on map `map_id`, loading the map and its tile on
@@ -426,11 +418,22 @@ impl MapGround {
         if let Some(wmo) = &self.global_wmo {
             return probe_collision_height(feet, None, std::slice::from_ref(wmo), walkable_only);
         }
-        let Some(tile) = self.tile(bevy_to_tile(feet.x, feet.z)) else {
+        let coordinates = bevy_to_tile(feet.x, feet.z);
+        let Some(tile) = self.tile(coordinates) else {
             return GroundProbe::Unloaded;
         };
+        if tile.wmos.is_none() {
+            let wmos = self.load_tile_wmos(coordinates);
+            self.tiles
+                .get_mut(&coordinates)
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .wmos = Some(wmos);
+        }
+        let tile = self.tiles[&coordinates].as_ref().unwrap();
         let terrain = tile.terrain.height_at_bevy(feet.x, feet.z);
-        probe_collision_height(feet, terrain, &tile.wmos, walkable_only)
+        probe_collision_height(feet, terrain, tile.wmos.as_ref().unwrap(), walkable_only)
     }
 
     fn load_tile(&mut self, (row, col): (u32, u32)) -> Option<TileGround> {
@@ -445,7 +448,26 @@ impl MapGround {
                 return None;
             }
         };
-        let wmos = match load_wmo_placements(&data_dir, files.obj0) {
+        info!(
+            "Loaded ground terrain tile ({row}, {col}) in {:?}",
+            started.elapsed()
+        );
+        Some(TileGround {
+            terrain,
+            wmos: None,
+            flight_min,
+        })
+    }
+
+    fn load_tile_wmos(&mut self, (row, col): (u32, u32)) -> Vec<WmoCollision> {
+        let source = self
+            .source
+            .as_ref()
+            .expect("terrain tile has its ADT source");
+        let files = source.tiles[col as usize * MAP_TILES + row as usize];
+        let data_dir = source.data_dir.clone();
+        let started = std::time::Instant::now();
+        let wmos: Vec<_> = match load_wmo_placements(&data_dir, files.obj0) {
             Ok(placements) => placements
                 .into_iter()
                 .filter_map(|placement| self.place_wmo(&data_dir, placement))
@@ -456,15 +478,11 @@ impl MapGround {
             }
         };
         info!(
-            "Loaded ground tile ({row}, {col}): {} WMOs in {:?}",
+            "Loaded ground collision tile ({row}, {col}): {} WMOs in {:?}",
             wmos.len(),
             started.elapsed()
         );
-        Some(TileGround {
-            terrain,
-            wmos,
-            flight_min,
-        })
+        wmos
     }
 
     fn place_wmo(&mut self, data_dir: &Path, placement: WmoPlacement) -> Option<WmoCollision> {
@@ -570,6 +588,19 @@ impl FileCheck<'_> {
             Err(err) => self.unparsed("models", fdid, "wmo", err),
         }
     }
+}
+
+fn missing_ground_files(data_dir: &Path, wdt: Option<u32>) -> Vec<String> {
+    let mut check = FileCheck {
+        data_dir,
+        missing: Vec::new(),
+        wmos: HashSet::new(),
+    };
+    match wdt {
+        Some(wdt) if wdt != 0 => check.map(wdt),
+        _ => check.missing.push(NO_WDT.into()),
+    }
+    check.missing
 }
 
 enum WdtGround {
@@ -839,13 +870,28 @@ fn check_spawned_ground(
     spawned: impl IntoIterator<Item = u32>,
     gaps: &HashSet<(u32, String)>,
 ) -> SpawnedGroundCheck {
-    let mut maps: Vec<u32> = spawned.into_iter().collect();
-    maps.sort_unstable();
+    // Independent read-only map walks share Bevy's bounded I/O pool, not one serial
+    // critical path. Fold sorted results so refusal and known-gap ordering stays stable.
+    let pool = bevy::tasks::IoTaskPool::get_or_init(|| {
+        bevy::tasks::TaskPoolBuilder::new().num_threads(4).build()
+    });
+    let mut results = pool.scope(|scope| {
+        for map in spawned {
+            let data_dir = &ground.data_dir;
+            let wdt = ground.wdts.get(&map).copied();
+            scope.spawn(async move {
+                let started = std::time::Instant::now();
+                let missing = missing_ground_files(data_dir, wdt);
+                debug!("Ground validation map {map}: {:?}", started.elapsed());
+                (map, missing)
+            });
+        }
+    });
+    results.sort_unstable_by_key(|(map, _)| *map);
     let mut check = SpawnedGroundCheck::default();
-    for map in maps {
-        let started = std::time::Instant::now();
+    for (map, missing) in results {
         let mut gap = false;
-        for file in ground.missing_files(map) {
+        for file in missing {
             if gaps.contains(&(map, file.clone())) {
                 gap = true;
                 check.known_gap_files += 1;
@@ -856,7 +902,6 @@ fn check_spawned_ground(
         if gap {
             check.known_gaps.push(map);
         }
-        debug!("Ground validation map {map}: {:?}", started.elapsed());
     }
     check
 }

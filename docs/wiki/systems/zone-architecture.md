@@ -18,6 +18,12 @@ Maps and dungeon copies share one Bevy `World`, partitioned by the `InMap { map_
 - `area_triggers::detect_area_trigger_teleports` (FixedUpdate after gravity) fires teleport triggers on entering.
 - Interest buckets are keyed by `(InMap, x, z)`; a player without a map (in transfer) sees only itself. `GroundMap` holds one `MapGround` per map, opened lazily from the map's WDT.
 
+### Public-spawn startup readiness
+
+UDP bind precedes `PostStartup` and is not population readiness. `ground::open_ground_map` validates every spawned map's required ground inputs using Bevy's bounded I/O pool; sorted results preserve missing-file and known-gap diagnostics. Validation still finishes before public spawning. `zones::spawn_continent_creatures` logs preparation per hosted map and queues its all-maps-ready log after the creature commands are applied, not when they are merely enqueued.
+
+Terrain area, liquid and flight-bound queries load ADT terrain without WMO collision. The first collision query loads the same tile's WMO placements/groups synchronously and caches them before answering; floor/height selection is unchanged. This avoids decoding collision solely to select regional spawn levels. Global-WMO maps retain their existing open path. No population, level rolls, spawn order, simulation frequency or navigation publication policy changes.
+
 Current source has no per-zone schedules and no dedicated `World` per instance.
 
 ## Proposed Zone Partitioning
@@ -64,6 +70,8 @@ Chosen (dungeons phase 1): one Bevy `World` with `InMap` filtering, matching Tri
 
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — original proposed zone model and AzerothCore comparison
 - [crates/server/src/zones.rs](../../../crates/server/src/zones.rs) — continent and dungeon-copy creature spawning
+- [crates/server/src/ground.rs](../../../crates/server/src/ground.rs) — ground validation and terrain/collision loading
+- [startup filesystem fixtures](../../../crates/server/src/ground/startup_latency_tests.rs) — actual FIFO overlap/nonblocking-area and retained-floor boundaries
 - [crates/server/src/maps/](../../../crates/server/src/maps/) — `InMap`, map store, instances, transfers, area triggers
 - [crates/server/src/world_data.rs](../../../crates/server/src/world_data.rs) — numeric zone and spawn data loaded from SQLite
 
