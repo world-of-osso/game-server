@@ -9,7 +9,7 @@ use shared::components::{Npc, PowerType};
 use super::summon::SummonedCreature;
 
 #[path = "guardian_core.rs"]
-mod core;
+pub(super) mod core;
 
 #[derive(Resource, Default)]
 pub struct GuardianSpells {
