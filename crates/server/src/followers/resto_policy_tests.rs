@@ -169,3 +169,30 @@ fn resto_policy_high_level_low_mana_uses_native_innervate() {
         "learned70 native Innervate must sustain low-mana healing; do not fake zero-cost spells or grant mana"
     );
 }
+
+#[test]
+fn resto_policy_native_channel_is_unsafe_when_caster_forecast_dies_before_finish() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(40);
+    for target in party {
+        damage(&mut h, target, 0.45);
+    }
+    let rows = h
+        .app
+        .world()
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| entry.spec_id == 105 && entry.spell_id == 740 && entry.available(105, 40))
+        .cloned()
+        .collect::<Vec<_>>();
+    assert_eq!(rows.len(), 1);
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    super::super::healer_triage::update(h.app.world_mut(), healer, &follower, &party, &rows);
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_none_or(|cast| cast.spell_id != 740),
+        "actual recent damage predicts caster death before native channel ends; do not start the channel"
+    );
+}
