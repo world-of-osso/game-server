@@ -19,8 +19,9 @@ fn owned_bleed(h: &Harness, unit: Entity) -> Option<AuraInstance> {
 }
 
 fn apply_rake(h: &mut Harness, unit: Entity) -> AuraInstance {
+    let target = h.npc;
     for _ in 0..8 {
-        cast_native(h, unit, RAKE, h.npc);
+        cast_native(h, unit, RAKE, target);
         if let Some(aura) = owned_bleed(h, unit) {
             return aura;
         }
