@@ -100,7 +100,12 @@ ownership prevents generic rows undoing a refused choice. At4b0d483c2, six nativ
 qualification yields11GREEN, one Fortitude ignore and one genuine RED: seven
 native10% hits at1sec spacing predict death within3sec while patients remain
 above25%HP, but the old20%-only Guardian rule never casts it. Guardian now also
-uses the shared projected-death deadline; that exact GREEN remains pending.
+uses the shared projected-death deadline; both forecast and HP cases GREEN at
+775bf36f2. Native70% Apotheosis Word discount also GREEN (not free). The separate
+NPC rescue fixture initially failed because full party AI killed its damage
+source before the first Bite. Advancing to the next ordinary dummy, without
+restoring pools, reaches the real boundary: NPC Guardian rescue, aura consumption
+and later death to the same native123483 hits GREENd71af72ec.
 Earned-Surge priority, effective native32 Sanctify, spread-cluster refusal and
 full-health cooldown conservation are native GREEN controls. Fortitude coverage
 stays explicitly ignored until the separately owned
@@ -136,6 +141,15 @@ Gap names below have prefix `HOLY_`:
 | ANGELIC_BULWARK_THRESHOLD_SHIELD | 108945: threshold114214 shield and native recovery window |
 | BENEDICTION_HYMN_RIPPLE_AND_UPGRADE | 1262760: Hymn pulses and next-Flash upgrade |
 | LEAP_OF_FAITH_EFFECT77 | 73325: native77 has no effect handler; do not cast an imaginary rescue |
+
+## Native utility decisions
+
+Atd71af72ec, actual three23268 Magic applications all exist but Henry never casts
+32375; actual native threat selects Henry but AI never casts586. Both are genuine
+policy REDs (`holy-{mass-dispel,fade-policy}-v8.log`), not auras fabricated to
+force eligibility. Candidate policy uses shared observed victims for Fade and
+real dispellable-Magic/native-radius footprints for Mass Dispel; positive and
+separated/other-victim/empty controls remain pending GREEN.
 
 Mass Dispel's normally-undispellable-Magic potency remains **unqualified**, not
 asserted missing solely because72734 is a marker. Ordinary effect38 behavior is

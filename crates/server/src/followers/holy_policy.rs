@@ -1,6 +1,6 @@
 //! HOLY_PRIEST_TRIAGE_V1: project decisions over source-valid shared triage inputs.
 use super::healer_triage::{Decision, EMERGENCY_SECONDS, SpecVerdict, SpellSet, TriageContext};
-use bevy::prelude::Entity;
+use bevy::prelude::{Entity, Vec3};
 use shared::components::Health;
 
 use crate::auras::ActiveAuras;
@@ -16,6 +16,10 @@ const SERENITY: u32 = 2050;
 const GUARDIAN_SPIRIT: u32 = 47788;
 const DESPERATE_PRAYER: u32 = 19236;
 const FORTITUDE: u32 = 21562;
+const FADE: u32 = 586;
+const MASS_DISPEL: u32 = 32375;
+const MAGIC_DISPEL_TYPE: u32 = 1;
+const MASS_DISPEL_PATIENTS: usize = 3;
 const SURGE: u32 = 114255;
 const MENDING_WARD: u32 = 41635;
 const OWNED: SpellSet = &[
@@ -26,6 +30,8 @@ const OWNED: SpellSet = &[
     GUARDIAN_SPIRIT,
     DESPERATE_PRAYER,
     FORTITUDE,
+    FADE,
+    MASS_DISPEL,
 ];
 const POLICY_SPELLS: &[u32] = &[
     FLASH_HEAL,
@@ -71,6 +77,8 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
     let decision = choose_guardian(ctx)
         .or_else(|| choose_personal_heal(ctx))
         .or_else(|| choose_emergency(ctx))
+        .or_else(|| choose_fade(ctx))
+        .or_else(|| choose_mass_dispel(ctx))
         .or_else(|| {
             select_action(&read_snapshot(ctx)).map(|action| Decision {
                 spell_id: action.spell,
@@ -140,6 +148,59 @@ fn choose_emergency(ctx: &TriageContext<'_>) -> Option<Decision> {
             candidate.decision.urgent && !OWNED.contains(&candidate.decision.spell_id)
         })
         .map(|candidate| candidate.decision)
+}
+
+fn choose_fade(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let threatened = ctx
+        .enemies
+        .iter()
+        .any(|(_, victim)| *victim == Some(ctx.caster));
+    (threatened && ready(ctx, FADE, ctx.caster)).then_some(Decision {
+        spell_id: FADE,
+        target: ctx.caster,
+        urgent: false,
+    })
+}
+
+fn choose_mass_dispel(ctx: &TriageContext<'_>) -> Option<Decision> {
+    if !ctx.ready(MASS_DISPEL) {
+        return None;
+    }
+    let radius = super::kit_area::radius_for_spell(ctx.world, ctx.caster, MASS_DISPEL)?;
+    ctx.patients
+        .iter()
+        .filter_map(|patient| {
+            let count = count_magic_patients(ctx, patient.position?, radius);
+            (count >= MASS_DISPEL_PATIENTS && ready(ctx, MASS_DISPEL, patient.entity))
+                .then_some((count, patient.entity))
+        })
+        .max_by(|left, right| {
+            left.0
+                .cmp(&right.0)
+                .then_with(|| right.1.to_bits().cmp(&left.1.to_bits()))
+        })
+        .map(|(_, target)| Decision {
+            spell_id: MASS_DISPEL,
+            target,
+            urgent: false,
+        })
+}
+
+fn count_magic_patients(ctx: &TriageContext<'_>, center: Vec3, radius: f32) -> usize {
+    ctx.patients
+        .iter()
+        .filter(|patient| {
+            patient
+                .position
+                .is_some_and(|at| center.distance(at) <= radius)
+                && crate::auras::has_dispellable_aura(
+                    ctx.world,
+                    ctx.caster,
+                    patient.entity,
+                    &[MAGIC_DISPEL_TYPE],
+                )
+        })
+        .count()
 }
 
 fn choose_fortitude(ctx: &TriageContext<'_>) -> Option<Decision> {

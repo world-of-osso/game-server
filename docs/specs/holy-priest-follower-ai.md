@@ -68,7 +68,10 @@ with the implementing tests. No claim that a threshold is sourced from DB2.
 Guardian Spirit protects patients below20% health or within the shared3sec
 projected-death window; Desperate Prayer uses Henry's
 below50% health plus observed incoming damage. Shared urgent direct-heal candidates
-precede routine throughput/upkeep. Surge selects below90%, PoM below95%, and group
+precede routine throughput/upkeep. Fade requires an actual engaged enemy currently
+attacking Henry, and does not interrupt an existing friendly cast. Mass Dispel
+requires three actually dispellable harmful Magic patients inside one native
+friendly dispel radius; global aura count or an empty footprint is insufficient. Surge selects below90%, PoM below95%, and group
 pressure requires three actual patients:65% for depleted-Word Apotheosis,55% for
 Hymn. Apotheosis precedes the channel when both qualify. A channel is refused for
 shared emergency patients or an authored near-term hit on Henry. Sanctify needs
@@ -87,12 +90,12 @@ available through the shared generic candidate ranking.
 | Surge | natural8% acquisition, instant/half-cost, one use, cap2 | Native Henry4GREEN66f0; missing-mana talent remains a named gap |
 | Prayer of Mending | real41635 damage heal33110 and delayed155793 bounce | Existing native tests; upkeep decision missing |
 | Voice of Harmony | learned390994 PoM → Serenity reduction4sec | Native cast qualification GREEN66f0, including unlearned control |
-| Apotheosis | restore native Holy Words;200% enhanced reduction;70% mana discount | Native reset/amplification GREEN66f0; timing and discount qualification pending |
+| Apotheosis | restore native Holy Words;200% enhanced reduction;70% mana discount | Reset/amplification GREEN66f0; group timing GREEN4b0; native nonfree70% Word discount GREEN775 |
 | Ultimate Serenity | native replacement and real nearby healing1250581 | PoH→Serenity CDR GREEN66f0; nearby healing remains unqualified |
-| Guardian Spirit | actual death prevention, one-shot rescue and expiry | Existing native tests |
+| Guardian Spirit | actual death prevention, one-shot rescue and expiry | HP/forecast policy GREEN775; nativeNPC one-shot rescue and later death GREENd71; earlier player expiry tests retained |
 | Divine Hymn | actual channel/ticks/recipient selection and safe timing | Timing unqualified |
 | Fortitude/Purify | party upkeep / native effect38 eligibility | Existing generic behavior; Holy policy tests owed |
-| Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Unqualified; named gaps if unsupported |
+| Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Generic Fade/Meredy103 suppression and expiry GREENf53; FadeAI/groupMagic REDd71; policy GREEN pending. Leap77 blocked; special72734 potency unqualified |
 | Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
 | Remaining selected passives | exact native modifiers or explicit named script gaps | See [named gaps](../wiki/investigations/holy-priest-follower-ai.md#named-selected-kit-gaps); not runtime-complete |
 

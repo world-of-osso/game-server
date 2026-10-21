@@ -234,6 +234,7 @@ fn holy_policy_native90_full_health_does_not_spend_throughput_cooldowns() {
     assert_eq!(casts(&group, 64843), 0);
     assert_eq!(casts(&group, 200183), 0);
     assert_eq!(casts(&group, 33076), 0);
+    assert_eq!(casts(&group, 32375), 0);
 }
 
 #[test]
@@ -300,12 +301,9 @@ fn holy_policy_native90_fortitude_covers_the_actual_party() {
     );
 }
 
-#[test]
-fn holy_policy_native90_mass_dispel_clears_real_clustered_magic() {
-    let mut group = native_group();
-    let targets = group.members[2..].to_vec();
+fn apply_group_magic(group: &mut GroupFixture, targets: &[Entity]) {
     let enemy = group.h.npc;
-    for &target in &targets {
+    for &target in targets {
         creature_cast(
             group.h.app.world_mut(),
             enemy,
@@ -322,6 +320,36 @@ fn holy_policy_native90_mass_dispel_clears_real_clustered_magic() {
             .iter()
             .all(|&target| has_aura(group.h.app.world(), target, MAGIC_DOT))
     );
+}
+
+#[test]
+fn holy_policy_native90_mass_dispel_refuses_separated_magic_patients() {
+    let mut group = native_group();
+    let targets = group.members[2..].to_vec();
+    apply_group_magic(&mut group, &targets);
+    group
+        .h
+        .app
+        .world_mut()
+        .get_mut::<Position>(targets[2])
+        .unwrap()
+        .x = 80.0;
+    for _ in 0..20 {
+        super::update_ai(group.h.app.world_mut());
+        group.h.advance(1);
+    }
+    assert_eq!(
+        casts(&group, 32375),
+        0,
+        "three Magic auras are not one native-radius footprint"
+    );
+}
+
+#[test]
+fn holy_policy_native90_mass_dispel_clears_real_clustered_magic() {
+    let mut group = native_group();
+    let targets = group.members[2..].to_vec();
+    apply_group_magic(&mut group, &targets);
     uses_spell(&mut group.h, group.priest, 32375);
     group.h.advance(5);
     assert!(
