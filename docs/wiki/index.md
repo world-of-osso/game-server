@@ -1,4 +1,5 @@
 - [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — selected70448 inventory, two native REDs, missing DUMMY consequence (not generic proc failure); qualification pending.
+- [Follower healer triage](systems/follower-healer-triage.md) — named project policy design, pending behavioral proof; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md).
 - [Pet-battle last-hit counters](systems/pet-battle-engine.md#last-hit-counter-percentages--2026-10-20) — generic197 follows DB2 Power100/150; tooltip disagreement stays a named note, not inferred arithmetic.
 - [Toy summon dependencies](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21) — largest cause151 missing templates fixed through source closure; prepared423→506, global marker gaps/Katy proof exemption; canonical publication pending.
 - [Toy census generic force casts](systems/toys.md#census-driven-generic-force-casts-2026-10-21) — Full1166+7:421→423 pipeline admission, native effect160 normal queued casts; actual Spore2s/5min lifecycle and retained effect64 controls, no blanket dummy scripts.

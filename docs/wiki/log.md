@@ -1,3 +1,7 @@
+## 2026-10-21 — Follower healer triage design
+
+[FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
+
 ## 2026-10-21 — Azureblade partial Lua-clock port
 
 [Azureblade](systems/boss-scripts.md#azureblade-partial-lua-clock--2026-10-21): explicit lead-approved Lua schedule/native70448 target/effect port, not invented TC AI. Ignored firstcleaveRED→native5GREEN37.75s atf9ec0db16 including Normal1/Follower205/two actual190187 summons/reset/isolated2585bit3. Producer sourcecopy1PASS; source base/models+1/23 rows, no synthetic205/population/credit change. Native-ground and ordinal-versus-bit fixture repairs retain production semantics. Energy/phase/area/Image-AI gaps and canonical publication remain open.
