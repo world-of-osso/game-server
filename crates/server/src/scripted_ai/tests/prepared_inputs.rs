@@ -73,6 +73,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         190609 => Some("doragosa"),
         188252 => Some("melidrussa"),
         189232 => Some("kokia"),
+        184580 | 184581 | 184582 => Some("lost-dwarves"),
         _ => None,
     };
     match producer {
@@ -108,7 +109,11 @@ fn decode_encounter_inputs(
     let data = data().expect("world.db fixture");
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    if [20923, 196482, 190609, 188252, 189232].contains(&entry) {
+    if [
+        20923, 196482, 190609, 188252, 189232, 184580, 184581, 184582,
+    ]
+    .contains(&entry)
+    {
         // The authenticated primary binding belongs to this prepared copy, not canonical data.
         inputs.push(crate::maps::store::load_map_store(&conn).unwrap());
     }
@@ -157,6 +162,7 @@ fn decode_encounter_inputs(
             || (entry == 17381 && *id == 17370)
             || (entry == 186737 && *id == 197204)
             || (entry == 186739 && *id == 190187)
+            || ([184580, 184581, 184582].contains(&entry) && [184580, 184581, 184582].contains(id))
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });
