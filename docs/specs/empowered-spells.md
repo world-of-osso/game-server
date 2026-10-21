@@ -11,6 +11,8 @@ Player and follower empowers use native build70448 stage metadata and release re
 - [ ] Prove converted-tick direct damage across selected ranks, Blast Furnace extension, Font variant release consequences and native Scouring count2. Preserve current effect5 fields, not obsolete TC silence/index/rank-count fields.
 - [ ] Accept player release only for the authenticated owner's matching active empower. `ReleaseEmpowerSpell {spell_id}` and `StopSpellCast` remain separate messages; the client sends release when the cast binding goes up.
 
+- [ ] Successful empowers extend the same active Dragonrage using native Animosity375797 effect0 milliseconds and effect1 diminishing effectiveness; a new Dragonrage instance resets the effectiveness.
+
 ## How it works
 
 - [Native pipeline and qualified release scripts](../wiki/investigations/follower-data.md#native-empower-pipeline--2026-10-21).

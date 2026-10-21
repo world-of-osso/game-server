@@ -11,8 +11,60 @@ const SURGE_DAMAGE: u32 = 359077;
 const BLAST_FURNACE: u32 = 375510;
 const SCOURING_FLAME: u32 = 378438;
 const ETERNITYS_SPAN: u32 = 375757;
+const ANIMOSITY: u32 = 375797;
+const DRAGONRAGE: u32 = 375087;
 const BASE_FIRE_TICKS: u32 = 10;
 const CONVERTED_TICKS_PER_RANK: u32 = 3;
+
+#[derive(Component)]
+struct AnimosityProgress {
+    dragonrage_instance: u32,
+    effectiveness: f32,
+}
+
+/// SimC4648–4681: each successful empower extends the same Dragonrage less.
+fn extend_dragonrage(world: &mut World, caster: Entity) {
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return;
+    };
+    let Some(passive) = auras.iter().find(|aura| aura.spell_id == ANIMOSITY) else {
+        return;
+    };
+    let extension = passive
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .expect("native Animosity extension effect0")
+        .amount;
+    let reduction = passive
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Animosity effectiveness effect1")
+        .amount;
+    let Some(rage) = auras
+        .iter()
+        .find(|aura| aura.spell_id == DRAGONRAGE && aura.caster == caster)
+    else {
+        return;
+    };
+    let instance = rage.instance_id;
+    let effectiveness = world
+        .get::<AnimosityProgress>(caster)
+        .filter(|progress| progress.dragonrage_instance == instance)
+        .map_or(1.0, |progress| progress.effectiveness);
+    crate::auras::extend_owned_duration(
+        world,
+        caster,
+        caster,
+        &[DRAGONRAGE],
+        (extension * effectiveness) as u32,
+    );
+    world.entity_mut(caster).insert(AnimosityProgress {
+        dragonrage_instance: instance,
+        effectiveness: effectiveness * (1.0 - reduction / 100.0),
+    });
+}
 
 fn read_native_aura_amount(world: &World, caster: Entity, spell: u32) -> f32 {
     world
@@ -91,7 +143,9 @@ pub(super) fn release(
         _ => unreachable!("qualified empower handler registration"),
     };
     // TC uses IGNORE_CAST_IN_PROGRESS, not FULL_MASK: preserve normal damage procs.
-    crate::spell_cast::execute_cast(world, caster, &child, target)
+    crate::spell_cast::execute_cast(world, caster, &child, target)?;
+    extend_dragonrage(world, caster);
+    Ok(())
 }
 
 pub(crate) fn damage_bonus(world: &World, caster: Entity, spell: &SpellInfo) -> f32 {
