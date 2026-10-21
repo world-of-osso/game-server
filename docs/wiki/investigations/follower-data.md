@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Rotation cast-action projection — 2026-10-21
+
+Published kit inventory omitted cast actions behind native learned passives. The [COPY producer](../../../scripts/follower_spec_kits.py) now projects source-qualified parents without inventing spellbooks: Demonology1250273→105174 (11+) and426115→264178 (15+), from SimC76f8118 `sc_warlock_init.cpp:245–250`; Feral343223→106951 (29–58), native TraitDefinition108167 VisibleSpellID, suppressed by learned102543 overriding106951 through108183 (59+), matching `sc_druid.cpp:3933–3946,10699`. Parents remain native passives; child SpellLevels still apply. Berserk/Incarnation policy requires actual Tiger's Fury.
+
+[Producer tests](../../../scripts/test_follower_rotation_policy.py) reproduce missing children before projection and pass5combined tests ate085f02fb, including Windwalker policy-output checks. This is **inventory/policy-output proof, not native rotation or damage parity**. Generic runtime predicates and native ST/3-target/tank simulator acceptance remain pending. SimC's70391 coefficients never replace native70448 data. [Contract](../../specs/follower-dungeons.md#rotation-fidelity-2026-10-21); engine diagnostics `data/diagnostics/rotation-fidelity-2026-10-21/` contain per-spec literal APL matrices and RED/GREEN logs.
+
+Native applicability: Bloodtalons is absent from default103 loadouts and pinned APL/module; do not fabricate it. Last Stand is passive1243659 (47+) triggered by Shield Wall, not a separate12975 button. Windwalker Tiger Palm's raw Chi effect is0, but learned1258122 native aura107/op12 adds2 to its second effect; compare fully modified amounts, not bare effect rows.
+
 ## Tranquil Mind two-stack Clearcasting — 2026-10-19
 
 Actual native70448 default105 first learns Tranquil Mind403521 at25, absent24. Tooltip sets Omen's chance **to** effect3/index2 value5%, not +5%; native1050702 supplies that dummy amount. Effect1050510/index0 is Aura107/op37 MaxAuraStacks+1, mask3=262144 matching Clearcasting16870; its native cap1 therefore becomes2 through the existing generic modifier reader. SimC76f8118 `sc_druid.cpp:10577` registers the talent but supplies no additional behavior authority here. Native tooltip/data are authoritative. Index1 mana-regeneration numeric certification and other extra-charge talents remain excluded.
