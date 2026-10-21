@@ -3528,3 +3528,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Conversation source ingress4GREEN6.83s at a034edf54; actual owned-backup CLI and independent five-table SQL replay, canonical refusal and unchanged partial-source receipts. Generic server runtime then protocol/Godot TalkingHead remain active.
 
 - 2026-10-21: Conversation bounded server runtimeb8cec653b eight genuineRED→eightGREEN16.60s/0warnings, enabled after proof: all3 Orator native shape ingresses Normal/Follower, private-owner/copy actor+line payload, native705 ordered timing/expiry, missingcreator isolation. Protocol and Godot TalkingHead presentation next.
+
+- 2026-10-21: Private conversation wire2RED→2GREEN14.20s on protocolfc1eb49; every-frame MessageReceiver test observer corrected without runtime workaround. Eight shared-payload/source runtime integration casesPASS29.56s; COMPOSITE10GREEN, bothwiretests enabled. Engine TalkingHead/pixels remain pending.

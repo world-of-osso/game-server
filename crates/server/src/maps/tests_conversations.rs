@@ -559,12 +559,10 @@ fn wire_delivery(difficulty: u32) {
     assert!(wire_updates(&mut scene.h, &scene.peer).is_empty());
 }
 #[test]
-#[ignore = "RED: conversation payload is not delivered to owning connection"]
 fn conversation_wire_orator_normal_private_delivery_and_expiry() {
     wire_delivery(1);
 }
 #[test]
-#[ignore = "RED: conversation payload is not delivered to owning connection"]
 fn conversation_wire_orator_follower205_private_delivery_and_expiry() {
     wire_delivery(205);
 }
