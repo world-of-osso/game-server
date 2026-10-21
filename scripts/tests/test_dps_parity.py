@@ -57,6 +57,25 @@ actions+=/judgment,if=holy_power<5
         self.assertEqual(profile["equipment"][1]["item_level_override"], 344)
         self.assertEqual(profile["actions"], ["actions=auto_attack", "actions+=/judgment,if=holy_power<5"])
 
+    def test_simc_scenarios_are_fixed_300_seconds_and_capped_at_three_targets(self):
+        profile = {"profile": "/profiles/MID2/MID2_Paladin_Protection.simc", "level": "90"}
+        single = PARITY.build_simc_arguments(profile, "single", Path("/evidence/66"))
+        packs = PARITY.build_simc_arguments(profile, "three", Path("/evidence/66"))
+        for arguments in [single, packs]:
+            self.assertIn(profile["profile"], arguments)
+            self.assertIn("max_time=300", arguments)
+            self.assertIn("fixed_time=1", arguments)
+            self.assertIn("vary_combat_length=0", arguments)
+            self.assertIn("threads=1", arguments)
+            self.assertIn("target_level=93", arguments)
+            self.assertNotIn("fight_style=DungeonSlice", arguments)
+        self.assertIn("desired_targets=1", single)
+        self.assertFalse(any(arg.startswith("raid_events=") for arg in single))
+        self.assertIn("desired_targets=1", packs)
+        self.assertIn("raid_events=adds,count=2,count_range=0,first=0,cooldown=30,duration=30,cooldown_stddev=0,duration_stddev=0", packs)
+        self.assertIn("json=/evidence/66.single.json", single)
+        self.assertIn("json=/evidence/66.three.json", packs)
+
     def test_selected_talents_keep_source_node_entry_and_rank_not_name_guesses(self):
         selected = PARITY.parse_selected_talents('''0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
 0.000 Parity adding specialization talent Shield (node=103002 entry=128002 rank=2/2)
