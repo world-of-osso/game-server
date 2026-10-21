@@ -360,6 +360,11 @@ fn missing_model_info_native_champion_proximity_aggroes_a_player() {
         "fixture must exercise actual missing model-info"
     );
     let player = spawn_player_near(&mut app, &source, 1.0);
+    let actor_position = *app.world().get::<Position>(champion).unwrap();
+    app.world_mut().entity_mut(player).insert(Position {
+        x: actor_position.x + 1.0,
+        ..actor_position
+    });
     run(&mut app, NOTIFY_TICKS * 3);
     assert_eq!(
         app.world().get::<CombatTarget>(champion).unwrap().0,
