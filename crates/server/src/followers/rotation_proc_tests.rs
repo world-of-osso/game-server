@@ -121,9 +121,9 @@ fn rotation_fidelity_windwalker_natural_combo_breaker_pays_no_chi_and_spends_one
         has_aura(h.app.world(), unit, 137384),
         "native learned Combo Breaker"
     );
-    for _ in 0..256 {
+    for _ in 0..1_024 {
         cast_native(&mut h, unit, 100780, target);
-        if has_aura(h.app.world(), unit, 116768) {
+        if stacks(&h, unit, 116768) == 2 {
             let before =
                 crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
                     .unwrap()
@@ -142,11 +142,25 @@ fn rotation_fidelity_windwalker_natural_combo_breaker_pays_no_chi_and_spends_one
                 uses - 1,
                 "one ordinary cast consumes one use"
             );
+            cast_native(&mut h, unit, 100784, target);
+            assert_eq!(
+                stacks(&h, unit, 116768),
+                0,
+                "final ordinary use expires the proc"
+            );
+            let after_final =
+                crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
+                    .unwrap()
+                    .0;
+            assert_eq!(
+                before, after_final,
+                "second accumulated native proc also pays no Chi"
+            );
             return;
         }
     }
     panic!(
-        "256 ordinary native Tiger Palms never produced learned Combo Breaker; no RNG/buff grants"
+        "1024 ordinary native Tiger Palms never accumulated two live Combo Breaker uses; no RNG/buff grants"
     );
 }
 

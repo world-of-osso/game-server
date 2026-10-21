@@ -150,9 +150,12 @@ fn matching<'a>(
     })
 }
 
+// Native accumulated next-spell uses, not multiplied modifier magnitude.
+// SimC76f8118 sc_monk.cpp1422 decrements one Combo Breaker stack per Blackout Kick.
+const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768];
+
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
-    //Tidal Waves/Backdraft stacks are next-spell uses, not magnitude.
-    let stacks = if matches!(aura.spell_id, 53390 | 117828) {
+    let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
         1.0
     } else {
         aura.stack_multiplier()
@@ -280,7 +283,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
-///53390/117828 grant accumulated next-spell uses with one native proc charge.
+/// Named accumulated next-spell uses share one native proc charge.
 ///Keep that charge while another stack remains; final use follows normal removal.
 fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
@@ -289,7 +292,7 @@ fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool
     let Some(aura) = auras.get_mut(instance) else {
         return false;
     };
-    if !matches!(aura.spell_id, 53390 | 117828) || aura.stacks <= 1 {
+    if !STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) || aura.stacks <= 1 {
         return false;
     }
     aura.stacks -= 1;
