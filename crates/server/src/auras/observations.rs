@@ -9,7 +9,7 @@ const TRACKED: &[(u32, u32)] = &[(16870, 113043), (114108, 158478)];
 
 #[derive(Default, Serialize)]
 struct ProcUsage {
-    talent_present: bool,
+    talent_learned: bool,
     initial_charges: u64,
     applications: u64,
     charges_gained: u64,
@@ -37,11 +37,14 @@ fn own_stacks(world: &World, caster: Entity, spell: u32) -> u8 {
 }
 
 pub(crate) fn start(world: &mut World, caster: Entity) {
+    let known = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .expect("initialized healer has native spellbook");
     let usage = TRACKED
         .iter()
         .map(|&(spell, talent)| {
             let row = ProcUsage {
-                talent_present: own_stacks(world, caster, talent) > 0,
+                talent_learned: known.contains(talent),
                 initial_charges: u64::from(own_stacks(world, caster, spell)),
                 ..Default::default()
             };

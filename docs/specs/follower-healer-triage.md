@@ -25,6 +25,8 @@
 - `crates/server/src/followers/healer_context.rs` — exposed script deadlines and native-radius injury snapshots.
 - `crates/server/src/scripted_ai/{mod,event_map,the_stockade}.rs` — read-only scheduled-damage hook and actual Hogger deadline mapping.
 - `crates/server/src/followers/healer_triage_tests.rs` — native input/executor behavioral regressions.
+- `crates/server/src/auras/observations.rs` — test-only native application/removal/partial-spend receipts.
+- `crates/server/src/dungeon_simulator/healer_metrics.rs` — passive frame/pack-death/mana/HoT/proc reporting.
 
 ## Tests asserting this spec
 

@@ -695,6 +695,7 @@ struct Run {
     event_cursor: usize,
     last_owner_position: Vec3,
     last_resources: Vec<(Option<f32>, Option<f32>)>,
+    healer_metrics: super::healer_metrics::Recorder,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -729,6 +730,7 @@ pub(super) fn run_cached(
         timings[1] += control.elapsed();
         let update = std::time::Instant::now();
         run.app.update();
+        run.healer_metrics.observe_frame(run.app.world());
         timings[2] += update.elapsed();
         ticks += 1;
         if tick % 1000 == 0 {
@@ -791,6 +793,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         ));
     }
     let last_owner_position = Vec3::new(graph.entrance[0], 0.0, graph.entrance[1]);
+    let healer_metrics = super::healer_metrics::start(app.world_mut(), &graph, &party, &actors);
     Ok(Run {
         app,
         graph,
@@ -801,6 +804,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         event_cursor: 0,
         last_owner_position,
         last_resources: Vec::new(),
+        healer_metrics,
         report: Report {
             seed,
             status: "running".into(),
@@ -837,6 +841,7 @@ impl Run {
             "allocated_entity_slots": self.app.world().entities().len(),
             "live_entities": self.app.world().entities().count_spawned(),
             "source_map_actors": self.actors.len(),
+            "healer_metrics": self.healer_metrics.report(self.app.world()),
             "observed_events": self.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len(),
             "samples": self.report.samples.len(), "memory": super::diagnostics::read_process_memory()})
     }
