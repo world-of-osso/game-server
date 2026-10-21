@@ -13,6 +13,7 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 ## How it works
 
 - [Existing battle engine](../pet-battle-effect-coverage.md).
+- [Explicit PvP project policies](../wiki/systems/petbattle-pvp.md).
 
 ## Implementation inventory
 
@@ -27,10 +28,11 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 ## Known gaps (current cycle)
 
 - [x] Both owners select a living initial front pet (including the current pet); combat waits for both choices without spending a round or applying swap effects. Duplicate choices and pre-selection combat actions are rejected.
-- [ ] Proposal/turn deadlines and PvP XP: no numerical policy established from local Retail UI Lua, GlobalStrings or available BattlePet DB2 exports; remain unset, not guessed. `Blizzard_PetBattleUI/Shared/Blizzard_PetBattleUI.lua:523` obtains duration from `C_PetBattles.GetTurnTimeInfo()`, not a Lua constant. `StaticPopupSpecial.xml:54` uses `CanAcceptQueuedPVPMatch()`, not a proposal duration. UI XP reads (`:264`) do not specify a PvP award formula.
+- [ ] Explicit project policy PET_BATTLE_PVP_TIMERS enforces proposal/initial/turn/replacement deadlines with the documented timeout actions; exact-boundary and stale-request behavioral proof required.
+- [ ] Explicit project policy PET_BATTLE_PVP_XP persists winner-only XP for living participants, using existing wild formula against opponent levels.
 - [ ] Draw delivery has no dedicated production-boundary assertion.
 - [x] Native controls and private both-skin actual three-pet defeat/win proof on UDP5598; no production port or world.db writes.
-- [ ] Exact Retail rating/level tolerance, countdown/penalty and reward policy require source evidence; exact equal level profiles currently match.
+- [ ] Explicit project policy PET_BATTLE_PVP_MATCHMAKING pairs FIFO average-level teams with widening tolerance. Exact Retail rating/timer/reward parity remains uncertified; named policies are not source discoveries.
 
 ## Out of scope
 
