@@ -1,0 +1,84 @@
+//! Per-GUID equipment modifiers, independent of the legacy inventory and wire ABI.
+use serde::{Deserialize, Serialize};
+use shared::item_scaling::{ItemScaling, ItemScalingTables, ItemStats};
+
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, bitcode::Encode, bitcode::Decode,
+)]
+#[serde(default, deny_unknown_fields)]
+pub struct ItemInstanceModifiers {
+    pub bonus_list: Vec<u32>,
+    pub item_level_override: Option<u16>,
+    pub enchant: u32,
+    pub gems: Vec<u32>,
+    pub crafted_stats: Vec<i8>,
+}
+
+pub fn item_instance_stats(
+    item: &ItemScaling,
+    inventory_type: u8,
+    instance: &ItemInstanceModifiers,
+    tables: &ItemScalingTables,
+) -> Result<ItemStats, String> {
+    let _ = instance;
+    Ok(shared::item_scaling::item_stats(
+        item,
+        inventory_type,
+        tables,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shared::item_scaling::ItemStatAllocation;
+
+    fn weapon() -> ItemScaling {
+        let mut item = ItemScaling {
+            class_id: 2,
+            quality: 4,
+            item_level: 100,
+            squish_era: 2,
+            delay_ms: 2000,
+            ..Default::default()
+        };
+        item.stats[0] = ItemStatAllocation {
+            stat: 4,
+            allocation: 10000,
+            socket_multiplier: 0.0,
+        };
+        item
+    }
+
+    #[test]
+    fn item_instance_explicit_level_changes_budget_and_weapon_damage_not_catalog() {
+        let item = weapon();
+        let mut tables = ItemScalingTables::default();
+        tables.rand_prop_points.insert(100, [[100.0; 5]; 3]);
+        tables.rand_prop_points.insert(200, [[400.0; 5]; 3]);
+        tables.damage[0].insert(100, [10.0; 7]);
+        tables.damage[0].insert(200, [40.0; 7]);
+        let instance = ItemInstanceModifiers {
+            item_level_override: Some(200),
+            ..Default::default()
+        };
+        let base = shared::item_scaling::item_stats(&item, 13, &tables);
+        let scaled = item_instance_stats(&item, 13, &instance, &tables).unwrap();
+        assert_eq!(scaled.item_level, 200);
+        assert_eq!(scaled.block.primary.strength, 400.0);
+        assert_eq!(scaled.weapon.unwrap().min, base.weapon.unwrap().min * 4.0);
+        assert_eq!(item.item_level, 100);
+        assert_eq!(base.block.primary.strength, 100.0);
+    }
+
+    #[test]
+    fn item_instance_invalid_zero_level_is_not_silent_base_gear() {
+        let instance = ItemInstanceModifiers {
+            item_level_override: Some(0),
+            ..Default::default()
+        };
+        assert!(
+            item_instance_stats(&weapon(), 13, &instance, &ItemScalingTables::default()).is_err()
+        );
+    }
+}
