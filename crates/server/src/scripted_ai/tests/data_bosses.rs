@@ -79,6 +79,8 @@ mod herald_reset;
 mod kargath;
 #[path = "kelidan.rs"]
 mod kelidan;
+#[path = "kokia.rs"]
+mod kokia;
 #[path = "landslide.rs"]
 mod landslide;
 #[path = "maraudon.rs"]
