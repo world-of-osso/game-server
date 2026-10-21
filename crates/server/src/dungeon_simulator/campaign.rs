@@ -1490,14 +1490,25 @@ impl Run {
                 self.party.tank
             ));
         println!(
-            "PROGRESS seed={} ticks={} sim_s={:.2} ratio={} steady_ratio={} entities={} events={}",
+            "PROGRESS seed={} ticks={} sim_s={:.2} ratio={} steady_ratio={} entities={} events={} pack={:?} owner_intent={:?} owner_state={:?} tank_state={:?}",
             self.report.seed,
             ticks,
             self.now(),
             performance["sim_per_wall"],
             performance["steady_sim_per_wall"],
             performance["live_entities"],
-            performance["observed_events"]
+            performance["observed_events"],
+            self.current_pack,
+            self.app
+                .world()
+                .get::<MoveIntent>(self.party.owner)
+                .map(|intent| intent.0),
+            self.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(self.party.owner),
+            self.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(self.party.tank),
         );
         let directory = super::runtime::output_directory();
         std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
