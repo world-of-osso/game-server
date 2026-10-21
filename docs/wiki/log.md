@@ -3445,3 +3445,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: property140 real785/787 stack-duration refresh; explicit786 pad-follow gap avoids silently admitting an incomplete parent.
 
 - 2026-10-20: property197 actual last-hit Power percentages, data-over-prose conflict note, real997/2432 RED/GREEN and1908/1046 census.
+
+- 2026-10-21: Holy257/Henry215011 selected70448 inventory and source corrections; native Surge/Apotheosis2RED9f32cff77; candidate00848e6cd awaiting targeted proof. See [[holy-priest-follower-ai]].
