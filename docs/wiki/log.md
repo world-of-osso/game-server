@@ -1,3 +1,7 @@
+## 2026-10-20 — Earthen Rage authored variance oracle
+
+[Native bounds](systems/auras.md#earthen-rage-baseline--2026-10-19): gate-e7824 observed43/44/43;100SP×0.42471 with±2.5% native variance rounds41–44, not41–43. Only the oracle derives correct rounded endpoints; production/RNG/timers unchanged. Gate failure is RED evidence, targeted/repeated GREEN pending.
+
 ## 2026-10-20 — Encounter fixture determinism
 
 [Root cause](systems/boss-scripts.md#encounter-fixture-determinism--2026-10-20): clocks already manual50ms; Maker fixture auto-engages before its late per-test seed. Two-app schedule regression RED precedes shared BossAi-reset fixture seeding. Source5–15s describes cast requests, not500ms-later impacts; Gargolmar aura presence is now checked on actual application instead of arbitrary70s. Under-load repetitions and scripted_ai integration pending.
