@@ -24,6 +24,82 @@ fn maker_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
+#[test]
+#[ignore = "RED: Maker domination30923 is not scheduled"]
+fn charm_control_native_maker_30923_charms_a_player_only_with_multiple_player_threats() {
+    for difficulty in [1, 2] {
+        let (mut h, boss, map) = pull_maker(difficulty);
+        let at = *h.app.world().get::<Position>(h.player()).unwrap();
+        let (x, y, z) = crate::terrain_height::bevy_to_wow(at.x + 1.0, at.y, at.z);
+        let (second, connection) = spawn_player(&mut h.app, map, [x, y, z, 0.0], 3);
+        h.players.push((second, connection, Inbox::default()));
+        crate::creature_aggro::add_threat(h.app.world_mut(), boss, second, 1.0);
+        let mut charmed = None;
+        for tick in 1..=800 {
+            h.advance(0.05);
+            for player in [h.player(), second] {
+                if h.has_aura(player, DOMINATION) {
+                    charmed = Some((player, tick as f32 * 0.05));
+                    break;
+                }
+            }
+            if charmed.is_some() {
+                break;
+            }
+        }
+        let (player, at) =
+            charmed.expect("source Maker must cast native30923 at a player in20-30s");
+        assert!(
+            (20.0..=31.0).contains(&at),
+            "native first domination window {at}"
+        );
+        let charm = h
+            .app
+            .world()
+            .get::<shared::components::UnitCharm>(player)
+            .unwrap();
+        assert_eq!(charm.charmer, boss.to_bits());
+        assert!(
+            !charm.possessed,
+            "Maker uses aura6 AI control, not a player mover"
+        );
+        assert_eq!(
+            h.app.world().get::<UnitFactionTemplate>(player),
+            h.app.world().get::<UnitFactionTemplate>(boss)
+        );
+        assert!(
+            h.app
+                .world()
+                .get::<shared::components::MovementControl>(player)
+                .unwrap()
+                .controlled
+        );
+        crate::auras::remove_auras(
+            h.app.world_mut(),
+            player,
+            crate::auras::RemoveReason::Cancelled,
+            |aura| aura.spell_id == DOMINATION,
+        );
+        assert_eq!(
+            h.app.world().get::<UnitFactionTemplate>(player).unwrap().0,
+            1
+        );
+        assert!(
+            !h.app
+                .world()
+                .get::<shared::components::MovementControl>(player)
+                .unwrap()
+                .controlled
+        );
+    }
+    let (mut solo, boss, _) = pull_maker(1);
+    solo.advance(35.0);
+    assert!(
+        spell_gos(&solo, boss, DOMINATION).is_empty(),
+        "TC refuses domination with one player threat"
+    );
+}
+
 /// Advance `secs`, reporting whether `target` was ever in a knockback flight.
 fn observe_knockback(h: &mut Harness, target: Entity, secs: f32) -> bool {
     let mut knocked = false;
