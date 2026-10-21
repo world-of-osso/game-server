@@ -14,6 +14,14 @@ The first focused attemptdd7847cda passed pre-fix because it killed the leader b
 
 The wipe and two tank-absence blocks require separate diagnosis. Immediately before tank deaths in seeds2/4/5, Crenna is full mana within1.2–2.7yd of Garrick, whose HP is338/72/1368 of40391. These three failures do not establish far-away healer positioning. Seed2's last600 native events before tank Death include9Regrowth successes,2Swiftmend,2Rejuvenation and2Lifebloom;15native411144 energizes restore375mana each. Full mana does not establish inactivity: healing continues until death against incoming native melee from three actors. No healer-policy or balance change follows from these samples alone.
 
+## Autonomous leader native sight hold —2026-10-21
+
+Extending candidatefa7ce6714 to disjoint Stockade seeds11–50 yields38clears,1stall(seed28),1tank-absence block(seed33),118boss Deaths,1377.821s batch wall. Together with seeds1–10 this is **48/50clears,148boss Deaths**, not zero-failure acceptance. Seed28's Austin dies to Slag Fury20375735 around2145sim_s while companions remain roughly55yd behind; the run stalls2343sim_s. Exact `run(28)` reproduces that same boundary at586220889 (43.59s). Native checkpoint motion traces distinguish route MoveIntent from later AI pursuit; no synthetic positions or timers are used.
+
+`positioning::hold_unsafe_approach` returned immediately for every unit lacking a literal `Follower` component. The autonomous owner carries `LeaderProfile`, so it bypassed the non-tank native-sight hold. A focused actual Slag Fury engagement from native source positions gives RED8.50s: the owner moves56.6821→73.39671 alongx in2sim_s despite idle watchers on the approach. Fix865989982 reuses the existing actual follower-role/active-specialization tank predicate; it adds no role type or alternate movement path. Focused GREEN7.31s, three retained native prevention/passive/accidental-combat controls GREEN21.92s, then exact seed28 clears all three native bosses at2421.4sim_s (52.78s test). Full reliability and seed33 requalification remain pending; no overall completion claim follows.
+
+Evidence: `stockade-candidate-fa7ce6714-seeds11-50/`, `isolated-leader28-{red,motion,role-green}.log`, and `leader-sight-{red,green,native-controls}.log` under the existing proof-ledger directory. [Contract](../../specs/dungeon-simulator.md#authored-route).
+
 ## Required-boss phase hold —2026-10-21
 
 A source can be alive but currently unattackable without counting as a completed boss. The route still selects other pullable packs first. If no such pack remains and a required boss actor is alive, the controller holds rather than returning an incomplete-boss error; when attackability returns, normal route selection resumes. An absent boss with no native Death receipt remains an error. No boss credit is fabricated.

@@ -382,7 +382,6 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
 }
 
 #[test]
-#[ignore = "explicit native simulator-leader unsafe approach across idle Stockade sources"]
 fn simulator_leader_does_not_pursue_through_unpulled_native_sight() {
     let _rng_scope = crate::random::seed_scope(28);
     let mut run = spawn_run(28, &mut None).unwrap();
