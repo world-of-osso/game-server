@@ -101,6 +101,7 @@ pub struct InventoryRecord {
     pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
     pub crafting_origins: HashMap<u64, CraftingOrigin>,
+    pub item_modifiers: HashMap<u64, server::item_instance::ItemInstanceModifiers>,
     pub item_durability: HashMap<u64, (u32, u32)>,
     pub definition_sources: HashMap<u64, ItemDefinitionSource>,
     /// Runtime-only collection receipt; not part of the stored inventory ABI.
@@ -155,6 +156,24 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
             Some((guid, data))
         })
         .collect();
+    let modifier_table = match txn.open_table(server::item_instance::store::ITEM_MODIFIERS) {
+        Ok(table) => Some(table),
+        Err(redb::TableError::TableDoesNotExist(_)) => None,
+        Err(error) => panic!("open GUID item modifiers: {error}"),
+    };
+    let item_modifiers = guids
+        .iter()
+        .filter_map(|&guid| {
+            let row = modifier_table
+                .as_ref()?
+                .get(guid)
+                .expect("read GUID item modifiers")?;
+            Some((
+                guid,
+                bitcode::decode(row.value()).expect("decode GUID item modifiers"),
+            ))
+        })
+        .collect();
     let origin_table = txn
         .open_table(ITEM_CRAFTING_ORIGINS)
         .expect("open crafting origins");
@@ -187,6 +206,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         bag_slots,
         instances,
         crafting_origins,
+        item_modifiers,
         item_durability,
         definition_sources,
         appearance_account: super::find_account_id_for_character(db, character_id),
@@ -373,5 +393,9 @@ pub(crate) fn write_inventory_record(
             .expect("write crafting origin");
     }
     drop(origins);
+    for (&guid, state) in &record.item_modifiers {
+        server::item_instance::store::write_modifiers(txn, guid, state)
+            .expect("write GUID item modifiers");
+    }
     super::charters::prune_destroyed_in(txn, character_id, record);
 }
