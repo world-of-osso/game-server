@@ -2604,6 +2604,10 @@ fn plan_targets(
         if let Some(dest) = &mut dest {
             scripts::relocate_destination(spell.id, effect, dest);
         }
+        // EffectChargeDest has LAUNCH/HIT destination modes, never HIT_TARGET.
+        if effect.effect == effects::EFFECT_CHARGE_DEST {
+            units.clear();
+        }
         plan.push(PlannedEffect {
             index,
             units,

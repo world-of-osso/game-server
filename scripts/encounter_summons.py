@@ -332,9 +332,32 @@ def import_nethekurse_fissures(connection):
     return [17471, 18370]
 
 
+def import_kargath_actors(connection):
+    """Pinned Kargath groups0/1 and native Blade Dance marker authority."""
+    identities = connection.execute('SELECT entry,AIName,ScriptName FROM tdb_creature_template WHERE entry IN(17611,17695,20709) ORDER BY entry').fetchall()
+    if identities != [(17611, '', 'npc_warchiefs_portal'), (17695, 'SmartAI', ''), (20709, '', '')]:
+        raise ValueError('Kargath source actor identities changed')
+    difficulties = connection.execute('SELECT Entry,DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty WHERE Entry IN(17611,17695,20709) ORDER BY Entry,DifficultyID').fetchall()
+    if difficulties != [(17611,0,231),(17695,0,231),(17695,2,1075),(20709,0,231)]:
+        raise ValueError('Kargath source actor difficulties changed')
+    groups = connection.execute('SELECT groupId,entry,summonType,summonTime,count(*) FROM tdb_creature_summon_groups WHERE summonerId=16808 AND summonerType=0 GROUP BY groupId,entry,summonType,summonTime ORDER BY groupId').fetchall()
+    if groups != [(0,17611,8,0,1),(1,17695,7,300000,4)]:
+        raise ValueError('Kargath source summon groups changed')
+    entries = [17611,17695,20709]
+    replace_source_base_templates(connection, entries)
+    # Remove only unauthored legacy difficulty projections; do not manufacture Normal1.
+    connection.execute('''DELETE FROM content_creature_template_difficulty
+        WHERE entry IN(17611,17695,20709) AND NOT EXISTS(
+            SELECT 1 FROM tdb_creature_template_difficulty source
+            WHERE source.Entry=content_creature_template_difficulty.entry
+              AND source.DifficultyID=content_creature_template_difficulty.DifficultyID)''')
+    project_difficulty(connection,17695,2)
+    return entries
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -352,6 +375,8 @@ def main():
                 entries = import_fiendish_hound(conn)
             elif args.encounter == 'nethekurse':
                 entries = import_nethekurse_fissures(conn)
+            elif args.encounter == 'kargath':
+                entries = import_kargath_actors(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
