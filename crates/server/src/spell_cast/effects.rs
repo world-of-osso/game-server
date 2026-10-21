@@ -1667,7 +1667,7 @@ fn power_drain_amount(
 }
 
 /// Validate before target planning/payment on every ordinary and triggered entry.
-pub(super) fn check_power_drain_inputs(
+pub(super) fn check_expected_power_inputs(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
