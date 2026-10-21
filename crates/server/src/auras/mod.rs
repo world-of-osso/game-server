@@ -48,6 +48,7 @@ pub(crate) mod mechanic_immunity;
 pub mod mount;
 mod natures_guardian;
 mod periodic;
+pub(crate) mod power_amount_trigger;
 pub mod procs;
 mod refresh;
 pub(crate) mod reward_mods;
@@ -1050,6 +1051,7 @@ pub(crate) fn apply_aura_with_spell(
         world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
+        power_amount_trigger::on_applied(world, target, &aura);
         linked_summon::on_applied(world, target, &aura);
         crate::spell_cast::area_trigger::on_aura_applied(world, target, &aura);
         fixate::on_applied(world, target, &aura);

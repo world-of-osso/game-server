@@ -107,6 +107,34 @@ pub(crate) fn end_all_combat(world: &mut World, unit: Entity) {
     }
 }
 
+/// TC EffectSanctuary/CombatStop(false,false): end PvE on both sides,
+/// suppress only this player's side of retained PvP references.
+pub(crate) fn sanctuary(world: &mut World, unit: Entity) {
+    let others: Vec<Entity> = world
+        .get::<CombatRefs>(unit)
+        .map(|refs| refs.0.keys().copied().collect())
+        .unwrap_or_default();
+    for other in others {
+        if both_players(world, unit, other) {
+            if let Some(mut refs) = world.get_mut::<CombatRefs>(unit) {
+                refs.0.get_mut(&other).expect("listed reference").suppressed = true;
+            }
+            continue;
+        }
+        if let Some(mut refs) = world.get_mut::<CombatRefs>(unit) {
+            refs.0.remove(&other);
+        }
+        if let Some(mut refs) = world.get_mut::<CombatRefs>(other) {
+            refs.0.remove(&unit);
+        }
+        if let Some(mut threat) = world.get_mut::<ThreatTable>(other) {
+            threat.remove(unit.to_bits());
+        }
+        update_combat_status(world, other);
+    }
+    update_combat_status(world, unit);
+}
+
 /// `CombatManager::Update` (CombatManager.cpp:139-157): timed references that ran out
 /// end, as do references to units that left the world.
 pub(crate) fn expire_combat_refs_system(world: &mut World) {
