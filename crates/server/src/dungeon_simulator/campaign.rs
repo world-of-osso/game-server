@@ -422,8 +422,15 @@ fn native_mana_recovery_is_party_progress_without_damage_or_movement() {
     }
     run.last_progress = run.now();
     let healer = run.party.members[1];
-    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 8936, Some(healer), false)
+    let before = run.app.world().get::<Mana>(healer).unwrap().current;
+    // An already-full normal direct heal is intentionally cancelled by healer AI.
+    // Spend through a learned native instant buff instead, without damage or injury.
+    crate::spell_cast::creature_cast(run.app.world_mut(), healer, 1126, Some(healer), false)
         .unwrap();
+    assert!(
+        run.app.world().get::<Mana>(healer).unwrap().current < before,
+        "native recovery fixture must actually spend mana before measuring progress"
+    );
     for _ in 0..1201 {
         run.app.update();
         assert!(
@@ -483,6 +490,44 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
         matches!(&decision, Ok((true, _))),
         "CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK: {decision:?}"
     );
+}
+
+#[test]
+fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
+    use crate::creature_ai::{CreatureState, FollowOwner};
+    use crate::scripted_ai::ReactState;
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let watcher = run.actors[&20375760];
+    let healer = run.party.members[1];
+    let owner = run.party.owner;
+    let center = *run.app.world().get::<Position>(watcher).unwrap();
+    for actor in run.actors.values() {
+        run.app
+            .world_mut()
+            .entity_mut(*actor)
+            .insert(ReactState::Passive);
+    }
+    run.app.world_mut().entity_mut(healer).insert(Position {
+        x: center.x - 20.0,
+        ..center
+    });
+    run.app.world_mut().entity_mut(owner).insert(Position {
+        x: center.x + 20.0,
+        ..center
+    });
+    for (react, should_follow) in [(ReactState::Aggressive, false), (ReactState::Passive, true)] {
+        run.app
+            .world_mut()
+            .entity_mut(watcher)
+            .insert((react, CreatureState::Idle));
+        crate::followers::simulator::regroup(run.app.world_mut(), healer, owner);
+        assert_eq!(
+            run.app.world().get::<FollowOwner>(healer).is_some(),
+            should_follow,
+            "native20375760 {react:?}: only aggressive idle sight may block regroup"
+        );
+    }
 }
 
 #[test]

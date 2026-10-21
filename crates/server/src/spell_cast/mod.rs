@@ -65,6 +65,8 @@ mod census_generic_next_tests;
 #[cfg(test)]
 mod census_guardian_aura_tests;
 #[cfg(test)]
+mod census_tail_tests;
+#[cfg(test)]
 mod census_three_tests;
 pub(crate) mod charge;
 #[cfg(test)]
@@ -424,6 +426,7 @@ pub enum CastFailure {
     NoCharges,
     Moving,
     NoTarget,
+    NoValidTargets,
     InvalidTarget,
     /// `SPELL_FAILED_CASTER_AURASTATE` (also covers required/excluded aura spells).
     CasterAuraState,
@@ -501,6 +504,7 @@ impl CastFailure {
             Self::NoCharges => (R::NoChargesRemain, None),
             Self::Moving => (R::CantCastWhileMoving, None),
             Self::NoTarget => (R::NoTarget, None),
+            Self::NoValidTargets => (R::NoTarget, Some("No valid targets".into())),
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::CasterAuraState => (
                 R::InvalidTarget,
@@ -945,7 +949,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -999,6 +1003,7 @@ fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info
 fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
+        || scripts::effect_handler(spell.id, effect.index).is_some()
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
         || scripts::on_cast_effect(spell.id, effect.index).is_some()
@@ -1380,6 +1385,7 @@ pub(crate) fn cast_item_spell(
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
 mod toy_facing;
+mod toy_flag;
 pub(crate) mod toy_requirements;
 
 pub(crate) fn cast_toy_spell(
@@ -1652,6 +1658,7 @@ enum StartCheck {
     Native,
     IgnoreCastInProgress,
     TankHealCapability,
+    HealerDecision,
 }
 
 fn validate_start(
@@ -1869,6 +1876,15 @@ fn validate_history(
     Ok(())
 }
 
+/// Native cooldown/charge/school state, without spending or waiting on GCD.
+pub(crate) fn read_healer_recovery(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    validate_history(world, caster, spell, StartCheck::HealerDecision)
+}
+
 fn permits_transient_gcd(
     world: &World,
     caster: Entity,
@@ -1876,6 +1892,9 @@ fn permits_transient_gcd(
     check: StartCheck,
     ready_at: f64,
 ) -> bool {
+    if check == StartCheck::HealerDecision {
+        return true;
+    }
     if check != StartCheck::TankHealCapability {
         return false;
     }
@@ -1917,6 +1936,10 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    // Source51640 owns an implicit corpse-area selection, not the player's selection.
+    if spell.id == toy_flag::TARGETING {
+        return Ok(None);
+    }
     // TC SpellInfo::CheckTarget rejects explicit self before any selector runs.
     if explicit == Some(caster) && targets::excludes_caster(spell) {
         return Err(CastFailure::InvalidTarget);

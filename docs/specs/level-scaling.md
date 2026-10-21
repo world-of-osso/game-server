@@ -5,6 +5,7 @@ The creatures are Retail spawns ([retail-spawn-source](retail-spawn-source.md)),
 ## What it must do
 
 Data
+- [x] Creature difficulty selection follows TC a352b1fa `CreatureTemplate::GetDifficulty`: exact row, then `Difficulty.FallbackDifficultyID` recursively, then base. 70448 Follower205 inherits Normal1 before base0; selected tuning, modifiers and regional level deltas follow the same chain. Explicit205 remains authoritative. This runtime rule must not require synthesized205 rows or replace explicit template tuning with map tuning.
 - [x] Template provenance selects stat authority: `zephras_row_source` records with `table_name='content_creature_template'` and `kind='reconstructed'` identify authored Zephras/Skyborn templates. Those retain their authored fixed levels/stats. Never infer authored origin from missing ContentTuning, level shape or absent TDB rows; Retail CT0 still requires real context. This is source selection, not a legacy-stat fallback.
 - [x] `db2.py extract` decodes ExpectedStat (FDID 1937326), ExpectedStatMod (1969773) and ContentTuningXExpected (2976765) from local CASC into `expected_stat`, `expected_stat_mod` and `content_tuning_x_expected`. The ID comes from the file's ID list (first column) and the parent field from its relationship map (last column).
 - [x] A tuned `content_creature_template` row carries its ContentTuning range as `minlevel`/`maxlevel`, plus TrinityCore's difficulty-0 values:

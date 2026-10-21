@@ -328,6 +328,95 @@ fn spawn_player_near(app: &mut App, spawn: &CreatureSpawn, dx: f32) -> Entity {
 }
 
 #[test]
+fn missing_model_info_native_champion_proximity_aggroes_a_player() {
+    let source = world_data()
+        .spawns
+        .iter()
+        .find(|spawn| spawn.template_entry == 122403)
+        .expect("authored Shadowguard Champion spawn")
+        .clone();
+    let mut app = fight_app(vec![source.clone()]).unwrap();
+    let champion = spawned(&app, 0);
+    let display = app
+        .world()
+        .get::<shared::components::ModelDisplay>(champion)
+        .unwrap()
+        .display_id;
+    assert_eq!(display, 124440);
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let source_rows: u32 = db
+        .query_row(
+            "SELECT count(*) FROM encounter_creature_model_info WHERE DisplayID=?",
+            [display],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        source_rows, 0,
+        "fixture must exercise actual missing model-info"
+    );
+    let player = spawn_player_near(&mut app, &source, 1.0);
+    let actor_position = *app.world().get::<Position>(champion).unwrap();
+    app.world_mut().entity_mut(player).insert(Position {
+        x: actor_position.x + 1.0,
+        ..actor_position
+    });
+    run(&mut app, NOTIFY_TICKS * 3);
+    assert_eq!(
+        app.world().get::<CombatTarget>(champion).unwrap().0,
+        Some(player),
+        "ordinary native proximity acquisition must not disappear with missing geometry"
+    );
+    assert_melee_attempts(&app, champion, player);
+}
+
+#[test]
+fn missing_model_info_scales_default_reach_but_preserves_authored_reach() {
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut world = World::new();
+    world.insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
+    let missing = world
+        .spawn((
+            shared::components::ModelDisplay { display_id: 124440 },
+            shared::components::UnitScale(2.0),
+        ))
+        .id();
+    assert_eq!(
+        crate::scripted_ai::model_reach::combat_reach(&world, missing),
+        Some(3.0)
+    );
+    let authored: f32 = db
+        .query_row(
+            "SELECT CombatReach FROM encounter_creature_model_info WHERE DisplayID=113757",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_ne!(
+        authored, 1.5,
+        "native Tauren model must distinguish authored geometry from the default"
+    );
+    let sourced = world
+        .spawn((
+            shared::components::ModelDisplay { display_id: 113757 },
+            shared::components::UnitScale(2.0),
+        ))
+        .id();
+    assert_eq!(
+        crate::scripted_ai::model_reach::combat_reach(&world, sourced),
+        Some(authored * 2.0)
+    );
+}
+
+#[test]
 #[ignore]
 fn a_player_hitting_an_invader_that_fights_infantry_taps_it_and_keeps_swinging() {
     let infantry = spawn_of(INFANTRY);

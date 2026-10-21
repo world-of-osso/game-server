@@ -191,6 +191,10 @@ pub const MOD_HEALTH_REGEN_PERCENT: u32 = 88;
 pub const PERIODIC_DAMAGE_PERCENT: u32 = 89;
 pub const MOD_UNATTACKABLE: u32 = 93;
 pub const FEATHER_FALL: u32 = 105;
+/// TC HandleAuraCanTurnWhileFalling reconciles native MovementInfo bit39.
+pub const CAN_TURN_WHILE_FALLING: u32 = 409;
+/// TC a352b1fa MovementInfo.h71; fits the existing replicated PlayerMotion(u64).
+pub(crate) const CAN_TURN_WHILE_FALLING_MOTION: u64 = 0x0000_0080_0000_0000;
 pub const ADD_FLAT_MODIFIER: u32 = 107;
 pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
@@ -333,6 +337,8 @@ pub const MOD_MOVEMENT_FORCE_MAGNITUDE: u32 = 485;
 pub const TRACK_CREATURES: u32 = 44;
 pub const STORE_TELEPORT_RETURN_POINT: u32 = 71;
 pub const MOD_UI_HEALING_RANGE: u32 = 188;
+/// TC Player::GetPowerRegen selects the interrupted rate while present.
+pub const INTERRUPT_REGEN: u32 = 94;
 pub const MOD_POWER_DISPLAY: u32 = 179;
 pub const SET_ACTION_BUTTON_SPELL_COUNT: u32 = 408;
 
@@ -393,6 +399,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | SAFE_FALL
         | MOD_DAMAGE_PERCENT_TAKEN
         | MOD_POWER_REGEN_PERCENT
+        | INTERRUPT_REGEN
         | MOD_HEALING_PCT
         | MOD_SPEED_ALWAYS
         | USE_NORMAL_MOVEMENT_SPEED
@@ -477,6 +484,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | STORE_TELEPORT_RETURN_POINT
         | MOD_POWER_DISPLAY
         | FEATHER_FALL
+        | CAN_TURN_WHILE_FALLING
         | FORCE_MOVE_FORWARD
         | MOD_UNATTACKABLE
         | MOD_CONFUSE

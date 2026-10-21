@@ -257,6 +257,10 @@ pub(crate) fn inspect_tank_movement(
     tank_planner::read_movement_admission(world, tank, target, &follower, None)
 }
 
+pub(crate) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
+    ai::regroup(world, unit, owner);
+}
+
 pub(crate) fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
     let spell_id = world.get::<Follower>(tank).unwrap().profile.attack_spell;
     let spell = world
