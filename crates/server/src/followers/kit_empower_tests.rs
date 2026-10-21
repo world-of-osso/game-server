@@ -135,7 +135,7 @@ fn native_empower_eternity_surge_rank_three_hits_three_of_four_enemies() {
 }
 
 #[test]
-#[ignore = "RED: leading Dummy0 prevents Eternity's Span recipient count"]
+#[ignore = "control: native Eternity's Span doubles rank recipients"]
 fn native_empower_eternity_span_rank_three_hits_six_of_seven_enemies() {
     assert_eq!(
         surge_targets(32, 7).len(),

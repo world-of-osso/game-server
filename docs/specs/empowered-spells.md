@@ -7,7 +7,7 @@ Player and follower empowers use native build70448 stage metadata and release re
 - [ ] Resolve native override spells before ordinary admission, derive stage thresholds from their DB2 durations and applicable native modifiers, and retain the TC1000ms maximum-stage hold.
 - [ ] Release at an explicitly selected completed stage, on a matching explicit player release after the first-stage minimum, or automatically after maximum hold; pass the completed stage into the release effects/scripts.
 - [ ] Defer the GCD until empower finish and use native359115's500ms clock. Cancellation must remain distinct from release and retain the sourced cancellation/resource lifecycle.
-- [ ] Fire Breath357208/382266 releases actual357209, converting three periodic ticks per extra rank into direct damage and preserving the remaining native DoT plus Blast Furnace extension. Eternity Surge359073/382411 releases359077 against the completed rank's recipient count, doubled by native Eternity's Span.
+- [ ] Fire Breath357208/382266 releases actual357209, converting three periodic ticks per extra rank into direct damage and preserving the remaining native DoT plus Blast Furnace extension. Eternity Surge359073/382411 releases359077 against the completed rank's recipient count, doubled by native Eternity's Span. Fire Breath's Magic dispel requires native Scouring Flame378438 and retains current effect5's native count2, not the obsolete TC silence/index/rank-count fields.
 - [ ] Accept player release only for the authenticated owner's matching active empower. `ReleaseEmpowerSpell {spell_id}` and `StopSpellCast` remain separate messages; the client sends release when the cast binding goes up.
 
 ## How it works
@@ -25,12 +25,13 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## Tests asserting this spec
 
-- `crates/server/src/followers/kit_empower_tests.rs` — native hold/GCD admission, Fire release/DoT, Surge rank recipients and Font variants; initially committed ignored REDs.
+- `crates/server/src/followers/kit_empower_tests.rs` — native hold/GCD admission, Fire release/DoT and Scouring gate, Surge/Span recipients and Font variants; REDs and separately labelled native controls.
 
 ## Known gaps (current cycle)
 
 - [ ] Prove the four initial native REDs GREEN on current master and the fresh canonical backup.
 - [ ] Add explicit player release, cancel/refund and selected-stage behavior tests plus matching protocol/client consumers.
+- [ ] Qualify and gate the current native Scouring dispel without changing generic utility handling.
 - [ ] Select follower empower stages from the applicable SimC APL branch, without inventing ranks or talent identities.
 
 ## Out of scope
