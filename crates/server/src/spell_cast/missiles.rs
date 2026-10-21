@@ -38,6 +38,12 @@ const SPELL_ATTR4_BOUNCY_CHAIN_MISSILES: u32 = 0x0004_0000;
 #[derive(Resource, Debug, Default)]
 pub(crate) struct PendingSpellHits(Vec<PendingHit>);
 
+impl PendingSpellHits {
+    pub(super) fn has_caster(&self, caster: Entity) -> bool {
+        self.0.iter().any(|hit| hit.caster == caster)
+    }
+}
+
 #[derive(Debug)]
 struct PendingHit {
     due: f64,

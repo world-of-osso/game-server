@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Wild Imp Energy exhaustion — 2026-10-21
+
+Atf1ad52286 native Imp100Energy/104318cost20 already produces exactly five ordinary SpellGo receipts without regeneration; the failure is that the exhausted actor remains alive at25s, before independent40s expiry (1genuineRED13.62s/zero warnings). Authored creature regeneration gating already supplies the correct no-regen state, so it is unchanged. Exact104317/55659 now retires through ordinary summon cleanup when the next bolt is unaffordable after the current cast and pending hits finish (SimC76f8118 pets.cpp833–849). Pending-hit drain preserves the last bolt because this engine drops in-flight hits whose caster has despawned; remove that drain if missiles acquire source-independent lifetime. GREEN pending. Core/PRD and Tyrant consequence hooks remain open.
+
+
 ### Fixed-cost Hand of Guldan Imp bridge — 2026-10-21
 
 At4001a8594 the ordinary105174 cast has native default30raw Soul Shards and its86040 meteor lands, but zero104317 actors instead of three (genuine1RED10.84s/zero warnings). The fixed native book exposes root effect0 count3, matching30raw/DisplayModifier10. Meteor execute now schedules three104317 FULL-trigger callbacks on the existing queued-cast lifetime path; cumulative1–2ms delays follow current SimC76f8118 actions2730–2756, not obsolete180ms spacing. Actual guardian targeting/binding/SP remain ordinary production behavior. Atc7bf9ed75 native3GREEN26.52s/zero warnings proves ordinary HoG meteor plus three real attacking Imps and retained direct binding/SP; existing three-shard meteor/area1GREEN4.91s. Frame quantization is not sub-frame timing proof, and variable-spend/free-count/Core/exhaustion/Tyrant behavior remains unproved.

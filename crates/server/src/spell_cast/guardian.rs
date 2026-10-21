@@ -175,8 +175,36 @@ pub(super) fn update(world: &mut World) {
         .iter(world)
         .collect();
     for actor in actors {
-        cast_on_owner_target(world, actor);
+        if wild_imp_exhausted(world, actor) {
+            super::summon::despawn_summon(world, actor);
+        } else {
+            cast_on_owner_target(world, actor);
+        }
     }
+}
+
+fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
+    let summon = world.get::<SummonedCreature>(actor).unwrap();
+    let entry = world.get::<Npc>(actor).unwrap().template_id;
+    if (summon.spell_id, entry) != (104317, 55659)
+        || world.get::<CastState>(actor).is_some()
+        || world
+            .resource::<super::missiles::PendingSpellHits>()
+            .has_caster(actor)
+    {
+        return false;
+    }
+    let bolt = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap();
+    let costs = super::applicable_costs(world, actor, bolt)
+        .expect("native Wild Imp requires its Energy pool and Fel Firebolt cost");
+    // SimC76f8118 pets.cpp833–849: dismiss when no next bolt is affordable.
+    // Existing missiles require a live source; drain them before retirement.
+    costs.iter().any(|(pool, cost, current)| {
+        *pool == super::CostPool::Power(PowerType::Energy) && current < cost
+    })
 }
 
 fn cast_on_owner_target(world: &mut World, actor: Entity) {
