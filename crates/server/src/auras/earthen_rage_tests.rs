@@ -48,6 +48,37 @@ fn observed(h: &Harness, spell: u32, source: Entity) -> Vec<CombatLogEvent> {
         .collect()
 }
 
+fn native_child_damage_range(h: &Harness) -> std::ops::RangeInclusive<i32> {
+    let world = h.app.world();
+    let spell = world.resource::<SpellStore>().get(DAMAGE).unwrap();
+    let effect = &spell.effects[0];
+    assert_eq!(effect.base_points, 0.0);
+    assert_eq!(effect.bonus_coefficient_from_ap, 0.0);
+    let spell_power = world
+        .get::<crate::stats::CharacterStats>(h.caster)
+        .unwrap()
+        .spell_power;
+    let amount = spell_power * effect.bonus_coefficient;
+    let half_variance = effect.variance.abs() / 2.0;
+    let min = (amount * (1.0 - half_variance)).round() as i32;
+    let max = (amount * (1.0 + half_variance)).round() as i32;
+    min..=max
+}
+
+#[test]
+fn native_earthen_rage_child_damage_uses_rounded_authored_variance_endpoints() {
+    let h = fixture();
+    // 100SP ×0.42471 ×(1±0.05/2) =41.409225..43.532775 before rounding.
+    let bounds = native_child_damage_range(&h);
+    assert_eq!(bounds, 41..=44);
+    assert!(
+        bounds.contains(&44),
+        "authored high rolls round up, not truncate"
+    );
+    assert!(!bounds.contains(&40));
+    assert!(!bounds.contains(&45));
+}
+
 fn cast_lightning(h: &mut Harness, target: Entity) {
     let before = observed(h, LIGHTNING_BOLT, h.caster).len();
     h.cast_and_deliver(LIGHTNING_BOLT, Some(target));
@@ -222,11 +253,12 @@ fn native_earthen_rage_ordinary_damage_procs_self_aura_and_three_scheduled_child
     }
     let children = observed(&h, DAMAGE, source);
     assert_eq!(children.len(), 3, "{children:?}");
+    let damage_range = native_child_damage_range(&h);
     assert!(
         children
             .iter()
-            .all(|e| e.target == Some(target.to_bits()) && e.amount >= 41 && e.amount <= 43),
-        "{children:?}"
+            .all(|e| e.target == Some(target.to_bits()) && damage_range.contains(&e.amount)),
+        "{children:?}; native rounded damage={damage_range:?}"
     );
     assert!(h.app.world().resource::<Time>().elapsed_secs_f64() > expiry);
     assert!(!super::has_aura(h.app.world(), source, PERIODIC));

@@ -123,6 +123,14 @@ impl EventMap {
         self.rng = Some(rand::rngs::StdRng::seed_from_u64(seed));
     }
 
+    /// Apply the shared fixture default without replacing an explicit scenario seed.
+    #[cfg(test)]
+    pub(crate) fn seed_rng_if_unseeded(&mut self, seed: u64) {
+        if self.rng.is_none() {
+            self.seed_rng(seed);
+        }
+    }
+
     /// Exact EventMap clock for opt-in fixture evidence; never advances it.
     #[cfg(test)]
     pub(crate) fn elapsed_ms(&self) -> u64 {

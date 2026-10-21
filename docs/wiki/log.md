@@ -1,3 +1,14 @@
+## 2026-10-20 — Earthen Rage authored variance oracle
+
+[Native bounds](systems/auras.md#earthen-rage-baseline--2026-10-19): gate-e7824 observed43/44/43;100SP×0.42471 with±2.5% native variance rounds41–44, not41–43. Only the oracle derives correct rounded endpoints; production/RNG/timers unchanged. Gate failure is RED evidence; native family12/12GREEN20.90s and10/10 same-core CPU-load repetitions at ac61a1f16. No runtime changes.
+
+## 2026-10-20 — Encounter fixture determinism
+
+[Root cause](systems/boss-scripts.md#encounter-fixture-determinism--2026-10-20): clocks already manual50ms; Maker fixture auto-engages before its late per-test seed. Two-app schedule regression RED precedes shared BossAi-reset fixture seeding. Source5–15s describes cast requests, not500ms-later impacts; Gargolmar aura presence is now checked on actual application instead of arbitrary70s. Production cast-order regression then exposed newly admitted casts already aged50ms: ScriptedAiPlugin now runs after advance_casts, matching TC Creature::Update order; exact500ms regression passes. Full scripted_ai coverage408standard+2private-AzurePASS/0FAIL/12existingignored. Final ac61a1f16 stress: Maker10/10, Gargolmar10/10, Earthen10/10 under four same-core CPU hogs in921.516s, no failures; load processes stopped.
+## 2026-10-20 — Public creature startup latency
+
+[Investigation](investigations/public-spawn-startup-latency.md): measured optimized release process/bind/applied-spawn phases on a full private world copy, profiled filesystem validation, reproduced both real I/O boundaries before changing them, and retained floor/metadata/level tuning. Bounded scoped startup workers and terrain-only metadata queries preserve population and single-threaded ECS scheduling. Exact before/after artifacts, noisy reverse-order captures, focused gates and loaded20tps exclusions live in the investigation.
+
 ## 2026-10-20 — Census resource/state/duration/sanctuary
 
 [Source matrix](systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20): generic245/262/396/176, no new scripts/protocol. Ignored REDs pushed before consumers;262 corrected from uncomputed health state to actual Swiftmend15. TC NULL220/443 and absent phasing167/viewpoint72 remain explicit gaps. Native12GREEN31.37s before enabling; merge3e1add814→8922af04b retains137/307;67targetedPASS35.88s/check/fmt with zero warnings. Native670 unique receipts preserve source passives and91 selected affected memberships:34 owned family warnings clear across18 specs (262×11/396×6/245×4/176×13),57 named-gap memberships retain warnings. Interrupted96 complete receipts retained plus574 remaining PASS366.39s; exact manifest coverage verified, no whole-spec parity claim.
@@ -3403,3 +3414,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: Nethekurse native combat and authentic StringId peon callback proof ingested into [boss scripts](systems/boss-scripts.md#shattered-halls-nethekurse-2026-10-20); source gaps explicit.
 
 - 2026-10-20: Nethekurse source-backed remainder/native wild+patrol+Reset proof added; COMPOSITE17GREEN, canonical fissure publication and absent native/create-properties gaps retained.
+
+- 2026-10-20: Kargath pinned source/native149 and eleven-case proof ingested;30738 delayed-selector incompatibility and source actor publication gaps explicit.

@@ -63,6 +63,8 @@ impl BossAi {
             return;
         }
         self.events.reset();
+        #[cfg(test)]
+        self.seed_fixture_events(ctx);
         self.summons.despawn_all(ctx.world);
         let Some(map) = ctx.map() else {
             return;
@@ -81,9 +83,19 @@ impl BossAi {
         }
     }
 
+    #[cfg(test)]
+    fn seed_fixture_events(&mut self, ctx: &Ctx) {
+        if let Some(seed) = ctx.world.get_resource::<super::tests::EncounterSeed>() {
+            self.events.seed_rng_if_unseeded(seed.0);
+        }
+    }
+
     /// `BossAI::_JustEngagedWith` (`CheckRequiredBosses` is `true`: the Stockade
     /// requires no earlier boss).
     pub fn just_engaged_with(&mut self, ctx: &mut Ctx) {
+        // Some scripts have no Reset override; seed before their first schedules too.
+        #[cfg(test)]
+        self.seed_fixture_events(ctx);
         let Some(map) = ctx.map() else {
             return;
         };
