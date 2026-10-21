@@ -6,8 +6,13 @@ const GRASP: u32 = 108199;
 const TALENT: u32 = 454822;
 const DEBUFF: u32 = 454824;
 
-fn fixture() -> Harness {
-    let mut h = harness(Vec::new(), &[GRASP, TALENT, DEBUFF], 6).unwrap();
+fn fixture(learn_talent: bool) -> Harness {
+    let ids = if learn_talent {
+        vec![GRASP, TALENT, DEBUFF]
+    } else {
+        vec![GRASP, DEBUFF]
+    };
+    let mut h = harness(Vec::new(), &ids, 6).unwrap();
     h.app.insert_resource(world_db().unwrap().store.clone());
     h.app
         .insert_resource(crate::test_data::world_data().clone());
@@ -24,9 +29,7 @@ fn cast_grasp(h: &mut Harness) {
 #[test]
 #[ignore = "RED: census-e77 DK Subduing Grasp effect1 not bound"]
 fn census_e77_dk_own_native_talent_applies_owned_subduing_grasp() {
-    let mut h = fixture();
-    super::creature_cast(h.app.world_mut(), h.caster, TALENT, Some(h.caster), true).unwrap();
-    h.advance(3);
+    let mut h = fixture(true);
     assert!(crate::auras::has_aura(h.app.world(), h.caster, TALENT));
     cast_grasp(&mut h);
     let aura = h
@@ -46,7 +49,7 @@ fn census_e77_dk_own_native_talent_applies_owned_subduing_grasp() {
 #[test]
 #[ignore = "RED batch control: no talent must not apply debuff"]
 fn census_e77_dk_no_talent_does_not_apply_subduing_grasp() {
-    let mut h = fixture();
+    let mut h = fixture(false);
     cast_grasp(&mut h);
     assert!(!crate::auras::has_aura(h.app.world(), h.npc, DEBUFF));
     assert!(
@@ -61,7 +64,7 @@ fn census_e77_dk_no_talent_does_not_apply_subduing_grasp() {
 #[test]
 #[ignore = "RED batch control: foreign talent must not apply debuff"]
 fn census_e77_dk_foreign_talent_does_not_apply_subduing_grasp() {
-    let mut h = fixture();
+    let mut h = fixture(false);
     super::creature_cast(h.app.world_mut(), h.npc, TALENT, Some(h.npc), true).unwrap();
     h.advance(3);
     assert!(crate::auras::has_aura(h.app.world(), h.npc, TALENT));
