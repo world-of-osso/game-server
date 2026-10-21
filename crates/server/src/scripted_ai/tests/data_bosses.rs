@@ -83,6 +83,8 @@ mod kelidan;
 mod landslide;
 #[path = "maraudon.rs"]
 mod maraudon;
+#[path = "melidrussa.rs"]
+mod melidrussa;
 #[path = "nethekurse.rs"]
 mod nethekurse;
 #[path = "noxxion.rs"]
