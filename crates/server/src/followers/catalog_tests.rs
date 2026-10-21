@@ -1,6 +1,75 @@
 use super::catalog::load_catalog;
 
 #[test]
+fn follower_population_catalog_lists_every_map_with_authentic_sources() {
+    use std::collections::BTreeSet;
+
+    let source = crate::test_data::world_db_path();
+    let temporary = tempfile::tempdir().unwrap();
+    let copy = temporary.path().join("follower-population.sqlite");
+    std::fs::copy(&source, &copy).unwrap();
+    let db = rusqlite::Connection::open(&copy).unwrap();
+    let expected: BTreeSet<u32> = db
+        .prepare(
+            "SELECT DISTINCT d.map_id FROM follower_lfg_dungeons d
+            JOIN tdb_world_safe_locs l ON l.MapID=d.map_id AND l.Comment LIKE '%Entrance%'
+            JOIN tdb_creature c ON c.map=d.map_id
+            WHERE d.difficulty_id=205 AND d.tanks=1 AND d.healers=1 AND d.damage=3
+              AND (','||replace(c.spawnDifficulties,' ','')||',') LIKE '%,1,%'
+              AND c.terrainSwapMap=-1 AND (c.phaseUseFlags=1 OR
+                  (c.phaseUseFlags=0 AND c.PhaseId IN (0,169) AND c.PhaseGroup=0))",
+        )
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(expected, BTreeSet::from([2451, 2515, 2521, 2526, 2648]));
+    db.execute_batch(
+        "DELETE FROM content_creature WHERE map IN
+            (SELECT map_id FROM follower_lfg_dungeons WHERE difficulty_id=205);
+        DELETE FROM tdb_world_safe_locs WHERE MapID IN
+            (SELECT map_id FROM follower_lfg_dungeons WHERE difficulty_id=205);",
+    )
+    .unwrap();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let source_path = source.canonicalize().unwrap();
+    let db2 = source_path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("db2/12.1.5.70448");
+    let output = std::process::Command::new("python3")
+        .arg(root.join("scripts/follower_population.py"))
+        .arg("--source-db")
+        .arg(&source)
+        .arg("--db")
+        .arg(&copy)
+        .arg("--db2-dir")
+        .arg(db2)
+        .arg("--report")
+        .arg(temporary.path().join("population.json"))
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "producer failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let actual: BTreeSet<_> = load_catalog(&db)
+        .unwrap()
+        .dungeons
+        .values()
+        .map(|dungeon| dungeon.entrance.map_id)
+        .collect();
+    assert_eq!(
+        actual, expected,
+        "every source-backed map must be queueable"
+    );
+}
+
+#[test]
 fn follower_normal_population_requires_exact_normal_spawns_and_an_authored_entrance() {
     let db = rusqlite::Connection::open_in_memory().unwrap();
     db.execute_batch("CREATE TABLE follower_profiles(entry INTEGER,name TEXT,class_id INTEGER,spec_id INTEGER,role INTEGER,attack_spell INTEGER,cooldown_spell INTEGER,heal_spell INTEGER,taunt_spell INTEGER,form_spell INTEGER,melee INTEGER);
