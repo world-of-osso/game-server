@@ -600,7 +600,6 @@ fn replication_forms_send_energy_regen_and_combat_dependent_rage_decay() {
 
 /// TC StatSystem.cpp931: aura94 selects combat regeneration without entering combat.
 #[test]
-#[ignore = "RED census-tail aura94"]
 fn census_tail_94_native_bear_form_retains_idle_rage_until_removed() {
     const BEAR_RAGE: u32 = 17_057;
     let mut h = harness(Vec::new(), &[BEAR_RAGE], DRUID).unwrap();
