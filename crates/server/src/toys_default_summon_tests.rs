@@ -6,7 +6,8 @@ use shared::components::{ModelDisplay, Npc, UnitSummonedBy};
 
 fn assert_default_source_actor(item: u32, spell: u32, entries: &[u32], lifetime_frames: usize) {
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, character) = setup(&dir.path().join("default-summon.redb"));
+    // Source Gnomatic Projector is Gnome-restricted; use a legal real race for this cohort.
+    let (mut h, character) = setup_for_race(&dir.path().join("default-summon.redb"), 7);
     let path = crate::test_data::world_db_path();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
