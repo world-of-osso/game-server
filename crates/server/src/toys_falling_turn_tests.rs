@@ -25,6 +25,16 @@ fn assert_turning_toy_expires(item: u32, spell: u32, duration_frames: usize) {
     let (mut h, character) = setup(&dir.path().join("falling-turn.redb"));
     load_source_spells(&mut h);
     learn_effect_toy(&mut h, character, item);
+    // Preserve native RequiredAreas groups4279/7354 with real resident ADT area headers.
+    match item {
+        131811 => {
+            place_toy_caster_on_source_map_area(&mut h, 1220, 955950, [4584.0, 6450.666], 7558)
+        }
+        182729 => {
+            place_toy_caster_on_source_map_area(&mut h, 2222, 2862831, [5450.0, -1816.0], 11462)
+        }
+        _ => panic!("no source-area fixture for item{item}"),
+    }
     assert_eq!(activate(&mut h, item)[0].error, None);
     assert!(h.inbox.go.iter().any(|go| go.spell_id == spell));
     let owner = h.caster;
