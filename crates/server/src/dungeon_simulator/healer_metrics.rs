@@ -93,19 +93,17 @@ pub(super) fn start(
         last_frame: world.resource::<Time<Virtual>>().elapsed_secs_f64(),
         combat_seconds: 0.0,
         alive_tank_combat_seconds: 0.0,
-        tank_hot_seconds: learned_periodic_heals(world, healer),
+        tank_hot_seconds: available_periodic_heals(world, healer),
         any_hot_seconds: 0.0,
         party_deaths: 0,
         pull_ends: Vec::new(),
     }
 }
 
-fn learned_periodic_heals(world: &World, healer: Entity) -> BTreeMap<u32, f64> {
+fn available_periodic_heals(world: &World, healer: Entity) -> BTreeMap<u32, f64> {
     let store = world.resource::<crate::spell_info::SpellStore>();
-    world
-        .get::<crate::class_progression::KnownSpells>(healer)
-        .expect("initialized healer has native spellbook")
-        .iter()
+    crate::followers::simulator::available_kit_spells(world, healer)
+        .into_iter()
         .filter(|spell| {
             store.get(*spell).is_some_and(|spell| {
                 spell.effects.iter().any(|effect| {

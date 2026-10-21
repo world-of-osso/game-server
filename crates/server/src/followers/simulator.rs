@@ -12,6 +12,24 @@ pub(crate) struct Party {
     pub members: Vec<Entity>,
 }
 
+/// NPC followers execute level-gated kit rows; they do not carry Player KnownSpells.
+pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
+    let follower = world
+        .get::<Follower>(unit)
+        .expect("initialized native follower");
+    let level = world
+        .get::<Level>(unit)
+        .expect("initialized follower level")
+        .0;
+    world
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| entry.available(follower.profile.spec_id, level))
+        .map(|entry| entry.spell_id)
+        .collect()
+}
+
 const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
 
 struct PartyConfiguration {
