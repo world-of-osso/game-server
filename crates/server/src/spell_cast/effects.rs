@@ -1269,7 +1269,7 @@ fn deal_damage_and_report(
         world
             .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(target)
             .is_some(),
-        before,
+        health,
         incoming_loss,
     );
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
