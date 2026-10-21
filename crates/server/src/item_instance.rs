@@ -85,6 +85,37 @@ mod tests {
     }
 
     #[test]
+    fn item_instance_profile_crafted_stats_replace_native_placeholders_in_order() {
+        let mut item = weapon();
+        item.stats[0] = ItemStatAllocation {
+            stat: 24,
+            allocation: 3500,
+            socket_multiplier: 0.0,
+        };
+        item.stats[1] = ItemStatAllocation {
+            stat: 25,
+            allocation: 3500,
+            socket_multiplier: 0.0,
+        };
+        let mut tables = ItemScalingTables::default();
+        tables.rand_prop_points.insert(100, [[100.0; 5]; 3]);
+        let instance = ItemInstanceModifiers {
+            crafted_stats: vec![36, 32],
+            ..Default::default()
+        };
+        let stats = item_instance_stats(&item, 13, &instance, &tables).unwrap();
+        assert_eq!(stats.block.secondary.haste, 35.0);
+        assert_eq!(stats.block.secondary.crit, 35.0);
+        // A single authored placeholder (native244774) stays one stat;
+        // SimC item.cpp1740 does not split its7000 budget into two stats.
+        item.stats[0].allocation = 7000;
+        item.stats[1] = ItemStatAllocation::default();
+        let stats = item_instance_stats(&item, 13, &instance, &tables).unwrap();
+        assert_eq!(stats.block.secondary.haste, 70.0);
+        assert_eq!(stats.block.secondary.crit, 0.0);
+    }
+
+    #[test]
     fn item_instance_invalid_zero_level_is_not_silent_base_gear() {
         let instance = ItemInstanceModifiers {
             item_level_override: Some(0),
