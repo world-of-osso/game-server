@@ -9,6 +9,8 @@ use serde_json::{Value, json};
 use std::collections::BTreeSet;
 
 fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
+    f.h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let step = f.h.app.world().resource::<Time<Fixed>>().timestep();
     assert_eq!(
