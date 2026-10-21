@@ -238,11 +238,11 @@ pub struct WorldData {
 }
 
 impl WorldData {
-    /// The template of `entry` in a map copy at `difficulty_id`: its difficulty row,
-    /// else its `content_creature_template` row.
+    /// CreatureTemplate::GetDifficulty: exact row, Difficulty fallback chain, then base.
     pub fn template_for(&self, entry: u32, difficulty_id: u32) -> Option<&CreatureTemplate> {
-        self.difficulty_templates
-            .get(&(entry, difficulty_id))
+        self.summon_levels
+            .difficulty_chain(difficulty_id)
+            .find_map(|id| self.difficulty_templates.get(&(entry, id)))
             .or_else(|| self.templates.get(&entry))
     }
 

@@ -306,6 +306,20 @@ fn follower_kit_garrick32_shield_of_the_righteous() {
 }
 
 #[test]
+fn follower_kit_garrick32_divine_toll_keeps_already_engaged_area() {
+    let (mut h, unit) = level32(209057);
+    uses_spell(&mut h, unit, 375576);
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(unit.to_bits())
+                && event.spell_id == Some(375576)
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+        }),
+        "native implicit-area safety must not blanket-disable the sourced spell"
+    );
+}
+
+#[test]
 fn follower_kit_garrick32_consecration() {
     let (mut h, unit) = level32(209057);
     uses_spell(&mut h, unit, 26573);
