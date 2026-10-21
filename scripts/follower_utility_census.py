@@ -37,6 +37,29 @@ def category(row, effects):
     return 'other learned active (manual / not scheduled)'
 
 
+def census_pets(db):
+    # Same family/automatic-level/passive predicate as pet_control's native bar.
+    rows = [dict(row) for row in db.execute('''
+        SELECT 266 AS owner_spec, f.ID AS family, a.Spell AS spell_id,
+               n.Name_lang AS name, l.SpellLevel AS min_level,
+               COALESCE(m.Attributes_0,0) AS attributes0,
+               COALESCE(m.Attributes_1,0) AS attributes1,
+               COALESCE(m.Attributes_9,0) AS attributes9
+        FROM creature_family f
+        JOIN skill_line_ability a ON a.SkillLine IN (f.SkillLine_0,f.SkillLine_1)
+        JOIN spell_levels l ON l.SpellID=a.Spell AND l.DifficultyID=0
+        JOIN spell_name n ON n.ID=a.Spell
+        LEFT JOIN spell_misc m ON m.SpellID=a.Spell AND m.DifficultyID=0
+        WHERE f.ID=29 AND a.SkillLine!=0 AND a.AcquireMethod=2
+          AND l.SpellLevel>0 AND (COALESCE(m.Attributes_0,0)&64)=0
+        ORDER BY l.SpellLevel,a.SkillLine!=f.SkillLine_0,a.ID
+    ''')]
+    categories = {30213: 'rotation (excluded)', 30151: 'movement / gap closer', 89766: 'pet interrupt / control'}
+    for row in rows:
+        row['category'] = categories.get(row['spell_id'], 'other learned pet action (not scheduled)')
+    return rows
+
+
 def census(database):
     with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as db:
         db.row_factory = sqlite3.Row
@@ -46,7 +69,8 @@ def census(database):
         for row in rows:
             row['effects'] = [dict(r) for r in db.execute('SELECT EffectIndex,Effect,EffectAura,EffectMiscValue_0,EffectTriggerSpell,ImplicitTarget_0,ImplicitTarget_1 FROM spell_effect WHERE SpellID=? AND DifficultyID=0 ORDER BY EffectIndex', (row['spell_id'],))]
             row['category'] = category(row, row['effects'])
-    return dict(build='12.1.5.70448', profiles=profiles, spells=rows)
+        pets = census_pets(db)
+    return dict(build='12.1.5.70448', profiles=profiles, spells=rows, pets=pets)
 
 
 def render(data):
@@ -59,6 +83,10 @@ def render(data):
             facts = '; '.join(f"{e['Effect']}/{e['EffectAura']}" + (f"→{e['EffectTriggerSpell']}" if e['EffectTriggerSpell'] else '') for e in row['effects'])
             lines.append(f"| {row['name']} `{row['spell_id']}` | {row['min_level']}–{row['max_level']} | {row['category']} | {facts} |")
         lines.append('')
+    lines += ['## Native selected Felguard actions', '', 'Owner spec266; family29. Native automatic level-up actions belong to the actual summoned Felguard, not the owner spellbook. Legion Strike stays rotational; Pursuit is native motion and Axe Toss is a learned stopping action. Hunter pet-family availability still depends on an actual existing/stabled pet.', '', '| Spell | From level | Category |', '|---|---|---|']
+    for row in data['pets']:
+        lines.append(f"| {row['name']} `{row['spell_id']}` | {row['min_level']} | {row['category']} |")
+    lines.append('')
     lines += ['## Explicit boundaries', '', '- DPS/Healer Growl6795 and Provoke115546 stay excluded from autonomous taunts. Only tank profiles may taunt.', '- Purge/soothe/dispel eligibility uses native effect38 types and harmfulness, never spell-name assumptions. Absent selected spells are not granted.', '- Non-rotation/manual includes travel, portals, item creation, tracking, summons, forms, pet commands, situational utility and unsupported source mechanics. Census presence does not certify execution support.', '- Damage/heal rotational rows and passive talents are enumerated for completeness but are not redesigned by this task.', '']
     return '\n'.join(lines)
 

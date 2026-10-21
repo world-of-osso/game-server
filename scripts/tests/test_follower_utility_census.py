@@ -26,7 +26,8 @@ class NativePetCensus(unittest.TestCase):
     def test_render_lists_all_native_pet_actions_and_execution_boundaries(self):
         report = census.render(self.data)
         for spell, level in [('Legion Strike `30213`', '1'), ('Pursuit `30151`', '14'), ('Axe Toss `89766`', '17')]:
-            self.assertIn(f'| {spell} | {level} |', report)
+            expected = f'| {spell} | {level} |'
+            self.assertTrue(expected in report, expected)
 
 
 if __name__ == '__main__':
