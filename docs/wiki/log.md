@@ -3510,3 +3510,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Missing-model project geometry policy
 
 [Model geometry](systems/model-geometry.md): approved generic runtime defaults replace follower-only sizing; actual Champion124440 acquisition/scaled precedence RED2/5.15s. Source rows and effective scale preserved; radius and GREEN proof pending.
+
+## 2026-10-21 — Utility integration and reproducible pet census
+
+[Follower utility](systems/follower-utility.md): native healer triage ownership retained during utility integration; old follower-only sizing references/oracle replaced by shared model-geometry contract. Pet census producer now emits native family29 actions30213/30151/89766 with levels1/14/17 and explicit rotation/movement/stopping categories; Python2RED→2GREEN0.331s at77be85c3e. Six actual companion-party buff cases are committed, native RED pending capacity.

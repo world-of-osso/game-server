@@ -1,15 +1,15 @@
 # Ordinary used-display model-info gap
 
-`ORDINARY_USED_DISPLAY_MODEL_INFO_GAP` is a separate source-data finding, not permission to widen follower policy. Verified2026-10-21 against canonical world.db and the complete local TDB1210.26091 dump:1051 distinct nonzero displays used by `content_creature_template_model` lack both prepared and raw-source model-info. This is a display inventory, not1051 observed live failures or1051 necessarily spawned creatures.
+`ORDINARY_USED_DISPLAY_MODEL_INFO_GAP` is a source-data finding. Runtime sizing now follows the explicitly approved [shared geometry policy](../systems/model-geometry.md); that decision does not turn runtime defaults into authored data. Verified2026-10-21 against canonical world.db and the complete local TDB1210.26091 dump:1051 distinct nonzero displays used by `content_creature_template_model` lack both prepared and raw-source model-info. This is a display inventory, not1051 observed live failures or1051 necessarily spawned creatures.
 
-## Production consumers
+## Historical fail-closed consumers (before the approved policy)
 
 - `creature_aggro_distance.rs::AggroDistance::combat_reach` returns None for an ordinary NPC without exact model-info. `creature_aggro.rs::PlayerSight::candidate_distance` propagates that None, excluding normal player-proximity acquisition.
 - `creature_threat.rs::in_melee_range` returns false on missing self/victim reaches, affecting melee/ranged threat-reselection thresholds. `scripted_ai/smart_ai.rs::process_range_event` treats missing reach-adjusted distance as out of range and rechecks500ms.
 - `scripted_ai/caster_chase.rs::plan_caster_step` errors for missing caster/victim reach; the source caster-movement consumer holds. Charge destinations and selected scripted movement/range consumers also require actual reaches.
 - This does **not** establish blanket ordinary melee/chase/evade failure. `combat.rs::in_melee_range` uses fixed5yd plus aura range; generic `creature_ai.rs` chase uses2yd and leash/no-path evade use position/navigation state independently.
 
-These are production-code consequences, not a live-server reproduction. Missing source geometry must not be silently substituted.
+These were production-code consequences, not a live-server reproduction. The generic policy's real native Champion proximity/white-swing regression now passes; source/default provenance remains explicit.
 
 ## Concrete source inventory
 
@@ -19,7 +19,7 @@ Actual spawned examples: Sapphiron15989/display113690/map533; Shadowguard Champi
 
 ## Boundary
 
-The separately authorized [follower policy](../../specs/follower-utility.md#player-race-follower-model-geometry) applies only to actual followers whose70448 ExtendedDisplayInfoID is nonzero. Ordinary creatures do not inherit it. Generic default sizing, non-spawn admission or retaining this source gap is a user-owned decision outside the utility implementation.
+The user-approved [shared model-geometry contract](../../specs/model-geometry.md) replaces follower-only sizing. Actual displays missing model-info now receive the explicit scaled default; authored rows retain precedence. Non-spawn admission remains outside this decision.
 
 ## Sources
 
