@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::components::{Health, Level};
 
-use super::kit::{Entry, Slot, Target};
+use super::kit::{Entry, ResourceCondition, Slot, Target};
 use super::{Follower, FollowerCatalog, ai};
 use crate::maps::InMap;
 use crate::networking::CombatTarget;
@@ -22,7 +22,7 @@ pub(super) fn update(
     enemy: Option<Entity>,
 ) -> bool {
     let level = world.get::<Level>(unit).map_or(0, |level| level.0);
-    let entries: Vec<_> = world
+    let mut entries: Vec<_> = world
         .get_resource::<FollowerCatalog>()
         .into_iter()
         .flat_map(|catalog| &catalog.kits)
@@ -32,6 +32,7 @@ pub(super) fn update(
     if entries.is_empty() {
         return false;
     }
+    super::tank_defense::sort_major_entries(world, unit, &mut entries);
     let enemies = ai::engaged_enemies(world, follower, unit, party);
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
@@ -43,10 +44,7 @@ pub(super) fn update(
     }
     let candidates: Vec<_> = enemy.into_iter().collect();
     let mut interrupt_attempted = false;
-    for entry in entries
-        .iter()
-        .filter(|entry| entry.available(follower.profile.spec_id, level))
-    {
+    for entry in &entries {
         let policy_owned = triage.as_ref().is_some_and(|outcome| {
             outcome.owned.contains(&entry.spell_id)
                 || super::healer_triage::manages(entry)
@@ -71,11 +69,28 @@ pub(super) fn update(
                 return true;
             }
         }
-        let Some(target) = select_target(world, unit, party, enemy, entry) else {
+        if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
+            continue;
+        }
+        let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
+            Ok(spell) => spell,
+            Err(error) => {
+                debug!(
+                    ?unit,
+                    base = entry.spell_id,
+                    ?error,
+                    "Follower action unavailable"
+                );
+                continue;
+            }
+        };
+        let mut entry = entry.clone();
+        entry.spell_id = spell_id;
+        let Some(target) = select_target(world, unit, party, enemy, &entry) else {
             continue;
         };
-        if conditions_met(world, unit, target, party, &enemies, entry)
-            && attempt_cast(world, unit, target, follower, entry)
+        if conditions_met(world, unit, target, party, &enemies, &entry)
+            && attempt_cast(world, unit, target, follower, &entry)
         {
             return true;
         }
@@ -196,7 +211,13 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
-    if !health_and_auras_allow(world, unit, target, party, entry)
+    if !action_history_allows(world, unit, entry)
+        || !entry
+            .conditions
+            .resources
+            .iter()
+            .all(|rule| resource_allows(world, unit, rule))
+        || !health_and_auras_allow(world, unit, target, party, entry)
         || !combat_allows(world, unit, target, enemies, entry)
     {
         return false;
@@ -215,6 +236,43 @@ pub(super) fn conditions_met(
             || super::kit_area::allows(world, unit, target, enemies, entry))
 }
 
+fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> bool {
+    use crate::spell_cast::powers::{PowerTypeTable, power_value};
+    let Some((current, maximum)) = power_value(world, unit, rule.power) else {
+        return false;
+    };
+    let scale = world
+        .resource::<PowerTypeTable>()
+        .get(rule.power)
+        .expect("rotation resource requires native PowerType metadata")
+        .display_modifier;
+    assert!(
+        scale > 0,
+        "rotation resource requires positive DisplayModifier"
+    );
+    let current = current / scale as f32;
+    let deficit = maximum / scale as f32 - current;
+    rule.min.is_none_or(|minimum| current >= minimum)
+        && rule.below.is_none_or(|maximum| current < maximum)
+        && rule.min_deficit.is_none_or(|minimum| deficit >= minimum)
+}
+
+fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
+    world
+        .get::<crate::spell_cast::SpellHistory>(unit)
+        .and_then(|history| history.last_cast_in(&entry.conditions.no_repeat_group))
+        != Some(entry.spell_id)
+}
+
+fn health_allows(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
+    if entry.conditions.tank_defensive_sequence {
+        return super::tank_defense::allows(world, unit, health_fraction(world, unit));
+    }
+    entry.conditions.health_below.is_none_or(|threshold| {
+        health_fraction(world, target).is_some_and(|health| health < threshold)
+    })
+}
+
 fn health_and_auras_allow(
     world: &World,
     unit: Entity,
@@ -223,14 +281,19 @@ fn health_and_auras_allow(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    if [condition.required_aura, condition.required_self_aura]
+        .into_iter()
+        .flatten()
+        .any(|aura| !crate::auras::has_aura(world, unit, aura))
+    {
+        return false;
+    }
     if entry.slot == Slot::Dispel
         && !crate::auras::has_dispellable_aura(world, unit, target, &condition.dispel_types)
     {
         return false;
     }
-    if condition.health_below.is_some_and(|threshold| {
-        health_fraction(world, target).is_none_or(|health| health >= threshold)
-    }) {
+    if !health_allows(world, unit, target, entry) {
         return false;
     }
     let aura_target = if entry.slot == Slot::Mitigation {
@@ -238,9 +301,12 @@ fn health_and_auras_allow(
     } else {
         target
     };
+    if !maintenance_allows(world, unit, aura_target, entry) {
+        return false;
+    }
     if condition
-        .missing_aura
-        .is_some_and(|aura| maintenance_aura_present(world, unit, aura_target, entry.slot, aura))
+        .refreshable_aura
+        .is_some_and(|aura| !own_aura_refreshable(world, unit, aura_target, aura))
     {
         return false;
     }
@@ -256,13 +322,76 @@ fn health_and_auras_allow(
     true
 }
 
+fn maintenance_allows(world: &World, caster: Entity, target: Entity, entry: &Entry) -> bool {
+    let Some(aura) = entry.conditions.missing_aura else {
+        return true;
+    };
+    match maintenance_aura_present(world, caster, target, entry, aura) {
+        Ok(present) => !present,
+        Err(error) => {
+            debug!(?caster, aura, ?error, "Follower aura forecast unavailable");
+            false
+        }
+    }
+}
+
+fn refresh_window_seconds(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    entry: &Entry,
+    aura: u32,
+) -> Result<Option<f64>, crate::spell_cast::CastFailure> {
+    use crate::spell_cast::CastFailure;
+    match (
+        entry.conditions.refresh_seconds,
+        entry.conditions.refresh_fraction,
+    ) {
+        (None, None) => Ok(None),
+        (Some(seconds), None) => Ok(Some(f64::from(seconds))),
+        (None, Some(fraction)) => {
+            let full = crate::auras::maximum_duration_ms(world, caster, target, aura).ok_or_else(
+                || {
+                    CastFailure::Unsupported(format!(
+                        "aura {aura} has no native finite full duration"
+                    ))
+                },
+            )?;
+            Ok(Some(f64::from(full) / 1_000.0 * f64::from(fraction)))
+        }
+        (Some(_), Some(_)) => Err(CastFailure::Unsupported(
+            "choose one aura refresh time unit".into(),
+        )),
+    }
+}
+
+/// SimC76f8118 action.cpp4630–4635: pandemic refreshable at inclusive30%.
+fn own_aura_refreshable(world: &World, caster: Entity, target: Entity, spell: u32) -> bool {
+    const PANDEMIC_FRACTION: f64 = 0.3;
+    let active = world
+        .get::<crate::auras::ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == spell && aura.caster == caster)
+        });
+    let Some(aura) = active else {
+        return true;
+    };
+    let Some(expiry) = aura.expires_at else {
+        return false;
+    };
+    let remaining = expiry - crate::auras::aura_now(world);
+    remaining <= f64::from(aura.duration_ms) / 1000.0 * PANDEMIC_FRACTION
+}
+
 fn maintenance_aura_present(
     world: &World,
     caster: Entity,
     target: Entity,
-    slot: Slot,
+    entry: &Entry,
     aura: u32,
-) -> bool {
+) -> Result<bool, crate::spell_cast::CastFailure> {
     let periodic_damage = world
         .resource::<crate::spell_info::SpellStore>()
         .get(aura)
@@ -272,17 +401,24 @@ fn maintenance_aura_present(
                     && effect.aura == crate::auras::PERIODIC_DAMAGE_AURA
             })
         });
-    if slot != Slot::Attack || !periodic_damage {
-        return crate::auras::has_aura(world, target, aura);
-    }
+    let owned = entry.slot == Slot::Attack && periodic_damage;
+    let window = refresh_window_seconds(world, caster, target, entry, aura)?;
+    let now = crate::auras::aura_now(world);
     // SimC76f8118 sc_druid.cpp13833: target.get_dot("moonfire", &source).
-    world
+    Ok(world
         .get::<crate::auras::ActiveAuras>(target)
         .is_some_and(|auras| {
             auras
                 .iter()
-                .any(|active| active.spell_id == aura && active.caster == caster)
-        })
+                .filter(|active| {
+                    let owner_matches = !owned || active.caster == caster;
+                    active.spell_id == aura && owner_matches
+                })
+                .any(|active| match window {
+                    None => true,
+                    Some(window) => active.expires_at.is_none_or(|expiry| expiry - now > window),
+                })
+        }))
 }
 
 pub(super) fn combat_allows(

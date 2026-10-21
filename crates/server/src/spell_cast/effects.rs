@@ -54,6 +54,7 @@ pub const EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT: u32 = 165;
 /// `SPELL_EFFECT_DUMMY`: no generic effect (`Spell::EffectDummy` runs scripts only).
 pub const EFFECT_DUMMY: u32 = 3;
 pub const EFFECT_POWER_DRAIN: u32 = 8;
+pub const EFFECT_POWER_BURN: u32 = 62;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
 pub const EFFECT_QUEST_COMPLETE: u32 = 16;
@@ -114,6 +115,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         33 | 95 => crate::gathering::effect_gather,
         87 => crate::pvp::isle_siege::effect_damage,
         EFFECT_POWER_DRAIN => power_drain,
+        EFFECT_POWER_BURN => power_burn,
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
@@ -1181,7 +1183,12 @@ pub(super) fn damage_before_mitigation(
             * creature_type_damage_multiplier(world, bonus_caster, target, ctx.spell)
             * mechanic_damage_multiplier(world, bonus_caster, ctx.spell, effect)
     };
-    let taken = if effect.is_some_and(|effect| effect.effect == EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT) {
+    let taken = if effect.is_some_and(|effect| {
+        matches!(
+            effect.effect,
+            EFFECT_DAMAGE_FROM_MAX_HEALTH_PCT | EFFECT_POWER_BURN
+        )
+    }) {
         crate::auras::damage_resilience_multiplier(world, target, ctx.spell)
     } else {
         crate::auras::damage_taken_multiplier(world, target, bonus_caster, ctx.spell)
@@ -1269,7 +1276,7 @@ fn deal_damage_and_report(
         world
             .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(target)
             .is_some(),
-        before,
+        health,
         incoming_loss,
     );
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
@@ -1325,6 +1332,12 @@ fn deal_damage_and_report(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    if !periodic && !resolved_source && ctx.depth == 0 {
+        super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit);
+    }
+    if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
+        super::scripts::roll_flame_shock_tick(world, ctx.caster);
+    }
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.
     // A fully absorbed damage effect still landed. Preserve that target in
@@ -1536,6 +1549,83 @@ fn power_drain(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target:
     drain_and_credit_power(world, ctx, effect, target, power, amount);
 }
 
+/// TC EffectPowerBurn: only actual target power lost becomes damage; no caster credit.
+fn power_burn(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Some(drained) = burn_primary_power(world, ctx, effect, target) else {
+        return;
+    };
+    let multiplier = spell_mods::modify(
+        world,
+        ctx.caster,
+        ctx.spell,
+        SpellModOp::Amplitude,
+        effect.amplitude,
+    );
+    let damage = (drained * multiplier).trunc() * ctx.chain_multiplier;
+    if damage <= 0.0 {
+        return;
+    }
+    let (amount, crit) = with_damage_crit(world, ctx.caster, target, ctx.spell, damage);
+    // Unlike SchoolDamage, TC does not call SpellDamageBonusDone/Taken here.
+    deal_damage_and_report(
+        world,
+        ctx,
+        target,
+        DamageInput {
+            amount,
+            crit,
+            periodic: false,
+            resolved_source: true,
+            effect: Some(effect),
+            bonus_caster: ctx.caster,
+        },
+    );
+}
+
+fn burn_primary_power(
+    world: &mut World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    target: Entity,
+) -> Option<f32> {
+    let power = PowerType::from_db(effect.misc_values[0])?;
+    let primary = world
+        .get::<super::powers::PowerPools>(target)?
+        .order
+        .first()
+        .copied();
+    if primary != Some(power) || !super::targets::is_alive(world, target) {
+        return None;
+    }
+    let amount = roll_power_burn_amount(world, ctx, effect, power)?;
+    let change = super::powers::change_power(world, target, power, -amount)?;
+    mark_dirty(world, target);
+    Some(-change)
+}
+
+fn roll_power_burn_amount(
+    world: &World,
+    ctx: &EffectCtx,
+    effect: &SpellEffect,
+    power: PowerType,
+) -> Option<f32> {
+    let base = if power == PowerType::Mana {
+        match power_drain_base_points(world, ctx.caster, ctx.spell, effect) {
+            Ok(base) => base,
+            Err(failure) => {
+                error!("Spell {} power burn failed: {failure:?}", ctx.spell.id);
+                return None;
+            }
+        }
+    } else {
+        calc_base_value(world, ctx.caster, ctx.spell, effect)
+    };
+    let variance = roll_power_drain_variance(effect.variance);
+    let rolled = base + base * variance;
+    let amount = modify_base_points(world, ctx.caster, ctx.spell, effect, rolled).round();
+    (amount >= 0.0).then_some(amount)
+}
+
 fn drain_and_credit_power(
     world: &mut World,
     ctx: &EffectCtx,
@@ -1583,22 +1673,22 @@ fn power_drain_amount(
 }
 
 /// Validate before target planning/payment on every ordinary and triggered entry.
-pub(super) fn check_power_drain_inputs(
+pub(super) fn check_expected_power_inputs(
     world: &World,
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), super::CastFailure> {
-    for effect in spell
-        .effects
-        .iter()
-        .filter(|effect| effect.effect == EFFECT_POWER_DRAIN)
-    {
+    for effect in spell.effects.iter().filter(|effect| {
+        effect.effect == EFFECT_POWER_DRAIN
+            || (effect.effect == EFFECT_POWER_BURN
+                && effect.misc_values[0] == PowerType::Mana as i32)
+    }) {
         power_drain_base_points(world, caster, spell, effect)?;
     }
     Ok(())
 }
 
-/// TC CalcBaseValue's effect8 ExpectedStat branch; no guessed caster level/raw base.
+/// TC CalcBaseValue's effect8 and Mana62 ExpectedStat branch; no guessed level/raw base.
 fn power_drain_base_points(
     world: &World,
     caster: Entity,
@@ -1609,7 +1699,7 @@ fn power_drain_base_points(
         .get::<shared::components::UnitLevel>(caster)
         .ok_or_else(|| {
             super::CastFailure::Unsupported(format!(
-                "Spell {} effect8 caster UnitLevel is missing",
+                "Spell {} power effect caster UnitLevel is missing",
                 spell.id
             ))
         })?
@@ -1633,7 +1723,7 @@ fn read_power_drain_expected_stat(
         .get_resource::<crate::level_scaling::CreatureSpellStats>()
         .ok_or_else(|| {
             super::CastFailure::Unsupported(format!(
-                "Spell {} effect8 requires expected_stat data",
+                "Spell {} power effect requires expected_stat data",
                 spell.id
             ))
         })?;

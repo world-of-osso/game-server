@@ -50,6 +50,11 @@ const ACQUIRE_AUTOMATIC_SKILL_RANK: u32 = 1;
 pub struct KnownSpells(Vec<u32>, Vec<(u32, u32)>, Vec<u32>);
 
 impl KnownSpells {
+    /// Native baseline book without player-only PvP or guild grants.
+    pub(crate) fn from_baseline(spells: Vec<u32>) -> Self {
+        Self(spells, Vec::new(), Vec::new())
+    }
+
     /// Membership-derived grants are separate from baseline/profession knowledge.
     pub(crate) fn guild_grants(&self) -> &[u32] {
         &self.2
