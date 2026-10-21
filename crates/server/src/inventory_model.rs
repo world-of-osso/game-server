@@ -417,6 +417,7 @@ impl InventoryModel {
             bag_slots,
             instances: self.instances,
             crafting_origins: self.crafting_origins,
+            item_modifiers: HashMap::new(),
             item_durability: self.item_durability,
             definition_sources: self.definition_sources,
             appearance_account: self.appearance_account,
@@ -485,6 +486,10 @@ impl InventoryModel {
                 .map(|(slot, item)| (*slot, self.definition_source(item.item_guid), item.item_id))
                 .collect(),
         }
+    }
+
+    pub(crate) fn equipped_modifiers(&self) -> crate::stats::EquippedItemModifiers {
+        crate::stats::EquippedItemModifiers::default()
     }
 
     pub(crate) fn definition_source(&self, guid: u64) -> ItemDefinitionSource {

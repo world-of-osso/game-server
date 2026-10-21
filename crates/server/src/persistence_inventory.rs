@@ -101,6 +101,7 @@ pub struct InventoryRecord {
     pub bag_slots: Vec<EquippedBagData>,
     pub instances: HashMap<u64, ItemInstanceData>,
     pub crafting_origins: HashMap<u64, CraftingOrigin>,
+    pub item_modifiers: HashMap<u64, server::item_instance::ItemInstanceModifiers>,
     pub item_durability: HashMap<u64, (u32, u32)>,
     pub definition_sources: HashMap<u64, ItemDefinitionSource>,
     /// Runtime-only collection receipt; not part of the stored inventory ABI.
@@ -187,6 +188,7 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
         bag_slots,
         instances,
         crafting_origins,
+        item_modifiers: HashMap::new(),
         item_durability,
         definition_sources,
         appearance_account: super::find_account_id_for_character(db, character_id),
