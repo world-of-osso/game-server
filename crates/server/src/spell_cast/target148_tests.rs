@@ -90,6 +90,10 @@ fn native_target148_target_enemy_then_towards_caster() {
         z: 0.0,
     });
     let actual = destination(&mut h, 196884, 1); // Feral Lunge [53,148], native radius2.
+    assert!(
+        (actual.orientation - std::f32::consts::PI).abs() < 0.001,
+        "148 faces from caster toward the original destination, not along displacement"
+    );
     assert_endpoint(&mut h, actual, origin, 2.0);
 }
 
