@@ -23,6 +23,14 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 ## What it must do
 
+### Census effect77 source ports (70448)
+
+- [x] Gorefiend's Grasp108199E1 applies native454824 only when its caster owns454822, using TC's limited triggered flags; foreign/absent talent does not apply it. Unmatched E0 remains a named gap, not whole-spell support.
+- [x] Shadow Word: Death32379E3 is consumed execute-bonus data, with native strict E2 threshold and E3 multiplier; classify it handled without target selection or no-op dispatch. Unmatched Shockwave46968E1 must still report unsupported77.
+- [x] Earthquake77478E1 supplies the native knockdown chance; actual field-owned hits may cast77505 once per target per61882 field. A fresh field can stun prior targets; orphan ticks retain damage without knockdown, outside/ally targets are excluded, and expired fields stop producing stuns.
+
+Source: TC a352b1fa `spell_dk.cpp1328–1358`, `spell_priest.cpp4483–4487`, `spell_shaman.cpp1006–1034`, native70448 read-only rows. Tests: `spell_cast/census_e77_{dk,priest,shaman}_tests.rs`. [All44 roots, named gaps and per-spec deltas](../diagnostics/census-e77-70448.md); [runtime](../wiki/systems/spell-casting.md#census-effect77--2026-10-20). No generic77 handler, whole-ability parity, or full-census rerun is implied.
+
 ### Twenty-first-batch native combo builders
 
 - [x] Active Berserk106951 adds its authored s2 amount to positive native self-directed ENERGIZE combo-point effects of untriggered same-family casts. Shred, Rake and Thrash gain one additional point; Thrash grants once per cast, not once per enemy. Native pool caps and overflow logging apply to the combined grant.
