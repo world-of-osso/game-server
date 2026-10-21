@@ -104,7 +104,7 @@ fn pet_swing_frames(
         .len();
     let mut first = None;
     let mut observed = 0;
-    for frame in 0..200 {
+    for frame in 0usize..200 {
         h.advance(1);
         let log = h.app.world().resource::<crate::combat::CombatLog>();
         let count = log
@@ -165,7 +165,7 @@ fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
     crate::auras::remove_auras(
         h.app.world_mut(),
         caster,
-        crate::auras::RemoveReason::Cancel,
+        crate::auras::RemoveReason::Cancelled,
         |aura| aura.spell_id == FRENZY,
     );
     let ordinary = pet_swing_frames(&mut h, pet);
