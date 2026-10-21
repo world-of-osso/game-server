@@ -151,6 +151,11 @@ fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() 
     // Target148 now consumes collision/ground during ordinary planning. Keep the
     // native254 refusal/bite oracle, with real geometry rather than an unloaded origin.
     let origin = super::target148_tests::place_on_native_ground(&mut h);
+    // The real LOS eye table needs Kobold Vermin's display, as in LOS cast fixtures.
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(shared::components::ModelDisplay { display_id: 10913 });
     let before = Position {
         x: origin.x + 10.0,
         ..origin
@@ -167,6 +172,10 @@ fn dummy10_feral_lunge_keeps_bite_but_refuses_jump254_parabolic_curve_trigger() 
         },
         map,
     ));
+    assert!(
+        crate::line_of_sight::sees_in_world(h.app.world(), h.caster, h.npc),
+        "native source geometry must admit ordinary parent casting"
+    );
     h.cast_and_deliver(196884, Some(h.npc));
     h.advance(12);
     landed(&h);
