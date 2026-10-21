@@ -120,3 +120,5 @@ Native Efflo script slice (after genuine81262 RED): capture actual new145205 sum
 The bounded before/after summon snapshot represents the source's per-cast ExecuteLog without adding a general execution-log subsystem; replace it with that native receipt if the runtime gains one or Efflo gets deferred/nested same-spell summon effects.
 
 New Efflo AI admission fixture keeps actual clustered damage stable (recent rate below emergency threshold), isolates the learned native145205 row and requires an actual summon. This separates native script healing from the common estimator’s zero direct-heal metadata rejection; RED not run yet, no selector implementation added.
+
+Additional depth qualification now explicitly covers learned level13 Barkskin on its actually attacked healer, level33 Germination second owned HoT under stable uncovered native pressure, and level70 Tree of Life after a real native Tranquility channel/cooldown. These tests are unrun RED candidates; no corresponding policy implementation is present yet. Rebirth remains utility-owned, Convoke remains absent rather than granted.

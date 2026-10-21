@@ -101,6 +101,31 @@ fn resto_policy_ironbark_protects_actually_attacked_tank_before_filler() {
 }
 
 #[test]
+fn resto_policy_barkskin_protects_actually_attacked_healer_before_throughput() {
+    let (mut h, healer) = super::super::kit_tests::at_level(209072, 13, |_| {});
+    let enemy = h.npc;
+    h.app.world_mut().entity_mut(enemy).insert((
+        shared::components::ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+    ));
+    crate::creature_aggro::add_threat(h.app.world_mut(), enemy, healer, 100.0);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::networking::CombatTarget>(enemy)
+            .and_then(|target| target.0),
+        Some(healer)
+    );
+    damage(&mut h, healer, 0.65);
+    let owner = h.caster;
+    decide(&mut h, healer, &[healer, owner]);
+    assert!(
+        own_aura(&h, healer, healer, 22812).is_some(),
+        "actual learned Barkskin must protect the attacked low-health healer before throughput preparation"
+    );
+}
+
+#[test]
 fn resto_policy_natures_cure_removes_native_magic_before_routine_healing() {
     let (mut h, healer) = super::super::kit_tests::level32(209072);
     let target = h.caster;
@@ -185,6 +210,41 @@ fn resto_policy_high_level_tranquility_channels_for_stacked_group_pressure() {
                 && event.source == Some(healer.to_bits())
                 && event.overflow < event.amount),
         "channel must produce useful native Tranquility child healing"
+    );
+}
+
+#[test]
+fn resto_policy_learned_tree_sustains_group_pressure_after_native_tranquility_cooldown() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(70);
+    crate::spell_cast::creature_cast(h.app.world_mut(), healer, 740, Some(healer), false).unwrap();
+    for _ in 0..200 {
+        h.advance(1);
+        if h.app.world().get::<CastState>(healer).is_none() {
+            break;
+        }
+    }
+    assert!(h.app.world().get::<CastState>(healer).is_none());
+    for target in &party[1..4] {
+        damage(&mut h, *target, 0.45);
+    }
+    let until = aura_now(h.app.world()) + 3.5;
+    while aura_now(h.app.world()) < until {
+        h.advance(1);
+    }
+    for target in &party[1..4] {
+        let patient = super::super::healer_triage::read_patient(h.app.world(), *target).unwrap();
+        let health = h.app.world().get::<Health>(*target).unwrap();
+        assert!(!patient.emergency && health.current < health.max * 0.7);
+    }
+    let spell = h.app.world().resource::<SpellStore>().get(740).unwrap();
+    assert!(
+        crate::spell_cast::read_healer_recovery(h.app.world(), healer, spell).is_err(),
+        "the real previous native channel must have spent Tranquility's cooldown"
+    );
+    decide(&mut h, healer, &party);
+    assert!(
+        own_aura(&h, healer, healer, 33891).is_some(),
+        "learned Tree of Life must use its native aura for sustained group pressure when Tranquility is unavailable"
     );
 }
 
@@ -309,6 +369,41 @@ fn resto_policy_native_abundance_fifth_primary_hot_enables_discount() {
     assert!(
         super::super::kit_clearcasting_tests::mana_cost(&h, healer, 8936) < regular,
         "discount must come from native207640, not a policy mana grant"
+    );
+}
+
+#[test]
+fn resto_policy_learned_germination_adds_second_native_hot_to_pressured_tank() {
+    let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(33);
+    assert!(own_aura(&h, healer, healer, 155675).is_some());
+    let tank = party[2];
+    super::super::kit_abundance_tests::cast_real_rejuvenation(&mut h, healer, tank);
+    assert!(own_aura(&h, healer, tank, 774).is_some());
+    assert!(own_aura(&h, healer, tank, 155777).is_none());
+    damage(&mut h, tank, 0.45);
+    let until = aura_now(h.app.world()) + 3.5;
+    while aura_now(h.app.world()) < until {
+        h.advance(1);
+    }
+    let patient = super::super::healer_triage::read_patient(h.app.world(), tank).unwrap();
+    assert!(!patient.emergency && patient.score > 0.0 && patient.missing_health > 0.0);
+    let rows = h
+        .app
+        .world()
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| entry.available(105, 33) && entry.spell_id == 774)
+        .cloned()
+        .collect::<Vec<_>>();
+    assert_eq!(rows.len(), 1);
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    super::super::healer_triage::update(h.app.world_mut(), healer, &follower, &party, &rows);
+    h.advance(1);
+    assert!(own_aura(&h, healer, tank, 774).is_some());
+    assert!(
+        own_aura(&h, healer, tank, 155777).is_some(),
+        "actual learned Germination must add its second native HoT despite the generic primary missing-aura condition"
     );
 }
 
