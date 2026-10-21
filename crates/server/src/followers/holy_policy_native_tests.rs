@@ -540,9 +540,7 @@ fn holy_policy_native90_group_pressure_uses_real_hymn_ticks() {
     );
 }
 
-#[test]
-#[ignore = "Holy cluster ranking RED at f6c6fffd4; no native596 chosen"]
-fn holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_words() {
+fn moderate_group_with_spent_words() -> GroupFixture {
     let mut group = native_group();
     let priest = group.priest;
     complete_real_cast(&mut group.h, priest, 200183);
@@ -557,38 +555,38 @@ fn holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_wor
     complete_real_cast(&mut group.h, priest, 2050);
     complete_real_cast(&mut group.h, priest, 2050);
     apply_pressure(&mut group, 4);
+    group
+}
+
+#[test]
+#[ignore = "FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS: shared cast lifetime RED e9697c1db"]
+fn holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_words() {
+    let mut group = moderate_group_with_spent_words();
+    let priest = group.priest;
+    uses_spell(&mut group.h, priest, 596);
+    group.h.advance(5);
+    assert_prayer_heals_cluster(&group);
+}
+
+#[test]
+fn holy_policy_native90_prayer_of_healing_effectively_covers_cluster_without_other_ai() {
+    let mut group = moderate_group_with_spent_words();
     for _ in 0..600 {
-        let prior = group.h.app.world().get::<CastState>(priest).cloned();
-        if let Some(cast) = prior.as_ref().filter(|cast| cast.spell_id == 596) {
-            let anchor = Entity::try_from_bits(cast.target).unwrap();
-            eprintln!(
-                "PoH lifetime before AI: anchor={anchor:?} hp={} elapsed={}; injured={}",
-                fraction(&group, anchor),
-                cast.elapsed,
-                group
-                    .members
-                    .iter()
-                    .filter(|&&member| fraction(&group, member) < 1.0)
-                    .count()
-            );
-        }
-        super::update_ai(group.h.app.world_mut());
-        group.h.advance(1);
+        step_henry(&mut group);
         if casts(&group, 596) > 0 {
             break;
         }
     }
-    let events: Vec<_> = group
-        .h
-        .app
-        .world()
-        .resource::<ObservedCombatEvents>()
-        .0
-        .iter()
-        .filter(|event| event.source == Some(priest.to_bits()) && event.spell_id == Some(596))
-        .collect();
-    assert!(casts(&group, 596) > 0, "native596 events={events:?}");
+    assert!(
+        casts(&group, 596) > 0,
+        "isolated native Henry controller must launch596"
+    );
     group.h.advance(5);
+    assert_prayer_heals_cluster(&group);
+}
+
+fn assert_prayer_heals_cluster(group: &GroupFixture) {
+    let priest = group.priest;
     let healed: std::collections::BTreeSet<_> = group
         .h
         .app

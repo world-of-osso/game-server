@@ -110,6 +110,15 @@ available through the shared generic candidate ranking.
 | Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
 | Remaining selected passives | exact native modifiers or explicit named script gaps | See [named gaps](../wiki/investigations/holy-priest-follower-ai.md#named-selected-kit-gaps); not runtime-complete |
 
+### Known integration blocker
+
+`FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS`: shared normal-direct-heal cancellation
+currently cancels596 when another actor tops its selected anchor even with other
+injured recipients still inside its native area. Original full-party native
+regression remains ignored RED; Henry-only consequence qualification is separate.
+Frozen comparisons retain the same shared behavior on both sides, not a claim of
+full-party cast-lifetime completion. See [native trace](../wiki/investigations/holy-priest-follower-ai.md).
+
 ## Temporary threat
 
 Native103 temporary threat modifiers apply to every unit already represented in

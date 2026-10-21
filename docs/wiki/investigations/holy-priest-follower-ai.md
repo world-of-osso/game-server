@@ -146,8 +146,20 @@ each native primary-centered cluster, and compares healing per native mana with
 available ordinary direct heals. Three injured recipients are required; best
 cluster ties use entity identity. Surge/Words and throughput cooldowns precede
 this choice, PoM upkeep follows it. No shared-ranking change, synthetic healing
-or additional spell metadata. Ignored native opportunity regression predates
-implementation; GREEN execution pending.
+or additional spell metadata. Original opportunity regression predates implementation.
+
+Native e9697c1db trace confirms a separate shared lifetime blocker:
+`FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS`. Actual596 CastStart progresses2.25sec;
+at2.30sec another party heal tops its anchor while three other patients remain
+injured. Shared `cancel_topped_cast` cancels before native2.306sec completion.
+Retry on another anchor likewise cancels at2sec with two other patients injured.
+This is not a596 native refusal or a missing Holy decision. Original full-party
+regression stays ignored RED; it is not replaced or claimed GREEN. An additional
+Henry-only controller case isolates native group selection/consequence without
+other followers healing the anchor. Shared gameplay remains frozen for matched
+cohorts; common fix and full-party GREEN belong to the lead's integration decision.
+Evidence: `holy-poh-{refusal,lifetime}-targeted.log`. Temporary trace instrumentation
+is removed before candidate freeze.
 
 Nova root cause: selected132157 has native RangeIndex1/self, but the generic
 kit's enemy target requests pursuit; `spell_reach` rejects its zero native range
@@ -156,7 +168,9 @@ healing safety and actual native-radius engaged-enemy count pass. Same-copy aliv
 fresh enemies and breakable CC veto the footprint, matching the existing generic
 AoE safety rule. This stays in Holy policy to keep frozen comparison runtime
 difference specialization-only; no generic movement/range changes. Native positive
-and safety controls remain required; GREEN pending.
+and safety controls pass at0de4fe1af: all five weave cases GREEN, including
+actual Holy Fire→Smite damage, Nova on three engaged enemies, and incoming-damage,
+fresh-pack and real Polymorph vetoes. The full-party PoH case alone remains RED.
 
 ## Named selected-kit gaps
 

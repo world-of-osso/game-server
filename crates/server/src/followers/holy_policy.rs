@@ -96,16 +96,6 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         })
         .or_else(|| choose_fortitude(ctx))
         .or_else(|| choose_holy_nova(ctx));
-    #[cfg(test)]
-    if ctx
-        .patients
-        .iter()
-        .filter(|patient| patient.missing_health > 0.0)
-        .count()
-        >= GROUP_PRESSURE_COUNT
-    {
-        eprintln!("Holy final native decision: {decision:?}");
-    }
     match decision {
         Some(decision) => SpecVerdict::Cast {
             decision,
@@ -356,19 +346,6 @@ fn read_candidates(ctx: &TriageContext<'_>, spell: u32) -> Vec<HolyDecision> {
 }
 
 fn choose_prayer_of_healing(ctx: &TriageContext<'_>) -> Option<HolyDecision> {
-    #[cfg(test)]
-    if ctx
-        .patients
-        .iter()
-        .filter(|patient| patient.missing_health > 0.0)
-        .count()
-        >= GROUP_PRESSURE_COUNT
-    {
-        eprintln!(
-            "Holy PoH native diagnostic: candidates={:?}; clusters={:?}",
-            ctx.candidates, ctx.clusters
-        );
-    }
     let direct_efficiency = ctx
         .candidates
         .iter()
