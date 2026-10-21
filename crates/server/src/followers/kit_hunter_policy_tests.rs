@@ -7,7 +7,13 @@ const AUSTIN: u32 = 209065;
 const NATIVE_DUCK: u32 = 174884;
 const WATERFOWL: u32 = 125;
 
-fn check_native_duck(level: u8) {
+fn prepare_native_duck(
+    level: u8,
+) -> (
+    crate::spell_cast::test_harness::Harness,
+    bevy::prelude::Entity,
+    bevy::prelude::Entity,
+) {
     let prepared = crate::spell_cast::test_harness::prepare_class_world();
     let data = prepared.world_data();
     let directory = tempfile::tempdir().unwrap();
@@ -68,6 +74,11 @@ fn check_native_duck(level: u8) {
             .any(|event| event.caster == caster.to_bits() && event.spell_id == 883),
         "pet acquisition must use ordinary learned Call Pet"
     );
+    (h, caster, pet)
+}
+
+fn check_native_duck(level: u8) {
+    prepare_native_duck(level);
 }
 
 #[test]
@@ -78,4 +89,93 @@ fn rotation_fidelity_253_level90_prepares_native_simc_default_duck_via_call_pet(
 #[test]
 fn rotation_fidelity_253_level32_prepares_native_simc_default_duck_via_call_pet() {
     check_native_duck(32);
+}
+
+/// Observe two completed swing clocks; misses also count as real attack attempts.
+fn pet_swing_frames(
+    h: &mut crate::spell_cast::test_harness::Harness,
+    pet: bevy::prelude::Entity,
+) -> usize {
+    let start = h
+        .app
+        .world()
+        .resource::<crate::combat::CombatLog>()
+        .range(0.0, f64::MAX)
+        .len();
+    let mut first = None;
+    let mut observed = 0;
+    for frame in 0..200 {
+        h.advance(1);
+        let log = h.app.world().resource::<crate::combat::CombatLog>();
+        let count = log
+            .range(0.0, f64::MAX)
+            .iter()
+            .skip(start)
+            .filter(|entry| entry.event.attacker == pet.to_bits() && entry.event.spell_id == 0)
+            .count();
+        if count > observed {
+            if let Some(first) = first {
+                return frame - first;
+            }
+            first = Some(frame);
+            observed = count;
+        }
+    }
+    panic!("native pet did not produce two melee attempts");
+}
+
+#[test]
+#[ignore = "RED: native1264934 Frenzy has no active-pet attack-speed consumer"]
+fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
+    const FRENZY: u32 = 1_264_934;
+    let (mut h, caster, pet) = prepare_native_duck(90);
+    assert!(crate::auras::has_aura(h.app.world(), caster, FRENZY));
+    let amount = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(FRENZY)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0 && effect.aura == 4)
+        .unwrap()
+        .base_points;
+    let target = h.npc;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(target)
+        .unwrap()
+        .max = 1_000_000_000.0;
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::Health>(target)
+        .unwrap()
+        .current = 1_000_000_000.0;
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(target)
+        .unwrap();
+    h.app
+        .world_mut()
+        .entity_mut(pet)
+        .insert((position, crate::combat::AutoAttack::new(target)));
+    let accelerated = pet_swing_frames(&mut h, pet);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancel,
+        |aura| aura.spell_id == FRENZY,
+    );
+    let ordinary = pet_swing_frames(&mut h, pet);
+    let expected = ordinary as f32 / (1.0 + amount / 100.0);
+    assert!(
+        (accelerated as f32 - expected).abs() <= 1.0,
+        "Frenzy native{amount}% must shorten pet interval: {accelerated} vs ordinary{ordinary}, expected{expected}"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), pet, FRENZY),
+        "owner passive must not become a synthetic pet buff"
+    );
 }
