@@ -3,6 +3,7 @@
 //! red=High, orange/purple=Medium, yellow=Low. Missing dynamic text stays absent.
 use std::collections::HashMap;
 
+use EncounterSeverity::{High, Low, Medium};
 use bevy::prelude::*;
 use shared::protocol::{
     CombatLogEvent, CombatLogKind, EncounterSeverity, EncounterTimelineEvent, EncounterTimer,
@@ -45,46 +46,66 @@ const fn counted_rename(spell: u32, name: &'static str, warning: EncounterSeveri
 /// LittleWigs2777a9d: current Retail timeline callbacks for Ruby/Academy,
 /// ordinary cast handlers for Rookery/Azure Vault. IDs are explicit native
 /// requests, not every spell on a boss or an inferred event-id→spell cast.
-fn abilities(encounter: u32) -> Option<&'static [Ability]> {
-    use EncounterSeverity::{High, Low, Medium};
-    Some(match encounter {
-        // KokiaBlazehoof.lua:208–243. Ritual needs absent Blizzard target text.
-        2606 => &[
+const PROFILES: &[(u32, &[Ability])] = &[
+    // KokiaBlazehoof.lua:208–243. Ritual needs absent Blizzard target text.
+    (
+        2606,
+        &[
             ability(372864, 372864, None, true),
             ability(372107, 372110, Some(Medium), true),
             ability(372858, 372858, Some(Medium), true),
         ],
-        // MelidrussaChillworn.lua:239–276; wrappers name native children.
-        2609 => &[
+    ),
+    // MelidrussaChillworn.lua:239–276; wrappers name native children.
+    (
+        2609,
+        &[
             ability(396044, 1307297, Some(Medium), true),
             ability(1311543, 1307308, Some(Low), true),
         ],
-        // Kyrioss.lua:70–110:1214315 starts a castbar, not the444034 warning.
-        2816 => &[
+    ),
+    // Kyrioss.lua:70–110:1214315 starts a castbar, not the444034 warning.
+    (
+        2816,
+        &[
             ability(1214325, 1214325, Some(High), false),
             ability(474018, 474018, Some(Medium), false),
             ability(1214315, 444123, None, false),
         ],
-        // EchoOfDoragosa.lua:184–245.
-        2565 => &[
+    ),
+    // EchoOfDoragosa.lua:184–245.
+    (
+        2565,
+        &[
             counted_rename(373326, "Missiles", Medium),
             counted_rename(1282251, "Tank Hit", Medium),
             counted_rename(374343, "Bombs", Low),
             counted_rename(388822, "Pull In", High),
         ],
-        // Azureblade.lua:108–140.
-        2585 => &[
+    ),
+    // Azureblade.lua:108–140.
+    (
+        2585,
+        &[
             ability(384223, 384223, Some(Low), false),
             ability(372222, 372222, Some(Medium), false),
             ability(385578, 385578, Some(High), false),
         ],
-        // Umbrelskul.lua:103–137; role/target-dependent Strike text not fabricated.
-        2584 => &[
+    ),
+    // Umbrelskul.lua:103–137; role/target-dependent Strike text not fabricated.
+    (
+        2584,
+        &[
             ability(384978, 384978, None, false),
             ability(384699, 384699, Some(High), false),
         ],
-        _ => return None,
-    })
+    ),
+];
+
+fn abilities(encounter: u32) -> Option<&'static [Ability]> {
+    PROFILES
+        .iter()
+        .find_map(|(id, abilities)| (*id == encounter).then_some(*abilities))
 }
 
 pub(super) fn owns_clock(encounter: u32) -> bool {
