@@ -441,7 +441,9 @@ fn follower_kit_interrupt_skull_bash_motion_is_native_spell_execution_only() {
     assert_eq!(
         *native.app.world().get::<Position>(native_unit).unwrap(),
         after,
-        "picker motion must equal ordinary sourced spell execution"
+        "picker motion must equal ordinary sourced spell execution; picker={:?}; native={:?}",
+        h.inbox.log,
+        native.inbox.log
     );
     assert!(
         h.inbox

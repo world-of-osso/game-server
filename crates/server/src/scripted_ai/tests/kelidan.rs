@@ -235,6 +235,7 @@ fn encounter_coverage_kelidan_native_spell_admissions_qualify() {
 const STAR_BEAM_PARTNER: [(u32, u32); 5] = [(1, 4), (2, 3), (3, 5), (4, 2), (5, 1)];
 
 /// A cast event at simulated seconds after observation started.
+#[derive(Debug)]
 struct Timed {
     at: f32,
     kind: CombatLogKind,
@@ -666,7 +667,7 @@ fn encounter_coverage_kelidan_channeler_combat_speech_bolt_and_mark() {
                 && marks[0].target == Some(player.to_bits())
                 && marks[0].at >= 5.0
                 && marks[0].at <= 15.2 + 3.0,
-            "Mark of Shadow5-15s at a player without it"
+            "Mark of Shadow5-15s at a player without it; difficulty={difficulty}; events={events:?}"
         );
     }
 }
