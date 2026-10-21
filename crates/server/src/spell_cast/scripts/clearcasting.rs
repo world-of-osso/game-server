@@ -1,5 +1,6 @@
 //! Native113043: Lifebloom HoT rolls effect0's chance, not DB ProcChance100.
 //! TC a352b1fa spell_druid.cpp1871–1882; SimC76f8118 sc_druid.cpp6247,11532–11535.
+use crate::random as rand;
 use bevy::prelude::*;
 
 use crate::auras::{ActiveAuras, AuraInstance, procs::AuraEvent, spend_stack};

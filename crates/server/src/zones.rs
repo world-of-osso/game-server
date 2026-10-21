@@ -1,3 +1,4 @@
+use crate::random as rand;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use shared::components::{
@@ -1170,6 +1171,7 @@ mod tests {
                 parabolicCurveId INTEGER, triggerSpellId INTEGER
              );
              CREATE TABLE content_tuning_level (ID INTEGER, minlevel INTEGER, maxlevel INTEGER);
+             CREATE TABLE difficulty (ID INTEGER, FallbackDifficultyID INTEGER);
              CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
              CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContentTuningID INTEGER);
              CREATE TABLE content_creature_template (entry INTEGER, minlevel INTEGER, maxlevel INTEGER,

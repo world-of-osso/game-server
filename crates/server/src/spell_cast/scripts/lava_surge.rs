@@ -1,5 +1,6 @@
 //! TC a352b1fa spell_shaman.cpp1793–1867: normalized Flame Shock ticks and RestoreCharge.
 //! SimC76f8118 sc_shaman.cpp7230–7258,12000–12020: defer reset/consumption mid-Lava Burst.
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
 

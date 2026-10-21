@@ -9,6 +9,8 @@ use serde_json::{Value, json};
 use std::collections::BTreeSet;
 
 fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
+    f.h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let step = f.h.app.world().resource::<Time<Fixed>>().timestep();
     assert_eq!(
@@ -16,6 +18,7 @@ fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
         std::time::Duration::from_millis(50),
         "native fixed-tick observation"
     );
+    let caster = source(&mut f.h, f.tank, OVERHEAT_GUID);
     let mut boundaries = Vec::new();
     let mut qualified = 0;
     let mut violations = Vec::new();
@@ -30,12 +33,26 @@ fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
         );
         let after = read_caster_boundary(f);
         let at = crate::spell_cast::targets::position(f.h.app.world(), f.tank).unwrap();
+        let interrupted =
+            f.h.app
+                .world()
+                .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+                .0
+                .iter()
+                .any(|event| {
+                    event.kind == shared::protocol::CombatLogKind::Interrupt
+                        && event.target == Some(caster.to_bits())
+                        && event.spell_id == Some(2139)
+                        && event.extra_spell_id == Some(OVERHEAT_FIREBALL)
+                });
+        // Real Counterspell can end the pickup opportunity on the first tick.
+        // It does not authorize entering the same unengaged route afterwards.
+        let cast_accounted_for = (before.casting && after.casting) || interrupted;
         let qualifies = before.exposed
             && after.exposed
             && before.refused
             && after.refused
-            && before.casting
-            && after.casting;
+            && cast_accounted_for;
         if qualifies {
             qualified += 1;
             if at != before_point {
@@ -43,11 +60,17 @@ fn observe_refusal_boundaries(f: &mut Fixture) -> Value {
             }
         }
         boundaries.push(
-            json!({"tick":tick,"qualified":qualifies,"moved":at!=before_point,
+            json!({"tick":tick,"qualified":qualifies,"moved":at!=before_point,"native_counterspell":interrupted,
             "before":before.details,"after":after.details}),
         );
     }
-    json!({"qualified_boundaries":qualified,"violation_ticks":violations,"boundaries":boundaries})
+    let events =
+        &f.h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+    let tail: Vec<_> = events.iter().rev().take(24).collect();
+    json!({"qualified_boundaries":qualified,"violation_ticks":violations,"boundaries":boundaries,"recent_events":tail})
 }
 
 struct OriginProbe {

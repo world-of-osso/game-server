@@ -16,6 +16,7 @@ mod kit_rotation_fidelity_tests;
 mod kit_rotation_tests;
 mod pack_identity;
 mod party;
+mod positioning;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
@@ -52,6 +53,8 @@ mod pull_sources_tests;
 mod pull_stat_provenance_tests;
 #[cfg(test)]
 mod rotation_dummy_tests;
+#[cfg(test)]
+pub(crate) mod simulator;
 mod spawning;
 mod stockade_diagnostic;
 mod tank_frontal;

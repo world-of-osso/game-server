@@ -40,7 +40,10 @@ pub use trait_data::{
     TraitNode, TraitNodeEntry, TraitNodeType, TraitTree,
 };
 
+#[cfg(not(test))]
 pub(crate) const WORLD_DB_PATH: &str = "data/world.db";
+#[cfg(test)]
+pub(crate) const WORLD_DB_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/world.db");
 
 /// One already matched charged spell modifier, retained by its launched cast.
 #[derive(Debug, Clone)]

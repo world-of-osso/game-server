@@ -11,6 +11,7 @@
 //! Pet bar/AI: pet_control.rs. Not modelled: full pet base stats, stable slots beyond
 //! the five active ones, hunter pet death, and pets across map transfers.
 
+use crate::random as rand;
 use std::collections::HashMap;
 
 use bevy::prelude::*;

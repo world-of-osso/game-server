@@ -1,5 +1,6 @@
 //! TC a352b1fa spell_evoker.cpp322–350: one native talent roll per completed cast.
 //! Dragonrage guarantee: native70448 375087s2; SimC76f8118 sc_evoker.cpp5625.
+use crate::random as rand;
 use bevy::prelude::*;
 
 use crate::auras::{ActiveAuras, has_aura};

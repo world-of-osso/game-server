@@ -1,4 +1,5 @@
 //! TrinityCore a352b1fa GetTargets(SMART_TARGET_INVOKER_PARTY).
+use crate::random as rand;
 use bevy::prelude::*;
 use shared::components::{Health, Npc, Player, Position};
 
