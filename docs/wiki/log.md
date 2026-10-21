@@ -1,3 +1,7 @@
+## 2026-10-20 — Kelidan and Skull Bash load flakes
+
+[Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.
+
 ## 2026-10-20 — Earthen Rage authored variance oracle
 
 [Native bounds](systems/auras.md#earthen-rage-baseline--2026-10-19): gate-e7824 observed43/44/43;100SP×0.42471 with±2.5% native variance rounds41–44, not41–43. Only the oracle derives correct rounded endpoints; production/RNG/timers unchanged. Gate failure is RED evidence; native family12/12GREEN20.90s and10/10 same-core CPU-load repetitions at ac61a1f16. No runtime changes.
