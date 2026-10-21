@@ -2,6 +2,16 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Generic summon dependencies and source interaction markers (2026-10-21)
+
+[Contract](../../specs/toys.md#generic-summon-dependency-closure): original206 effect28 blockers partition into151 missing-template toys and55 unsupported-control/title toys; no missing SummonProperties. The producer only imported one aura428 hop plus audited scenery. It now resolves every Toy on-use normal-difficulty TriggerSpell closure with cycle-safe UNION, preserving authentic TDB templates/models/addons; no world spawns or fabricated identities.
+
+Global source markers keep interactions refused: NPC flags, spellclick, SmartAI, VehicleId, gameobject summon/use effects in a summoned toy's closure, and explicit existing toyfx contracts. Blank source script names never prove scriptlessness. Sole exemption is Katy156833/261602's exact mailbox flag, independently exercised by `toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry`; additional/drifted markers still refuse. Previously admitted46780 Ogre Pinata,118191 Vargoth and188694 Florist Pouch become named gaps (unproved SmartAI death/spawn actions or gossip).
+
+Producer RED1→GREEN4 covers direct51337/recursive60383 source equality, idempotency, retained rows and rollback. Marker RED→GREEN3 includes actual186501 trophy use with both179325/180947 actors, source models/scales/owner/map/destination and natural60s expiry/item cooldown. Retained13-case census/mailbox scope initially had11PASS/two old-contract failures; preserving the five explicit toyfx11/toyfx18 dummy/seat/wormhole/invisible-display contracts gives four-case GREEN including both failures, updated census and canonical census. Earlier unaffected11 proofs remain scoped, not rerun.
+
+Prepared-copy pipeline admission423→506/1173:86 added,three corrected removals. Baseline before both batches421→506 net+85. **Canonical without publication is420**, not506. Maintained importer inserts206 authentic templates/280 models/one addon, zero removals/updates to existing content; lead owns publication. Original151 cohort initially has13 marked/138 marker-free toys; five further explicit existing contracts stay refused. Four source/data gaps remain behind effect28:260074/265250/271783 absent,52697 still omitted by legacy identity selection;55 controls remain unimplemented. Template admission is not complete interaction/native parity. Evidence and exact per-item matrix: engine `data/diagnostics/toys-census-2026-10-21/`, including census.json,by-cause.md,summon-delta.json and publication manifest.
+
 ## Census-driven generic force casts (2026-10-21)
 
 [Contract](../../specs/toys.md#census-driven-generic-effect160): the current Full1166+seven70448 catalog has421→423/1173 pipeline-admissible toys after generic effect160 (`FORCE_CAST_2`) dispatch. TC a352b1fa `SpellEffects.cpp:851–892` queues a normal cast by the hit unit at the original caster, after the parent SpellGo. Reuse the existing pending-cast queue, but preserve normal cast time, readiness and CC checks rather than effect64's costed-trigger policy. No per-toy script or dummy whitelist added.
