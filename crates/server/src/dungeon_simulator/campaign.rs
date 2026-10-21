@@ -53,6 +53,75 @@ pub(super) struct Report {
 }
 
 #[test]
+fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
+    let mut expected = [209057, 209072, 209053, 209059, 209065];
+    if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
+        expected = entries
+            .split(',')
+            .map(|entry| entry.trim().parse::<u32>().unwrap())
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("five requested native profiles");
+    }
+    if let Ok(healer) = std::env::var("DUNGEON_SIMULATOR_HEALER_ENTRY") {
+        expected[1] = healer.parse().unwrap();
+    }
+    let level: u8 = std::env::var("DUNGEON_SIMULATOR_LEVEL")
+        .map(|value| value.parse().unwrap())
+        .unwrap_or(32);
+    let run = spawn_run(1, &mut None).unwrap();
+    for (unit, entry) in run.party.members.iter().zip(expected[..4].iter()) {
+        let follower = run
+            .app
+            .world()
+            .get::<crate::followers::Follower>(*unit)
+            .unwrap();
+        assert_eq!(
+            follower.profile.entry, *entry,
+            "actual spawned native follower profile"
+        );
+    }
+    let leader = run
+        .app
+        .world()
+        .resource::<crate::followers::FollowerCatalog>()
+        .profiles
+        .iter()
+        .find(|profile| profile.entry == expected[4])
+        .unwrap();
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::class_progression::ActiveSpec>(run.party.owner)
+            .unwrap()
+            .0,
+        leader.spec_id
+    );
+    for unit in run.members() {
+        assert_eq!(
+            run.app
+                .world()
+                .get::<shared::components::Level>(unit)
+                .unwrap()
+                .0,
+            level
+        );
+        assert_eq!(
+            run.app
+                .world()
+                .get::<shared::components::UnitLevel>(unit)
+                .unwrap()
+                .0,
+            u16::from(level)
+        );
+        assert!(
+            run.app.world().get::<Health>(unit).unwrap().max > 0.0,
+            "real native stat initialization"
+        );
+    }
+}
+
+#[test]
 fn spawned_normal_population_allows_existing_fight_tank_movement() {
     let _rng_scope = crate::random::seed_scope(34);
     let mut run = spawn_run(34, &mut None).unwrap();
