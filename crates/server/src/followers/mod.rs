@@ -9,7 +9,15 @@ mod holy_policy;
 mod kit;
 mod kit_ai;
 mod kit_area;
+#[cfg(test)]
+mod kit_hunter_policy_tests;
 mod kit_interrupt;
+#[cfg(test)]
+mod kit_proc_fidelity_tests;
+#[cfg(test)]
+mod kit_rotation_fidelity_tests;
+#[cfg(test)]
+mod kit_rotation_tests;
 mod pack_identity;
 mod party;
 mod positioning;
@@ -48,6 +56,8 @@ mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
 mod resto_policy;
+#[cfg(test)]
+mod rotation_dummy_tests;
 #[cfg(test)]
 pub(crate) mod simulator;
 mod spawning;

@@ -341,6 +341,7 @@ pub(crate) fn create_tables(db: &Database) {
     let _ = txn.open_table(inventory_store::ITEM_INSTANCES);
     txn.open_table(inventory_store::ITEM_CRAFTING_ORIGINS)
         .expect("create crafting origins table");
+    server::item_instance::store::initialize_store(&txn).expect("create GUID item modifiers table");
     txn.open_table(inventory_store::ITEM_UNLOCKED)
         .expect("create item unlock state table");
     txn.open_table(inventory_store::ITEM_DURABILITIES)
