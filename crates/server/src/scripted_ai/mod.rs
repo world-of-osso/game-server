@@ -23,6 +23,7 @@ mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
 mod broggok;
+mod bromach;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 mod doragosa;
@@ -338,6 +339,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if script_name == bromach::SCRIPT {
+        return bromach::creature_ai(world, creature);
+    }
     if script_name == lost_dwarves::SCRIPT {
         return lost_dwarves::creature_ai(world, creature);
     }
@@ -398,6 +402,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || algethar_academy::is_creature_script(script_name)
         || ruby_life_pools::is_creature_script(script_name)
         || script_name == lost_dwarves::SCRIPT
+        || script_name == bromach::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)

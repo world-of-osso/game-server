@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Bromach current Lua partial
+
+- Current LittleWigs2777a9d `Bromach.lua` authenticates184018/map2451/2556bit1 and initial Call3696055.1s, Slam36970312.1s, Totem38230320.4s, Bloodlust36975427.9s. Consume current source-order repeats: Call28→37.8s, Totem/Bloodlust30.3→40.1s, Slam14.7→28s only after native success. A canceled Slam must not arm its repeat.
+- Native70448 owns targets/casts/auras and382303 effect32→382302 effect28→186696/property64. Preserve caster-ground default; no guessed placement. Producer `--encounter bromach` binds primary2487/5357/display107143 and imports actual totem base/models/addon388314 plus authored Normal1/Heroic2/Mythic23 rows; never manufacture205 stats or spawn rows. Actual raid16/CT0 row is not a dungeon projection.
+- `BROMACH_TREMOR_TIMELINE_CONDITION_CONTEXT`, `BROMACH_CALL_OF_DEEP_SELECTOR_GROUP_GAP` and `BROMACH_QUAKING_TOTEM_AI_GAP` retain unauthored condition/selector/quake/death-stun scripting. No fabricated troggs, quake effects or energy/phase behavior. Native summons must be copy-local and cleaned on boss reset/death; partial lifecycle grants only2556bit1.
+
 ## Lost Dwarves Lua surrender policy
 
 - Current LittleWigs2777a9d `TheLostDwarves.lua` authenticates map2451/2555 and Baelog184581, Eric184582, Olaf184580. Outgoing requests use native70448 and current listed repeat durations in source order. `LOST_DWARVES_TIMELINE_PHASE_CONTEXT` retains unavailable per-phase counts/boat/energy context; no old alternate schedule.

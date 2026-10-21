@@ -1,5 +1,6 @@
 """Actual TDB/70448 copy; local Lua binding never rewrites flags or population."""
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,7 +13,7 @@ SOURCE = Path(__file__).resolve().parents[2] / 'data/world.db'
 class AcademyBindingsTests(unittest.TestCase):
     def test_ancient_binding_preserves_source_immunity_stats_and_population(self):
         with tempfile.TemporaryDirectory() as directory:
-            with sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro', uri=True) as source, sqlite3.connect(Path(directory)/'copy.sqlite') as db:
+            with closing(sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro', uri=True)) as source, closing(sqlite3.connect(Path(directory)/'copy.sqlite')) as db:
                 source.backup(db)
                 before = db.execute('SELECT * FROM content_creature_template WHERE entry=196482').fetchone()
                 columns = [row[1] for row in db.execute('PRAGMA table_info(content_creature_template)')]
@@ -36,7 +37,7 @@ class AcademyBindingsTests(unittest.TestCase):
 
     def test_doragosa_binding_preserves_authored_actor_and_native_children(self):
         with tempfile.TemporaryDirectory() as directory:
-            with sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro', uri=True) as source, sqlite3.connect(Path(directory)/'copy.sqlite') as db:
+            with closing(sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro', uri=True)) as source, closing(sqlite3.connect(Path(directory)/'copy.sqlite')) as db:
                 source.backup(db)
                 before = db.execute('SELECT * FROM content_creature WHERE map=2526').fetchall()
                 stats = db.execute('SELECT * FROM content_creature_template_difficulty WHERE entry=190609').fetchall()
