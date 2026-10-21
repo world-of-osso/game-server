@@ -25,7 +25,7 @@ fn resource_entry(
     }
 }
 
-fn native_dummy(entry: u32) -> (Harness, Entity) {
+pub(super) fn native_dummy(entry: u32) -> (Harness, Entity) {
     let (mut h, unit) = level32(entry);
     h.app.world_mut().entity_mut(h.npc).insert(Health {
         current: 100_000_000.0,
@@ -71,7 +71,7 @@ fn retryable(failure: &CastFailure) -> bool {
     )
 }
 
-fn cast_native(h: &mut Harness, unit: Entity, spell: u32, target: Entity) {
+pub(super) fn cast_native(h: &mut Harness, unit: Entity, spell: u32, target: Entity) {
     for _ in 0..1_200 {
         match creature_cast(h.app.world_mut(), unit, spell, Some(target), false) {
             Ok(()) => {
