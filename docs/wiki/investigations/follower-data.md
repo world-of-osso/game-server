@@ -2,7 +2,7 @@
 
 ### Natural idle Imp expiry — 2026-10-21
 
-At236fa94e1 actual21idle native Imps survive39s, emit no Firebolt and expire after their native40s, but earn no Core (1genuineRED13.93s/zero warnings). Exact104317/55659 native deadline expiry now invokes the same learned Demoniac/capped PRD path as Energy exhaustion before ordinary removal. Map/owner cleanup before the deadline does not invoke this expiry hook; other summons are unchanged. GREEN pending; this closes a separate natural-demise boundary, not Implosion/Power Siphon/Tyrant parity.
+At236fa94e1 actual21idle native Imps survive39s, emit no Firebolt and expire after their native40s, but earn no Core (1genuineRED13.93s/zero warnings). Exact104317/55659 native deadline expiry now invokes the same learned Demoniac/capped PRD path as Energy exhaustion before ordinary removal. Map/owner cleanup before the deadline does not invoke this expiry hook; other summons are unchanged. At5ac8bb740 native7GREEN39.22s/zero warnings plus retained guardians11GREEN10.20s confirms this boundary; this closes a separate natural-demise boundary, not Implosion/Power Siphon/Tyrant parity.
 
 
 ### Natural Demoniac Core — 2026-10-21
