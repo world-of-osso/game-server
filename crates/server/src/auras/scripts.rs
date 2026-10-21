@@ -223,6 +223,7 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
+        || (spell_id == 109186 && effect_index == 0)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
@@ -331,6 +332,7 @@ pub(super) fn effect_enabled(
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
     super::abundance::register(&mut scripts);
+    crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
     super::spirit_wolf::register(&mut scripts);

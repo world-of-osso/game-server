@@ -25,6 +25,7 @@ mod chrono_flame;
 mod clearcasting;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+pub(crate) mod holy_priest;
 pub(super) use germination::redirect_rejuvenation;
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
@@ -472,6 +473,7 @@ pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
     match spell_id {
+        holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
         ENRAGED_REGENERATION => Some(cast_invigorating_fury_heal),
         crate::scripted_ai::azure_vault::ABSOLUTE_ZERO_DAMAGE => {

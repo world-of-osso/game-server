@@ -30,6 +30,8 @@ mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
+#[cfg(test)]
+mod holy_words_tests;
 pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
