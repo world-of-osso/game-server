@@ -1,5 +1,5 @@
 //! Real 70448 percentage damage on a native level90 group, not a trivial Stockade overlevel.
-use super::kit_clearcasting_tests::{complete_real_cast, mana_cost, own_aura};
+use super::kit_clearcasting_tests::{complete_real_cast, frame_seconds, mana_cost, own_aura};
 use super::kit_tests::{at_level, uses_spell};
 use crate::auras::{ActiveAuras, has_aura};
 use crate::group::{GroupRegistry, OnlineMember, OnlineView};
@@ -518,6 +518,45 @@ fn holy_policy_native90_group_pressure_uses_real_hymn_ticks() {
     assert!(
         recipients.len() >= 3,
         "real Hymn must effectively heal the injured group"
+    );
+}
+
+#[test]
+fn holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_words() {
+    let mut group = native_group();
+    let priest = group.priest;
+    complete_real_cast(&mut group.h, priest, 200183);
+    let expiry = own_aura(&group.h, priest, 200183)
+        .unwrap()
+        .expires_at
+        .unwrap();
+    let remaining = expiry - crate::auras::aura_now(group.h.app.world());
+    let frames = (remaining / frame_seconds(&group.h)).ceil() as usize + 1;
+    group.h.advance(frames);
+    assert!(!has_aura(group.h.app.world(), priest, 200183));
+    complete_real_cast(&mut group.h, priest, 2050);
+    complete_real_cast(&mut group.h, priest, 2050);
+    apply_pressure(&mut group, 4);
+    uses_spell(&mut group.h, priest, 596);
+    group.h.advance(5);
+    let healed: std::collections::BTreeSet<_> = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(priest.to_bits())
+                && event.spell_id == Some(596)
+                && event.kind == CombatLogKind::Heal
+                && event.amount > event.overflow
+        })
+        .filter_map(|event| event.target)
+        .collect();
+    assert!(
+        healed.len() >= 3,
+        "native group heal must effectively cover its actual cluster"
     );
 }
 
