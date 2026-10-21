@@ -1,5 +1,9 @@
 # Boss scripts
 
+## Lost Dwarves Lua surrender — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#lost-dwarves-lua-surrender-policy). Current LittleWigs2777a9d `Dragonflight/UldamanLegacyOfTyr/TheLostDwarves.lua` supplies actor identities, outgoing clocks and10% surrender. TC a352b1fa has only legacy map70 Uldaman scripts, not2451 boss AI. Explicit parent policy stops each living actor at10% through existing evade/stop and grants2555bit0 only after all three surrender in the same copy. No friendly faction/flags or boat visual invented. The existing pure precommit loss interception now receives native Health (current/max); only local Dwarf script takes the10% floor, existing Herald/Animated Gold paths retain1HP behavior. Source bindings preserve actualTDB spawns9004388/9004390/9004392 and stats/models/difficulties. IgnoredRED2f400b3b8: nativeCleave1PASS, absentfirstCleave0vs1 and actualoverkilldeath2FAIL25.03s. Expanded proof pending.
+
 ## Academy current Retail partial — 2026-10-21
 
 Doragosa current Retail `EchoOfDoragosa.lua` supplies7→10/9→12/14→14/28→28; excludes always-canceled6.5s Blast. Native1282251 effect32 explicitly selects1282252 and389011; no legacy Astral Breath. Native first-Missiles RED0vs1→GREEN; COMPOSITE6GREEN Normal1/Follower205 (fivePASS48.99s atbaca8b3e3 plus affected direct-flight qualification1PASS46.02s atb2729ea29, production unchanged). Each125s run has31 native source requests and completions, actual Missiles/Blastchild/Vacuum damage, reset/rearm, isolated2565/bit3credit and corpse silence. Direct Blast preserves nativeSpeed1 flight: nochild3.5s, actual1282252+389011 at6.5s. Tests enabled after proof; sourceproducer2PASS3.924s; final integration/publication lead-owned. Producer `--encounter doragosa` binds only source190609. Bomb dummy-selector and Overwhelming Power→rift script remain named gaps.

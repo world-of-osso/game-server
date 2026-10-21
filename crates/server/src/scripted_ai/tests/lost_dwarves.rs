@@ -107,3 +107,131 @@ fn encounter_coverage_lost_dwarves_overkill_surrenders_alive_and_all_three_grant
         assert!(h.inbox(1).ends.is_empty(), "copy-isolated credit");
     }
 }
+
+#[test]
+fn encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completions() {
+    for difficulty in [1, 205] {
+        for (entry, lanes) in [
+            (
+                184581,
+                vec![
+                    (369563, vec![8.5, 26.8, 51.7, 68.7, 93.6, 110.6]),
+                    (369573, vec![20.6, 41.2, 77.0, 97.6]),
+                    (375924, vec![24.8, 103.6]),
+                ],
+            ),
+            (
+                184582,
+                vec![
+                    (369791, vec![6.1, 32.7, 57.6, 84.2, 109.1]),
+                    (375924, vec![24.8, 103.6]),
+                ],
+            ),
+            (
+                184580,
+                vec![
+                    (369677, vec![12.1, 29.1, 58.9, 75.9, 105.7, 122.7]),
+                    (369602, vec![17.2, 51.1, 85.8, 119.7]),
+                    (375924, vec![24.8, 103.6]),
+                ],
+            ),
+        ] {
+            let (mut h, boss, map) = dwarf_copy(entry, difficulty);
+            let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+            h.app
+                .insert_resource(super::cast_admission::CastAdmissions {
+                    actor: boss,
+                    origin,
+                    entries: Vec::new(),
+                });
+            h.engage(boss);
+            h.advance(130.0);
+            let attempts = &h
+                .app
+                .world()
+                .resource::<super::cast_admission::CastAdmissions>()
+                .entries;
+            eprintln!("DWARF{entry} difficulty{difficulty} {attempts:?}");
+            let expected_count: usize = lanes.iter().map(|(_, times)| times.len()).sum();
+            assert_eq!(
+                attempts.len(),
+                expected_count,
+                "only source actor's abilities"
+            );
+            for (spell, times) in lanes {
+                let actual: Vec<_> = attempts.iter().filter(|a| a.spell == spell).collect();
+                assert_eq!(actual.len(), times.len(), "ongoing source lane{spell}");
+                for (attempt, time) in actual.iter().zip(times.iter()) {
+                    assert!(attempt.result.is_ok(), "native admission {attempt:?}");
+                    assert!(
+                        (attempt.time - *time).abs() <= 0.15,
+                        "ordered repeat/native casting {attempt:?} expected{time}"
+                    );
+                }
+                assert_eq!(
+                    cast_count(&h, boss, spell),
+                    times.len(),
+                    "real native completions{spell}"
+                );
+            }
+            assert!(
+                h.inbox(1)
+                    .spell_gos
+                    .iter()
+                    .all(|g| g.caster != boss.to_bits())
+            );
+            assert_eq!(
+                h.app
+                    .world()
+                    .resource::<crate::maps::InstanceManager>()
+                    .completed_encounters(map),
+                0,
+                "one unsurrendered actor cannot credit council"
+            );
+        }
+    }
+}
+
+#[test]
+fn encounter_coverage_lost_dwarves_threshold_stops_casts_without_faction_or_flags() {
+    let (mut h, boss, map) = dwarf_copy(DWARVES[0], 205);
+    let flags = *h.app.world().get::<UnitFlags>(boss).unwrap();
+    let faction = *h.app.world().get::<UnitFactionTemplate>(boss).unwrap();
+    h.engage(boss);
+    h.hit_pct(boss, 89.0);
+    h.advance(12.0);
+    assert_eq!(cast_count(&h, boss, 369563), 1, "above10% still fights");
+    assert!(h.health(boss).current > h.health(boss).max * 0.1);
+    h.hit_pct(boss, 200.0);
+    h.advance(0.1);
+    assert!(h.health(boss).current > 0.0 && h.health(boss).current <= h.health(boss).max * 0.1);
+    assert!(
+        !h.app.world().get::<CombatStatus>(boss).unwrap().0,
+        "surrender exits combat"
+    );
+    assert_eq!(*h.app.world().get::<UnitFlags>(boss).unwrap(), flags);
+    assert_eq!(
+        *h.app.world().get::<UnitFactionTemplate>(boss).unwrap(),
+        faction
+    );
+    let before = h.inbox(0).spell_gos.len();
+    h.advance(60.0);
+    assert_eq!(
+        h.inbox(0).spell_gos.len(),
+        before,
+        "surrendered actor remains silent despite hostile source faction"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(boss)
+            .is_none()
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+}
