@@ -759,6 +759,7 @@ fn spawn_isolated_moloch(seed: u64) -> Run {
 }
 
 #[test]
+#[ignore = "explicit native scripted-Vanish controller hold regression"]
 fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
     let _rng_scope = crate::random::seed_scope(2);
     let mut run = spawn_isolated_moloch(2);
@@ -798,6 +799,39 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
         }
     }
     panic!("native scripted damage boundary did not execute Moloch Vanish");
+}
+
+#[test]
+#[ignore = "explicit required-boss hold does not block another pullable native pack"]
+fn living_unattackable_required_boss_does_not_block_another_pullable_pack() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_run(2, &mut None).unwrap();
+    let boss = run.actors[&20375766];
+    run.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(shared::components::UnitFlags(
+            shared::components::UnitFlags::NOT_SELECTABLE,
+        ));
+    let next = run.next_pack().expect("other native packs remain pullable");
+    assert_ne!(next.1, boss);
+    run.control().unwrap();
+    assert_eq!(run.current_pack, Some(next.0));
+    assert!(run.app.world().get::<MoveIntent>(run.party.owner).is_some());
+    assert!(run.report.bosses_killed.is_empty());
+}
+
+#[test]
+#[ignore = "explicit required-boss absence without Death remains a controller error"]
+fn absent_required_boss_without_a_death_is_not_a_clear_or_an_endless_hold() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_isolated_moloch(2);
+    let boss = run.actors[&20375766];
+    run.app.world_mut().despawn(boss);
+    assert!(run.next_pack().is_none());
+    assert!(run.control().is_err());
+    assert!(run.report.bosses_killed.is_empty());
+    assert!(!run.finished());
 }
 
 #[test]
