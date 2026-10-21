@@ -265,6 +265,193 @@ fn petbattle_pvp_policy_fifo_decline_preserves_same_frame_join_order() {
     );
 }
 
+#[test]
+fn petbattle_pvp_policy_manual_decision_resets_streak_but_invalid_does_not() {
+    let mut app = app();
+    let [a, b] = matched(&mut app);
+    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
+    for _ in 0..2 {
+        let round = app.world().resource::<Matchmaker>().battles[&id]
+            .encounter
+            .battle
+            .round;
+        advance(
+            app.world_mut(),
+            b,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Pass,
+            },
+        )
+        .unwrap();
+        elapse(&mut app, 30_000);
+    }
+    let round = app.world().resource::<Matchmaker>().battles[&id]
+        .encounter
+        .battle
+        .round;
+    for owner in [a, b] {
+        advance(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Pass,
+            },
+        )
+        .unwrap();
+    }
+    for _ in 0..2 {
+        let round = app.world().resource::<Matchmaker>().battles[&id]
+            .encounter
+            .battle
+            .round;
+        advance(
+            app.world_mut(),
+            b,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Pass,
+            },
+        )
+        .unwrap();
+        elapse(&mut app, 30_000);
+    }
+    assert!(
+        is_in_battle(app.world(), a),
+        "manual decision broke the consecutive timeout streak"
+    );
+    let round = app.world().resource::<Matchmaker>().battles[&id]
+        .encounter
+        .battle
+        .round;
+    assert!(
+        advance(
+            app.world_mut(),
+            a,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Ability(0)
+            }
+        )
+        .is_err()
+    );
+    advance(
+        app.world_mut(),
+        b,
+        WildPetBattleActionRequest {
+            battle_id: id,
+            round,
+            action: WildPetBattleAction::Pass,
+        },
+    )
+    .unwrap();
+    elapse(&mut app, 30_000);
+    assert!(
+        !is_in_battle(app.world(), a),
+        "invalid request did not reset the streak"
+    );
+}
+
+#[test]
+fn petbattle_pvp_policy_dead_participant_and_unused_bench_do_not_share_winner_xp() {
+    let mut app = app();
+    let [a, b] = matched(&mut app);
+    let id = app.world().get::<PvpParticipant>(a).unwrap().id;
+    app.world_mut()
+        .resource_mut::<Matchmaker>()
+        .battles
+        .get_mut(&id)
+        .unwrap()
+        .rng = RuntimeRng(rand::rngs::StdRng::seed_from_u64(41));
+    for _ in 0..80 {
+        let battle = &app.world().resource::<Matchmaker>().battles[&id];
+        if battle.encounter.battle.teams[0].pets[0].health <= 0 {
+            break;
+        }
+        let round = battle.encounter.battle.round;
+        for (owner, action) in [
+            (a, WildPetBattleAction::Pass),
+            (b, WildPetBattleAction::Ability(1)),
+        ] {
+            advance(
+                app.world_mut(),
+                owner,
+                WildPetBattleActionRequest {
+                    battle_id: id,
+                    round,
+                    action,
+                },
+            )
+            .unwrap();
+        }
+    }
+    assert!(
+        app.world().resource::<Matchmaker>().battles[&id]
+            .encounter
+            .battle
+            .teams[0]
+            .pets[0]
+            .health
+            <= 0
+    );
+    let round = app.world().resource::<Matchmaker>().battles[&id]
+        .encounter
+        .battle
+        .round;
+    advance(
+        app.world_mut(),
+        a,
+        WildPetBattleActionRequest {
+            battle_id: id,
+            round,
+            action: WildPetBattleAction::Swap(2),
+        },
+    )
+    .unwrap();
+    for owner in [a, b] {
+        advance(
+            app.world_mut(),
+            owner,
+            WildPetBattleActionRequest {
+                battle_id: id,
+                round,
+                action: WildPetBattleAction::Pass,
+            },
+        )
+        .unwrap();
+    }
+    advance(
+        app.world_mut(),
+        b,
+        WildPetBattleActionRequest {
+            battle_id: id,
+            round: round + 1,
+            action: WildPetBattleAction::Forfeit,
+        },
+    )
+    .unwrap();
+    let journal = &app.world().get::<AccountPetJournal>(a).unwrap().journal;
+    assert_eq!(
+        (journal.pets[0].level, journal.pets[0].xp),
+        (1, 0),
+        "dead participant receives nothing"
+    );
+    assert!(
+        journal.pets[1].level > 1 || journal.pets[1].xp > 0,
+        "living replacement participated and earned XP"
+    );
+    assert_eq!(
+        (journal.pets[2].level, journal.pets[2].xp),
+        (1, 0),
+        "unused bench receives nothing"
+    );
+}
+
 fn app() -> App {
     build_app(false)
 }
