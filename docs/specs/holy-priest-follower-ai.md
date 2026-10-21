@@ -50,7 +50,10 @@ Publication source is server master c6be257c5; protocol03cebdb.
    Hymn requires sustained group injury and a safe channel opportunity; Apotheosis
    requires group pressure plus depleted Holy Words. Avoid spending these merely
    because combat exists or before immediate triage needs are met.
-5. Fortitude covers missing party buff recipients. Purify prioritizes actual
+5. Fortitude casts once when any party recipient lacks it, relying on native
+   target118 raid/party expansion; never replace that mechanic with per-member
+   casts. The coverage regression stays explicitly ignored until the generic
+   target118 correction lands. Purify prioritizes actual
    eligible harmful Magic/Disease auras. Mass Dispel requires an applicable native
    dispel footprint; Leap of Faith requires a demonstrated hazardous patient and
    a safe Henry endpoint. No random displacement, fake hazard or empty dispel.
@@ -59,6 +62,20 @@ Publication source is server master c6be257c5; protocol03cebdb.
 
 Thresholds, scoring and pressure windows are project policy and must be documented
 with the implementing tests. No claim that a threshold is sourced from DB2.
+
+### V1 project thresholds and ownership
+
+Guardian Spirit protects patients below20% health; Desperate Prayer uses Henry's
+below50% health plus observed incoming damage. Shared urgent direct-heal candidates
+precede routine throughput/upkeep. Surge selects below90%, PoM below95%, and group
+pressure requires three actual patients:65% for depleted-Word Apotheosis,55% for
+Hymn. Apotheosis precedes the channel when both qualify. A channel is refused for
+shared emergency patients or an authored near-term hit on Henry. Sanctify needs
+three injured members inside the shared native-radius cluster. Fortitude waits
+for calm shared triage and casts once around Henry when any party buff is missing.
+These are project decisions, not DB2 magnitudes. Owned cooldown/upkeep rows stay
+owned even when no native admission is available; ordinary direct healing remains
+available through the shared generic candidate ranking.
 
 ## Consequence coverage required
 
@@ -105,6 +122,7 @@ no fabricated efficiency denominator. Keep before/after simulator revisions and
 settings with the receipts. Stockade stays at its native default32, not a level90
 party overleveling low-level enemies. Qualify the full90 kit separately on a
 native90 party receiving actual70448 max-health damage (124257) and native harmful
-Magic (17146); do not manufacture injury, mana or buffs. Repeat the20-seed cohort
+Magic (23268, native72/3sec with no power cost;17146 requires95mana
+and is invalid for a no-mana dummy); do not manufacture injury, mana or buffs. Repeat the20-seed cohort
 on scaling follower difficulty205 when that simulator is available. Plane geometry
 is not live navigation certification.

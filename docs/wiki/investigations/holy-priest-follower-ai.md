@@ -79,13 +79,26 @@ NPC reference instead of the500-threat Player reference. These are genuine REDs,
 not the earlier construction failures (`holy-threat-fixture-v3.log`,2FAIL6.32s).
 The shared `temporary_threat` reader returned zero for every non-Player. Removing
 that restriction applies the existing native flat modifier to every listed unit;
-raw threat and the existing expiry/reselection path remain untouched. GREEN is
-pending. Mirror Image's unimplemented guardian consequence is outside this control.
+raw threat and the existing expiry/reselection path remain untouched. Atf53b75c0b,
+both native cases GREEN5.39sec (`holy-threat-v4.log`), including expiry and raw
+threat preservation. Mirror Image's unimplemented guardian consequence is outside
+this control.
 
 The group setup then reached a second distinct boundary: the fixed-stat player
 harness omitted UnitStats/CombatRatings/DerivedStats, so StatsPlugin's query never
-matched the owner even with Level90. The fixture must use the ordinary stat-entry
-shape and derived native health, not manufacture larger health or SP values.
+matched the owner even with Level90. The fixture now uses the ordinary stat-entry shape and derived native health,
+not manufactured health or SP. Native90 stat/actual124257 group-damage control
+GREEN6.65sec atf53b75c0b (`holy-pressure-control-v4.log`). Six subsequent policy
+cases genuinely RED: Hymn, Apotheosis, PoM, Guardian Spirit, Desperate Prayer and
+party Fortitude. The Purify case instead failed on17146's native95mana cost;
+its corrected no-mana dummy uses authentic23268 (same72/3sec Magic DoT, no power
+row). This setup failure is not a Purify policy RED.
+
+The production Holy adapter now reads real patients, source-radius clusters,
+native recovery/cost admission and owned41635 wards. Its cooldown/maintenance
+ownership prevents generic rows undoing a refused choice. Integration GREEN is
+pending. Fortitude coverage stays explicitly ignored until the separately owned
+native target118 raid expansion lands; no individual-buff workaround.
 
 ## Named selected-kit gaps
 
@@ -120,8 +133,8 @@ Gap names below have prefix `HOLY_`:
 
 Mass Dispel's normally-undispellable-Magic potency remains **unqualified**, not
 asserted missing solely because72734 is a marker. Ordinary effect38 behavior is
-separate. Source-radius clusters and upcoming-timer integration are pending the
-shared triage slice; absence is not a fabricated safe footprint or forecast.
+separate. Source-radius clusters and authored upcoming timers are now supplied
+by shared triage; only those observed inputs may justify geometry/preparation.
 
 ## Sources
 

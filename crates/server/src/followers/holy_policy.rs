@@ -1,12 +1,41 @@
 //! HOLY_PRIEST_TRIAGE_V1: project decisions over source-valid shared triage inputs.
-use super::healer_triage::{SpecVerdict, TriageContext};
+use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
 use bevy::prelude::Entity;
+use shared::components::Health;
+
+use crate::auras::ActiveAuras;
+use crate::spell_cast::{self, CastFailure};
+use crate::spell_info::SpellStore;
 
 const FLASH_HEAL: u32 = 2061;
 const PRAYER_OF_MENDING: u32 = 33076;
 const SANCTIFY: u32 = 34861;
 const DIVINE_HYMN: u32 = 64843;
 const APOTHEOSIS: u32 = 200183;
+const SERENITY: u32 = 2050;
+const GUARDIAN_SPIRIT: u32 = 47788;
+const DESPERATE_PRAYER: u32 = 19236;
+const FORTITUDE: u32 = 21562;
+const SURGE: u32 = 114255;
+const MENDING_WARD: u32 = 41635;
+const OWNED: SpellSet = &[
+    PRAYER_OF_MENDING,
+    SANCTIFY,
+    DIVINE_HYMN,
+    APOTHEOSIS,
+    GUARDIAN_SPIRIT,
+    DESPERATE_PRAYER,
+    FORTITUDE,
+];
+const POLICY_SPELLS: &[u32] = &[
+    FLASH_HEAL,
+    PRAYER_OF_MENDING,
+    SANCTIFY,
+    DIVINE_HYMN,
+    APOTHEOSIS,
+];
+const GUARDIAN_HEALTH: f32 = 0.20;
+const PERSONAL_HEALTH: f32 = 0.50;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct HolyDecision {
@@ -38,8 +67,169 @@ struct PolicySnapshot {
     channel: bool,
 }
 
-pub(super) fn decide(_ctx: &TriageContext<'_>) -> SpecVerdict {
-    SpecVerdict::Defer { owned: &[] }
+pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
+    let decision = choose_guardian(ctx)
+        .or_else(|| choose_personal_heal(ctx))
+        .or_else(|| choose_emergency(ctx))
+        .or_else(|| {
+            select_action(&read_snapshot(ctx)).map(|action| Decision {
+                spell_id: action.spell,
+                target: action.target,
+                urgent: false,
+            })
+        })
+        .or_else(|| choose_fortitude(ctx));
+    match decision {
+        Some(decision) => SpecVerdict::Cast {
+            decision,
+            owned: OWNED,
+        },
+        None => SpecVerdict::Defer { owned: OWNED },
+    }
+}
+
+fn ready(ctx: &TriageContext<'_>, spell_id: u32, target: Entity) -> bool {
+    let Some(entry) = ctx.entries.iter().find(|entry| entry.spell_id == spell_id) else {
+        return false;
+    };
+    let Some(spell) = ctx.world.resource::<SpellStore>().get(spell_id) else {
+        return false;
+    };
+    super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, target, entry)
+        && spell_cast::read_healer_recovery(ctx.world, ctx.caster, spell).is_ok()
+        && spell_cast::spell_costs(ctx.world, ctx.caster, spell).is_ok()
+}
+
+fn health_fraction(ctx: &TriageContext<'_>, target: Entity) -> Option<f32> {
+    let health = ctx.world.get::<Health>(target)?;
+    (health.current > 0.0 && health.max > 0.0).then_some(health.current / health.max)
+}
+
+fn own_aura(ctx: &TriageContext<'_>, target: Entity, spell: u32) -> bool {
+    ctx.world.get::<ActiveAuras>(target).is_some_and(|auras| {
+        auras
+            .iter()
+            .any(|aura| aura.spell_id == spell && aura.caster == ctx.caster)
+    })
+}
+
+fn choose_guardian(ctx: &TriageContext<'_>) -> Option<Decision> {
+    ctx.patients.iter().find_map(|patient| {
+        let critical = health_fraction(ctx, patient.entity)? < GUARDIAN_HEALTH;
+        (critical && ready(ctx, GUARDIAN_SPIRIT, patient.entity)).then_some(Decision {
+            spell_id: GUARDIAN_SPIRIT,
+            target: patient.entity,
+            urgent: true,
+        })
+    })
+}
+
+fn choose_personal_heal(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let injured = health_fraction(ctx, ctx.caster)? < PERSONAL_HEALTH;
+    let incoming = ctx
+        .patients
+        .iter()
+        .any(|patient| patient.entity == ctx.caster && patient.incoming_per_second > 0.0);
+    (injured && incoming && ready(ctx, DESPERATE_PRAYER, ctx.caster)).then_some(Decision {
+        spell_id: DESPERATE_PRAYER,
+        target: ctx.caster,
+        urgent: true,
+    })
+}
+
+fn choose_emergency(ctx: &TriageContext<'_>) -> Option<Decision> {
+    ctx.candidates
+        .iter()
+        .find(|candidate| {
+            candidate.decision.urgent && !OWNED.contains(&candidate.decision.spell_id)
+        })
+        .map(|candidate| candidate.decision)
+}
+
+fn choose_fortitude(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let calm = ctx
+        .patients
+        .iter()
+        .all(|patient| patient.score == 0.0 && !ctx.preparing(patient.entity));
+    let missing = ctx
+        .patients
+        .iter()
+        .any(|patient| !crate::auras::has_aura(ctx.world, patient.entity, FORTITUDE));
+    (calm && missing && ready(ctx, FORTITUDE, ctx.caster)).then_some(Decision {
+        spell_id: FORTITUDE,
+        target: ctx.caster,
+        urgent: false,
+    })
+}
+
+fn read_snapshot(ctx: &TriageContext<'_>) -> PolicySnapshot {
+    let patients = ctx
+        .patients
+        .iter()
+        .filter_map(|patient| {
+            Some(Patient {
+                unit: patient.entity,
+                health_fraction: health_fraction(ctx, patient.entity)?,
+            })
+        })
+        .collect();
+    let candidates = POLICY_SPELLS
+        .iter()
+        .flat_map(|&spell| read_candidates(ctx, spell))
+        .collect();
+    let clusters = ctx
+        .clusters
+        .iter()
+        .map(|cluster| Cluster {
+            spell: cluster.spell_id,
+            center: cluster.anchor,
+            injured: cluster.members.len(),
+        })
+        .collect();
+    PolicySnapshot {
+        caster: ctx.caster,
+        patients,
+        candidates,
+        clusters,
+        surge: own_aura(ctx, ctx.caster, SURGE),
+        mending: ctx
+            .patients
+            .iter()
+            .any(|patient| own_aura(ctx, patient.entity, MENDING_WARD)),
+        depleted: words_depleted(ctx),
+        channel: !ctx.patients.iter().any(|patient| patient.emergency)
+            && !ctx.preparing(ctx.caster),
+    }
+}
+
+fn read_candidates(ctx: &TriageContext<'_>, spell: u32) -> Vec<HolyDecision> {
+    let targets: Vec<_> = if matches!(spell, APOTHEOSIS | DIVINE_HYMN) {
+        vec![ctx.caster]
+    } else {
+        ctx.patients.iter().map(|patient| patient.entity).collect()
+    };
+    targets
+        .into_iter()
+        .filter(|&target| ready(ctx, spell, target))
+        .map(|target| HolyDecision { spell, target })
+        .collect()
+}
+
+fn words_depleted(ctx: &TriageContext<'_>) -> bool {
+    let store = ctx.world.resource::<SpellStore>();
+    let words: Vec<_> = ctx
+        .entries
+        .iter()
+        .filter(|entry| matches!(entry.spell_id, SERENITY | SANCTIFY))
+        .filter_map(|entry| store.get(entry.spell_id))
+        .collect();
+    !words.is_empty()
+        && words.iter().all(|spell| {
+            matches!(
+                spell_cast::read_healer_recovery(ctx.world, ctx.caster, spell),
+                Err(CastFailure::NoCharges)
+            )
+        })
 }
 
 // Named project thresholds, never sourced spell mechanics.
@@ -53,8 +243,8 @@ fn select_action(context: &PolicySnapshot) -> Option<HolyDecision> {
     [
         choose_surge(context),
         choose_sanctify(context),
-        choose_hymn(context),
         choose_apotheosis(context),
+        choose_hymn(context),
         choose_mending(context),
     ]
     .into_iter()

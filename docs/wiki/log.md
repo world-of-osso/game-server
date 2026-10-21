@@ -1,3 +1,7 @@
+## 2026-10-21 — Holy native policy boundary
+
+[Holy Priest](investigations/holy-priest-follower-ai.md): native temporary-threat2GREEN and native90 damage/stat controlGREEN atf53b75c0b; six policy REDs justify the real-context adapter. Integration GREEN pending; target118 Fortitude coverage ignored pending generic correction, never replaced by individual buffs.
+
 ## 2026-10-21 — Follower healer triage design
 
 [FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
