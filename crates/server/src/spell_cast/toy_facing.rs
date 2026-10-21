@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use shared::components::{ModelDisplay, Player, Rotation, UnitScale};
 
 use super::{CastFailure, targets, toy_requirements::ToyCastingRequirements};
+use crate::scripted_ai::model_reach::{PLAYER_BOUNDING_RADIUS, scaled_model_dimension};
 
 const MIN_MELEE_REACH: f32 = 2.0;
-const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 const IN_FRONT: u32 = 1;
 const PET_BOUNDING_RADIUS: f32 = 1.0;
 
@@ -26,13 +26,12 @@ fn bounding_radius(world: &World, target: Entity) -> Result<f32, CastFailure> {
         .facing
         .model_radii
         .get(&display.display_id)
-        .ok_or_else(|| {
-            CastFailure::Unsupported(format!(
-                "facing target display{} has no TDB bounding radius",
-                display.display_id
-            ))
-        })?;
-    Ok(radius * scale)
+        .copied();
+    Ok(scaled_model_dimension(
+        radius,
+        PLAYER_BOUNDING_RADIUS,
+        scale,
+    ))
 }
 
 pub(super) fn check_cast(

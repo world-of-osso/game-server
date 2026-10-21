@@ -5,7 +5,9 @@ use shared::components::{ModelDisplay, Player, Position, UnitScale};
 use std::collections::HashMap;
 
 /// `DEFAULT_PLAYER_COMBAT_REACH`, scaled by `Player::SetObjectScale` (Player.cpp:1577).
-const PLAYER_COMBAT_REACH: f32 = 1.5;
+pub(crate) const PLAYER_COMBAT_REACH: f32 = 1.5;
+/// TC a352b1fa ObjectDefines.h:39, rounded to its f32 representation.
+pub(crate) const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 
 /// `creature_model_info.CombatReach` by display, from the prepared
 /// `encounter_creature_model_info` rows (scripts/encounter_model_geometry.py).
@@ -20,15 +22,16 @@ pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Resul
     Ok(ModelReaches(rows.collect::<rusqlite::Result<_>>()?))
 }
 
+/// Pure `MISSING_MODEL_INFO_TC_PLAYER_DEFAULTS_SCALED` dimension decision.
+/// Callers must establish actual display identity and load their source catalog first.
+pub(crate) fn scaled_model_dimension(authored: Option<f32>, default: f32, scale: f32) -> f32 {
+    authored.unwrap_or(default) * scale
+}
+
 /// Authored model reach wins; an actual display missing model-info uses the approved
 /// TC player default. `UnitScale` already includes creature and display scale.
 pub(crate) fn creature_combat_reach(models: &ModelReaches, display: u32, scale: f32) -> f32 {
-    models
-        .0
-        .get(&display)
-        .copied()
-        .unwrap_or(PLAYER_COMBAT_REACH)
-        * scale
+    scaled_model_dimension(models.0.get(&display).copied(), PLAYER_COMBAT_REACH, scale)
 }
 
 /// A player's default reach, or a creature's authored/project-default reach.
