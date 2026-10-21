@@ -56,6 +56,8 @@ mod stampwhistle;
 mod stasis_sand;
 #[path = "toys_stone_whistle_tests.rs"]
 mod stone_whistle;
+#[path = "toys_summon_closure_tests.rs"]
+mod summon_closure;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
 #[path = "toys_waywatcher_tests.rs"]
