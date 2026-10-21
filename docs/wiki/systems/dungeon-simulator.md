@@ -124,3 +124,9 @@ Cargo-test gate exposed cwd-relative Startup catalog loading and a stale Overhea
 Production non-tank combat/heal pursuit and idle regroup now inspect live same-copy unpulled aggressive hostiles using the existing native radius calculation (levels, scaling and both reaches). If an approach segment would enter a sight circle, keep the current position and continue any native cast valid from there. Tank planning is unchanged; no pack-specific offsets or radius changes. This conservative chooser holds unsafe approaches; it does not invent alternative terrain paths. Exact natural20375760/Crenna regression RED15.7928<16yd at3.55s→GREEN, with deliberate native accidental-attack handling control retained (2PASS12.39s).
 
 Post-change batch11 atf3b7b8295/P03cebdb:10/10clears,0wipes/stalls/blocks/timeouts,30boss Deaths.27601.6sim_s/441.435run-wall=62.53×; whole process445.98s. Prior50seed result remains explicitly pre-positioning. Throughput is secondary per user; unchanged target still open.
+
+## Native Returning/home arrival — 2026-10-21
+
+Seed12's last active Rumbling Earth20375744 remained alive in Returning after Felguard30213 damage. The adapter previously selected pursuit/follow/pet destinations but no home destination; the normal return-home system was absent. Native at-home and displaced4yd fixtures both genuinely fail at fcacd14e7, while Bo's actual first-fight participation passes after source/catalog alignment.
+
+Returning now follows frozen-edge time to the same explicit/escort/spawn home chosen by production. Actual arrival invokes `creature_ai::home::finish_return`, extracted from ordinary return-home completion: Idle, mana, non-regenerating health, addon auras/pose and JustReachedHome dispatch. No native direct navigation is installed in the simulator, and no history/death state is fabricated. GREEN and seed12 replay remain pending. [Contract](../../specs/dungeon-simulator.md#native-evadehome-lifecycle).

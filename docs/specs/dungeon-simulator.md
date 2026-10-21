@@ -20,6 +20,11 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-source 2D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.
 
+## Native evade/home lifecycle
+
+- [ ] Returning creatures consume frozen-edge travel to the same native explicit/escort/spawn home used by production. A displaced actor must move, not teleport; an actor already at home must not remain Returning.
+- [ ] On actual arrival, share ordinary Idle/mana/non-regenerating-health/addon/pose restoration and `JustReachedHome` dispatch with production. Do not clear pull history or fake native deaths to release a stalled fight.
+
 ## Native pet utility
 
 Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs normal pet actions/AI. The immutable catalog moves between cached seeded worlds; pet commands, owners and cast state never do. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
@@ -35,7 +40,8 @@ Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs norma
 - `crates/server/src/dungeon_simulator/runtime.rs`: plain manually clocked gameplay App and production `zones::spawn_map_creatures` population, with replication disabled.
 - `crates/server/src/dungeon_simulator/campaign.rs`: full-population controller, real party-progress observation, periodic profiling checkpoints and HP/mana/pull/death report.
 - `crates/server/src/dungeon_simulator/diagnostics.rs`: read-only source-unit snapshots and process memory observations.
-- `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet movement timed along frozen edges, never straight-line travel time.
+- `crates/server/src/dungeon_simulator/movement.rs`: source-speed pursuit/follow/pet/Returning movement timed along frozen edges, never straight-line travel time.
+- `crates/server/src/creature_home.rs`: shared native home identity and actual arrival restoration/hook lifecycle.
 - `Cargo.toml` `[profile.sim]`: optimized batch execution with native debug assertions.
 - `scripts/run-dungeon-simulator.py`: execute the compiled filtered test from repository root, with explicit output directory, run count and starting seed.
 - `crates/server/src/dungeon_simulator/batch.rs`: seeded collector, per-pack wipe/failure counts and summary JSON.
@@ -54,6 +60,7 @@ Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs norma
 
 - `dungeon_simulator::catalogs::seeded_apps_reuse_catalog_allocations_but_reset_dynamic_state`: exact spawn/spell allocation reuse with fresh clocks, actors and event queues (RED→GREEN6.39s).
 - `dungeon_simulator::campaign::sampling_retains_a_member_after_native_dead_summon_despawn`: actual kill→native corpse decay→absent actor sampling (RED→GREEN11.23s).
+- `dungeon_simulator::runtime::native_evade_at_home_completes_ordinary_return_lifecycle`, `native_evade_walks_frozen_home_route_before_completing_return`: actual authored Rumbling Earth20375744 native-home and displaced4yd return boundaries (both genuine RED at fcacd14e7; GREEN pending).
 
 ## Known gaps (current cycle)
 

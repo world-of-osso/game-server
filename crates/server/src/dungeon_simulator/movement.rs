@@ -13,19 +13,34 @@ fn point(position: &Position) -> Vec3 {
     Vec3::new(position.x, 0.0, position.z)
 }
 
+fn creature_destination(world: &World, unit: Entity) -> Option<(Vec3, f32)> {
+    match world.get::<crate::creature_ai::CreatureState>(unit)? {
+        crate::creature_ai::CreatureState::Pursuing { target } => {
+            let target = Entity::try_from_bits(*target)?;
+            let to = point(world.get::<Position>(target)?);
+            let reach = world
+                .get::<crate::followers::FollowerReach>(unit)
+                .map_or(crate::creature_ai::CHASE_REACH, |reach| reach.0);
+            Some((to, reach))
+        }
+        crate::creature_ai::CreatureState::Returning => {
+            let spawn = world.get::<crate::creature_ai::SpawnPoint>(unit)?;
+            let explicit = world.get::<crate::creature_ai::HomePosition>(unit);
+            let escort = world.get::<crate::scripted_ai::movement::ScriptedPath>(unit);
+            let home =
+                crate::creature_ai::home::position(spawn, explicit, escort.map(|path| path.home));
+            Some((point(&home), 0.0))
+        }
+        _ => None,
+    }
+}
+
 fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
     if let Some(intent) = world.get::<MoveIntent>(unit) {
         return Some((intent.0, 0.0));
     }
-    if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
-        world.get::<crate::creature_ai::CreatureState>(unit)
-    {
-        let target = Entity::try_from_bits(*target)?;
-        let to = point(world.get::<Position>(target)?);
-        let reach = world
-            .get::<crate::followers::FollowerReach>(unit)
-            .map_or(crate::creature_ai::CHASE_REACH, |reach| reach.0);
-        return Some((to, reach));
+    if let Some(destination) = creature_destination(world, unit) {
+        return Some(destination);
     }
     if let Some(follow) = world.get::<crate::creature_ai::FollowOwner>(unit) {
         if follow.owner != unit {
@@ -177,8 +192,27 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
             z: 0.0,
         });
     }
-    world.entity_mut(unit).insert(travel);
+    if !finish_home_arrival(world, unit, &travel) {
+        world.entity_mut(unit).insert(travel);
+    }
     Ok(())
+}
+
+fn finish_home_arrival(world: &mut World, unit: Entity, travel: &Travel) -> bool {
+    let returning = world.get::<crate::creature_ai::CreatureState>(unit)
+        == Some(&crate::creature_ai::CreatureState::Returning);
+    if !returning || !travel.legs.is_empty() {
+        return false;
+    }
+    let position = *world.get::<Position>(unit).unwrap();
+    crate::creature_ai::move_follower(world, unit, position, 0.0);
+    if let Some(home) = world.get::<crate::creature_ai::HomePosition>(unit).copied()
+        && let Some(mut rotation) = world.get_mut::<Rotation>(unit)
+    {
+        rotation.y = home.orientation;
+    }
+    crate::creature_ai::home::finish_return(world, unit);
+    true
 }
 
 #[test]

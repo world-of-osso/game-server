@@ -1609,6 +1609,9 @@ fn leash_check_system(
     }
 }
 
+#[path = "creature_home.rs"]
+pub(crate) mod home;
+
 /// Run evading creatures back to their spawn point (`MoveTargetedHome`,
 /// run speed), then transition to Idle. At home the creature's mana is full and
 /// its addon auras and pose return (`HomeMovementGenerator::DoFinalize` →
@@ -1627,13 +1630,8 @@ pub(crate) fn return_to_spawn_system(
             &mut Position,
             &SpawnPoint,
             &mut CreatureState,
-            Option<&mut shared::components::Mana>,
-            Option<&crate::zones::SpawnAddonAuras>,
-            Option<(&crate::zones::SpawnPose, &mut shared::components::UnitPose)>,
             Option<&InMap>,
             Bearing,
-            Option<&mut shared::components::Health>,
-            Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
             Option<&HomePosition>,
             Option<&mut crate::scripted_ai::waypoint_path::PathMovement>,
@@ -1653,13 +1651,8 @@ pub(crate) fn return_to_spawn_system(
         mut pos,
         spawn,
         mut state,
-        mana,
-        addon_auras,
-        pose,
         map,
         bearing,
-        health,
-        regen,
         escort,
         explicit_home,
         default_waypoint,
@@ -1674,19 +1667,7 @@ pub(crate) fn return_to_spawn_system(
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let home = explicit_home.map_or_else(
-            || {
-                escort.map_or(
-                    Position {
-                        x: spawn.x,
-                        y: spawn.y,
-                        z: spawn.z,
-                    },
-                    |escort| escort.home,
-                )
-            },
-            |home| home.position,
-        );
+        let home = home::position(spawn, explicit_home, escort.map(|escort| escort.home));
         let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
@@ -1736,37 +1717,7 @@ pub(crate) fn return_to_spawn_system(
         queues.apply(entity, &mut pos, bearing, stride);
         if reached {
             *state = CreatureState::Idle;
-            commands.queue(move |world: &mut World| {
-                crate::scripted_ai::dispatch(
-                    world,
-                    entity,
-                    crate::scripted_ai::Hook::JustReachedHome,
-                );
-            });
-            if let Some(mut mana) = mana
-                && mana.current != mana.max
-            {
-                mana.current = mana.max;
-            }
-            if let Some(mut health) = health.filter(|_| !regen)
-                && health.current != health.max
-            {
-                health.current = health.max;
-                if let Some(replication) = queues.replication.as_deref() {
-                    replication.mark(entity);
-                }
-            }
-            if let Some(auras) = addon_auras {
-                commands
-                    .entity(entity)
-                    .insert(crate::zones::AddonAuras(auras.0.clone()));
-            }
-            if let Some((spawn_pose, mut pose)) = pose
-                && pose.set_if_neq(spawn_pose.0)
-                && let Some(replication) = queues.replication.as_deref()
-            {
-                replication.mark(entity);
-            }
+            commands.queue(move |world: &mut World| home::finish_return(world, entity));
         }
     }
 }

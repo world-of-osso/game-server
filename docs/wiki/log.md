@@ -3541,3 +3541,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Lost Dwarves currentLua/70448 partial plus explicit living10% surrender policy: ignoredRED→native7GREEN Normal/Follower; all-three isolatedcredit, preservedflags/faction, nativehealth-regen/reset restoration and old-pull credit exclusion. Sourceproducer onlybinds3authoredactors. [Boss scripts](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21).
 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
+
+## 2026-10-21 — Simulator native home-return prerequisite
+
+[Simulator](systems/dungeon-simulator.md#native-returninghome-arrival--2026-10-21): actual20375744 at-home and displaced4yd Returning2RED atfcacd14e7, Bo first-fightPASS in the same16.27s composite. Shared production home-arrival restoration and frozen Returning destination implemented; GREEN/seed12 replay pending.
