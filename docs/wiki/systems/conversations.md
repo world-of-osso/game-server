@@ -1,6 +1,6 @@
 # Conversations
 
-Source ingress is implemented; server runtime/payload and then protocol/Godot TalkingHead presentation are the active ordered slices. [Contract](../../specs/conversations.md).
+Source ingress and the bounded server runtime/payload are proved; approved protocol/Godot TalkingHead presentation is next. [Contract](../../specs/conversations.md).
 
 ## Local source ingress
 
@@ -36,4 +36,4 @@ TC `Conversation.cpp` creates private-owner actor/line objects, computes per-loc
 
 ## Server implementation in progress
 
-Eight native runtime/ingress tests at5fa0334a1 genuinely fail after real source import/map/ACK/actor prerequisites (conversation-runtime-red.log,16.83s); generic705 creation refuses, six Orator entrants receive no payload, missing-creator ingress is not consumed. Runtime now loads source actor/line definitions into explicit per-template Results, creates map-owned private actor/line payloads and expires at maximum supported-locale end plus10s. Orator scripts use native rotated boxes/sphere and ordinary living/selectable Players, exact-copy216619 creator and source trigger removal. Source condition-bearing lines/scripts reject explicitly rather than being silently admitted. No GM mode exists in the current player model; account privilege is not treated as GM mode. Source Voice/BroadcastTextDuration absence contributes zero as TC does, not a guessed voice length. GREEN pending.
+Eight native runtime/ingress tests at5fa0334a1 genuinely fail after real source import/map/ACK/actor prerequisites (conversation-runtime-red.log,16.83s); generic705 creation refuses, six Orator entrants receive no payload, missing-creator ingress is not consumed. Runtime now loads source actor/line definitions into explicit per-template Results, creates map-owned private actor/line payloads and expires at maximum supported-locale end plus10s. Orator scripts use native rotated boxes/sphere and ordinary living/selectable Players, exact-copy216619 creator and source trigger removal. Source condition-bearing lines/scripts reject explicitly rather than being silently admitted. No GM mode exists in the current player model; account privilege is not treated as GM mode. Source Voice/BroadcastTextDuration absence contributes zero as TC does, not a guessed voice length. All eight runtime tests pass16.60s/zero warnings atb8cec653b (`conversation-runtime-green1.log`) and are enabled afterward. Six cover all three Orator ingresses in Normal1/Follower205, native705 independently proves ordered two-line payload and1s+10s lifetime, and the missing-creator case preserves copy isolation/source trigger consumption. This is internal server payload proof, not yet protocol delivery or client presentation.

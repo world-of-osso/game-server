@@ -380,7 +380,6 @@ fn ingress(difficulty: u32, authored: &Authored) {
 macro_rules! ingress_case {
     ($name:ident,$difficulty:expr,$index:expr) => {
         #[test]
-        #[ignore = "RED: source conversation runtime/ingress is absent"]
         fn $name() {
             ingress($difficulty, &AUTHORED[$index]);
         }
@@ -394,7 +393,6 @@ ingress_case!(conversation_runtime_orator_intro3_normal, 1, 2);
 ingress_case!(conversation_runtime_orator_intro3_follower205, 205, 2);
 
 #[test]
-#[ignore = "RED: generic conversation creation/source timing is absent"]
 fn conversation_runtime_native705_multiline_timing_owner_and_map_lifetime() {
     let mut scene = scene(1, 266);
     let orator = creator(&mut scene.h, scene.map);
@@ -458,7 +456,6 @@ fn conversation_runtime_native705_multiline_timing_owner_and_map_lifetime() {
 }
 
 #[test]
-#[ignore = "RED: source ingress consumption without a creator is absent"]
 fn conversation_runtime_orator_missing_creator_does_not_borrow_another_copy() {
     let mut scene = scene(1, 266);
     let orator = creator(&mut scene.h, scene.map);

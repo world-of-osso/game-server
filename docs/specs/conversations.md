@@ -7,13 +7,13 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 ### Source ingress
 
 - [x] Import source conversation templates, actors and line templates plus70448 ConversationLine/BroadcastTextDuration into an explicitly owned copy, without changing other tables or canonical data. Preserve receipt authentication/unreadable-record facts; never promote available rows into tablewide authentication claims.
-- [ ] Preserve actual24642→67085,24643→67091,24644→67092 and authored actor51642/display116692 identities; no invented dialogue, actor aliases or placements. Fail explicitly for unavailable required definitions.
+- [x] Preserve actual24642→67085,24643→67091,24644→67092 and authored actor51642/display116692 identities; no invented dialogue, actor aliases or placements. Fail explicitly for unavailable required definitions.
 
 ### Server runtime
 
-- [ ] Create source actor/line payloads in the creator's exact copy, with private-owner isolation and no extra recipient/copy delivery.
-- [ ] Use authored line order, duration contributions and TC's10-second post-line object lifetime; do not guess missing voice durations or phase clocks.
-- [ ] Actual static ingress spawns266–268 on2669 run the source Player/non-GM checks, use that instance's Orator216619, create the private conversation at the entrant's position and remove the source trigger as authored.
+- [x] Create source actor/line payloads in the creator's exact copy, with private-owner isolation and no extra recipient/copy delivery.
+- [x] Use authored line order, duration contributions and TC's10-second post-line object lifetime; do not guess missing voice durations or phase clocks.
+- [x] Actual static ingress spawns266–268 on2669 run the source ordinary-Player eligibility checks (GM mode is not represented in the current player model), use that instance's Orator216619, create the private conversation at the entrant's position and remove the source trigger as authored.
 
 ### Protocol and presentation
 
@@ -39,7 +39,7 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 
 ## Known gaps (current cycle)
 
-- [ ] Server runtime, owner payload, source lifecycle and Orator ingress.
+- [ ] GM-mode state, condition-bearing conversation-line evaluation and custom conversation scripts are not qualified by the ordinary-Player/source-script-free runtime gate. Unsupported source definitions fail explicitly.
 - [ ] Approved protocol and detached-engine TalkingHead presentation slice after the server gate.
 
 ## Out of scope

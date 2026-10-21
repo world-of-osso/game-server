@@ -3526,3 +3526,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
 
 - 2026-10-21: Conversation source ingress4GREEN6.83s at a034edf54; actual owned-backup CLI and independent five-table SQL replay, canonical refusal and unchanged partial-source receipts. Generic server runtime then protocol/Godot TalkingHead remain active.
+
+- 2026-10-21: Conversation bounded server runtimeb8cec653b eight genuineRED→eightGREEN16.60s/0warnings, enabled after proof: all3 Orator native shape ingresses Normal/Follower, private-owner/copy actor+line payload, native705 ordered timing/expiry, missingcreator isolation. Protocol and Godot TalkingHead presentation next.
