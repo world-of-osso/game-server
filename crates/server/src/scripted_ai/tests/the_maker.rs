@@ -25,7 +25,6 @@ fn maker_copy(difficulty: u32) -> (Harness, Entity, InMap) {
 }
 
 #[test]
-#[ignore = "RED: Maker domination30923 is not scheduled"]
 fn charm_control_native_maker_30923_charms_a_player_only_with_multiple_player_threats() {
     for difficulty in [1, 2] {
         let (mut h, boss, map) = pull_maker(difficulty);

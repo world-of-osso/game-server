@@ -92,7 +92,6 @@ fn order(h: &mut Harness, command: u32, target: Option<Entity>) {
 }
 
 #[test]
-#[ignore = "RED: possess movement authority needs native message proof"]
 fn charm_control_native_605_routes_input_to_npc_not_priest_and_rejects_old_epoch() {
     let mut h = fixture();
     let original = *h.app.world().get::<Position>(h.caster).unwrap();
@@ -172,7 +171,6 @@ fn charm_control_native_605_routes_input_to_npc_not_priest_and_rejects_old_epoch
 }
 
 #[test]
-#[ignore = "RED: native charm action and actual melee consequence unproven"]
 fn charm_control_native_205364_pet_attack_hits_enemy_not_charmer() {
     let mut h = fixture();
     let enemy = spawn_npc(&mut h.app, 4.0);
@@ -221,7 +219,6 @@ fn charm_control_native_205364_pet_attack_hits_enemy_not_charmer() {
 }
 
 #[test]
-#[ignore = "RED: native damage break and restoration unproven"]
 fn charm_control_native_205364_retains_damage_but_31865_breaks_from_native_flags() {
     for (spell, retained) in [(205364, true), (31865, false)] {
         let mut h = fixture();
@@ -268,7 +265,6 @@ fn charm_control_native_205364_retains_damage_but_31865_breaks_from_native_flags
 }
 
 #[test]
-#[ignore = "qualification: NPC-charmer owns the charmed player's attack stop input"]
 fn charm_control_native_30923_original_connection_cannot_stop_charmer_ai_attack() {
     let mut h = fixture();
     let opponent = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 4.0);
@@ -312,7 +308,6 @@ fn charm_control_native_30923_original_connection_cannot_stop_charmer_ai_attack(
 }
 
 #[test]
-#[ignore = "RED: possessed unit must inherit its charmer's valid duel opponent"]
 fn charm_control_native_605_attack_order_uses_charmer_duel_permission() {
     let mut h = fixture();
     let opponent = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 4.0);
@@ -414,7 +409,6 @@ fn charm_control_native_605_attack_order_uses_charmer_duel_permission() {
 }
 
 #[test]
-#[ignore = "RED: TDB native Imp spell3110 is not on the charm bar"]
 fn charm_control_native_1098_uses_authentic_imp_tdb_spell_slots() {
     let mut h = fixture_for(9);
     h.app

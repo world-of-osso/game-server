@@ -10,7 +10,7 @@ Possessed input reuses PlayerInput with the controlled unit's epoch and existing
 
 ## Attack authority
 
-Pet/charm attacks use the canonical spell-target enemy predicate, including duel/arena rules, rather than a second faction-only check. Permission controllers resolve UnitCharm before summon ownership; movement/range positions remain the actual unit's. Both melee and spell nonlethal-duel checks use the controlling principal (TC Unit.cpp930–932). A charmed player's original connection cannot stop the NPC-charmer's active melee. Actual dealer identity remains the controlled unit in combat events.
+Pet/charm attacks use the canonical spell-target enemy predicate, including duel/arena rules, rather than a second faction-only check. Permission controllers resolve UnitCharm before summon ownership; movement/range positions remain the actual unit's. Both melee and spell nonlethal-duel checks use the controlling principal (TC Unit.cpp930–932). A charmed player's original connection cannot stop the NPC-charmer's active melee. Actual dealer identity remains the controlled unit in combat events. Player selection alone is not an attack: assistance reads their AutoAttack victim, while an NPC charmer's CombatTarget is its AI victim.
 
 ## Native70448 source qualification
 
