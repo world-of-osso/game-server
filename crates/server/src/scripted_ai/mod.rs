@@ -32,7 +32,9 @@ pub mod instance_script;
 pub(crate) mod jump_movement;
 pub(crate) mod kargath;
 pub mod kings_rest;
+mod kokia;
 pub(crate) mod maraudon;
+mod melidrussa;
 pub(crate) mod model_reach;
 pub mod movement;
 pub mod murder_row;
@@ -352,6 +354,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if hellfire_ramparts::is_creature_script(script_name) {
         return hellfire_ramparts::creature_ai(world, creature);
     }
+    if ruby_life_pools::is_creature_script(script_name) {
+        return ruby_life_pools::creature_ai(world, creature);
+    }
     if blood_furnace::is_creature_script(script_name) {
         return blood_furnace::creature_ai(world, creature);
     }
@@ -383,6 +388,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
         || algethar_academy::is_creature_script(script_name)
+        || ruby_life_pools::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)

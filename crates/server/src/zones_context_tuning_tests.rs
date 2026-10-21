@@ -6,6 +6,76 @@ const NAZAN: u32 = 17_536;
 const RAMPARTS: u32 = 543;
 
 #[test]
+fn follower205_summoned_vault_rune_inherits_normal_stats_not_base_zero() {
+    // TC a352b1fa CreatureTemplate::GetDifficulty; actual Vault Rune has no205 row.
+    let data = crate::test_data::world_data();
+    let entry = 197_204;
+    assert!(!data.difficulty_templates.contains_key(&(entry, 205)));
+    assert!(data.templates[&entry].tuning.is_none());
+    let normal = &data.difficulty_templates[&(entry, 1)];
+    assert_eq!(normal.tuning.as_ref().unwrap().content_tuning_id, 2156);
+    let normal_stats = &normal.tuning.as_ref().unwrap().stats;
+    let source = data.spawns.iter().find(|spawn| spawn.map == 2515).unwrap();
+    let spawn = CreatureSpawn {
+        template_entry: entry,
+        ..source.clone()
+    };
+    let mut world = World::new();
+    let mut queue = bevy::ecs::world::CommandQueue::default();
+    let mut commands = Commands::new(&mut queue, &world);
+    let rune = spawn_creature(
+        &mut commands,
+        data,
+        data.template_for(entry, 205).unwrap(),
+        &mut CreatureSpawnContext {
+            map: crate::maps::InMap::continent(2515),
+            difficulty_id: 205,
+            ground: None,
+            temporary: true,
+        },
+        false,
+        &spawn,
+        &mut rand::thread_rng(),
+    )
+    .expect("actual template can be summoned without terrain");
+    queue.apply(&mut world);
+    let scaling = world
+        .get::<LevelScaling>(rune)
+        .expect("205 must inherit Normal tuning, not untuned base0");
+    assert_eq!(
+        (
+            scaling.content_tuning_id,
+            scaling.min_level,
+            scaling.max_level
+        ),
+        (2156, 70, 70)
+    );
+    assert_eq!(world.get::<UnitLevel>(rune).unwrap().0, 70);
+    assert_eq!(
+        world.get::<Health>(rune).unwrap().max,
+        normal_stats.max_health(70)
+    );
+    assert_eq!(
+        world
+            .get::<ScaledStats>(rune)
+            .unwrap()
+            .0
+            .swing_damage_range(70, 2.0),
+        normal_stats.swing_damage_range(70, 2.0)
+    );
+    assert!(
+        data.template_for(entry, 0).unwrap().tuning.is_none(),
+        "base0 stays untuned"
+    );
+    let exact = data.template_for(210_930, 205).unwrap();
+    assert_eq!(
+        exact.tuning.as_ref().unwrap().content_tuning_id,
+        2940,
+        "explicit205 wins"
+    );
+}
+
+#[test]
 fn herald_context_startup_publishes_ground_before_ordinary_continent_stats() {
     let mut data = sourced_nazan_fixture();
     // A sourced17536 fixture at an actual imported continent spawn, not a canonical Nazan placement.

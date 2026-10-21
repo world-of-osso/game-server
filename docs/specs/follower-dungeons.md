@@ -33,6 +33,13 @@ Additional user-approved workaround (2026-10-11): follower difficulty205 runs re
 
 Spell458324 is not assigned by the follower templates' TDB/runtime addon data. Do not bootstrap it from its name; this hides the companions and breaks retaliation. Apply native spec passives and only the explicitly approved player-spec bridge spells.
 
+### Population preparation (70448)
+
+- `scripts/follower_population.py` must operate only on an existing, unlinked database copy, with its source opened read-only. Canonical `world.db` remains lead-owned.
+- Authenticate local70448 Map, MapDifficulty, LFGDungeons and AreaTrigger CSVs against their CASC receipt; cover all27 difficulty205 maps with authored1/1/3 composition.
+- Project only TDB1210 Normal-tagged, base-phase creature rows and explicitly authored Entrance safe locations; preserve exact source coordinates, orientation and difficulty tags. Require prepared runtime templates. Do not infer destinations from trigger-volume positions or fabricate missing populations.
+- Reapplication must be idempotent and transactional. Every map lacking either source retains a named gap; catalog coverage is not dungeon-completion proof. [Source boundary](../wiki/investigations/follower-data.md#follower-population-source-audit--2026-10-21).
+
 ### Gameplay (acceptance remains open until behavioral/live proof)
 - Selecting a hostile is not engagement. Assist requires an actual owner attack victim or that enemy's threat reference to the owner/party; keep defending enemies attacking party members. Owner selection only prioritizes already engaged enemies. Kits, stats, crowd-control protection and navigation remain unchanged.
 - Diagnostic `npc-info` retains its live identity/health row and appends `combat` JSON with current derived spell/healing/attack power, strength/intellect, crit/haste/versatility, native creature armor, combat target and per-unit threat. The `victim` field is the literal `CombatTarget`: an attack victim for a hostile NPC, but possibly a healer's patient. Absent components are null, never invented player stats or zero threat. Inspection must not mutate combat state. These native inputs support follower output/threat comparisons without changing kits or budgets; a snapshot is not sustained-output proof.
@@ -223,3 +230,7 @@ Sourced passive and noncombat/movement/explicit utility spells remain inventorie
 Local70448 SpellMisc/SpellEffect rows and pinned TC a352b1fa SharedDefines/SpellInfo/paladin/druid scripts expose no recognized combat-only flag for these two selectors. The bounded source audit and exact local-row hashes are retained in `aoe-combat-policy-source.json` in the Stockade diagnostic ledger; no Retail-parity claim is made for the explicit project policy.
 
 Lingering damage after an enemy's native Death (for example Hogger86604) remains real damage but cannot reinsert the dead caster into active enemies or reopen a cleared encounter. Temporary living-enemy invisibility/OOC still must not count as death.
+
+## Native-sight-safe non-tank positioning
+
+Idle follow and combat/heal approach choices for non-tank followers must not cross an unpulled aggressive hostile's native sight circle. Use actual same-copy live hostile positions and native per-recipient attack distance, including both model reaches and level scaling; no pack-specific offsets or fixed fake radii. Hold an unsafe approach while continuing native casts that are valid from the safe current position. The tank retains its pull planner. Actual accidental combat still takes precedence and already-dead packs are skipped in the authored route.
