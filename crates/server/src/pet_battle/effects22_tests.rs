@@ -104,8 +104,9 @@ fn pet_battle_current_health_mind_games_costs_each_friendly_slot_without_family_
 #[test]
 fn pet_battle_current_health_torment_blocked_victims_do_not_leech_previous_damage() {
     let catalog = catalog();
-    let mut initial = battle(&catalog, 9, 9, [2263, 479, 123]);
+    let mut initial = battle(&catalog, 9, 9, [2263, 110, 123]);
     initial.teams[0].pets[0].health = 1000;
+    initial.teams[1].pets[0].abilities = [479, 110, 123];
     let (shielded, _) = initial
         .step(
             &catalog,
