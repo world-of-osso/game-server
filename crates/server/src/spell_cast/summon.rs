@@ -906,6 +906,16 @@ pub(super) fn expire_summons(world: &mut World) {
         .map(|(entity, _, _)| entity)
         .collect();
     for entity in expired {
+        let summon = world.get::<SummonedCreature>(entity).unwrap();
+        if summon.spell_id == 104317
+            && summon.expires_at.is_some_and(|expiry| now >= expiry)
+            && world
+                .get::<Npc>(entity)
+                .is_some_and(|npc| npc.template_id == 55659)
+        {
+            let owner = summon.owner;
+            super::guardian::core::on_natural_fade(world, owner);
+        }
         despawn_summon(world, entity);
     }
 }

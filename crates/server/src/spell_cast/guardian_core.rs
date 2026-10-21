@@ -11,7 +11,7 @@ const FADE_CAP: u32 = 21;
 #[derive(Component, Default)]
 struct FadeAttempts(u32);
 
-pub(super) fn on_energy_fade(world: &mut World, owner: Entity) {
+pub(crate) fn on_natural_fade(world: &mut World, owner: Entity) {
     if !world
         .get::<crate::class_progression::KnownSpells>(owner)
         .is_some_and(|known| known.contains(DEMONIAC))
