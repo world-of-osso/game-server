@@ -60,9 +60,13 @@ fn approach_enters_unpulled_sight(
 }
 
 fn is_unpulled_hostile(world: &World, unit: Entity, watcher: Entity) -> bool {
+    // Match CreatureSight's optional react state: absent means Aggressive.
     let aggressive = world
         .get::<crate::creature_aggro::AggroRange>(watcher)
-        .is_some();
+        .is_some()
+        && world
+            .get::<crate::scripted_ai::ReactState>(watcher)
+            .is_none_or(|react| *react == crate::scripted_ai::ReactState::Aggressive);
     let alive = world
         .get::<Health>(watcher)
         .is_some_and(|health| health.current > 0.0);
