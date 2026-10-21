@@ -2527,7 +2527,7 @@ fn plan_targets(
     explicit: Option<Entity>,
     ignore_target_check: bool,
 ) -> Result<TargetPlan, CastFailure> {
-    effects::check_power_drain_inputs(world, caster, spell)?;
+    effects::check_expected_power_inputs(world, caster, spell)?;
     if open_lock::is_item_cast(spell) {
         return Ok(spell
             .effects
