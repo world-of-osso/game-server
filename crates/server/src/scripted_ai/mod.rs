@@ -17,9 +17,11 @@
 
 use crate::random as rand;
 pub(crate) mod azure_vault;
+mod azureblade;
 mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
+mod broggok;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 pub mod event_map;
@@ -39,6 +41,7 @@ pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
+mod umbrelskul;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 

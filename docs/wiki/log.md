@@ -1,9 +1,21 @@
 -2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
+## 2026-10-21 — Umbrelskul partial Lua-clock port
+
+[Umbrelskul](systems/boss-scripts.md#umbrelskul-partial-lua-clock--2026-10-21): ignored firstStrikeRED a8b2e4c39 precedes78bd2a595 partial source. Native7GREEN44.00s at87fad0cf7, including Normal/Follower/Mythic source branches, success-only DragonStrike repeat/cancel, native line+periodic damage, reset and isolated2584bit2. Sourcecopy producer1PASS3.332s; local binding only, all world inputs preserved. Energy/Brittle/crystals/upstream selector remain named gaps; publication/final gate lead-owned.
+
 -2026-10-20: [Stockade simulator](systems/dungeon-simulator.md):50/50seeded clears; cwd-independent test catalogs, actualCounterspell-aware refusal oracle;278case Cargo gate passes except waived privateAzure asset prerequisite.
 -2026-10-20: [Stockade simulator](systems/dungeon-simulator.md): authored99pull route, production combat-only Divine Toll/Starfall policy and postmortem Hogger bleed history fix; first10/10seeded clears,96.37× run-inclusive,100×/live gates open.
 ## 2026-10-20 — Transport-free Stockade simulator
 
 [Simulator](systems/dungeon-simulator.md): committed source graph143 packs/367 native walk edges and plain Bevy gameplay App. Graph census and isolated opening pack pass; full-route source-actor death/HP/mana/pull reporting exists, no boss clear. Route3 reproduced DPS lost during OOC hold; user clarified active-combat10s with dungeon/wipe reset, production correction committed pending GREEN. Combat RNG scoped replay/history family later GREEN. Optimized catalog reuse allocation/state-reset RED→GREEN6.39s; native dead-follower corpse despawn sampling RED→GREEN11.23s. Full seeds1–10 at2fa2b68d5/P03cebdb:0clears,2wipes,3stalls,3timeouts,2blocks; table/root observations in simulator page. No ≥100× consistency or live qualification. Complete native combat-event serialization added to diagnose causes. User later approved named ready single-pack/boss policies: native RED2→GREEN2 at aefef7da6; batch4 exposes false recovery stalls rather than measurement/boss refusal. Party-resource progress correction and sourced refreshment-consumer gap are recorded in the simulator page.
+## 2026-10-21 — Azureblade partial Lua-clock port
+
+[Azureblade](systems/boss-scripts.md#azureblade-partial-lua-clock--2026-10-21): explicit lead-approved Lua schedule/native70448 target/effect port, not invented TC AI. Ignored firstcleaveRED→native5GREEN37.75s atf9ec0db16 including Normal1/Follower205/two actual190187 summons/reset/isolated2585bit3. Producer sourcecopy1PASS; source base/models+1/23 rows, no synthetic205/population/credit change. Native-ground and ordinal-versus-bit fixture repairs retain production semantics. Energy/phase/area/Image-AI gaps and canonical publication remain open.
+
+## 2026-10-21 — Broggok core and encounter-gap audit
+
+[Broggok](systems/boss-scripts.md#blood-furnace-broggok--2026-10-21): ignored appearance RED precedes source port; actual70448 cone damage/Normal+Heroic clocks, intro/release speech and isolated reset/death give COMPOSITE5GREEN. Native absent IDs and authentic TDB prisoner/path/navigation gaps stay explicit; no fabricated memberships or historical cloud. Audit72encounters/13dungeons at engine `data/diagnostics/encounter-gaps-2026-10-21/report.md`; not native-clear certification.
+
 ## 2026-10-20 — Kelidan and Skull Bash load flakes
 
 [Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. At97398c587/protocol03cebdb: each exact case10/10 under4 same-core hogs (490.887s, hogs stopped); full filters684PASS/0FAIL/20existingignored (679standard +1privatefrontal +4privatefrozen); check/fmt0, no warnings. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.
@@ -3428,3 +3440,18 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: Kargath pinned source/native149 and eleven-case proof ingested;30738 delayed-selector incompatibility and source actor publication gaps explicit.
 
 - 2026-10-20: Porung authenticated Heroic primary/unchanged native SmartAI and six-case composite proof ingested; stale No Repeat comment and real Normal-only same-display counterexample documented.
+
+## 2026-10-21 — Toy census generic force casts
+
+[Source and proof](systems/toys.md#census-driven-generic-force-casts-2026-10-21): effect160 generic normal queued target→caster cast gives421→423/1173 pipeline admission. Behavioral RED2/one control→GREEN3; native timing/CC and actual Spore learning/2s cast/5min expiry/cooldown, nine existing effect64 controls retained. Brulfist movement/native presentation remain unproved; dummy/scripts and missing data stay explicit.
+
+## 2026-10-21 — Generic toy summon dependency closure
+
+[Source and proof](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21):151 missing-template/55 control split; producer RED→GREEN4, marker/actual trophy GREEN3 and retained census/mailbox proofs. Prepared423→506 (86 additions/three corrected gaps); canonical420 pending lead publication.206 templates/280 models/one addon inserted with no existing-row changes. Global markers and existing contracts preserved; sole Katy exemption has real mailbox proof.
+- 2026-10-20: property363 current-health team damage and explicit percentage-convention policy; actual70448 census distinguishes registered handlers from recursive admission.
+
+- 2026-10-20: property362 same-species healing, shared370 identity counter and current70448 census1904/1043.
+
+- 2026-10-20: property140 real785/787 stack-duration refresh; explicit786 pad-follow gap avoids silently admitting an incomplete parent.
+
+- 2026-10-20: property197 actual last-hit Power percentages, data-over-prose conflict note, real997/2432 RED/GREEN and1908/1046 census.

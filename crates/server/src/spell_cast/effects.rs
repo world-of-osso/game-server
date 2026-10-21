@@ -71,6 +71,8 @@ pub const EFFECT_NORMALIZED_WEAPON_DMG: u32 = 121;
 pub const EFFECT_HEAL_PCT: u32 = 136;
 pub const EFFECT_ENERGIZE_PCT: u32 = 137;
 pub const EFFECT_FORCE_CAST: u32 = 140;
+/// TC EffectForceCast2: target casts normally after the parent's SpellGo.
+pub const EFFECT_FORCE_CAST_2: u32 = 160;
 /// TC SpellEffects.cpp3995, SPELL_EFFECT_CHARGE_DEST.
 pub const EFFECT_CHARGE_DEST: u32 = 149;
 /// TC a352b1fa SpellEffects.cpp256/295 share EffectRemoveAura.
@@ -135,6 +137,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_INTERRUPT_CAST => interrupt_cast,
         EFFECT_HEAL_PCT => heal_pct,
         EFFECT_FORCE_CAST => force_cast,
+        EFFECT_FORCE_CAST_2 => super::queued_triggers::schedule_force_cast,
         EFFECT_REMOVE_AURA | EFFECT_REMOVE_AURA_2 => remove_aura,
         EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,

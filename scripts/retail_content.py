@@ -294,13 +294,20 @@ TOY_BANNER_ITEM_IDS = (
     163986, 163987, 187834, 187957, 187958, 203716, 208057, 211424,
     218128, 232301, 232302, 232303, 232305, 232306, 232307,
 )
-TOY_SUMMON_ENTRIES = f"""SELECT s.EffectMiscValue_0 FROM toy t
-    JOIN item_x_item_effect x ON x.ItemID = t.ItemID
-    JOIN item_effect i ON i.ID = x.ItemEffectID AND i.TriggerType = 0
-    JOIN spell_effect a ON a.SpellID = i.SpellID AND a.DifficultyID = 0 AND a.EffectAura = 428
-    JOIN spell_effect s ON s.SpellID = a.EffectTriggerSpell AND s.DifficultyID = 0 AND s.Effect = 28
-    WHERE s.EffectMiscValue_0 > 0
-    UNION SELECT entry FROM tdb_creature_template WHERE entry IN {TOY_SCENERY_SUMMON_ENTRIES}"""
+# Import authored dependencies, not just one aura428 hop or individually audited
+# scenery. Runtime SummonProperties/targets/scripts still decide whether use works.
+# UNION (not UNION ALL) terminates real trigger cycles without dropping other roots.
+TOY_SUMMON_ENTRIES = f"""WITH RECURSIVE reachable(id) AS (
+    SELECT i.SpellID FROM toy t
+      JOIN item_x_item_effect x ON x.ItemID=t.ItemID
+      JOIN item_effect i ON i.ID=x.ItemEffectID
+      WHERE i.TriggerType=0 AND i.SpellID>0
+    UNION SELECT e.EffectTriggerSpell FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
+      WHERE e.DifficultyID=0 AND e.EffectTriggerSpell>0
+)
+SELECT e.EffectMiscValue_0 FROM spell_effect e JOIN reachable r ON r.id=e.SpellID
+WHERE e.DifficultyID=0 AND e.Effect=28 AND e.EffectMiscValue_0>0
+UNION SELECT entry FROM tdb_creature_template WHERE entry IN {TOY_SCENERY_SUMMON_ENTRIES}"""
 
 
 CLASS_SUMMON_ENTRIES = """WITH RECURSIVE class_line AS (

@@ -2,6 +2,26 @@
 
 Standalone `server::pet_battle` library, consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
 
+## Last-hit counter percentages — 2026-10-20
+
+Property197 reuses percentage damage with Last_HitTaken as its basis. `PET_BATTLE_197_POWER_PCT_OF_LAST_HIT` takes actual997 Power100 and2432 Power150 as percentages, without another power/crit/variance scaling. Existing hit/type/floor/mitigation and actual direct-or-periodic history remain unchanged. Local70448 BattlePetEffectProperties197 and effects2253/4618 supply these values. `PET_BATTLE_197_DESCRIPTION_POWER_CONFLICT` retains2432's equal-last-hit tooltip disagreement: DB2 fields win over prose; no guessed missing fields. Five source-driven cases prove both roots, incoming/history/periodic/zero hits, type rounding, miss/block and RNG boundaries; [contract](../../specs/pet-battle-engine.md), [coverage](../../pet-battle-effect-coverage.md).
+
+## Frostbite duration refresh — 2026-10-20
+
+Generic140 refreshes existing target/ability stacks to NewDuration without state reapplication, new stacks or caster/turn reset. Local70448 program785/effect1573 supplies787/3rounds. Five real-program RED→GREEN tests prove stack refresh/expiry, victim isolation, retained caster power after swap and unconditional refresh despite a new-stack miss. They do not establish785 as a selectable owned ability.
+
+Root786 stays explicitly rejected under `PET_BATTLE_BLISTERING_COLD_PAD_FOLLOW_UNPROVEN`: its785 pad claims swap persistence, but team-state migration is not proven. [Contract](../../specs/pet-battle-engine.md) and [coverage](../../pet-battle-effect-coverage.md) distinguish the executable785 program from that unimplemented parent lifecycle.
+
+## Species Heal — 2026-10-20
+
+Generic362 reuses ordinary healing after adding its same-species reserve bonus. Shared roster counting also serves370 without behavior change. Source70448 BattlePetAbility2260 says additional same-species team members; effect4061 supplies10base points/2bonus/0variance. Exclude caster/enemies, count dead roster identities, and never substitute family. The dead-roster interpretation matches existing370, not independent Retail capture. Four real-row RED→GREEN tests and five370 regressions cover both teams/active slots, counts, dead reserves, modifiers/cap/accuracy and zero RNG. [Contract](../../specs/pet-battle-engine.md), [census](../../pet-battle-effect-coverage.md).
+
+## Current-health percentage effects — 2026-10-20
+
+Property363 executes authored current-health percentages for distinct team members. Torment2263 addresses the active enemy then other slots; Mind Games: Health2388 addresses its own team. The ordinal counts363 rows, not interleaved leech rows. Each attempted victim clears Last_HitDealt first: dead, missed or shielded victims cannot repeat an earlier heal. Torment2292 still rejects unsupported156 before RNG.
+
+`PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION` explicitly adopts existing percentage-damage flooring, hostile type scaling, accuracy/blocks and damage/passive handling; own-team costs are untyped. Project policy, not independent Retail arithmetic/mitigation proof. Journal-card normalization stays unchanged. Sources: local70448 BattlePetAbility2263/2292/2388 descriptions, BattlePetAbilityTurn, BattlePetEffectProperties363 and their effects4077–4082/4175–4180/4303–4304/4453–4455. Real-root tests cover active-slot pairs, current versus maximum HP, actual-victim leech, misses/dead/shielded victims, hostile type policy and own-team conservation. See [contract](../../specs/pet-battle-engine.md) and [coverage](../../pet-battle-effect-coverage.md).
+
 ## Content
 
 `Catalog::load_world_db` strictly loads ten battle SQLite tables. Missing schemas, invalid types, conflicting known state values and dangling turn/ability/aura references return contextual errors. Identical species4597 speed-state rows are deduplicated; undefined species-state rows (35 in this export) remain in `unresolved_states`. No runtime CSV fallback. Tests copy the ten battle tables from shipped `data/world.db` into isolated in-memory SQLite; no server-local CSV export dependency or mutation of shipped data. No data is committed.

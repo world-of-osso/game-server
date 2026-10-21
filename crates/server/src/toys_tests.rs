@@ -20,6 +20,8 @@ mod disguises;
 mod dragon_head;
 #[path = "toys_flute_tests.rs"]
 mod flute;
+#[path = "toys_force_cast_tests.rs"]
+mod force_cast;
 #[path = "toys_force_forward_tests.rs"]
 mod force_forward;
 #[path = "toys_forlorn_toll_tests.rs"]
@@ -54,6 +56,8 @@ mod stampwhistle;
 mod stasis_sand;
 #[path = "toys_stone_whistle_tests.rs"]
 mod stone_whistle;
+#[path = "toys_summon_closure_tests.rs"]
+mod summon_closure;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
 #[path = "toys_waywatcher_tests.rs"]
