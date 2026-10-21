@@ -97,7 +97,17 @@ fn encounter_coverage_doragosa_native_astral_blast_children_qualify() {
         h.engage(boss);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 1282251, Some(player), false)
             .expect("native1282251");
+        // Native parent1282251 has Speed1: its3s cast is followed by flight,
+        // not an immediate effect32 hit at cast completion.
         h.advance(3.5);
+        assert!(
+            !h.inbox(0)
+                .log
+                .iter()
+                .any(|e| e.kind == CombatLogKind::Damage && e.spell_id == Some(1282252)),
+            "native projectile has not arrived"
+        );
+        h.advance(3.0);
         assert!(
             h.inbox(0)
                 .log
