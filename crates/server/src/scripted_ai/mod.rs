@@ -261,6 +261,10 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
+    /// Read-only script requests, not impact-time or damage-amount predictions.
+    fn scheduled_damage(&self) -> Vec<ScheduledDamage> {
+        Vec::new()
+    }
     fn initialize_ai(&mut self, ctx: &mut Ctx) {
         dispatch(ctx.world, ctx.me, Hook::Reset);
     }
@@ -320,11 +324,31 @@ impl DamageTaken {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum ScheduledDamageTarget {
+    Victim,
+    SourceArea,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScheduledDamage {
+    pub spell_id: u32,
+    pub request_in_ms: u64,
+    pub target: ScheduledDamageTarget,
+}
+
 /// A creature's AI and the hooks raised while it was running.
 #[derive(Component)]
 pub struct CreatureAiState {
     ai: Option<Box<dyn CreatureAi>>,
     pending: VecDeque<Hook>,
+}
+
+pub(crate) fn read_scheduled_damage(world: &World, source: Entity) -> Vec<ScheduledDamage> {
+    world
+        .get::<CreatureAiState>(source)
+        .and_then(|state| state.ai.as_ref())
+        .map_or_else(Vec::new, |ai| ai.scheduled_damage())
 }
 
 /// `ScriptMgr` registration by ScriptName, else the `AIName` SmartAI; `None` for names

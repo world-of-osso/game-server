@@ -1,6 +1,27 @@
+## 2026-10-21 — Native item-instance stats foundation
+
+[Instance properties](systems/character-stats.md#instance-properties--2026-10-21): additive GUID storage preserves legacy bytes; native bonus/configuration, capped enchant and GemProperties resolution feeds slot-bound stats.15 library cases pass; actual native271468/7987 modifier-only RED687vs737→GREEN with retained Arcane control. Two real inventory hydration/projection REDs now pass in the24-case library/main integration proof. Type23/base ItemEffect identity resolution adds3RED→18libraryGREEN; equip proc/aura execution and300s parity remain open. Canonical producer application is lead-owned; no deployment or DPS-parity claim.
+## 2026-10-21 — Popcorn and Burning Blade Banner source visuals
+
+[Toys](systems/toys.md#popcorn-and-burning-blade-banner-visual-only-source-slice-2026-10-21): complete70448 graph102rows/29tables; strict source-only admissions162539/168014,516→518. RED2/control1→7GREEN147.26s proves real owner apply/replicate/CancelAura/recovery/invariants and eight metadata-drift refusals; Gadgetzan still refused. After master23c6f091d merge, feature/drift3/3PASS93.58s; checkEXIT0 with inherited follower warning,fmtEXIT0. No native/full-hour reuse claim.
+
+## 2026-10-21 — Healer framework native qualification
+
+[Healer triage](systems/follower-healer-triage.md): native risk/cost/owned hook, topped-start starvation RED→GREEN, actual Hogger read-only deadlines/Reset and native-radius scatter/stack controls. Gateha847 exposed five residual priority/fixture failures; authored Ironbark and urgent/routine Swiftmend decisions plus actual paid OOC fixture resolve them, Henry dispel retained. Six-case+core15GREEN; masterff190 integration requested followers/campaign285GREEN206.38s plus private-asset Leymor1GREEN17.46s; scoped check/format PASS, sole13179-owned helper warning excluded perlead. Shared death forecast/native readiness restored for Holy. Full Crenna depth and paired20-seed metrics remain pending.
+
+## 2026-10-21 — Follower healer triage design
+
+[FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
+## 2026-10-21 — PvP pet battle policies
+
+[Explicit unsourced project policy](systems/petbattle-pvp.md): monotonic authoritative deadlines, default choices/streak forfeit, FIFO level widening and preserved join tickets, exact living-participant winner XP persistence/receipt. RED6 plus same-frame FIFO RED1 → GREEN9; native proof pending, no protocol change or Retail numerical-parity claim.
+## 2026-10-21 — Generic falling-turn ability
+
+[Toys](systems/toys.md#generic-turn-while-falling-ability-2026-10-21): source aura409 owns movement bit39 and survives real input/overlapping aura removal. RED4→corrected5GREEN includes real Kite60s/Plume10s legal-area lifecycles and neutral-faction scenery regression;13 retained movement/FeatherFall/census controls passed earlier. Pipeline514→516. No protocol/native-steering claim; post-masterff190cb1c focused16/16PASS58.55s, canonical census516, checkEXIT0 with inherited follower warning. All-toy scope no longer has a five-item minimum.
+
 ## 2026-10-21 — Default TempSummon title census
 
-[Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; stressed repetition proof remains pending.
+[Toys](systems/toys.md#native-default-tempsummon-titles-2026-10-21): sourced generic default-title dispatch raises canonical pipeline509→514 with five actual2/5/11-minute actor lifecycles. Party/viewer and specialized control gaps remain refused. Postmerge11PASS plus corrected companion effect fixture PASS; no level1/native/interactions certificate. Readiness fixture now loads both harnesses before real-clock charge consumption; ten consecutive60-second tests PASS with four busy loops pinned to the same four cores; all hog processes confirmed stopped. No runtime readiness change.
 -2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 ## 2026-10-21 — Follower205 source audits
 
