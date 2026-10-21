@@ -52,6 +52,8 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 
 fn first_clock(difficulty: u32) {
     let (mut h, boss, map) = fixture(difficulty);
+    let other = h.players[1].0;
+    let other_health = h.health(other);
     assert_eq!(
         get_boss_state(h.app.world_mut(), map, 0),
         Some(EncounterState::InProgress)
@@ -87,18 +89,19 @@ fn first_clock(difficulty: u32) {
         h.health(h.player()).current < before,
         "native periodic1214315→1214323 damage"
     );
-    let other = h.players[1].0;
+    // Native player initialization applies its own Flight Style404468. That is
+    // not a boss leak: require every peer event to originate AND land on the peer.
+    let peer_bits = other.to_bits();
     assert!(
-        h.inbox(1).log.is_empty(),
-        "no combat projection into another copy: boss={boss:?}/{:?}, player={:?}/{:?}/connection={:?}, other={other:?}/{:?}/connection={:?}, events={:?}",
-        h.app.world().get::<InMap>(boss),
-        h.player(),
-        h.app.world().get::<InMap>(h.player()),
-        h.players[0].1,
-        h.app.world().get::<InMap>(other),
-        h.players[1].1,
+        h.inbox(1)
+            .log
+            .iter()
+            .all(|event| { event.source == Some(peer_bits) && event.target == Some(peer_bits) }),
+        "peer may receive only its own self events, got {:?}",
         h.inbox(1).log,
     );
+    assert_eq!(h.health(other).current, other_health.current);
+    assert!(h.inbox(1).spell_gos.is_empty());
     let player = h.player();
     crate::combat::kill_unit(h.app.world_mut(), player, boss);
     h.advance(0.1);
@@ -153,13 +156,11 @@ fn repeat_and_reset(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "Kyrioss source repeat/reset proof pending"]
 fn encounter_coverage_tww_kyrioss_normal_cast_start_relative_repeat_and_reset() {
     repeat_and_reset(1);
 }
 
 #[test]
-#[ignore = "Kyrioss source repeat/reset proof pending"]
 fn encounter_coverage_tww_kyrioss_follower205_cast_start_relative_repeat_and_reset() {
     repeat_and_reset(205);
 }
