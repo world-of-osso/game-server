@@ -87,3 +87,9 @@ Rebirth decision and combat resurrection are owned by agent13120's utility layer
 ## Restoration upkeep continuation (GREEN pending)
 
 Owned Lifebloom reads the selected living tank's actual own aura expiry/duration. It refreshes inside the qualified inclusive30% native bloom window through ordinary casting, bypassing only the generic missing-aura row that previously forbade refresh. Rescue retains priority; missing full-health upkeep requires observed incoming damage or an exposed preparation deadline, and settled OOC HoTs may expire naturally instead of manufacturing mana expenditure. No bloom/heal/proc is granted by policy.
+
+## Efflorescence source preparation (qualification pending)
+
+Runtime `content_creature_template`, models and addon lack47649; authenticated `tdb_creature_template` names it Efflorescence. The existing `retail_content.CLASS_SUMMON_ENTRIES` already reaches47649 through trait108116→native145205 summon effect, so no hard-coded closure override is needed. A durable SQLite backup was processed with `scripts/add_class_summon_templates.py --db <prepared-copy>`:33 exact class-summon templates were added with source models/addons and no world-spawn count change. SQL diff/manifest and backup live under the healer diagnostics directory; canonical publication is lead-owned. A real source-backed import/idempotency/no-spawn test is added before publication.
+
+Source-only SotF scope check:158478/effect221440 and114108/effect127235 are effect6/aura4 dummy rows with four zero effect masks and zero class-option masks. These fields do not prove Wild Growth exclusion or inclusion. Label741 also contains unrelated class heals and is not bound by either dummy effect. Tooltip wording alone is not an affected-spell authority; WG scope remains unqualified, with no guessed multiplier added.
