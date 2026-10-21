@@ -648,11 +648,23 @@ fn alternate_roster_attackers_participate_in_the_first_native_fight() {
         run.control().unwrap();
         run.app.update();
     }
-    for actor in run.members() {
+    let actors: Vec<_> = run.members().collect();
+    for actor in actors {
         println!(
             "ACTOR {}",
             super::diagnostics::inspect_unit(run.app.world(), None, actor)
         );
+        if run
+            .app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .is_some()
+        {
+            println!(
+                "DECISION {}",
+                crate::followers::simulator::inspect_follower_decision(run.app.world_mut(), actor)
+            );
+        }
     }
     let monk = run
         .party

@@ -32,6 +32,7 @@ catalogs! {
     spells: crate::spell_info::SpellStore,
     classes: crate::spell_info::ClassSpells,
     powers: crate::spell_cast::powers::PowerTypeTable,
+    pet_spells: crate::pet_control::PetLevelupSpells,
     item_scaling: crate::item_stats::ItemScalingTables,
     factions: crate::faction::FactionTemplates,
     maps: crate::maps::MapStore,
