@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Scoped kit delta composition — 2026-10-21
+
+The producer now accepts `--spec-ids` and preserves all unowned kit rows in its copy. SQL comes from `sqldiff --primarykey --table follower_spec_kit`, wrapped only when actual changes exist; no rowids or table recreation. This fixes the automation, not merely one exported delta. A real disjoint262/470411 update failed composition before the fix; the producer/policy22-case batch now passes without SQLite resource warnings (connections explicitly closed).
+
+Publication artifact `delta-v4-keyed.sql` changes20stable keys across66/73/103/266/269 and yields518owned intervals exactly equal to originalv4. `receipt-v4-keyed.json` records scope/keys/source hashes. Fresh native backups replayed our full patch and actual peer`delta-a3.sql` in both orders: identical complete kit rows, untouched other specs, integrityOK, canonical unchanged. Evidence: engine `data/diagnostics/rotation-fidelity-2026-10-21/rotation-b-v4-keyed-composition-receipt.json`. Native verification must use the SQL-replayed `world-v4-keyed-ours_only.db`, not just the prepared producer output. Earlier rowid-based `delta-v4.sql` is historical and must not be published.
+
 ## Windwalker finite-target starter test — 2026-10-21
 
 The Bo32 Blackout Kick test used a finite5000HP Kobold while Bo had7840maxHP. With v4, Zenith80 precedes eligible TouchOfDeath111, then BoK120; canonical's old BoK110 preceded ToD110 by spell ID. Loaded native trace41764af04 shows Zenith at0.25s, ToD7840damage/2875overkill and real targetDeath at0.30s, then no living enemy for the remaining30s. BoK is genuinely free under Zenith (native3Chi−rank2−Zenith1), but lower priority than the valid execute. This was a policy-input/oracle mismatch, not a frame-time stall; isolated/master comparisons used canonical rather than v4.

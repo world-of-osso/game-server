@@ -3518,3 +3518,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Landed healer reader/horizon wired into [tank rotation policy](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21); removed None shim, preserving healer scheduling and major ordering.
 
 - 2026-10-21: [Bo32 finite target](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21): traced actual ToD kill before lower-priority BoK; preserve source order/window, separate strong-target BoK and weak-target execute oracles.
+
+- 2026-10-21: [Scoped rotation deltas](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21): generator now preserves unowned specs and emits primary keys;22PythonGREEN, actual a3 both-order proof and keyed replay copy, no canonical writes.
