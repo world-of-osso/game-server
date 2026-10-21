@@ -1,3 +1,7 @@
+## 2026-10-20 — Generic census healing, label mobility and energize
+
+[Generic next](systems/auras.md#census-generic-next--2026-10-20): initial RED498eeb521 was invalid (limited fixture store omitted native applied/triggered IDs). Corrected ignored68f31ad3d pushed with consumers reverted gives6RED and253 baseline probe receipts; restored6c76aead4 gives unchanged6GREEN plus253-receipt probe PASS178.44s before enabling. Earlier14-root warning delta includes354eight now inherited from merged master27743876c; duplicate354 consumer removed, existing master wildcard behavior retained. Merged bde34597a15PASS215.50s includes six cases, retained eight330 controls and253-receipt probe; check/fmtPASS, no warnings. Branch-owned delta is307four and137two across six specs; this is not full ability/spec parity.470 explicitly TC NULL; no fabricated timer scaling or per-spell scripts.
+
 ## 2026-10-20 — Generic combat/stat aura consumers
 
 [Per-type source matrix and ledger](systems/auras.md#generic-combatstat-aura-census-slice--2026-10-20):12 generic consumers,4 explicit TC NYI gaps. Pushed ignored REDs first; corrected retired weapon ID, saturated armor and pre-owned expertise fixtures without changing native spell data.419 current mana clamps instead of scaling.316 accounts absorption but does not invent a script rescue. Final861d7edd5 targeted15 enabled PASS26.31s/0warnings, protocol600b755; no full suite or independent parent gate. Receipt-backed pinned sources supersede shifted citations from the broader TC tree; compared handler bodies are identical.
