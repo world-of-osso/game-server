@@ -134,13 +134,19 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
     crate::combat::deal_direct_damage(run.app.world_mut(), run.party.tank, boss, max * 0.35);
     for _ in 0..600 {
         run.app.update();
-        let out_of_combat = run.members().all(|member| {
-            run.app
-                .world()
-                .get::<CombatStatus>(member)
-                .is_none_or(|status| !status.0)
-        });
-        if crate::auras::has_aura(run.app.world(), boss, 55964) && out_of_combat {
+        if crate::auras::has_aura(run.app.world(), boss, 55964) {
+            // Native follower regroup calls CombatStop after detection is lost.
+            // Drive that actual boundary without relying on concurrent heal-cast timing.
+            let members: Vec<_> = run.members().collect();
+            for member in members {
+                crate::combat::combat_stop(run.app.world_mut(), member);
+            }
+            assert!(run.members().all(|member| {
+                run.app
+                    .world()
+                    .get::<CombatStatus>(member)
+                    .is_some_and(|status| !status.0)
+            }));
             assert!(run.app.world().get::<Health>(boss).unwrap().current > 0.0);
             assert!(!crate::spell_cast::targets::relation_matches(
                 run.app.world(),
