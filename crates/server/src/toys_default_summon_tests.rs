@@ -19,9 +19,19 @@ fn assert_default_source_actor(item: u32, spell: u32, entries: &[u32], lifetime_
     learn_effect_toy(&mut h, character, item);
     let caster = h.caster;
     let start = *h.app.world().get::<Position>(caster).unwrap();
-    let destination = [start.x + 2.0, start.y, start.z + 1.0];
+    let native_spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap();
+    let cursor_placement = native_spell
+        .effects
+        .iter()
+        .any(|effect| effect.implicit_targets.contains(&87));
+    let destination = cursor_placement.then_some([start.x + 2.0, start.y, start.z + 1.0]);
     assert_eq!(
-        activate_at(&mut h, item, Some(destination))[0].error,
+        activate_at(&mut h, item, destination)[0].error,
         None,
         "item{item}"
     );
