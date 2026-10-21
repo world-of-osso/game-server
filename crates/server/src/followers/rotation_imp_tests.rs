@@ -38,11 +38,11 @@ fn warlock(level: u8) -> (Harness, Entity) {
         current: 100_000_000.0,
         max: 100_000_000.0,
     });
+    let target = h.npc;
     h.app
         .world_mut()
-        .get_mut::<crate::networking::CombatTarget>(owner)
-        .unwrap()
-        .0 = Some(h.npc);
+        .entity_mut(owner)
+        .insert(crate::networking::CombatTarget(Some(target)));
     (h, owner)
 }
 
