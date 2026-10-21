@@ -22,9 +22,13 @@ fn read_patient(_world: &World, _target: Entity) -> Option<Patient> {
     None
 }
 
-fn major_emergency(health: f32, _projection: Option<(f32, f32)>) -> bool {
-    // Existing HP fallback baseline; projection decision is covered by a RED test.
-    health < FALLBACK_HEALTH
+fn major_emergency(health: f32, projection: Option<(f32, f32)>) -> bool {
+    // Same documented horizon as healer-ai; import its constant when it lands.
+    const EMERGENCY_SECONDS: f32 = 3.0;
+    match projection {
+        Some((incoming, death_seconds)) if incoming > 0.0 => death_seconds <= EMERGENCY_SECONDS,
+        _ => health < FALLBACK_HEALTH,
+    }
 }
 
 pub(super) fn allows(world: &World, unit: Entity, health: Option<f32>) -> bool {
