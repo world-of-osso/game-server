@@ -57,6 +57,7 @@ pub const EFFECT_POWER_DRAIN: u32 = 8;
 pub const EFFECT_POWER_BURN: u32 = 62;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
+pub const EFFECT_HEAL_MAX_HEALTH: u32 = 67;
 pub const EFFECT_QUEST_COMPLETE: u32 = 16;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
 pub const EFFECT_KILL_CREDIT: u32 = 134;
@@ -119,6 +120,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
+        EFFECT_HEAL_MAX_HEALTH => heal_max_health,
         crate::death::resurrection::EFFECT_RESURRECT
         | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
             crate::death::resurrection::send_offer
@@ -1424,6 +1426,27 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
     ) * ctx.chain_multiplier;
     let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
     apply_heal(world, ctx, target, amount, crit, false);
+}
+
+/// TC EffectHealMaxHealth: zero value selects caster max; nonzero selects missing HP.
+/// This effect does not call SpellHealingBonusDone/Taken before shared heal resolution.
+fn heal_max_health(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Some(health) = world
+        .get::<Health>(target)
+        .filter(|health| health.current > 0.0)
+    else {
+        return;
+    };
+    let amount = if roll_base_points(world, ctx.caster, ctx.spell, effect).trunc() == 0.0 {
+        world
+            .get::<Health>(ctx.caster)
+            .map_or(0.0, |health| health.max)
+    } else {
+        health.max - health.current
+    };
+    let amount = amount * ctx.chain_multiplier;
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
+    apply_resolved_heal(world, ctx, target, amount, crit, false);
 }
 
 /// 136 HEAL_PCT: BasePoints% of the target's max health.

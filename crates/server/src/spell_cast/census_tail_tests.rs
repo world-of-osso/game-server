@@ -670,7 +670,6 @@ fn max_heal_fixture() -> Harness {
 }
 
 #[test]
-#[ignore = "RED: native67 zero value heals caster max, not victim max"]
 fn census_tail_67_native_lay_on_hands_uses_caster_max_and_logs_overheal() {
     let mut h = max_heal_fixture();
     let caster_health = h.health(h.caster);
@@ -698,7 +697,6 @@ fn census_tail_67_native_lay_on_hands_uses_caster_max_and_logs_overheal() {
 }
 
 #[test]
-#[ignore = "RED: native67 nonzero fills only recipient missing health"]
 fn census_tail_67_native_nonzero_full_heal_uses_recipient_missing_health() {
     let mut h = max_heal_fixture();
     let target = h.npc;
@@ -707,7 +705,6 @@ fn census_tail_67_native_nonzero_full_heal_uses_recipient_missing_health() {
 }
 
 #[test]
-#[ignore = "RED: native67 does not call ordinary healing done or taken bonuses"]
 fn census_tail_67_native_max_health_heal_bypasses_done_and_taken_bonuses() {
     let mut h = max_heal_fixture();
     let caster = h.caster;
@@ -729,7 +726,6 @@ fn census_tail_67_native_max_health_heal_bypasses_done_and_taken_bonuses() {
 }
 
 #[test]
-#[ignore = "RED control: native67 cannot resurrect a dead recipient"]
 fn census_tail_67_native_lay_on_hands_does_not_heal_dead_target() {
     let mut h = max_heal_fixture();
     let target = h.npc;

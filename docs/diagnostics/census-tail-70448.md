@@ -41,6 +41,12 @@ Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/oss
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Effect67 HEAL_MAX_HEALTH
+
+TC `SpellEffects.cpp:2966–2987` requires a living recipient; zero integral effect value takes caster maximum HP, nonzero takes recipient missing HP. No SpellHealingBonusDone/Taken calls. `Spell.cpp:2879–2892` then resolves native crit restrictions and shared healing delivery. Reuse existing resolved-heal/log/overheal/threat path, not ordinary modified healing or a new subsystem.
+
+Ignored RED734754e61: `census_tail_67_native --include-ignored`1PASS/3FAIL17.24s. Native633 castermax1000 and recipient500/5000 remains500 instead1500; native17683 BP1 remains500 instead5000. Native106457 +20% done/115804−50% taken case must still heal1000. Dead recipient control passes. Tests also verify unchanged caster HP and actual native633 noncrit1000/500 overheal log. `/home/osso/.worktrees/logs/census-tail/67-red.log`; compile1m58s/no warnings. Minimal consumer/enabled tests committed; GREEN pending. No claim for Lay on Hands secondary effects/scripts.
+
 ## Aura423 MANA_COST_PCT
 
 TC `SpellAuraEffects.cpp:4241–4247` adds amount/100 to the unit mana-cost multiplier; `SpellInfo.cpp:4242–4248` multiplies Mana only after ordinary modifiers, truncates integer powerCost, then preserves original cost sign. Native1270845 Mana Confluence supplies−5%;108294 Heart of the Wild−50%,203704 Mana Break+30%,327140 Forgeborne Reveries−100% supply nonzero controls. Existing PowerCost kind and native cost/payment functions reused; global percentages add, not multiply, and apply to optional Mana before available-power cap.

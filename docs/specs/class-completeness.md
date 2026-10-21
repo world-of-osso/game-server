@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Maximum-health healing effect slice — 2026-10-21
+
+- Native67 effect value0 selects caster maximum HP; nonzero selects recipient missing HP. It heals living recipients only and preserves caster health, native crit restrictions, ordinary heal logs/overheal and healing-threat delivery.
+- Do not apply ordinary healing-done/taken or versatility bonuses: TC EffectHealMaxHealth queues the raw health-derived value, not SpellHealingBonusDone/Taken. Native633 Lay on Hands and17683 Full Heal qualify both branches; this does not qualify unrelated Lay on Hands scripts/cooldown effects. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Global mana cost aura slice — 2026-10-21
 
 - Native423 sums signed percentages across recipient-owned auras and multiplies mana cost after existing school/spell modifiers; truncate native integer costs before existing sign preservation. Other powers and owners remain unchanged; removal restores prior costs. Optional Mana cost uses the same multiplier before available-power clamping.
