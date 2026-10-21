@@ -9,6 +9,7 @@ const LIFEBLOOM: u32 = 33763;
 const NATURES_SWIFTNESS: u32 = 132158;
 const REGROWTH: u32 = 8936;
 const NATURES_CURE: u32 = 88423;
+const INNERVATE: u32 = 29166;
 // Matches the qualified native bloom-on-refresh window; durations remain native.
 const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
@@ -25,6 +26,7 @@ const OWNED: SpellSet = &[
     UTILITY_REBIRTH,
     NATURES_SWIFTNESS,
     NATURES_CURE,
+    INNERVATE,
 ];
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
@@ -33,6 +35,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_urgent_swiftmend(ctx))
         .or_else(|| choose_natures_swiftness(ctx))
         .or_else(|| choose_natures_cure(ctx))
+        .or_else(|| choose_innervate(ctx))
         .or_else(|| choose_lifebloom(ctx))
         .or_else(|| ranked_maintenance(ctx));
     match decision {
@@ -223,6 +226,27 @@ fn useful_friendly_cast_in_progress(ctx: &TriageContext<'_>) -> bool {
         .is_some_and(|target| {
             !crate::spell_cast::targets::is_hostile(ctx.world, ctx.caster, target)
         })
+}
+
+fn choose_innervate(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let low_mana = ctx
+        .mana_fraction
+        .is_some_and(|mana| mana <= super::healer_triage::LOW_MANA);
+    let healing_needed = ctx
+        .patients
+        .iter()
+        .any(|patient| patient.missing_health > 0.0);
+    if !low_mana || !healing_needed || !ctx.ready(INNERVATE) {
+        return None;
+    }
+    if ctx.own_aura_on(ctx.caster, INNERVATE).is_some() {
+        return None;
+    }
+    Some(Decision {
+        spell_id: INNERVATE,
+        target: ctx.caster,
+        urgent: false,
+    })
 }
 
 fn choose_natures_cure(ctx: &TriageContext<'_>) -> Option<Decision> {
