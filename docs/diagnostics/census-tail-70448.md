@@ -21,6 +21,12 @@ Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diag
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Effect62 POWER_BURN
+
+TC `SpellEffects.cpp:1220–1243` burns the living target's matching primary power and converts actual lost power using CalcValueMultiplier (Amplitude, not ChainAmplitude), with no caster credit. TC `SpellInfo.cpp:883–885` requires ExpectedStat PlayerMana for Mana62; reuse the existing effect8 native amount loader and admission validation. EffectPowerBurn does not call SpellDamageBonusDone/Taken; retain ordinary crit/armor/resilience/absorb/resist handling without inventing source/taken bonuses.
+
+Ignored REDebf86f93a gives2PASS/2FAIL21.94s. Corrected actual UnitLevel/expected_stat fixture22ac7ede0 plus real Barkskin damage-exclusion controlf1acfd987 gives2PASS/3FAIL31.75s before implementation. Native22568 Ferocious Bite index1 Energy75 remains75 instead50; Wilt23772 with only3 Mana does not burn it. Dead-target/wrong-primary controls pass. `62-red-native-inputs.log` retains corrected proof. Generic handler and unchanged enabled tests committed; GREEN pending.
+
 ## Priority target118 ALLY_OR_RAID
 
 TC `Spell.cpp:1393–1401` expands around the explicit unit only when caster and target share a party/raid. Native21562 Fortitude supplies radius100; ordinary explicit-friendly admission range is preserved by the selector's Ally requirement (`Spell.cpp:1105`). Generic expansion reuses living/friendly/same-copy area selection, group membership, caps and center sight checks. Actual follower parties share GroupRegistry but use `Follower::member_id`; resolve that identity before ordinary summoned-unit ownership so non-roster followers cannot inherit their owner's membership.

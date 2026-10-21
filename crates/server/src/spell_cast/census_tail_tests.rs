@@ -75,7 +75,6 @@ fn burn_fixture(cat: bool) -> Harness {
 }
 
 #[test]
-#[ignore = "RED census-tail effect62"]
 fn census_tail_62_native_ferocious_bite_burns_only_remaining_energy_without_damage() {
     let mut h = burn_fixture(true);
     for (before, after) in [(75.0, 50.0), (10.0, 0.0)] {
@@ -102,7 +101,6 @@ fn census_tail_62_native_bite_does_not_burn_a_nonprimary_power_pool() {
 }
 
 #[test]
-#[ignore = "RED census-tail effect62"]
 fn census_tail_62_native_wilt_damage_uses_actual_mana_burn_and_value_multiplier() {
     let mut h = burn_fixture(false);
     let caster = h.caster;
@@ -118,7 +116,6 @@ fn census_tail_62_native_wilt_damage_uses_actual_mana_burn_and_value_multiplier(
 }
 
 #[test]
-#[ignore = "RED census-tail effect62"]
 fn census_tail_62_native_wilt_bypasses_spell_bonus_taken_but_still_burns_mana() {
     let mut h = burn_fixture(false);
     h.cast_and_deliver(BARKSKIN, None);
