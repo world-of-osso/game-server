@@ -1,6 +1,6 @@
 ## 2026-10-21 — Sourced Kite/Ribbon visual pair
 
-[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): source29rows/27tables/two resident ordinary models, instant self zero-payload roots. Actual learn/UseToy RED2/Compass controlPASS (59.53s) precedes two strict registry entries. Source Kite300s aura/one-hour recovery and Ribbon600s aura/truezero recovery preserved; real cancel/reuse proof required. GREEN/census pending; no native/natural5/10min/full-hour claim.
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): source29rows/27tables/two resident ordinary models, instant self zero-payload roots. Actual learn/UseToy RED2/Compass controlPASS (59.53s) precedes two strict registry entries. Source Kite300s aura/one-hour recovery and Ribbon600s aura/truezero recovery preserved. Minimald307f1ac4→mergedmaster8e3777ef6/34feb049f GREEN9/9 (168.53s), including Ribbon immediate real cancel/reuse and six identities' twelve drift refusals. Census519→521 exactly202022/242323; check/fmt pass with inherited unused-function warning. No native/natural5/10min/full-hour claim.
 
 ## 2026-10-21 — Companion native-level flag counterexample
 

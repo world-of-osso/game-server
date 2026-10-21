@@ -47,8 +47,8 @@ A dummy aura counts as satisfied at server scope only when all four conditions h
 - [x] Lost Compass202711/399041: hold out the source compass; complete70448 visual125287/event/kit/model/positioner/AnimKit graph, source indefinite owner aura and1000ms recovery. This does not admit Wayfinder's Compass388275 or implement navigation.
 - [x] Hot Buttered Popcorn162539/202432: eating/held-popcorn visual only, source10000ms owner aura and60000ms recovery. Retain the hidden-aura-icon flag; it is not an invented gameplay effect.
 - [x] Banner of the Burning Blade168014/295037: wear the source banner, source600000ms owner aura and3600000ms recovery. No summon, faction change or full-hour reuse claim.
-- [ ] Yennu's Kite202022/396236: source300000ms owner attachment and3600000ms recovery; keep native arena/rated restriction. Actual learning/use/replication/cancellation proof pending.
-- [ ] Chowdar's Favorite Ribbon242323/1232024: source600000ms owner attachment and true zero recovery/category/GCD; real cancellation followed by immediate successful reuse must reapply and replicate the aura. Proof pending.
+- [x] Yennu's Kite202022/396236: source300000ms owner attachment and3600000ms recovery; keep native arena/rated restriction. Actual learning/use/replication/cancellation and immediate cooldown refusal proved.
+- [x] Chowdar's Favorite Ribbon242323/1232024: source600000ms owner attachment and true zero recovery/category/GCD; real cancellation followed by immediate successful reuse reapplies and replicates the aura.
 - [x] These source-complete identities use the existing strict visual-only pipeline, real bag learning/UseToy, owner-only aura replication, real cancellation and unchanged health/body/position. Missing visual or changed nonzero payload still refuses without effects/cooldown.
 
 No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
