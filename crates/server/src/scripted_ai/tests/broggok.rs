@@ -88,6 +88,14 @@ fn watch_broggok(h: &mut Harness, boss: Entity) {
     h.app.world_mut().entity_mut(boss).insert(visibility);
 }
 
+fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
+    h.inbox(0)
+        .spell_gos
+        .iter()
+        .filter(|go| go.caster == boss.to_bits() && go.spell_id == spell)
+        .count()
+}
+
 fn talk_count(h: &Harness, boss: Entity, group: u8) -> usize {
     let texts = &h.app.world().resource::<CreatureTexts>().groups[&BROGGOK][&group];
     h.inbox(0)
@@ -217,7 +225,11 @@ fn encounter_coverage_broggok_native_rotation_damage_and_copy_isolation() {
                 .iter()
                 .all(|go| go.caster != boss.to_bits())
         );
-        assert_eq!(h.casts(0, boss, 30917), 0, "absent bolt has no substitute");
+        assert_eq!(
+            cast_count(&h, boss, 30917),
+            0,
+            "absent bolt has no substitute"
+        );
     }
 }
 
@@ -225,7 +237,7 @@ fn encounter_coverage_broggok_native_rotation_damage_and_copy_isolation() {
 fn encounter_coverage_broggok_reset_death_and_corpse_silence() {
     let (mut h, boss, map) = pull_broggok(2);
     h.advance(21.0);
-    assert!(h.casts(0, boss, SLIME_SPRAY) > 0);
+    assert!(cast_count(&h, boss, SLIME_SPRAY) > 0);
     crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
     assert_eq!(
         instance_script::get_boss_state(h.app.world_mut(), map, BIT),
@@ -239,15 +251,15 @@ fn encounter_coverage_broggok_reset_death_and_corpse_silence() {
         0
     );
     h.engage(boss);
-    let before = h.casts(0, boss, SLIME_SPRAY);
+    let before = cast_count(&h, boss, SLIME_SPRAY);
     h.advance(4.8);
     assert_eq!(
-        h.casts(0, boss, SLIME_SPRAY),
+        cast_count(&h, boss, SLIME_SPRAY),
         before,
         "reset source earliest5s"
     );
     h.advance(16.2);
-    assert!(h.casts(0, boss, SLIME_SPRAY) > before);
+    assert!(cast_count(&h, boss, SLIME_SPRAY) > before);
     h.hit_pct(boss, 200.0);
     h.advance(0.1);
     assert_eq!(
