@@ -12,6 +12,7 @@ mod kit_area;
 mod kit_interrupt;
 mod pack_identity;
 mod party;
+mod positioning;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
