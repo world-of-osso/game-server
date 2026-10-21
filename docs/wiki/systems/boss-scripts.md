@@ -1,5 +1,13 @@
 # Boss scripts
 
+## TWW Rookery Kyrioss — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#tww-rookery--kyrioss-source-boundary). No TC a352b1fa Rookery AI exists. `tww_rookery.rs` explicitly implements LittleWigs2777a9d5 schedules for primary209230/2816/map2648bit0 using native70448 cast times, targets and effects. First Thunder1214325/5.1s, Wild474018/9.4s and actual Torrent1214315/16s; warning444123 is not cast. Accepted Thunder/Wild starts own their source first42.5/41.3s and alternating15.8/40s repeats. Reset clears counters/clocks. `encounter_summons.py --encounter kyrioss` prepares only the explicit `littlewigs_kyrioss` binding on an independent database; no new stats, spawns or205 rows. Lead owns publication.
+
+Ignored REDa4734b359 genuinely fails first native casts. COMPOSITE4GREEN: Normal1/Follower205 repeat/reset2 atd86c8c714 (`kyrioss-native-green3.log`) plus first-clock/native periodic1214315→1214323 real damage/copy-isolated death credit2 at6aea86c3a (`kyrioss-first-clock-final.log`,44.85s). Producer unit3PASS. Tests observe self-cast completions through actual SpellGo with fixture interest; combat logs go only to source/target owners. Peer-only404468 Flight Style initialization is not a boss-copy leak: provenance asserts only peer self events, unchanged peerHP, no peerSpellGo/credit. Native clocks are unchanged. Filter `encounter_coverage_tww_kyrioss_`; protocol detached03cebdb; evidence in game-engine `data/diagnostics/follower-dungeons-2026-10-21/`.
+
+Dummy children for1214325/474018,444034-driven Torrent phase/repeat, and Dash419870 controller/endpoints remain named unsourced gaps. No energy fabrication, native-clear/full-fight, navigation or combat-budget certification.
+
 ## Blood Furnace Broggok — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#blood-furnace-broggok-source-boundary). TC a352b1fa `boss_broggok.cpp`17380/1924/map542bit2. Ignored REDec2d35c10 genuinely fails appearance selectability; source9262fafd6 restores passive/uninteractible appearance, exact intro/release action clocks, ordinary self-cast rotation and inherited reset/death. Source JustSummoned deliberately does not track summons. Native30913 cone damage and both difficulties' first/repeat windows pass;30916 is current effect179/AT33896, never a fabricated historical summon.

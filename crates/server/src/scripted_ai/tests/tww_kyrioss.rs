@@ -166,13 +166,11 @@ fn encounter_coverage_tww_kyrioss_follower205_cast_start_relative_repeat_and_res
 }
 
 #[test]
-#[ignore = "RED first: Kyrioss has no sourced combat schedule port yet"]
 fn encounter_coverage_tww_kyrioss_normal_first_clock_native_torrent_and_credit() {
     first_clock(1);
 }
 
 #[test]
-#[ignore = "RED first: Kyrioss has no sourced combat schedule port yet"]
 fn encounter_coverage_tww_kyrioss_follower205_first_clock_native_torrent_and_credit() {
     first_clock(205);
 }
