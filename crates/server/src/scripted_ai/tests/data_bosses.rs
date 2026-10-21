@@ -43,6 +43,8 @@ mod azure_telash_return;
 mod broggok;
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "doragosa.rs"]
+mod doragosa;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]
