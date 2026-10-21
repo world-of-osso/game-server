@@ -396,6 +396,7 @@ impl NewCharacterKit<'_> {
             nonvisual_equipped: Vec::new(),
             instances: HashMap::new(),
             crafting_origins: HashMap::new(),
+            item_modifiers: HashMap::new(),
             item_durability: HashMap::new(),
             definition_sources: HashMap::new(),
             appearance_account: None,

@@ -17,6 +17,12 @@ Tuned creatures (`ContentTuningID` != 0, 4,563 of the 4,824 templates spawned on
 
 Continent population waits for `ground::open_ground_map` and its deferred resource publication in PostStartup. Real production-order startup reaches missing-context RED before this dependency and strict GREEN1/1 at1050147f after it; the fixture uses sourced17536 at an actual imported continent position, not a canonical Nazan placement. Seven enabled context/source/startup cases plus affected controls pass54/54 in177.24s at33dcb7b6; 55 existing ignored cases are not acceptance evidence. [Herald boundary and remaining morph gap](../../specs/ramparts-herald.md).
 
+### Creature difficulty fallback — 2026-10-21
+
+`WorldData::template_for` and regional `SummonLevels::delta` share the installed Difficulty chain, matching TC a352b1fa `CreatureTemplate::GetDifficulty`. Follower205→Normal1→base0 is data, not a hardcoded Follower stat multiplier. Existing explicit205 content rows win; no rows are manufactured. Explicit selected-template ContentTuning still precedes MapDifficulty tuning.
+
+The read-only audit found raw TDB1210 has0 difficulty205 rows, while content has178 already-resolved packages (40 Normal,138 base0). Existing placed follower-map Normal/base packages agree, so missing205 alone does not prove weak trash. Summoned Azure Vault Rune197204 is a concrete counterexample: baseCT0 versus NormalCT2156/expansion9, without205. Its real temporary-spawn path reproduces missing LevelScaling before the runtime chain fix. Native RED→GREEN proof is pending. Full source receipts and all27-map trash inventory: `game-engine/data/diagnostics/follower-dungeons-2026-10-21/{scaling-205.md,trash-coverage.md}`. No universal205-specific multipliers or missing trash mechanics were inferred.
+
 ### Gate486 fixture source audit
 
 The controlled Lesser Voidwalker418 placement at WoW(3,0) samples MCNK area279 (Dalaran Crater), whose CT11 range7..30 plus source delta0 yields native30 under TC `ApplyLevelScaling`/`SelectLevel`. Cache20 is not its native level there; criterion21 uses29/30/31 to retain below/equal/above coverage. Lucifron's real map409 spawn20056605 supports9/18; installed MapDifficulty9 supplies CT1004. The lifecycle fixture's legacy3 had no map row and could not establish source context; it now uses actual9. Neither correction changes canonical data. [Requirements/tests](../../specs/level-scaling.md).

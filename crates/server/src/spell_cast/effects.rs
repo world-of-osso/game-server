@@ -56,6 +56,7 @@ pub const EFFECT_DUMMY: u32 = 3;
 pub const EFFECT_POWER_DRAIN: u32 = 8;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
+pub const EFFECT_QUEST_COMPLETE: u32 = 16;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
 pub const EFFECT_KILL_CREDIT: u32 = 134;
 pub const EFFECT_PERSISTENT_AREA_AURA: u32 = 27;
@@ -142,6 +143,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_TELEPORT_UNITS | EFFECT_TELEPORT_UNITS_LEGACY | EFFECT_LEAP => teleport_units,
         EFFECT_MODIFY_CHARGES => modify_charges,
         EFFECT_ATTACK_ME => attack_me,
+        EFFECT_QUEST_COMPLETE => quest_complete,
         crate::profession::EFFECT_CREATE_ITEM => crate::profession::effect_create_item,
         crate::profession::EFFECT_LEARN_SPELL => crate::profession::effect_learn_spell,
         crate::profession::EFFECT_SKILL_STEP => crate::profession::effect_skill_step,
@@ -158,6 +160,16 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
 /// death/AI/credit once; instakill packet details and player CHEAT_GOD are unmodelled.
 fn instakill(world: &mut World, ctx: &EffectCtx, _effect: &SpellEffect, target: Entity) {
     crate::combat::kill_unit(world, ctx.caster, target);
+}
+
+/// TC EffectQuestComplete shares the existing tracking/event persistence semantics.
+fn quest_complete(world: &mut World, _ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    if world.get::<Player>(target).is_none() {
+        return;
+    }
+    if let Ok(quest_id) = u32::try_from(effect.misc_values[0]) {
+        crate::quest::persist_scripted_quest_result(world, target, quest_id, false);
+    }
 }
 
 /// TC EffectKillCreditPersonal/EffectKillCredit: credit the hit player, not the caster
@@ -1257,7 +1269,7 @@ fn deal_damage_and_report(
         world
             .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(target)
             .is_some(),
-        before,
+        health,
         incoming_loss,
     );
     let (loss, duel_defeated) = crate::duel::duel_health_loss(
@@ -1313,6 +1325,12 @@ fn deal_damage_and_report(
     event.crit = crit;
     event.periodic = periodic;
     log_event(world, event);
+    if !periodic && !resolved_source && ctx.depth == 0 {
+        super::scripts::record_fire_hit(world, ctx.caster, ctx.spell, crit);
+    }
+    if periodic && ctx.spell.id == super::scripts::FLAME_SHOCK {
+        super::scripts::roll_flame_shock_tick(world, ctx.caster);
+    }
     // Proc events carry the damage in the target's health units (level scaling), which
     // breakable crowd control compares with the target's max health.
     // A fully absorbed damage effect still landed. Preserve that target in

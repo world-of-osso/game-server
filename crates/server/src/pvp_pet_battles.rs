@@ -1,9 +1,14 @@
 //! Find Battle matchmaking wraps the same deterministic engine as wild battles.
 use super::*;
+#[path = "pvp_pet_battle_policy.rs"]
+mod policy;
+use policy::*;
 
 #[derive(Resource, Default)]
 struct Matchmaker {
     queued: Vec<Entity>,
+    queued_at: BTreeMap<Entity, (std::time::Duration, u64)>,
+    next_queue_ticket: u64,
     proposals: BTreeMap<u64, Proposal>,
     battles: BTreeMap<u64, PvpBattle>,
 }
@@ -11,6 +16,7 @@ struct Matchmaker {
 struct Proposal {
     owners: [Entity; 2],
     accepted: [bool; 2],
+    expires_at: std::time::Duration,
 }
 #[derive(Clone)]
 struct PvpBattle {
@@ -18,6 +24,9 @@ struct PvpBattle {
     owners: [Entity; 2],
     decisions: [Option<Action>; 2],
     initial_pets: Option<[Option<usize>; 2]>,
+    expires_at: std::time::Duration,
+    consecutive_timeouts: [u8; 2],
+    participated: [BTreeSet<usize>; 2],
     rng: RuntimeRng,
 }
 #[derive(Component, Clone, Copy)]
@@ -104,6 +113,7 @@ fn queue_request(
     owner: Entity,
     request: PetBattleQueueRequest,
 ) -> Result<(), String> {
+    expire_proposals(world);
     connection(world, owner)?;
     match request {
         PetBattleQueueRequest::Join => {
@@ -121,7 +131,14 @@ fn queue_request(
             }) {
                 return Err("account already queued or in a pet battle".into());
             }
-            world.resource_mut::<Matchmaker>().queued.push(owner);
+            let joined_at = now(world);
+            {
+                let mut matches = world.resource_mut::<Matchmaker>();
+                let ticket = matches.next_queue_ticket;
+                matches.next_queue_ticket += 1;
+                matches.queued_at.insert(owner, (joined_at, ticket));
+                matches.queued.push(owner);
+            }
             send_queue(world, owner, PetBattleQueueState::Queued, None);
         }
         PetBattleQueueRequest::Leave => cancel_queue(world, owner),
@@ -179,14 +196,17 @@ fn cancel_queue(world: &mut World, owner: Entity) {
             }
         }
     }
+    world.resource_mut::<Matchmaker>().queued_at.remove(&owner);
     send_queue(world, owner, state(world, owner), None);
 }
-fn level_profile(world: &World, owner: Entity) -> Result<Vec<u8>, String> {
-    let mut levels: Vec<_> = load_team(world, owner)?.iter().map(|p| p.level).collect();
-    levels.sort_unstable();
-    Ok(levels)
+fn level_profile(world: &World, owner: Entity) -> Result<u16, String> {
+    Ok(load_team(world, owner)?
+        .iter()
+        .map(|p| u16::from(p.level))
+        .sum())
 }
 fn propose_matches(world: &mut World) {
+    sort_queue_by_wait(world);
     let queue = world.resource::<Matchmaker>().queued.clone();
     let mut matched = BTreeSet::new();
     for (index, owner) in queue.iter().enumerate() {
@@ -197,16 +217,20 @@ fn propose_matches(world: &mut World) {
             continue;
         };
         let opponent = queue[index + 1..].iter().find(|other| {
-            !matched.contains(*other) && level_profile(world, **other).is_ok_and(|p| p == profile)
+            !matched.contains(*other)
+                && level_profile(world, **other)
+                    .is_ok_and(|p| compatible_levels(world, *owner, profile, p))
         });
         let Some(opponent) = opponent else { continue };
         let owners = [*owner, *opponent];
         let id = next_id(world);
+        let expires_at = now(world) + PET_BATTLE_PVP_TIMERS;
         world.resource_mut::<Matchmaker>().proposals.insert(
             id,
             Proposal {
                 owners,
                 accepted: [false; 2],
+                expires_at,
             },
         );
         for owner in owners {
@@ -259,9 +283,13 @@ fn start_match(world: &mut World, id: u64, owners: [Entity; 2]) -> Result<(), St
         owners,
         decisions: [None; 2],
         initial_pets: Some([None; 2]),
+        expires_at: now(world) + PET_BATTLE_PVP_TIMERS,
+        consecutive_timeouts: [0; 2],
+        participated: Default::default(),
         rng: RuntimeRng(rand::rngs::StdRng::from_entropy()),
     };
     for (team, owner) in owners.iter().enumerate() {
+        world.resource_mut::<Matchmaker>().queued_at.remove(owner);
         world.entity_mut(*owner).insert(PvpParticipant { id, team });
         send_queue(world, *owner, PetBattleQueueState::InBattle, None);
         let snapshot = snapshot(world, &battle, team);
@@ -285,6 +313,7 @@ fn snapshot(world: &World, battle: &PvpBattle, team: usize) -> WildPetBattleSnap
         .encounter
         .snapshot(world.resource::<WildCatalog>(), journal);
     state.can_trap = false;
+    state.turn_time_ms = battle.expires_at.saturating_sub(now(world)).as_millis() as u32;
     state.initial_selection_required = battle.initial_pets.is_some();
     if team == 1 {
         state.teams.swap(0, 1);
@@ -302,6 +331,8 @@ pub(super) fn receive_queue(world: &mut World) {
     if !world.contains_resource::<Matchmaker>() {
         world.init_resource::<Matchmaker>();
     }
+    expire_proposals(world);
+    expire_battles(world);
     let mut query = world.query_filtered::<(&PlayerLink, &mut MessageReceiver<PetBattleQueueRequest>), (With<Authenticated>, With<InWorld>)>();
     let requests: Vec<_> = query
         .iter_mut(world)
@@ -337,6 +368,7 @@ pub(super) fn advance(
     owner: Entity,
     request: WildPetBattleActionRequest,
 ) -> Result<(), String> {
+    expire_battles(world);
     let participant = *world
         .get::<PvpParticipant>(owner)
         .ok_or("no PvP pet battle")?;
@@ -359,6 +391,9 @@ pub(super) fn advance(
     }
     validate_decision(world.resource::<WildCatalog>(), &battle, team, action)?;
     battle.decisions[team] = Some(action);
+    if !needs_replacement(&battle) {
+        battle.consecutive_timeouts[team] = 0;
+    }
     for side in 0..2 {
         let other = 1 - side;
         let dead = battle.encounter.battle.teams[side].pets
@@ -409,6 +444,7 @@ fn select_initial_pet(
             battle.encounter.battle.teams[team].active = slot;
         }
         battle.initial_pets = None;
+        battle.expires_at = now(world) + PET_BATTLE_PVP_TIMERS;
         for side in 0..2 {
             let state = snapshot(world, &battle, side);
             let connection = connection(world, battle.owners[side])?;
@@ -479,12 +515,23 @@ fn resolve_round(
     mut battle: PvpBattle,
     actions: [Action; 2],
 ) -> Result<(), String> {
+    let combat_round = battle.initial_pets.is_none()
+        && !needs_replacement(&battle)
+        && !actions.contains(&Action::Forfeit);
+    let before_active = battle.encounter.battle.teams.each_ref().map(|t| t.active);
     let (next, events) = battle.encounter.battle.step(
         &world.resource::<WildCatalog>().turns,
         actions,
         &mut battle.rng,
     )?;
     battle.encounter.battle = next;
+    if combat_round {
+        for (team, slot) in before_active.into_iter().enumerate() {
+            battle.participated[team].insert(slot);
+            battle.participated[team].insert(battle.encounter.battle.teams[team].active);
+        }
+    }
+    battle.expires_at = now(world) + PET_BATTLE_PVP_TIMERS;
     battle.encounter.feedback = events.iter().filter_map(combat_feedback).collect();
     let text: Vec<_> = events
         .iter()
@@ -501,7 +548,7 @@ fn resolve_round(
         persist_battle_progress(world, owner, &journal, &battle.encounter.owned_health(team))?;
     }
     if let Some(outcome) = battle.encounter.battle.outcome {
-        finish_match(world, id, &battle, outcome, actions, text);
+        finish_match(world, id, &battle, outcome, actions, text)?;
     } else {
         for team in 0..2 {
             let owner = battle.owners[team];
@@ -531,7 +578,8 @@ fn finish_match(
     outcome: Outcome,
     actions: [Action; 2],
     text: Vec<String>,
-) {
+) -> Result<(), String> {
+    let rewards = persist_winner_xp(world, battle, outcome)?;
     for team in 0..2 {
         let owner = battle.owners[team];
         if outcome == Outcome::Winner(team) && actions[team] != Action::Forfeit {
@@ -555,7 +603,7 @@ fn finish_match(
                 WildPetBattleUpdate::End {
                     battle_id: id,
                     outcome: result,
-                    rewards: vec![],
+                    rewards: rewards[team].clone(),
                     captured_pet_id: None,
                     combat_text: text.clone(),
                 },
@@ -571,6 +619,7 @@ fn finish_match(
     }
     world.resource_mut::<Matchmaker>().battles.remove(&id);
     info!("PvP pet battle {id} ended: {outcome:?}");
+    Ok(())
 }
 pub(super) fn remove_abandoned(world: &mut World) {
     let Some(matches) = world.get_resource::<Matchmaker>() else {

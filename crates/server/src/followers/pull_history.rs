@@ -321,6 +321,7 @@ fn read_event_parties(
 /// The ordinary log boundary observes damage/healing after native mitigation/clamping,
 /// and deaths before corpse cleanup; disappearance never enters this path as death.
 pub(crate) fn record_event(world: &mut World, event: &CombatLogEvent) {
+    super::healer_triage::record_damage(world, event);
     if !matches!(
         event.kind,
         CombatLogKind::Damage | CombatLogKind::Heal | CombatLogKind::Death

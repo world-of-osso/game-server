@@ -1,6 +1,8 @@
 //! Authentic JournalEncounterCreature joins exercised through real creature spawning.
 use super::*;
 
+#[path = "ancient.rs"]
+mod ancient;
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
 #[path = "azure_blade.rs"]
@@ -41,8 +43,14 @@ mod azure_telash;
 mod azure_telash_return;
 #[path = "broggok.rs"]
 mod broggok;
+#[path = "bromach.rs"]
+mod bromach;
 #[path = "celebras.rs"]
 mod celebras;
+#[path = "crawth.rs"]
+mod crawth;
+#[path = "doragosa.rs"]
+mod doragosa;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]
@@ -79,12 +87,18 @@ mod herald_reset;
 mod kargath;
 #[path = "kelidan.rs"]
 mod kelidan;
+#[path = "kokia.rs"]
+mod kokia;
 #[path = "landslide.rs"]
 mod landslide;
+#[path = "lost_dwarves.rs"]
+mod lost_dwarves;
 #[path = "maraudon.rs"]
 mod maraudon;
 #[path = "melidrussa.rs"]
 mod melidrussa;
+#[path = "native_target148.rs"]
+mod native_target148;
 #[path = "nethekurse.rs"]
 mod nethekurse;
 #[path = "noxxion.rs"]
@@ -103,6 +117,8 @@ mod porung;
 mod the_maker;
 #[path = "theradras.rs"]
 mod theradras;
+#[path = "tww_kyrioss.rs"]
+mod tww_kyrioss;
 #[path = "umbrelskul.rs"]
 mod umbrelskul;
 #[path = "vazruden_slay.rs"]
@@ -436,6 +452,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
+            209230, 216619,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
