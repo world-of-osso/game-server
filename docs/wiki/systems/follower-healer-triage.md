@@ -28,6 +28,12 @@ Convoke is **not present in Crenna's local105 kit**: `FOLLOWER_RESTO_CONVOKE_NOT
 
 Additional native-consumer gaps found by source inspection (not yet behavioral qualification): `FOLLOWER_RESTO_NPC_RESURRECTION_OFFER_UNIMPLEMENTED` — `death/resurrection.rs::build_offer` requires a Player caster, while Crenna is an NPC; `FOLLOWER_RESTO_EFFLORESCENCE_HEALING_UNQUALIFIED` — native145205 summons47649, but no existing qualified Efflorescence healing consumer/placement fixture was found. Do not replace either with direct HP grants. Tree-of-Life/utility coverage remains pending native behavioral qualification; enumeration alone is not support.
 
+## Initial common slice (implementation, GREEN pending)
+
+`healer_triage.rs` now records target-health-unit damage at the ordinary log boundary, ranks patient risk, subtracts live native HoT/shield coverage, compares effective healing/native mana, reads native charge/cooldown readiness, cancels topped normal direct casts, and gates damage. `healer_policy.rs` dispatches pure105/257 hooks with explicit owned-spell vetoes. Resto initially chooses common ranked candidates; Holy has an empty-ownership seam for the separate policy agent. Known upcoming timers, source-radius clusters and full Restoration policy depth are not yet implemented by this slice.
+
+Six observed RED cases at simulator22f7bfa65/P03cebdb, server opt1/deps3,135.22s: five patient/cost/cast assertions and the missing benchmark observation schema. Failures were behavioral assertions, not compile/setup errors. Core policy fixes are awaiting targeted GREEN; two further native Resto proc/emergency tests remain pending RED execution.
+
 ## Evidence / limitations
 
 Initial base c6be257c5, frozen protocol03cebdb. Own simulator baseline e479f2de9; same seeds1–20 and source root for before/after. Baseline build underway; no success/metrics claim yet. Simulator has frozen-plane navigation rather than production LOS/nav; native movement proofs are required separately. Level32 cannot measure talents only learned later; absent gains must be reported as N/A, not 0% proc use.

@@ -2,6 +2,9 @@
 mod ai;
 mod catalog;
 mod hazards;
+mod healer_policy;
+mod healer_triage;
+mod holy_policy;
 mod kit;
 mod kit_ai;
 mod kit_area;
@@ -42,6 +45,7 @@ mod pull_sources;
 mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
+mod resto_policy;
 mod spawning;
 mod stockade_diagnostic;
 mod tank_frontal;

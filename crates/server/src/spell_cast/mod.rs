@@ -942,7 +942,7 @@ fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base
 
 /// Cast time after ChangeCastTime mods, divided by `1 + CharacterStats.haste_pct`
 /// (haste auras fold in through `StatModifiers`).
-fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
+pub(crate) fn cast_time_ms(world: &World, caster: Entity, spell: &SpellInfo) -> i32 {
     let base = spell
         .misc
         .as_ref()
@@ -1649,6 +1649,7 @@ enum StartCheck {
     Native,
     IgnoreCastInProgress,
     TankHealCapability,
+    HealerDecision,
 }
 
 fn validate_start(
@@ -1866,6 +1867,15 @@ fn validate_history(
     Ok(())
 }
 
+/// Native cooldown/charge/school state, without spending or waiting on GCD.
+pub(crate) fn read_healer_recovery(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+) -> Result<(), CastFailure> {
+    validate_history(world, caster, spell, StartCheck::HealerDecision)
+}
+
 fn permits_transient_gcd(
     world: &World,
     caster: Entity,
@@ -1873,6 +1883,9 @@ fn permits_transient_gcd(
     check: StartCheck,
     ready_at: f64,
 ) -> bool {
+    if check == StartCheck::HealerDecision {
+        return true;
+    }
     if check != StartCheck::TankHealCapability {
         return false;
     }

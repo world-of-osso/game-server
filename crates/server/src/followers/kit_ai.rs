@@ -21,19 +21,24 @@ pub(super) fn update(
     party: &[Entity],
     enemy: Option<Entity>,
 ) -> bool {
+    let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let entries: Vec<_> = world
         .get_resource::<FollowerCatalog>()
         .into_iter()
         .flat_map(|catalog| &catalog.kits)
-        .filter(|entry| entry.spec_id == follower.profile.spec_id)
+        .filter(|entry| entry.available(follower.profile.spec_id, level))
         .cloned()
         .collect();
     if entries.is_empty() {
         return false;
     }
-    let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let enemies = ai::engaged_enemies(world, follower, unit, party);
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
+        return true;
+    }
+    let triage = (follower.profile.role == shared::group::GroupRole::Healer)
+        .then(|| super::healer_triage::update(world, unit, follower, party, &entries));
+    if triage.as_ref().is_some_and(|outcome| outcome.acted) {
         return true;
     }
     let candidates: Vec<_> = enemy.into_iter().collect();
@@ -42,6 +47,14 @@ pub(super) fn update(
         .iter()
         .filter(|entry| entry.available(follower.profile.spec_id, level))
     {
+        let policy_owned = triage.as_ref().is_some_and(|outcome| {
+            outcome.owned.contains(&entry.spell_id)
+                || super::healer_triage::manages(entry)
+                || (!outcome.safe_to_dps && matches!(entry.slot, Slot::Attack | Slot::Aoe))
+        });
+        if policy_owned {
+            continue;
+        }
         let interrupt_entry = super::kit_interrupt::is_interrupt_entry(
             entry,
             world.resource::<crate::spell_info::SpellStore>(),
@@ -108,14 +121,33 @@ fn choose_patient(world: &World, unit: Entity, party: &[Entity], entry: &Entry) 
         .iter()
         .copied()
         .filter(|target| patient_is_eligible(world, unit, *target, entry));
-    let by_health = eligible
-        .filter_map(|target| health_fraction(world, target).map(|fraction| (target, fraction)));
-    by_health
-        .min_by(|left, right| left.1.total_cmp(&right.1))
+    let healer = world
+        .get::<Follower>(unit)
+        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
+    let ranked = eligible.filter_map(|target| {
+        let fraction = health_fraction(world, target)?;
+        let score = if healer {
+            super::healer_triage::read_patient(world, target)?.score
+        } else {
+            1.0 - fraction
+        };
+        Some((target, score))
+    });
+    ranked
+        .max_by(|left, right| {
+            left.1
+                .total_cmp(&right.1)
+                .then_with(|| right.0.to_bits().cmp(&left.0.to_bits()))
+        })
         .map(|(target, _)| target)
 }
 
-fn patient_is_eligible(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
+pub(super) fn patient_is_eligible(
+    world: &World,
+    unit: Entity,
+    target: Entity,
+    entry: &Entry,
+) -> bool {
     let same_map = world.get::<InMap>(target) == world.get::<InMap>(unit);
     let missing_requested_aura = entry
         .conditions
@@ -134,7 +166,7 @@ fn patient_is_eligible(world: &World, unit: Entity, target: Entity, entry: &Entr
     same_map && missing_requested_aura && correct_role && can_remove_aura && native_target_eligible
 }
 
-fn is_tank(world: &World, unit: Entity) -> bool {
+pub(super) fn is_tank(world: &World, unit: Entity) -> bool {
     if world
         .get::<Follower>(unit)
         .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Tank)
