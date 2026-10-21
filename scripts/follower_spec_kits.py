@@ -27,7 +27,7 @@ SOURCE_TABLES = {
     'TraitCond': 'trait_cond', 'TraitNode': 'trait_node', 'TraitNodeEntry': 'trait_node_entry',
     'TraitNodeXTraitNodeEntry': 'trait_node_x_trait_node_entry',
 }
-SCHEMA = '''CREATE TABLE follower_spec_kit (
+SCHEMA = '''CREATE TABLE IF NOT EXISTS follower_spec_kit (
     spec_id INTEGER NOT NULL, spell_id INTEGER NOT NULL,
     min_level INTEGER NOT NULL CHECK(min_level BETWEEN 1 AND 90),
     max_level INTEGER NOT NULL CHECK(max_level BETWEEN min_level AND 90),
@@ -324,6 +324,21 @@ def kit_rows(db, source):
     return rows, inventory, list(reference_rows.values())
 
 
+def replace_kit_scope(output, rows, spec_ids):
+    output.execute(SCHEMA)
+    generated = {row[0] for row in rows}
+    published = {row[0] for row in output.execute('SELECT DISTINCT spec_id FROM follower_spec_kit')}
+    scope = set(spec_ids) if spec_ids is not None else generated | published
+    if not scope or (spec_ids is not None and not scope.issubset(generated)):
+        raise ValueError(f'unknown or empty follower spec scope: {sorted(scope)}')
+    scope = sorted(scope)
+    selected = [row for row in rows if row[0] in scope]
+    placeholders = ','.join('?' for _ in scope)
+    output.execute(f'DELETE FROM follower_spec_kit WHERE spec_id IN({placeholders})', scope)
+    output.executemany('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', selected)
+    return selected, scope
+
+
 def prepare(args):
     inputs = [args.world_db.resolve(), args.source_json.resolve()]
     outputs = [args.output_db.resolve(), args.receipt.resolve(), args.sqldiff.resolve()]
@@ -343,11 +358,12 @@ def prepare(args):
         reference_sources = read_description_reference_sources(args.db2_root, references)
         with closing(sqlite3.connect(args.output_db)) as output:
             db.backup(output)
-            output.execute('DROP TABLE IF EXISTS follower_spec_kit')
-            output.execute(SCHEMA)
-            output.executemany('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', rows)
+            rows, scope = replace_kit_scope(output, rows, args.spec_ids)
             output.commit()
-    diff = subprocess.run(['sqldiff', str(args.world_db), str(args.output_db)], capture_output=True, text=True, check=True).stdout
+            output_rows = output.execute('SELECT COUNT(*) FROM follower_spec_kit').fetchone()[0]
+    diff = subprocess.run(['sqldiff', '--primarykey', '--table', 'follower_spec_kit',
+                           str(args.world_db), str(args.output_db)], capture_output=True, text=True, check=True).stdout
+    diff = f'BEGIN IMMEDIATE;\n{diff}COMMIT;\n' if diff.strip() else ''
     args.sqldiff.write_text(diff)
     if digest(args.world_db) != before:
         raise ValueError('input database changed during preparation; discard this copy')
@@ -355,19 +371,21 @@ def prepare(args):
                    producer_sha256=digest(__file__), source_database=str(args.world_db.resolve()),
                    source_database_sha256=before, output_database=str(args.output_db.resolve()),
                    output_database_sha256=digest(args.output_db), source_json_sha256=digest(args.source_json),
-                   changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), sources=evidence,
+                   changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), output_rows=output_rows,
+                   spec_ids=scope, key_columns=['spec_id', 'spell_id', 'min_level'], sources=evidence,
                    chosen_loadouts=source['loadouts'], trait_source_trees=source['trees'], level32_inventory=inventory,
                    aura_reference_rows=references, description_reference_sources=reference_sources,
                    selected_source_rows=selected_source_rows(args.db2_root, source),
                    sqldiff=str(args.sqldiff.resolve()), sqldiff_sha256=digest(args.sqldiff))
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
-    print(f'Prepared {len(rows)} kit intervals in COPY {args.output_db}; canonical unchanged')
+    print(f'Prepared {len(rows)} kit intervals for specs {scope} in COPY {args.output_db}; canonical unchanged')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['world-db', 'db2-root', 'source-json', 'output-db', 'receipt', 'sqldiff']:
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--spec-ids', type=int, nargs='+', help='Replace only these owned spec kits; omitted replaces the complete kit')
     prepare(parser.parse_args())
 
 
