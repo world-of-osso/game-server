@@ -249,8 +249,7 @@ fn encounter_coverage_kargath_authored_groups_arrive_then_assassins_wander_uneng
             !h.app
                 .world()
                 .get::<shared::components::CombatStatus>(actor)
-                .unwrap()
-                .0,
+                .is_some_and(|combat| combat.0),
             "override does not zone-engage assassins"
         );
     }
