@@ -182,7 +182,7 @@ Native build12.1.5.70448 inputs: SpecializationSpells, SpellLevels, SkillLineAbi
 
 Rotation comparisons use SimC76f8118 APL/class-module decisions with native70448 spell data; SimC's70391 numeric spell data must not replace native costs or coefficients. Windwalker combo-eligible actions share a no-repeat group; Fists of Fury/Rising Sun Kick must not be starved by lower-priority Blackout Kick. Actual successful execution, not a rejected admission or triggered child, advances action history. Full talent/proc/window fidelity remains unverified until native dummy measurements prove it.
 
-A learned native passive may expose a cast action only with an explicit source-backed parent→action relation. SimC `sc_warlock_init.cpp:245–250` maps learned1250273 to105174 and learned426115 to264178; retain the parents and gate children by actual native parent availability and child SpellLevels. Never grant these actions to a loadout without its parent.
+A learned native passive may expose a cast action only with an explicit source-backed parent→action relation. SimC `sc_warlock_init.cpp:245–250` maps learned1250273 to105174 and learned426115 to264178; retain the parents and gate children by actual native parent availability and child SpellLevels. Never grant these actions to a loadout without its parent. Native TraitDefinition108167 exposes Berserk106951 for learned343223; learned Incarnation102543 (definition108183) overrides106951. Schedule only the surviving cooldown, during actual Tiger's Fury5217, matching SimC's Feral cooldown list.
 
 ### Shared interrupt contract
 

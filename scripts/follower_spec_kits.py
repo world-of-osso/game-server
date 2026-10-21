@@ -101,6 +101,8 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('interrupt', 5)
     if name in {'Mark of the Wild', 'Arcane Intellect', 'Power Word: Fortitude', 'Battle Shout', 'Blessing of the Bronze', 'Skyfury', 'Lightning Shield', 'Defensive Stance'}:
         return policy('buff', 75, 'self', missing_aura=spell)
+    if spec == 103 and name in {'Berserk', 'Incarnation: Avatar of Ashamane'}:
+        return policy('buff', 80, 'self', combat=True, missing_aura=spell, required_aura=5217)
     if name in {'Avenging Wrath', 'Combustion', 'Dragonrage', 'Zenith', 'Bestial Wrath', "Tiger's Fury", 'Stormkeeper', 'Summon Demonic Tyrant', 'Divine Toll', 'Mirror Image'}:
         return policy('buff', 80, 'self', combat=True, missing_aura=spell)
     if name in {'Consecration', 'Earthquake', 'Flamestrike', 'Meteor'}:
@@ -221,13 +223,18 @@ def read_description_reference_sources(db2, references):
 # SimC76f8118 engine/class_modules/warlock/sc_warlock_init.cpp:245-250.
 # Native70448 has the same talent/action identities; only those actually learned
 # in the selected native loadout enable the named cast actions.
-SIMC_TALENT_CAST_ACTIONS = {266: ((1250273, 105174), (426115, 264178))}
+# Native TraitDefinition108167 VisibleSpellID106951 and108183 OverridesSpellID106951;
+# SimC sc_druid.cpp3933-3946,10699 suppresses Berserk when Incarnation is learned.
+SIMC_TALENT_CAST_ACTIONS = {
+    266: ((1250273, 105174, ()), (426115, 264178, ())),
+    103: ((343223, 106951, (102543,)),),
+}
 
 
 def project_loadout_actions(loadout):
     known = dict(loadout['known'])
-    for parent, action in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
-        if str(parent) in known:
+    for parent, action, replacements in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
+        if str(parent) in known and not any(str(spell) in known for spell in replacements):
             known.setdefault(str(action), False)
     return known
 
