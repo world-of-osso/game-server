@@ -391,7 +391,7 @@ SAI clock fixtures retain150ms dispatch grace and100ms protected sampling guards
 - [x] `MAKER_NORMAL_BEAKER_30925_ABSENT_70448`: retail DB2 has no30925, so Normal casts nothing and no substitute spell is used.
 - [x] KilledUnit speaks group1 only for player victims; NPC victims are silent. JustDied completes1922 bit0, then speaks group2.
 - [x] Evade resets the encounter; a re-pull re-arms Talk0 and the beaker schedule.
-- [ ] `MAKER_DOMINATION_CHARM_UNIMPLEMENTED`: Domination30923 needs player charm (aura6) and more than one threat player; not scheduled.
+- [ ] Domination30923 uses generic aura6 with the source20–30s/repeat20–30s schedule, random player target and more-than-one-threat-player gate; implementation added, native GREEN pending. [Charm proof](charm-possess.md).
 - [ ] `BLOOD_FURNACE_DOOR_DATA_UNIMPLEMENTED`: Maker doors181811/181812/181815 DoorData state.
 - [x] `RAMPARTS_BLOOD_FURNACE_BOSS_BINDINGS_UNPUBLISHED` retired: canonical world data publishes the542/543 creature bindings (2026-10-20) and tests use them.
 - Broggok (lever MakeActive, `GO_NOT_SELECTABLE_FLAG_UNMODELLED`), prisoner waves, sound, loot, persistence and native presentation are out of scope.
