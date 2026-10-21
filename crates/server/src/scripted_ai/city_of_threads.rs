@@ -70,7 +70,8 @@ impl Orator {
             self.boss.events.reschedule(EVENT_ENERGIZE, 6_000);
             return;
         }
-        powers::change_power(ctx.world, ctx.me, PowerType::Energy, 4.0);
+        powers::change_power(ctx.world, ctx.me, PowerType::Energy, 4.0)
+            .expect("Orator Energy pool initialized on appearance");
         self.energize_count += 1;
         let delay = if self.energize_count % 2 == 1 {
             1_200
@@ -251,6 +252,7 @@ fn finish_indoctrination(
     cast_source_child(world, target, aura.caster, LINGERING_INFLUENCE);
     if world.get::<Npc>(target).is_some() {
         let current = read_energy(world, target);
-        powers::change_power(world, target, PowerType::Energy, -current);
+        powers::change_power(world, target, PowerType::Energy, -current)
+            .expect("Indoctrination creature Energy pool exists");
     }
 }
