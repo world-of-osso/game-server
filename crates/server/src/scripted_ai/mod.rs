@@ -39,6 +39,7 @@ pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
 pub mod the_stockade;
+pub(crate) mod tww_rookery;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 
@@ -323,6 +324,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == SMART_AI || script_name.is_empty() {
         return smart_ai::creature_ai(world, creature);
     }
+    if script_name == tww_rookery::KYRIOSS_SCRIPT {
+        return tww_rookery::creature_ai(world, creature);
+    }
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
@@ -379,6 +383,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || shattered_halls::is_creature_script(script_name)
         || nethekurse::is_creature_script(script_name)
         || kargath::is_creature_script(script_name)
+        || script_name == tww_rookery::KYRIOSS_SCRIPT
     {
         Some(script_name.to_owned())
     } else {

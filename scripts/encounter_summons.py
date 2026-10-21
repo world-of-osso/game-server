@@ -364,9 +364,36 @@ def import_porung_binding(connection):
     return [primary['entry']]
 
 
+def import_kyrioss_schedule(connection):
+    """LittleWigs2777a9d5 Kyrioss: explicit local schedule, never a claimed TC AI.
+
+    Existing TDB base/stats/spawns and DB2 binding remain untouched. In
+    particular this does not manufacture a Follower205 difficulty row.
+    """
+    source = connection.execute(
+        'SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=209230'
+    ).fetchone()
+    if source != ('', ''):
+        raise ValueError('Kyrioss TDB source AI identity changed')
+    binding = connection.execute(
+        'SELECT encounter_id,bit FROM raid_encounter_creature WHERE map_id=2648 AND creature_entry=209230'
+    ).fetchone()
+    if binding != (2816, 0):
+        raise ValueError('Kyrioss native primary2816/map2648/bit0 binding missing')
+    runtime = connection.execute(
+        'SELECT AIName,ScriptName FROM content_creature_template WHERE entry=209230'
+    ).fetchone()
+    if runtime not in [('', ''), ('', 'littlewigs_kyrioss')]:
+        raise ValueError('Kyrioss runtime AI identity conflicts with source schedule')
+    connection.execute(
+        "UPDATE content_creature_template SET ScriptName='littlewigs_kyrioss' WHERE entry=209230"
+    )
+    return [209230]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','kyrioss'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -388,6 +415,8 @@ def main():
                 entries = import_kargath_actors(conn)
             elif args.encounter == 'porung':
                 entries = import_porung_binding(conn)
+            elif args.encounter == 'kyrioss':
+                entries = import_kyrioss_schedule(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':

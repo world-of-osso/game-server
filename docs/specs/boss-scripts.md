@@ -1,5 +1,12 @@
 # Boss scripts
 
+## TWW Rookery — Kyrioss source boundary
+
+- Map2648 primary209230/encounter2816/bit0 runs explicitly named `littlewigs_kyrioss`; TC a352b1fa has no Rookery script. `encounter_summons.py --encounter kyrioss` binds independent copies only, validates native identity, preserves TDB stats/population/difficulty rows and unrelated bosses; lead owns publication.
+- LittleWigs2777a9d51418934b5fdd5b92d937b1af6070bcad `WarWithin/TheRookery/Kyrioss.lua` supplies first Crashing Thunder1214325 at5100ms, Wild Lightning474018 at9400ms and Torrent's actual cast1214315 at16000ms (444123 is the warning label). Use ordinary70448 cast times, implicit targets and effects in Normal1 and Follower205; no instant cast or manufactured205 template row.
+- Crashing/Wild repeats are relative to actual accepted cast starts: first42500/41300ms respectively, then15800/40000ms alternating. Rejected admission must not emit a successful cast or restart a repeat. Reset clears counters/clocks; death/credit remains copy-local.
+- Named gaps: `KYRIOSS_DUMMY_CHILDREN_UNSOURCED` (1214325/474018 native dummy effects do not establish their scripted child casts); `KYRIOSS_TORRENT_444034_PHASE_UNSOURCED` (native1214315 periodic1214323 does not prove the444034 event or authorize a guessed55.9s repeat); `KYRIOSS_DASH_CONTROLLER_UNSOURCED` (419870 exists but source endpoint/controller/landing actions are absent). No fabricated energy/stage actions, dummy substitutions, whole-fight, native-clear, navigation or budget certification.
+
 ## Blood Furnace Broggok source boundary
 
 - Broggok17380 uses pinned TC a352b1fa `boss_broggok.cpp`, published1924/map542bit2 (source ordinal1), ordinary70448 spell admission and map-copy lifecycle.
