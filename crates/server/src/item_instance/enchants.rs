@@ -225,6 +225,41 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "native8163 type4 armor reproduction; run explicitly before enabling"]
+    fn item_instance_native_armor_enchant_keeps_primary_and_physical_resistance() {
+        let mut tables = native();
+        // Native70448 SpellItemEnchantment8163: type4/school0 and type5/hybrid72.
+        tables.enchants.insert(
+            8163,
+            Enchantment {
+                effects: [
+                    EnchantEffect {
+                        kind: 4,
+                        argument: 0,
+                        coefficient: 0.802820027,
+                        points: 0,
+                    },
+                    EnchantEffect {
+                        kind: 5,
+                        argument: 72,
+                        coefficient: 1.2191,
+                        points: 0,
+                    },
+                    EnchantEffect::default(),
+                ],
+                scaling_class: -7,
+                min_level: 0,
+                max_level: 80,
+            },
+        );
+        let stats = enchantment_stats(8163, 90, &tables).unwrap().stats;
+        assert_eq!(stats.secondary.armor, 27.0);
+        assert_eq!(stats.primary.strength, 41.0);
+        assert_eq!(stats.primary.agility, 41.0);
+        assert_eq!(stats.primary.intellect, 0.0);
+    }
+
+    #[test]
     fn item_instance_unknown_gem_and_enchant_are_explicit_errors() {
         assert!(gem_stats(999999, 90, &native()).is_err());
         assert!(enchantment_stats(999999, 90, &native()).is_err());
