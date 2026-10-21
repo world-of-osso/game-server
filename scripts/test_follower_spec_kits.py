@@ -8,8 +8,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 
-from scripts.follower_spec_kits import read_periodic_description_child
+from scripts.follower_spec_kits import prepare, read_periodic_description_child
 
 ROOT = Path(__file__).resolve().parents[1]
 DB2 = Path('/home/osso/Projects/world-of-osso/game-engine/data/db2/active')
@@ -113,6 +114,46 @@ class FollowerKitProducerTests(unittest.TestCase):
                 self.assertEqual(before.execute('SELECT * FROM follower_profiles ORDER BY entry').fetchall(), after.execute('SELECT * FROM follower_profiles ORDER BY entry').fetchall())
             self.assertEqual((root / 'second.sql').read_text(), '')
             self.assertEqual(json.loads((root / 'second.json').read_text())['changed_tables'], [])
+
+    def test_scoped_delta_composes_with_disjoint_spec_in_both_orders(self):
+        directory_root = ROOT / 'target/follower-policy-fixtures'
+        directory_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=directory_root) as directory:
+            root = Path(directory)
+            source = (ROOT / 'data/world.db').resolve()
+            owned = [66, 73, 103, 266, 269]
+            prepare(SimpleNamespace(world_db=source, db2_root=DB2, source_json=SOURCE,
+                                    output_db=root / 'owned.db', receipt=root / 'owned.json',
+                                    sqldiff=root / 'owned.sql', spec_ids=owned))
+            delta = (root / 'owned.sql').read_text()
+            # Actual a3 ownership shape; the peer's native262/470411 row must
+            # retain its authored refresh predicate across either application order.
+            peer = '''UPDATE follower_spec_kit SET priority=84,
+                conditions='{"refreshable_aura": 188389, "target": "enemy"}'
+                WHERE spec_id=262 AND spell_id=470411 AND min_level=3;'''
+            def rows(db):
+                return db.execute('SELECT * FROM follower_spec_kit ORDER BY spec_id,spell_id,min_level').fetchall()
+            with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True) as native:
+                with sqlite3.connect(root / 'owned-first.db') as first, sqlite3.connect(root / 'peer-first.db') as second:
+                    native.backup(first)
+                    native.backup(second)
+                    first.executescript(delta)
+                    first.executescript(peer)
+                    second.executescript(peer)
+                    second.executescript(delta)
+                    self.assertEqual(rows(first), rows(second), 'disjoint stable-key deltas must commute')
+                    expected = rows(first)
+                with sqlite3.connect(root / 'peer-only.db') as peer_only:
+                    native.backup(peer_only)
+                    peer_only.executescript(peer)
+                    self.assertEqual([row for row in expected if row[0] not in owned],
+                                     [row for row in rows(peer_only) if row[0] not in owned],
+                                     'our delta must not rewrite any other spec')
+            with sqlite3.connect(root / 'owned.db') as prepared:
+                self.assertEqual([row for row in expected if row[0] in owned],
+                                 [row for row in rows(prepared) if row[0] in owned])
+            self.assertNotIn('rowid', delta.lower(), 'published SQL contract uses stable native primary keys')
+            self.assertEqual(json.loads((root / 'owned.json').read_text())['spec_ids'], owned)
 
     def test_refuses_source_database_output(self):
         with tempfile.TemporaryDirectory() as directory:
