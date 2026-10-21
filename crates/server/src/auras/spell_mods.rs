@@ -146,8 +146,8 @@ fn matching<'a>(
 }
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
-    //Tidal Waves/Backdraft stacks are next-spell uses, not magnitude.
-    let stacks = if matches!(aura.spell_id, 53390 | 117828) {
+    // Tidal Waves/Backdraft/Surge stacks are next-spell uses, not magnitude.
+    let stacks = if matches!(aura.spell_id, 53390 | 117828 | 114255) {
         1.0
     } else {
         aura.stack_multiplier()

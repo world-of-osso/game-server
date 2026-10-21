@@ -50,7 +50,26 @@ fn roll_surge_from_native_spell(world: &World, aura: &AuraInstance, event: &Aura
 }
 
 fn grant_surge(world: &mut World, priest: Entity, _aura: &AuraInstance, _other: Option<Entity>) {
+    #[cfg(test)]
+    let before = read_surge_stacks(world, priest);
     crate::spell_cast::cast_triggered(world, priest, SURGE_BUFF, Some(priest), 1);
+    #[cfg(test)]
+    {
+        let after = read_surge_stacks(world, priest);
+        crate::spell_cast::holy_metrics::record_surge_gain(world, priest, before, after);
+    }
+}
+
+#[cfg(test)]
+fn read_surge_stacks(world: &World, priest: Entity) -> u8 {
+    world
+        .get::<ActiveAuras>(priest)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == SURGE_BUFF && aura.caster == priest)
+        })
+        .map_or(0, |aura| aura.stacks)
 }
 
 /// 200183: with235587 gain one charge; otherwise reset the Holy Words.
@@ -104,6 +123,8 @@ pub(super) fn spend_surge(world: &mut World, priest: Entity) {
         .map(|aura| aura.instance_id);
     if let Some(instance) = instance {
         crate::auras::spend_stack(world, priest, instance);
+        #[cfg(test)]
+        crate::spell_cast::holy_metrics::record_surge_use(world, priest);
     }
 }
 

@@ -23,6 +23,57 @@ pub(crate) struct HolyMetrics {
     pub actors: BTreeMap<u64, ActorMetrics>,
 }
 
+pub(super) fn read_recharge(world: &World, caster: Entity, category: u32, now: f64) -> f64 {
+    let Some(history) = world.get::<super::SpellHistory>(caster) else {
+        return 0.0;
+    };
+    let charge_end = history
+        .charges
+        .get(&category)
+        .and_then(|charges| charges.pending.back())
+        .map(|charge| charge.ready_at);
+    charge_end.map_or(0.0, |end| (end - now).max(0.0))
+}
+
+pub(super) fn record_reduction(
+    world: &mut World,
+    caster: Entity,
+    spell: u32,
+    requested: f64,
+    applied: f64,
+) {
+    if !matches!(spell, 2050 | 34861) {
+        return;
+    }
+    let Some(mut metrics) = world.get_resource_mut::<HolyMetrics>() else {
+        return;
+    };
+    let actor = metrics.actors.entry(caster.to_bits()).or_default();
+    let word = actor.words.entry(spell).or_default();
+    word.requests += 1;
+    word.requested_seconds += requested;
+    word.applied_seconds += applied;
+}
+
+pub(super) fn record_surge_gain(world: &mut World, caster: Entity, before: u8, after: u8) {
+    let Some(mut metrics) = world.get_resource_mut::<HolyMetrics>() else {
+        return;
+    };
+    let actor = metrics.actors.entry(caster.to_bits()).or_default();
+    actor.surge_roll_successes += 1;
+    actor.surge_effective_gains += u64::from(after.saturating_sub(before));
+}
+
+pub(super) fn record_surge_use(world: &mut World, caster: Entity) {
+    if let Some(mut metrics) = world.get_resource_mut::<HolyMetrics>() {
+        metrics
+            .actors
+            .entry(caster.to_bits())
+            .or_default()
+            .surge_uses += 1;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
