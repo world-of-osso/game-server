@@ -39,6 +39,12 @@ const CONTRACT_GAPS: &[(u32, &str)] = &[
     (193478, "source seating interaction"),
     (198156, "source wormhole interaction"),
     (219387, "source fireworks interaction"),
+    // Additional explicit toyfx11/toyfx18 source contracts, not item-name inference.
+    (88375, "source target-dummy interaction"),
+    (144339, "source target-dummy interaction"),
+    (116689, "source seating interaction"),
+    (172924, "source wormhole interaction"),
+    (122126, "source weighted invisible-display contract"),
 ];
 
 pub(super) fn load(conn: &Connection) -> rusqlite::Result<BTreeMap<u32, BTreeSet<String>>> {

@@ -20,7 +20,7 @@ Do not add these three Toy rows until a real contract is established and approve
 
 The runtime still applies SummonProperties/target/script preflight. Prepared-copy census admission is distinct from behavior-complete toys, and canonical data publication remains separate.
 
-Global source interaction markers refuse summoned toys even after template import: nonzero NPC flags, spellclick rows, SmartAI rows, VehicleId, or gameobject summon/use effects in their normal-difficulty trigger closure. Explicit existing toyfx spittoon88387, brew88579, beanbag193478, wormhole198156 and fireworks219387 contracts remain named gaps. Only the proven Katy156833/261602 mailbox marker is exempt, through `toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry`; other/new markers still refuse. Vargoth118191's unproved gossip is a named gap. Blank script names and item names never establish actor-only status.
+Global source interaction markers refuse summoned toys even after template import: nonzero NPC flags, spellclick rows, SmartAI rows, VehicleId, or gameobject summon/use effects in their normal-difficulty trigger closure. Explicit existing toyfx spittoon88387, brew88579, seats193478/116689, wormholes198156/172924, fireworks219387, target dummies88375/144339 and invisible-display122126 contracts remain named gaps. Only the proven Katy156833/261602 mailbox marker is exempt, through `toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry`; other/new markers still refuse. Vargoth118191's unproved gossip is a named gap. Blank script names and item names never establish actor-only status.
 
 ## Census-driven generic effect160
 
