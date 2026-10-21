@@ -1,0 +1,93 @@
+# Holy Priest follower decisions
+
+## Scope and authority
+
+Henry Garrick (215011), class5, spec257, uses the native selected starter
+spellbook and talents at his actual level. Spell/effect/cost/radius/proc values
+come only from the local 12.1.5.70448 catalog. Decisions are named project policy
+`HOLY_PRIEST_TRIAGE_V1`, not SimulationCraft or a Retail healer rotation.
+Generic patient eligibility, damage history and triage remain shared healer policy.
+No unlearned spells, synthetic procs, fabricated auras or alternate catalogs.
+
+Source receipt: game-engine `data/diagnostics/holy-priest-2026-10-21/kit-source.json`
+contains the88 published rows, the90 native starter-loadout snapshots, the Priest
+talent tree and per-spell SHA256 hashes of the referenced local catalog rows.
+Publication source is server master c6be257c5; protocol03cebdb.
+
+## Source corrections to historical expectations
+
+- Surge of Light109186 has native8% chance. Its114255 buff grants at most2 uses,
+  instant Flash Heal and **50% less mana for Holy**, not a free heal. Stack count
+  represents uses, not doubled discount. Successful launch spends one use;
+  cancelled/failed casts do not. No fabricated100% proc qualification.
+- Heal2060 and Circle of Healing204883 exist as spell records but are absent from
+  Henry's selected70448 spellbook. Do not grant/schedule them or assume Heal
+  reduces Serenity: current63733 explicitly names Flash Heal only.
+- Sanctify34861 is selected at levels15–68. Ultimate Serenity1246517 replaces it
+  at69; its native tooltip redirects Sanctify talents to Serenity. Old Sanctify
+  scheduling must not reintroduce the removed spell.
+- Dispel Magic528 is not selected. Purify527 is learned10; Mass Dispel32375 is
+  learned50. Do not invent the missing hostile single-target dispel.
+- Apotheosis200183 is learned35. Native values are200% increased Holy Word
+  reduction and70% less Holy Word mana, not historical free Holy Words.
+
+## Decision contract
+
+1. Preserve native admission and triage exclusions: living same-copy party,
+   actual known spell, range/LOS, mana, cooldown/charges, crowd control and
+   ordinary aura eligibility. Emergency healing takes precedence over upkeep,
+   throughput cooldowns and damage.
+2. Guardian Spirit protects an imminent-death patient; Serenity supplies urgent
+   direct healing. Desperate Prayer protects an injured Henry. Fade is a personal
+   threat/defensive action, not an enemy damage filler. Never treat an aura's
+   successful admission as proof its missing scripted consequence exists.
+3. Spend Surge on an injured reachable patient before an ordinary paid Flash
+   Heal when no higher emergency applies. Maintain the actual owned PoM ward
+   **41635**, including its bounced holder, rather than testing root33076.
+   Do not overwrite a live owned bounce solely because its holder is healthy.
+4. Use Sanctify only on a real injured cluster inside its native destination
+   radius. Prayer of Healing uses its native primary-centered footprint. Divine
+   Hymn requires sustained group injury and a safe channel opportunity; Apotheosis
+   requires group pressure plus depleted Holy Words. Avoid spending these merely
+   because combat exists or before immediate triage needs are met.
+5. Fortitude covers missing party buff recipients. Purify prioritizes actual
+   eligible harmful Magic/Disease auras. Mass Dispel requires an applicable native
+   dispel footprint; Leap of Faith requires a demonstrated hazardous patient and
+   a safe Henry endpoint. No random displacement, fake hazard or empty dispel.
+   Holy Fire, Smite and Holy Nova weave only when shared triage reports healing
+   safe; native engaged-enemy AoE/CC guards remain in force.
+
+Thresholds, scoring and pressure windows are project policy and must be documented
+with the implementing tests. No claim that a threshold is sourced from DB2.
+
+## Consequence coverage required
+
+| Feature | Native consequence / proof obligation | Initial state |
+|---|---|---|
+| Flash Heal → Serenity | native2050 effect1 reduction6sec | Existing native tests |
+| PoH → Sanctify | native34861 effect2 reduction6sec | Existing native tests |
+| Surge | natural8% acquisition, instant/half-cost, one use, cap2 | New RED tests |
+| Prayer of Mending | real41635 damage heal33110 and delayed155793 bounce | Existing native tests; upkeep decision missing |
+| Voice of Harmony | learned390994 PoM → Serenity reduction4sec | Unqualified |
+| Apotheosis | restore native Holy Words;200% enhanced reduction;70% mana discount | New reset RED test |
+| Ultimate Serenity | native replacement and real nearby healing1250581 | Unqualified; no invented AoE |
+| Guardian Spirit | actual death prevention, one-shot rescue and expiry | Existing native tests |
+| Divine Hymn | actual channel/ticks/recipient selection and safe timing | Timing unqualified |
+| Fortitude/Purify | party upkeep / native effect38 eligibility | Existing generic behavior; Holy policy tests owed |
+| Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Unqualified; named gaps if unsupported |
+| Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
+| Remaining selected passives | exact native modifiers or explicit named script gaps | Source inventory, not runtime-complete |
+
+## Verification
+
+Targeted tests use real catalog records, ordinary cast completion and naturally
+acquired procs. Record exact RED and GREEN revisions/commands. Existing GREENs are
+retained evidence, never relabelled as newly reproduced REDs.
+
+Use the frozen detached dungeon-simulator checkout with Henry selected for both
+sides, identical protocol/catalog/route/level/seeds1–20, optimized incremental
+`sim` profile. Report deaths, overheal percentage, sampled mana curve, actual Holy
+Word cooldown reduction versus available reducible time, and actual proc grants
+versus consumed uses. Separate unavailable mechanics from zero observed events;
+no fabricated efficiency denominator. Keep before/after simulator revisions and
+settings with the receipts. Plane geometry is not live navigation certification.
