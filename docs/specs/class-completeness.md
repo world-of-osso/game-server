@@ -190,6 +190,7 @@ Source: `spell_cast`, `auras`, `spell_info`; [implementation and proof](../class
 - [x] Native effect values apply authored RealPointsPerLevel only outside expected-stat/coefficient scaling, with native level bounds.
 - [ ] Owned bag item-target locks require native lock eligibility and a persisted per-GUID unlock; do not consume the item or fabricate loot. Retail threshold parity remains uncertified where pinned reference behavior conflicts with caster-aware native values.
 - [x] Native target119 offers resurrection to eligible party/raid corpse owners at their body positions, using authored restoration percentages.
+- [x] Native target118 expands around the explicit ally using its effect radius when caster and target share a party/raid; otherwise it affects only that ally. Expansion preserves native friendly admission range, same-copy/living/friendly filtering, caps and area sight checks. Follower parties use their actual GroupRegistry member identities, not ownership alone; same-owner non-roster followers are excluded.
 - [x] Native targets72/86/91 use random directions and authored radii around the caster or prior destination.
 - [x] Unspawned class/spec/talent summon templates/models/addons are retained from authentic TDB rows without creating world spawns.
 - [x] Native spellcaster portals restrict party access and apply authored class/race conditions before casting their destination chain.
