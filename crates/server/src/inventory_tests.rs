@@ -424,10 +424,10 @@ fn item_instance_unique_ring_rejects_differently_enchanted_second_without_mutati
         grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
         let second = grant_bag_item(&app, client.character_id, 12344, "Seal of Ascension");
         let txn = db(&app).begin_write().unwrap();
-        server::item_instance::store::write_modifiers(
+        ::server::item_instance::store::write_modifiers(
             &txn,
             second,
-            &server::item_instance::ItemInstanceModifiers {
+            &::server::item_instance::ItemInstanceModifiers {
                 enchant,
                 ..Default::default()
             },
