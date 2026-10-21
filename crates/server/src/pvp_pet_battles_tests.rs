@@ -9,7 +9,6 @@ fn elapse(app: &mut App, millis: u64) {
 }
 
 #[test]
-#[ignore = "RED: explicit PvP project policy implementation pending"]
 fn petbattle_pvp_policy_proposal_expires_nonresponders_but_requeues_acceptor() {
     let mut app = app();
     let a = player(&mut app, 41).0;
@@ -50,7 +49,6 @@ fn petbattle_pvp_policy_proposal_expires_nonresponders_but_requeues_acceptor() {
 }
 
 #[test]
-#[ignore = "RED: explicit PvP project policy implementation pending"]
 fn petbattle_pvp_policy_initial_timeout_keeps_current_leads_without_round() {
     let mut app = app();
     let [a, _] = proposed(&mut app);
@@ -66,7 +64,6 @@ fn petbattle_pvp_policy_initial_timeout_keeps_current_leads_without_round() {
 }
 
 #[test]
-#[ignore = "RED: explicit PvP project policy implementation pending"]
 fn petbattle_pvp_policy_three_consecutive_turn_timeouts_forfeit() {
     let mut app = app();
     let [a, b] = matched(&mut app);
@@ -102,7 +99,6 @@ fn petbattle_pvp_policy_three_consecutive_turn_timeouts_forfeit() {
 }
 
 #[test]
-#[ignore = "RED: explicit PvP project policy implementation pending"]
 fn petbattle_pvp_policy_replacement_timeout_picks_first_living_slot_without_round() {
     let mut app = app();
     let [a, _] = matched(&mut app);
@@ -120,7 +116,6 @@ fn petbattle_pvp_policy_replacement_timeout_picks_first_living_slot_without_roun
 }
 
 #[test]
-#[ignore = "RED: explicit PvP project policy implementation pending"]
 fn petbattle_pvp_policy_fifo_average_levels_widen_after_ten_seconds() {
     let mut app = app();
     let a = player_with_levels(&mut app, 41, [1, 1, 4]).0;
@@ -137,7 +132,6 @@ fn petbattle_pvp_policy_fifo_average_levels_widen_after_ten_seconds() {
 }
 
 #[test]
-#[ignore = "RED: explicit PvP project policy implementation pending"]
 fn petbattle_pvp_policy_xp_only_living_participants_of_winner_and_persists() {
     let mut app = app();
     let [a, b] = matched(&mut app);
@@ -223,7 +217,6 @@ fn petbattle_pvp_policy_xp_only_living_participants_of_winner_and_persists() {
 }
 
 #[test]
-#[ignore = "RED: same-frame FIFO requeue must preserve join order"]
 fn petbattle_pvp_policy_fifo_decline_preserves_same_frame_join_order() {
     let mut app = app();
     let a = player(&mut app, 41).0;

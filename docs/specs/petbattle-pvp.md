@@ -8,6 +8,9 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 - [x] Propose compatible slotted teams; decline requeues the other player; reject stale acceptance.
 - [x] Wait for both player decisions, preserve each player's ally/enemy orientation, reject stale rounds and duplicate decisions.
 - [x] Resolve engine victory/defeat, forfeit and disconnected opponents without trapping PvP pets.
+- [x] PET_BATTLE_PVP_TIMERS enforces proposal/initial/turn/replacement deadlines, late proposal rejection and the documented default actions; valid manual turns reset timeout streaks, invalid requests do not.
+- [x] PET_BATTLE_PVP_XP persists exact winner-only living-participant XP receipts; dead/unused pets receive none, duplicate terminal requests cannot repeat rewards.
+- [x] PET_BATTLE_PVP_MATCHMAKING pairs FIFO average-level teams with widening tolerance, preserving same-frame join order through proposal cancellation.
 - [x] Native Find Battle/Leave Queue and Accept/Decline use the same Retail elements in both skins; [client acceptance](../../../game-engine/docs/specs/petbattle-pvp.md#acceptance--2026-10-10-petbattle-pvp2).
 
 ## How it works
@@ -28,11 +31,9 @@ Retail Find Battle queues two account-owned three-pet loadouts and runs them thr
 ## Known gaps (current cycle)
 
 - [x] Both owners select a living initial front pet (including the current pet); combat waits for both choices without spending a round or applying swap effects. Duplicate choices and pre-selection combat actions are rejected.
-- [ ] Explicit project policy PET_BATTLE_PVP_TIMERS enforces proposal/initial/turn/replacement deadlines with the documented timeout actions; exact-boundary and stale-request behavioral proof required.
-- [ ] Explicit project policy PET_BATTLE_PVP_XP persists winner-only XP for living participants, using existing wild formula against opponent levels.
 - [ ] Draw delivery has no dedicated production-boundary assertion.
 - [x] Native controls and private both-skin actual three-pet defeat/win proof on UDP5598; no production port or world.db writes.
-- [ ] Explicit project policy PET_BATTLE_PVP_MATCHMAKING pairs FIFO average-level teams with widening tolerance. Exact Retail rating/timer/reward parity remains uncertified; named policies are not source discoveries.
+- [ ] Exact Retail rating/timer/reward parity remains uncertified; named policies are not source discoveries. New native UDP5941 both-skin policy proof pending.
 
 ## Out of scope
 

@@ -1,6 +1,6 @@
 # PvP pet battle project policies
 
-Verified: 2026-10-21. [Contract](../../specs/petbattle-pvp.md). Six policy REDs passed after implementation; same-frame FIFO requeue RED reproduced separately and correction pending GREEN.
+Verified: 2026-10-21. [Contract](../../specs/petbattle-pvp.md). Nine targeted policy tests PASS at487ad01a6, including the separately reproduced same-frame FIFO requeue RED. Ordinary test execution is re-enabled after this GREEN.
 
 ## Explicit project policy, not Retail numerical authority
 

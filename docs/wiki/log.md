@@ -1,3 +1,7 @@
+## 2026-10-21 — PvP pet battle policies
+
+[Explicit unsourced project policy](systems/petbattle-pvp.md): monotonic authoritative deadlines, default choices/streak forfeit, FIFO level widening and preserved join tickets, exact living-participant winner XP persistence/receipt. RED6 plus same-frame FIFO RED1 → GREEN9; native proof pending, no protocol change or Retail numerical-parity claim.
+
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.

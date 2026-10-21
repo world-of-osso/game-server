@@ -1,3 +1,4 @@
+- [PvP pet battle policies](systems/petbattle-pvp.md) — explicit project clocks, timeout defaults/streak forfeit, widening FIFO tickets and living-participant winner XP; RED6+FIFO1→GREEN9, native pending.
 - [Follower population sources](investigations/follower-data.md#follower-population-source-audit--2026-10-21) — all27 build70448 maps audited; copy-only source projection, explicit population/entrance gaps, actual catalog coverage.
 - [Headless dungeon simulator](systems/dungeon-simulator.md) — Stockade seeds1–50 all clear/150native boss Deaths,0failures;71.76× run-inclusive. Cargo gate278PASS/one lead-waived Azure asset prerequisite. Positioning avoidance/Azure phase remain open.
 - [Pet-battle last-hit counters](systems/pet-battle-engine.md#last-hit-counter-percentages--2026-10-20) — generic197 follows DB2 Power100/150; tooltip disagreement stays a named note, not inferred arithmetic.
