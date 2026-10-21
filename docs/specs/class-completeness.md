@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Generic flight-speed census slice — 2026-10-21
+
+- Unmounted players and uncontrolled NPCs sum native206 vehicle-flight and208 normal-flight percentages. Player-controlled NPCs instead take strongest positive206; mounted units instead take strongest207 with native209 mounted-always factors. Preserve211 nonstacking bonus, slows, normalization and removal.
+- Correct the former208 mounted-always alias to source209; existing native208 Crow Speed must no longer increase mounted flight. Native125883 Zen Flight,48403 Crow Speed,13587 Mount Speed and33948 Flight Form Speed qualify these branches without changing DB2 inputs.
+- This slice does not implement210 vehicle-always or missing charmer-to-vehicle propagation; those remain separate causes/boundaries. No new flying permission, ownership/control or client projection system. [Source and targeted proof](../diagnostics/census-tail-70448.md).
+
 ## Generic combat/stat aura census slice — 2026-10-20
 
 Generic consumers cover57,103,145,240,269,316,354,404,405,419,422,463 with native70448 spell definitions. Preserve native masks, stacking, rating truncation, create-mana cost basis and reversible changes; do not introduce per-spell cases. Aura419 changes maximum mana without granting proportional current mana; removal only clamps. Aura316's generic absorption accounting must not invent death prevention.

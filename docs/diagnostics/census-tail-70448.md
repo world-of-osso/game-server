@@ -21,6 +21,12 @@ Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diag
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura206 and native208/209 correction
+
+TC `SpellAuraDefines.h:293–297` defines206 vehicle-flight,207 mounted-flight,208 normal-flight,209 mounted-always; the previous runtime incorrectly called208 mounted-always. TC `Unit.cpp:8833–8854` takes strongest positive206 for player-controlled NPCs, strongest207 ×209 factors for mounted units, and summed206+208 for other units;211 competes with the stacking factor. Preserve normalization, slows and removal. Native125883 index1 supplies206+60,48403 index1 supplies208+10,13587 index1 supplies209+3 and33948 index1 supplies206+220. Existing `UNIT_FLAG_PLAYER_CONTROLLED` selects the NPC branch; no new ownership subsystem.
+
+Ignored RED072dfdcc2 initially exposed the missing consumers and wrong alias, but loading Crow Speed as known also auto-granted its passive and contaminated mounted controls. Corrected89ee25592 keeps native definitions available while removing those extra known grants/auras before observation. Unchanged six cases then1PASS/5FAIL26.06s: mounted206 exclusion passes, normal206/sum/controlled-NPC strongest/208 regression/209 factor fail at their actual behavior boundary. `/home/osso/.worktrees/logs/census-tail/206-red-isolated.log`. Minimal runtime consumers and enabled tests committed; GREEN pending. Separate210 vehicle-always and charmer propagation remain unqualified; no full ability or live movement-parity claim.
+
 ## Effect62 POWER_BURN
 
 TC `SpellEffects.cpp:1220–1243` burns the living target's matching primary power and converts actual lost power using CalcValueMultiplier (Amplitude, not ChainAmplitude), with no caster credit. TC `SpellInfo.cpp:883–885` requires ExpectedStat PlayerMana for Mana62; reuse the existing effect8 native amount loader and admission validation. EffectPowerBurn does not call SpellDamageBonusDone/Taken; retain ordinary crit/armor/resilience/absorb/resist handling without inventing source/taken bonuses.

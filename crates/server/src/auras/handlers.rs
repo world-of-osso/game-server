@@ -219,8 +219,10 @@ pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
 pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
+pub const MOD_INCREASE_VEHICLE_FLIGHT_SPEED: u32 = 206;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
-pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
+pub const MOD_INCREASE_FLIGHT_SPEED: u32 = 208;
+pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 209;
 /// TC Unit.cpp8854: strongest positive flight bonus.
 pub const MOD_FLIGHT_SPEED_NOT_STACK: u32 = 211;
 pub const ADV_FLYING: u32 = 446;
@@ -457,6 +459,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
         | MOD_MOUNTED_SPEED_NOT_STACK
+        | MOD_INCREASE_VEHICLE_FLIGHT_SPEED
+        | MOD_INCREASE_FLIGHT_SPEED
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
         | MOD_FLIGHT_SPEED_NOT_STACK
         | MOD_DODGE_PERCENT

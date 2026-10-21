@@ -193,7 +193,6 @@ fn assert_flight(h: &Harness, unit: Entity, expected: f32) {
 }
 
 #[test]
-#[ignore = "RED: generic206 and native208 unmounted flight modifiers"]
 fn census_tail_206_native_zen_and_crow_add_unmounted_then_remove() {
     let mut h = flight_fixture();
     let caster = h.caster;
@@ -209,7 +208,6 @@ fn census_tail_206_native_zen_and_crow_add_unmounted_then_remove() {
 }
 
 #[test]
-#[ignore = "RED control:206 must not change mounted207 speed"]
 fn census_tail_206_native_zen_does_not_change_mounted_flight() {
     let mut h = flight_fixture();
     crate::auras::mount_tests::mount(&mut h);
@@ -220,7 +218,6 @@ fn census_tail_206_native_zen_does_not_change_mounted_flight() {
 }
 
 #[test]
-#[ignore = "RED regression:208 is normal flight, not mounted-always"]
 fn census_tail_206_native_crow_no_longer_uses_wrong_mounted_alias() {
     let mut h = flight_fixture();
     crate::auras::mount_tests::mount(&mut h);
@@ -231,7 +228,6 @@ fn census_tail_206_native_crow_no_longer_uses_wrong_mounted_alias() {
 }
 
 #[test]
-#[ignore = "RED: actual209 mounted-always factor"]
 fn census_tail_206_native_mount_speed_209_multiplies_only_mounted_flight() {
     let mut h = flight_fixture();
     let caster = h.caster;
@@ -245,7 +241,6 @@ fn census_tail_206_native_mount_speed_209_multiplies_only_mounted_flight() {
 }
 
 #[test]
-#[ignore = "RED: player-controlled NPC takes strongest206, ignores208"]
 fn census_tail_206_native_controlled_npc_uses_strongest_vehicle_bonus() {
     let mut h = flight_fixture();
     let npc = spawn_npc(&mut h.app, 2.0);
@@ -263,7 +258,6 @@ fn census_tail_206_native_controlled_npc_uses_strongest_vehicle_bonus() {
 }
 
 #[test]
-#[ignore = "RED: uncontrolled NPC uses additive206+208 branch"]
 fn census_tail_206_native_uncontrolled_npc_adds_flight_modifiers() {
     let mut h = flight_fixture();
     let npc = spawn_npc(&mut h.app, 2.0);

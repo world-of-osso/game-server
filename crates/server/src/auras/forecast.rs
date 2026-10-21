@@ -23,7 +23,8 @@ fn build_unexpired_snapshot(auras: &ActiveAuras, at: f64) -> ActiveAuras {
 }
 
 fn same_melee_stats(unit: Entity, current: &ActiveAuras, future: &ActiveAuras) -> bool {
-    if stat_mods::compute(current) != stat_mods::compute(future) {
+    // Flight branch selection cannot change a melee projection.
+    if stat_mods::compute(current, false) != stat_mods::compute(future, false) {
         return false;
     }
     if scripted_stat_signature(unit, current) != scripted_stat_signature(unit, future) {
