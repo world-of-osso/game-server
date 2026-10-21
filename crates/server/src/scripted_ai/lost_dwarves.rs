@@ -20,7 +20,9 @@ const LONGBOAT: u32 = 375924;
 const SURRENDER_FRACTION: f32 = 0.1;
 
 #[derive(Component)]
-struct Surrendered;
+struct Surrendered {
+    reset_pending: bool,
+}
 
 pub(super) fn limit_loss(health: &Health, loss: f32) -> f32 {
     let surrender_health = (health.max * SURRENDER_FRACTION).floor();
@@ -85,7 +87,7 @@ impl CreatureAi for Dwarf {
     }
 
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
-        if ctx.world.get::<Surrendered>(ctx.me).is_some() {
+        if update_surrender_state(ctx) {
             return;
         }
         let at_threshold = ctx.world.get::<Health>(ctx.me).is_some_and(|health| {
@@ -136,7 +138,9 @@ fn next_repeat(durations: &[u64], index: &mut usize) -> u64 {
 
 fn surrender(ctx: &mut Ctx, boss_id: u32) {
     let map = ctx.map().expect("Lost Dwarves instance");
-    ctx.world.entity_mut(ctx.me).insert(Surrendered);
+    ctx.world.entity_mut(ctx.me).insert(Surrendered {
+        reset_pending: false,
+    });
     crate::creature_aggro::enter_evade_mode(ctx.world, ctx.me);
     // Stop re-engagement without inventing a friendly faction or immunity flags.
     ctx.world.entity_mut(ctx.me).remove::<ThreatTable>();
@@ -144,7 +148,7 @@ fn surrender(ctx: &mut Ctx, boss_id: u32) {
         .world
         .query::<(&InMap, &Npc, &Surrendered)>()
         .iter(ctx.world)
-        .filter(|(actor_map, _, _)| **actor_map == map)
+        .filter(|(actor_map, _, surrendered)| **actor_map == map && !surrendered.reset_pending)
         .fold(0, |mask, (_, npc, _)| {
             mask | match npc.template_id {
                 BAELOG => 1,
@@ -165,17 +169,32 @@ fn surrender(ctx: &mut Ctx, boss_id: u32) {
 
 fn reset_surrendered_peers(ctx: &mut Ctx) {
     let map = ctx.map().expect("Lost Dwarves instance");
-    let peers: Vec<_> = ctx
+    for (actor_map, mut surrendered) in ctx
         .world
-        .query_filtered::<(Entity, &InMap), With<Surrendered>>()
-        .iter(ctx.world)
-        .filter(|(_, actor_map)| **actor_map == map)
-        .map(|(actor, _)| actor)
-        .collect();
-    for actor in peers {
+        .query::<(&InMap, &mut Surrendered)>()
+        .iter_mut(ctx.world)
+    {
+        if *actor_map == map {
+            surrendered.reset_pending = true;
+        }
+    }
+}
+
+fn update_surrender_state(ctx: &mut Ctx) -> bool {
+    let Some(surrendered) = ctx.world.get::<Surrendered>(ctx.me) else {
+        return false;
+    };
+    let recovered = ctx
+        .world
+        .get::<Health>(ctx.me)
+        .is_some_and(|health| health.current > health.max * SURRENDER_FRACTION);
+    if surrendered.reset_pending && recovered {
+        // Native home/regen must cross10% before sight-aggro is restored;
+        // otherwise it re-surrenders before the first out-of-combat regen tick.
         ctx.world
-            .entity_mut(actor)
+            .entity_mut(ctx.me)
             .remove::<Surrendered>()
             .insert(ThreatTable::default());
     }
+    true
 }
