@@ -98,8 +98,8 @@ fn encounter_coverage_emberon_native_purging_periodic_and_indefinite_duration_qu
             h.app
                 .world()
                 .get::<shared::casting::CastState>(boss)
-                .is_none(),
-            "native indefinite channel is an aura without CastState"
+                .is_none_or(|cast| cast.spell_id != PURGING),
+            "native indefinite Purging has no CastState; ordinary Clap may still cast"
         );
         let first = damage_count(&h, boss, PURGING_DAMAGE);
         assert!(
@@ -216,8 +216,26 @@ fn encounter_coverage_emberon_normal_phase_cap_resumed_clocks_and_copy_credit() 
                 .iter()
                 .all(|go| go.caster != boss.to_bits())
         );
+        h.advance(9.0);
+        let later = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        let purging: Vec<_> = later
+            .iter()
+            .filter(|attempt| attempt.spell == PURGING)
+            .collect();
+        assert_eq!(purging.len(), 2, "next source37.7s phase request");
+        assert!(purging[1].result.is_ok());
+        assert!(
+            (purging[1].time - 100.5).abs() <= 0.2,
+            "native cast occupancy {purging:?}"
+        );
+        assert!(h.has_aura(boss, PURGING), "second native phase active");
         h.hit_pct(boss, 200.0);
         h.advance(0.1);
+        assert!(!h.has_aura(boss, PURGING), "death ends second phase");
         assert_eq!(
             instance_script::get_boss_state(h.app.world_mut(), map, BIT),
             Some(EncounterState::Done)
