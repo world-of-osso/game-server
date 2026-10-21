@@ -6,7 +6,7 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 
 ### Source ingress
 
-- [ ] Import source conversation templates, actors and line templates plus70448 ConversationLine/BroadcastTextDuration into an explicitly owned copy, without changing other tables or canonical data. Preserve receipt authentication/unreadable-record facts; never promote available rows into tablewide authentication claims.
+- [x] Import source conversation templates, actors and line templates plus70448 ConversationLine/BroadcastTextDuration into an explicitly owned copy, without changing other tables or canonical data. Preserve receipt authentication/unreadable-record facts; never promote available rows into tablewide authentication claims.
 - [ ] Preserve actual24642→67085,24643→67091,24644→67092 and authored actor51642/display116692 identities; no invented dialogue, actor aliases or placements. Fail explicitly for unavailable required definitions.
 
 ### Server runtime
@@ -23,6 +23,7 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 
 ## How it works
 
+- [Conversations](../wiki/systems/conversations.md).
 - [World-static ingress](../wiki/systems/world-area-triggers.md).
 
 ## Implementation inventory
