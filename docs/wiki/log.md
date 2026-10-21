@@ -1,6 +1,9 @@
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.
+## 2026-10-21 — Azureblade partial Lua-clock port
+
+[Azureblade](systems/boss-scripts.md#azureblade-partial-lua-clock--2026-10-21): explicit lead-approved Lua schedule/native70448 target/effect port, not invented TC AI. Ignored firstcleaveRED→native5GREEN37.75s atf9ec0db16 including Normal1/Follower205/two actual190187 summons/reset/isolated2585bit3. Producer sourcecopy1PASS; source base/models+1/23 rows, no synthetic205/population/credit change. Native-ground and ordinal-versus-bit fixture repairs retain production semantics. Energy/phase/area/Image-AI gaps and canonical publication remain open.
 
 ## 2026-10-21 — Broggok core and encounter-gap audit
 

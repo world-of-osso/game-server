@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Azureblade partial Lua clock — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#azureblade-lua-clock-partial-boundary). Lead explicitly authorized LittleWigs2777a9d `Azureblade.lua` schedules with native70448 targets/effects despite missing TC AI. Initial image3.3/14.6s, cleave5.2/13.4s, orb10.6/15.8s each stop after source first-phase count2. Native cast time remains1/2/2.5s; second Cleave waits for actual Image casting, not widened source deadlines. Energy/center/Overwhelming phase and Image AI remain named gaps, not invented clocks or Retail parity.
+
+Ignored first-Cleave REDfd33f9817 (two native qualificationsPASS, actual0vs1FAIL) precedes partial7ecbfbfc4. Source producer `encounter_summons.py --encounter azureblade` installs explicitly local `boss_azureblade` and actual190187 base/model/Normal1/Mythic23 rows without synthetic205 stats, population or credit changes. Independent disk-copy unit1PASS2.432s proves preservation/idempotence/source-drift rejection. Source name is not falsely attributed to TDB.
+
+Native finalf9ec0db16:5/5PASS37.75s, including real Normal1/Follower205 requests, native cone damage,384223→373658→373582 actual two owned images, reset cleanup/rearm, isolated2585 completion bit3 and corpse silence. Initial Image0 was missing fixture GroundMap for native destination138; fixed real geometry input, no summon shortcut. The fixture also injected compatibility ordinal1 as DB2bit1, falsely awarding Telash alongside Azureblade; Azure fixtures now preserve the real compatibility catalog. Saved boss state remains ordinal1; completion is nativebit3 only. Runtime credit code unchanged. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/azureblade-*`. Producer publication and final gate lead-owned; no canonical mutation/full clear claim.
+
 ## Blood Furnace Broggok — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#blood-furnace-broggok-source-boundary). TC a352b1fa `boss_broggok.cpp`17380/1924/map542bit2. Ignored REDec2d35c10 genuinely fails appearance selectability; source9262fafd6 restores passive/uninteractible appearance, exact intro/release action clocks, ordinary self-cast rotation and inherited reset/death. Source JustSummoned deliberately does not track summons. Native30913 cone damage and both difficulties' first/repeat windows pass;30916 is current effect179/AT33896, never a fabricated historical summon.
