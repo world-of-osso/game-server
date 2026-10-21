@@ -4,6 +4,8 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 
 ## What it must do
 
+- [x] Execute property363 current-health percentages for Torment2263 and Mind Games: Health2388 across active/other team slots from their authored rows; reset per-victim leech context before every attempt. Torment2292's property156 selector remains rejected. `PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION` explicitly adopts existing percentage-damage flooring, hostile family scaling, hit/block and damage/passive handling; friendly-team costs are untyped. This project policy is not independent Retail arithmetic/mitigation proof. Preserve `PET_BATTLE_PAD_USES_JOURNAL_CARD_NORMALIZATION` unchanged.
+
 - [x] Load the ten requested battle DB2 tables through its own strict SQLite loader, with test-only local-CASC CSV fixtures and no journal-code dependency/runtime CSV fallback.
 - [x] Derive stats from species/breed states, DB2 quality and level; preserve float32 rounding boundaries and fail invalid inputs explicitly.
 - [x] Model three pets per team and an active slot; ability/swap/pass/forfeit decisions; speed order and injected tie RNG; faint replacement without combat-round advancement.

@@ -89,6 +89,7 @@ pub fn supported_property(property: u32) -> bool {
             | 370
             | 223
             | 194
+            | 363
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -280,6 +281,7 @@ fn validate_ability_graph(
                     | 384
                     | 385
                     | 370
+                    | 363
             ) && catalog.abilities[&ability].family < 0
             {
                 return Err(format!("ability {ability}: damage has no family"));
@@ -446,6 +448,18 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         79 | 157 | 177 => catalog.states.contains_key(&(p[0] as u32)),
         28 => effect.aura != 0 && p[2] >= -1 && p[4..].iter().all(|v| *v == 0),
         68 => p[2..].iter().all(|v| *v == 0),
+        363 => {
+            matches!(catalog.turns[&effect.turn].ability, 2263 | 2292 | 2388)
+                && (0..=100).contains(&p[0])
+                && matches!(p[2], 0 | 1)
+                && p[3..].iter().all(|v| *v == 0)
+                && catalog
+                    .turn_effects(effect.turn)
+                    .into_iter()
+                    .filter(|row| row.property == 363)
+                    .count()
+                    == 3
+        }
         104 => {
             [p[2], p[3]]
                 .iter()

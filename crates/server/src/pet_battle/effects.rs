@@ -55,6 +55,7 @@ impl<R: BattleRng> Runtime<'_, R> {
             107 => self.fade_swap(caster, effect),
             67 => Ok(self.equalize_health(caster, target, effect)),
             68 => self.percent_damage(caster, target, ability, effect),
+            363 => self.current_health_team_damage(caster, target, ability, effect),
             44 => {
                 if !self.hit(caster, caster, effect) {
                     return Ok(false);
@@ -496,6 +497,26 @@ impl<R: BattleRng> Runtime<'_, R> {
         }
         Ok(true)
     }
+    fn current_health_team_damage(
+        &mut self,
+        caster: PetRef,
+        target: PetRef,
+        ability: u32,
+        effect: &Effect,
+    ) -> Result<bool, String> {
+        let order = self
+            .catalog
+            .turn_effects(effect.turn)
+            .into_iter()
+            .filter(|row| row.property == 363 && row.order <= effect.order)
+            .count() as u32;
+        let team_anchor = if ability == 2388 { caster } else { target };
+        let recipient = other_team_slot(team_anchor, order);
+        //Each following leech row belongs to this victim, including misses/dead reserves.
+        let last = self.catalog.state_id("Last_HitDealt")?;
+        self.battle.pet_mut(caster).states.insert(last, 0);
+        self.percent_damage(caster, recipient, ability, effect)
+    }
     fn percent_damage(
         &mut self,
         caster: PetRef,
@@ -514,7 +535,9 @@ impl<R: BattleRng> Runtime<'_, R> {
         if caster != recipient && self.block_attack(recipient)? {
             return Ok(false);
         }
-        let health = if effect.property == 62 {
+        let health = if effect.property == 363 {
+            self.battle.pet(recipient).health
+        } else if effect.property == 62 {
             self.battle.pet(target).stats.health
         } else if recipient == caster {
             self.battle.pet(caster).health
@@ -522,7 +545,10 @@ impl<R: BattleRng> Runtime<'_, R> {
             self.battle.pet(caster).stats.health
         };
         let family = self.catalog.abilities[&ability].family;
-        let multiplier = if recipient == caster {
+        //PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION:
+        //hostile percentages retain type scaling; friendly costs are untyped.
+        let friendly_cost = effect.property == 363 && recipient.team == caster.team;
+        let multiplier = if recipient == caster || friendly_cost {
             1.0
         } else {
             type_multiplier(family as usize, self.battle.pet(recipient).family)?
