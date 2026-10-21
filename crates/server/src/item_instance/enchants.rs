@@ -52,8 +52,13 @@ pub fn enchantment_stats(
             3 => result
                 .equip_spells
                 .push(u32::try_from(effect.argument).map_err(|e| e.to_string())?),
+            // TC a352b1fa Player.cpp12430–12447: physical-school resistance is armor.
+            4 if effect.argument == 0 => {
+                result.stats.secondary.armor +=
+                    scaled_amount(enchant, effect, level)?.trunc().max(1.0);
+            }
             5 => {
-                let amount = scaled_amount(enchant, effect, level)?;
+                let amount = scaled_amount(enchant, effect, level)?.round();
                 add_stat(&mut result.stats, effect.argument, amount)?;
             }
             kind => {
@@ -95,7 +100,7 @@ fn scaled_amount(enchant: &Enchantment, effect: &EnchantEffect, level: u8) -> Re
     let row = scaling_data::SPELL_SCALING
         .get(index)
         .ok_or_else(|| format!("enchantment scaling level {level} absent"))?;
-    Ok((row[column] * effect.coefficient).round())
+    Ok(row[column] * effect.coefficient)
 }
 
 fn scaling_column(class: i32) -> Result<usize, String> {
