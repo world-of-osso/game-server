@@ -560,7 +560,6 @@ mod copy_tests {
     }
 
     #[test]
-    #[ignore = "party follower portrait RED; enable after native/headless GREEN"]
     fn party_follower_roster_keeps_actual_template_heads_after_interest_is_lost() {
         let (mut app, owner, run) = fixture();
         let db = rusqlite::Connection::open_with_flags(
