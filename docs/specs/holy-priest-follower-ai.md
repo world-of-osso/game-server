@@ -78,6 +78,14 @@ with the implementing tests. No claim that a threshold is sourced from DB2.
 | Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
 | Remaining selected passives | exact native modifiers or explicit named script gaps | Source inventory, not runtime-complete |
 
+## Temporary threat
+
+Native103 temporary threat modifiers apply to every unit already represented in
+a creature's threat list, not only Player-tagged units. Fade on Henry and Mirror
+Image55342's native103 on Meredy must reselect the victim while retaining raw
+threat, then restore that reference when the real aura expires. Mirror Image's
+separate guardian/DUMMY consequence is not certified by this control.
+
 ## Verification
 
 Targeted tests use real catalog records, ordinary cast completion and naturally

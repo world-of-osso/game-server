@@ -9,6 +9,8 @@ mod holy_policy;
 mod holy_policy_native_tests;
 #[cfg(test)]
 mod holy_priest_tests;
+#[cfg(test)]
+mod holy_threat_tests;
 mod kit;
 mod kit_ai;
 mod kit_area;
