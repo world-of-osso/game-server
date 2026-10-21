@@ -366,3 +366,82 @@ fn healer_triage_native_radius_rejects_scattered_injury_then_accepts_stack() {
         "same injuries stacked inside native radius must admit Wild Growth"
     );
 }
+
+#[test]
+fn healer_triage_recent_damage_does_not_restart_direct_heal_on_topped_patient() {
+    use crate::spell_cast::effects::{EffectCtx, apply_heal, deal_damage};
+    let (mut h, healer) = fixture();
+    let target = h.caster;
+    let store = h.app.world().resource::<crate::spell_info::SpellStore>();
+    let damage_spell = store.get(133).unwrap().clone();
+    let heal_spell = store.get(8936).unwrap().clone();
+    let damage = EffectCtx {
+        caster: h.npc,
+        spell: &damage_spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    let before = h.health(target);
+    deal_damage(
+        h.app.world_mut(),
+        &damage,
+        target,
+        before * 0.1,
+        false,
+        false,
+    );
+    assert!(
+        h.health(target) < before,
+        "native damage must produce recent triage pressure"
+    );
+    let heal = EffectCtx {
+        caster: healer,
+        spell: &heal_spell,
+        depth: 0,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    apply_heal(h.app.world_mut(), &heal, target, before, false, false);
+    assert_eq!(
+        h.health(target),
+        before,
+        "another native heal topped the damaged patient"
+    );
+    let risk = super::super::healer_triage::read_patient(h.app.world(), target).unwrap();
+    assert!(risk.incoming_per_second > 0.0 && risk.score > 0.0);
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    let rows = [entry(&h, 8936)];
+    for _ in 0..3 {
+        let outcome = super::super::healer_triage::update(
+            h.app.world_mut(),
+            healer,
+            &follower,
+            &[target, healer],
+            &rows,
+        );
+        assert!(
+            h.app.world().get::<CastState>(healer).is_none(),
+            "a topped target must not enter a normal-direct start→cancel→restart loop from recent damage alone"
+        );
+        assert!(
+            !outcome.acted,
+            "triage must release execution to utilities rather than starve them"
+        );
+    }
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current *= 0.8;
+    super::super::healer_triage::update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[target, healer],
+        &rows,
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_some_and(|cast| cast.spell_id == 8936),
+        "fresh real injury still admits the useful direct heal"
+    );
+}
