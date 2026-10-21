@@ -196,6 +196,88 @@ fn native_empower_scouring_present_dispels_enemy_magic_buff() {
 }
 
 #[test]
+#[ignore = "RED: cancelled empower retains its normal spell cooldown and omits finish GCD"]
+fn native_empower_cancel_resets_surge_cooldown_without_release_damage() {
+    let (mut h, caster) = prepare(21);
+    let target = h.npc;
+    crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        caster,
+        ETERNITY_SURGE,
+        Some(target),
+        false,
+    )
+    .unwrap();
+    h.advance(10);
+    assert!(h.app.world().get::<CastState>(caster).is_some());
+    crate::spell_cast::cancel_cast(h.app.world_mut(), caster);
+    assert!(h.app.world().get::<CastState>(caster).is_none());
+    let world = h.app.world();
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let history = world
+        .get::<crate::spell_cast::SpellHistory>(caster)
+        .unwrap();
+    assert!(
+        !history.on_cooldown(
+            store.get(ETERNITY_SURGE).unwrap(),
+            crate::spell_cast::history_now(world)
+        ),
+        "TC Spell::finish resets the cancelled empower's ordinary spell cooldown"
+    );
+    assert!(
+        history.on_gcd(
+            store.get(359115).unwrap(),
+            crate::spell_cast::history_now(world)
+        ),
+        "cancel still applies native359115 finish GCD"
+    );
+    h.advance(100);
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id == Some(SURGE_DAMAGE)
+                && event.kind == CombatLogKind::Damage),
+        "cancel must never be reinterpreted as empower release"
+    );
+}
+
+#[test]
+#[ignore = "RED: follower holds single-target Fire Breath to max instead of APL rank1"]
+fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
+    let (mut h, caster) = prepare(21);
+    let mut begun = false;
+    for _ in 0..600 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        if h.inbox
+            .go
+            .iter()
+            .any(|event| event.caster == caster.to_bits() && event.spell_id == FIRE_BREATH)
+        {
+            begun = true;
+            break;
+        }
+    }
+    assert!(begun, "real follower must first admit native Fire Breath");
+    for _ in 0..21 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    let dot = h.app.world().get::<ActiveAuras>(h.npc).and_then(|auras| {
+        auras
+            .iter()
+            .find(|aura| aura.spell_id == FIRE_DAMAGE && aura.caster == caster)
+    });
+    assert_eq!(
+        dot.map(|aura| aura.duration_ms),
+        Some(20_000),
+        "SimC fb_fs single-target rank1 releases after the first native stage"
+    );
+}
+
+#[test]
 fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
