@@ -5,6 +5,8 @@ mod hazards;
 mod kit;
 mod kit_ai;
 mod kit_area;
+#[cfg(test)]
+mod kit_hunter_policy_tests;
 mod kit_interrupt;
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
