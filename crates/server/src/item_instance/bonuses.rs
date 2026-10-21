@@ -32,6 +32,7 @@ pub struct ItemBonusTables {
 pub struct BonusResult {
     pub scaling: ItemScaling,
     pub sockets: Vec<u32>,
+    pub effect_ids: Vec<u32>,
 }
 
 pub fn apply_item_bonuses(
@@ -42,6 +43,7 @@ pub fn apply_item_bonuses(
     let mut result = BonusResult {
         scaling: *item,
         sockets: Vec::new(),
+        effect_ids: Vec::new(),
     };
     let mut midnight_scaling = false;
     for bonus in ordered_entries(bonus_list, tables)? {
@@ -188,6 +190,35 @@ fn interpolate_curve(points: &[(f64, f64)], x: f64) -> Result<f64, String> {
 mod tests {
     use super::*;
     use shared::item_scaling::{ItemScalingTables, ItemStatAllocation};
+
+    #[test]
+    fn item_instance_native_mid2_bonus_keeps_effect_identity_not_flat_stats() {
+        // Native70448 list13771/row31240 adds ItemEffect234561 (spell1297382).
+        let tables = ItemBonusTables {
+            entries: HashMap::from([(
+                13771,
+                vec![ItemBonus {
+                    kind: 23,
+                    values: [234561, 0, 0, 0],
+                }],
+            )]),
+            ..Default::default()
+        };
+        let item = ItemScaling {
+            item_level: 285,
+            ..Default::default()
+        };
+        let resolved = apply_item_bonuses(&item, &[13771], &tables).unwrap();
+        assert_eq!(resolved.effect_ids, vec![234561]);
+        assert_eq!(resolved.scaling.item_level, 285);
+        assert!(
+            resolved
+                .scaling
+                .stats
+                .iter()
+                .all(|stat| stat.allocation == 0)
+        );
+    }
 
     #[test]
     fn item_instance_native_ilevel_and_crit_allocation_bonuses_change_real_stats() {

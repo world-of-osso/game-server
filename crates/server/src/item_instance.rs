@@ -1,5 +1,6 @@
 //! Per-GUID equipment modifiers, independent of the legacy inventory and wire ABI.
 pub mod bonuses;
+pub mod effects;
 pub mod enchants;
 pub mod load;
 pub mod store;

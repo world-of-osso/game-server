@@ -38,6 +38,12 @@ pub fn load_bonus_tables(conn: &Connection) -> rusqlite::Result<ItemBonusTables>
     })
 }
 
+pub fn load_item_effect_tables(
+    _conn: &Connection,
+) -> rusqlite::Result<super::effects::ItemEffectTables> {
+    Ok(super::effects::ItemEffectTables::default())
+}
+
 pub fn load_enchantment_tables(conn: &Connection) -> rusqlite::Result<EnchantmentTables> {
     let effects: Vec<String> = (0..3)
         .flat_map(|index| {
@@ -131,6 +137,29 @@ mod tests {
     use super::super::bonuses::apply_item_bonuses;
     use super::*;
     use shared::item_scaling::ItemScaling;
+
+    #[test]
+    fn item_instance_sqlite_base_and_bonus_effects_keep_native_spell_and_trigger() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE item_effect(ID INTEGER PRIMARY KEY,SpellID INTEGER,TriggerType INTEGER,CoolDownMSec INTEGER,CategoryCoolDownMSec INTEGER,SpellCategoryID INTEGER);
+            INSERT INTO item_effect VALUES(232799,1291718,1,-1,-1,0),(234561,1297382,1,-1,-1,0);
+            CREATE TABLE item_x_item_effect(ID INTEGER PRIMARY KEY,ItemID INTEGER,ItemEffectID INTEGER);
+            INSERT INTO item_x_item_effect VALUES(1,268209,232799);").unwrap();
+        let tables = load_item_effect_tables(&conn).unwrap();
+        let effects =
+            super::super::effects::equipped_item_effects(268209, &[234561], &tables).unwrap();
+        assert_eq!(effects.len(), 2);
+        assert_eq!(
+            (effects[0].id, effects[0].spell_id, effects[0].trigger),
+            (232799, 1291718, 1)
+        );
+        assert_eq!(
+            (effects[1].id, effects[1].spell_id, effects[1].trigger),
+            (234561, 1297382, 1)
+        );
+        assert_eq!(effects[1].cooldown_ms, -1);
+        assert_eq!(effects[1].category_cooldown_ms, -1);
+    }
 
     #[test]
     fn item_instance_sqlite_native_gem_and_scaled_enchant_rows_reach_item_stats() {
