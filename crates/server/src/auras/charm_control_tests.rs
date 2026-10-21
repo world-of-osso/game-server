@@ -388,7 +388,18 @@ fn charm_control_native_605_attack_order_uses_charmer_duel_permission() {
         .get_mut::<shared::components::Health>(opponent)
         .unwrap()
         .current = 10.0;
-    h.advance(480);
+    // Observe the defeat itself, before native605's30s duration expires and the
+    // victim can regenerate. The preceding attack proof already used12s.
+    for _ in 0..200 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<crate::duel::DuelDefeated>(opponent)
+            .is_some()
+        {
+            break;
+        }
+    }
     assert_eq!(
         h.health(opponent),
         1.0,
