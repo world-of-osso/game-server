@@ -96,7 +96,7 @@ fn calculate_armor_with_stat_percent(
         .app
         .world()
         .get::<StatModifiers>(h.caster)
-        .copied()
+        .cloned()
         .unwrap_or_default();
     mods.armor_from_primary_stat_pct = stat_percent;
     compute_character_stats(&input, Some(&mods)).unwrap()

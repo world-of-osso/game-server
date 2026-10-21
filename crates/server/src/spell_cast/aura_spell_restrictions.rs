@@ -106,11 +106,10 @@ fn target_state_exempt(world: &World, caster: Entity, target: Entity, spell: &Sp
     let vehicle = world
         .get::<shared::components::Mounted>(caster)
         .is_some_and(|mount| mount.vehicle_id != 0);
-    const ABILITY_IGNORE_AURASTATE: u32 = 262;
     let ignores_state = crate::auras::spell_mods::has_aura_type_affecting(
         world,
         caster,
-        ABILITY_IGNORE_AURASTATE,
+        crate::auras::handlers::ABILITY_IGNORE_AURASTATE,
         spell,
     );
     owner_target || vehicle || ignores_state

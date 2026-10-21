@@ -30,6 +30,14 @@ pub struct AuraStatMods {
     pub critical_damage_mods: Vec<(u32, f32)>,
     /// MOD_HEALING_DONE_PERCENT 136.
     pub healing_done_mult: f32,
+    /// Aura422 scales newly received shields, not damage per hit.
+    pub absorb_taken_mult: f32,
+    /// Aura103: temporary flat threat; base threat is never rewritten.
+    pub temporary_threat: f32,
+    /// Aura57: spell-only critical chance; never affects weapon attacks.
+    pub spell_crit_pct: f32,
+    /// Aura269: product of remaining damage reduction, by school.
+    pub target_reduction_mult: Vec<(u32, f32)>,
     /// MOD_HEALING_PCT 118 and MOD_HEALING_RECEIVED 283.
     pub healing_taken_mult: f32,
     /// Raw signed MOD_WEAPON_CRIT_PERCENT52 + MOD_CRIT_PCT290, NPC autoattacks only.
@@ -110,6 +118,10 @@ impl Default for AuraStatMods {
             damage_taken_mult: [1.0; SCHOOL_COUNT],
             critical_damage_mods: Vec::new(),
             healing_done_mult: 1.0,
+            absorb_taken_mult: 1.0,
+            temporary_threat: 0.0,
+            spell_crit_pct: 0.0,
+            target_reduction_mult: Vec::new(),
             healing_taken_mult: 1.0,
             npc_crit_pct: 0.0,
             autoattack_crit_pct: 0.0,
@@ -172,6 +184,20 @@ impl AuraStatMods {
 
     pub fn damage_taken(&self, school_mask: u32) -> f32 {
         Self::school_mult(&self.damage_taken_mult, school_mask)
+    }
+
+    /// TC a352b1fa Unit.cpp7081-7094/8237-8252: scale a reduction, not a vulnerability.
+    pub fn bypass_damage_reduction(&self, school_mask: u32, taken: f32) -> f32 {
+        if taken >= 1.0 {
+            return taken;
+        }
+        let remaining: f32 = self
+            .target_reduction_mult
+            .iter()
+            .filter(|(mask, _)| mask & school_mask != 0)
+            .map(|(_, multiplier)| multiplier)
+            .product();
+        (1.0 - (1.0 - taken) * remaining).max(0.0)
     }
 
     pub fn critical_damage(&self, school_mask: u32) -> f32 {
@@ -462,6 +488,23 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                 stats.ranged_attack_power_pct +=
                     amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
             }
+            MOD_RATING_PCT => stats.rating_percent_mods.push((misc as u32, amount)),
+            CONVERT_CRIT_RATING_PCT_TO_PARRY_RATING => {
+                stats.crit_to_parry_pct += amount * (1.0 + stats.crit_to_parry_pct / 100.0);
+            }
+            MOD_BASE_MANA_PCT => {
+                stats.base_mana_pct += amount * (1.0 + stats.base_mana_pct / 100.0);
+            }
+            OVERRIDE_ATTACK_POWER_BY_SP_PCT => {
+                stats.attack_power_from_sp_pct =
+                    Some(stats.attack_power_from_sp_pct.unwrap_or(0.0) + amount);
+            }
+            MOD_ABSORB_TAKEN_PCT => combat.absorb_taken_mult *= pct(amount),
+            MOD_TOTAL_THREAT => combat.temporary_threat += amount,
+            MOD_SPELL_CRIT_CHANCE => combat.spell_crit_pct += amount,
+            MOD_IGNORE_TARGET_RESIST => combat
+                .target_reduction_mult
+                .push((misc as u32, 1.0 - amount / 100.0)),
             MOD_VERSATILITY => stats.versatility_pct += effect.amount.trunc() * stacks,
             // HandleModRating truncates each effect before ApplyRatingMod. Do not
             // triple-count the same rating for damage/healing/damage-taken bits.
@@ -482,7 +525,9 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             // (AuraEffect::HandleOverrideSpellPowerByAttackPower, SpellAuraEffects.cpp:3997-4008).
             OVERRIDE_SPELL_POWER_BY_AP_PCT => stats.spell_power_from_ap_pct += amount,
             MOD_INCREASE_HEALTH => stats.max_health_flat += amount,
-            MOD_INCREASE_HEALTH_PERCENT => stats.max_health_pct += amount,
+            MOD_INCREASE_HEALTH_PERCENT | MOD_INCREASE_HEALTH_PERCENT2 => {
+                stats.max_health_pct += amount * (1.0 + stats.max_health_pct / 100.0);
+            }
             // Mainline55233s4 explicitly supplies Vampiric Blood's max-health percent.
             DUMMY if aura.spell_id == 55233 && effect.index == 3 => stats.max_health_pct += amount,
             // Unit::GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT) (StatSystem.cpp:499).

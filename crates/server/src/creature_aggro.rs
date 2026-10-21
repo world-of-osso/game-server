@@ -33,7 +33,7 @@ mod attack_distance;
 pub(crate) use attack_distance::AggroDistance;
 #[path = "creature_threat.rs"]
 mod victim;
-pub(crate) use victim::{CurrentVictim, current_victim};
+pub(crate) use victim::{CurrentVictim, current_victim, refresh_temporary_threat};
 /// `Creature::CanCreatureAttack` (Creature.cpp:2741-2755): a victim farther than this
 /// from the creature's home is out of reach: the continent visibility range
 /// (`Visibility.Distance.Continents` = 100, worldserver.conf.dist:2365; under the

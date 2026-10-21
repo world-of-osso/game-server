@@ -134,7 +134,7 @@ fn read_native_crit_chance(h: &Harness, attacker: Entity, victim: Entity) -> f32
             .get::<crate::stats::StatModifiers>(attacker)
             .map_or(0.0, |m| m.haste_pct),
         enemy_dodge_pct: modifier(h, attacker, 251),
-        npc_expertise_pct: modifier(h, attacker, 240) / 4.0,
+        expertise_pct: modifier(h, attacker, 240) / 4.0,
         creature: world.get::<shared::components::Npc>(attacker).is_some(),
         authored_attack_time: world.get::<super::CreatureAttackTime>(attacker).copied(),
         creature_flags: world.get::<crate::zones::CreatureFlagsExtra>(attacker),

@@ -78,7 +78,7 @@ fn calculate_armor(h: &Harness) -> crate::stats::CharacterStats {
         .app
         .world()
         .get::<StatModifiers>(h.caster)
-        .copied()
+        .cloned()
         .unwrap_or_default();
     armor_with(mods)
 }
