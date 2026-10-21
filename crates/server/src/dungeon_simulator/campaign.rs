@@ -91,10 +91,8 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
     );
 }
 
-#[test]
-fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
-    let _rng_scope = crate::random::seed_scope(4);
-    let mut run = spawn_run(4, &mut None).unwrap();
+fn spawn_isolated_moloch(seed: u64) -> Run {
+    let mut run = spawn_run(seed, &mut None).unwrap();
     let boss = run.actors[&20375766];
     for (&guid, &actor) in &run.actors {
         if guid != 20375766 {
@@ -124,6 +122,67 @@ fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
             ..at
         });
     }
+    run
+}
+
+#[test]
+fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_isolated_moloch(2);
+    let boss = run.actors[&20375766];
+    let max = run.app.world().get::<Health>(boss).unwrap().max;
+    crate::combat::deal_direct_damage(run.app.world_mut(), run.party.tank, boss, max * 0.35);
+    for _ in 0..600 {
+        run.app.update();
+        if crate::auras::has_aura(run.app.world(), boss, 55964) {
+            assert!(run.app.world().get::<Health>(boss).unwrap().current > 0.0);
+            assert!(!crate::spell_cast::targets::relation_matches(
+                run.app.world(),
+                run.party.tank,
+                boss,
+                crate::spell_cast::targets::Relation::Enemy
+            ));
+            let before = run.report.pulls.len();
+            run.control().unwrap();
+            assert_eq!(
+                run.report.pulls.len(),
+                before,
+                "a living observed enemy's native Vanish must not start a new-pull decision"
+            );
+            return;
+        }
+    }
+    panic!("native scripted damage boundary did not execute Moloch Vanish");
+}
+
+#[test]
+fn initialized_simulator_leader_recovers_native_health_after_a_wound() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run(1, &mut None).unwrap();
+    for _ in 0..400 {
+        run.app.update();
+    }
+    let attacker = run.actors[&20375759];
+    let owner = run.party.owner;
+    crate::combat::deal_direct_damage(run.app.world_mut(), attacker, owner, 100.0);
+    let wounded = *run.app.world().get::<Health>(owner).unwrap();
+    assert!(wounded.current < wounded.max);
+    crate::combat::kill_unit(run.app.world_mut(), owner, attacker);
+    for _ in 0..100 {
+        run.app.update();
+    }
+    let recovered = run.app.world().get::<Health>(owner).unwrap();
+    assert_eq!(
+        recovered.current, recovered.max,
+        "native Player health regeneration must remain active for the initialized leader"
+    );
+}
+
+#[test]
+fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
+    let _rng_scope = crate::random::seed_scope(4);
+    let mut run = spawn_isolated_moloch(4);
+    let boss = run.actors[&20375766];
     crate::combat::deal_direct_damage(run.app.world_mut(), run.party.tank, boss, 100.0);
     for _ in 0..1200 {
         run.app.update();
