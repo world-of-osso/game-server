@@ -2151,7 +2151,8 @@ pub(crate) fn applicable_costs(
             None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
-            scripts::mana_cost(world, caster, spell, modified)
+            let modified = scripts::mana_cost(world, caster, spell, modified);
+            school_costs::modify_mana_cost(world, caster, modified)
         } else {
             modified
         };
@@ -2168,6 +2169,11 @@ pub(crate) fn applicable_costs(
             }
         } else {
             0.0
+        };
+        let optional = if pool == CostPool::Power(PowerType::Mana) {
+            school_costs::modify_mana_cost(world, caster, optional).max(0.0)
+        } else {
+            optional
         };
         let amount = amount + optional.min((current - amount).max(0.0));
         costs.push((pool, amount, current));

@@ -33,6 +33,12 @@ Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/oss
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura423 MANA_COST_PCT
+
+TC `SpellAuraEffects.cpp:4241–4247` adds amount/100 to the unit mana-cost multiplier; `SpellInfo.cpp:4242–4248` multiplies Mana only after ordinary modifiers, truncates integer powerCost, then preserves original cost sign. Native1270845 Mana Confluence supplies−5%;108294 Heart of the Wild−50%,203704 Mana Break+30%,327140 Forgeborne Reveries−100% supply nonzero controls. Existing PowerCost kind and native cost/payment functions reused; global percentages add, not multiply, and apply to optional Mana before available-power cap.
+
+Ignored RED063e9e68c initially has3 meaningful payment failures plus an invalid Mage Energy fixture; corrected897b9d234 uses an actual Rogue Energy pool. `census_tail_423 --include-ignored` then1PASS/3FAIL18.63s: actual native Fireball payment leaves9900 instead9905,9925 or10000. Non-Mana/foreign-owner controls pass. `/home/osso/.worktrees/logs/census-tail/423-red-native-pools.log`; compile1m22s/no warnings. Added native365350 Arcane Surge optional-cost control uses concrete5million available Mana so actual authored2900000 is not hidden by affordability clamping; no DB2 amount is changed. Minimal implementation and enabled five tests committed; GREEN pending.
+
 ## Aura377 CAST_WHILE_WALKING_ALL
 
 TC `Unit.cpp:3298–3313`: attribute13 `DO_NOT_ALLOW_DISABLE_MOVEMENT_INTERRUPT` wins, then330 mask/377 presence/307 label grant movement. Real212653 Shimmer index1 authors377 amount0, native duration650ms; permission is presence-only across spell families. Register existing CastMovement kind and extend existing permission reader, preserving cast/channel refresh/removal/expiry. No teleport changes.

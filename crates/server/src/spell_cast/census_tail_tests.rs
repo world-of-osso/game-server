@@ -562,7 +562,6 @@ fn pay_fireball_cost(h: &mut Harness, expected: f32) {
 }
 
 #[test]
-#[ignore = "RED: native423 reduces actual mana payment and removal restores it"]
 fn census_tail_423_native_mana_confluence_changes_paid_cost_then_restores() {
     let mut h = mana_cost_fixture();
     let baseline = native_mana_cost(&h);
@@ -575,7 +574,6 @@ fn census_tail_423_native_mana_confluence_changes_paid_cost_then_restores() {
 }
 
 #[test]
-#[ignore = "RED: native423 percentages add before integer mana payment"]
 fn census_tail_423_native_independent_percentages_add_instead_of_multiply() {
     let mut h = mana_cost_fixture();
     let baseline = native_mana_cost(&h);
@@ -588,7 +586,6 @@ fn census_tail_423_native_independent_percentages_add_instead_of_multiply() {
 }
 
 #[test]
-#[ignore = "RED: native423 below-100 percent never becomes a mana grant"]
 fn census_tail_423_native_full_reduction_clamps_cost_sign_without_credit() {
     let mut h = mana_cost_fixture();
     let caster = h.caster;
@@ -600,7 +597,27 @@ fn census_tail_423_native_full_reduction_clamps_cost_sign_without_credit() {
 }
 
 #[test]
-#[ignore = "RED control: native423 does not reduce real Energy cost or another caster"]
+fn census_tail_423_native_arcane_surge_optional_mana_uses_the_same_multiplier() {
+    const ARCANE_SURGE: u32 = 365_350;
+    let mut h = mana_cost_fixture();
+    let caster = h.caster;
+    // Large concrete pool exposes the actual authored2900000 optional cost,
+    // rather than hiding either calculation behind available-power clamping.
+    *h.app.world_mut().get_mut::<Mana>(caster).unwrap() = Mana {
+        current: 5_000_000.0,
+        max: 5_000_000.0,
+    };
+    hit_native(&mut h, MANA_CONFLUENCE, 0, caster);
+    let spell = world_db().unwrap().store.get(ARCANE_SURGE).unwrap();
+    let costs = super::spell_costs(h.app.world(), caster, spell).unwrap();
+    super::spend_costs(h.app.world_mut(), caster, &costs);
+    assert_eq!(
+        h.app.world().get::<Mana>(caster).unwrap().current,
+        2_245_000.0
+    );
+}
+
+#[test]
 fn census_tail_423_native_mana_modifier_leaves_other_powers_and_owners_unchanged() {
     let mut h = mana_cost_fixture();
     let baseline_mana = native_mana_cost(&h);

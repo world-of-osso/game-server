@@ -314,6 +314,8 @@ pub const MOD_RESISTANCE_PCT: u32 = 101;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
 pub const CAST_WHILE_WALKING_ALL: u32 = 377;
+/// TC additive global mana-cost percentage, after ordinary spell mods.
+pub const MOD_MANA_COST_PCT: u32 = 423;
 /// TC Unit::CanCastSpellWhileMoving: Misc0 SpellLabel, no family mask.
 pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
@@ -517,7 +519,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_RECOVERY_RATE
         | MOD_RECOVERY_RATE_BY_SPELL_LABEL => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
-        MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
+        MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST | MOD_MANA_COST_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB | SCHOOL_ABSORB_OVERKILL => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,

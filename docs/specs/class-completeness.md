@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Global mana cost aura slice — 2026-10-21
+
+- Native423 sums signed percentages across recipient-owned auras and multiplies mana cost after existing school/spell modifiers; truncate native integer costs before existing sign preservation. Other powers and owners remain unchanged; removal restores prior costs. Optional Mana cost uses the same multiplier before available-power clamping.
+- Native1270845 Mana Confluence−5%,108294−50%,203704+30% and327140−100% qualify additive reduction/increase and no accidental generation; real365350 optional Mana qualifies the second cost branch. No native spell/amount/catalog changes. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Global cast movement aura slice — 2026-10-21
 
 - Native377 grants cast/channel movement without a family/label/amount constraint, except native attr13 movement-prohibition. Existing cast refresh, channel movement and removal/expiry logic remain authoritative.
