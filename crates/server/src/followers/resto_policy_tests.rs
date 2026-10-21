@@ -136,6 +136,38 @@ fn resto_policy_high_level_tranquility_channels_for_stacked_group_pressure() {
         damage(&mut h, target, 0.45);
     }
     decide(&mut h, healer, &party);
+    if !h
+        .app
+        .world()
+        .get::<CastState>(healer)
+        .is_some_and(|cast| cast.spell_id == 740 && cast.cast_type == CastType::Channel)
+    {
+        let world = h.app.world();
+        let patients = party
+            .iter()
+            .filter_map(|unit| super::super::healer_triage::read_patient(world, *unit))
+            .collect::<Vec<_>>();
+        let entries = world
+            .resource::<FollowerCatalog>()
+            .kits
+            .iter()
+            .filter(|entry| entry.spec_id == 105 && entry.spell_id == 740)
+            .cloned()
+            .collect::<Vec<_>>();
+        let spell = world.resource::<SpellStore>().get(740).unwrap();
+        eprintln!(
+            "Tranquility diagnostic: patients={patients:?} clusters={:?} recovery={:?} costs={:?} casts={:?}",
+            super::super::healer_context::read_clusters(world, healer, &entries, &patients),
+            crate::spell_cast::read_healer_recovery(world, healer, spell),
+            crate::spell_cast::spell_costs(world, healer, spell),
+            h.inbox
+                .go
+                .iter()
+                .filter(|event| event.caster == healer.to_bits())
+                .map(|event| event.spell_id)
+                .collect::<Vec<_>>()
+        );
+    }
     assert!(
         h.app
             .world()
@@ -354,10 +386,7 @@ fn resto_policy_native_efflo_summon_pulses_useful_owner_healing_at_placement() {
         "published native Efflo template required"
     );
     h.app
-        .world_mut()
-        .resource_mut::<crate::world_data::WorldData>()
-        .templates
-        .extend(native.templates);
+        .insert_resource(crate::test_data::world_data().clone());
     let center = shared::components::Position {
         x: 12.0,
         y: 0.0,
