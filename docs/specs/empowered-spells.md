@@ -27,12 +27,14 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## Tests asserting this spec
 
-- `crates/server/src/followers/kit_empower_tests.rs` — native hold/GCD admission, Fire release/DoT and Scouring gate, Surge/Span recipients and Font variants; REDs and separately labelled native controls.
+- `crates/server/src/followers/kit_empower_tests.rs` — native hold/GCD admission, Fire release/DoT and Scouring gate, Surge/Span recipients, Font variants, selected-stage follower and cancellation.
+- `crates/server/src/spell_cast/empower_input_tests.rs` — actual HostClient release, first-stage minimum, wrong-spell/unauthenticated rejection and distinct StopSpellCast cancellation.
 
 ## Known gaps (current cycle)
 
 - [ ] Add explicit player release, cancel/refund and selected-stage behavior tests plus matching protocol/client consumers.
-- [ ] Prove follower single-target Fire Breath rank1 and cancellation cooldown/GCD/no-release controls GREEN.
+- [x] Follower single-target Fire Breath releases rank1 after the native first-stage threshold. Cancelled Surge removes its ordinary cooldown, applies finish GCD and never releases damage.
+- [x] Matching authenticated player release waits for native stage1 then fires the20s DoT. Wrong-spell and unauthenticated requests do not release; StopSpellCast still cancels without damage.
 - [ ] Complete optional Legacy of the Lifebinder/Volatility purchased-rank branches; current starter book lacks those talents, so they remain unqualified rather than inferred from spell presence.
 
 ## Out of scope

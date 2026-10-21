@@ -37,7 +37,6 @@ fn fire_damage(h: &Harness) -> bool {
 }
 
 #[test]
-#[ignore = "RED: explicit player empower release has no server consumer"]
 fn native_empower_input_early_release_waits_for_stage_one_then_fires() {
     let mut h = player_empower();
     release(&mut h, FIRE_BREATH);
@@ -64,7 +63,6 @@ fn native_empower_input_early_release_waits_for_stage_one_then_fires() {
 }
 
 #[test]
-#[ignore = "control: unauthenticated peers cannot release a live owner empower"]
 fn native_empower_input_unauthenticated_release_preserves_active_cast() {
     let mut h = player_empower();
     h.app
@@ -81,7 +79,6 @@ fn native_empower_input_unauthenticated_release_preserves_active_cast() {
 }
 
 #[test]
-#[ignore = "control: wrong-spell release is ignored and StopSpellCast remains cancellation"]
 fn native_empower_input_wrong_spell_does_not_release_and_stop_never_fires() {
     let mut h = player_empower();
     release(&mut h, 359073);
