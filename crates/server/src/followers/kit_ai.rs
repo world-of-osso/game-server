@@ -375,6 +375,11 @@ fn combat_allows(
     if condition.requires_cast && world.get::<CastState>(target).is_none() {
         return false;
     }
+    // Do not create a hold→regen→expiry→hold cycle on the sole enemy.
+    // Existing CC still expires natively; kicks/nonbreakable stuns are unchanged.
+    if enemies.len() == 1 && is_damage_breakable_control(world, entry) {
+        return false;
+    }
     if entry.slot == Slot::Control
         && world
             .get::<crate::auras::ActiveAuras>(target)
@@ -399,6 +404,17 @@ fn combat_allows(
         return false;
     }
     true
+}
+
+fn is_damage_breakable_control(world: &World, entry: &Entry) -> bool {
+    entry.slot == Slot::Control
+        && world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(entry.spell_id)
+            .and_then(|spell| spell.interrupts.as_ref())
+            .is_some_and(|flags| {
+                flags.aura_interrupt_flags[0] & crate::auras::ANY_DAMAGE_INTERRUPT_MASK != 0
+            })
 }
 
 fn attempt_cast(

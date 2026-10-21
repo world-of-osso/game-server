@@ -1,6 +1,8 @@
 //! Spell scripts (TrinityCore `SpellScript`) keyed by spell ID: behaviour that the
 //! spell's DB2 effects do not carry.
 
+use crate::random as rand;
+
 mod after_cast_auras;
 mod batch10;
 mod batch11;
@@ -74,6 +76,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (super::toy_flag::TARGETING, 0) {
+        return Some(super::toy_flag::plant);
+    }
     prayer_of_mending::effect_handler(spell, index)
         .or_else(|| batch13::effect_handler(spell, index))
 }
@@ -594,6 +599,8 @@ pub(super) type TargetPlanHook =
 /// Script-owned target plans still use normal validation, hit and effect paths.
 pub(super) fn target_plan(spell_id: u32) -> Option<(Relation, TargetPlanHook)> {
     match spell_id {
+        super::toy_flag::TARGETING => Some((Relation::Any, super::toy_flag::targeting_plan)),
+        super::toy_flag::FLAG => Some((Relation::Any, super::toy_flag::flag_plan)),
         97372 => Some((Relation::Any, track_switch_plan)),
         batch16::HEALING_WAVE => Some((Relation::Ally, batch16::healing_wave_plan)),
         batch12::SHIELD_RIGHTEOUS => Some((Relation::Ally, batch12::shield_plan)),
@@ -1311,8 +1318,8 @@ fn frostbolt_chilled(world: &mut World, caster: Entity, target: Entity, depth: u
 
 #[cfg(test)]
 mod tests {
-    use rand::SeedableRng;
-    use rand::rngs::StdRng;
+    use ::rand::SeedableRng;
+    use ::rand::rngs::StdRng;
 
     use super::*;
     use crate::spell_info::SpellEffect;

@@ -33,7 +33,7 @@ pub(crate) struct ToyTexts(HashMap<u32, (String, String)>);
 pub(crate) fn load_toy_texts(conn: &Connection) -> rusqlite::Result<ToyTexts> {
     let mut statement = conn.prepare(
         "SELECT ID, MaleText, FemaleText FROM content_broadcast_text
-        WHERE ID IN (26147, 26152, 32638, 32663, 32664)",
+        WHERE ID IN (26147, 26152, 28008, 32638, 32663, 32664)",
     )?;
     let rows = statement.query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?;
     rows.collect::<rusqlite::Result<HashMap<_, _>>>()
@@ -98,7 +98,7 @@ fn has_source_signature(spell: &SpellInfo, effect_type: u32) -> bool {
     single_effect(spell).is_some_and(|effect| is_caster_script_effect(effect, effect_type))
 }
 
-fn texts_available(world: &World, ids: &[u32]) -> bool {
+pub(super) fn texts_available(world: &World, ids: &[u32]) -> bool {
     let Some(texts) = world.get_resource::<ToyTexts>() else {
         return false;
     };
@@ -123,6 +123,9 @@ fn unsupported_coin(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
+    if spell.id == super::toy_flag::TARGETING {
+        return super::toy_flag::unsupported(world, spell);
+    }
     if spell.id == COIN_TOSS {
         return unsupported_coin(world, spell);
     }
@@ -157,6 +160,9 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
+    if spell == super::toy_flag::TARGETING {
+        return has_effect_shape(effect, EFFECT_DUMMY, [22, 93], 0);
+    }
     if spell == UNUSUAL_COMPASS || spell == WORMHOLE_PANDARIA {
         return is_caster_script_effect(effect, EFFECT_DUMMY);
     }
@@ -173,10 +179,13 @@ pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
 }
 
 pub(crate) fn check_cast(
-    world: &World,
+    world: &mut World,
     caster: Entity,
     spell: &SpellInfo,
 ) -> Result<(), CastFailure> {
+    if spell.id == super::toy_flag::TARGETING {
+        return super::toy_flag::check_cast(world, caster, spell);
+    }
     if spell.id == UNUSUAL_COMPASS {
         return check_compass_cast(world, caster, spell);
     }
@@ -256,6 +265,26 @@ pub(super) fn send_text_emote(world: &mut World, caster: Entity, text_id: u32) -
         send_chat(world, recipient, emote.clone());
     }
     emote
+}
+
+pub(super) fn send_targeted_text_emote(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    text_id: u32,
+) {
+    let mut emote = read_text_emote(world, caster, text_id);
+    let target_name = &world
+        .get::<Player>(target)
+        .expect("selected corpse owner")
+        .name;
+    emote.content = emote
+        .content
+        .replace("%s", &emote.sender)
+        .replace("$n", target_name);
+    for recipient in emote_hearers(world, caster, &emote.sender) {
+        send_chat(world, recipient, emote.clone());
+    }
 }
 
 fn read_text_emote(world: &World, caster: Entity, text_id: u32) -> ChatMessage {

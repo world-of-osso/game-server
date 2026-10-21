@@ -14,7 +14,7 @@ incremental = true
 [profile.dev.package."*"]
 opt-level = 2
 
-# Incremental optimized headless rotation/dungeon measurements.
+# Headless seeded batches need optimized gameplay while retaining native assertions.
 [profile.sim]
 inherits = "release"
 debug-assertions = true

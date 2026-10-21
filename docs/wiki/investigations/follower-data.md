@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Rotation proc lifetimes — 2026-10-21
+
+Native486f589b5/COPYv4 gives20PASS/1oracleFAIL11.44s (`rotation-b-proc-green-laststand-trace.log` in engine diagnostics). Four genuine native proc REDs at5ae2a1d66 become GREEN: TF5217 freezes its native masked op22 modifier at bleed application (no late-buff upgrade), HitCombo196740→196741 increments on different ordinary combo actions and clears repeats, and learned ComboBreaker137384 rolls native8% on landed TigerPalm then supplies one free BlackoutKick/consumption through real116768. No granted proc/resource or forced RNG. The finite256-cast natural proc bound is not proc-frequency certification. Existing fresh refresh windows, form adapter, major nonoverlap/order, carry/pooling and projection decision also pass.
+
+LastStand's failed arithmetic oracle observed actual unrelated PainAndGain382551 healing2513 at level46. Native12975 independently contains aura133 and effect136; SimC70391's current-health scaling is not numeric authority for70448. The corrected test attributes only12975's actual one Heal receipt and checks learned46/47 child/max-health boundaries, retaining other passives and existing ratio policy. Corrected GREEN is pending. Full Demo guardian/Core/Tyrant, WW mastery/Dance and all-spec tank/damage measurement remain open. [Contract](../../specs/follower-dungeons.md#rotation-fidelity-2026-10-21).
+
 ## Rotation duration and admission slices — 2026-10-21
 
 Nativec09cba900/protocol03cebdb gives10GREEN/6RED9.67s (engine `data/diagnostics/rotation-fidelity-2026-10-21/carry-green-policy-red.log`): earned CP/Chi/shard display-unit gates, Rip24s/Rake15s Pandemic carry, Block6s extension, SoTR4.5s extension, TF alignment and retained WW no-repeat/spender windows pass. Actual `AuraRefreshed` receipts distinguish a miss from a reapplication; bounded whole native lifecycles never grant hit/proc/resources. Source generic duration rules live in [refresh](../../../crates/server/src/auras/refresh.rs), SimC action.cpp4612/sc_warrior.cpp7196/sc_paladin.cpp2864–2876. SoTR's three-duration cap is implemented but its cap boundary still lacks native measurement.
@@ -17,6 +23,13 @@ Published kit inventory omitted cast actions behind native learned passives. The
 [Producer tests](../../../scripts/test_follower_rotation_policy.py) reproduce missing children before projection and pass5combined tests ate085f02fb, including Windwalker policy-output checks. This is **inventory/policy-output proof, not native rotation or damage parity**. Generic runtime predicates and native ST/3-target/tank simulator acceptance remain pending. SimC's70391 coefficients never replace native70448 data. [Contract](../../specs/follower-dungeons.md#rotation-fidelity-2026-10-21); engine diagnostics `data/diagnostics/rotation-fidelity-2026-10-21/` contain per-spec literal APL matrices and RED/GREEN logs.
 
 Native applicability: Bloodtalons is absent from default103 loadouts and pinned APL/module; do not fabricate it. Last Stand is passive1243659 (47+) triggered by Shield Wall, not a separate12975 button. Windwalker Tiger Palm's raw Chi effect is0, but learned1258122 native aura107/op12 adds2 to its second effect; compare fully modified amounts, not bare effect rows.
+## Follower population source audit — 2026-10-21
+
+All27 local70448 MapDifficulty205 maps have matching LFG1/1/3 rows. TDB1210 has Normal creatures on17, authored Entrance safe locations on9; only maps2451/2515/2521/2526/2648 have both. The ten wholly absent populations and eighteen missing entrances are named individually in engine `data/diagnostics/follower-dungeons-2026-10-21/population.md`. Existing projection already includes every available Normal creature; no newly unlocked map is claimed.
+
+The authenticated full local70448 CSV receipt has Map/MapDifficulty/LFGDungeons/AreaTrigger, but no WorldSafeLocs or AreaTriggerTeleport. TDB teleport→safe-location links add no destinations on the missing maps. A trigger volume's position is not an authored destination/facing; neither that nor a spawn position may substitute for an entrance. These are local source gaps, not a catalog-query bug.
+
+[Copy-only producer](../../../scripts/follower_population.py) validates the four CSV hashes/build identity and reprojects TDB source rows without widening difficulty tags. It requires already-prepared runtime templates/relationships; unrelated loot/template/encounter imports stay outside scope. Existing source IDs/positions/facing are preserved. [Native catalog test](../../../crates/server/src/followers/catalog_tests.rs) removes all follower runtime creatures/entrances on a private full copy, runs the producer, and requires every source-complete map to reappear through actual `load_catalog`. [Python cases](../../../scripts/tests/test_follower_population.py) compare actual source placements/tags/entrances, exercise idempotence, copy/authentication rejection and atomic rollback. [Contract](../../specs/follower-dungeons.md#population-preparation-70448).
 
 ## Tranquil Mind two-stack Clearcasting — 2026-10-19
 

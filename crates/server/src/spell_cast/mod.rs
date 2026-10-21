@@ -12,6 +12,7 @@
 //! `crate::auras::apply_aura`.
 //! See `docs/wiki/systems/spell-casting.md`.
 
+use crate::random as rand;
 #[cfg(test)]
 mod achievement_damage_tests;
 #[cfg(test)]
@@ -91,7 +92,7 @@ mod critical_block_tests;
 mod dead_cast_progress_tests;
 #[cfg(test)]
 mod dead_caster_channel_tests;
-mod disenchant;
+pub(crate) mod disenchant;
 #[cfg(test)]
 mod disenchant_tests;
 mod druid_transform;
@@ -235,7 +236,7 @@ mod minimum_speed_tests;
 mod missiles;
 #[cfg(test)]
 mod npc_dodge_tests;
-mod open_lock;
+pub(crate) mod open_lock;
 #[cfg(test)]
 mod open_lock_tests;
 #[cfg(test)]
@@ -322,6 +323,8 @@ mod arena_cooldown_tests;
 mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
+#[cfg(test)]
+mod combat_area_target_tests;
 pub(crate) mod homebind;
 pub(crate) mod jump_charge;
 mod knockback;
@@ -421,6 +424,7 @@ pub enum CastFailure {
     NoCharges,
     Moving,
     NoTarget,
+    NoValidTargets,
     InvalidTarget,
     /// `SPELL_FAILED_CASTER_AURASTATE` (also covers required/excluded aura spells).
     CasterAuraState,
@@ -498,6 +502,7 @@ impl CastFailure {
             Self::NoCharges => (R::NoChargesRemain, None),
             Self::Moving => (R::CantCastWhileMoving, None),
             Self::NoTarget => (R::NoTarget, None),
+            Self::NoValidTargets => (R::NoTarget, Some("No valid targets".into())),
             Self::InvalidTarget => (R::InvalidTarget, None),
             Self::CasterAuraState => (
                 R::InvalidTarget,
@@ -1017,13 +1022,14 @@ fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info
 fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
+        || scripts::effect_handler(spell.id, effect.index).is_some()
         || scripts::on_effect_hit(spell.id, effect.index).is_some()
         || scripts::cast_effect(spell.id, effect.index).is_some()
         || scripts::on_cast_effect(spell.id, effect.index).is_some()
         || (effect.effect == effects::EFFECT_DUMMY && targets::unsupported_target(effect).is_none())
 }
 
-fn max_targets(spell: &SpellInfo) -> u32 {
+pub(crate) fn max_targets(spell: &SpellInfo) -> u32 {
     spell
         .target_restrictions
         .as_ref()
@@ -1398,6 +1404,7 @@ pub(crate) fn cast_item_spell(
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
 mod toy_facing;
+mod toy_flag;
 pub(crate) mod toy_requirements;
 
 pub(crate) fn cast_toy_spell(
@@ -1935,6 +1942,10 @@ fn validate_target(
     explicit: Option<Entity>,
     sight: Sight,
 ) -> Result<Option<Entity>, CastFailure> {
+    // Source51640 owns an implicit corpse-area selection, not the player's selection.
+    if spell.id == toy_flag::TARGETING {
+        return Ok(None);
+    }
     // TC SpellInfo::CheckTarget rejects explicit self before any selector runs.
     if explicit == Some(caster) && targets::excludes_caster(spell) {
         return Err(CastFailure::InvalidTarget);

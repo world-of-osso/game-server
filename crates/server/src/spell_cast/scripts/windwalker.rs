@@ -2,6 +2,7 @@
 use bevy::prelude::*;
 
 use crate::auras::{self, ActiveAuras, RemoveReason};
+use crate::random as rand;
 use crate::spell_cast::SpellHistory;
 use crate::spell_info::SpellInfo;
 

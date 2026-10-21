@@ -14,6 +14,7 @@
 //! interpreted generically. Unsupported event/action/target kinds are diagnosed
 //! once per kind at startup, including rows outside the loaded creature subset.
 
+use crate::random as rand;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
