@@ -2,13 +2,16 @@
 use super::kit_clearcasting_tests::{complete_real_cast, mana_cost, own_aura};
 use super::kit_tests::{at_level, uses_spell};
 use crate::auras::{ActiveAuras, has_aura};
+use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+use crate::persistence::ClientId;
 use crate::spell_cast::creature_cast;
 use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents};
 use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::components::{
-    CombatRatings, DerivedStats, Health, Level, Position, UnitLevel, UnitStats,
+    CombatRatings, DerivedStats, Health, Level, Player, Position, UnitLevel, UnitStats,
 };
+use shared::group::GroupRole;
 use shared::protocol::CombatLogKind;
 
 const HENRY: u32 = 215011;
@@ -57,6 +60,7 @@ fn native_group_at(level: u8) -> GroupFixture {
         let unit = super::native_fixture::spawn(h.app.world_mut(), owner, entry).unwrap();
         members.push(unit);
     }
+    form_native_party(&mut h, &members, level);
     h.advance(3);
     for &member in &members {
         assert_eq!(h.app.world().get::<Level>(member).unwrap().0, level);
@@ -78,6 +82,39 @@ fn native_group_at(level: u8) -> GroupFixture {
         assert_eq!(health.current, health.max);
     }
     GroupFixture { h, priest, members }
+}
+
+fn form_native_party(h: &mut Harness, members: &[Entity], level: u8) {
+    let owner = h.caster;
+    let player = h.app.world().get::<Player>(owner).unwrap();
+    let owner_info = OnlineMember {
+        entity: owner.to_bits(),
+        name: player.name.clone(),
+        class: player.class,
+        level,
+        portrait: default(),
+        dungeon_difficulty: 1,
+        raid_difficulty: default(),
+    };
+    h.app.world_mut().entity_mut(owner).insert(ClientId(1));
+    let mut view = OnlineView::from([(1, owner_info)]);
+    let mut companions = Vec::new();
+    for &unit in members.iter().filter(|&&unit| unit != owner) {
+        let follower = h.app.world().get::<super::Follower>(unit).unwrap();
+        let member = super::Follower::member_id(unit);
+        view.insert(member, follower.online(unit, level, 1));
+        companions.push((member, follower.profile.role));
+    }
+    let mut groups = GroupRegistry::default();
+    groups
+        .create_companion_party(1, GroupRole::Dps, &companions, &view)
+        .unwrap();
+    assert!(
+        companions
+            .iter()
+            .all(|(member, _)| groups.is_in_same_group(1, *member))
+    );
+    h.app.insert_resource(groups);
 }
 
 fn apply_pressure(group: &mut GroupFixture, rounds: usize) {

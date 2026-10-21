@@ -88,9 +88,10 @@ The group setup then reached a second distinct boundary: the fixed-stat player
 harness omitted UnitStats/CombatRatings/DerivedStats, so StatsPlugin's query never
 matched the owner even with Level90. The fixture now uses the ordinary stat-entry shape and derived native health,
 not manufactured health or SP. Native90 stat/actual124257 group-damage control
-GREEN6.65sec atf53b75c0b (`holy-pressure-control-v4.log`). Six subsequent policy
-cases genuinely RED: Hymn, Apotheosis, PoM, Guardian Spirit, Desperate Prayer and
-party Fortitude. The Purify case instead failed on17146's native95mana cost;
+GREEN6.65sec atf53b75c0b (`holy-pressure-control-v4.log`). Five subsequent policy
+cases genuinely RED: Hymn, Apotheosis, PoM, Guardian Spirit and Desperate Prayer.
+Fortitude coverage also failed, but required the generic target118 mechanic and
+a correctly formed companion group rather than an individual-cast workaround. The Purify case instead failed on17146's native95mana cost;
 its corrected no-mana dummy uses authentic23268 (same72/3sec Magic DoT, no power
 row). This setup failure is not a Purify policy RED.
 
@@ -110,7 +111,12 @@ Earned-Surge priority, effective native32 Sanctify, spread-cluster refusal and
 full-health cooldown conservation are native GREEN controls. Fortitude coverage
 was explicitly ignored while native target118 raid expansion was missing;
 common master655258480 now supplies that fix in both comparison trees and the
-regression is re-enabled. Integration proof is pending; no individual-buff workaround.
+regression is re-enabled. At1fb04d63b the complete bounded run yielded36GREEN
+and one Fortitude failure: the fixture had native actors sharing an owner but
+never created a `GroupRegistry` party. Ownership is intentionally not membership.
+The fixture now uses real `create_companion_party`, actual follower online records
+and the owner's test ClientId; its membership and coverage proof remains pending.
+No production policy change or individual-buff workaround.
 
 ## Named selected-kit gaps
 
