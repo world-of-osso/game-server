@@ -46,6 +46,7 @@ pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
+mod talondras;
 pub mod the_stockade;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
@@ -363,6 +364,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if script_name == talondras::SCRIPT {
+        return talondras::creature_ai(world, creature);
+    }
     if script_name == bromach::SCRIPT {
         return bromach::creature_ai(world, creature);
     }
@@ -427,6 +431,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || ruby_life_pools::is_creature_script(script_name)
         || script_name == lost_dwarves::SCRIPT
         || script_name == bromach::SCRIPT
+        || script_name == talondras::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)

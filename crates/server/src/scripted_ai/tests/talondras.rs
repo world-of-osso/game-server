@@ -95,3 +95,151 @@ fn encounter_coverage_talondras_first_stomp_uses_current_lua_clock() {
         "current Lua5.1s request/native2s cast"
     );
 }
+
+#[test]
+fn encounter_coverage_talondras_ongoing_native_lanes_damage_copy_credit_and_corpse() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map) = talondras_copy(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
+        h.engage(boss);
+        h.advance(105.0);
+        let attempts = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        eprintln!("TALONDRAS difficulty{difficulty} {attempts:?}");
+        let lanes = [
+            (
+                SHARDS,
+                &[
+                    4.5, 14.2, 23.9, 33.6, 43.4, 53.1, 62.8, 72.5, 82.2, 91.9, 101.6,
+                ][..],
+            ),
+            (
+                STOMP,
+                &[5.1, 17.2, 29.3, 41.4, 53.5, 65.6, 77.7, 89.8, 101.9][..],
+            ),
+        ];
+        assert_eq!(
+            attempts.len(),
+            20,
+            "only current sourced Normal/Follower lanes"
+        );
+        for (spell, times) in lanes {
+            let actual: Vec<_> = attempts.iter().filter(|a| a.spell == spell).collect();
+            assert_eq!(actual.len(), times.len(), "ongoing native lane{spell}");
+            for (attempt, time) in actual.iter().zip(times) {
+                assert!(attempt.result.is_ok(), "native admission {attempt:?}");
+                assert!(
+                    (attempt.time - *time).abs() <= 0.15,
+                    "native occupancy/source order {attempt:?} expected{time}"
+                );
+            }
+            assert_eq!(
+                cast_count(&h, boss, spell),
+                times.len(),
+                "actual native SpellGo{spell}"
+            );
+            assert!(
+                h.inbox(0)
+                    .log
+                    .iter()
+                    .any(|e| e.kind == CombatLogKind::Damage
+                        && e.amount > 0
+                        && e.spell_id == Some(spell)
+                        && e.source == Some(boss.to_bits())),
+                "scheduled native damage{spell}"
+            );
+        }
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|e| e.kind == CombatLogKind::Damage
+                    && e.periodic
+                    && e.spell_id == Some(SHARDS)),
+            "native scheduled periodic damage"
+        );
+        assert_eq!(
+            cast_count(&h, boss, 372623),
+            0,
+            "Orb initial clock is not invented"
+        );
+        assert_eq!(
+            cast_count(&h, boss, 372719),
+            0,
+            "BigWigs Normal includes205: no non-Normal Titanic initial"
+        );
+        assert!(
+            h.has_aura(boss, 372600),
+            "preserved actual Inexorable addon, not fabricated phase state"
+        );
+        assert!(
+            h.inbox(0)
+                .starts
+                .iter()
+                .any(|s| s.encounter_id == 2557 && s.difficulty_id == difficulty)
+        );
+        assert!(h.inbox(1).starts.is_empty());
+        assert!(
+            h.inbox(1)
+                .spell_gos
+                .iter()
+                .all(|g| g.caster != boss.to_bits())
+        );
+        h.hit_pct(boss, 200.0);
+        h.advance(0.1);
+        assert_eq!(
+            instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+            Some(EncounterState::Done)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1 << BIT
+        );
+        assert!(h.inbox(1).ends.is_empty());
+        let before = h.inbox(0).spell_gos.len();
+        h.advance(20.0);
+        assert_eq!(h.inbox(0).spell_gos.len(), before, "no new corpse casts");
+    }
+}
+
+#[test]
+fn encounter_coverage_talondras_evade_rearms_without_credit() {
+    let (mut h, boss, map) = talondras_copy(205);
+    h.engage(boss);
+    h.advance(12.0);
+    assert_eq!(cast_count(&h, boss, SHARDS), 1);
+    assert_eq!(cast_count(&h, boss, STOMP), 1);
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    assert_eq!(
+        instance_script::get_boss_state(h.app.world_mut(), map, BIT),
+        Some(EncounterState::NotStarted)
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .resource::<crate::maps::InstanceManager>()
+            .completed_encounters(map),
+        0
+    );
+    h.engage(boss);
+    h.advance(4.2);
+    assert_eq!(cast_count(&h, boss, SHARDS), 1, "no early reset Shards");
+    h.advance(2.5);
+    assert_eq!(
+        cast_count(&h, boss, SHARDS),
+        2,
+        "native home/re-engage restores4.5s first Shards"
+    );
+}

@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Talondras current Lua partial
+
+- Current LittleWigs2777a9d `SentinelTalondras.lua` explicitly binds184124↔2557/map2451bit2. Normal1 and Follower205 use Shards372718 first4.5/repeat9.7s and Stomp372701 first5.1/repeat12.1s; native70448 owns direct/DOT/area/knockback effects and cast occupancy. BigWigs `Normal()` includes205; no non-Normal Titanic30.4s request is invented here.
+- `TALONDRAS_ROLE_STUN_TIMELINE_CONTEXT`, `TALONDRAS_ORB_INITIAL_CLOCK_GAP` and `TALONDRAS_INEXORABLE_ENERGY_PHASE_SCRIPT_GAP` retain unavailable alert-role/stun correction/Orb first-time/energy/stacks/transitions. Current victim is native explicit-enemy default for Shards; no guessed random selector. Preserve real template addons372717/372600/372775/372778.
+- Producer `--encounter talondras` changes only local ScriptName and primary binding (Journal2484/5356/display106790). Keep actual TDB/runtime model109735, actor stats/flags/addons/population/difficulties unchanged; never substitute journal thumbnail for the runtime model or manufacture205 rows. Require native Normal/Follower clocks/damage/reset/copy-credit proof; full Orb/energy fight remains uncertified.
+
 ## Bromach current Lua partial
 
 - Current LittleWigs2777a9d `Bromach.lua` authenticates184018/map2451/2556bit1 and initial Call3696055.1s, Slam36970312.1s, Totem38230320.4s, Bloodlust36975427.9s. Consume current source-order repeats: Call28→37.8s, Totem/Bloodlust30.3→40.1s, Slam14.7→28s only after native success. A canceled Slam must not arm its repeat.

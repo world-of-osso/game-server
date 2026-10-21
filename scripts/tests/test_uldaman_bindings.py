@@ -58,3 +58,26 @@ class UldamanBindingsTests(unittest.TestCase):
                 db.execute('UPDATE spell_effect SET EffectMiscValue_0=0 WHERE SpellID=382302 AND EffectIndex=0')
                 with self.assertRaisesRegex(ValueError, 'native'):
                     encounter_summons.import_bromach(db)
+
+    def test_talondras_binding_retains_runtime_model_and_native_source_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with closing(sqlite3.connect(SOURCE.resolve().as_uri()+'?mode=ro', uri=True)) as source, closing(sqlite3.connect(Path(directory)/'copy.sqlite')) as db:
+                source.backup(db)
+                before = db.execute('SELECT * FROM content_creature_template WHERE entry=184124').fetchone()
+                columns = [row[1] for row in db.execute('PRAGMA table_info(content_creature_template)')]
+                models = db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=184124').fetchall()
+                stats = db.execute('SELECT * FROM content_creature_template_difficulty WHERE entry=184124').fetchall()
+                population = db.execute('SELECT * FROM content_creature WHERE map=2451').fetchall()
+                for _ in range(2):
+                    self.assertEqual(encounter_summons.import_talondras(db), [184124])
+                    expected = list(before)
+                    expected[columns.index('ScriptName')] = 'boss_sentinel_talondras'
+                    self.assertEqual(db.execute('SELECT * FROM content_creature_template WHERE entry=184124').fetchone(), tuple(expected))
+                    self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=184124').fetchall(), models)
+                    self.assertEqual(db.execute('SELECT * FROM content_creature_template_difficulty WHERE entry=184124').fetchall(), stats)
+                    self.assertEqual(db.execute('SELECT * FROM content_creature WHERE map=2451').fetchall(), population)
+                    self.assertEqual(db.execute('SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=184124').fetchall(), [(109735,)])
+                    self.assertEqual(db.execute('SELECT encounter_id,bit,journal_encounter_id,journal_creature_id,display_id FROM raid_encounter_creature WHERE map_id=2451 AND creature_entry=184124').fetchone(), (2557,2,2484,5356,106790))
+                db.execute('UPDATE spell_effect SET ImplicitTarget_1=0 WHERE SpellID=372701 AND EffectIndex=0')
+                with self.assertRaisesRegex(ValueError, 'native'):
+                    encounter_summons.import_talondras(db)
