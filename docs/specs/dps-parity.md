@@ -19,6 +19,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - [ ] A headless300s follower dummy harness consumes exact profile gear through the production stat path and supported talents/consumables, on one target and a specified three-target DungeonSlice-like setup.
 - [ ] Reports compare primary/crit/haste/mastery/versatility/AP/SP first, then action counts/average hit/damage share and buff uptimes. Flag every delta>5% and classify stats/gear, coefficients, missing proc/aura or rotation/decision.
 - [x] SimC action normalization includes direct and periodic amounts without double-counting parent compound totals.
+- [x] Stat comparison accepts identically-unitized attribute/stat maps, flags strictly greater than5% differences, distinguishes absent and zero-reference measurements, and rejects nonfinite inputs.
 - [ ] Compare SimC70391 and native70448 effect rows before attributing a coefficient mismatch to a server bug. Rotation/decision edits remain lead-owned.
 - [ ] Cover specs66/73/105/257/262/63/253/1467/269/266/103. Missing105/257 shipped healer profiles remain explicit HPS-reference gaps, not synthetic BiS profiles. Report first-three and all-spec summaries to the lead.
 
@@ -39,7 +40,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 ## Tests asserting this spec
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
-- `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata and direct/periodic action accounting.
+- `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata, direct/periodic action accounting and finite/missing/zero-reference stat comparisons.
 - `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
 - `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions. Owned inventory hydration/projection is additionally proved at the persistence/Stats boundary.
 - `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration and enchant/gem join regressions; both passed within the 15-case library proof.
