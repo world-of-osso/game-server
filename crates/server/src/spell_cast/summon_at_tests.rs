@@ -309,7 +309,8 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
         [4584.0, 6450.666],
         7558,
     );
-    let position = h.app.world().get::<Position>(h.caster).unwrap().as_vec3();
+    let position = *h.app.world().get::<Position>(h.caster).unwrap();
+    let position = Vec3::new(position.x, position.y, position.z);
     let (area_tuning, maximum): (u32, u8) = conn
         .query_row(
             "SELECT a.ContentTuningID, c.maxlevel FROM area_table a
