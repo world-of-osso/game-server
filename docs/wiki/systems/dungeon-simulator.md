@@ -2,6 +2,10 @@
 
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
+## Fresh post-integration baseline —2026-10-21
+
+Archived executable13610f262 (productioncb7a1ffe4, includes master8e3777ef6), protocol03cebdb, frozen read-only worldDB SHA256`40d95b0a21a243edcf12dc9a1fa1ca56ad4b45f2828026622d609d62fab5cca5`: Stockade32/default five/seeds1–10/jobs2 gives **10clears,30native boss Deaths,0failures**, all reports present,416.926s batch wall. Total27597.3sim_s/814.318run-wall_s=33.89× under shared-host contention. The prior corridor seed2 failure does not reproduce here; no deterministic-replay or causal-fix claim follows. This is baseline before the required-boss hold candidate and lead-owned model-default integration, not current-candidate acceptance. Evidence: `stockade-postmaster-baseline-13610f262/summary.json` and `stockade-postmaster-baseline-command.json` under the existing proof-ledger directory.
+
 ## Required-boss phase hold —2026-10-21
 
 A source can be alive but currently unattackable without counting as a completed boss. The route still selects other pullable packs first. If no such pack remains and a required boss actor is alive, the controller holds rather than returning an incomplete-boss error; when attackability returns, normal route selection resumes. An absent boss with no native Death receipt remains an error. No boss credit is fabricated.
