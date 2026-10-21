@@ -5,7 +5,19 @@ use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
 
 const IRONBARK: u32 = 102342;
 const SWIFTMEND: u32 = 18562;
-const OWNED: SpellSet = &[8936, 18562, 774, 33763, 48438, 740, 145205, IRONBARK];
+// UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
+const UTILITY_REBIRTH: u32 = 20484;
+const OWNED: SpellSet = &[
+    8936,
+    18562,
+    774,
+    33763,
+    48438,
+    740,
+    145205,
+    IRONBARK,
+    UTILITY_REBIRTH,
+];
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
     let decision = choose_ironbark(ctx)
@@ -92,6 +104,9 @@ fn ranked_maintenance(ctx: &TriageContext<'_>) -> Option<Decision> {
 }
 
 fn routine_heal_allowed(ctx: &TriageContext<'_>, decision: Decision) -> bool {
+    if decision.spell_id == UTILITY_REBIRTH {
+        return false;
+    }
     if decision.spell_id != SWIFTMEND {
         return true;
     }

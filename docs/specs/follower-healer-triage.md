@@ -36,6 +36,7 @@
 
 - [ ] Complete Restoration policy depth and paired simulator metrics beyond the qualified common framework/native cooldown slice.
 - [ ] `FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`: absent from local105 kit.
+- [ ] `UTILITY_LAYER_REZ_PENDING`: Rebirth decision/native NPC-caster execution belongs to the utility layer; reserve its generic-row veto and consume that layer after landing.
 - [ ] `FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: current native bonus supports Regrowth/Rejuvenation/Germination only.
 
 ## Out of scope
