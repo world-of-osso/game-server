@@ -1,5 +1,35 @@
 # Boss scripts
 
+## Melidrussa current Retail partial — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#melidrussa-current-retail-partial-boundary). Current LittleWigs2777a9d Retail wrappers1307297/1307308 name native396044/1311543 children. Explicit lead policy uses first5/15s and ongoing source-order Normal/Follower lanes Hailburst24/22/25s, Chillstorm24/32/25s (Mythic lists24s), retaining `MELIDRUSSA_TIMELINE_CONDITION_CONTEXT`. No legacy6.8/12.1 timers, invented selectors or instant child casts. Actual Hailburst keeps3s casting/area enemy damage; downstream Chillstorm/Hailbombs dummy selectors and Whelp phase remain named gaps.
+
+Ignored REDd19089800 genuinely misses first native Hailburst0vs1; two native qualifications pass. Partial788e6ca87 +testsbcc2dc5cf give5/5PASS77.74s Normal1/Follower205:140s ongoing request lanes, actual damage,2609bit1 primary/copy credit, reset lane rearm and corpse silence. Source-copy unit1PASS6.140s verifies pinned TC primary/header hashes,70448 journal, native child fields, idempotence, preservation and drift rejection. `--encounter melidrussa` installs authenticated primary plus explicitly local Lua binding; no actor/difficulty/model/addon/population edits. Lead owns publication.
+
+Merged latest master into b7f618873 afterward (global RNG wrapper and targeted375576/50286 combat-area policy). No Melidrussa source changes. Extra post-merge native rerun was capacity-blocked for9minutes (RAM5–8GiB/FIFO); no process started. Native5 proof is explicitly pre-merge, not fresh integration certification. Final integration gate lead-owned. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/melidrussa-*`.
+
+## Umbrelskul partial Lua clock — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#umbrelskul-lua-clock-partial-boundary). Lead-approved LittleWigs2777a9d/native70448 partial port186738/2584. Dragon Strike first7.4s and next8.4s Normal/Follower or15.3s Mythic countdown starts only after actual native successful cast; cancelled casts have no invented retry. Crystalline Roar directly requests native384699 at12.2s/repeat23.1s or105.6s, using actual line129/width10 and5s casting. Source-unspecified384696 selector/energy/Brittle/crystals remain named gaps; no full Retail phase claim.
+
+Ignored REDa8b2e4c39 genuinely observes first-Strike0vs1; two native input/direct+periodic qualifications pass first. Partial78bd2a595 plus native tests87fad0cf7 give7/7PASS44.00s: Normal1/Follower205/Mythic23 real clocks, actual direct/periodic/line damage, native casting overlap, cancellation boundary, evade rearm,2584 completionbit2 independent of saved ordinal3, copy isolation and corpse silence. All enabled only after GREEN. Source-copy producer1PASS3.332s preserves stats/difficulties/addons/models/population/credit, idempotence and source-drift rejection. `--encounter umbrelskul` installs explicitly local Lua-backed binding only; canonical publication/final gate lead-owned. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/umbrelskul-*`.
+
+## Azureblade partial Lua clock — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#azureblade-lua-clock-partial-boundary). Lead explicitly authorized LittleWigs2777a9d `Azureblade.lua` schedules with native70448 targets/effects despite missing TC AI. Initial image3.3/14.6s, cleave5.2/13.4s, orb10.6/15.8s each stop after source first-phase count2. Native cast time remains1/2/2.5s; second Cleave waits for actual Image casting, not widened source deadlines. Energy/center/Overwhelming phase and Image AI remain named gaps, not invented clocks or Retail parity.
+
+Ignored first-Cleave REDfd33f9817 (two native qualificationsPASS, actual0vs1FAIL) precedes partial7ecbfbfc4. Source producer `encounter_summons.py --encounter azureblade` installs explicitly local `boss_azureblade` and actual190187 base/model/Normal1/Mythic23 rows without synthetic205 stats, population or credit changes. Independent disk-copy unit1PASS2.432s proves preservation/idempotence/source-drift rejection. Source name is not falsely attributed to TDB.
+
+Native finalf9ec0db16:5/5PASS37.75s, including real Normal1/Follower205 requests, native cone damage,384223→373658→373582 actual two owned images, reset cleanup/rearm, isolated2585 completion bit3 and corpse silence. Initial Image0 was missing fixture GroundMap for native destination138; fixed real geometry input, no summon shortcut. The fixture also injected compatibility ordinal1 as DB2bit1, falsely awarding Telash alongside Azureblade; Azure fixtures now preserve the real compatibility catalog. Saved boss state remains ordinal1; completion is nativebit3 only. Runtime credit code unchanged. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/azureblade-*`. Producer publication and final gate lead-owned; no canonical mutation/full clear claim.
+
+## Blood Furnace Broggok — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#blood-furnace-broggok-source-boundary). TC a352b1fa `boss_broggok.cpp`17380/1924/map542bit2. Ignored REDec2d35c10 genuinely fails appearance selectability; source9262fafd6 restores passive/uninteractible appearance, exact intro/release action clocks, ordinary self-cast rotation and inherited reset/death. Source JustSummoned deliberately does not track summons. Native30913 cone damage and both difficulties' first/repeat windows pass;30916 is current effect179/AT33896, never a fabricated historical summon.
+
+Core proof COMPOSITE5GREEN: four cases ata0e0e82ae (`broggok-core-green.log`) plus actual-SpellGo lifecycle atda039eb9d (`broggok-lifecycle-green.log`,19.75s). Self-cast CastSuccess is not delivered to the player; the corrected lifecycle observer uses actual owned SpellGo, no runtime/timer change. Filter `encounter_coverage_broggok_`; detached protocol03cebdb. Evidence and72-encounter audit: game-engine `data/diagnostics/encounter-gaps-2026-10-21/`.
+
+Named native absences:30917/26837/26838/30914/38462. Ingress remains blocked: TDB1210 has no BroggokPrisoner StringIds or groups402–405 required by this TC source; no fabricated memberships. Path1381150 has authored final orientation unsupported by current MovePath and no local542 navigation bake. Lever/prisoner ingress, historical cloud damage/radius, full encounter/native/loot/persistence are not certified. Published primary binding already exists; no canonical database mutation or new producer.
+
 ## Encounter fixture determinism — 2026-10-20
 
 The shared `stockade_app_with` harness already uses manual50ms real-time updates and a50ms fixed step; CPU stalls do not advance simulation. Its `EncounterSeed(0)` now seeds each BossAi EventMap during reset and, for scripts without Reset overrides, before JustEngagedWith schedules events. Independent apps own independent streams. Explicit ground-phase seeds remain available for fixtures exercising specific roll combinations; production RNG is unchanged.

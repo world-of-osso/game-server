@@ -355,6 +355,62 @@ def import_kargath_actors(connection):
     return entries
 
 
+def import_azureblade(connection):
+    """Local Lua-clock186739 binding and native373582 image190187, no placements.
+
+    The script is explicitly our LittleWigs-backed partial port, not a claimed
+    TDB/TC script. Source base/difficulty rows remain authoritative for actors;
+    neither an invented follower205 difficulty nor image spell AI is added.
+    """
+    identity = connection.execute('SELECT name,AIName,ScriptName FROM tdb_creature_template WHERE entry=186739').fetchone()
+    if identity != ('Azureblade', '', ''):
+        raise ValueError('Azureblade source identity changed')
+    runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=186739').fetchone()
+    if runtime not in [('Azureblade', '', ''), ('Azureblade', '', 'boss_azureblade')]:
+        raise ValueError('Azureblade runtime binding conflicts with the local Lua port')
+    effect = connection.execute('SELECT Effect,EffectMiscValue_0,EffectMiscValue_1 FROM spell_effect WHERE SpellID=373582 AND DifficultyID=0 AND EffectIndex=0').fetchone()
+    if effect != (28,190187,64):
+        raise ValueError('Azureblade native Draconic Image373582 identity changed')
+    image = connection.execute('SELECT AIName,ScriptName FROM tdb_creature_template WHERE entry=190187').fetchone()
+    difficulties = connection.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=190187 ORDER BY DifficultyID').fetchall()
+    if image != ('','') or difficulties != [(0,),(1,),(23,)]:
+        raise ValueError('Azureblade image source identity/difficulties changed')
+    replace_source_base_templates(connection, [190187])
+    project_difficulty(connection, 190187, 1)
+    project_difficulty(connection, 190187, 23)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_azureblade' WHERE entry=186739")
+    return [186739,190187]
+
+
+def import_umbrelskul(connection):
+    """Install our explicitly local Lua-clock binding, retaining all source stats."""
+    source = connection.execute('SELECT name,AIName,ScriptName FROM tdb_creature_template WHERE entry=186738').fetchone()
+    if source != ('Umbrelskul', '', ''):
+        raise ValueError('Umbrelskul source identity changed')
+    runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=186738').fetchone()
+    if runtime not in [('Umbrelskul', '', ''), ('Umbrelskul', '', 'boss_umbrelskul')]:
+        raise ValueError('Umbrelskul runtime binding conflicts with the local Lua port')
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_umbrelskul' WHERE entry=186738")
+    return [186738]
+
+
+def import_melidrussa(connection):
+    """Current Retail Lua child requests and TC-authenticated primary, no new stats."""
+    import encounter_cpp_bindings
+    runtime = connection.execute('SELECT name,AIName,ScriptName FROM content_creature_template WHERE entry=188252').fetchone()
+    if runtime not in [('Melidrussa Chillworn','',''), ('Melidrussa Chillworn','','boss_melidrussa_chillworn')]:
+        raise ValueError('Melidrussa runtime binding conflicts with local Lua port')
+    for wrapper, child in [(1307297,396044),(1307308,1311543)]:
+        effect = connection.execute('SELECT Effect,EffectTriggerSpell FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0',(wrapper,)).fetchone()
+        if effect != (3,child):
+            raise ValueError(f'Melidrussa native wrapper{wrapper} child changed')
+    primary, _ = encounter_cpp_bindings.PROFILES['melidrussa']
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    connection.executescript(encounter_cpp_bindings.binding_sql(rows))
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_melidrussa_chillworn' WHERE entry=188252")
+    return [188252]
+
+
 def import_porung_binding(connection):
     """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
     import encounter_cpp_bindings
@@ -366,7 +422,7 @@ def import_porung_binding(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','melidrussa'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -388,6 +444,12 @@ def main():
                 entries = import_kargath_actors(conn)
             elif args.encounter == 'porung':
                 entries = import_porung_binding(conn)
+            elif args.encounter == 'azureblade':
+                entries = import_azureblade(conn)
+            elif args.encounter == 'umbrelskul':
+                entries = import_umbrelskul(conn)
+            elif args.encounter == 'melidrussa':
+                entries = import_melidrussa(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
