@@ -191,6 +191,26 @@ fn dps_parity_native_bis_dummy_records_300s() {
         file.display()
     );
     let samples = report["engagement_samples"].as_array().unwrap();
+    assert_eq!(
+        samples[0]["actor_is_player"], false,
+        "measured follower stays an NPC"
+    );
+    assert_eq!(
+        samples[0]["owner_is_player"], true,
+        "owner uses native player initialization"
+    );
+    let owner = samples[0]["owner"]["entity"].as_u64().unwrap();
+    let owner_damage: u64 = report["combat"]["actions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|action| action["actor"].as_u64() == Some(owner))
+        .map(|action| action["damage"].as_u64().unwrap())
+        .sum();
+    assert_eq!(
+        owner_damage, 0,
+        "out-of-range controller must not contribute damage"
+    );
     let end_damage = samples.last().unwrap()["damage_to_targets"]
         .as_i64()
         .unwrap();

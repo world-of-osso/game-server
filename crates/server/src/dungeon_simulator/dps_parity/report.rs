@@ -36,7 +36,10 @@ pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Va
         .map(|event| i64::from(event.amount))
         .sum();
     json!({"actor": inspect(actor), "owner": inspect(owner), "targets": target_states,
-        "damage_to_targets": damage, "first_events": events.iter().take(16).collect::<Vec<_>>()})
+        "damage_to_targets": damage,
+        "actor_is_player": world.get::<shared::components::Player>(actor).is_some(),
+        "owner_is_player": world.get::<shared::components::Player>(owner).is_some(),
+        "first_events": events.iter().take(16).collect::<Vec<_>>()})
 }
 
 fn is_target_damage(event: &shared::protocol::CombatLogEvent, targets: &[Entity]) -> bool {

@@ -118,38 +118,8 @@ pub(crate) fn spawn_party(
     let configuration = PartyConfiguration::read()?;
     let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
-    let owner = world
-        .spawn((
-            Player {
-                name: leader.name.clone(),
-                race: 1,
-                class: leader.class_id,
-                appearance: default(),
-            },
-            Level(configuration.level),
-            shared::components::UnitLevel(configuration.level),
-            UnitFactionTemplate(1),
-            at,
-            copy,
-            crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
-            crate::networking::CombatTarget::default(),
-            crate::networking::Moving(false),
-            shared::components::UnitPowers::default(),
-        ))
-        .id();
-    // Run native Player initialization before the profile installs PowerPools;
-    // otherwise its Without<PowerPools> query never installs health regeneration.
-    world
-        .run_system_once(crate::spell_cast::powers::init_player_powers)
-        .map_err(|error| {
-            format!("initialize simulator leader through native player powers: {error}")
-        })?;
-    spawning::initialize(world, owner, owner, leader.clone())?;
-    world
-        .entity_mut(owner)
-        .remove::<(Follower, shared::components::UnitSummonedBy)>()
-        .insert(LeaderProfile(leader));
+    let owner = initialize_player_owner(world, &leader, configuration.level, copy, at)?;
+    world.entity_mut(owner).insert(LeaderProfile(leader));
     let members = spawning::spawn_members(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
     world
@@ -187,8 +157,25 @@ pub(crate) fn spawn_parity_attacker(
         .find(|profile| profile.spec_id == spec_id)
         .cloned()
         .ok_or_else(|| format!("native follower spec{spec_id} absent"))?;
-    let owner = spawn_parity_owner(world, level, copy);
+    let owner = initialize_player_owner(
+        world,
+        &profile,
+        level,
+        copy,
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    )?;
     let unit = spawning::spawn(world, owner, profile)?;
+    // A living native owner can maintain /startattack without landing out-of-range swings.
+    // No LeaderProfile is installed: the owner runs no follower rotation.
+    world.entity_mut(owner).insert(Position {
+        x: 20.0,
+        y: 0.0,
+        z: 0.0,
+    });
     // advance_runs removes followers without a real or admitted diagnostic run.
     world
         .entity_mut(owner)
@@ -200,17 +187,53 @@ pub(crate) fn spawn_parity_attacker(
     Ok(unit)
 }
 
-fn spawn_parity_owner(world: &mut World, level: u8, copy: crate::maps::InMap) -> Entity {
+fn initialize_player_owner(
+    world: &mut World,
+    profile: &Profile,
+    level: u8,
+    copy: crate::maps::InMap,
+    at: Position,
+) -> Result<Entity, String> {
+    let owner = spawn_player_identity(world, profile, level, copy, at);
+    // Run native Player initialization before the profile installs PowerPools;
+    // otherwise its Without<PowerPools> query never installs health regeneration.
+    world
+        .run_system_once(crate::spell_cast::powers::init_player_powers)
+        .map_err(|error| {
+            format!("initialize simulator leader through native player powers: {error}")
+        })?;
+    spawning::initialize(world, owner, owner, profile.clone())?;
+    world
+        .entity_mut(owner)
+        .remove::<(Follower, shared::components::UnitSummonedBy)>();
+    Ok(owner)
+}
+
+fn spawn_player_identity(
+    world: &mut World,
+    profile: &Profile,
+    level: u8,
+    copy: crate::maps::InMap,
+    at: Position,
+) -> Entity {
     world
         .spawn((
-            Level(level),
-            UnitFactionTemplate(1),
-            Position {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
+            Player {
+                name: profile.name.clone(),
+                race: 1,
+                class: profile.class_id,
+                appearance: default(),
             },
+            Level(level),
+            shared::components::UnitLevel(level),
+            UnitFactionTemplate(1),
+            at,
             copy,
+            crate::persistence::ClientId(1),
+            crate::maps::DungeonDifficulty(1),
+            crate::networking::CombatTarget::default(),
+            crate::networking::Moving(false),
+            shared::components::UnitPowers::default(),
         ))
         .id()
 }
