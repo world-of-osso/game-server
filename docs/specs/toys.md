@@ -13,6 +13,13 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Census-driven generic effect160
+
+- [x] Native effect160 (`FORCE_CAST_2`) queues a normal cast by the hit unit toward the original caster after the parent's SpellGo, preserving the child's ordinary cast time, resource/cooldown and crowd-control checks (TC a352b1fa `SpellEffects.cpp:851–892`). No per-toy script or cosmetic whitelist substitutes for this generic dispatch.
+- [ ] Spore-Bound Essence203852/402642 must complete its own root use before the forced402636 cast begins, preserve the source2000ms child cast, apply the source300000ms transform202340/display88121, expire naturally and retain item cooldown.
+
+Full catalog diagnostics distinguish pipeline-admissibility from complete toy lifecycle/native presentation. A handled root is not proof that arbitrary dummy scripts or missing summon definitions work.
+
 ## Natural shared hearthstone charge coverage
 
 - [x] Hiveborne281136/1310234 and Shadeweaver281615/1311934 naturally recover the shared SpellCategory2309 charge: source MaxCharges1 and ChargeRecoveryTime1800000ms.
