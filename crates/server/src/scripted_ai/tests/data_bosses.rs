@@ -43,6 +43,8 @@ mod azure_telash;
 mod azure_telash_return;
 #[path = "broggok.rs"]
 mod broggok;
+#[path = "bromach.rs"]
+mod bromach;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "crawth.rs"]
