@@ -568,7 +568,7 @@ mod copy_tests {
             (name, display_id)
         }).collect();
         join_party(app.world_mut(), owner, &run, &run.members).unwrap();
-        let groups = app.world().resource::<GroupRegistry>();
+        let mut groups = app.world_mut().resource_mut::<GroupRegistry>();
         let group = groups.group_id_of(30).unwrap();
         let roster = groups.build_roster(group, &OnlineView::new()).unwrap();
         assert_eq!(roster.members.len(), 5);
