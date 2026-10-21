@@ -86,7 +86,7 @@ fn insert_source_spells(
     let mut seen = HashSet::new();
     let mut passives = Vec::new();
     for &id in slots {
-        if id == 0 || !seen.insert(id) {
+        if id == 0 {
             continue;
         }
         let Some(spell) = world.resource::<SpellStore>().get(id) else {
@@ -98,6 +98,9 @@ fn insert_source_spells(
         }
         if super::is_passive(spell) {
             passives.push(id);
+            continue;
+        }
+        if !seen.insert(id) {
             continue;
         }
         insert_button(bar, id, button_kind(spell, possessed), possessed);
