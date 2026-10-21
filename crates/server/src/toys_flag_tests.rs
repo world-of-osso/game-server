@@ -25,7 +25,7 @@ fn flag_harness(path: &std::path::Path) -> (Harness, u64) {
     (h, character)
 }
 
-fn kill_flag_enemy(h: &mut Harness, x: f32, name: &str, race: u8) -> Entity {
+fn spawn_flag_player(h: &mut Harness, x: f32, name: &str, race: u8) -> Entity {
     let db = &h.app.world().resource::<GameDatabase>().db;
     let (character, _) = persistence::create_character(db, 2, name, race, 1).unwrap();
     let enemy = spawn_player(&mut h.app, 1, x);
@@ -35,6 +35,11 @@ fn kill_flag_enemy(h: &mut Harness, x: f32, name: &str, race: u8) -> Entity {
         UnitFactionTemplate(template),
         crate::persistence::ClientId(character),
     ));
+    enemy
+}
+
+fn kill_flag_enemy(h: &mut Harness, x: f32, name: &str, race: u8) -> Entity {
+    let enemy = spawn_flag_player(h, x, name, race);
     crate::combat::kill_unit(h.app.world_mut(), h.caster, enemy);
     h.advance(2);
     assert_eq!(h.app.world().get::<Health>(enemy).unwrap().current, 0.0);
@@ -191,4 +196,41 @@ fn toy_coverage_flag51640_changed_source_root_is_not_admitted_as_a_generic_dummy
     );
     assert!(!h.inbox.go.iter().any(|go| go.spell_id == 51640));
     assert!(!h.inbox.cooldowns.iter().any(|cd| cd.spell_id == 51640));
+}
+
+#[test]
+fn toy_coverage_dead_aura_native_duration_expires_while_ordinary_buffs_end_on_death() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = flag_harness(&dir.path().join("dead-aura.redb"));
+    let enemy = spawn_flag_player(&mut h, 2.0, "Slowedorc", 2);
+    for spell in [23113, 774] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: h.caster,
+                target: enemy,
+                spell_id: spell,
+                effect_mask: u32::MAX,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(h.app.world(), enemy, spell));
+    }
+    crate::combat::kill_unit(h.app.world_mut(), h.caster, enemy);
+    h.advance(2);
+    assert!(crate::auras::has_aura(h.app.world(), enemy, 23113));
+    assert!(!crate::auras::has_aura(h.app.world(), enemy, 774));
+    h.advance(115);
+    assert!(crate::auras::has_aura(h.app.world(), enemy, 23113));
+    h.advance(10);
+    assert!(!crate::auras::has_aura(h.app.world(), enemy, 23113));
+    assert!(
+        !h.app
+            .world()
+            .get::<UnitAuras>(enemy)
+            .unwrap()
+            .auras
+            .iter()
+            .any(|a| a.spell_id == 23113)
+    );
 }
