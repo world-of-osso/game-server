@@ -219,6 +219,8 @@ pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
 pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
+/// TC Unit.cpp1725: Player-only physical armor penetration.
+pub const MOD_ARMOR_PENETRATION_PCT: u32 = 280;
 pub const MOD_INCREASE_VEHICLE_FLIGHT_SPEED: u32 = 206;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
 pub const MOD_INCREASE_FLIGHT_SPEED: u32 = 208;
@@ -470,7 +472,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_VERSATILITY
         | MOD_ATTACK_POWER_PCT
         | MOD_RANGED_ATTACK_POWER_PCT
-        | MOD_DAMAGE_DONE_VERSUS => StatMod,
+        | MOD_DAMAGE_DONE_VERSUS
+        | MOD_ARMOR_PENETRATION_PCT => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL

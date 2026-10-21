@@ -21,6 +21,12 @@ Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diag
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura280 ARMOR_PENETRATION_PCT
+
+TC `Unit.cpp:1720–1742`: Players only; sum aura280 with armor-penetration rating, clamp0–100, then reduce only `min(armor,(armor+levelConstant)/3)` where victim-level constant is400+85L below60 or400+85L+4.5×85×(L−59) otherwise. Native450990 Martial Precision supplies12 and177112 Pureshot Aura100. Read-only active70448 query found seven280 spells and no matching `spell_equipped_items` rows, so these native inputs need no weapon restriction. Rating/equipment behavior outside those inputs is unqualified; no new system.
+
+Ignored REDf7a2e1de2/13a6566c9: native physical spell12294 damage math, attacker UnitLevel80/native ArmorConstant880, target armor2000. Native12% should produce effective1870 armor against victim10 and1760 against60; removal restores2000. Native100% still leaves916.6667 against10; adding12 cannot exceed100. Actual controlled-NPC aura application remains Player-only exclusion. `census_tail_280 --include-ignored` gives1PASS/2FAIL26.76s; unchanged damage305 instead of penetration and expected489 at cap prove missing consumer. `/home/osso/.worktrees/logs/census-tail/280-red.log`. Minimal consumer shared by physical spells, autoattacks and forecast committed; GREEN pending. Autoattack live/UDP and whole-ability parity are not certified by these bounded spell-math proofs.
+
 ## Aura206 and native208/209 correction
 
 TC `SpellAuraDefines.h:293–297` defines206 vehicle-flight,207 mounted-flight,208 normal-flight,209 mounted-always; the previous runtime incorrectly called208 mounted-always. TC `Unit.cpp:8833–8854` takes strongest positive206 for player-controlled NPCs, strongest207 ×209 factors for mounted units, and summed206+208 for other units;211 competes with the stacking factor. Preserve normalization, slows and removal. Native125883 index1 supplies206+60,48403 index1 supplies208+10,13587 index1 supplies209+3 and33948 index1 supplies206+220. Existing `UNIT_FLAG_PLAYER_CONTROLLED` selects the NPC branch; no new ownership subsystem.

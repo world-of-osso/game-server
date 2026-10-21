@@ -697,6 +697,7 @@ fn armor_reduced(
         &caster_scaling,
         &target_scaling,
         world.get_resource::<ArmorConstants>(),
+        world.get::<crate::auras::AuraStatMods>(caster),
     )
 }
 

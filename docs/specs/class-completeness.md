@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Generic armor-penetration census slice — 2026-10-21
+
+- Native280 sums on Players only, clamps0–100 at physical armor reduction and applies to the TC victim-level penetrable-armor cap, not all armor. Preserve native mitigation and reversible removal; controlled NPCs gain no Player-only penetration.
+- Native450990 Martial Precision12% and177112 Pureshot Aura100% qualify the physical spell boundary. The same capped-armor consumer serves autoattacks and their forecast. All seven active70448 aura280 spells have no equipped-item requirement rows; weapon-filter/rating behavior outside these native inputs remains unqualified. Do not invent a new equipment or rating system. [Source and proof ledger](../diagnostics/census-tail-70448.md).
+
 ## Generic flight-speed census slice — 2026-10-21
 
 - Unmounted players and uncontrolled NPCs sum native206 vehicle-flight and208 normal-flight percentages. Player-controlled NPCs instead take strongest positive206; mounted units instead take strongest207 with native209 mounted-always factors. Preserve211 nonstacking bonus, slows, normalization and removal.

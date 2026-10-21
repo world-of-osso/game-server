@@ -52,7 +52,6 @@ fn penetration_fixture() -> Harness {
 }
 
 #[test]
-#[ignore = "RED: native280 player armor penetration with victim-level cap"]
 fn census_tail_280_native_martial_precision_changes_physical_mitigation_then_removes() {
     let mut h = penetration_fixture();
     let spell = world_db().unwrap().store.get(12294).unwrap();
@@ -92,7 +91,6 @@ fn census_tail_280_native_martial_precision_changes_physical_mitigation_then_rem
 }
 
 #[test]
-#[ignore = "RED: native280 sums then clamps at100 without ignoring capped armor"]
 fn census_tail_280_native_hundred_percent_is_capped_and_does_not_stack_past_cap() {
     let mut h = penetration_fixture();
     let spell = world_db().unwrap().store.get(12294).unwrap();
@@ -120,7 +118,6 @@ fn census_tail_280_native_hundred_percent_is_capped_and_does_not_stack_past_cap(
 }
 
 #[test]
-#[ignore = "RED control:280 is Player-only, even on controlled NPCs"]
 fn census_tail_280_native_npc_does_not_gain_player_armor_penetration() {
     let mut h = penetration_fixture();
     let npc = h.npc;

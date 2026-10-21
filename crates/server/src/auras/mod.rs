@@ -1533,6 +1533,8 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     // NPCs that happen to carry the follower class-stat bridge.
     if world.get::<Player>(unit).is_none() {
         stats.primary_base_pct = UnitStats::default();
+        // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
+        combat.armor_penetration_pct = 0.0;
     }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
