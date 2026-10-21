@@ -69,8 +69,11 @@ pub(super) fn filter_heal_targets(world: &World, caster: Entity, units: &mut Vec
     if units.len() <= HEAL_TARGETS {
         return;
     }
-    units.shuffle(&mut rand::thread_rng());
     units.sort_by_key(|unit| read_target_priority(world, caster, *unit));
+    let boundary = read_target_priority(world, caster, units[HEAL_TARGETS - 1]);
+    let first = units.partition_point(|unit| read_target_priority(world, caster, *unit) < boundary);
+    let end = units.partition_point(|unit| read_target_priority(world, caster, *unit) <= boundary);
+    units[first..end].shuffle(&mut rand::thread_rng());
     units.truncate(HEAL_TARGETS);
 }
 
