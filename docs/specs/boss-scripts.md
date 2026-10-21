@@ -6,6 +6,14 @@
 - Explicit lead instruction: use current Retail Lua, not legacy handlers. Where Retail uses timeline conditionals unavailable to this server, keep ongoing requests by consuming the Lua's listed durations in source order and record the unexecutable condition context as a named gap. This is a declared partial scheduling policy, not claimed execution of Blizzard's timeline.
 - Take ordinary child spell requests, implicit targets, radii, triggers and effects from70448. Missing selectors become named gaps; do not invent alternate IDs, targets, effects, stats or follower205 difficulty rows. Require native Normal1 and Follower205 behavior proof per boss.
 
+## Kokia current-Retail partial boundary
+
+- Current LittleWigs2777a9d Retail Kokia189232/2606/map2521bit0 (TC source ordinal1). Primary is authenticated by pinned Ruby header/instance and70448 journal2485/5354/display106851, not guessed from appearance. Boss AI is explicitly local Lua-backed, not attributed to nonexistent TC boss code.
+- Current Retail source-order policy: Ritual372864 first8s/repeat40s; Molten Boulder current372110 explicitly names native child372107, first19s then listed20/19s alternation; Searing Blows372858 first28s/repeat40s. `KOKIA_TIMELINE_CONDITION_CONTEXT` preserves unknown shared40-counter/conditional context. Do not use legacy7.3/14.5/21.6 clocks.
+- Native implicit targets remain defaults: Ritual self-centered area Dummy3; Boulder existing-destination87 defaults caster because no authored selector; Searing Any25 uses the current victim. Preserve actual native2.5s Boulder casting and Searing aura23→372859 weapon damage/duration/costs/cast flags.
+- Named gaps: `KOKIA_RITUAL_SELECTOR_SUMMON_UNSCRIPTED` (current372864 has no child; never substitute legacy372863/1309540 or fabricate Firestorm summons), `KOKIA_MOLTEN_BOULDER_PROJECTILE_UNSCRIPTED` (372107 Dummy has no authored projectile/area script), `KOKIA_SEARING_WOUNDS_SCRIPT_UNPROVEN` (372859 trigger metadata alone does not certify Wounds behavior). Full fight/follower clear/native visuals/loot/persistence remain unproved.
+- `encounter_summons.py --encounter kokia` prepares only authenticated primary2606bit0 and local `boss_kokia_blazehoof`; preserve actor stats/difficulties/models/addons/population and unrelated credit. No205 difficulty or unsourced adds/placements. Require native Normal1/Follower205 ongoing clocks/damage/reset/copy credit/corpse proof.
+
 ## Melidrussa current-Retail partial boundary
 
 - Local Lua-backed188252/2609/map2521bit1. TC a352b1fa header/instance authenticate the primary (source ordinal0), not a boss AI. Current LittleWigs2777a9d Retail wrappers1307297/1307308 identify native children396044/1311543; old6.8/12.1 legacy clocks are not used.
