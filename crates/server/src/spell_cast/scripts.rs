@@ -34,7 +34,9 @@ mod swiftmend;
 pub(super) use soul_of_the_forest::direct_multiplier as soul_of_the_forest_direct_multiplier;
 pub(crate) use soul_of_the_forest::snapshot_amount as snapshot_soul_of_the_forest;
 mod touch_of_death;
+mod windwalker;
 pub(crate) use chrono_flame::record_health_change;
+pub(crate) use windwalker::ordinary_combo_cast;
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
@@ -1288,6 +1290,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        100780 => Some(windwalker::tiger_palm_hit),
         swiftmend::SWIFTMEND => Some(swiftmend::hit),
         soul_of_the_forest::REGROWTH => Some(clearcasting::regrowth_hit),
         soul_of_the_forest::REJUVENATION => Some(soul_of_the_forest::consume_after_heal),

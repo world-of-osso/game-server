@@ -2371,6 +2371,7 @@ pub(crate) fn execute_cast(
     }
     take_cast_resources(world, caster, spell, &costs);
     start_cooldowns(world, caster, spell);
+    scripts::ordinary_combo_cast(world, caster, spell);
     world
         .get_mut::<SpellHistory>(caster)
         .expect("ordinary successful cast initialized its history")
