@@ -238,7 +238,7 @@ pub(crate) fn inspect_follower_decision(world: &mut World, unit: Entity) -> serd
             );
         }
     }
-    serde_json::json!({"unit":unit.to_bits(),"spec":follower.profile.spec_id,"target":target.map(Entity::to_bits),
+    serde_json::json!({"unit":unit.to_bits(),"spec":follower.profile.spec_id,"melee":follower.profile.melee,"role":format!("{:?}",follower.profile.role),"target":target.map(Entity::to_bits),
         "enemies":enemies.iter().map(|(enemy,_)| enemy.to_bits()).collect::<Vec<_>>(),
         "self_hazard":super::hazards::target_is_hazardous(world,unit,unit),
         "approach":target.map(|target| super::hazards::approach_is_unsafe(world,unit,target)),

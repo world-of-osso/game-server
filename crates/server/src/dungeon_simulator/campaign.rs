@@ -642,6 +642,11 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
 #[test]
 #[ignore = "explicit alternate-roster qualification; use Bo/Lantha party entries"]
 fn alternate_roster_attackers_participate_in_the_first_native_fight() {
+    let mut logging = App::new();
+    logging.add_plugins(bevy::log::LogPlugin {
+        filter: "warn,game_server::followers::kit_ai=debug,game_server::followers::ai=debug".into(),
+        ..default()
+    });
     let _scope = crate::random::seed_scope(11);
     let mut run = spawn_run(11, &mut None).unwrap();
     for _ in 0..600 {
