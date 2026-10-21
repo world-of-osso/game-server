@@ -25,6 +25,7 @@ pub fn item_instance_stats(
     tables: &ItemScalingTables,
 ) -> Result<ItemStats, String> {
     let mut resolved = *item;
+    apply_crafted_stat_choices(&mut resolved, &instance.crafted_stats)?;
     if let Some(level) = instance.item_level_override {
         if level == 0 || !tables.rand_prop_points.contains_key(&level) {
             return Err(format!("item level {level} has no native stat budget"));
@@ -39,6 +40,24 @@ pub fn item_instance_stats(
         inventory_type,
         tables,
     ))
+}
+
+fn apply_crafted_stat_choices(item: &mut ItemScaling, choices: &[i8]) -> Result<(), String> {
+    if choices.len() > 2 {
+        return Err("an item has at most two crafted stat placeholders".into());
+    }
+    for (index, &stat) in choices.iter().enumerate() {
+        if !matches!(stat, 3 | 4 | 5 | 7 | 32 | 36 | 40 | 49 | 61..=63 | 71..=74) {
+            return Err(format!("crafted item stat {stat} is not modeled"));
+        }
+        let placeholder = 24 + index as i8;
+        for entry in &mut item.stats {
+            if entry.stat == placeholder {
+                entry.stat = stat;
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -2,6 +2,9 @@
 use shared::components::ItemStatBlock;
 use std::collections::HashMap;
 
+#[path = "../spell_scaling_data.rs"]
+mod scaling_data;
+
 #[derive(Clone, Copy, Default)]
 pub struct EnchantEffect {
     pub kind: u32,
@@ -31,19 +34,113 @@ pub struct EnchantContribution {
 }
 
 pub fn enchantment_stats(
-    _id: u32,
-    _level: u8,
-    _tables: &EnchantmentTables,
+    id: u32,
+    level: u8,
+    tables: &EnchantmentTables,
 ) -> Result<EnchantContribution, String> {
-    Ok(EnchantContribution::default())
+    let mut result = EnchantContribution::default();
+    if id == 0 {
+        return Ok(result);
+    }
+    let enchant = tables
+        .enchants
+        .get(&id)
+        .ok_or_else(|| format!("native enchantment {id} absent"))?;
+    for effect in &enchant.effects {
+        match effect.kind {
+            0 => {}
+            3 => result
+                .equip_spells
+                .push(u32::try_from(effect.argument).map_err(|e| e.to_string())?),
+            5 => {
+                let amount = scaled_amount(enchant, effect, level)?;
+                add_stat(&mut result.stats, effect.argument, amount)?;
+            }
+            kind => {
+                return Err(format!(
+                    "enchantment {id} effect type {kind} is not modeled"
+                ));
+            }
+        }
+    }
+    Ok(result)
 }
 
 pub fn gem_stats(
-    _item: u32,
-    _level: u8,
-    _tables: &EnchantmentTables,
+    item: u32,
+    level: u8,
+    tables: &EnchantmentTables,
 ) -> Result<EnchantContribution, String> {
-    Ok(EnchantContribution::default())
+    let enchant = tables
+        .gems
+        .get(&item)
+        .ok_or_else(|| format!("native gem item {item} has no GemProperties enchant"))?;
+    enchantment_stats(*enchant, level, tables)
+}
+
+fn scaled_amount(enchant: &Enchantment, effect: &EnchantEffect, level: u8) -> Result<f32, String> {
+    if enchant.scaling_class == 0 {
+        return Ok(effect.points as f32);
+    }
+    let level = level.max(enchant.min_level);
+    let level = if enchant.max_level == 0 {
+        level
+    } else {
+        level.min(enchant.max_level)
+    };
+    let column = scaling_column(enchant.scaling_class)?;
+    let index = usize::from(level)
+        .checked_sub(1)
+        .ok_or("enchantment level zero")?;
+    let row = scaling_data::SPELL_SCALING
+        .get(index)
+        .ok_or_else(|| format!("enchantment scaling level {level} absent"))?;
+    Ok((row[column] * effect.coefficient).round())
+}
+
+fn scaling_column(class: i32) -> Result<usize, String> {
+    match class {
+        -1 | -7 => Ok(0),
+        -2 => Ok(1),
+        -3 => Ok(2),
+        -4 => Ok(3),
+        -5 => Ok(4),
+        -6 => Ok(5),
+        -8 => Ok(6),
+        -9 => Ok(7),
+        -10 => Ok(8),
+        _ => Err(format!("unmodeled enchantment scaling class {class}")),
+    }
+}
+
+fn add_stat(block: &mut ItemStatBlock, stat: i32, value: f32) -> Result<(), String> {
+    match stat {
+        3 | 4 | 5 | 7 | 71..=74 => add_primary(block, stat, value),
+        32 => block.secondary.crit += value,
+        36 => block.secondary.haste += value,
+        40 => block.secondary.versatility += value,
+        49 => block.secondary.mastery += value,
+        61 => block.secondary.speed += value,
+        62 => block.secondary.leech += value,
+        63 => block.secondary.avoidance += value,
+        _ => return Err(format!("unmodeled enchantment item stat {stat}")),
+    }
+    Ok(())
+}
+
+fn add_primary(block: &mut ItemStatBlock, stat: i32, value: f32) {
+    if matches!(stat, 4 | 71 | 72 | 74) {
+        block.primary.strength += value;
+    }
+    if matches!(stat, 3 | 71 | 72 | 73) {
+        block.primary.agility += value;
+    }
+    if matches!(stat, 5 | 71 | 73 | 74) {
+        block.primary.intellect += value;
+    }
+    if stat == 7 {
+        block.primary.stamina += value;
+    }
 }
 
 #[cfg(test)]
