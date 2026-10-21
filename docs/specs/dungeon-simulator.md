@@ -18,7 +18,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 
 ## Authored route
 
-Stockade's committed `route` lists a unique pack sequence and graph-source 2D anchor for every pack. The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.
+Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-source 2D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.
 
 ## How it works
 
