@@ -638,6 +638,7 @@ pub(crate) struct ItemData<'w> {
     templates: Option<Res<'w, ItemTemplates>>,
     tables: Option<Res<'w, ItemScalingTables>>,
     forever_tables: Option<Res<'w, ForeverItemScalingTables>>,
+    instances: Option<Res<'w, NativeItemInstances>>,
 }
 
 impl ItemData<'_> {
@@ -661,15 +662,13 @@ impl ItemData<'_> {
     }
 
     /// Stat blocks of every equipped item and the main- and off-hand weapons.
-    fn gear(&self, equipped: Option<&EquippedItems>) -> Gear {
-        let mut gear = Gear {
-            blocks: Vec::new(),
-            main_hand: WeaponDamage::UNARMED,
-            off_hand: None,
-            has_weapon: false,
-            shield_armor: None,
-            health_regen: 0.0,
-        };
+    fn gear(
+        &self,
+        equipped: Option<&EquippedItems>,
+        modifiers: Option<&EquippedItemModifiers>,
+        level: u8,
+    ) -> Gear {
+        let mut gear = Gear::default();
         let Some(equipped) = equipped else {
             return gear;
         };
@@ -684,28 +683,88 @@ impl ItemData<'_> {
             let template = templates
                 .get(source, item_id)
                 .unwrap_or_else(|| panic!("equipped item {item_id} has no {source:?} definition"));
-            let stats = item_stats(template, self.scaling_tables(source));
-            gear.blocks.push(stats.block);
-            gear.health_regen += stats.health_regen;
-            if template.inventory_type == INVTYPE_SHIELD && slot == EquipmentSlot::OffHand {
-                gear.shield_armor = Some(stats.block.secondary.armor);
-            }
-            match (slot, stats.weapon) {
-                (EquipmentSlot::MainHand, Some(weapon)) => {
-                    gear.main_hand = weapon;
-                    gear.has_weapon = true;
-                }
-                (EquipmentSlot::OffHand, Some(weapon)) => {
-                    gear.off_hand = Some(weapon);
-                    gear.has_weapon = true;
-                }
-                _ => {}
-            }
+            let properties = modifiers.and_then(|modifiers| {
+                modifiers
+                    .items
+                    .iter()
+                    .find(|(key, _)| *key == slot)
+                    .map(|(_, state)| state)
+            });
+            let stats = self.equipped_stats(template, source, properties, level);
+            gear.apply_item(slot, template, stats);
         }
         gear
     }
+
+    fn equipped_stats(
+        &self,
+        template: &crate::item_templates::ItemTemplate,
+        source: shared::item_data::ItemDefinitionSource,
+        properties: Option<&server::item_instance::ItemInstanceModifiers>,
+        level: u8,
+    ) -> crate::item_stats::ItemStats {
+        let tables = self.scaling_tables(source);
+        let Some(properties) = properties else {
+            return item_stats(template, tables);
+        };
+        assert_eq!(
+            source,
+            shared::item_data::ItemDefinitionSource::Retail,
+            "Retail instance modifiers cannot use another product's item tables"
+        );
+        let native = self
+            .instances
+            .as_deref()
+            .expect("item instance modifiers require native bonus/enchantment tables");
+        compute_native_instance_stats(template, properties, level, native, tables)
+    }
 }
 
+fn compute_native_instance_stats(
+    template: &crate::item_templates::ItemTemplate,
+    properties: &server::item_instance::ItemInstanceModifiers,
+    level: u8,
+    native: &NativeItemInstances,
+    tables: &ItemScalingTables,
+) -> crate::item_stats::ItemStats {
+    let modified = server::item_instance::bonuses::apply_item_bonuses(
+        &template.scaling,
+        &properties.bonus_list,
+        &native.bonuses,
+    )
+    .unwrap_or_else(|error| panic!("resolve equipped item bonuses: {error}"));
+    let mut stats = server::item_instance::item_instance_stats(
+        &modified.scaling,
+        template.inventory_type,
+        properties,
+        tables,
+    )
+    .unwrap_or_else(|error| panic!("resolve equipped item stats: {error}"));
+    let mut blocks = vec![stats.block];
+    blocks.extend(instance_enchant_blocks(properties, level, &native.enchants));
+    let (primary, secondary) = sum_equipment_stats(&blocks);
+    stats.block = ItemStatBlock { primary, secondary };
+    stats
+}
+
+fn instance_enchant_blocks(
+    properties: &server::item_instance::ItemInstanceModifiers,
+    level: u8,
+    tables: &server::item_instance::enchants::EnchantmentTables,
+) -> Vec<ItemStatBlock> {
+    use server::item_instance::enchants::{enchantment_stats, gem_stats};
+    let enchant = enchantment_stats(properties.enchant, level, tables)
+        .unwrap_or_else(|error| panic!("resolve equipped enchant: {error}"));
+    let mut blocks = vec![enchant.stats];
+    for &gem in &properties.gems {
+        let contribution = gem_stats(gem, level, tables)
+            .unwrap_or_else(|error| panic!("resolve equipped gem {gem}: {error}"));
+        blocks.push(contribution.stats);
+    }
+    blocks
+}
+
+#[derive(Default)]
 struct Gear {
     blocks: Vec<ItemStatBlock>,
     main_hand: WeaponDamage,
@@ -713,6 +772,32 @@ struct Gear {
     has_weapon: bool,
     shield_armor: Option<f32>,
     health_regen: f32,
+}
+
+impl Gear {
+    fn apply_item(
+        &mut self,
+        slot: EquipmentSlot,
+        template: &crate::item_templates::ItemTemplate,
+        stats: crate::item_stats::ItemStats,
+    ) {
+        self.blocks.push(stats.block);
+        self.health_regen += stats.health_regen;
+        if template.inventory_type == INVTYPE_SHIELD && slot == EquipmentSlot::OffHand {
+            self.shield_armor = Some(stats.block.secondary.armor);
+        }
+        match (slot, stats.weapon) {
+            (EquipmentSlot::MainHand, Some(weapon)) => {
+                self.main_hand = weapon;
+                self.has_weapon = true;
+            }
+            (EquipmentSlot::OffHand, Some(weapon)) => {
+                self.off_hand = Some(weapon);
+                self.has_weapon = true;
+            }
+            _ => {}
+        }
+    }
 }
 
 /// `InventoryType` Shield.
@@ -745,6 +830,7 @@ type StatsQuery = (
     &'static Level,
     Option<&'static ActiveSpec>,
     Option<&'static EquippedItems>,
+    Option<&'static EquippedItemModifiers>,
     Option<&'static KnownSpells>,
     Option<&'static StatModifiers>,
     Option<&'static CharacterStats>,
@@ -763,6 +849,7 @@ type StatsFilter = (
         Changed<Level>,
         Changed<ActiveSpec>,
         Changed<EquippedItems>,
+        Changed<EquippedItemModifiers>,
         Changed<KnownSpells>,
         Changed<StatModifiers>,
     )>,
@@ -801,6 +888,7 @@ pub(crate) fn update_character_stats(
         level,
         spec,
         equipped,
+        instance_modifiers,
         known,
         mods,
         previous_stats,
@@ -816,7 +904,7 @@ pub(crate) fn update_character_stats(
         };
         let class = class_info(classes.as_deref(), class_id);
         let (primary_stat, mastery_coefficient) = spec_inputs(class, spec_id, spells.as_deref());
-        let gear = items.gear(equipped);
+        let gear = items.gear(equipped, instance_modifiers, level.0);
         let (gear_primary, gear_ratings) = sum_equipment_stats(&gear.blocks);
         let input = StatInputs {
             class: class_id,

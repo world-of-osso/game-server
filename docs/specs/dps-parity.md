@@ -32,6 +32,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction and SimC action normalization.
 - `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution; production equipment integration remains pending.
 - `crates/server/src/item_instance/{bonuses,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state.
+- `crates/server/src/stats.rs` — production stat consumer of slot-bound instance properties; inventory delivery/startup wiring remains pending.
 
 ## Tests asserting this spec
 
@@ -39,7 +40,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata and direct/periodic action accounting.
 - `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
 - `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six passing native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions; runtime wiring remains pending.
-- `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration regression; genuine RED recorded before loader implementation, GREEN pending.
+- `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration and enchant/gem join regressions; both passed within the 15-case library proof.
+- `crates/server/src/stats_instance_tests.rs` — actual StatsPlugin modifier-only change on native chest 271468/enchant 7987; genuine RED missed +50 Strength before consumer wiring; GREEN pending.
 
 ## Known gaps (current cycle)
 
