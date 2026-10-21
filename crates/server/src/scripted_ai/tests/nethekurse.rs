@@ -590,7 +590,6 @@ fn encounter_coverage_nethekurse_shadow_sear_caps_two_authentic_event_targets() 
 }
 
 #[test]
-#[ignore = "RED: source default-slot patrol pause not ported"]
 fn encounter_coverage_nethekurse_peon_reaction_pauses_authored_patrol_five_seconds() {
     let (mut h, boss, _, peons) = populated_nethekurse(1);
     assert!(
@@ -630,6 +629,8 @@ fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consump
         assert_eq!(templates[&17471].script_name, "npc_lesser_shadow_fissure");
         assert!(h.creatures_of(18370).is_empty());
         observe_admissions(&mut h, boss);
+        h.app
+            .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30745, Some(boss), false)
             .expect("native ordinary Target Fissures");
         h.advance(0.2);
@@ -678,19 +679,38 @@ fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consump
         let position = *h.app.world().get::<Position>(fissure).unwrap();
         let player = h.player();
         h.app.world_mut().entity_mut(player).insert(position);
-        let before = h.health(player).current;
+        let victim = Entity::try_from_bits(
+            spell_gos(&h, boss, 30744)[0]
+                .target
+                .expect("source-selected convert"),
+        )
+        .unwrap();
+        let before = h.health(victim).current;
         h.advance(2.2);
+        let events = &h
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
         assert!(
-            h.inbox(0).log.iter().any(|event| {
+            events.iter().any(|event| {
                 event.source == Some(fissure.to_bits())
-                    && event.target == Some(player.to_bits())
+                    && event.target == Some(victim.to_bits())
                     && event.spell_id == Some(32251)
                     && event.kind == CombatLogKind::Damage
                     && event.amount > 0
             }),
-            "actual native Consumption32250→32251 damages the entrant"
+            "native Consumption32251 damages the actual targeted event convert"
         );
-        assert!(h.health(player).current < before);
+        assert!(h.health(victim).current < before);
+        assert!(
+            !events.iter().any(|event| {
+                event.spell_id == Some(32251)
+                    && event.kind == CombatLogKind::Damage
+                    && event.target == Some(player.to_bits())
+            }),
+            "TDB32251 StringId condition excludes even the co-located entrant"
+        );
     }
 }
 
@@ -731,10 +751,9 @@ fn encounter_coverage_nethekurse_evade_keeps_peon_count_and_rearms_dark_spin() {
         instance_script::get_boss_state(h.app.world_mut(), map, NETHEKURSE_BIT),
         Some(EncounterState::NotStarted)
     );
-    assert_eq!(
-        h.health(boss).current,
-        h.health(boss).max,
-        "ordinary evade restores native health"
+    assert!(
+        h.health(boss).current < h.health(boss).max * 0.25,
+        "source Reset does not heal; ordinary health regeneration is a separate system"
     );
     let home = *h.app.world().get::<Position>(boss).unwrap();
     h.app.world_mut().entity_mut(player).insert(Position {
@@ -748,7 +767,7 @@ fn encounter_coverage_nethekurse_evade_keeps_peon_count_and_rearms_dark_spin() {
         2,
         "Reset preserves the one dead event convert"
     );
-    h.hit_pct(boss, 76.0);
+    h.hit_pct(boss, 1.0);
     h.advance(0.2);
     assert_eq!(
         requested_times(&h, 30502).len(),
