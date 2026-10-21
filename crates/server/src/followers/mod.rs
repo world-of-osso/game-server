@@ -45,6 +45,7 @@ mod pull_sources_tests;
 mod pull_stat_provenance_tests;
 mod spawning;
 mod stockade_diagnostic;
+mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]

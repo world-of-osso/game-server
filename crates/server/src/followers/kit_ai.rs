@@ -17,7 +17,7 @@ pub(super) fn update(
     party: &[Entity],
     enemy: Option<Entity>,
 ) -> bool {
-    let entries: Vec<_> = world
+    let mut entries: Vec<_> = world
         .get_resource::<FollowerCatalog>()
         .into_iter()
         .flat_map(|catalog| &catalog.kits)
@@ -27,6 +27,7 @@ pub(super) fn update(
     if entries.is_empty() {
         return false;
     }
+    super::tank_defense::sort_major_entries(world, unit, &mut entries);
     let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let enemies = ai::engaged_enemies(world, follower, unit, party);
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
@@ -230,6 +231,15 @@ fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
         != Some(entry.spell_id)
 }
 
+fn health_allows(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
+    if entry.conditions.tank_defensive_sequence {
+        return super::tank_defense::allows(world, unit, health_fraction(world, unit));
+    }
+    entry.conditions.health_below.is_none_or(|threshold| {
+        health_fraction(world, target).is_some_and(|health| health < threshold)
+    })
+}
+
 fn health_and_auras_allow(
     world: &World,
     unit: Entity,
@@ -249,9 +259,7 @@ fn health_and_auras_allow(
     {
         return false;
     }
-    if condition.health_below.is_some_and(|threshold| {
-        health_fraction(world, target).is_none_or(|health| health >= threshold)
-    }) {
+    if !health_allows(world, unit, target, entry) {
         return false;
     }
     let aura_target = if entry.slot == Slot::Mitigation {
