@@ -57,3 +57,13 @@ Evidence: `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/sim-batch2/{
 ## See Also
 
 - [[follower-data]] — full native class/spec kits and tank policies.
+
+## Ready pulls and recovery — 2026-10-20
+
+User policies `SCRIPTED_BOSS_PULL_WHEN_READY` and `CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` now admit the next single authored formation when the complete admitted party is alive, in its copy, out of combat and at full HP/mana, with a healer and no explicit target hazard. No numerical forecast is fabricated; full positive tankHP preserves the30% reserve. Overlap still uses native forecast composition. Exact native regressions: scripted boss refusal and short-fight→cleared→Wait(Measurements) RED2/2 at65bb1e5f1, GREEN2/2 at aefef7da6 (13.56s), including no-add and dead-healer controls.
+
+Batch4 at aefef7da6/P03cebdb executed seeds1–10:0clears/0wipes/8stalls/2timeouts/0blocks. Seeds4/10 retain the Moloch Polymorph loop; the other eight stop during real OOC mana recovery. Seed3 mana185.5→2193.2 over60s proves the former no-damage/no-leader-movement stall rule was wrong. Resource gains now count as party progress; a full-resource stationary party still does not manufacture progress. Native Regrowth-spend→OOC-recovery regression RED plus no-change control PASS at3d402c97b (14.03s); GREEN pending. Evidence `sim-batch4/` in the current diagnostics log directory.
+
+### FOLLOWER_REFRESHMENT_NPC_CONSUMER_UNIMPLEMENTED
+
+Drink audit verified local `follower_spec_kit`: Fire63 has utility190336, minimum level5. `spell_effect`190336 is only Dummy3/self target, no item or triggered child. Pinned [TrinityCore a352b1fa spell_mage.cpp526–551](https://github.com/TrinityCore/TrinityCore/blob/a352b1fa/src/server/scripts/Spells/spell_mage.cpp#L526-L551) runs its callback only for a Player caster, choosing116136 solo or167145 when grouped. Meredy remains an NPC under the approved player-spec bridge; its refreshment script, conjured-item/table consumer and follower bags are unimplemented. A vendor water definition is not evidence that Crenna owns an item. Do not grant water, tag the NPC as a Player, or cast an unsourced consumption spell. Plain native OOC mana regeneration remains active; no drinking-speed benefit is claimed.

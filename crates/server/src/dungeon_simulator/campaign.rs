@@ -262,6 +262,7 @@ struct Run {
     last_progress: f64,
     event_cursor: usize,
     last_owner_position: Vec3,
+    last_resources: Vec<(Option<f32>, Option<f32>)>,
 }
 
 pub(super) fn run(seed: u64) -> Result<Report, String> {
@@ -367,6 +368,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         last_progress: 0.0,
         event_cursor: 0,
         last_owner_position,
+        last_resources: Vec::new(),
         report: Report {
             seed,
             status: "running".into(),
@@ -664,7 +666,33 @@ impl Run {
         });
     }
 
+    fn observe_resource_gain(&mut self) -> bool {
+        let world = self.app.world();
+        let current: Vec<_> = self
+            .members()
+            .map(|member| {
+                (
+                    world.get::<Health>(member).map(|health| health.current),
+                    world.get::<Mana>(member).map(|mana| mana.current),
+                )
+            })
+            .collect();
+        let increased = |before: Option<f32>, after: Option<f32>| {
+            before
+                .zip(after)
+                .is_some_and(|(before, after)| after > before)
+        };
+        let gained = self
+            .last_resources
+            .iter()
+            .zip(&current)
+            .any(|(before, after)| increased(before.0, after.0) || increased(before.1, after.1));
+        self.last_resources = current;
+        gained
+    }
+
     fn stalled(&mut self) -> bool {
+        let resource_gain = self.observe_resource_gain();
         let world = self.app.world();
         let events = &world
             .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
@@ -683,7 +711,7 @@ impl Run {
         self.event_cursor = events.len();
         let position = world.get::<Position>(self.party.owner).unwrap();
         let position = Vec3::new(position.x, 0.0, position.z);
-        if damage || position != self.last_owner_position {
+        if damage || position != self.last_owner_position || resource_gain {
             self.last_progress = self.now();
         }
         self.last_owner_position = position;
@@ -692,10 +720,10 @@ impl Run {
         }
         self.report.status = "stalled".into();
         self.report.detail = self.report.pulls.last().map_or_else(
-            || "no party damage or actual leader movement for 60s".into(),
+            || "no party damage, actual leader movement or HP/mana gain for 60s".into(),
             |pull| {
                 format!(
-                    "no party damage or actual leader movement for 60s; last pull: {}",
+                    "no party damage, actual leader movement or HP/mana gain for 60s; last pull: {}",
                     pull.decision
                 )
             },
