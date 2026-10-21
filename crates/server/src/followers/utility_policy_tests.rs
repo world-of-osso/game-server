@@ -140,6 +140,8 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
     // The native simulator leader's controller receives this exact temporary
     // profile after initialization removes its stored Follower component.
     follower.owner = unit;
+    h.app
+        .init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     utility_tests::start_enemy_fireball(&mut h, unit);
     let enemy = h.npc;
     h.app
@@ -158,9 +160,13 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
     );
     super::kit_ai::update(h.app.world_mut(), unit, &follower, &[unit], Some(enemy));
     h.advance(3);
+    // Read actual engine events before owner routing: this actor is intentionally
+    // outside the original fixture owner's party/delivery boundary.
     assert!(
-        h.inbox
-            .log
+        h.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
             .iter()
             .any(|event| event.kind == CombatLogKind::Interrupt
                 && event.source == Some(unit.to_bits())
