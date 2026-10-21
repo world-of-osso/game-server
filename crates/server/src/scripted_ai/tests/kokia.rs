@@ -51,10 +51,28 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
             .iter()
             .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
     );
+    h.advance(1.0);
+    let remaining = h
+        .inbox(0)
+        .timeline
+        .iter()
+        .rev()
+        .find_map(|event| match event {
+            EncounterTimelineEvent::Timers { timers, .. } => timers
+                .iter()
+                .find(|timer| timer.spell_id == SEARING_BLOWS)
+                .map(|timer| timer.remaining_ms),
+            _ => None,
+        })
+        .unwrap();
+    assert!(
+        (26900..=27000).contains(&remaining),
+        "snapshot reads advancing real request clock"
+    );
     h.advance(32.0);
     assert!(cast_count(&h, boss, SEARING_BLOWS) > 0);
     assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
-        EncounterTimelineEvent::Cast { caster, spell_id: SEARING_BLOWS, warning_text, .. }
+        EncounterTimelineEvent::Cast { caster, spell_id: SEARING_BLOWS, severity: shared::protocol::EncounterSeverity::Medium, warning_text }
         if *caster == boss.to_bits() && warning_text == "Searing Blows (1)")));
     assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
         EncounterTimelineEvent::Timers { timers, .. }
@@ -67,7 +85,15 @@ fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
     h.advance(0.1);
     assert!(!h.inbox(0).ends.last().unwrap().success);
     let count = h.inbox(0).timeline.len();
+    let pulls = h.inbox(0).starts.len();
+    let player = h.player();
+    h.app.world_mut().get_mut::<Position>(player).unwrap().0 += Vec3::splat(1000.0);
     h.advance(10.0);
+    assert_eq!(
+        h.inbox(0).starts.len(),
+        pulls,
+        "distant player cannot start another pull"
+    );
     assert_eq!(
         h.inbox(0).timeline.len(),
         count,
