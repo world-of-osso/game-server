@@ -48,7 +48,7 @@ fn observed(h: &Harness, spell: u32, source: Entity) -> Vec<CombatLogEvent> {
         .collect()
 }
 
-fn native_child_damage_range(h: &Harness) -> std::ops::RangeInclusive<u32> {
+fn native_child_damage_range(h: &Harness) -> std::ops::RangeInclusive<i32> {
     let world = h.app.world();
     let spell = world.resource::<SpellStore>().get(DAMAGE).unwrap();
     let effect = &spell.effects[0];
@@ -60,8 +60,8 @@ fn native_child_damage_range(h: &Harness) -> std::ops::RangeInclusive<u32> {
         .spell_power;
     let amount = spell_power * effect.bonus_coefficient;
     let half_variance = effect.variance.abs() / 2.0;
-    let min = (amount * (1.0 - half_variance)).round() as u32;
-    let max = (amount * (1.0 + half_variance)).round() as u32;
+    let min = (amount * (1.0 - half_variance)).round() as i32;
+    let max = (amount * (1.0 + half_variance)).round() as i32;
     min..=max
 }
 
