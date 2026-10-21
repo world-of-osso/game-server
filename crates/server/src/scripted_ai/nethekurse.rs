@@ -27,7 +27,10 @@ const EMOTE_STATE_APPLAUD: u32 = 253;
 const PEON_REACTION_MS: u64 = 5_000;
 
 pub(super) fn is_creature_script(name: &str) -> bool {
-    matches!(name, SCRIPT | "npc_fel_orc_convert")
+    matches!(
+        name,
+        SCRIPT | "npc_fel_orc_convert" | "npc_lesser_shadow_fissure" | "npc_wild_shadow_fissure"
+    )
 }
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
@@ -39,8 +42,11 @@ pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn Creatu
     if instance != "instance_shattered_halls" {
         return None;
     }
-    if world.get::<super::CreatureScriptName>(actor)?.0 == "npc_fel_orc_convert" {
-        return Some(Box::new(FelOrcConvert::default()));
+    match world.get::<super::CreatureScriptName>(actor)?.0.as_str() {
+        "npc_fel_orc_convert" => return Some(Box::new(FelOrcConvert::default())),
+        "npc_lesser_shadow_fissure" => return Some(Box::new(Fissure { wild: false })),
+        "npc_wild_shadow_fissure" => return Some(Box::new(Fissure { wild: true })),
+        _ => {}
     }
     Some(Box::new(Nethekurse {
         boss: BossAi::new(ENCOUNTER_BIT),
@@ -280,6 +286,19 @@ impl CreatureAi for FelOrcConvert {
         Self::notify_nethekurse(ctx, ACTION_PEON_KILLED);
     }
 
+    fn spell_hit(&mut self, ctx: &mut Ctx, _caster: Entity, spell: u32) {
+        let group = match spell {
+            PEON_SHADOW_SEAR => 1,
+            PEON_DEATH_COIL => 2,
+            PEON_TARGET_FISSURES => 3,
+            _ => return,
+        };
+        if rand::Rng::gen_bool(&mut rand::thread_rng(), 0.30) {
+            ctx.talk(group);
+            // NETHEKURSE_PEON_ROAR_9110_AUDIO_UNPORTED: explicit sound on Coil reaction.
+        }
+    }
+
     fn update_ai(&mut self, ctx: &mut Ctx, diff_ms: u32) {
         if !ctx.update_victim() {
             return;
@@ -318,5 +337,50 @@ pub(crate) fn filter_shadow_sear(
     targets.truncate(2);
     if includes_caster {
         targets.push(caster);
+    }
+}
+
+struct Fissure {
+    wild: bool,
+}
+
+impl CreatureAi for Fissure {
+    fn initialize_ai(&mut self, ctx: &mut Ctx) {
+        ctx.set_react_state(super::ReactState::Passive);
+    }
+
+    fn just_appeared(&mut self, ctx: &mut Ctx) {
+        let consumption = if self.wild {
+            32250
+        } else {
+            ctx.dungeon_mode(30497, 35952)
+        };
+        // Lesser30497/35952 are named absent70448 gaps, never substituted.
+        ctx.do_cast_self(consumption);
+    }
+}
+
+/// TC30745 FilterTargets: uniformly retain one actual source-selected target.
+pub(crate) fn filter_target_fissures(
+    _world: &World,
+    _spell: &crate::spell_info::SpellInfo,
+    _explicit: Option<Entity>,
+    targets: &mut Vec<Entity>,
+) {
+    use rand::seq::SliceRandom;
+    targets.shuffle(&mut rand::thread_rng());
+    targets.truncate(1);
+}
+
+/// TC30745 OnEffectHitTarget(SCRIPT_EFFECT): normal CastSpell30744 at that hit.
+pub(crate) fn cast_target_fissure(world: &mut World, caster: Entity, target: Entity, _depth: u8) {
+    if let Err(reason) = crate::spell_cast::creature_cast(world, caster, 30744, Some(target), false)
+    {
+        warn!(
+            ?caster,
+            ?target,
+            ?reason,
+            "Target Fissures30745 child30744 refused"
+        );
     }
 }
