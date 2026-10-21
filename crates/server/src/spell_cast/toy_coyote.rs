@@ -36,7 +36,8 @@ fn is_summon_trigger(effect: &SpellEffect) -> bool {
         effect.aura,
         effect.implicit_targets,
     ) == (1, 64, 0, [0, 0]);
-    source && effect.trigger_spell == SUMMON && effect.base_points == 0.0 && no_misc_payload(effect)
+    let child = (effect.trigger_spell, effect.base_points) == (SUMMON, 0.0);
+    source && child && no_misc_payload(effect)
 }
 
 fn has_hat_signature(spell: &SpellInfo) -> bool {
@@ -59,10 +60,12 @@ fn has_summon_signature(spell: &SpellInfo) -> bool {
             effect.implicit_targets,
         ) == (0, 28, 0, [32, 0]);
         let creature = effect.misc_values == [COYOTE as i32, PROPERTIES];
-        let payload = effect.base_points == 1.0
-            && effect.trigger_spell == 0
-            && effect.item_type == 0
-            && effect.mechanic == 0;
+        let payload = (
+            effect.base_points,
+            effect.trigger_spell,
+            effect.item_type,
+            effect.mechanic,
+        ) == (1.0, 0, 0, 0);
         source && creature && payload
     })
 }
