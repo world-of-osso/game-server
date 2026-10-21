@@ -109,6 +109,14 @@ fn proc_fidelity_1467_two_earned_stacks_fund_two_free_spenders() {
 #[test]
 fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
     let (mut h, caster) = prepare(209059);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .is_some_and(|known| known.contains(195283)),
+        "the real selected native driver is learned even though Effect3 creates no aura"
+    );
+    assert!(!has_aura(h.app.world(), caster, 195283));
     let target = h.npc;
     for expected in [48107, 48108] {
         let start = h.inbox.log.len();
