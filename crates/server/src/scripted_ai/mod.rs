@@ -19,6 +19,7 @@ pub(crate) mod azure_vault;
 mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
+mod broggok;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 pub mod event_map;

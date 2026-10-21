@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Blood Furnace Broggok source boundary
+
+- Broggok17380 uses pinned TC a352b1fa `boss_broggok.cpp`, published1924/map542bit2 (source ordinal1), ordinary70448 spell admission and map-copy lifecycle.
+- Appearance is passive/uninteractible. Source intro action1738000 attempts26837, then Talk0 after2s. Release1738001 restores aggression/selectability immediately, then Talk1/MovePath1381150 after5s; path completion zones into combat. Lever/prisoner instance ingress requires separate behavioral proof; direct action-hook fixtures do not certify ingress.
+- Engagement attempts26838 and schedules self Slime Spray30913 first5–15s/repeat10–15s, Poison Bolt30917 first0–5s/repeat10–15s, Poison Cloud30916 first5–20s/repeat10–25s. Events wait while casting and use ordinary admission, not instant policies.
+- Preserve source empty JustSummoned override: no summon tracking, forced combat or boss-reset/death cleanup. Inherited BossAI reset/death updates only this copy's primary state/credit.
+- Named gaps: `BROGGOK_POISON_BOLT_30917_ABSENT_70448`, `BROGGOK_SUMMON_TRIGGER_26837_ABSENT_70448`, `BROGGOK_DESPAWN_TRIGGER_26838_ABSENT_70448`, `BROGGOK_POISON_AURA_30914_ABSENT_70448`, `BROGGOK_POISON_AURA_38462_ABSENT_70448`. Native30916 is effect179/AT33896, not historical17662; historical cloud damage/radius scaling is not fabricated. Native area behavior, prisoner/lever ingress, full-instance/loot/persistence remain unproved until their own gates.
+
 ## Encounter coverage continuation — 2026-10-12
 
 - [x] Census every hosted DungeonEncounter difficulty record and Journal-only encounter, preserving unknown/ambiguous identities and separating structural admissions from behavioral proof: [coverage](../encounter-coverage.md).
