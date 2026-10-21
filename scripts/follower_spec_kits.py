@@ -61,7 +61,8 @@ def dps_rotation_policy(spec, name):
     # apl_evoker.cpp96–106: empowers/spenders precede Azure/Living Flame filler.
     if spec == 1467:
         if name == 'Fire Breath':
-            return policy('attack', 92)
+            # Native357208 is self-targeted with RangeIndex1, not an enemy-range cast.
+            return policy('attack', 92, 'self', combat=True)
         if name == 'Eternity Surge':
             return policy('attack', 94)
         if name == 'Pyre':
