@@ -2,11 +2,17 @@
 
 Standalone `server::pet_battle` library, consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
 
-## Species Heal — 2026-10-21
+## Frostbite duration refresh — 2026-10-20
+
+Generic140 refreshes existing target/ability stacks to NewDuration without state reapplication, new stacks or caster/turn reset. Local70448 program785/effect1573 supplies787/3rounds. Five real-program RED→GREEN tests prove stack refresh/expiry, victim isolation, retained caster power after swap and unconditional refresh despite a new-stack miss. They do not establish785 as a selectable owned ability.
+
+Root786 stays explicitly rejected under `PET_BATTLE_BLISTERING_COLD_PAD_FOLLOW_UNPROVEN`: its785 pad claims swap persistence, but team-state migration is not proven. [Contract](../../specs/pet-battle-engine.md) and [coverage](../../pet-battle-effect-coverage.md) distinguish the executable785 program from that unimplemented parent lifecycle.
+
+## Species Heal — 2026-10-20
 
 Generic362 reuses ordinary healing after adding its same-species reserve bonus. Shared roster counting also serves370 without behavior change. Source70448 BattlePetAbility2260 says additional same-species team members; effect4061 supplies10base points/2bonus/0variance. Exclude caster/enemies, count dead roster identities, and never substitute family. The dead-roster interpretation matches existing370, not independent Retail capture. Four real-row RED→GREEN tests and five370 regressions cover both teams/active slots, counts, dead reserves, modifiers/cap/accuracy and zero RNG. [Contract](../../specs/pet-battle-engine.md), [census](../../pet-battle-effect-coverage.md).
 
-## Current-health percentage effects — 2026-10-21
+## Current-health percentage effects — 2026-10-20
 
 Property363 executes authored current-health percentages for distinct team members. Torment2263 addresses the active enemy then other slots; Mind Games: Health2388 addresses its own team. The ordinal counts363 rows, not interleaved leech rows. Each attempted victim clears Last_HitDealt first: dead, missed or shielded victims cannot repeat an earlier heal. Torment2292 still rejects unsupported156 before RNG.
 
