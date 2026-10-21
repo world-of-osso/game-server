@@ -281,45 +281,51 @@ fn summon_at_available_matrix_area_entities_do_not_invent_actions() {
 
 #[test]
 fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
-    // Green Balloon (toy 69895, spell 99104) references absent creature 53453.
-    // Mechanism-only fixture substitutes EXISTING template 25305, not invented
-    // world data. This test does not mark Green Balloon usable or prove its model.
+    // The published Toy dependency closure now supplies actual Green Balloon53453.
+    // Exercise native99104's unmodified effect28 and canonical3141, without substitutions.
+    // This mechanism proof does not claim unimplemented root target43/aura4 or native pixels.
     let mut h = harness(Vec::new(), &[99104], 8).unwrap();
-    h.app.insert_resource(crate::world_data::load_world_data(
-        &world_db().unwrap().powers_db,
-    ));
-    let conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.execute_batch(
-        "CREATE TABLE summon_properties (
-            ID INTEGER, Control INTEGER, Faction INTEGER, Title INTEGER, Slot INTEGER,
-            Flags_0 INTEGER, Flags_1 INTEGER
-        ); INSERT INTO summon_properties VALUES (3141,1,0,5,6,0,0);",
-    )
-    .unwrap();
+    let path = &world_db().unwrap().powers_db;
+    h.app
+        .insert_resource(crate::world_data::load_world_data(path));
+    let conn =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
     h.app
         .insert_resource(super::summon::load_summon_properties(&conn).unwrap());
-    let mut spell = world_db().unwrap().store.get(99104).unwrap().clone();
-    let effect = &mut spell.effects[0];
-    assert_eq!(effect.misc_values, [53453, 3141]);
-    assert_eq!(
-        super::summon::unsupported_reason(h.app.world(), effect).as_deref(),
-        Some("missing summon creature 53453")
-    );
-    effect.misc_values[0] = 25305;
-    let dest = super::targets::Dest {
-        position: Vec3::ZERO,
-        orientation: 0.0,
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(shared::components::CombatStatus(false));
+    let spell = world_db().unwrap().store.get(99104).unwrap();
+    assert_eq!(spell.effects[0].misc_values, [53453, 3141]);
+    assert!(super::summon::unsupported_reason(h.app.world(), &spell.effects[0]).is_none());
+    let ctx = super::effects::EffectCtx {
+        caster: h.caster,
+        spell,
+        depth: 0,
+        // Target43 selection is outside this companion lifecycle boundary.
+        dest: Some(super::targets::Dest {
+            position: Vec3::ZERO,
+            orientation: 0.0,
+        }),
+        chain_multiplier: 1.0,
     };
-    for _ in 0..2 {
-        let ctx = super::effects::EffectCtx {
-            caster: h.caster,
-            spell: &spell,
-            depth: 0,
-            dest: Some(dest),
-            chain_multiplier: 1.0,
-        };
-        super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
-    }
+    super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
+    let first = {
+        let world = h.app.world_mut();
+        world
+            .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
+            .single(world)
+            .unwrap()
+    };
+    h.advance(40); // The authored companion has no finite lifetime.
+    assert!(h.app.world().get_entity(first).is_ok());
+    super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
+    assert!(
+        h.app.world().get_entity(first).is_err(),
+        "second native summon effect replaces the old slot occupant"
+    );
     let world = h.app.world_mut();
     let summons: Vec<_> = world
         .query_filtered::<Entity, With<super::summon::SummonedCreature>>()
@@ -331,6 +337,29 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
         "companion slot 6 replaces, rather than duplicates"
     );
     let summon = summons[0];
+    assert_eq!(
+        world
+            .get::<shared::components::Npc>(summon)
+            .unwrap()
+            .template_id,
+        53453
+    );
+    assert_eq!(
+        world
+            .get::<shared::components::ModelDisplay>(summon)
+            .unwrap()
+            .display_id,
+        38340
+    );
+    // Companion level scaling is a separate contract, not an unconditional level1.
+    // TC TemporarySummon.cpp240–253 clamps owner level against source scaling.
+    assert!(
+        world
+            .get::<super::summon::SummonedCreature>(summon)
+            .unwrap()
+            .expires_at
+            .is_none()
+    );
     assert!(
         world
             .get::<crate::creature_ai::FollowOwner>(summon)

@@ -14,6 +14,7 @@
 //!   (`ObjectMgr::ChooseDisplayId`); else a MOD_SHAPESHIFT 36 form shows its model
 //!   (`shapeshift`); with neither left the native display returns.
 
+use crate::random as rand;
 use bevy::prelude::*;
 use lightyear::prelude::ReplicationDirtyQueue;
 use shared::components::{ModelDisplay, Position, UnitFlags, UnitFlags2};
@@ -76,6 +77,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
     let stealth = super::stealth::Stealth::from_auras(auras);
     let preparing = has_type(auras, super::handlers::ARENA_PREPARATION);
     let forced_forward = has_type(auras, super::handlers::FORCE_MOVE_FORWARD);
+    let turning_while_falling = has_type(auras, super::handlers::CAN_TURN_WHILE_FALLING);
     let unattackable = has_type(auras, MOD_UNATTACKABLE);
     let confused = has_type(auras, MOD_CONFUSE);
     let fear_caster = auras
@@ -91,6 +93,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         shared::components::FeatherFall(has_type(auras, super::handlers::FEATHER_FALL));
     reconcile_preparation(world, unit, preparing);
     reconcile_forced_forward(world, unit, forced_forward);
+    reconcile_turn_while_falling(world, unit, turning_while_falling);
     reconcile_scale(world, unit);
     reconcile_feather_fall(world, unit, feather_fall);
     if world.get::<super::Invisibility>(unit) != Some(&visibility) {
@@ -127,6 +130,26 @@ fn reconcile_forced_forward(world: &mut World, unit: Entity, forced: bool) {
         return;
     }
     world.entity_mut(unit).insert(next);
+    if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
+        dirty.mark(unit);
+    }
+}
+
+/// TC HandleAuraCanTurnWhileFalling retains the flag while any owner remains.
+fn reconcile_turn_while_falling(world: &mut World, unit: Entity, enabled: bool) {
+    let Some(mut motion) = world.get_mut::<shared::components::PlayerMotion>(unit) else {
+        return;
+    };
+    let flag = super::handlers::CAN_TURN_WHILE_FALLING_MOTION;
+    let next = if enabled {
+        motion.0 | flag
+    } else {
+        motion.0 & !flag
+    };
+    if next == motion.0 {
+        return;
+    }
+    motion.0 = next;
     if let Some(dirty) = world.get_resource::<ReplicationDirtyQueue>() {
         dirty.mark(unit);
     }

@@ -1,3 +1,4 @@
+use crate::random as rand;
 use bevy::ecs::system::SystemParam;
 use std::collections::HashMap;
 
@@ -1848,7 +1849,7 @@ fn commit_melee_loss(
         world
             .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(victim)
             .is_some(),
-        before,
+        health,
         outcome.incoming_loss,
     );
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;
@@ -1915,7 +1916,7 @@ pub(crate) fn deal_health_damage(
         world
             .get::<crate::scripted_ai::hellfire_ramparts::HeraldUnkillable>(victim)
             .is_some(),
-        before,
+        health,
         incoming_loss,
     );
     let protected = world.get::<Unkillable>(victim).is_some() && attacker != victim;

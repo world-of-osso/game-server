@@ -314,7 +314,7 @@ fn ragefire_completion_adarogg_intro_walks_source_paths_and_eats_without_arrival
 
 #[test]
 fn ragefire_completion_normal_loot_uses_each_authored_boss_pool_and_money_range() {
-    use rand::SeedableRng;
+    use ::rand::SeedableRng;
     let path = world_db_path();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     let tables = crate::loot::load_loot_tables(&conn).unwrap();

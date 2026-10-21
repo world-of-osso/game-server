@@ -3,6 +3,7 @@
 //! the same time run in the order they were scheduled (`std::multimap`).
 //! Phases, groups and series are not ported: no Stockade script uses them.
 
+use crate::random as rand;
 use rand::Rng;
 
 #[derive(Debug, Default, Clone)]
@@ -66,6 +67,14 @@ impl EventMap {
     /// `ScheduleEvent(eventId, time)`.
     pub fn schedule(&mut self, event_id: u32, delay_ms: u64) {
         self.insert(self.time + delay_ms, event_id);
+    }
+
+    /// Remaining time on the real script clock; due events remain zero until dispatched.
+    pub(crate) fn remaining_ms(&self, event_id: u32) -> Option<u64> {
+        self.events
+            .iter()
+            .find(|(_, id)| *id == event_id)
+            .map(|(due, _)| due.saturating_sub(self.time))
     }
 
     /// `CancelEvent`: remove all queued instances without changing clock/repeat state.

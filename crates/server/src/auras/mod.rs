@@ -1598,12 +1598,13 @@ pub fn has_aura(world: &World, unit: Entity, spell_id: u32) -> bool {
 
 /// TC a352b1fa Unit.cpp:783–801: harmful + AnyDamageMask, deliberately
 /// independent of aura type. SpellDefines.h:114 includes scripted damage breaks.
+pub(crate) const ANY_DAMAGE_INTERRUPT_MASK: u32 = 0x0900_0002;
+
 pub(crate) fn has_breakable_by_damage_cc(world: &World, unit: Entity) -> bool {
-    const ANY_DAMAGE_MASK: u32 = 0x0900_0002;
     world.get::<ActiveAuras>(unit).is_some_and(|auras| {
         auras
             .iter()
-            .any(|aura| aura.harmful && aura.interrupt_flags[0] & ANY_DAMAGE_MASK != 0)
+            .any(|aura| aura.harmful && aura.interrupt_flags[0] & ANY_DAMAGE_INTERRUPT_MASK != 0)
     })
 }
 
@@ -2174,14 +2175,16 @@ fn update_auras(world: &mut World, units: &mut QueryState<AuraUnit, Without<Grid
     let now = aura_now(world);
     let units = units_with_auras(world, units);
     for unit in units {
-        if !targets::is_alive(world, unit) {
+        if targets::is_alive(world, unit) {
+            state_interrupts(world, unit);
+            crate::spell_cast::toy_area::remove_outside_auras(world, unit);
+            remove_casterless(world, unit);
+            periodic::run_due_ticks(world, unit, now);
+        } else {
             remove_on_death(world, unit);
-            continue;
         }
-        state_interrupts(world, unit);
-        crate::spell_cast::toy_area::remove_outside_auras(world, unit);
-        remove_casterless(world, unit);
-        periodic::run_due_ticks(world, unit, now);
+        // TC Unit.cpp438/2969–2973 updates/expires owned auras even on dead units.
+        // ALLOW_AURA_WHILE_DEAD preserves an aura on death, not past its duration.
         remove_auras(world, unit, RemoveReason::Expired, |aura| {
             aura.expires_at.is_some_and(|at| at <= now)
         });
