@@ -90,4 +90,9 @@ sides, identical protocol/catalog/route/level/seeds1–20, optimized incremental
 Word cooldown reduction versus available reducible time, and actual proc grants
 versus consumed uses. Separate unavailable mechanics from zero observed events;
 no fabricated efficiency denominator. Keep before/after simulator revisions and
-settings with the receipts. Plane geometry is not live navigation certification.
+settings with the receipts. Stockade stays at its native default32, not a level90
+party overleveling low-level enemies. Qualify the full90 kit separately on a
+native90 party receiving actual70448 max-health damage (124257) and native harmful
+Magic (589); do not manufacture injury, mana or buffs. Repeat the20-seed cohort
+on scaling follower difficulty205 when that simulator is available. Plane geometry
+is not live navigation certification.
