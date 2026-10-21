@@ -231,6 +231,18 @@ fn spawn_azure_gate_after_first_member_death() -> Run {
         .position(|step| step.pack == 29001816)
         .unwrap();
     run.graph.route.drain(..gate);
+    // Production admission initializes this party's run history before any Death.
+    let guids = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == 29001816)
+        .unwrap()
+        .spawns
+        .iter()
+        .map(|spawn| spawn.guid)
+        .collect();
+    crate::followers::simulator::pull(run.app.world_mut(), run.party.tank, &guids).unwrap();
     let at = *run.app.world().get::<Position>(first).unwrap();
     let members: Vec<_> = run.members().collect();
     for member in members {
