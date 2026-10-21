@@ -65,7 +65,7 @@ The main-hand result is `CharacterStats.main_hand` (unarmed 1–2 at 2.0 s, Trin
 
 The additive redb `item_modifiers` table stores bonus lists, explicit item-level overrides, permanent enchants, gem item IDs and crafted stat choices by GUID. Existing `item_instances` soulbound bytes and inventory/wire encodings are unchanged. `InventoryRecord.item_modifiers` hydrates only owned GUIDs; the inventory model preserves those properties and projects them alongside equipped catalog identities. Startup creates the new table for existing databases.
 
-The [native producer](../../../scripts/item_instance_data.py) reads the existing read-only 70448 exports into a supplied world database. Canonical publication remains lead-owned. `ItemScalingPlugin` loads the new native bonus/enchantment resources; missing tables fail with the producer instruction.
+The [native producer](../../../scripts/item_instance_data.py) reads the existing read-only 70448 exports into a supplied world database. Canonical publication remains lead-owned. The ordinary `scripts/db2.py import` invokes the same producer inside its existing transaction so native instance tables refresh with the core build. `ItemScalingPlugin` loads the new native bonus/enchantment resources; missing tables fail with the producer instruction.
 
 | Resolution | Current coverage |
 |---|---|
