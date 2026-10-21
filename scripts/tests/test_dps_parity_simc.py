@@ -27,7 +27,7 @@ class SimcScenarioTests(unittest.TestCase):
         # separate top-level targets. Positive uptime proves actual recipients.
         recipients = {buff["target"] for target in report["targets"]
                       for buff in target["buffs"] if buff.get("uptime", 0) > 0}
-        self.assertEqual(recipients, {"Fluffy_Pillow", "1", "2"},
+        self.assertEqual(recipients, {"Fluffy_Pillow", "Fluffy_Pillow_1", "Fluffy_Pillow_2"},
                          "actual main target and both adds must receive effects")
         self.assertTrue(any(event["type"] == "adds" for event in report.get("raid_events", [])))
         self.assertEqual(report["players"][0]["collected_data"]["fight_length"]["mean"], 300.0)
