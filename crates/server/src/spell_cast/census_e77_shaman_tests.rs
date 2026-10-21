@@ -33,7 +33,6 @@ fn knockdowns(h: &Harness) -> HashMap<Entity, usize> {
 }
 
 #[test]
-#[ignore = "RED: Earthquake has no TC native E1 chance consumer or field stun set"]
 fn census_e77_shaman_native_knockdown_is_once_per_target_per_owned_field() {
     let mut h = fixture();
     //256 authentic targets × six native5% rolls: absence probability <1e-30.
@@ -85,7 +84,6 @@ fn census_e77_shaman_native_knockdown_is_once_per_target_per_owned_field() {
 }
 
 #[test]
-#[ignore = "RED batch control: standalone tick has no original Earthquake field"]
 fn census_e77_shaman_orphan_native_tick_deals_damage_without_knockdown() {
     let mut h = fixture();
     let victim = spawn_npc(&mut h.app, CENTER.x);
