@@ -35,6 +35,8 @@ mod damage_meter;
 mod db2_source_build;
 mod death;
 mod duel;
+#[cfg(test)]
+mod dungeon_simulator;
 mod durability;
 mod economy;
 mod equipment_admin_types;
@@ -113,6 +115,7 @@ mod quest_time;
 mod quest_view;
 mod race_class;
 mod raid_history;
+mod random;
 mod renown;
 mod reputation;
 mod rest;

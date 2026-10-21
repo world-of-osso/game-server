@@ -103,6 +103,10 @@ pub(super) fn read(
     from: Vec3,
     to: Vec3,
 ) -> Result<Option<Vec<Vec3>>, String> {
+    #[cfg(test)]
+    if let Some(space) = world.get_resource::<crate::dungeon_simulator::Space>() {
+        return space.route(from, to).map(Some);
+    }
     let mut paths = world
         .entity_mut(tank)
         .take::<AdmissionPaths>()
