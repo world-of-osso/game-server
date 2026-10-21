@@ -52,7 +52,7 @@ pub fn enchantment_stats(
             3 => result
                 .equip_spells
                 .push(u32::try_from(effect.argument).map_err(|e| e.to_string())?),
-            // TC a352b1fa Player.cpp12430–12447: physical-school resistance is armor.
+            // TC a352b1fa Player.cpp13509–13531: physical-school resistance is armor.
             4 if effect.argument == 0 => {
                 result.stats.secondary.armor +=
                     scaled_amount(enchant, effect, level)?.trunc().max(1.0);
