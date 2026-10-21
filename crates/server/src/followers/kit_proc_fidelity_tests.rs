@@ -57,6 +57,56 @@ fn proc_fidelity_1467_native_dragonrage_azure_grants_and_spends_essence_burst() 
 }
 
 #[test]
+fn proc_fidelity_1467_two_earned_stacks_fund_two_free_spenders() {
+    let (mut h, caster) = prepare(215240);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 375087, caster);
+    complete_cast(&mut h, caster, 362969, target);
+    complete_cast(&mut h, caster, 362969, target);
+    let burst = super::kit_clearcasting_tests::own_aura(&h, caster, 359618).unwrap();
+    assert_eq!(burst.stacks, 2, "native375722 adds one maximum stack");
+    for (spender, remaining) in [(356995, 1), (357211, 0)] {
+        let before = power_value(h.app.world(), caster, PowerType::Essence)
+            .unwrap()
+            .0;
+        complete_cast(&mut h, caster, spender, target);
+        let current = super::kit_clearcasting_tests::own_aura(&h, caster, 359618);
+        assert_eq!(
+            current.as_ref().map_or(0, |aura| aura.stacks),
+            remaining,
+            "one completed spender must spend exactly one earned Essence Burst"
+        );
+        if let Some(current) = current {
+            assert_eq!(current.instance_id, burst.instance_id);
+            assert_eq!(current.expires_at, burst.expires_at);
+            assert_eq!(current.charges, 1);
+        }
+        assert!(
+            power_value(h.app.world(), caster, PowerType::Essence)
+                .unwrap()
+                .0
+                >= before
+        );
+        for _ in 0..200 {
+            if h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_none()
+            {
+                break;
+            }
+            h.advance(1);
+        }
+        assert!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(caster)
+                .is_none()
+        );
+    }
+}
+
+#[test]
 fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
     let (mut h, caster) = prepare(209059);
     let target = h.npc;
