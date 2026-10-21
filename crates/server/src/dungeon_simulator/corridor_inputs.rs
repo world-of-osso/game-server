@@ -71,7 +71,7 @@ fn freeze_native_corridor_inputs() {
                 .0
         })
         .collect();
-    let value = serde_json::json!({"map_id":graph.map_id,"boss_order":graph.boss_entries(),
+    let value = serde_json::json!({"map_id":graph.map_id,"boss_entries":graph.boss_entries(),
         "party_levels":levels,"qualification_seed":0,"radius_source":"native AggroDistance::center_radius; maximum over default party",
         "sources":sources});
     let path = graph_path().with_file_name(format!(
