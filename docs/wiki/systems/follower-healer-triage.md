@@ -87,3 +87,7 @@ Integration after candidate2d4 merges newer master rotation/native work separate
 - Native70448 resolved tables and kit intervals in the frozen read-only DB; source observations use ordinary executor paths.
 - TC a352b1fa `spell_druid.cpp719–778`, `Spell.cpp::SelectRandomInjuredTargets`, `SpellAuraEffects.cpp1513–1516,1570–1617`; archived under the evidence root.
 - [[follower-data]], [[dungeon-simulator]], [[spell-casting]].
+
+## Master integration gate
+
+Source06cd80b2b includes masterc6bc60006 and the final native Efflo cap/injured-player-priority fixture. Focused `kit_ai`, companion group buffs, Germination, Abundance and observation contract:39PASS/0FAIL/0ignored58.74s, compile5m15s. Scoped sim server checkEXIT0/45.12s; sole inherited `has_uncleared_fight` warning remains explicitly lead-excluded/13179-owned. `cargo fmt --all --check` PASS. Changed Rust manually audited for readability (analysis CLI unavailable); no new suppressions, synthetic effects or unrelated fixes. Evidence `resto-final-master-integration-{targeted,check}.log`, `resto-final-format-check.log`. Documentation-only qualification updates do not invalidate that code proof.

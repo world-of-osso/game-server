@@ -30,3 +30,5 @@ Raw outputs: `baseline-framework-655258480/`, `candidate-resto-depth/`; aggregat
 [System page](../wiki/systems/follower-healer-triage.md#proof-ledger) records exact RED/GREEN scopes. The final master-integrated source is separately gated; its newer unrelated rotation/targeting changes are not silently substituted into the frozen comparison.
 
 Remaining exclusions: Convoke absent from kit; SotF Wild Growth bonus unqualified; Rebirth decision/execution utility-owned; NPC treat-as-raid Efflo priority subcase unqualified. Production navigation/pixels are not inferred from frozen-plane simulation.
+
+Final code gate06cd80b2b/masterc6bc60006:39targetedPASS/0FAIL/0ignored58.74s, compile5m15s; scoped sim checkEXIT0/45.12s with sole pre-existing lead-excluded13179 `has_uncleared_fight` warning; cargo fmt --all --check PASS; changed Rust manual readability audit (CLI unavailable), no suppression. Tests include actual Efflo cap3/player priority and full native field/lifecycle chain. Subsequent changes are documentation only.

@@ -11,9 +11,9 @@
 - [ ] Approach patients using native spell range, LOS, hazard and native-sight-safe movement; do not cross an unpulled sight envelope to heal.
 - [x] Permit damage only while the living party is safe.
 - [x] Expose a common read-only triage snapshot/decision hook used by both specialization policies before generic ordered kit rows.
-- [ ] Drive Crenna's learned Restoration105 heal/HoT/proc/cooldown/utility synergies through existing native execution; record absent kit/native mechanics as named gaps rather than fake effects.
-- [ ] Native Efflorescence must initialize its actual summon aura, heal at the placed field through its native owner and honor the source target-selection cap/priority; never synthesize healing or resources.
-- [ ] Publish paired seeds1–20 clears/deaths/pull-end mana/overheal plus tank HoT uptime and native proc consumption; separate unavailable talent metrics from zero use.
+- [x] Drive Crenna's learned Restoration105 heal/HoT/proc/cooldown/utility synergies through existing native execution; record absent kit/native mechanics as named gaps rather than fake effects.
+- [x] Native Efflorescence must initialize its actual summon aura, heal at the placed field through its native owner and honor the source target-selection cap/priority; never synthesize healing or resources.
+- [x] Publish paired seeds1–20 clears/deaths/pull-end mana/overheal plus tank HoT uptime and native proc consumption; separate unavailable talent metrics from zero use.
 
 ## How it works
 
@@ -32,13 +32,13 @@
 ## Tests asserting this spec
 
 - `crates/server/src/followers/healer_triage_tests.rs` — qualified common regressions and native Nature's Swiftness/Clearcasting decisions.
-- `crates/server/src/followers/resto_policy_tests.rs` — native Restoration pressure, upkeep, group buff, proc and unsafe-cast regressions; Efflo runtime/admission qualification ongoing.
+- `crates/server/src/followers/resto_policy_tests.rs` — native Restoration pressure, upkeep, group buff, proc, unsafe-cast, Efflo runtime/admission/replacement and target-cap/player-priority regressions.
 - `crates/server/src/dungeon_simulator/healer_metrics_tests.rs` — native pull-end/mana/HoT/proc accounting contract.
 
 ## Known gaps (current cycle)
 
-- [ ] Complete Restoration policy depth and paired simulator metrics beyond the qualified common framework/native cooldown slice.
-- [ ] `FOLLOWER_RESTO_EFFLO_UNQUALIFIED`: native summon/aura/pulse, stable-field AI admission and source old-area-trigger lifecycle qualification remain open.
+- [ ] Production navigation/pixel acceptance remains separate from frozen-plane simulator evidence.
+- [ ] `FOLLOWER_RESTO_EFFLO_NPC_PRIORITY_UNQUALIFIED`: NPC static-flag4 treat-as-raid classification has no native producer; represented player/group/injury priority and target cap are qualified.
 - [ ] `FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`: absent from local105 kit.
 - [ ] `UTILITY_LAYER_REZ_PENDING`: Rebirth decision/native NPC-caster execution belongs to the utility layer; reserve its generic-row veto and consume that layer after landing.
 - [ ] `FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: current native bonus supports Regrowth/Rejuvenation/Germination only.
