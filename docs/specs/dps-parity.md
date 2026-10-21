@@ -28,13 +28,16 @@ Compare native70448 server combat with shipped MID1 SimulationCraft76f8118 profi
 
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
 - `scripts/dps_parity.py` — shipped MID1 profile extraction and SimC action normalization.
-- `crates/server/src/item_instance.rs` — item-instance runtime API/test scaffold; behavior implementation remains pending.
+- `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution; production equipment integration remains pending.
+- `crates/server/src/item_instance/{bonuses,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state.
 
 ## Tests asserting this spec
 
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, missing-ID rejection and direct/periodic action accounting.
-- `crates/server/src/item_instance.rs::tests` — item-level budget/weapon-damage and invalid-level regressions; RED compilation pending, not claimed passing.
+- `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
+- `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six passing native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions; runtime wiring remains pending.
+- `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration regression; genuine RED recorded before loader implementation, GREEN pending.
 
 ## Known gaps (current cycle)
 
