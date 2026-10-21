@@ -133,7 +133,6 @@ fn rotation_fidelity_253_missing_duck_data_still_shoots() {
 }
 
 #[test]
-#[ignore = "RED: native1264934 Frenzy has no active-pet attack-speed consumer"]
 fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
     const FRENZY: u32 = 1_264_934;
     let (mut h, caster, pet) = prepare_native_duck(90);
