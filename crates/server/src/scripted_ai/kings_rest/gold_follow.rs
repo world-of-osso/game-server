@@ -21,7 +21,7 @@ pub(crate) fn load_model_reaches(conn: &rusqlite::Connection) -> rusqlite::Resul
     let reaches = crate::scripted_ai::model_reach::load_model_reaches(conn)?;
     if !GOLD_DISPLAYS
         .iter()
-        .all(|display| reaches.source.contains_key(display))
+        .all(|display| reaches.0.contains_key(display))
     {
         return Err(rusqlite::Error::QueryReturnedNoRows);
     }
