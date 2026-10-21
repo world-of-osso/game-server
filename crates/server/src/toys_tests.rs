@@ -6607,6 +6607,7 @@ fn report_toy_census(path: &std::path::Path, report_variable: &str) -> serde_jso
     world.insert_resource(crate::spell_cast::teleport_positions::load_positions(&conn).unwrap());
     world.insert_resource(crate::merchant::load_vendor_catalog(&conn).unwrap());
     world.insert_resource(shared_item_templates(path));
+    world.insert_resource(crate::conditions::load_spell_target_conditions(path).unwrap());
     let has_summon_properties: bool = conn
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='summon_properties')",
