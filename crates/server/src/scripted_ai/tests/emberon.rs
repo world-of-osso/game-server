@@ -40,7 +40,6 @@ fn damage_count(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon native qualification before source port"]
 fn encounter_coverage_emberon_native_clap_damage_qualifies() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = emberon_copy(difficulty);
@@ -64,7 +63,6 @@ fn encounter_coverage_emberon_native_clap_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon native qualification before source port"]
 fn encounter_coverage_emberon_native_unstable_embers_aura_qualifies() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = emberon_copy(difficulty);
@@ -84,7 +82,6 @@ fn encounter_coverage_emberon_native_unstable_embers_aura_qualifies() {
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon native qualification before source port"]
 fn encounter_coverage_emberon_native_purging_periodic_and_indefinite_duration_qualify() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = emberon_copy(difficulty);
@@ -122,7 +119,6 @@ fn encounter_coverage_emberon_native_purging_periodic_and_indefinite_duration_qu
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon first sourced request RED before combat implementation"]
 fn encounter_coverage_emberon_first_clap_uses_current_lua_clock() {
     let (mut h, boss, _) = emberon_copy(205);
     h.engage(boss);
@@ -138,7 +134,6 @@ fn encounter_coverage_emberon_first_clap_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon Normal24.3s lifecycle RED before combat implementation"]
 fn encounter_coverage_emberon_normal_phase_cap_resumed_clocks_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = emberon_copy(difficulty);
@@ -259,7 +254,6 @@ fn encounter_coverage_emberon_normal_phase_cap_resumed_clocks_and_copy_credit() 
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon below10pct source condition RED before combat implementation"]
 fn encounter_coverage_emberon_below_ten_percent_disables_purging_and_keeps_normal_lanes() {
     let (mut h, boss, _) = emberon_copy(205);
     h.engage(boss);
@@ -284,7 +278,6 @@ fn encounter_coverage_emberon_below_ten_percent_disables_purging_and_keeps_norma
 }
 
 #[test]
-#[ignore = "encounter_coverage Emberon channel reset RED before combat implementation"]
 fn encounter_coverage_emberon_evade_during_channel_cleans_phase_and_rearms_without_credit() {
     let (mut h, boss, map) = emberon_copy(205);
     h.engage(boss);
