@@ -189,6 +189,22 @@ fn rotation_fidelity_tyrant_native_variant_follows_learned_antoran_armaments() {
     // SimC76f8118 pets1513: effect1 normally, effect4 only with Antoran Armaments.
     for (level, expected, antoran) in [(32, 135002, false), (35, 250289, true)] {
         let (mut h, owner) = warlock(level);
+        //250289 has no template tuning: use actual Northshire ADT area9/ancestry,
+        //not an invented135002 tuning copy or unknown regional level fallback.
+        crate::spell_cast::test_harness::place_toy_caster_on_source_area(
+            &mut h,
+            778027,
+            [-8949.95, -132.493],
+            9,
+        );
+        let origin = *h
+            .app
+            .world()
+            .get::<shared::components::Position>(h.caster)
+            .unwrap();
+        h.app.world_mut().entity_mut(owner).insert(origin);
+        let target = h.npc;
+        h.app.world_mut().entity_mut(target).insert(origin);
         assert_eq!(
             h.app
                 .world()
