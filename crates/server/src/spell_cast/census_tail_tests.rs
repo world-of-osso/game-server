@@ -9,6 +9,7 @@ const DREAMWALK_TRACKING_QUEST: u32 = 39_174;
 const FEROCIOUS_BITE: u32 = 22_568;
 const CAT_FORM: u32 = 768;
 const WILT: u32 = 23_772;
+const BARKSKIN: u32 = 22_812;
 
 /// Resolve one native effect after target selection, without unrelated teleport siblings.
 fn hit_native(h: &mut Harness, spell_id: u32, effect_index: u8, target: Entity) {
@@ -48,7 +49,7 @@ fn quest_fixture() -> (Harness, tempfile::TempDir, u64) {
 }
 
 fn burn_fixture(cat: bool) -> Harness {
-    let mut h = harness(Vec::new(), &[FEROCIOUS_BITE, CAT_FORM, WILT], 11).unwrap();
+    let mut h = harness(Vec::new(), &[FEROCIOUS_BITE, CAT_FORM, WILT, BARKSKIN], 11).unwrap();
     let level = h
         .app
         .world()
@@ -113,6 +114,25 @@ fn census_tail_62_native_wilt_damage_uses_actual_mana_burn_and_value_multiplier(
         h.health(caster),
         health - 6.0,
         "native amplitude2, not chain amplitude1; only three Mana existed"
+    );
+}
+
+#[test]
+#[ignore = "RED census-tail effect62"]
+fn census_tail_62_native_wilt_bypasses_spell_bonus_taken_but_still_burns_mana() {
+    let mut h = burn_fixture(false);
+    h.cast_and_deliver(BARKSKIN, None);
+    assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, BARKSKIN));
+    let caster = h.caster;
+    h.app.world_mut().get_mut::<Mana>(caster).unwrap().current = 3.0;
+    let health = h.health(caster);
+    hit_native(&mut h, WILT, 0, caster);
+    assert_eq!(h.app.world().get::<Mana>(caster).unwrap().current, 0.0);
+    assert_eq!(
+        h.health(caster),
+        health - 6.0,
+        "TC EffectPowerBurn does not call SpellDamageBonusTaken"
     );
 }
 
