@@ -1,3 +1,4 @@
+- [Pet-battle last-hit counters](systems/pet-battle-engine.md#last-hit-counter-percentages--2026-10-20) — generic197 follows DB2 Power100/150; tooltip disagreement stays a named note, not inferred arithmetic.
 - [Pet-battle Frostbite refresh](systems/pet-battle-engine.md#frostbite-duration-refresh--2026-10-20) — generic140 refreshes existing stacks;786 stays explicitly gated on unproven pad follow.
 - [Pet-battle Species Heal](systems/pet-battle-engine.md#species-heal--2026-10-20) — generic362 shares370 roster identity counting; real2260 RED/GREEN and ordinary healing preserved.
 - [Pet-battle current-health effects](systems/pet-battle-engine.md#current-health-percentage-effects--2026-10-20) — generic363 team routing, actual-victim leech and named engine-percentage policy; no Retail arithmetic certification.

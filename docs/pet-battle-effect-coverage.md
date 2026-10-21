@@ -1,3 +1,9 @@
+## Last-hit counters197 — 2026-10-20
+
+Generic197 uses **Last_HitTaken×Power/100** under `PET_BATTLE_197_POWER_PCT_OF_LAST_HIT`: source997/effect2253 Power100 and2432/effect4618 Power150. Existing percentage-damage hit/type/floor/mitigation handling is reused, without another power/critical/variance rescaling. The most recent actual direct or periodic hit supplies the stored value; no unsourced direct-only filter. **`PET_BATTLE_197_DESCRIPTION_POWER_CONFLICT`** records2432's equal-last-hit tooltip disagreement; DB2 data wins, not prose.
+
+Real197 RED5 then4GREEN plus a corrected wall-fixture1GREEN proves both roots, actual incoming hits, historical/zero hits, periodic history, type/floor policy, misses/blocks and no extra RNG. The first wall fixture incorrectly expected an outgoing Bite to pass a two-way wall; corrected fixture establishes history before the barrier and proves one counter charge consumed. Production unchanged by the fixture correction. Retained363 regression7PASS. Census **1908/2829 rows,1046records;71registered/33defined-used unregistered**, plus undefined0. Native/owned/Retail proof is not claimed.
+
 ## Frostbite duration refresh140 — 2026-10-20
 
 Generic140 assigns authored NewDuration to every existing matching aura stack on the current target, without creating stacks, changing original caster, resetting turn progress or reapplying states. Source70448 program785/effect1573 refreshes Frostbite787 to3 rounds. Real aura-program RED5→GREEN5 proves multi-stack refresh/expiry, recipient isolation, original-caster damage after swap, independent refresh after a new-stack miss and no creation when absent. These direct785 program tests are not selectable/journal proof.

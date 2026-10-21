@@ -3424,3 +3424,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: property362 same-species healing, shared370 identity counter and current70448 census1904/1043.
 
 - 2026-10-20: property140 real785/787 stack-duration refresh; explicit786 pad-follow gap avoids silently admitting an incomplete parent.
+
+- 2026-10-20: property197 actual last-hit Power percentages, data-over-prose conflict note, real997/2432 RED/GREEN and1908/1046 census.

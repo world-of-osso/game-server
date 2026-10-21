@@ -2,6 +2,10 @@
 
 Standalone `server::pet_battle` library, consumed by the separate [wild runtime](../../specs/wild-pet-battles.md). The library itself owns no Bevy plugin, transport, UI, spawning or account journal. Current capability is bounded; see [full property coverage](../../pet-battle-effect-coverage.md), not a blanket Retail parity claim.
 
+## Last-hit counter percentages — 2026-10-20
+
+Property197 reuses percentage damage with Last_HitTaken as its basis. `PET_BATTLE_197_POWER_PCT_OF_LAST_HIT` takes actual997 Power100 and2432 Power150 as percentages, without another power/crit/variance scaling. Existing hit/type/floor/mitigation and actual direct-or-periodic history remain unchanged. Local70448 BattlePetEffectProperties197 and effects2253/4618 supply these values. `PET_BATTLE_197_DESCRIPTION_POWER_CONFLICT` retains2432's equal-last-hit tooltip disagreement: DB2 fields win over prose; no guessed missing fields. Five source-driven cases prove both roots, incoming/history/periodic/zero hits, type rounding, miss/block and RNG boundaries; [contract](../../specs/pet-battle-engine.md), [coverage](../../pet-battle-effect-coverage.md).
+
 ## Frostbite duration refresh — 2026-10-20
 
 Generic140 refreshes existing target/ability stacks to NewDuration without state reapplication, new stacks or caster/turn reset. Local70448 program785/effect1573 supplies787/3rounds. Five real-program RED→GREEN tests prove stack refresh/expiry, victim isolation, retained caster power after swap and unconditional refresh despite a new-stack miss. They do not establish785 as a selectable owned ability.
