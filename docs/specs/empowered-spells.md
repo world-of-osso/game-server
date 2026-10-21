@@ -4,10 +4,11 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## What it must do
 
-- [ ] Resolve native override spells before ordinary admission, derive stage thresholds from their DB2 durations and applicable native modifiers, and retain the TC1000ms maximum-stage hold.
+- [x] Resolve native Font override spells through the shared follower action resolver before admission and retain the native three/four-stage metadata and TC1000ms maximum-stage hold. Modifier-specific timing still needs focused proof.
 - [ ] Release at an explicitly selected completed stage, on a matching explicit player release after the first-stage minimum, or automatically after maximum hold; pass the completed stage into the release effects/scripts.
 - [ ] Defer the GCD until empower finish and use native359115's500ms clock. Cancellation must remain distinct from release and retain the sourced cancellation/resource lifecycle.
-- [ ] Fire Breath357208/382266 releases actual357209, converting three periodic ticks per extra rank into direct damage and preserving the remaining native DoT plus Blast Furnace extension. Eternity Surge359073/382411 releases359077 against the completed rank's recipient count, doubled by native Eternity's Span. Fire Breath's Magic dispel requires native Scouring Flame378438 and retains current effect5's native count2, not the obsolete TC silence/index/rank-count fields.
+- [x] Native rank3 Fire Breath357208 releases real357209 damage with its remaining8000ms DoT. Native rank3 Eternity Surge359073 hits3 recipients, or6 with actual Eternity's Span. Fire Breath's dispel preserves enemy Magic buffs without378438 and removes them with native Scouring Flame.
+- [ ] Prove converted-tick direct damage across selected ranks, Blast Furnace extension, Font variant release consequences and native Scouring count2. Preserve current effect5 fields, not obsolete TC silence/index/rank-count fields.
 - [ ] Accept player release only for the authenticated owner's matching active empower. `ReleaseEmpowerSpell {spell_id}` and `StopSpellCast` remain separate messages; the client sends release when the cast binding goes up.
 
 ## How it works
@@ -29,9 +30,7 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## Known gaps (current cycle)
 
-- [ ] Prove the four initial native REDs GREEN on current master and the fresh canonical backup.
 - [ ] Add explicit player release, cancel/refund and selected-stage behavior tests plus matching protocol/client consumers.
-- [ ] Qualify and gate the current native Scouring dispel without changing generic utility handling.
 - [ ] Select follower empower stages from the applicable SimC APL branch, without inventing ranks or talent identities.
 
 ## Out of scope

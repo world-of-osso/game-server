@@ -130,7 +130,6 @@ fn observe_surge_targets(level: u8, enemies: usize) -> std::collections::BTreeSe
 }
 
 #[test]
-#[ignore = "RED: leading Dummy0 prevents rank recipient cap"]
 fn native_empower_eternity_surge_rank_three_hits_three_of_four_enemies() {
     assert_eq!(
         observe_surge_targets(21, 4).len(),
@@ -140,7 +139,6 @@ fn native_empower_eternity_surge_rank_three_hits_three_of_four_enemies() {
 }
 
 #[test]
-#[ignore = "control: native Eternity's Span doubles rank recipients"]
 fn native_empower_eternity_span_rank_three_hits_six_of_seven_enemies() {
     assert_eq!(
         observe_surge_targets(32, 7).len(),
@@ -188,19 +186,16 @@ fn cast_fire_breath_and_check_magic_buff(scouring: bool) -> bool {
 }
 
 #[test]
-#[ignore = "RED: Fire Breath dispels without native Scouring Flame"]
 fn native_empower_scouring_absent_preserves_enemy_magic_buff() {
     assert!(cast_fire_breath_and_check_magic_buff(false));
 }
 
 #[test]
-#[ignore = "control: source-native Scouring Flame must retain actual dispel"]
 fn native_empower_scouring_present_dispels_enemy_magic_buff() {
     assert!(!cast_fire_breath_and_check_magic_buff(true));
 }
 
 #[test]
-#[ignore = "pending: native Font dispatch through the single shared follower resolver"]
 fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
