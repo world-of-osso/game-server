@@ -124,7 +124,8 @@ fn census_tail_118_native_henry_fortitude_buffs_actual_companion_party() {
     let mut companions = Vec::new();
     let mut units = vec![owner];
     let mut henry = None;
-    for entry in [209_057, 215_011, 209_053, 209_059] {
+    let mut outsider = None;
+    for entry in [209_057, 215_011, 209_053, 209_059, 209_065] {
         let profile = catalog
             .profiles
             .iter()
@@ -143,11 +144,16 @@ fn census_tail_118_native_henry_fortitude_buffs_actual_companion_party() {
                     name: follower.profile.name.clone(),
                 },
                 follower.clone(),
+                shared::components::UnitSummonedBy(owner.to_bits()),
             ));
         let member = super::Follower::member_id(unit);
-        view.insert(member, follower.online(unit, 80, 1));
-        companions.push((member, follower.profile.role));
-        units.push(unit);
+        if entry == 209_065 {
+            outsider = Some(unit);
+        } else {
+            view.insert(member, follower.online(unit, 80, 1));
+            companions.push((member, follower.profile.role));
+            units.push(unit);
+        }
         if entry == 215_011 {
             henry = Some(unit);
         }
@@ -172,4 +178,8 @@ fn census_tail_118_native_henry_fortitude_buffs_actual_companion_party() {
             "companion party member {unit:?} lacks native Fortitude"
         );
     }
+    assert!(
+        !buffed(&h, outsider.unwrap()),
+        "ownership alone does not confer follower group membership"
+    );
 }
