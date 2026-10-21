@@ -24,6 +24,9 @@
 //! UNIT_TARGET_RAID and 118 UNIT_TARGET_ALLY_OR_RAID to the ally target.
 //! Every other ID is unsupported and fails the cast.
 
+mod ordered_destination;
+pub(super) use ordered_destination::{check_destination_support, effect_destination};
+
 use crate::random as rand;
 use bevy::prelude::*;
 use shared::casting::{CastState, CastType};
@@ -84,6 +87,8 @@ enum Selector {
     CenterCaster,
     /// Already selected destination;138 resolves terrain height in the mutable cast-plan step.
     ExistingDest,
+    ///148: move the selected destination toward the caster by this slot's radius.
+    DestTowardsCaster,
     ///72: random point in this slot's radius span around the caster.
     CasterRandom,
     ///86/91: random direction;86 samples the radius span,91 keeps the radius.
@@ -147,7 +152,8 @@ fn selector(id: u32) -> Option<Selector> {
         21 | 57 | 118 => Selector::Explicit(Ally),
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
-        87 | 138 | 148 => Selector::ExistingDest,
+        87 | 138 => Selector::ExistingDest,
+        148 => Selector::DestTowardsCaster,
         78 => Selector::DestOffset(0.0),
         79 => Selector::DestOffset(std::f32::consts::PI),
         72 => Selector::CasterRandom,
@@ -188,8 +194,9 @@ pub fn unsupported_target(effect: &SpellEffect) -> Option<u32> {
             && (effect.effect == super::disenchant::EFFECT_DISENCHANT
                 || super::open_lock::is_item_effect(effect));
         let gathering_target = id == 23 && effect.effect == 33;
+        let offset_has_origin = matches!(effect.implicit_targets[0], 18 | 148);
         let unsupported_offset =
-            matches!(id, 78 | 79) && (effect.implicit_targets[0] != 18 || radius(effect, 1) <= 0.0);
+            matches!(id, 78 | 79) && (!offset_has_origin || radius(effect, 1) <= 0.0);
         unsupported_offset || (selector(id).is_none() && !item_target && !gathering_target)
     })
 }
@@ -412,13 +419,32 @@ pub fn select_targets(
     let mut center = None;
     let mut units = Vec::new();
     let mut selected_any = false;
+    let ordered = effect.implicit_targets.contains(&148);
+    let mut destination = spell.cast_destination.map(|point| Dest {
+        position: Vec3::from_array(point),
+        orientation: orientation(world, caster),
+    });
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
         if id == 79 && unsupported_target(effect) == Some(79) {
             return Err(79);
         }
         let selector = selector(id).ok_or(id)?;
+        if ordered && ordered_destination::sets_destination(selector) {
+            destination = ordered_destination::select_slot(
+                world,
+                caster,
+                explicit,
+                spell,
+                effect,
+                slot,
+                destination,
+            )
+            .map_err(|_| id)?;
+            center = destination.map(|destination| destination.position);
+            continue;
+        }
         match selector {
-            Selector::None | Selector::ForwardLeap => {}
+            Selector::None | Selector::ForwardLeap | Selector::DestTowardsCaster => {}
             Selector::ExistingDest => {
                 // TC Spell::InitExplicitTargets:666–678 initializes an absent
                 // required destination from the supplied object target, else self.
@@ -1170,67 +1196,7 @@ pub fn effect_dest(
         orientation: orientation(world, caster),
     });
     for (slot, &id) in effect.implicit_targets.iter().enumerate() {
-        let selector = selector(id)?;
-        let point = match selector {
-            Selector::ChannelDestination => {
-                dest = channel_destination(world, caster);
-                continue;
-            }
-            Selector::CenterCaster => position(world, caster),
-            Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
-            // TC Spell::InitExplicitTargets:666–678; CheckDst must retain the
-            // unit-target destination instead of replacing it with the caster.
-            Selector::ExistingDest => dest
-                .map(|dest: Dest| dest.position)
-                .or_else(|| position(world, explicit.unwrap_or(caster))),
-            Selector::CasterRandom => {
-                position(world, caster).map(|point| random_destination(point, effect, slot))
-            }
-            Selector::DestRandom => {
-                // Native CheckDst initializes an absent destination before applying the offset.
-                if dest.is_none() {
-                    dest = Some(Dest {
-                        position: position(world, caster)?,
-                        orientation: orientation(world, caster),
-                    });
-                }
-                dest.map(|dest: Dest| random_destination(dest.position, effect, slot))
-            }
-            Selector::DestOffset(angle) => dest.map(|dest: Dest| {
-                offset_destination(
-                    dest.position,
-                    dest.orientation + angle,
-                    radius(effect, slot),
-                )
-            }),
-            Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
-            Selector::DestTargetOffset(angle) => explicit
-                .and_then(|target| target_offset(world, target, radius(effect, slot), angle)),
-            Selector::CasterOffset(angle) => {
-                let distance = radius(effect, slot);
-                let distance = clamp_player_front_distance(world, caster, id, distance);
-                caster_offset(world, caster, angle, distance)
-            }
-            _ => continue,
-        };
-        let facing = match selector {
-            Selector::CenterCaster
-            | Selector::ForwardLeap
-            | Selector::CasterRandom
-            | Selector::CasterOffset(_) => orientation(world, caster),
-            Selector::DestRandom | Selector::DestOffset(_) => dest?.orientation,
-            Selector::ExistingDest => {
-                dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
-            }
-            _ => explicit.map_or_else(
-                || orientation(world, caster),
-                |target| orientation(world, target),
-            ),
-        };
-        dest = point.map(|position| Dest {
-            position,
-            orientation: facing,
-        });
+        dest = effect_dest_slot(world, caster, explicit, effect, slot, id, dest);
     }
     if dest.is_none()
         && matches!(
@@ -1245,6 +1211,100 @@ pub fn effect_dest(
         });
     }
     dest
+}
+
+fn effect_dest_slot(
+    world: &World,
+    caster: Entity,
+    explicit: Option<Entity>,
+    effect: &SpellEffect,
+    slot: usize,
+    id: u32,
+    dest: Option<Dest>,
+) -> Option<Dest> {
+    let selector = selector(id)?;
+    let point = match selector {
+        Selector::ChannelDestination => {
+            return channel_destination(world, caster);
+        }
+        Selector::CenterCaster => position(world, caster),
+        Selector::ForwardLeap => caster_offset(world, caster, 0.0, radius(effect, slot)),
+        // TC Spell::InitExplicitTargets:666–678; CheckDst must retain the
+        // unit-target destination instead of replacing it with the caster.
+        Selector::ExistingDest => dest
+            .map(|dest: Dest| dest.position)
+            .or_else(|| position(world, explicit.unwrap_or(caster))),
+        Selector::CasterRandom => {
+            position(world, caster).map(|point| random_destination(point, effect, slot))
+        }
+        Selector::DestRandom => {
+            let origin = dest
+                .map(|dest| dest.position)
+                .or_else(|| position(world, caster))?;
+            Some(random_destination(origin, effect, slot))
+        }
+        Selector::DestTowardsCaster => {
+            let origin = dest
+                .map(|dest| dest.position)
+                .or_else(|| position(world, explicit.unwrap_or(caster)))?;
+            let caster_position = position(world, caster)?;
+            let delta = caster_position - origin;
+            let angle = (-delta.z).atan2(delta.x);
+            Some(offset_destination(origin, angle, radius(effect, slot)))
+        }
+        Selector::DestOffset(angle) => dest.map(|dest: Dest| {
+            offset_destination(
+                dest.position,
+                if effect.implicit_targets.contains(&148) {
+                    orientation(world, caster) + angle
+                } else {
+                    dest.orientation + angle
+                },
+                radius(effect, slot),
+            )
+        }),
+        Selector::CenterExplicit(_) => explicit.and_then(|target| position(world, target)),
+        Selector::DestTargetOffset(angle) => {
+            explicit.and_then(|target| target_offset(world, target, radius(effect, slot), angle))
+        }
+        Selector::CasterOffset(angle) => {
+            let distance = radius(effect, slot);
+            let distance = clamp_player_front_distance(world, caster, id, distance);
+            caster_offset(world, caster, angle, distance)
+        }
+        _ => return dest,
+    };
+    let facing = match selector {
+        Selector::CenterCaster
+        | Selector::ForwardLeap
+        | Selector::CasterRandom
+        | Selector::CasterOffset(_) => orientation(world, caster),
+        Selector::DestRandom => {
+            dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
+        }
+        Selector::DestOffset(_) if effect.implicit_targets.contains(&148) => {
+            orientation(world, caster)
+        }
+        Selector::DestOffset(_) => dest?.orientation,
+        Selector::DestTowardsCaster => {
+            let original = dest
+                .map(|dest| dest.position)
+                .or_else(|| position(world, explicit.unwrap_or(caster)))?;
+            let delta = original - position(world, caster)?;
+            (-delta.z).atan2(delta.x).rem_euclid(std::f32::consts::TAU)
+        }
+        Selector::ExistingDest => {
+            dest.map_or_else(|| orientation(world, caster), |dest| dest.orientation)
+        }
+        _ => explicit.map_or_else(
+            || orientation(world, caster),
+            |target| orientation(world, target),
+        ),
+    };
+    point.map(|position| Dest {
+        position,
+        orientation: facing,
+    })
 }
 
 ///TC caster-ground62 and destination-ground138 resolve map height (`Map::GetHeight`,

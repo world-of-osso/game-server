@@ -1,5 +1,13 @@
 # Spell Casting
 
+## Ordered target148 destination — 2026-10-21
+
+`targets/ordered_destination.rs` handles target148 generically in native TargetA/TargetB order (TC a352b1fa Spell.cpp1690–1738), including the center consumed by destination-area unit selection. Radius comes from the active slot; movement direction is destination→caster, while destination facing is caster→original destination. Following78/79 uses caster facing,87 retains the already-selected destination and138 grounds at its own slot, not after all selection. Effect254 mixed148/87 no longer requires a user ground point when the unit target supplies its native initial destination.
+
+Real434712 Attr9=0 chooses `MovePositionToFirstCollision` (Spell.cpp9286–9292), not the six-yard/ten-step `MovePosition` path. The approved direct-ray subset uses existing baked/live collision and dry/non-hover creature ground services. `SPELL_DEST_DETOUR_RAYCAST_ABSENT` (Object.cpp2853–2866) names missing Detour parity; collision eye-height/clearance and supported-floor semantics remain existing server policy, not full TC geometry certification. `SPELL_DEST_FORCE_LOCATION_MAX_HEIGHT_ABSENT` (Object.cpp2802–2826) rejects force-location148 spells rather than substituting direct collision. Normal/Follower physical endpoint and native mixed-selector tests produced eight genuine RED failures before implementation; GREEN pending.
+
+Sources: pinned TC a352b1fa files above, actual70448 runtime spells434712/196884/330398/1243638/1281788/1242814/448480; [contract](../../specs/spell-teleports-overrides.md). Evidence: engine `data/diagnostics/follower-dungeons-2026-10-21/native148-ordered-red.log`.
+
 ## Death Grip and destination jumps — 2026-10-20
 
 TC a352b1fa `spell_dk.cpp663–673` binds49576 effect0 to caster→victim243912, victim→caster49575 and, only with Blood137008, caster→victim51399. Existing triggered-cast planning preserves launch ownership, order and taunt aura ownership; range/dead-target parent refusals never reach the hook.
