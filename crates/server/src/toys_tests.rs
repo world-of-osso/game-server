@@ -18,6 +18,8 @@ mod citizens;
 mod disguises;
 #[path = "toys_dragon_head_tests.rs"]
 mod dragon_head;
+#[path = "toys_flag_tests.rs"]
+mod flag;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_cast_tests.rs"]
