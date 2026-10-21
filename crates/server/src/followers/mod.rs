@@ -48,6 +48,8 @@ mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
+mod utility;
+mod utility_interrupt;
 #[cfg(test)]
 mod utility_policy_tests;
 

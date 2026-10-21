@@ -23,6 +23,7 @@ pub(super) fn update(
         .flat_map(|catalog| &catalog.kits)
         .filter(|entry| entry.spec_id == follower.profile.spec_id)
         .cloned()
+        .map(super::utility::normalize_entry)
         .collect();
     if entries.is_empty() {
         return false;
@@ -32,7 +33,10 @@ pub(super) fn update(
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
         return true;
     }
-    let candidates: Vec<_> = enemy.into_iter().collect();
+    if super::utility::try_support(world, unit, follower, party, &enemies) {
+        return true;
+    }
+    let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
     let mut interrupt_attempted = false;
     for entry in entries
         .iter()
@@ -43,18 +47,19 @@ pub(super) fn update(
             world.resource::<crate::spell_info::SpellStore>(),
         );
         let pet_interrupt = follower.profile.spec_id == 266;
-        if !interrupt_attempted && (interrupt_entry || pet_interrupt) {
+        if !interrupt_attempted && (interrupt_entry || pet_interrupt || entry.slot == Slot::Control)
+        {
             interrupt_attempted = true;
-            if super::kit_interrupt::try_interrupt_candidates(
-                world,
-                unit,
-                &follower.profile,
-                &candidates,
-            ) {
+            if super::utility_interrupt::try_party(world, follower.owner, party, &candidates) {
                 return true;
             }
         }
-        let Some(target) = select_target(world, unit, party, enemy, entry) else {
+        let entry_enemy = if entry.slot == Slot::Control {
+            candidates.first().copied()
+        } else {
+            enemy
+        };
+        let Some(target) = select_target(world, unit, party, entry_enemy, entry) else {
             continue;
         };
         if conditions_met(world, unit, target, party, &enemies, entry)
@@ -107,7 +112,24 @@ fn choose_patient(world: &World, unit: Entity, party: &[Entity], entry: &Entry) 
     let by_health = eligible
         .filter_map(|target| health_fraction(world, target).map(|fraction| (target, fraction)));
     by_health
-        .min_by(|left, right| left.1.total_cmp(&right.1))
+        .min_by(|left, right| {
+            let harm = |target| {
+                if entry.slot == Slot::Dispel {
+                    super::utility_interrupt::dispel_harm(
+                        world,
+                        unit,
+                        target,
+                        &entry.conditions.dispel_types,
+                    )
+                } else {
+                    0
+                }
+            };
+            harm(right.0)
+                .cmp(&harm(left.0))
+                .then_with(|| left.1.total_cmp(&right.1))
+                .then_with(|| left.0.to_bits().cmp(&right.0.to_bits()))
+        })
         .map(|(target, _)| target)
 }
 
@@ -127,7 +149,15 @@ fn patient_is_eligible(world: &World, unit: Entity, target: Entity, entry: &Entr
             crate::spell_cast::check_target_aura_restrictions(world, unit, Some(target), spell)
                 .is_ok()
         });
-    same_map && missing_requested_aura && correct_role && can_remove_aura && native_target_eligible
+    let defensive_eligible = entry.slot != Slot::Defensive
+        || (super::utility::projected_death(world, target)
+            && !super::utility::active_defensive(world, target));
+    same_map
+        && missing_requested_aura
+        && correct_role
+        && can_remove_aura
+        && native_target_eligible
+        && defensive_eligible
 }
 
 fn is_tank(world: &World, unit: Entity) -> bool {
@@ -160,6 +190,12 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    if entry.slot == Slot::Defensive
+        && (!super::utility::projected_death(world, target)
+            || super::utility::active_defensive(world, target))
+    {
+        return false;
+    }
     if !health_and_auras_allow(world, unit, target, party, entry)
         || !combat_allows(world, unit, target, enemies, entry)
     {
@@ -257,6 +293,12 @@ fn combat_allows(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    if super::utility::is_raid_buff(entry.spell_id) && !enemies.is_empty() {
+        return false;
+    }
+    if entry.slot == Slot::Taunt && !is_tank(world, unit) {
+        return false;
+    }
     if condition.combat && enemies.is_empty() {
         return false;
     }
@@ -325,6 +367,12 @@ fn attempt_cast(
         )
     {
         return false;
+    }
+    if entry.conditions.target == Target::Enemy
+        && entry.slot != Slot::Control
+        && super::utility::try_movement(world, unit, target, follower, entry.spell_id)
+    {
+        return true;
     }
     let result = if urgent {
         crate::spell_cast::creature_cast_interrupting_self(
