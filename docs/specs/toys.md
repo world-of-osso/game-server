@@ -13,6 +13,16 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Server-scope visual-only census rule
+
+A dummy aura counts as satisfied at server scope only when all four conditions hold: source contract is visual/audio only; authored visual chain resolves completely; slots have no trigger/misc/item/mechanic/gameplay payload; actual UseToy applies and replicates the aura and real CancelAura removes it. Native pixels/audio remain a separate proof boundary. Successful cast, aura4 alone or zero-valued slots are insufficient.
+
+- [x] Gleaming Arcanocrystal201927/395705: hold/refract the source crystal; complete70448 visual119030/event/kit/ordinary models/positioners/animation and sound graph, source20000ms owner aura and120000ms recovery.
+- [x] Lost Compass202711/399041: hold out the source compass; complete70448 visual125287/event/kit/model/positioner/AnimKit graph, source indefinite owner aura and1000ms recovery. This does not admit Wayfinder's Compass388275 or implement navigation.
+- [x] Both use the existing strict visual-only pipeline, real bag learning/UseToy, owner-only aura replication, real cancellation and unchanged health/body/position. Missing visual or changed nonzero payload still refuses without effects/cooldown.
+
+No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
+
 ## Flag of Ownership source script
 
 - [x] Port TC a352b1fa `spell_item.cpp:3603–3641` for38578/51640 only: choose one random enemy player body in the source area, exclude NPCs/living/allied/out-of-range bodies, emit BroadcastText28008 with the selected owner, then trigger51657.

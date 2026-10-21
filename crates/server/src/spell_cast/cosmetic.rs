@@ -31,11 +31,14 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     261981, // Spitzy
     272071, // Roar of Rezan: one-shot caster sound107006/animation74, no gameplay payload.
     286277, // Worn Cloak
-    300104, 300144,  // War Banner: source CurrentPvpFaction condition and combat interrupts
-    302273,  // Heart of a Champion
-    318452,  // Aqir Egg Cluster's missile-triggered swarm attachments
-    302730,  // Brewfest Chowdown Trophy's champion animation aura (visual88525)
-    383065,  // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
+    300104, 300144, // War Banner: source CurrentPvpFaction condition and combat interrupts
+    302273, // Heart of a Champion
+    318452, // Aqir Egg Cluster's missile-triggered swarm attachments
+    302730, // Brewfest Chowdown Trophy's champion animation aura (visual88525)
+    383065, // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
+    // Audited build70448 complete model/positioner/animation/sound chains;
+    // source contracts only hold/refract a crystal or hold out a compass.
+    395705, 399041,  // Gleaming Arcanocrystal, Lost Compass (not Wayfinder's Compass).
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
