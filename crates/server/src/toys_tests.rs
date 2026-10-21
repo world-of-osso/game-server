@@ -2158,9 +2158,12 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
             world.get::<crate::maps::InMap>(summon),
             world.get::<crate::maps::InMap>(h.caster)
         );
+        // Plain Ally/Title0 TempSummon retains source template faction35:
+        // properties121/3149 have Faction0 and no UseSummonerFaction(0x1000).
+        // TC TemporarySummon.cpp255–265; SetOwnerGUID is not Minion faction inheritance.
         assert_eq!(
             world.get::<UnitFactionTemplate>(summon),
-            world.get::<UnitFactionTemplate>(h.caster)
+            Some(&UnitFactionTemplate(35))
         );
         assert!(
             world

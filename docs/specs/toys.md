@@ -19,6 +19,8 @@ Do not add these three Toy rows until a real contract is established and approve
 - [x] Source-native168667/298926,192485/373230,258135/1262837,258136/1262850 and267472/1280448 admit actor-only use under the global source-marker policy. No per-toy script is added. Existing198206/198264/210975 opt-in party/viewer world-effect contracts remain named gaps.
 - [x] Real source-eligible use must produce the exact source actors/models in the owner's map, without guardian/follow classification, and preserve natural source2/5/11-minute actor lifetime. Projector's Gnome restriction remains enforced.
 
+The existing scenery88381/127771 and88584/128180 remains ordinary Ally/Title0 TempSummon with source template faction35, not caster-faction inheritance: properties121/3149 author Faction0 and do not set UseSummonerFaction. Ownership alone does not make these Minions.
+
 Actor-only admission does not certify Blingtron gifts/combat, clone stacking, jumpable collision geometry, native rendering, or unresolved scripts. Totem/vehicle/possession and other blocked action contracts do not acquire support merely from this title dispatch.
 
 ## Server-scope visual-only census rule
