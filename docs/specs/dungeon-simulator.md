@@ -29,6 +29,15 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Preserve pre-impact combat holds for valid native combat references, even before the first damage event. Unattackable-only references do not veto clear readiness.
 - [ ] Preserve actual damage/healing measurements, fatal-hit output and observed Death receipts while filtering clearable-opponent identity.
 
+## Boss-path corridor authoring
+
+`FOLLOWER_ROUTE_BOSS_PATH_CORRIDOR` (user,2026-10-21): freeze a deterministic route per map. Visit Azure bosses in Leymor→Azureblade→Telash→Umbrelskul order and use the qualified books for translocation hops. Preserve Stockade's qualified Moloch→Hogger→Overheat encounter order and completion equivalence.
+
+- [ ] Compute shortest paths on the frozen native-height graph, with directed zero-distance teleport edges; a teleport exposes no intervening physical corridor.
+- [ ] Plan only packs whose native acquisition sphere intersects a walked path segment, plus sourced boss-gate packs. Skip other packs. Qualification uses the map's fixed baseline party/level, never a per-seed route recomputation.
+- [ ] Source Leymor's three191164 tenders/formation29001816 as an explicit prerequisite before the boss; do not clear every post-boss wing first.
+- [ ] Keep the1h diagnostic bound. Prove Stockade seeds1–10 and report Azure seeds1–10 after generic route integration.
+
 ## Authored route
 
 Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-source 2D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.

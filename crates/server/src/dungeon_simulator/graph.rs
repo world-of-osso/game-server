@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 #[path = "azure_extraction.rs"]
 mod azure_extraction;
+#[path = "corridor_inputs.rs"]
+mod corridor_inputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Spawn {
@@ -32,7 +34,7 @@ pub(super) struct Edge {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct RouteStep {
     pub pack: u32,
-    pub anchor: [f32; 2],
+    pub anchor: [f32; 3],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -397,7 +399,7 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
         assert!(seen.insert(pack), "duplicate authored pack{pack}");
         assert!(graph.packs.iter().any(|entry| entry.id == pack));
         let anchor = step["anchor"].as_array().unwrap();
-        assert_eq!(anchor.len(), 2);
+        assert_eq!(anchor.len(), 3);
         assert!(
             anchor
                 .iter()
@@ -489,15 +491,8 @@ fn extract_stockade_graph() {
         entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
-        route: {
-            #[derive(Deserialize)]
-            struct AuthoredRoute {
-                route: Vec<RouteStep>,
-            }
-            serde_json::from_slice::<AuthoredRoute>(&std::fs::read(graph_path()).unwrap())
-                .expect("preserve authored pull order across topology extraction")
-                .route
-        },
+        // Topology extraction is followed by native radius capture and the generic route author.
+        route: Vec::new(),
         teleports: Vec::new(),
         packs,
         edges,

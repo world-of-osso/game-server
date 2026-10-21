@@ -1,0 +1,12 @@
+{
+  "34": {
+    "boss_order": [46383, 46254, 46264],
+    "gate_entries": {},
+    "source": "Preserve qualified Stockade boss order: Moloch, Hogger, Overheat (prior route indices18/32/66)."
+  },
+  "2515": {
+    "boss_order": [186644, 186739, 186737, 186738],
+    "gate_entries": {"186644": [191164]},
+    "source": "TC a352b1fa Azure instance encounter order; leymor_arcane_tender group and native205 intro fixture require all three191164, source formation29001816."
+  }
+}

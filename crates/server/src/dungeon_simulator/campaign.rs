@@ -1233,16 +1233,7 @@ impl Run {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .insert(MoveIntent(Vec3::new(
-                    step.anchor[0],
-                    self.graph
-                        .packs
-                        .iter()
-                        .find(|pack| pack.id == pack_id)
-                        .unwrap()
-                        .height,
-                    step.anchor[1],
-                )));
+                .insert(MoveIntent(Vec3::from_array(step.anchor)));
             return Ok(());
         }
         self.app
