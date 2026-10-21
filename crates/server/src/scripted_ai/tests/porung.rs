@@ -133,7 +133,6 @@ fn encounter_coverage_porung_authentic_inputs_and_normal_absence_qualify() {
 }
 
 #[test]
-#[ignore = "pending native SmartAI cleave clock and damage proof"]
 fn encounter_coverage_porung_source_cleave_repeats_at_victim_and_really_damages() {
     let (mut h, _) = porung_copy(2);
     let boss = h.creatures_of(PORUNG)[0];
