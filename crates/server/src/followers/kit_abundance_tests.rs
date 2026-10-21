@@ -37,7 +37,7 @@ fn add_native_friend(h: &mut Harness, entry: u32) -> Entity {
     unit
 }
 
-fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
+pub(super) fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
     let (mut h, healer) = at_level(CRENNA, level, |_| {});
     let native = crate::spell_cast::test_harness::load_native_creature_world(FRIENDS);
     h.app
