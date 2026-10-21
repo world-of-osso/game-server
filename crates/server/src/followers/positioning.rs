@@ -2,18 +2,14 @@
 use bevy::ecs::system::SystemState;
 use bevy::prelude::*;
 use shared::components::Health;
-use shared::group::GroupRole;
 
-use super::{Follower, pull_route};
+use super::{kit_ai, pull_route};
 use crate::creature_aggro::AggroDistance;
 use crate::maps::InMap;
 use crate::spell_cast::targets;
 
 pub(super) fn hold_unsafe_approach(world: &mut World, unit: Entity, target: Entity) -> bool {
-    let Some(follower) = world.get::<Follower>(unit) else {
-        return false;
-    };
-    if follower.profile.role == GroupRole::Tank {
+    if kit_ai::is_tank(world, unit) {
         return false;
     }
     let unsafe_approach = match approach_enters_unpulled_sight(world, unit, target) {
