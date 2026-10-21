@@ -176,6 +176,7 @@ pub(crate) fn portrait_appearance(
             .cloned()
     });
     GroupPortraitAppearance {
+        creature_display_id: None,
         race: player.race,
         appearance: player.appearance.clone(),
         head,

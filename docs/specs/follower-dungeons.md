@@ -1,5 +1,7 @@
 # Follower dungeons
 
+Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
+
 ## Admin harness party staging
 
 `stage-follower-party <owner> <map> <x> <y> <z>` is admin-socket-only setup, not gameplay

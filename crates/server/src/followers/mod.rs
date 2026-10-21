@@ -91,13 +91,17 @@ impl Follower {
         entity: Entity,
         level: u8,
         dungeon_difficulty: u32,
+        display_id: u32,
     ) -> crate::group::OnlineMember {
         crate::group::OnlineMember {
             entity: entity.to_bits(),
             name: self.profile.name.clone(),
             class: self.profile.class_id,
             level,
-            portrait: Default::default(),
+            portrait: shared::protocol::GroupPortraitAppearance {
+                creature_display_id: Some(display_id),
+                ..Default::default()
+            },
             dungeon_difficulty,
             raid_difficulty: Default::default(),
         }

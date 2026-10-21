@@ -262,6 +262,10 @@ pub(super) fn join_members(
                     unit,
                     world.get::<UnitLevel>(unit).expect("follower level").0,
                     difficulty,
+                    world
+                        .get::<shared::components::ModelDisplay>(unit)
+                        .expect("spawned follower display")
+                        .display_id,
                 ),
             );
             (Follower::member_id(unit), follower.profile.role)
@@ -447,6 +451,13 @@ mod copy_tests {
         let members = profiles
             .iter()
             .map(|profile| {
+                let display_id = db
+                    .query_row(
+                        "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx LIMIT 1",
+                        [profile.entry],
+                        |row| row.get(0),
+                    )
+                    .unwrap();
                 app.world_mut()
                     .spawn((
                         Follower {
@@ -459,6 +470,7 @@ mod copy_tests {
                             name: profile.name.clone(),
                         },
                         UnitLevel(12),
+                        shared::components::ModelDisplay { display_id },
                         shared::components::Health {
                             current: 1000.0,
                             max: 1000.0,

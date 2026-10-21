@@ -1341,6 +1341,7 @@ fn roster_portrait_fixture() -> (
     let bob = connect(&mut app, 2, "Bob");
     let cid = connect(&mut app, 3, "Cid");
     let portrait = shared::protocol::GroupPortraitAppearance {
+        creature_display_id: None,
         race: 4,
         appearance: CharacterAppearance {
             sex: 1,
@@ -1671,6 +1672,7 @@ fn roster_portrait_persisted_helm_equip_reaches_far_member() {
     );
     let updates = rosters(&mut app, &alice);
     let expected = GroupPortraitAppearance {
+        creature_display_id: None,
         race: 4,
         appearance: loaded.appearance,
         head: Some(EquippedAppearanceEntry {
