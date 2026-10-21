@@ -201,7 +201,6 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
 }
 
 #[test]
-#[ignore = "RED: dummy fixture omits the production stat recomputation system"]
 fn rotation_dummy_native_stat_buff_recomputes_all_four_follower_sheets() {
     for (entry, spec) in [(209059, 63), (209053, 262), (209065, 253), (215240, 1467)] {
         let (mut h, caster) = prepare_follower(entry, spec, 90);
