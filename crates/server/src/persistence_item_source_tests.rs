@@ -176,6 +176,38 @@ fn native_modifiers() -> server::item_instance::ItemInstanceModifiers {
 }
 
 #[test]
+fn item_instance_preexisting_character_without_modifier_table_reopens_as_unmodified() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = Database::create(file.path()).unwrap();
+    super::super::create_tables(&db);
+    let record = native_equipped_record(41);
+    save_inventory_record(&db, 1, &record);
+    let txn = db.begin_write().unwrap();
+    assert!(
+        txn.delete_table(server::item_instance::store::ITEM_MODIFIERS)
+            .unwrap()
+    );
+    txn.commit().unwrap();
+    drop(db);
+
+    let db = Database::open(file.path()).unwrap();
+    let loaded = load_inventory_record(&db, 1).expect("pre-existing character remains loadable");
+    assert_eq!(loaded.equipped, record.equipped);
+    assert!(loaded.item_modifiers.is_empty());
+    let standalone = server::item_instance::store::load_modifiers(&db, 41).unwrap();
+    assert_eq!(standalone, Default::default());
+    assert!(
+        matches!(
+            db.begin_read()
+                .unwrap()
+                .open_table(server::item_instance::store::ITEM_MODIFIERS),
+            Err(redb::TableError::TableDoesNotExist(_))
+        ),
+        "reading legacy data must not create a table"
+    );
+}
+
+#[test]
 fn item_instance_inventory_record_hydrates_guid_modifiers_after_database_reopen() {
     let file = tempfile::NamedTempFile::new().unwrap();
     let db = Database::create(file.path()).unwrap();

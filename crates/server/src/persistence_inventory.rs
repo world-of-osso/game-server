@@ -156,13 +156,16 @@ pub fn load_inventory_record(db: &Database, character_id: u64) -> Option<Invento
             Some((guid, data))
         })
         .collect();
-    let modifier_table = txn
-        .open_table(server::item_instance::store::ITEM_MODIFIERS)
-        .expect("open GUID item modifiers");
+    let modifier_table = match txn.open_table(server::item_instance::store::ITEM_MODIFIERS) {
+        Ok(table) => Some(table),
+        Err(redb::TableError::TableDoesNotExist(_)) => None,
+        Err(error) => panic!("open GUID item modifiers: {error}"),
+    };
     let item_modifiers = guids
         .iter()
         .filter_map(|&guid| {
             let row = modifier_table
+                .as_ref()?
                 .get(guid)
                 .expect("read GUID item modifiers")?;
             Some((
