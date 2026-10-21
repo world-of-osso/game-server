@@ -73,6 +73,9 @@ mod effects23_tests;
 #[path = "effects24_tests.rs"]
 mod effects24_tests;
 
+#[path = "effects25_tests.rs"]
+mod effects25_tests;
+
 fn fixture_db() -> Connection {
     // Copy only battle tables; corruption tests must never mutate shipped world.db.
     let db = Connection::open_in_memory().unwrap();
