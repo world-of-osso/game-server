@@ -228,7 +228,7 @@ fn route_enters_source(
         .any(|leg| segment_distance_squared(center, leg[0], leg[1]) < radius * radius))
 }
 
-fn read_native_radius(
+pub(super) fn read_native_radius(
     world: &World,
     geometry: &mut SystemState<AggroDistance>,
     tank: Entity,
@@ -249,7 +249,7 @@ fn read_native_radius(
         .ok_or_else(|| "Source actor lacks native aggro radius".into())
 }
 
-fn segment_distance_squared(center: Vec3, from: Vec3, to: Vec3) -> f32 {
+pub(super) fn segment_distance_squared(center: Vec3, from: Vec3, to: Vec3) -> f32 {
     let delta = to - from;
     let length_squared = delta.length_squared();
     let fraction = if length_squared > 0.0 {

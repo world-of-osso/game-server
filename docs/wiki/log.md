@@ -2,6 +2,11 @@
 
 [FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
 
+## 2026-10-21 — Azure translocation policy
+
+[Source book gossip and qualified endpoint derivation](systems/azure-translocation.md): nine directed links from13 source books, including authenticated AreaPOI7116 in the final component; missing ActionSets remain named. Native ingress three REDs before implementation; GREEN pending.
+
+-2026-10-20: [Non-tank positioning](systems/dungeon-simulator.md#non-tank-sight-envelope-positioning): native sight-circle approach hold RED→GREEN on20375760; accidental recovery retained, post-change10/10seeded clears.
 ## 2026-10-21 — Follower population source audit
 
 [All27 follower maps](investigations/follower-data.md#follower-population-source-audit--2026-10-21): source-only copy producer and native catalog reconstruction test; missing authentic population/entrance data stays named, not fabricated.

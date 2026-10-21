@@ -4,7 +4,26 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 ## Frozen geometry
 
-`content/dungeons/stockade-34.json` contains 143 Normal source packs and 367 native-query walk-distance edges (70 KB). Pack identity matches source formations, never proximity clusters. Extraction retains a minimum spanning forest plus four nearest neighbours; every node is connected. Only the explicitly ignored extraction test opens the nav bake. Runtime positions are flattened to a plane; travel consumes source speeds and frozen edge distances, not the straight-line endpoint distance.
+`content/dungeons/stockade-34.json` contains 143 Normal source packs and 367 native-query walk-distance edges (70 KB). Pack identity matches source formations, never proximity clusters. Extraction retains a minimum spanning forest plus four nearest neighbours; every node is connected. Only the explicitly ignored extraction test opens the nav bake. Native source heights now remain intact for every graph (approved2026-10-21). Frozen node/entrance heights drive full3D nearest-node selection; native range/aggro retain floor separation. Travel consumes source speeds and frozen edge distances, not straight-line endpoint distance. Samples store Bevy[x,y,z]. No runtime navmesh, ground, LOS or physics is installed.
+
+## Azure graph
+
+`content/dungeons/azure-vault-2515.json` retains225 Normal source actors in214 native formation packs plus authored AreaPOI7116 as an empty topology node. Qualified staged navigation supplies540 walk-distance edges; [the shared production book policy](azure-translocation.md) supplies nine directed teleport links. Authored179-hostile-pack route follows Leymor→Azureblade→Telash→Umbrelskul. Two off-route source actors29001897/29001912 are nav-unreachable and remain named, not connected synthetically. Runtime uses `DUNGEON_SIMULATOR_MAP=2515`, native difficulty205, Normal population projection and `DUNGEON_SIMULATOR_LEVEL=70` (MapDifficulty5417→ContentTuning2155 range10–70). Default five profiles remain unchanged. Seeded clear proof pending.
+
+## Native-height acceptance and Azure baseline —2026-10-21
+
+Revision`a4c03c0b7`, protocol03cebdb, optimized native executable. Stockade batch12/default five/level32/seeds1–10/`--jobs3`: **10clears,30boss Deaths,0wipe/stall/block/timeout**,371.463s total batch wall time. Both frozen graphs pass source-leader/entrance height equality checks; stacked floors and directed teleport refusal pass native fixtures. Source heights do not invalidate Stockade completion.
+
+Azure batch1/default five/level70/difficulty205/seeds1–10/`--jobs3`: **0clears,0wipes,10stalls,0blocks/timeouts,0boss Deaths**,220.861s total batch wall time. All ten native reports exist; worker101 reflects each failed-clear assertion, not a missing worker/report.
+
+| Seeds | Terminal cause | Failed pack |
+|---|---|---|
+|1,2,5,7,9|Four admitted members die; Meredy survives. Fatal sources include Arcane Tender29001796, Conjured Lasher29001801 and Global Affix Stalker29001806.|29001796|
+|3,4,6,8,10|All five survive; ready party remains held by alive, unattackable Global Affix Stalker history after combat flags disappear.|29001821|
+
+All ten runs contain actual171322 melee receipts (5–168 party hits). Source171322 carries uninteractible flag0x02000000, faction14, blank AI/script and flags_extra0. TC's watcher-side `CanStartAttack` does not reject uninteractibility; the party's target-side `IsValidAttackTarget` does. Do **not** invent a per-entry passive exclusion. Ordered follow-up: prove own-sight versus recruitment ingress, then native-validity-filtered history/clear logic with a clearable-enemy control. No stat tuning or budget-impossibility claim.
+
+Evidence under `/home/osso/.worktrees/logs/stockade-simulator-2026-10-20/`: `sim-batch12-native-heights/`, `azure-batch1/`, and the prior single-seed calibration `azure-native-probe1/`. The calibration is not the ten-seed proof. No book was reached; the [production endpoint policy](azure-translocation.md) passes native ingress/party tests but not full seeded traversal yet.
 
 ## Execution
 
@@ -118,3 +137,9 @@ Atdeb62e43e/P03cebdb (master070ae0a97 merged), seeds1–50 all clear:50/50,0wipe
 Opening oracle now proves actual20375760 accidental acquisition, positive damage, Death and route skipping. Native producer trace: `creature_sight_system`→`attack_start(0)`, Crenna15.7928yd from watcher inside native16yd. Her reach3yd differs from Garrick1.5yd; prior tank-only14.5yd diagnostic was not this acquisition. Positioning avoidance is the next authorized change, not a threat fix.
 
 Cargo-test gate exposed cwd-relative Startup catalog loading and a stale Overheat oracle: real Meredy Counterspell2139 legitimately ends12466 on the first tick, while all10unengaged-route movement refusals remain. Test catalog paths now resolve fromCARGO_MANIFEST_DIR; production path unchanged. Updated oracle permits cast disappearance only with the actual2139→12466 interrupt receipt. At570e080b5 full `followers::`+`dungeon_simulator::` through Cargo gives278PASS/1environmentFAIL/10ignored456.44s; sole failure is Leymor's explicit private2515asset receipt prerequisite, waived by lead. No behavior gate remains from the former cwd/Overheat failures.
+
+## Non-tank sight-envelope positioning
+
+Production non-tank combat/heal pursuit and idle regroup now inspect live same-copy unpulled aggressive hostiles using the existing native radius calculation (levels, scaling and both reaches). If an approach segment would enter a sight circle, keep the current position and continue any native cast valid from there. Tank planning is unchanged; no pack-specific offsets or radius changes. This conservative chooser holds unsafe approaches; it does not invent alternative terrain paths. Exact natural20375760/Crenna regression RED15.7928<16yd at3.55s→GREEN, with deliberate native accidental-attack handling control retained (2PASS12.39s).
+
+Post-change batch11 atf3b7b8295/P03cebdb:10/10clears,0wipes/stalls/blocks/timeouts,30boss Deaths.27601.6sim_s/441.435run-wall=62.53×; whole process445.98s. Prior50seed result remains explicitly pre-positioning. Throughput is secondary per user; unchanged target still open.

@@ -12,17 +12,116 @@ pub(crate) struct Party {
     pub members: Vec<Entity>,
 }
 
+const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
+
+struct PartyConfiguration {
+    level: u8,
+    entries: [u32; 5],
+}
+
+impl PartyConfiguration {
+    fn read() -> Result<Self, String> {
+        let level = read_override("DUNGEON_SIMULATOR_LEVEL")?;
+        let healer = read_override("DUNGEON_SIMULATOR_HEALER_ENTRY")?;
+        let party = read_override("DUNGEON_SIMULATOR_PARTY_ENTRIES")?;
+        Self::parse(level.as_deref(), healer.as_deref(), party.as_deref())
+    }
+
+    fn parse(
+        level: Option<&str>,
+        healer: Option<&str>,
+        party: Option<&str>,
+    ) -> Result<Self, String> {
+        let level = level
+            .unwrap_or("32")
+            .parse::<u8>()
+            .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_LEVEL: {error}"))?;
+        if level == 0 || u32::from(level) > crate::spell_info::MAX_LEVEL {
+            return Err(format!(
+                "Simulator level must be1..={}",
+                crate::spell_info::MAX_LEVEL
+            ));
+        }
+        let mut entries = match party {
+            Some(party) => parse_party_entries(party)?,
+            None => DEFAULT_PARTY,
+        };
+        if let Some(healer) = healer {
+            entries[1] = healer
+                .parse()
+                .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_HEALER_ENTRY: {error}"))?;
+        }
+        Ok(Self { level, entries })
+    }
+}
+
+fn read_override(name: &str) -> Result<Option<String>, String> {
+    match std::env::var(name) {
+        Ok(value) => Ok(Some(value)),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(error) => Err(format!("Invalid {name}: {error}")),
+    }
+}
+
+fn parse_party_entries(value: &str) -> Result<[u32; 5], String> {
+    let entries: Vec<_> = value
+        .split(',')
+        .map(|entry| entry.trim().parse::<u32>())
+        .collect::<Result<_, _>>()
+        .map_err(|error| format!("Invalid DUNGEON_SIMULATOR_PARTY_ENTRIES: {error}"))?;
+    entries.try_into().map_err(|_| {
+        "DUNGEON_SIMULATOR_PARTY_ENTRIES requires tank,healer,dps,dps,leader-dps".into()
+    })
+}
+
+fn read_party_profiles(world: &World, entries: [u32; 5]) -> Result<Vec<Profile>, String> {
+    use shared::group::GroupRole::{Dps, Healer, Tank};
+    let catalog = world.resource::<FollowerCatalog>();
+    entries
+        .into_iter()
+        .zip([Tank, Healer, Dps, Dps, Dps])
+        .enumerate()
+        .map(|(slot, (entry, role))| {
+            let profile = catalog
+                .profiles
+                .iter()
+                .find(|profile| profile.entry == entry)
+                .ok_or_else(|| format!("Native simulator follower profile{entry} absent"))?;
+            if profile.role != role {
+                return Err(format!(
+                    "Simulator party slot{} requires{role:?}, profile{entry} is{:?}",
+                    slot + 1,
+                    profile.role
+                ));
+            }
+            Ok(profile.clone())
+        })
+        .collect()
+}
+
+#[test]
+fn simulator_configuration_rejects_invalid_levels_and_incomplete_rosters() {
+    for level in ["0", "91", "not-a-level"] {
+        assert!(PartyConfiguration::parse(Some(level), None, None).is_err());
+    }
+    for party in ["209057,209072", "209057,209072,no,209059,209065"] {
+        assert!(PartyConfiguration::parse(None, None, Some(party)).is_err());
+    }
+}
+
 pub(crate) fn spawn_party(
     world: &mut World,
     copy: crate::maps::InMap,
     at: Position,
 ) -> Result<Party, String> {
-    let profiles = world.resource::<FollowerCatalog>().profiles.clone();
-    let leader = profiles
-        .iter()
-        .find(|profile| profile.entry == 209065)
-        .cloned()
-        .ok_or("Austin source profile absent")?;
+    let configuration = PartyConfiguration::read()?;
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
+    let profiles = read_party_profiles(world, configuration.entries)?;
+    let leader = profiles[4].clone();
     let owner = world
         .spawn((
             Player {
@@ -31,13 +130,13 @@ pub(crate) fn spawn_party(
                 class: leader.class_id,
                 appearance: default(),
             },
-            Level(32),
-            shared::components::UnitLevel(32),
+            Level(configuration.level),
+            shared::components::UnitLevel(configuration.level),
             UnitFactionTemplate(1),
             at,
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            crate::maps::DungeonDifficulty(difficulty_id),
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::UnitPowers::default(),
@@ -55,17 +154,7 @@ pub(crate) fn spawn_party(
         .entity_mut(owner)
         .remove::<(Follower, shared::components::UnitSummonedBy)>()
         .insert(LeaderProfile(leader));
-    let selected: Vec<_> = [209057, 209072, 209053, 209059]
-        .into_iter()
-        .map(|entry| {
-            profiles
-                .iter()
-                .find(|profile| profile.entry == entry)
-                .cloned()
-                .ok_or_else(|| format!("source follower profile {entry} absent"))
-        })
-        .collect::<Result<_, _>>()?;
-    let members = spawning::spawn_members(world, owner, &selected)?;
+    let members = spawning::spawn_members(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
     world
         .entity_mut(owner)
@@ -126,6 +215,10 @@ pub(crate) fn inspect_tank_movement(
         .ok_or("tank has no selected victim")?;
     let follower = world.get::<Follower>(tank).unwrap().clone();
     tank_planner::read_movement_admission(world, tank, target, &follower, None)
+}
+
+pub(crate) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
+    ai::regroup(world, unit, owner);
 }
 
 pub(crate) fn opening_spell(world: &World, tank: Entity) -> (u32, f32) {
