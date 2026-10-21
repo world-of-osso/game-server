@@ -355,9 +355,18 @@ def import_kargath_actors(connection):
     return entries
 
 
+def import_porung_binding(connection):
+    """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
+    import encounter_cpp_bindings
+    primary, _ = encounter_cpp_bindings.PROFILES['porung']
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    connection.executescript(encounter_cpp_bindings.binding_sql(rows))
+    return [primary['entry']]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -377,6 +386,8 @@ def main():
                 entries = import_nethekurse_fissures(conn)
             elif args.encounter == 'kargath':
                 entries = import_kargath_actors(conn)
+            elif args.encounter == 'porung':
+                entries = import_porung_binding(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
