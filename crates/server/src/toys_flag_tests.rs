@@ -50,6 +50,13 @@ fn toy_coverage_flag51640_actual_enemy_death_plants_one_source_flag_and_expires(
     let enemy = kill_flag_enemy(&mut h, 2.0, "Fallenorc", 2);
     let friendly = kill_flag_enemy(&mut h, 1.0, "Fallenally", 1);
     let far = kill_flag_enemy(&mut h, 30.0, "Farorc", 2);
+    let wrong_map = kill_flag_enemy(&mut h, 2.5, "Othermaporc", 2);
+    h.app
+        .world_mut()
+        .entity_mut(wrong_map)
+        .insert(crate::maps::InMap::continent(1));
+    crate::combat::kill_unit(h.app.world_mut(), h.caster, h.npc);
+    h.advance(2);
     let body = *h.app.world().get::<Position>(enemy).unwrap();
     assert_eq!(activate(&mut h, FLAG_OWNERSHIP)[0].error, None);
     let world = h.app.world_mut();
@@ -71,7 +78,7 @@ fn toy_coverage_flag51640_actual_enemy_death_plants_one_source_flag_and_expires(
             .iter()
             .any(|a| a.spell_id == 51657)
     );
-    for other in [h.caster, friendly, far, h.npc] {
+    for other in [h.caster, friendly, far, wrong_map, h.npc] {
         assert!(
             !world
                 .get::<UnitAuras>(other)
@@ -84,7 +91,8 @@ fn toy_coverage_flag51640_actual_enemy_death_plants_one_source_flag_and_expires(
             .iter()
             .any(|go| go.spell_id == 51640 && go.hit_targets == [enemy.to_bits()])
     );
-    assert!(h.inbox.go.iter().any(|go| go.spell_id == 51657));
+    // Full-mask child casts use the ordinary triggered path: prove their actual
+    // object/aura effects above, not a separate child SpellGo packet.
     let emotes = drain::<ChatMessage>(&mut h.app, h.connection);
     assert!(
         emotes.iter().any(|m| m.channel == ChatType::Emote
@@ -133,4 +141,48 @@ fn toy_coverage_flag51640_no_enemy_body_refuses_before_effects_and_cooldown() {
             .unavailable_reason
             .is_none()
     );
+}
+
+#[test]
+fn toy_coverage_flag51640_two_enemy_bodies_selects_exactly_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = flag_harness(&dir.path().join("random-body.redb"));
+    let first = kill_flag_enemy(&mut h, 2.0, "Firstorc", 2);
+    let second = kill_flag_enemy(&mut h, 3.0, "Secondorc", 2);
+    assert_eq!(activate(&mut h, FLAG_OWNERSHIP)[0].error, None);
+    let go = h.inbox.go.iter().find(|go| go.spell_id == 51640).unwrap();
+    assert_eq!(go.hit_targets.len(), 1);
+    assert!([first.to_bits(), second.to_bits()].contains(&go.hit_targets[0]));
+    let world = h.app.world_mut();
+    let positions: Vec<_> = world
+        .query::<(&GameObjectInfo, &Position)>()
+        .iter(world)
+        .filter(|(info, _)| info.entry == 190589)
+        .map(|(_, position)| *position)
+        .collect();
+    assert_eq!(positions.len(), 1);
+    let chosen = Entity::try_from_bits(go.hit_targets[0]).unwrap();
+    assert_eq!(world.get::<Position>(chosen), Some(&positions[0]));
+}
+
+#[test]
+fn toy_coverage_flag51640_changed_source_root_is_not_admitted_as_a_generic_dummy() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut h, _) = flag_harness(&dir.path().join("changed-root.redb"));
+    let store = h.app.world().resource::<crate::spell_info::SpellStore>();
+    let mut root = store.get(51640).unwrap().clone();
+    let child = store.get(51657).unwrap().clone();
+    root.effects[0].implicit_targets = [1, 0];
+    h.app
+        .insert_resource(crate::spell_info::SpellStore::fixture(vec![root, child]));
+    let result = activate(&mut h, FLAG_OWNERSHIP);
+    assert!(
+        result[0]
+            .error
+            .as_deref()
+            .unwrap()
+            .contains("source signature differs")
+    );
+    assert!(!h.inbox.go.iter().any(|go| go.spell_id == 51640));
+    assert!(!h.inbox.cooldowns.iter().any(|cd| cd.spell_id == 51640));
 }
