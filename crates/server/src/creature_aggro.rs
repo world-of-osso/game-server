@@ -189,7 +189,12 @@ type Watchers<'w, 's> = Query<
         &'static InMap,
         Option<&'static crate::scripted_ai::ReactState>,
     ),
-    (With<AggroRange>, Without<DeathState>, Without<GridDormant>),
+    (
+        With<AggroRange>,
+        Without<DeathState>,
+        Without<GridDormant>,
+        Without<shared::components::UnitCharm>,
+    ),
 >;
 
 /// `CreatureAI::MoveInLineOfSight` → `Creature::CanStartAttack`: an idle
@@ -363,6 +368,7 @@ pub(crate) fn update_victim_system(world: &mut World) {
             Without<DeathState>,
             Without<GridDormant>,
             Without<crate::followers::Follower>,
+            Without<shared::components::UnitCharm>,
         )>()
         .iter(world)
         .filter(|(_, state)| matches!(state, CreatureState::Pursuing { .. }))
@@ -621,7 +627,12 @@ pub(crate) fn add_school_threat(
                 })
         });
     let amount = amount * threat_multiplier(world, attacker, school) * taunt_multiplier;
-    if creature == attacker || !can_engage(world, creature) {
+    if creature == attacker
+        || !can_engage(world, creature)
+        || world
+            .get::<shared::components::UnitCharm>(creature)
+            .is_some()
+    {
         return;
     }
     if let Some(mut threat) = world.get_mut::<ThreatTable>(creature) {

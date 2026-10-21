@@ -257,12 +257,22 @@ struct AttackRules<'w, 's> {
     arenas: Query<'w, 's, &'static crate::pvp::PlayerPvpState>,
     maps: Query<'w, 's, &'static crate::maps::InMap>,
     summon_owners: Query<'w, 's, &'static shared::components::UnitSummonedBy>,
+    charms: Query<'w, 's, &'static crate::auras::charm::CharmState>,
+    controllers: Query<'w, 's, &'static crate::auras::charm::CharmedUnit>,
     unit_flags: Query<'w, 's, &'static shared::components::UnitFlags>,
     stealth: crate::auras::stealth::DetectionUnits<'w, 's>,
     templates: Res<'w, FactionTemplates>,
 }
 
 impl AttackRules<'_, '_> {
+    fn body_inactive(&self, player: Entity) -> bool {
+        self.charms.contains(player)
+            || self
+                .controllers
+                .get(player)
+                .is_ok_and(|link| self.charms.get(link.0).is_ok_and(|state| state.possessed))
+    }
+
     fn dead(&self, unit: Entity) -> bool {
         self.health
             .get(unit)
@@ -337,7 +347,7 @@ type RetargetedCreatures<'w, 's> = Query<
     (Entity, &'static CombatTarget, Option<&'static AutoAttack>),
     (
         Changed<CombatTarget>,
-        Without<Player>,
+        Or<(Without<Player>, With<shared::components::UnitCharm>)>,
         Without<crate::scripted_ai::caster_chase::CasterChase>,
     ),
 >;
@@ -378,6 +388,9 @@ fn process_attack_messages(
     for (mut receiver, link) in &mut swings {
         let player = link.0;
         for request in receiver.receive() {
+            if rules.body_inactive(player) {
+                continue;
+            }
             let victim = Entity::try_from_bits(request.target)
                 .filter(|&victim| rules.health.contains(victim));
             match victim {

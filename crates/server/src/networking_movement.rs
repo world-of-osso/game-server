@@ -14,6 +14,8 @@ pub(super) const DEFAULT_WALK_SPEED: f32 = 2.5;
 pub(super) const DEFAULT_SWIM_SPEED: f32 = shared::movement::SWIM_SPEED;
 pub(super) const DEFAULT_FLIGHT_SPEED: f32 = shared::movement::FLIGHT_SPEED;
 
+pub(super) type MovableUnit = Or<(With<Player>, With<shared::components::UnitCharm>)>;
+
 pub(super) type PlayerMovement = (
     &'static mut Position,
     &'static mut Rotation,
@@ -128,7 +130,7 @@ impl MovementChanges {
 pub(super) fn apply_movement_input(
     input: &PlayerInput,
     player_entity: Entity,
-    players: &mut Query<PlayerMovement, With<Player>>,
+    players: &mut Query<PlayerMovement, MovableUnit>,
     clocks: &mut MovementClocks,
     mut terrain: Option<(&mut GroundMap, InMap)>,
 ) -> MovementChanges {

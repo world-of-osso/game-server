@@ -17,13 +17,14 @@
 //! `SPELL_ATTR0_DO_NOT_DISPLAY_SPELLBOOK_AURA_ICON_COMBAT_LOG`.
 
 mod abundance;
-#[cfg(test)]
-mod charm_tests;
 pub(crate) mod agony;
 pub(crate) mod area_avoidance;
 pub(crate) mod augmentation;
 pub(crate) mod aura_state;
 pub(crate) mod base_armor;
+pub(crate) mod charm;
+#[cfg(test)]
+mod charm_tests;
 mod charred_warblades;
 pub(crate) mod combat_stats;
 pub(crate) mod damage_shield;
@@ -149,6 +150,7 @@ impl Plugin for AuraPlugin {
                 FixedUpdate,
                 (
                     init_unit_auras,
+                    charm::update,
                     mount::apply_flight_style,
                     sync_passive_auras,
                     update_auras,
@@ -990,6 +992,9 @@ pub(crate) fn apply_aura_with_spell(
     if instance.effects.is_empty() {
         return;
     }
+    if !charm::can_apply(world, application, &instance) {
+        return;
+    }
     refresh::prepare_application(world, target, &mut instance);
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
@@ -1050,6 +1055,7 @@ pub(crate) fn apply_aura_with_spell(
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
         }
+        charm::on_applied(world, target, &aura);
         world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
         linked::on_applied(world, target, &aura);
@@ -1364,6 +1370,7 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    charm::on_removed(world, unit, aura);
     world_state::on_removed(world, unit, aura);
     scripts::run_remove(world, unit, aura, reason);
     linked::on_removed(world, unit, aura);
@@ -2349,6 +2356,14 @@ fn receive_cancel_aura(world: &mut World) {
         })
         .collect();
     for (owner, spell_id) in requests {
+        if let Some(target) = charm::controlled_unit(world, owner)
+            && world
+                .get::<charm::CharmState>(target)
+                .is_some_and(|state| state.spell == spell_id)
+        {
+            charm::release(world, target);
+            continue;
+        }
         let cancelable = lookup_spell(world, spell_id)
             .is_some_and(|spell| attributes(&spell, 0) & ATTR0_NO_AURA_CANCEL == 0);
         if !cancelable {

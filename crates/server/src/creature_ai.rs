@@ -51,6 +51,7 @@ const RETRY_CONFUSED_SECS: f32 = 0.1;
 /// Living, active creatures that are not confused or feared: their wander, waypoint
 /// and formation movement runs.
 type Roaming = (
+    Without<shared::components::UnitCharm>,
     Without<crate::knockback::KnockbackFlight>,
     Without<DeathState>,
     Without<GridDormant>,

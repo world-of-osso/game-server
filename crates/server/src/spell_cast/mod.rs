@@ -1128,6 +1128,11 @@ fn combat_log_recipient(world: &World, unit: Entity) -> Entity {
 }
 
 pub(crate) fn combat_event_owner(world: &World, unit: Entity) -> Entity {
+    if let Some(charm) = world.get::<shared::components::UnitCharm>(unit)
+        && let Some(charmer) = Entity::try_from_bits(charm.charmer)
+    {
+        return combat_event_owner(world, charmer);
+    }
     if let Some(follower) = world.get::<crate::followers::Follower>(unit) {
         return follower.owner;
     }
@@ -1470,6 +1475,9 @@ fn request_cast(
     request: &SpellCastIntent,
 ) -> Result<(), (u32, CastFailure)> {
     let requested_id = request.spell_id.unwrap_or(0);
+    if crate::auras::charm::body_inactive(world, caster) {
+        return Err((requested_id, CastFailure::CantDoThatRightNow));
+    }
     let spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.resolve(request.spell_id, &request.spell))

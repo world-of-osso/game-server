@@ -489,6 +489,7 @@ fn update_creature_ai(world: &mut World) {
     let creatures: Vec<Entity> = world
         .query_filtered::<Entity, (
             With<CreatureAiState>,
+            Without<shared::components::UnitCharm>,
             Without<DeathState>,
             Without<GridDormant>,
         )>()

@@ -303,7 +303,9 @@ fn handle_pet_action(world: &mut World, owner: Entity, action: PetAction) {
     if world.get::<Mounted>(owner).is_some() {
         return;
     }
-    let Some(pet) = summoned_pet(world, owner).filter(|pet| pet.to_bits() == action.pet) else {
+    let pet =
+        crate::auras::charm::controlled_unit(world, owner).or_else(|| summoned_pet(world, owner));
+    let Some(pet) = pet.filter(|pet| pet.to_bits() == action.pet) else {
         return;
     };
     if is_dead(world, pet) {
@@ -391,7 +393,9 @@ fn process_pet_autocast_toggles(world: &mut World) {
 /// sets a learned autocastable spell's button `ACT_ENABLED` or `ACT_DISABLED`. The owner
 /// then gets the bar again (TrinityCore leaves the client to update its own bar).
 fn toggle_autocast(world: &mut World, owner: Entity, toggle: PetSpellAutocast) {
-    let Some(pet) = summoned_pet(world, owner).filter(|pet| pet.to_bits() == toggle.pet) else {
+    let pet =
+        crate::auras::charm::controlled_unit(world, owner).or_else(|| summoned_pet(world, owner));
+    let Some(pet) = pet.filter(|pet| pet.to_bits() == toggle.pet) else {
         return;
     };
     if is_dead(world, pet) {
@@ -419,7 +423,13 @@ fn toggle_autocast(world: &mut World, owner: Entity, toggle: PetSpellAutocast) {
 /// `ACT_COMMAND`.
 fn command(world: &mut World, owner: Entity, pet: Entity, order: u32, action: &PetAction) {
     match order {
-        COMMAND_ABANDON => crate::hunter_pet::abandon_or_dismiss_pet(world, pet),
+        COMMAND_ABANDON => {
+            if world.get::<crate::auras::charm::CharmState>(pet).is_some() {
+                crate::auras::charm::release(world, pet);
+            } else {
+                crate::hunter_pet::abandon_or_dismiss_pet(world, pet);
+            }
+        }
         COMMAND_STAY => {
             set_motion(world, pet, PetMotion::Idle);
             let here = world.get::<Position>(pet).copied();
@@ -506,13 +516,29 @@ fn update_charm(world: &mut World, pet: Entity, change: impl FnOnce(&mut PetChar
 
 /// `PetAI::UpdateAI` for every pet.
 fn pet_ai_system(world: &mut World) {
-    let pets: Vec<(Entity, Entity)> = world
-        .query_filtered::<(Entity, &HunterPet), With<PetCharm>>()
+    let pets: Vec<_> = world
+        .query_filtered::<(
+            Entity,
+            Option<&HunterPet>,
+            Option<&crate::auras::charm::CharmState>,
+        ), With<PetCharm>>()
         .iter(world)
-        .map(|(pet, hunter_pet)| (pet, hunter_pet.owner))
+        .filter_map(|(pet, hunter_pet, charm)| {
+            if let Some(charm) = charm {
+                Some((pet, charm.owner, charm.possessed))
+            } else {
+                hunter_pet.map(|hunter| (pet, hunter.owner, false))
+            }
+        })
         .collect();
-    for (pet, owner) in pets {
-        update_pet(world, owner, pet);
+    for (pet, owner, possessed) in pets {
+        if possessed {
+            if victim(world, pet).is_some_and(|target| !valid_attack_target(world, pet, target)) {
+                stop_attacking(world, pet);
+            }
+        } else {
+            update_pet(world, owner, pet);
+        }
     }
 }
 
@@ -592,8 +618,15 @@ fn select_next_target(world: &mut World, owner: Entity, pet: Entity) -> Option<E
     if react == REACT_PASSIVE {
         return None;
     }
-    let owner_victim = (react == REACT_ASSIST)
-        .then(|| world.get::<AutoAttack>(owner).map(|attack| attack.victim))
+    let assists_owner =
+        react == REACT_ASSIST || world.get::<crate::auras::charm::CharmState>(pet).is_some();
+    let owner_victim = assists_owner
+        .then(|| {
+            world
+                .get::<AutoAttack>(owner)
+                .map(|attack| attack.victim)
+                .or_else(|| victim(world, owner))
+        })
         .flatten();
     let candidates = [
         nearest_attacker(world, pet, pet),
@@ -675,9 +708,13 @@ fn attack_start(world: &mut World, pet: Entity, target: Entity) {
     if !can_attack(world, pet, target) {
         return;
     }
-    let chase = world
-        .get::<PetCharm>(pet)
-        .is_some_and(|charm| charm.command != COMMAND_STAY || charm.command_attack);
+    let possessed = world
+        .get::<crate::auras::charm::CharmState>(pet)
+        .is_some_and(|state| state.possessed);
+    let chase = !possessed
+        && world
+            .get::<PetCharm>(pet)
+            .is_some_and(|charm| charm.command != COMMAND_STAY || charm.command_attack);
     match world.get_mut::<CombatTarget>(pet) {
         Some(mut combat_target) => combat_target.0 = Some(target),
         None => {

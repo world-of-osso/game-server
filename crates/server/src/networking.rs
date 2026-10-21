@@ -546,9 +546,11 @@ pub(crate) struct PlayerInputParams<'w, 's> {
             &'static PlayerLink,
         ),
     >,
-    players: Query<'w, 's, PlayerMovement, With<Player>>,
+    players: Query<'w, 's, PlayerMovement, MovableUnit>,
+    controllers: Query<'w, 's, &'static crate::auras::charm::CharmedUnit>,
+    charms: Query<'w, 's, &'static shared::components::UnitCharm>,
     /// A player in a map transfer (no `InMap`) does not move.
-    on_map: Query<'w, 's, (), (With<Player>, With<InMap>)>,
+    on_map: Query<'w, 's, (), With<InMap>>,
     death_states: Query<'w, 's, &'static crate::death::PlayerDeathState>,
     presence: Query<
         'w,
@@ -589,12 +591,20 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .remove::<crate::skyriding::SkyridingImpulse>();
     }
     for (mut receiver, link) in &mut params.receivers {
-        let control = params
-            .controls
+        let mover = params
+            .controllers
             .get(link.0)
             .ok()
-            .copied()
-            .unwrap_or_default();
+            .and_then(|controlled| {
+                params
+                    .charms
+                    .get(controlled.0)
+                    .ok()
+                    .filter(|charm| charm.possessed && charm.charmer == link.0.to_bits())
+                    .map(|_| controlled.0)
+            })
+            .unwrap_or(link.0);
+        let control = params.controls.get(mover).ok().copied().unwrap_or_default();
         // Input sent before the client adopted a server teleport is stale
         // (`HandleMovementOpcode` ignores movement while `IsBeingTeleported`).
         let received: Vec<PlayerInput> = receiver
@@ -603,7 +613,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             .collect();
         let resumed = received.is_empty();
         let inputs = if resumed {
-            match params.clocks.unreached(link.0, control.epoch) {
+            match params.clocks.unreached(mover, control.epoch) {
                 Some(unreached) => vec![unreached],
                 None => continue,
             }
@@ -614,16 +624,16 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             continue;
         };
         // The server drives a controlled player (taxi flight); its input is dropped.
-        let controlled = control.controlled;
+        let controlled = control.controlled || params.charms.contains(link.0);
         // A corpse (dead, not yet released) does not move.
         let corpse = params
             .death_states
             .get(link.0)
             .is_ok_and(|death| death.state == DeathState::Dead);
-        if controlled || corpse || !params.on_map.contains(link.0) {
-            params.clocks.track(link.0, latest, false);
+        if controlled || corpse || !params.on_map.contains(mover) {
+            params.clocks.track(mover, latest, false);
             stop_held_player(
-                link.0,
+                mover,
                 &mut params.players,
                 params.replication_dirty.as_deref(),
             );
@@ -650,9 +660,9 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                 }
             });
         }
-        let map = params.maps.get(link.0).copied().ok();
+        let map = params.maps.get(mover).copied().ok();
         let mut changes = MovementChanges::default();
-        let passenger = params.passengers.get(link.0).ok().copied();
+        let passenger = params.passengers.get(mover).ok().copied();
         let ship = passenger
             .and_then(|passenger| crate::transport::movement_frame(&params.ships, passenger));
         for input in inputs {
@@ -669,7 +679,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
                 }
             };
             if passenger.is_some() && input.transport.is_none() {
-                let player = link.0;
+                let player = mover;
                 params
                     .commands
                     .queue(move |world: &mut World| crate::transport::disembark(world, player));
@@ -677,21 +687,32 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
             let terrain = params.ground.as_deref_mut().zip(map);
             changes = changes.merge(apply_movement_input(
                 &input,
-                link.0,
+                mover,
                 &mut params.players,
                 &mut params.clocks,
                 terrain,
             ));
         }
-        params.clocks.track(link.0, latest, changes.behind);
-        params.commands.entity(link.0).insert(Moving(moving));
+        let running = latest.running;
+        params.clocks.track(mover, latest, changes.behind);
+        params.commands.entity(mover).insert(Moving(moving));
+        if mover != link.0 {
+            let motion = if !moving {
+                shared::components::CreatureMotion::Still
+            } else if running {
+                shared::components::CreatureMotion::Run
+            } else {
+                shared::components::CreatureMotion::Walk
+            };
+            params.commands.entity(mover).insert(motion);
+        }
         if changes.position_changed {
-            mark_interest_position_changed(params.dirty_queue.as_deref(), link.0);
+            mark_interest_position_changed(params.dirty_queue.as_deref(), mover);
         }
         if changes.replicated_state_changed
             && let Some(replication_dirty) = params.replication_dirty.as_deref()
         {
-            replication_dirty.mark(link.0);
+            replication_dirty.mark(mover);
         }
     }
 }
@@ -700,7 +721,7 @@ pub(crate) fn process_player_inputs(time: Res<Time>, mut params: PlayerInputPara
 /// other clients.
 fn stop_held_player(
     player: Entity,
-    players: &mut Query<PlayerMovement, With<Player>>,
+    players: &mut Query<PlayerMovement, MovableUnit>,
     replication_dirty: Option<&ReplicationDirtyQueue>,
 ) {
     let Ok((.., mut motion, _)) = players.get_mut(player) else {
@@ -730,7 +751,7 @@ type GravityPlayerData<'w, 's> = Query<
         Option<&'static shared::components::FeatherFall>,
         Option<&'static crate::auras::ActiveAuras>,
     ),
-    With<Player>,
+    MovableUnit,
 >;
 
 /// `PLAYER_FLAGS_IS_OUT_OF_BOUNDS`: the player fell below `Map::GetMinHeight`. Cleared once

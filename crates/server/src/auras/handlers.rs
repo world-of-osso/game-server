@@ -5,6 +5,8 @@
 /// How a handled aura type takes effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuraKind {
+    /// Unit::SetCharmedBy/RemoveCharmedBy lifecycle and control ownership.
+    Charm,
     /// Ticks every `EffectAuraPeriod` (`periodic.rs`).
     Periodic,
     /// Folded into `stats::StatModifiers` or `AuraStatMods` (`stat_mods.rs`).
@@ -77,6 +79,8 @@ pub enum AuraKind {
     Reward,
 }
 
+pub const MOD_POSSESS: u32 = 2;
+pub const MOD_CHARM: u32 = 6;
 pub const PERIODIC_DAMAGE: u32 = 3;
 pub const DUMMY: u32 = 4;
 pub const MOD_CONFUSE: u32 = 5;
@@ -353,6 +357,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | PERIODIC_DAMAGE_PERCENT => Periodic,
         PERIODIC_DUMMY | DUMMY => Script,
         super::health_pct_trigger::TRIGGER_SPELL_ON_HEALTH_PCT => HealthTrigger,
+        MOD_POSSESS | MOD_CHARM => Charm,
         MOD_TAUNT => Taunt,
         MOD_FIXATE => Fixate,
         DAMAGE_SHIELD => DamageShield,
