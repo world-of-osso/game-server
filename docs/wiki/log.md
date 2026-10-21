@@ -1,3 +1,7 @@
+## 2026-10-20 — Kelidan and Skull Bash load flakes
+
+[Kelidan](systems/boss-scripts.md#kelidan-mark-observation-window--2026-10-20) sampled16s despite already admitting cast-delayed requests through18.2s. [Skull Bash](investigations/follower-data.md#skull-bash-motion-oracle--2026-10-20) equated independent child221514 native hit rolls; actual Miss leaves position0 while93985 interrupts. Both reproduced in-process without artificial load. Oracles now cover their complete admitted window/actual outcome; tolerances, RNG and production unchanged. At97398c587/protocol03cebdb: each exact case10/10 under4 same-core hogs (490.887s, hogs stopped); full filters684PASS/0FAIL/20existingignored (679standard +1privatefrontal +4privatefrozen); check/fmt0, no warnings. Proof ledger: engine `data/diagnostics/load-flakes-2026-10-20/`.
+
 ## 2026-10-20 — Earthen Rage authored variance oracle
 
 [Native bounds](systems/auras.md#earthen-rage-baseline--2026-10-19): gate-e7824 observed43/44/43;100SP×0.42471 with±2.5% native variance rounds41–44, not41–43. Only the oracle derives correct rounded endpoints; production/RNG/timers unchanged. Gate failure is RED evidence; native family12/12GREEN20.90s and10/10 same-core CPU-load repetitions at ac61a1f16. No runtime changes.
@@ -3426,3 +3430,8 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Generic toy summon dependency closure
 
 [Source and proof](systems/toys.md#generic-summon-dependencies-and-source-interaction-markers-2026-10-21):151 missing-template/55 control split; producer RED→GREEN4, marker/actual trophy GREEN3 and retained census/mailbox proofs. Prepared423→506 (86 additions/three corrected gaps); canonical420 pending lead publication.206 templates/280 models/one addon inserted with no existing-row changes. Global markers and existing contracts preserved; sole Katy exemption has real mailbox proof.
+- 2026-10-20: property363 current-health team damage and explicit percentage-convention policy; actual70448 census distinguishes registered handlers from recursive admission.
+
+- 2026-10-20: property362 same-species healing, shared370 identity counter and current70448 census1904/1043.
+
+- 2026-10-20: property140 real785/787 stack-duration refresh; explicit786 pad-follow gap avoids silently admitting an incomplete parent.
