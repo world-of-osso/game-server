@@ -42,7 +42,6 @@ fn listen_and_approach(h: &mut Harness, boss: Entity) {
 }
 
 #[test]
-#[ignore = "RED: Porung primary20923/1935bit0 not published"]
 fn encounter_coverage_porung_real_heroic_engage_starts_native_encounter() {
     let (mut h, map) = porung_copy(2);
     let bosses = h.creatures_of(PORUNG);
@@ -189,11 +188,34 @@ fn encounter_coverage_porung_source_cleave_repeats_at_victim_and_really_damages(
                 && event.amount > 0),
         "real native cleave damage"
     );
+    let other = h
+        .inbox(1)
+        .spell_gos
+        .iter()
+        .take(12)
+        .map(|go| {
+            let actor = Entity::try_from_bits(go.caster);
+            (
+                go.spell_id,
+                go.caster,
+                actor
+                    .and_then(|actor| h.app.world().get::<shared::components::Npc>(actor))
+                    .map(|npc| npc.template_id),
+                actor
+                    .and_then(|actor| h.app.world().get::<InMap>(actor))
+                    .copied(),
+            )
+        })
+        .collect::<Vec<_>>();
+    eprintln!(
+        "PORUNG boss={} other_copy_spell_gos={} examples={other:?}",
+        boss.to_bits(),
+        h.inbox(1).spell_gos.len()
+    );
     assert!(h.inbox(1).spell_gos.is_empty());
 }
 
 #[test]
-#[ignore = "pending1935bit0 real death credit and corpse silence proof"]
 fn encounter_coverage_porung_death_completes_only_heroic_bit_zero_then_stops_casting() {
     let (mut h, map) = porung_copy(2);
     let boss = h.creatures_of(PORUNG)[0];
@@ -245,7 +267,8 @@ fn encounter_coverage_porung_death_completes_only_heroic_bit_zero_then_stops_cas
 #[test]
 #[ignore = "pending same-display nonprimary exclusion proof"]
 fn encounter_coverage_porung_shared_display_guard_never_completes_porung() {
-    let (mut h, map) = porung_copy(2);
+    // TDB62921/17461 is Normal1 only; never manufacture it into Heroic2.
+    let (mut h, map) = porung_copy(1);
     let guards = h.creatures_of(17461);
     assert!(!guards.is_empty(), "actual same-display guard population");
     h.hit_pct(guards[0], 200.0);
@@ -266,7 +289,6 @@ fn encounter_coverage_porung_shared_display_guard_never_completes_porung() {
 }
 
 #[test]
-#[ignore = "pending native SmartAI Reset rearm proof"]
 fn encounter_coverage_porung_real_evade_rearms_source_initial_cleave_timer() {
     let (mut h, map) = porung_copy(2);
     let boss = h.creatures_of(PORUNG)[0];
