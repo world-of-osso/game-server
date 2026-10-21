@@ -40,6 +40,7 @@ pub(super) enum Reason {
     Recovery,
     DeadMember,
     Hazard,
+    Engaged,
 }
 
 fn valid_estimates(input: &BudgetInput) -> bool {

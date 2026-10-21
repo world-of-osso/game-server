@@ -671,12 +671,14 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
-        if self.members().any(|member| {
-            self.app
-                .world()
-                .get::<CombatStatus>(member)
-                .is_some_and(|status| status.0)
-        }) {
+        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner)
+            || self.members().any(|member| {
+                self.app
+                    .world()
+                    .get::<CombatStatus>(member)
+                    .is_some_and(|status| status.0)
+            })
+        {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)

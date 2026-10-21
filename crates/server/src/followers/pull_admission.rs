@@ -60,6 +60,10 @@ fn read_cleared_single_pull(
     if fighting || !ai::engaged_enemies(world, &run.follower, tank, &run.party).is_empty() {
         return Ok(None);
     }
+    if !run.history.active_enemies.is_empty() {
+        // Lost detection/combat flags are not observed Death receipts.
+        return Ok(Some(Decision::Wait(Reason::Engaged)));
+    }
     if projected.is_empty() {
         return Err("A new pull requires a nonempty projected source footprint".into());
     }
@@ -219,7 +223,11 @@ fn read_projection(
         difficulty,
         &run.history.cleared_spawns,
     )?;
-    let engaged = ai::engaged_enemies(world, &run.follower, tank, &run.party);
+    let engaged: BTreeSet<_> = ai::engaged_enemies(world, &run.follower, tank, &run.party)
+        .into_iter()
+        .map(|(unit, _)| unit)
+        .chain(run.history.active_enemies.iter().copied())
+        .collect();
     let engaged_packs = read_engaged_packs(world, &sources, &engaged)?;
     let mut packs: BTreeSet<_> = projected
         .iter()
@@ -250,11 +258,11 @@ fn read_source_pack(sources: &BTreeMap<u32, Source>, guid: u32) -> Result<u32, S
 fn read_engaged_packs(
     world: &World,
     sources: &BTreeMap<u32, Source>,
-    engaged: &[(Entity, Option<Entity>)],
+    engaged: &BTreeSet<Entity>,
 ) -> Result<BTreeSet<u32>, String> {
     engaged
         .iter()
-        .map(|(unit, _)| {
+        .map(|unit| {
             let origin = world
                 .get::<crate::zones::CreatureOrigin>(*unit)
                 .ok_or_else(|| {

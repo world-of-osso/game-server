@@ -18,6 +18,7 @@ pub(super) struct Snapshot {
     pub completed_fights: u32,
     pub party_stable: bool,
     pub cleared_spawns: BTreeSet<u32>,
+    pub active_enemies: BTreeSet<Entity>,
 }
 
 #[derive(Clone, Copy)]
@@ -204,12 +205,18 @@ fn sample_party(world: &mut World, owner: Entity) {
     history.observe_health(now, healthy);
 }
 
-pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
+fn current_history(world: &World, owner: Entity) -> Option<&PullHistory> {
     let history = world.get::<PullHistory>(owner)?;
     let (map, members) = read_current_party(world, owner)?;
-    if history.map != map || history.members != members {
-        return None;
-    }
+    (history.map == map && history.members == members).then_some(history)
+}
+
+pub(super) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
+    current_history(world, owner).is_some_and(|history| !history.active_enemies.is_empty())
+}
+
+pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
+    let history = current_history(world, owner)?;
     let now = read_time(world);
     let rates = history.rates();
     Some(Snapshot {
@@ -219,6 +226,7 @@ pub(super) fn snapshot(world: &World, owner: Entity) -> Option<Snapshot> {
         completed_fights: history.completed_fights,
         party_stable: history.party_stable(now),
         cleared_spawns: history.cleared_spawns.clone(),
+        active_enemies: history.active_enemies.clone(),
     })
 }
 

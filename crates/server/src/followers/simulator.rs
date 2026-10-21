@@ -101,6 +101,10 @@ pub(crate) fn update_leader(world: &mut World) {
     }
 }
 
+pub(crate) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
+    pull_history::has_uncleared_fight(world, owner)
+}
+
 pub(crate) fn pull(
     world: &mut World,
     tank: Entity,
