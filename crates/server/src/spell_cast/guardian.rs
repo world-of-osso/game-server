@@ -112,6 +112,8 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     let spells = match (summon.spell_id, entry) {
         // SimC76f8118 sc_warlock_pets.cpp721/867: sourced Wild Imp only.
         (104317, 55659) => vec![104318],
+        // SimC76f8118 pets1520–1533: base Tyrant, not Antoran's Burning Cleave.
+        (SUMMON_DEMONIC_TYRANT, 135002) => vec![270481],
         // Native205180 description explicitly names $205231s1. TDB1210 has
         // no103673 creature spell row; this is not an Imp/Firebolt substitute.
         (205180, 103673) => vec![205231],
