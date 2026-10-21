@@ -351,7 +351,13 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
             .display_id,
         38340
     );
-    assert_eq!(world.get::<shared::components::Level>(summon).unwrap().0, 1);
+    assert_eq!(
+        world
+            .get::<shared::components::UnitLevel>(summon)
+            .unwrap()
+            .0,
+        1
+    );
     assert!(
         world
             .get::<super::summon::SummonedCreature>(summon)
