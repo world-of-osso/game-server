@@ -90,7 +90,7 @@ pub(super) fn update(
             continue;
         };
         if conditions_met(world, unit, target, party, &enemies, &entry)
-            && attempt_cast(world, unit, target, follower, &entry)
+            && attempt_cast(world, unit, target, follower, &entry, enemies.len())
         {
             return true;
         }
@@ -483,6 +483,7 @@ fn attempt_cast(
     target: Entity,
     follower: &Follower,
     entry: &Entry,
+    enemies: usize,
 ) -> bool {
     // An already admitted heal must finish; selecting it again is not a new
     // emergency. Re-starting it each tick would consume no mana and heal nobody.
@@ -521,6 +522,10 @@ fn attempt_cast(
             entry.spell_id,
             Some(target),
         )
+    } else if let Some(stage) =
+        super::empower_policy::selected_stage(world, unit, entry.spell_id, enemies)
+    {
+        crate::spell_cast::creature_cast_empowered(world, unit, entry.spell_id, Some(target), stage)
     } else {
         crate::spell_cast::creature_cast(world, unit, entry.spell_id, Some(target), false)
     };

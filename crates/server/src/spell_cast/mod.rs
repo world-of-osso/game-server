@@ -292,8 +292,9 @@ use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
+    AiTarget, ai_spell_target, creature_cast, creature_cast_empowered,
+    creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
+    creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -3547,6 +3548,7 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    empower::cancel(world, caster);
     crate::crafting_orders::interrupt(world, caster);
     world
         .entity_mut(caster)

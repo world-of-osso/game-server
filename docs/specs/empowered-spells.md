@@ -19,7 +19,8 @@ Player and follower empowers use native build70448 stage metadata and release re
 ## Implementation inventory
 
 - `crates/server/src/spell_cast/empower.rs` — stage progress, hold and qualified completion.
-- `crates/server/src/spell_cast/mod.rs` — shared admission, progress and channel cleanup; `followers/kit_overrides.rs` owns follower override resolution before eligibility.
+- `crates/server/src/spell_cast/{mod.rs,creature.rs}` — shared admission, selected-stage NPC casts, progress and channel cleanup; `followers/kit_overrides.rs` owns follower override resolution before eligibility.
+- `crates/server/src/followers/empower_policy.rs` — SimC ES/fb_fs/fb_sc rank order for the qualified native selected book.
 - `crates/server/src/spell_cast/scripts/empower_evoker.rs` — sourced Fire Breath/Eternity Surge release consequences.
 - `crates/server/src/spell_info/mod.rs` — per-cast selected/completed rank snapshots.
 - `crates/server/src/spell_cast/effects.rs` — converted periodic damage before direct critical-strike resolution.
@@ -31,7 +32,8 @@ Player and follower empowers use native build70448 stage metadata and release re
 ## Known gaps (current cycle)
 
 - [ ] Add explicit player release, cancel/refund and selected-stage behavior tests plus matching protocol/client consumers.
-- [ ] Select follower empower stages from the applicable SimC APL branch, without inventing ranks or talent identities.
+- [ ] Prove follower single-target Fire Breath rank1 and cancellation cooldown/GCD/no-release controls GREEN.
+- [ ] Complete optional Legacy of the Lifebinder/Volatility purchased-rank branches; current starter book lacks those talents, so they remain unqualified rather than inferred from spell presence.
 
 ## Out of scope
 

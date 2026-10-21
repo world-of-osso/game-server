@@ -13,6 +13,7 @@ const FINISH_GCD_SPELL: u32 = 359115;
 pub(super) struct EmpowerProgress {
     stage_ends_ms: Vec<u32>,
     release_requested: bool,
+    paid_costs: Vec<(super::CostPool, f32)>,
 }
 
 impl EmpowerProgress {
@@ -74,6 +75,10 @@ pub(super) fn begin(
         .copied()
         .expect("native stages checked")
         + HOLD_AT_MAX_MS;
+    let paid_costs = super::spell_costs(world, caster, spell)?
+        .into_iter()
+        .map(|(pool, amount, _)| (pool, amount))
+        .collect();
     super::execute_cast(world, caster, spell, target)?;
     let mut cast = CastState::channel(
         spell.id,
@@ -86,6 +91,7 @@ pub(super) fn begin(
     world.entity_mut(caster).insert(EmpowerProgress {
         stage_ends_ms,
         release_requested: false,
+        paid_costs,
     });
     Ok(())
 }
@@ -145,17 +151,82 @@ fn finish(world: &mut World, caster: Entity, spell: &SpellInfo, target: Option<E
     let handler =
         scripts::empower_completion(spell.id).expect("release handler validated at admission");
     let result = handler(world, caster, spell, target);
+    world.entity_mut(caster).remove::<EmpowerProgress>();
     super::finish_channel(world, caster, spell.id);
+    apply_finish_gcd(world, caster);
+    if let Err(failure) = result {
+        if let Ok((reason, _)) = failure.to_contract() {
+            super::send_spell_failure(world, caster, spell.id, reason, None);
+        }
+        super::send_cast_rejection(world, caster, spell.id, &failure);
+    }
+}
+
+fn apply_finish_gcd(world: &mut World, caster: Entity) {
     let gcd = world
         .resource::<SpellStore>()
         .get(FINISH_GCD_SPELL)
         .expect("TC empower finish GCD359115 requires native metadata")
         .clone();
     super::start_gcd(world, caster, &gcd);
-    if let Err(failure) = result {
-        if let Ok((reason, _)) = failure.to_contract() {
-            super::send_spell_failure(world, caster, spell.id, reason, None);
+}
+
+/// Spell::finish failure: normal cooldown reset, actual paid power refund, finish GCD.
+/// Charge recovery is separate in TC SpellHistory and is not restored here.
+pub(super) fn cancel(world: &mut World, caster: Entity) {
+    let Some(progress) = world.entity_mut(caster).take::<EmpowerProgress>() else {
+        return;
+    };
+    let spell = world
+        .get::<PendingCastSpell>(caster)
+        .expect("empower retains its spell")
+        .spell
+        .clone();
+    reset_spell_cooldown(world, caster, &spell);
+    refund_costs(world, caster, progress.paid_costs);
+    apply_finish_gcd(world, caster);
+}
+
+fn reset_spell_cooldown(world: &mut World, caster: Entity, spell: &SpellInfo) {
+    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+        return;
+    };
+    if history.spell_ready_at.remove(&spell.id).is_none() {
+        return;
+    }
+    let category = spell
+        .categories
+        .as_ref()
+        .map_or(0, |category| category.category);
+    if history.category_spell_ids.get(&category) == Some(&spell.id) {
+        history.category_ready_at.remove(&category);
+        history.category_spell_ids.remove(&category);
+    }
+    super::send_to_owner(
+        world,
+        caster,
+        shared::protocol::SpellCooldownUpdate {
+            spell_id: spell.id,
+            category,
+            duration_ms: 0,
+            remaining_ms: 0,
+            is_gcd: false,
+        },
+    );
+}
+
+fn refund_costs(world: &mut World, caster: Entity, costs: Vec<(super::CostPool, f32)>) {
+    for (pool, amount) in costs {
+        match pool {
+            super::CostPool::Power(power) => {
+                super::powers::change_power(world, caster, power, amount);
+            }
+            super::CostPool::Health => {
+                let mut health = world
+                    .get_mut::<shared::components::Health>(caster)
+                    .expect("power caster health");
+                health.current = (health.current + amount).clamp(0.0, health.max);
+            }
         }
-        super::send_cast_rejection(world, caster, spell.id, &failure);
     }
 }

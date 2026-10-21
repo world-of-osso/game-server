@@ -1,6 +1,7 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+mod empower_policy;
 mod hazards;
 mod healer_context;
 mod healer_policy;
