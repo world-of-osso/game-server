@@ -286,7 +286,7 @@ fn change_runes(world: &mut World, entity: Entity, delta: f32) -> f32 {
 }
 
 /// Give players their class pools once `ClassSpells` and the table are loaded.
-pub(super) fn init_player_powers(
+pub(crate) fn init_player_powers(
     mut commands: Commands,
     players: Query<(Entity, &Player), Without<PowerPools>>,
     table: Option<Res<PowerTypeTable>>,

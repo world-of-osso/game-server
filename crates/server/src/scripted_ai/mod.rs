@@ -15,6 +15,7 @@
 //! itself) is queued and runs right after.
 //! See `docs/specs/boss-scripts.md`.
 
+use crate::random as rand;
 pub(crate) mod azure_vault;
 mod azureblade;
 mod blood_furnace;
