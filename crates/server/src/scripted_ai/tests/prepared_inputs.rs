@@ -68,6 +68,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         186737 => Some("telash"),
         186739 => Some("azureblade"),
         186738 => Some("umbrelskul"),
+        196482 => Some("ancient"),
         _ => None,
     };
     match producer {

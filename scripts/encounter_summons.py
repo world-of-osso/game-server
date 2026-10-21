@@ -394,6 +394,29 @@ def import_umbrelskul(connection):
     return [186738]
 
 
+def import_ancient(connection):
+    """Local current-Retail Lua binding only; preserve immunity/unlock source gaps."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2526, entry=196482, encounter_id=2563, bit=1,
+                   script='', ai='', journal_id=2512, actor_id=5420, display_id=109194,
+                   spawn_guid=9001232, spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    native = connection.execute('''SELECT Effect,EffectAura,EffectTriggerSpell FROM spell_effect
+        WHERE SpellID=388796 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (6,23,388797):
+        raise ValueError('Ancient native Germinate identity changed')
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=196482').fetchone()
+    if runtime not in [('Overgrown Ancient','','',832), ('Overgrown Ancient','','boss_overgrown_ancient',832)]:
+        raise ValueError('Ancient runtime binding or source immunity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_overgrown_ancient' WHERE entry=196482")
+    return [196482]
+
+
 def import_porung_binding(connection):
     """Reuse the sole authenticated primary-actor profile; no combat/template edits."""
     import encounter_cpp_bindings
@@ -405,7 +428,7 @@ def import_porung_binding(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -431,6 +454,8 @@ def main():
                 entries = import_azureblade(conn)
             elif args.encounter == 'umbrelskul':
                 entries = import_umbrelskul(conn)
+            elif args.encounter == 'ancient':
+                entries = import_ancient(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':

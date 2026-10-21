@@ -1,5 +1,9 @@
 # Boss scripts
 
+## Academy current Retail partial — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#academy-current-retail-partial-boundary). LittleWigs2777a9d `Dragonflight/AlgetharAcademy/OvergrownAncient.lua` current timeline supplies9→28/29,18→33,30→30,54→55 lanes, not legacy clocks. TC a352b1fa has no Academy scripts. Native70448 Barkbreaker damage+aura, Germinate periodic388797 dummy, Branch Out ground dummy and Burst Forth area damage remain unmodified. Local source-binding producer preserves source832 PC/NPC immunity and actual spawn9001232; fixtures prove outgoing casts only, not unlock or ordinary kill-credit. Native RED: first Barkbreaker0vs1; Normal1/Follower205 direct Barkbreaker damage+aura qualifies. Expanded GREEN pending. Source receipts: `game-engine/data/diagnostics/df-bosses-2026-10-21/academy-actor-source.json`; behavioral fixture `scripted_ai/tests/ancient.rs`.
+
 ## Umbrelskul partial Lua clock — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#umbrelskul-lua-clock-partial-boundary). Lead-approved LittleWigs2777a9d/native70448 partial port186738/2584. Dragon Strike first7.4s and next8.4s Normal/Follower or15.3s Mythic countdown starts only after actual native successful cast; cancelled casts have no invented retry. Crystalline Roar directly requests native384699 at12.2s/repeat23.1s or105.6s, using actual line129/width10 and5s casting. Source-unspecified384696 selector/energy/Brittle/crystals remain named gaps; no full Retail phase claim.

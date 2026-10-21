@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 use crate::random as rand;
+mod algethar_academy;
 pub(crate) mod azure_vault;
 mod azureblade;
 mod blood_furnace;
@@ -329,6 +330,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if algethar_academy::is_creature_script(script_name) {
+        return algethar_academy::creature_ai(world, creature);
+    }
     if murder_row::is_creature_script(script_name) {
         return murder_row::creature_ai(world, creature, script_name);
     }
@@ -377,6 +381,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || wailing_caverns::is_creature_script(script_name)
         || maraudon::is_creature_script(script_name)
         || azure_vault::is_creature_script(script_name)
+        || algethar_academy::is_creature_script(script_name)
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)

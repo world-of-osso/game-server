@@ -1,5 +1,12 @@
 # Boss scripts
 
+## Academy current Retail partial boundary
+
+- Ancient196482/2563/map2526/bit1 uses current Retail LittleWigs2777a9d durations: Barkbreaker388544 initial9 then28/29 in order, Germinate388796 initial18/repeat33, Branch Out388623 initial/repeat30, Burst Forth388923 initial54/repeat55. Native70448 targets/effects remain authoritative. No legacy OnEngage schedules.
+- Parent explicitly authorizes outgoing-cast fixtures via threat engagement while retaining Ancient/Crawth source immunity832. `ACADEMY_ANCIENT_UNLOCK_SOURCE_GAP` and `ACADEMY_ANCIENT_ORDINARY_KILL_CREDIT_GAP` remain; no flag removal or full-clear claim. `ACADEMY_TIMELINE_CONDITION_CONTEXT` covers canceled/random Normal bars, energy and paused/removed timeline events; source-listed durations still continue in order.
+- `ACADEMY_ANCIENT_GERMINATE_SELECTOR_GAP` and `ACADEMY_ANCIENT_BRANCH_SELECTOR_GAP`: native dummy388797/388623 has no authored child/summon selector. Never invent lashers/branches/placements. Producer `encounter_summons.py --encounter ancient` binds only the authenticated source primary and local Lua script; no stats/population/models/addons/difficulty edits.
+- `ACADEMY_VEXAMUS_COMBAT_ACTOR_SOURCE_GAP`:194181 has no TDB spawn/group. Native387448 summons194181/property64 but no authored TC/SAI caster ingress. Placement deferred; no guessed coordinates or actor alias.
+
 ## Umbrelskul Lua-clock partial boundary
 
 - Explicit lead-approved partial Lua-clock/native70448 port: Umbrelskul186738/map2515, saved ordinal3/encounter2584/native completionbit2. LittleWigs2777a9d `Dragonflight/TheAzureVault/Umbrelskul.lua` supplies ability countdowns, not a complete executable TC script.
