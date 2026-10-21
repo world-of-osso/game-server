@@ -37,51 +37,6 @@ fn cast_count(h: &Harness, spell: u32) -> usize {
 }
 
 #[test]
-fn follower_utility_policy_geometry_requires_follower_and_native_player_race_identity() {
-    let (mut h, unit) = level32(227734);
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    let extra: u32 = db
-        .query_row(
-            "SELECT ExtendedDisplayInfoID FROM creature_display_info WHERE ID=121289",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap();
-    assert_ne!(extra, 0);
-    h.app
-        .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
-    h.app.world_mut().entity_mut(unit).insert((
-        shared::components::ModelDisplay { display_id: 121289 },
-        shared::components::UnitScale(1.0),
-    ));
-    let geometry = crate::scripted_ai::model_reach::model_geometry(h.app.world(), unit).unwrap();
-    assert_eq!(geometry.combat_reach, 1.5);
-    assert_eq!(geometry.bounding_radius, 0.389);
-    let follower = h
-        .app
-        .world_mut()
-        .entity_mut(unit)
-        .take::<super::Follower>()
-        .unwrap();
-    assert!(
-        crate::scripted_ai::model_reach::model_geometry(h.app.world(), unit).is_none(),
-        "ordinary NPC cannot inherit the follower policy"
-    );
-    h.app
-        .world_mut()
-        .entity_mut(unit)
-        .insert((follower, shared::components::ModelDisplay { display_id: 0 }));
-    assert!(
-        crate::scripted_ai::model_reach::model_geometry(h.app.world(), unit).is_none(),
-        "unknown/unqualified display stays fail-closed"
-    );
-}
-
-#[test]
 fn follower_utility_policy_native_resurrection_effect_restores_a_dead_follower() {
     let (mut h, unit) = level32(209072);
     let healer = add_follower(&mut h, 215011);

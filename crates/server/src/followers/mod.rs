@@ -57,6 +57,8 @@ mod tank_planner;
 #[cfg(test)]
 mod tank_planner_tests;
 mod utility;
+#[cfg(test)]
+mod utility_buff_tests;
 mod utility_interrupt;
 #[cfg(test)]
 mod utility_policy_tests;
