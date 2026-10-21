@@ -10,7 +10,13 @@ const DESCEND: Position = Position {
 };
 
 pub(super) fn first_west(difficulty: u32) -> (Harness, InMap, Entity, Entity) {
+    first_west_seeded(difficulty, 0)
+}
+
+pub(super) fn first_west_seeded(difficulty: u32, seed: u64) -> (Harness, InMap, Entity, Entity) {
     let (mut h, map, nazan, sentries) = prepared_ramparts(difficulty);
+    // Still idle: intro and zone combat have not initialized the flying schedules.
+    h.app.insert_resource(EncounterSeed(seed));
     reach_center(&mut h, nazan, &sentries);
     h.advance(1.0);
     let start = *h.app.world().get::<Position>(nazan).unwrap();

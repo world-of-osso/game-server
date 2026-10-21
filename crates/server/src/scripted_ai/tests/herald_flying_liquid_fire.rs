@@ -1,5 +1,5 @@
 //! Natural flying-parent qualification precedes any flying Liquid Fire hook.
-use super::herald_call::first_west;
+use super::herald_call::first_west_seeded;
 use super::*;
 use crate::scripted_ai::tests::cast_admission::CastAdmissions;
 use crate::spell_cast::test_harness::ObservedCombatEvents;
@@ -24,7 +24,8 @@ fn stage_flying_recipient(h: &mut Harness, map: InMap, nazan: Entity) {
 }
 
 fn qualify_flying_parents(difficulty: u32) {
-    let (mut h, map, nazan, _) = first_west(difficulty);
+    // Pin a real admission branch before zone combat; never bypass shared cooldowns.
+    let (mut h, map, nazan, _) = first_west_seeded(difficulty, 1);
     h.app.init_resource::<ObservedCombatEvents>();
     let parents = if difficulty == 2 {
         [32491, 33794]
@@ -113,7 +114,7 @@ fn objects_in_copy(h: &mut Harness, map: InMap, entry: u32) -> std::collections:
 fn assert_flying_liquid_fire(difficulty: u32, random: bool) {
     use crate::game_objects::summoned::SummonedObject;
     use crate::spell_cast::test_harness::ObservedTriggeredCasts;
-    let (mut h, map, nazan, _) = first_west(difficulty);
+    let (mut h, map, nazan, _) = first_west_seeded(difficulty, 1);
     stage_flying_recipient(&mut h, map, nazan);
     h.app.init_resource::<ObservedCombatEvents>();
     super::herald_liquid_fire::install_liquid_fire_inputs(&mut h);

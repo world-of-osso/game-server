@@ -150,6 +150,38 @@ fn data() -> Option<&'static Data> {
     .as_ref()
 }
 
+#[test]
+fn encounter_fixture_clocks_ignore_host_delays() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let (mut h, _) = Harness::new(NPC_RANDOLPH_MOLOCH, &[]).expect("world.db fixture");
+    let ticks = Arc::new(AtomicUsize::new(0));
+    let observed = ticks.clone();
+    h.app.add_systems(FixedUpdate, move || {
+        observed.fetch_add(1, Ordering::Relaxed);
+    });
+    let clocks = |h: &Harness| {
+        let world = h.app.world();
+        [
+            world.resource::<Time<Real>>().elapsed(),
+            world.resource::<Time<Virtual>>().elapsed(),
+            world.resource::<Time<Fixed>>().elapsed(),
+            world.resource::<Time>().elapsed(),
+        ]
+    };
+    let before = clocks(&h);
+    for _ in 0..3 {
+        // Exceed Bevy's default250ms wall-delta clamp between simulated ticks.
+        std::thread::sleep(Duration::from_millis(300));
+        h.advance(0.05);
+    }
+    assert_eq!(ticks.load(Ordering::Relaxed), 3);
+    for (start, end) in before.into_iter().zip(clocks(&h)) {
+        assert_eq!(end - start, Duration::from_millis(150));
+    }
+}
+
 #[derive(Default)]
 struct Inbox {
     chat: Vec<ChatMessage>,
@@ -163,6 +195,10 @@ struct Inbox {
     opened: Vec<shared::protocol::InteractionOpened>,
     closed: Vec<shared::protocol::InteractionClosed>,
 }
+
+/// Each app owns its seed; parallel encounters never share an RNG stream.
+#[derive(Resource)]
+pub(super) struct EncounterSeed(pub u64);
 
 struct Harness {
     app: App,
@@ -193,6 +229,7 @@ fn stockade_app_with(data: &'static Data, extra: impl FnOnce(&mut App)) -> App {
     ));
     extra(&mut app);
     app.insert_resource(bossmod::Catalog::default());
+    app.insert_resource(EncounterSeed(0));
     app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
         Duration::from_millis(50),
     ));
