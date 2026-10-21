@@ -443,11 +443,12 @@ fn opening_accidental_pack_is_killed_and_skipped_in_authored_route() {
                 "native accidental engagement precedes any planned pull for that pack"
             );
             let healer = run.party.members[1];
+            let geometry =
+                super::diagnostics::inspect_aggro_pair(run.app.world_mut(), accidental, healer)
+                    .expect("actual NPC-to-healer acquisition geometry");
             println!(
-                "ACCIDENTAL_ACQUISITION at={} enemy={} healer={}",
-                run.now(),
-                super::diagnostics::inspect_unit(run.app.world(), Some(20375760), accidental),
-                super::diagnostics::inspect_unit(run.app.world(), None, healer)
+                "ACCIDENTAL_ACQUISITION at={} geometry={geometry}",
+                run.now()
             );
         }
         let events = &run
