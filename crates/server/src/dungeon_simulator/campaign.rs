@@ -1644,6 +1644,9 @@ impl Run {
             .unwrap()
             .spawns
             .iter()
+            .filter(|spawn| {
+                crate::spell_cast::targets::is_alive(self.app.world(), self.actors[&spawn.guid])
+            })
             .map(|spawn| spawn.guid)
             .collect();
         let (allowed, decision) = match crate::followers::simulator::pull(
