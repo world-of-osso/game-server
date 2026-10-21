@@ -30,8 +30,8 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 
 - `scripts/item_instance_data.py` — native-table producer for a supplied existing SQLite copy; canonical application is lead-owned.
 - `scripts/dps_parity.py` — explicit current-tier/prior-tier profile extraction and SimC action normalization.
-- `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution; production equipment integration remains pending.
-- `crates/server/src/item_instance/{bonuses,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state.
+- `crates/server/src/item_instance.rs` — pure instance-level stat budget resolution, consumed by production equipment Stats.
+- `crates/server/src/item_instance/{bonuses,effects,load,store}.rs` — native bonus application/SQLite loading and additive GUID-keyed redb state. Type23 preserves ItemEffect IDs; base/bonus resolution retains native spell IDs, trigger types and cooldown sentinels. Equip-proc execution is not yet integrated.
 - `crates/server/src/stats.rs` — production stat consumer of slot-bound instance properties.
 - `crates/server/src/{inventory,inventory_model,persistence_inventory,item_stats,persistence}.rs` — owned GUID hydration/projection, initial/delta delivery, startup catalogs and additive redb initialization.
 
@@ -40,13 +40,13 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 - `scripts/tests/test_item_instance_data.py` — concrete signed rows, idempotence, unrelated-table retention and duplicate-ID rollback.
 - `scripts/tests/test_dps_parity.py` — exact item identities/modifiers, reference-tier selection, missing-ID rejection, selected-talent metadata and direct/periodic action accounting.
 - `crates/server/src/item_instance.rs::tests` — two passing item-level budget/weapon-damage and invalid-level regressions.
-- `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six passing native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions; runtime wiring remains pending.
+- `crates/server/src/item_instance/{bonuses,store}.rs::tests` — six native allocation/configuration/socket/crafted-stat and durable-reopen/owner-transfer/rollback regressions. Owned inventory hydration/projection is additionally proved at the persistence/Stats boundary.
 - `crates/server/src/item_instance/load.rs::tests` — native SQLite configuration and enchant/gem join regressions; both passed within the 15-case library proof.
 - `crates/server/src/stats_instance_tests.rs` — actual StatsPlugin modifier-only change on native chest 271468/enchant 7987; genuine RED missed +50 Strength before consumer wiring; subsequent native GREEN and unchanged legacy Arcane control passed.
 
 ## Known gaps (current cycle)
 
-- [ ] Runtime instance bonus/enchant/gem derivation and backward-compatible persistence.
+- [ ] Remaining profile bonus options, equip-spell aura/proc lifecycle and complete instance-movement qualification; basic Stats derivation and additive persistence have targeted GREEN proof.
 - [ ] Real300s server dummy execution and equal-gear parity reports.
 - [ ] Shipped105/257 healer BiS/HPS references are absent upstream.
 

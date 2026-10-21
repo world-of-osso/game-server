@@ -39,9 +39,34 @@ pub fn load_bonus_tables(conn: &Connection) -> rusqlite::Result<ItemBonusTables>
 }
 
 pub fn load_item_effect_tables(
-    _conn: &Connection,
+    conn: &Connection,
 ) -> rusqlite::Result<super::effects::ItemEffectTables> {
-    Ok(super::effects::ItemEffectTables::default())
+    let effects = load_map(
+        conn,
+        "SELECT ID,SpellID,TriggerType,CoolDownMSec,CategoryCoolDownMSec,SpellCategoryID FROM item_effect",
+        |row| {
+            Ok((
+                row.get(0)?,
+                super::effects::ItemEffect {
+                    id: row.get(0)?,
+                    spell_id: row.get(1)?,
+                    trigger: row.get(2)?,
+                    cooldown_ms: row.get(3)?,
+                    category_cooldown_ms: row.get(4)?,
+                    category: row.get(5)?,
+                },
+            ))
+        },
+    )?;
+    let mut statement =
+        conn.prepare("SELECT ItemID,ItemEffectID FROM item_x_item_effect ORDER BY ItemID,ID")?;
+    let rows = statement.query_map([], |row| Ok((row.get::<_, u32>(0)?, row.get::<_, u32>(1)?)))?;
+    let mut items: HashMap<u32, Vec<u32>> = HashMap::new();
+    for row in rows {
+        let (item, effect) = row?;
+        items.entry(item).or_default().push(effect);
+    }
+    Ok(super::effects::ItemEffectTables { effects, items })
 }
 
 pub fn load_enchantment_tables(conn: &Connection) -> rusqlite::Result<EnchantmentTables> {

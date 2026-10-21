@@ -18,11 +18,21 @@ pub struct ItemEffectTables {
 }
 
 pub fn equipped_item_effects(
-    _item_id: u32,
-    _bonus_effect_ids: &[u32],
-    _tables: &ItemEffectTables,
+    item_id: u32,
+    bonus_effect_ids: &[u32],
+    tables: &ItemEffectTables,
 ) -> Result<Vec<ItemEffect>, String> {
-    Ok(Vec::new())
+    let base_ids = tables.items.get(&item_id).into_iter().flatten();
+    base_ids
+        .chain(bonus_effect_ids)
+        .map(|id| {
+            tables
+                .effects
+                .get(id)
+                .copied()
+                .ok_or_else(|| format!("equipped item {item_id}: native ItemEffect {id} absent"))
+        })
+        .collect()
 }
 
 #[cfg(test)]

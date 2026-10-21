@@ -54,6 +54,10 @@ pub fn apply_item_bonuses(
                 result.scaling.quality = u8::try_from(bonus.values[0]).map_err(|e| e.to_string())?
             }
             6 => add_sockets(&mut result, bonus.values)?,
+            23 => result.effect_ids.push(
+                u32::try_from(bonus.values[0])
+                    .map_err(|error| format!("ItemEffect ID: {error}"))?,
+            ),
             25 => replace_crafted_stat(&mut result.scaling, bonus.values[0])?,
             49 => {
                 apply_scaling_config(&mut result.scaling, bonus.values[0], tables)?;
