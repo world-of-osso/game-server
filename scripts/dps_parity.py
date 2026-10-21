@@ -155,12 +155,15 @@ def compare_stat_sheets(reference, server):
 def build_simc_arguments(profile, mode, output):
     if mode not in {"single", "three"}:
         raise ValueError(f"Unknown parity scenario: {mode}")
-    arguments = [profile["profile"], "fight_style=Patchwerk", "desired_targets=1",
+    arguments = [profile["profile"], "desired_targets=1",
                  "max_time=300", "fixed_time=1", "vary_combat_length=0",
                  "iterations=1000", "threads=1", "optimal_raid=0", "seed=70448",
                  f'target_level={int(profile["level"]) + 3}', "report_details=1",
                  f"json={output}.{mode}.json", f"output={output}.{mode}.txt"]
+    if mode == "single":
+        arguments.append("fight_style=Patchwerk")
     if mode == "three":
+        # Patchwerk clears explicit raid_events in sim.cpp2318; default NONE keeps them.
         # Stock DungeonSlice forces360s/1main target; use reproducible3-target packs.
         arguments.append("raid_events=adds,count=2,count_range=0,first=0,cooldown=30,duration=30,cooldown_stddev=0,duration_stddev=0")
     return arguments
