@@ -157,6 +157,7 @@ mod vehicle;
 mod vignettes;
 mod who;
 mod wild_pet_battles;
+mod world_area_triggers;
 mod world_data;
 mod world_map;
 mod world_quest_availability;

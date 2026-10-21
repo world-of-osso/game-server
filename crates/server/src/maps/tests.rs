@@ -534,6 +534,8 @@ fn map_store() -> Option<&'static MapStore> {
 mod battleground_nodes;
 #[path = "tests_skirmish_requeue.rs"]
 mod skirmish_requeue;
+#[path = "tests_world_area_triggers.rs"]
+mod world_area_triggers;
 
 fn source_warsong_flags() -> crate::game_objects::GameObjectSpawns {
     source_battleground_objects(2106)
