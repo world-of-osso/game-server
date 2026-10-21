@@ -608,6 +608,18 @@ pub(crate) fn add_school_threat(
     amount: f32,
     school: u32,
 ) {
+    #[cfg(test)]
+    if amount == 0.0
+        && world
+            .get::<crate::zones::CreatureOrigin>(creature)
+            .is_some_and(|origin| origin.guid == 20375705)
+        && world.get::<CreatureState>(creature) == Some(&CreatureState::Idle)
+    {
+        eprintln!(
+            "STOCKADE_ZERO_THREAT_ORIGIN {}",
+            std::backtrace::Backtrace::force_capture()
+        );
+    }
     let taunt_multiplier = world
         .get::<crate::auras::ActiveAuras>(creature)
         .map_or(1.0, |auras| {
