@@ -31,7 +31,8 @@ Generic aura2/6 control uses native70448 spells and TrinityCore a352b1fa `Unit::
 - [x] Atb93d9ea2f,9 native lifecycle/control/Maker tests GREEN34.41s. The additional duel permission/spell safety checks pass; its late melee assertion crossed native605's30s duration. Atde5bbb5c6 the corrected observation stops at defeat:1GREEN16.77s. All10 qualifications enabled.
 - [x] Loaded canonical `tdb_creature_template_spell` (TDB1210 CreatureID/Index/Spell/VerifiedBuild); nativeImp416 duplicate3110 yields one action. Passive/charmed restrictions and slot order are source-qualified implementation, not separately tested branches. Creatures without rows retain a per-creature named source gap; no invented loadouts.
 - [x] Maker native30923 source20–30s/repeat20–30s, multiple-player threat gate, actual charmed-player party damage, and solo exclusion pass in both difficulties.
-- [ ] Real rendered client movement/control proof remains pending in both skins.
+- [x] Atf235eabdc, integrated10 native charm/Maker cases plus5 hunter/warlock/jump regressions pass15/15 in133.86s. Matching server/admin build passes; existing master warning `followers/pull_history.rs:214 has_uncleared_fight` remains outside this change.
+- [x] Real rendered client proof passes in both skins: native605/205364, controlled NPC movement/camera, parked priest, actual StopSpellCast cancellation and priest control restoration. Eight inspected original1920×1080 PNGs: `/syncthing/AgentShared/charm-possess-2026-10-21/`. Client contract records setup and native-proof bounds.
 
 ## Out of scope
 

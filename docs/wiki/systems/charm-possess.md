@@ -28,6 +28,10 @@ NPC-controlled players retain their Player component but take the NPC faction-at
 - Local native world.db SpellEffect/SpellInterrupts rows605/1098/205364/30923/51514, read2026-10-21.
 - [Pet control](../../specs/pet-control.md) — reused command/bar/AI semantics and existing project deviations.
 
+## Proof
+
+Atf235eabdc, all10 native charm/Maker qualifications plus5 hunter/warlock/jump regressions pass15/15 (133.86s). Both native skins subsequently cast605/205364 on the published Blackrock Spy: actual controlled NPC input/camera, parked priest, native IPC StopSpellCast and restored priest movement pass, with eight inspected1920×1080 PNGs. [Contract](../../specs/charm-possess.md) records receipt paths and unqualified native cases.
+
 ## See Also
 
 - [Aura runtime](auras.md)
