@@ -6,6 +6,7 @@ use crate::spell_cast::{self, PlannedEffect, targets};
 use crate::spell_info::SpellStore;
 use bevy::prelude::*;
 use shared::components::Health;
+use std::collections::HashSet;
 
 pub(super) const HEALING_RAIN: u32 = 73920;
 const SIGIL_OF_FLAME: u32 = 204596;
@@ -22,6 +23,7 @@ pub(super) const VOID_STEP: u32 = 1234796;
 pub(super) const RADIANCE: u32 = 194509;
 const RAIN_HEAL: u32 = 73921;
 const QUAKE_DAMAGE: u32 = 77478;
+const QUAKE_KNOCKDOWN: u32 = 77505;
 const BLOSSOM_HEAL: u32 = 355916;
 const WINTER_SLOW: u32 = 211793;
 const VIRULENT_PLAGUE: u32 = 191587;
@@ -54,6 +56,10 @@ pub(super) struct GroundPulses {
     depth: u8,
 }
 
+/// TC areatrigger_sha_earthquake::AddStunnedTarget: one set per actual field.
+#[derive(Component, Default)]
+struct EarthquakeStunnedTargets(HashSet<Entity>);
+
 fn spawn_ground_pulses(
     world: &mut World,
     ctx: &EffectCtx,
@@ -67,7 +73,7 @@ fn spawn_ground_pulses(
     let map = *world
         .get::<crate::maps::InMap>(ctx.caster)
         .expect("ground spell caster map");
-    world.spawn((
+    let mut field = world.spawn((
         pulses,
         shared::components::Position {
             x: center.position.x,
@@ -76,6 +82,9 @@ fn spawn_ground_pulses(
         },
         map,
     ));
+    if ctx.spell.id == EARTHQUAKE {
+        field.insert(EarthquakeStunnedTargets::default());
+    }
 }
 
 fn read_ground_pulses(world: &World, ctx: &EffectCtx) -> GroundPulses {
@@ -336,11 +345,15 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
         });
         units.truncate(pulses.cap);
     }
-    let child = world
+    let mut child = world
         .resource::<SpellStore>()
         .get(pulses.child)
         .expect("named ground spell child")
         .clone();
+    // TC casts77478 with OriginalCaster=at->GetGUID(); preserve it through flight.
+    if pulses.root == EARTHQUAKE {
+        child.cast_original_caster = Some(entity);
+    }
     //26573's tooltip explicitly multiplies the81297 total by1.05.
     let chain_multipliers = if pulses.root == CONSECRATION {
         units.iter().map(|&unit| (unit, 1.05)).collect()
@@ -370,9 +383,59 @@ fn cast_ground_pulse(world: &mut World, entity: Entity, pulses: &GroundPulses) {
             prevent_hit_script: false,
         });
     }
-    // Named damage/heal effect only: Earthquake's knockdown77 remains unsupported.
+    // Named damage/heal effect only; Earthquake reads E1 chance in its OnHit script.
     spell_cast::hit::remove_defended_targets(world, pulses.caster, &child, &mut plan);
     spell_cast::missiles::launch(world, pulses.caster, &child, plan, pulses.depth);
+}
+
+/// TC a352b1fa spell_shaman.cpp1015-1027: roll native E1, then find the original
+/// field among this caster's Earthquakes; stun a target only once per field.
+pub(in crate::spell_cast) fn cast_earthquake_knockdown(
+    world: &mut World,
+    ctx: &EffectCtx,
+    target: Entity,
+) {
+    let chance = ctx
+        .spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 1)
+        .expect("native Earthquake tick chance E1")
+        .base_points;
+    if rand::random::<f32>() * 100.0 >= chance {
+        return;
+    }
+    let Some(field) = ctx.spell.cast_original_caster else {
+        return;
+    };
+    if mark_earthquake_stunned_target(world, ctx.caster, field, target) {
+        spell_cast::cast_triggered(
+            world,
+            ctx.caster,
+            QUAKE_KNOCKDOWN,
+            Some(target),
+            ctx.depth + 1,
+        );
+    }
+}
+
+fn mark_earthquake_stunned_target(
+    world: &mut World,
+    caster: Entity,
+    field: Entity,
+    target: Entity,
+) -> bool {
+    let owned_earthquake = world
+        .get::<GroundPulses>(field)
+        .is_some_and(|pulses| pulses.root == EARTHQUAKE && pulses.caster == caster);
+    if !owned_earthquake {
+        return false;
+    }
+    world
+        .get_mut::<EarthquakeStunnedTargets>(field)
+        .expect("Earthquake field owns its stunned-target set")
+        .0
+        .insert(target)
 }
 
 fn teleport_void_step(world: &mut World, ctx: &EffectCtx, effect: &crate::spell_info::SpellEffect) {
