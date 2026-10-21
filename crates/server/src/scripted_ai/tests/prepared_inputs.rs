@@ -192,6 +192,13 @@ fn decode_encounter_inputs(
         spawn_string_ids,
         script_spawn_groups,
         reset_spawn_groups,
+        // Nethekurse's source reactions pause the real default patrol. The
+        // fissure-only producer leaves this canonical path catalog unchanged.
+        waypoints: if entry == 16807 && populate {
+            crate::test_data::world_data().waypoints.clone()
+        } else {
+            Default::default()
+        },
         // The Azure intro depends on the real non-following tender formation.
         formations: if populate && map_id == 2515 {
             crate::test_data::world_data().formations.clone()
