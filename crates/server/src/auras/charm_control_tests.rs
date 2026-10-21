@@ -179,6 +179,15 @@ fn charm_control_native_205364_pet_attack_hits_enemy_not_charmer() {
     let before = h.health(enemy);
     let owner_before = h.health(h.caster);
     apply(&mut h, 205364);
+    h.select(Some(enemy));
+    h.advance(4);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(h.npc)
+            .is_none(),
+        "merely selecting an enemy is not the charmer attacking it"
+    );
     order(&mut h, COMMAND_ATTACK, Some(enemy));
     h.advance(120);
     assert!(

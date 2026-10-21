@@ -36,7 +36,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use lightyear::prelude::{MessageReceiver, ReplicationDirtyQueue};
 use rusqlite::{Connection, OpenFlags};
-use shared::components::{Health, Mounted, Position, UnitFlags};
+use shared::components::{Health, Mounted, Player, Position, UnitFlags};
 use shared::protocol::{
     ACT_COMMAND, ACT_DISABLED, ACT_ENABLED, ACT_PASSIVE, ACT_REACTION, COMMAND_ABANDON,
     COMMAND_ATTACK, COMMAND_FOLLOW, COMMAND_MOVE_TO, COMMAND_STAY, PET_ACTION_BAR_SLOTS, PetAction,
@@ -617,15 +617,10 @@ fn select_next_target(world: &mut World, owner: Entity, pet: Entity) -> Option<E
     if react == REACT_PASSIVE {
         return None;
     }
-    let assists_owner =
-        react == REACT_ASSIST || world.get::<crate::auras::charm::CharmState>(pet).is_some();
+    let charmed = world.get::<crate::auras::charm::CharmState>(pet).is_some();
+    let assists_owner = react == REACT_ASSIST || charmed;
     let owner_victim = assists_owner
-        .then(|| {
-            world
-                .get::<AutoAttack>(owner)
-                .map(|attack| attack.victim)
-                .or_else(|| victim(world, owner))
-        })
+        .then(|| owner_attack_victim(world, owner, charmed))
         .flatten();
     let candidates = [
         nearest_attacker(world, pet, pet),
@@ -636,6 +631,17 @@ fn select_next_target(world: &mut World, owner: Entity, pet: Entity) -> Option<E
         .flatten()
         .chain(owner_victim)
         .find(|&target| can_attack(world, pet, target))
+}
+
+fn owner_attack_victim(world: &World, owner: Entity, charmed: bool) -> Option<Entity> {
+    if let Some(attack) = world.get::<AutoAttack>(owner) {
+        return Some(attack.victim);
+    }
+    // For players CombatTarget is selection, not attacking; for NPC AI it is the victim.
+    if charmed && world.get::<Player>(owner).is_none() {
+        return victim(world, owner);
+    }
+    None
 }
 
 /// The unit auto-attacking `unit` nearest to `pet` (`getAttackerForHelper`'s
