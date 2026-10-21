@@ -11,6 +11,8 @@ mod kit_interrupt;
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
+mod kit_rotation_fidelity_tests;
+#[cfg(test)]
 mod kit_rotation_tests;
 mod pack_identity;
 mod party;
