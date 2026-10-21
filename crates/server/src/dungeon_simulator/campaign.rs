@@ -417,6 +417,53 @@ fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
 }
 
 #[test]
+fn non_tank_positioning_does_not_enter_unpulled_rowdy_native_sight_radius() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let watcher = run.actors[&20375760];
+    let opening = run.actors[&20375759];
+    let healer = run.party.members[1];
+    let geometry =
+        super::diagnostics::inspect_aggro_pair(run.app.world_mut(), watcher, healer).unwrap();
+    let radius = geometry["npc_acquisition_radius"].as_f64().unwrap() as f32;
+    assert_eq!(
+        radius, 16.0,
+        "native31-to32 acquisition includes Crenna's3yd reach"
+    );
+    for _ in 0..4000 {
+        run.control().unwrap();
+        run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Death
+                && event.target == Some(opening.to_bits())
+        }) {
+            return;
+        }
+        let from = *run.app.world().get::<Position>(watcher).unwrap();
+        let to = *run.app.world().get::<Position>(healer).unwrap();
+        let distance = (from.x - to.x).hypot(from.z - to.z);
+        assert!(
+            distance >= radius,
+            "non-tank healer entered unpulled20375760 native sight: {distance}<{radius} at{}s",
+            run.now()
+        );
+        assert!(
+            !run.app
+                .world()
+                .get::<CombatStatus>(watcher)
+                .is_some_and(|status| status.0),
+            "healer positioning must not recruit the unpulled watcher"
+        );
+    }
+    panic!("opening pack must actually die, not just hold the complete party forever");
+}
+
+#[test]
 fn opening_accidental_pack_is_killed_and_skipped_in_authored_route() {
     let subscriber = bevy::log::tracing_subscriber::fmt()
         .with_env_filter("game_server::creature_sight=debug,game_server::creature_aggro=debug")
@@ -429,6 +476,15 @@ fn opening_accidental_pack_is_killed_and_skipped_in_authored_route() {
     let mut acquired = false;
     for _ in 0..4000 {
         run.control().unwrap();
+        if run.report.pulls.len() == 1 && !acquired {
+            // Deliberate external accidental attack still uses native threat/combat;
+            // safe autonomous positioning must not erase its recovery coverage.
+            crate::creature_aggro::attack_start(
+                run.app.world_mut(),
+                accidental,
+                run.party.members[1],
+            );
+        }
         run.app.update();
         if !acquired
             && run
