@@ -646,6 +646,98 @@ fn census_tail_423_native_mana_modifier_leaves_other_powers_and_owners_unchanged
     assert_eq!(h.power(PowerType::Energy), 100.0 - expected);
 }
 
+const LAY_ON_HANDS: u32 = 633;
+const FULL_HEAL: u32 = 17_683;
+const YSERAS_PRESENCE: u32 = 106_457;
+const MORTAL_WOUNDS: u32 = 115_804;
+
+fn max_heal_fixture() -> Harness {
+    let mut h = harness(
+        Vec::new(),
+        &[LAY_ON_HANDS, FULL_HEAL, YSERAS_PRESENCE, MORTAL_WOUNDS],
+        2,
+    )
+    .unwrap();
+    *h.app.world_mut().get_mut::<Health>(h.caster).unwrap() = Health {
+        current: 500.0,
+        max: 1000.0,
+    };
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 500.0,
+        max: 5000.0,
+    });
+    h
+}
+
+#[test]
+#[ignore = "RED: native67 zero value heals caster max, not victim max"]
+fn census_tail_67_native_lay_on_hands_uses_caster_max_and_logs_overheal() {
+    let mut h = max_heal_fixture();
+    let caster_health = h.health(h.caster);
+    let target = h.npc;
+    hit_native(&mut h, LAY_ON_HANDS, 0, target);
+    assert_eq!(h.health(target), 1500.0);
+    assert_eq!(h.health(h.caster), caster_health);
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 4500.0;
+    hit_native(&mut h, LAY_ON_HANDS, 0, target);
+    assert_eq!(h.health(target), 5000.0);
+    h.advance(1);
+    let event = h
+        .inbox
+        .log
+        .iter()
+        .filter(|event| {
+            event.spell_id == Some(LAY_ON_HANDS)
+                && event.kind == shared::protocol::CombatLogKind::Heal
+        })
+        .last()
+        .expect("native heal log");
+    assert_eq!(event.amount, 1000);
+    assert_eq!(event.overflow, 500);
+    assert!(!event.crit);
+}
+
+#[test]
+#[ignore = "RED: native67 nonzero fills only recipient missing health"]
+fn census_tail_67_native_nonzero_full_heal_uses_recipient_missing_health() {
+    let mut h = max_heal_fixture();
+    let target = h.npc;
+    hit_native(&mut h, FULL_HEAL, 0, target);
+    assert_eq!(h.health(target), 5000.0);
+}
+
+#[test]
+#[ignore = "RED: native67 does not call ordinary healing done or taken bonuses"]
+fn census_tail_67_native_max_health_heal_bypasses_done_and_taken_bonuses() {
+    let mut h = max_heal_fixture();
+    let caster = h.caster;
+    let target = h.npc;
+    hit_native(&mut h, YSERAS_PRESENCE, 0, caster);
+    hit_native(&mut h, MORTAL_WOUNDS, 0, target);
+    assert!(crate::auras::has_aura(
+        h.app.world(),
+        caster,
+        YSERAS_PRESENCE
+    ));
+    assert!(crate::auras::has_aura(h.app.world(), target, MORTAL_WOUNDS));
+    hit_native(&mut h, LAY_ON_HANDS, 0, target);
+    assert_eq!(
+        h.health(target),
+        1500.0,
+        "caster+20% and recipient−50% cannot alter native67"
+    );
+}
+
+#[test]
+#[ignore = "RED control: native67 cannot resurrect a dead recipient"]
+fn census_tail_67_native_lay_on_hands_does_not_heal_dead_target() {
+    let mut h = max_heal_fixture();
+    let target = h.npc;
+    h.app.world_mut().get_mut::<Health>(target).unwrap().current = 0.0;
+    hit_native(&mut h, LAY_ON_HANDS, 0, target);
+    assert_eq!(h.health(target), 0.0);
+}
+
 fn rewarded(h: &Harness, character: u64) -> bool {
     persistence::quest_store::load_quest_log(
         &h.app.world().resource::<GameDatabase>().db,
