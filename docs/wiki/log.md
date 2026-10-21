@@ -3386,3 +3386,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 [Professions](systems/professions.md) count and take recipe reagents from the bags, character bank, then Warband bank (policy CRAFTING_REAGENT_CONSUMPTION_ORDER_RETAIL_ACCESSIBLE_BAGS); [banks](systems/banks.md) now send both `BankContents` on world entry and changed banks after such a craft (`ChangedBanks`). Crafting-order crafter reagents and tools remain bag-only.
 
 - 2026-10-20: Nethekurse native combat and authentic StringId peon callback proof ingested into [boss scripts](systems/boss-scripts.md#shattered-halls-nethekurse-2026-10-20); source gaps explicit.
+
+- 2026-10-20: Nethekurse source-backed remainder/native wild+patrol+Reset proof added; COMPOSITE17GREEN, canonical fissure publication and absent native/create-properties gaps retained.

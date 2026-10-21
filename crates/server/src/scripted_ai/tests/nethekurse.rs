@@ -617,7 +617,6 @@ fn encounter_coverage_nethekurse_peon_reaction_pauses_authored_patrol_five_secon
 }
 
 #[test]
-#[ignore = "RED: Target Fissures30745 child and wild fissure script not ported"]
 fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consumption() {
     for difficulty in [1, 2] {
         let (mut h, boss, map, _) = populated_nethekurse(difficulty);
@@ -715,7 +714,6 @@ fn encounter_coverage_nethekurse_target_fissures_summons_one_native_wild_consump
 }
 
 #[test]
-#[ignore = "pending native source Reset count/spin proof"]
 fn encounter_coverage_nethekurse_evade_keeps_peon_count_and_rearms_dark_spin() {
     let (mut h, boss, map, peons) = populated_nethekurse(1);
     observe_admissions(&mut h, boss);
