@@ -20,6 +20,7 @@ const FORTITUDE: u32 = 21562;
 const FADE: u32 = 586;
 const MASS_DISPEL: u32 = 32375;
 const PURIFY: u32 = 527;
+const HOLY_NOVA: u32 = 132157;
 const MAGIC_DISPEL_TYPE: u32 = 1;
 const MASS_DISPEL_PATIENTS: usize = 3;
 const SURGE: u32 = 114255;
@@ -36,6 +37,7 @@ const OWNED: SpellSet = &[
     MASS_DISPEL,
     PURIFY,
     PRAYER_OF_HEALING,
+    HOLY_NOVA,
 ];
 const POLICY_SPELLS: &[u32] = &[
     FLASH_HEAL,
@@ -92,7 +94,8 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
                 urgent: false,
             })
         })
-        .or_else(|| choose_fortitude(ctx));
+        .or_else(|| choose_fortitude(ctx))
+        .or_else(|| choose_holy_nova(ctx));
     match decision {
         Some(decision) => SpecVerdict::Cast {
             decision,
@@ -230,6 +233,59 @@ fn choose_fortitude(ctx: &TriageContext<'_>) -> Option<Decision> {
         .any(|patient| !crate::auras::has_aura(ctx.world, patient.entity, FORTITUDE));
     (calm && missing && ready(ctx, FORTITUDE, ctx.caster)).then_some(Decision {
         spell_id: FORTITUDE,
+        target: ctx.caster,
+        urgent: false,
+    })
+}
+
+fn choose_holy_nova(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let safe = ctx.patients.iter().all(|patient| {
+        patient.score == 0.0 && !patient.emergency && !ctx.preparing(patient.entity)
+    });
+    if !safe || !ready(ctx, HOLY_NOVA, ctx.caster) {
+        return None;
+    }
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == HOLY_NOVA)?;
+    let center = super::healer_context::position(ctx.world, ctx.caster)?;
+    let radius = super::kit_area::radius_for_spell(ctx.world, ctx.caster, HOLY_NOVA)?;
+    let inside = |unit| {
+        super::healer_context::position(ctx.world, unit)
+            .is_some_and(|at| center.distance(at) <= radius)
+    };
+    let engaged = ctx
+        .enemies
+        .iter()
+        .filter(|(unit, _)| {
+            inside(*unit) && !crate::auras::has_breakable_by_damage_cc(ctx.world, *unit)
+        })
+        .count();
+    if engaged < entry.conditions.min_enemies {
+        return None;
+    }
+    let map = *ctx.world.get::<crate::maps::InMap>(ctx.caster)?;
+    let unsafe_footprint = ctx
+        .world
+        .resource::<crate::maps::units::MapUnits>()
+        .in_map(map)
+        .any(|unit| {
+            ctx.world
+                .get::<Health>(unit)
+                .is_some_and(|health| health.current > 0.0)
+                && inside(unit)
+                && crate::spell_cast::targets::relation_matches(
+                    ctx.world,
+                    ctx.caster,
+                    unit,
+                    crate::spell_cast::targets::Relation::Enemy,
+                )
+                && (!ctx.enemies.iter().any(|(enemy, _)| *enemy == unit)
+                    || crate::auras::has_breakable_by_damage_cc(ctx.world, unit))
+        });
+    (!unsafe_footprint).then_some(Decision {
+        spell_id: HOLY_NOVA,
         target: ctx.caster,
         urgent: false,
     })

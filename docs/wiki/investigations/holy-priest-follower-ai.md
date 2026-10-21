@@ -149,6 +149,15 @@ this choice, PoM upkeep follows it. No shared-ranking change, synthetic healing
 or additional spell metadata. Ignored native opportunity regression predates
 implementation; GREEN execution pending.
 
+Nova root cause: selected132157 has native RangeIndex1/self, but the generic
+kit's enemy target requests pursuit; `spell_reach` rejects its zero native range
+before a cast can launch. Holy now owns132157 and self-targets only after shared
+healing safety and actual native-radius engaged-enemy count pass. Same-copy alive
+fresh enemies and breakable CC veto the footprint, matching the existing generic
+AoE safety rule. This stays in Holy policy to keep frozen comparison runtime
+difference specialization-only; no generic movement/range changes. Native positive
+and safety controls remain required; GREEN pending.
+
 ## Named selected-kit gaps
 
 Verified source inspection at66f0b1d6b: these numeric spell IDs have no class-specific

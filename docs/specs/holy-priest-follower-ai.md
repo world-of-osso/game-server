@@ -84,6 +84,10 @@ native primary-centered cluster. Sum their existing effective-healing estimates
 and compare aggregate healing per native mana against available ordinary direct
 heals; choose the best useful cluster before PoM upkeep, after Surge/Words and
 throughput cooldown decisions. No invented coefficient or map-wide injury count.
+Holy Nova uses its native self target (RangeIndex1), never an enemy pursuit for
+this zero-range spell. Require shared healing-safe inputs, the selected kit's
+engaged-enemy count in its native radius, and no living fresh enemy or protected
+breakable CC in that footprint. Holy owns the decision; no generic movement change.
 These are project decisions, not DB2 magnitudes. Owned cooldown/upkeep rows stay
 owned even when no native admission is available; ordinary direct healing remains
 available through the shared generic candidate ranking.
