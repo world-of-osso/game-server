@@ -143,6 +143,124 @@ fn census_tail_62_native_bite_does_not_burn_a_dead_target() {
     assert_eq!(h.power(PowerType::Energy), 75.0);
 }
 
+const ZEN_FLIGHT: u32 = 125_883;
+const CROW_SPEED: u32 = 48_403;
+const MOUNT_SPEED: u32 = 13_587;
+const FLIGHT_FORM_SPEED: u32 = 33_948;
+
+fn flight_fixture() -> Harness {
+    crate::auras::mount_tests::rider(
+        225,
+        true,
+        &[ZEN_FLIGHT, CROW_SPEED, MOUNT_SPEED, FLIGHT_FORM_SPEED],
+    )
+    .expect("native70448 flight and mount records")
+}
+
+fn remove_flight_aura(h: &mut Harness, unit: Entity, spell_id: u32) {
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        unit,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == spell_id,
+    );
+}
+
+fn assert_flight(h: &Harness, unit: Entity, expected: f32) {
+    let actual = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(unit)
+        .unwrap()
+        .flight_speed;
+    assert!((actual - expected).abs() < 1e-5, "{actual} != {expected}");
+}
+
+#[test]
+#[ignore = "RED: generic206 and native208 unmounted flight modifiers"]
+fn census_tail_206_native_zen_and_crow_add_unmounted_then_remove() {
+    let mut h = flight_fixture();
+    let caster = h.caster;
+    hit_native(&mut h, ZEN_FLIGHT, 1, caster);
+    assert!(crate::auras::has_aura(h.app.world(), caster, ZEN_FLIGHT));
+    assert_flight(&h, caster, 1.6);
+    hit_native(&mut h, CROW_SPEED, 1, caster);
+    assert_flight(&h, caster, 1.7);
+    remove_flight_aura(&mut h, caster, ZEN_FLIGHT);
+    assert_flight(&h, caster, 1.1);
+    remove_flight_aura(&mut h, caster, CROW_SPEED);
+    assert_flight(&h, caster, 1.0);
+}
+
+#[test]
+#[ignore = "RED control:206 must not change mounted207 speed"]
+fn census_tail_206_native_zen_does_not_change_mounted_flight() {
+    let mut h = flight_fixture();
+    crate::auras::mount_tests::mount(&mut h);
+    let caster = h.caster;
+    assert_flight(&h, caster, 3.2);
+    hit_native(&mut h, ZEN_FLIGHT, 1, caster);
+    assert_flight(&h, caster, 3.2);
+}
+
+#[test]
+#[ignore = "RED regression:208 is normal flight, not mounted-always"]
+fn census_tail_206_native_crow_no_longer_uses_wrong_mounted_alias() {
+    let mut h = flight_fixture();
+    crate::auras::mount_tests::mount(&mut h);
+    let caster = h.caster;
+    hit_native(&mut h, CROW_SPEED, 1, caster);
+    assert!(crate::auras::has_aura(h.app.world(), caster, CROW_SPEED));
+    assert_flight(&h, caster, 3.2);
+}
+
+#[test]
+#[ignore = "RED: actual209 mounted-always factor"]
+fn census_tail_206_native_mount_speed_209_multiplies_only_mounted_flight() {
+    let mut h = flight_fixture();
+    let caster = h.caster;
+    hit_native(&mut h, MOUNT_SPEED, 1, caster);
+    assert_flight(&h, caster, 1.0);
+    crate::auras::mount_tests::mount(&mut h);
+    assert!(crate::auras::has_aura(h.app.world(), caster, MOUNT_SPEED));
+    assert_flight(&h, caster, 3.296);
+    remove_flight_aura(&mut h, caster, MOUNT_SPEED);
+    assert_flight(&h, caster, 3.2);
+}
+
+#[test]
+#[ignore = "RED: player-controlled NPC takes strongest206, ignores208"]
+fn census_tail_206_native_controlled_npc_uses_strongest_vehicle_bonus() {
+    let mut h = flight_fixture();
+    let npc = spawn_npc(&mut h.app, 2.0);
+    h.app.world_mut().entity_mut(npc).insert((
+        shared::components::UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
+        crate::auras::ActiveAuras::default(),
+        crate::auras::AuraStatMods::default(),
+    ));
+    hit_native(&mut h, ZEN_FLIGHT, 1, npc);
+    hit_native(&mut h, FLIGHT_FORM_SPEED, 1, npc);
+    hit_native(&mut h, CROW_SPEED, 1, npc);
+    assert_flight(&h, npc, 3.2);
+    remove_flight_aura(&mut h, npc, FLIGHT_FORM_SPEED);
+    assert_flight(&h, npc, 1.6);
+}
+
+#[test]
+#[ignore = "RED: uncontrolled NPC uses additive206+208 branch"]
+fn census_tail_206_native_uncontrolled_npc_adds_flight_modifiers() {
+    let mut h = flight_fixture();
+    let npc = spawn_npc(&mut h.app, 2.0);
+    h.app.world_mut().entity_mut(npc).insert((
+        crate::auras::ActiveAuras::default(),
+        crate::auras::AuraStatMods::default(),
+    ));
+    hit_native(&mut h, ZEN_FLIGHT, 1, npc);
+    hit_native(&mut h, FLIGHT_FORM_SPEED, 1, npc);
+    hit_native(&mut h, CROW_SPEED, 1, npc);
+    assert_flight(&h, npc, 3.9);
+}
+
 fn rewarded(h: &Harness, character: u64) -> bool {
     persistence::quest_store::load_quest_log(
         &h.app.world().resource::<GameDatabase>().db,
