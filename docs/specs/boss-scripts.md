@@ -6,6 +6,11 @@
 - Explicit lead instruction: use current Retail Lua, not legacy handlers. Where Retail uses timeline conditionals unavailable to this server, keep ongoing requests by consuming the Lua's listed durations in source order and record the unexecutable condition context as a named gap. This is a declared partial scheduling policy, not claimed execution of Blizzard's timeline.
 - Take ordinary child spell requests, implicit targets, radii, triggers and effects from70448. Missing selectors become named gaps; do not invent alternate IDs, targets, effects, stats or follower205 difficulty rows. Require native Normal1 and Follower205 behavior proof per boss.
 
+## Ruby pair combat actor source gap
+
+- `RUBY_PAIR_COMBAT_ACTOR_SOURCE_GAP`: pinned TC/current Lua name combat Kyrakka190484 and Erkhart190485, but TDB1210 has no placements, Effect28 summons or summon groups for them. Source spawn9001490 is RP vehicle199790 with full-TDB `vehicle_template_accessory` rider199791; this is an explicit RP relationship, not proof of combat actor alias/transition.
+- Preserve native PC/NPC immunity on199790/199791 (flags832/262976). No shared-name/display alias, guessed placement, unsourced faction/immunity change or fabricated combat transformation. Actor/source gap stays open; lead explicitly instructs continuing Academy then Uldaman, with no active population owner.
+
 ## Kokia current-Retail partial boundary
 
 - Current LittleWigs2777a9d Retail Kokia189232/2606/map2521bit0 (TC source ordinal1). Primary is authenticated by pinned Ruby header/instance and70448 journal2485/5354/display106851, not guessed from appearance. Boss AI is explicitly local Lua-backed, not attributed to nonexistent TC boss code.

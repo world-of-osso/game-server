@@ -1,5 +1,9 @@
 # Boss scripts
 
+## Ruby pair combat actor source gap — 2026-10-21
+
+[Boundary](../../specs/boss-scripts.md#ruby-pair-combat-actor-source-gap): TC/Lua190484/190485 combat actors have zero local TDB placements, Effect28 summons or groups. Existing map2521 source9001490 is RP vehicle199790; full TDB accessory row explicitly selects199791 rider/seat0. The RP actors retain PC/NPC immunity (native flags832/262976); same names/display do not establish a combat transition. No placement, alias or immunity removal was fabricated. Lead explicitly accepts `RUBY_PAIR_COMBAT_ACTOR_SOURCE_GAP`, leaves it open without a population owner, and orders Academy then Uldaman next. Read-only receipts: engine `data/diagnostics/encounter-gaps-2026-10-21/ruby-pair-accessory-source.json`.
+
 ## Kokia current Retail partial — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#kokia-current-retail-partial-boundary). Current Retail LittleWigs2777a9d source-order lanes: Ritual372864 first8/repeat40s; current372110 names ordinary372107 child, first19s then20/19 alternation; Searing372858 first28/repeat40s. Native Any25 victim aura23 produces actual372859 weapon damage; Boulder retains2.5s casting and existing-destination87 caster default. No old7.3/14.5/21.6 timing or fabricated legacy372863/1309540/Firestorm chain.

@@ -1,3 +1,7 @@
+## 2026-10-21 — Ruby pair actor source gap
+
+[Pair source gap](systems/boss-scripts.md#ruby-pair-combat-actor-source-gap--2026-10-21): no authored combat190484/190485 placements/summons/groups. Full TDB proves RP199790 vehicle/rider199791 only; preserve their native immunity and do not infer an actor alias. Lead accepts named gap/open/no population owner and orders Academy then Uldaman. No runtime/data edits for the pair.
+
 ## 2026-10-21 — Kokia current Retail partial
 
 [Kokia](systems/boss-scripts.md#kokia-current-retail-partial--2026-10-21): ignored firstSearingRED precedes currentRetail partial065cf3fc9. Native5/5GREEN78.66s atd1af8bded proves Normal/Follower140s ongoing lanes, native aura23 weapon damage/reset/source-order rearm/isolated2606bit0/corpse. Producer1PASS12.435s; authenticated primary/localLua binding only, all actor inputs retained. No legacy timing or unsourced Ritual/Firestorm/projectile forwarding; conditional context and final gate/publication remain explicit.
