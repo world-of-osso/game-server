@@ -137,6 +137,34 @@ impl BossScript for BossHogger {
 }
 
 impl CreatureAi for BossHogger {
+    fn scheduled_damage(&self) -> Vec<super::ScheduledDamage> {
+        use super::{ScheduledDamage, ScheduledDamageTarget};
+        [
+            (
+                hogger::EVENT_VICIOUS_SLICE,
+                hogger::SPELL_VICIOUS_SLICE,
+                ScheduledDamageTarget::Victim,
+            ),
+            (
+                hogger::EVENT_MADDENING_CALL,
+                hogger::SPELL_MADDENING_CALL,
+                ScheduledDamageTarget::SourceArea,
+            ),
+        ]
+        .into_iter()
+        .filter_map(|(event, spell_id, target)| {
+            self.boss
+                .events
+                .remaining_ms(event)
+                .map(|request_in_ms| ScheduledDamage {
+                    spell_id,
+                    request_in_ms,
+                    target,
+                })
+        })
+        .collect()
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
         self.has_enraged = false;

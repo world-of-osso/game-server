@@ -598,6 +598,46 @@ fn replication_forms_send_energy_regen_and_combat_dependent_rage_decay() {
     assert_eq!(power_entry(&h, PowerType::Rage).regen_per_sec, 0.0);
 }
 
+/// TC StatSystem.cpp931: aura94 selects combat regeneration without entering combat.
+#[test]
+fn census_tail_94_native_bear_form_retains_idle_rage_until_removed() {
+    const BEAR_RAGE: u32 = 17_057;
+    let mut h = harness(Vec::new(), &[BEAR_RAGE], DRUID).unwrap();
+    h.app
+        .world_mut()
+        .get_mut::<shared::components::CombatStatus>(h.caster)
+        .unwrap()
+        .0 = false;
+    h.advance(80);
+    h.cast_and_deliver(BEAR_RAGE, None);
+    assert!(crate::auras::has_aura(h.app.world(), h.caster, BEAR_RAGE));
+    assert!(
+        !h.app
+            .world()
+            .get::<shared::components::CombatStatus>(h.caster)
+            .unwrap()
+            .0
+    );
+    let before = h.power(PowerType::Rage);
+    assert!(before > 0.0, "native effect0 must grant Rage");
+    h.advance(20);
+    assert_eq!(h.power(PowerType::Rage), before);
+    assert_eq!(power_entry(&h, PowerType::Rage).regen_per_sec, 0.0);
+    let caster = h.caster;
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == BEAR_RAGE,
+    );
+    h.advance(20);
+    assert!(
+        h.power(PowerType::Rage) < before,
+        "removal restores native idle decay"
+    );
+    assert_eq!(power_entry(&h, PowerType::Rage).regen_per_sec, -12.5);
+}
+
 const EVOKER: u8 = 13;
 /// Evoker `chr_classes_x_power_types` without the alternate bars (Evoker is not in
 /// `ClassSpells` yet).

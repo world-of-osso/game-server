@@ -2,10 +2,23 @@
 
 [Toys](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): exact3141flag0x100 skips TC's owner-clamp block. Initial ordinary53453 birth1 oracle lacked terrain; ordinary temporary zone spawning skips source regional tuning and is a separate gap. Generic717a791a5 correctly refuses missing context. Corrected native99104 fixture uses actual map1220/area7558/tuning332/native45 versus caster10; Keg Pony/Stored Wisdom fixtures use real Northshire/native30. Source-based RED/GREEN pending; no invented min/max or whole99104cast claim.
 
+## 2026-10-21 — Native item-instance stats foundation
+
+[Instance properties](systems/character-stats.md#instance-properties--2026-10-21): additive GUID storage preserves legacy bytes; native bonus/configuration, capped enchant and GemProperties resolution feeds slot-bound stats.15 library cases pass; actual native271468/7987 modifier-only RED687vs737→GREEN with retained Arcane control. Two real inventory hydration/projection REDs now pass in the24-case library/main integration proof. Type23/base ItemEffect identity resolution adds3RED→18libraryGREEN; equip proc/aura execution and300s parity remain open. Canonical producer application is lead-owned; no deployment or DPS-parity claim.
 ## 2026-10-21 — Popcorn and Burning Blade Banner source visuals
 
 [Toys](systems/toys.md#popcorn-and-burning-blade-banner-visual-only-source-slice-2026-10-21): complete70448 graph102rows/29tables; strict source-only admissions162539/168014,516→518. RED2/control1→7GREEN147.26s proves real owner apply/replicate/CancelAura/recovery/invariants and eight metadata-drift refusals; Gadgetzan still refused. After master23c6f091d merge, feature/drift3/3PASS93.58s; checkEXIT0 with inherited follower warning,fmtEXIT0. No native/full-hour reuse claim.
 
+## 2026-10-21 — Healer framework native qualification
+
+[Healer triage](systems/follower-healer-triage.md): native risk/cost/owned hook, topped-start starvation RED→GREEN, actual Hogger read-only deadlines/Reset and native-radius scatter/stack controls. Gateha847 exposed five residual priority/fixture failures; authored Ironbark and urgent/routine Swiftmend decisions plus actual paid OOC fixture resolve them, Henry dispel retained. Six-case+core15GREEN; masterff190 integration requested followers/campaign285GREEN206.38s plus private-asset Leymor1GREEN17.46s; scoped check/format PASS, sole13179-owned helper warning excluded perlead. Shared death forecast/native readiness restored for Holy. Full Crenna depth and paired20-seed metrics remain pending.
+
+## 2026-10-21 — Follower healer triage design
+
+[FOLLOWER_HEALER_TRIAGE_POLICY](systems/follower-healer-triage.md) design and read-only107-row Crenna70448 census recorded. Initial risk/coverage/topped-cast regressions committed d311a3d98; RED execution and implementation pending optimized baseline compilation. No completion claim.
+## 2026-10-21 — PvP pet battle policies
+
+[Explicit unsourced project policy](systems/petbattle-pvp.md): monotonic authoritative deadlines, default choices/streak forfeit, FIFO level widening and preserved join tickets, exact living-participant winner XP persistence/receipt. RED6 plus same-frame FIFO RED1 → GREEN9; native proof pending, no protocol change or Retail numerical-parity claim.
 ## 2026-10-21 — Generic falling-turn ability
 
 [Toys](systems/toys.md#generic-turn-while-falling-ability-2026-10-21): source aura409 owns movement bit39 and survives real input/overlapping aura removal. RED4→corrected5GREEN includes real Kite60s/Plume10s legal-area lifecycles and neutral-faction scenery regression;13 retained movement/FeatherFall/census controls passed earlier. Pipeline514→516. No protocol/native-steering claim; post-masterff190cb1c focused16/16PASS58.55s, canonical census516, checkEXIT0 with inherited follower warning. All-toy scope no longer has a five-item minimum.
@@ -3501,3 +3514,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — TWW Rookery Kyrioss
 
 [Source boundary/proof](systems/boss-scripts.md#tww-rookery-kyrioss--2026-10-21): pushed ignored RED first; source-explicit LittleWigs schedules and native70448 cast/effect pipeline; Normal/Follower COMPOSITE4GREEN plus producer3PASS. Self-cast SpellGo and exact peer404468 provenance avoid fabricated log delivery. Dummy children, Torrent phase/repeat and Dash controller remain named gaps; canonical publication lead-owned.
+
+- 2026-10-21: Lost Dwarves currentLua/70448 partial plus explicit living10% surrender policy: ignoredRED→native7GREEN Normal/Follower; all-three isolatedcredit, preservedflags/faction, nativehealth-regen/reset restoration and old-pull credit exclusion. Sourceproducer onlybinds3authoredactors. [Boss scripts](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21).

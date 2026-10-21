@@ -367,6 +367,7 @@ fn record_helper_persists_layout_instances_character_and_inventory() {
         nonvisual_equipped: Vec::new(),
         instances: HashMap::from([(501, ItemInstanceData { soulbound: true })]),
         crafting_origins: HashMap::new(),
+        item_modifiers: HashMap::new(),
         item_durability: HashMap::from([(501, (44, 55))]),
         definition_sources: HashMap::from([(501, shared::item_data::ItemDefinitionSource::Retail)]),
         appearance_account: None,
