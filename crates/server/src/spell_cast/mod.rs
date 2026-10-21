@@ -312,6 +312,8 @@ mod arena_cooldown_tests;
 mod assisted_costs;
 #[cfg(test)]
 mod charge_snapshot_tests;
+#[cfg(test)]
+mod combat_area_target_tests;
 pub(crate) mod homebind;
 pub(crate) mod jump_charge;
 mod knockback;
