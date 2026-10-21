@@ -7,7 +7,7 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 ## What it must do
 
 - [x] Freeze map-34 Normal spawns grouped by the tank planner's source formation identity into `content/dungeons/stockade-34.json`; retain source GUIDs, entries and 2D positions.
-- [ ] Extract inter-pack walk distances once using the existing nav query. Runtime movement consumes only the frozen graph; aggro and range use 2D positions.
+- [ ] Extract inter-pack walk distances once using the existing nav query. Runtime movement consumes only the frozen graph; freeze native entrance/node heights and preserve full3D nearest-node, range and aggro distances for every dungeon. No runtime geometry services.
 - [x] Spawn through the production map-population path, preserving its Normal difficulty, formation, pool and source-identity semantics; a hand-built population must not bypass those tags.
 - [ ] Run real spell casting, auras, damage, threat, creature AI, full follower kits and tank pull planning in-process, with manually stepped time and direct intents/callable handlers, without networking plugins or transport.
 - [ ] Clear every Stockade boss in seconds of CPU, targeting at least 100 simulated seconds per wall-second. Report ticks, setup/update/control/observation wall costs, simulation ratio, live entity/event counts and process memory in periodic checkpoints. Report cleared/wiped, failed pack, HP/mana traces and pull decisions; terminal source-unit state and complete native combat-event order must make stalls diagnosable. Keep all admitted members in samples after native dead-summon despawn: record absence and unavailable HP/mana/position explicitly, never invent values or abort the batch. Unrelated NPC fights/regen and unexecuted movement requests do not establish party progress. Actual party HP or mana gains do establish progress, including OOC rest; capped resources alone do not. Flag a stall only after60s without party damage, actual movement or resource gain.
@@ -15,6 +15,13 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Batch N seeded runs and summarize per-pack wipe rate. Report runs reaching each pack as the denominator, wipes separately from all failed clears (including stalls/blocks/timeouts), and keep each run's HP/mana/pull trace. A batch that executed successfully is not a clear unless all runs cleared.
 - [ ] Enforce `SCRIPTED_BOSS_PULL_WHEN_READY` and `CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` from the [follower policy](follower-dungeons.md): no numeric forecast may strand a cleared, full-ready party before its next single pack. No overlap or chained adds on that admission.
 - [ ] Preserve approved tank policy: ten active-combat seconds of current-run DPS/healing measurements, retained through OOC travel/recovery/holds and reset at dungeon start or full wipe; separate five-second health stability remains wall-clock. Preserve 30% HP reserve, first single pack, affordable sourced heal, every member above 80% across five seconds before overlap, static spawns until observed dead, caster collection and hazard reaction.
+
+## Azure qualification
+
+- [x] Freeze the staged2515 native graph, complete Normal source population and an authored Leymor→Azureblade→Telash→Umbrelskul route. Difficulty205 retains its native Normal-population alias.
+- [ ] Execute the same [Azure translocation policy](azure-translocation.md) as production when the authored route crosses a disconnected component; freeze directed teleport edges, never invented walk connectors.
+- [ ] Run Azure seeds1–10 with `--jobs`, unchanged Garrick/Crenna/Shuja/Meredy/Austin roster and native205 ContentTuning2155 maximum level70; report every clear/wipe/stall/block and root cause.
+- [ ] Rerun Stockade seeds1–10 after generic source-height preservation.
 
 ## Authored route
 

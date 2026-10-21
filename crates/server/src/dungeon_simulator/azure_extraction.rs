@@ -9,7 +9,11 @@ fn extract_azure_graph() {
     let mut packs = source_packs(data, 2515);
     packs.push(Pack {
         id: 7116,
-        position: [-5364.33008, -1035.76001],
+        position: [
+            crate::npc_interaction::azure_translocation::FINAL_POI_WOW.x,
+            -crate::npc_interaction::azure_translocation::FINAL_POI_WOW.y,
+        ],
+        height: crate::npc_interaction::azure_translocation::FINAL_POI_WOW.z,
         spawns: Vec::new(),
     });
     let directory = std::path::Path::new(
@@ -17,17 +21,16 @@ fn extract_azure_graph() {
     );
     let candidates = query_edges(data, &packs, directory);
     let edges = select_edges(&packs, candidates);
-    let links = [
-        (29001868, 29001870),
-        (29002007, 29001886),
-        (29002008, 29001886),
-        (29002009, 29001886),
-        (29001906, 29001915),
-        (29001918, 29002013),
-        (29002014, 7116),
-        (29002015, 7116),
-        (29002016, 7116),
-    ];
+    let links: Vec<_> = data.spawns_by_map[&2515]
+        .iter()
+        .map(|index| &data.spawns[*index])
+        .filter_map(|spawn| {
+            crate::npc_interaction::azure_translocation::LINKS
+                .iter()
+                .find(|link| link.entry == spawn.template_entry)
+                .map(|link| (spawn.guid, link.destination))
+        })
+        .collect();
     let pack_for = |guid| {
         packs
             .iter()
@@ -48,7 +51,8 @@ fn extract_azure_graph() {
         .filter(|pack| pack.spawns.iter().any(|spawn| spawn.entry == 196102))
         .min_by(|a, b| {
             let distance = |pack: &Pack| {
-                Vec2::from_array(pack.position).distance_squared(Vec2::new(-5050.48, -1024.56))
+                pack.point()
+                    .distance_squared(Vec3::new(-5050.48, 594.216, -1024.56))
             };
             distance(a).total_cmp(&distance(b))
         })
@@ -95,9 +99,9 @@ fn extract_azure_graph() {
                             pack.spawns
                                 .iter()
                                 .any(|spawn| bosses.contains(&spawn.entry)),
-                            Vec2::from_array(pack.position).distance_squared(Vec2::from_array(
-                                packs.iter().find(|p| p.id == current).unwrap().position,
-                            )),
+                            pack.point().distance_squared(
+                                packs.iter().find(|p| p.id == current).unwrap().point(),
+                            ),
                         )
                     };
                     let ka = key(a);
@@ -125,6 +129,7 @@ fn extract_azure_graph() {
     let graph = Graph {
         map_id: 2515,
         entrance: [-5050.48, -1024.56],
+        entrance_height: 594.216,
         entrance_pack: opening,
         unreachable: unreachable(&packs, &combined, opening),
         packs,

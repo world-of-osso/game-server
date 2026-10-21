@@ -4,7 +4,11 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 ## Frozen geometry
 
-`content/dungeons/stockade-34.json` contains 143 Normal source packs and 367 native-query walk-distance edges (70 KB). Pack identity matches source formations, never proximity clusters. Extraction retains a minimum spanning forest plus four nearest neighbours; every node is connected. Only the explicitly ignored extraction test opens the nav bake. Runtime positions are flattened to a plane; travel consumes source speeds and frozen edge distances, not the straight-line endpoint distance.
+`content/dungeons/stockade-34.json` contains 143 Normal source packs and 367 native-query walk-distance edges (70 KB). Pack identity matches source formations, never proximity clusters. Extraction retains a minimum spanning forest plus four nearest neighbours; every node is connected. Only the explicitly ignored extraction test opens the nav bake. Native source heights now remain intact for every graph (approved2026-10-21). Frozen node/entrance heights drive full3D nearest-node selection; native range/aggro retain floor separation. Travel consumes source speeds and frozen edge distances, not straight-line endpoint distance. Samples store Bevy[x,y,z]. No runtime navmesh, ground, LOS or physics is installed.
+
+## Azure graph
+
+`content/dungeons/azure-vault-2515.json` retains225 Normal source actors in214 native formation packs plus authored AreaPOI7116 as an empty topology node. Qualified staged navigation supplies540 walk-distance edges; [the shared production book policy](azure-translocation.md) supplies nine directed teleport links. Authored179-hostile-pack route follows Leymor→Azureblade→Telash→Umbrelskul. Two off-route source actors29001897/29001912 are nav-unreachable and remain named, not connected synthetically. Runtime uses `DUNGEON_SIMULATOR_MAP=2515`, native difficulty205, Normal population projection and `DUNGEON_SIMULATOR_LEVEL=70` (MapDifficulty5417→ContentTuning2155 range10–70). Default five profiles remain unchanged. Seeded clear proof pending.
 
 ## Execution
 

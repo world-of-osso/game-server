@@ -114,11 +114,7 @@ fn load_gameplay_data(app: &mut App) {
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let mut data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
-    // The approved simulation geometry is a plane. Native combat/stat inputs stay intact.
-    for spawn in data.spawns.iter_mut().filter(|spawn| spawn.map == 34) {
-        spawn.position_z = 0.0;
-    }
+    let data = crate::world_data::load_world_data(&crate::test_data::world_db_path());
     app.insert_resource(data.armor_constants.clone());
     app.insert_resource(data);
     let (spells, classes) = crate::spell_info::load_spell_data(&db).unwrap();
@@ -138,18 +134,20 @@ fn load_gameplay_data(app: &mut App) {
 }
 
 pub(super) fn create_copy(app: &mut App) -> crate::maps::InMap {
+    let graph = &app.world().resource::<super::Space>().0;
+    let (map_id, difficulty_id) = (graph.map_id, graph.difficulty_id());
     app.world_mut()
         .resource_scope(|world, maps: Mut<crate::maps::MapStore>| {
             world
                 .resource_mut::<crate::maps::InstanceManager>()
                 .create_map(
                     &maps,
-                    34,
+                    map_id,
                     crate::maps::instances::InstanceEntrant {
                         character_id: 1,
                         group: None,
                         leader: 1,
-                        difficulty_id: 1,
+                        difficulty_id,
                         ..default()
                     },
                     crate::maps::instances::Now {
@@ -166,6 +164,12 @@ pub(super) fn spawn_population(
     app: &mut App,
     copy: crate::maps::InMap,
 ) -> std::collections::BTreeMap<u32, Entity> {
+    let difficulty_id = app
+        .world()
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .expect("native simulator copy difficulty")
+        .difficulty_id;
     let mut queue = bevy::ecs::world::CommandQueue::default();
     app.world_mut()
         .resource_scope(|world, data: Mut<crate::world_data::WorldData>| {
@@ -175,7 +179,7 @@ pub(super) fn spawn_population(
                 &data,
                 crate::zones::MapContent {
                     map: copy,
-                    difficulty_id: 1,
+                    difficulty_id,
                     dead_bosses: Vec::new(),
                 },
                 false,
@@ -230,7 +234,7 @@ pub(super) fn run_first_pack() -> Result<(), String> {
         copy,
         Position {
             x: graph.entrance[0],
-            y: 0.0,
+            y: graph.entrance_height,
             z: graph.entrance[1],
         },
     )?;
@@ -257,7 +261,7 @@ pub(super) fn run_first_pack() -> Result<(), String> {
         .collect();
     let at = Position {
         x: pack.position[0] - 2.0,
-        y: 0.0,
+        y: pack.height,
         z: pack.position[1],
     };
     for unit in party.members.iter().copied().chain([party.owner]) {

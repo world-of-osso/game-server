@@ -7,7 +7,6 @@ use std::collections::BTreeMap;
 
 const MAX_TICKS: usize = 72_000;
 const STALL_SECONDS: f64 = 60.0;
-const BOSS_ENTRIES: [u32; 3] = [46383, 46264, 46254];
 
 #[derive(Component)]
 pub(super) struct MoveIntent(pub Vec3);
@@ -21,7 +20,7 @@ pub(super) struct MemberSample {
     max_health: Option<f32>,
     mana: Option<f32>,
     max_mana: Option<f32>,
-    position: Option<[f32; 2]>,
+    position: Option<[f32; 3]>,
 }
 
 #[derive(Serialize)]
@@ -76,6 +75,48 @@ fn azure_simulator_uses_requested_follower_copy_and_native_population() {
                 .is_some_and(|npc| npc.template_id == entry)),
             "native boss{entry} must spawn"
         );
+    }
+}
+
+#[test]
+#[ignore = "explicit Azure2515/205 environment qualification"]
+fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(
+        run.graph.map_id, 2515,
+        "explicit Azure qualification environment"
+    );
+    let owner = run.party.owner;
+    let book = run.actors[&29001868];
+    let endpoint = *run
+        .app
+        .world()
+        .get::<Position>(run.actors[&29001870])
+        .unwrap();
+    let source = *run.app.world().get::<Position>(book).unwrap();
+    let members: Vec<_> = run.members().collect();
+    let before: Vec<_> = members
+        .iter()
+        .map(|unit| {
+            let world = run.app.world();
+            (
+                *world.get::<crate::maps::InMap>(*unit).unwrap(),
+                world.get::<Health>(*unit).unwrap().current,
+                world.get::<Mana>(*unit).map(|mana| mana.current),
+            )
+        })
+        .collect();
+    run.app.world_mut().entity_mut(owner).insert(source);
+    assert_eq!(
+        crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
+        Ok(5)
+    );
+    for (unit, (copy, health, mana)) in members.into_iter().zip(before) {
+        let world = run.app.world();
+        assert_eq!(world.get::<Position>(unit), Some(&endpoint));
+        assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        assert_eq!(world.get::<Health>(unit).unwrap().current, health);
+        assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
     }
 }
 
@@ -793,7 +834,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         copy,
         Position {
             x: graph.entrance[0],
-            y: 0.0,
+            y: graph.entrance_height,
             z: graph.entrance[1],
         },
     )?;
@@ -810,7 +851,8 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             "frozen graph contains sources absent from production Normal population: {missing:?}"
         ));
     }
-    let last_owner_position = Vec3::new(graph.entrance[0], 0.0, graph.entrance[1]);
+    let last_owner_position =
+        Vec3::new(graph.entrance[0], graph.entrance_height, graph.entrance[1]);
     Ok(Run {
         app,
         graph,
@@ -856,7 +898,9 @@ impl Run {
             "update_wall_seconds": timings[2].as_secs_f64(),
             "allocated_entity_slots": self.app.world().entities().len(),
             "live_entities": self.app.world().entities().count_spawned(),
-            "source_map_actors": self.actors.len(),
+            "source_map_actors": self.actors.len(), "map_id": self.graph.map_id,
+            "difficulty_id":self.graph.difficulty_id(),
+            "party_levels":self.members().map(|unit|self.app.world().get::<shared::components::Level>(unit).map(|level|level.0)).collect::<Vec<_>>(),
             "observed_events": self.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len(),
             "samples": self.report.samples.len(), "memory": super::diagnostics::read_process_memory()})
     }
@@ -939,7 +983,7 @@ impl Run {
                     max_health: health.map(|health| health.max),
                     mana: mana.map(|mana| mana.current),
                     max_mana: mana.map(|mana| mana.max),
-                    position: position.map(|position| [position.x, position.z]),
+                    position: position.map(|position| [position.x, position.y, position.z]),
                 }
             })
             .collect();
@@ -951,8 +995,11 @@ impl Run {
 
     fn finished(&mut self) -> bool {
         let world = self.app.world();
-        self.report.bosses_killed = BOSS_ENTRIES
-            .into_iter()
+        self.report.bosses_killed = self
+            .graph
+            .boss_entries()
+            .iter()
+            .copied()
             .filter(|entry| {
                 self.graph
                     .packs
@@ -971,9 +1018,12 @@ impl Run {
                     })
             })
             .collect();
-        if self.report.bosses_killed.len() == BOSS_ENTRIES.len() {
+        if self.report.bosses_killed.len() == self.graph.boss_entries().len() {
             self.report.status = "cleared".into();
-            self.report.detail = "all three source boss actors died".into();
+            self.report.detail = format!(
+                "all{} source boss actors died",
+                self.graph.boss_entries().len()
+            );
             return true;
         }
         if self
@@ -1009,6 +1059,9 @@ impl Run {
         };
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
+        if self.approach_translocation(target_position)? {
+            return Ok(());
+        }
         let tank_position = *self.app.world().get::<Position>(self.party.tank).ok_or(
             "admitted tank is absent; route anchor remains known, but no native opener can cast",
         )?;
@@ -1020,12 +1073,22 @@ impl Run {
             .iter()
             .find(|step| step.pack == pack_id)
             .unwrap();
-        if (target_position.x - tank_position.x).hypot(target_position.z - tank_position.z) > range
-        {
+        let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
+        let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        if from.distance(to) > range {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .insert(MoveIntent(Vec3::new(step.anchor[0], 0.0, step.anchor[1])));
+                .insert(MoveIntent(Vec3::new(
+                    step.anchor[0],
+                    self.graph
+                        .packs
+                        .iter()
+                        .find(|pack| pack.id == pack_id)
+                        .unwrap()
+                        .height,
+                    step.anchor[1],
+                )));
             return Ok(());
         }
         self.app
@@ -1077,6 +1140,59 @@ impl Run {
                 "native tank opening failed on pack{pack_id}: {error:?}"
             )),
         }
+    }
+
+    fn approach_translocation(&mut self, target: Position) -> Result<bool, String> {
+        if self.graph.teleports.is_empty() {
+            return Ok(false);
+        }
+        let from = *self
+            .app
+            .world()
+            .get::<Position>(self.party.owner)
+            .ok_or("translocation reader absent")?;
+        let edge = self
+            .app
+            .world()
+            .resource::<super::Space>()
+            .next_translocation(
+                Vec3::new(from.x, from.y, from.z),
+                Vec3::new(target.x, target.y, target.z),
+            )?;
+        let Some((source, destination)) = edge else {
+            return Ok(false);
+        };
+        let book = *self
+            .actors
+            .get(&source)
+            .ok_or("translocation source actor absent")?;
+        let at = *self
+            .app
+            .world()
+            .get::<Position>(book)
+            .ok_or("translocation book lacks position")?;
+        if Vec3::new(from.x, from.y, from.z).distance(Vec3::new(at.x, at.y, at.z)) > 0.1 {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .insert(MoveIntent(Vec3::new(at.x, at.y, at.z)));
+            return Ok(true);
+        }
+        crate::npc_interaction::azure_translocation::traverse(
+            self.app.world_mut(),
+            self.party.owner,
+            book,
+        )?;
+        super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<MoveIntent>();
+        self.record_pull(
+            source,
+            format!("AZURE_TRANSLOCATION_BOOK_ENDPOINTS {source}->{destination}"),
+        );
+        Ok(true)
     }
 
     fn next_pack(&self) -> Option<(u32, Entity)> {
@@ -1158,7 +1274,7 @@ impl Run {
         });
         self.event_cursor = events.len();
         let position = world.get::<Position>(self.party.owner).unwrap();
-        let position = Vec3::new(position.x, 0.0, position.z);
+        let position = Vec3::new(position.x, position.y, position.z);
         if damage || position != self.last_owner_position || resource_gain {
             self.last_progress = self.now();
         }
