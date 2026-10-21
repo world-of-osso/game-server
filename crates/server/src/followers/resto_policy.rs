@@ -6,6 +6,8 @@ use super::healer_triage::{Decision, SpecVerdict, SpellSet, TriageContext};
 const IRONBARK: u32 = 102342;
 const SWIFTMEND: u32 = 18562;
 const LIFEBLOOM: u32 = 33763;
+const NATURES_SWIFTNESS: u32 = 132158;
+const REGROWTH: u32 = 8936;
 // Matches the qualified native bloom-on-refresh window; durations remain native.
 const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
@@ -20,11 +22,14 @@ const OWNED: SpellSet = &[
     145205,
     IRONBARK,
     UTILITY_REBIRTH,
+    NATURES_SWIFTNESS,
 ];
 
 pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
     let decision = choose_ironbark(ctx)
+        .or_else(|| choose_swift_regrowth(ctx))
         .or_else(|| choose_urgent_swiftmend(ctx))
+        .or_else(|| choose_natures_swiftness(ctx))
         .or_else(|| choose_lifebloom(ctx))
         .or_else(|| ranked_maintenance(ctx));
     match decision {
@@ -154,4 +159,65 @@ fn choose_lifebloom(ctx: &TriageContext<'_>) -> Option<Decision> {
         target: tank.entity,
         urgent: false,
     })
+}
+
+fn regrowth_target(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == REGROWTH)?;
+    let patient = ctx.patients.iter().find(|patient| {
+        patient.missing_health > 0.0
+            && (patient.emergency || patient.score > 0.0)
+            && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
+    })?;
+    Some(Decision {
+        spell_id: REGROWTH,
+        target: patient.entity,
+        urgent: patient.emergency,
+    })
+}
+
+fn choose_swift_regrowth(ctx: &TriageContext<'_>) -> Option<Decision> {
+    ctx.own_aura_on(ctx.caster, NATURES_SWIFTNESS)?;
+    if !ctx.ready(REGROWTH) {
+        return None;
+    }
+    regrowth_target(ctx)
+}
+
+fn choose_natures_swiftness(ctx: &TriageContext<'_>) -> Option<Decision> {
+    if !ctx.ready(NATURES_SWIFTNESS)
+        || useful_friendly_cast_in_progress(ctx)
+        || ctx.own_aura_on(ctx.caster, NATURES_SWIFTNESS).is_some()
+    {
+        return None;
+    }
+    let target = regrowth_target(ctx)?;
+    if !target.urgent {
+        return None;
+    }
+    let spell = ctx
+        .world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(REGROWTH)?;
+    if crate::spell_cast::cast_time_ms(ctx.world, ctx.caster, spell) <= 0
+        || crate::spell_cast::read_healer_recovery(ctx.world, ctx.caster, spell).is_err()
+    {
+        return None;
+    }
+    Some(Decision {
+        spell_id: NATURES_SWIFTNESS,
+        target: ctx.caster,
+        urgent: true,
+    })
+}
+
+fn useful_friendly_cast_in_progress(ctx: &TriageContext<'_>) -> bool {
+    ctx.world
+        .get::<shared::casting::CastState>(ctx.caster)
+        .and_then(|cast| bevy::prelude::Entity::try_from_bits(cast.target))
+        .is_some_and(|target| {
+            !crate::spell_cast::targets::is_hostile(ctx.world, ctx.caster, target)
+        })
 }
