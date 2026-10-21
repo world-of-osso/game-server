@@ -8,6 +8,11 @@ fn assert_default_source_actor(item: u32, spell: u32, entries: &[u32], lifetime_
     let dir = tempfile::tempdir().unwrap();
     // Source Gnomatic Projector is Gnome-restricted; use a legal real race for this cohort.
     let (mut h, character) = setup_for_race(&dir.path().join("default-summon.redb"), 7);
+    if matches!(item, 71137 | 192485) {
+        // Both UseCreatureLevel actors have template tuning0/delta0. Actual
+        // Northshire area9 selects tuning73/native30 rather than owner80.
+        place_toy_caster_on_source_area(&mut h, 778027, [-8949.95, -132.493], 9);
+    }
     let path = crate::test_data::world_db_path();
     let conn =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
@@ -52,6 +57,12 @@ fn assert_default_source_actor(item: u32, spell: u32, entries: &[u32], lifetime_
         expected
     );
     for &(actor, entry) in &actors {
+        if matches!(item, 71137 | 192485) {
+            assert_eq!(
+                world.get::<shared::components::UnitLevel>(actor).unwrap().0,
+                30
+            );
+        }
         let template = &world.resource::<crate::world_data::WorldData>().templates[&entry];
         assert!(
             template

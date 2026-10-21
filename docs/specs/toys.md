@@ -24,9 +24,10 @@ Sources: TC a352b1fa `SpellAuraEffects.cpp:2969–2983`, `Unit.cpp:13933–13961
 ## Source-native companion levels
 
 - [x] SummonProperties UseCreatureLevel0x100 selects source-native creature level/difficulty before dependent stats even for non-guardian companions; it must not silently inherit the caster's level.
-- [x] Native99104 effect28/properties3141/creature53453/display38340 preserves the ordinary source-native birth level in the same map. In current normal map0, that is level1 despite the level10 caster. Follow designation, immunity, permanent lifetime, slot replacement and owner-map cleanup remain unchanged.
+- [ ] Native99104 effect28/properties3141/creature53453/display38340 preserves source-native regional birth: actual map1220/area7558 selects tuning332/native45 despite caster10. Follow designation, immunity, permanent lifetime, slot replacement and owner-map cleanup remain unchanged; corrected fixture proof pending.
+- [ ] Admitted flagged actors Keg Pony71137 and Stored Wisdom192485 retain tuning73/native30 in real Northshire, rather than caster80, and preserve source3/5-minute lifetimes; corrected fixture proof pending.
 
-Sources: TC a352b1fa `DBCEnums.h:2780`, `TemporarySummon.cpp:240–253`. This mechanism proof does not certify the unimplemented99104 target43/dummy4 cast or impose level1 on arbitrary creature templates/maps.
+Sources: TC a352b1fa `DBCEnums.h:2780`, `TemporarySummon.cpp:240–253`, `Creature.cpp:1128–1143,1610–1618,3122–3173`. Missing destination-area context remains a refusal, not a guessed level. Ordinary temporary zone spawning currently skips regional tuning; its birth1 is not a valid source oracle. This mechanism proof does not certify that separate parity gap, the unimplemented99104 target43/dummy4 cast, or arbitrary native rendering.
 
 ## Native default TempSummon title dispatch
 

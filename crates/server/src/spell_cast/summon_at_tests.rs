@@ -300,35 +300,44 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
     let spell = world_db().unwrap().store.get(99104).unwrap();
     assert_eq!(spell.effects[0].misc_values, [53453, 3141]);
     assert!(super::summon::unsupported_reason(h.app.world(), &spell.effects[0]).is_none());
+    // TC Creature::Create initializes terrain area before SelectLevel. Normal53453
+    // has tuning0/delta0; real area7558 supplies tuning332 with levels10–45.
+    super::test_harness::place_toy_caster_on_source_map_area(
+        &mut h,
+        1220,
+        955950,
+        [4584.0, 6450.666],
+        7558,
+    );
+    let position = h.app.world().get::<Position>(h.caster).unwrap().as_vec3();
+    let (area_tuning, maximum): (u32, u8) = conn
+        .query_row(
+            "SELECT a.ContentTuningID, c.maxlevel FROM area_table a
+         JOIN content_tuning_level c ON c.ID = a.ContentTuningID WHERE a.ID = 7558",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((area_tuning, maximum), (332, 45));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Level>(h.caster)
+            .unwrap()
+            .0,
+        10
+    );
     let ctx = super::effects::EffectCtx {
         caster: h.caster,
         spell,
         depth: 0,
         // Target43 selection is outside this companion lifecycle boundary.
         dest: Some(super::targets::Dest {
-            position: Vec3::ZERO,
+            position,
             orientation: 0.0,
         }),
         chain_multiplier: 1.0,
     };
-    // UseCreatureLevel0x100 must retain the same real template's native birth level,
-    // not inherit this level10 caster. Observe it independently through ordinary spawn.
-    let native = crate::zones::summon_creature(h.app.world_mut(), h.caster, 53453, [0.0; 4])
-        .expect("published native Green Balloon template");
-    let native_level = *h
-        .app
-        .world()
-        .get::<shared::components::UnitLevel>(native)
-        .unwrap();
-    assert_ne!(
-        native_level.0,
-        h.app
-            .world()
-            .get::<shared::components::Level>(h.caster)
-            .unwrap()
-            .0
-    );
-    crate::zones::unsummon(h.app.world_mut(), native);
     super::summon::summon_creature(h.app.world_mut(), &ctx, &spell.effects[0]);
     let first = {
         let world = h.app.world_mut();
@@ -371,8 +380,8 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
     );
     assert_eq!(
         world.get::<shared::components::UnitLevel>(summon),
-        Some(&native_level),
-        "UseCreatureLevel must preserve native source birth instead of caster level"
+        Some(&shared::components::UnitLevel(maximum)),
+        "UseCreatureLevel must preserve native regional birth instead of caster level"
     );
     assert!(
         world
