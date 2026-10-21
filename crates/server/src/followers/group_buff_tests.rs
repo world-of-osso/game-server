@@ -57,7 +57,6 @@ fn buffed(h: &Harness, unit: Entity) -> bool {
 }
 
 #[test]
-#[ignore = "RED target118 group expansion"]
 fn census_tail_118_native_fortitude_buffs_all_five_around_target_not_caster() {
     let (mut h, members, outsider) = player_party();
     h.cast_and_deliver(FORTITUDE, Some(members[1]));
@@ -83,7 +82,6 @@ fn census_tail_118_native_fortitude_ungrouped_target_does_not_buff_casters_party
 }
 
 #[test]
-#[ignore = "RED target118 group expansion"]
 fn census_tail_118_native_fortitude_excludes_far_dead_and_other_copy_members() {
     let (mut h, members, outsider) = player_party();
     h.app.world_mut().get_mut::<Position>(members[2]).unwrap().x = 131.0;
@@ -109,7 +107,6 @@ fn census_tail_118_native_fortitude_excludes_far_dead_and_other_copy_members() {
 }
 
 #[test]
-#[ignore = "RED target118 follower group identity"]
 fn census_tail_118_native_henry_fortitude_buffs_actual_companion_party() {
     let mut h = harness(Vec::new(), &[FORTITUDE], 5).unwrap();
     let owner = h.caster;

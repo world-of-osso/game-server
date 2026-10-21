@@ -15,6 +15,12 @@ Clean-room reference: TrinityCore a352b1fa. Baseline evidence: engine `data/diag
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Priority target118 ALLY_OR_RAID
+
+TC `Spell.cpp:1393–1401` expands around the explicit unit only when caster and target share a party/raid. Native21562 Fortitude supplies radius100; ordinary explicit-friendly admission range is preserved by the selector's Ally requirement (`Spell.cpp:1105`). Generic expansion reuses living/friendly/same-copy area selection, group membership, caps and center sight checks. Actual follower parties share GroupRegistry but use `Follower::member_id`; resolve that identity before ordinary summoned-unit ownership so non-roster followers cannot inherit their owner's membership.
+
+Ignored RED208a0bdbb refined6d905360c: `census_tail_118 --include-ignored`,1PASS/3FAIL20.11s. Five-player target-centered expansion fails; dead/far/copy exclusion case lacks caster buff; native Henry215011 fails to buff the companion roster. Ungrouped-target-only control passes. Real follower profiles loaded from native catalog; summoned ownership and a same-owner non-roster follower reproduce the production boundary. `/home/osso/.worktrees/logs/census-tail/118-red.log`. GREEN pending.
+
 ## Effect16 QUEST_COMPLETE
 
 TC `SpellEffects.cpp:3765–3793` completes native exploration/event quests only when active, or native tracking-event flags even without visible log entries; already-rewarded quests are not replayed. Generic handler delegates to existing `quest::persist_scripted_quest_result` with the actual hit player and native MiscValue, preserving production persistence/dirty notifications.
