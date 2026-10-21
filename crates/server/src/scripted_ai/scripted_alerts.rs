@@ -111,8 +111,12 @@ fn project_schedule(
                 EncounterTimer {
                     event_id: event,
                     spell_id: ability.label,
-                    remaining_ms: remaining.min(u64::from(u32::MAX)) as u32,
-                    duration_ms: duration.min(u64::from(u32::MAX)) as u32,
+                    remaining_ms: remaining
+                        .try_into()
+                        .expect("encounter timer fits wire clock"),
+                    duration_ms: duration
+                        .try_into()
+                        .expect("encounter duration fits wire clock"),
                     conditional: true,
                 },
             ))
@@ -133,15 +137,8 @@ pub(super) fn publish_schedule(world: &mut World, unit: Entity, events: &EventMa
         return;
     };
     let (signature, timers) = project_schedule(events, abilities);
-    let now = world.resource::<Time>().elapsed_secs_f64();
-    {
-        let mut entity = world.entity_mut(unit);
-        let mut publication = entity.entry::<Publication>().or_default().into_mut();
-        if signature == publication.signature && now - publication.sampled_at < 1.0 {
-            return;
-        }
-        publication.signature = signature;
-        publication.sampled_at = now;
+    if !record_publication(world, unit, signature) {
+        return;
     }
     instance_script::send_to_players(
         world,
@@ -152,6 +149,44 @@ pub(super) fn publish_schedule(world: &mut World, unit: Entity, events: &EventMa
             timers,
         },
     );
+}
+
+fn record_publication(world: &mut World, unit: Entity, signature: Vec<(u32, u64)>) -> bool {
+    const SNAPSHOT_INTERVAL_SECS: f64 = 1.0;
+    let now = world.resource::<Time>().elapsed_secs_f64();
+    let mut entity = world.entity_mut(unit);
+    let mut publication = entity.entry::<Publication>().or_default().into_mut();
+    if signature == publication.signature && now - publication.sampled_at < SNAPSHOT_INTERVAL_SECS {
+        return false;
+    }
+    publication.signature = signature;
+    publication.sampled_at = now;
+    true
+}
+
+fn is_warning_boundary(world: &World, unit: Entity, spell: u32, kind: CombatLogKind) -> bool {
+    let spell = world
+        .resource::<SpellStore>()
+        .get(spell)
+        .expect("sourced native encounter spell");
+    let starts_cast = crate::spell_cast::cast_time_ms(world, unit, spell) > 0;
+    let boundary = if starts_cast {
+        CombatLogKind::CastStart
+    } else {
+        CombatLogKind::CastSuccess
+    };
+    kind == boundary
+}
+
+fn warning_name(store: &SpellStore, ability: Ability) -> String {
+    match ability.warning_name {
+        Some(name) => name.to_owned(),
+        None => store
+            .get(ability.label)
+            .expect("sourced encounter label")
+            .name
+            .clone(),
+    }
 }
 
 fn select_cast_warning(
@@ -172,27 +207,10 @@ fn select_cast_warning(
         .iter()
         .find(|ability| Some(ability.spell) == event.spell_id)?;
     ability.warning?;
-    let store = world.resource::<SpellStore>();
-    let spell = store
-        .get(ability.spell)
-        .expect("sourced native encounter spell");
-    let starts_cast = crate::spell_cast::cast_time_ms(world, unit, spell) > 0;
-    let boundary = if starts_cast {
-        CombatLogKind::CastStart
-    } else {
-        CombatLogKind::CastSuccess
-    };
-    if event.kind != boundary {
+    if !is_warning_boundary(world, unit, ability.spell, event.kind) {
         return None;
     }
-    let name = match ability.warning_name {
-        Some(name) => name.to_owned(),
-        None => store
-            .get(ability.label)
-            .expect("sourced encounter label")
-            .name
-            .clone(),
-    };
+    let name = warning_name(world.resource::<SpellStore>(), ability);
     Some((unit, map, ability, name))
 }
 
