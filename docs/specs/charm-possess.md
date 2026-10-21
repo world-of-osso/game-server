@@ -28,7 +28,7 @@ Generic aura2/6 control uses native70448 spells and TrinityCore a352b1fa `Unit::
 ## Known gaps (current cycle)
 
 - [ ] Targeted GREEN and real client movement/control proof pending.
-- [ ] `CHARM_CREATURE_SPELL_BAR_SOURCE_ABSENT`: canonical world.db has no creature_template_spell table; no NPC spell buttons invented. Generic Attack and charm commands use existing bar.
+- [ ] Load NPC spell slots from canonical `tdb_creature_template_spell` (TDB1210 CreatureID/Index/Spell/VerifiedBuild), preserving source order and TC passive/charmed restrictions. No invented loadouts for creatures without rows.
 - [ ] Maker native30923 scheduling not yet enabled; generic aura lifecycle first.
 
 ## Out of scope
