@@ -29,6 +29,13 @@ def native_fixture():
 
 
 class PublicationTests(unittest.TestCase):
+    def test_missing_native_effect_link_is_rejected_without_publication(self):
+        with native_fixture() as conn:
+            conn.execute("DELETE FROM spell_effect WHERE Effect=16")
+            with self.assertRaisesRegex(ValueError, "definition is unavailable"):
+                render_sql(conn)
+            self.assertEqual(conn.execute("SELECT count(*) FROM content_quest_template").fetchone()[0], 0)
+
     def test_native_tracking_row_is_published_with_existing_quest_mapping_and_is_idempotent(self):
         with native_fixture() as conn:
             sql = render_sql(conn)
