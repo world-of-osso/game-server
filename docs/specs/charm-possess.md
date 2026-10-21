@@ -4,7 +4,7 @@ Generic aura2/6 control uses native70448 spells and TrinityCore a352b1fa `Unit::
 
 ## What it must do
 
-- [ ] Native605/205364/1098/30923 assign one charmer, adopt its faction, stop the prior cast/combat/threat, reject a second charmer, and restore identity on aura removal.
+- [x] Native605/205364/1098/30923 assign one charmer, adopt its faction, stop the prior cast/combat/threat, reject a second charmer, and restore identity on aura removal (native aura-boundary3GREEN).
 - [ ] Ordinary charm follows/attacks for its charmer through pet commands/AI; possession only attacks on command and never AI-chases.
 - [ ] Possession routes authenticated PlayerInput to the controlled unit, validates its movement epoch/budget, freezes the player's own body, and restores control on removal.
 - [ ] Native duration, channel cancellation, damage interrupt flags, death and lost-caster lifetime govern removal; never infer break-on-damage from spell names.
@@ -23,7 +23,7 @@ Generic aura2/6 control uses native70448 spells and TrinityCore a352b1fa `Unit::
 
 ## Tests asserting this spec
 
-- `crates/server/src/auras/charm_tests.rs`: native605 faction/combat/control/cancel;205364 follow/duration;1098/30923 ownership/refusal. Ignored RED pushed e2f48c726;0PASS/3FAIL on missing faction consumer.
+- `crates/server/src/auras/charm_tests.rs`: native605 faction/combat/control/cancel;205364 follow/duration;1098/30923 ownership/refusal. Ignored RED pushed e2f48c726;0PASS/3FAIL on missing faction consumer. At0568cd86e, unchanged3GREEN/0FAIL32.74s;tests enabled.
 
 ## Known gaps (current cycle)
 

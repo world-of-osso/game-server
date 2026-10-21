@@ -27,7 +27,6 @@ fn apply(h: &mut Harness, spell_id: u32) {
 }
 
 #[test]
-#[ignore = "RED: generic aura2/6 charm state absent"]
 fn charm_native_605_takes_faction_stops_combat_and_restores_on_cancel() {
     let mut h = fixture();
     let enemy = spawn_npc(&mut h.app, 4.0);
@@ -81,7 +80,6 @@ fn charm_native_605_takes_faction_stops_combat_and_restores_on_cancel() {
 }
 
 #[test]
-#[ignore = "RED: generic aura6 owner/follow absent"]
 fn charm_native_205364_changes_faction_follows_charmer_and_expires() {
     let mut h = fixture();
     apply(&mut h, 205364);
@@ -130,7 +128,6 @@ fn charm_native_205364_changes_faction_follows_charmer_and_expires() {
 }
 
 #[test]
-#[ignore = "RED: generic aura6 controller replacement absent"]
 fn charm_native_1098_30923_uses_same_lifecycle_and_rejects_second_charmer() {
     for spell in [1098, 30923] {
         let mut h = fixture();
