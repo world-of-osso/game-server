@@ -20,6 +20,7 @@ pub(crate) struct SummonLevels {
     maps: HashMap<(u32, u32), u32>,
     areas: HashMap<u32, (u32, u32)>,
     deltas: HashMap<(u32, u32), (i8, i8)>,
+    difficulty_fallbacks: HashMap<u32, u32>,
 }
 
 impl SummonLevels {
@@ -37,11 +38,23 @@ impl SummonLevels {
             .query_map([], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?
             .collect::<rusqlite::Result<_>>()?;
         let deltas = load_deltas(conn)?;
+        let difficulty_fallbacks = conn
+            .prepare("SELECT ID, FallbackDifficultyID FROM difficulty")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<rusqlite::Result<_>>()?;
         Ok(Self {
             ranges,
             maps,
             areas,
             deltas,
+            difficulty_fallbacks,
+        })
+    }
+
+    /// CreatureTemplate::GetDifficulty (TC a352b1fa Creature.cpp:252–262).
+    pub(super) fn difficulty_chain(&self, difficulty: u32) -> impl Iterator<Item = u32> + '_ {
+        std::iter::successors(Some(difficulty), |id| {
+            self.difficulty_fallbacks.get(id).copied()
         })
     }
 
@@ -104,8 +117,8 @@ impl SummonLevels {
 
     /// Difficulty rows replace base rows, including their deltas when tuning is regional.
     fn delta(&self, entry: u32, difficulty: u32) -> Option<(i8, i8)> {
-        self.deltas
-            .get(&(entry, difficulty))
+        self.difficulty_chain(difficulty)
+            .find_map(|id| self.deltas.get(&(entry, id)))
             .or_else(|| self.deltas.get(&(entry, 0)))
             .copied()
     }
@@ -123,6 +136,8 @@ mod tests {
         conn.execute_batch(
             "CREATE TABLE content_tuning_level (ID INTEGER, minlevel INTEGER, maxlevel INTEGER);
              INSERT INTO content_tuning_level VALUES (482,1,90),(73,1,30),(9001,10,60);
+             CREATE TABLE difficulty (ID INTEGER, FallbackDifficultyID INTEGER);
+             INSERT INTO difficulty VALUES (205,1),(1,0);
              CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
              INSERT INTO map_difficulty VALUES (0,0,0),(0,1,9001);
              CREATE TABLE area_table (ID INTEGER, ParentAreaID INTEGER, ContentTuningID INTEGER);
@@ -136,6 +151,12 @@ mod tests {
         let native = levels.guardian_range(&template, 0, 1, Some(9)).unwrap();
         assert_eq!(native.range, (1, 90), "template precedes regional tuning");
         assert_eq!(native.delta, (-2, -2), "difficulty replaces base delta");
+        let follower = levels.guardian_range(&template, 0, 205, Some(9)).unwrap();
+        assert_eq!(
+            follower.delta,
+            (-2, -2),
+            "205 inherits Normal delta, not base"
+        );
         template.tuning = None;
         let map = levels.guardian_range(&template, 0, 1, None).unwrap();
         assert_eq!(map.range, (10, 60), "map tuning does not need terrain");

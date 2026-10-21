@@ -1,3 +1,7 @@
+## 2026-10-21 — Follower205 source audits
+
+[Generic difficulty chain](systems/level-scaling.md#creature-difficulty-fallback--2026-10-21): pinned70448/TDB1210/TCa352b1fa prove205→1→0, template CT precedence and ExpectedStat mods; existing178 content205 rows are40 Normal/138 base projections, not raw205 observations. Native Vault Rune197204 temporary spawn reproduces missing LevelScaling (403a8357b,1FAIL17.83s); generic template and regional-delta chain implemented, GREEN pending. Read-only all27-map source inventory records650 nonboss candidates,23 source-bound/627 unbound and10 absent populations; helpers/phases retained, not a hostile-mechanics completion claim. Evidence in engine `data/diagnostics/follower-dungeons-2026-10-21/`.
+
 ## 2026-10-21 — Broggok core and encounter-gap audit
 
 [Broggok](systems/boss-scripts.md#blood-furnace-broggok--2026-10-21): ignored appearance RED precedes source port; actual70448 cone damage/Normal+Heroic clocks, intro/release speech and isolated reset/death give COMPOSITE5GREEN. Native absent IDs and authentic TDB prisoner/path/navigation gaps stay explicit; no fabricated memberships or historical cloud. Audit72encounters/13dungeons at engine `data/diagnostics/encounter-gaps-2026-10-21/report.md`; not native-clear certification.
