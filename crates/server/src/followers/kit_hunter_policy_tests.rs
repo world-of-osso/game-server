@@ -125,6 +125,15 @@ fn pet_swing_frames(
 }
 
 #[test]
+#[ignore = "RED: failed pet preparation blocks the entire hunter kit"]
+fn rotation_fidelity_253_missing_duck_data_still_shoots() {
+    let (mut h, caster) = at_level(AUSTIN, 32, |_| {});
+    assert!(summoned_pet(h.app.world(), caster).is_none());
+    super::kit_tests::uses_spell(&mut h, caster, 217200);
+    assert!(summoned_pet(h.app.world(), caster).is_none());
+}
+
+#[test]
 #[ignore = "RED: native1264934 Frenzy has no active-pet attack-speed consumer"]
 fn rotation_fidelity_253_native_frenzy_shortens_pet_melee_interval() {
     const FRENZY: u32 = 1_264_934;
