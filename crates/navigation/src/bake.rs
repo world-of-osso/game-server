@@ -285,13 +285,27 @@ impl RecastBuild {
             .filter(|c| c.nverts >= 3)
             .map(|c| c.nverts - 2)
             .sum();
+        let mut unique = std::collections::HashMap::<(u16, u16), Vec<u16>>::new();
+        for contour in contours.iter().filter(|c| c.nverts >= 3) {
+            // SAFETY: successful contour construction owns four ints per vertex.
+            let verts =
+                unsafe { std::slice::from_raw_parts(contour.verts, contour.nverts as usize * 4) };
+            for vertex in verts.chunks_exact(4) {
+                let (x, y, z) = (vertex[0] as u16, vertex[1] as u16, vertex[2] as u16);
+                let heights = unique.entry((x, z)).or_default();
+                if !heights.iter().rev().any(|height| height.abs_diff(y) <= 2) {
+                    heights.push(y);
+                }
+            }
+        }
+        let unique_vertices: usize = unique.values().map(Vec::len).sum();
         let limit = if vertices >= 0xfffe {
             "contour vertex capacity: maxVertices >= 0xfffe"
         } else {
             "internal polygonization/allocation failure (not contour vertex capacity)"
         };
         format!(
-            "Recast polygon mesh failed: {limit}; contour_vertices={vertices}, triangle_capacity={triangles}, contours={}, mesh_vertices={}, mesh_polygons={}, nvp=6",
+            "Recast polygon mesh failed: {limit}; contour_vertices={vertices}, deduplicated_vertices={unique_vertices}, triangle_capacity={triangles}, contours={}, mesh_vertices={}, mesh_polygons={}, nvp=6",
             contours.len(),
             mesh.nverts,
             mesh.npolys,
