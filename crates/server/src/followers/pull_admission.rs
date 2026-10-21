@@ -31,6 +31,9 @@ pub(super) fn read_pull_budget(
     difficulty: u32,
 ) -> Result<Decision, String> {
     let run = read_run_budget(world, tank)?;
+    if let Some(decision) = read_cleared_single_pull(world, tank, &run, projected, difficulty)? {
+        return Ok(decision);
+    }
     let Some(ready) = pull_readiness::read_ready_heal(world, tank, &run.party)? else {
         return Ok(Decision::Wait(Reason::Healer));
     };
@@ -40,7 +43,126 @@ pub(super) fn read_pull_budget(
     Ok(pull_budget::evaluate(&input))
 }
 
-/// Native numeric report uses exactly the input and arithmetic used for admission.
+/// User policies apply only to a cleared copy and one next authored pack.
+/// No stat snapshot or invented numeric forecast can veto this ready single pull.
+fn read_cleared_single_pull(
+    world: &mut World,
+    tank: Entity,
+    run: &RunBudget,
+    projected: &BTreeSet<u32>,
+    difficulty: u32,
+) -> Result<Option<Decision>, String> {
+    let fighting = run.party.iter().any(|unit| {
+        world
+            .get::<shared::components::CombatStatus>(*unit)
+            .is_some_and(|status| status.0)
+    });
+    if fighting || !ai::engaged_enemies(world, &run.follower, tank, &run.party).is_empty() {
+        return Ok(None);
+    }
+    if projected.is_empty() {
+        return Err("A new pull requires a nonempty projected source footprint".into());
+    }
+    let sources = pull_sources::read_present_sources(
+        world,
+        run.map,
+        difficulty,
+        &run.history.cleared_spawns,
+    )?;
+    let packs: BTreeSet<_> = projected
+        .iter()
+        .map(|guid| read_source_pack(&sources, *guid))
+        .collect::<Result<_, _>>()?;
+    if packs.len() != 1 {
+        return Ok(Some(Decision::Wait(Reason::FirstSinglePack)));
+    }
+    if let Some(reason) = read_party_recovery(world, run)? {
+        return Ok(Some(Decision::Wait(reason)));
+    }
+    if !has_admitted_healer(world, run) {
+        return Ok(Some(Decision::Wait(Reason::Healer)));
+    }
+    let targets: Vec<_> = projected
+        .iter()
+        .map(|guid| {
+            sources[guid]
+                .actor
+                .ok_or_else(|| format!("Ready pull source GUID {guid} lacks its native actor"))
+        })
+        .collect::<Result<_, _>>()?;
+    if targets
+        .iter()
+        .any(|target| super::hazards::target_is_hazardous(world, tank, *target))
+    {
+        return Ok(Some(Decision::Wait(Reason::Hazard)));
+    }
+    let scripted_boss = targets.iter().any(|target| {
+        world
+            .get::<crate::scripted_ai::CreatureScriptName>(*target)
+            .is_some_and(|name| name.0.starts_with("boss_"))
+    });
+    let policy = if scripted_boss {
+        "SCRIPTED_BOSS_PULL_WHEN_READY"
+    } else {
+        "CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK"
+    };
+    debug!(
+        policy,
+        ?tank,
+        ?packs,
+        "Ready single-pack pull without numerical forecast"
+    );
+    // Full positive tank HP preserves the 30% reserve without a fake forecast.
+    Ok(Some(Decision::Allow {
+        bootstrap: run.history.completed_fights == 0,
+        forecast_health: None,
+    }))
+}
+
+fn read_party_recovery(world: &World, run: &RunBudget) -> Result<Option<Reason>, String> {
+    for &unit in &run.party {
+        if world.get::<InMap>(unit) != Some(&run.map) {
+            return Ok(Some(Reason::Recovery));
+        }
+        let Some(health) = world.get::<Health>(unit) else {
+            return Ok(Some(Reason::DeadMember));
+        };
+        if health.current <= 0.0 {
+            return Ok(Some(Reason::DeadMember));
+        }
+        let mana = world
+            .get::<shared::components::Mana>(unit)
+            .ok_or_else(|| format!("Ready pull member {unit:?} lacks native mana state"))?;
+        let valid = health.current.is_finite()
+            && health.max.is_finite()
+            && health.max > 0.0
+            && mana.current.is_finite()
+            && mana.max.is_finite()
+            && mana.max >= 0.0;
+        if !valid {
+            return Err(format!(
+                "Ready pull member {unit:?} has invalid native HP/mana"
+            ));
+        }
+        if health.current < health.max || mana.current < mana.max {
+            return Ok(Some(Reason::Recovery));
+        }
+    }
+    Ok(None)
+}
+
+fn has_admitted_healer(world: &World, run: &RunBudget) -> bool {
+    let owner_heals = party::read_admission(world, run.follower.owner)
+        .is_some_and(|(_, _, role)| role == GroupRole::Healer);
+    owner_heals
+        || run.party.iter().any(|unit| {
+            world
+                .get::<Follower>(*unit)
+                .is_some_and(|follower| follower.profile.role == GroupRole::Healer)
+        })
+}
+
+/// Native numeric report uses exactly the input and arithmetic used for overlap admission.
 #[cfg(test)]
 pub(super) fn read_forecast_health(
     world: &mut World,
