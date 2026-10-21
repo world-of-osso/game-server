@@ -43,7 +43,7 @@ pub(super) fn on_energy_fade(world: &mut World, owner: Entity) {
         return;
     }
     attempts.0 = 0;
-    super::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
+    crate::spell_cast::cast_triggered(world, owner, CORE_BUFF, Some(owner), 0);
 }
 
 // Solve E[attempts] = 1/p for the capped accumulated distribution.

@@ -218,13 +218,14 @@ fn rotation_fidelity_wild_imp_demise_naturally_earns_and_spends_demonic_core() {
         "actual learned Demoniac driver"
     );
     assert!(!crate::auras::has_aura(h.app.world(), owner, 264173));
-    // Pinned SimC init1261–1265/hpp1070: natural fade PRD hardcap21.
-    let imps: Vec<_> = (0..21).map(|_| summon_imp(&mut h, owner)).collect();
+    // Native264173 cumulative4; pinned SimC fade PRD hardcap21 per success.
+    //84real fades guarantee four earned uses without injecting a proc or RNG.
+    let imps: Vec<_> = (0..84).map(|_| summon_imp(&mut h, owner)).collect();
     h.advance(500);
     assert!(
         imps.iter()
             .all(|imp| h.app.world().get_entity(*imp).is_err()),
-        "all21real native actors must exhaust naturally before testing the proc"
+        "all84real native actors must exhaust naturally before testing the proc"
     );
     let core_stacks = |world: &World| {
         world
@@ -233,9 +234,9 @@ fn rotation_fidelity_wild_imp_demise_naturally_earns_and_spends_demonic_core() {
             .map_or(0, |aura| aura.stacks)
     };
     let before = core_stacks(h.app.world());
-    assert!(
-        before > 0,
-        "21natural fades must earn Core through sourced PRD, no injected aura/RNG"
+    assert_eq!(
+        before, 4,
+        "84natural fades must earn native four-use Core cap through sourced PRD, no injected aura/RNG"
     );
     let target = h.npc;
     crate::spell_cast::creature_cast(h.app.world_mut(), owner, 264178, Some(target), false)
