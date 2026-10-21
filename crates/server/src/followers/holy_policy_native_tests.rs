@@ -557,7 +557,37 @@ fn holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_wor
     complete_real_cast(&mut group.h, priest, 2050);
     complete_real_cast(&mut group.h, priest, 2050);
     apply_pressure(&mut group, 4);
-    uses_spell(&mut group.h, priest, 596);
+    for _ in 0..600 {
+        let prior = group.h.app.world().get::<CastState>(priest).cloned();
+        if let Some(cast) = prior.as_ref().filter(|cast| cast.spell_id == 596) {
+            let anchor = Entity::try_from_bits(cast.target).unwrap();
+            eprintln!(
+                "PoH lifetime before AI: anchor={anchor:?} hp={} elapsed={}; injured={}",
+                fraction(&group, anchor),
+                cast.elapsed,
+                group
+                    .members
+                    .iter()
+                    .filter(|&&member| fraction(&group, member) < 1.0)
+                    .count()
+            );
+        }
+        super::update_ai(group.h.app.world_mut());
+        group.h.advance(1);
+        if casts(&group, 596) > 0 {
+            break;
+        }
+    }
+    let events: Vec<_> = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| event.source == Some(priest.to_bits()) && event.spell_id == Some(596))
+        .collect();
+    assert!(casts(&group, 596) > 0, "native596 events={events:?}");
     group.h.advance(5);
     let healed: std::collections::BTreeSet<_> = group
         .h
