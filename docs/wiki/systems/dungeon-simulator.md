@@ -6,6 +6,14 @@ Transport-free Stockade qualification runs a plain Bevy App inside the server te
 
 Archived executable13610f262 (productioncb7a1ffe4, includes master8e3777ef6), protocol03cebdb, frozen read-only worldDB SHA256`40d95b0a21a243edcf12dc9a1fa1ca56ad4b45f2828026622d609d62fab5cca5`: Stockade32/default five/seeds1–10/jobs2 gives **10clears,30native boss Deaths,0failures**, all reports present,416.926s batch wall. Total27597.3sim_s/814.318run-wall_s=33.89× under shared-host contention. The prior corridor seed2 failure does not reproduce here; no deterministic-replay or causal-fix claim follows. This is baseline before the required-boss hold candidate and lead-owned model-default integration, not current-candidate acceptance. Evidence: `stockade-postmaster-baseline-13610f262/summary.json` and `stockade-postmaster-baseline-command.json` under the existing proof-ledger directory.
 
+## Surviving-formation admission boundary —2026-10-21
+
+The same frozen post-integration baseline gives Azure70/205/default five/seeds1–10/jobs2 **0clears,1wipe,2blocks,7timeouts,0boss Deaths**,786.026s batch wall, all ten reports present. Every timeout reaches formation29001816's living members but repeatedly reports `Projected source GUID 29001816 is not present in this run`. Movement now approaches surviving29001823; the next controller step still projected the complete frozen formation, including its observed-dead leader. Production source-presence accounting correctly excludes that leader.
+
+The first focused attemptdd7847cda passed pre-fix because it killed the leader before admission initialized party history; it is not RED evidence. Corrected0cbc74372 admits the formation first, then executes native191164 Death, selects the living member and reaches actual native admission: genuine missing-GUID RED5.89s. Fix51c652a82 filters the controller footprint to living native formation members, retaining original formation identity and frozen route. GREEN/candidate batch pending. Evidence: `azure-postmaster-baseline-13610f262/` and `formation-admission-red2.log` under the existing proof-ledger directory.
+
+The wipe and two tank-absence blocks require separate diagnosis. Immediately before tank deaths in seeds2/4/5, Crenna is full mana within1.2–2.7yd of Garrick, whose HP is338/72/1368 of40391. These three failures do not establish far-away healer positioning; native action/refusal diagnosis is still open. No healer-policy change follows from these samples alone.
+
 ## Required-boss phase hold —2026-10-21
 
 A source can be alive but currently unattackable without counting as a completed boss. The route still selects other pullable packs first. If no such pack remains and a required boss actor is alive, the controller holds rather than returning an incomplete-boss error; when attackability returns, normal route selection resumes. An absent boss with no native Death receipt remains an error. No boss credit is fabricated.
