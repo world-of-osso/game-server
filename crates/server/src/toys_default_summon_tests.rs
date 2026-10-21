@@ -113,6 +113,12 @@ fn toy_coverage_default_title_name27_two_gnomatic_source_actors_and_two_minute_l
 }
 
 #[test]
+fn toy_coverage_native_level_keg_pony_retains_source_actor_and_three_minute_lifetime() {
+    // Native5051's Ally/Title0/UseCreatureLevel path also changes with the generic fix.
+    assert_default_source_actor(71137, 100959, &[54223], 3600);
+}
+
+#[test]
 fn toy_coverage_default_title_census_retains_source_interaction_and_control_gaps() {
     let report = report_toy_census(
         &crate::test_data::world_db_path(),
