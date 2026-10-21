@@ -301,6 +301,37 @@ fn holy_policy_native90_fortitude_covers_the_actual_party() {
 }
 
 #[test]
+fn holy_policy_native90_mass_dispel_clears_real_clustered_magic() {
+    let mut group = native_group();
+    let targets = group.members[2..].to_vec();
+    let enemy = group.h.npc;
+    for &target in &targets {
+        creature_cast(
+            group.h.app.world_mut(),
+            enemy,
+            MAGIC_DOT,
+            Some(target),
+            false,
+        )
+        .unwrap();
+        group.h.advance(35);
+    }
+    group.h.advance(40);
+    assert!(
+        targets
+            .iter()
+            .all(|&target| has_aura(group.h.app.world(), target, MAGIC_DOT))
+    );
+    uses_spell(&mut group.h, group.priest, 32375);
+    group.h.advance(5);
+    assert!(
+        targets
+            .iter()
+            .all(|&target| !has_aura(group.h.app.world(), target, MAGIC_DOT))
+    );
+}
+
+#[test]
 fn holy_policy_native90_purify_removes_real_magic_during_triage_pressure() {
     let mut group = native_group();
     let target = group.members[2];
@@ -349,6 +380,24 @@ fn holy_policy_native90_mending_keeps_the_owned_bounced_ward() {
     );
 }
 
+fn cast_native_bite(group: &mut GroupFixture, target: Entity) {
+    // The full party AI can naturally kill its damage dummy. Use the ordinary
+    // next dummy, never replenish health or change the native damage spell.
+    if !crate::spell_cast::targets::is_alive(group.h.app.world(), group.h.npc) {
+        let enemy = crate::spell_cast::test_harness::spawn_npc(&mut group.h.app, 3.0);
+        group
+            .h
+            .app
+            .world_mut()
+            .entity_mut(enemy)
+            .insert((Level(90), UnitLevel(90)));
+        group.h.npc = enemy;
+    }
+    let enemy = group.h.npc;
+    creature_cast(group.h.app.world_mut(), enemy, 123483, Some(target), false).unwrap();
+    group.h.advance(3);
+}
+
 #[test]
 fn holy_policy_native90_guardian_rescues_an_actual_npc_once() {
     let mut group = native_group();
@@ -368,19 +417,10 @@ fn holy_policy_native90_guardian_rescues_an_actual_npc_once() {
             .get::<super::Follower>(protected)
             .is_some()
     );
-    let enemy = group.h.npc;
     // Native Bite123483 is one100%-max-health physical hit, no power/cast time.
     // Ordinary native avoidance/armor remain intact; no hit or pool is replaced.
     for _ in 0..20 {
-        creature_cast(
-            group.h.app.world_mut(),
-            enemy,
-            123483,
-            Some(protected),
-            false,
-        )
-        .unwrap();
-        group.h.advance(3);
+        cast_native_bite(&mut group, protected);
         if !has_aura(group.h.app.world(), protected, 47788) {
             break;
         }
@@ -403,15 +443,7 @@ fn holy_policy_native90_guardian_rescues_an_actual_npc_once() {
             })
     );
     for _ in 0..20 {
-        creature_cast(
-            group.h.app.world_mut(),
-            enemy,
-            123483,
-            Some(protected),
-            false,
-        )
-        .unwrap();
-        group.h.advance(3);
+        cast_native_bite(&mut group, protected);
         if fraction(&group, protected) == 0.0 {
             return;
         }
