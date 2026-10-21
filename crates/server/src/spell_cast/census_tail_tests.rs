@@ -149,12 +149,28 @@ const MOUNT_SPEED: u32 = 13_587;
 const FLIGHT_FORM_SPEED: u32 = 33_948;
 
 fn flight_fixture() -> Harness {
-    crate::auras::mount_tests::rider(
-        225,
-        true,
-        &[ZEN_FLIGHT, CROW_SPEED, MOUNT_SPEED, FLIGHT_FORM_SPEED],
-    )
-    .expect("native70448 flight and mount records")
+    let extras = [ZEN_FLIGHT, CROW_SPEED, MOUNT_SPEED, FLIGHT_FORM_SPEED];
+    let mut h = crate::auras::mount_tests::rider(225, true, &extras)
+        .expect("native70448 flight and mount records");
+    // Keep native passive records loadable without auto-granting Crow Speed.
+    let baseline = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(h.caster)
+        .unwrap()
+        .iter()
+        .filter(|id| !extras.contains(id))
+        .collect();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::class_progression::KnownSpells::fixture(baseline));
+    let caster = h.caster;
+    for spell_id in extras {
+        remove_flight_aura(&mut h, caster, spell_id);
+    }
+    h.advance(3);
+    h
 }
 
 fn remove_flight_aura(h: &mut Harness, unit: Entity, spell_id: u32) {
