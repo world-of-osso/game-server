@@ -251,3 +251,115 @@ fn healer_triage_topped_patient_cancels_native_direct_cast_before_mana_spend() {
         "topped heal must not finish wasting native mana"
     );
 }
+
+#[test]
+fn healer_triage_scripted_deadline_prepares_full_health_tank() {
+    let (mut h, healer) = fixture();
+    let tank = h.caster;
+    let boss = h.npc;
+    let map = InMap {
+        map_id: 34,
+        instance_id: 1,
+    };
+    for unit in [tank, boss, healer] {
+        h.app.world_mut().entity_mut(unit).insert(map);
+    }
+    h.app
+        .world_mut()
+        .entity_mut(tank)
+        .insert(crate::class_progression::ActiveSpec(66));
+    let max = h.app.world().get::<Health>(tank).unwrap().max;
+    h.app.world_mut().get_mut::<Health>(tank).unwrap().current = max;
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    let rows = [entry(&h, 33763)];
+    super::super::healer_triage::update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[tank, healer],
+        &rows,
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), tank, 33763),
+        "no invented preparation timer"
+    );
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::maps::store::load_map_store(&db).unwrap());
+    let ai =
+        crate::scripted_ai::the_stockade::creature_ai(h.app.world(), boss, "boss_hogger").unwrap();
+    crate::scripted_ai::tests::install_fixture_ai(h.app.world_mut(), boss, ai);
+    crate::scripted_ai::dispatch(
+        h.app.world_mut(),
+        boss,
+        crate::scripted_ai::Hook::JustEngagedWith(tank),
+    );
+    super::super::healer_triage::update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[tank, healer],
+        &rows,
+    );
+    assert!(
+        crate::auras::has_aura(h.app.world(), tank, 33763),
+        "actual Hogger1–4s EventMap damage deadlines must permit full-health tank preparation"
+    );
+}
+
+#[test]
+fn healer_triage_native_radius_rejects_scattered_injury_then_accepts_stack() {
+    let (mut h, healer) = super::super::kit_tests::at_level(209072, 40, |_| {});
+    let anchor = h.caster;
+    let p1 = patient(&mut h, 500.0, false);
+    let p2 = patient(&mut h, 500.0, false);
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(anchor)
+        .unwrap();
+    h.app.world_mut().get_mut::<Health>(anchor).unwrap().current *= 0.5;
+    for (unit, offset) in [(p1, 10000.0), (p2, -10000.0)] {
+        h.app
+            .world_mut()
+            .entity_mut(unit)
+            .insert(shared::components::Position {
+                x: position.x + offset,
+                ..position
+            });
+    }
+    let rows = [entry(&h, 48438)];
+    let follower = h.app.world().get::<Follower>(healer).unwrap().clone();
+    super::super::healer_triage::update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[anchor, p1, p2, healer],
+        &rows,
+    );
+    assert!(
+        h.app.world().get::<CastState>(healer).is_none(),
+        "global injury count must not admit Wild Growth when no native-radius cluster has three injured patients"
+    );
+    for unit in [p1, p2] {
+        h.app.world_mut().entity_mut(unit).insert(position);
+    }
+    super::super::healer_triage::update(
+        h.app.world_mut(),
+        healer,
+        &follower,
+        &[anchor, p1, p2, healer],
+        &rows,
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<CastState>(healer)
+            .is_some_and(|cast| cast.spell_id == 48438),
+        "same injuries stacked inside native radius must admit Wild Growth"
+    );
+}
