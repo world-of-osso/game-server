@@ -23,6 +23,59 @@ fn cast_count(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
+fn boss_alerts_kokia_real_schedule_and_actual_cast_without_imported_clock() {
+    use shared::protocol::EncounterTimelineEvent;
+    let (mut h, boss, _) = kokia_copy(205);
+    h.engage(boss);
+    h.advance(0.1);
+    let timers = h
+        .inbox(0)
+        .timeline
+        .iter()
+        .find_map(|event| match event {
+            EncounterTimelineEvent::Timers { caster, timers, .. } if *caster == boss.to_bits() => {
+                Some(timers)
+            }
+            _ => None,
+        })
+        .expect("actual Kokia schedule must publish without an imported addon catalog");
+    assert_eq!(timers.len(), 3);
+    for (spell, duration) in [(372864, 8000), (372107, 19000), (SEARING_BLOWS, 28000)] {
+        let timer = timers.iter().find(|timer| timer.spell_id == spell).unwrap();
+        assert_eq!(timer.duration_ms, duration);
+        assert!((duration - 100..=duration).contains(&timer.remaining_ms));
+    }
+    assert!(
+        !h.inbox(0)
+            .timeline
+            .iter()
+            .any(|event| matches!(event, EncounterTimelineEvent::Cast { .. }))
+    );
+    h.advance(20.0);
+    assert!(cast_count(&h, boss, 372864) > 0);
+    assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
+        EncounterTimelineEvent::Cast { caster, spell_id: 372864, warning_text, .. }
+        if *caster == boss.to_bits() && warning_text.contains("Ritual of Blazebinding"))));
+    assert!(h.inbox(0).timeline.iter().any(|event| matches!(event,
+        EncounterTimelineEvent::Timers { timers, .. }
+        if timers.iter().any(|timer| timer.spell_id == 372864 && timer.duration_ms == 40000))));
+    assert!(
+        h.inbox(1).timeline.is_empty(),
+        "other copy cannot receive timers or warnings"
+    );
+    crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+    h.advance(0.1);
+    assert!(!h.inbox(0).ends.last().unwrap().success);
+    let count = h.inbox(0).timeline.len();
+    h.advance(10.0);
+    assert_eq!(
+        h.inbox(0).timeline.len(),
+        count,
+        "reset retires actual schedule alerts"
+    );
+}
+
+#[test]
 fn encounter_coverage_kokia_current_retail_inputs_qualify() {
     let conn =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
