@@ -10,6 +10,7 @@ const NATURES_SWIFTNESS: u32 = 132158;
 const REGROWTH: u32 = 8936;
 const NATURES_CURE: u32 = 88423;
 const INNERVATE: u32 = 29166;
+const TRANQUILITY: u32 = 740;
 // Matches the qualified native bloom-on-refresh window; durations remain native.
 const LIFEBLOOM_REFRESH_FRACTION: f64 = 0.30;
 // UTILITY_LAYER_REZ_PENDING: veto generic Rebirth; only the utility layer decides it.
@@ -33,6 +34,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
     let decision = choose_ironbark(ctx)
         .or_else(|| choose_swift_regrowth(ctx))
         .or_else(|| choose_urgent_swiftmend(ctx))
+        .or_else(|| choose_tranquility(ctx))
         .or_else(|| choose_natures_swiftness(ctx))
         .or_else(|| choose_natures_cure(ctx))
         .or_else(|| choose_innervate(ctx))
@@ -119,7 +121,7 @@ fn ranked_maintenance(ctx: &TriageContext<'_>) -> Option<Decision> {
 }
 
 fn routine_heal_allowed(ctx: &TriageContext<'_>, decision: Decision) -> bool {
-    if decision.spell_id == UTILITY_REBIRTH {
+    if matches!(decision.spell_id, UTILITY_REBIRTH | TRANQUILITY) {
         return false;
     }
     if decision.spell_id != SWIFTMEND {
@@ -226,6 +228,44 @@ fn useful_friendly_cast_in_progress(ctx: &TriageContext<'_>) -> bool {
         .is_some_and(|target| {
             !crate::spell_cast::targets::is_hostile(ctx.world, ctx.caster, target)
         })
+}
+
+fn choose_tranquility(ctx: &TriageContext<'_>) -> Option<Decision> {
+    let entry = ctx
+        .entries
+        .iter()
+        .find(|entry| entry.spell_id == TRANQUILITY)?;
+    if !ctx.ready(TRANQUILITY) || !channel_is_safe(ctx, TRANQUILITY) {
+        return None;
+    }
+    let patient = ctx.patients.iter().find(|patient| {
+        let enough_injured = ctx
+            .injury_cluster(TRANQUILITY, patient.entity)
+            .is_some_and(|cluster| cluster.members.len() >= entry.conditions.min_injured);
+        enough_injured
+            && super::kit_ai::patient_is_eligible(ctx.world, ctx.caster, patient.entity, entry)
+    })?;
+    Some(Decision {
+        spell_id: TRANQUILITY,
+        target: patient.entity,
+        urgent: false,
+    })
+}
+
+fn channel_is_safe(ctx: &TriageContext<'_>, spell_id: u32) -> bool {
+    let Some(spell) = ctx
+        .world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+    else {
+        return false;
+    };
+    let channel_seconds =
+        crate::spell_cast::duration_ms(ctx.world, ctx.caster, spell) as f32 / 1000.0;
+    ctx.patients
+        .iter()
+        .find(|patient| patient.entity == ctx.caster)
+        .is_some_and(|patient| patient.projected_death_seconds > channel_seconds)
 }
 
 fn choose_innervate(ctx: &TriageContext<'_>) -> Option<Decision> {
