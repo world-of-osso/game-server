@@ -91,6 +91,7 @@ pub fn supported_property(property: u32) -> bool {
             | 194
             | 363
             | 362
+            | 140
     )
 }
 /// DB2 descriptions identify first-active/other-enemy damage for these three-row attacks.
@@ -152,6 +153,9 @@ fn validate_ability_graph(
     }
     if !catalog.abilities.contains_key(&ability) {
         return Err(format!("missing ability {ability}"));
+    }
+    if ability == 786 {
+        return Err("PET_BATTLE_BLISTERING_COLD_PAD_FOLLOW_UNPROVEN".into());
     }
     if let Some(states) = catalog.ability_states.get(&ability) {
         for (state, value) in states {
@@ -478,6 +482,7 @@ fn validate_effect(catalog: &Catalog, effect: &Effect) -> Result<(), String> {
         136 => matches!(p[0], 0 | 1) && p[1..].iter().all(|v| *v == 0),
         139 | 145 => p[1..].iter().all(|v| *v == 0),
         85 => catalog.states.contains_key(&(p[0] as u32)),
+        140 => effect.aura != 0 && p[0] > 0 && p[1..].iter().all(|v| *v == 0),
         111 => p[0] > 0 && p[0] <= 100 && p[2..].iter().all(|v| *v == 0),
         169 | 171 => {
             [p[2], p[3]]

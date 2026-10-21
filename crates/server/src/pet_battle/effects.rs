@@ -161,6 +161,14 @@ impl<R: BattleRng> Runtime<'_, R> {
                 self.damage_effect(caster, target, ability, &damage)
             }
             85 => self.reset_aura_state(p[0] as u32),
+            140 => {
+                for aura in &mut self.battle.auras {
+                    if aura.target == target && aura.ability == effect.aura {
+                        aura.remaining = p[0];
+                    }
+                }
+                Ok(true)
+            }
             112 => self.resurrect_reserve(caster, effect),
             111 => {
                 let pet = self.battle.pet_mut(caster);

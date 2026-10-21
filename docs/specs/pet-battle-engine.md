@@ -4,6 +4,8 @@ Pure deterministic server library in `crates/server/src/pet_battle/`, exported t
 
 ## What it must do
 
+- [x] Execute generic140 by refreshing all existing matching aura stacks on the current target to authored NewDuration without reapplying states, changing caster or creating stacks. Real785/787 refreshes to3 rounds, independently of a new-stack miss. Keep786 rejected before RNG under `PET_BATTLE_BLISTERING_COLD_PAD_FOLLOW_UNPROVEN`: the785 pad's swap persistence/team-state migration is not proven. Direct785 aura-program tests are not journal/owned786 proof.
+
 - [x] Execute property362 Species Heal2260 using its authored10 base points and2 additional points for each other same-species teammate, before ordinary healing power/accuracy/variance/modifiers/cap. Count literal roster identities, including dead reserves, as existing370; do not infer species from family or count enemies/caster. This follows source roster wording, not independent Retail death-count certification.
 
 - [x] Execute property363 current-health percentages for Torment2263 and Mind Games: Health2388 across active/other team slots from their authored rows; reset per-victim leech context before every attempt. Torment2292's property156 selector remains rejected. `PET_BATTLE_PCT_CURRENT_HP_USES_ENGINE_PCT_DAMAGE_CONVENTION` explicitly adopts existing percentage-damage flooring, hostile family scaling, hit/block and damage/passive handling; friendly-team costs are untyped. This project policy is not independent Retail arithmetic/mitigation proof. Preserve `PET_BATTLE_PAD_USES_JOURNAL_CARD_NORMALIZATION` unchanged.
