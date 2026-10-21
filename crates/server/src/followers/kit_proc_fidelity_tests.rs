@@ -94,6 +94,75 @@ fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
 }
 
 #[test]
+fn proc_fidelity_262_surge_earned_during_lava_burst_survives_that_cast() {
+    let (mut h, caster) = at_level(209053, 32, |_| {});
+    let target = h.npc;
+    creature_cast(h.app.world_mut(), caster, 51505, Some(target), false).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_some()
+    );
+    // Controlled native proc-spell application isolates its in-flight consumer.
+    // This does not claim natural acquisition; that has a separate tick test.
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 77762, Some(caster), 1);
+    assert!(has_aura(h.app.world(), caster, 77762));
+    for _ in 0..100 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+        {
+            break;
+        }
+    }
+    assert!(
+        has_aura(h.app.world(), caster, 77762),
+        "a proc earned during the hardcast belongs to the next Lava Burst"
+    );
+    wait_for_gcd(&mut h, caster, 51505);
+    creature_cast(h.app.world_mut(), caster, 51505, Some(target), false).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+    );
+    assert!(!has_aura(h.app.world(), caster, 77762));
+}
+
+#[test]
+fn proc_fidelity_63_hot_streak_earned_during_pyroblast_is_not_spent_by_hardcast() {
+    let (mut h, caster) = prepare(209059);
+    let target = h.npc;
+    creature_cast(h.app.world_mut(), caster, 11366, Some(target), false).unwrap();
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_some()
+    );
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 48108, Some(caster), 1);
+    assert!(has_aura(h.app.world(), caster, 48108));
+    for _ in 0..200 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none()
+        {
+            break;
+        }
+    }
+    assert!(
+        has_aura(h.app.world(), caster, 48108),
+        "hardcast did not receive Hot Streak's instant-cast modifier at admission"
+    );
+}
+
+#[test]
 fn proc_fidelity_262_natural_flame_shock_ticks_grant_lava_surge() {
     // Level32 still knows Flame Shock; level90 replaces it with Voltaic Blaze.
     let (mut h, caster) = at_level(209053, 32, |_| {});
