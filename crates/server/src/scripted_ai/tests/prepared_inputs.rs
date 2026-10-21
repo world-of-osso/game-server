@@ -66,6 +66,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         16808 => Some("kargath"),
         20923 => Some("porung"),
         186737 => Some("telash"),
+        186739 => Some("azureblade"),
         _ => None,
     };
     match producer {
@@ -149,6 +150,7 @@ fn decode_encounter_inputs(
             || (entry == 16808 && [17611, 17695, 20709].contains(id))
             || (entry == 17381 && *id == 17370)
             || (entry == 186737 && *id == 197204)
+            || (entry == 186739 && *id == 190187)
             || (map_id == 43 && [3636, 3654, 3678, 3679, 5048, 5762, 5763].contains(id))
             || spawns.iter().any(|spawn| spawn.template_entry == *id)
     });

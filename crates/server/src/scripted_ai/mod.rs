@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 pub(crate) mod azure_vault;
+mod azureblade;
 mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
