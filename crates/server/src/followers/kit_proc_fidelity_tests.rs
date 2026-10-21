@@ -8,14 +8,14 @@ use bevy::prelude::*;
 use shared::components::{Health, PowerType};
 use shared::protocol::CombatLogKind;
 
-fn prepare(entry: u32) -> (Harness, Entity) {
+pub(super) fn prepare(entry: u32) -> (Harness, Entity) {
     let (mut h, caster) = at_level(entry, 90, |_| {});
     h.app.world_mut().get_mut::<Health>(h.npc).unwrap().max = 1_000_000_000.0;
     h.app.world_mut().get_mut::<Health>(h.npc).unwrap().current = 1_000_000_000.0;
     (h, caster)
 }
 
-fn complete_cast(h: &mut Harness, caster: Entity, spell: u32, target: Entity) {
+pub(super) fn complete_cast(h: &mut Harness, caster: Entity, spell: u32, target: Entity) {
     wait_for_gcd(h, caster, spell);
     // Native Fire Blast has a separate500ms cooldown even with spare charges.
     for _ in 0..200 {

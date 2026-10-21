@@ -73,6 +73,51 @@ fn proc_deadlines(world: &World, caster: Entity, spec: u32) -> BTreeMap<u32, f64
         .collect()
 }
 
+struct ProcObserver {
+    spec: u32,
+    caster: Entity,
+    consumed: BTreeMap<u32, usize>,
+    expired: BTreeMap<u32, usize>,
+}
+
+impl ProcObserver {
+    fn new(spec: u32, caster: Entity) -> Self {
+        Self {
+            spec,
+            caster,
+            consumed: BTreeMap::new(),
+            expired: BTreeMap::new(),
+        }
+    }
+
+    fn observe(
+        &mut self,
+        previous: BTreeMap<u32, f64>,
+        current: BTreeMap<u32, f64>,
+        now: f64,
+        receipts: &[shared::protocol::SpellGo],
+    ) {
+        for (aura, deadline) in previous {
+            if current.contains_key(&aura) {
+                continue;
+            }
+            let consumers = proc_consumers(self.spec)
+                .iter()
+                .find(|(id, _)| *id == aura)
+                .unwrap()
+                .1;
+            let spent = receipts.iter().any(|event| {
+                event.caster == self.caster.to_bits() && consumers.contains(&event.spell_id)
+            });
+            if spent && now < deadline {
+                *self.consumed.entry(aura).or_default() += 1;
+            } else if now >= deadline {
+                *self.expired.entry(aura).or_default() += 1;
+            }
+        }
+    }
+}
+
 fn sample_dots(
     h: &Harness,
     caster: Entity,
@@ -101,8 +146,7 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
     let begin = aura_now(h.app.world());
     let first_log = h.inbox.log.len();
     let mut dots = BTreeMap::new();
-    let mut consumed = BTreeMap::<u32, usize>::new();
-    let mut expired = BTreeMap::<u32, usize>::new();
+    let mut observer = ProcObserver::new(spec, caster);
     let mut updates = 0;
     while aura_now(h.app.world()) - begin < seconds {
         let previous_time = aura_now(h.app.world());
@@ -112,24 +156,7 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         h.advance(1);
         let now = aura_now(h.app.world());
         let current = proc_deadlines(h.app.world(), caster, spec);
-        for (aura, deadline) in previous_procs {
-            if current.contains_key(&aura) {
-                continue;
-            }
-            let consumers = proc_consumers(spec)
-                .iter()
-                .find(|(id, _)| *id == aura)
-                .unwrap()
-                .1;
-            let spent = h.inbox.go[first_go..].iter().any(|event| {
-                event.caster == caster.to_bits() && consumers.contains(&event.spell_id)
-            });
-            if spent && now < deadline {
-                *consumed.entry(aura).or_default() += 1;
-            } else if now >= deadline {
-                *expired.entry(aura).or_default() += 1;
-            }
-        }
+        observer.observe(previous_procs, current, now, &h.inbox.go[first_go..]);
         sample_dots(&h, caster, &targets, now - previous_time, &mut dots);
         updates += 1;
         assert!(updates <= 3000, "120s deterministic clock did not advance");
@@ -169,13 +196,13 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
                         && event.source.is_some_and(|source| sources.contains(&source))
                 })
                 .count();
-            let consumed = consumed.get(aura).copied().unwrap_or(0);
+            let consumed = observer.consumed.get(aura).copied().unwrap_or(0);
             (
                 *aura,
                 ProcMeasurement {
                     gained,
                     consumed,
-                    expired: expired.get(aura).copied().unwrap_or(0),
+                    expired: observer.expired.get(aura).copied().unwrap_or(0),
                     consumed_per_gained: (gained > 0).then_some(consumed as f64 / gained as f64),
                 },
             )
@@ -206,6 +233,28 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
             .unwrap_or_else(|error| panic!("write {}: {error}", path.display()));
     }
     assert!(damage > 0, "native follower produced no damage");
+}
+
+#[test]
+fn rotation_metrics_1467_observes_one_use_when_two_real_stacks_become_one() {
+    use super::kit_proc_fidelity_tests::{complete_cast, prepare};
+    let (mut h, caster) = prepare(215240);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 375087, caster);
+    complete_cast(&mut h, caster, 362969, target);
+    complete_cast(&mut h, caster, 362969, target);
+    let mut observer = ProcObserver::new(1467, caster);
+    let before = proc_deadlines(h.app.world(), caster, 1467);
+    let start = h.inbox.go.len();
+    complete_cast(&mut h, caster, 356995, target);
+    let after = proc_deadlines(h.app.world(), caster, 1467);
+    observer.observe(before, after, aura_now(h.app.world()), &h.inbox.go[start..]);
+    assert_eq!(
+        observer.consumed.get(&359618).copied().unwrap_or(0),
+        1,
+        "a real2→1 stack spend must appear in the consumption numerator"
+    );
+    assert!(observer.expired.is_empty());
 }
 
 #[test]
