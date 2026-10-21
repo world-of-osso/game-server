@@ -268,6 +268,70 @@ fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies
 }
 
 #[test]
+#[ignore = "explicit Stockade32 Henry roster; opening200sim_s native movement reproduction"]
+fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
+    let _rng_scope = crate::random::seed_scope(6);
+    let mut run = spawn_run(6, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 34);
+    let healer = run.party.members[1];
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::followers::Follower>(healer)
+            .unwrap()
+            .profile
+            .entry,
+        215011,
+        "qualify the explicit Henry roster, never silently test Crenna"
+    );
+    let origin = *run.app.world().get::<Position>(healer).unwrap();
+    let started = std::time::Instant::now();
+    // Frozen cohort seed6 first separates the native tank by40yd at175.5s.
+    // Keep the batch observation order and bound the reproduction to200s.
+    for tick in 0..4000 {
+        if tick % 10 == 0 {
+            run.sample();
+        }
+        assert!(
+            !run.finished(),
+            "opening fixture ended: {}",
+            run.report.detail
+        );
+        run.control().unwrap();
+        run.app.update();
+        if tick % 1000 == 0 {
+            run.write_progress(
+                tick + 1,
+                started,
+                std::time::Duration::ZERO,
+                &[std::time::Duration::ZERO; 3],
+            )
+            .unwrap();
+        }
+    }
+    let tank = super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank);
+    let state = super::diagnostics::inspect_unit(run.app.world(), None, healer);
+    println!(
+        "NATIVE_HEALER_MOVEMENT at={} tank={tank} healer={state}",
+        run.now()
+    );
+    assert!(
+        !run.report.pulls.is_empty(),
+        "the real route controller must have admitted opening combat"
+    );
+    assert_ne!(
+        run.app.world().get::<Position>(run.party.tank).unwrap(),
+        &origin,
+        "the tank must have actually left the entrance"
+    );
+    assert_ne!(
+        run.app.world().get::<Position>(healer).unwrap(),
+        &origin,
+        "Henry must accompany the native route instead of remaining at the entrance while the tank fights out of healing range"
+    );
+}
+
+#[test]
 #[ignore = "explicit Stockade corridor seed2 native isolated leader death reproduction"]
 fn stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader() {
     let _rng_scope = crate::random::seed_scope(2);
