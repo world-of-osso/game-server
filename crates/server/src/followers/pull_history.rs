@@ -211,7 +211,6 @@ fn current_history(world: &World, owner: Entity) -> Option<&PullHistory> {
     (history.map == map && history.members == members).then_some(history)
 }
 
-#[cfg(test)]
 pub(super) fn has_uncleared_fight(world: &World, owner: Entity) -> bool {
     current_history(world, owner).is_some_and(|history| !history.active_enemies.is_empty())
 }
