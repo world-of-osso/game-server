@@ -90,7 +90,9 @@ fn rotation_fidelity_tank_prefers_shorter_native_cooldown_not_catalog_order() {
 #[test]
 fn rotation_fidelity_last_stand_is_only_the_native_learned_shield_wall_consequence() {
     for (level, learned) in [(46, false), (47, true)] {
-        let (mut h, unit) = at_level(215517, level, |_| {});
+        let (mut h, unit) = at_level(215517, level, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
         let before = h.app.world().get::<Health>(unit).unwrap().max;
         let wounded = before * 0.50;
         h.app.world_mut().get_mut::<Health>(unit).unwrap().current = wounded;
