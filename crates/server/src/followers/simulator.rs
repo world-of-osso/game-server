@@ -172,6 +172,31 @@ pub(crate) fn spawn_party(
     })
 }
 
+/// One real follower, without the dungeon party's four unrelated damage/buff sources.
+pub(crate) fn spawn_parity_attacker(
+    world: &mut World,
+    spec_id: u32,
+    level: u8,
+    copy: crate::maps::InMap,
+) -> Result<Entity, String> {
+    let profile = world
+        .resource::<FollowerCatalog>()
+        .profiles
+        .iter()
+        .find(|profile| profile.spec_id == spec_id)
+        .cloned()
+        .ok_or_else(|| format!("native follower spec{spec_id} absent"))?;
+    let owner = world
+        .spawn((
+            Level(level),
+            UnitFactionTemplate(1),
+            Position::default(),
+            copy,
+        ))
+        .id();
+    spawning::spawn(world, owner, profile)
+}
+
 pub(crate) fn update_leader(world: &mut World) {
     let leaders: Vec<_> = world
         .query::<(Entity, &LeaderProfile)>()
