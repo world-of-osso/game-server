@@ -1,30 +1,37 @@
 //! Additive GUID-keyed modifiers; existing bitcode inventory rows stay unchanged.
 use super::ItemInstanceModifiers;
-use redb::{Database, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableDatabase, TableDefinition, WriteTransaction};
 
 type StoreResult<T> = Result<T, Box<dyn std::error::Error>>;
 pub const ITEM_MODIFIERS: TableDefinition<u64, &[u8]> = TableDefinition::new("item_modifiers");
 
-pub fn initialize_store(_txn: &WriteTransaction) -> StoreResult<()> {
+pub fn initialize_store(txn: &WriteTransaction) -> StoreResult<()> {
+    txn.open_table(ITEM_MODIFIERS)?;
     Ok(())
 }
 
 pub fn write_modifiers(
-    _txn: &WriteTransaction,
-    _guid: u64,
-    _state: &ItemInstanceModifiers,
+    txn: &WriteTransaction,
+    guid: u64,
+    state: &ItemInstanceModifiers,
 ) -> StoreResult<()> {
+    txn.open_table(ITEM_MODIFIERS)?
+        .insert(guid, bitcode::encode(state).as_slice())?;
     Ok(())
 }
 
-pub fn load_modifiers(_db: &Database, _guid: u64) -> StoreResult<ItemInstanceModifiers> {
-    Ok(ItemInstanceModifiers::default())
+pub fn load_modifiers(db: &Database, guid: u64) -> StoreResult<ItemInstanceModifiers> {
+    let txn = db.begin_read()?;
+    let table = txn.open_table(ITEM_MODIFIERS)?;
+    match table.get(guid)? {
+        Some(row) => Ok(bitcode::decode(row.value())?),
+        None => Ok(ItemInstanceModifiers::default()),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use redb::{ReadableDatabase, ReadableTable};
 
     #[test]
     fn item_instance_modifiers_survive_database_reopen_and_owner_transfer_without_legacy_rewrite() {
