@@ -15,10 +15,14 @@ use shared::protocol::{
 };
 
 fn fixture() -> Harness {
+    fixture_for(5)
+}
+
+fn fixture_for(class: u8) -> Harness {
     let mut h = harness_with_plugins(
         Vec::new(),
-        &[605, 205364, 31865, 133, 3110],
-        5,
+        &[605, 1098, 205364, 31865, 133, 3110],
+        class,
         false,
         |app| {
             app.insert_resource(load_native_creature_world(&[6, 416]));
@@ -248,8 +252,8 @@ fn charm_control_native_205364_retains_damage_but_31865_breaks_from_native_flags
 
 #[test]
 #[ignore = "RED: TDB native Imp spell3110 is not on the charm bar"]
-fn charm_control_native_imp_uses_authentic_tdb_spell_slots() {
-    let mut h = fixture();
+fn charm_control_native_1098_uses_authentic_imp_tdb_spell_slots() {
+    let mut h = fixture_for(9);
     h.app
         .world_mut()
         .entity_mut(h.npc)
@@ -258,8 +262,19 @@ fn charm_control_native_imp_uses_authentic_tdb_spell_slots() {
             name: "Imp".into(),
         });
     //The spell's real source row is CreatureID416/Index0,2/Spell3110.
-    apply(&mut h, 205364);
-    h.advance(2);
+    // Native Subjugate's demon restriction must be tested on an actual demon identity.
+    for _ in 0..3 {
+        h.cast(1098, Some(h.npc));
+        h.advance(100);
+        if has_aura(h.app.world(), h.npc, 1098) {
+            break;
+        }
+    }
+    assert!(
+        has_aura(h.app.world(), h.npc, 1098),
+        "native warlock1098 casts onto source Imp416: {:?}",
+        h.inbox.failed
+    );
     let bar = &h
         .app
         .world()
