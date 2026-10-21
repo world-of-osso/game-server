@@ -80,7 +80,6 @@ fn encounter_coverage_melidrussa_ordinary_hailburst_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "MELIDRUSSA_PARTIAL_PORT_PENDING"]
 fn encounter_coverage_melidrussa_first_hailburst_runs_through_native_cast() {
     let (mut h, boss, _) = melidrussa_copy(205);
     h.engage(boss);

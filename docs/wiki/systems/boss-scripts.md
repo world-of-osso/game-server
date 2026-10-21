@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Melidrussa current Retail partial — 2026-10-21
+
+[Contract](../../specs/boss-scripts.md#melidrussa-current-retail-partial-boundary). Current LittleWigs2777a9d Retail wrappers1307297/1307308 name native396044/1311543 children. Explicit lead policy uses first5/15s and ongoing source-order Normal/Follower lanes Hailburst24/22/25s, Chillstorm24/32/25s (Mythic lists24s), retaining `MELIDRUSSA_TIMELINE_CONDITION_CONTEXT`. No legacy6.8/12.1 timers, invented selectors or instant child casts. Actual Hailburst keeps3s casting/area enemy damage; downstream Chillstorm/Hailbombs dummy selectors and Whelp phase remain named gaps.
+
+Ignored REDd19089800 genuinely misses first native Hailburst0vs1; two native qualifications pass. Partial788e6ca87 +testsbcc2dc5cf give5/5PASS77.74s Normal1/Follower205:140s ongoing request lanes, actual damage,2609bit1 primary/copy credit, reset lane rearm and corpse silence. Source-copy unit1PASS6.140s verifies pinned TC primary/header hashes,70448 journal, native child fields, idempotence, preservation and drift rejection. `--encounter melidrussa` installs authenticated primary plus explicitly local Lua binding; no actor/difficulty/model/addon/population edits. Lead owns publication.
+
+Merged latest master into b7f618873 afterward (global RNG wrapper and targeted375576/50286 combat-area policy). No Melidrussa source changes. Extra post-merge native rerun was capacity-blocked for9minutes (RAM5–8GiB/FIFO); no process started. Native5 proof is explicitly pre-merge, not fresh integration certification. Final integration gate lead-owned. Evidence: engine `data/diagnostics/encounter-gaps-2026-10-21/melidrussa-*`.
+
 ## Umbrelskul partial Lua clock — 2026-10-21
 
 [Contract](../../specs/boss-scripts.md#umbrelskul-lua-clock-partial-boundary). Lead-approved LittleWigs2777a9d/native70448 partial port186738/2584. Dragon Strike first7.4s and next8.4s Normal/Follower or15.3s Mythic countdown starts only after actual native successful cast; cancelled casts have no invented retry. Crystalline Roar directly requests native384699 at12.2s/repeat23.1s or105.6s, using actual line129/width10 and5s casting. Source-unspecified384696 selector/energy/Brittle/crystals remain named gaps; no full Retail phase claim.
