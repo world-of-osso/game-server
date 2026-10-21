@@ -21,7 +21,7 @@ fn fixture() -> Harness {
 fn fixture_for(class: u8) -> Harness {
     let mut h = harness_with_plugins(
         Vec::new(),
-        &[605, 1098, 205364, 31865, 133, 3110],
+        &[605, 1098, 205364, 30923, 31865, 133, 3110],
         class,
         false,
         |app| {
@@ -248,6 +248,50 @@ fn charm_control_native_205364_retains_damage_but_31865_breaks_from_native_flags
             25
         );
     }
+}
+
+#[test]
+#[ignore = "qualification: NPC-charmer owns the charmed player's attack stop input"]
+fn charm_control_native_30923_original_connection_cannot_stop_charmer_ai_attack() {
+    let mut h = fixture();
+    let opponent = crate::spell_cast::test_harness::spawn_player(&mut h.app, 1, 4.0);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(crate::combat::AutoAttack::new(opponent));
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: h.npc,
+            target: h.caster,
+            spell_id: 30923,
+            effect_mask: u32::MAX,
+            source: AuraSource::Cast,
+        },
+    );
+    h.advance(10);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(h.caster)
+            .unwrap()
+            .victim,
+        opponent
+    );
+    h.app
+        .world_mut()
+        .get_mut::<MessageSender<shared::protocol::AttackStop>>(h.connection)
+        .unwrap()
+        .send::<CombatChannel>(shared::protocol::AttackStop);
+    h.advance(4);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::combat::AutoAttack>(h.caster)
+            .map(|attack| attack.victim),
+        Some(opponent),
+        "the original connection lost control and cannot stop the NPC-charmer's attack"
+    );
 }
 
 #[test]
