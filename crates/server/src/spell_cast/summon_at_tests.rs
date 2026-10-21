@@ -351,13 +351,8 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
             .display_id,
         38340
     );
-    assert_eq!(
-        world
-            .get::<shared::components::UnitLevel>(summon)
-            .unwrap()
-            .0,
-        1
-    );
+    // Companion level scaling is a separate contract, not an unconditional level1.
+    // TC TemporarySummon.cpp240–253 clamps owner level against source scaling.
     assert!(
         world
             .get::<super::summon::SummonedCreature>(summon)
