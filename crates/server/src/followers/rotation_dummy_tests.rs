@@ -194,6 +194,37 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
     })
 }
 
+#[test]
+#[ignore = "RED: dummy fixture omits the production stat recomputation system"]
+fn rotation_dummy_native_stat_buff_recomputes_all_four_follower_sheets() {
+    for (entry, spec) in [(209059, 63), (209053, 262), (209065, 253), (215240, 1467)] {
+        let (mut h, caster) = prepare_follower(entry, spec, 90);
+        let before = h
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .primary
+            .intellect;
+        assert!(before > 0.0);
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 1459, Some(caster), true)
+            .unwrap();
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), caster, 1459));
+        let after = h
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .primary
+            .intellect;
+        assert!(
+            after > before,
+            "spec{spec}: native Arcane Intellect must reach the actual production-derived sheet ({before}→{after})"
+        );
+    }
+}
+
 fn sample_dots(
     h: &Harness,
     caster: Entity,
