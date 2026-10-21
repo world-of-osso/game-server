@@ -693,7 +693,7 @@
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
 - [Zone population](../zone-population-counts.md) —371-zone ranked TDB/content census,43-map copy promotion,12 additional hosts; both-skin three rewarded quests/paid taxi, explicit navigation/appearance/surface gaps.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
-- [Boss-mod data import](systems/bossmod-data.md) — copy-only addon authority; six explicit current-Lua scripts project real EventMap requests instead of independent clocks; Kokia RED recorded/GREEN-native pending, historical hosted/addon proof retained.
+- [Boss-mod data import](systems/bossmod-data.md) — six explicit current-Lua EventMap clocks, sourced warnings;2/2 behavioralGREEN and real private Kokia205 both-skin1920 native proof; copy-only addon authority and native-text/condition gaps retained.
 
 - [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
 - [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.
