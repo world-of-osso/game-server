@@ -18,7 +18,7 @@ Player and follower empowers use native build70448 stage metadata and release re
 ## Implementation inventory
 
 - `crates/server/src/spell_cast/empower.rs` — stage progress, hold and qualified completion.
-- `crates/server/src/spell_cast/{mod.rs,creature.rs}` — shared admission, override routing, progress and channel cleanup.
+- `crates/server/src/spell_cast/mod.rs` — shared admission, progress and channel cleanup; `followers/kit_overrides.rs` owns follower override resolution before eligibility.
 - `crates/server/src/spell_cast/scripts/empower_evoker.rs` — sourced Fire Breath/Eternity Surge release consequences.
 - `crates/server/src/spell_info/mod.rs` — per-cast selected/completed rank snapshots.
 - `crates/server/src/spell_cast/effects.rs` — converted periodic damage before direct critical-strike resolution.

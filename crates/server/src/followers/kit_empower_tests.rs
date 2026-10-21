@@ -189,13 +189,18 @@ fn native_empower_scouring_present_dispels_enemy_magic_buff() {
 }
 
 #[test]
-#[ignore = "RED: ordinary creature casts do not resolve native Font of Magic overrides"]
-fn native_empower_font_dispatches_both_real_four_stage_variants() {
+#[ignore = "pending: native Font dispatch through the single shared follower resolver"]
+fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
         assert!(crate::auras::has_aura(h.app.world(), caster, 411212));
+        let resolved = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
+        assert_eq!(
+            resolved, variant,
+            "native Font must resolve before cast eligibility"
+        );
         let target = if base == FIRE_BREATH { caster } else { h.npc };
-        crate::spell_cast::creature_cast(h.app.world_mut(), caster, base, Some(target), false)
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, resolved, Some(target), false)
             .unwrap();
         h.advance(1);
         assert!(

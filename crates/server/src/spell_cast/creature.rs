@@ -100,10 +100,9 @@ fn load_creature_cast(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(SpellInfo, Option<Entity>), CastFailure> {
-    let effective = crate::auras::overrides::resolve_spell(world, caster, spell_id);
     let spell = world
         .get_resource::<SpellStore>()
-        .and_then(|store| store.get(effective))
+        .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
     let requirement = targets::explicit_requirement(handled_effects(&spell));
