@@ -5,6 +5,7 @@ const AZUREBLADE: u32 = 186739;
 const MAP: u32 = 2515;
 /// Preserve installed Azure saved ordinal1; DB2 encounter2585 completion bit3.
 const ORDINAL: u32 = 1;
+const COMPLETION_BIT: u32 = 3;
 const ARCANE_CLEAVE: u32 = 372222;
 const IMAGE: u32 = 384223;
 const ANCIENT_ORB: u32 = 385578;
@@ -211,8 +212,8 @@ fn encounter_coverage_azureblade_native_bounded_rotation_and_image_chain() {
                 .world()
                 .resource::<crate::maps::InstanceManager>()
                 .completed_encounters(map),
-            1 << ORDINAL,
-            "preserved Azure saved ordinal, not DB2bit3"
+            1 << COMPLETION_BIT,
+            "native2585 bit3 only, independent of saved ordinal1"
         );
         assert_eq!(
             h.inbox(0)
