@@ -87,9 +87,17 @@ fn first_clock(difficulty: u32) {
         h.health(h.player()).current < before,
         "native periodic1214315→1214323 damage"
     );
+    let other = h.players[1].0;
     assert!(
         h.inbox(1).log.is_empty(),
-        "no combat projection into another map copy"
+        "no combat projection into another copy: boss={boss:?}/{:?}, player={:?}/{:?}/connection={:?}, other={other:?}/{:?}/connection={:?}, events={:?}",
+        h.app.world().get::<InMap>(boss),
+        h.player(),
+        h.app.world().get::<InMap>(h.player()),
+        h.players[0].1,
+        h.app.world().get::<InMap>(other),
+        h.players[1].1,
+        h.inbox(1).log,
     );
     let player = h.player();
     crate::combat::kill_unit(h.app.world_mut(), player, boss);
