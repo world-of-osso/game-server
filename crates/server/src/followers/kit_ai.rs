@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use shared::casting::CastState;
 use shared::components::{Health, Level};
 
-use super::kit::{Entry, Slot, Target};
+use super::kit::{Entry, ResourceCondition, Slot, Target};
 use super::{Follower, FollowerCatalog, ai};
 use crate::maps::InMap;
 use crate::networking::CombatTarget;
@@ -161,6 +161,11 @@ pub(super) fn conditions_met(
 ) -> bool {
     let condition = &entry.conditions;
     if !action_history_allows(world, unit, entry)
+        || !entry
+            .conditions
+            .resources
+            .iter()
+            .all(|rule| resource_allows(world, unit, rule))
         || !health_and_auras_allow(world, unit, target, party, entry)
         || !combat_allows(world, unit, target, enemies, entry)
     {
@@ -178,6 +183,27 @@ pub(super) fn conditions_met(
     enough_injured
         && (condition.min_enemies == 0
             || super::kit_area::allows(world, unit, target, enemies, entry))
+}
+
+fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> bool {
+    use crate::spell_cast::powers::{PowerTypeTable, power_value};
+    let Some((current, maximum)) = power_value(world, unit, rule.power) else {
+        return false;
+    };
+    let scale = world
+        .resource::<PowerTypeTable>()
+        .get(rule.power)
+        .expect("rotation resource requires native PowerType metadata")
+        .display_modifier;
+    assert!(
+        scale > 0,
+        "rotation resource requires positive DisplayModifier"
+    );
+    let current = current / scale as f32;
+    let deficit = maximum / scale as f32 - current;
+    rule.min.is_none_or(|minimum| current >= minimum)
+        && rule.below.is_none_or(|maximum| current < maximum)
+        && rule.min_deficit.is_none_or(|minimum| deficit >= minimum)
 }
 
 fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
