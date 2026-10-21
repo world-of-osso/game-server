@@ -34,6 +34,9 @@ struct DummyMeasurement {
     dot_uptime_fraction: BTreeMap<u32, f64>,
     procs: BTreeMap<u32, ProcMeasurement>,
     pet_present: bool,
+    stat_source: &'static str,
+    initial_stats: serde_json::Value,
+    final_stats: serde_json::Value,
 }
 
 fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
@@ -174,7 +177,9 @@ fn sample_buffs(
 
 fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
     if spec != 253 {
-        return at_level(entry, level, |_| {});
+        return at_level(entry, level, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
     }
     let data = crate::spell_cast::test_harness::prepare_class_world().world_data();
     let source = rusqlite::Connection::open_with_flags(
@@ -187,6 +192,7 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
         app.insert_resource(data)
             .insert_resource(abilities)
             .add_plugins((
+                crate::stats::StatsPlugin,
                 crate::hunter_pet::HunterPetPlugin,
                 crate::pet_control::PetControlPlugin,
                 crate::creature_ai::CreatureAiPlugin,
@@ -247,9 +253,31 @@ fn sample_dots(
     }
 }
 
+fn snapshot_stats(h: &Harness, caster: Entity) -> serde_json::Value {
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(caster)
+        .unwrap();
+    serde_json::json!({
+        "primary": stats.primary,
+        "spell_power": stats.spell_power,
+        "attack_power": stats.attack_power,
+        "ranged_attack_power": stats.ranged_attack_power,
+        "crit_pct": stats.crit_pct,
+        "haste_pct": stats.haste_pct,
+        "mastery_pct": stats.mastery_pct,
+        "mastery_points": stats.mastery_points,
+        "versatility_pct": stats.versatility_pct,
+        "max_health": stats.max_health,
+        "max_mana": stats.max_mana,
+    })
+}
+
 fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
     let (mut h, caster) = prepare_follower(entry, spec, level);
     let targets = prepare_dummies(&mut h, count);
+    let initial_stats = snapshot_stats(&h, caster);
     let begin = aura_now(h.app.world());
     let first_log = h.inbox.log.len();
     let mut dots = BTreeMap::new();
@@ -349,6 +377,9 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         dot_uptime_fraction: fractions,
         procs,
         pet_present: pet.is_some(),
+        stat_source: "production_stats_plugin_ungeared_starter",
+        initial_stats,
+        final_stats: snapshot_stats(&h, caster),
     };
     let json = serde_json::to_string_pretty(&report).unwrap();
     println!("ROTATION_DUMMY {json}");
