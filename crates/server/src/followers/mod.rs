@@ -244,3 +244,16 @@ mod rotation_defense_tests;
 #[cfg(test)]
 mod rotation_imp_tests;
 #[cfg(test)]
+mod rotation_override_tests;
+#[cfg(test)]
+mod rotation_proc_tests;
+#[cfg(test)]
+mod rotation_refresh_tests;
+#[cfg(test)]
+mod rotation_tests;
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+mod utility_tests;
+#[cfg(test)]
+mod wire_tests;
