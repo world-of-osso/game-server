@@ -271,6 +271,104 @@ fn census_tail_206_native_uncontrolled_npc_adds_flight_modifiers() {
     assert_flight(&h, npc, 3.9);
 }
 
+const ASPHYXIATE: u32 = 221_562;
+const HAMMER_OF_JUSTICE: u32 = 853;
+const GRAVITY_DISABLE: u32 = 195_289;
+const FIREBALL: u32 = 133;
+
+fn stun_fixture() -> Harness {
+    harness(
+        Vec::new(),
+        &[ASPHYXIATE, HAMMER_OF_JUSTICE, GRAVITY_DISABLE, FIREBALL],
+        8,
+    )
+    .unwrap()
+}
+
+fn assert_stun_state(h: &Harness, stunned: bool, gravity: bool) {
+    let auras = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(h.caster)
+        .unwrap();
+    assert_eq!(auras.is_stunned(), stunned);
+    let mods = h
+        .app
+        .world()
+        .get::<crate::auras::AuraStatMods>(h.caster)
+        .unwrap();
+    assert_eq!(mods.movement_speed, if stunned { 0.0 } else { 1.0 });
+    assert_eq!(mods.flight_speed, if stunned { 0.0 } else { 1.0 });
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::auras::world_state::WorldAuraState>(h.caster)
+            .unwrap()
+            .disable_gravity,
+        gravity
+    );
+    let fireball = world_db().unwrap().store.get(FIREBALL).unwrap();
+    assert_eq!(
+        crate::auras::cast_blocker(h.app.world(), h.caster, fireball),
+        stunned.then_some(crate::auras::CastBlock::Stunned)
+    );
+}
+
+#[test]
+#[ignore = "RED:298 must stop an actual active cast and block while applied"]
+fn census_tail_298_native_asphyxiate_stops_cast_and_releases_stun_gravity() {
+    let mut h = stun_fixture();
+    h.cast_and_deliver(FIREBALL, Some(h.npc));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(h.caster)
+            .is_some()
+    );
+    let caster = h.caster;
+    hit_native(&mut h, ASPHYXIATE, 0, caster);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .is_none(),
+        "real Asphyxiate must stop the active Fireball"
+    );
+    assert_stun_state(&h, true, true);
+    remove_flight_aura(&mut h, caster, ASPHYXIATE);
+    assert_stun_state(&h, false, false);
+}
+
+#[test]
+#[ignore = "RED: removing298 retains native488 gravity and independent12 stun"]
+fn census_tail_298_native_removal_preserves_other_stun_and_gravity_sources() {
+    let mut h = stun_fixture();
+    let caster = h.caster;
+    hit_native(&mut h, ASPHYXIATE, 0, caster);
+    hit_native(&mut h, GRAVITY_DISABLE, 0, caster);
+    hit_native(&mut h, HAMMER_OF_JUSTICE, 0, caster);
+    assert_stun_state(&h, true, true);
+    remove_flight_aura(&mut h, caster, ASPHYXIATE);
+    assert_stun_state(&h, true, true);
+    remove_flight_aura(&mut h, caster, HAMMER_OF_JUSTICE);
+    assert_stun_state(&h, false, true);
+    remove_flight_aura(&mut h, caster, GRAVITY_DISABLE);
+    assert_stun_state(&h, false, false);
+}
+
+#[test]
+#[ignore = "RED: removing ordinary12 cannot release active298 stun"]
+fn census_tail_298_native_asphyxiate_remains_when_ordinary_stun_is_removed() {
+    let mut h = stun_fixture();
+    let caster = h.caster;
+    hit_native(&mut h, HAMMER_OF_JUSTICE, 0, caster);
+    hit_native(&mut h, ASPHYXIATE, 0, caster);
+    remove_flight_aura(&mut h, caster, HAMMER_OF_JUSTICE);
+    assert_stun_state(&h, true, true);
+    remove_flight_aura(&mut h, caster, ASPHYXIATE);
+    assert_stun_state(&h, false, false);
+}
+
 fn rewarded(h: &Harness, character: u64) -> bool {
     persistence::quest_store::load_quest_log(
         &h.app.world().resource::<GameDatabase>().db,
