@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use shared::components::{ModelDisplay, Npc, Player, UnitScale};
 
 use crate::auras::{ActiveAuras, handlers::MOD_DETECTED_RANGE};
-use crate::scripted_ai::model_reach::{ModelReaches, PLAYER_MODEL_GEOMETRY};
+use crate::scripted_ai::model_reach::{ModelReaches, PLAYER_COMBAT_REACH, creature_combat_reach};
 use crate::world_data::WorldData;
 
 const BASE_ATTACK_DISTANCE: f32 = 15.0;
@@ -66,7 +66,6 @@ type UnitGeometry<'w, 's> = Query<
     's,
     (
         Has<Player>,
-        Has<crate::followers::Follower>,
         Option<&'static Npc>,
         Option<&'static ModelDisplay>,
         Option<&'static UnitScale>,
@@ -90,8 +89,8 @@ impl AggroDistance<'_, '_> {
         creature_level: u8,
         target_level: u8,
     ) -> Option<f32> {
-        let (_, _, _, _, _, auras, _) = self.units.get(creature).ok()?;
-        let (_, _, _, _, _, target_auras, _) = self.units.get(target).ok()?;
+        let (_, _, _, _, auras, _) = self.units.get(creature).ok()?;
+        let (_, _, _, _, target_auras, _) = self.units.get(target).ok()?;
         Some(
             AttackDistance {
                 creature_level,
@@ -107,7 +106,7 @@ impl AggroDistance<'_, '_> {
     }
 
     fn expansion_max_level(&self, creature: Entity) -> Option<u8> {
-        let (_, _, npc, _, _, _, difficulty) = self.units.get(creature).ok()?;
+        let (_, npc, _, _, _, difficulty) = self.units.get(creature).ok()?;
         let npc = npc?;
         let difficulty = difficulty.map_or(0, |difficulty| difficulty.0);
         let template = self
@@ -127,23 +126,14 @@ impl AggroDistance<'_, '_> {
     }
 
     pub(crate) fn combat_reach(&self, unit: Entity) -> Option<f32> {
-        let (player, follower, _, display, scale, _, _) = self.units.get(unit).ok()?;
+        let (player, _, display, scale, _, _) = self.units.get(unit).ok()?;
         let scale = scale.map_or(1.0, |scale| scale.0);
         if player {
-            return Some(PLAYER_MODEL_GEOMETRY.scaled(scale).combat_reach);
+            return Some(PLAYER_COMBAT_REACH * scale);
         }
-        let reach = display.and_then(|display| {
-            self.models
-                .as_deref()?
-                .creature_geometry(display.display_id, follower)
-        });
-        if reach.is_none() {
-            error!(
-                ?unit,
-                "Cannot evaluate creature aggro: authored model combat reach is missing"
-            );
-        }
-        reach.map(|geometry| geometry.scaled(scale).combat_reach)
+        let display = display?;
+        let models = self.models.as_deref()?;
+        Some(creature_combat_reach(models, display.display_id, scale))
     }
 }
 

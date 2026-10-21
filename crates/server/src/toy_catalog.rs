@@ -203,7 +203,11 @@ fn classify(
                 reasons.insert(reason);
             }
         }
-        if let Some(target) = crate::spell_cast::targets::unsupported_target(effect) {
+        let source_owned_flag_target =
+            spell.id == 51640 && crate::spell_cast::toy_scripts::supports_effect(spell.id, effect);
+        if !source_owned_flag_target
+            && let Some(target) = crate::spell_cast::targets::unsupported_target(effect)
+        {
             reasons.insert(format!("target {target}"));
         }
         let script_owns_trigger = crate::spell_cast::toy_scripts::owns_triggered_spell(spell.id);

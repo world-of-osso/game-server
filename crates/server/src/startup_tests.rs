@@ -36,6 +36,7 @@ fn create_world_schema(conn: &rusqlite::Connection) {
             BaseAttackTime INTEGER NOT NULL
         );
         CREATE TABLE content_tuning_level (ID INTEGER PRIMARY KEY, minlevel INTEGER, maxlevel INTEGER);
+        CREATE TABLE difficulty (ID INTEGER, FallbackDifficultyID INTEGER);
         CREATE TABLE map_difficulty (MapID INTEGER, DifficultyID INTEGER, ContentTuningID INTEGER);
         CREATE TABLE area_table (ID INTEGER PRIMARY KEY, ParentAreaID INTEGER, ContentTuningID INTEGER);
         CREATE TABLE expected_stat (

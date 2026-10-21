@@ -412,6 +412,10 @@ pub(super) fn pursue(
     {
         return true;
     }
+    if super::positioning::hold_unsafe_approach(world, unit, target) {
+        world.entity_mut(unit).insert(CombatTarget(Some(target)));
+        return true;
+    }
     let reach = if melee {
         Some(MELEE_REACH)
     } else {
@@ -469,6 +473,10 @@ pub(super) fn regroup(world: &mut World, unit: Entity, owner: Entity) {
     if super::tank_planner::apply_admitted_position(world, unit, None)
         || super::tank_planner::apply_admitted_caster_target(world, unit)
     {
+        return;
+    }
+    if super::positioning::hold_unsafe_approach(world, unit, owner) {
+        world.entity_mut(unit).insert(CombatTarget(None));
         return;
     }
     let Some(unsafe_approach) = super::hazards::approach_is_unsafe(world, unit, owner) else {

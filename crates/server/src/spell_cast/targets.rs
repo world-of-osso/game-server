@@ -19,9 +19,9 @@
 //! (the live channel destination), 77 UNIT_CHANNEL_TARGET
 //! (the caster's channel target), 92 UNIT_SUMMONER (the native summoned creature's
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
-//! area aura affects, `spell_cast::area_aura`). With no group or pet backend, 56 UNIT_CASTER_AREA_RAID
-//! and 120 UNIT_CASTER_AND_SUMMONS resolve to the caster, and 57
-//! UNIT_TARGET_RAID and 118 UNIT_TARGET_ALLY_OR_RAID to the ally target.
+//! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
+//!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
+//! otherwise just that ally. Target57 selects an explicit ally;120 selects the caster.
 //! Every other ID is unsupported and fails the cast.
 
 use crate::random as rand;
@@ -76,6 +76,8 @@ enum Selector {
     Caster,
     /// The explicit (requested) unit target.
     Explicit(Relation),
+    ///118: explicit ally, expanded around that ally when grouped with the caster.
+    AllyOrRaid,
     ///119: dead party/raid members selected at their stored corpse positions.
     RaidCorpses,
     ///56: living members of the caster's party/raid (and their controlled units).
@@ -144,7 +146,8 @@ fn selector(id: u32) -> Option<Selector> {
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
-        21 | 57 | 118 => Selector::Explicit(Ally),
+        21 | 57 => Selector::Explicit(Ally),
+        118 => Selector::AllyOrRaid,
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
         87 | 138 | 148 => Selector::ExistingDest,
@@ -203,6 +206,7 @@ pub fn explicit_requirement<'a>(
         .flat_map(|effect| effect.implicit_targets)
         .find_map(|id| match selector(id)? {
             Selector::Explicit(relation) | Selector::CenterExplicit(relation) => Some(relation),
+            Selector::AllyOrRaid => Some(Relation::Ally),
             Selector::DestTargetOffset(_) => Some(Relation::Any),
             _ => None,
         })
@@ -215,6 +219,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
             selector(id),
             Some(
                 Selector::Explicit(_)
+                    | Selector::AllyOrRaid
                     | Selector::RaidCorpses
                     | Selector::ChannelTarget
                     | Selector::Summoner
@@ -438,6 +443,22 @@ pub fn select_targets(
                     units.push(target);
                     units.extend(chain_targets(
                         world, caster, spell, effect, target, relation,
+                    ));
+                }
+            }
+            Selector::AllyOrRaid => {
+                selected_any = true;
+                if let Some(target) = explicit.filter(|&target| {
+                    ignore_relation || relation_matches(world, caster, target, Relation::Ally)
+                }) {
+                    units.extend(ally_or_raid_targets(
+                        world,
+                        caster,
+                        target,
+                        spell,
+                        effect,
+                        slot,
+                        max_targets,
                     ));
                 }
             }
@@ -724,11 +745,49 @@ fn limit_spell_targets(
     units
 }
 
-fn raid_character(world: &World, unit: Entity) -> Option<u64> {
+/// TC Spell.cpp1393–1401: target118 uses the targeted unit as the area center.
+fn ally_or_raid_targets(
+    world: &mut World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+    effect: &SpellEffect,
+    slot: usize,
+    cap: u32,
+) -> Vec<Entity> {
+    if !shares_raid(world, caster, target) {
+        return vec![target];
+    }
+    let Some(center) = position(world, target) else {
+        return Vec::new();
+    };
+    let mut candidates = area_units(
+        world,
+        caster,
+        center,
+        radius(effect, slot),
+        Relation::Ally,
+        0,
+    );
+    candidates.retain(|&unit| shares_raid(world, caster, unit));
+    let candidates = limit_implicit_targets(world, spell, caster, candidates, cap);
+    filter_area_sight(world, caster, spell, effect, center, candidates)
+}
+
+fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
+    if world.get::<crate::followers::Follower>(unit).is_some() {
+        return Some(crate::followers::Follower::member_id(unit));
+    }
     let controller = match world.get::<shared::components::UnitSummonedBy>(unit) {
         Some(owner) => Entity::try_from_bits(owner.0)?,
         None => unit,
     };
+    if world
+        .get::<crate::followers::Follower>(controller)
+        .is_some()
+    {
+        return Some(crate::followers::Follower::member_id(controller));
+    }
     world
         .get::<crate::persistence::ClientId>(controller)
         .map(|id| id.0)
@@ -739,10 +798,10 @@ fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
     if caster == target {
         return true;
     }
-    let Some(caster_id) = raid_character(world, caster) else {
+    let Some(caster_id) = raid_member_id(world, caster) else {
         return false;
     };
-    let Some(target_id) = raid_character(world, target) else {
+    let Some(target_id) = raid_member_id(world, target) else {
         return false;
     };
     caster_id == target_id

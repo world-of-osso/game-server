@@ -14,10 +14,16 @@ mod bashiok;
 mod breakfast;
 #[path = "toys_citizens_tests.rs"]
 mod citizens;
+#[path = "toys_default_summon_tests.rs"]
+mod default_summons;
 #[path = "toys_disguise_tests.rs"]
 mod disguises;
 #[path = "toys_dragon_head_tests.rs"]
 mod dragon_head;
+#[path = "toys_falling_turn_tests.rs"]
+mod falling_turn;
+#[path = "toys_flag_tests.rs"]
+mod flag;
 #[path = "toys_flute_tests.rs"]
 mod flute;
 #[path = "toys_force_cast_tests.rs"]
@@ -60,6 +66,8 @@ mod stone_whistle;
 mod summon_closure;
 #[path = "toys_summon_level_tests.rs"]
 mod summon_levels;
+#[path = "toys_visual_census_tests.rs"]
+mod visual_census;
 #[path = "toys_waywatcher_tests.rs"]
 mod waywatcher;
 #[path = "toys_ysera_tests.rs"]
@@ -93,15 +101,16 @@ fn setup_for_race_class(path: &std::path::Path, race: u8, class: u8) -> (Harness
     let mut h = harness(
         Vec::new(),
         &[
-            TRANSFORM, 51640, 61810, 45426, 176594, 176457, 185712, 302273, 98444, 141917, 156132,
-            99104, 304370, 304369, 23126, 167273, 65451, 176889, 225656, 225658, 225660, 225657,
-            225659, 376088, 116, 376092, 376155, 376203, 397775, 376172, 376113, 398159, 398162,
-            398329, 398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762, 388088, 264091,
-            289277, 384585, 203533, 203820, 261981, 286277, 455023, 462145, 1269949, 1280563,
-            128328, 406870, 383065, 239560, 254513, 405634, 127771, 128180, 280827, 280828, 360123,
-            361085, 361090, 381262, 401253, 417591, 429364, 442240, 469612, 469613, 469614, 469616,
-            469617, 469618, 128327, 196783, 318453, 318452, 243209, 362988, 302730, 193333, 408067,
-            430760, 71909, 171352, 127803, 128150, 128151, 128152, 176899, 176900, 300104, 300144,
+            TRANSFORM, 51640, 51657, 23453, 61810, 45426, 176594, 176457, 185712, 302273, 98444,
+            141917, 156132, 99104, 304370, 304369, 23126, 167273, 65451, 176889, 225656, 225658,
+            225660, 225657, 225659, 376088, 116, 376092, 376155, 376203, 397775, 376172, 376113,
+            398159, 398162, 398329, 398328, 398334, 398333, 62736, 42766, 54710, 42753, 42762,
+            388088, 264091, 289277, 384585, 203533, 203820, 261981, 286277, 455023, 462145,
+            1269949, 1280563, 128328, 406870, 383065, 239560, 254513, 405634, 127771, 128180,
+            280827, 280828, 360123, 361085, 361090, 381262, 401253, 417591, 429364, 442240, 469612,
+            469613, 469614, 469616, 469617, 469618, 128327, 196783, 318453, 318452, 243209, 362988,
+            302730, 193333, 408067, 430760, 71909, 171352, 127803, 128150, 128151, 128152, 176899,
+            176900, 300104, 300144,
         ],
         class,
     )
@@ -461,20 +470,21 @@ fn toys_category_override_expires_authoritatively() {
 #[test]
 fn toys_unsupported_dummy_is_not_silent_success() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, _) = setup(&dir.path().join("toys.redb"));
-    learn(&mut h, 1);
-    let results = activate(&mut h, FLAG_OWNERSHIP);
+    let (mut h, character) = setup(&dir.path().join("toys.redb"));
+    // Flag51640 now has its TC script; zero-payload Gadgetzan23453 still does not.
+    learn_effect_toy(&mut h, character, 18986);
+    let results = activate(&mut h, 18986);
     assert!(results[0].error.as_deref().unwrap().contains("effect 3"));
     assert!(
         h.inbox
             .cooldowns
             .iter()
-            .all(|cooldown| cooldown.spell_id != 51640)
+            .all(|cooldown| cooldown.spell_id != 23453)
     );
     let unavailable = snapshot(h.app.world(), 1)
         .toys
         .into_iter()
-        .find(|toy| toy.item_id == FLAG_OWNERSHIP)
+        .find(|toy| toy.item_id == 18986)
         .unwrap();
     assert!(unavailable.learned);
     assert!(unavailable.unavailable_reason.unwrap().contains("effect 3"));
@@ -2150,9 +2160,12 @@ fn toyfx8_scenery_learns_spawns_source_models_and_expires_without_following() {
             world.get::<crate::maps::InMap>(summon),
             world.get::<crate::maps::InMap>(h.caster)
         );
+        // Plain Ally/Title0 TempSummon retains source template faction35:
+        // properties121/3149 have Faction0 and no UseSummonerFaction(0x1000).
+        // TC TemporarySummon.cpp255–265; SetOwnerGUID is not Minion faction inheritance.
         assert_eq!(
             world.get::<UnitFactionTemplate>(summon),
-            world.get::<UnitFactionTemplate>(h.caster)
+            Some(&UnitFactionTemplate(35))
         );
         assert!(
             world

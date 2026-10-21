@@ -2,12 +2,17 @@
 mod ai;
 mod catalog;
 mod hazards;
+mod healer_context;
+mod healer_policy;
+mod healer_triage;
+mod holy_policy;
 mod kit;
 mod kit_ai;
 mod kit_area;
 mod kit_interrupt;
 mod pack_identity;
 mod party;
+mod positioning;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
@@ -42,6 +47,7 @@ mod pull_sources;
 mod pull_sources_tests;
 #[cfg(test)]
 mod pull_stat_provenance_tests;
+mod resto_policy;
 #[cfg(test)]
 pub(crate) mod simulator;
 mod spawning;
@@ -57,6 +63,9 @@ mod utility_policy_tests;
 
 use bevy::prelude::*;
 use shared::group::GroupRole;
+
+#[cfg(test)]
+mod group_buff_tests;
 
 pub(crate) use ai::FollowerReach;
 pub(crate) use catalog::FollowerCatalog;
