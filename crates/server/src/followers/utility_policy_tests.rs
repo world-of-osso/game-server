@@ -37,6 +37,173 @@ fn cast_count(h: &Harness, spell: u32) -> usize {
 }
 
 #[test]
+fn follower_utility_policy_native_resurrection_effect_restores_a_dead_follower() {
+    let (mut h, unit) = level32(209072);
+    let healer = add_follower(&mut h, 215011);
+    h.app
+        .world_mut()
+        .entity_mut(healer)
+        .insert(crate::combat::CorpseDelay(60.0));
+    crate::combat::kill_unit(h.app.world_mut(), h.npc, healer);
+    h.advance(2);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(healer)
+            .is_some()
+    );
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 20484, Some(healer), false).unwrap();
+    h.advance(80);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(20484)
+        .unwrap();
+    let percent = spell
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 18)
+        .unwrap()
+        .base_points;
+    let max = h.app.world().get::<Health>(healer).unwrap().max;
+    assert!(h.health(healer) >= (max * percent / 100.0).floor());
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat::DeathState>(healer)
+            .is_none()
+    );
+    assert!(h.app.world().get::<crate::combat::Corpse>(healer).is_none());
+}
+
+#[test]
+fn follower_utility_policy_native_resurrection_from_follower_retains_player_acceptance() {
+    use lightyear::prelude::{MessageReceiver, MessageSender};
+    use shared::protocol::{ResurrectionOffer, ResurrectionResponse};
+    let (mut h, unit) = level32(209072);
+    h.stop_attack();
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(crate::death::PlayerDeathState {
+            state: shared::death::DeathState::Dead,
+            corpse: None,
+            graveyard: None,
+        });
+    h.app
+        .world_mut()
+        .get_mut::<Health>(h.caster)
+        .unwrap()
+        .current = 0.0;
+    h.app.world_mut().entity_mut(h.connection).insert((
+        MessageSender::<ResurrectionOffer>::default(),
+        MessageReceiver::<ResurrectionOffer>::default(),
+    ));
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 20484, Some(h.caster), false)
+        .unwrap();
+    h.advance(80);
+    let offers =
+        crate::spell_cast::test_harness::drain::<ResurrectionOffer>(&mut h.app, h.connection);
+    assert_eq!(offers.len(), 1);
+    assert_eq!(offers[0].caster_name, "Crenna Earth-Daughter");
+    assert_eq!(h.health(h.caster), 0.0, "player must not auto-accept");
+    crate::death::resurrection::respond(
+        h.app.world_mut(),
+        h.caster,
+        ResurrectionResponse {
+            caster: unit.to_bits(),
+            spell_id: 20484,
+            accept: true,
+        },
+    );
+    assert!(h.health(h.caster) > 0.0);
+}
+
+#[test]
+fn follower_utility_policy_delayed_shield_does_not_spend_a_second_kick() {
+    let (mut h, first) = at_level(209057, 26, |_| {});
+    let second = add_follower(&mut h, 215240);
+    utility_tests::start_enemy_fireball(&mut h, first);
+    h.app.world_mut().get_mut::<Position>(first).unwrap().x = -15.0;
+    let target = h.npc;
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(first)
+        .unwrap()
+        .profile
+        .clone();
+    assert!(super::kit_interrupt::try_interrupt_candidates(
+        h.app.world_mut(),
+        first,
+        &profile,
+        &[target]
+    ));
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(target)
+            .is_some(),
+        "native shield must still be in flight"
+    );
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(second)
+        .unwrap()
+        .profile
+        .clone();
+    assert!(!super::kit_interrupt::try_interrupt_candidates(
+        h.app.world_mut(),
+        second,
+        &profile,
+        &[target]
+    ));
+    h.advance(30);
+    assert_eq!(cast_count(&h, 351338), 0);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|e| e.kind == CombatLogKind::Interrupt && e.spell_id == Some(31935))
+    );
+}
+
+#[test]
+fn follower_utility_policy_rotates_ready_party_kicks() {
+    let (mut h, first) = level32(209059);
+    let second = add_follower(&mut h, 215240);
+    utility_tests::start_enemy_fireball(&mut h, first);
+    let target = h.npc;
+    let profile = h
+        .app
+        .world()
+        .get::<super::Follower>(first)
+        .unwrap()
+        .profile
+        .clone();
+    assert!(super::kit_interrupt::try_interrupt_candidates(
+        h.app.world_mut(),
+        first,
+        &profile,
+        &[target]
+    ));
+    h.advance(600);
+    utility_tests::start_enemy_fireball(&mut h, first);
+    let party = [h.caster, first, second];
+    assert!(super::utility_interrupt::try_party(
+        h.app.world_mut(),
+        h.caster,
+        &party,
+        &[target]
+    ));
+    h.advance(3);
+    assert_eq!(cast_count(&h, 351338), 1);
+    assert_eq!(cast_count(&h, 2139), 1);
+}
+
+#[test]
 fn follower_utility_policy_interrupts_unselected_engaged_caster() {
     let (mut h, unit) = level32(209059);
     let caster = spawn_npc(&mut h.app, 3.0);
@@ -246,11 +413,11 @@ fn follower_utility_policy_battle_res_prefers_dead_healer() {
     let healer = add_follower(&mut h, 215011);
     let tank = add_follower(&mut h, 209057);
     for dead in [healer, tank] {
-        h.app.world_mut().get_mut::<Health>(dead).unwrap().current = 0.0;
         h.app
             .world_mut()
             .entity_mut(dead)
             .insert(crate::combat::CorpseDelay(60.0));
+        crate::combat::kill_unit(h.app.world_mut(), h.npc, dead);
     }
     for _ in 0..80 {
         update_ai(h.app.world_mut());
@@ -324,7 +491,12 @@ fn follower_utility_policy_no_damage_into_someone_elses_cc() {
             source: crate::auras::AuraSource::Cast,
         },
     );
-    h.attack(h.npc);
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(crate::networking::CombatTarget(Some(h.caster)));
+    // Only follower behavior is under test; the owner must not white-swing the sheep.
+    h.stop_attack();
     h.advance(3);
     let before = h.health(h.npc);
     for _ in 0..40 {

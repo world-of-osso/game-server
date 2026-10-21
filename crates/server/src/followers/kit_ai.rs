@@ -17,7 +17,7 @@ pub(super) fn update(
     party: &[Entity],
     enemy: Option<Entity>,
 ) -> bool {
-    let entries: Vec<_> = world
+    let mut entries: Vec<_> = world
         .get_resource::<FollowerCatalog>()
         .into_iter()
         .flat_map(|catalog| &catalog.kits)
@@ -28,6 +28,21 @@ pub(super) fn update(
     if entries.is_empty() {
         return false;
     }
+    entries.sort_by_key(|entry| match entry.slot {
+        Slot::Interrupt => 0,
+        Slot::Heal
+            if entry
+                .conditions
+                .health_below
+                .is_some_and(|threshold| threshold <= 0.2) =>
+        {
+            1
+        }
+        Slot::Defensive => 2,
+        Slot::Dispel => 3,
+        Slot::Control => 4,
+        _ => 5,
+    });
     let level = world.get::<Level>(unit).map_or(0, |level| level.0);
     let enemies = ai::engaged_enemies(world, follower, unit, party);
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
