@@ -92,6 +92,60 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
 }
 
 #[test]
+fn scripted_boss_ready_single_pull_does_not_require_a_numeric_forecast() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let tank = run.party.tank;
+    let boss = std::collections::BTreeSet::from([20375766]);
+    let decision = crate::followers::simulator::pull(run.app.world_mut(), tank, &boss);
+    assert!(
+        matches!(&decision, Ok((true, _))),
+        "SCRIPTED_BOSS_PULL_WHEN_READY: {decision:?}"
+    );
+    let multiple = std::collections::BTreeSet::from([20375766, 20375765]);
+    assert!(
+        !crate::followers::simulator::pull(run.app.world_mut(), tank, &multiple)
+            .unwrap()
+            .0,
+        "boss admission must not chain an add"
+    );
+    let healer = run.party.members[1];
+    crate::combat::kill_unit(run.app.world_mut(), run.party.owner, healer);
+    assert!(
+        !crate::followers::simulator::pull(run.app.world_mut(), tank, &boss)
+            .unwrap()
+            .0,
+        "dead admitted member is a real wait, not ready"
+    );
+}
+
+#[test]
+fn cleared_ready_party_pulls_next_single_pack_without_measurements() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    for _ in 0..3 {
+        run.app.update();
+    }
+    let tank = run.party.tank;
+    let first = run.actors[&20375759];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, first);
+    crate::followers::pull_history::sample_all(run.app.world_mut());
+    run.app.update();
+    crate::combat::kill_unit(run.app.world_mut(), tank, first);
+    run.app.update();
+    crate::followers::pull_history::sample_all(run.app.world_mut());
+    let next = std::collections::BTreeSet::from([20375765]);
+    let decision = crate::followers::simulator::pull(run.app.world_mut(), tank, &next);
+    assert!(
+        matches!(&decision, Ok((true, _))),
+        "CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK: {decision:?}"
+    );
+}
+
+#[test]
 #[ignore = "opening footprint regression; explicit RED before generic admission diagnosis"]
 fn opening_admission_does_not_recruit_unprojected_source_packs() {
     let _rng_scope = crate::random::seed_scope(7);
