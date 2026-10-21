@@ -221,6 +221,115 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
 }
 
 #[test]
+#[ignore = "explicit Stockade32 roster with native230861 Demonology follower"]
+fn native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival() {
+    let _rng_scope = crate::random::seed_scope(12);
+    let mut run = spawn_run(12, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 34);
+    let enemy = run.actors[&20375744];
+    let warlock = *run
+        .party
+        .members
+        .iter()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<crate::followers::Follower>(**unit)
+                .unwrap()
+                .profile
+                .entry
+                == 230861
+        })
+        .expect("explicit native Demonology roster");
+    crate::spell_cast::creature_cast(run.app.world_mut(), warlock, 30146, Some(warlock), false)
+        .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), warlock).expect("native Felguard");
+    let spawn = run
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(enemy)
+        .unwrap();
+    let home = run
+        .app
+        .world()
+        .get::<crate::creature_ai::HomePosition>(enemy)
+        .map_or(
+            Position {
+                x: spawn.x,
+                y: spawn.y,
+                z: spawn.z,
+            },
+            |home| home.position,
+        );
+    let displaced = Position {
+        x: home.x - 10.0,
+        ..home
+    };
+    run.app.world_mut().entity_mut(enemy).insert(displaced);
+    run.app.world_mut().entity_mut(pet).insert(displaced);
+    crate::combat::deal_direct_damage(run.app.world_mut(), pet, enemy, 100.0);
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.source == Some(pet.to_bits())
+                    && event.target == Some(enemy.to_bits())
+                    && event.amount > 0
+            )
+    );
+    crate::creature_aggro::enter_evade_mode(run.app.world_mut(), enemy);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(enemy),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+    let entrance = Position {
+        x: run.graph.entrance[0],
+        y: run.graph.entrance_height,
+        z: run.graph.entrance[1],
+    };
+    run.app.world_mut().entity_mut(pet).insert(entrance);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), warlock, None);
+    for _ in 0..800 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(enemy)
+            == Some(&crate::creature_ai::CreatureState::Idle)
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(enemy),
+        Some(&crate::creature_ai::CreatureState::Idle),
+        "native evade must finish instead of remaining Returning forever"
+    );
+    let at = *run.app.world().get::<Position>(enemy).unwrap();
+    assert!(
+        Vec3::new(at.x, at.y, at.z).distance(Vec3::new(home.x, home.y, home.z)) < 0.0001,
+        "actual frozen travel must reach home"
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<CombatStatus>(enemy)
+            .is_some_and(|combat| combat.0)
+    );
+}
+
+#[test]
 fn simulator_party_environment_overrides_keep_native_profiles_and_level() {
     let mut expected = [209057, 209072, 209053, 209059, 209065];
     if let Ok(entries) = std::env::var("DUNGEON_SIMULATOR_PARTY_ENTRIES") {
