@@ -780,6 +780,7 @@ pub(crate) fn open_ground_map(
     maps: Res<crate::maps::MapStore>,
     world: Res<crate::world_data::WorldData>,
 ) {
+    let started = std::time::Instant::now();
     let data_dir = ground_data_dir();
     let wdts = maps
         .maps
@@ -803,7 +804,11 @@ pub(crate) fn open_ground_map(
             check.known_gap_files, check.known_gaps
         );
     }
-    info!("Ground loads from {}", data_dir.display());
+    info!(
+        "Ground loads from {} (validation {:?})",
+        data_dir.display(),
+        started.elapsed()
+    );
     commands.insert_resource(ground);
 }
 
@@ -838,6 +843,7 @@ fn check_spawned_ground(
     maps.sort_unstable();
     let mut check = SpawnedGroundCheck::default();
     for map in maps {
+        let started = std::time::Instant::now();
         let mut gap = false;
         for file in ground.missing_files(map) {
             if gaps.contains(&(map, file.clone())) {
@@ -850,6 +856,7 @@ fn check_spawned_ground(
         if gap {
             check.known_gaps.push(map);
         }
+        debug!("Ground validation map {map}: {:?}", started.elapsed());
     }
     check
 }
