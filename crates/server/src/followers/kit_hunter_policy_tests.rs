@@ -125,7 +125,6 @@ fn pet_swing_frames(
 }
 
 #[test]
-#[ignore = "RED: failed pet preparation blocks the entire hunter kit"]
 fn rotation_fidelity_253_missing_duck_data_still_shoots() {
     let (mut h, caster) = at_level(AUSTIN, 32, |_| {});
     assert!(summoned_pet(h.app.world(), caster).is_none());

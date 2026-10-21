@@ -16,6 +16,10 @@ At9bb23c9be new native selection/Voltaic tests give4RED20.44s: Fire never reache
 
 [Lava Surge script](../../../crates/server/src/spell_cast/scripts/lava_surge.rs) receives real188389 damage ticks, checks actual77756 and its native chance, and retains TC's per-passive normalized-tick counter across all own Flame Shocks within100 yards/same map. Native77762 hit restores one charge except during51505; after51505 completion restore the deferred charge and preserve any unadmitted77762 instance through the existing charged-mod consumer. This composes the same admission marker as Fire. Natural/in-flight exact GREEN atf5bd68593 (part of5PASS/1FireFAIL24.77s); full talent coverage and Voltaic Blaze/selection still open. [Contract](../../specs/auras.md#elemental-lava-surge).
 
+### Pet-preparation failure starvation — 2026-10-21
+
+Native70448 Exhilaration109304 is learned at9 (`SkillLineAbility`44516, `SpellLevels`35395); the level32 kit/book retains it. The regression was `prepare_pet` returning handled even when the duck template/catalog was unavailable, preventing every later kit action. Both actual level32 healing and Barbed Shot fixtures reproduced `casts: []`. Preparation failure now reports once per follower and leaves the rest of its kit available; a successful native summon still owns its ordinary action/GCD. On the canonical-backup/scoped-delta copy, Exhilaration GREEN15.99s, missing-duck Barbed Shot GREEN14.80s and retained actual Call Pet32/90 GREEN29.74s/36.52s. No spellbook, native timer, template or stat edit.
+
 ### Scoped rotation kit publication — 2026-10-21
 
 [`follower_kit_delta.py`](../../../scripts/follower_kit_delta.py) applies prepared policy values through `(spec_id,spell_id,min_level)` on a fresh read-only-source SQLite backup. Changed interval identities require requalification; other specs/tables remain unchanged. Three behavioral CLI tests cover reordered rowids, repeat application, preserved source/other specs/tables and refusal of missing intervals/existing outputs.
