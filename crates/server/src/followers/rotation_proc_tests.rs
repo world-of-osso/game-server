@@ -3,6 +3,7 @@ use super::rotation_refresh_tests::{cast_native, native_dummy};
 use crate::auras::{ActiveAuras, AuraInstance, has_aura};
 use crate::spell_cast::test_harness::Harness;
 use bevy::prelude::*;
+use shared::components::{Health, PowerType};
 use shared::protocol::CombatLogKind;
 
 const RAKE: u32 = 1822;
@@ -66,6 +67,86 @@ fn rotation_fidelity_feral_tigers_fury_is_frozen_in_fresh_bleed_amount() {
         "SimC cat_attack_t persistent TF modifier uses actual native5217s3; baseline={}, empowered={}, expected={expected}",
         bleed_amount(&baseline),
         bleed_amount(&empowered)
+    );
+}
+
+fn monk(level: u8) -> (Harness, Entity) {
+    let (mut h, unit) = super::kit_tests::at_level(227734, level, |_| {});
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: 100_000_000.0,
+        max: 100_000_000.0,
+    });
+    (h, unit)
+}
+
+fn stacks(h: &Harness, unit: Entity, spell: u32) -> u32 {
+    h.app
+        .world()
+        .get::<ActiveAuras>(unit)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == spell)
+        .map_or(0, |aura| u32::from(aura.stacks))
+}
+
+#[test]
+fn rotation_fidelity_windwalker_hit_combo_tracks_ordinary_actions_and_resets_repeat() {
+    let (mut h, unit) = monk(35);
+    let target = h.npc;
+    assert!(
+        has_aura(h.app.world(), unit, 196740),
+        "native learned Hit Combo"
+    );
+    cast_native(&mut h, unit, 100780, target);
+    assert_eq!(stacks(&h, unit, 196741), 1, "first actual combo action");
+    cast_native(&mut h, unit, 100784, target);
+    assert_eq!(
+        stacks(&h, unit, 196741),
+        2,
+        "different actual action stacks Hit Combo"
+    );
+    cast_native(&mut h, unit, 100784, target);
+    assert_eq!(
+        stacks(&h, unit, 196741),
+        0,
+        "repeating actual action removes Hit Combo"
+    );
+}
+
+#[test]
+fn rotation_fidelity_windwalker_natural_combo_breaker_pays_no_chi_and_spends_one_use() {
+    let (mut h, unit) = monk(37);
+    let target = h.npc;
+    assert!(
+        has_aura(h.app.world(), unit, 137384),
+        "native learned Combo Breaker"
+    );
+    for _ in 0..256 {
+        cast_native(&mut h, unit, 100780, target);
+        if has_aura(h.app.world(), unit, 116768) {
+            let before =
+                crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
+                    .unwrap()
+                    .0;
+            let uses = stacks(&h, unit, 116768);
+            cast_native(&mut h, unit, 100784, target);
+            let after = crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
+                .unwrap()
+                .0;
+            assert_eq!(
+                before, after,
+                "native Combo Breaker makes Blackout Kick free"
+            );
+            assert_eq!(
+                stacks(&h, unit, 116768),
+                uses - 1,
+                "one ordinary cast consumes one use"
+            );
+            return;
+        }
+    }
+    panic!(
+        "256 ordinary native Tiger Palms never produced learned Combo Breaker; no RNG/buff grants"
     );
 }
 
