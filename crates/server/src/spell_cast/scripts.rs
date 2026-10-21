@@ -245,6 +245,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         }
         (30_926 | 36_921, 1) => Some(crate::scripted_ai::hellfire_ramparts::liquid_fire::cone_hit),
         (super::omor_orbital::ORBITAL_TARGET, 0) => Some(super::omor_orbital::cast_hit),
+        (30745, 0) => Some(crate::scripted_ai::nethekurse::cast_target_fissure),
         (crate::scripted_ai::azure_vault::FROST_BOMB_CAST, 0) => {
             Some(crate::scripted_ai::azure_vault::apply_frost_bomb)
         }
@@ -546,6 +547,8 @@ pub fn area_target_filter(spell_id: u32, effect_index: u8) -> Option<AreaTargetF
         (crate::auras::ebon_might::EBON, 0 | 1) => Some(crate::auras::ebon_might::filter_allies),
         (145_110, 0) => Some(pick_yseras_gift_group_target),
         (AZURE_STRIKE, 1) => Some(azure_strike_targets),
+        (30735, 0) => Some(crate::scripted_ai::nethekurse::filter_shadow_sear),
+        (30745, 0) => Some(crate::scripted_ai::nethekurse::filter_target_fissures),
         (batch5::EPIDEMIC_DAMAGE, 1) => Some(batch5::epidemic_splash),
         _ => None,
     }

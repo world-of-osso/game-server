@@ -1158,6 +1158,10 @@ fn startup_load_world_data(mut commands: Commands) {
             .expect("Failed to load authored Ragefire intro areas7899/7904 from local DB2/TDB"),
     );
     commands.insert_resource(
+        crate::scripted_ai::nethekurse_intro::load_trigger(&conn)
+            .expect("Failed to load authored Nethekurse sewer4347 from local DB2/TDB"),
+    );
+    commands.insert_resource(
         crate::scripted_ai::kings_rest::load_molten_gold_areas(&conn)
             .expect("Failed to load authored Molten Gold area12928 from local TDB"),
     );

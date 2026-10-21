@@ -42,6 +42,7 @@ use shared::protocol::{
 use crate::interest::NetworkVisibility;
 use crate::terrain_height::{bevy_to_wow, wow_to_bevy};
 
+pub(crate) const GAMEOBJECT_TYPE_DOOR: u8 = 0;
 pub(crate) const GAMEOBJECT_TYPE_BUTTON: u8 = 1;
 pub(crate) const GAMEOBJECT_TYPE_CHEST: u8 = 3;
 pub(crate) const GAMEOBJECT_TYPE_TRAP: u8 = 6;

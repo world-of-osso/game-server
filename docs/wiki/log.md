@@ -3400,3 +3400,6 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-20: qualified native Priest32379 execute carrier E3 and retained unmatched-slot warning; one ignored RED→GREEN before enabling.
 
 - 2026-10-20: ported TC Earthquake OnHit E1 native5%/once-per-owned-field knockdown; native2GREEN after ignored RED, no generic77 dispatch.
+- 2026-10-20: Nethekurse native combat and authentic StringId peon callback proof ingested into [boss scripts](systems/boss-scripts.md#shattered-halls-nethekurse-2026-10-20); source gaps explicit.
+
+- 2026-10-20: Nethekurse source-backed remainder/native wild+patrol+Reset proof added; COMPOSITE17GREEN, canonical fissure publication and absent native/create-properties gaps retained.
