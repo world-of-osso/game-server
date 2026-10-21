@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Deios source ingress boundary — 2026-10-21
+
+LittleWigs2777a9d `ChronoLordDeios.lua` binds184125/2559/map2451bit4 (Journal2479/5379/display106056). Actual TDB/runtime flags320 include PC immunity0x100; genuine spawn9004522 exists. Production `AggroMode::for_template` makes PC-immune actors Passive and omits their threat table; ordinary `add_threat` cannot engage them. Native source-preserving tests atf56c055a9 give2PASS/firstWing0vs1FAIL34.10s: ordinary Wing376049 area damage qualifies in Normal1/Follower205, while real threat ingress stays absent and credit stays0. The ignored6.3sWing test remains a genuine RED, not a timer implementation.
+
+`DEIOS_PC_IMMUNITY_INGRESS_UNSOURCED` retains missing unlock/controller. No immunity flags removed, artificial engaged fixture, alias actor or combat port. Lua warmup16.9s/VerifyEnablehealth>1 describe alerts but do not authorize unlock, living surrender, RP or completion credit. Pinned TC a352b1fa scripts contain no Deios boss implementation; the unrelated184125 Steamvault gameobject is not authority. Native Sand375727/Wing376049/Rewind376208 data alone cannot supply ingress/phase controller. See [boss requirements](../../specs/boss-scripts.md); receipts `data/diagnostics/df-bosses-2026-10-21/deios-source.json`, `deios-red.log`.
+
 ## Emberon current Lua partial — 2026-10-21
 
 `emberon.rs` is explicitly local LittleWigs2777a9d `Emberon.lua` combat policy for Normal1/Follower205, not an authored TC2451 boss script. Source counts2Claps/3Embers precede Purging;2Claps/4Embers follow it. Native70448 admits every ordinary request and owns cone104, area22/15, casts, dummy aura369110 and periodic368990→369025. Source UNIT_HEALTH below10% disables future Purging and allows normal lanes beyond their counts; the remembered future deadline is not retroactively cast if already elapsed.

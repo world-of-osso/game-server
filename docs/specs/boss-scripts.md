@@ -1,5 +1,10 @@
 # Boss scripts
 
+## Deios source ingress boundary
+
+- Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
+- `DEIOS_PC_IMMUNITY_INGRESS_UNSOURCED`: actual source/runtime flags320 retain PC immunity0x100; source spawn9004522 and native spells exist, but no authored unlock/controller is available in pinned TC a352b1fa. Native ordinary threat ingress is blocked with no threat table. Preserve flags and do not manufacture engaged state, timer GREEN, death/kill-credit or a completed fight. Ordinary outgoing Wing damage qualification is separate from combat ingress; keep the first-Wing RED ignored until authentic ingress exists.
+
 ## Emberon current Lua partial
 
 - Producer `--encounter emberon` installs only local `boss_emberon` and primary184422/2558/map2451bit3 (Journal2476/5404/display107816). Keep source spawn9004496, actual model107816, addon369101, stats/flags/population/difficulties and native spell data unchanged; no fabricated205 rows.
