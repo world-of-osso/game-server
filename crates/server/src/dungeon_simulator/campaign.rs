@@ -759,7 +759,6 @@ fn spawn_isolated_moloch(seed: u64) -> Run {
 }
 
 #[test]
-#[ignore = "explicit native scripted-Vanish controller hold regression"]
 fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
     let _rng_scope = crate::random::seed_scope(2);
     let mut run = spawn_isolated_moloch(2);
@@ -802,7 +801,6 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
 }
 
 #[test]
-#[ignore = "explicit required-boss hold does not block another pullable native pack"]
 fn living_unattackable_required_boss_does_not_block_another_pullable_pack() {
     let _rng_scope = crate::random::seed_scope(2);
     let mut run = spawn_run(2, &mut None).unwrap();
@@ -822,7 +820,6 @@ fn living_unattackable_required_boss_does_not_block_another_pullable_pack() {
 }
 
 #[test]
-#[ignore = "explicit required-boss absence without Death remains a controller error"]
 fn absent_required_boss_without_a_death_is_not_a_clear_or_an_endless_hold() {
     let _rng_scope = crate::random::seed_scope(2);
     let mut run = spawn_isolated_moloch(2);
