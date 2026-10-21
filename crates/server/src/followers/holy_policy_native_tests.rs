@@ -1,11 +1,14 @@
 //! Real 70448 percentage damage on a native level90 group, not a trivial Stockade overlevel.
-use super::kit_clearcasting_tests::complete_real_cast;
+use super::kit_clearcasting_tests::{complete_real_cast, own_aura};
 use super::kit_tests::{at_level, uses_spell};
 use crate::auras::{ActiveAuras, has_aura};
 use crate::spell_cast::creature_cast;
 use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents};
 use bevy::prelude::*;
-use shared::components::{CombatRatings, DerivedStats, Health, Level, UnitLevel, UnitStats};
+use shared::casting::CastState;
+use shared::components::{
+    CombatRatings, DerivedStats, Health, Level, Position, UnitLevel, UnitStats,
+};
 use shared::protocol::CombatLogKind;
 
 const HENRY: u32 = 215011;
@@ -24,7 +27,11 @@ struct GroupFixture {
 }
 
 fn native_group() -> GroupFixture {
-    let (mut h, priest) = at_level(HENRY, 90, |app| {
+    native_group_at(90)
+}
+
+fn native_group_at(level: u8) -> GroupFixture {
+    let (mut h, priest) = at_level(HENRY, level, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
         app.init_resource::<ObservedCombatEvents>();
     });
@@ -32,8 +39,8 @@ fn native_group() -> GroupFixture {
     // The fixed-stat cast harness omits the three stat projection components.
     // Install the real entry shape so StatsPlugin computes native90 values.
     h.app.world_mut().entity_mut(owner).insert((
-        Level(90),
-        UnitLevel(90),
+        Level(level),
+        UnitLevel(level),
         UnitStats::default(),
         CombatRatings::default(),
         DerivedStats::default(),
@@ -43,7 +50,7 @@ fn native_group() -> GroupFixture {
     h.app
         .world_mut()
         .entity_mut(h.npc)
-        .insert((Level(90), UnitLevel(90)));
+        .insert((Level(level), UnitLevel(level)));
     crate::combat::attack_stop(h.app.world_mut(), owner);
     let mut members = vec![owner, priest];
     for entry in [209057, 209053, 209059] {
@@ -52,8 +59,8 @@ fn native_group() -> GroupFixture {
     }
     h.advance(3);
     for &member in &members {
-        assert_eq!(h.app.world().get::<Level>(member).unwrap().0, 90);
-        assert_eq!(h.app.world().get::<UnitLevel>(member).unwrap().0, 90);
+        assert_eq!(h.app.world().get::<Level>(member).unwrap().0, level);
+        assert_eq!(h.app.world().get::<UnitLevel>(member).unwrap().0, level);
         let health = h.app.world().get::<Health>(member).unwrap();
         let stats = h
             .app
@@ -62,7 +69,7 @@ fn native_group() -> GroupFixture {
             .unwrap();
         assert!(
             stats.primary.stamina > 0.0,
-            "native90 primary stats missing for {member:?}"
+            "native{level} primary stats missing for {member:?}"
         );
         assert_eq!(
             health.max, stats.max_health,
@@ -138,6 +145,95 @@ fn holy_policy_native90_fixture_has_real_group_damage_and_native_stats() {
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0)
     );
+}
+
+#[test]
+fn holy_policy_native90_earned_surge_precedes_paid_heal_and_mending() {
+    let mut group = native_group();
+    let priest = group.priest;
+    let chance = 0.08_f64;
+    let bound = (1e-6_f64.ln() / (-chance).ln_1p()).ceil() as usize;
+    for _ in 0..bound {
+        complete_real_cast(&mut group.h, priest, 2061);
+        if own_aura(&group.h, priest, 114255).is_some() {
+            break;
+        }
+        group.h.advance(300);
+    }
+    assert!(own_aura(&group.h, priest, 114255).is_some());
+    apply_pressure(&mut group, 2);
+    assert!(own_aura(&group.h, priest, 114255).is_some());
+    let start = group.h.inbox.go.len();
+    super::update_ai(group.h.app.world_mut());
+    assert!(group.h.app.world().get::<CastState>(priest).is_none());
+    group.h.advance(3);
+    let action = group.h.inbox.go[start..]
+        .iter()
+        .find(|event| event.caster == priest.to_bits())
+        .unwrap();
+    assert_eq!(
+        action.spell_id, 2061,
+        "earned instant Surge wins routine priority"
+    );
+}
+
+#[test]
+fn holy_policy_native32_sanctify_effectively_heals_the_native_cluster() {
+    let mut group = native_group_at(32);
+    apply_pressure(&mut group, 4);
+    uses_spell(&mut group.h, group.priest, 34861);
+    group.h.advance(5);
+    let healed: std::collections::BTreeSet<_> = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.source == Some(group.priest.to_bits())
+                && event.spell_id == Some(34861)
+                && event.kind == CombatLogKind::Heal
+                && event.amount > event.overflow
+        })
+        .filter_map(|event| event.target)
+        .collect();
+    assert!(
+        healed.len() >= 3,
+        "native destination heal must reach real patients"
+    );
+}
+
+#[test]
+fn holy_policy_native32_spread_patients_do_not_spend_sanctify() {
+    let mut group = native_group_at(32);
+    apply_pressure(&mut group, 4);
+    for (index, &member) in group.members.iter().enumerate() {
+        let mut position = group.h.app.world_mut().get_mut::<Position>(member).unwrap();
+        position.x = index as f32 * 40.0;
+    }
+    let start = casts(&group, 34861);
+    for _ in 0..20 {
+        super::update_ai(group.h.app.world_mut());
+        group.h.advance(1);
+    }
+    assert_eq!(
+        casts(&group, 34861),
+        start,
+        "global injury is not a native-radius cluster"
+    );
+}
+
+#[test]
+fn holy_policy_native90_full_health_does_not_spend_throughput_cooldowns() {
+    let mut group = native_group();
+    for _ in 0..40 {
+        super::update_ai(group.h.app.world_mut());
+        group.h.advance(1);
+    }
+    assert_eq!(casts(&group, 64843), 0);
+    assert_eq!(casts(&group, 200183), 0);
+    assert_eq!(casts(&group, 33076), 0);
 }
 
 #[test]
