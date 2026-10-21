@@ -57,6 +57,9 @@ fn add_inbox<M: Message>(app: &mut App) {
     app.add_systems(First, collect::<M>);
 }
 
+#[path = "npc_interaction/azure_book_tests.rs"]
+mod azure_book_tests;
+
 struct Harness {
     app: App,
     conn: Connection,
