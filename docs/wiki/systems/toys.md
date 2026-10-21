@@ -2,6 +2,16 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Source-complete visual-only server census rule (2026-10-21)
+
+[Contract](../../specs/toys.md#server-scope-visual-only-census-rule): source visual/audio-only contract, complete authored chain, zero gameplay payload, then actual UseToy aura application/replication/cancellation are all required. Native pixels/audio remain separate. Zero-valued dummy slots or applying any aura is not success by itself. No generic dummy executor was added.
+
+Two source-complete identities enter the existing strict visual-only pipeline at70df268bd:201927/395705 Gleaming Arcanocrystal (hold/refract crystal,20000ms aura/120000ms recovery) and202711/399041 Lost Compass (hold compass,indefinite aura/1000ms recovery; not Wayfinder388275/navigation). Build70448 closure114 rows/24 tables resolves visual/event/kit/ordinary model/positioner/state/matrix/animation/bone configuration/sound/advanced sound/fade curves, preserving all source rows and row/table hashes. Seven raw models exist locally; no new extraction or native playback claim. Numeric skeletal keys are retained, not invented pose mappings. Evidence: visual-closure-two-70448.json in engine diagnostics.
+
+Actual learning/use RED2/one negative control precedes admission; current three tests GREEN49.34s cover both source auras on owner only despite another selected unit, replicated ownership, real CancelAura removal, unchanged health/body/position, source recovery retained and four absent-visual/nonzero-payload refusals. Canonical507→509, exactly201927/202711, zero removals; census+Gadgetzan refusal PASS2 and check/fmt PASS/no warnings.
+
+Original overlapping dummy cohorts248 aura4/152 effect3 contain379 unique toys. Exact per-item split in dummy-classification.json/dummy-by-source.md:one identity-bound TC script ported(51640),two source-complete server-proved cosmetics,one Piccolo identity gap(current182346 versus legacy17512),169 zero-payload contract gaps and206 script/payload gaps. These last categories mean current identity/behavior is not established, not that TC definitely lacks a script: pinned source package contains src/ without SQL bindings. Ordinary static visual rows alone also fail fishing-bonus/corpse-cremation/soul-protection/crab-target contracts; no names or numeric similarity substitute for proof.
+
 ## Flag of Ownership source script and dead-aura expiry (2026-10-21)
 
 [Contract](../../specs/toys.md#flag-of-ownership-source-script): TC a352b1fa `spell_item.cpp:3603–3641` owns only38578/51640: select one random enemy player body, text-emote28008 at that owner, trigger51657. The source child creates wild GO190589/display7953 and its zero-payload60s corpse-marker aura. Source-only target93 is admitted only for the exact root signature, not as a generic dummy/modern flag alias. Stored player corpses use the existing authoritative PlayerDeathState representation; offline corpse discovery/native pixels remain unproved.

@@ -3430,3 +3430,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Flag of Ownership and finite dead-owner auras
 
 [Source and proof](systems/toys.md#flag-of-ownership-source-script-and-dead-aura-expiry-2026-10-21): exact TC51640 script, real enemy deaths/selection/flag/aura/targeted emote/natural60s expiry and reuse. Generic dead-aura early continue reproduced independently with23113, then fixed without enabling dead periodic ticks. Eight-case composite plus check/fmt; canonical published506→507. Full-trigger child packet and receiver-lifetime fixture assumptions corrected without weakening effects/emote proof. No native/offline corpse claim.
+
+## 2026-10-21 — Source-complete toy visual server rule
+
+[Rule and proof](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): two unconditioned cosmetic contracts/114 authored rows/24 source tables, strict zero-payload pipeline. Actual learn/apply/owner replication/cancel RED2→GREEN3; source durations/recovery and four metadata refusals, invariants retained. Canonical507→509;379 original dummy identities split into proved/current-script/identity and named contract gaps. No blanket dummy or native playback claim; check/fmt/census/refusal PASS.
