@@ -13,6 +13,22 @@
 
 Do not add these three Toy rows until a real contract is established and approved through the source/RED/publication/GREEN flow. [Source/code/asset matrix](../toy-effects14-coverage.md#accepted-sourced-boundary-full1166-plus-seven-2026-10-18). This source boundary does not certify native rendering, every historical toy's full lifecycle, uncovered natural30-minute/hour reuse or footstep/particle presentation; those remain separately scoped follow-ups.
 
+## Generic summon dependency closure
+
+- [x] Content generation imports authentic TDB creature dependencies of every Toy on-use spell, including recursive normal-difficulty `EffectTriggerSpell` links, not only aura428 or a hand-selected scenery list. Cycles terminate without suppressing other roots; no world spawns or fabricated source rows are added.
+- [x] Reapplying the producer preserves existing content and source models/addons. Missing TDB identities remain gaps. Importing a template does not implement its script, interaction, vehicle/possession category or native presentation.
+
+The runtime still applies SummonProperties/target/script preflight. Prepared-copy census admission is distinct from behavior-complete toys, and canonical data publication remains separate.
+
+Global source interaction markers refuse summoned toys even after template import: nonzero NPC flags, spellclick rows, SmartAI rows, VehicleId, or gameobject summon/use effects in their normal-difficulty trigger closure. Explicit existing toyfx spittoon88387, brew88579, seats193478/116689, wormholes198156/172924, fireworks219387, target dummies88375/144339 and invisible-display122126 contracts remain named gaps. Only the proven Katy156833/261602 mailbox marker is exempt, through `toyfx66_katy_real_learning_summon_mailbox_service_and_source_expiry`; other/new markers still refuse. Vargoth118191's unproved gossip is a named gap. Blank script names and item names never establish actor-only status.
+
+## Census-driven generic effect160
+
+- [x] Native effect160 (`FORCE_CAST_2`) queues a normal cast by the hit unit toward the original caster after the parent's SpellGo, preserving the child's ordinary cast time, resource/cooldown and crowd-control checks (TC a352b1fa `SpellEffects.cpp:851–892`). No per-toy script or cosmetic whitelist substitutes for this generic dispatch.
+- [x] Spore-Bound Essence203852/402642 must complete its own root use before the forced402636 cast begins, preserve the source2000ms child cast, apply the source300000ms transform202340/display88121, expire naturally and retain item cooldown.
+
+Full catalog diagnostics distinguish pipeline-admissibility from complete toy lifecycle/native presentation. A handled root is not proof that arbitrary dummy scripts or missing summon definitions work.
+
 ## Natural shared hearthstone charge coverage
 
 - [x] Hiveborne281136/1310234 and Shadeweaver281615/1311934 naturally recover the shared SpellCategory2309 charge: source MaxCharges1 and ChargeRecoveryTime1800000ms.
