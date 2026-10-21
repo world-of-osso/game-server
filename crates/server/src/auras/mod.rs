@@ -1053,6 +1053,7 @@ pub(crate) fn apply_aura_with_spell(
         crate::quest::record_gain_aura(world, target, spell.id);
         if shapeshift::aura_form(&aura).is_some() {
             shapeshift::remove_other_forms(world, target, id);
+            shapeshift::apply_form_boosts(world, target, &aura);
         }
         world_state::on_applied(world, target, &aura);
         scripts::run_apply(world, target, &aura);
@@ -1368,6 +1369,7 @@ fn overkill_absorb_amount(world: &World, unit: Entity, loss: f32, school: u32) -
 }
 
 fn announce_removed(world: &mut World, unit: Entity, aura: &AuraInstance, reason: RemoveReason) {
+    shapeshift::remove_form_boosts(world, unit, aura);
     #[cfg(test)]
     observations::removed(world, unit, aura, reason);
     world_state::on_removed(world, unit, aura);
