@@ -242,6 +242,30 @@ fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<u32> {
 }
 
 #[test]
+fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
+    let bytes = std::fs::read(graph_path()).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let route = value["route"]
+        .as_array()
+        .expect("Stockade requires an authored route, not runtime nearest-pack selection");
+    assert!(!route.is_empty());
+    let graph = read_graph().unwrap();
+    let mut seen = BTreeSet::new();
+    for step in route {
+        let pack = step["pack"].as_u64().unwrap() as u32;
+        assert!(seen.insert(pack), "duplicate authored pack{pack}");
+        assert!(graph.packs.iter().any(|entry| entry.id == pack));
+        let anchor = step["anchor"].as_array().unwrap();
+        assert_eq!(anchor.len(), 2);
+        assert!(
+            anchor
+                .iter()
+                .all(|coordinate| coordinate.as_f64().is_some_and(f64::is_finite))
+        );
+    }
+}
+
+#[test]
 #[ignore = "explicit one-time extraction from native world.db and nav bake"]
 fn extract_stockade_graph() {
     let data = crate::test_data::world_data();

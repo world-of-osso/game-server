@@ -91,6 +91,48 @@ fn spawned_normal_population_allows_existing_fight_tank_movement() {
     );
 }
 
+#[test]
+fn authored_route_order_does_not_change_when_the_tank_is_nearer_another_pack() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let elsewhere = *run
+        .app
+        .world()
+        .get::<Position>(run.actors[&20375760])
+        .unwrap();
+    run.app
+        .world_mut()
+        .entity_mut(run.party.tank)
+        .insert(elsewhere);
+    assert_eq!(
+        run.next_pack().unwrap().0,
+        20375759,
+        "fixed opening route must win over nearest living pack"
+    );
+}
+
+#[test]
+fn authored_route_skips_observed_accidental_deaths_without_reordering_the_rest() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    let bytes = std::fs::read(super::graph::graph_path()).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let steps = value["route"].as_array().expect("authored Stockade route");
+    assert!(steps.len() >= 4);
+    let ids: Vec<_> = steps
+        .iter()
+        .map(|step| step["pack"].as_u64().unwrap() as u32)
+        .collect();
+    let owner = run.party.owner;
+    crate::combat::kill_unit(run.app.world_mut(), owner, run.actors[&ids[0]]);
+    crate::combat::kill_unit(run.app.world_mut(), owner, run.actors[&ids[2]]);
+    assert_eq!(run.next_pack().unwrap().0, ids[1]);
+    crate::combat::kill_unit(run.app.world_mut(), owner, run.actors[&ids[1]]);
+    assert_eq!(
+        run.next_pack().unwrap().0,
+        ids[3],
+        "already dead accidental pack must not be pulled again"
+    );
+}
+
 fn spawn_isolated_moloch(seed: u64) -> Run {
     let mut run = spawn_run(seed, &mut None).unwrap();
     let boss = run.actors[&20375766];
