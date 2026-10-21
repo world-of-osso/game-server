@@ -52,8 +52,7 @@ Publication source is server master c6be257c5; protocol03cebdb.
    because combat exists or before immediate triage needs are met.
 5. Fortitude casts once when any party recipient lacks it, relying on native
    target118 raid/party expansion; never replace that mechanic with per-member
-   casts. The coverage regression stays explicitly ignored until the generic
-   target118 correction lands. Purify prioritizes actual
+   casts. Party coverage must be demonstrated through that native group expansion. Purify prioritizes actual
    eligible harmful Magic/Disease auras. Mass Dispel requires an applicable native
    dispel footprint; Leap of Faith requires a demonstrated hazardous patient and
    a safe Henry endpoint. No random displacement, fake hazard or empty dispel.
@@ -94,8 +93,8 @@ available through the shared generic candidate ranking.
 | Ultimate Serenity | native replacement and real nearby healing1250581 | PoH→Serenity CDR GREEN66f0; nearby healing remains unqualified |
 | Guardian Spirit | actual death prevention, one-shot rescue and expiry | HP/forecast policy GREEN775; nativeNPC one-shot rescue and later death GREENd71; earlier player expiry tests retained |
 | Divine Hymn | actual channel/ticks/recipient selection and safe timing | Timing unqualified |
-| Fortitude/Purify | party upkeep / native effect38 eligibility | Existing generic behavior; Holy policy tests owed |
-| Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Generic Fade/Meredy103 suppression and expiry GREENf53; FadeAI/groupMagic REDd71; policy GREEN pending. Leap77 blocked; special72734 potency unqualified |
+| Fortitude/Purify | party upkeep / native effect38 eligibility | Purify realMagic GREEN4b0; Fortitude regression enabled after common target118 fix, integration proof pending |
+| Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Generic Fade/Meredy103 suppression and expiry GREENf53; FadeAI/groupMagic REDd71→GREENeaa with negative footprint/victim controls. Leap77 blocked; special72734 potency unqualified |
 | Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
 | Remaining selected passives | exact native modifiers or explicit named script gaps | See [named gaps](../wiki/investigations/holy-priest-follower-ai.md#named-selected-kit-gaps); not runtime-complete |
 

@@ -108,8 +108,9 @@ restoring pools, reaches the real boundary: NPC Guardian rescue, aura consumptio
 and later death to the same native123483 hits GREENd71af72ec.
 Earned-Surge priority, effective native32 Sanctify, spread-cluster refusal and
 full-health cooldown conservation are native GREEN controls. Fortitude coverage
-stays explicitly ignored until the separately owned
-native target118 raid expansion lands; no individual-buff workaround.
+was explicitly ignored while native target118 raid expansion was missing;
+common master655258480 now supplies that fix in both comparison trees and the
+regression is re-enabled. Integration proof is pending; no individual-buff workaround.
 
 ## Named selected-kit gaps
 
@@ -149,7 +150,9 @@ Atd71af72ec, actual three23268 Magic applications all exist but Henry never cast
 policy REDs (`holy-{mass-dispel,fade-policy}-v8.log`), not auras fabricated to
 force eligibility. Candidate policy uses shared observed victims for Fade and
 real dispellable-Magic/native-radius footprints for Mass Dispel; positive and
-separated/other-victim/empty controls remain pending GREEN.
+separated/other-victim/empty controls GREENeaa4ea879: two native dispel cases,
+one empty-cooldown case and four native threat cases. This proves ordinary Magic
+removal and actual target selection, not special normally-undispellable potency.
 
 Mass Dispel's normally-undispellable-Magic potency remains **unqualified**, not
 asserted missing solely because72734 is a marker. Ordinary effect38 behavior is

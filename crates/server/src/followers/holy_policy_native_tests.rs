@@ -275,7 +275,6 @@ fn holy_policy_native90_depleted_words_under_pressure_use_apotheosis() {
 }
 
 #[test]
-#[ignore = "native target118 raid expansion pending generic fix; no per-member cast workaround"]
 fn holy_policy_native90_fortitude_covers_the_actual_party() {
     let mut group = native_group();
     for _ in 0..600 {
