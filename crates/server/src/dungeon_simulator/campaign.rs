@@ -122,7 +122,7 @@ fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
 
 #[test]
 #[ignore = "explicit Azure2515/205 native sight/history qualification"]
-fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
+fn azure_stalker_ingress_during_authored_opening_has_native_proximity_receipts() {
     let subscriber = bevy::log::tracing_subscriber::fmt()
         .with_env_filter("game_server::creature_sight=debug,game_server::creature_aggro=debug")
         .with_test_writer()
@@ -141,8 +141,21 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
         owner.to_bits()
     );
     let members: Vec<_> = run.members().collect();
-    for _ in 0..160 {
+    for _ in 0..600 {
+        run.control().unwrap();
         run.app.update();
+        let events = &run
+            .app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0;
+        if events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+                && event.source == Some(stalker.to_bits())
+        }) {
+            break;
+        }
     }
     let events = &run
         .app
@@ -158,17 +171,32 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
                     .target
                     .is_some_and(|target| members.iter().any(|member| member.to_bits() == target))
         ),
-        "native sight source must actually damage the party before any opener"
+        "actual authored movement must reach the observed stalker damage boundary"
     );
-    assert!(
-        !events.iter().any(
-            |event| event.kind == shared::protocol::CombatLogKind::Damage
-                && event
-                    .source
-                    .is_some_and(|source| members.iter().any(|member| member.to_bits() == source))
-        ),
-        "no party opener, formation pull or party harm recruited this source"
-    );
+}
+
+#[test]
+#[ignore = "explicit Azure2515/205 native history qualification"]
+fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let stalker = run.actors[&29001806];
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    let members: Vec<_> = run.members().collect();
+    let guids = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == run.graph.route[0].pack)
+        .unwrap()
+        .spawns
+        .iter()
+        .map(|spawn| spawn.guid)
+        .collect();
+    crate::followers::simulator::pull(run.app.world_mut(), tank, &guids).unwrap();
+    crate::combat::deal_direct_damage(run.app.world_mut(), stalker, owner, 100.0);
     for member in &members {
         assert!(!crate::spell_cast::targets::relation_matches(
             run.app.world(),
@@ -178,7 +206,6 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
         ));
     }
     let valid = run.actors[&29001791];
-    let tank = run.party.tank;
     assert!(
         crate::spell_cast::targets::relation_matches(
             run.app.world(),
@@ -201,6 +228,12 @@ fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
     assert!(
         !crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
         "alive but invalid attack targets cannot keep a cleared party held forever"
+    );
+    let pending = run.actors[&29001801];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, pending);
+    assert!(
+        crate::followers::simulator::has_uncleared_fight(run.app.world(), owner),
+        "valid native pre-impact combat must still hold, even before a damage receipt"
     );
 }
 
