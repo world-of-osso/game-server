@@ -2859,12 +2859,27 @@ fn run_hit_scripts(
     plan: &TargetPlan,
     depth: u8,
 ) {
-    let Some(hook) = scripts::on_hit(spell.id) else {
+    let hook = scripts::on_hit(spell.id);
+    let context_hook = scripts::on_hit_with_context(spell.id);
+    if hook.is_none() && context_hook.is_none() {
         return;
+    }
+    let ctx = EffectCtx {
+        caster,
+        spell,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
     };
     for unit in hit_units(plan) {
-        if world.get_entity(unit).is_ok() {
+        if world.get_entity(unit).is_err() {
+            continue;
+        }
+        if let Some(hook) = hook {
             hook(world, caster, unit, depth);
+        }
+        if let Some(hook) = context_hook {
+            hook(world, &ctx, unit);
         }
     }
 }

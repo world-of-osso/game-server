@@ -230,7 +230,7 @@ pub(super) fn relocate_destination(
 /// This classifies consumed data only; it must not select targets or dispatch a no-op.
 pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
     // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
-    matches!((spell_id, effect_index), (32_379, 3))
+    matches!((spell_id, effect_index), (32_379, 3) | (77_478, 1))
 }
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
@@ -1266,6 +1266,16 @@ fn pick_azure_strike_targets(
 
 /// `SpellHitFn`: runs once per unit the spell lands on, after its effects resolved there.
 pub type HitHook = fn(&mut World, Entity, Entity, u8);
+
+/// OnHit scripts that need per-cast metadata (including original field identity).
+pub(super) type ContextHitHook = fn(&mut World, &super::effects::EffectCtx, Entity);
+
+pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
+    match spell_id {
+        77_478 => Some(batch9::cast_earthquake_knockdown),
+        _ => None,
+    }
+}
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
