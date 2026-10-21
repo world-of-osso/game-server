@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Popcorn and Burning Blade Banner visual-only source slice (2026-10-21)
+
+Source162539/202432 promises only eating/holding popcorn;168014/295037 only wearing the Burning Blade banner. Both roots have zero gameplay payload and complete authored build70448 visual chains:102 rows/29 tables, five resident ordinary models, resolved positioner/curve/matrix/animation/bone-parent/quality/sound/bus metadata. The sound-bus override's PlayerCondition48728→ModifierTree12108/12109 is a source raid mixer limit, not a toy gameplay action. Numeric animation/bone selectors remain source values, not invented poses. Evidence: visual-pair-popcorn-banner-70448.json with row/table SHA256.
+
+Minimal e0423b4db adds only the two identities to the existing strict visual-only registry. Actual learning/UseToy RED2/one refusal control→7/7GREEN147.26s covers both new owner auras and earlier crystal/compass, owner-only UnitAuras, real CancelAura, unchanged health/body/position, source10s/600s durations and60s/3600s recovery retained after cancellation. Eight missing-visual/nonzero-payload refusals and the real Gadgetzan dummy refusal remain enforced. Popcorn retains its authored hidden-icon flag. Pipeline516→518 exactly162539/168014, no removals. Evidence: visual-pair-red.log,visual-pair-green.log,visual-pair-pipeline-report.json. No generic dummy executor, native animation/audio/positioner certificate or full-hour reuse claim.
+
 ## Generic turn-while-falling ability (2026-10-21)
 
 TC a352b1fa `SpellAuraEffects.cpp:2969–2983` keeps aura409's ability until the last owner ends; `Unit.cpp:13933–13961` changes the native movement flag. `MovementInfo.h:71` supplies bit39 (`0x0000008000000000`), already representable by frozen03cebdb's replicated PlayerMotion(u64). Implementationd0842a529 reconciles that flag from ActiveAuras and preserves it when real PlayerInput replaces direction/stop state. No protocol fields or per-toy script added.
@@ -38,7 +44,7 @@ Two source-complete identities enter the existing strict visual-only pipeline at
 
 Actual learning/use RED2/one negative control precedes admission; current three tests GREEN49.34s cover both source auras on owner only despite another selected unit, replicated ownership, real CancelAura removal, unchanged health/body/position, source recovery retained and four absent-visual/nonzero-payload refusals. Canonical507→509, exactly201927/202711, zero removals; census+Gadgetzan refusal PASS2 and check/fmt PASS/no warnings.
 
-Original overlapping dummy cohorts248 aura4/152 effect3 contain379 unique toys. Exact per-item split in dummy-classification.json/dummy-by-source.md:one identity-bound TC script ported(51640),two source-complete server-proved cosmetics,one Piccolo identity gap(current182346 versus legacy17512),169 zero-payload contract gaps and206 script/payload gaps. These last categories mean current identity/behavior is not established, not that TC definitely lacks a script: pinned source package contains src/ without SQL bindings. Ordinary static visual rows alone also fail fishing-bonus/corpse-cremation/soul-protection/crab-target contracts; no names or numeric similarity substitute for proof.
+Original overlapping dummy cohorts248 aura4/152 effect3 contain379 unique toys. Exact per-item split in dummy-classification.json/dummy-by-source.md:one identity-bound TC script ported(51640),four source-complete server-proved cosmetics,one Piccolo identity gap(current182346 versus legacy17512),167 zero-payload contract gaps and206 script/payload gaps. These last categories mean current identity/behavior is not established, not that TC definitely lacks a script: pinned source package contains src/ without SQL bindings. Ordinary static visual rows alone also fail fishing-bonus/corpse-cremation/soul-protection/crab-target contracts; no names or numeric similarity substitute for proof.
 
 ## Flag of Ownership source script and dead-aura expiry (2026-10-21)
 

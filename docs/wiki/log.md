@@ -1,3 +1,7 @@
+## 2026-10-21 — Popcorn and Burning Blade Banner source visuals
+
+[Toys](systems/toys.md#popcorn-and-burning-blade-banner-visual-only-source-slice-2026-10-21): complete70448 graph102rows/29tables; strict source-only admissions162539/168014,516→518. RED2/control1→7GREEN147.26s proves real owner apply/replicate/CancelAura/recovery/invariants and eight metadata-drift refusals; Gadgetzan still refused. No native/full-hour reuse claim.
+
 ## 2026-10-21 — Generic falling-turn ability
 
 [Toys](systems/toys.md#generic-turn-while-falling-ability-2026-10-21): source aura409 owns movement bit39 and survives real input/overlapping aura removal. RED4→corrected5GREEN includes real Kite60s/Plume10s legal-area lifecycles and neutral-faction scenery regression;13 retained movement/FeatherFall/census controls passed earlier. Pipeline514→516. No protocol/native-steering claim; post-masterff190cb1c focused16/16PASS58.55s, canonical census516, checkEXIT0 with inherited follower warning. All-toy scope no longer has a five-item minimum.
