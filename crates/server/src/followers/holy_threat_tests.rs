@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use shared::components::{Level, ModelDisplay, ThreatTable, UnitLevel};
 
 fn native_fixture(entry: u32) -> (Harness, Entity) {
-    let (mut h, old_unit, profile) = spawn_profile_fixture_with_plugins(entry, |_| {});
+    let (mut h, old_unit, _profile) = spawn_profile_fixture_with_plugins(entry, |_| {});
     h.app.world_mut().despawn(old_unit);
     let owner = h.caster;
     crate::combat::attack_stop(h.app.world_mut(), owner);
@@ -26,7 +26,7 @@ fn native_fixture(entry: u32) -> (Harness, Entity) {
         .insert_resource(super::catalog::load_catalog(&db).unwrap());
     h.app
         .insert_resource(crate::scripted_ai::model_reach::load_model_reaches(&db).unwrap());
-    let unit = super::spawning::spawn(h.app.world_mut(), owner, profile).unwrap();
+    let unit = super::native_fixture::spawn(h.app.world_mut(), owner, entry).unwrap();
     h.app.world_mut().entity_mut(h.npc).insert((
         ModelDisplay { display_id },
         ThreatTable::default(),

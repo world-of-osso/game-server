@@ -66,17 +66,17 @@ with the implementing tests. No claim that a threshold is sourced from DB2.
 |---|---|---|
 | Flash Heal → Serenity | native2050 effect1 reduction6sec | Existing native tests |
 | PoH → Sanctify | native34861 effect2 reduction6sec | Existing native tests |
-| Surge | natural8% acquisition, instant/half-cost, one use, cap2 | New RED tests |
+| Surge | natural8% acquisition, instant/half-cost, one use, cap2 | Native Henry4GREEN66f0; missing-mana talent remains a named gap |
 | Prayer of Mending | real41635 damage heal33110 and delayed155793 bounce | Existing native tests; upkeep decision missing |
-| Voice of Harmony | learned390994 PoM → Serenity reduction4sec | Unqualified |
-| Apotheosis | restore native Holy Words;200% enhanced reduction;70% mana discount | New reset RED test |
-| Ultimate Serenity | native replacement and real nearby healing1250581 | Unqualified; no invented AoE |
+| Voice of Harmony | learned390994 PoM → Serenity reduction4sec | Native cast qualification GREEN66f0, including unlearned control |
+| Apotheosis | restore native Holy Words;200% enhanced reduction;70% mana discount | Native reset/amplification GREEN66f0; timing and discount qualification pending |
+| Ultimate Serenity | native replacement and real nearby healing1250581 | PoH→Serenity CDR GREEN66f0; nearby healing remains unqualified |
 | Guardian Spirit | actual death prevention, one-shot rescue and expiry | Existing native tests |
 | Divine Hymn | actual channel/ticks/recipient selection and safe timing | Timing unqualified |
 | Fortitude/Purify | party upkeep / native effect38 eligibility | Existing generic behavior; Holy policy tests owed |
 | Mass Dispel/Leap/Fade | actual applicability/safety/consequence | Unqualified; named gaps if unsupported |
 | Damage weaving | no unsafe offense while injury demands healing | Shared framework dependency |
-| Remaining selected passives | exact native modifiers or explicit named script gaps | Source inventory, not runtime-complete |
+| Remaining selected passives | exact native modifiers or explicit named script gaps | See [named gaps](../wiki/investigations/holy-priest-follower-ai.md#named-selected-kit-gaps); not runtime-complete |
 
 ## Temporary threat
 
