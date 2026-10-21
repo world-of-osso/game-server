@@ -32,6 +32,16 @@ fn point(position: &Position) -> Vec3 {
 }
 
 fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
+    if world.get::<crate::creature_ai::CreatureState>(unit)
+        == Some(&crate::creature_ai::CreatureState::Returning)
+    {
+        let home = crate::creature_ai::return_home_position(
+            world.get::<crate::creature_ai::SpawnPoint>(unit)?,
+            world.get::<crate::creature_ai::HomePosition>(unit),
+            world.get::<crate::scripted_ai::movement::ScriptedPath>(unit),
+        );
+        return Some((point(&home), 0.0));
+    }
     if let Some(intent) = world.get::<MoveIntent>(unit) {
         return Some((intent.0, 0.0));
     }
@@ -193,7 +203,22 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
             z: 0.0,
         });
     }
-    world.entity_mut(unit).insert(travel);
+    let returned_home = travel.legs.is_empty()
+        && world.get::<crate::creature_ai::CreatureState>(unit)
+            == Some(&crate::creature_ai::CreatureState::Returning);
+    if returned_home {
+        if let Some(home) = world.get::<crate::creature_ai::HomePosition>(unit) {
+            let facing = home.orientation;
+            world.entity_mut(unit).insert(Rotation {
+                x: 0.0,
+                y: facing,
+                z: 0.0,
+            });
+        }
+        crate::creature_ai::finish_return_home(world, unit);
+    } else {
+        world.entity_mut(unit).insert(travel);
+    }
     Ok(())
 }
 

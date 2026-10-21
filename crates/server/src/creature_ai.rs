@@ -1627,13 +1627,8 @@ pub(crate) fn return_to_spawn_system(
             &mut Position,
             &SpawnPoint,
             &mut CreatureState,
-            Option<&mut shared::components::Mana>,
-            Option<&crate::zones::SpawnAddonAuras>,
-            Option<(&crate::zones::SpawnPose, &mut shared::components::UnitPose)>,
             Option<&InMap>,
             Bearing,
-            Option<&mut shared::components::Health>,
-            Has<crate::spell_cast::powers::CreatureHealthRegenTimer>,
             Option<&crate::scripted_ai::movement::ScriptedPath>,
             Option<&HomePosition>,
             Option<&mut crate::scripted_ai::waypoint_path::PathMovement>,
@@ -1653,13 +1648,8 @@ pub(crate) fn return_to_spawn_system(
         mut pos,
         spawn,
         mut state,
-        mana,
-        addon_auras,
-        pose,
         map,
         bearing,
-        health,
-        regen,
         escort,
         explicit_home,
         default_waypoint,
@@ -1674,19 +1664,7 @@ pub(crate) fn return_to_spawn_system(
         }
         bevy::log::debug!(?entity, from = ?*pos, ?spawn, driver = "return_home", "return movement");
         let speed = spawn.speed_run * BASE_RUN_SPEED;
-        let home = explicit_home.map_or_else(
-            || {
-                escort.map_or(
-                    Position {
-                        x: spawn.x,
-                        y: spawn.y,
-                        z: spawn.z,
-                    },
-                    |escort| escort.home,
-                )
-            },
-            |home| home.position,
-        );
+        let home = return_home_position(spawn, explicit_home, escort);
         let (mut next_position, reached) = match (nav.as_deref_mut(), map) {
             (Some(nav), Some(map)) => match nav.advance(
                 entity,
@@ -1736,39 +1714,64 @@ pub(crate) fn return_to_spawn_system(
         queues.apply(entity, &mut pos, bearing, stride);
         if reached {
             *state = CreatureState::Idle;
-            commands.queue(move |world: &mut World| {
-                crate::scripted_ai::dispatch(
-                    world,
-                    entity,
-                    crate::scripted_ai::Hook::JustReachedHome,
-                );
-            });
-            if let Some(mut mana) = mana
-                && mana.current != mana.max
-            {
-                mana.current = mana.max;
-            }
-            if let Some(mut health) = health.filter(|_| !regen)
-                && health.current != health.max
-            {
-                health.current = health.max;
-                if let Some(replication) = queues.replication.as_deref() {
-                    replication.mark(entity);
-                }
-            }
-            if let Some(auras) = addon_auras {
-                commands
-                    .entity(entity)
-                    .insert(crate::zones::AddonAuras(auras.0.clone()));
-            }
-            if let Some((spawn_pose, mut pose)) = pose
-                && pose.set_if_neq(spawn_pose.0)
-                && let Some(replication) = queues.replication.as_deref()
-            {
-                replication.mark(entity);
-            }
+            commands.queue(move |world: &mut World| finish_return_home(world, entity));
         }
     }
+}
+
+pub(crate) fn return_home_position(
+    spawn: &SpawnPoint,
+    home: Option<&HomePosition>,
+    escort: Option<&crate::scripted_ai::movement::ScriptedPath>,
+) -> Position {
+    home.map_or_else(
+        || {
+            escort.map_or(
+                Position {
+                    x: spawn.x,
+                    y: spawn.y,
+                    z: spawn.z,
+                },
+                |path| path.home,
+            )
+        },
+        |home| home.position,
+    )
+}
+
+/// Shared native home arrival; physical and frozen-edge movers call this only at home.
+pub(crate) fn finish_return_home(world: &mut World, entity: Entity) {
+    world.entity_mut(entity).insert(CreatureState::Idle);
+    if let Some(mut mana) = world.get_mut::<shared::components::Mana>(entity)
+        && mana.current != mana.max
+    {
+        mana.current = mana.max;
+    }
+    let regenerates = world
+        .get::<crate::spell_cast::powers::CreatureHealthRegenTimer>(entity)
+        .is_some();
+    let mut replicate = false;
+    if !regenerates
+        && let Some(mut health) = world.get_mut::<shared::components::Health>(entity)
+        && health.current != health.max
+    {
+        health.current = health.max;
+        replicate = true;
+    }
+    if let Some(auras) = world.get::<crate::zones::SpawnAddonAuras>(entity) {
+        let auras = crate::zones::AddonAuras(auras.0.clone());
+        world.entity_mut(entity).insert(auras);
+    }
+    if let Some(spawn_pose) = world.get::<crate::zones::SpawnPose>(entity) {
+        let spawn_pose = spawn_pose.0;
+        if let Some(mut pose) = world.get_mut::<shared::components::UnitPose>(entity) {
+            replicate |= pose.set_if_neq(spawn_pose);
+        }
+    }
+    if replicate && let Some(queue) = world.get_resource::<ReplicationDirtyQueue>() {
+        queue.mark(entity);
+    }
+    crate::scripted_ai::dispatch(world, entity, crate::scripted_ai::Hook::JustReachedHome);
 }
 
 #[cfg(test)]
