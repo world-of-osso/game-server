@@ -226,6 +226,13 @@ pub(super) fn relocate_destination(
     }
 }
 
+/// Source scripts read these77 values without registering an effect hit hook.
+/// This classifies consumed data only; it must not select targets or dispatch a no-op.
+pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
+    // TC a352b1fa spell_priest.cpp4483-4487: CalcDamage reads execute bonus E3.
+    matches!((spell_id, effect_index), (32_379, 3))
+}
+
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
         (49_576, 0) => Some(death_grip),

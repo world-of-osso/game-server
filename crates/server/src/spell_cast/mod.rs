@@ -2665,7 +2665,9 @@ fn resolve_effects(
         crate::achievement::record_targeted_spell_hit(world, caster, unit, spell.id);
     }
     for effect in &spell.effects {
-        if !selects_targets(spell, effect) {
+        let consumed_data =
+            effect.effect == 77 && scripts::consumes_effect_value(spell.id, effect.index);
+        if !selects_targets(spell, effect) && !consumed_data {
             effects::log_unhandled(world, spell.id, effect.effect);
         }
     }
