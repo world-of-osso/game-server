@@ -603,13 +603,15 @@ fn census_tail_423_native_full_reduction_clamps_cost_sign_without_credit() {
 #[ignore = "RED control: native423 does not reduce real Energy cost or another caster"]
 fn census_tail_423_native_mana_modifier_leaves_other_powers_and_owners_unchanged() {
     let mut h = mana_cost_fixture();
-    h.set_power(PowerType::Energy, 100.0);
-    let spell = world_db().unwrap().store.get(1752).unwrap();
-    let before = super::applicable_costs(h.app.world(), h.caster, spell).unwrap();
     let baseline_mana = native_mana_cost(&h);
     let npc = h.npc;
     hit_native(&mut h, MANA_CONFLUENCE, 0, npc);
     assert_eq!(native_mana_cost(&h), baseline_mana);
+    // A real Rogue owns the native Energy pool; a Mage does not.
+    let mut h = harness(Vec::new(), &[MANA_CONFLUENCE, 1752], 4).unwrap();
+    h.set_power(PowerType::Energy, 100.0);
+    let spell = world_db().unwrap().store.get(1752).unwrap();
+    let before = super::applicable_costs(h.app.world(), h.caster, spell).unwrap();
     let caster = h.caster;
     hit_native(&mut h, MANA_CONFLUENCE, 0, caster);
     assert_eq!(
