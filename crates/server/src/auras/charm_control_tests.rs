@@ -52,6 +52,11 @@ fn fixture() -> Harness {
         VerticalVelocity(0.0),
         crate::networking::FallTracker::grounded(0.0),
     ));
+    // Production zones::spawn_creature publishes a stationary NPC speed of zero.
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert(MovementSpeed(0.0));
     h
 }
 
@@ -89,6 +94,10 @@ fn charm_control_native_605_routes_input_to_npc_not_priest_and_rejects_old_epoch
     let original = *h.app.world().get::<Position>(h.caster).unwrap();
     apply(&mut h, 605);
     let control = *h.app.world().get::<MovementControl>(h.npc).unwrap();
+    assert!(
+        h.app.world().get::<MovementSpeed>(h.npc).unwrap().0 > 0.0,
+        "taking possession must publish movement speed, not the NPC's prior idle speed0"
+    );
     assert_eq!(
         *h.app.world().get::<UnitCharm>(h.npc).unwrap(),
         UnitCharm {
