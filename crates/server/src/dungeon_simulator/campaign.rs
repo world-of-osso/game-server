@@ -137,8 +137,10 @@ fn single_engaged_boss_never_enters_repeating_breakable_control_hold() {
         events
             .iter()
             .any(|event| event.source == Some(boss.to_bits())
-                && event.kind == shared::protocol::CombatLogKind::CastStart),
-        "real scripted boss must create control opportunities"
+                && event.kind == shared::protocol::CombatLogKind::CastSuccess
+                && event.spell_id == Some(86726)),
+        "real scripted boss must create control opportunities: {:?}",
+        super::diagnostics::inspect_unit(run.app.world(), Some(20375766), boss)
     );
     let sheep = events
         .iter()
