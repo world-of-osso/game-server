@@ -33,3 +33,7 @@ TC `Conversation.cpp` creates private-owner actor/line objects, computes per-loc
 
 - [World-static ingress](world-area-triggers.md)
 - [Orator source boundaries](boss-scripts.md#tww-city-of-threads-orator--2026-10-21)
+
+## Server implementation in progress
+
+Eight native runtime/ingress tests at5fa0334a1 genuinely fail after real source import/map/ACK/actor prerequisites (conversation-runtime-red.log,16.83s); generic705 creation refuses, six Orator entrants receive no payload, missing-creator ingress is not consumed. Runtime now loads source actor/line definitions into explicit per-template Results, creates map-owned private actor/line payloads and expires at maximum supported-locale end plus10s. Orator scripts use native rotated boxes/sphere and ordinary living/selectable Players, exact-copy216619 creator and source trigger removal. Source condition-bearing lines/scripts reject explicitly rather than being silently admitted. No GM mode exists in the current player model; account privilege is not treated as GM mode. Source Voice/BroadcastTextDuration absence contributes zero as TC does, not a guessed voice length. GREEN pending.

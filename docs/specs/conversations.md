@@ -29,10 +29,13 @@ Generic conversation actors, lines and lifetimes from pinned TDB1210 and native7
 ## Implementation inventory
 
 - `scripts/conversation_data.py`: pinned local source reads, owned-copy import, receipt-preserving report and replayable SQL publication artifact.
+- `crates/server/src/conversations/{mod,catalog,ingress}.rs`: internal private payload, source catalog and finite source ingress scripts.
+- `crates/server/src/{main,world_data}.rs`: production plugin/catalog installation.
 
 ## Tests asserting this spec
 
 - `scripts/tests/test_conversation_data.py`: actual native actor/line records and scoped SQLite writes.
+- `crates/server/src/maps/tests_conversations.rs`: actual Orator box/sphere entry, private-owner/copy isolation, source lifetimes, missing creator and generic native705 line order.
 
 ## Known gaps (current cycle)
 

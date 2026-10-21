@@ -1153,6 +1153,9 @@ fn startup_load_world_data(mut commands: Commands) {
         maps.area_triggers.len()
     );
     commands.insert_resource(maps);
+    commands.insert_resource(crate::conversations::load_catalog(&conn).expect(
+        "Load native conversation sources; publish scripts/conversation_data.py tables first",
+    ));
     commands.insert_resource(
         crate::scripted_ai::ragefire_chasm::intro_triggers::load_triggers(&conn)
             .expect("Failed to load authored Ragefire intro areas7899/7904 from local DB2/TDB"),

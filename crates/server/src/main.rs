@@ -288,6 +288,7 @@ fn add_world_plugins(app: &mut App) {
         .add_plugins(mirror_timers::MirrorTimerPlugin)
         .add_plugins(world_time::WorldTimePlugin)
         .add_plugins(maps::MapPlugin)
+        .add_plugins(conversations::ConversationPlugin)
         .add_plugins(housing::HousingPlugin)
         .add_plugins(mythic_plus::MythicPlusPlugin)
         .add_plugins(zones::ZonePlugin)
