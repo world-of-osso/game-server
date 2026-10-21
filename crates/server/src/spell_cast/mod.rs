@@ -974,7 +974,7 @@ fn handled_effects(spell: &SpellInfo) -> impl Iterator<Item = &crate::spell_info
 /// A `SPELL_EFFECT_DUMMY` effect does nothing itself but selects its targets, which the
 /// spell then hits (`CreatureAI::SpellHit`); one at an unmodelled implicit target selects
 /// nothing instead of failing the cast.
-pub(crate) fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
+fn selects_targets(spell: &SpellInfo, effect: &crate::spell_info::SpellEffect) -> bool {
     effects::is_handled(effect)
         || cosmetic::is_visual_only(spell)
         || scripts::on_effect_hit(spell.id, effect.index).is_some()

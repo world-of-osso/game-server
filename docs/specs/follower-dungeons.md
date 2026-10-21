@@ -215,3 +215,9 @@ Sourced passive and noncombat/movement/explicit utility spells remain inventorie
 ## Out of scope
 - Agent writes to canonical world.db or UDP5000 operations: lead-only.
 - Invented spell IDs/coefficients, roles inferred from creature unit_class and garrison-mission abilities treated as combat spells remain prohibited. Player-spec assignments are permitted solely by the approved workaround.
+
+## Combat-only implicit areas
+
+`AOE_HITS_ONLY_IN_COMBAT_UNITS` is explicit user policy, not a fabricated DB2 attribute. Divine Toll375576 hostile implicit area and Starfall191034's periodic selector50286 must exclude idle enemies before native target limits. Keep engaged enemies, explicit primary targets and friendly areas. Earthquake61882, Divine Storm53385 and Chain Lightning188443 remain able to pull; do not blanket-filter all AoEs. Production spell targeting applies the policy independently of follower kit admission.
+
+Local70448 SpellMisc/SpellEffect rows and pinned TC a352b1fa SharedDefines/SpellInfo/paladin/druid scripts expose no recognized combat-only flag for these two selectors. The bounded source audit and exact local-row hashes are retained in `aoe-combat-policy-source.json` in the Stockade diagnostic ledger; no Retail-parity claim is made for the explicit project policy.
