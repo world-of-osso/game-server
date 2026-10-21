@@ -6,6 +6,8 @@ use shared::components::{Health, ModelDisplay, UnitAuras};
 
 #[path = "toys_dh_visual_tests.rs"]
 mod dh_visual;
+#[path = "toys_horn_visual_tests.rs"]
+mod horn_visual;
 #[path = "toys_pennant_visual_tests.rs"]
 mod pennant_visual;
 #[path = "toys_seed_visual_tests.rs"]
