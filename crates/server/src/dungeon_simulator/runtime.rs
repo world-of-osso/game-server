@@ -128,6 +128,7 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));
+    app.add_systems(FixedUpdate, crate::zones::apply_addon_auras);
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
     app.add_systems(

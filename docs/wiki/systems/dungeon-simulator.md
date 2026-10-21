@@ -130,3 +130,7 @@ Post-change batch11 atf3b7b8295/P03cebdb:10/10clears,0wipes/stalls/blocks/timeou
 Seed12's last active Rumbling Earth20375744 remained alive in Returning after Felguard30213 damage. The adapter previously selected pursuit/follow/pet destinations but no home destination; the normal return-home system was absent. Native at-home and displaced4yd fixtures both genuinely fail at fcacd14e7, while Bo's actual first-fight participation passes after source/catalog alignment.
 
 Returning now follows frozen-edge time to the same explicit/escort/spawn home chosen by production. Actual arrival invokes `creature_ai::home::finish_return`, extracted from ordinary return-home completion: Idle, mana, non-regenerating health, addon auras/pose and JustReachedHome dispatch. No native direct navigation is installed in the simulator, and no history/death state is fabricated. GREEN and seed12 replay remain pending. [Contract](../../specs/dungeon-simulator.md#native-evadehome-lifecycle).
+
+## Native addon consumer — 2026-10-21
+
+The plain App omitted production `zones::apply_addon_auras`. Source SpawnAddonAuras/AddonAuras existed, but actual46263/19818,46381/10022,46405/55474 spawn fixtures all failed before home-return assertions. Register the ordinary production system identically in both comparison variants; no copied aura logic or source mutation. Returning2GREEN plus retained ordinary return5GREEN at21dee71c8 (composite7PASS/3addonRED32.85s). Addon GREEN and fresh matched runs remain pending.

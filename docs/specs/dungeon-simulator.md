@@ -25,6 +25,10 @@ Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-so
 - [ ] Returning creatures consume frozen-edge travel to the same native explicit/escort/spawn home used by production. A displaced actor must move, not teleport; an actor already at home must not remain Returning.
 - [ ] On actual arrival, share ordinary Idle/mana/non-regenerating-health/addon/pose restoration and `JustReachedHome` dispatch with production. Do not clear pull history or fake native deaths to release a stalled fight.
 
+## Native addon auras
+
+- [ ] Apply source creature/template addon auras at spawn and actual home return with production `zones::apply_addon_auras`, not copied simulator effect logic. Map34 native46263/19818,46381/10022,46405/55474 must retain real evade removal/restoration.
+
 ## Native pet utility
 
 Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs normal pet actions/AI. The immutable catalog moves between cached seeded worlds; pet commands, owners and cast state never do. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
