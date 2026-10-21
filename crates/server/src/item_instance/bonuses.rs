@@ -8,9 +8,25 @@ pub struct ItemBonus {
     pub values: [i32; 4],
 }
 
+#[derive(Clone, Copy)]
+pub struct ScalingConfig {
+    pub offset_curve: u32,
+    pub item_level: u16,
+    pub squish_era: u8,
+}
+
+#[derive(Clone, Copy)]
+pub struct OffsetCurve {
+    pub curve: u32,
+    pub offset: i32,
+}
+
 #[derive(Default)]
 pub struct ItemBonusTables {
     pub entries: HashMap<u32, Vec<ItemBonus>>,
+    pub scaling_configs: HashMap<u32, ScalingConfig>,
+    pub offset_curves: HashMap<u32, OffsetCurve>,
+    pub curves: HashMap<u32, Vec<(f64, f64)>>,
 }
 
 pub struct BonusResult {
@@ -55,6 +71,7 @@ mod tests {
                     }],
                 ),
             ]),
+            ..Default::default()
         };
         let item = ItemScaling {
             class_id: 4,
@@ -93,6 +110,7 @@ mod tests {
                     }],
                 ),
             ]),
+            ..Default::default()
         };
         let mut item = ItemScaling::default();
         item.stats[0] = ItemStatAllocation {
@@ -105,6 +123,90 @@ mod tests {
         assert_eq!(modified.scaling.stats[0].allocation, 3500);
         assert_eq!(modified.sockets, vec![7]);
         assert_eq!(item.stats[0].stat, 24);
+    }
+
+    #[test]
+    fn item_instance_midnight_config_precedes_crafting_delta_regardless_of_input_order() {
+        // Actual MID1 crafted bracers: native config271/curve88583 gives272;
+        // quality bonus9627 adds13 to reach285 after all config replacements.
+        let native = ItemBonusTables {
+            entries: HashMap::from([
+                (
+                    12066,
+                    vec![ItemBonus {
+                        kind: 49,
+                        values: [273, 70, 0, 0],
+                    }],
+                ),
+                (
+                    12214,
+                    vec![ItemBonus {
+                        kind: 49,
+                        values: [264, 100, 0, 0],
+                    }],
+                ),
+                (
+                    13622,
+                    vec![ItemBonus {
+                        kind: 49,
+                        values: [271, 65, 0, 0],
+                    }],
+                ),
+                (
+                    9627,
+                    vec![ItemBonus {
+                        kind: 52,
+                        values: [13, 2, 4, 0],
+                    }],
+                ),
+            ]),
+            scaling_configs: HashMap::from([
+                (
+                    273,
+                    ScalingConfig {
+                        offset_curve: 47,
+                        item_level: 246,
+                        squish_era: 2,
+                    },
+                ),
+                (
+                    264,
+                    ScalingConfig {
+                        offset_curve: 47,
+                        item_level: 246,
+                        squish_era: 2,
+                    },
+                ),
+                (
+                    271,
+                    ScalingConfig {
+                        offset_curve: 47,
+                        item_level: 272,
+                        squish_era: 2,
+                    },
+                ),
+            ]),
+            offset_curves: HashMap::from([(
+                47,
+                OffsetCurve {
+                    curve: 88583,
+                    offset: 0,
+                },
+            )]),
+            curves: HashMap::from([(88583, vec![(0.0, 0.0), (1300.0, 1300.0)])]),
+        };
+        let item = ItemScaling {
+            item_level: 197,
+            ..Default::default()
+        };
+        for bonuses in [
+            vec![9627, 13622, 12214, 12066, 12214],
+            vec![12066, 12214, 12214, 13622, 9627],
+        ] {
+            let result = apply_item_bonuses(&item, &bonuses, &native).unwrap();
+            assert_eq!(result.scaling.item_level, 285);
+            assert_eq!(result.scaling.squish_era, 2, "no second legacy squish");
+        }
     }
 
     #[test]
