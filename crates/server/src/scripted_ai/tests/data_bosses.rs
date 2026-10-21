@@ -103,6 +103,8 @@ mod theradras;
 mod tww_kyrioss;
 #[path = "tww_orator.rs"]
 mod tww_orator;
+#[path = "tww_orator_areas.rs"]
+mod tww_orator_areas;
 #[path = "vazruden_slay.rs"]
 mod vazruden_slay;
 #[path = "vyletongue.rs"]
