@@ -14,6 +14,10 @@ fn toy_coverage_force160_native_target_cast_waits_for_its_own_cast_time() {
     let mut h = harness(Vec::new(), &[HITCHING_POST_USE, HITCHING_POST_MOUNT], 8).unwrap();
     let player = h.caster;
     let npc = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(CombatStatus(false));
     crate::spell_cast::creature::creature_cast(
         h.app.world_mut(),
         npc,
@@ -72,6 +76,10 @@ fn toy_coverage_force160_native_target_stun_blocks_the_normal_child() {
     .unwrap();
     let player = h.caster;
     let npc = h.npc;
+    h.app
+        .world_mut()
+        .entity_mut(player)
+        .insert(CombatStatus(false));
     crate::auras::apply_aura(
         h.app.world_mut(),
         &AuraApplication {
