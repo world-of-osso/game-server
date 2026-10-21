@@ -969,6 +969,7 @@ impl Run {
             "difficulty_id":self.graph.difficulty_id(),
             "party_levels":self.members().map(|unit|self.app.world().get::<shared::components::Level>(unit).map(|level|level.0)).collect::<Vec<_>>(),
             "observed_events": self.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len(),
+            "holy_metrics": self.app.world().resource::<crate::spell_cast::holy_metrics::HolyMetrics>(),
             "samples": self.report.samples.len(), "memory": super::diagnostics::read_process_memory()})
     }
 

@@ -92,9 +92,13 @@ Targeted tests use real catalog records, ordinary cast completion and naturally
 acquired procs. Record exact RED and GREEN revisions/commands. Existing GREENs are
 retained evidence, never relabelled as newly reproduced REDs.
 
-Use the frozen detached dungeon-simulator checkout with Henry selected for both
-sides, identical protocol/catalog/route/level/seeds1–20, optimized incremental
-`sim` profile. Report deaths, overheal percentage, sampled mana curve, actual Holy
+Freeze a common baseline containing the current Holy mechanics, generic healer
+framework and latest merged `origin/dungeon-simulator`, with Holy `decide` returning
+`Defer`. The candidate differs only by Holy policy. Select Henry for both sides,
+with identical protocol/catalog/route/level/seeds1–20 and optimized incremental
+`sim` profile. Both initialize the same opt-in Holy observer and publish its
+per-actor counters at `performance.holy_metrics` in final and progress reports.
+This comparison measures policy, not the earlier Surge/Holy Word mechanic fixes. Report deaths, overheal percentage, sampled mana curve, actual Holy
 Word cooldown reduction versus available reducible time, and actual proc grants
 versus consumed uses. Separate unavailable mechanics from zero observed events;
 no fabricated efficiency denominator. Keep before/after simulator revisions and

@@ -72,6 +72,7 @@ pub(super) fn build_cached_app(catalogs: &mut Option<super::catalogs::Catalogs>)
     ));
     app.init_resource::<crate::maps::InstanceManager>();
     app.init_resource::<crate::spell_cast::test_harness::ObservedCombatEvents>();
+    app.init_resource::<crate::spell_cast::holy_metrics::HolyMetrics>();
     app.add_systems(
         FixedUpdate,
         (
