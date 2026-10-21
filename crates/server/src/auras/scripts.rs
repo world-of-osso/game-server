@@ -236,6 +236,7 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == 47788 && effect_index == 2)
         || (spell_id == crate::spell_cast::scripts::prayer_of_mending::WARD && effect_index == 0)
         || (spell_id == 288733 && effect_index == 1)
+        || (spell_id == crate::spell_cast::toy_coyote::HAT && effect_index == 0)
 }
 
 /// Mainline740s6 supplies the caster's Tranquility shield cap.
@@ -336,6 +337,7 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);

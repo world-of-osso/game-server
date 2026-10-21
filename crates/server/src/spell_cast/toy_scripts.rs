@@ -123,6 +123,9 @@ fn unsupported_coin(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
+    if [super::toy_coyote::HAT, super::toy_coyote::DESPAWN].contains(&spell.id) {
+        return super::toy_coyote::unsupported(world, spell);
+    }
     if spell.id == super::toy_flag::TARGETING {
         return super::toy_flag::unsupported(world, spell);
     }
@@ -160,6 +163,9 @@ pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn supports_effect(spell: u32, effect: &SpellEffect) -> bool {
+    if [super::toy_coyote::HAT, super::toy_coyote::DESPAWN].contains(&spell) {
+        return super::toy_coyote::supports_effect(spell, effect);
+    }
     if spell == super::toy_flag::TARGETING {
         return has_effect_shape(effect, EFFECT_DUMMY, [22, 93], 0);
     }
@@ -189,7 +195,14 @@ pub(crate) fn check_cast(
     if spell.id == UNUSUAL_COMPASS {
         return check_compass_cast(world, caster, spell);
     }
-    if [WEATHER_MACHINE, WORMHOLE_PANDARIA, CREATE_FOAM_SWORD].contains(&spell.id) {
+    if [
+        WEATHER_MACHINE,
+        WORMHOLE_PANDARIA,
+        CREATE_FOAM_SWORD,
+        super::toy_coyote::HAT,
+    ]
+    .contains(&spell.id)
+    {
         return unsupported(world, spell)
             .map_or(Ok(()), |reason| Err(CastFailure::Unsupported(reason)));
     }

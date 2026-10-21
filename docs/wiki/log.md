@@ -1,6 +1,6 @@
 ## 2026-10-21 — Source-owned Coyote target condition
 
-[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): canonical52173 conditions require28267 ANDcasterownership33/3. Corrected source51149 actors RED selectsnone versusown (48.95s); target-condition evaluation now receives realcaster and reads only represented source-owned temporary summons, not plainWild summoner associations. SourceTCConditionMgr493–494/SpellEffects2027–2028; GREEN and exactHat removalport pending, no wholeToy admission.
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): canonical52173 conditions require28267 ANDcasterownership33/3. Corrected source51149 actors RED selectsnone versusown (48.95s); target-condition evaluation now receives realcaster and reads only represented source-owned temporary summons, not plainWild summoner associations. SourceTCConditionMgr493–494/SpellEffects2027–2028; 5be76345c condition mechanism GREEN2/2 (36.92s), including legacy/current entry control. ExactHat realUseToy RED1/driftcontrol1PASS71.83s atc0b06e8d5 precedes source removal hook/52173 per-unit handler and dependency/signature/owned-filter admission. Combined GREEN/census pending; no nativeHat/follow/companionlevel claim.
 
 ## 2026-10-21 — Sourced Obsidian Battle Horn visual
 

@@ -1405,6 +1405,7 @@ pub(crate) fn cast_item_spell(
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
+pub(crate) mod toy_coyote;
 mod toy_facing;
 mod toy_flag;
 pub(crate) mod toy_requirements;

@@ -61,6 +61,32 @@ struct Condition {
 pub(crate) struct SpellTargetConditions(HashMap<(u32, u8), Vec<Condition>>);
 
 impl SpellTargetConditions {
+    /// Exact owned-entry conjunction required by source Coyote removal52173.
+    pub(crate) fn has_owned_entry_filter(&self, spell: u32, effect: u8, entry: u32) -> bool {
+        let Some(conditions) = self.0.get(&(spell, effect)) else {
+            return false;
+        };
+        let source_group = conditions.iter().all(|condition| {
+            !condition.negative
+                && condition.else_group == 0
+                && condition.effect_mask == (1 << effect)
+        });
+        if conditions.len() != 2 || !source_group {
+            return false;
+        }
+        let entry_check = Check::ObjectEntry {
+            type_id: TYPEID_UNIT,
+            entry,
+        };
+        let has_entry = conditions
+            .iter()
+            .any(|condition| condition.check == entry_check);
+        let has_owner = conditions
+            .iter()
+            .any(|condition| condition.check == Check::SummonOwnedByCaster);
+        has_entry && has_owner
+    }
+
     pub(crate) fn share_targets(&self, spell: u32, first: u8, second: u8) -> bool {
         self.0.get(&(spell, first)) == self.0.get(&(spell, second))
     }
