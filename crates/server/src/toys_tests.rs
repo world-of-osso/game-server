@@ -14,6 +14,8 @@ mod bashiok;
 mod breakfast;
 #[path = "toys_citizens_tests.rs"]
 mod citizens;
+#[path = "toys_default_summon_tests.rs"]
+mod default_summons;
 #[path = "toys_disguise_tests.rs"]
 mod disguises;
 #[path = "toys_dragon_head_tests.rs"]
