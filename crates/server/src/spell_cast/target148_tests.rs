@@ -13,6 +13,11 @@ const IDS: &[u32] = &[330398, 196884, 1243638, 1281788, 1242814, 448480];
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(Vec::new(), IDS, 1).expect("native spell fixture");
+    let origin = place_on_native_ground(&mut h);
+    (h, origin)
+}
+
+pub(super) fn place_on_native_ground(h: &mut Harness) -> Position {
     let connection = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -41,7 +46,7 @@ fn scene() -> (Harness, Position) {
             z: 0.0,
         },
     ));
-    (h, origin)
+    origin
 }
 
 fn assert_endpoint(h: &mut Harness, actual: Dest, origin: Position, offset: f32) {
@@ -76,7 +81,6 @@ fn destination(h: &mut Harness, spell_id: u32, effect: usize) -> Dest {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_target_enemy_then_towards_caster() {
     let (mut h, origin) = scene();
     // Face perpendicular to the destination/caster line:148 follows that line, not facing.
@@ -90,7 +94,6 @@ fn native_target148_target_enemy_then_towards_caster() {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_then_ground_preserves_shifted_destination() {
     let (mut h, origin) = scene();
     let actual = destination(&mut h, 1243638, 0); // Harpoon [148,138], native radius3.
@@ -98,7 +101,6 @@ fn native_target148_then_ground_preserves_shifted_destination() {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_then_existing_destination_does_not_reinitialize() {
     let (mut h, origin) = scene();
     let actual = destination(&mut h, 1281788, 0); // Fast Jump [148,87], native radius3.
@@ -106,7 +108,6 @@ fn native_target148_then_existing_destination_does_not_reinitialize() {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_then_back_uses_caster_facing_and_source_order() {
     let (mut h, origin) = scene();
     let actual = destination(&mut h, 330398, 0); // Leap [148,79]: +5 toward caster then -2.5 relative to caster facing0.
@@ -118,7 +119,6 @@ fn native_target148_then_back_uses_caster_facing_and_source_order() {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_area_enemy_selection_uses_modified_center() {
     let (mut h, origin) = scene();
     let near = spawn_npc(&mut h.app, 0.0);
@@ -148,7 +148,6 @@ fn native_target148_area_enemy_selection_uses_modified_center() {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_force_location_has_named_geometry_gap() {
     let (mut h, _) = scene();
     let spell = world_db().unwrap().store.get(448480).unwrap().clone(); // Actual [138,148], force-location attribute.

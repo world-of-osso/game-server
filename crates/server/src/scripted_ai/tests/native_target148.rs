@@ -71,13 +71,11 @@ fn native_pull(difficulty: u32) {
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_normal_real_actor_physical_pull_endpoint() {
     native_pull(1);
 }
 
 #[test]
-#[ignore = "target148 ordered native destination RED"]
 fn native_target148_follower205_real_actor_physical_pull_endpoint() {
     native_pull(205);
 }
