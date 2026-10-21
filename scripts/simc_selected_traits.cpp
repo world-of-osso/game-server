@@ -39,15 +39,13 @@ int main(int argc, char **argv) {
   }
   try {
     sim_t sim;
-    const std::vector<std::string> arguments = {argv[2],
-                                                "item_db_source=local",
-                                                "iterations=1",
-                                                "threads=1",
-                                                "max_time=0.1",
-                                                "fixed_time=1",
-                                                "vary_combat_length=0",
-                                                "optimal_raid=0",
-                                                "output=/dev/null"};
+    const std::vector<std::string> arguments = {
+        argv[2], "item_db_source=local", "iterations=1",
+        // Metadata has no action-sequence contract; tiny
+        // runs exceed SimC's time-based sequence bound.
+        "collect_action_sequence=0", "threads=1", "max_time=0.1",
+        "fixed_time=1", "vary_combat_length=0", "optimal_raid=0",
+        "output=/dev/null"};
     const int result = sim.simc_metadata_entry(arguments);
     if (result != 0)
       return result;
