@@ -58,6 +58,8 @@ mod census_e77_dk_tests;
 #[cfg(test)]
 mod census_e77_priest_tests;
 #[cfg(test)]
+mod census_e77_shaman_tests;
+#[cfg(test)]
 mod census_generic_next_tests;
 #[cfg(test)]
 mod census_guardian_aura_tests;
