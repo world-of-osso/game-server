@@ -509,10 +509,7 @@ fn non_tank_regroup_crosses_passive_but_not_aggressive_sight() {
         x: center.x + 20.0,
         ..center
     });
-    for (react, should_follow) in [
-        (ReactState::Aggressive, false),
-        (ReactState::Passive, true),
-    ] {
+    for (react, should_follow) in [(ReactState::Aggressive, false), (ReactState::Passive, true)] {
         run.app
             .world_mut()
             .entity_mut(watcher)
