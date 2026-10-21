@@ -56,8 +56,8 @@ No generic dummy executor or new per-toy script is added. Pure zero payload does
 
 ## Exact seasonal pennant aura slots
 
-- [ ] Obsidian206267/412530, Crimson206343/412912, Verdant210497/425994, Draconic211869/430508, Forged225933/456798, Unbound Legend227538/460082, Unbound Strategist227539/460083, Prized235519/1217166 and Astral242636/1233142 preserve authored self aura4 slot0 amount1, indefinite duration and120000ms item recovery.
-- [ ] Actual learning/UseToy applies and replicates only the owner's amount1 aura; real cancellation removes it without changing health/body/position, immediate reuse refuses on source recovery. Missing visual or amount2 drift refuses every identity without effects/recovery. Proof pending.
+- [x] Obsidian206267/412530, Crimson206343/412912, Verdant210497/425994, Draconic211869/430508, Forged225933/456798, Unbound Legend227538/460082, Unbound Strategist227539/460083, Prized235519/1217166 and Astral242636/1233142 preserve authored self aura4 slot0 amount1, indefinite duration and120000ms item recovery.
+- [x] Actual learning/UseToy applies and replicates only the owner's amount1 aura; real cancellation removes it without changing health/body/position, immediate reuse refuses on source recovery. Missing visual or amount2 drift refuses every identity without effects/recovery.
 
 These exact slots use the existing amount-aware cosmetic-aura gate, not the zero-payload visual-only registry or a generic dummy executor. Complete70448 ordinary-model chains include source race/sex conditions. Native art selection/playback, acquisition rewards and full120-second reuse are separate; arena restrictions stay enforced.
 

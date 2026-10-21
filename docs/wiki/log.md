@@ -1,6 +1,6 @@
 ## 2026-10-21 — Exact seasonal pennant aura slots
 
-[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): nine exact source amount1/selfaura4 identities, permanent duration/120s ItemEffect. Complete331rows26tables/nine resident models/81visualselectors/nine race-sex conditions. Actual nineUseToy RED9/Compass controlPASS67.87s precedes exact amount-aware slot admission, not zero-dummy broadening. GREEN/census pending; nativeart/full120sreuse/acquisition excluded.
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): nine exact source amount1/selfaura4 identities, permanent duration/120s ItemEffect. Complete331rows26tables/nine resident models/81visualselectors/nine race-sex conditions. Actual nineUseToy RED9/Compass controlPASS67.87s precedes exact amount-aware slot admission, not zero-dummy broadening. Exactamountslotaa928af5c passes13/13 actualuse/census/controls95.33s plus18driftcases1/1PASS144.22s; check/fmt pass with inherited unused-function warning. Census522→531 exactlynine, zero removals/otherreasonchanges; nativeart/full120sreuse/acquisition excluded.
 
 ## 2026-10-21 — Sourced Fast-Growing Seed visual
 
