@@ -100,21 +100,30 @@ fn process_group_commands(
     mut receivers: GroupCommandReceivers,
     mut senders: GroupSenders,
     players: OnlinePlayers,
-    followers: Query<(Entity, &crate::followers::Follower, &UnitLevel)>,
+    followers: Query<(
+        Entity,
+        &crate::followers::Follower,
+        &UnitLevel,
+        &shared::components::ModelDisplay,
+    )>,
     mut registry: ResMut<GroupRegistry>,
     time: Res<Time>,
     mut difficulty_changes: ResMut<crate::maps::difficulty::DifficultyChanges>,
     mut raid_changes: ResMut<crate::maps::raid::RaidChanges>,
 ) {
     let mut online = build_online_view(&players);
-    online.extend(followers.iter().filter_map(|(entity, follower, level)| {
-        let (_, _, _, _, difficulty, _, _) = players.get(follower.owner).ok()?;
-        let difficulty = difficulty?.0;
-        Some((
-            crate::followers::Follower::member_id(entity),
-            follower.online(entity, level.0, difficulty),
-        ))
-    }));
+    online.extend(
+        followers
+            .iter()
+            .filter_map(|(entity, follower, level, display)| {
+                let (_, _, _, _, difficulty, _, _) = players.get(follower.owner).ok()?;
+                let difficulty = difficulty?.0;
+                Some((
+                    crate::followers::Follower::member_id(entity),
+                    follower.online(entity, level.0, difficulty, display.display_id),
+                ))
+            }),
+    );
     let mut effects = registry.sync_presence(&online);
     effects.extend(registry.tick(time.delta_secs()));
     effects.extend(apply_commands(

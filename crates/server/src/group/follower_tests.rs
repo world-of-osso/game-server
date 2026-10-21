@@ -25,13 +25,14 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
     )]);
     let mut members = Vec::new();
     let mut tank = None;
-    for (entry, name, class_id, spec_id, role) in [
+    for (entry, name, class_id, spec_id, role, display_id) in [
         (
             209057,
             "Captain Garrick",
             2,
             66,
             shared::group::GroupRole::Tank,
+            113753,
         ),
         (
             209072,
@@ -39,6 +40,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             11,
             105,
             shared::group::GroupRole::Healer,
+            113757,
         ),
         (
             209059,
@@ -46,6 +48,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             8,
             63,
             shared::group::GroupRole::Dps,
+            113755,
         ),
         (
             209053,
@@ -53,6 +56,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             7,
             262,
             shared::group::GroupRole::Dps,
+            113752,
         ),
     ] {
         let follower = crate::followers::Follower {
@@ -80,6 +84,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
                     name: name.into(),
                 },
                 UnitLevel(80),
+                shared::components::ModelDisplay { display_id },
                 Health {
                     current: 400.0,
                     max: 1000.0,
@@ -92,7 +97,7 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
             ))
             .id();
         let member = crate::followers::Follower::member_id(unit);
-        online.insert(member, follower.online(unit, 80, 205));
+        online.insert(member, follower.online(unit, 80, 205, display_id));
         members.push((member, role));
         if entry == 209057 {
             tank = Some(unit);
@@ -105,6 +110,14 @@ fn follower_party_loopback_keeps_npc_members_online_and_updates_their_health() {
     pump(&mut app);
     let roster = last_roster(&mut app, &player);
     assert_eq!(roster.members.len(), 5);
+    for member in &roster.members {
+        assert_eq!(
+            member.portrait.creature_display_id,
+            online[&member.character_id].portrait.creature_display_id,
+            "presence refresh must retain the actual head for {}",
+            member.name
+        );
+    }
     assert!(
         roster
             .members
