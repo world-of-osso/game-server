@@ -315,6 +315,11 @@ fn encounter_coverage_kargath_source_dance_clock_preserves_native_selector_gap()
         let charges = request_times(&h, 25821);
         if difficulty == 2 {
             assert_eq!(charges.len(), 2);
+            assert_eq!(
+                spell_gos(&h, boss, 25821).len(),
+                2,
+                "actual ordinary Heroic charge launches, not requests alone"
+            );
             assert!(
                 (charges[0] - times[0] - 4.5).abs() <= 0.1,
                 "Heroic500ms after source ninth timer"
@@ -488,10 +493,11 @@ fn encounter_coverage_kargath_native_destination_charge_moves_to_actual_marker()
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30751, Some(marker), false)
         .expect("ordinary native30751");
     h.advance(0.05);
-    assert_ne!(
-        *h.app.world().get::<Position>(boss).unwrap(),
-        start,
-        "native effect149 moves, not an ignored cast"
+    let first = *h.app.world().get::<Position>(boss).unwrap();
+    let first_step = Vec3::new(first.x - start.x, first.y - start.y, first.z - start.z).length();
+    assert!(
+        first_step > 0.0 && first_step <= 42.0 * 0.05 + 0.02,
+        "native default42yd/s at50ms, neither ignored nor teleporting: {first_step}"
     );
     h.advance(1.0);
     let end = *h.app.world().get::<Position>(boss).unwrap();
@@ -505,4 +511,36 @@ fn encounter_coverage_kargath_native_destination_charge_moves_to_actual_marker()
             <= 0.05,
         "destination charge ends at source marker, not a reach-offset substitute: {end:?} vs {destination:?}"
     );
+}
+
+#[test]
+#[ignore = "pending actual player-only Kargath slay boundary proof"]
+fn encounter_coverage_kargath_slay_speaks_only_for_actual_player_kills() {
+    for player_victim in [true, false] {
+        let (mut h, boss, _) = kargath_copy(1);
+        super::omor_slay::install_player_death_transition(&mut h);
+        stand_near_kargath(&mut h, boss);
+        h.engage(boss);
+        h.advance(0.2);
+        let victim = if player_victim {
+            h.player()
+        } else {
+            h.creatures_of(20709)[0]
+        };
+        // HARNESS SETUP: source explicit Unit::Kill, never a fabricated KilledUnit hook.
+        crate::combat::kill_unit(h.app.world_mut(), boss, victim);
+        h.advance(0.2);
+        assert_eq!(
+            kargath_yells(&h, boss, 1),
+            usize::from(player_victim),
+            "source TYPEID_PLAYER filter"
+        );
+        h.advance(0.5);
+        assert_eq!(
+            kargath_yells(&h, boss, 1),
+            usize::from(player_victim),
+            "no corpse replay"
+        );
+        assert!(h.inbox(1).chat.is_empty());
+    }
 }
