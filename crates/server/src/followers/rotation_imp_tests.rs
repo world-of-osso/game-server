@@ -185,6 +185,28 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
 }
 
 #[test]
+fn rotation_fidelity_wild_imp_unlearned_demoniac_does_not_grant_core() {
+    let (mut h, owner) = warlock(14);
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(owner)
+            .unwrap()
+            .contains(426115)
+    );
+    let imps: Vec<_> = (0..21).map(|_| summon_imp(&mut h, owner)).collect();
+    h.advance(500);
+    assert!(
+        imps.iter()
+            .all(|imp| h.app.world().get_entity(*imp).is_err())
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), owner, 264173),
+        "natural fades must not grant the unlearned15 Demoniac effect at14"
+    );
+}
+
+#[test]
 fn rotation_fidelity_wild_imp_demise_naturally_earns_and_spends_demonic_core() {
     let (mut h, owner) = warlock(32);
     assert!(

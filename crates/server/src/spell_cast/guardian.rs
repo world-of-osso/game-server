@@ -8,6 +8,9 @@ use shared::components::{Npc, PowerType};
 
 use super::summon::SummonedCreature;
 
+#[path = "guardian_core.rs"]
+mod core;
+
 #[derive(Resource, Default)]
 pub struct GuardianSpells {
     pub spells: HashMap<u32, Vec<u32>>,
@@ -176,6 +179,8 @@ pub(super) fn update(world: &mut World) {
         .collect();
     for actor in actors {
         if wild_imp_exhausted(world, actor) {
+            let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
+            core::on_energy_fade(world, owner);
             super::summon::despawn_summon(world, actor);
         } else {
             cast_on_owner_target(world, actor);

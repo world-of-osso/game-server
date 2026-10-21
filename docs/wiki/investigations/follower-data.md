@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Natural Demoniac Core — 2026-10-21
+
+Atf1ca3f02a four retained Imp tests pass, including all five final damage/miss receipts, but21actual exhausted native Imps earn no Core (genuine1RED29.12s combined/zero warnings). Exact Energy-fade cleanup now checks actual learned426115, derives the accumulated PRD coefficient from native267102 effect0 nominal chance and pinned21-attempt cap, rolls through ordinary RNG and resets its owner-local counter only on success, then casts actual264173. Sources: SimC76f8118 init1261–1265, pets963–983, proc_rng.cpp188–218; this is not a flat10% independent roll. Native32earned Core/ordinary264178 one-use and14unlearned negative controls pending GREEN. Finite40s expiry, Implosion/Power Siphon and Tyrant remain separate unproved consequences.
+
+
 ### Wild Imp Energy exhaustion — 2026-10-21
 
 Atf1ad52286 native Imp100Energy/104318cost20 already produces exactly five ordinary SpellGo receipts without regeneration; the failure is that the exhausted actor remains alive at25s, before independent40s expiry (1genuineRED13.62s/zero warnings). Authored creature regeneration gating already supplies the correct no-regen state, so it is unchanged. Exact104317/55659 now retires through ordinary summon cleanup when the next bolt is unaffordable after the current cast and pending hits finish (SimC76f8118 pets.cpp833–849). Pending-hit drain preserves the last bolt because this engine drops in-flight hits whose caster has despawned; remove that drain if missiles acquire source-independent lifetime. At05b16a3df native4GREEN19.75s plus retained guardians11GREEN13.85s/zero warnings confirms native budget/early demise and retained binding/SP/HoG behavior. Core/PRD and Tyrant consequence hooks remain open.
