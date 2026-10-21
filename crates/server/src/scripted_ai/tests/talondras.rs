@@ -101,7 +101,6 @@ fn encounter_coverage_talondras_native_shards_direct_and_periodic_qualify() {
 }
 
 #[test]
-#[ignore = "RED: Talondras current Lua-clock port absent"]
 fn encounter_coverage_talondras_first_stomp_uses_current_lua_clock() {
     let (mut h, boss, _) = talondras_copy(205);
     let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
