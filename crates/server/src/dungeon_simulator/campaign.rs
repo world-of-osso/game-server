@@ -1544,6 +1544,13 @@ impl Run {
             return Ok(());
         }
         let Some((pack_id, target)) = self.next_pack() else {
+            if self.has_living_required_boss() {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
+                return Ok(());
+            }
             return Err(
                 "no living hostile source pack remains, but boss deaths are incomplete".into(),
             );
@@ -1703,6 +1710,16 @@ impl Run {
                         )
                 })?;
             Some((pack.id, target))
+        })
+    }
+
+    fn has_living_required_boss(&self) -> bool {
+        let world = self.app.world();
+        self.actors.values().any(|actor| {
+            crate::spell_cast::targets::is_alive(world, *actor)
+                && world
+                    .get::<shared::components::Npc>(*actor)
+                    .is_some_and(|npc| self.graph.boss_entries().contains(&npc.template_id))
         })
     }
 
