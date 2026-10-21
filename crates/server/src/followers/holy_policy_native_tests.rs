@@ -5,7 +5,7 @@ use crate::auras::{ActiveAuras, has_aura};
 use crate::spell_cast::creature_cast;
 use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents};
 use bevy::prelude::*;
-use shared::components::{Health, Level, UnitLevel};
+use shared::components::{CombatRatings, DerivedStats, Health, Level, UnitLevel, UnitStats};
 use shared::protocol::CombatLogKind;
 
 const HENRY: u32 = 215011;
@@ -28,7 +28,15 @@ fn native_group() -> GroupFixture {
         app.init_resource::<ObservedCombatEvents>();
     });
     let owner = h.caster;
-    h.app.world_mut().entity_mut(owner).insert(UnitLevel(90));
+    // The fixed-stat cast harness omits the three stat projection components.
+    // Install the real entry shape so StatsPlugin computes native90 values.
+    h.app.world_mut().entity_mut(owner).insert((
+        Level(90),
+        UnitLevel(90),
+        UnitStats::default(),
+        CombatRatings::default(),
+        DerivedStats::default(),
+    ));
     // This damage-only dummy's hit level matches the group. Native165 reads
     // recipient maximum health; caster health/power are never substituted.
     h.app
@@ -46,9 +54,18 @@ fn native_group() -> GroupFixture {
         assert_eq!(h.app.world().get::<Level>(member).unwrap().0, 90);
         assert_eq!(h.app.world().get::<UnitLevel>(member).unwrap().0, 90);
         let health = h.app.world().get::<Health>(member).unwrap();
+        let stats = h
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(member)
+            .unwrap();
         assert!(
-            health.max > 1000.0,
-            "native90 stats must replace the small harness pool"
+            stats.primary.stamina > 0.0,
+            "native90 primary stats missing for {member:?}"
+        );
+        assert_eq!(
+            health.max, stats.max_health,
+            "native derived health projection for {member:?}"
         );
         assert_eq!(health.current, health.max);
     }
