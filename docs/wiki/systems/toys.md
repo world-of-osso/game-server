@@ -2,15 +2,25 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Generic turn-while-falling ability (2026-10-21)
+
+TC a352b1fa `SpellAuraEffects.cpp:2969–2983` keeps aura409's ability until the last owner ends; `Unit.cpp:13933–13961` changes the native movement flag. `MovementInfo.h:71` supplies bit39 (`0x0000008000000000`), already representable by frozen03cebdb's replicated PlayerMotion(u64). Implementationd0842a529 reconciles that flag from ActiveAuras and preserves it when real PlayerInput replaces direction/stop state. No protocol fields or per-toy script added.
+
+Pipeline514→516, exactly131811/196768 Rocfeather Skyhorn Kite and182729/340077 Hearty Dragon Plume. Original four cases RED; real receiver/overlap/movement/FeatherFall controls pass. Actual learning/UseToy retains both source feather-fall/turn abilities and natural60s/10s expiry. Fixtures keep source RequiredAreas4279/7354 through authentic resident terrain: map1220/ADT955950/area7558 and map2222/ADT2862831/area11462. Initial two fixture area refusals were correct product behavior, not bypassed or fixed in production. Corrected five-case run atc1dc38855 PASS75.14s includes existing scenery regression; other retained controls/census passed in turn-falling-green.log (13PASS/two prior fixture failures, not claimed15PASS).
+
+Source state on replicated components and real input receive is proved; transport packet playback/native steering/rendering remain separate. Current all-toy scope processes even1–4-item slices; the earlier five-item stop threshold is retired. Post-master-ff190cb1c proof remains pending after merge1a3532e1e.
+
 ## Native default TempSummon titles (2026-10-21)
 
 TC a352b1fa `SpellEffects.cpp:1957–2024` and `Object.cpp:1191–1265` dispatch non-special Wild/Ally titles through ordinary TempSummon. Implementation1c09a35d7 shares that decision between admission and spawning; joined spawn groups and explicit guardian/companion/totem/vehicle paths remain separate. Construct7/Name27/new61 are labels, not unsupported control mechanisms.
+
+Plain Ally/Title0 scenery88381/127771 and88584/128180 retains template faction35, not caster faction1: properties121/3149 have Faction0 and flags2/8194, neither UseSummonerFaction0x1000. TC Object.cpp1191–1265 creates TempSummon, not Minion; TemporarySummon.cpp255–265 retains the template faction absent explicit override. Batch5 exposed the old fixture's incorrect caster-inheritance oracle; correction69362c414 passes without a production faction change.
 
 Canonical pipeline509→514, exactly168667/192485/258135/258136/267472, zero removals. Real learning/UseToy produces the source models/actors, ownership/map and natural2/5/11-minute expiry without guardian/follow classification. Gnomatic retains its Gnome restriction and two actors. Party/viewer198206/198264/210975 remain explicit interaction gaps. Actor-only proof does not establish gifts/combat, clone stacking, jumpable collision, native pixels or scripts.
 
 RED6 precedes implementation. Corrected actual-use fixtures submit cursor coordinates only for authored target87, not native target47. Postmerge67820e8cc proof11PASS covers all five lifecycles, census/negative contracts, three property controls, signed-title loading and owner-map removal. Its companion failure is separately corrected below; it is not counted as a passing12-case run. Evidence: default-title-postmerge-green.log.
 
-Remaining-cause ranking establishes no additional source-complete batch yielding at least five toys after this fix. The29 metadata IDs have0/29 build70448 ItemSparse rows;25 area-trigger cohorts resolve no required create-properties/actions; summoned Goober/periodic-dummy/script dependencies lack a common completed action contract. Fall-turn aura409 has only two isolated unlocks, below the lead's threshold. These are audited source/proof gaps, not proof that every future implementation is impossible. Exact overlapping cohorts and per-item blockers remain in generic-ranking.json/md and census.json/by-cause.md diagnostics.
+Remaining-cause ranking establishes no additional source-complete batch yielding at least five toys after this fix. The29 metadata IDs have0/29 build70448 ItemSparse rows;25 area-trigger cohorts resolve no required create-properties/actions; summoned Goober/periodic-dummy/script dependencies lack a common completed action contract. Fall-turn aura409's two isolated unlocks were deferred under the former five-item threshold and are now implemented above under the expanded all-toy scope. These are audited source/proof gaps, not proof that every future implementation is impossible. Exact overlapping cohorts and per-item blockers remain in generic-ranking.json/md and census.json/by-cause.md diagnostics.
 
 ## Published companion fixture reconciliation (2026-10-21)
 
