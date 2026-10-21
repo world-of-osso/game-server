@@ -26,6 +26,12 @@ pub(super) struct Edge {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+pub(super) struct RouteStep {
+    pub pack: u32,
+    pub anchor: [f32; 2],
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Graph {
     pub map_id: u32,
     pub entrance: [f32; 2],
@@ -33,6 +39,7 @@ pub(super) struct Graph {
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
     pub unreachable: Vec<u32>,
+    pub route: Vec<RouteStep>,
 }
 
 #[derive(Resource)]
@@ -295,6 +302,9 @@ fn extract_stockade_graph() {
         entrance: [entrance.x, entrance.z],
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
+        route: read_graph()
+            .expect("preserve the authored pull route during graph extraction")
+            .route,
         packs,
         edges,
     };

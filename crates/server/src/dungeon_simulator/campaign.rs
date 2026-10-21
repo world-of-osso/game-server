@@ -779,19 +779,23 @@ impl Run {
         };
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
-        let tank_position = *self.app.world().get::<Position>(self.party.tank).unwrap();
+        let tank_position = *self.app.world().get::<Position>(self.party.tank).ok_or(
+            "admitted tank is absent; route anchor remains known, but no native opener can cast",
+        )?;
         let (_, range) =
             crate::followers::simulator::opening_spell(self.app.world(), self.party.tank);
+        let step = self
+            .graph
+            .route
+            .iter()
+            .find(|step| step.pack == pack_id)
+            .unwrap();
         if (target_position.x - tank_position.x).hypot(target_position.z - tank_position.z) > range
         {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .insert(MoveIntent(Vec3::new(
-                    target_position.x,
-                    0.0,
-                    target_position.z,
-                )));
+                .insert(MoveIntent(Vec3::new(step.anchor[0], 0.0, step.anchor[1])));
             return Ok(());
         }
         self.app
@@ -847,31 +851,21 @@ impl Run {
 
     fn next_pack(&self) -> Option<(u32, Entity)> {
         let world = self.app.world();
-        let from = world.get::<Position>(self.party.tank)?;
-        self.graph
-            .packs
-            .iter()
-            .filter_map(|pack| {
-                let target = pack
-                    .spawns
-                    .iter()
-                    .map(|spawn| self.actors[&spawn.guid])
-                    .find(|actor| {
-                        crate::spell_cast::targets::is_alive(world, *actor)
-                            && world
-                                .get::<crate::creature_aggro::AggroRange>(*actor)
-                                .is_some()
-                            && crate::spell_cast::targets::is_hostile(
-                                world,
-                                self.party.tank,
-                                *actor,
-                            )
-                    })?;
-                let distance = (pack.position[0] - from.x).hypot(pack.position[1] - from.z);
-                Some((pack.id, target, distance))
-            })
-            .min_by(|a, b| a.2.total_cmp(&b.2).then(a.0.cmp(&b.0)))
-            .map(|(id, target, _)| (id, target))
+        self.graph.route.iter().find_map(|step| {
+            let pack = self.graph.packs.iter().find(|pack| pack.id == step.pack)?;
+            let target = pack
+                .spawns
+                .iter()
+                .map(|spawn| self.actors[&spawn.guid])
+                .find(|actor| {
+                    crate::spell_cast::targets::is_alive(world, *actor)
+                        && world
+                            .get::<crate::creature_aggro::AggroRange>(*actor)
+                            .is_some()
+                        && crate::spell_cast::targets::is_hostile(world, self.party.owner, *actor)
+                })?;
+            Some((pack.id, target))
+        })
     }
 
     fn record_pull(&mut self, pack: u32, decision: String) {
