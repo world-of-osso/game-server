@@ -70,7 +70,10 @@ below50% health plus observed incoming damage. Shared urgent direct-heal candida
 precede routine throughput/upkeep. Fade requires an actual engaged enemy currently
 attacking Henry, and does not interrupt an existing friendly cast. Mass Dispel
 requires three actually dispellable harmful Magic patients inside one native
-friendly dispel radius; global aura count or an empty footprint is insufficient. Surge selects below90%, PoM below95%, and group
+friendly dispel radius; global aura count or an empty footprint is insufficient.
+Purify follows those emergency/group-dispel decisions and precedes routine healing,
+using its selected native harmful Magic/Disease eligibility; no empty dispel.
+Surge selects below90%, PoM below95%, and group
 pressure requires three actual patients:65% for depleted-Word Apotheosis,55% for
 Hymn. Apotheosis precedes the channel when both qualify. A channel is refused for
 shared emergency patients or an authored near-term hit on Henry. Sanctify needs

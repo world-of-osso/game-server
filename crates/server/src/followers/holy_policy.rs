@@ -18,6 +18,7 @@ const DESPERATE_PRAYER: u32 = 19236;
 const FORTITUDE: u32 = 21562;
 const FADE: u32 = 586;
 const MASS_DISPEL: u32 = 32375;
+const PURIFY: u32 = 527;
 const MAGIC_DISPEL_TYPE: u32 = 1;
 const MASS_DISPEL_PATIENTS: usize = 3;
 const SURGE: u32 = 114255;
@@ -32,6 +33,7 @@ const OWNED: SpellSet = &[
     FORTITUDE,
     FADE,
     MASS_DISPEL,
+    PURIFY,
 ];
 const POLICY_SPELLS: &[u32] = &[
     FLASH_HEAL,
@@ -79,6 +81,7 @@ pub(super) fn decide(ctx: &TriageContext<'_>) -> SpecVerdict {
         .or_else(|| choose_emergency(ctx))
         .or_else(|| choose_fade(ctx))
         .or_else(|| choose_mass_dispel(ctx))
+        .or_else(|| choose_purify(ctx))
         .or_else(|| {
             select_action(&read_snapshot(ctx)).map(|action| Decision {
                 spell_id: action.spell,
@@ -184,6 +187,16 @@ fn choose_mass_dispel(ctx: &TriageContext<'_>) -> Option<Decision> {
             target,
             urgent: false,
         })
+}
+
+fn choose_purify(ctx: &TriageContext<'_>) -> Option<Decision> {
+    ctx.patients.iter().find_map(|patient| {
+        ready(ctx, PURIFY, patient.entity).then_some(Decision {
+            spell_id: PURIFY,
+            target: patient.entity,
+            urgent: false,
+        })
+    })
 }
 
 fn count_magic_patients(ctx: &TriageContext<'_>, center: Vec3, radius: f32) -> usize {

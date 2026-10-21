@@ -125,6 +125,14 @@ now checks its first decision on a non-emergency Magic patient above95%HP; the
 earlier eventual-removal GREEN did not establish priority over an unnecessary
 paid heal. At f6c6fffd4, the six Holy namespaces run43 cases:39GREEN/4FAIL109.81sec, build3m46sec/no warnings. Formal-party Fortitude and all five safety/consequence controls except the two positive weave cases pass. Purify genuinely chooses2050 before527 on actual non-emergency Magic above95%HP. PoH never casts596 on the moderately injured native cluster after real Word depletion; per-patient shared ranking omits its aggregate benefit. These are Holy policy REDs. Holy Fire/Smite launches585 but fails the assumed new-target damage assertion; Nova never launches132157. Their setup/admission boundaries remain under diagnosis, not established production bugs. Four failures are explicitly ignored pending qualification; original output is `holy-successor-f6-targeted.log` in the diagnostics root.
 
+Purify priority root cause: generic kit utility rows run only after shared triage
+has tried its ordinary healing candidates. Even negligible real23268 injury
+therefore admits2050 before the available527. Holy now owns527 and selects the
+ranked actually dispellable patient after emergencies/MassDispel, before routine
+heals. Native kit eligibility retains Magic/Disease types and ordinary spell
+admission. Ignored first-action regression is pushed before this change; GREEN
+execution pending.
+
 ## Named selected-kit gaps
 
 Verified source inspection at66f0b1d6b: these numeric spell IDs have no class-specific
