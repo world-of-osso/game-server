@@ -195,6 +195,12 @@ fn health_and_auras_allow(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    if condition
+        .required_aura
+        .is_some_and(|aura| !crate::auras::has_aura(world, unit, aura))
+    {
+        return false;
+    }
     if entry.slot == Slot::Dispel
         && !crate::auras::has_dispellable_aura(world, unit, target, &condition.dispel_types)
     {
