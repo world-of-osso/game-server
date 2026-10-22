@@ -71,7 +71,17 @@ Read-only tracing of those exact receipts finds that spawning three native dummi
 
 Frozen73/63/103 kits contain the relevant multi-enemy entries, but their minimum2/3 engaged-enemy conditions fail;73Thunder Clap's minimum1 still encounters the fresh-enemy veto. Their observed casts contain no such AoE. Fire's35Pyroblasts and Feral's17Rips/59Bites refute blanket lack of Hot Streak/combo-point opportunities, not every individual admission/resource predicate. BM differs:1264359Wild Thrash succeeds20times with zero damage;70448 encodes only Dummy3 effects, whereas pinned SimC explicitly dispatches pet1264355 and Beast Cleave. That native ability chain is parent-owned, not a reason to invent a new BM priority.
 
-The parent-approved harness contract now starts every initial/replacement opponent with active mutual CombatRefs to the real player/controller through ordinary `set_in_combat_with`. It never inserts a ThreatTable, changes native31146 passivity, modifies kit/AI target policy or bypasses the fresh-pack veto. Four ignored controls were pushed before implementation; ate43c2ceec they genuinely fail4/4: missing mutual engagement and absent73/63/103 authoredmin_enemies≥2 AoE casts. The minimal fixture-only engagement implementation is pending unchanged-test GREEN and three-spec measurement qualification; the earlier cbf receipts remain historical and are not upgraded by this change.
+The parent-approved harness contract now starts every initial/replacement opponent with active mutual CombatRefs to the real player/controller through ordinary `set_in_combat_with`. It never inserts a ThreatTable, changes native31146 passivity, modifies kit/AI target policy or bypasses the fresh-pack veto. Four ignored controls were pushed before implementation; ate43c2ceec they genuinely fail4/4: missing mutual engagement and absent73/63/103 authoredmin_enemies≥2 AoE casts. At32b2a678f the unchanged controls pass4/4 in325.52s, with no warnings. Only the three authorized73/63/103 cells were then rerun against the identical frozen snapshot/profile/traits, all passing300s execution/final30s/owner0/wave/recipient-conservation gates. Native31146 still has no ThreatTable. The earlier cbf receipts remain intact, not retrospectively changed.
+
+| Spec | Prior cbf DPS | Engaged32 DPS | Reference DPS | Reference delta | Positive adds |
+|---|---:|---:|---:|---:|---:|
+|73|14272.79|40403.36|214978.87|-81.21%|18/20|
+|63|22298.16|22604.97|371058.54|-93.91%|8/20|
+|103|42160.52|46227.06|247748.82|-81.34%|18/20|
+
+Authored AoE now actually casts: Protection73 has57Thunder Claps and158Revenges; Fire63 has10Meteors and8Flamestrikes1254851 (24hits); Feral103 has181Cat Swipes106785 and38Primal Wraths. Meteor's10 successful casts still produce no hit/damage channel; this separate script-output boundary is not repaired here. Native1254851 and reference2120 remain distinct factor channels rather than an invented equivalence. First-wave adds still receive no damage for73/103; Fire damages only eight adds. Native passive CombatRefs retain their normal five-second expiry and no fixture heartbeat was added, so this initial/replacement engagement contract is not continuous all-target engagement or full AoE parity.
+
+`engaged-three-comparison.{json,md,proof.json}` and three `native-engaged-three-v1/<spec>.three-factor-decomposition.{json,md}` retain exact reports, stat snapshots, actor channels, historical count deltas and conserved reference-minus-native partitions. The runtime source change is fixture engagement, not a kit/coefficient change; individual damage/RNG residuals are not isolated causal effects. No other single/three-target or SimC benchmark was rerun.
 
 ## Continuous-edge seeded qualification —2026-10-22
 
