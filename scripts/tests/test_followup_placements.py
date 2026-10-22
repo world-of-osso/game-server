@@ -79,6 +79,13 @@ class FollowupPlacementAcceptance(unittest.TestCase):
         self.assertEqual(receipt['donors'], [])
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
             self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=214661').fetchone(), (14,))
+            self.assertEqual(db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature '
+                                        'WHERE map=2661 AND guid BETWEEN 63661000 AND 63661999 ORDER BY guid').fetchall(), [
+                (63661000, 210267, 2760.08212038, -4935.52571057, 100.20407886059111),
+                (63661001, 214661, 2649.0533460799998, -5013.14830145, 110.600006),
+            ])
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2661_214661'])
+        self.assertEqual(receipt['placements'][1]['source_floor_evidence']['wmo_group_id'], 69970)
 
     def test_taahbat_keeps_native_identity_existing_awazj_and_soul_scribe_scaling_gap(self):
         self.assert_source_primaries(2830, (234933,))

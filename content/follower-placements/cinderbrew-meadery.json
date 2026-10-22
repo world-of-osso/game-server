@@ -23,6 +23,31 @@
       "ordinal": 1,
       "source_url": "db2:12.1.5.70448/JournalEncounter#2589",
       "journal_encounter_id": 2589,
+      "source_floor": null,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS",
+        "db2_assignment_id": 68120,
+        "wmo_group_id": 69970,
+        "placement_unique_id": 44593122,
+        "wmo_root_fdid": 5244088,
+        "wmo_group_fdid": 5422559,
+        "maximum_height_difference_yards": 1.0,
+        "triangles": [
+          {"triangle_index": 13449, "world_vertices": [[2649.946024656296,-5014.337890625,141.9790802001953],[2648.989973306656,-5021.148300170898,141.97908782958984],[2648.990510702133,-5007.636993408203,141.97908782958984]]},
+          {"triangle_index": 16329, "world_vertices": [[2649.8337029218674,-5019.734039306641,145.6973991394043],[2648.169236421585,-5010.65950012207,145.6973991394043],[2652.978434085846,-5009.80647277832,143.70666122436523]]},
+          {"triangle_index": 16865, "world_vertices": [[2646.1943559646606,-5013.548110961914,110.29371643066406],[2650.9502041335863,-5015.857925415039,110.29371643066406],[2650.9501949080636,-5011.280456542969,110.29371643066406]]},
+          {"triangle_index": 44295, "world_vertices": [[2617.8086128234863,-5005.535339355469,128.015775680542],[2697.7553787231445,-5005.535339355469,128.015775680542],[2697.7553787231445,-5028.455459594727,128.0157928466797]]},
+          {"triangle_index": 44535, "world_vertices": [[2628.01469039917,-5018.715438842773,110.29615688323975],[2649.3069204092026,-5018.715438842773,110.29615688323975],[2649.3069204092026,-5006.383346557617,110.29615688323975]]}
+        ],
+        "source_files": [
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5319046.wdt", "sha256": "d3118bf7213e7d74c24e3f4dbf413474757879b3270d226913144e9f96f0d315"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5320107.adt", "sha256": "4d9643338c5daa1e4bdc1b7106431726d561fd8a9763d42d3656cf73a963d2ca"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5244088.wmo", "sha256": "1bd208d5a86206aeeb1b34e45b647edfe8b74c33992ff1f7b171d8eb2018010a"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5422559.wmo", "sha256": "b857343ebe5eea60ca3a3a53ae2f318c6a69498574c13f1575eebffdc5f7a0dd"}
+        ],
+        "transform": "MODF position[21931.357421875,99.70453643798828,14415.7158203125], rotation[0,90,0], scale1. File XYZ maps to WoW[2650.9501953125+Y,-4864.69140625-X,99.70453643798828+Z]. All five group hits retained: both upward110.293716/110.296157 select only baked110.600006 within1yd; three downward ceilings including128.015781 rejected. UiMap2335 has no group-floor index; final height stays baked."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2661_214661",
       "journal_actor_source": {
         "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
         "path": "/home/osso/Repos/LittleWigs/WarWithin/CinderbrewMeadery/GoldieBaronbottom.lua",
