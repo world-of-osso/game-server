@@ -114,6 +114,19 @@ fn encounter_coverage_orator_source_appearance_and_first_subjugate_normal_projec
             .expect("TC Subjugate first4.5s ordinary native cast");
         assert_eq!(cast.spell_id, SUBJUGATE, "difficulty{difficulty}");
         assert_eq!(cast.duration, 1.25, "actual70448 CastingTimeIndex206");
+        h.advance(5.0);
+        let terror = h.app.world().get::<shared::casting::CastState>(boss)
+            .expect("TC Terrorize selector starts its native child, not an instant/full-mask substitute");
+        assert_eq!(terror.spell_id, 434779);
+        assert_eq!(
+            terror.duration, 3.0,
+            "native CastingTimeIndex14 must occupy the caster"
+        );
+        assert_eq!(
+            energy(&h, boss),
+            32.0,
+            "due energy waits during native3s child"
+        );
     }
 }
 
@@ -175,9 +188,9 @@ fn encounter_coverage_orator_ongoing_two_energy_phases_native_damage_and_copy_cr
             .resource::<super::cast_admission::CastAdmissions>()
             .entries;
         let lanes = [
-            (SUBJUGATE, &[4.5, 21.6, 33.6, 50.7, 65.75, 82.85][..]),
-            (434808, &[9.4, 17.5, 38.6, 46.7, 67.8, 75.9][..]),
-            (434829, &[28.05, 60.75][..]),
+            (SUBJUGATE, &[4.5, 21.6, 37.85, 54.95, 66.95, 84.05][..]),
+            (434808, &[9.4, 17.5, 39.1, 47.2, 68.3, 78.3][..]),
+            (434829, &[32.85, 73.3][..]),
         ];
         assert_eq!(
             attempts.len(),
@@ -190,7 +203,7 @@ fn encounter_coverage_orator_ongoing_two_energy_phases_native_damage_and_copy_cr
             for (attempt, expected) in lane.iter().zip(times) {
                 assert!(
                     (attempt.time - expected).abs() <= 0.15,
-                    "TC/native occupancy {attempt:?}, expected{expected}"
+                    "TC/native occupancy {attempt:?}, expected{expected}; all requests{attempts:?}"
                 );
                 assert!(
                     attempt.result.is_ok(),
@@ -284,8 +297,8 @@ fn encounter_coverage_orator_generic_evade_rearms_clock_without_forging_respawn_
         assert_eq!(completed_casts(&h, boss, SUBJUGATE), 1);
         let before = energy(&h, boss);
         assert_eq!(
-            before, 76.0,
-            "source19 grants before20s, no automatic regeneration"
+            before, 52.0,
+            "source13 grants before20s; native Terrorize children occupy3s each"
         );
         let player = h.player();
         h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
