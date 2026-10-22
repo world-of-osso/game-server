@@ -287,13 +287,64 @@ def write_placements(target, manifest, placements, bindings):
             raise ValueError(f'reserved placement GUID collision at{guid}')
         target.execute('INSERT OR IGNORE INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
                        (guid, record['entry'], manifest['map_id'], x, y, z, '1', comment))
-        existing_binding = target.execute('SELECT * FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', binding[:2]).fetchone()
-        if existing_binding is not None and tuple(existing_binding) != binding:
-            raise ValueError(f'primary binding conflicts for{binding[:2]}')
-        target.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
+        write_primary_binding(target, binding)
         placement['guid'] = guid
         placement['binding'] = binding
         placement['orientation_policy'] = 'unsourced schema-default orientation; stationary project placement, not Retail facing'
+
+
+def write_primary_binding(target, binding):
+    existing = target.execute('SELECT * FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', binding[:2]).fetchone()
+    if existing is not None and tuple(existing) != binding:
+        raise ValueError(f'primary binding conflicts for{binding[:2]}')
+    target.execute('INSERT OR IGNORE INTO raid_encounter_creature VALUES(?,?,?,?,?,?,?)', binding)
+
+
+def read_native_binding_entries(source, manifest):
+    proofs = []
+    for record in manifest.get('native_binding_only_entries', []):
+        rows = []
+        for table, guid in [('tdb_creature', record['native_guid']), ('content_creature', record['runtime_guid'])]:
+            cursor = source.execute(f'SELECT * FROM {table} WHERE guid=?', (guid,))
+            row = cursor.fetchone()
+            if row is None:
+                raise ValueError('native binding-only actor is absent from the source population')
+            rows.append(dict(zip([column[0] for column in cursor.description], row)))
+        native, runtime = rows
+        fields = ['map', 'position_x', 'position_y', 'position_z', 'spawnDifficulties', 'VerifiedBuild']
+        expected = (manifest['map_id'], *record['source_xyz'], record['spawn_difficulties'], record['source_verified_build'])
+        if native['id'] != record['entry'] or runtime['id1'] != record['entry'] or any(tuple(row[key] for key in fields) != expected for row in rows):
+            raise ValueError('native binding-only actor differs from its exact authored pose/mask/build')
+        occupied = source.execute('SELECT guid FROM content_creature WHERE map=? AND id1=?', (manifest['map_id'], record['entry'])).fetchall()
+        if [row[0] for row in occupied] != [record['runtime_guid']]:
+            raise ValueError('native binding-only actor has duplicate runtime placements')
+        proofs.append(dict(entry=record['entry'], native_spawn=native, runtime_spawn=runtime,
+                           policy='NATIVE_TDB_SPAWN_PRESERVED_BINDING_ONLY', source_record=record))
+    return proofs
+
+
+def validate_sourced_duo(manifest, placements, native_bindings, cache):
+    policy = manifest.get('duo_placement_policy')
+    if policy is None:
+        return []
+    if policy != 'FOLLOWER_PLACEMENT_DUO_INDIVIDUALLY_SOURCED_SAME_MARKER' or manifest['map_id'] != 2874:
+        raise ValueError('individually sourced same-marker policy is approved only for Muro/Nekraxx')
+    records = manifest['entries'] + manifest.get('native_binding_only_entries', [])
+    if sorted(record['entry'] for record in records) != [247570, 247572]:
+        raise ValueError('same-marker policy requires both individually identified Muro/Nekraxx actors')
+    pages = []
+    for record in sorted(records, key=lambda row: row['entry']):
+        page = read_cached_npc(cache, record['entry'])
+        if page['cache_sha256'] != record['cache_sha256'] or len(page['markers']) != 1 or record['journal_encounter_id'] != 2810:
+            raise ValueError('duo individual marker source changed or is absent')
+        pages.append(page)
+    if pages[0]['markers'] != pages[1]['markers']:
+        raise ValueError('duo individual pages do not independently identify the same marker')
+    if len(placements) != 1 or placements[0]['entry'] != 247570 or len(native_bindings) != 1 or native_bindings[0]['entry'] != 247572:
+        raise ValueError('preserve native Nekraxx as corroboration; place only missing Muro')
+    return [dict(policy=policy, individual_pages=pages, journal_marker=placements[0]['marker'],
+                 journal_xy=placements[0]['wow_xy'], native_corroboration=native_bindings[0],
+                 marker_precision_scope='Both independent pages share the same rounded marker; use unchanged precise journal XY for Muro, preserve native Nekraxx XYZ.')]
 
 
 def read_table_rows(db, table):
@@ -402,6 +453,11 @@ def prepare(args):
                 raise ValueError('native map difficulty differs from authenticated DB2')
         native_room_anchors = validate_native_room_anchors(baseline, manifest)
         placements = [derive_placement(r, manifest, tables | binding_tables, args.cache, polygons, args.route, args.nav, entrance) for r in manifest['entries']]
+        native_bindings = read_native_binding_entries(baseline, manifest)
+        for proof in native_bindings:
+            record = proof['source_record']
+            proof['binding'] = derive_binding(baseline, inventory, binding_tables, manifest['map_id'], record['entry'], record['journal_actor_source'])
+        source_relationships = validate_sourced_duo(manifest, placements, native_bindings, args.cache)
         receipt = dict(map_id=manifest['map_id'], policy=manifest['placement_policy'], db2_authentication=auth | binding_auth,
                        producer_sha256=digest(__file__), source_reader_sha256=digest(Path(__file__).with_name('follower_placement_sources.py')),
                        calibration=calibrate(baseline, manifest['calibration_entries'], tables, args.cache),
@@ -411,7 +467,8 @@ def prepare(args):
                        manifest_sha256=digest(args.manifest), inventory_sha256=digest(args.inventory),
                        surface_file=str(args.surfaces), surface_sha256=digest(args.surfaces),
                        route_binary_sha256=digest(args.route), entrance=entrance, placements=placements,
-                       native_room_anchors=native_room_anchors, source_gaps=manifest.get('source_gaps', []),
+                       native_room_anchors=native_room_anchors, native_binding_only=native_bindings,
+                       source_relationships=source_relationships, source_gaps=manifest.get('source_gaps', []),
                        source_database=str(args.source_db.resolve()), baseline_sha256=digest(baseline_path), canonical_modified=False)
         receipt['navigation_gaps'] = [p['navigation_gap'] for p in placements if 'navigation_gap' in p]
         receipt['entrance_gaps'] = sorted({p['entrance_gap'] for p in placements if 'entrance_gap' in p})
@@ -430,6 +487,8 @@ def prepare(args):
             with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
                 receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, manifest['entries'], args.cache)
                 write_placements(prepared, manifest, placements, bindings)
+                for proof in native_bindings:
+                    write_primary_binding(prepared, tuple(proof['binding']))
                 sql, changed = make_sql(baseline, prepared)
                 receipt['changed_keys'] = changed
             backup(baseline, replay_path)
