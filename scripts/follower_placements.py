@@ -18,6 +18,7 @@ PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS'
 JOURNAL_PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
 LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
 NATIVE_BINDING_POLICY = 'FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR'
+MDT_BOSS_BINDING_POLICY = 'BOSS_IDENTITY_FROM_PINNED_MDT_BOSS_ENTRY'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
 JOURNAL_HOSTILITY_POLICY = 'FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER'
 TRASH_HOSTILITY_POLICY = 'FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE'
@@ -174,13 +175,15 @@ def derive_exact_native_binding(source, tables, map_id, entry, identity):
     candidates = source.execute('SELECT DISTINCT t.entry FROM tdb_creature_template t JOIN tdb_creature_template_model m '
                                 'ON m.CreatureID=t.entry WHERE t.name=? AND m.CreatureDisplayID=?',
                                 (name, int(actor['CreatureDisplayInfoID']))).fetchall()
-    if {row[0] for row in candidates} != {entry}:
+    if identity['policy'] == MDT_BOSS_BINDING_POLICY:
+        qualify_mdt_boss_identity(source, tables, map_id, entry, identity)
+    elif {row[0] for row in candidates} != {entry}:
         raise ValueError('exact native name and display has ambiguous template entries')
     return (map_id, entry, int(dungeon['ID']), int(dungeon['Bit']), int(journal['ID']), int(actor['ID']), int(actor['CreatureDisplayInfoID']))
 
 
 def derive_binding(source, inventory, tables, map_id, entry, identity=None):
-    if identity is not None and identity['policy'] == NATIVE_BINDING_POLICY:
+    if identity is not None and identity['policy'] in (NATIVE_BINDING_POLICY, MDT_BOSS_BINDING_POLICY):
         return derive_exact_native_binding(source, tables, map_id, entry, identity)
     encounter = next(e for e in inventory['encounters'] if e['MapID'] == map_id and entry in e['enabled_entries'])
     dungeon = next(r for r in tables['DungeonEncounter'] if int(r['ID']) == encounter['encounter']['ID'])
@@ -255,8 +258,8 @@ def stage_source_difficulties(target, records):
 
 def qualify_journal_hostility(target, record, tables):
     identity = record['journal_actor_source']
-    if identity['policy'] != NATIVE_BINDING_POLICY:
-        raise ValueError('journal hostility requires the unique exact native actor binding')
+    if identity['policy'] not in (NATIVE_BINDING_POLICY, MDT_BOSS_BINDING_POLICY):
+        raise ValueError('journal hostility requires an approved exact native actor binding')
     binding = derive_exact_native_binding(target, tables, record['map_id'], record['entry'], identity)
     follower = [row for row in tables['MapDifficulty']
                 if int(row['MapID']) == record['map_id'] and row['DifficultyID'] == '205']
@@ -270,7 +273,10 @@ def qualify_journal_hostility(target, record, tables):
     rows = {name: next(row for row in tables[name] if int(row['ID']) == row_id)
             for name, row_id in [('JournalEncounterCreature', binding[5]), ('JournalEncounter', binding[4]),
                                  ('DungeonEncounter', binding[2]), ('MapDifficulty', int(follower[0]['ID']))]}
-    return dict(policy=JOURNAL_HOSTILITY_POLICY, binding=list(binding),
+    identity_proof = {}
+    if identity['policy'] == MDT_BOSS_BINDING_POLICY:
+        identity_proof['identity_source'] = qualify_mdt_boss_identity(target, tables, record['map_id'], record['entry'], identity)
+    return dict(policy=JOURNAL_HOSTILITY_POLICY, binding=list(binding), **identity_proof,
                 rows={name: dict(row=row, sha256=hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
                       for name, row in rows.items()})
 
@@ -316,6 +322,29 @@ def read_mdt_enemy_table(evidence, map_id, tables):
     if len(maps) != 1:
         raise ValueError('MDT challenge-mode row does not identify the requested dungeon')
     return parse_mdt_enemy_table(text), dict(source=evidence, db2_rows=dict(MapChallengeMode=maps[0]))
+
+
+def qualify_mdt_boss_identity(source, tables, map_id, entry, identity):
+    # Explicit actor-only approval; exact name/display validation remains in derive_exact_native_binding.
+    if (map_id, entry, identity['journal_encounter_id'], identity['journal_actor_id']) != (2915, 241542, 2814, 6001):
+        raise ValueError('MDT boss identity policy is approved only for Xenas Nysarra241542')
+    evidence = identity['mdt_boss_source']
+    enemies, proof = read_mdt_enemy_table(evidence, map_id, tables)
+    enemy = enemies.get(entry)
+    actor = next(row for row in tables['JournalEncounterCreature'] if int(row['ID']) == identity['journal_actor_id'])
+    if enemy is None or not enemy['is_boss'] or enemy['source_line'] != evidence['source_line'] or enemy['name'] != actor['Name_lang']:
+        raise ValueError('MDT source must identify the pinned exact-name boss entry')
+    candidates = sorted(row[0] for row in source.execute(
+        'SELECT DISTINCT t.entry FROM tdb_creature_template t JOIN tdb_creature_template_model m ON m.CreatureID=t.entry '
+        'WHERE t.name=? AND m.CreatureDisplayID=?', (actor['Name_lang'], int(actor['CreatureDisplayInfoID']))))
+    if [candidate for candidate in candidates if candidate in enemies and enemies[candidate]['is_boss']] != [entry]:
+        raise ValueError('MDT boss entry must uniquely disambiguate exact native name/display candidates')
+    conflicts = [candidate for candidate in candidates if candidate != entry]
+    budgets = [dict(entry=candidate, source_difficulties=[dict(zip(('DifficultyID', 'ContentTuningID', 'HealthModifier'), row))
+               for row in source.execute('SELECT DifficultyID,ContentTuningID,HealthModifier FROM tdb_creature_template_difficulty '
+                                         'WHERE Entry=? ORDER BY DifficultyID', (candidate,))]) for candidate in conflicts]
+    return dict(policy=MDT_BOSS_BINDING_POLICY, mdt_enemy=enemy, conflict_candidates=conflicts,
+                conflicting_native_budgets=budgets, **proof)
 
 
 def qualify_mdt_hostility(target, record, tables):
@@ -556,7 +585,10 @@ def prepare(args):
     regional_records = [r for r in manifest['entries'] if 'content_tuning_policy' in r]
     if any(r['content_tuning_policy'] != MAP_TUNING_POLICY or r['map_id'] != manifest['map_id'] for r in regional_records):
         raise ValueError('map tuning policy or actor map differs from placement manifest')
-    tables, auth = read_db2(args.db2, ('MapDifficulty',) if regional_records else ())
+    additional_tables = ['MapDifficulty'] if regional_records else []
+    if any(r.get('journal_actor_source', {}).get('policy') == MDT_BOSS_BINDING_POLICY for r in manifest['entries']):
+        additional_tables.append('MapChallengeMode')
+    tables, auth = read_db2(args.db2, additional_tables)
     binding_tables, binding_auth = read_binding_tables(args.db2)
     inventory = json.loads(args.inventory.read_text())
     polygons = read_surface_polygons(args.surfaces)
