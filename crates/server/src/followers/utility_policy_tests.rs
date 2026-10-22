@@ -176,6 +176,59 @@ fn follower_utility_policy_explicit_profile_actor_keeps_its_native_kick_without_
 }
 
 #[test]
+fn follower_utility_policy_party_danger_precedes_kicker_range_and_identity() {
+    let (mut h, unit) = at_level(209059, 70, |_| {});
+    let second = add_follower(&mut h, 209059);
+    let (near, far) = if unit.to_bits() < second.to_bits() {
+        (unit, second)
+    } else {
+        (second, unit)
+    };
+    let damage = h.npc;
+    let control = spawn_npc(&mut h.app, 80.0);
+    for (actor, x) in [(near, 0.0), (far, 80.0), (damage, 0.0)] {
+        h.app.world_mut().get_mut::<Position>(actor).unwrap().x = x;
+    }
+    for (caster, victim, spell) in [(damage, near, 133), (control, far, 118)] {
+        utility_tests::prepare_enemy_spec(&mut h, caster, 63);
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert(crate::networking::CombatTarget(Some(victim)));
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, spell, Some(victim), false)
+            .unwrap();
+    }
+    let context = h.app.world().get::<super::Follower>(unit).unwrap().clone();
+    let candidates = super::utility_interrupt::ordered_casts(
+        h.app.world(),
+        &[(damage, Some(near)), (control, Some(far))],
+    );
+    assert!(super::utility_interrupt::try_party(
+        h.app.world_mut(),
+        unit,
+        &context,
+        &[near, far],
+        &candidates,
+        super::kit_interrupt::InterruptPhase::Primary
+    ));
+    h.advance(3);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(control)
+            .is_none(),
+        "a ready in-range party member must stop native Polymorph before spending another member's kick on Fireball"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(damage)
+            .is_some(),
+        "lower-danger Fireball must remain after the first party opportunity"
+    );
+}
+
+#[test]
 fn follower_utility_policy_delayed_shield_does_not_spend_a_second_kick() {
     let (mut h, first) = at_level(209057, 26, |_| {});
     let second = add_follower(&mut h, 215240);
