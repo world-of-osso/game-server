@@ -54,9 +54,11 @@ Walking now attaches endpoints to the closest full3D existing walk edge or node.
 
 ## Disconnected chase parity —2026-10-22
 
-The archived Azure panic maps mover164v0 to unselectable Polymorphic Rune195638/source29001884. Before the first book hop it remains on the508yd floor; the party crosses to the425yd walking component. Ordinary server chase movement treats a failed route as `Step::Blocked`, records `CannotReachTarget` and runs the existing five-second `no_path_evade_system` before native home arrival. The simulator omits those physical-navigation systems and currently turns a failed frozen path into a process panic.
+The archived Azure panic maps mover164v0 to unselectable Polymorphic Rune195638/source29001884. Ordinary server chase movement treats a failed route as `Step::Blocked`, records `CannotReachTarget` and runs the existing five-second `no_path_evade_system` before native home arrival. The simulator omitted that lifecycle and turned a failed frozen path into a process panic.
 
-A separate ignored native fixture qualifies the real disconnected29001868→29001870 book hop, starts the actual Rune's chase and requires blocked-state→native evade→home arrival without fabricated links or a new timer. Diagnostic movement errors now retain source identity, endpoints and creature state. RED and parity implementation are pending; no hazard-policy change was made for sm909's separately confirmed canonical kit-parser drift.
+The original55c880f8a fixture fails its setup assertion, not movement: first hop29001868→29001870 lands on the Rune's same508yd component. Corrected ignored539b08c09 uses native second book29002007→29001886 (508→426yd). Genuine RED11.79s identifies source29001884 at[-5353.02,508.083,-1117.58] chasing[-5336.61,426.341,-1113.19] and panics at movement's disconnected-component boundary. No fabricated positions or links are needed.
+
+Simulator movement now records failure through the same production `mark_chase_blocked` helper and runs the actual `no_path_evade_system` after movement. Reachable travel removes the flag; native home arrival remains unchanged. No physical-navigation plugin, duplicate timer or Rune-specific policy is installed. GREEN and new cohorts are pending; no hazard-policy change was made for sm909's separately confirmed canonical kit-parser drift. Receipts: engine `data/diagnostics/sim-azure-evade-2026-10-22/`.
 
 ## Recorded late-healer route boundary —2026-10-21
 
