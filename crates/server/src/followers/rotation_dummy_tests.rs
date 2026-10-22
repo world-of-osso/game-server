@@ -9,6 +9,7 @@ use shared::protocol::CombatLogKind;
 use std::collections::BTreeMap;
 
 const DURATION_SECONDS: f64 = 120.0;
+const AUTO_SHOT: u32 = 75;
 const DUMMY_HEALTH: f32 = 1_000_000_000.0;
 
 #[derive(Default, Serialize)]
@@ -37,6 +38,10 @@ struct DummyMeasurement {
     stat_source: &'static str,
     initial_stats: serde_json::Value,
     final_stats: serde_json::Value,
+    reported_damage_sources: Vec<u64>,
+    known_spells: Vec<u32>,
+    summon_owners: BTreeMap<u64, u64>,
+    combat_events: Vec<shared::protocol::CombatLogEvent>,
 }
 
 fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
@@ -201,6 +206,103 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
 }
 
 #[test]
+fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_repeat() {
+    let (mut h, caster) = prepare_follower(209065, 253, 32);
+    let targets = prepare_dummies(&mut h, 2);
+    let next_target = targets[1];
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(caster)
+        .unwrap();
+    let base = if stats.main_hand.kind == shared::components::WeaponType::Ranged {
+        stats.main_hand.speed
+    } else {
+        2.0 // TC BASE_ATTACK_TIME when no ranged main hand supplies the clock.
+    };
+    let frame_step = match h.app.world().resource::<bevy::time::TimeUpdateStrategy>() {
+        bevy::time::TimeUpdateStrategy::ManualDuration(step) => *step,
+        _ => panic!("native fixture requires its manual frame clock"),
+    };
+    let interval =
+        crate::melee::attack_timer_duration(crate::melee::swing_time(base, stats.haste_pct));
+    assert_eq!(interval.as_nanos() % frame_step.as_nanos(), 0);
+    // The direct AI call executes before advance; its receipt is drained only
+    // afterward. Timestamp that initial execution, not its later delivery frame.
+    let started_at = h.app.world().resource::<Time>().elapsed();
+    let first = h.inbox.go.len();
+    super::update_ai(h.app.world_mut());
+    h.advance(1);
+    let initial_shots = h.inbox.go[first..]
+        .iter()
+        .filter(|event| event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT)
+        .count();
+    assert_eq!(initial_shots, 1, "initial ordinary Auto Shot receipt");
+    let mut shots = vec![started_at];
+    for frame in 1..200 {
+        if frame == 10 {
+            h.select(Some(next_target));
+            h.attack(next_target);
+        }
+        let first = h.inbox.go.len();
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        let now = h.app.world().resource::<Time>().elapsed();
+        shots.extend(h.inbox.go[first..].iter().filter_map(|event| {
+            (event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT).then_some(now)
+        }));
+    }
+    assert!(
+        shots.len() >= 3,
+        "engaged native BM must start and repeat Auto Shot: {shots:?}"
+    );
+    for pair in shots.windows(2) {
+        assert_eq!(
+            pair[1] - pair[0],
+            interval,
+            "native ranged execution clock, not receipt-frame labels: {shots:?}"
+        );
+    }
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(AUTO_SHOT)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "actual native follower Auto Shot damage"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(AUTO_SHOT)
+                && event.target == Some(next_target.to_bits())
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        }),
+        "ordinary target change redirects the repeat without restarting its clock"
+    );
+}
+
+#[test]
+fn rotation_fidelity_253_selection_alone_does_not_start_auto_shot() {
+    let (mut h, caster, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209065, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
+    for _ in 0..120 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|event| { event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT }),
+        "owner selection without native engagement must not start Auto Shot"
+    );
+}
+
+#[test]
 fn rotation_dummy_native_stat_buff_recomputes_all_four_follower_sheets() {
     for (entry, spec) in [(209059, 63), (209053, 262), (209065, 253), (215240, 1467)] {
         let (mut h, caster) = prepare_follower(entry, spec, 90);
@@ -279,6 +381,11 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
     let initial_stats = snapshot_stats(&h, caster);
     let begin = aura_now(h.app.world());
     let first_log = h.inbox.log.len();
+    let mut summon_query = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::UnitSummonedBy)>();
+    let mut summon_owners = BTreeMap::new();
     let mut dots = BTreeMap::new();
     let mut buffs = BTreeMap::new();
     let mut observer = ProcObserver::new(spec, caster);
@@ -290,6 +397,9 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         super::update_ai(h.app.world_mut());
         let after_ai = proc_snapshots(h.app.world(), caster, spec);
         h.advance(1);
+        for (entity, owner) in summon_query.iter(h.app.world()) {
+            summon_owners.insert(entity.to_bits(), owner.0);
+        }
         let now = aura_now(h.app.world());
         let current = proc_snapshots(h.app.world(), caster, spec);
         let receipts = &h.inbox.go[first_go..];
@@ -359,6 +469,14 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         .iter()
         .map(|(&spell, &seconds)| (spell, seconds / elapsed / count as f64))
         .collect();
+    let mut known_spells: Vec<_> = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .expect("native follower retains its actual selected book")
+        .iter()
+        .collect();
+    known_spells.sort_unstable();
     let report = DummyMeasurement {
         spec,
         level,
@@ -379,7 +497,38 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         stat_source: "production_stats_plugin_ungeared_starter",
         initial_stats,
         final_stats: snapshot_stats(&h, caster),
+        reported_damage_sources: sources,
+        known_spells,
+        summon_owners,
+        combat_events: events
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event.kind,
+                    CombatLogKind::Damage
+                        | CombatLogKind::CastSuccess
+                        | CombatLogKind::Summon
+                        | CombatLogKind::Energize
+                )
+            })
+            .cloned()
+            .collect(),
     };
+    let observed_damage: i64 = report
+        .combat_events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event
+                    .source
+                    .is_some_and(|source| report.reported_damage_sources.contains(&source))
+        })
+        .map(|event| i64::from(event.amount))
+        .sum();
+    assert_eq!(
+        observed_damage, report.damage,
+        "exported actual events must reconstruct the reported source-scoped damage"
+    );
     let json = serde_json::to_string_pretty(&report).unwrap();
     println!("ROTATION_DUMMY {json}");
     if let Some(directory) = std::env::var_os("ROTATION_FIDELITY_OUTPUT") {
@@ -425,6 +574,14 @@ fn rotation_dummy_262_single_target_120s() {
 #[test]
 fn rotation_dummy_262_three_targets_120s() {
     measure_dummy(209053, 262, 3, 90, DURATION_SECONDS);
+}
+#[test]
+fn rotation_dummy_262_level70_single_target_60s() {
+    measure_dummy(209053, 262, 1, 70, 60.0);
+}
+#[test]
+fn rotation_dummy_262_level70_three_targets_60s() {
+    measure_dummy(209053, 262, 3, 70, 60.0);
 }
 #[test]
 fn rotation_dummy_262_level32_smoke() {

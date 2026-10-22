@@ -13,6 +13,7 @@ use crate::networking::CombatTarget;
 pub(crate) struct FollowerReach(pub f32);
 
 pub(super) const MELEE_REACH: f32 = 2.0;
+const AUTO_SHOT: u32 = 75;
 
 pub(super) fn update(world: &mut World) {
     super::pull_history::sample_all(world);
@@ -21,6 +22,10 @@ pub(super) fn update(world: &mut World) {
         .iter(world)
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
+    for (unit, follower) in &followers {
+        super::utility::sample_health(world, *unit);
+        super::utility::sample_health(world, follower.owner);
+    }
     for (unit, follower) in &followers {
         if follower.profile.role == GroupRole::Tank
             && crate::spell_cast::targets::is_alive(world, *unit)
@@ -53,6 +58,7 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         EnemySelection::Attack(enemy) => Some(enemy),
         _ => None,
     };
+    update_auto_shot(world, unit, follower, enemy);
     if super::kit_ai::update(world, unit, follower, &party, enemy) {
         return;
     }
@@ -80,6 +86,28 @@ pub(super) fn update_follower(world: &mut World, unit: Entity, follower: &Follow
         return;
     };
     attack_enemy(world, unit, follower, enemy);
+}
+
+/// BM_AUTO_SHOT_STARTS_ON_ENGAGE_SIMC_APL: pinned Hunter APL's auto_shot
+/// starts native75 on engagement, not on owner selection. TC qualifies the repeat,
+/// not this initial policy decision; no player spell or resource is granted.
+fn update_auto_shot(world: &mut World, unit: Entity, follower: &Follower, enemy: Option<Entity>) {
+    if follower.profile.spec_id != 253 {
+        return;
+    }
+    let Some(enemy) = enemy else {
+        crate::spell_cast::auto_repeat::cancel(world, unit);
+        return;
+    };
+    if let Some(mut repeat) = world.get_mut::<crate::spell_cast::auto_repeat::AutoRepeat>(unit) {
+        if repeat.retarget_auto_shot(enemy) {
+            return;
+        }
+    }
+    if let Err(error) = crate::spell_cast::creature_cast(world, unit, AUTO_SHOT, Some(enemy), false)
+    {
+        debug!(?unit, ?error, "Follower Auto Shot start unavailable");
+    }
 }
 
 /// TC a352b1fa CasterAI::UpdateAI, CombatAI.cpp:166–177. Stop a cast
@@ -296,6 +324,9 @@ pub(super) fn engaged_enemies(
         })
         .filter(|&(enemy, victim)| {
             owner_victim == Some(enemy)
+                || party.iter().any(|&member| {
+                    crate::combat_refs::has_active_reference_to(world, enemy, member)
+                })
                 || victim.is_some_and(|victim| party.contains(&victim))
                 || world
                     .get::<shared::components::ThreatTable>(enemy)

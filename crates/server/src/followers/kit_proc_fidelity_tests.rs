@@ -194,6 +194,129 @@ fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
 }
 
 #[test]
+fn proc_fidelity_63_feel_the_burn_native_fire_blast_grants_mastery() {
+    let (mut h, caster) = prepare(209059);
+    assert!(has_aura(h.app.world(), caster, 383391));
+    assert!(!has_aura(h.app.world(), caster, 383395));
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let buff = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("native383391 must grant real383395 from actual Fire Blast");
+    assert_eq!(buff.stacks, 1);
+    assert_eq!(buff.duration_ms, 4000);
+    assert!(
+        buff.effects
+            .iter()
+            .any(|effect| effect.aura_type == 318 && effect.amount == 2.0)
+    );
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_fireball_does_not_grant_mastery() {
+    let (mut h, caster) = prepare(209059);
+    assert!(has_aura(h.app.world(), caster, 383391));
+    let first = h.inbox.log.len();
+    let target = h.npc;
+    complete_cast(&mut h, caster, 133, target);
+    h.advance(20);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(133)
+                && event.source == Some(caster.to_bits())
+                && event.amount > 0
+        }),
+        "control must land actual native Fireball damage"
+    );
+    assert!(
+        !has_aura(h.app.world(), caster, 383395),
+        "native383391 names Fire Blast, not every harmful spell"
+    );
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
+    let (mut h, caster) = prepare(209059);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let first = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("first real Fire Blast must grant383395");
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let second = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("second real Fire Blast must retain383395");
+    assert_eq!(second.stacks, 2, "both actual native applications overlap");
+    let first_expiry = first
+        .expires_at
+        .expect("native first buff has finite4s duration");
+    let second_expiry = second
+        .expires_at
+        .expect("native second buff has finite4s duration");
+    assert!(second_expiry > first_expiry);
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > first_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < second_expiry);
+    let remaining = super::kit_clearcasting_tests::own_aura(&h, caster, 383395)
+        .expect("second application remains after first naturally expires");
+    assert_eq!(
+        remaining.stacks, 1,
+        "multiple native applications overlap, not a single refreshed two-stack lifetime"
+    );
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > second_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(!has_aura(h.app.world(), caster, 383395));
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_cap_replaces_oldest_application() {
+    let (mut h, caster) = prepare(209059);
+    // Native child casts isolate the authored100-stack cap, not producer frequency.
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 383395, Some(caster), 1);
+    }
+    let initial = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(initial.stacks, 100);
+    let first_expiry = initial.expires_at.unwrap();
+    h.advance(10);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let refreshed = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(refreshed.stacks, 100);
+    let latest_expiry = refreshed.expires_at.unwrap();
+    assert!(latest_expiry > first_expiry);
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > first_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < latest_expiry);
+    let remaining = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(
+        remaining.stacks, 1,
+        "the later real Fire Blast replaces only the oldest expiry at the native cap"
+    );
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > latest_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(!has_aura(h.app.world(), caster, 383395));
+}
+
+#[test]
 fn proc_fidelity_262_surge_earned_during_lava_burst_survives_that_cast() {
     let (mut h, caster) = at_level(209053, 32, |_| {});
     let target = h.npc;
