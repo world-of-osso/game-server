@@ -461,6 +461,13 @@ fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload
     let target = h.npc;
     let first = h.inbox.log.len();
     complete_cast(&mut h, caster, 188196, target);
+    h.advance(4);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284)),
+        "overload follows the sourced400ms callback, not immediate root impact"
+    );
     h.advance(30);
     assert!(h.inbox.log[first..].iter().any(|event| {
         event.kind == CombatLogKind::Damage
