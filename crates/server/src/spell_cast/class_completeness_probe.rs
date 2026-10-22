@@ -189,7 +189,28 @@ fn choose_case_target(h: &mut Harness, spell: &crate::spell_info::SpellInfo) -> 
     } else {
         h.caster
     };
+    group_raid_case_target(h, relation, target);
     (target, hostile)
+}
+
+fn group_raid_case_target(
+    h: &mut Harness,
+    relation: Option<super::targets::Relation>,
+    target: Entity,
+) {
+    if relation != Some(super::targets::Relation::Raid) || target == h.caster {
+        return;
+    }
+    let owner = h.caster;
+    let owner_id = h
+        .app
+        .world()
+        .get::<crate::persistence::ClientId>(owner)
+        .unwrap()
+        .0;
+    // Case caster IDs are u32 spell IDs; reserve a separate member-ID namespace.
+    let member_id = (1_u64 << 32) | owner_id;
+    group_fixture_players(&mut h.app, (owner, owner_id), (target, member_id));
 }
 
 fn send_case_cast(

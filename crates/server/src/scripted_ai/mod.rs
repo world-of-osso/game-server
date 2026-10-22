@@ -27,6 +27,7 @@ mod broggok;
 mod bromach;
 pub(crate) mod caster_chase;
 pub mod creature_text;
+mod dailcry;
 mod doragosa;
 mod emberon;
 pub mod event_map;
@@ -34,6 +35,7 @@ pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
 pub(crate) mod kargath;
+mod kikatal;
 pub mod kings_rest;
 mod kokia;
 mod lost_dwarves;
@@ -382,6 +384,12 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == orator::SCRIPT {
         return orator::creature_ai(world, creature);
     }
+    if script_name == kikatal::SCRIPT {
+        return kikatal::creature_ai(world, creature);
+    }
+    if script_name == dailcry::SCRIPT {
+        return dailcry::creature_ai(world, creature);
+    }
     if script_name == talondras::SCRIPT {
         return talondras::creature_ai(world, creature);
     }
@@ -453,6 +461,8 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == emberon::SCRIPT
         || script_name == anubzekt::SCRIPT
         || script_name == orator::SCRIPT
+        || script_name == kikatal::SCRIPT
+        || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
