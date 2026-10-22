@@ -50,6 +50,8 @@ mod bonus_stat_tests;
 #[cfg(test)]
 mod cast_while_moving_tests;
 #[cfg(test)]
+mod caster_healing_taken_tests;
+#[cfg(test)]
 mod caster_school_damage_tests;
 mod casting_restriction;
 #[cfg(test)]
