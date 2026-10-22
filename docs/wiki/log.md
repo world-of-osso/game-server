@@ -1,3 +1,7 @@
+## 2026-10-21 — Native empower modifier snapshot
+
+[Tip the Scales](investigations/follower-data.md#native-empower-pipeline--2026-10-21): actual370553 consumed after duration snapshot, selected-stage1 Font Fire releases max rank4 with6000ms DoT; following Surge retains ordinary timing and native delayed missile impact. Corrected1PASS32.37s at601053452, zero warnings, production unchanged. Initial impact-window failure is not a feature RED; cancellation paid-power/charge proofs remain open.
+
 ## 2026-10-21 — Native defensive choices and quantitative empower proof
 
 [Defenses](investigations/follower-data.md#four-spec-native-defensive-choices--2026-10-21): existing wounded-and-attacked policy produces native casts/auras for all four specs, not on owner-only threat;4PASS50.73s. [Empower](investigations/follower-data.md#native-empower-pipeline--2026-10-21): later positive proofs close Animosity new-instance reset, Blast Furnace learn/rank duration, converted tick damage, Font rank4 outcomes and native Scouring count. Optional talent ranks/modifier timing remain open; no new production edits.

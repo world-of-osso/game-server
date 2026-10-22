@@ -4,15 +4,15 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## What it must do
 
-- [x] Resolve native Font override spells through the shared follower action resolver before admission and retain the native three/four-stage metadata and TC1000ms maximum-stage hold. Modifier-specific timing still needs focused proof.
-- [ ] Release at an explicitly selected completed stage, on a matching explicit player release after the first-stage minimum, or automatically after maximum hold; pass the completed stage into the release effects/scripts.
+- [x] Resolve native Font override spells through the shared follower action resolver before admission and retain the native three/four-stage metadata and TC1000ms maximum-stage hold. Native Tip the Scales370553 must snapshot its one-use duration modifier before consumption: selected-stage1 Font Fire releases rank4 immediately; the next Surge retains its ordinary stage timing and delayed missile impact.
+- [x] Release at an explicitly selected completed stage, on a matching explicit player release after the first-stage minimum, or automatically after maximum hold; pass the completed stage into the release effects/scripts.
 - [ ] Defer the GCD until empower finish and use native359115's500ms clock. Cancellation must remain distinct from release and retain the sourced cancellation/resource lifecycle.
 - [x] Native rank3 Fire Breath357208 releases real357209 damage with its remaining8000ms DoT. Native rank3 Eternity Surge359073 hits3 recipients, or6 with actual Eternity's Span. Fire Breath's dispel preserves enemy Magic buffs without378438 and removes them with native Scouring Flame.
-- [ ] Prove converted-tick direct damage across selected ranks, Blast Furnace extension, Font variant release consequences and native Scouring count2. Preserve current effect5 fields, not obsolete TC silence/index/rank-count fields.
-- [ ] Accept player release only for the authenticated owner's matching active empower. `ReleaseEmpowerSpell {spell_id}` and `StopSpellCast` remain separate messages; the client sends release when the cast binding goes up.
+- [x] Prove converted-tick direct damage across selected ranks, Blast Furnace extension, Font variant release consequences and native Scouring count2. Preserve current effect5 fields, not obsolete TC silence/index/rank-count fields.
+- [x] Accept player release only for the authenticated owner's matching active empower. `ReleaseEmpowerSpell {spell_id}` and `StopSpellCast` remain separate messages; the client sends release when the cast binding goes up.
 
 - [x] Two completed native Font empowers extend the same active Dragonrage by native Animosity375797 effect0 milliseconds, then by the native effect1 diminished amount (5000ms then3750ms on70448).
-- [ ] A new Dragonrage instance resets Animosity effectiveness; test its lifetime boundary independently.
+- [x] A new Dragonrage instance resets Animosity effectiveness; test its lifetime boundary independently.
 
 ## How it works
 
@@ -35,7 +35,7 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## Known gaps (current cycle)
 
-- [ ] Add explicit player release, cancel/refund and selected-stage behavior tests plus matching protocol/client consumers.
+- [ ] Prove actual paid-power refund and retained charge recovery independently of normal-cooldown cancellation. Matching player-release/selected-stage and protocol/client consumers already have scoped proof; a running physical Godot-to-server key-up capture remains unproved.
 - [x] Follower single-target Fire Breath releases rank1 after the native first-stage threshold. Cancelled Surge removes its ordinary cooldown, applies finish GCD and never releases damage.
 - [x] Matching authenticated player release waits for native stage1 then fires the20s DoT. Wrong-spell and unauthenticated requests do not release; StopSpellCast still cancels without damage.
 - [ ] Complete optional Legacy of the Lifebinder/Volatility purchased-rank branches; current starter book lacks those talents, so they remain unqualified rather than inferred from spell presence.
