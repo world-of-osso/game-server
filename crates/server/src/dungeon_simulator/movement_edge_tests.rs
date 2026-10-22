@@ -25,7 +25,6 @@ fn fixture() -> (Space, RecordedPositions) {
 }
 
 #[test]
-#[ignore = "explicit recorded Azure native idle-sight sphere and moving endpoint"]
 fn recorded_mid_edge_follow_does_not_overshoot_into_the_idle_sapling() {
     let (space, recorded) = fixture();
     let from = Vec3::from_array(recorded.healer);
@@ -54,7 +53,6 @@ fn recorded_mid_edge_follow_does_not_overshoot_into_the_idle_sapling() {
 }
 
 #[test]
-#[ignore = "explicit recorded Azure retarget boundary and native frozen edge time"]
 fn recorded_mid_edge_retarget_consumes_only_the_remaining_frozen_walk_time() {
     let (space, recorded) = fixture();
     let from = Vec3::from_array(recorded.healer);
