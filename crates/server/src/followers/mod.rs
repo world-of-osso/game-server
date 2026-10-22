@@ -4,6 +4,8 @@ mod catalog;
 mod empower_policy;
 mod hazards;
 mod healer_context;
+#[cfg(test)]
+mod healer_group_cancel_tests;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;
