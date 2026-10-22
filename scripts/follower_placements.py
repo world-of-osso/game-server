@@ -3,6 +3,7 @@
 import argparse
 from contextlib import closing
 import csv
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -18,6 +19,7 @@ JOURNAL_PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
 LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
 NATIVE_BINDING_POLICY = 'FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
+JOURNAL_HOSTILITY_POLICY = 'FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER'
 MAP_TUNING_POLICY = 'FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY'
 TABLE_KEYS = {'content_creature_template': ('entry',),
               'content_creature_template_model': ('CreatureID', 'Idx'),
@@ -247,7 +249,29 @@ def stage_source_difficulties(target, records):
     return proofs
 
 
-def prepare_templates(target, records, cache):
+def qualify_journal_hostility(target, record, tables):
+    identity = record['journal_actor_source']
+    if identity['policy'] != NATIVE_BINDING_POLICY:
+        raise ValueError('journal hostility requires the unique exact native actor binding')
+    binding = derive_exact_native_binding(target, tables, record['map_id'], record['entry'], identity)
+    follower = [row for row in tables['MapDifficulty']
+                if int(row['MapID']) == record['map_id'] and row['DifficultyID'] == '205']
+    if len(follower) != 1:
+        raise ValueError('journal hostility requires one authenticated follower-difficulty map row')
+    cursor = target.execute('SELECT * FROM map_difficulty WHERE MapID=? AND DifficultyID=205', (record['map_id'],))
+    columns = [column[0] for column in cursor.description]
+    native = [{key: str(value) for key, value in zip(columns, row)} for row in cursor]
+    if native != follower:
+        raise ValueError('native follower map differs from authenticated DB2')
+    rows = {name: next(row for row in tables[name] if int(row['ID']) == row_id)
+            for name, row_id in [('JournalEncounterCreature', binding[5]), ('JournalEncounter', binding[4]),
+                                 ('DungeonEncounter', binding[2]), ('MapDifficulty', int(follower[0]['ID']))]}
+    return dict(policy=JOURNAL_HOSTILITY_POLICY, binding=list(binding),
+                rows={name: dict(row=row, sha256=hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
+                      for name, row in rows.items()})
+
+
+def prepare_templates(target, records, cache, tables=None):
     entries = ','.join(str(r['entry']) for r in records)
     difficulties = stage_source_difficulties(target, records)
     target.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
@@ -257,14 +281,25 @@ def prepare_templates(target, records, cache):
         native_faction = target.execute('SELECT faction FROM tdb_creature_template WHERE entry=?', (record['entry'],)).fetchone()[0]
         if native_faction > 0:
             continue
-        actor = read_cached_npc(cache, record['entry'])
         donor = read_cached_npc(cache, record['faction_donor'])
         faction = target.execute('SELECT faction FROM tdb_creature_template WHERE entry=?', (record['faction_donor'],)).fetchone()[0]
-        if actor['entity']['react'] != [-1, -1] or donor['entity']['react'] != actor['entity']['react'] or faction <= 0:
-            raise ValueError('faction donor does not have the sourced matching hostile A/H reaction')
+        hostility = None
+        if record.get('faction_policy') == JOURNAL_HOSTILITY_POLICY:
+            if tables is None:
+                raise ValueError('journal hostility requires authenticated binding and map tables')
+            hostility = qualify_journal_hostility(target, record, tables)
+            if faction != 16 or donor['entity']['react'] != [-1, -1]:
+                raise ValueError('journal hostility donor must have native faction16 and sourced hostile A/H reaction')
+        else:
+            actor = read_cached_npc(cache, record['entry'])
+            if actor['entity']['react'] != [-1, -1] or donor['entity']['react'] != actor['entity']['react'] or faction <= 0:
+                raise ValueError('faction donor does not have the sourced matching hostile A/H reaction')
         target.execute('UPDATE content_creature_template SET faction=? WHERE entry=? AND faction=0', (faction, record['entry']))
-        donors.append(dict(entry=record['entry'], donor_entry=record['faction_donor'], donor_page=donor,
-                           faction=faction, policy=FACTION_POLICY, reason=record['donor_reason']))
+        proof = dict(entry=record['entry'], donor_entry=record['faction_donor'], donor_page=donor,
+                     faction=faction, policy=FACTION_POLICY, reason=record['donor_reason'])
+        if hostility is not None:
+            proof['hostility_source'] = hostility
+        donors.append(proof)
     target.execute(f'INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID IN({entries})')
     return donors, difficulties
 
@@ -485,7 +520,7 @@ def prepare(args):
                         'SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (record['entry'],))]
             backup(baseline, prepared_path)
             with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
-                receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, manifest['entries'], args.cache)
+                receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, manifest['entries'], args.cache, tables | binding_tables)
                 write_placements(prepared, manifest, placements, bindings)
                 for proof in native_bindings:
                     write_primary_binding(prepared, tuple(proof['binding']))
