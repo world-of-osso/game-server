@@ -151,6 +151,50 @@ fn census_tail_280_native_npc_does_not_gain_player_armor_penetration() {
 }
 
 #[test]
+#[ignore = "RED:22 physicalflatarmor must reach the actual NPC mitigation consumer"]
+fn census_tail_22_native_npc_physical_mitigation_uses_flat_then_total_armor() {
+    let mut h = fixture(&[28790, 52022]);
+    let target = h.npc;
+    let spell = world_db().unwrap().store.get(12294).unwrap();
+    let conn = rusqlite::Connection::open_with_flags(
+        &world_db().unwrap().powers_db,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(crate::world_data::load_expected_stats(&conn).armor_constants());
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(CreatureArmor(300.0));
+    let before = armor_reduced(h.app.world(), h.caster, target, 1000.0, spell);
+    for spell_id in [28790, 52022] {
+        apply_aura(
+            h.app.world_mut(),
+            &AuraApplication {
+                caster: h.caster,
+                target,
+                spell_id,
+                effect_mask: 1,
+                source: AuraSource::Cast,
+            },
+        );
+    }
+    let armored = armor_reduced(h.app.world(), h.caster, target, 1000.0, spell);
+    assert!(armored < before);
+    remove_auras(h.app.world_mut(), target, RemoveReason::Cancelled, |_| true);
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert(CreatureArmor(1200.0));
+    assert_eq!(
+        armored,
+        armor_reduced(h.app.world(), h.caster, target, 1000.0, spell),
+        "(native300+700)×1.20 reaches armor mitigation"
+    );
+}
+
+#[test]
 fn aura_stat_native_57_changes_magic_crit_but_not_weapon_crit() {
     let mut h = fixture(&[450831]); //2.5 spell-only percentage points.
     let magic = world_db().unwrap().store.get(314633).unwrap();

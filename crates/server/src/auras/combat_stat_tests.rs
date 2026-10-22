@@ -129,6 +129,76 @@ fn census_tail_198_native_split_versatility_destination_is_not_applied_to_all_ve
 }
 
 #[test]
+#[ignore = "RED:22 native signed physicalarmor changes are reversible; authoredzero stayszero"]
+fn census_tail_22_native_physical_resistance_adds_signed_armor_then_removes() {
+    let mut h = fixture(&[360827, 28790, 5480]);
+    let ratings = CombatRatings {
+        armor: 1000.0,
+        crit: 1234.0,
+        ..Default::default()
+    };
+    apply(&mut h, 360827, 0);
+    assert_eq!(
+        computed(&h, ratings).armor,
+        1000.0,
+        "nativeBlisteringScales22 amount0 is not invented armor"
+    );
+    apply(&mut h, 28790, 0);
+    assert_eq!(computed(&h, ratings).armor, 1700.0);
+    apply(&mut h, 5480, 0);
+    assert_eq!(computed(&h, ratings).armor, 1500.0);
+    assert_eq!(computed(&h, ratings).ratings.crit, 1234.0);
+    let caster = h.caster;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 5480
+    });
+    assert_eq!(computed(&h, ratings).armor, 1700.0);
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 28790
+    });
+    assert_eq!(computed(&h, ratings).armor, 1000.0);
+}
+
+#[test]
+#[ignore = "RED:22 TOTAL_VALUE is afterbase142 and beforetotal101"]
+fn census_tail_22_native_flat_armor_preserves_base_and_total_percentage_order() {
+    let mut h = fixture(&[360827, 28790, 52022]);
+    apply(&mut h, 360827, 1);
+    apply(&mut h, 28790, 0);
+    apply(&mut h, 52022, 0);
+    let actual = computed(
+        &h,
+        CombatRatings {
+            armor: 1000.0,
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        actual.armor, 2280.0,
+        "(1000×1.20+700)×1.20, not scaling700byBASE_PCT"
+    );
+}
+
+#[test]
+#[ignore = "RED control:22 nonphysical resistance cannot become armor or a fake modeled stat"]
+fn census_tail_22_native_fire_resistance_retains_unrepresented_school_warning() {
+    let mut h = fixture(&[29127]);
+    apply(&mut h, 29127, 0);
+    assert_eq!(
+        computed(
+            &h,
+            CombatRatings {
+                armor: 1000.0,
+                ..Default::default()
+            }
+        )
+        .armor,
+        1000.0
+    );
+    assert!(take_unhandled_auras(h.app.world_mut()).contains(&(29127, 22)));
+}
+
+#[test]
 fn aura_stat_native_405_scales_selected_ratings_not_percent_chance() {
     let mut h = fixture(&[117216, 417489, 1262442]);
     let ratings = CombatRatings {
