@@ -26,6 +26,11 @@ use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spell_data};
 use crate::stats::CharacterStats;
 
+mod assisted_parity;
+pub(crate) use assisted_parity::{
+    read_facts as read_assisted_parity_facts, read_request_window as read_assisted_request_window,
+};
+
 /// Opt-in actual server combat events, including ownerless NPC self-events.
 /// Captured before owner routing; never changes production delivery or ownership.
 #[derive(Resource, Default)]
@@ -516,6 +521,44 @@ pub(crate) fn charge_range(h: &mut Harness) {
         y: 0.0,
         z: 0.0,
     });
+}
+
+/// Establish actual raid eligibility through invite/accept, preserving case-supplied IDs.
+pub(crate) fn group_fixture_players(app: &mut App, leader: (Entity, u64), member: (Entity, u64)) {
+    let (leader, leader_id) = leader;
+    let (member, member_id) = member;
+    app.init_resource::<crate::group::GroupRegistry>();
+    app.world_mut()
+        .entity_mut(leader)
+        .insert(crate::persistence::ClientId(leader_id));
+    app.world_mut()
+        .entity_mut(member)
+        .insert(crate::persistence::ClientId(member_id));
+    let member_name = format!("FixtureAlly-{member_id}");
+    app.world_mut().get_mut::<Player>(member).unwrap().name = member_name.clone();
+    let online = crate::group::OnlineView::from_iter([
+        (leader_id, fixture_online_member(app.world(), leader)),
+        (member_id, fixture_online_member(app.world(), member)),
+    ]);
+    let mut groups = app
+        .world_mut()
+        .resource_mut::<crate::group::GroupRegistry>();
+    groups.invite(leader_id, &member_name, &online);
+    groups.respond_invite(member_id, true);
+    assert!(groups.is_in_same_group(leader_id, member_id));
+}
+
+fn fixture_online_member(world: &World, entity: Entity) -> crate::group::OnlineMember {
+    let player = world.get::<Player>(entity).unwrap();
+    crate::group::OnlineMember {
+        entity: entity.to_bits(),
+        name: player.name.clone(),
+        class: player.class,
+        level: world.get::<Level>(entity).unwrap().0,
+        portrait: default(),
+        dungeon_difficulty: 1,
+        raid_difficulty: default(),
+    }
 }
 
 pub(crate) fn drain<M: lightyear::prelude::Message>(app: &mut App, connection: Entity) -> Vec<M> {
