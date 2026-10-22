@@ -9,6 +9,12 @@ selection. Never infer an edge merely because a description mentions a spell.
 SIMC_DESCRIPTION_CHILDREN = {
     274837: (274838, 'sc_druid.cpp:4114-4140'),
     1243807: (1244079, 'sc_druid.cpp:4060-4090'),
+    # Explicit secondary-action selection, independently confirmed by each
+    # native root description. Pet commands do not imply owner damage credit.
+    204019: (204301, 'paladin/sc_paladin_protection.cpp:354-431'),
+    34026: (83381, 'sc_hunter.cpp:3350,6587-6588,7548-7549'),
+    1264359: (1264355, 'sc_hunter.cpp:3352,6796-6808,7562-7563'),
+    355913: (355916, 'sc_evoker.cpp:4395-4440,10083-10084'),
 }
 
 
