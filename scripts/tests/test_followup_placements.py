@@ -70,6 +70,14 @@ class FollowupPlacementAcceptance(unittest.TestCase):
         receipt = json.loads((path.parent / 'receipt.json').read_text())
         self.assertEqual({p['entry']: p['source_difficulty_id'] for p in receipt['source_difficulties']}, {213179: 0})
         self.assertEqual(receipt['donors'], [])
+        self.assertEqual(receipt['navigation_gaps'], [])
+        placement = receipt['placements'][0]
+        self.assertEqual(placement['page']['assignment_resolution']['chosen_assignment_id'], 68441)
+        self.assertEqual(len(placement['assignments']), 67)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            self.assertEqual(db.execute('SELECT id1,map,position_x,position_y,position_z FROM content_creature WHERE guid=63660000').fetchone(),
+                             (213179, 2660, -103.24485721595764, 424.63702790355273, 137.09528))
+            self.assertEqual(db.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=213179').fetchall(), [(0,)])
 
     def test_cinderbrew_missing_primaries_keep_native_zero_rows_and_goldie_faction(self):
         self.assert_source_primaries(2661, (210267, 214661), source_difficulty=0)
@@ -96,6 +104,12 @@ class FollowupPlacementAcceptance(unittest.TestCase):
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
             self.assertEqual(db.execute('SELECT id1,map,position_x,position_y,position_z FROM content_creature WHERE guid=30006707').fetchone(),
                              (237514, 2830, 878.045, -614.084, 999.058))
+            self.assertEqual(db.execute('SELECT id1,map,position_x,position_y,position_z FROM content_creature WHERE guid=63830000').fetchone(),
+                             (234933, 2830, 860.9113228374999, -671.9940244898503, 998.2693509718046))
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2830_234933'])
+        evidence = receipt['placements'][0]['source_floor_evidence']
+        self.assertEqual(evidence['maximum_horizontal_distance_yards'], 12)
+        self.assertEqual(evidence['corroboration']['entry'], 237514)
 
     def test_darkflame_missing_primaries_keep_native_one_and_zero_source_rows(self):
         self.assert_source_primaries(2651, (208743,))
