@@ -1,4 +1,23 @@
 ## 2026-10-22 — Native power receipt observability
+## 2026-10-22 — Utility Attr4 master refresh
+
+[Utility master integration](systems/follower-utility.md#master-attr4-integration-refresh): master23c75e20e/sourcee83a4a831 retains pursuit plus native no-clipping parallel casts. Exact prior95 cases95PASS149.10s; no source-input or paired metric changes.
+
+## 2026-10-22 — Utility/native-policy integration
+
+[Utility admission](systems/follower-utility.md#integration-with-native-defensive-admission): matched master40812PASS versus utility12FAIL, plus shared missing Leymor receipt. Preserve authored defensive admission/healer ownership; owned Holy/Resto harm-first dispels2RED→GREEN. Approved native OOC Mark and actual ready-kick/cooldown-spent Overheat cases pass. Final native95PASS103.55s at1afc510b6/mastere5f37f774; no paired metric rerun or Leymor frontal/nav qualification.
+
+## 2026-10-21 — Follower utility and scoped geometry
+
+[Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Midnight clock authority
+
+[Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
+
+## 2026-10-22 — Dailcry native channel boundary
+
+[Dailcry](investigations/follower-data.md#captain-dailcry-native-channel-boundary--2026-10-22): eb1native first/reset pass; ongoing oracle expected instant Mauling but actual70448 is a30s channel. Corrected670739696 ongoing1/1GREEN168.22s preserves full native occupancy and proves12requests/native damage/actualcopy-credit/corpse across Normal1/Follower205; retained first/reset2PASS yields3-case composite proof, tests enabled. Binding producer1/1GREEN preserves source; Normal population bridge supports205 without fabricated rows. No production timer/cancellation change.
+
 ## 2026-10-22 — Spotlight and native target57 qualified
 
 [Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): separate generic4db754ace/exact25c96a187, correctedRED4/control4PASS102.82s→8GREEN112.11s at25c96a187/protocol2abc7fa. Native1022 rejects foreign ally while21/10060 remains allowed; actual grouped recipient apply/replicate/CancelAura/invariants/recovery refusal, foreign no substitute and2drifts pass. Check133s/0warnings/fmt/readabilityPASS. Exact542→543 only230924,630 unadmitted; named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE persists in census/ledger. No outdoor/native/full30min expiry/hour reuse claim. Original379 current partition25visual/2ports/1identity/155zero-payload/196script gaps, with exact source ledgers.
@@ -3788,6 +3807,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Missing-model project geometry policy
 
 [Model geometry](systems/model-geometry.md): approved generic runtime defaults replace follower-only sizing; actual Champion124440 acquisition/scaled precedence RED2/5.15s. Source rows and effective scale preserved; radius and GREEN proof pending.
+
+## 2026-10-21 — Utility integration and reproducible pet census
+
+[Follower utility](systems/follower-utility.md): native healer triage ownership retained during utility integration; old follower-only sizing references/oracle replaced by shared model-geometry contract. Pet census producer now emits native family29 actions30213/30151/89766 with levels1/14/17 and explicit rotation/movement/stopping categories; Python2RED→2GREEN0.331s at77be85c3e. Six actual companion-party buff cases are committed, native RED pending capacity.
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): native TF and WW fourRED→GREEN; retained refresh/defense/form20PASS, LastStand source-attribution oracle corrected; full measurements remain open.
 
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): merged1c4df4250 native21PASS26.07s/0warnings/fmtPASS, including real two-use ComboBreaker and StatsPlugin LastStand46/47; full APL/healer import remain open.
@@ -3804,6 +3827,9 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
 
+## 2026-10-22 — Qualified follower utility comparison
+
+[Follower utility](systems/follower-utility.md#backend-aligned-matched-outcomes): native global range/phase priority2RED→79-case utility/healer/retainedGREEN (one existing ignored). Backend-aligned frozen-input20+20 runs: landed interrupts655→691, dangerous completions14→23, native party Deaths1→0, clears19→20; no improved-cast-suppression or statistical survival claim. Source/prerequisite boundaries and earlier failed candidates retained in linked receipts.
 - 2026-10-21: [Encoded navigation grid](design/navigation-worker.md#encoded-navigation-grid-contract): real2669tile31_37 capacity RED (69452contour/68202unique vertices); generic uniform whole-map refinement and encoded-width runtime support at84b5a36ba. Body/voxel/region/simplification unchanged; real2669CLI/query, refined cross-tile and mixed-grid3/3GREEN, patchedAzurefour4×4 payload hashes byte-identical. Four full-map repairs20/49/30/15tiles uniformly8×8 pass;27requested maps staged1100nav/LOS/M2tiles each,19119packets unchangedbodyparams,3300-file publication manifest. Sanity8/20PASS,18noentrance/4nobossspawn gaps explicit. After147bab495 merge, navigationunit8PASS/5existingassetignores/defaultcheck/fullfmtPASS; targeted3GREEN proofscope unchanged, no redundant rerun. Publication/runtime rollout remainslead-owned.
 - 2026-10-21: Talondras currentLua/native70448 partial: originalignoredRED→parent-approved native5GREEN; all20source requests, exact11native successes/9category1152rejections perNormal/Follower run, nativeDamage/DOT/reset/isolatedcredit. Runtime109735model kept; Orb/energy/category mismatch gaps explicit, no cooldown bypass. [Boss scripts](systems/boss-scripts.md#talondras-current-lua-partial--2026-10-21).
 
