@@ -66,6 +66,7 @@ pub(super) fn encounter_inputs(entry: u32, map_id: u32, populate: bool) -> Arc<P
         16808 => Some("kargath"),
         20923 => Some("porung"),
         209230 => Some("kyrioss"),
+        208745 => Some("candle-king"),
         186737 => Some("telash"),
         186739 => Some("azureblade"),
         186738 => Some("umbrelskul"),
@@ -113,7 +114,8 @@ fn decode_encounter_inputs(
     let mut inputs = PreparedInputs::default();
     let conn = Connection::open_with_flags(&path, OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
     if [
-        20923, 196482, 190609, 188252, 189232, 184580, 184581, 184582, 184018, 184124, 184422,
+        208745, 20923, 196482, 190609, 188252, 189232, 184580, 184581, 184582, 184018, 184124,
+        184422,
     ]
     .contains(&entry)
     {

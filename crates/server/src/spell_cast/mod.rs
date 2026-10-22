@@ -727,6 +727,16 @@ impl SpellHistory {
                     .is_some_and(|&at| at > now))
     }
 
+    /// TC a352b1fa SpellHistory.cpp:709–736 GetRemainingCooldown: a live own
+    /// entry wins; otherwise consult its category. Expired entries are not live.
+    pub(crate) fn remaining_cooldown_ms(&self, spell: &SpellInfo, now: f64) -> u64 {
+        let category = spell.categories.as_ref().map_or(0, |c| c.category);
+        let own_deadline = self.spell_ready_at.get(&spell.id).filter(|&&at| at > now);
+        let deadline = own_deadline.or_else(|| self.category_ready_at.get(&category));
+        let remaining = deadline.copied().unwrap_or(now) - now;
+        (remaining.max(0.0) * 1000.0) as u64
+    }
+
     pub(crate) fn on_gcd(&self, spell: &SpellInfo, now: f64) -> bool {
         let category = gcd_category(spell);
         category != 0 && self.gcd_ready_at.get(&category).is_some_and(|&at| at > now)

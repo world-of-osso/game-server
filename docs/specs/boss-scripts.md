@@ -1,5 +1,11 @@
 # Boss scripts
 
+## TWW Candle King TC parent-request partial
+
+- TC a352b1fa `KhazAlgar/DarkflameCleft/boss_the_candle_king.cpp:85–222` governs actual208745/map2651/2787bit0 (Journal2560/5595/display114508). Preserve source `boss_the_candle_king`, flags64, spawn10002793, all actors/stats/addons/models/population and native70448 effects. Producer `--encounter candle-king` installs only its authenticated binding on independent copies. Follower205 tests explicitly project the native actor from the Normal placement; they do not publish unauthored205 spawn/stat rows.
+- Normal1/Follower205 engagement requests Darklight426152, then Molds420659 at6s, Mind426145 at10.5s, Pickaxe421274 at13.2s, Throw420696 at19.3s; repeats31.5/20.6/17/17s respectively. Before every lane request, follow TC `GetCooldownOfSpell`/`TryCastSpellIfReady`: wait actual remaining native spell/category cooldown, never reset or bypass category1152. Native cast occupancy and ordinary admission remain authoritative; TC repeats after DoCast even when it fails.
+- `CANDLE_KING_SELECTOR_CHILDREN_UNPORTED`: TC authors Molds summon420665, Throw marker421250→expire421145, and Pickaxe421277/422648→rect-selected421282. Those scripts are sourced but not yet ported; native parent dummy/aura effects are not certification of their children. `CANDLE_KING_WAX_AREA_CONTROLLER_UNPORTED` retains wax actors/clone, candlelight, cursed/molten wax and statue cleanup. `CANDLE_KING_EVADE_DESPAWN_UNPORTED` retains TC despawn/respawn rather than claiming generic native evade equals full TC lifecycle. Other difficulties and whole-fight/native-clear certification remain excluded. Require native Normal/projected205 RED→GREEN first/ongoing clocks, cooldown deferral, native fear, copy-local death credit/corpse silence and reset/rearm before enabling tests.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
