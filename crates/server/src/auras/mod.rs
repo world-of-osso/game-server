@@ -1052,7 +1052,7 @@ pub(crate) fn apply_aura_with_spell(
     if instance.effects.is_empty() {
         return;
     }
-    refresh::prepare_application(world, target, &mut instance);
+    refresh::prepare_application(world, target, &mut instance, spell);
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
     mechanic_immunity::remove_matching(world, target, &instance);
