@@ -39,7 +39,6 @@ fn count_cast_receipts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "native Aldryr source proof pending"]
 fn encounter_coverage_aldryr_first_keg_smash_uses_current_lua_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = aldryr_copy(difficulty);
@@ -63,7 +62,6 @@ fn encounter_coverage_aldryr_first_keg_smash_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "native Aldryr ongoing proof pending"]
 fn encounter_coverage_aldryr_ongoing_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = aldryr_copy(difficulty);
@@ -198,7 +196,6 @@ fn encounter_coverage_aldryr_ongoing_native_damage_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "native Aldryr evade/rearm proof pending"]
 fn encounter_coverage_aldryr_evade_rearms_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = aldryr_copy(difficulty);
