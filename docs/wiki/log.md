@@ -1,3 +1,7 @@
+## 2026-10-22 — Initial respawn project-admission policy
+
+[Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22): approved City2669/POI8072 and Priory2649/8073 only, unique/unconditional, exact native POI coordinates plus sourced-trash facing. Native portal provenance gaps and13–51yd calibration finding retained; conditional checkpoints rejected. Actual missing-two RED0.028s; GREEN pending. Lead confirmed Avanoxx/Taah8rows published/integrityOK.
+
 ## 2026-10-22 — Avanoxx and Taah'bat packet qualification
 
 [TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22):68d67b7dc assignment/journal/anchor5GREEN0.572s;207d6b03e actual-copy Avanoxx2GREEN0.021s and Taah'bat2GREEN0.017s. Each fresh-copy4-row packet replays3× exactly; native0/CT2977 Avanoxx137.09528 has complete entrance route, native1/CT2718 Taah'bat998.269351 remains incomplete. Raw67assignments/native lowestOrderIndex, instance12yd limit and unchanged A'wazj corroboration retained. Soul-Scribe scaling gap remains; publication pending. Lead confirmed Cinderbrew8rows published/integrityOK.
