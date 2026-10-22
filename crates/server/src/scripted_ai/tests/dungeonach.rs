@@ -192,20 +192,22 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
     );
     let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
     assert_eq!(state.criteria_progress[&18527], 1);
+    assert_eq!(state.criteria_progress[&24760], 1);
+    assert_eq!(state.criteria_progress[&24762], 1);
     let database = h.app.world().resource::<crate::persistence::GameDatabase>();
     let mut character_state = state.clone();
     assert!(character_state.account.take().is_some());
     let before_commit = crate::persistence::load_achievements(&database.db, 1001);
+    assert!(
+        !before_commit.earned_ids.contains(&633),
+        "held writer must expose the real pending-commit boundary"
+    );
+    assert!(!before_commit.criteria_progress.contains_key(&24762));
     release_credit_writer.take().unwrap().send(()).unwrap();
     crate::test_data::drain_persistence(database);
-    let after_commit = crate::persistence::load_achievements(&database.db, 1001);
     assert_eq!(
-        after_commit, character_state,
-        "native queued credit must become durable after its FIFO fence"
-    );
-    assert_eq!(
-        before_commit, character_state,
-        "pre-existing final assertion races the native asynchronous writer"
+        crate::persistence::load_achievements(&database.db, 1001),
+        character_state
     );
     assert!(
         !h.app
@@ -345,6 +347,9 @@ fn reconnect_dungeon2_player(
     player: Entity,
     connection: Entity,
 ) -> (Entity, Entity) {
+    crate::test_data::drain_persistence(
+        h.app.world().resource::<crate::persistence::GameDatabase>(),
+    );
     let state = crate::persistence::load_achievements(
         &h.app
             .world()
