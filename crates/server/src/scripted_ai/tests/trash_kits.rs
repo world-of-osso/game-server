@@ -2,7 +2,15 @@
 use super::*;
 
 fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
-    let mut app = stockade_app(data().expect("source world.db"));
+    let mut app = stockade_app_with(data().expect("source world.db"), |app| {
+        if entry == 196102 {
+            app.add_plugins(bevy::log::LogPlugin {
+                filter: "warn,game_server::spell_cast=debug".into(),
+                level: bevy::log::Level::DEBUG,
+                ..Default::default()
+            });
+        }
+    });
     app.insert_resource(crate::test_data::world_data().clone());
     let source = crate::spell_cast::test_harness::world_db().unwrap();
     app.insert_resource(SpellStore::fixture(vec![
@@ -97,7 +105,18 @@ fn assert_native_trash_cast(entry: u32, map: u32, spell: u32) {
                 );
                 let remaining = cast.duration - cast.elapsed;
                 h.advance(remaining + 0.2);
-                assert!(h.casts(0, actor, spell) > 0, "native SpellGo observed");
+                let gos: Vec<_> = h
+                    .inbox(0)
+                    .spell_gos
+                    .iter()
+                    .filter(|go| go.caster == actor.to_bits() && go.spell_id == spell)
+                    .collect();
+                assert!(
+                    h.casts(0, actor, spell) > 0,
+                    "native cast completion missing; actual SpellGo={gos:?}, state={:?}, health={:?}",
+                    h.app.world().get::<CastState>(actor),
+                    h.health(actor)
+                );
                 return;
             }
         }
