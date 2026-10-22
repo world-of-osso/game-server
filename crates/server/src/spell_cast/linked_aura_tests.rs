@@ -1,4 +1,4 @@
-//! TC a352b1fa HandleAuraLinked: zero amounts preserve authored child values.
+//! TC a352b1fa HandleAuraLinked: zero preserves child BP0; nonzero overrides it.
 use super::test_harness::*;
 use crate::auras::{ActiveAuras, AuraApplication, AuraSource, RemoveReason};
 use bevy::prelude::*;
@@ -217,11 +217,21 @@ fn class_completeness_native_linked_child_respects_active_trigger_depth_limit() 
 }
 
 #[test]
-fn class_completeness_native_linked_nonzero_conflicting_children_remain_unapplied() {
+fn class_completeness_native_linked_nonzero_overrides_child_bp0_and_removes_owned_child() {
     let mut h = linked_harness();
     let caster = h.caster;
-    for (parent, child) in [(URSOLS_WARDING, URSOLS_CHILD), (WAKING_DREAM, WAKING_CHILD)] {
+    // Native70448 parent BP10/8 overrides child BP-1/-1000, per TC5316–5320.
+    for (parent, child, amount) in [
+        (URSOLS_WARDING, URSOLS_CHILD, 10.0),
+        (WAKING_DREAM, WAKING_CHILD, 8.0),
+    ] {
         apply_link(&mut h, parent, caster, caster);
+        let applied = child_aura(&h, caster, child);
+        assert_eq!(applied.caster, caster);
+        assert_eq!(applied.effects[0].amount, amount);
+        crate::auras::remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+            aura.spell_id == parent
+        });
         assert!(!crate::auras::has_aura(h.app.world(), caster, child));
     }
 }
