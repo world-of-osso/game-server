@@ -192,13 +192,19 @@ pub(super) fn howling_blast(world: &mut World, caster: Entity, target: Entity, _
 
 /// 34861s3: Prayer of Healing reduces an existing recharge by six seconds.
 pub(super) fn prayer(world: &mut World, caster: Entity, _spell: &SpellInfo) {
+    let (word, index) = if crate::auras::has_aura(world, caster, 1246517) {
+        (super::batch3::SERENITY, 1)
+    } else {
+        (SANCTIFY, 2)
+    };
     if world
         .resource::<crate::spell_info::SpellStore>()
-        .get(SANCTIFY)
+        .get(word)
         .is_some()
     {
-        let seconds = script_effect_value(world, caster, SANCTIFY, 2);
-        reduce_cooldown(world, caster, SANCTIFY, f64::from(seconds));
+        let seconds = script_effect_value(world, caster, word, index);
+        let seconds = super::holy_priest::holy_word_reduction(world, caster, seconds);
+        reduce_cooldown(world, caster, word, seconds);
     }
 }
 
