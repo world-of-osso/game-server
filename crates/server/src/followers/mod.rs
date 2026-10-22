@@ -11,6 +11,8 @@ mod kit;
 mod kit_ai;
 mod kit_area;
 #[cfg(test)]
+mod kit_defensive_fidelity_tests;
+#[cfg(test)]
 mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
