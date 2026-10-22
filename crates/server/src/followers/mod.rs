@@ -6,6 +6,12 @@ mod healer_context;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;
+#[cfg(test)]
+mod holy_policy_native_tests;
+#[cfg(test)]
+mod holy_priest_tests;
+#[cfg(test)]
+mod holy_threat_tests;
 mod kit;
 mod kit_ai;
 mod kit_area;
