@@ -53,20 +53,6 @@ fn ruby_entrance_party_follows_owner_and_separates() {
         .insert((entrance, InMap::continent(2521)));
     let members = super::spawning::spawn_members(h.app.world_mut(), h.caster, &profiles).unwrap();
     h.app.world_mut().entity_mut(h.caster).insert(owner);
-    for &unit in &members {
-        h.app.world_mut().entity_mut(unit).insert((
-            entrance,
-            InMap::continent(2521),
-            crate::creature_ai::SpawnPoint {
-                x: entrance.x,
-                y: entrance.y,
-                z: entrance.z,
-                wander_distance: 0.0,
-                speed_walk: 1.0,
-                speed_run: 1.0,
-            },
-        ));
-    }
     let maps = crate::maps::store::load_map_store(&db).unwrap();
     h.app.insert_resource(GroundMap::new(
         &data,
