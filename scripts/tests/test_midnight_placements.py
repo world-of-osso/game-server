@@ -94,10 +94,10 @@ class MidnightPlacementAcceptance(unittest.TestCase):
             self.assertEqual(actual[0][9:], (x, y, z))
             self.assertEqual(db.execute('SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty WHERE Entry=?', (entry,)).fetchall(), [(0, 0)])
             self.assertEqual(db.execute('SELECT journal_encounter_id FROM raid_encounter_creature WHERE map_id=? AND creature_entry=?', (map_id, entry)).fetchone(), (journal_id,))
-            self.assertEqual(db.execute('SELECT m.CreatureDisplayID,n.CreatureDisplayID FROM content_creature_template_model m '
-                                        'JOIN tdb_creature_template_model n ON n.CreatureID=m.CreatureID AND n.Idx=m.Idx '
-                                        'WHERE m.CreatureID=?', (entry,)).fetchall(),
-                             [(receipt['placements'][0]['binding'][-1], receipt['placements'][0]['binding'][-1])])
+            native_models = db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall()
+            self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall(), native_models)
+            self.assertIn(receipt['placements'][0]['binding'][-1],
+                          [row[0] for row in db.execute('SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (entry,))])
         proof = receipt['source_difficulties'][0]
         self.assertEqual(proof['source_difficulty_id'], 0)
         self.assertEqual(proof['source_row']['ContentTuningID'], 0)
