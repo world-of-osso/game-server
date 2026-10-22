@@ -249,6 +249,66 @@ fn rotation_fidelity_tyrant_demonic_power_tracks_real_owned_imp_lifecycle() {
     );
 }
 
+fn owner_scaled_tyrant_demonfire(level: u8) -> (f32, i32) {
+    let (mut h, owner) = warlock(level);
+    crate::spell_cast::creature_cast(h.app.world_mut(), owner, 265187, Some(owner), false)
+        .expect("ordinary sourced base Tyrant");
+    h.advance(80);
+    let world = h.app.world_mut();
+    let tyrant = world
+        .query::<(Entity, &SummonedCreature, &shared::components::Npc)>()
+        .iter(world)
+        .find(|(_, summon, npc)| {
+            summon.owner == owner && summon.spell_id == 265187 && npc.template_id == 135002
+        })
+        .map(|(actor, _, _)| actor)
+        .expect("actual base Tyrant before Antoran35");
+    let world = h.app.world();
+    let power = world
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .spell_power;
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(270481)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap();
+    let expected =
+        power * effect.bonus_coefficient * crate::auras::summon_damage::multiplier(world, tyrant);
+    let tolerance = expected * effect.variance + 1.0;
+    for _ in 0..200 {
+        if let Some(event) = h.inbox.log.iter().find(|event| {
+            event.source == Some(tyrant.to_bits())
+                && event.spell_id == Some(270481)
+                && event.kind == CombatLogKind::Damage
+                && !event.crit
+        }) {
+            let actual = event.amount + event.absorbed + event.resisted + event.blocked;
+            assert!(
+                (actual as f32 - expected).abs() <= tolerance,
+                "Tyrant retains SimC base1.0SP, not Imp1.2 or legacy0.15; level={level}, ownerSP={power}, expected={expected}, actual={actual}"
+            );
+            return (power, actual);
+        }
+        h.advance(1);
+    }
+    panic!("native Tyrant did not land a noncritical Demonfire");
+}
+
+#[test]
+fn rotation_fidelity_tyrant_native_demonfire_inherits_base_owner_spell_power() {
+    let low = owner_scaled_tyrant_demonfire(31);
+    let high = owner_scaled_tyrant_demonfire(34);
+    assert!(
+        high.0 > low.0 && high.1 > low.1,
+        "actual native ownerSP and Demonfire grow31→34"
+    );
+}
+
 #[test]
 fn rotation_fidelity_tyrant_base_actor_uses_sourced_native_demonfire() {
     let (mut h, owner) = warlock(32);
