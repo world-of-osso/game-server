@@ -1,3 +1,7 @@
+## 2026-10-22 — Erkhart packet proof
+
+[Ruby native faction](investigations/follower-data.md#ruby-erkhart-native-faction--2026-10-22):9b36fb602 fresh-copy4row packet/replay3× exact, native faction16 without donors;6714e0961 actual-copy native stats/model/faction/precise pose/source-finding/SQL owner+collision2GREEN0.022s. Journal-vs-Wowhead30.438463yd finding preserved; Kyrakka unsourced, Erkhart route incomplete. Prepared only, not dungeon completion.
+
 ## 2026-10-22 — Erkhart native faction precedes donation
 
 [Ruby native faction](investigations/follower-data.md#ruby-erkhart-native-faction--2026-10-22): actual missing-placement RED, then producer failed requiring a donor for native faction16. Preparation now preserves positive source faction without donor input or receipt; absent-faction path unchanged. Authenticated journal coordinates retain Wowhead disagreement finding; Kyrakka remains unsourced. Packet proof pending.
