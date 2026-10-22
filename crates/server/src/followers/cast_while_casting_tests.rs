@@ -70,7 +70,7 @@ fn dps_parity_cast_while_casting_follower_kit_executes_without_self_interrupt() 
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)
         .unwrap();
     assert!(
-        attempt_cast(h.app.world_mut(), caster, target, &follower, &entry),
+        attempt_cast(h.app.world_mut(), caster, target, &follower, &entry, 1),
         "ordinary kit precheck must honor the same native cast attribute"
     );
     assert_fire_blast_preserved_fireball(&mut h, caster, target);
