@@ -61,6 +61,17 @@ CREATE TABLE `areatrigger_create_properties_orbit` (
   PRIMARY KEY (`AreaTriggerCreatePropertiesId`,`IsCustom`)
 ) ENGINE=InnoDB;
 INSERT INTO `areatrigger_create_properties_orbit` VALUES (5838,0,0,0,0,0,0,0,1,52129),(13339,0,0,5,0,0,0,0,1,55165);
+CREATE TABLE `areatrigger_create_properties_spline_point` (
+  `AreaTriggerCreatePropertiesId` int unsigned NOT NULL,
+  `IsCustom` tinyint unsigned NOT NULL,
+  `Idx` int unsigned NOT NULL,
+  `X` float NOT NULL DEFAULT '0',
+  `Y` float NOT NULL DEFAULT '0',
+  `Z` float NOT NULL DEFAULT '0',
+  `VerifiedBuild` int unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`AreaTriggerCreatePropertiesId`,`IsCustom`,`Idx`)
+) ENGINE=InnoDB;
+INSERT INTO `areatrigger_create_properties_spline_point` VALUES (1315,0,0,0,0,0,40120),(1315,0,2,2.4063,-0.0312364,-0.498047,40120);
 '''
 
 
@@ -112,6 +123,12 @@ INSERT INTO `destructible_hitpoint` VALUES (28,1,600000),(32,1,600000);
                     (36,279254,'The warbringer','transport_seething_shore'),
                 ])
                 self.assertEqual(conn.execute('SELECT CircleRadius,BlendFromRadius,CounterClockwise,CanLoop FROM tdb_areatrigger_create_properties_orbit WHERE AreaTriggerCreatePropertiesId=13339').fetchone(), (5.0,0.0,0,1))
+                self.assertEqual(conn.execute('SELECT * FROM tdb_areatrigger_create_properties_spline_point ORDER BY AreaTriggerCreatePropertiesId,IsCustom,Idx').fetchall(), [
+                    (1315,0,0,0.0,0.0,0.0,40120),
+                    (1315,0,2,2.4063,-0.0312364,-0.498047,40120),
+                ])
+                with self.assertRaises(sqlite3.IntegrityError):
+                    conn.execute('INSERT INTO tdb_areatrigger_create_properties_spline_point VALUES (1315,0,2,9,9,9,40120)')
 
 
 if __name__ == '__main__':

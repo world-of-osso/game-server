@@ -16,7 +16,7 @@ Native Spell* records own cast times, ranges, cooldown/category admission and sp
 
 ## Source area-trigger admission
 
-Effect179 destination fields share the source-backed field executor. Admission is feature-driven across every native create-properties ID, never an ID allowlist: supported shape, curve, actions and flags all must be satisfied. Unsupported or missing definitions are skipped with recorded reasons; emit admitted/skipped counts. Existing26505 and25515 are regression examples, not registrations. Preserve authored radius/scale, duration, entry/exit actions and periodic aura clocks; never substitute DB2 spell radius for missing source geometry. Wider-admission control failures must be reported before narrowing scope.
+Effect179 destination fields share the source-backed field executor. Admission is feature-driven across every native create-properties ID, never an ID allowlist: supported shape, curve, actions and flags all must be satisfied. Unsupported or missing definitions are skipped with recorded reasons; emit admitted/skipped counts. Movement admission checks source spline-point and orbit metadata independently of MoveCurveId; missing metadata never establishes stationary behavior. The canonical battleground importer includes verbatim `tdb_areatrigger_create_properties_spline_point` rows. Existing26505 and25515 are regression examples, not registrations. Preserve authored radius/scale, duration, entry/exit actions and periodic aura clocks; never substitute DB2 spell radius for missing source geometry. Wider-admission control failures must be reported before narrowing scope.
 
 ## Publication and proof
 
