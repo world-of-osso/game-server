@@ -2,6 +2,8 @@
 
 Target (2026-10-22): the union of the lead's `fu913`, `sm894` and `rd912` server gate filters must finish in at most900s execution wall with approximately8GiB peak RSS. Test cases, existing ignores, gameplay steps and assertions are preserved. Compilation and capacity-queue time are reported separately. **Acceptance remains open until the complete union has a passing measured receipt.**
 
+Controlled same-source route initialization is **3.045× faster in CPU and4.046× in wall time** with the server override; all5437 discovered case identities and ignore statuses are unchanged. Full native Stockade passes in73.885s. Complete union wall/RSS qualification remains pending.
+
 ## Baseline and cause
 
 The reported debug gate took40–64minutes and reached approximately7.9GB RSS plus7.9GB swap. Historical gate logs are `/home/osso/.worktrees/logs/gate-{fu913,sm909,ct911,rd912}-srv.log`; exact filter sources are `lead-gate-{fu913,sm894,rd912}.sh` in that directory.
@@ -16,13 +18,13 @@ Existing [native fixture caches](slow-native-test-fixtures.md) already reuse par
 
 Evidence directory: `game-engine/data/diagnostics/server-test-perf-2026-10-22/` in the canonical engine checkout. Admission uses `CAPACITY_ID=server-test-perf`; baseline nextest executes serially. `/usr/bin/time` is absent, so a fresh Python timing process records wall, child user/system CPU and `getrusage(RUSAGE_CHILDREN).ru_maxrss` without including compilation.
 
-The lead authorized copying (not hardlinking) `game-server-verify2/target/debug/deps/game_server-71c0ac62686babf4` into the private checkout. SHA256: `299c2212aa8b255da715b61031df14ea7051f18dfebec040a4e39cb3863455a4`. The recorded fu913 gate head is `fd7e76756`; the selected simulator/Nethekurse sources have no diff to the checkout base `40812331c`. This is a historical executable, not an assertion that every linked input equals the new build. New compilation pins protocol `2abc7fa844f6e71d93203ce5421ae853e884854d` in an independent detached checkout.
+The lead authorized copying (not hardlinking) `game-server-verify2/target/debug/deps/game_server-71c0ac62686babf4` into the private checkout. SHA256: `299c2212aa8b255da715b61031df14ea7051f18dfebec040a4e39cb3863455a4`. The recorded fu913 gate head is `fd7e76756`; the selected simulator/Nethekurse sources have no diff to the checkout base `40812331c`. This is a historical executable, not an assertion that every linked input equals the new build:49 underlying server source files differ despite matching selected fixture files. Historical comparisons below are not isolated opt-level effects; the separate same-source control is. New compilation pins protocol `2abc7fa844f6e71d93203ce5421ae853e884854d` in an independent detached checkout.
 
 | Test / scope | Before | After | Status |
 |---|---:|---:|---|
-| Campaign authored route order, cold process |27.024s wall /20.50s sampled CPU /614624KiB HWM|pending|safe baseline PASS|
-| Full native Stockade clear |aborted after919.72s sampled CPU|pending|no passing baseline receipt|
-| Nethekurse native aggro, Normal + Heroic |48.535s wall /41.25s sampled CPU /1457520KiB HWM|pending|safe baseline PASS|
+| Campaign authored route order, cold process |27.024s wall /20.50s sampled CPU /614624KiB HWM|8.789s /7.72s /587552KiB|both PASS; historical source confounded|
+| Full native Stockade clear |aborted after919.72s sampled CPU|73.885s /73.16s /697692KiB|after PASS; no passing before receipt|
+| Nethekurse native aggro, Normal + Heroic |48.535s wall /41.25s sampled CPU /1457520KiB HWM|15.620s /12.15s /1421772KiB|both PASS; historical source confounded|
 | Full gate-filter union |reported40–64min|pending|not accepted|
 
 The copied executable's machine-readable nextest census selects2748 enabled tests in the game-server binary. Its total census contains5397 cases, including mismatches and pre-existing ignored cases. `baseline-union-census.json` and `union-filter.txt` retain exact selection semantics: `(fu913 OR sm894) minus their existing opening-admission skip`, union `rd912`. Other workspace binaries still require their own census and acceptance;2748 is not presented as the entire workspace count.
@@ -31,7 +33,21 @@ During the baseline Stockade test, `/proc` reported peakRSS626396KiB but current
 
 That first run was stopped after917.28s user+2.44s system CPU when its embedded `CARGO_MANIFEST_DIR` was found to point checkpoint/preparation output at the original checkout's target directory. The partial run is diagnostic evidence, not a passing before receipt. The corrected baseline uses a private `bwrap` mount mapping the original checkout path onto the private checkout, read-only host root, and explicit private `DUNGEON_SIMULATOR_OUTPUT`. A mount-identity/write probe confirmed its target output exists only in the private checkout. The bounded matching cohort is authored-route initialization plus Normal/Heroic Nethekurse aggro; the optimized full Stockade test remains additional absolute-budget coverage. Safe baseline **2/2PASS**,75.771s timer wall,62.376182s exact child CPU (56.933442user+5.442740system),1452960KiB child `ru_maxrss`; wrapper wall75.946s. Per-case `/proc` CPU is a sampled lower bound, and HWM may differ slightly from the exit-time resource metric. Maximum sampled swap is2760KiB for route setup and668KiB for Nethekurse.
 
-Both safe sides use a private SQLite online backup created before the safe baseline executed:886865920bytes, SHA256`09dac63b0337dee505bd704ad7766abe2bc3cf6a71dfbf3acd84de5690ef12f0`, mode0444, under the private target. Other asset directories remain read-only source links. This freezes canonical imports without mutating source data. The optimized build is admitted separately after the safe baseline finishes; initial compile remains pending.
+Both safe sides use a private SQLite online backup created before the safe baseline executed:886865920bytes, SHA256`09dac63b0337dee505bd704ad7766abe2bc3cf6a71dfbf3acd84de5690ef12f0`, mode0444, under the private target. Other asset directories remain read-only source links. This freezes canonical imports without mutating source data. The current opt2 three-case run at550c4b453 passes3/3:100.394074s timer wall,94.934341s exact child CPU,1418396KiB `ru_maxrss`,zero sampled swap. A server-only warm rebuild takes8m19s with zero third-party compilation; an earlier cold attempt was stopped at the mandatory300GiB disk floor, not reported as a passing build. Cargo's overall `test` banner still says unoptimized; the actual server rustc argv records `opt-level=2`, `debuginfo=1`, `debug-assertions=on`.
+
+### Same-source opt-level control
+
+Both executables use550c4b453, protocol2abc7fa, the same09dac63b frozen database, `debug=1`, `CARGO_INCREMENTAL=0` and nextest process isolation. Only the cheap authored-route test executes, once per profile; no full Stockade opt0 rerun. CLI profile override selectsopt0 without editing source. Compiler artifact metadata retains debug assertions and overflow checks. Full discovery matches all5437 case names/kinds/ignore statuses between the binaries.
+
+| Metric, identical one-case cohort | Opt0 | Opt2 |
+|---|---:|---:|
+| Test-body wall |31.085s|7.654s|
+| Exact timer wall |31.133876s|7.695305s|
+| Exact child user+system CPU |23.252883s|7.635607s|
+| Child peak RSS |619324KiB|579512KiB|
+| Sampled swap |0|0|
+
+Both pass. These give the controlled3.045× CPU/4.046× wall result, not a claimed full-suite speedup. The opt2 snapshot SHA256 is `041973351cb9195b6c86683462a1081b67b6599cbc4cf2643487cc173b0c1263`. The opt0 build takes7m but also repairs already-pruned vendor/Lightyear dependencies, so its compilation duration is not an isolated optimization comparison. `controlled-profiles.log`, both `controlled-opt*.time`/`-processes.json`/`-census.json` files and the opt0 compiler artifact preserve raw proof.
 
 ## Repeated dependency compilation
 
@@ -49,9 +65,19 @@ Alternative checks: `git diff 31ce2d6db..dd5702f88` is empty for `Cargo.lock` an
 
 Evidence: `pruner-artifact-classification.json`, `same-petgate-dependency-config.diff` (empty), `gate-libc-fingerprints.json`, the installed pruner and adjacent standalone unittest. Logs count108–112 total compile events including workspace/path crates, not108–112 registry crates.
 
+### Relative vendor roots and the four-crate Lightyear cascade
+
+The separate13796 verbose log reports four registry consumers Dirty because `lightyear_replication` was rebuilt. The root itself actually compiles at log line332, without its own Dirty report. `lightyear`, interpolation, frame-interpolation and prediction are registry crates; `lightyear_replication` is the checkout-local patched vendor crate, not a git dependency.
+
+Its real dep-info first input is **`vendor/lightyear_replication/src/lib.rs`**. The old guard searched for`/vendor/`, which misses a leading relative `vendor/`; a read-only call on13796's actual artifact returnedFalse. A matching aged-filesystem regression deletes its real-shaped `.d`/library/fingerprint group:1 failing method among4 before the second repair. The lead deployed a normalized path-component check; all4 methods now pass0.009s. Its installed SHA256 is `2cbee2f3a37cc515dce4615f224cd181450fa97403c101467ad9347edbc90518`.
+
+Both13796's and this task's real first inputs for Recast, Replication and Replicon are relative `vendor/.../src/lib.rs`; all six artifacts now classify as retained. No Recast exception is needed. The Replication manifest explicitly sets `build=false`, vendor/protocol directories are not symlinks, and vendor Git is clean with its last code commit inAugust. The target is not pinned in `target-keep.txt`: global housekeeping can select it while idle. The exact historical deletion invocation is not recorded, but the misclassification, production-shaped deletion and downstream rebuild pattern are directly demonstrated. There is no evidence that a build-script rerun or moving Shared symlink caused this occurrence.
+
+This task's subsequent same-source opt0 build also heals precisely the three vendor roots and four registry consumers after the idle period, independently showing why a supposedly warm compile can take minutes. Existing missing artifacts need that one healing build; the second fix prevents future age-only vendor eviction. Evidence: `df-lightyear-fingerprints.json`, `df-relative-vendor-prune-classification.json`, `relative-vendor-fixed-classification.json`, `relative-vendor-{red,green}.log`, the preserved pre-relative-fix pruner and13796's `dailcry-ongoing-native-vv-670739696.log`.
+
 ## Gate invocation and remaining slow cases
 
-Pending measured execution and memory comparison. Keep the existing six-thread libtest invocation available: its process-wide fixtures are shared, unlike nextest's per-test processes. Nextest supplies isolated per-case timing here; process isolation is not assumed faster for thousands of cold-data cases. No timeout, retry or ignored-test policy is changed to manufacture a passing budget.
+Next: qualify the complete union using four libtest threads and a fresh private SQLite backup of current canonical data taken at union start. Do not set `FOLLOWER_KIT_DB`: every published kit is now canonical; the historical Demo-only copy is known to fail Barbed253. Keep libtest's shared process: its process-wide fixtures are shared, unlike nextest's per-test processes. Nextest supplies isolated per-case timing here; process isolation is not assumed faster for thousands of cold-data cases. No timeout, retry or ignored-test policy is changed to manufacture a passing budget.
 
 The reported audit identifies campaign12, Nethekurse6, Omor3, and Azure combat/Kokia/Vyletongue2 each above60s. These are historical counts, not post-change measurements. A final receipt must enumerate the actual remaining slow names, durations and sampled causes, and compare test identities/statuses before accepting the budget.
 
