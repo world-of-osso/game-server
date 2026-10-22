@@ -6,6 +6,13 @@
 
 [Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): native2 measurements PASS31.84s, source-scoped770.85/714.367 DPS vs SimC caster965.019/1550.704 plus owned guardians130.905/129.465; actualstat mismatch and Azure duty remain explicit.3T14 completed462620 casts produce no77478; native AI consequence RED1/16.49s/zero warnings. Shared existing61882 field path extended to native target variant at3de3f1131; center/overlap/native-clock control and GREEN pending. Frozen Feel packet31b remains distinct.
 
+## 2026-10-22 — CritterGUID shared runtime and source90/150
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): lifecycle8bb2cba0a and selectorsb8580b258 follow genuine corrected7RED/3PASS77.05s. Real persisted-journal RPC/native51149+26571+261 cases10GREEN92.58s; retained four Coyote+99104slot6+census6GREEN45.93s. Source Companion-only current actor/matching removal, shared authored positive slots and explicit90/implicit150; no ownership scan/guardian substitution. Pipeline543 unchanged,exact25 reason changes; Crab retains74 and all per-toy script/visual gaps persist. Relevant check pending; no native toy-action/rendering claim. First40693a25a failure was fixture-only and excluded.
+
+## 2026-10-22 — CritterGUID source and slot audit
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): source Companion-title GUID setter/matching removal,90explicit identity/no self default and150auto lookup. Journal3221/5028/5085 slot5 versus legacy0/5/6 means no blanket slot6/cross-slot removal or older-actor restoration. Hidden344 has ordinary Ally title0, not critter/guardian; three journal roots lack effects even raw70448. Test-firsta955bb1b2 adds real owned-journal RPC +native Coyote/Hare/three-Skeleton lifecycle/negative cases; RED pending, no implementation/admission claim.
 - [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
 ## 2026-10-22 — Feel the Burn targeted GREEN and affected samples
 
