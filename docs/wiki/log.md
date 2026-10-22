@@ -1,3 +1,7 @@
+## 2026-10-22 — Swampface source room packet
+
+[Swampface](investigations/follower-data.md#swampface-native-room-and-regional-tuning--2026-10-22): actual missing-primary RED→source2GREEN0.078s/actual-copy2GREEN0.017s at33932c243. Fresh-copy4stable rows/replay3×; native CT0/modifiers/runtime model124283 retained, journal115575 separate, map CT provenance only. Approved20yd anchors at13.34/19.02yd plus third corroboration select335.20258. Staging copies deleted; publication pending, route gap explicit.
+
 ## 2026-10-22 — CT0 native map tuning and Gorren source floor
 
 [Native map tuning](investigations/follower-data.md#native-map-difficulty-tuning-for-ct0--2026-10-22): TC map-CT selection preserves native CT0/modifiers, records authenticated MapDifficulty ID/CT separately; seven-actor RED→source3GREEN0.081s. Gorren assigned-group upward consensus qualifies142.126492; actual missing-primary RED→fresh-copy2GREEN0.011s/replay3×. Lead confirmed packet4rows published/integrityOK; route gap relayed. Existing runtime regional scaling already implements this rule; no fresh runtime proof or dungeon completion claimed.
