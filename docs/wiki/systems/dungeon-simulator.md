@@ -54,9 +54,64 @@ The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized sing
 |251,1480|Node76073 requires76072 fully ranked; node108144 requires110172 fully ranked respectively|Strict reference-trait rejection; Human lookup no longer blocks251|
 |267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and `pet.present=false`|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
 
-Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls and awaits the parent-owned CombatRefs admission integration.
+Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls; the later parent-authorized CombatRefs cohort is recorded below.
 
 For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact;96d695ee6 passes the unchanged test1/1 with no warnings. That unit proof covers accounting, not actual3-target execution. `pet.present=false` elsewhere is the primary-pet lookup result, not proof that no guardian entity existed.
+
+## SIMC_PROFILE_TRAIT_EDGE_DIVERGENCE —2026-10-22
+
+Native DB2 precedence wins. Official Frost251 selects Cleaving Strikes76073/entry96202 without native direct parent Raise Dead76072/entry96201 (edge119101,type2). The native parent is freely granted only to SpecSet7=[252Unholy], not Frost. Official Devourer1480 selects Improved Consume108144/entry134330 without Star Fragments110172/entry136697 (edge136693,type2). Both parents are absent from the complete official allocation exports, not merely removed by effective-rank filtering. SimC's trait structure/hash parser does not carry/enforce this native parent graph; its successful initialization is not native config legality proof.
+
+The parent explicitly authorized derived native inputs omitting only76073 for251 and108144 for1480, adding no parents and leaving official profiles/exports unchanged. Exact old/new hashes and dropped rows live in `native-legal-trait-subset-v1-plan.json`. Ordinary strict validation remains enabled. Actual attempts at32b2a678f produce no qualified DPS:1480 passes its trait gate then stops at AssistedCombatRule80974/type54;251 exposes the next orphan Unholy Momentum76069, whose parent edges119098(from76073) and119103(from76067Improved Death Strike) are both unfilled. No further nodes were silently dropped in those first attempts. The parent subsequently authorized native-legality closure: repeatedly omit each selected node that the ordinary native validator rejects for entirely unfilled required-parent alternatives, record node/edge IDs and iteration, and add no parents. Closure terminates after251 drops76073 at iteration1(edge119101),76069Unholy Momentum at2(edges119098/119103) and76061Brittle at3(edges119575/119576/130332). The next failure is a different constraint: node76076/condition19531 needs8currency2801points spent in earlier rows, but only1remains. Parent decision: stop, do not delete gate-blocked nodes/rebuild the profile.251 is `SIMC_PROFILE_NOT_NATIVE_LEGAL`, a reference gap excluded from parity scoring until a native-legal reference exists.1480 needs only its108144 omission and reaches the independent unverified rule80974/type54 boundary, never bypassed. `native-legality-closure-final-receipt.{json,md}` records every drop/edge/iteration/native attempt and affected-channel DPS; `all-spec-parity-receipt-index-v5.{json,md,proof.json}` reflects the final classification.
+
+Existing SimC single-target breakdowns bound expected effects without inventing a counterfactual run. Frost's recorded mix has no direct output in the affected Scourge/Festering/Claw/Frostscythe/Death-and-Decay channels, so expected direct damage from dropping Cleaving Strikes is0 for that recorded mix, not a universal zero-effect claim. Devourer Consume contributes10929.34DPS (5.10% of214110.01total); holding casts/other modifiers fixed, removal of its+10%damage factor removes1/11ofthat channel, approximately993.58DPS or0.464%total. Improved Consume also reduces cast time by250ms, so full timing/resource/rotation feedback is not recoverable from that aggregate breakdown. `simc-profile-trait-edge-divergence.json` preserves source/edge/effect rows, official metadata and both derived-attempt receipts; native legality and a true talent marginal DPS are never assumed.
+
+## Existing three-spec stat, coverage and formula decomposition —2026-10-22
+
+`three-spec-stat-coverage-formula.{json,md,proof.json}` under the existing diagnostic root analyzes only the32b2a678f73/63/103 receipts. All three native/reference players are level90. All47 occupied item identities match;45 explicit levels match and read-only native bonus ordering resolves the remaining Protection legs/feet to344/331, also matching. Redirected-base-stat options remain unmodeled in4/4/5 slots, with two additional Feral content-tuning options; identity/level agreement does not establish final stat allocation.
+
+Native/reference AP or SP is3488.21/3884,3452.15/3600,2660.70/2741. Hypothetically scaling all current damage linearly by only that power ratio gives44987.78/23573.12/47622.20DPS, still far below214978.87/371058.54/247748.82. This is neither measured normalization nor a bound: native precombat/reference buffed snapshots and secondary ratings differ.
+
+The original partitions conserve each gap, not causal contributions. Protection has84711.77DPS in unobserved reference channels and72480.75 in matched per-hit residual; Feral107410.72 unobserved and90769.77 in hit-count difference. Fire's349963.91 unobserved term includes unmapped native1254851/reference2120 Flamestrike, not proof every channel lacks native code. Shared Convoke children likewise are not standalone-cast requirements. Across42 non-Meteor base-effect rows,16 compared DB2/SimC fields agree; effective class-module/talent/hotfix/crit/mitigation/snapshot arithmetic remains unproved. Feral Swipe mean hit1.037x reference and auto2.159x refute uniform under-scaling despite much weaker recorded Rip/Rake/Bite. Meteor mechanism and ST eligibility were handed to Fire owner13122; no duplicate trace or new runtime. Partial18/8/18-of20 add coverage remains unresolved. No causal gear/rotation/formula percentage or current-master parity is claimed.
+
+## CombatRefs-integrated three-target receipts —2026-10-22
+
+Parent-authorized reruns usecbf70f94f/P2abc7fa, including landed party CombatRefs admissionf69574f05 and suppressed-launch exclusion4405dca61, first-five mechanics, Rune evade, BM Auto Shot and the additive recipient collector. The exact snapshot remains1f7e953e; all eight original profiles/effective-trait inputs retain their hashes. No new single-target/reference simulations were run. Six current native controls pass149.08s, all-target check46.67s and formatting pass, with no warnings; binary/source identity is sealed separately from historical executables.
+
+All eight300s native execution cells pass: full clock, positive final30s output, zero out-of-range controller damage,10waves/20distinct retired adds and conserved recipient/action damage and hit totals. Actual add coverage is a separate observation:
+
+| Spec | Native DPS | Reference DPS | Positive adds | Both adds positive waves |
+|---|---:|---:|---:|---:|
+|66|20563.28|223262.07|20/20|10/10|
+|73|14272.79|214978.87|0/20|0/10|
+|262|36896.59|319420.50|20/20|10/10|
+|63|22298.16|371058.54|0/20|0/10|
+|253|14244.22|259612.50|0/20|0/10|
+|103|42160.52|247748.82|0/20|0/10|
+|266|12536.73|420736.29|20/20|10/10|
+|269|35050.52|376559.68|18/20|8/10|
+
+The main dummy receives positive damage over the whole fight in every case; its receipt is not per-wave/simultaneous-hit evidence. Windwalker lacks damage to the second add of waves at90s and270s. Protection Warrior, Fire, Beast Mastery and Feral execute but show no add damage; the source admission fix alone does not establish an authored AoE rotation. Even complete20-add coverage does not prove reference timing/selection/APL. Current native DPS remains82.98–97.02% below these references; this is descriptive one-seed versus1000-iteration output, not statistical agreement.
+
+`combatrefs-three-comparison.{json,md,proof.json}` and eight `native-combatrefs-three-v1/<spec>.three-factor-decomposition.{json,md}` preserve stat snapshots, source-weighted actor channels, counts/per-hit residuals, recipient coverage and exact input/report hashes. The eight partitions conserve the full reference-minus-native damage gap; unobserved output is not automatically missing rotation or absent class support. Historical/native deltas combine multiple mechanics, global-health policy and startup-source changes, so none is labeled an isolated CombatRefs effect. `all-spec-parity-receipt-index-v3.{json,md,proof.json}` links all40 mixed-revision rows without upgrading historical single-target proof or hiding blocked/unexecuted cases.
+
+### Zero-add root boundary and fixture engagement
+
+Read-only tracing of those exact receipts finds that spawning three native dummies did not start a three-opponent fight. `engage()` selected/auto-attacked only the main dummy; all five saved snapshots for73/63/253/103 show adds without CombatRefs, victim or threat. `engaged_enemies` correctly admits real active party references, while `kit_area` counts only those engaged opponents and refuses implicit AoE that would recruit a fresh bystander. Its fresh-pack veto is the retained user rule `AOE_HITS_ONLY_IN_COMBAT_UNITS`, not the defect.
+
+Frozen73/63/103 kits contain the relevant multi-enemy entries, but their minimum2/3 engaged-enemy conditions fail;73Thunder Clap's minimum1 still encounters the fresh-enemy veto. Their observed casts contain no such AoE. Fire's35Pyroblasts and Feral's17Rips/59Bites refute blanket lack of Hot Streak/combo-point opportunities, not every individual admission/resource predicate. BM differs:1264359Wild Thrash succeeds20times with zero damage;70448 encodes only Dummy3 effects, whereas pinned SimC explicitly dispatches pet1264355 and Beast Cleave. That native ability chain is parent-owned, not a reason to invent a new BM priority.
+
+The parent-approved harness contract now starts every initial/replacement opponent with active mutual CombatRefs to the real player/controller through ordinary `set_in_combat_with`. It never inserts a ThreatTable, changes native31146 passivity, modifies kit/AI target policy or bypasses the fresh-pack veto. Four ignored controls were pushed before implementation; ate43c2ceec they genuinely fail4/4: missing mutual engagement and absent73/63/103 authoredmin_enemies≥2 AoE casts. At32b2a678f the unchanged controls pass4/4 in325.52s, with no warnings. Only the three authorized73/63/103 cells were then rerun against the identical frozen snapshot/profile/traits, all passing300s execution/final30s/owner0/wave/recipient-conservation gates. Native31146 still has no ThreatTable. The earlier cbf receipts remain intact, not retrospectively changed.
+
+| Spec | Prior cbf DPS | Engaged32 DPS | Reference DPS | Reference delta | Positive adds |
+|---|---:|---:|---:|---:|---:|
+|73|14272.79|40403.36|214978.87|-81.21%|18/20|
+|63|22298.16|22604.97|371058.54|-93.91%|8/20|
+|103|42160.52|46227.06|247748.82|-81.34%|18/20|
+
+Authored AoE now actually casts: Protection73 has57Thunder Claps and158Revenges; Fire63 has10Meteors and8Flamestrikes1254851 (24hits); Feral103 has181Cat Swipes106785 and38Primal Wraths. Meteor's10 successful casts still produce no hit/damage channel; this separate script-output boundary is not repaired here. Native1254851 and reference2120 remain distinct factor channels rather than an invented equivalence. First-wave adds still receive no damage for73/103; Fire damages only eight adds. Native passive CombatRefs retain their normal five-second expiry and no fixture heartbeat was added, so this initial/replacement engagement contract is not continuous all-target engagement or full AoE parity.
+
+`engaged-three-comparison.{json,md,proof.json}` and three `native-engaged-three-v1/<spec>.three-factor-decomposition.{json,md}` retain exact reports, stat snapshots, actor channels, historical count deltas and conserved reference-minus-native partitions. The runtime source change is fixture engagement, not a kit/coefficient change; individual damage/RNG residuals are not isolated causal effects. No other single/three-target or SimC benchmark was rerun.
 
 ## Qualified path-candidate Stockade cohort —2026-10-21
 
