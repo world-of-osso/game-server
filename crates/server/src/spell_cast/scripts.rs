@@ -29,6 +29,7 @@ mod clearcasting;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
@@ -520,6 +521,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
+        prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
@@ -976,11 +979,22 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+    #[cfg(test)]
+    let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+    let reduced = world
+        .get_mut::<super::SpellHistory>(caster)
+        .map(|mut history| {
+            reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
+        });
+    #[cfg(test)]
+    {
+        let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+        let applied = (before - after).max(0.0).min(seconds);
+        super::holy_metrics::record_reduction(world, caster, spell_id, seconds, applied);
+    }
+    let Some((charges, remaining_ms)) = reduced else {
         return;
     };
-    let (charges, remaining_ms) =
-        reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
     if let Some(charges) = charges {
         super::send_to_owner(world, caster, charges);
     }

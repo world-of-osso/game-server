@@ -21,6 +21,10 @@ pub(crate) fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Enti
         data.templates.extend(native.templates);
         data.difficulty_templates
             .extend(native.difficulty_templates);
+        let source = crate::test_data::world_data();
+        data.class_level_base_hp = source.class_level_base_hp.clone();
+        data.class_level_base_mana = source.class_level_base_mana.clone();
+        data.armor_constants = source.armor_constants.clone();
     }
     world.insert_resource(
         crate::spell_info::load_class_spells(&db)
