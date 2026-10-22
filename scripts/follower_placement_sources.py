@@ -73,7 +73,9 @@ def read_cached_npc(cache, entry):
 
 
 def select_assignment(tables, map_id, marker, policy=None):
-    area = next(row for row in tables["AreaTable"] if int(row["ID"]) == marker["zone"])
+    area = next((row for row in tables["AreaTable"] if int(row["ID"]) == marker["zone"]), None)
+    if area is None:
+        raise ValueError(f"Wowhead zone{marker['zone']} absent from authenticated AreaTable")
     if int(area["ContinentID"]) != map_id:
         raise ValueError("Wowhead zone does not belong to requested DB2 map")
     assignments = [row for row in tables["UiMapAssignment"] if int(row["MapID"]) == map_id]

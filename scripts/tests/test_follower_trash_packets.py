@@ -5,7 +5,26 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import sys
 import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from follower_placement_sources import read_cached_npc, read_db2
+from follower_trash import project_marker
+
+
+@unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ and 'FOLLOWER_PLACEMENT_CACHE' in os.environ,
+                     'requires explicit authenticated source and own-page fixture')
+class MurderMarkerSourceControls(unittest.TestCase):
+    def test_observed_defiled_golem_negative_zone_remains_unprojected_gap(self):
+        tables, _ = read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        page = read_cached_npc(Path(os.environ['FOLLOWER_PLACEMENT_CACHE']), 235322)
+        self.assertEqual(page['markers'][322], dict(zone=-15, floor=0, percent=[29.3, 33]))
+        point = project_marker(2813, page, 322, tables, {}, {})
+        self.assertEqual(point['status'], 'FOLLOWER_TRASH_MARKER_PROJECTION_UNRESOLVED')
+        self.assertIn('AreaTable', point['reason'])
+        self.assertEqual(point['marker'], page['markers'][322])
+        self.assertNotIn('wow_xyz', point)
 
 
 @unittest.skipUnless('ALTAR_TRASH_DB' in os.environ, 'requires explicit Altar source/prepared fixture')
