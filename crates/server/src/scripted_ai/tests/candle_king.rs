@@ -69,6 +69,37 @@ fn create_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
 }
 
 #[test]
+#[ignore = "RED: TC InitExplicitTargets must remove redundant self before EXCLUDE_CASTER"]
+fn encounter_coverage_candle_king_native_redundant_self_and_explicit_enemy_control() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = candle_copy(difficulty);
+        let frostbolt =
+            crate::spell_cast::creature_cast(h.app.world_mut(), boss, 116, Some(boss), false);
+        assert_eq!(
+            frostbolt,
+            Err(crate::spell_cast::CastFailure::InvalidTarget),
+            "real explicit enemy still rejects self"
+        );
+        let result =
+            crate::spell_cast::creature_cast(h.app.world_mut(), boss, MOLDS, Some(boss), false);
+        assert_eq!(
+            result,
+            Ok(()),
+            "TC clears supplied self because native22/7 needs no explicit unit"
+        );
+        let cast = h
+            .app
+            .world()
+            .get::<shared::casting::CastState>(boss)
+            .unwrap();
+        assert_eq!(cast.spell_id, MOLDS);
+        assert_eq!(cast.duration, 1.5);
+        h.advance(1.6);
+        assert_eq!(completed_casts(&h, boss, MOLDS), 1);
+    }
+}
+
+#[test]
 #[ignore = "RED: TC Candle King handler not ported"]
 fn encounter_coverage_candle_king_first_molds_normal_and_projected205_tc_clock() {
     for difficulty in [1, 205] {
