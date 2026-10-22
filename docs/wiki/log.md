@@ -1,3 +1,7 @@
+## 2026-10-22 — Abort-safe native simulator evidence
+
+[Recoverable aborts](systems/dungeon-simulator.md#abort-safe-run-evidence-2026-10-22): native FixedUpdate unwind RED10.13s→544GREEN21.36s preserves291ordered events in final aborted report and separate status/reason export. Native summary1PASS/process runner3PASS; real invalid-level initialization writesbothfiles/aborted1 beforeexpectedclear-assertionexit101. No silent clear, invented events or SIGKILL guarantee. [Pending history](systems/dungeon-simulator.md#native-evade-releases-pending-pull-history-2026-10-22) bounded native reset RED→3cebGREEN; oldseed7stall retired afterformation integration.
+
 ## 2026-10-22 — Transport-free leader pet ownership
 
 [Native pet wiring](systems/dungeon-simulator.md#transport-free-leader-pet-initialization-2026-10-22): actual BM leader CallPet/damage RED22.81s→fresh/cached GREEN12.52s after native runtime-only stable/HunterPetPlugin/PetCatalog integration.0b includes mastery'sa4; build8m05/no warnings and5retained controls pass. Authentic Duck fixture input only, no canonical data writes, fake character, AP/rotation or class-script change. Actual WildThrash3casts/0childdamage after summon remains a mechanics-owner gap. New pet-enabled Azure cohort pending.
