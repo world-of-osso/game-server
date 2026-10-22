@@ -195,6 +195,15 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             "six sourced ticks, not unsourced regeneration"
         );
         h.advance(140.3);
+        eprintln!(
+            "SKARMORAK end difficulty{difficulty} bossEnergy{} bossHealth{:?} playerHealth{:?} cast{:?} bossCombat{:?} state{:?}",
+            energy(&h, boss),
+            h.health(boss),
+            h.health(h.player()),
+            h.app.world().get::<shared::casting::CastState>(boss),
+            h.app.world().get::<CombatStatus>(boss),
+            h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+        );
         let attempts = &h
             .app
             .world()
