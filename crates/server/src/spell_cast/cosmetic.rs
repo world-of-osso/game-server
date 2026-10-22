@@ -24,6 +24,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     196783, // Darkshard Fragment (crystal growth attachments)
     203657, // Noble's Eternal Elementium Signet
     217708, // Gravil Goldbraid's Famous Sausage Hat
+    219708,
+    219871, // DH Skull of Corruption/Fel Focusing Crystal: permanent contemplation visuals.
     223143, // Prismatic Bauble: source20s ordinary rainbow attachment1417024.
     231129, 231142, 231143, 231144, // Falcosaur accessories
     239560, // Akazamzarak's Spare Hat (hat/rabbit visual models, not a summon)

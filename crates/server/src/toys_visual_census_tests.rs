@@ -4,6 +4,8 @@ use super::*;
 use crate::auras::ActiveAuras;
 use shared::components::{Health, ModelDisplay, UnitAuras};
 
+#[path = "toys_dh_visual_tests.rs"]
+mod dh_visual;
 #[path = "toys_pennant_visual_tests.rs"]
 mod pennant_visual;
 #[path = "toys_seed_visual_tests.rs"]
@@ -20,8 +22,19 @@ fn install_visual_source(h: &mut Harness) {
 }
 
 fn assert_cancellable_source_visual(item: u32, spell: u32, duration_ms: u32, recovery_ms: u32) {
+    assert_cancellable_source_visual_on(item, spell, duration_ms, recovery_ms, (1, 8));
+}
+
+fn assert_cancellable_source_visual_on(
+    item: u32,
+    spell: u32,
+    duration_ms: u32,
+    recovery_ms: u32,
+    race_class: (u8, u8),
+) {
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, character) = setup(&dir.path().join("visual.redb"));
+    let (mut h, character) =
+        setup_for_race_class(&dir.path().join("visual.redb"), race_class.0, race_class.1);
     install_visual_source(&mut h);
     let owner = h.caster;
     let other = h.npc;
