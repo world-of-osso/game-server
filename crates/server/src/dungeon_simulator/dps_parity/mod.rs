@@ -1,5 +1,6 @@
 //! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
 mod inputs;
+mod pet_child_tests;
 mod player_rotation;
 mod power_tests;
 mod report;
