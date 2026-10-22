@@ -35,25 +35,25 @@ def copy_native_actor_fixture(source, entry):
 
 @unittest.skipUnless('FOLLOWUP_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')
 class FollowupPlacementAcceptance(unittest.TestCase):
-    def assert_source_primaries(self, map_id, entries):
+    def assert_source_primaries(self, map_id, entries, source_difficulty=1):
         path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
         marks = ','.join('?' for _ in entries)
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
             rows = db.execute(
                 'SELECT c.id1,t.faction,t.unit_class,s.unit_class,t.HealthModifier,d.HealthModifier,'
-                't.ContentTuningID,d.ContentTuningID,r.display_id,m.CreatureDisplayID,n.CreatureDisplayID '
+                't.ContentTuningID,d.ContentTuningID,r.display_id,m.CreatureDisplayID,n.CreatureDisplayID,s.faction '
                 'FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 '
                 'JOIN tdb_creature_template s ON s.entry=c.id1 '
-                'JOIN tdb_creature_template_difficulty d ON d.Entry=c.id1 AND d.DifficultyID=1 '
+                'JOIN tdb_creature_template_difficulty d ON d.Entry=c.id1 AND d.DifficultyID=? '
                 'JOIN raid_encounter_creature r ON r.creature_entry=c.id1 AND r.map_id=c.map '
                 'JOIN content_creature_template_model m ON m.CreatureID=c.id1 '
                 'JOIN tdb_creature_template_model n ON n.CreatureID=c.id1 AND n.Idx=m.Idx '
-                f'WHERE c.map=? AND c.id1 IN({marks}) ORDER BY c.id1,c.guid', (map_id, *entries)
+                f'WHERE c.map=? AND c.id1 IN({marks}) ORDER BY c.id1,c.guid', (source_difficulty, map_id, *entries)
             ).fetchall()
         self.assertEqual([r[0] for r in rows], list(entries), f'map{map_id} missing sourced primary placements')
-        for entry, faction, actual_class, native_class, health, native_health, tuning, native_tuning, display, runtime_display, native_display in rows:
+        for entry, faction, actual_class, native_class, health, native_health, tuning, native_tuning, display, runtime_display, native_display, native_faction in rows:
             with self.subTest(entry=entry):
-                self.assertEqual(faction, 16)
+                self.assertEqual(faction, native_faction if native_faction > 0 else 16)
                 self.assertEqual(actual_class, native_class)
                 self.assertEqual(health, native_health)
                 self.assertEqual(tuning, native_tuning)
@@ -61,7 +61,19 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 self.assertEqual(display, {189719: 106801, 189722: 103584, 189727: 107064,
                                            189729: 106934, 194181: 107525, 186151: 107680,
                                            186338: 105722, 186615: 107145, 186616: 105823,
-                                           190485: 108318}[entry])
+                                           190485: 108318, 208743: 115888, 208747: 117773, 210149: 114171}[entry])
+
+    def test_darkflame_missing_primaries_keep_native_one_and_zero_source_rows(self):
+        self.assert_source_primaries(2651, (208743,))
+        self.assert_source_primaries(2651, (208747, 210149), source_difficulty=0)
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        self.assertEqual({p['entry']: p['source_difficulty_id'] for p in receipt['source_difficulties']},
+                         {208743: 1, 208747: 0, 210149: 0})
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            self.assertEqual(db.execute('SELECT Entry FROM tdb_creature_template_difficulty '
+                                        'WHERE Entry IN(208747,210149) AND DifficultyID=1').fetchall(), [])
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2651 AND id1=212777').fetchone(), (0,))
 
     def test_native_difficulty_chain_imports_source_zero_without_synthetic_normal_rows(self):
         path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)

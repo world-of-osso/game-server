@@ -1,0 +1,54 @@
+{
+  "map_id": 2651,
+  "entrance_id": 81002651,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 208743,
+      "ordinal": 0,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2559",
+      "journal_encounter_id": 2559,
+      "cache_sha256": "d109eb1739ac19ffccdb26ac77821aadfd976bb6dbb717f95fc673e91fff17ed",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/DarkflameCleft/Blazikon.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "c33fe61350c23e20384114983cd0ee1a3ae6c95d33ad0623c593322547cb651e",
+        "journal_actor_id": 5648
+      }
+    },
+    {
+      "entry": 208747,
+      "ordinal": 1,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2561",
+      "journal_encounter_id": 2561,
+      "cache_sha256": "fa52ee0ff553507c4cd677c6f4ed5b63f994e1688dd8ca60948ffbfb5f06864b",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/DarkflameCleft/TheDarkness.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "4a7f1f12a9d889f7325701b01b5ef7e5f640a00924bd6f08833f1bd3368b18a9",
+        "journal_actor_id": 5649
+      },
+      "faction_donor": 208743,
+      "donor_reason": "Same Darkflame Normal1 boss Blazikon has native faction16 and matching sourced hostile A/H reactions; own source0 CT2718/class4/health101.25 retained. Journal2561 has one named actor, The Darkness, not the Massive Candle helper212777."
+    },
+    {
+      "entry": 210149,
+      "ordinal": 2,
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2569",
+      "journal_encounter_id": 2569,
+      "cache_sha256": "6c73874e10c2c7afcec5635690390ff57c8dc162b6060ca54ad4c108e333d6b8",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/DarkflameCleft/OlWaxbeard.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "601641726a929876b4dd31ecc23c60a706328420c7a96f0b5c3e83ebbfc2bcec",
+        "journal_actor_id": 5577
+      }
+    }
+  ],
+  "calibration_entries": [188252, 189232]
+}

@@ -1,3 +1,7 @@
+## 2026-10-22 — Darkflame source manifests
+
+[Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22): actual missing-primary RED; pinned journal/Lua sources for Blazikon1, Darkness0 and Waxbeard0; Massive Candle helper excluded, existing Candle King preserved. Native-chain fixture1GREEN0.010s ataca4f122e proves source0 import/CT0 refusal/no synthetic1. Packet pending.
+
 ## 2026-10-22 — Native difficulty-chain source selection
 
 [Source difficulty chain](investigations/follower-data.md#native-source-difficulty-chain--2026-10-22): approved source0 selection through existing TC resolver, explicit source row receipts, no synthetic Normal1 records. Actual Waxbeard native0/CT2718 fixture reproduced strict-Normal1 refusal; CT0 is an explicit scaling gap. GREEN pending. Lead confirmed Nokhud12 + Ruby4 rows published/integrityOK and route relay.
