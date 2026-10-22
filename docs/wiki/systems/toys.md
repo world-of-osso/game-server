@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Target74 and Cranky Crab source action boundary (2026-10-22)
+
+[Destination contract](../../specs/spell-summon-area-trigger.md#source-target74-destinations). TC a352b1fa SpellInfo.cpp322/823 defines74 as explicit-target-reference random destination, using radius Max-Min without adding Min. Spell.cpp1653–1685 centers on the explicit object;150's current-critter selection does not rewrite that object. Source453588 B421 has Radius3/Min3/Max6, so using Radius3 instead of Max6 would collapse random spread. Spell.cpp9286–9292 uses collision except FORCE_DEST_LOCATION; existing direct-ray services are not Detour parity.
+
+Cranky Crab166662/289330 source description says “Summons a very cranky crab for your battle pet to ride on.” Its28/149189/properties491(Wild,Title0,slot0)/[150,74] uses B196 radius0.25 and600000ms duration. Available149189 template has faction35,VehicleId0,blank AI/script and no SmartAI; source TC search finds no identity binding. A scenery crab cannot satisfy riding. Preserve a named battle-pet ride interaction gap rather than inventing an attachment/vehicle script when generic74 becomes supported. Provenance:target74-source-provenance.json,331-row native selector audit target74-native-cohort.json. Tests added; RED pending, no generic74 implementation/admission claim.
+
 ## CritterGUID source identity and slot boundary (2026-10-22)
 
 [Companion-target contract](../../specs/battle-pets.md#source-companion-target-identity). TC a352b1fa Unit.cpp6322–6368 sets CritterGUID only for Companion-title minions and clears it only when the removed minion matches the current GUID. Another owned actor is not a replacement identity. Target90 checks the explicitly selected GUID (SpellInfo.cpp2553–2560); InitExplicitTargets621–664 excludes minipets from the non-enemy self default. Target150 directly resolves caster CritterGUID (Spell.cpp1786–1788), independent of selection. Removing latest must not scan/restore an older living actor.

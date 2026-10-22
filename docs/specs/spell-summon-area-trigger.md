@@ -10,6 +10,13 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 - [ ] Missing creature and SummonProperties are reported rather than invented.
 - [x] Missing matrix trigger bindings do not acquire fictional actions; five available matrix area roots produce lifecycle-only entities.
 
+## Source target74 destinations
+
+- [ ] Source target74 centers its destination on the explicit object, independently of caster/current-critter selection. A missing explicit object or one in another map does not create a substituted destination at the selector boundary.
+- [ ] TargetA/TargetB choose their authored radius entry. TC `CalcRadius(nullptr)` uses RadiusMax and samples `(Max-Min)*sqrt(random)` without adding Min; a source nonzero Radius value must not replace RadiusMax.
+- [ ] Apply the existing direct collision and target-ground boundary, preserving target orientation. Missing collision/ground authority refuses explicitly; source FORCE_DEST_LOCATION retains its named MAX_HEIGHT geometry gap. This does not certify Detour path parity.
+- [ ] Cranky Crab166662 remains unavailable for its source-described battle-pet ride interaction until actual action binding/data are established; destination74 and a scenery actor alone do not implement that ride.
+
 ## How it works
 
 - [Spell casting runtime](../wiki/systems/spell-casting.md#temporary-summons-and-spell-area-triggers).
@@ -25,6 +32,7 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 ## Tests asserting this spec
 
 - `crates/server/src/spell_cast/summon_at_tests.rs`: real-data cast/lifecycle tests.
+- `crates/server/src/spell_cast/target74_tests.rs`: real70448 destination/radius/origin/map/authority boundaries and preserved Crab action gap.
 
 ## Known gaps (current cycle)
 

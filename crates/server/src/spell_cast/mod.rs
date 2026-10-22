@@ -3796,6 +3796,8 @@ mod target148_tests;
 #[cfg(test)]
 mod target32_grounding_tests;
 #[cfg(test)]
+mod target74_tests;
+#[cfg(test)]
 mod teleport_tests;
 #[cfg(test)]
 mod tests;
