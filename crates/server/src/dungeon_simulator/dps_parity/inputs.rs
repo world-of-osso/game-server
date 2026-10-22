@@ -90,6 +90,15 @@ pub(super) fn install_reference_catalogs(app: &mut App) -> Result<(), String> {
     let db =
         rusqlite::Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
             .map_err(|error| format!("open private database {}: {error}", path.display()))?;
+    let data = crate::world_data::load_world_data(&path);
+    app.insert_resource(data.armor_constants.clone());
+    app.insert_resource(data);
+    app.insert_resource(
+        crate::hunter_pet::read_pet_catalog(&db).map_err(|error| error.to_string())?,
+    );
+    app.insert_resource(
+        crate::pet_control::load_pet_levelup_spells(&db).map_err(|error| error.to_string())?,
+    );
     let followers = crate::followers::simulator::load_parity_catalog(&db)
         .map_err(|error| format!("load private follower catalog: {error}"))?;
     app.insert_resource(followers);
