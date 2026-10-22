@@ -94,6 +94,61 @@ fn housing_quest_uses_authored_acquisition_criteria_and_never_auto_completes_emp
 }
 
 #[test]
+fn housing_quest_installed_quest_root_annotation_allows_only_matching_paid_item_credit() {
+    let (source, mut quests) = fixture();
+    // Local70448 CriteriaTree216882: IsForQuest0x1000; TC a352b1fa DBCEnums.h.
+    source
+        .execute("UPDATE criteria_tree SET Flags=4096 WHERE ID=216882", [])
+        .unwrap();
+    crate::housing_quests::load(&source, &mut quests).unwrap();
+    assert!(
+        !quests.quests[&92572].completion_blocked,
+        "authored IsForQuest root metadata must not block Furniture Favor"
+    );
+    let mut log = QuestLogData {
+        active: vec![ActiveQuestData {
+            quest_id: 92572,
+            counts: vec![0],
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    assert!(!crate::housing_quests::credit_acquired_item(
+        &quests, &mut log, 245259, 1
+    ));
+    assert!(!crate::quest_rules::is_complete_in_log(
+        &quests,
+        &log,
+        92572,
+        |_| 0
+    ));
+    assert!(crate::housing_quests::credit_acquired_item(
+        &quests, &mut log, 253168, 1
+    ));
+    assert_eq!(log.active(92572).unwrap().counts, vec![1]);
+    assert!(crate::quest_rules::is_complete_in_log(
+        &quests,
+        &log,
+        92572,
+        |_| 0
+    ));
+    assert_eq!(quests.quests[&92572].reward_items, vec![(253173, 1)]);
+}
+
+#[test]
+fn housing_quest_root_annotation_does_not_allow_faction_or_unknown_flags() {
+    for flags in [0x1200, 0x1400, 0x9000] {
+        let (source, mut quests) = fixture();
+        source
+            .execute("UPDATE criteria_tree SET Flags=? WHERE ID=216882", [flags])
+            .unwrap();
+        crate::housing_quests::load(&source, &mut quests).unwrap();
+        assert!(quests.quests[&92572].completion_blocked, "flags{flags}");
+        assert!(quests.quests[&92572].objectives.is_empty());
+    }
+}
+
+#[test]
 fn housing_quest_unknown_criteria_or_conditions_remain_blocked_without_a_replacement_objective() {
     let (source, mut quests) = fixture();
     source

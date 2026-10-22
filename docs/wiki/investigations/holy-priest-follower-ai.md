@@ -234,7 +234,6 @@ Gap names below have prefix `HOLY_`:
 
 | Gap | Native parent / consequence |
 |---|---|
-| ECHO_OF_LIGHT_PRODUCER | 77485: direct heal →77489 HoT |
 | SPIRIT_REDEMPTION_LIFECYCLE | 20711: lethal hit →27827 state; generic316 only accounts absorption |
 | RESTITUTION_REVIVAL | 391124: healing-dependent return after Spirit expiry |
 | FOCUSED_WILL_MELEE_PROC | 45243: actual melee →45242 protection |
@@ -245,7 +244,6 @@ Gap names below have prefix `HOLY_`:
 | DIVINE_SERVICE_BOUNCE_SCALING | 391233:33110 amount depends on remaining41635 uses |
 | PROTECTIVE_LIGHT_SELF_FLASH_PROC | 193063: self Flash →193065 protection |
 | DIVINE_IMAGE_SUMMON_EMPOWER_COPY | 392988: Naaru lifecycle and mirrored casts |
-| PRISMATIC_ECHOES_MASTERY_BONUS | 390967: mastery-specific script scalar; ordinary Renew modifier remains data-backed |
 | LASTING_WORDS_RENEW_APPLICATION | 471504: timed139 from Serenity/Sanctify-or-Ultimate recipients |
 | TRANSLUCENT_IMAGE_FADE_EXTRA_REDUCTION | 373446: extra373447 consequence; base586 reduction remains native |
 | ANGELIC_BULWARK_THRESHOLD_SHIELD | 108945: threshold114214 shield and native recovery window |
@@ -281,10 +279,61 @@ scope/revisions and retained environment failures. No simulator effectiveness or
 survival improvement claimed. Evidence: game-engine
 `data/diagnostics/healer-ai-2026-10-21/binding-heals/`.
 
-Echo77485→77489 remains separate: native amount depends on mastery points, and the
-inspected `auras/mastery.rs::effect_bonus` admitted Players only. The shared
-follower-mastery bridge is another slice; do not invent Henry mastery or weaken
-that guard in this script. Echo's residual-HoT producer is still unimplemented.
+Echo's later producer qualification is recorded below; it depended on the
+separate shared follower-mastery bridge rather than an invented Henry amount.
+
+## Echo of Light producer and shared rolling carry — 2026-10-22
+
+The shared follower-mastery bridge92313031f landed before the Echo RED.
+`HOLY_ECHO_RESIDUAL_ON_NATIVE_AMOUNT` uses SimC76f8118
+`sc_priest.hpp:1464–1476` for the direct-heal/pre-overheal producer and
+`residual_action.hpp:71–108` for unpaid-pool shape. Native70448 supplies the live
+77485 effect0 percentage and77489 clock: **4000ms duration,2000ms period**,
+not historical six seconds. Shared proc admission retains its real mask/chance;
+actual triggered368276 Binding healing is eligible, while periodic ticks are not.
+No native amount, learned spell, proc chance or Henry stats are fabricated.
+
+Producer62dd452a6 gave genuine2FAIL/2PASS/1nextignored28.88s after positive native
+mastery/direct-heal prerequisites: both own/other patient77489 missing. Narrow
+producera286b0383 passed4/41.00s. The exact next refresh test then failed21.06s:
+paid948 versus old unpaid473.88202 plus fresh948.3356. A generic native71023
+Languish boundary independently reproduced5damage versus8expected at968399598;
+unflagged139 and two-real-priest ownership controls passed.
+
+[Shared flag-driven carry](../systems/auras.md#native-rolling-periodic-refresh--2026-10-22)
+now settles due ticks once, preserves same-caster/spell/effect unpaid amounts and
+retains existing phase. Barbed keeps its fresh five-amount normalization;335467
+no longer owns a duplicate carry path. Initial unnecessary storage rounding broke
+335467's fractional snapshot assertion;29e0d8a61 removed that layer globally,
+retaining existing payment rounding without a spell exception or weakened test.
+
+Post-masteraeeaa1b87 passes19native cases77.83s: generic2, Echo6 including self
+actual healing/rolling/two casters, Barbed4,3354671, Binding5 and enabled PoH1.
+Helper check exits0/1m27s with no warnings, format passes at the same code.
+This is native mechanic evidence, not healer policy effectiveness, simulator
+survival or live-pixel acceptance. Prismatic Echoes390967's separate bonus was
+qualified afterward, below. Full exact revisions and limitations:
+[Echo proof ledger](../../handoffs/healer-echo-of-light-proof-ledger.md).
+
+## Prismatic Echoes learned bonus — 2026-10-22
+
+SimC76f8118 `sc_priest.cpp:3704–3711` multiplies Holy's Echo contribution by
+`1+390967effect0/100`; local70448 supplies **5%**, not a copied historical value.
+The ordinary effect1 Renew13% modifier stays untouched. `echo_of_light.rs` reads
+the actor's actual owned talent aura and scales only the new pool contribution;
+shared raw mastery/77485 values and already-carried unpaid amounts are unchanged.
+
+Separate testtip871560575 reproduced native level61 learned Echo tick81 versus85
+expected; native60 unlearned control passed (1PASS/1FAIL37.36s). Narrow production
+97a246aa5, merged53a0ee990, passes15native cases84.14s: the level boundary plus
+Echo refresh/two-caster/self/periodic/expiry, Binding and generic carry controls.
+This later tip is separate from ec943's frozen cf561a925 Echo candidate. Helper default check exits0/1m11s with no warnings; format passes at the same
+code. Evidence: game-engine
+`data/diagnostics/healer-ai-2026-10-21/prismatic-echoes/` contains `native-red.log`,
+`native-green.log`, `final-check.log`, `format-check.log`, `readability-review.md`
+and `inputs.json` (three source-alias hash matches; frozen DB unchanged).
+No AI, native catalog, mastery points or other spell producer changed; no
+simulator effectiveness or live acceptance inferred.
 
 ## Native utility decisions
 
