@@ -10,6 +10,17 @@ ENTRIES = (186116, 186120, 186121, 186122, 186124, 186125)
 
 @unittest.skipUnless('BRACKENHIDE_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')
 class BrackenhidePlacementAcceptance(unittest.TestCase):
+    def test_wratheye_is_on_the_sourced_indoor_surface_not_an_outdoor_roof(self):
+        path = Path(os.environ['BRACKENHIDE_PLACEMENT_DB']).resolve(strict=True)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            row = db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63520002 AND id1=186121 AND map=2520').fetchone()
+        self.assertIsNotNone(row)
+        self.assertAlmostEqual(row[0], -3344.54, places=6)
+        self.assertAlmostEqual(row[1], 3663.96, places=6)
+        self.assertAlmostEqual(row[2], 111.17662182231342, places=6)
+        self.assertGreaterEqual(row[2], 109.52377891540527)
+        self.assertLessEqual(row[2], 200.3784294128418)
+
     def test_six_boss_actors_have_native_stats_models_and_primary_bindings(self):
         path = Path(os.environ['BRACKENHIDE_PLACEMENT_DB']).resolve(strict=True)
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
