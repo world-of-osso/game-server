@@ -43,6 +43,7 @@ pub(crate) mod handlers;
 pub(crate) mod health_pct_trigger;
 pub mod invisibility;
 mod item_requirements;
+mod light_of_titans;
 mod linked;
 pub(crate) mod linked_summon;
 pub(crate) mod mastery;
