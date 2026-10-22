@@ -45,7 +45,7 @@ def read_binaries(artifacts):
     binaries = {}
     for row in read_events(artifacts):
         if row.get("reason") == "compiler-artifact" and row.get("executable") and row["profile"]["test"]:
-            binaries[row["executable"]] = row["target"]["name"]
+            binaries[row["executable"]] = str(Path(row["manifest_path"]).parent)
     if not binaries:
         raise ValueError("Cargo artifact receipt contains no test binaries")
     return binaries
@@ -54,12 +54,12 @@ def read_binaries(artifacts):
 def discover_groups(binaries, filters, skips, output, env):
     groups = defaultdict(list)
     expected = Counter()
-    for binary in binaries:
+    for binary, cwd in binaries.items():
         tag = hashlib.sha256(binary.encode()).hexdigest()[:12]
         command = [binary, *filters, "--list", "-Z", "unstable-options", "--format", "json"]
         for skip in skips:
             command.extend(["--skip", skip])
-        result = subprocess.run(command, env=env, capture_output=True, text=True, check=True)
+        result = subprocess.run(command, cwd=cwd, env=env, capture_output=True, text=True, check=True)
         path = output / (tag + "-discovery.jsonl")
         path.write_text(result.stdout)
         (output / (tag + "-discovery.log")).write_text(result.stderr)
@@ -73,7 +73,7 @@ def discover_groups(binaries, filters, skips, output, env):
     plan = []
     for (binary, module), names in groups.items():
         tag = hashlib.sha256((binary + "\0" + module).encode()).hexdigest()[:12]
-        plan.append({"binary": binary, "module": module, "tests": names, "tag": tag})
+        plan.append({"binary": binary, "cwd": binaries[binary], "module": module, "tests": names, "tag": tag})
     plan.sort(key=lambda group: -len(group["tests"]))
     (output / "plan.json").write_text(json.dumps(plan, indent=2))
     return plan, expected
@@ -87,7 +87,7 @@ def launch_group(group, output, env):
     with (output / (tag + ".jsonl")).open("w") as stdout, (output / (tag + ".log")).open("w") as stderr:
         process = subprocess.Popen(
             [sys.executable, "-c", TIMER, str(output / (tag + ".time")), *command],
-            env=phase_env, stdout=stdout, stderr=stderr, start_new_session=True,
+            cwd=group["cwd"], env=phase_env, stdout=stdout, stderr=stderr, start_new_session=True,
         )
     return {"group": group, "process": process}
 

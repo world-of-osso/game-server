@@ -24,6 +24,7 @@ parser.add_argument("-Z")
 parser.add_argument("--skip", action="append", default=[])
 parser.add_argument("filters", nargs="*")
 args = parser.parse_args()
+assert open('relative-input.txt').read() == 'package fixture'
 cases = [(module + "::" + case, False) for module in ["left", "right", "third"] for case in ["alpha", "beta"]]
 cases += [("left::ignored", True), ("broken::failure", False)]
 selected = [(name, ignored) for name, ignored in cases
@@ -67,8 +68,12 @@ class NativeBatchContracts(unittest.TestCase):
         binary = self.root / "test-backend"
         binary.write_text(BACKEND)
         binary.chmod(0o755)
+        package = self.root / "package"
+        package.mkdir()
+        (package / "relative-input.txt").write_text("package fixture")
         self.artifacts = self.root / "artifacts.jsonl"
         self.artifacts.write_text(json.dumps({
+            "manifest_path": str(package / "Cargo.toml"),
             "reason": "compiler-artifact", "profile": {"test": True},
             "target": {"name": "lifetime-fixture"}, "executable": str(binary),
         }) + "\n")
