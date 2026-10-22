@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Base-rating conversion slice — 2026-10-21
+
+- Native198 adds truncated percentage of the highest selected original base rating to each selected destination rating, before405 percentage changes. Do not consume source rating or feed already converted/percentage-modified ratings back into conversion. Preserve existing463 ordering and removal.
+- Native231065 Lightning Reflexes100% Crit→Dodge and3156078% Haste→Avoidance qualify matching masks, truncation,405 source/target ordering. **AURA_198_SPLIT_RATING_DESTINATION_UNREPRESENTED** remains for native304775: shared CombatRatings unifies Versatility damage/healing/taken, so healing-only destination cannot be applied to all Versatility. Reject unknown or partial destination fields explicitly and retain their warning; do not expand protocol in this slice. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Maximum-power percentage slice — 2026-10-21
 
 - Native178 is Player-only and composes matching power TOTAL_PCT factors multiplicatively. Keep Mana separate from419 BASE_PCT/create-mana cost basis. Applying/removing/recalculating178 changes current power by the maximum-capacity delta, preserving absolute deficit with ordinary clamping and power-threshold hooks.

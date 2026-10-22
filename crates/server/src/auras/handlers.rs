@@ -320,6 +320,7 @@ pub const MOD_MANA_COST_PCT: u32 = 423;
 pub const MOD_CRITICAL_BLOCK_AMOUNT: u32 = 638;
 /// Player-only TOTAL_PCT capacity, preserving absolute missing power.
 pub const MOD_MAX_POWER_PCT: u32 = 178;
+pub const MOD_COMBAT_RATING_FROM_COMBAT_RATING: u32 = 198;
 /// TC Unit::CanCastSpellWhileMoving: Misc0 SpellLabel, no family mask.
 pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
@@ -486,7 +487,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_DAMAGE_DONE_VERSUS
         | MOD_ARMOR_PENETRATION_PCT
         | MOD_CRITICAL_BLOCK_AMOUNT
-        | MOD_MAX_POWER_PCT => StatMod,
+        | MOD_MAX_POWER_PCT
+        | MOD_COMBAT_RATING_FROM_COMBAT_RATING => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL

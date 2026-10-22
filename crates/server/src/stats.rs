@@ -66,6 +66,8 @@ pub struct StatModifiers {
     pub ratings_flat: CombatRatings,
     /// Aura405: ordered rating mask/percent pairs; truncation occurs per effect.
     pub rating_percent_mods: Vec<(u32, f32)>,
+    /// Aura198: source rating mask, destination rating mask, percent of highest base rating.
+    pub rating_from_rating: Vec<(u32, u32, f32)>,
     /// Aura463: composed percentage of base melee crit rating added to parry.
     pub crit_to_parry_pct: f32,
     /// Aura419: composed BASE_PCT mana modifier; never changes create-mana costs.
@@ -363,9 +365,54 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
     (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
+/// Native unified rating fields cannot represent a destination-only sub-rating.
+pub(crate) fn supports_rating_conversion(source: u32, target: u32) -> bool {
+    if source == 0 || target == 0 {
+        return false;
+    }
+    let mut empty = CombatRatings::default();
+    let masks = rating_fields(&mut empty).map(|(mask, _)| mask);
+    let known = masks.iter().fold(0, |known, mask| known | *mask);
+    if source & !known != 0 || target & !known != 0 {
+        return false;
+    }
+    masks
+        .iter()
+        .all(|mask| target & *mask == 0 || target & *mask == *mask)
+}
+
+/// TC Player.cpp5256–5269 reads only the original base ratings, before405.
+fn apply_rating_conversions(
+    base: CombatRatings,
+    ratings: &mut CombatRatings,
+    conversions: &[(u32, u32, f32)],
+) {
+    for &(source, target, percent) in conversions {
+        let mut raw = base;
+        let highest = rating_fields(&mut raw)
+            .into_iter()
+            .filter(|(mask, _)| source & mask != 0)
+            .map(|(_, value)| *value)
+            .reduce(f32::max);
+        if let Some(highest) = highest {
+            let bonus = (highest * percent / 100.0).trunc();
+            add_rating_bonus(ratings, target, bonus);
+        }
+    }
+}
+
+fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
+    for (mask, value) in rating_fields(ratings) {
+        if target & mask != 0 {
+            *value += bonus;
+        }
+    }
+}
+
 /// TC Player.cpp5271-5279: sequential integer rating changes, then base crit conversion.
 fn modified_ratings(base: CombatRatings, mods: &StatModifiers) -> CombatRatings {
     let mut ratings = base;
+    apply_rating_conversions(base, &mut ratings, &mods.rating_from_rating);
     for &(mask, percent) in &mods.rating_percent_mods {
         for (bits, value) in rating_fields(&mut ratings) {
             if mask & bits != 0 {

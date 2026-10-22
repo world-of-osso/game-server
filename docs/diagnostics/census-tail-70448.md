@@ -51,6 +51,14 @@ At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compil
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura198 COMBAT_RATING_FROM_COMBAT_RATING
+
+TC `Player.cpp:5254–5274` reads original base ratings selected by MiscA, takes their maximum, adds truncated amount% to MiscB destinations, then applies405. Existing stat-rating conversion and463 ordering reused; no per-spell case. The source statistic is not consumed and modified ratings do not feed back into198.
+
+Ignored RED0f13536e5 `census_tail_198 --include-ignored`1PASS/3FAIL24.88s. Native231065 Lightning Reflexes leaves Dodge100 rather than1334 with base Crit1234; native405+25 target/10 source leaves125 rather than1667; native3156078% Haste1234 leaves Avoidance200 rather than298 even with unrelated Crit5000. Native304775 split-Versatility destination control already passes unsupported/unchanged. `/home/osso/.worktrees/logs/census-tail/198-red.log`; compile1m46s/no warnings. Minimal198 consumer, native source-mask validation and enabled four cases committed; GREEN pending.
+
+**AURA_198_SPLIT_RATING_DESTINATION_UNREPRESENTED**: native304775 converts Versatility-damage bit28 into healing-only bit30, but current CombatRatings represents one shared Versatility value. Such partial destination masks and unrepresented source/target bits remain explicitly unsupported and logged; stat folding uses the same support decision. Never increase all Versatility to silence that warning. Current valid source aliases use the existing unified rating model; no protocol/rating-layout expansion.
+
 ## Aura178 MAX_POWER_PCT
 
 TC `SpellAuraEffects.cpp:4286–4326` applies Player-only matching TOTAL_PCT, then changes current power by newMax−oldMax rather than filling proportionally or only clamping. Mana uses its existing stats/create-mana basis and composes separately with419 BASE_PCT; non-Mana uses native PowerTypeTable plus existing flat modifiers. Collect native maximum changes before replacing modifiers, then store modifiers before ordinary ModifyPower/threshold hooks to prevent a nested trigger from repeating the old delta. Subsequent stats/power recomputation uses the same factors and cannot undo capacity.

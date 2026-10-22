@@ -787,10 +787,20 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
                 .immunity
                 .as_ref()
                 .is_some_and(|definition| !definition.has_unmodeled_fields());
+        let rating_supported = effect.aura_type != handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING
+            || crate::stats::supports_rating_conversion(
+                effect.misc_values[0] as u32,
+                effect.misc_values[1] as u32,
+            );
         let handled = handlers::is_handled(effect.aura_type)
-            && supported_amount
-            && duration_supported
-            && immunity_supported;
+            && [
+                supported_amount,
+                duration_supported,
+                immunity_supported,
+                rating_supported,
+            ]
+            .into_iter()
+            .all(|supported| supported);
         if handled
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
@@ -809,6 +819,9 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
 }
 
 fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if effect.aura_type == handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING {
+        return "has unrepresented source or split destination rating masks".into();
+    }
     if effect.aura_type == handlers::MECHANIC_IMMUNITY_MASK {
         return if effect.immunity.is_some() {
             format!(
@@ -1564,6 +1577,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
         combat.armor_penetration_pct = 0.0;
         stats.max_mana_pct = 0.0;
+        stats.rating_from_rating.clear();
         combat.max_power_mult.clear();
     }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);

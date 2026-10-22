@@ -52,7 +52,6 @@ fn computed(h: &Harness, ratings: CombatRatings) -> CharacterStats {
 }
 
 #[test]
-#[ignore = "RED: native198 adds base melee-critical rating to Dodge without consuming Crit"]
 fn census_tail_198_native_lightning_reflexes_uses_base_crit_then_removes() {
     let mut h = fixture(&[231065]);
     let ratings = CombatRatings {
@@ -74,7 +73,6 @@ fn census_tail_198_native_lightning_reflexes_uses_base_crit_then_removes() {
 }
 
 #[test]
-#[ignore = "RED: native198 reads pre405source and precedes target405"]
 fn census_tail_198_native_conversion_precedes_source_and_target_percentages() {
     let mut h = fixture(&[231065, 117216, 299744]);
     let ratings = CombatRatings {
@@ -94,7 +92,6 @@ fn census_tail_198_native_conversion_precedes_source_and_target_percentages() {
 }
 
 #[test]
-#[ignore = "RED: native198 matchingHaste8%truncates and ignores larger unrelated Crit"]
 fn census_tail_198_native_evasive_reads_selected_base_rating_and_truncates() {
     let mut h = fixture(&[315607]);
     let ratings = CombatRatings {
@@ -111,7 +108,6 @@ fn census_tail_198_native_evasive_reads_selected_base_rating_and_truncates() {
 }
 
 #[test]
-#[ignore = "RED control: native304775 partialVersatilitytarget remains explicitly unrepresented"]
 fn census_tail_198_native_split_versatility_destination_is_not_applied_to_all_versatility() {
     let mut h = fixture(&[304775]);
     let caster = h.caster;

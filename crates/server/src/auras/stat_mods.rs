@@ -517,6 +517,16 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
             }
             MOD_RATING_PCT => stats.rating_percent_mods.push((misc as u32, amount)),
+            MOD_COMBAT_RATING_FROM_COMBAT_RATING
+                if crate::stats::supports_rating_conversion(
+                    misc as u32,
+                    effect.misc_values[1] as u32,
+                ) =>
+            {
+                stats
+                    .rating_from_rating
+                    .push((misc as u32, effect.misc_values[1] as u32, amount));
+            }
             CONVERT_CRIT_RATING_PCT_TO_PARRY_RATING => {
                 stats.crit_to_parry_pct += amount * (1.0 + stats.crit_to_parry_pct / 100.0);
             }
