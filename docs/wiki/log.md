@@ -5,6 +5,18 @@
 ## 2026-10-22 — Native Ascendance entry RED and bounded selection policy
 
 [Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22): actual1219480 self aura/full285452 control pass, owned188389 absent0vs6/entry burst missing; corrected combat-only native2RED22.84s/zero warnings. Approved named Flame-Shock-eligibility project policy, not Retail radius. Entry script/per-cast50% multiplier pushed; GREEN remains pending. Earlier projection d79 landed through lead ra922/Python21PASS and its single kit row is published.
+## 2026-10-22 — Exact attack countdowns
+
+## 2026-10-22 — BM engage Auto Shot and exact shared attack timers
+
+Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarget and selection-only negative. Separate0d4 Duration/native-ms executor correction passes shared40×50ms RED→GREEN and retained melee/offhand/AutoShot/range/math scopes; forecast7 passes after selected-catalog fixture repair. See [follower data](investigations/follower-data.md#bm-auto-shot-engage-policy--2026-10-22). No fullAPL/DPS/proc parity claim.
+
+[Shared timer](systems/spell-casting.md#exact-attack-countdowns--2026-10-22): real production40tick RED, native millisecond resets/Duration countdown for both melee hands and autorepeat; no epsilon/tolerance widening. GREEN pending.
+
+## 2026-10-22 — BM Auto Shot engage policy
+
+[BM start decision](investigations/follower-data.md#bm-auto-shot-engage-policy--2026-10-22): named SimC/native75 policy, genuine zero-shot RED; preserve native timer/selection boundary, GREEN pending; proc-mask mechanics separate.
+
 ## 2026-10-22 — Player DPS bridge and fixed-time receipt inventory
 
 [Bridge and fixture boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): unchanged pinned authored decisions drive real Players; exact unknown-rule/cast failures remain blockers. Historical564d46598 health/player controls2GREEN and10policy-on300s single-target executions retained, including Fury72/Enhancement263. New40-row receipt inventory verifies report hashes and distinguishes11blocks/10missing references/6unattempted/trait rejection/Human regression/source-invalid retry; no new simulations. Only269 changes cast counts under health policy;66alsochanges hits/per-hit output, no isolated causality. Process source-view RED→GREEN proves readonly snapshot isolation only; post-master native source/Human/check gates pending. Prior adapter metrics remain historical, not current-master acceptance.
