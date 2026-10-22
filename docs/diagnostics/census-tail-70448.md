@@ -28,11 +28,19 @@ At Ruste7fffe2da / docs9f9800704, compiled-binary probe1PASS/0FAIL1110.87s/exit0
 
 Valid evidence is isolated `round-3-retry/`, including exact command/binary SHA, full receipts, frozen classification, delta/cause/spec matrices, exit/log and `round-2-transitions.json`. Earlier `round-3/` is **INVALID**: an admission job omitted by compaction launched concurrently with a second run against the same file, corrupting two lines and duplicating five tail keys. Both processes exited; preserve raw evidence and `INVALID.md`, do not repair/dedupe or publish it. Retry verified no probe process, used a distinct newly-created directory and one synchronous execution. Canonical publication remains lead-owned.
 
+### Fourth five-cause refresh
+
+At Rust494cfb1d8 / docs checkouta72f724e8: single compiled-binary probe1PASS/0FAIL1058.52s/exit0, exactly7827 memberships/40 specs: **7118PASS/709FAIL**. All twenty owned dispatch-cause warning counts are0. Five new causes259/504/50/345/308 produce five native memberships promoting:270/116849 Life Cocoon,1468/366155 Reversion,264/462587 White Water,70/255937 Wake of Ashes and270/1266748 Vital Clarity. Versus valid round3, five additional285-linked promotions (104/371905+471492,105/392221,270/388491+388511) are inherited from master7ceea1fff, not this branch's work.
+
+Three new failures are explicit empower release-script boundaries:250/1263824 Consumption,269/1217413 Slicing Winds,1473/396286 Upheaval. Their receipts reject `empower<id> release script is not implemented` after inherited authenticated empower-release changes; do not patch the oracle or rerun to hide them. The prior two target148 regressions persist. Relative frozen7071/756:52 promotions/five observed regressions. Bloodthirst remains PASS this round, not a repaired proc claim.
+
+Valid isolated `round-4/` holds exact command/protocol/binary SHA, raw receipts/log/exit, frozen classification, delta/cause/spec matrices and `round-3-transitions.json`. Admission, no-active-probe check and exclusive new directory enforce one writer. Canonical publication remains lead-owned; no source data edited. Dispatch PASS is not complete ability/script/UDP parity.
+
 ## Named gaps
 
 | Cause | Roots | Disposition and evidence |
 |---|---|---|
-|285 LINKED_2 nonzero|371905,388491,388511,392221,471492,427775|Existing source conflict retained by lead decision2026-10-21. [Prior native matrix](../class-completeness2.md#zero-amount-linked-auras--batch25). Do not copy parent positive BP0 over70448 negative child values; do not invent sign or scaling rules.|
+|285 LINKED_2 nonzero (historical tail gap)|371905,388491,388511,392221,471492,427775|Originally retained by lead decision2026-10-21; inherited master7ceea1fff later adds sourced linked basepoint overrides. Round4 has no285 warning roots and five related membership promotions; not this branch's implementation. [Prior native matrix](../class-completeness2.md#zero-amount-linked-auras--batch25) is historical; use current native implementation/proofs rather than recreating a parent-BP0/sign rule.|
 |483 SUPPRESS_TRANSFORMS|164862 Flap,188499 Blade Dance|**AURA_483_TC_NULL_NYI**. TC `SpellAuraEffects.cpp:555` dispatches HandleNULL; `SpellAuraDefines.h:570` explicitly marks NYI. Complete `src/server` search finds only those declarations, no consumer. Five memberships remain partial; no marker handler or invented transform behavior.|
 
 **AURA_120_151_VIS_FLAGS_PROTOCOL_ABSENT**: native61648 Aspect of the Chameleon (aura120) requires client-facing `UNIT_VIS_FLAGS_UNTRACKABLE` (`SpellAuraEffects.cpp:2693–2710`); native19885 Track Hidden (aura151) requires player-local `PLAYER_LOCAL_FLAG_TRACK_STEALTHED` (`SpellAuraEffects.cpp:2650–2670`). Pinned handlers do not implement a server detection algorithm. Existing protocol has neither field; server WorldAuraState's44 tracking mask likewise explicitly lacks client projection. Lead2026-10-21 names this boundary; no unused booleans or warning-only marker handler. Six memberships remain partial.
