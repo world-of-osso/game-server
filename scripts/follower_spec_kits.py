@@ -63,6 +63,9 @@ def dps_rotation_policy(spec, name):
         return policy('aoe', 85, min_enemies=3, ground=True, required_self_aura=48108)
     if spec == 63 and name == 'Arcane Explosion':
         return policy('utility', 1000)
+    # apl_hunter.cpp104/109/119/132: min own Barbed DoT, not a missing-only gate.
+    if spec == 253 and name == 'Barbed Shot':
+        return policy('attack', 100, target_if_min_aura=217200)
     # apl_shaman.cpp100–102: maintain own Flame Shock before filler/spenders.
     if spec == 262 and name in {'Flame Shock', 'Voltaic Blaze'}:
         return policy('attack', 84, refreshable_aura=188389)
@@ -118,6 +121,11 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
     if spec == 266 and name == 'Demonbolt':
         return policy('attack', 110, required_aura=264173,
                       resources=[dict(power='SoulShards', below=4)])
+
+    # SimC apl_shaman79/103: after native Shock actions84, before spenders85.
+    if spec == 262 and spell == 1219480:
+        return policy('buff', 84, 'self', combat=True, missing_aura=1219480,
+                      cooldown_remaining_above=dict(spell_id=191634, seconds=15))
 
     rotation = dps_rotation_policy(spec, name)
     if rotation is not None:
@@ -284,7 +292,10 @@ def read_description_reference_sources(db2, references):
 # in the selected native loadout enable the named cast actions.
 # Native TraitDefinition108167 VisibleSpellID106951 and108183 OverridesSpellID106951;
 # SimC sc_druid.cpp3933-3946,10699 suppresses Berserk when Incarnation is learned.
+# Elemental114050's native description names1219480; SimCsc_shaman11419
+# selects that actual self action, not the legacy enemy-targeted DUMMY parent.
 SIMC_TALENT_CAST_ACTIONS = {
+    262: ((114050, 1219480, ()),),
     266: ((1250273, 105174, ()), (426115, 264178, ())),
     103: ((343223, 106951, (102543,)),),
 }

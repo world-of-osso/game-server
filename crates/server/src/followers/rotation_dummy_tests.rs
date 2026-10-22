@@ -9,6 +9,7 @@ use shared::protocol::CombatLogKind;
 use std::collections::BTreeMap;
 
 const DURATION_SECONDS: f64 = 120.0;
+const AUTO_SHOT: u32 = 75;
 const DUMMY_HEALTH: f32 = 1_000_000_000.0;
 
 #[derive(Default, Serialize)]
@@ -34,6 +35,9 @@ struct DummyMeasurement {
     dot_uptime_fraction: BTreeMap<u32, f64>,
     procs: BTreeMap<u32, ProcMeasurement>,
     pet_present: bool,
+    stat_source: &'static str,
+    initial_stats: serde_json::Value,
+    final_stats: serde_json::Value,
 }
 
 fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
@@ -150,7 +154,7 @@ impl ProcObserver {
 
 fn buff_auras(spec: u32) -> &'static [u32] {
     match spec {
-        262 => &[77762],
+        262 => &[77762, 191634, 1219480],
         63 => &[48107, 48108, 190319],
         253 => &[1264934, 19574],
         1467 => &[359618, 375087],
@@ -174,7 +178,9 @@ fn sample_buffs(
 
 fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
     if spec != 253 {
-        return at_level(entry, level, |_| {});
+        return at_level(entry, level, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
     }
     let data = crate::spell_cast::test_harness::prepare_class_world().world_data();
     let source = rusqlite::Connection::open_with_flags(
@@ -187,11 +193,139 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
         app.insert_resource(data)
             .insert_resource(abilities)
             .add_plugins((
+                crate::stats::StatsPlugin,
                 crate::hunter_pet::HunterPetPlugin,
                 crate::pet_control::PetControlPlugin,
                 crate::creature_ai::CreatureAiPlugin,
             ));
     })
+}
+
+#[test]
+fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_repeat() {
+    let (mut h, caster) = prepare_follower(209065, 253, 32);
+    let targets = prepare_dummies(&mut h, 2);
+    let next_target = targets[1];
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(caster)
+        .unwrap();
+    let base = if stats.main_hand.kind == shared::components::WeaponType::Ranged {
+        stats.main_hand.speed
+    } else {
+        2.0 // TC BASE_ATTACK_TIME when no ranged main hand supplies the clock.
+    };
+    let frame_step = match h.app.world().resource::<bevy::time::TimeUpdateStrategy>() {
+        bevy::time::TimeUpdateStrategy::ManualDuration(step) => *step,
+        _ => panic!("native fixture requires its manual frame clock"),
+    };
+    let interval =
+        crate::melee::attack_timer_duration(crate::melee::swing_time(base, stats.haste_pct));
+    assert_eq!(interval.as_nanos() % frame_step.as_nanos(), 0);
+    // The direct AI call executes before advance; its receipt is drained only
+    // afterward. Timestamp that initial execution, not its later delivery frame.
+    let started_at = h.app.world().resource::<Time>().elapsed();
+    let first = h.inbox.go.len();
+    super::update_ai(h.app.world_mut());
+    h.advance(1);
+    let initial_shots = h.inbox.go[first..]
+        .iter()
+        .filter(|event| event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT)
+        .count();
+    assert_eq!(initial_shots, 1, "initial ordinary Auto Shot receipt");
+    let mut shots = vec![started_at];
+    for frame in 1..200 {
+        if frame == 10 {
+            h.select(Some(next_target));
+            h.attack(next_target);
+        }
+        let first = h.inbox.go.len();
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        let now = h.app.world().resource::<Time>().elapsed();
+        shots.extend(h.inbox.go[first..].iter().filter_map(|event| {
+            (event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT).then_some(now)
+        }));
+    }
+    assert!(
+        shots.len() >= 3,
+        "engaged native BM must start and repeat Auto Shot: {shots:?}"
+    );
+    for pair in shots.windows(2) {
+        assert_eq!(
+            pair[1] - pair[0],
+            interval,
+            "native ranged execution clock, not receipt-frame labels: {shots:?}"
+        );
+    }
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(AUTO_SHOT)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "actual native follower Auto Shot damage"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(AUTO_SHOT)
+                && event.target == Some(next_target.to_bits())
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        }),
+        "ordinary target change redirects the repeat without restarting its clock"
+    );
+}
+
+#[test]
+fn rotation_fidelity_253_selection_alone_does_not_start_auto_shot() {
+    let (mut h, caster, _) =
+        super::profile_behavior_tests::spawn_profile_fixture_with_plugins(209065, |app| {
+            app.add_plugins(crate::stats::StatsPlugin);
+        });
+    for _ in 0..120 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|event| { event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT }),
+        "owner selection without native engagement must not start Auto Shot"
+    );
+}
+
+#[test]
+fn rotation_dummy_native_stat_buff_recomputes_all_four_follower_sheets() {
+    for (entry, spec) in [(209059, 63), (209053, 262), (209065, 253), (215240, 1467)] {
+        let (mut h, caster) = prepare_follower(entry, spec, 90);
+        let before = h
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .primary
+            .intellect;
+        assert!(before > 0.0);
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, 1459, Some(caster), true)
+            .unwrap();
+        h.advance(3);
+        assert!(crate::auras::has_aura(h.app.world(), caster, 1459));
+        let after = h
+            .app
+            .world()
+            .get::<crate::stats::CharacterStats>(caster)
+            .unwrap()
+            .primary
+            .intellect;
+        assert!(
+            after > before,
+            "spec{spec}: native Arcane Intellect must reach the actual production-derived sheet ({before}→{after})"
+        );
+    }
 }
 
 fn sample_dots(
@@ -216,9 +350,31 @@ fn sample_dots(
     }
 }
 
+fn snapshot_stats(h: &Harness, caster: Entity) -> serde_json::Value {
+    let stats = h
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(caster)
+        .unwrap();
+    serde_json::json!({
+        "primary": stats.primary,
+        "spell_power": stats.spell_power,
+        "attack_power": stats.attack_power,
+        "ranged_attack_power": stats.ranged_attack_power,
+        "crit_pct": stats.crit_pct,
+        "haste_pct": stats.haste_pct,
+        "mastery_pct": stats.mastery_pct,
+        "mastery_points": stats.mastery_points,
+        "versatility_pct": stats.versatility_pct,
+        "max_health": stats.max_health,
+        "max_mana": stats.max_mana,
+    })
+}
+
 fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
     let (mut h, caster) = prepare_follower(entry, spec, level);
     let targets = prepare_dummies(&mut h, count);
+    let initial_stats = snapshot_stats(&h, caster);
     let begin = aura_now(h.app.world());
     let first_log = h.inbox.log.len();
     let mut dots = BTreeMap::new();
@@ -318,6 +474,9 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         dot_uptime_fraction: fractions,
         procs,
         pet_present: pet.is_some(),
+        stat_source: "production_stats_plugin_ungeared_starter",
+        initial_stats,
+        final_stats: snapshot_stats(&h, caster),
     };
     let json = serde_json::to_string_pretty(&report).unwrap();
     println!("ROTATION_DUMMY {json}");

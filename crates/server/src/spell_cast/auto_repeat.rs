@@ -8,6 +8,7 @@
 //! are not modelled.
 use bevy::prelude::*;
 use shared::components::WeaponType;
+use std::time::Duration;
 
 use super::{SpellStore, attributes, execute_cast};
 use crate::stats::CharacterStats;
@@ -22,7 +23,18 @@ const BASE_ATTACK_SECS: f32 = 2.0;
 pub(crate) struct AutoRepeat {
     spell_id: u32,
     target: Entity,
-    ready_in: f32,
+    ready_in: Duration,
+}
+
+impl AutoRepeat {
+    /// Follow the attack decision without starting another shot or resetting its timer.
+    pub(crate) fn retarget_auto_shot(&mut self, target: Entity) -> bool {
+        if self.spell_id != AUTO_SHOT {
+            return false;
+        }
+        self.target = target;
+        true
+    }
 }
 
 /// After a successful cast: an autorepeat spell (re)starts with a full ranged timer.
@@ -38,7 +50,7 @@ pub(super) fn on_cast(
     if attributes(spell, 2) & SPELL_ATTR2_AUTO_REPEAT == 0 {
         return;
     }
-    let ready_in = ranged_attack_secs(world, caster);
+    let ready_in = crate::melee::attack_timer_duration(ranged_attack_secs(world, caster));
     world.entity_mut(caster).insert(AutoRepeat {
         spell_id: spell.id,
         target,
@@ -68,13 +80,16 @@ pub(crate) fn cancel(world: &mut World, unit: Entity) {
 }
 
 pub(super) fn update(world: &mut World) {
-    let dt = world.resource::<Time>().delta_secs();
+    let dt = world.resource::<Time>().delta();
     let mut repeats = world.query::<(Entity, &mut AutoRepeat)>();
     let due: Vec<(Entity, u32, Entity)> = repeats
         .iter_mut(world)
         .filter_map(|(caster, mut repeat)| {
-            repeat.ready_in -= dt;
-            (repeat.ready_in <= 0.0).then_some((caster, repeat.spell_id, repeat.target))
+            repeat.ready_in = repeat.ready_in.saturating_sub(dt);
+            repeat
+                .ready_in
+                .is_zero()
+                .then_some((caster, repeat.spell_id, repeat.target))
         })
         .collect();
     for (caster, spell_id, target) in due {

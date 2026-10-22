@@ -75,6 +75,8 @@ pub(crate) fn prepare_auction_players(path: &std::path::Path) -> (Harness, Entit
 }
 
 pub(crate) fn progress(h: &Harness, character: u64, criterion: u32) -> Option<u64> {
+    // Auction/economy fixtures have consumed credits in Update; fence their writer.
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     persistence::load_achievements(h.db(), character)
         .criteria_progress
         .get(&criterion)

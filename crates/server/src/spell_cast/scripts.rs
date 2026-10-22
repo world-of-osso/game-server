@@ -26,13 +26,16 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod elemental_ascendance;
+mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-pub(super) use hot_streak::record_fire_hit;
+pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
@@ -45,7 +48,9 @@ mod windwalker;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
-pub(crate) use windwalker::ordinary_combo_cast;
+pub(crate) use windwalker::{
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
+};
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
@@ -83,6 +88,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
+        return Some(super::toy_coyote::despawn);
+    }
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
     }
@@ -110,6 +118,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
         && batch23::effect_enabled(world, caster, spell, index)
+        && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -513,6 +522,18 @@ pub(crate) fn preserve_unadmitted_proc(
 }
 
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
+pub(super) type EmpowerCompleteHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
+
+pub(super) fn empower_completion(spell_id: u32) -> Option<EmpowerCompleteHook> {
+    match spell_id {
+        357208 | 382266 | 359073 | 382411 => Some(empower_evoker::release),
+        _ => None,
+    }
+}
+
+pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
+
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
@@ -520,11 +541,13 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
+        prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
         hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
-            Some(hot_streak::consume_admitted_hot_streak)
+            Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
@@ -976,11 +999,22 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+    #[cfg(test)]
+    let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+    let reduced = world
+        .get_mut::<super::SpellHistory>(caster)
+        .map(|mut history| {
+            reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
+        });
+    #[cfg(test)]
+    {
+        let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+        let applied = (before - after).max(0.0).min(seconds);
+        super::holy_metrics::record_reduction(world, caster, spell_id, seconds, applied);
+    }
+    let Some((charges, remaining_ms)) = reduced else {
         return;
     };
-    let (charges, remaining_ms) =
-        reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
     if let Some(charges) = charges {
         super::send_to_owner(world, caster, charges);
     }
@@ -1343,6 +1377,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),

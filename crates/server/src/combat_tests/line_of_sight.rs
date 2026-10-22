@@ -103,7 +103,7 @@ fn player_swing_across_wall_reports_los_holds_both_timers_and_resumes() {
             && error.detail.is_none()
     }));
     let attack = h.app.world().get::<AutoAttack>(h.caster).unwrap();
-    assert!(attack.timer <= 0.0 && attack.off_hand_timer <= 0.0);
+    assert!(attack.timer.is_zero() && attack.off_hand_timer.is_zero());
     assert_eq!(attack.victim, npc);
     place_in_open_ground(&mut h);
     h.inbox.failed.clear();
@@ -114,7 +114,14 @@ fn player_swing_across_wall_reports_los_holds_both_timers_and_resumes() {
     h.advance(1);
     assert_eq!(h.health(npc), 4990.0, "ready swing lands immediately");
     assert!(h.inbox.failed.is_empty());
-    assert!(h.app.world().get::<AutoAttack>(h.caster).unwrap().timer > 0.0);
+    assert!(
+        !h.app
+            .world()
+            .get::<AutoAttack>(h.caster)
+            .unwrap()
+            .timer
+            .is_zero()
+    );
 }
 
 #[test]
@@ -136,7 +143,14 @@ fn creature_swing_across_wall_holds_timer_and_resumes_without_player_error() {
         h.inbox.failed.is_empty(),
         "creature error is not sent to victim"
     );
-    assert!(h.app.world().get::<AutoAttack>(h.npc).unwrap().timer <= 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<AutoAttack>(h.npc)
+            .unwrap()
+            .timer
+            .is_zero()
+    );
     place_in_open_ground(&mut h);
     h.advance(1);
     assert_eq!(
@@ -144,7 +158,14 @@ fn creature_swing_across_wall_holds_timer_and_resumes_without_player_error() {
         990.0,
         "ready creature swing lands immediately"
     );
-    assert!(h.app.world().get::<AutoAttack>(h.npc).unwrap().timer > 0.0);
+    assert!(
+        !h.app
+            .world()
+            .get::<AutoAttack>(h.npc)
+            .unwrap()
+            .timer
+            .is_zero()
+    );
     assert!(
         h.inbox
             .log

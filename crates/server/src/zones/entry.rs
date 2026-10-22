@@ -330,9 +330,18 @@ impl EntryProjection {
     }
 
     fn apply_class_energy(&self, actor: &mut EntityWorldMut<'_>) {
-        let table = actor
+        // Zone-only worlds also spawn creatures without installing SpellCastPlugin.
+        // Preserve source stats/identity but leave power absent, never invent a pool.
+        let Some(table) = actor
             .world()
-            .resource::<crate::spell_cast::powers::PowerTypeTable>();
+            .get_resource::<crate::spell_cast::powers::PowerTypeTable>()
+        else {
+            warn!(
+                "Creature{} class4 Energy unavailable: PowerTypeTable is not installed",
+                self.template.entry
+            );
+            return;
+        };
         let pools = table
             .initial_creature_energy(self.template.unit_class)
             .expect("Creature class4 requires native NPC-eligible Energy DisplayPower data");

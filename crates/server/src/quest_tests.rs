@@ -350,6 +350,7 @@ fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_dail
     assert!(received::<QuestFailed>(&mut app, &client).is_empty());
     turn_in(&mut app, &client, giver, 24629, None);
     assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert!(
         !persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress
@@ -360,6 +361,7 @@ fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_dail
     turn_in(&mut app, &client, giver, 24629, None);
     assert!(received::<QuestFailed>(&mut app, &client).is_empty());
     assert!(load_quest_log(db(&app), client.character_id).is_rewarded(24629));
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(
         persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress
@@ -368,7 +370,7 @@ fn achievements_criteria_daily_quest_reward_counts_only_committed_authentic_dail
     );
     turn_in(&mut app, &client, giver, 24629, None);
     assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
-    app.update();
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(
         persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress
@@ -410,13 +412,16 @@ fn achievements_criteria_quest_money_zone_count_and_abandon_credit_only_committe
     assert!(received::<QuestFailed>(&mut app, &client).is_empty());
     // Statistic94 criterion5289 counts a committed log removal, not a refused one.
     request(&mut app, &client, AbandonQuest { quest_id: 9355 });
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(progress(&app, 5289), Some(1));
     request(&mut app, &client, AbandonQuest { quest_id: 9355 });
     assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(progress(&app, 5289), Some(1));
     accept(&mut app, &client, giver, 9355);
     turn_in(&mut app, &client, giver, 9355, None);
     assert!(!received::<QuestFailed>(&mut app, &client).is_empty());
+    crate::test_data::advance_and_drain_persistence(&mut app);
     for criterion in [4092, 3912, 3631] {
         assert_eq!(
             progress(&app, criterion),
@@ -431,6 +436,7 @@ fn achievements_criteria_quest_money_zone_count_and_abandon_credit_only_committe
     let paid = persistence::load_inventory(db(&app), client.character_id).gold - before;
     assert!(paid > 0);
     // Gold from quest rewards4092, Hellfire quests3912 and Quests completed3631.
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(progress(&app, 4092), Some(paid));
     assert_eq!(progress(&app, 3912), Some(1));
     assert_eq!(progress(&app, 3631), Some(2));
@@ -521,6 +527,7 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
             .count(),
         1
     );
+    crate::test_data::drain_persistence(app.world().resource::<GameDatabase>());
     let saved = persistence::load_achievements(db(&app), client.character_id);
     assert!(saved.earned_ids.contains(&2357));
     assert_eq!(saved.criteria_progress[&8905], 1);
@@ -661,6 +668,7 @@ fn achievements_criteria_currency_counts_committed_gain_not_requested_amount_or_
             .get(1792),
         0
     );
+    crate::test_data::advance_and_drain_persistence(&mut app);
     let saved = persistence::load_achievements(
         &app.world().resource::<GameDatabase>().db,
         client.character_id,

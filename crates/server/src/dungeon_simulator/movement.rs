@@ -3,17 +3,60 @@ use super::{Space, campaign::MoveIntent};
 use bevy::prelude::*;
 use shared::components::{Health, Position, Rotation};
 
+#[path = "movement_edge_tests.rs"]
+mod edge_tests;
+
 #[derive(Component)]
 struct Travel {
     destination: Vec3,
     legs: std::collections::VecDeque<(Vec3, f32)>,
 }
 
+pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
+    let mut units: Vec<_> = world
+        .query::<(Entity, &crate::followers::Follower)>()
+        .iter(world)
+        .filter(|(_, follower)| follower.owner == owner)
+        .map(|(unit, _)| unit)
+        .collect();
+    units.push(owner);
+    let pets: Vec<_> = units
+        .iter()
+        .filter_map(|unit| crate::hunter_pet::summoned_pet(world, *unit))
+        .collect();
+    units.extend(pets);
+    for unit in units {
+        world.entity_mut(unit).remove::<Travel>();
+    }
+}
+
+pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
+    let Some(travel) = world.get::<Travel>(unit) else {
+        return serde_json::Value::Null;
+    };
+    serde_json::json!({
+        "destination": travel.destination.to_array(),
+        "legs": travel.legs.iter().map(|(point, remaining)| {
+            serde_json::json!({"to": point.to_array(), "remaining_yards": remaining})
+        }).collect::<Vec<_>>(),
+    })
+}
+
 fn point(position: &Position) -> Vec3 {
-    Vec3::new(position.x, 0.0, position.z)
+    Vec3::new(position.x, position.y, position.z)
 }
 
 fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
+    if world.get::<crate::creature_ai::CreatureState>(unit)
+        == Some(&crate::creature_ai::CreatureState::Returning)
+    {
+        let home = crate::creature_ai::return_home_position(
+            world.get::<crate::creature_ai::SpawnPoint>(unit)?,
+            world.get::<crate::creature_ai::HomePosition>(unit),
+            world.get::<crate::scripted_ai::movement::ScriptedPath>(unit),
+        );
+        return Some((point(&home), 0.0));
+    }
     if let Some(intent) = world.get::<MoveIntent>(unit) {
         return Some((intent.0, 0.0));
     }
@@ -68,45 +111,7 @@ fn read_legs(
     from: Vec3,
     destination: Vec3,
 ) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
-    let points = space.route(from, destination)?;
-    let mut previous = from;
-    points
-        .into_iter()
-        .map(|next| {
-            let nearest = |point: Vec3| {
-                space
-                    .0
-                    .packs
-                    .iter()
-                    .min_by(|a, b| {
-                        let distance = |pack: &super::graph::Pack| {
-                            Vec3::new(pack.position[0], 0.0, pack.position[1])
-                                .distance_squared(point)
-                        };
-                        distance(a).total_cmp(&distance(b))
-                    })
-                    .unwrap()
-                    .id
-            };
-            let a = nearest(previous);
-            let b = nearest(next);
-            let yards = if a == b {
-                previous.distance(next)
-            } else {
-                space
-                    .0
-                    .edges
-                    .iter()
-                    .find(|edge| {
-                        (edge.from == a && edge.to == b) || (edge.from == b && edge.to == a)
-                    })
-                    .ok_or_else(|| format!("route leg pack{a}->pack{b} lacks a frozen edge"))?
-                    .yards
-            };
-            previous = next;
-            Ok((next, yards))
-        })
-        .collect()
+    space.walk_legs(from, destination)
 }
 
 fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> Vec3 {
@@ -139,6 +144,30 @@ fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> V
     from
 }
 
+fn handle_unreachable_movement(
+    world: &mut World,
+    unit: Entity,
+    from: Vec3,
+    to: Vec3,
+    error: String,
+) -> Result<(), String> {
+    if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
+        world.get::<crate::creature_ai::CreatureState>(unit)
+    {
+        crate::creature_ai::mark_chase_blocked(world, unit, *target);
+        let position = *world.get::<Position>(unit).unwrap();
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
+        return Ok(());
+    }
+    Err(format!(
+        "{error}; source={:?} from={from:?} to={to:?} state={:?}",
+        world
+            .get::<crate::zones::CreatureOrigin>(unit)
+            .map(|origin| origin.guid),
+        world.get::<crate::creature_ai::CreatureState>(unit),
+    ))
+}
+
 fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     if !can_move(world, unit) {
         return Ok(());
@@ -152,11 +181,18 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         .take::<Travel>()
         .filter(|travel| travel.destination == to);
     if travel.is_none() {
+        let legs = match read_legs(world.resource::<Space>(), from, to) {
+            Ok(legs) => legs,
+            Err(error) => return handle_unreachable_movement(world, unit, from, to, error),
+        };
         travel = Some(Travel {
             destination: to,
-            legs: read_legs(world.resource::<Space>(), from, to)?,
+            legs,
         });
     }
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::CannotReachTarget>();
     let mut travel = travel.unwrap();
     let speed = read_speed(world, unit);
     let next = advance(from, &mut travel, speed * dt, reach);
@@ -165,7 +201,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         unit,
         Position {
             x: next.x,
-            y: 0.0,
+            y: next.y,
             z: next.z,
         },
         speed,
@@ -177,7 +213,22 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
             z: 0.0,
         });
     }
-    world.entity_mut(unit).insert(travel);
+    let returned_home = travel.legs.is_empty()
+        && world.get::<crate::creature_ai::CreatureState>(unit)
+            == Some(&crate::creature_ai::CreatureState::Returning);
+    if returned_home {
+        if let Some(home) = world.get::<crate::creature_ai::HomePosition>(unit) {
+            let facing = home.orientation;
+            world.entity_mut(unit).insert(Rotation {
+                x: 0.0,
+                y: facing,
+                z: 0.0,
+            });
+        }
+        crate::creature_ai::finish_return_home(world, unit);
+    } else {
+        world.entity_mut(unit).insert(travel);
+    }
     Ok(())
 }
 

@@ -348,6 +348,106 @@ pub(crate) fn init_player_powers(
     }
 }
 
+/// Collect178 changes before replacing the old aura modifiers, without changing resources.
+pub(crate) fn max_power_percent_changes(
+    world: &World,
+    unit: Entity,
+    stats: &crate::stats::StatModifiers,
+    mods: &crate::auras::AuraStatMods,
+) -> Vec<(PowerType, f32)> {
+    if world.get::<Player>(unit).is_none() {
+        return Vec::new();
+    }
+    mana_percent_change(world, unit, stats)
+        .into_iter()
+        .chain(non_mana_percent_changes(world, unit, mods))
+        .collect()
+}
+
+fn mana_percent_change(
+    world: &World,
+    unit: Entity,
+    stats: &crate::stats::StatModifiers,
+) -> Option<(PowerType, f32)> {
+    let previous = world
+        .get::<crate::stats::StatModifiers>(unit)
+        .map_or(0.0, |mods| mods.max_mana_pct);
+    if previous == stats.max_mana_pct || world.get::<Mana>(unit).is_none() {
+        return None;
+    }
+    let base = world.get::<crate::stats::CharacterStats>(unit)?.base_mana;
+    let max = (base * (1.0 + stats.base_mana_pct / 100.0) * (1.0 + stats.max_mana_pct / 100.0))
+        .round()
+        .max(0.0);
+    Some((PowerType::Mana, max))
+}
+
+fn non_mana_percent_changes(
+    world: &World,
+    unit: Entity,
+    mods: &crate::auras::AuraStatMods,
+) -> Vec<(PowerType, f32)> {
+    let Some(pools) = world.get::<PowerPools>(unit) else {
+        return Vec::new();
+    };
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!("Unit{unit:?} max-power recalculation unavailable: PowerTypeTable is not installed");
+        return Vec::new();
+    };
+    let previous = world.get::<crate::auras::AuraStatMods>(unit);
+    pools
+        .pools
+        .iter()
+        .filter_map(|pool| {
+            let power = pool.power as i32;
+            let old = previous.map_or(1.0, |mods| mods.max_power_multiplier(power));
+            let next = mods.max_power_multiplier(power);
+            if old == next {
+                return None;
+            }
+            let base = table
+                .get(pool.power)
+                .expect("player pool has a native power definition")
+                .max_base_power as f32;
+            Some((
+                pool.power,
+                ((base + mods.max_power_flat(power)) * next)
+                    .round()
+                    .max(0.0),
+            ))
+        })
+        .collect()
+}
+
+/// TC HandleAuraModMaxPowerPct updates maximum first, then ModifyPower by its delta.
+/// Called after storing modifiers so threshold-triggered casts cannot repeat the old delta.
+pub(crate) fn apply_max_power_percent_changes(
+    world: &mut World,
+    unit: Entity,
+    changes: Vec<(PowerType, f32)>,
+) {
+    for (power, max) in changes {
+        let old = power_value(world, unit, power)
+            .expect("collected native power pool")
+            .1;
+        if power == PowerType::Mana {
+            world
+                .get_mut::<Mana>(unit)
+                .expect("collected mana pool")
+                .max = max;
+        } else {
+            world
+                .get_mut::<PowerPools>(unit)
+                .expect("collected power pools")
+                .get_mut(power)
+                .expect("collected native power pool")
+                .max = max;
+        }
+        change_power(world, unit, power, max - old).expect("collected native power pool");
+        super::mark_dirty(world, unit);
+    }
+}
+
 /// `Player::UpdateMaxPower`: `MaxBasePower` plus MOD_INCREASE_ENERGY and MOD_MAX_POWER
 /// (TOTAL_VALUE flat), rounded; `SetMaxPower` clamps the current value.
 pub(super) fn update_max_powers(
@@ -362,7 +462,9 @@ pub(super) fn update_max_powers(
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let max = (info.max_base_power as f32 + mods.max_power_flat(pool.power as i32)).round();
+            let max = ((info.max_base_power as f32 + mods.max_power_flat(pool.power as i32))
+                * mods.max_power_multiplier(pool.power as i32))
+            .round();
             if pool.max != max {
                 pool.max = max.max(0.0);
                 pool.current = pool.current.min(pool.max);
