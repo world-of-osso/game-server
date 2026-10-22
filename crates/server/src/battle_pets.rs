@@ -466,6 +466,10 @@ fn despawn_ownerless_companions(world: &mut World) {
 }
 
 #[cfg(test)]
+#[path = "battle_pet_critter_tests.rs"]
+mod critter_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use shared::pet_battle::{PetJournal, PetJournalError, PetQuality};
