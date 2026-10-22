@@ -3,6 +3,9 @@ use super::{Space, campaign::MoveIntent};
 use bevy::prelude::*;
 use shared::components::{Health, Position, Rotation};
 
+#[path = "movement_edge_tests.rs"]
+mod edge_tests;
+
 #[derive(Component)]
 struct Travel {
     destination: Vec3,
