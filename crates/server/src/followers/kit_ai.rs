@@ -379,6 +379,7 @@ pub(super) fn conditions_met(
         return false;
     }
     if !action_history_allows(world, unit, entry)
+        || !cooldown_allows(world, unit, entry)
         || !entry
             .conditions
             .resources
@@ -401,6 +402,21 @@ pub(super) fn conditions_met(
     enough_injured
         && (condition.min_enemies == 0
             || super::kit_area::allows(world, unit, target, enemies, entry))
+}
+
+fn cooldown_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
+    let Some(threshold) = &entry.conditions.cooldown_remaining_above else {
+        return true;
+    };
+    let Some(history) = world.get::<crate::spell_cast::SpellHistory>(unit) else {
+        return false;
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(threshold.spell_id)
+        .expect("kit cooldown predicate requires native spell metadata");
+    let deadline = crate::spell_cast::history_now(world) + threshold.seconds;
+    history.on_cooldown(spell, deadline)
 }
 
 fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> bool {
