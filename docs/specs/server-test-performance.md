@@ -8,6 +8,7 @@ The server's standard lead gate must retain its native coverage while completing
 
 - [ ] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap; report compilation separately.
 - [ ] Preserve test cases, existing ignore status, assertions and native simulation steps; scheduling may separate heavy tests without dropping coverage.
+- [ ] Module-process batching must preserve the exact selected case/ignore inventory and report per-module CPU/wall plus aggregate peak RSS, using at most six concurrent test threads.
 - [x] Retain debug assertions and overflow checks in optimized server tests; the compiler artifact and same-source controlled route receipt assert these settings.
 
 ### Immutable fixture inputs
@@ -36,6 +37,7 @@ The server's standard lead gate must retain its native coverage while completing
 - `crates/server/src/test_data/catalog_cache_tests.rs` — immutable input reuse, concurrent read capability and path/content isolation.
 - `crates/server/src/test_data.rs` — existing live-App catalog/creature/prepared-source isolation.
 - `crates/server/src/test_data/catalog_data_tests.rs` — local edits/iteration and serialized collection values.
+- `scripts/tests/test_native_test_batches.py` — real process-cache lifetime, bounded parallelism, ignored-case accounting and failure propagation contracts.
 - Native gate discovery/execution inventories and compiler artifact receipts linked from the investigation.
 
 ## Known gaps (current cycle)
