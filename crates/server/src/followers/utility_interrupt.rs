@@ -111,12 +111,18 @@ pub(super) fn try_party(
             unit.to_bits(),
         )
     });
-    for (unit, profile) in members {
-        if super::kit_interrupt::try_interrupt_candidates_in_phase(
-            world, unit, &profile, candidates, phase,
-        ) {
-            world.entity_mut(owner).insert(LastKick(unit));
-            return true;
+    for &target in candidates {
+        for (unit, profile) in &members {
+            if super::kit_interrupt::try_interrupt_candidates_in_phase(
+                world,
+                *unit,
+                profile,
+                &[target],
+                phase,
+            ) {
+                world.entity_mut(owner).insert(LastKick(*unit));
+                return true;
+            }
         }
     }
     false

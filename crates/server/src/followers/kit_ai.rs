@@ -54,36 +54,35 @@ pub(super) fn update(
         return true;
     }
     let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
-    if super::utility_interrupt::try_party(
-        world,
-        unit,
-        follower,
-        party,
-        &candidates,
-        super::kit_interrupt::InterruptPhase::Primary,
-    ) {
-        return true;
-    }
-    // Retain the existing emergency-heal priority above damage-spell kicks.
-    for entry in entries.iter().filter(|entry| {
-        entry.slot == Slot::Heal
-            && entry
-                .conditions
-                .health_below
-                .is_some_and(|threshold| threshold <= 0.2)
-    }) {
-        if try_entry(world, unit, follower, party, enemy, &enemies, entry) {
+    for &candidate in &candidates {
+        if super::utility_interrupt::try_party(
+            world,
+            unit,
+            follower,
+            party,
+            &[candidate],
+            super::kit_interrupt::InterruptPhase::Primary,
+        ) {
+            return true;
+        }
+        // Existing emergency heals precede damage kicks, not enemy danger.
+        if try_emergency_heal(world, unit, follower, party, enemy, &enemies, &entries) {
+            return true;
+        }
+        if super::utility_interrupt::try_party(
+            world,
+            unit,
+            follower,
+            party,
+            &[candidate],
+            super::kit_interrupt::InterruptPhase::IncludingDamage,
+        ) {
             return true;
         }
     }
-    if super::utility_interrupt::try_party(
-        world,
-        unit,
-        follower,
-        party,
-        &candidates,
-        super::kit_interrupt::InterruptPhase::IncludingDamage,
-    ) {
+    if candidates.is_empty()
+        && try_emergency_heal(world, unit, follower, party, enemy, &enemies, &entries)
+    {
         return true;
     }
     for entry in entries
@@ -134,6 +133,27 @@ pub(super) fn update(
         ai::hold_combat(world, unit);
     }
     true
+}
+
+fn try_emergency_heal(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+    enemy: Option<Entity>,
+    enemies: &[(Entity, Option<Entity>)],
+    entries: &[Entry],
+) -> bool {
+    entries
+        .iter()
+        .filter(|entry| {
+            entry.slot == Slot::Heal
+                && entry
+                    .conditions
+                    .health_below
+                    .is_some_and(|threshold| threshold <= 0.2)
+        })
+        .any(|entry| try_entry(world, unit, follower, party, enemy, enemies, entry))
 }
 
 fn is_generic_utility(slot: Slot) -> bool {
