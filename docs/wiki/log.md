@@ -1,3 +1,7 @@
+## 2026-10-22 — Cinderbrew packet qualification
+
+[TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22):edfb882f1 fresh-copy8row I'pa/Goldie packet/replay3× exact, native0 CT2718 and Goldie faction14 retained; actual-copy stats/models/poses/provenance/SQL owner+collision2GREEN0.023s. Goldie floor group69970 upward consensus excludes roof after90-degree source transform. I'pa route passes, Goldie incomplete; publication pending.
+
 ## 2026-10-22 — Remaining positive-scaling TWW sources
 
 [Source manifests](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22): Avanoxx0/CT2977, I'pa+Goldie0/CT2718 (native Goldie faction14), Taah'bat1/CT2718; own native stats/models, no donor scaling. Existing A'wazj preserved, Soul-ScribeCT0 remains named gap. Three actual missing-placement REDs0.031s; packet qualification pending. Lead confirmed Darkflame12rows published/integrityOK.
