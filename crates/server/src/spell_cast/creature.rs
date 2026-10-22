@@ -19,6 +19,8 @@ use super::{
 use crate::creature_ai::CreatureState;
 use crate::spell_info::{SpellInfo, SpellStore};
 
+mod explicit_targets;
+
 /// Triggered casts resolve without proc events (`TRIGGERED_DISALLOW_PROC_EVENTS`).
 const TRIGGERED_DEPTH: u8 = 1;
 
@@ -118,13 +120,14 @@ fn load_creature_cast(
     spell_id: u32,
     target: Option<Entity>,
 ) -> Result<(SpellInfo, Option<Entity>), CastFailure> {
-    let spell = world
+    let mut spell = world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(spell_id))
         .cloned()
         .ok_or(CastFailure::UnknownSpell)?;
     let requirement = targets::explicit_requirement(handled_effects(&spell));
-    let explicit = target.or_else(|| default_scripted_target(world, caster, requirement));
+    let supplied = target.or_else(|| default_scripted_target(world, caster, requirement));
+    let explicit = explicit_targets::normalize_unit_target(world, &mut spell, supplied);
     Ok((spell, explicit))
 }
 

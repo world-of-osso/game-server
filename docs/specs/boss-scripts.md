@@ -1,5 +1,10 @@
 # Boss scripts
 
+## Native creature explicit-unit normalization
+
+- TC a352b1fa `Spell.cpp:621–678` removes a supplied unit object when the spell needs neither an explicit unit nor corpse; this occurs before target exclusion checks. Native raw target flags, implicit target reference/object types and effect missing-target masks determine necessity, not SpellID exceptions. Preserve required unit/corpse objects and authored gameobject inputs. Implicit candidate filtering still enforces EXCLUDE_CASTER.
+- When that redundant object supplies a required destination, retain its original position in the per-cast snapshot before dropping the unit object. Source destination slot order, offsets and ground support remain authoritative. Qualify native Molds420659 self exclusion, explicit-enemy116 rejection and actual Fast Jump1281788 destination/landing alongside existing creature/self-cast and target controls.
+
 ## TWW Candle King TC parent-request partial
 
 - TC a352b1fa `KhazAlgar/DarkflameCleft/boss_the_candle_king.cpp:85–222` governs actual208745/map2651/2787bit0 (Journal2560/5595/display114508). Preserve source `boss_the_candle_king`, flags64, spawn10002793, all actors/stats/addons/models/population and native70448 effects. Producer `--encounter candle-king` installs only its authenticated binding on independent copies. Follower205 tests explicitly project the native actor from the Normal placement; they do not publish unauthored205 spawn/stat rows.

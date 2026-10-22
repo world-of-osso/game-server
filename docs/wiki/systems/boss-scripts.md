@@ -1,5 +1,11 @@
 # Boss scripts
 
+## Candle King native explicit-unit boundary — 2026-10-22
+
+Actual source208745/map2651/ScriptName`boss_the_candle_king` requests Molds420659 via `DoCastSelf` at6s. Native70448 Molds carries EXCLUDE_CASTER but selects implicit22/7, not an explicit unit. Native gate atf2370bef4 proves the request reaches ordinary admission and fails InvalidTarget; Mind426145 already applies native fear. This is not permission to retarget Molds at the victim or bypass its attributes.
+
+TC a352b1fa `Spell.cpp:621–678` removes redundant supplied unit objects before CheckCast, but preserves the original object position for a required destination. `spell_cast/creature/explicit_targets.rs` implements that normalization with source target/effect metadata; raw unit/corpse masks and authored gameobject inputs stay intact. Native controls cover ordinary first Molds, explicit-enemy self refusal and Fast Jump1281788 original-target-derived landing. Implementation is committed; native GREEN remains pending. Source/native receipts: `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/`; [contract](../../specs/boss-scripts.md#native-creature-explicit-unit-normalization).
+
 ## Deios source ingress boundary — 2026-10-21
 
 LittleWigs2777a9d `ChronoLordDeios.lua` binds184125/2559/map2451bit4 (Journal2479/5379/display106056). Actual TDB/runtime flags320 include PC immunity0x100; genuine spawn9004522 exists. Production `AggroMode::for_template` makes PC-immune actors Passive and omits their threat table; ordinary `add_threat` cannot engage them. Native source-preserving tests atf56c055a9 give2PASS/firstWing0vs1FAIL34.10s: ordinary Wing376049 area damage qualifies in Normal1/Follower205, while real threat ingress stays absent and credit stays0. The ignored6.3sWing test remains a genuine RED, not a timer implementation.

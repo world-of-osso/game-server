@@ -152,6 +152,30 @@ fn native_target148_area_enemy_selection_uses_modified_center() {
 }
 
 #[test]
+fn native_target148_creature_cast_preserves_redundant_object_destination_through_landing() {
+    let (mut h, origin) = scene();
+    h.app.add_systems(
+        FixedUpdate,
+        crate::scripted_ai::jump_movement::advance_jumps,
+    );
+    let caster = h.caster;
+    let target = h.npc;
+    super::creature_cast(h.app.world_mut(), caster, 1281788, Some(target), false)
+        .expect("native Fast Jump removes redundant unit but keeps its destination");
+    h.advance(100);
+    let position = *h.app.world().get::<Position>(caster).unwrap();
+    assert_endpoint(
+        &mut h,
+        Dest {
+            position: Vec3::new(position.x, position.y, position.z),
+            orientation: 0.0,
+        },
+        origin,
+        3.0,
+    );
+}
+
+#[test]
 fn native_target148_force_location_has_named_geometry_gap() {
     let (mut h, _) = scene();
     let spell = world_db().unwrap().store.get(448480).unwrap().clone(); // Actual [138,148], force-location attribute.
