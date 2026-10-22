@@ -4615,17 +4615,17 @@ fn encounter_coverage_source_conditions_preserve_legacy_and_current_object_types
     let (mut h, boss, _) = bound_boss(135322, 1762, 0);
     let conditions = crate::conditions::load_spell_target_conditions(&world_db_path()).unwrap();
     let player = h.player();
-    assert!(conditions.target_meets(h.app.world(), 265991, 0, boss));
-    assert!(!conditions.target_meets(h.app.world(), 265991, 0, player));
+    assert!(conditions.target_meets(h.app.world(), 265991, 0, boss, boss));
+    assert!(!conditions.target_meets(h.app.world(), 265991, 0, player, boss));
     h.app
         .world_mut()
         .get_mut::<shared::components::Npc>(boss)
         .unwrap()
         .template_id = 15263;
     // Actual retained TDB3730 row is legacy31/type3/entry15263.
-    assert!(conditions.target_meets(h.app.world(), 3730, 0, boss));
-    assert!(!conditions.target_meets(h.app.world(), 3730, 0, player));
-    assert!(!conditions.target_meets(h.app.world(), 265991, 0, boss));
+    assert!(conditions.target_meets(h.app.world(), 3730, 0, boss, boss));
+    assert!(!conditions.target_meets(h.app.world(), 3730, 0, player, boss));
+    assert!(!conditions.target_meets(h.app.world(), 265991, 0, boss, boss));
 }
 
 #[test]
