@@ -141,8 +141,23 @@ fn follower_trash_azure_arcane_tender_natively_casts_tc_wild_eruption() {
 
 #[test]
 fn follower_trash_destination_trigger_uses_actual_npc_enemy_victim() {
+    let _ = bevy::log::tracing_subscriber::fmt()
+        .with_max_level(bevy::log::tracing::Level::WARN)
+        .with_test_writer()
+        .try_init();
     let (mut h, actor) = trash_actor(191164, 2515, 375652);
     h.engage(actor);
+    eprintln!(
+        "destination victim state={:?}",
+        h.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(actor)
+    );
+    eprintln!(
+        "native missile={:?}; child={:?}",
+        h.app.world().resource::<SpellStore>().get(375650),
+        h.app.world().resource::<SpellStore>().get(375647)
+    );
     let position = *h.app.world().get::<Position>(actor).unwrap();
     let before = h.health(h.player()).current;
     let minimum_flight = h
@@ -177,6 +192,7 @@ fn follower_trash_destination_trigger_uses_actual_npc_enemy_victim() {
         "native minimum missile duration is retained"
     );
     h.advance(step * 2.0);
+    eprintln!("events after flight={:?}", h.inbox(0).log);
     assert!(
         h.inbox(0)
             .log
