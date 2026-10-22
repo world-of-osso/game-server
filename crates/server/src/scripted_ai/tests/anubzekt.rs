@@ -47,6 +47,13 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             .expect("ordinary source100Energy Eye, no scripted power grant");
         assert_eq!(
             crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
+            Some((100.0, 100.0)),
+            "ordinary native cast charges power on completion, not admission"
+        );
+        h.advance(7.2);
+        assert_eq!(completed_casts(&h, boss, EYE), 1);
+        assert_eq!(
+            crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
             Some((0.0, 100.0))
         );
         h.advance(2.0);
@@ -57,7 +64,6 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             energy, 0.0,
             "actual source unit_flags2 lacks regenerate-power0x800"
         );
-        h.advance(5.2);
         assert_eq!(completed_casts(&h, boss, EYE), 1);
         assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
     }
