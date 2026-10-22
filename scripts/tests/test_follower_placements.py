@@ -68,6 +68,9 @@ class NeltharusPlacementAcceptance(unittest.TestCase):
                 where = 'map=2519 AND guid BETWEEN 63519000 AND 63519003' if table == 'content_creature' else 'map_id=2519'
                 rows = source.execute(f'SELECT * FROM {table} WHERE {where}').fetchall()
                 target.executemany(f"INSERT INTO {table} VALUES({','.join('?' for _ in rows[0])})", rows)
+            before = target.execute('SELECT * FROM content_creature ORDER BY guid').fetchall()
+            write_placements(target, manifest, receipt['placements'], [tuple(p['binding']) for p in receipt['placements']])
+            self.assertEqual(target.execute('SELECT * FROM content_creature ORDER BY guid').fetchall(), before)
             target.execute('UPDATE content_creature SET position_x=position_x+1 WHERE guid=63519000')
             with self.assertRaisesRegex(ValueError, 'reserved placement GUID collision'):
                 write_placements(target, manifest, receipt['placements'], [tuple(p['binding']) for p in receipt['placements']])
