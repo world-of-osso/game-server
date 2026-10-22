@@ -115,6 +115,11 @@ pub(crate) fn spawn_party(
     at: Position,
 ) -> Result<Party, String> {
     let configuration = PartyConfiguration::read()?;
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
     let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
     let owner = world
@@ -131,7 +136,7 @@ pub(crate) fn spawn_party(
             at,
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            crate::maps::DungeonDifficulty(difficulty_id),
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::UnitPowers::default(),
