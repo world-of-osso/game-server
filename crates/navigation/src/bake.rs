@@ -208,8 +208,9 @@ impl RecastBuild {
                 ),
                 "rasterization",
             )?;
-            // Do not promote steep/vertical obstacle faces to walkable just because
-            // their top lies inside the 1.6-yard grounded step budget.
+            // TC a352b1fa TileBuilder.cpp229: classify climbable low obstructions
+            // before ledge/headroom filtering, using the unchanged climb budget.
+            rcFilterLowHangingWalkableObstacles(self.context, CLIMB_CELLS, self.heightfield);
             rcFilterLedgeSpans(self.context, HEIGHT_CELLS, CLIMB_CELLS, self.heightfield);
             rcFilterWalkableLowHeightSpans(self.context, HEIGHT_CELLS, self.heightfield);
             require(

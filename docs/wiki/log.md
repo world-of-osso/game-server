@@ -1,3 +1,7 @@
+## 2026-10-22 — Low-hanging filter candidate
+
+[Navigation candidate](systems/navigation.md#low-hanging-filter-candidate--2026-10-22): pinned TC filter stage precedes ledge/headroom. Concrete supported-floor/0.8yd obstruction route RED atc84c7f051; unchanged-climb filter candidate added,2yd/steep negative controls and private four-tile2661experiment pending. No per-map cause or publication claimed.
+
 ## 2026-10-22 — Partial corridor continuation
 
 [Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At6e15d295c(master996ec2347merged),7boss movers(Gorek/Brackenhide/Nokhud)GREEN; Ruby boundedrepeat,6immediateBlockedgaps and retained navigation/simulator33PASS. Stockade16PASS/8FAIL exactlymatches24-case masterbaseline; followers460PASS/1qualifiedreceiptENVfailure/11ignored, targetedLeymorretrypending. Navigationlib8PASS/11ignored, iterativeCLI proofPASS, all-targetscheck/fmtPASS. Source reader/data drift fixed only by integrating currentmaster; no fallback or DBfieldstripping. Overall gate remains explicit.

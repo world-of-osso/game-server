@@ -135,6 +135,79 @@ fn write_native_polygons(nav: &NavigationMap, masks: BTreeMap<dtPolyRef, u32>, o
     csv.flush().unwrap();
 }
 
+fn trace_goldie_iteration(nav: &mut NavigationMap, case: &Case, trace: &mut impl Write) -> bool {
+    let mut from = case.start;
+    let mut visited = HashSet::new();
+    for segment in 0..64 {
+        match nav.path(from, case.target) {
+            Ok(path) => {
+                let end = *path.points.last().unwrap();
+                writeln!(
+                    trace,
+                    "segment={segment} complete={} corners={} from={from:?} endpoint={end:?}",
+                    path.complete,
+                    path.points.len()
+                )
+                .unwrap();
+                if path.complete {
+                    return true;
+                }
+                if end == from || !visited.insert(end.to_array().map(f32::to_bits)) {
+                    writeln!(trace, "stopped=no_progress_or_repeated_partial_endpoint").unwrap();
+                    return false;
+                }
+                from = end;
+            }
+            Err(error) => {
+                writeln!(trace, "segment={segment} production_error={error}").unwrap();
+                return false;
+            }
+        }
+    }
+    writeln!(trace, "stopped=diagnostic_segment_limit").unwrap();
+    false
+}
+
+#[test]
+#[ignore = "requires canonical2661 and FOLLOWER_GOLDIE_PRIVATE_NAV after a private candidate bake"]
+fn low_hanging_goldie_private_map_component_probe() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let private = PathBuf::from(std::env::var_os("FOLLOWER_GOLDIE_PRIVATE_NAV").unwrap());
+    let output = PathBuf::from(std::env::var_os("FOLLOWER_COMPONENT_DIAGNOSTICS").unwrap());
+    let mut trace = BufWriter::new(
+        std::fs::File::create(output.join("goldie-low-hanging-comparison.txt")).unwrap(),
+    );
+    let case = cases(2661).remove(0);
+    for (label, dir) in [
+        ("canonical_control", root.join("2661")),
+        ("private_candidate", private),
+    ] {
+        let mut nav = NavigationMap::open(&dir).unwrap();
+        load_complete_map(&mut nav);
+        let filter = filter();
+        let (start_ref, start_pos) = nav.nearest(case.start, &filter).unwrap();
+        let (end_ref, end_pos) = nav.nearest(case.target, &filter).unwrap();
+        let component = connected_polygons(&nav, start_ref, &filter);
+        let connected = component.contains_key(&end_ref);
+        writeln!(trace, "case={label} directory={} tiles={} component_polygons={} target_connected={connected} nearest_source={start_pos:?} nearest_target={end_pos:?}", dir.display(), nav.loaded.len(), component.len()).unwrap();
+        let reached = trace_goldie_iteration(&mut nav, &case, &mut trace);
+        writeln!(
+            trace,
+            "case={label} iterative_reached={reached} unchanged_pool={MAX_NODES}"
+        )
+        .unwrap();
+        assert!(
+            !reached || connected,
+            "native route cannot leave its linked component"
+        );
+        eprintln!(
+            "Goldie {label}: component={} target_connected={connected} iterative_reached={reached}",
+            component.len()
+        );
+    }
+    trace.flush().unwrap();
+}
+
 #[test]
 #[ignore = "requires canonical five-map assets and FOLLOWER_COMPONENT_DIAGNOSTICS"]
 fn full_map_disconnected_component_polygon_export() {
