@@ -1,5 +1,6 @@
 """TC map difficulty scaling preserves native CT0 rows and their modifiers."""
 from contextlib import closing
+import copy
 import json
 import os
 from pathlib import Path
@@ -8,7 +9,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from follower_placements import stage_source_difficulties
+from follower_placements import stage_source_difficulties, validate_native_room_anchors
 from scripts.tests.test_followup_placements import copy_native_actor_fixture
 
 POLICY = 'FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY'
@@ -51,6 +52,23 @@ class NativeMapTuning(unittest.TestCase):
                     self.assertEqual(target.execute('SELECT ContentTuningID FROM temp.tdb_difficulty').fetchone(), (0,))
                     self.assertEqual(target.execute('SELECT * FROM tdb_creature_template_difficulty ORDER BY Entry,DifficultyID').fetchall(), native)
 
+    def test_swampface_room_uses_twenty_yards_without_moving_anchors(self):
+        manifest = json.loads((Path(__file__).resolve().parents[2] /
+                               'content/follower-placements/floodgate-swampface.json').read_text())
+        with closing(self.open_source()) as source:
+            proof = validate_native_room_anchors(source, manifest)[0]
+            distances = [anchor['horizontal_distance_yards'] for anchor in proof['anchors']]
+            self.assertAlmostEqual(distances[0], 13.340053445765932)
+            self.assertAlmostEqual(distances[1], 19.021048674128014)
+            narrower = copy.deepcopy(manifest)
+            narrower['entries'][0]['source_floor_evidence']['maximum_horizontal_distance_yards'] = 12
+            with self.assertRaisesRegex(ValueError, 'same-room native anchors do not agree'):
+                validate_native_room_anchors(source, narrower)
+            corroboration = manifest['entries'][0]['source_floor_evidence']['corroboration']
+            self.assertEqual(source.execute('SELECT id,map,position_x,position_y,position_z FROM tdb_creature WHERE guid=?',
+                                            (corroboration['guid'],)).fetchone(),
+                             (231223, 2773, *corroboration['wow_xyz']))
+
     def test_missing_map_or_critter_never_acquires_map_tuning(self):
         with closing(self.open_source()) as source:
             for mutation in ('DELETE FROM map_difficulty',
@@ -64,6 +82,27 @@ class NativeMapTuning(unittest.TestCase):
 
 @unittest.skipUnless('FOLLOWER_MAP_PLACEMENT_DB' in os.environ, 'requires explicit placement database')
 class RegionalPlacementAcceptance(unittest.TestCase):
+    def test_swampface_keeps_native_model_and_zero_ct_with_twenty_yard_room_provenance(self):
+        path = Path(os.environ['FOLLOWER_MAP_PLACEMENT_DB']).resolve(strict=True)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute('SELECT c.guid,t.faction,t.unit_class,t.ContentTuningID,t.HealthModifier,'
+                              'c.position_x,c.position_y,c.position_z,m.CreatureDisplayID,r.display_id '
+                              'FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 '
+                              'JOIN content_creature_template_model m ON m.CreatureID=c.id1 '
+                              'JOIN raid_encounter_creature r ON r.map_id=c.map AND r.creature_entry=c.id1 '
+                              'WHERE c.map=2773 AND c.id1=226396').fetchall()
+            self.assertEqual(rows, [(63773000, 16, 4, 0, 35.0, 1593.7705868895773, -2745.6774048999923,
+                                     335.20258, 124283, 115575)], 'missing native Swampface primary/model/pose')
+            self.assertEqual(db.execute('SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty WHERE Entry=226396').fetchall(), [(0, 0)])
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        tuning = receipt['source_difficulties'][0]['effective_content_tuning']
+        self.assertEqual((tuning['map_difficulty_row']['ID'], tuning['content_tuning_id']), (5518, 2718))
+        evidence = receipt['placements'][0]['source_floor_evidence']
+        self.assertEqual([anchor['guid'] for anchor in evidence['anchors']], [10006487, 10006494])
+        self.assertEqual(evidence['corroboration']['guid'], 10006489)
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2773_226396'])
+        self.assertEqual(receipt['donors'][0]['donor_entry'], 226398)
+
     def test_gorren_keeps_native_zero_tuning_and_uses_sourced_map_and_floor(self):
         path = Path(os.environ['FOLLOWER_MAP_PLACEMENT_DB']).resolve(strict=True)
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:

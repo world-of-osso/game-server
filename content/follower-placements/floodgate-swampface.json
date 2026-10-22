@@ -1,0 +1,89 @@
+{
+  "map_id": 2773,
+  "entrance_id": 81002773,
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 226396,
+      "ordinal": 0,
+      "map_id": 2773,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2650",
+      "journal_encounter_id": 2650,
+      "cache_sha256": "9d477d039af3f9fbbd4c3e10c2938fcec8602f8a676564ec71abc8f346eeb995",
+      "source_floor": 0,
+      "source_floor_reference_height": 335.20258,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS",
+        "approval": "Lead approved Swampface-only20yd; Vexamus5yd/Blazikon8yd/Taahbat12yd unchanged.",
+        "marker_wow_xy": [
+          1593.7705868895773,
+          -2745.6774048999923
+        ],
+        "maximum_horizontal_distance_yards": 20,
+        "maximum_vertical_difference_yards": 1,
+        "anchors": [
+          {
+            "guid": 10006487,
+            "entry": 231223,
+            "name": "Disturbed Kelp",
+            "map_id": 2773,
+            "wow_xyz": [
+              1597.45,
+              -2758.5,
+              334.994
+            ]
+          },
+          {
+            "guid": 10006494,
+            "entry": 231223,
+            "name": "Disturbed Kelp",
+            "map_id": 2773,
+            "wow_xyz": [
+              1578.07,
+              -2734.94,
+              335.009
+            ]
+          }
+        ],
+        "corroboration": {
+          "guid": 10006489,
+          "entry": 231223,
+          "name": "Disturbed Kelp",
+          "map_id": 2773,
+          "wow_xyz": [
+            1598.33,
+            -2725.14,
+            334.984
+          ],
+          "scope": "Third native kelp at21.04yd corroborates height only; not counted as a within20yd anchor."
+        },
+        "rejected_surface_heights": [
+          757.9880793184406,
+          816.0727037439319,
+          907.1891577249245,
+          947.0118205575773,
+          1050.1255401222586
+        ],
+        "method": "Both exact native same-room kelp anchors agree within1yd only with335.20258. All other baked candidates are400+yd higher. No source XY shift or route repair."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2773_226396",
+      "faction_donor": 226398,
+      "donor_reason": "Same-dungeon native faction16 Big M.O.M.M.A. with matching hostile A/H reaction; faction only.",
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/WarWithin/OperationFloodgate/Swampface.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "e2c422466dc78353474a57b524f504c3914339303761b8ad3cb72c82355001b1",
+        "journal_actor_id": 5754
+      }
+    }
+  ],
+  "source_gaps": [],
+  "calibration_entries": [
+    188252,
+    189232
+  ]
+}
