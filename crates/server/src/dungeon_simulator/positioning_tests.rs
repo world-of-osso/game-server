@@ -1,7 +1,7 @@
 //! Seed50's actual party positions and surviving source watchers, not invented geometry.
 use super::super::{Space, diagnostics, runtime};
-use super::*;
-use bevy::prelude::*;
+use super::{run, spawn_run};
+use bevy::prelude::Vec3;
 use serde::Deserialize;
 use shared::components::{CombatStatus, Position};
 use std::collections::BTreeSet;
