@@ -1,3 +1,7 @@
+## 2026-10-22 — Legacy source gaps / Gutshot encounter-add exclusion
+
+[Legacy trash audit](investigations/follower-data.md#legacy-trash-source-qualification--2026-10-22):117exact own pages/one observed hyena point. Lead held Bracken packet; authenticated JournalSection24719+native SpellEffect384827/28/Misc194745+LittleWigs2777a9d confirm Gutshot summoned add. Excluded static194745 with retained proof/marker gap: actual-markerRED1→zero static points1GREEN0.837s at8280f2746. Historical four-row packet is NEVER_PUBLISH; geometry/native/replay proof did not establish trash classification. Nokhud34/Nelt19/Halls16/Dawn15 pages all genuine empty mappers; no static trash qualifies. Next Windrunner/Xenas bosses first, then trash, no identity/floor relaxation. Lead also confirmed Murder128spawns/23templates/65models PUBLISHED/replayidentical.
+
 ## 2026-10-22 — Murder density packet qualified
 
 [Murder marker population](investigations/follower-data.md#murder-individual-marker-density-packet--2026-10-22):128actual poses/24own native types/92per-type shortfall, fresh-copy216INSERTs/replay3×. ActualmissingRED→whole128/native/density1GREEN0.284s atac5226092; SQLowner/pose control passed separately. Real zone-15 absentAreaTable StopIteration→explicit source gap3GREEN1.909s at74fd; no guessed frame. Native255050 template/boss234648binding preserved; no groups/entrance/routes/canonical writes.
