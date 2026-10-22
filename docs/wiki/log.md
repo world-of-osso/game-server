@@ -2497,6 +2497,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-22: Blinding direct-marker packet803spawns/16native types/838INSERTs; exact singleton-frame provenance,3738floor gaps, source2GREEN/whole803+SQL2GREEN/replay3×. All5885point candidate equivalence retained while test time135.100→1.901s with spatial/frame reuse. Magisters publication confirmed. [Evidence](investigations/follower-data.md#blinding-vale-singleton-frame-trash-packet--2026-10-22).
+
 - 2026-10-22: Magisters direct-marker trash packet161spawns/nine own native types,179inserts+one exact guarded Brightscale0→16 UPDATE; source6GREEN/update3GREEN/whole161 acceptance+SQL owner/pose controls, fresh-copy replay3×, no group/admission/route claim. [Evidence](investigations/follower-data.md#magisters-individual-trash-marker-packet--2026-10-22).
 
 - 2026-10-22:27map trash census, five rejected zero-parameter custom-map chains, approved direct individual Wowhead markers plus native0 MDT-enemy hostility; no pack invention, producer/source-floor qualification pending. Trio boss packets lead-confirmed published15rows. [Evidence](investigations/follower-data.md#follower-trash-census-and-rejected-custom-map-chains--2026-10-22).
