@@ -15,6 +15,41 @@ const SKELETON_ENTRY: u32 = 48;
 const EXPLICIT_MINIPET_SPELL: u32 = 48722;
 const OWN_CRITTER_SPELL: u32 = 279843;
 
+#[derive(Resource, Default)]
+struct JournalReplies(HashMap<Entity, Vec<CollectionStateUpdate>>);
+
+// HostClient replies survive only one frame; retain each real wire delivery.
+fn advance_journal(h: &mut Harness, frames: usize) {
+    for _ in 0..frames {
+        h.advance(1);
+        let connections: Vec<_> = h
+            .app
+            .world_mut()
+            .query_filtered::<Entity, With<MessageReceiver<CollectionStateUpdate>>>()
+            .iter(h.app.world())
+            .collect();
+        for connection in connections {
+            let replies = drain::<CollectionStateUpdate>(&mut h.app, connection);
+            h.app
+                .world_mut()
+                .resource_mut::<JournalReplies>()
+                .0
+                .entry(connection)
+                .or_default()
+                .extend(replies);
+        }
+    }
+}
+
+fn take_journal_replies(h: &mut Harness, connection: Entity) -> Vec<CollectionStateUpdate> {
+    h.app
+        .world_mut()
+        .resource_mut::<JournalReplies>()
+        .0
+        .remove(&connection)
+        .unwrap_or_default()
+}
+
 struct OwnedPetIds {
     mechanical: u64,
     snowy: u64,
@@ -72,6 +107,7 @@ fn initialize_fixture_sessions(world: &mut World) {
 }
 
 fn install_critter_runtime(app: &mut App, db: Database) {
+    app.init_resource::<JournalReplies>();
     app.insert_resource(GameDatabase::new(db));
     app.insert_resource(load_test_catalog());
     app.insert_resource(crate::test_data::world_data().clone());
@@ -105,8 +141,9 @@ fn create_critter_fixture(path: &std::path::Path) -> (Harness, OwnedPetIds) {
     .unwrap();
     h.app
         .insert_resource(crate::spell_info::load_spell_data(&conn).unwrap().0);
-    h.advance(5);
-    drain::<CollectionStateUpdate>(&mut h.app, h.connection);
+    advance_journal(&mut h, 5);
+    let connection = h.connection;
+    take_journal_replies(&mut h, connection);
     (h, ids)
 }
 
@@ -116,8 +153,8 @@ fn request_summon(h: &mut Harness, connection: Entity, pet_id: u64) -> Vec<Colle
         .get_mut::<MessageSender<SummonPet>>(connection)
         .unwrap()
         .send::<CollectionChannel>(SummonPet { pet_id });
-    h.advance(6);
-    drain::<CollectionStateUpdate>(&mut h.app, connection)
+    advance_journal(h, 6);
+    take_journal_replies(h, connection)
 }
 
 fn request_dismiss(h: &mut Harness) -> Vec<CollectionStateUpdate> {
@@ -126,8 +163,9 @@ fn request_dismiss(h: &mut Harness) -> Vec<CollectionStateUpdate> {
         .get_mut::<MessageSender<DismissPet>>(h.connection)
         .unwrap()
         .send::<CollectionChannel>(DismissPet);
-    h.advance(6);
-    drain::<CollectionStateUpdate>(&mut h.app, h.connection)
+    advance_journal(h, 6);
+    let connection = h.connection;
+    take_journal_replies(h, connection)
 }
 
 fn owned_actors(h: &mut Harness, owner: Entity, entry: u32) -> Vec<Entity> {
@@ -166,7 +204,7 @@ fn cast_source_summon(h: &mut Harness, spell: u32, entry: u32) -> Vec<Entity> {
     let result =
         crate::spell_cast::creature_cast(h.app.world_mut(), owner, spell, Some(owner), false);
     assert!(result.is_ok(), "source{spell}: {result:?}");
-    h.advance(5);
+    advance_journal(h, 5);
     let actors = owned_actors(h, owner, entry);
     assert!(
         !actors.is_empty(),
@@ -242,7 +280,8 @@ fn toy_coverage_critter_same_source_slot_replaces_across_journal_and_legacy_both
         h.app.world().get_entity(journal).is_err(),
         "source41 and journal3221 both claim slot5"
     );
-    let updates = drain::<CollectionStateUpdate>(&mut h.app, h.connection);
+    let connection = h.connection;
+    let updates = take_journal_replies(&mut h, connection);
     assert!(
         updates
             .iter()
@@ -312,7 +351,10 @@ fn toy_coverage_critter_guardians_and_source_noncompanion_journal_actor_are_not_
     let dir = tempfile::tempdir().unwrap();
     let (mut h, ids) = create_critter_fixture(&dir.path().join("no-substitute.redb"));
     let guardians = cast_source_summon(&mut h, SKELETON_SPELL, SKELETON_ENTRY);
-    assert_eq!(guardians.len(), 3, "source61 uses authored effect count3");
+    assert!(
+        (2..=3).contains(&guardians.len()),
+        "source261 base3/variance0.25 produces two or three guardians: {guardians:?}"
+    );
     assert_eq!(
         select_source_targets(&mut h, OWN_CRITTER_SPELL, None),
         Ok(Vec::new())
@@ -345,7 +387,8 @@ fn toy_coverage_critter_target90_has_no_self_default_and_target150_ignores_forei
         .world_mut()
         .entity_mut(connection)
         .insert((Authenticated { account_id: 2 }, InWorld { character_id: 2 }));
-    h.advance(5);
+    advance_journal(&mut h, 5);
+    take_journal_replies(&mut h, connection);
     let updates = request_summon(&mut h, connection, ids.foreign);
     assert!(
         updates
