@@ -174,6 +174,9 @@ def prepare_templates(target, records, cache):
     retail_content.insert_tdb_templates(target, f'SELECT Entry FROM temp.tdb_difficulty')
     donors = []
     for record in records:
+        native_faction = target.execute('SELECT faction FROM tdb_creature_template WHERE entry=?', (record['entry'],)).fetchone()[0]
+        if native_faction > 0:
+            continue
         actor = read_cached_npc(cache, record['entry'])
         donor = read_cached_npc(cache, record['faction_donor'])
         faction = target.execute('SELECT faction FROM tdb_creature_template WHERE entry=?', (record['faction_donor'],)).fetchone()[0]

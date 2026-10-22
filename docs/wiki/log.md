@@ -1,3 +1,7 @@
+## 2026-10-22 — Erkhart native faction precedes donation
+
+[Ruby native faction](investigations/follower-data.md#ruby-erkhart-native-faction--2026-10-22): actual missing-placement RED, then producer failed requiring a donor for native faction16. Preparation now preserves positive source faction without donor input or receipt; absent-faction path unchanged. Authenticated journal coordinates retain Wowhead disagreement finding; Kyrakka remains unsourced. Packet proof pending.
+
 ## 2026-10-22 — Nokhud partial packet and no-co-location boundary
 
 [Nokhud journal identity](investigations/follower-data.md#nokhud-journal-uimap-identity--2026-10-22): source8GREEN0.540s;163522cf4 actual-copy Balakar/Maruuk/Granyth2GREEN0.029s with12stable-key inserts/replay3× exact. Native stats/models retained; all three entrance routes remain incomplete. Tempest has no support at sourceXY; Teera and Kyrakka require individual source points, not fabricated shared-marker co-location. Lead confirmed Halls/Vexamus16inserts published/integrityOK; Nokhud publication pending.

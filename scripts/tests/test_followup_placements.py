@@ -45,6 +45,12 @@ class FollowupPlacementAcceptance(unittest.TestCase):
 
     def test_ruby_erkhart_keeps_own_native_faction_model_and_budget(self):
         self.assert_source_primaries(2521, (190485,))
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        self.assertEqual(receipt['donors'], [])
+        self.assertEqual([g['name'] for g in receipt['source_gaps']], ['FOLLOWER_PLACEMENT_NO_INDIVIDUAL_SOURCE_190484'])
+        self.assertEqual(receipt['source_findings'][0]['entry'], 190485)
+        self.assertGreater(receipt['source_findings'][0]['distance_yards'], 5)
 
     def test_nokhud_four_source_supported_primaries_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2516, (186151, 186338, 186615, 186616))
