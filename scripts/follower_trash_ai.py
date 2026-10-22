@@ -56,16 +56,34 @@ def read_lua_kits(root):
             if not cast or section not in names:
                 continue
             spells = [int(s) for s in re.findall(r"\b\d+\b", cast[1])]
+            normal = spells
+            other = []
+            if len(spells) == 2 and re.search(
+                r"--\s*normal(?:/heroic)?,\s*mythic\b", line, re.I
+            ):
+                normal, other = spells[:1], spells[1:]
             for entry in names[section]:
-                kit = kits.setdefault(entry, {"spells": [], "sources": []})
+                kit = kits.setdefault(
+                    entry,
+                    {
+                        "spells": [],
+                        "normal_spells": [],
+                        "other_difficulty_spells": [],
+                        "sources": [],
+                    },
+                )
                 kit["spells"] = sorted(set(kit["spells"] + spells))
+                kit["normal_spells"] = sorted(set(kit["normal_spells"] + normal))
+                kit["other_difficulty_spells"] = sorted(
+                    set(kit["other_difficulty_spells"] + other)
+                )
                 source = f"LittleWigs2777a9d:{path.relative_to(root)}"
                 if source not in kit["sources"]:
                     kit["sources"].append(source)
     return kits
 
 
-def read_wowhead_abilities(page):
+def read_wowhead_ability_evidence(page):
     if page.startswith('"'):
         page = json.loads(page)
     section = re.search(
@@ -74,8 +92,32 @@ def read_wowhead_abilities(page):
         re.S,
     )
     if not section:
-        return []
-    return sorted({int(value) for value in re.findall(r'"id"\s*:\s*(\d+)', section[1])})
+        return dict(spells=[], all_spells=[], excluded_abilities=[])
+    # Cached NPC ability arrays are JSON except for this literal JS property key.
+    rows = json.loads(re.sub(r"\bmodes\s*:", '"modes":', section[1]))
+    admitted = []
+    excluded = []
+    for row in rows:
+        player_class = row.get("reqclass", 0) > 0 or row.get("chrclass", 0) > 0
+        modes = set(row.get("modes", {}).get("mode", []))
+        reason = None
+        if player_class:
+            reason = "player_class_requires_corroboration"
+        elif modes and not modes & {0, 1, 205}:
+            reason = "not_normal_follower_variant"
+        if reason:
+            excluded.append(dict(row, reason=reason))
+        else:
+            admitted.append(row["id"])
+    return dict(
+        spells=sorted(set(admitted)),
+        all_spells=sorted({row["id"] for row in rows}),
+        excluded_abilities=excluded,
+    )
+
+
+def read_wowhead_abilities(page):
+    return read_wowhead_ability_evidence(page)["spells"]
 
 
 def infer_similar_kits(actors):
@@ -198,7 +240,7 @@ def cached_abilities(entry):
     if not body.exists():
         return None
     return dict(
-        spells=read_wowhead_abilities(body.read_text()),
+        **read_wowhead_ability_evidence(body.read_text()),
         url=url,
         cache=str(body),
         sha256=hashlib.sha256(body.read_bytes()).hexdigest(),
@@ -405,24 +447,24 @@ def census(world, inventory, littlewigs):
             actor["sources"].append(
                 "TDB1210:creature_template_addon (passive auras only)"
             )
+        cached = cached_abilities(entry)
+        if cached is not None:
+            actor["wowhead"] = cached
         if smart or bound or actor["source_script"] in cpp:
             actor["classification"] = "sourced-kit"
         elif entry in lua:
             actor.update(
                 classification="Lua-only",
-                spells=lua[entry]["spells"].copy(),
+                spells=lua[entry]["normal_spells"].copy(),
+                other_difficulty_spells=lua[entry]["other_difficulty_spells"].copy(),
                 sources=actor["sources"] + lua[entry]["sources"],
             )
-        else:
-            cached = cached_abilities(entry)
-            if cached is not None:
-                actor["wowhead"] = cached
-                if cached["spells"]:
-                    actor.update(
-                        classification="Wowhead-only",
-                        spells=cached["spells"],
-                        sources=actor["sources"] + [cached["url"]],
-                    )
+        elif cached is not None and cached["spells"]:
+            actor.update(
+                classification="Wowhead-only",
+                spells=cached["spells"],
+                sources=actor["sources"] + [cached["url"]],
+            )
         actor["maps"].sort()
     rows = sorted(actors.values(), key=lambda actor: actor["entry"])
     infer_similar_kits(rows)
@@ -473,6 +515,23 @@ def write_census(report, output):
         lines.append(
             f"| {actor['entry']} | {actor['name']} | {actor['maps']} | {actor['classification']} | {actor['spells']} | {actor.get('donor_entry', '')} | {actor.get('excluded_reason', '')} |"
         )
+    lines.extend(
+        [
+            "",
+            "## Withheld ability evidence",
+            "",
+            "Other-difficulty IDs are not projected. Player-class rows are not accepted from Wowhead alone; higher TDB/TC/Lua bindings retain precedence.",
+        ]
+    )
+    for actor in report["actors"]:
+        if actor.get("other_difficulty_spells"):
+            lines.append(
+                f"- {actor['entry']}: Lua non-Normal variants {actor['other_difficulty_spells']} (evidence only)."
+            )
+        for row in actor.get("wowhead", {}).get("excluded_abilities", []):
+            lines.append(
+                f"- {actor['entry']}: Wowhead spell{row['id']} — `{row['reason']}`; evidence in cached NPC page below."
+            )
     lines.extend(["", "## Cached Wowhead citations"])
     for actor in report["actors"]:
         if actor.get("wowhead"):

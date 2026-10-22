@@ -3,6 +3,7 @@
 import json
 import sys
 import sqlite3
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -44,6 +45,46 @@ class TrashSources(unittest.TestCase):
             )
         citizen = next(actor for actor in report["actors"] if actor["entry"] == 225601)
         self.assertEqual(citizen.get("excluded_reason"), "player_friendly_faction")
+
+    def test_follower_uses_explicit_normal_variant_and_retains_mythic_evidence(self):
+        with sqlite3.connect(
+            "file:/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db?mode=ro",
+            uri=True,
+        ) as world:
+            report = trash.census(
+                world,
+                dict(
+                    maps=[dict(MapID=2515, MapName_lang="The Azure Vault")],
+                    encounters=[],
+                ),
+                LW,
+            )
+            whelp = next(
+                actor for actor in report["actors"] if actor["entry"] == 187159
+            )
+            self.assertEqual(whelp["spells"], [370225])
+            self.assertEqual(whelp["other_difficulty_spells"], [397726])
+            _, receipt = trash.prepare_projection(world, [whelp])
+        self.assertEqual([cast["spell"] for cast in receipt["casts"]], [370225])
+
+    def test_markdown_keeps_withheld_difficulty_and_class_evidence_visible(self):
+        with sqlite3.connect(
+            "file:/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db?mode=ro",
+            uri=True,
+        ) as world:
+            report = trash.census(
+                world,
+                dict(
+                    maps=[dict(MapID=2515, MapName_lang="The Azure Vault")],
+                    encounters=[],
+                ),
+                LW,
+            )
+        with tempfile.TemporaryDirectory() as directory:
+            trash.write_census(report, Path(directory))
+            rendered = (Path(directory) / "census.md").read_text()
+        self.assertIn("397726", rendered)
+        self.assertIn("player_class_requires_corroboration", rendered)
 
     def test_lua_cast_events_belong_to_registered_named_actor(self):
         kits = trash.read_lua_kits(LW)
@@ -90,6 +131,21 @@ new Listview({template: 'spell', id: 'abilities', data: [{"id":387564,"name":"My
         self.assertEqual(actors[0]["donor_entry"], 196116)
         self.assertEqual(actors[0]["policy"], "FOLLOWER_TRASH_SIMILAR_CREATURE_KIT")
         self.assertEqual(actors[0]["classification"], "inferred")
+
+    def test_cached_player_class_spell_requires_higher_source_corroboration(self):
+        cached = trash.cached_abilities(196102)
+        self.assertEqual(cached["spells"], [387564])
+        self.assertTrue(
+            any(
+                row["id"] == 317898
+                and row["reason"] == "player_class_requires_corroboration"
+                for row in cached["excluded_abilities"]
+            )
+        )
+
+    def test_wowhead_normal_variant_is_not_duplicated_with_mythic_id(self):
+        page = """new Listview({template: 'spell', id: 'abilities', data: [{"id":370225,"name":"Shriek",modes:{"mode":[1,2]}},{"id":397726,"name":"Shriek",modes:{"mode":[8,23]}}]});"""
+        self.assertEqual(trash.read_wowhead_abilities(page), [370225])
 
     def test_same_name_stem_records_the_actual_sourced_donor(self):
         actors = [
