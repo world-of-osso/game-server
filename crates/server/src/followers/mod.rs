@@ -1,6 +1,7 @@
 //! User-approved player-spec combat bridge for authenticated Retail followers.
 mod ai;
 mod catalog;
+mod empower_policy;
 mod hazards;
 mod healer_context;
 mod healer_policy;
@@ -15,6 +16,10 @@ mod holy_threat_tests;
 mod kit;
 mod kit_ai;
 mod kit_area;
+#[cfg(test)]
+mod kit_defensive_fidelity_tests;
+#[cfg(test)]
+mod kit_empower_tests;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
 mod kit_interrupt;
