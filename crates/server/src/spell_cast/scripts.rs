@@ -26,6 +26,7 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod elemental_ascendance;
 mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
@@ -34,7 +35,7 @@ pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
-pub(super) use hot_streak::record_fire_hit;
+pub(super) use hot_streak::{pyroclasm_damage_modifier, record_fire_hit};
 pub(super) use lava_surge::{FLAME_SHOCK, roll_flame_shock_tick};
 pub(crate) mod prayer_of_mending;
 mod scourge_strike;
@@ -546,7 +547,7 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
             Some(essence_burst::roll_essence_burst)
         }
         hot_streak::PYROBLAST | hot_streak::FLAMESTRIKE => {
-            Some(hot_streak::consume_admitted_hot_streak)
+            Some(hot_streak::consume_procs_and_roll_pyroclasm)
         }
         lava_surge::LAVA_BURST => Some(lava_surge::restore_deferred_charge),
         IMPENDING_VICTORY => Some(heal_and_consume_victorious),
@@ -1376,6 +1377,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),

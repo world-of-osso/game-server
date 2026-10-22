@@ -74,6 +74,13 @@ pub fn swing_time(weapon_speed: f32, haste_pct: f32) -> f32 {
     weapon_speed / (1.0 + haste_pct / 100.0)
 }
 
+/// TC Unit.cpp670–673 truncates attack resets to integer milliseconds.
+/// Exact durations then count down without repeated floating-point subtraction.
+/// Both melee hands and ranged autorepeat share this conversion.
+pub(crate) fn attack_timer_duration(seconds: f32) -> std::time::Duration {
+    std::time::Duration::from_millis((seconds * 1000.0) as u64)
+}
+
 /// Who swings, for the miss and crit chances it brings.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Swinger {

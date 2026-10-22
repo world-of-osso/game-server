@@ -216,6 +216,52 @@ fn rotation_fidelity_windwalker_pools_only_when_two_chi_fit() {
 }
 
 #[test]
+fn powers_follower_resource_rule_without_catalog_refuses_without_mutating_pool() {
+    let (mut h, unit, _) = super::profile_behavior_tests::spawn_profile_fixture(209057);
+    let target = h.npc;
+    let entry = resource_entry(
+        66,
+        35395,
+        super::kit::ResourceCondition {
+            power: PowerType::Mana,
+            min: None,
+            below: None,
+            min_deficit: None,
+        },
+    );
+    assert!(super::kit_ai::conditions_met(
+        h.app.world_mut(),
+        unit,
+        target,
+        &[],
+        &[],
+        &entry
+    ));
+    let before = power_value(h.app.world(), unit, PowerType::Mana).unwrap();
+    h.app
+        .world_mut()
+        .remove_resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .unwrap();
+    assert!(!super::kit_ai::conditions_met(
+        h.app.world_mut(),
+        unit,
+        target,
+        &[],
+        &[],
+        &entry
+    ));
+    assert_eq!(
+        power_value(h.app.world(), unit, PowerType::Mana),
+        Some(before)
+    );
+    assert!(
+        !h.app
+            .world()
+            .contains_resource::<crate::spell_cast::powers::PowerTypeTable>()
+    );
+}
+
+#[test]
 fn rotation_fidelity_demonology_does_not_waste_demonbolt_at_shard_cap() {
     let (mut h, unit) = native_dummy(230861);
     let target = h.npc;

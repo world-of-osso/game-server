@@ -9,6 +9,40 @@ const SINISTER_STRIKE: u32 = 1752;
 const BASELINE_COSTS: [f32; 2] = [20.0, 45.0];
 
 #[test]
+fn powers_optional_preparation_preserves_existing_pools_without_spell_runtime() {
+    let (mut h, players, _database) = fixture(1018);
+    let who = &players[0];
+    assert!(
+        !h.app
+            .world()
+            .contains_resource::<crate::spell_cast::powers::PowerTypeTable>()
+    );
+    let before = h.app.world().get::<PowerPools>(who.player).unwrap().clone();
+    apply_preparation(&mut h, who);
+    assert_eq!(costs(&h, who), [0.0; 2]);
+    assert_eq!(
+        h.app.world().get::<PowerPools>(who.player).unwrap(),
+        &before
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        who.player,
+        crate::auras::RemoveReason::Expired,
+        |aura| aura.spell_id == PREPARATION,
+    );
+    assert_eq!(costs(&h, who), BASELINE_COSTS);
+    assert_eq!(
+        h.app.world().get::<PowerPools>(who.player).unwrap(),
+        &before
+    );
+    assert!(
+        !h.app
+            .world()
+            .contains_resource::<crate::spell_cast::powers::PowerTypeTable>()
+    );
+}
+
+#[test]
 fn bg_preparation_aura_native44521_qualification_changes_cost_and_affordability_then_restores() {
     let (mut h, players, _database) = fixture(1018);
     let who = &players[0];
