@@ -40,3 +40,126 @@ fn dps_parity_pet_stats_baseline_records_actual_native_hunter_pet() {
         "native253-level90-exact-reference-gear",
     );
 }
+
+fn expected_hunter_max_hp(world: &World, owner: Entity, pet: Entity) -> f32 {
+    let data = world.resource::<crate::world_data::WorldData>();
+    let entry = world
+        .get::<shared::components::Npc>(pet)
+        .unwrap()
+        .template_id;
+    let level = world.get::<UnitLevel>(pet).unwrap().0;
+    let template = data.template_for(entry, 0).unwrap();
+    let tuning_id = template
+        .tuning
+        .as_ref()
+        .map_or(0, |tuning| tuning.content_tuning_id);
+    let (native_health, _) = data.expected_stats.creature_health_armor(
+        level,
+        template.health_scaling_expansion,
+        tuning_id,
+        template.unit_class,
+    );
+    // TC Pet.cpp898–925: absent pet_levelstats uses ExpectedStat, not the
+    // imported legacy class-level placeholder health. No fake intrinsic stats.
+    let base = (native_health * template.health_modifier).max(1.0).trunc();
+    let stamina = world
+        .get::<crate::stats::CharacterStats>(owner)
+        .unwrap()
+        .primary
+        .stamina;
+    // TC Guardian::UpdateStats1187–1190 truncates the resulting native stat;
+    // UpdateMaxHealth1284–1310 adds only bonus stamina ×10 for hunter pets.
+    base + (stamina * 0.30).trunc() * 10.0
+}
+
+#[test]
+#[ignore = "native TC pet inheritance RED; requires prepared parity inputs"]
+fn dps_parity_pet_stats_spawn_inherits_native_owner_health_and_armor() {
+    let (run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let world = run.app.world();
+    record_pet_stats(world, run.actor, pet, "spawn-inheritance-before-assert");
+    let owner = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap();
+    // TC Pet.cpp879 base armor applies before optional pet_levelstats.
+    let level = f32::from(world.get::<UnitLevel>(pet).unwrap().0);
+    let expected_armor = (level * 50.0 + owner.armor * 0.70).trunc();
+    let actual_armor = world
+        .get::<crate::level_scaling::CreatureArmor>(pet)
+        .map(|armor| armor.0);
+    assert_eq!(
+        (world.get::<Health>(pet).unwrap().max, actual_armor),
+        (
+            expected_hunter_max_hp(world, run.actor, pet),
+            Some(expected_armor)
+        ),
+        "TC native owner Stamina30%/×10HP and armor70%; no SimC mixing"
+    );
+}
+
+#[test]
+#[ignore = "native TC pet owner-stat refresh RED; requires prepared parity inputs"]
+fn dps_parity_pet_stats_native_owner_stamina_change_refreshes_and_removes() {
+    const FORTITUDE: u32 = 21562;
+    let (mut run, pet) = super::power_tests::prepare_hunter_and_pet();
+    let before = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .primary
+        .stamina;
+    crate::spell_cast::cast_triggered(
+        run.app.world_mut(),
+        run.actor,
+        FORTITUDE,
+        Some(run.actor),
+        1,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    let boosted = run
+        .app
+        .world()
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap()
+        .primary
+        .stamina;
+    assert!(
+        boosted > before,
+        "actual native Fortitude must change owner stamina first"
+    );
+    record_pet_stats(
+        run.app.world(),
+        run.actor,
+        pet,
+        "native-fortitude-owner-change",
+    );
+    assert_eq!(
+        run.app.world().get::<Health>(pet).unwrap().max,
+        expected_hunter_max_hp(run.app.world(), run.actor, pet)
+    );
+    crate::auras::remove_auras(
+        run.app.world_mut(),
+        run.actor,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == FORTITUDE,
+    );
+    for _ in 0..4 {
+        run.app.update();
+    }
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::stats::CharacterStats>(run.actor)
+            .unwrap()
+            .primary
+            .stamina,
+        before
+    );
+    assert_eq!(
+        run.app.world().get::<Health>(pet).unwrap().max,
+        expected_hunter_max_hp(run.app.world(), run.actor, pet)
+    );
+}
