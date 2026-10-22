@@ -1,6 +1,10 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-21 — Companion native-level flag counterexample
+
+[Toys](systems/toys.md#published-companion-fixture-reconciliation-2026-10-21): exact3141flag0x100 skips TC's owner-clamp block. Initial ordinary53453 birth1 oracle lacked terrain; ordinary temporary zone spawning skips source regional tuning and is a separate gap. Generic717a791a5 correctly refuses missing context. Corrected native99104 fixture uses actual map1220/area7558/tuning332/native45 versus caster10; Keg Pony/Stored Wisdom fixtures use real Northshire/native30. Corrected RED10vs45→GREEN7/7 (49.30s) atf73b54cb7/master9eabe0146; check/fmt pass with inherited unused-function warning. Census519's +268455 comes from inherited mastere73367de4 effect16, not native-level support. No invented min/max or whole99104cast claim.
+
 ## 2026-10-21 — Native follower duration/admission boundaries
 
 [Rotation slices](investigations/follower-data.md#rotation-duration-and-admission-slices--2026-10-21): nativec09cba90010GREEN/6RED9.67s; resource-unit gates and four carries pass, new timer/major/LastStand/Cat boundaries fail. Cat source48629's missing applied-aura precondition and actual3-target setup proved before adapter. Source-qualified adapter/refresh/conditional LastStand and project sequencing committed, GREEN pending.14producerPASS; canonical publication, full proc/snapshot and simulator acceptance open.
@@ -3545,6 +3549,8 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 - 2026-10-21: [Scoped rotation deltas](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21): generator now preserves unowned specs and emits primary keys;22PythonGREEN, actual a3 both-order proof and keyed replay copy, no canonical writes.
 - 2026-10-21: Ordered generic148 destination/direct-ray subset; eightRED→eightGREEN and retained144 composite152GREEN, all enabled; source dispatch correction and explicit Detour/force-location gaps recorded in [[spell-casting]].
+
+- 2026-10-21: Generic world-static AreaTrigger source catalog/map ownership: four genuine map-entry/login/continent RED failures→COMPOSITE4GREEN plus retained map2PASS (COMPOSITE6), all enabled after masterfac9 integration; corrected fresh-entity/reused-map-number oracle. Conversation and Orator death-hook integration remain separate.
 - 2026-10-21: Lost Dwarves currentLua/70448 partial plus explicit living10% surrender policy: ignoredRED→native7GREEN Normal/Follower; all-three isolatedcredit, preservedflags/faction, nativehealth-regen/reset restoration and old-pull credit exclusion. Sourceproducer onlybinds3authoredactors. [Boss scripts](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21).
 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
