@@ -271,6 +271,28 @@ fn rotation_selection_262_native_ascendance_entry_uses_half_lava_burst_damage() 
         full.amount,
         half.amount
     );
+    let first = h.inbox.log.len();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 285452, Some(h.npc), 1);
+    h.advance(1);
+    let ordinary = h.inbox.log[first..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("ordinary native Lava Burst still damages during Ascendance");
+    assert!(ordinary.crit);
+    let minimum =
+        ((f64::from(full.amount) - 0.5) * (1.0 - variance) / (1.0 + variance) - 0.5).floor() as i32;
+    let maximum =
+        ((f64::from(full.amount) + 0.5) * (1.0 + variance) / (1.0 - variance) + 0.5).ceil() as i32;
+    assert!(
+        (minimum..=maximum).contains(&ordinary.amount),
+        "only the entry cast is half-effectiveness; ordinary damage={}",
+        ordinary.amount
+    );
 }
 
 fn stormkeeper_within_sync_window(h: &Harness, caster: Entity) -> bool {
