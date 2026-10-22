@@ -24,14 +24,14 @@ fn encounter_coverage_kikatal_first_webs_uses_current_lua_clock() {
         assert!(
             h.app
                 .world()
-                .get::<crate::spell_cast::CastState>(boss)
+                .get::<shared::casting::CastState>(boss)
                 .is_none()
         );
         h.advance(0.3);
         let cast = h
             .app
             .world()
-            .get::<crate::spell_cast::CastState>(boss)
+            .get::<shared::casting::CastState>(boss)
             .expect("source Erupting Webs6.1s ordinary native cast");
         assert_eq!(cast.spell_id, WEBS, "difficulty{difficulty}");
     }
