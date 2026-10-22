@@ -1,3 +1,7 @@
+## 2026-10-22 — Native Ascendance entry targeted GREEN
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22):2GREEN16.60s at1e7f8cebb proves six caster-owned shocks/actual half-bursts, idle/80yd exclusions and ordinary-full-damage control during Ascendance. One unused import removed without suppression at1bda89dad; proved cases enabled. Affected Ele StatsPlugin3PASS37.49s, ST/3T3836.858/3032.125 DPS labelled unpaired starter samples. New master60f31 aura/proc/mastery/cast changes require parent integration proof; no historical-to-current promotion.
+
 ## 2026-10-22 — Native Ascendance entry RED and bounded selection policy
 
 [Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22): actual1219480 self aura/full285452 control pass, owned188389 absent0vs6/entry burst missing; corrected combat-only native2RED22.84s/zero warnings. Approved named Flame-Shock-eligibility project policy, not Retail radius. Entry script/per-cast50% multiplier pushed; GREEN remains pending. Earlier projection d79 landed through lead ra922/Python21PASS and its single kit row is published.

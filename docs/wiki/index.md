@@ -1,4 +1,4 @@
-- [Ascendance entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22) — actual self-aura/full-burst prerequisites, corrected combat-only native2RED22.84s; approved native-child-eligibility project policy, implementation GREEN pending.
+- [Ascendance entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22) — native2RED22.84s→2GREEN16.60s; six actual owned shocks/half-bursts, idle/range/full-damage controls; approved project policy, Ele3 samples/current integration gate distinct.
 - [Elemental Ascendance projection](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22) — native parent114050→actual1219480, SK>15s aura/learn/sync-window; d79 landed through ra922/Python21PASS, one-row action published; full APL open.
 - [Qualified cast-action additions](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21) — stable-key addition/replay RED→4GREEN0.364s; existing interval-removal guard retained.
 - [Class4 zone-only ingress](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22) — shared entry tolerates absent spell-runtime metadata without fabricated pools.
