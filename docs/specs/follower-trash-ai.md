@@ -2,7 +2,7 @@
 
 ## Contract
 
-Every spawned trash entry in the current27 follower-dungeon maps is inventoried from the union of legacy, content and TDB spawn slots. Boss/encounter actors, inventory Journal model/map actor candidates and noncombat/service candidates remain visible with explicit exclusions. Uncertain encounter candidates are neither generic trash recipients nor donors; withholding them never certifies a primary binding. Counts derive from the current canonical DB, not the historical627/650 estimate.
+Every spawned trash entry in the current27 follower-dungeon maps is inventoried from the union of legacy, content and TDB spawn slots. Boss/encounter actors, inventory Journal model/map actor candidates, source-declared player-friendly factions and noncombat/service candidates remain visible with explicit exclusions. Uncertain encounter candidates are neither generic trash recipients nor donors; withholding them never certifies a primary binding. Counts derive from the current canonical DB, not the historical627/650 estimate.
 
 Ability authority: Retail12.1.5.70448 Spell* rows, TDB1210 creature_template_spell/SmartAI/addons and TrinityCore a352b1fa scripts, then LittleWigs2777a9d trash cast events, then cached Wowhead NPC Abilities. Passive addon auras do not establish a cast kit. Warning-only aura/damage events never become casts. Wowhead requests use only the host-wide locked/cache fetcher, at most one request per10seconds.
 

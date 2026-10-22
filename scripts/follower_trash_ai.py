@@ -256,6 +256,16 @@ def source_script_files():
     return result
 
 
+def is_player_friendly_faction(faction):
+    if faction is None:
+        return False
+    # TC a352b1fa DBCEnums: PLAYER1/ALLIANCE2/HORDE4; DB2Structure faction relations.
+    player_friend = bool(faction["FriendGroup"] & 1)
+    player_enemy = bool(faction["EnemyGroup"] & (1 | 2 | 4))
+    explicit_enemies = any(faction[f"Enemies_{index}"] for index in range(8))
+    return player_friend and not player_enemy and not explicit_enemies
+
+
 def census(world, inventory, littlewigs):
     maps = inventory["maps"]
     ids = ",".join(str(m["MapID"]) for m in maps)
@@ -329,10 +339,16 @@ def census(world, inventory, littlewigs):
             )
         ]
         actor.update(classification="none", spells=[], sources=[])
+        faction = world.execute(
+            "SELECT * FROM faction_template WHERE ID=?", (actor["faction"],)
+        ).fetchone()
+        actor["faction_relation"] = dict(faction) if faction is not None else None
         if entry in bosses:
             actor["excluded_reason"] = "boss_or_encounter_actor"
         elif entry in uncertain_encounters:
             actor["excluded_reason"] = "uncertain_encounter_candidate"
+        elif is_player_friendly_faction(faction):
+            actor["excluded_reason"] = "player_friendly_faction"
         elif (
             actor["type"] in (8, 10, 12, 13)
             or actor["npcflag"]

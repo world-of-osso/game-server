@@ -29,6 +29,22 @@ class TrashSources(unittest.TestCase):
         lasher = next(actor for actor in report["actors"] if actor["entry"] == 196102)
         self.assertEqual(lasher["models"], [76261])
 
+    def test_player_friendly_mereldar_citizen_is_not_a_trash_recipient_or_donor(self):
+        with sqlite3.connect(
+            "file:/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db?mode=ro",
+            uri=True,
+        ) as world:
+            report = trash.census(
+                world,
+                dict(
+                    maps=[dict(MapID=2662, MapName_lang="The Dawnbreaker")],
+                    encounters=[],
+                ),
+                LW,
+            )
+        citizen = next(actor for actor in report["actors"] if actor["entry"] == 225601)
+        self.assertEqual(citizen.get("excluded_reason"), "player_friendly_faction")
+
     def test_lua_cast_events_belong_to_registered_named_actor(self):
         kits = trash.read_lua_kits(LW)
         self.assertEqual(kits[196102]["spells"], [387564])
