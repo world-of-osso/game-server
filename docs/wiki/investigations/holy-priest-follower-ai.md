@@ -241,7 +241,6 @@ Gap names below have prefix `HOLY_`:
 | TWINS_INFUSION_SHARE | 373466: additional native10060 recipient |
 | COSMIC_RIPPLE_RECHARGE | 238136: Word recovery →243241 group heal |
 | LIGHTS_RESURGENCE_RENEW | 193157: PoM heal →139 chance |
-| BINDING_HEALS_SELF_TRANSFER | 368275: healing another patient also heals Henry |
 | EVERLASTING_LIGHT_MISSING_MANA_CHANCE | 1249233: native50% missing-mana scaling; base1091868% producer is separate |
 | DIVINE_SERVICE_BOUNCE_SCALING | 391233:33110 amount depends on remaining41635 uses |
 | PROTECTIVE_LIGHT_SELF_FLASH_PROC | 193063: self Flash →193065 protection |
@@ -252,6 +251,40 @@ Gap names below have prefix `HOLY_`:
 | ANGELIC_BULWARK_THRESHOLD_SHIELD | 108945: threshold114214 shield and native recovery window |
 | BENEDICTION_HYMN_RIPPLE_AND_UPGRADE | 1262760: Hymn pulses and next-Flash upgrade |
 | LEAP_OF_FAITH_EFFECT77 | 73325: native77 has no effect handler; do not cast an imaginary rescue |
+
+## Binding Heals native transfer — 2026-10-22
+
+TC a352b1fa `spell_priest.cpp:859–889` uses the actor's resolved `GetHeal()`
+(not effective healing), effect0's native percentage and the actual368276 self
+heal. Its companion SQL
+`sql/old/11.x/world/25101_2026_01_14/2025_12_30_01_world.sql` limits proc eligibility
+to healing hits in priest family6/mask0x1800. The DB2 aura mask alone is too broad:
+its effect class mask is zero. Native70448 supplies20%, helpful-magic mask0x4000,
+100% chance, and no child cost/cast time/recovery category. Self-target exclusion
+prevents recursive transfers even though the aura accepts triggered procs.
+
+`ResolvingHits` now carries resolved healing alongside damage, preserving one
+ordinary hit event per recipient and pre-overheal amounts. Periodic events carry
+their healing payload but do not match Binding's direct-spell proc mask. The aura
+script uses shared proc admission and the real triggered child executor; no
+`holy_policy.rs`, spellbook grants, health multipliers or canonical DB writes.
+
+At16dc69af8/P2abc7fa, ordinary Henry90 Flash Heal12778/overheal4958 produced no
+child: genuine RED23.23s, while self-heal/Renew controls passed. At production
+revision a1f941b13, transfer/amount/one-child, self, Renew, nonmatching Serenity,
+level29 unlearned-talent controls and the re-enabled Prayer of Healing lifetime
+regression all passed:6/34.76s. Post-master167612f27 adds actual Henry health
+recovery and passes10native cases37.16s including four shared-proc controls;
+check exits0/1m15s with no warnings, format passes. See the
+[proof ledger](../../handoffs/healer-binding-heals-proof-ledger.md) for exact
+scope/revisions and retained environment failures. No simulator effectiveness or
+survival improvement claimed. Evidence: game-engine
+`data/diagnostics/healer-ai-2026-10-21/binding-heals/`.
+
+Echo77485→77489 remains separate: native amount depends on mastery points, and the
+inspected `auras/mastery.rs::effect_bonus` admitted Players only. The shared
+follower-mastery bridge is another slice; do not invent Henry mastery or weaken
+that guard in this script. Echo's residual-HoT producer is still unimplemented.
 
 ## Native utility decisions
 

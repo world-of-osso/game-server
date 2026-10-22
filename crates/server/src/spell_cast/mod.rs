@@ -76,6 +76,8 @@ pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
 #[cfg(test)]
+mod charge_type_mask_tests;
+#[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
 mod class_completeness_probe;
@@ -183,6 +185,8 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+#[cfg(test)]
+mod periodic_healing_taken_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
@@ -760,7 +764,7 @@ impl SpellHistory {
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
             state.retime(now, mods.recovery_mult);
         }
-        // Aura453 has no immediate handler: only future consumption changes.
+        // Flat453/205 have no immediate handler: only future consumption changes.
         state.recovery_ms = recovery_ms;
         state.recovery_mult = mods.recovery_mult;
         Some(state)
@@ -769,7 +773,8 @@ impl SpellHistory {
 
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
-    crate::auras::charge_mods(world, caster, category)
+    let type_mask = spell.categories.as_ref().map_or(0, |c| c.charge_type_mask);
+    crate::auras::charge_mods(world, caster, category, type_mask)
 }
 
 /// Refresh existing category clocks/maxima, never discover known spells here.
@@ -929,7 +934,7 @@ pub(crate) fn interrupt_channel_with_flags(world: &mut World, caster: Entity, fl
 }
 
 /// TC Unit::CanCastSpellWhileMoving:330 uses a family mask;307 uses Misc0
-/// SpellLabel without a family constraint. Neither selector depends on amount.
+/// SpellLabel without a family constraint;377 permits every spell. None depends on amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
     if attributes(spell, 13) & NO_DISABLE_MOVEMENT_INTERRUPT != 0 {
@@ -943,13 +948,15 @@ fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool 
     ) || world
         .get::<crate::auras::ActiveAuras>(caster)
         .is_some_and(|auras| {
-            auras.iter().any(|aura| {
-                aura.effects.iter().any(|effect| {
-                    effect.aura_type == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
-                        && u32::try_from(effect.misc_values[0])
-                            .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+            auras.has_type(crate::auras::handlers::CAST_WHILE_WALKING_ALL)
+                || auras.iter().any(|aura| {
+                    aura.effects.iter().any(|effect| {
+                        effect.aura_type
+                            == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
+                            && u32::try_from(effect.misc_values[0])
+                                .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+                    })
                 })
-            })
         })
 }
 
@@ -2197,7 +2204,8 @@ pub(crate) fn applicable_costs(
             None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
-            scripts::mana_cost(world, caster, spell, modified)
+            let modified = scripts::mana_cost(world, caster, spell, modified);
+            school_costs::modify_mana_cost(world, caster, modified)
         } else {
             modified
         };
@@ -2214,6 +2222,11 @@ pub(crate) fn applicable_costs(
             }
         } else {
             0.0
+        };
+        let optional = if pool == CostPool::Power(PowerType::Mana) {
+            school_costs::modify_mana_cost(world, caster, optional).max(0.0)
+        } else {
+            optional
         };
         let amount = amount + optional.min((current - amount).max(0.0));
         costs.push((pool, amount, current));
@@ -2481,6 +2494,7 @@ pub(crate) fn execute_cast(
             can_proc: true,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         },
     );
@@ -2807,6 +2821,7 @@ fn resolve_effects(
             spell_id: spell.id,
             depth,
             damage: Vec::new(),
+            healing: Vec::new(),
             blocked: plan
                 .iter()
                 .flat_map(|effect| effect.blocked_units.iter().copied())
@@ -2926,11 +2941,14 @@ fn resolve_effects(
     for unit in hit_units(plan) {
         crate::scripted_ai::spell_hit(world, unit, caster, spell.id);
     }
-    let damage = world
+    let (damage, healing) = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
-        .map_or_else(Vec::new, |frame| frame.damage);
-    push_hit_events(world, caster, spell, plan, depth, &damage);
+        .map_or_else(
+            || (Vec::new(), Vec::new()),
+            |frame| (frame.damage, frame.healing),
+        );
+    push_hit_events(world, caster, spell, plan, depth, &damage, &healing);
 }
 
 /// `Spell::PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat with
@@ -3025,6 +3043,7 @@ struct HitFrame {
     spell_id: u32,
     depth: u8,
     damage: Vec<(Entity, f32)>,
+    healing: Vec<(Entity, f32)>,
     blocked: HashSet<Entity>,
 }
 
@@ -3071,6 +3090,32 @@ pub(crate) fn record_hit_damage(
     true
 }
 
+/// Record resolved direct healing in the same per-recipient hit as damage.
+/// Preserve pre-overheal healing, including a fully overhealing hit.
+pub(crate) fn record_hit_heal(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+    amount: f32,
+) -> bool {
+    let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
+        return false;
+    };
+    let Some(frame) = resolving
+        .0
+        .last_mut()
+        .filter(|frame| frame.caster == caster && frame.spell_id == spell_id)
+    else {
+        return false;
+    };
+    match frame.healing.iter_mut().find(|(unit, _)| *unit == target) {
+        Some((_, total)) => *total += amount,
+        None => frame.healing.push((target, amount)),
+    }
+    true
+}
+
 /// One proc event per distinct unit the spell landed on, with the direct damage it
 /// took (TAKE_ANY_DAMAGE when above 0); damage to a unit outside the plan gets a
 /// damage-only event.
@@ -3081,6 +3126,7 @@ fn push_hit_events(
     plan: &TargetPlan,
     depth: u8,
     damage: &[(Entity, f32)],
+    healing: &[(Entity, f32)],
 ) {
     let hit = hit_units(plan);
     let damage_to = |unit: Entity| {
@@ -3101,6 +3147,7 @@ fn push_hit_events(
                 can_proc: depth == 0,
                 periodic: false,
                 damage: amount,
+                heal: None,
                 reflected: false,
             },
         );
@@ -3131,6 +3178,10 @@ fn push_hit_events(
                 can_proc: depth == 0,
                 periodic: false,
                 damage,
+                heal: healing
+                    .iter()
+                    .find(|(unit, _)| *unit == target)
+                    .map(|(_, amount)| *amount),
                 reflected: false,
             },
         );

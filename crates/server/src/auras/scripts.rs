@@ -457,6 +457,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        super::binding_heals::BINDING_HEALS,
+        AuraScript {
+            check_proc: Some(super::binding_heals::check_heal),
+            on_damage_proc: Some(super::binding_heals::transfer_heal),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         super::charred_warblades::CHARRED_WARBLADES,
         AuraScript {
             check_proc: Some(super::charred_warblades::check_fire_damage),
