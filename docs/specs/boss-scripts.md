@@ -5,6 +5,13 @@
 - Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
 - Preserve actual regenerate-power flag0x800. Native PowerType rates apply only when the source creature permits regeneration. Anub'zekt's flag is absent: initialEnergy100 is valid, forced regeneration or repeated energy grants are not. Missing native class4 power metadata must fail explicitly rather than invent a pool.
 
+## Ki'katal current Lua partial
+
+- Normal1/Follower205 only: LittleWigs2777a9d `WarWithin/AraKara/KikatalTheHarvester.lua` authenticates215407/map2660/2901bit0. Native70448 journal2585/actor5632/display117473 matches source spawn10004111 (1,2,8,23,205). Producer `--encounter kikatal` changes only local `littlewigs_kikatal` ScriptName and authenticated primary binding; preserve stats/models/addons/flags/population/difficulties and all native spell data.
+- Request Webs432130 first6.1/repeat18.2s, Volley432227 first12/repeat23s and Singularity432117 first27.9/repeat46.1s. Use ordinary native targets/cast occupancy/effects; no Mythic461487 in this scope. Repeat only after native admission. `KIKATAL_SINGULARITY_MINIMUM_ALERT_CONTEXT` retains7.3s lower-bound/range alerts, not invented exact alternate timers.
+- `KIKATAL_WEBS_DUMMY_CHILD_UNSOURCED`, `KIKATAL_GRASPING_BLOOD_CONTROLLER_UNSOURCED` and `KIKATAL_SINGULARITY_ESCAPE_CONTROLLER_UNSOURCED` retain missing Webs child forwarding, Blood population/movement and Singularity escape/controller interactions. Do not invent actor positions, adds, energy grants, immunities or child casts. This is a declared partial, not whole-fight certification.
+- Push/execute ignored native RED before implementation; require native ongoing requests/effects/reset/copy-credit/corpse and producer preservation/idempotence/conflict proofs before enabling tests and sending the lead gate packet. Canonical database mutation and final integration/publication remain lead-owned.
+
 ## Anub'zekt current Lua partial
 
 - Use actual215405/map2660/2906bit1, source spawn10004042 with authored `1,2,8,23,205`, Journal2584 primary5726/display115723. Bloodstained Webmage5744 is not another primary. Preserve actor flags64, stats/models/addons/difficulties/population and native70448 data. Producer `--encounter anubzekt` installs only `littlewigs_anubzekt` and the authenticated binding on independent copies.
