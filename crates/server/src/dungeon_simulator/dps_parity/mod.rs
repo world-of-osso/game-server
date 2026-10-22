@@ -36,6 +36,12 @@ fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, Str
     {
         return Err("native31146 lacks its actual training-dummy script".into());
     }
+    // SIMC_FIXED_TIME_TARGET_HEALTH owns this fixture's current health. Source31146
+    // has RegenHealth=1; its ordinary two-second heal must not alter phase gates.
+    // Keep the template, script, flags and damage handling unchanged.
+    app.world_mut()
+        .entity_mut(target)
+        .remove::<crate::spell_cast::powers::CreatureHealthRegenTimer>();
     Ok(target)
 }
 
