@@ -19,11 +19,10 @@ class IntrinsicSpellRoleTests(unittest.TestCase):
 
     def test_native_health_leech_keeps_damage_and_self_heal_roles(self):
         # Exact native direct/periodic effects isolate the hit+heal contract from scripts.
-        for effect_type, aura_type in ((9, 0), (6, 53)):
-            with self.subTest(effect=effect_type, aura=aura_type):
+        for spell, effect in ((3108, 927), (234153, 353731)):
+            with self.subTest(spell=spell, effect=effect):
                 with closing(sqlite3.connect(':memory:', uri=True)) as db:
                     db.execute('ATTACH DATABASE ? AS native', ((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro',))
-                    spell, effect = db.execute('SELECT SpellID,ID FROM native.spell_effect WHERE DifficultyID=0 AND Effect=? AND EffectAura=? AND EffectTriggerSpell=0 ORDER BY ID LIMIT 1', (effect_type, aura_type)).fetchone()
                     db.execute('CREATE TABLE spell_effect AS SELECT * FROM native.spell_effect WHERE ID=?', (effect,))
                     facts = SpellRoleCatalog(db, dict(edges=[], unresolved_calls=[])).read_role(spell)
                 self.assertEqual(facts['intrinsic'], 'mixed', 'TC leech also heals its caster')

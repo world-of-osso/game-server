@@ -25,9 +25,9 @@ def read_tc_child_artifact(path):
 def effect_roles(effect):
     aura = effect['EffectAura'] if effect['Effect'] in AURA_EFFECTS else 0
     damage = effect['Effect'] in DAMAGE_EFFECTS or aura in DAMAGE_AURAS
-    # TC SpellEffects.cpp1332–1370: health leech deals damage then HealBySpell.
+    # TC SpellEffects.cpp1332–1370 / SpellAuraEffects.cpp5737–5835: leech also heals.
     healing = effect['Effect'] in HEAL_EFFECTS or aura in HEAL_AURAS
-    healing = healing or effect['Effect'] == 9
+    healing = healing or effect['Effect'] == 9 or aura == 53
     return tuple(role for role, applies in (('damage', damage), ('heal', healing)) if applies)
 
 
