@@ -35,10 +35,10 @@ fn earn_word(h: &mut Harness, paladin: Entity) {
         .resource::<crate::spell_info::SpellStore>()
         .get(WORD_OF_GLORY)
         .unwrap();
-    let required: f32 = crate::spell_cast::spell_costs(world, paladin, spell)
+    let required: f32 = crate::spell_cast::applicable_costs(world, paladin, spell)
         .unwrap()
         .iter()
-        .filter_map(|(pool, amount)| {
+        .filter_map(|(pool, amount, _)| {
             (*pool == crate::spell_cast::CostPool::Power(PowerType::HolyPower)).then_some(*amount)
         })
         .sum();
