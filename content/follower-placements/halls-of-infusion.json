@@ -1,14 +1,22 @@
 {
   "map_id": 2527,
   "entrance_id": 100020,
-  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
   "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
   "guid_base": 61000000,
   "entries": [
     {
       "entry": 189719,
       "ordinal": 0,
-      "source_url": "https://www.wowhead.com/npc=189719",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2504",
+      "journal_encounter_id": 2504,
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/HallsOfInfusion/WatcherIrideus.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "187c195a8106d6a36e1810749b6e5c5a3d1b59aaacbee04b7eef9e67bab82bc0",
+        "journal_actor_id": 5395
+      },
       "cache_sha256": "f12fc8605e40ddb3c7a950ad7b1d26bec3bbafb338b796cdb895a4f542c7d5af",
       "faction_donor": 189232,
       "donor_reason": "No native Halls population; sourced Dragonflight boss faction16 with matching hostile A/H react. Own Normal1 class, ContentTuning and budget retained."
@@ -16,7 +24,15 @@
     {
       "entry": 189722,
       "ordinal": 1,
-      "source_url": "https://www.wowhead.com/npc=189722",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2507",
+      "journal_encounter_id": 2507,
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/HallsOfInfusion/GulpingGoliath.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "df76faf16012f9ace6dcaaa5c8a3ee2770e5c7a4c2442cc8f8a0ca3f0a001642",
+        "journal_actor_id": 5448
+      },
       "cache_sha256": "5f1ecd948ad54eb24d9c183e65f4ddf49a082b8807b5888cf38df15b19a43e4a",
       "source_floor": 1,
       "source_floor_evidence": {
@@ -45,7 +61,15 @@
     {
       "entry": 189727,
       "ordinal": 2,
-      "source_url": "https://www.wowhead.com/npc=189727",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2510",
+      "journal_encounter_id": 2510,
+      "journal_actor_source": {
+        "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
+        "path": "/home/osso/Repos/LittleWigs/Dragonflight/HallsOfInfusion/KhajinTheUnyielding.lua",
+        "revision": "2777a9d51418934b5fdd5b92d937b1af6070bcad",
+        "sha256": "2b319a2c8418eef92d1b0dc1e594b5da12a8aab195a4c0ef6d7e3b362510fc73",
+        "journal_actor_id": 5405
+      },
       "cache_sha256": "89d9504f6950abe97d225e1c452ca00c702576123b0ccb56945aa4e6bbf3c58a",
       "source_floor": 1,
       "source_floor_evidence": {

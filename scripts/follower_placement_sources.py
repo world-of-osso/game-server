@@ -88,6 +88,30 @@ def select_assignment(tables, map_id, marker):
     return candidates
 
 
+def read_journal_marker(tables, map_id, entry, journal_id):
+    rows = [r for r in tables['JournalEncounter'] if int(r['ID']) == journal_id]
+    if len(rows) != 1:
+        raise ValueError('placement requires one authenticated journal encounter row')
+    row = rows[0]
+    assignments = [a for a in tables['UiMapAssignment']
+                   if a['UiMapID'] == row['UiMapID'] and int(a['MapID']) == map_id]
+    bounds = {tuple(a[key] for key in ('UiMin_0', 'UiMin_1', 'UiMax_0', 'UiMax_1',
+                                      'Region_0', 'Region_1', 'Region_3', 'Region_4')) for a in assignments}
+    if len(bounds) != 1:
+        raise ValueError('journal UiMap does not have unique horizontal bounds on the requested map')
+    floors = {int(g['FloorIndex']) for g in tables['UiMapGroupMember'] if g['UiMapID'] == row['UiMapID']}
+    if len(floors) > 1:
+        raise ValueError('journal UiMap has ambiguous floor identities')
+    percent = [float(row['Map_0']) * 100, float(row['Map_1']) * 100]
+    if not all(math.isfinite(v) and 0 <= v <= 100 for v in percent):
+        raise ValueError('journal marker is outside its UiMap')
+    marker = dict(ui_map_id=int(row['UiMapID']), floor=next(iter(floors)) if floors else None, percent=percent)
+    page = dict(entry=entry, source_table='JournalEncounter', source_row=row,
+                source_row_sha256=hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest(),
+                url=f'db2:{BUILD}/JournalEncounter#{journal_id}', markers=[marker])
+    return page, marker, assignments
+
+
 def transform_marker(marker, assignments):
     row = assignments[0]
     bounds = dict(ui_min=[float(row[f"UiMin_{i}"]) for i in range(2)],

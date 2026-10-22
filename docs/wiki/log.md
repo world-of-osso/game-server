@@ -1,3 +1,7 @@
+## 2026-10-22 — Journal coordinate precedence and explicit Lua primary identity
+
+[Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): authenticated JournalEncounter/UiMap XY precedes cached Wowhead, with disagreement findings over5yd. Pinned Lua entry/encounter plus unique journal actor decouples native runtime models from journal displays; no model substitution. Actual old binder refused Goliath/Vexamus; precise-marker RED demonstrated rounded-Wowhead selection. New packet GREEN remains pending.
+
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.

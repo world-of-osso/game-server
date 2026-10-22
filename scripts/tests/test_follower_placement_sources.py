@@ -65,6 +65,28 @@ class FollowerPlacementSources(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'recorded WMO transform'):
             read_source_floor_support(damaged, marker, assignments, observed)
 
+    def test_journal_marker_wins_over_rounded_wowhead_and_reports_large_disagreement(self):
+        from follower_placements import derive_placement, read_binding_tables
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        tables = self.tables | binding_tables
+        for entry, map_id, journal_id, expected in [
+            (194181, 2526, 2509, (1815.2512440319297, -2783.9755457624997)),
+            (190485, 2521, 2503, None),
+        ]:
+            with self.subTest(entry=entry):
+                page = read_cached_npc(self.cache, entry)
+                record = dict(entry=entry, journal_encounter_id=journal_id, cache_sha256=page['cache_sha256'])
+                manifest = dict(map_id=map_id, placement_policy='FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP')
+                result = derive_placement(record, manifest, tables, self.cache, [], Path('unused'), Path('unused'),
+                                          dict(LocX=0, LocY=0, LocZ=0))
+                if expected is not None:
+                    self.assertEqual(tuple(result['wow_xy']), expected)
+                else:
+                    self.assertGreater(result['wowhead_comparison']['distance_yards'], 5)
+                    self.assertEqual(result['wowhead_comparison']['finding'], 'FOLLOWER_JOURNAL_WOWHEAD_XY_DISAGREEMENT')
+                self.assertEqual(result['page']['source_table'], 'JournalEncounter')
+                self.assertEqual(result['page']['source_row']['ID'], str(journal_id))
+
     def test_halls_upward_floor_triangles_exclude_ceilings_and_ambiguous_nav_surfaces(self):
         manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/halls-of-infusion.json'
         records = {r['entry']: r for r in json.loads(manifest_path.read_text())['entries']}

@@ -4,15 +4,18 @@ import argparse
 from contextlib import closing
 import csv
 import json
+import re
 from pathlib import Path
 import sqlite3
 import subprocess
 
 import retail_content
 from follower_placement_sources import (digest, read_cached_npc, read_db2,
-    read_source_floor_support, read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
+    read_journal_marker, read_source_floor_support, read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
 
 PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS'
+JOURNAL_PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
+LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
 TABLE_KEYS = {'content_creature_template': ('entry',),
               'content_creature_template_model': ('CreatureID', 'Idx'),
@@ -37,16 +40,17 @@ def query_route(executable, nav, start, end):
 
 
 def select_surface_query(record, marker, queries):
+    evidence = record.get('source_floor_evidence')
+    if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS':
+        supported = [q for q in queries if all(abs(q['height'] - a['wow_xyz'][2]) <=
+                     evidence['maximum_vertical_difference_yards'] for a in evidence['anchors'])]
+        if len(supported) != 1 or marker['floor'] != record['source_floor']:
+            raise ValueError('same-room native anchors must support exactly one baked candidate on the source floor')
+        return supported[0]
     if 'source_floor_surface_height' in record:
         selected = [q for q in queries if abs(q['height'] - record['source_floor_surface_height']) < 0.000001]
         if len(selected) != 1 or marker['floor'] != record['source_floor']:
             raise ValueError('approved source-floor surface no longer matches baked geometry')
-        evidence = record.get('source_floor_evidence')
-        if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS':
-            supported = [q for q in queries if all(abs(q['height'] - a['wow_xyz'][2]) <=
-                         evidence['maximum_vertical_difference_yards'] for a in evidence['anchors'])]
-            if len(supported) != 1 or supported != selected:
-                raise ValueError('same-room native anchors must support exactly one baked candidate')
         return selected[0]
     if len(queries) == 1:
         return queries[0]
@@ -54,12 +58,30 @@ def select_surface_query(record, marker, queries):
     return next(iter(reachable.values())) if len(reachable) == 1 else None
 
 
-def derive_placement(record, manifest, tables, cache, polygons, route, nav, entrance):
+def compare_wowhead_marker(record, tables, cache, map_id, xy):
     page = read_cached_npc(cache, record['entry'])
-    if page['cache_sha256'] != record['cache_sha256'] or len(page['markers']) != 1:
-        raise ValueError(f"NPC{record['entry']} pinned marker evidence changed")
-    marker = page['markers'][0]
-    assignments = select_assignment(tables, manifest['map_id'], marker)
+    if page['cache_sha256'] != record['cache_sha256']:
+        raise ValueError('pinned Wowhead comparison evidence changed')
+    comparison = dict(page=page, status='NO_INDIVIDUAL_WOWHEAD_MARKER')
+    if len(page['markers']) == 1:
+        marker = page['markers'][0]
+        observed = transform_marker(marker, select_assignment(tables, map_id, marker))
+        distance = sum((a - b) ** 2 for a, b in zip(xy, observed)) ** 0.5
+        comparison.update(status='COMPARED', wowhead_xy=observed, distance_yards=distance)
+        if distance > 5:
+            comparison['finding'] = 'FOLLOWER_JOURNAL_WOWHEAD_XY_DISAGREEMENT'
+    return comparison
+
+
+def derive_placement(record, manifest, tables, cache, polygons, route, nav, entrance):
+    if manifest['placement_policy'] == JOURNAL_PLACEMENT_POLICY:
+        page, marker, assignments = read_journal_marker(tables, manifest['map_id'], record['entry'], record['journal_encounter_id'])
+    else:
+        page = read_cached_npc(cache, record['entry'])
+        if page['cache_sha256'] != record['cache_sha256'] or len(page['markers']) != 1:
+            raise ValueError(f"NPC{record['entry']} pinned marker evidence changed")
+        marker = page['markers'][0]
+        assignments = select_assignment(tables, manifest['map_id'], marker)
     x, y = transform_marker(marker, assignments)
     evidence = record.get('source_floor_evidence')
     if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS':
@@ -73,6 +95,8 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
     placement = dict(entry=record['entry'], page=page, marker=marker,
                      assignments=assignments, wow_xy=[x, y], all_surface_heights=all_heights,
                      surface_queries=queries, status='MISSING_OR_AMBIGUOUS_SURFACE')
+    if manifest['placement_policy'] == JOURNAL_PLACEMENT_POLICY and 'cache_sha256' in record:
+        placement['wowhead_comparison'] = compare_wowhead_marker(record, tables, cache, manifest['map_id'], [x, y])
     if 'source_floor_evidence' in record:
         placement['source_floor_evidence'] = record['source_floor_evidence']
     if selected is not None:
@@ -97,12 +121,35 @@ def read_binding_tables(directory):
     return tables, proof
 
 
-def derive_binding(source, inventory, tables, map_id, entry):
+def validate_lua_primary_identity(identity, inventory, encounter, map_id, entry, journal_id):
+    path = Path(identity['path'])
+    if identity['policy'] != LUA_BINDING_POLICY or identity['revision'] != inventory['littlewigs'] or digest(path) != identity['sha256']:
+        raise ValueError('pinned Lua primary identity evidence changed')
+    if not path.as_posix().endswith('/' + encounter['module']):
+        raise ValueError('Lua primary module differs from pinned source inventory')
+    text = path.read_text()
+    enabled = re.findall(r'RegisterEnableMob\(([^)]*)\)', text)
+    entries = {int(token) for args in enabled for token in re.findall(r'\b\d+\b', args)}
+    encounter_ids = re.findall(r'SetEncounterID\(\s*(\d+)\s*\)', text)
+    journals = re.findall(r'NewBoss\("[^"]+",\s*(\d+),\s*(\d+)\)', text)
+    if entry not in entries or encounter_ids != [str(encounter['encounter']['ID'])] or (str(map_id), str(journal_id)) not in journals:
+        raise ValueError('Lua source does not identify this primary entry, encounter and journal')
+
+
+def derive_binding(source, inventory, tables, map_id, entry, identity=None):
     encounter = next(e for e in inventory['encounters'] if e['MapID'] == map_id and entry in e['enabled_entries'])
     dungeon = next(r for r in tables['DungeonEncounter'] if int(r['ID']) == encounter['encounter']['ID'])
     journal = next(r for r in tables['JournalEncounter'] if int(r['ID']) in encounter['journal_ids'])
-    displays = {r[0] for r in source.execute('SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (entry,))}
-    actors = [r for r in tables['JournalEncounterCreature'] if r['JournalEncounterID'] == journal['ID'] and int(r['CreatureDisplayInfoID']) in displays]
+    participants = [r for r in tables['JournalEncounterCreature'] if r['JournalEncounterID'] == journal['ID']]
+    if identity is not None:
+        validate_lua_primary_identity(identity, inventory, encounter, map_id, entry, int(journal['ID']))
+        name = source.execute('SELECT name FROM tdb_creature_template WHERE entry=?', (entry,)).fetchone()[0]
+        actors = [r for r in participants if r['Name_lang'] == name]
+        if len(actors) != 1 or int(actors[0]['ID']) != identity['journal_actor_id']:
+            raise ValueError(f'NPC{entry} has no unique exact-name journal actor for its pinned Lua identity')
+    else:
+        displays = {r[0] for r in source.execute('SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (entry,))}
+        actors = [r for r in participants if int(r['CreatureDisplayInfoID']) in displays]
     if len(actors) != 1 or int(dungeon['MapID']) != map_id or journal['DungeonEncounterID'] != dungeon['ID']:
         raise ValueError(f'NPC{entry} lacks an unambiguous authenticated primary identity')
     actor = actors[0]
@@ -143,7 +190,7 @@ def write_placements(target, manifest, placements, bindings):
             raise ValueError('placement ordinal exceeds reserved map namespace')
         guid = manifest['guid_base'] + manifest['map_id'] * 1000 + ordinal
         x, y, z = placement['wow_xyz']
-        comment = f"{PLACEMENT_POLICY}; {placement['page']['url']}; floor={placement['marker']['floor']}; percent={placement['marker']['percent']}"
+        comment = f"{manifest['placement_policy']}; {placement['page']['url']}; floor={placement['marker']['floor']}; percent={placement['marker']['percent']}"
         existing = target.execute('SELECT id1,map,Comment,position_x,position_y,position_z FROM content_creature WHERE guid=?', (guid,)).fetchone()
         if existing is not None and tuple(existing) != (record['entry'], manifest['map_id'], comment, x, y, z):
             raise ValueError(f'reserved placement GUID collision at{guid}')
@@ -214,7 +261,7 @@ def validate_native_room_anchors(source, manifest):
         if len({a['guid'] for a in anchors}) < 2:
             raise ValueError('same-room floor policy requires at least two distinct native anchors')
         x, y = evidence['marker_wow_xy']
-        floor = record['source_floor_surface_height']
+        floor = record['source_floor_reference_height']
         observed = []
         for anchor in anchors:
             native = source.execute('SELECT id,map,position_x,position_y,position_z FROM tdb_creature WHERE guid=?',
@@ -225,8 +272,8 @@ def validate_native_room_anchors(source, manifest):
             vertical = abs(floor - native[4])
             if distance > evidence['maximum_horizontal_distance_yards'] or vertical > evidence['maximum_vertical_difference_yards']:
                 raise ValueError('same-room native anchors do not agree on the supported floor')
-            observed.append(dict(anchor, horizontal_distance_yards=distance, vertical_difference_yards=vertical))
-        proofs.append(dict(entry=record['entry'], policy=evidence['policy'], anchors=observed))
+            observed.append(dict(anchor, horizontal_distance_yards=distance, reference_vertical_difference_yards=vertical))
+        proofs.append(dict(entry=record['entry'], policy=evidence['policy'], reference_floor_height=floor, anchors=observed))
     return proofs
 
 
@@ -235,7 +282,7 @@ def prepare(args):
         raise ValueError('output directory must be new; never overwrite proof or inputs')
     args.output.mkdir(parents=True)
     manifest = json.loads(args.manifest.read_text())
-    if manifest['placement_policy'] != PLACEMENT_POLICY or manifest['faction_policy'] != FACTION_POLICY:
+    if manifest['placement_policy'] not in (PLACEMENT_POLICY, JOURNAL_PLACEMENT_POLICY) or manifest['faction_policy'] != FACTION_POLICY:
         raise ValueError('manifest policies differ from approved placement policy')
     tables, auth = read_db2(args.db2)
     binding_tables, binding_auth = read_binding_tables(args.db2)
@@ -248,8 +295,8 @@ def prepare(args):
         baseline.row_factory = sqlite3.Row
         entrance = dict(baseline.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=? AND MapID=?', (manifest['entrance_id'], manifest['map_id'])).fetchone())
         native_room_anchors = validate_native_room_anchors(baseline, manifest)
-        placements = [derive_placement(r, manifest, tables, args.cache, polygons, args.route, args.nav, entrance) for r in manifest['entries']]
-        receipt = dict(map_id=manifest['map_id'], policy=PLACEMENT_POLICY, db2_authentication=auth | binding_auth,
+        placements = [derive_placement(r, manifest, tables | binding_tables, args.cache, polygons, args.route, args.nav, entrance) for r in manifest['entries']]
+        receipt = dict(map_id=manifest['map_id'], policy=manifest['placement_policy'], db2_authentication=auth | binding_auth,
                        producer_sha256=digest(__file__), source_reader_sha256=digest(Path(__file__).with_name('follower_placement_sources.py')),
                        calibration=calibrate(baseline, manifest['calibration_entries'], tables, args.cache),
                        calibration_scope='Horizontal transform and floor controls; Wowhead markers are approximate observations, not exact native spawn capture',
@@ -261,10 +308,17 @@ def prepare(args):
                        native_room_anchors=native_room_anchors, source_gaps=manifest.get('source_gaps', []),
                        source_database=str(args.source_db.resolve()), baseline_sha256=digest(baseline_path), canonical_modified=False)
         receipt['navigation_gaps'] = [p['navigation_gap'] for p in placements if 'navigation_gap' in p]
+        receipt['source_findings'] = [dict(entry=p['entry'], **p['wowhead_comparison']) for p in placements
+                                      if 'finding' in p.get('wowhead_comparison', {})]
         if any('wow_xyz' not in p for p in placements):
             receipt['status'] = 'BLOCKED_SURFACE_AMBIGUITY_OR_NO_ROUTE'
         else:
-            bindings = [derive_binding(baseline, inventory, binding_tables, manifest['map_id'], r['entry']) for r in manifest['entries']]
+            bindings = [derive_binding(baseline, inventory, binding_tables, manifest['map_id'], r['entry'], r.get('journal_actor_source')) for r in manifest['entries']]
+            for record, placement in zip(manifest['entries'], placements):
+                if 'journal_actor_source' in record:
+                    placement['binding_source'] = record['journal_actor_source']
+                    placement['native_template_display_ids'] = [row[0] for row in baseline.execute(
+                        'SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (record['entry'],))]
             backup(baseline, prepared_path)
             with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
                 receipt['donors'] = prepare_templates(prepared, manifest['entries'], args.cache)
