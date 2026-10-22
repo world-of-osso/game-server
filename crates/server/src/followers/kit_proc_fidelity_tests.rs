@@ -413,7 +413,6 @@ fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_r
 }
 
 #[test]
-#[ignore = "native Stormkeeper guaranteed Elemental Overload RED before implementation"]
 fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 168534));
@@ -446,7 +445,6 @@ fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage(
 }
 
 #[test]
-#[ignore = "native missing-Mastery overload ownership positive control pending GREEN"]
 fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload() {
     let (mut h, caster) = prepare(209053);
     crate::auras::remove_auras(
