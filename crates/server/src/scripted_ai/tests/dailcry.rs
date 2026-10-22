@@ -1,5 +1,5 @@
 //! LittleWigs2777a9d CaptainDailcry.lua; source207946, native70448.
-//! Difficulty205 projects the authored actor; source spawn excludes205.
+//! Difficulty205 uses the existing approved Normal-population bridge.
 use super::*;
 
 const DAILCRY: u32 = 207946;
@@ -25,12 +25,23 @@ fn dailcry_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     (h, boss, map)
 }
 
-fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
+fn count_cast_receipts(h: &Harness, boss: Entity, spell: u32) -> usize {
     h.inbox(0)
         .spell_gos
         .iter()
         .filter(|go| go.caster == boss.to_bits() && go.spell_id == spell)
         .count()
+}
+
+fn assert_thirty_second_mauling_channel(h: &Harness, boss: Entity) {
+    let cast = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(boss)
+        .expect("native Mauling channel remains active until its actual deadline");
+    assert_eq!(cast.spell_id, MAULING);
+    assert_eq!(cast.cast_type, shared::casting::CastType::Channel);
+    assert_eq!(cast.duration, 30.0, "native70448 Attributes1 0x4/Duration9");
 }
 
 #[test]
@@ -101,21 +112,34 @@ fn encounter_coverage_dailcry_ongoing_native_damage_and_copy_credit() {
                 entries: Vec::new(),
             });
         h.engage(boss);
-        h.advance(90.0);
+        h.advance(14.9);
+        assert_thirty_second_mauling_channel(&h, boss);
+        h.advance(29.7);
+        assert_thirty_second_mauling_channel(&h, boss);
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<super::cast_admission::CastAdmissions>()
+                .entries
+                .len(),
+            4,
+            "native channel defers every ordinary outgoing lane"
+        );
+        h.advance(45.4);
         let attempts = &h
             .app
             .world()
             .resource::<super::cast_admission::CastAdmissions>()
             .entries;
         let lanes = [
-            (PIERCE, &[5.2, 17.3, 29.4, 41.5, 53.6, 68.2, 80.3][..]),
-            (SPEAR, &[9.3, 34.8, 60.3, 85.8][..]),
-            (BATTLE_CRY, &[12.3, 39.0, 65.7][..]),
+            (PIERCE, &[5.2, 44.8, 56.9, 69.0, 81.1][..]),
+            (SPEAR, &[9.3, 47.3, 72.8][..]),
+            (BATTLE_CRY, &[12.3, 50.3, 77.0][..]),
             (MAULING, &[14.8][..]),
         ];
         assert_eq!(
             attempts.len(),
-            15,
+            12,
             "all source/native occupancy requests: {attempts:?}"
         );
         for (spell, times) in lanes {
@@ -128,7 +152,7 @@ fn encounter_coverage_dailcry_ongoing_native_damage_and_copy_credit() {
                 );
                 assert!(attempt.result.is_ok(), "ordinary admission {attempt:?}");
             }
-            assert_eq!(completed_casts(&h, boss, spell), times.len());
+            assert_eq!(count_cast_receipts(&h, boss, spell), times.len());
         }
         for spell in [PIERCE, BATTLE_CRY] {
             assert!(
@@ -198,7 +222,7 @@ fn encounter_coverage_dailcry_evade_rearms_without_credit() {
         let (mut h, boss, map) = dailcry_copy(difficulty);
         h.engage(boss);
         h.advance(40.0);
-        assert!(completed_casts(&h, boss, PIERCE) > 0);
+        assert!(count_cast_receipts(&h, boss, PIERCE) > 0);
         let player = h.player();
         h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
         crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
@@ -220,7 +244,7 @@ fn encounter_coverage_dailcry_evade_rearms_without_credit() {
         let mut near = *h.app.world().get::<Position>(boss).unwrap();
         near.x += 3.0;
         h.app.world_mut().entity_mut(player).insert(near);
-        let before = completed_casts(&h, boss, PIERCE);
+        let before = count_cast_receipts(&h, boss, PIERCE);
         h.engage(boss);
         h.advance(5.0);
         assert!(
@@ -239,7 +263,7 @@ fn encounter_coverage_dailcry_evade_rearms_without_credit() {
             PIERCE
         );
         h.advance(2.6);
-        assert_eq!(completed_casts(&h, boss, PIERCE), before + 1);
+        assert_eq!(count_cast_receipts(&h, boss, PIERCE), before + 1);
         assert_eq!(
             h.app
                 .world()

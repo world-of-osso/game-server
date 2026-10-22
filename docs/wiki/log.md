@@ -1,3 +1,7 @@
+## 2026-10-22 — Dailcry native channel boundary
+
+[Dailcry](investigations/follower-data.md#captain-dailcry-native-channel-boundary--2026-10-22): eb1native first/reset pass; ongoing oracle expected instant Mauling but actual70448 is a30s channel. Corrected oracle preserves full native occupancy and remains pending. Binding producer1/1GREEN preserves source; Normal population bridge supports205 without fabricated rows. No production timer/cancellation change.
+
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
