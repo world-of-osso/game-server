@@ -20,6 +20,7 @@ Compare native 70448 server combat with shipped MID2 SimulationCraft 76f8118 pro
 Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` clears explicit raid events for Patchwerk after parsing. The opt-in CLI integration test must observe three actual targets and an adds event; argument-string checks alone did not detect this failure.
 
 - [ ] A headless300s follower dummy harness consumes exact profile gear through the production stat path and supported talents/consumables, on one target and a specified three-target DungeonSlice-like setup.
+- [ ] The same test-only measurement harness supports real player characters without requiring a follower profile, using exact level90 reference item instances and pinned active traits. Existing native AssistedCombat70448 authored order/predicates drive player casts; unavailable native facts or unsupported rules fail explicitly. No invented priorities, stat changes or production mechanics edits are permitted.
 - [ ] Reports compare primary/crit/haste/mastery/versatility/AP/SP first, then action counts/average hit/damage share and buff uptimes. Flag every delta>5% and classify stats/gear, coefficients, missing proc/aura or rotation/decision.
 - [x] SimC action normalization includes direct and periodic amounts without double-counting parent compound totals.
 - [x] Stat comparison accepts identically-unitized attribute/stat maps, flags strictly greater than5% differences, distinguishes absent and zero-reference measurements, and rejects nonfinite inputs.

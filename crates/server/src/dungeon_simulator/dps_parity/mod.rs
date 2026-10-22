@@ -307,3 +307,60 @@ fn dps_parity_native_bis_dummy_records_300s() {
         report["combat"]["dps"]
     );
 }
+
+#[test]
+#[ignore = "opt-in native Arms71 player with pinned level90 gear/traits; requires private parity inputs"]
+fn dps_parity_native_player_profile_spawns_with_pinned_gear() {
+    let run = prepare(71, 1).expect("pinned native Arms71 player profile must spawn");
+    let world = run.app.world();
+    let player = world
+        .get::<shared::components::Player>(run.actor)
+        .expect("measured actor must be a real player");
+    assert_eq!(player.class, 1);
+    assert!(world.get::<shared::components::Npc>(run.actor).is_none());
+    assert!(world.get::<crate::followers::Follower>(run.actor).is_none());
+    assert_eq!(
+        world.get::<shared::components::Level>(run.actor).unwrap().0,
+        90
+    );
+    let expected_items: Vec<_> = run
+        .profile
+        .equipment
+        .iter()
+        .map(|item| {
+            (
+                inputs::slot(&item.slot).unwrap(),
+                shared::item_data::ItemDefinitionSource::Retail,
+                item.item_id,
+            )
+        })
+        .collect();
+    assert_eq!(
+        world
+            .get::<crate::stats::EquippedItems>(run.actor)
+            .unwrap()
+            .items,
+        expected_items
+    );
+    let expected_modifiers: Vec<_> = run
+        .profile
+        .equipment
+        .iter()
+        .map(|item| (inputs::slot(&item.slot).unwrap(), item.modifiers()))
+        .collect();
+    assert_eq!(
+        world
+            .get::<crate::stats::EquippedItemModifiers>(run.actor)
+            .unwrap()
+            .items,
+        expected_modifiers
+    );
+    let stats = world
+        .get::<crate::stats::CharacterStats>(run.actor)
+        .unwrap();
+    assert!(
+        stats.main_hand.min > 1.0,
+        "native BiS weapon stats must be applied"
+    );
+    assert!(stats.primary.strength > 0.0);
+}
