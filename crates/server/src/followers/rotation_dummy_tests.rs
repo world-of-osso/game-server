@@ -204,7 +204,8 @@ fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
 #[test]
 fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_repeat() {
     let (mut h, caster) = prepare_follower(209065, 253, 32);
-    prepare_dummies(&mut h, 1);
+    let targets = prepare_dummies(&mut h, 2);
+    let next_target = targets[1];
     let stats = h
         .app
         .world()
@@ -223,6 +224,10 @@ fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_re
     let interval = interval_frames.floor() as usize..=interval_frames.ceil() as usize;
     let mut shots = Vec::new();
     for frame in 0..200 {
+        if frame == 10 {
+            h.select(Some(next_target));
+            h.attack(next_target);
+        }
         let first = h.inbox.go.len();
         super::update_ai(h.app.world_mut());
         h.advance(1);
@@ -248,6 +253,15 @@ fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_re
                 && event.amount > 0
         }),
         "actual native follower Auto Shot damage"
+    );
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(AUTO_SHOT)
+                && event.target == Some(next_target.to_bits())
+                && matches!(event.kind, CombatLogKind::Damage | CombatLogKind::Miss(_))
+        }),
+        "ordinary target change redirects the repeat without restarting its clock"
     );
 }
 

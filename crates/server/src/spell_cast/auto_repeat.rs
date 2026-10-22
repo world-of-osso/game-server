@@ -25,6 +25,17 @@ pub(crate) struct AutoRepeat {
     ready_in: f32,
 }
 
+impl AutoRepeat {
+    /// Follow the attack decision without starting another shot or resetting its timer.
+    pub(crate) fn retarget_auto_shot(&mut self, target: Entity) -> bool {
+        if self.spell_id != AUTO_SHOT {
+            return false;
+        }
+        self.target = target;
+        true
+    }
+}
+
 /// After a successful cast: an autorepeat spell (re)starts with a full ranged timer.
 pub(super) fn on_cast(
     world: &mut World,
