@@ -105,7 +105,7 @@ fn dps_parity_power_receipt_attributes_native_energize_and_capped_overflow() {
         false,
     )
     .unwrap();
-    for unit in [run.actor, pet] {
+    for unit in [run.actor, run.actor, pet] {
         crate::spell_cast::creature_cast(
             run.app.world_mut(),
             unit,
@@ -124,7 +124,7 @@ fn dps_parity_power_receipt_attributes_native_energize_and_capped_overflow() {
             event.kind == CombatLogKind::Energize && event.spell_id == Some(PACK_TACTICS_ENERGIZE)
         })
         .collect();
-    assert_eq!(events.len(), 2);
+    assert_eq!(events.len(), 3);
     let native_grant = world
         .resource::<crate::spell_info::SpellStore>()
         .get(PACK_TACTICS_ENERGIZE)
@@ -140,20 +140,24 @@ fn dps_parity_power_receipt_attributes_native_energize_and_capped_overflow() {
         .expect("receipt must account for actual Energize events");
     assert_eq!(gains.len(), 2, "owner/pet source identities must not merge");
     for unit in [run.actor, pet] {
-        let event = events
+        let owned: Vec<_> = events
             .iter()
-            .find(|event| event.source == Some(unit.to_bits()))
-            .unwrap();
+            .filter(|event| event.source == Some(unit.to_bits()))
+            .collect();
+        let expected_count = if unit == run.actor { 2 } else { 1 };
+        assert_eq!(owned.len(), expected_count);
+        let amount = native_grant * expected_count as i32;
+        let overflow: i32 = owned.iter().map(|event| event.overflow).sum();
         let gain = gains
             .iter()
             .find(|gain| gain["source"] == unit.to_bits())
             .unwrap();
         assert_eq!(gain["target"], unit.to_bits());
         assert_eq!(gain["spell_id"], PACK_TACTICS_ENERGIZE);
-        assert_eq!(gain["amount"], native_grant);
-        assert_eq!(gain["overflow"], event.overflow);
-        assert_eq!(gain["effective_gain"], event.amount - event.overflow);
-        assert_eq!(gain["events"], 1);
+        assert_eq!(gain["amount"], amount);
+        assert_eq!(gain["overflow"], overflow);
+        assert_eq!(gain["effective_gain"], amount - overflow);
+        assert_eq!(gain["events"], expected_count);
     }
     let pet_event = events
         .iter()
