@@ -556,6 +556,52 @@ fn native_empower_font_rank_four_releases_real_short_dot_and_eight_target_surge(
 }
 
 #[test]
+fn native_empower_scouring_retains_native_two_dispels_at_rank_three() {
+    let (mut h, caster) = prepare(21);
+    let target = h.npc;
+    let buffs = [1459, 21562, 1044]; // Three actual helpful Magic auras, no absorbs.
+    for spell in buffs {
+        crate::spell_cast::creature_cast(h.app.world_mut(), target, spell, Some(target), true)
+            .unwrap();
+        assert!(crate::auras::has_aura(h.app.world(), target, spell));
+    }
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 378438, Some(caster), 1);
+    let count = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(FIRE_DAMAGE)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 5 && effect.effect == 38)
+        .unwrap()
+        .base_points;
+    assert_eq!(
+        count, 2.0,
+        "native70448 count differs from historical rank-driven TC script"
+    );
+    crate::spell_cast::creature_cast_empowered(
+        h.app.world_mut(),
+        caster,
+        FIRE_BREATH,
+        Some(caster),
+        3,
+    )
+    .unwrap();
+    h.advance(60);
+    let remaining = buffs
+        .iter()
+        .filter(|spell| crate::auras::has_aura(h.app.world(), target, **spell))
+        .count();
+    assert_eq!(
+        remaining,
+        buffs.len() - count as usize,
+        "actual rank3 Fire Breath must dispel exactly native2, not historicalrank3"
+    );
+}
+
+#[test]
 fn native_empower_font_kit_resolver_dispatches_both_real_four_stage_variants() {
     for (base, variant) in [(FIRE_BREATH, 382266), (ETERNITY_SURGE, 382411)] {
         let (mut h, caster) = prepare(65);
