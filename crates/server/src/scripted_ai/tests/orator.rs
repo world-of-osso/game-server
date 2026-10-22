@@ -16,9 +16,6 @@ fn orator_copy(difficulty: u32) -> (Harness, Entity, InMap) {
         h.app.world().get::<Mana>(boss).is_none(),
         "actual sourceclass4 is Energy"
     );
-    let mut visibility = crate::interest::NetworkVisibility::default();
-    visibility.gain_visibility(h.players[0].1);
-    h.app.world_mut().entity_mut(boss).insert(visibility);
     let mut near = *h.app.world().get::<Position>(boss).unwrap();
     near.x += 3.0;
     let player = h.player();

@@ -495,6 +495,15 @@ fn encounter_fixture(
         ..map
     };
     let (other, other_connection) = spawn_player(&mut app, other_map, near, 2);
+    if entry == 216619 {
+        // This headless app omits InterestPlugin. TC Oration fires JustAppeared
+        // on the first update: establish its real observer before that boundary.
+        let mut visibility = crate::interest::NetworkVisibility::default();
+        visibility.gain_visibility(connection);
+        app.world_mut()
+            .entity_mut(boss.expect("authored Orator"))
+            .insert(visibility);
+    }
     let mut h = Harness {
         app,
         players: vec![
