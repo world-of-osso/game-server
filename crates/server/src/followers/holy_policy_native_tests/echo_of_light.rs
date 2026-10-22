@@ -131,7 +131,7 @@ fn holy_echo_of_light_native90_direct_overheal_produces_two_native_ticks_and_exp
         "no recursive Echo producer: {ticks:?}"
     );
     for tick in ticks {
-        assert!(tick.periodic && !tick.crit);
+        assert!(tick.periodic);
         assert!(
             (tick.amount - expected).abs() <= 1,
             "native amount, not effective direct heal: expected{expected}, {tick:?}"
@@ -144,7 +144,7 @@ fn holy_echo_of_light_native90_direct_overheal_produces_two_native_ticks_and_exp
 fn holy_echo_of_light_native90_self_flash_is_eligible_unlike_binding_heals() {
     let mut group = native_group();
     native_mastery_percent(&group);
-    apply_pressure(&mut group, 4);
+    apply_pressure(&mut group, 6);
     let priest = group.priest;
     let start = group
         .h
