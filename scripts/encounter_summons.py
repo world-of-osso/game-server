@@ -676,6 +676,32 @@ def import_dailcry(connection):
     return [207946]
 
 
+def import_aldryr(connection):
+    """Local2777a9d Lua binding; preserve actual Aldryr placement/native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2661, entry=210271, encounter_id=2900, bit=0,
+                   script='', ai='', journal_id=2586, actor_id=5619, display_id=116429,
+                   spawn_guid=10002374, spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=210271'
+    ).fetchone()
+    if runtime not in [('Brew Master Aldryr', '', '', 64),
+                       ('Brew Master Aldryr', '', 'littlewigs_aldryr', 64)]:
+        raise ValueError('Aldryr runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=432229 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (2, 6, 0):
+        raise ValueError('Aldryr native Keg Smash432229 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_aldryr' WHERE entry=210271")
+    return [210271]
+
+
 def import_kyrioss_schedule(connection):
     """LittleWigs2777a9d5 Kyrioss: explicit local schedule, never a claimed TC AI.
 
@@ -705,7 +731,7 @@ def import_kyrioss_schedule(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','aldryr'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -735,6 +761,8 @@ def main():
                 entries = import_kikatal(conn)
             elif args.encounter == 'dailcry':
                 entries = import_dailcry(conn)
+            elif args.encounter == 'aldryr':
+                entries = import_aldryr(conn)
             elif args.encounter == 'azureblade':
                 entries = import_azureblade(conn)
             elif args.encounter == 'umbrelskul':
