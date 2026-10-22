@@ -27,7 +27,8 @@ The server's standard lead gate must retain its native coverage while completing
 
 - `Cargo.toml` — server test optimization profile.
 - `crates/server/src/test_data/catalog_cache.rs` — immutable typed definitions keyed by source path/content.
-- `crates/server/src/catalog_data.rs` — production-owned/test-shared collection backing; live edits detach.
+- `crates/server/src/catalog_data.rs` — production-owned/test-shared collection backing; live edits detach. Spell entries share independently so prepared server-side additions do not copy unrelated definitions.
+- Spell, class, follower and large world collections use this backing in tests; world path and read-only spell/follower/map loaders reuse complete decoded inputs. Writable and in-memory connections continue reading their local SQL state.
 - `crates/server/src/test_data/catalog_cache_tests.rs` — real SQLite read capability, concurrency and source isolation fixtures, included by the lightweight library test target.
 
 ## Tests asserting this spec
@@ -40,7 +41,7 @@ The server's standard lead gate must retain its native coverage while completing
 ## Known gaps (current cycle)
 
 - [ ] Current profile-only union takes37m58s and swaps; the performance goal is not met.
-- [ ] SQL reuse and shared immutable storage implementation and matching before/after proof remain open.
+- [ ] Native loader/storage integration is implemented; targeted live-App isolation, compilation and matching before/after measurements remain open.
 - [ ] Memory-weighted heavy-test scheduling and final complete gate proof remain open.
 
 ## Out of scope

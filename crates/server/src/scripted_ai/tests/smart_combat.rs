@@ -14,7 +14,7 @@ fn geomancer() -> (Harness, Entity) {
     templates.retain(|entry, _| *entry == GEOMANCER);
     crate::world_data::load_template_models(&conn, &mut templates);
     app.insert_resource(WorldData {
-        templates,
+        templates: templates.into(),
         class_level_base_mana: data.base_mana.clone(),
         ..Default::default()
     });

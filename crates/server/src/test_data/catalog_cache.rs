@@ -61,6 +61,20 @@ impl InputCatalogs {
     }
 }
 
+/// Cache file-backed read-only fixture connections. Writable and in-memory databases
+/// retain ordinary SQL reads because their mutable state is not an immutable file input.
+pub(crate) fn load_connection<T: Clone + Send + Sync + 'static>(
+    connection: &rusqlite::Connection,
+    read: impl FnOnce() -> rusqlite::Result<T>,
+) -> rusqlite::Result<T> {
+    if connection.is_readonly(rusqlite::DatabaseName::Main)? {
+        if let Some(path) = connection.path() {
+            return load(Path::new(path), read).map(|data| data.as_ref().clone());
+        }
+    }
+    read()
+}
+
 /// `read` must construct the complete definition catalog for `T`, never a mutable
 /// App, connection, entity collection or a caller-dependent filtered view.
 pub(crate) fn load<T: Send + Sync + 'static>(

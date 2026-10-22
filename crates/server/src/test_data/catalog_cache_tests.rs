@@ -47,16 +47,40 @@ fn warm_immutable_input_survives_revoked_database_read_capability() {
     let path = directory.path().join("world.db");
     write_catalog(&path);
     let db = readonly(&path);
-    let original = catalog_cache::load(&path, || read_catalog(&db)).unwrap();
+    let original = catalog_cache::load_connection(&db, || read_catalog(&db)).unwrap();
     deny_catalog_reads(&db);
-    let reused = catalog_cache::load(&path, || read_catalog(&db))
+    let reused = catalog_cache::load_connection(&db, || read_catalog(&db))
         .expect("unchanged immutable definitions must not query SQLite again");
     assert_eq!(reused.0, [(133, "Fireball".into()), (585, "Smite".into())]);
-    let mut app_owned = original.as_ref().clone();
+    let mut app_owned = original.clone();
     app_owned.0[0].1 = "only the first App".into();
     app_owned.0.pop();
     assert_eq!(reused.0.len(), 2);
     assert_eq!(reused.0[0].1, "Fireball");
+}
+
+#[test]
+fn writable_and_in_memory_connections_observe_uncheckpointed_edits() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("world.db");
+    write_catalog(&path);
+    for db in [
+        Connection::open(&path).unwrap(),
+        Connection::open_in_memory().unwrap(),
+    ] {
+        db.execute_batch(
+            "CREATE TABLE IF NOT EXISTS catalog_rows (id INTEGER PRIMARY KEY, name TEXT);
+            INSERT OR REPLACE INTO catalog_rows VALUES (133, 'Fireball'), (585, 'Smite');",
+        )
+        .unwrap();
+        let before = catalog_cache::load_connection(&db, || read_catalog(&db)).unwrap();
+        db.execute_batch("BEGIN; UPDATE catalog_rows SET name='edited locally' WHERE id=133;")
+            .unwrap();
+        let after = catalog_cache::load_connection(&db, || read_catalog(&db)).unwrap();
+        assert_eq!(before.0[0].1, "Fireball");
+        assert_eq!(after.0[0].1, "edited locally");
+        db.execute_batch("ROLLBACK").unwrap();
+    }
 }
 
 #[test]

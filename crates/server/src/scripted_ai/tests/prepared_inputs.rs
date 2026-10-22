@@ -149,7 +149,7 @@ fn decode_encounter_inputs(
         Vec::new()
     };
     let mut templates = canonical.map_or_else(
-        || crate::world_data::load_templates(&conn, &expected),
+        || crate::world_data::load_templates(&conn, &expected).into(),
         |data| data.templates.clone(),
     );
     templates.retain(|id, _| {
@@ -213,10 +213,10 @@ fn decode_encounter_inputs(
             Default::default()
         };
     inputs.push(WorldData {
-        templates,
-        difficulty_templates,
+        templates: templates.into(),
+        difficulty_templates: difficulty_templates.into(),
         spawns_by_map: crate::world_data::build_spawns_by_map(&spawns),
-        spawns,
+        spawns: spawns.into(),
         template_string_ids,
         spawn_string_ids,
         script_spawn_groups,

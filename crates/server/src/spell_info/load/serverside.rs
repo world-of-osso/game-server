@@ -20,11 +20,27 @@ pub(super) fn load_serverside_spells(
     lookups: &Lookups,
     spells: &mut Spells,
 ) -> rusqlite::Result<usize> {
-    if !table_exists(conn, SPELLS)? {
-        return Ok(0);
-    }
     let file_ids: Vec<u32> = spells.iter().map(|spell| spell.id).collect();
-    let mut loaded = read_spells(conn, lookups, &file_ids)?;
+    let loaded = read_additional_spells(conn, lookups, &file_ids)?;
+    let count = loaded.len();
+    for spell in loaded {
+        let index = spells
+            .binary_search_by_key(&spell.id, |existing| existing.id)
+            .expect_err("serverside spell IDs were checked against DB2");
+        spells.insert(index, spell);
+    }
+    Ok(count)
+}
+
+pub(super) fn read_additional_spells(
+    conn: &Connection,
+    lookups: &Lookups,
+    file_ids: &[u32],
+) -> rusqlite::Result<Vec<SpellInfo>> {
+    if !table_exists(conn, SPELLS)? {
+        return Ok(Vec::new());
+    }
+    let mut loaded = read_spells(conn, lookups, file_ids)?;
     for effect_row in read_effects(conn, lookups)? {
         let (spell_id, effect) = effect_row;
         if file_ids.binary_search(&spell_id).is_ok() {
@@ -35,14 +51,7 @@ pub(super) fn load_serverside_spells(
             spell.effects.push(effect);
         }
     }
-    let count = loaded.len();
-    for spell in loaded {
-        let index = spells
-            .binary_search_by_key(&spell.id, |existing| existing.id)
-            .expect_err("serverside spell IDs were checked against DB2");
-        spells.insert(index, spell);
-    }
-    Ok(count)
+    Ok(loaded)
 }
 
 fn table_exists(conn: &Connection, name: &str) -> rusqlite::Result<bool> {
