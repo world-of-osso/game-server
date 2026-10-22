@@ -78,7 +78,7 @@ pub(super) fn add_native_dps(h: &mut Harness, map: InMap) -> Vec<Entity> {
 }
 
 fn fixture() -> Fixture {
-    let (mut h, tank, first) = source_fixture_with_plugins(46249, |app| {
+    let (mut h, tank, first) = source_fixture_with_plugins(46382, |app| {
         app.add_plugins(crate::stats::StatsPlugin);
     });
     let owner = h.caster;
@@ -128,7 +128,7 @@ fn fixture() -> Fixture {
         .iter()
         .find(|spawn| {
             spawn.map == 34
-                && spawn.template_entry == 46249
+                && spawn.template_entry == 46382
                 && spawn.guid != first_guid
                 && spawn.spawns_at(1)
         })
@@ -424,7 +424,7 @@ fn tank_pull_admission_native_overlap_requires_complete_stable_admitted_health()
         .iter()
         .find(|spawn| {
             spawn.map == 34
-                && spawn.template_entry == 46249
+                && spawn.template_entry == 46382
                 && spawn.guid != first_guid
                 && spawn.guid != second_guid
                 && spawn.spawns_at(1)

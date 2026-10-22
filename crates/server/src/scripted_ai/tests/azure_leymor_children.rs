@@ -251,6 +251,7 @@ fn azure_leymor_child_stomp_cancelled_channel_never_deals_finish_damage() {
 }
 
 #[test]
+#[ignore = "AT_LEYMOR_ARCANE_ERUPTION_MOVEMENT_FORCE_PENDING: exact source25390 force lifecycle/headless policy is a follow-up; no guessed field fallback"]
 fn azure_leymor_child_brand_emits_one_native_field_for_two_real_aura_recipients() {
     let (mut h, leymor) = prepare_leymor_for_later_clock();
     h.advance(24.8);

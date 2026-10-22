@@ -397,12 +397,24 @@ fn tank_owner_pacing_entrance_route_refuses_multiple_packs_and_preserves_native_
         Decision::Wait(Reason::FirstSinglePack),
         "a cleared party may pull one pack, not the23-pack entrance footprint"
     );
-    let (forecast, reserve, _) =
-        pull_admission::read_forecast_health(f.h.app.world_mut(), f.tank, &route.spawns, 1)
-            .unwrap();
+    let tank_health = f.h.health(f.tank);
+    let reason = pull_admission::read_forecast_health(
+        f.h.app.world_mut(),
+        f.tank,
+        &route.spawns,
+        1,
+    )
+    .expect_err(
+        "native scripted entrance packs need an explicit pull decision, not a numerical forecast",
+    );
     assert!(
-        forecast < reserve,
-        "actual native debt must remain below the unchanged30% reserve"
+        reason.contains("requires an explicit pull decision"),
+        "{reason}"
+    );
+    assert_eq!(
+        f.h.health(f.tank),
+        tank_health,
+        "refusal never spends the native reserve"
     );
 }
 

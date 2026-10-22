@@ -18,6 +18,14 @@ Native Spell* records own cast times, ranges, cooldown/category admission and sp
 
 Effect179 destination fields share the source-backed field executor. Admission is feature-driven across every native create-properties ID, never an ID allowlist: supported shape, curve, actions and flags all must be satisfied. Unsupported or missing definitions are skipped with recorded reasons; emit admitted/skipped counts. Movement admission checks source spline-point and orbit metadata independently of MoveCurveId; missing metadata never establishes stationary behavior. The canonical battleground importer includes verbatim `tdb_areatrigger_create_properties_spline_point` rows. Existing26505 and25515 are regression examples, not registrations. Preserve authored radius/scale, duration, entry/exit actions and periodic aura clocks; never substitute DB2 spell radius for missing source geometry. Wider-admission control failures must be reported before narrowing scope.
 
+## Named follow-up: Leymor movement forces
+
+`AT_LEYMOR_ARCANE_ERUPTION_MOVEMENT_FORCE_PENDING` withholds properties25390 while the exact pinned TC `at_leymor_arcane_eruption` force script is unported; three existing field-dependent controls remain explicitly ignored until that follow-up. Never restore guessed-radius lifecycle fallback. Generic Unit forces must apply/remove by source GUID with origin, magnitude and Gravity type, preserving independent sources.
+
+`MOVEMENT_FORCE_GRAVITY_RADIAL_HEADLESS` is an approved project policy, not Retail-sourced physics: negative magnitude pulls server-driven movers horizontally toward the origin at its absolute yd/s; positive pushes away. Source vectors add each tick to intended velocity, clamp without overshooting a pull origin and use navmesh/collision without teleporting or leaving the mesh. Player application remains `MOVEMENT_FORCE_CLIENT_APPLICATION_BLOCKED` pending protocol MoveApply/MoveRemove and engine support. Store enter/exit/exact-source removal and independent-source stacking need separate RED→GREEN proof.
+
+Forecast-only tests use authentic unscripted packs. Newly scripted trash requires an explicit pull decision; fixture updates must never weaken production forecast or creature AI to regain numerical estimates.
+
 ## Publication and proof
 
 Implementer never writes canonical world.db. Deliver stable-key SQL and a receipt tested by replay on a fresh canonical SQLite backup; repeated application preserves authored source rows and unrelated content. Lead publishes.

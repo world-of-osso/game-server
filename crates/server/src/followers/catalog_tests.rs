@@ -38,13 +38,9 @@ fn follower_population_catalog_lists_every_map_with_authentic_sources() {
     )
     .unwrap();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let source_path = source.canonicalize().unwrap();
-    let db2 = source_path
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("db2/12.1.5.70448");
+    // A private world.db copy lives directly under data/, unlike canonical's
+    // data/server-world/world.db. DB2 source location is independent of either.
+    let db2 = root.join("data/db2/12.1.5.70448");
     let output = std::process::Command::new("python3")
         .arg(root.join("scripts/follower_population.py"))
         .arg("--source-db")

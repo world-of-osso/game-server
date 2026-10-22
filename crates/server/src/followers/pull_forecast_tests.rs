@@ -78,7 +78,7 @@ pub(super) fn spawn_source_actor(
 
 #[test]
 fn tank_pull_forecast_uses_native_front_arc_after_master_facing_integration() {
-    let (mut h, tank, enemy) = source_fixture(46249);
+    let (mut h, tank, enemy) = source_fixture(46382);
     let target = *h
         .app
         .world()
@@ -115,13 +115,13 @@ fn tank_pull_forecast_uses_native_front_arc_after_master_facing_integration() {
 
 #[test]
 fn tank_pull_forecast_reads_generic_source_stats_and_actual_swing_timer_without_mutation() {
-    let (mut h, tank, enemy) = source_fixture(46249);
+    let (mut h, tank, enemy) = source_fixture(46382);
     let mut attack = AutoAttack::new(tank);
     attack.timer = 1.25;
     h.app.world_mut().entity_mut(enemy).insert(attack);
     let health = h.health(enemy);
     let level = h.app.world().get::<UnitLevel>(enemy).unwrap().0;
-    let rank = h.app.world().resource::<WorldData>().templates[&46249].rank;
+    let rank = h.app.world().resource::<WorldData>().templates[&46382].rank;
     let estimate = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
     assert!(estimate.expected_hit.is_finite() && estimate.expected_hit > 0.0);
     assert!(estimate.largest_hit >= estimate.expected_hit);
@@ -137,14 +137,14 @@ fn tank_pull_forecast_reads_generic_source_stats_and_actual_swing_timer_without_
 
 #[test]
 fn tank_pull_forecast_rank_does_not_apply_an_extra_elite_coefficient() {
-    let (mut h, tank, enemy) = source_fixture(46249);
+    let (mut h, tank, enemy) = source_fixture(46382);
     let original = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
     // Classification alone cannot multiply already initialized ExpectedStat damage.
     h.app
         .world_mut()
         .resource_mut::<WorldData>()
         .templates
-        .get_mut(&46249)
+        .get_mut(&46382)
         .unwrap()
         .rank = 0;
     let ordinary = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
@@ -204,7 +204,7 @@ pub(super) fn add_native_healer(h: &mut Harness) -> Entity {
 
 #[test]
 fn tank_pull_forecast_lifetime_stops_at_native_divine_protection_stat_expiry() {
-    let (mut h, tank, enemy) = source_fixture(46249);
+    let (mut h, tank, enemy) = source_fixture(46382);
     crate::spell_cast::creature_cast(h.app.world_mut(), tank, 498, Some(tank), false).unwrap();
     h.advance(3);
     let expiry = h
@@ -236,7 +236,7 @@ fn tank_pull_forecast_lifetime_stops_at_native_divine_protection_stat_expiry() {
 
 #[test]
 fn tank_pull_forecast_lifetime_does_not_blanket_refuse_for_a_pure_native_hot() {
-    let (mut h, tank, enemy) = source_fixture(46249);
+    let (mut h, tank, enemy) = source_fixture(46382);
     let healer = add_native_healer(&mut h);
     crate::spell_cast::creature_cast(h.app.world_mut(), healer, 774, Some(tank), false).unwrap();
     h.advance(3);
@@ -257,7 +257,7 @@ fn tank_pull_forecast_lifetime_does_not_blanket_refuse_for_a_pure_native_hot() {
 
 #[test]
 fn tank_pull_forecast_dead_or_other_copy_enemy_is_not_a_candidate() {
-    let (mut h, tank, enemy) = source_fixture(46249);
+    let (mut h, tank, enemy) = source_fixture(46382);
     assert!(forecast::read_generic_creature(h.app.world(), enemy, tank).is_ok());
     h.app.world_mut().get_mut::<Health>(enemy).unwrap().current = 0.0;
     assert!(forecast::read_generic_creature(h.app.world(), enemy, tank).is_err());
