@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Demo lifecycle production-stat continuation — 2026-10-21
+
+Fixture165a32309 restores the historical production StatsPlugin/pet-runtime measurement, limited to Demo ST/3targets and adding authenticated copy-only Imp closure. One seed1/level32/60s on matched sim/serverO1/depsO3 yields totals8660/12847 versus old baseline7550/8027 and historical pre-lifecycle candidate6988/8627; actual owned actors observed1→20, zero dummy retaliation, identical initial AP/SP/crit/haste. Thirteen historical native row scopes remain exactly equal. Run1PASS30.60s/zero warnings; reports `production-stats-demo-lifecycle-comparison.{md,json}` and `demo165-metadata-scope-comparison.json` under the rotation diagnostic directory. Current cohort includes intervening master8e3777ef6 changes, so this is not an isolated marginal-effect experiment. Neither60s sample casts Demonbolt or samples Core; preserve that negative observation despite separate natural84-fade Core proof. No full APL/Retail/statistical parity or tank mitigation claim.
+
+
 ### Base Tyrant Demonfire binding — 2026-10-21
 
 At6a0ec7e69 actual learned265187 summons base135002 but emits no270481 damage (1genuineRED14.58s/zero warnings). Exact265187/135002 now binds native270481 from pinned SimC pets1520–1533. Actual cast time/cost/coefficient remain native; no substitute Imp/Firebolt, no fabricated cadence. Atf1a03c3c8 native2GREEN17.12s/zero warnings proves base270481 damage and retained32/35 single-variant admission. This is attack-binding proof only: base Tyrant still has existing generic demon inheritance rather than a newly approved actor-specific SP policy; Antoran250289 Burning Cleave, Demonic Power roster and orchestration remain open.
