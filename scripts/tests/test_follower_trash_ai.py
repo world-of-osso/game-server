@@ -13,6 +13,22 @@ LW = Path("/home/osso/Repos/LittleWigs")
 
 
 class TrashSources(unittest.TestCase):
+    def test_retail_display_comes_from_tdb_not_legacy_model_table(self):
+        with sqlite3.connect(
+            "file:/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db?mode=ro",
+            uri=True,
+        ) as world:
+            report = trash.census(
+                world,
+                dict(
+                    maps=[dict(MapID=2515, MapName_lang="The Azure Vault")],
+                    encounters=[],
+                ),
+                LW,
+            )
+        lasher = next(actor for actor in report["actors"] if actor["entry"] == 196102)
+        self.assertEqual(lasher["models"], [76261])
+
     def test_lua_cast_events_belong_to_registered_named_actor(self):
         kits = trash.read_lua_kits(LW)
         self.assertEqual(kits[196102]["spells"], [387564])

@@ -245,7 +245,7 @@ def census(world, inventory, littlewigs):
         actor["models"] = [
             r[0]
             for r in world.execute(
-                "SELECT CreatureDisplayID FROM creature_template_model WHERE CreatureID=?",
+                "SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx",
                 (entry,),
             )
         ]
