@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 #[path = "azure_extraction.rs"]
 mod azure_extraction;
+#[path = "corridor_inputs.rs"]
+mod corridor_inputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Spawn {
@@ -32,7 +34,7 @@ pub(super) struct Edge {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct RouteStep {
     pub pack: u32,
-    pub anchor: [f32; 2],
+    pub anchor: [f32; 3],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -43,32 +45,36 @@ pub(super) struct Graph {
     pub entrance_pack: u32,
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
-    #[serde(default)]
     pub teleports: Vec<Edge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
 }
+
+#[path = "walk_route.rs"]
+mod walk_route;
 
 #[derive(Resource)]
 pub(crate) struct Space(pub(super) Graph);
 
 impl Space {
     pub(crate) fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
-        let nodes = self.path_nodes(from, to, false)?;
-        let mut points: Vec<_> = nodes
+        let mut points: Vec<_> = self
+            .walk_legs(from, to)?
             .into_iter()
-            .skip(1)
-            .map(|id| {
-                self.0
-                    .packs
-                    .iter()
-                    .find(|pack| pack.id == id)
-                    .unwrap()
-                    .point()
-            })
+            .map(|(point, _)| point)
             .collect();
-        points.push(to);
+        if points.is_empty() {
+            points.push(to);
+        }
         Ok(points)
+    }
+
+    pub(super) fn walk_legs(
+        &self,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
+        walk_route::read(&self.0, from, to)
     }
 
     pub(super) fn next_translocation(
@@ -76,7 +82,7 @@ impl Space {
         from: Vec3,
         to: Vec3,
     ) -> Result<Option<(u32, u32)>, String> {
-        let nodes = self.path_nodes(from, to, true)?;
+        let nodes = self.path_nodes(from, to)?;
         Ok(nodes.windows(2).find_map(|pair| {
             self.0
                 .teleports
@@ -86,12 +92,7 @@ impl Space {
         }))
     }
 
-    fn path_nodes(
-        &self,
-        from: Vec3,
-        to: Vec3,
-        include_teleports: bool,
-    ) -> Result<Vec<u32>, String> {
+    fn path_nodes(&self, from: Vec3, to: Vec3) -> Result<Vec<u32>, String> {
         let nearest = |point: Vec3| {
             self.0
                 .packs
@@ -117,13 +118,13 @@ impl Space {
                 break;
             }
             visited.insert(node);
-            for edge in self.0.edges.iter().map(|edge| (edge, false)).chain(
-                self.0
-                    .teleports
-                    .iter()
-                    .filter(|_| include_teleports)
-                    .map(|edge| (edge, true)),
-            ) {
+            for edge in self
+                .0
+                .edges
+                .iter()
+                .map(|edge| (edge, false))
+                .chain(self.0.teleports.iter().map(|edge| (edge, true)))
+            {
                 let (edge, directed) = edge;
                 let next = if edge.from == node {
                     edge.to
@@ -397,7 +398,7 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
         assert!(seen.insert(pack), "duplicate authored pack{pack}");
         assert!(graph.packs.iter().any(|entry| entry.id == pack));
         let anchor = step["anchor"].as_array().unwrap();
-        assert_eq!(anchor.len(), 2);
+        assert_eq!(anchor.len(), 3);
         assert!(
             anchor
                 .iter()
@@ -407,7 +408,6 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
 }
 
 #[test]
-#[ignore = "AZURE_SIMULATOR_GRAPH_PENDING: extract the private baked graph and author its route"]
 fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_route() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../content/dungeons/azure-vault-2515.json");
@@ -432,10 +432,6 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
         "complete native205 alias uses Normal source population"
     );
     assert!(!graph.edges.is_empty(), "real frozen navigation distances");
-    let opening = graph.route.first().unwrap().pack;
-    assert!(graph.packs.iter().any(|pack| pack.id == opening
-        && pack.spawns.iter().any(|spawn| spawn.entry == 196102)),
-        "open on a sourced Conjured Lasher, not the live capture's transient entity ID");
     let mut route_ids = BTreeSet::new();
     for step in &graph.route {
         assert!(
@@ -445,13 +441,24 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
         assert!(step.anchor.into_iter().all(f32::is_finite));
         assert!(graph.packs.iter().any(|pack| pack.id == step.pack));
     }
-    for boss in [186644, 186739, 186737, 186738] {
-        assert!(
-            graph.packs.iter().any(|pack| route_ids.contains(&pack.id)
-                && pack.spawns.iter().any(|spawn| spawn.entry == boss)),
-            "authored route must include boss{boss}"
-        );
-    }
+    let bosses = [186644, 186739, 186737, 186738];
+    let actual_bosses: Vec<_> = graph
+        .route
+        .iter()
+        .flat_map(|step| {
+            &graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == step.pack)
+                .unwrap()
+                .spawns
+        })
+        .filter_map(|spawn| bosses.contains(&spawn.entry).then_some(spawn.entry))
+        .collect();
+    assert_eq!(
+        actual_bosses, bosses,
+        "sourced encounter order, not an arbitrary opening pack"
+    );
 }
 
 #[test]
@@ -489,15 +496,8 @@ fn extract_stockade_graph() {
         entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
-        route: {
-            #[derive(Deserialize)]
-            struct AuthoredRoute {
-                route: Vec<RouteStep>,
-            }
-            serde_json::from_slice::<AuthoredRoute>(&std::fs::read(graph_path()).unwrap())
-                .expect("preserve authored pull order across topology extraction")
-                .route
-        },
+        // Topology extraction is followed by native radius capture and the generic route author.
+        route: Vec::new(),
         teleports: Vec::new(),
         packs,
         edges,
