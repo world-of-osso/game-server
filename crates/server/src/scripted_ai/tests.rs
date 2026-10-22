@@ -46,6 +46,7 @@ pub(crate) mod data_bosses;
 mod dungeonach;
 mod rainfire_visibility;
 mod smart_combat;
+mod trash_kits;
 mod wailing_caverns;
 const NPC_LORD_OVERHEAT: u32 = 46264;
 const NPC_HOGGER: u32 = 46254;
