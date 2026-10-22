@@ -96,6 +96,12 @@ pub struct SpellInfo {
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub(crate) cast_proc_mods: Vec<u32>,
+    /// NPC-selected release rank; None holds for explicit release or native max hold.
+    #[serde(skip)]
+    pub(crate) cast_empower_to: Option<u8>,
+    /// Completed native empower stage passed into release spell/effect snapshots.
+    #[serde(skip)]
+    pub(crate) cast_empower_level: Option<u8>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
@@ -264,6 +270,8 @@ pub struct SpellCategories {
     pub max_charges: u32,
     /// `spell_category.ChargeRecoveryTime` of `charge_category`, ms per charge.
     pub charge_recovery_ms: u32,
+    /// Native SpellCategory.TypeMask, used by aura205 (not the category ID).
+    pub charge_type_mask: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
