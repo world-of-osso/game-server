@@ -18,6 +18,7 @@ pub(super) const MOONFIRE: u32 = 8921;
 pub(super) const DEVASTATE: u32 = 20243;
 const MOONFIRE_DAMAGE: u32 = 164812;
 const THUNDER_CLAP_SLOW: u32 = 435203;
+const THUNDER_CLAP_REND: u32 = 388539;
 const SHRED_RANK: u32 = 231063;
 const SHIELD_SLAM: u32 = 23922;
 const SHIELD_SLAM_RANK: u32 = 231834;
@@ -56,9 +57,21 @@ pub(super) fn moonfire(world: &mut World, caster: Entity, target: Entity, depth:
     spell_cast::missiles::launch(world, caster, &child, plan, depth + 1);
 }
 
-/// 6343's tooltip explicitly names 435203s1/d. Apply per damage-hit enemy.
+/// TC a352b1fa spell_warrior.cpp2096–2144: slow and known-Rend hooks share landed hits.
 pub(super) fn thunder_clap(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     spell_cast::cast_triggered(world, caster, THUNDER_CLAP_SLOW, Some(target), depth + 1);
+    let knows_rend = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(super::batch13::REND));
+    if knows_rend {
+        spell_cast::cast_triggered(world, caster, THUNDER_CLAP_REND, Some(target), depth + 1);
+    }
+}
+
+/// TC a352b1fa spell_warrior.cpp1773–1789: native effect96 owns movement and landing.
+pub(super) fn shield_charge(world: &mut World, caster: Entity, target: Entity, depth: u8) {
+    const SHIELD_CHARGE_EFFECT: u32 = 385953;
+    spell_cast::cast_triggered(world, caster, SHIELD_CHARGE_EFFECT, Some(target), depth + 1);
 }
 
 /// 2050s2 is the number of seconds removed when Flash Heal is cast.

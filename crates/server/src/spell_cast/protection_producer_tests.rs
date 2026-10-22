@@ -73,7 +73,6 @@ fn clap(rend: bool) -> (Harness, Vec<Entity>) {
 }
 
 #[test]
-#[ignore = "spec73 producer RED before TC Thunder Clap Rend hook"]
 fn protection_producers_tc_thunder_clap_emits_owned_rend_on_each_landed_enemy() {
     let (mut h, _) = clap(true);
     let landed: Vec<_> = h
@@ -118,7 +117,6 @@ fn protection_producers_tc_thunder_clap_emits_owned_rend_on_each_landed_enemy() 
 }
 
 #[test]
-#[ignore = "spec73 producer RED before TC Thunder Clap Rend hook"]
 fn protection_producers_tc_thunder_clap_without_known_rend_preserves_slow_only() {
     let (h, _) = clap(false);
     assert!(
@@ -132,7 +130,6 @@ fn protection_producers_tc_thunder_clap_without_known_rend_preserves_slow_only()
 }
 
 #[test]
-#[ignore = "spec73 producer RED before TC Shield Charge Dummy chain"]
 fn protection_producers_tc_shield_charge_moves_then_native_landing_children_deal_damage() {
     let mut h = fixture(false);
     let target = h.npc;

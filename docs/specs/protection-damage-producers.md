@@ -23,8 +23,12 @@ Restore the missing spec73 producer channels identified by `game-engine/data/dia
 
 |Producer|Status|Proof|
 |---|---|---|
-|Thunder Clap Rend|Missing|RED pending|
-|Shield Charge chain|Missing Dummy producer; generic effect96 exists|RED pending|
+|Thunder Clap Rend|TC hit hook implemented; GREEN pending|a0a9fca65 native landed hit lacks Rend; unknown-Rend control passes|
+|Shield Charge chain|TC Dummy→385953 implemented; existing effect96 owns385954|a0a9fca65 native cast succeeds but never moves/damages; GREEN pending|
 |Whirling Blade/Ravager|Missing named producer/ticks|RED pending|
 |Phalanx/Bloody Rebuke|Missing named producer/consumer|RED pending|
 |Guillotine/Venomfang|Equipped driver lifecycle exists; damage producers missing|RED pending|
+
+### First TC producer receipts
+
+Ignored a0a9fca65 `protection_producers_tc_ --include-ignored`:1PASS/2FAIL16.79s, compile7m59s/no warnings. Shield Charge admits with actual2362 shield but remains at its initial position; landed Thunder Clap retains its slow but lacks388539. Native unknown-Rend control passes. `/home/osso/.worktrees/logs/census-tail/protection-tc-red.log`. Minimal TC hooks retain native charge flight/trigger child and qualify Rend by actual KnownSpells, not presence of384277 or a generic unconditional bleed. GREEN pending; remaining producer rows are still open.
