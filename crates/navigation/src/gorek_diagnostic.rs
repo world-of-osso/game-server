@@ -111,6 +111,84 @@ fn neltharus_gorek_native_query_trace() {
     }
 }
 
+#[test]
+#[ignore = "requires canonical2521 assets and FOLLOWER_GOREK_DIAGNOSTICS"]
+fn ruby_resource_limited_tail_native_component_probe() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let output = PathBuf::from(std::env::var_os("FOLLOWER_GOREK_DIAGNOSTICS").unwrap());
+    let mut trace = std::fs::File::create(output.join("ruby-tail-native-status.txt")).unwrap();
+    let entrance = Vec3::new(1386.2, 131.0, 169.719);
+    let target = Vec3::new(1773.8756, 313.123, -18.689396);
+    let actual_tail = Vec3::new(1641.4063, 164.04453, 4.6875);
+    let mut nav = NavigationMap::open(&root.join("2521")).unwrap();
+    // Retain the entrance query's loaded mesh, as the production worker does.
+    nav.load_around(entrance, target).unwrap();
+    let filter = filter();
+    let (entrance_ref, _) = nav.nearest(entrance, &filter).unwrap();
+    let (target_ref, end_pos) = nav.nearest(target, &filter).unwrap();
+    let parents = connected_polygons(&nav, entrance_ref, &filter);
+    writeln!(
+        trace,
+        "entrance_component_polygons={} target_in_component={}",
+        parents.len(),
+        parents.contains_key(&target_ref)
+    )
+    .unwrap();
+    for (label, start) in [("entrance", entrance), ("actual_mover_tail", actual_tail)] {
+        let (start_ref, start_pos) = nav.nearest(start, &filter).unwrap();
+        let mut corridor = [0; MAX_PATH];
+        let mut count = 0;
+        // SAFETY: initialized owned native query, valid refs and bounded buffers.
+        let result = unsafe {
+            (*nav.query).findPath(
+                start_ref,
+                target_ref,
+                start_pos.as_ptr(),
+                end_pos.as_ptr(),
+                &filter,
+                corridor.as_mut_ptr(),
+                &mut count,
+                MAX_PATH as i32,
+            )
+        };
+        status(result, "Ruby native tail diagnostic").unwrap();
+        assert!(count > 0);
+        let last_ref = corridor[count as usize - 1];
+        let mut last_point = [0.0; 3];
+        // SAFETY: returned native reference and three-float arrays.
+        status(
+            unsafe {
+                (*nav.query).closestPointOnPoly(
+                    last_ref,
+                    end_pos.as_ptr(),
+                    last_point.as_mut_ptr(),
+                    std::ptr::null_mut(),
+                )
+            },
+            "Ruby native partial endpoint",
+        )
+        .unwrap();
+        writeln!(trace, "case={label} status={result:#x} reached={} polys={count} start_in_entrance_component={} nearest_start={start_pos:?} nearest_target={end_pos:?} native_last={last_point:?}", last_ref == target_ref, parents.contains_key(&start_ref)).unwrap();
+        match nav.path(start, target) {
+            Ok(path) => writeln!(
+                trace,
+                "production_complete={} production_points={} production_last={:?}",
+                path.complete,
+                path.points.len(),
+                path.points.last()
+            )
+            .unwrap(),
+            Err(error) => writeln!(trace, "production_error={error}").unwrap(),
+        }
+    }
+    eprintln!(
+        "Ruby component={} target_connected={}; diagnostic={}",
+        parents.len(),
+        parents.contains_key(&target_ref),
+        output.join("ruby-tail-native-status.txt").display()
+    );
+}
+
 fn tile_and_poly(nav: &NavigationMap, reference: dtPolyRef) -> (*const dtMeshTile, *const dtPoly) {
     let mut tile = std::ptr::null();
     let mut poly = std::ptr::null();
