@@ -28,6 +28,8 @@ mod kit_interrupt;
 mod kit_overrides;
 
 #[cfg(test)]
+mod fire_efficiency_tests;
+#[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;

@@ -39,7 +39,7 @@ struct DummyMeasurement {
     final_stats: serde_json::Value,
 }
 
-fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
+pub(super) fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
     let mut targets = vec![h.npc];
     targets.extend((1..count).map(|index| spawn_npc(&mut h.app, index as f32)));
     for &target in &targets {
@@ -175,7 +175,7 @@ fn sample_buffs(
     }
 }
 
-fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
+pub(super) fn prepare_follower(entry: u32, spec: u32, level: u8) -> (Harness, Entity) {
     if spec != 253 {
         return at_level(entry, level, |app| {
             app.add_plugins(crate::stats::StatsPlugin);
@@ -252,7 +252,7 @@ fn sample_dots(
     }
 }
 
-fn snapshot_stats(h: &Harness, caster: Entity) -> serde_json::Value {
+pub(super) fn snapshot_stats(h: &Harness, caster: Entity) -> serde_json::Value {
     let stats = h
         .app
         .world()
