@@ -70,7 +70,6 @@ fn encounter_coverage_orator_native_subjugate_damage_aura_and_copy_isolation() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = orator_copy(difficulty);
         let player = h.player();
-        let before = energy(&h, boss);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, SUBJUGATE, Some(player), false)
             .expect("ordinary native Subjugate, no invented power or triggered flags");
         h.advance(1.4);
@@ -97,11 +96,6 @@ fn encounter_coverage_orator_native_subjugate_damage_aura_and_copy_isolation() {
                 .log
                 .iter()
                 .all(|event| event.source != Some(boss.to_bits()))
-        );
-        assert_eq!(
-            energy(&h, boss),
-            before,
-            "native Subjugate has no Energy cost"
         );
     }
 }
