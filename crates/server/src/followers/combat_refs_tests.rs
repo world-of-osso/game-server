@@ -55,6 +55,79 @@ fn spawn_dummy(h: &mut Harness, unit: Entity, index: usize) -> Entity {
 }
 
 #[test]
+#[ignore = "RED: suppressed projectile references are not active enemy combat"]
+fn follower_combatrefs_native_missile_launch_waits_for_enemy_combat() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let (mut h, unit, targets) = native_dummies();
+    let target = targets[0];
+    let mut at = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(unit)
+        .unwrap();
+    at.x += 30.0;
+    h.app.world_mut().entity_mut(target).insert(at);
+    crate::spell_cast::creature_cast(h.app.world_mut(), unit, 133, Some(target), false)
+        .expect("native learned Fireball");
+    for _ in 0..100 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<crate::combat_refs::CombatRefs>(target)
+            .is_some()
+        {
+            break;
+        }
+    }
+    assert!(
+        h.app
+            .world()
+            .get::<crate::combat_refs::CombatRefs>(target)
+            .is_some(),
+        "actual native missile must create the target-side reference"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<CombatStatus>(target)
+            .is_none_or(|status| !status.0),
+        "TC Spell.cpp2763-2764: target engages only when the projectile hits"
+    );
+    let follower = h.app.world().get::<Follower>(unit).unwrap().clone();
+    let party = ai::party_units(h.app.world_mut(), h.caster);
+    assert!(
+        ai::engaged_enemies(h.app.world_mut(), &follower, unit, &party).is_empty(),
+        "suppressed launch references must not start party rotations before impact"
+    );
+    for _ in 0..100 {
+        h.advance(1);
+        if h.app
+            .world()
+            .get::<CombatStatus>(target)
+            .is_some_and(|status| status.0)
+        {
+            break;
+        }
+    }
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.target == Some(target.to_bits())
+                && event.source == Some(unit.to_bits())
+                && event.spell_id == Some(133)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0),
+        "the native missile must actually hit, not an invented reference refresh"
+    );
+    assert_eq!(
+        ai::engaged_enemies(h.app.world_mut(), &follower, unit, &party).len(),
+        1,
+        "native impact activates the party reference"
+    );
+}
+
+#[test]
 fn follower_combatrefs_native_three_targets_reach_area_policy() {
     let (mut h, unit, targets) = native_dummies();
     let owner = h.caster;
