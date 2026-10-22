@@ -194,7 +194,6 @@ fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
 }
 
 #[test]
-#[ignore = "qualify native Feel the Burn Fire Blast acquisition"]
 fn proc_fidelity_63_feel_the_burn_native_fire_blast_grants_mastery() {
     let (mut h, caster) = prepare(209059);
     assert!(has_aura(h.app.world(), caster, 383391));
@@ -214,7 +213,6 @@ fn proc_fidelity_63_feel_the_burn_native_fire_blast_grants_mastery() {
 }
 
 #[test]
-#[ignore = "native Feel the Burn eligibility RED before implementation"]
 fn proc_fidelity_63_feel_the_burn_native_fireball_does_not_grant_mastery() {
     let (mut h, caster) = prepare(209059);
     assert!(has_aura(h.app.world(), caster, 383391));
@@ -238,7 +236,6 @@ fn proc_fidelity_63_feel_the_burn_native_fireball_does_not_grant_mastery() {
 }
 
 #[test]
-#[ignore = "native Feel the Burn overlapping lifetimes RED before implementation"]
 fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
     let (mut h, caster) = prepare(209059);
     let target = h.npc;
@@ -281,7 +278,6 @@ fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
 }
 
 #[test]
-#[ignore = "native async-cap positive control pending GREEN"]
 fn proc_fidelity_63_feel_the_burn_native_cap_replaces_oldest_application() {
     let (mut h, caster) = prepare(209059);
     // Native child casts isolate the authored100-stack cap, not producer frequency.
