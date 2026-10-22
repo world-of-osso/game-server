@@ -84,7 +84,7 @@ fn read_approach_path(
         .query_deferred(
             unit,
             map.map_id,
-            Goal::SightApproach(target.to_bits()),
+            Goal::Approach(target.to_bits()),
             NavQuery::Path { from, to },
         )
     else {
