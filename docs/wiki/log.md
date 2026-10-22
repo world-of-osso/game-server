@@ -1,3 +1,7 @@
+## 2026-10-21 — Pyroclasm named trigger/consumer policy
+
+[Auras](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21): true admitted HS spends roll native269650 chance; hardcast11366/1254851 snapshots native269651 damage and spends one stack, instant casts retain it. SimC supplies semantics where TC/DB2 have no proc script/data;70448 supplies15%/230%/two stacks. Native RED2 reproduced; instant-control crit oracle corrected; enabled GREEN pending.
+
 ## 2026-10-21 — Generic native RPPM haste rows
 
 [Auras](systems/auras.md#rppm-haste-modifiers--2026-10-21): load Type1 Param/Coeff rows and scale the RPPM rate before probability/bad-luck math. Donor native325201/PPM57/mod221 with real learned55 haste30 gives RED94.78624 expected vs42.625 actual. No Flags inference or timer changes; GREEN pending; non-haste types remain gaps.

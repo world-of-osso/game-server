@@ -1,5 +1,11 @@
 # Auras
 
+## Pyroclasm Hot Streak policy — 2026-10-21
+
+`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` extends the existing Hot Streak cast-boundary hook, not generic proc masks. A true admitted48108 consumption rolls active269650 effect0 (native15%) and casts269651 with its native duration/two-stack cap. SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies the policy; pinned TC has no script and native269650 is DUMMY4 without proc options or a trigger. Native269651's230% value wins over reference numbers.
+
+The ordinary per-cast clone records whether admission had positive cast time. At launch, eligible11366/1254851 hardcasts retain one269651 effect0 percentage in the existing numeric modifier snapshot; after launch they spend one stack through the native stack-loss path without refreshing its timer. This preserves damage after consumption and through missiles, and excludes instant casts even if buff state changes during an in-flight hardcast. Hot Streak consumption remains tied to the exact admitted instance. Native RED reproduced64 HS spends without a proc and two retained stacks after a hardcast; corrected instant-control oracle accounts for real crit outcomes/authored variance rather than assuming identical RNG. Enabled GREEN pending. [Contract](../../specs/auras.md#pyroclasm-hot-streak-policy); tests `followers/pyroclasm_tests.rs`.
+
 ## RPPM haste modifiers — 2026-10-21
 
 `SpellInfo::ProcsPerMinute` now retains the native Type1 Param/Coeff rows, loaded once with the base-rate catalog. TC a352b1fa `SpellInfo.cpp4292–4308/4358–4371` multiplies the rate by each selected haste factor before computing probability and bad-luck protection. Params1–5 use this engine's existing unified derived haste; Flags are not haste semantics. All159 current70448 Type1 rows have PlayerConditionID0. Native325201 PPM57/mod221 with actual learned55 Martial Agility1272685 (30% haste) reproduced expected94.78624% vs42.625% before implementation. The inherited donor test is enabled; GREEN pending. Other modifier types2–8 remain named unsupported work, including selected73 aura202560's Type8 row. [Contract](../../specs/auras.md#data-driven-rppm-haste); test `auras/dance_rppm_tests.rs`.

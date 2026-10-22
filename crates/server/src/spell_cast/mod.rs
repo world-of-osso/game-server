@@ -2217,10 +2217,11 @@ fn begin_validated_cast(
 ) -> Result<(), CastFailure> {
     let mut admitted = spell.clone();
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
+    crate::stand_state::stand_to_cast(world, caster, attributes(&admitted, 0));
+    start_gcd(world, caster, &admitted);
+    let cast_ms = cast_time_ms(world, caster, &admitted);
+    admitted.cast_was_hardcast = cast_ms > 0;
     let spell = &admitted;
-    crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
-    start_gcd(world, caster, spell);
-    let cast_ms = cast_time_ms(world, caster, spell);
     if cast_ms > 0 {
         let mut cast = CastState::normal(
             spell.id,
@@ -2395,9 +2396,9 @@ pub(crate) fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
-    prepared.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
-        world, caster, &prepared,
-    ));
+    let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
+    launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
+    prepared.cast_charge_mods = Some(launch_modifiers);
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {

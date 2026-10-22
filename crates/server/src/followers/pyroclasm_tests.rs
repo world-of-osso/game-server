@@ -28,7 +28,6 @@ fn pyroclasm_stacks(h: &Harness, caster: Entity) -> u8 {
 }
 
 #[test]
-#[ignore = "DPS parity RED: Hot Streak spend never rolls native Pyroclasm"]
 fn dps_parity_pyroclasm_hot_streak_spend_uses_native_talent_chance() {
     let _seed = crate::random::seed_scope(269650);
     let (mut h, caster) = prepare(209059);
@@ -115,7 +114,6 @@ fn assert_native_damage_ratio(base: f32, damage: f32, expected: f32) {
 }
 
 #[test]
-#[ignore = "DPS parity RED: Pyroclasm hardcast damage and one-stack consumer absent"]
 fn dps_parity_pyroclasm_hardcast_keeps_native_bonus_at_missile_impact_and_spends_one_stack() {
     let (base, _) = cast_pyroblast_with_proc(false, false);
     let (boosted, remaining) = cast_pyroblast_with_proc(true, false);

@@ -1,3 +1,4 @@
+- [Pyroclasm policy](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21) — named SimC trigger/hardcast consumer on native15%/230%/two-stack data; launch snapshot preserves consumed bonus; native RED2, GREEN pending.
 - [RPPM haste rows](systems/auras.md#rppm-haste-modifiers--2026-10-21) — native Type1 Param/Coeff scaling, not Flags; actual learned55 Dance RED reproduced, enabled GREEN pending; other modifier types remain gaps.
 - [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED, GREEN pending.
 - [Cast while casting](systems/spell-casting.md#cast-while-casting--2026-10-21) — native Attr4 admission shared by creature/player/kit paths, without delaying Fire Blast behind the active cast; three native RED reproduced, GREEN pending.

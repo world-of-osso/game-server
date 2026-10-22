@@ -89,13 +89,17 @@ pub struct SpellInfo {
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
     pub(crate) cast_ignore_cooldowns: bool,
-    /// Successful-launch charged modifiers; None means not yet snapshotted.
+    /// Successful-launch consumed modifiers (charges or scripted stacks).
+    /// None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
     /// Script-owned cast-time proc instances that actually modified admission.
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub(crate) cast_proc_mods: Vec<u32>,
+    /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
+    #[serde(skip)]
+    pub(crate) cast_was_hardcast: bool,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
