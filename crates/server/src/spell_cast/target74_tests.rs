@@ -1,5 +1,5 @@
 //! Source74 geometry only: these casts do not certify the sampled spells' actions.
-use super::test_harness::{Harness, harness, world_db};
+use super::test_harness::{Harness, harness, spawn_npc, world_db};
 use super::*;
 use shared::components::{Position, Rotation};
 
@@ -10,11 +10,19 @@ const THWAP: u32 = 453588;
 const BLOOD_AND_THUNDER: u32 = 128206;
 const FORCE_JUMP: u32 = 140575;
 const DEATHFORGE_MINE: u32 = 38107;
+const THROW_DYNAMITE: u32 = 86088;
 
 fn scene() -> (Harness, Position) {
     let mut h = harness(
         Vec::new(),
-        &[CRAB, THWAP, BLOOD_AND_THUNDER, FORCE_JUMP, DEATHFORGE_MINE],
+        &[
+            CRAB,
+            THWAP,
+            BLOOD_AND_THUNDER,
+            FORCE_JUMP,
+            DEATHFORGE_MINE,
+            THROW_DYNAMITE,
+        ],
         1,
     )
     .expect("native source74 fixture");
@@ -56,6 +64,59 @@ fn assert_native_floor(h: &mut Harness, actual: targets::Dest) {
         "{actual:?} versus floor{height}"
     );
     assert!((actual.orientation - TARGET_YAW).abs() < 0.001);
+}
+
+fn spawn_enemy_field(h: &mut Harness, origin: Position) -> Vec<(Entity, Vec3)> {
+    let map = *h.app.world().get::<crate::maps::InMap>(h.npc).unwrap();
+    let original = (h.npc, Vec3::new(origin.x, origin.y, origin.z));
+    (-7..=7)
+        .flat_map(|x| (-7..=7).map(move |z| (x, z)))
+        .map(|(x, z)| {
+            let entity = spawn_npc(&mut h.app, 0.0);
+            let position = Position {
+                x: origin.x + x as f32,
+                z: origin.z + z as f32,
+                ..origin
+            };
+            h.app.world_mut().entity_mut(entity).insert((position, map));
+            (entity, Vec3::new(position.x, position.y, position.z))
+        })
+        .chain(std::iter::once(original))
+        .collect()
+}
+
+#[test]
+fn toy_coverage_target74_area_recipients_use_the_same_sample_as_emitted_destination() {
+    let (mut h, origin) = scene();
+    let inputs = spawn_enemy_field(&mut h, origin);
+    let spell = world_db()
+        .unwrap()
+        .store
+        .get(THROW_DYNAMITE)
+        .unwrap()
+        .clone();
+    // Native86088 [74,16]: source A radius5, B area radius2, no target cap.
+    for _ in 0..SAMPLES {
+        let plan = plan_targets(h.app.world_mut(), h.caster, &spell, Some(h.npc), false)
+            .expect("native74-to-area cast plan");
+        let effect = plan.iter().find(|effect| effect.index == 0).unwrap();
+        let destination = effect.dest.expect("native74 emitted destination");
+        assert!(horizontal_distance(destination, origin) <= 5.001);
+        let expected: std::collections::HashSet<_> = inputs
+            .iter()
+            .filter(|(_, point)| point.distance(destination.position) <= 2.0)
+            .map(|(entity, _)| *entity)
+            .collect();
+        let actual: std::collections::HashSet<_> = effect.units.iter().copied().collect();
+        assert!(
+            !expected.is_empty(),
+            "concrete field must cover sampled destination"
+        );
+        assert_eq!(
+            actual, expected,
+            "recipients must use emitted center {destination:?}"
+        );
+    }
 }
 
 #[test]
