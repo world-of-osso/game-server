@@ -4,6 +4,8 @@ from functools import lru_cache
 import json
 from pathlib import Path
 
+from scripts.follower_spell_role_policy import read_named_child_edges
+
 # TC a352b1fa SharedDefines.h1348–1511 and SpellAuraDefines.h90–249.
 DAMAGE_EFFECTS = frozenset((2, 7, 9, 17, 31, 58, 62, 121, 165))
 HEAL_EFFECTS = frozenset((10, 67, 75, 136))
@@ -88,4 +90,4 @@ class SpellRoleCatalog:
         native = [dict(parent_spell_id=spell, child_spell_id=row['EffectTriggerSpell'],
                        kind='native_trigger', effect_id=row['ID'])
                   for row in effects if row['EffectTriggerSpell'] > 0]
-        return native + self.tc_edges[spell]
+        return native + self.tc_edges[spell] + read_named_child_edges(self.db, spell)
