@@ -165,6 +165,13 @@ impl NavigationMap {
         }
         let last_ref = corridor[count as usize - 1];
         let complete = last_ref == end_ref;
+        let exhaustion_flags = DT_PARTIAL_RESULT | DT_OUT_OF_NODES;
+        let exhausted = result & exhaustion_flags == exhaustion_flags;
+        // A completed search proves a disconnect. Only resource-limited searches
+        // may expose a walkable prefix; preserve stationary CannotReachTarget policy.
+        if !complete && !exhausted {
+            return Err("unreachable target (incomplete corridor)".into());
+        }
         let reachable_end = if complete {
             end_pos
         } else {

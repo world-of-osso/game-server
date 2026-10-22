@@ -234,7 +234,7 @@ fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
 }
 
 #[test]
-fn navigation_disconnected_partial_walk_stops_and_stays_blocked() {
+fn navigation_completed_disconnected_search_stays_blocked_without_moving() {
     let dir = tempfile::tempdir().unwrap();
     let map_dir = dir.path().join("12");
     std::fs::create_dir(&map_dir).unwrap();
@@ -250,35 +250,14 @@ fn navigation_disconnected_partial_walk_stops_and_stays_blocked() {
     std::fs::write(map_dir.join("32_31.nav"), tile).unwrap();
     let mut nav = Navigation::new(dir.path());
     let actor = Entity::from_bits(99);
-    let mut from = Vec3::new(20.0, 0.2, 20.0);
+    let from = Vec3::new(20.0, 0.2, 20.0);
     let target = Vec3::new(80.0, 0.2, 20.0);
-    let mut progressed = false;
-    let mut blocked = false;
-    for _ in 0..100 {
-        let mut movement = request(12, from, target);
-        movement.reach = 0.0;
-        let step = nav.advance(actor, movement);
-        nav.drain_until_idle();
-        match step {
-            Step::Moved { position, reached } => {
-                assert!(!reached, "disconnected prefix must never report arrival");
-                let next = point(position);
-                assert!(next.x < 40.0, "must not cross the authored fixture gap");
-                progressed |= next != from;
-                from = next;
-            }
-            Step::Blocked => {
-                blocked = true;
-                break;
-            }
-            Step::Pending => {}
-            Step::Unbaked => panic!("fixture bake missing"),
-        }
-    }
-    assert!(
-        progressed && blocked,
-        "walk prefix, then block at its actual end"
-    );
+    // Previous partial-walking implementation demonstrably moved on these islands.
+    // A completed search now proves the disconnect and must never return Moved.
+    assert!(matches!(
+        ready_step(&mut nav, actor, request(12, from, target)),
+        Step::Blocked
+    ));
     for _ in 0..5 {
         assert!(matches!(
             ready_step(&mut nav, actor, request(12, from, target)),
