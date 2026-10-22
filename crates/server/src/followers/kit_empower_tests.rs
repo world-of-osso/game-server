@@ -337,6 +337,8 @@ fn native_empower_tip_scales_snapshots_max_rank_before_consuming_one_use() {
     );
     h.advance(20);
     assert!(h.app.world().get::<CastState>(caster).is_none());
+    // Native359077 waits300ms, then travels at36yd/s; release is not impact.
+    h.advance(20);
     assert!(
         h.inbox
             .log
