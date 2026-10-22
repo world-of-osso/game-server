@@ -45,7 +45,6 @@ fn assert_thirty_second_mauling_channel(h: &Harness, boss: Entity) {
 }
 
 #[test]
-#[ignore = "native Dailcry source proof pending"]
 fn encounter_coverage_dailcry_first_pierce_uses_current_lua_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = dailcry_copy(difficulty);
@@ -69,7 +68,6 @@ fn encounter_coverage_dailcry_first_pierce_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "native Dailcry ongoing proof pending"]
 fn encounter_coverage_dailcry_ongoing_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = dailcry_copy(difficulty);
@@ -216,7 +214,6 @@ fn encounter_coverage_dailcry_ongoing_native_damage_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "native Dailcry evade/rearm proof pending"]
 fn encounter_coverage_dailcry_evade_rearms_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = dailcry_copy(difficulty);

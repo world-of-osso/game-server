@@ -1,5 +1,5 @@
 - [Midnight clock authority](investigations/follower-data.md#midnight-clock-authority--2026-10-22) —31 incoming-timeline modules/160 native alert rows;30 new ports retain clock/identity/placement gaps, Kystia TC exception preserved.
-- [Dailcry native Mauling channel](investigations/follower-data.md#captain-dailcry-native-channel-boundary--2026-10-22) — first/reset native cases pass; corrected30s-channel ongoing oracle pending.
+- [Dailcry native Mauling channel](investigations/follower-data.md#captain-dailcry-native-channel-boundary--2026-10-22) — native3-case composite proof, full30s channel/12requests/damage/copy-credit; controller gaps retained.
 - [Ki'katal source-clock partial](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22) — native3/3 Normal/Follower request/effect/reset/copy-credit proof; controller gaps retained.
 - [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
