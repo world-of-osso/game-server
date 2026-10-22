@@ -10,7 +10,8 @@ from pathlib import Path
 import sqlite3
 
 from follower_placements import (PLACEMENT_POLICY, TRASH_HOSTILITY_POLICY, TABLE_KEYS,
-    backup, make_sql, open_readonly, prepare_templates, read_table_rows)
+    backup, make_sql, open_readonly, prepare_templates, read_mdt_enemy_table, read_table_rows)
+from follower_trash_density import DENSITY_POLICY, apply_mdt_density
 from follower_placement_sources import (SINGLE_FRAME_POLICY, digest, read_cached_npc, read_db2, read_json_payload,
     read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
 
@@ -127,6 +128,12 @@ def prepare(args):
     manifest = json.loads(args.manifest.read_text())
     if manifest['placement_policy'] != PLACEMENT_POLICY or manifest['faction_policy'] != TRASH_HOSTILITY_POLICY:
         raise ValueError('trash manifest differs from approved source policies')
+    density_policy = manifest.get('density_policy')
+    if manifest['map_id'] == 2811:
+        if density_policy is not None:
+            raise ValueError('published Magisters is explicitly exempt from retroactive density changes')
+    elif density_policy != DENSITY_POLICY:
+        raise ValueError('trash map requires the explicit MDT clone-count density policy')
     updates = manifest.get('guarded_faction_updates', [])
     if updates and (manifest['map_id'] != 2811 or updates != [232106]):
         raise ValueError('only the explicit Magisters232106 faction correction is authorized')
@@ -142,6 +149,13 @@ def prepare(args):
     tables, authentication = read_db2(args.db2, ('MapDifficulty', 'MapChallengeMode'))
     polygons = read_surface_polygons(args.surfaces)
     pages, placements, gaps = read_trash_markers(manifest, tables, args.cache, polygons)
+    density = None
+    if density_policy is not None:
+        if manifest['density_source']['policy'] != DENSITY_POLICY:
+            raise ValueError('density count source does not declare the approved policy')
+        enemies, proof = read_mdt_enemy_table(manifest['density_source'], manifest['map_id'], tables)
+        placements, density, density_gaps = apply_mdt_density(placements, enemies, proof)
+        gaps.extend(density_gaps)
     baseline_path, prepared_path, replay_path = [args.output / name for name in ('baseline.sqlite', 'prepared.sqlite', 'replayed.sqlite')]
     with closing(open_readonly(args.source_db)) as source:
         backup(source, baseline_path)
@@ -157,6 +171,9 @@ def prepare(args):
                    entrance=None, entrance_gaps=[f"FOLLOWER_ENTRANCE_UNSOURCED_{manifest['map_id']}"],
                    route_queries=[], nav_directory=str(args.nav.resolve()), nav_files_sha256=nav_files,
                    canonical_modified=False)
+    if density is not None:
+        receipt['density'] = density
+        receipt['density_selector_sha256'] = digest(Path(__file__).with_name('follower_trash_density.py'))
     if not placements:
         receipt['status'] = 'BLOCKED_NO_QUALIFIED_TRASH_MARKERS'
         (args.output / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')

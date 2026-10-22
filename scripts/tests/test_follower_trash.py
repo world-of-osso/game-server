@@ -210,5 +210,43 @@ class BlindingTrashAcceptance(unittest.TestCase):
         self.assertEqual(receipt['sql_replay_count'], 3)
 
 
+@unittest.skipUnless('VOIDSCAR_TRASH_DB' in os.environ, 'requires explicit Voidscar source/prepared fixture')
+class VoidscarDensityAcceptance(unittest.TestCase):
+    def test196_density_capped_actors_are_unshifted_own_native_observations(self):
+        path = Path(os.environ['VOIDSCAR_TRASH_DB']).resolve()
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature WHERE map=2923 AND guid BETWEEN 63923100 AND 63923999 ORDER BY guid').fetchall()
+            self.assertEqual(len(rows), 196)
+            self.assertEqual([r[0] for r in rows], list(range(63923100, 63923296)))
+            receipt = json.loads((path.parent / 'receipt.json').read_text())
+            witness = json.loads(Path(receipt['surface_proof']['path']).read_text())
+            by_marker = {(p['entry'], p['marker_index']): p for p in witness['markers']}
+            actual = {r[0]: r[1:] for r in rows}
+            for point in receipt['placements']:
+                source = by_marker[(point['entry'], point['marker_index'])]
+                self.assertEqual(source['status'], 'UNIQUE_BAKED_SURFACE')
+                self.assertEqual(actual[point['guid']], (point['entry'], *source['wow_xy'], source['all_surface_heights'][0]))
+            quota_file = Path(receipt['surface_proof']['path']).parent / 'mdt-density-quota-preflight.json'
+            expected = next(row for row in json.loads(quota_file.read_text()) if row['map_id'] == 2923)
+            from collections import Counter
+            self.assertEqual(dict(Counter(r[1] for r in rows)), {r['entry']: r['selected_count'] for r in expected['rows'] if r['selected_count']})
+            for entry in {r[1] for r in rows}:
+                own = db.execute('SELECT t.unit_class,d.ContentTuningID,d.HealthModifier,d.DamageModifier,d.ArmorModifier,d.ManaModifier FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry WHERE t.entry=? AND d.DifficultyID=0', (entry,)).fetchone()
+                self.assertEqual(db.execute('SELECT unit_class,ContentTuningID,HealthModifier,DamageModifier,ArmorModifier,ManaModifier FROM content_creature_template WHERE entry=? AND faction=16', (entry,)).fetchone(), own)
+                self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall(), db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall())
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2923 AND id1=239008').fetchone(), (1,))
+        density = receipt['density']
+        self.assertEqual(density['policy'], 'FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT')
+        self.assertEqual((density['qualified_count'], density['selected_count'], density['excluded_count']), (5884, 196, 5688))
+        self.assertEqual(sum(r['shortfall'] for r in density['per_npc']), 13)
+        self.assertEqual(receipt['marker_count'], 9197)
+        self.assertEqual(len(receipt['source_gaps']), 3314)
+        unknown = next(g for g in receipt['source_gaps'] if g['entry'] == 255000)
+        self.assertIsNone(unknown['marker_count'])
+        self.assertFalse(receipt['pack_groups_created'])
+        self.assertEqual(receipt['preserved_group_tables']['baseline'], receipt['preserved_group_tables']['replayed'])
+        self.assertEqual(receipt['sql_replay_count'], 3)
+
+
 if __name__ == '__main__':
     unittest.main()
