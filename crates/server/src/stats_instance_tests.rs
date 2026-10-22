@@ -14,6 +14,7 @@ fn item_instance_native_equipped_enchant_change_recomputes_character_stats() {
     let native = NativeItemInstances {
         bonuses: load::load_bonus_tables(&conn).unwrap(),
         enchants: load::load_enchantment_tables(&conn).unwrap(),
+        effects: load::load_item_effect_tables(&conn).unwrap(),
     };
     let mut app = App::new();
     app.insert_resource(spells)

@@ -1,6 +1,16 @@
 use super::*;
 use shared::components::WeaponType;
 
+#[test]
+fn attack_timer_reset_uses_native_integer_milliseconds() {
+    for (seconds, milliseconds) in [(2.0, 2000), (1.6, 1600), (1.6009, 1600), (0.0, 0)] {
+        assert_eq!(
+            attack_timer_duration(seconds),
+            std::time::Duration::from_millis(milliseconds)
+        );
+    }
+}
+
 /// Worn Shortsword (25), the Retail warrior starting weapon: 1-2 at 2.60.
 const WORN_SHORTSWORD: WeaponDamage = WeaponDamage {
     min: 1.0,
