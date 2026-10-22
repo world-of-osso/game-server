@@ -1,3 +1,7 @@
+## 2026-10-22 — Darkflame packet qualification
+
+[Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22):55d981923 scoped consensus/8yd-native-anchor2GREEN0.268s;8473befb0 actual-copy native stats/models/factions/poses/source1+0 rows/helper exclusion/SQL owner+posecollision2GREEN0.031s. Fresh canonical-copy12-row packet/replay3× exact; sourceDifficulty1/0/0 retained, no synthetic1. Waxbeard route passes, Blazikon and Darkness incomplete. Prepared, publication pending; no dungeon clear.
+
 ## 2026-10-22 — Darkflame floor consensus and bounded anchors
 
 [Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22): initial packet refused ambiguous floors; source-consensus RED showed old reader returned all levels. Approved all-upward-hit consensus selects Darkness59.8; Blazikon alone uses two native room anchors within8yd for56.683550, not a global limit change. Waxbeard unique reachable86.600006. New proof pending.
