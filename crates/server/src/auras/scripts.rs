@@ -91,6 +91,8 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
     }
 }
 
+const FEEL_THE_BURN: u32 = 383391;
+const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
 const TURTLE_PACIFY: u32 = 205_769;
 const BARKSKIN: u32 = 22_812;
@@ -339,7 +341,23 @@ pub(super) fn effect_enabled(
     spell_id != 187827 || effect_index != 3 || super::has_aura(world, caster, 321068)
 }
 
+/// Native383391 names only Fire Blast; SimC76f8118 sc_mage.cpp4583.
+fn check_feel_the_burn_proc(
+    _world: &World,
+    _aura: &AuraInstance,
+    event: &super::procs::AuraEvent,
+) -> bool {
+    event.spell_id == Some(FIRE_BLAST)
+}
+
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        FEEL_THE_BURN,
+        AuraScript {
+            check_proc: Some(check_feel_the_burn_proc),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         crate::spell_cast::efflorescence::DUMMY,
         AuraScript {
