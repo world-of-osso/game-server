@@ -34,6 +34,12 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
         let (mut h, boss, _) = anubzekt_copy(difficulty);
         let player = h.player();
         h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
+        crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+        h.advance(5.0);
+        assert!(
+            !h.app.world().get::<CombatStatus>(boss).unwrap().0,
+            "real evade/home must finish before idle outgoing qualification"
+        );
         assert!(
             h.app.world().get::<Mana>(boss).is_none(),
             "source class4 is not Mana"
@@ -132,9 +138,9 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
         let initial_infestations = completed_casts(&h, boss, INFESTATION);
-        assert_eq!(
-            initial_infestations, 1,
-            "source immediate-on-pull cast precedes fixture observer"
+        assert!(
+            h.has_aura(h.player(), INFESTATION),
+            "source immediate-on-pull aura is already real before fixture observer"
         );
         let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
         h.app
