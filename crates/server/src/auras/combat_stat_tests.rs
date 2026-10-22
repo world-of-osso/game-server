@@ -52,6 +52,87 @@ fn computed(h: &Harness, ratings: CombatRatings) -> CharacterStats {
 }
 
 #[test]
+#[ignore = "RED: native198 adds base melee-critical rating to Dodge without consuming Crit"]
+fn census_tail_198_native_lightning_reflexes_uses_base_crit_then_removes() {
+    let mut h = fixture(&[231065]);
+    let ratings = CombatRatings {
+        crit: 1234.0,
+        dodge: 100.0,
+        haste: 500.0,
+        ..Default::default()
+    };
+    apply(&mut h, 231065, 0);
+    let actual = computed(&h, ratings).ratings;
+    assert_eq!(actual.dodge, 1334.0);
+    assert_eq!(actual.crit, 1234.0);
+    assert_eq!(actual.haste, 500.0);
+    let caster = h.caster;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 231065
+    });
+    assert_eq!(computed(&h, ratings).ratings.dodge, 100.0);
+}
+
+#[test]
+#[ignore = "RED: native198 reads pre405source and precedes target405"]
+fn census_tail_198_native_conversion_precedes_source_and_target_percentages() {
+    let mut h = fixture(&[231065, 117216, 299744]);
+    let ratings = CombatRatings {
+        crit: 1234.0,
+        dodge: 100.0,
+        ..Default::default()
+    };
+    apply(&mut h, 231065, 0);
+    apply(&mut h, 117216, 1);
+    apply(&mut h, 299744, 0);
+    let actual = computed(&h, ratings).ratings;
+    assert_eq!(actual.crit, 1357.0);
+    assert_eq!(
+        actual.dodge, 1667.0,
+        "(100+1234)+trunc(1334×25%), not converted1357"
+    );
+}
+
+#[test]
+#[ignore = "RED: native198 matchingHaste8%truncates and ignores larger unrelated Crit"]
+fn census_tail_198_native_evasive_reads_selected_base_rating_and_truncates() {
+    let mut h = fixture(&[315607]);
+    let ratings = CombatRatings {
+        crit: 5000.0,
+        haste: 1234.0,
+        avoidance: 200.0,
+        ..Default::default()
+    };
+    apply(&mut h, 315607, 0);
+    let actual = computed(&h, ratings).ratings;
+    assert_eq!(actual.avoidance, 298.0);
+    assert_eq!(actual.crit, 5000.0);
+    assert_eq!(actual.haste, 1234.0);
+}
+
+#[test]
+#[ignore = "RED control: native304775 partialVersatilitytarget remains explicitly unrepresented"]
+fn census_tail_198_native_split_versatility_destination_is_not_applied_to_all_versatility() {
+    let mut h = fixture(&[304775]);
+    let caster = h.caster;
+    apply(&mut h, 304775, 0);
+    assert_eq!(
+        computed(
+            &h,
+            CombatRatings {
+                versatility: 100.0,
+                ..Default::default()
+            }
+        )
+        .ratings
+        .versatility,
+        100.0
+    );
+    assert!(take_unhandled_auras(h.app.world_mut()).contains(&(304775, 198)));
+    assert!(has_aura(h.app.world(), caster, 304775));
+}
+
+#[test]
 fn aura_stat_native_405_scales_selected_ratings_not_percent_chance() {
     let mut h = fixture(&[117216, 417489, 1262442]);
     let ratings = CombatRatings {
