@@ -1,3 +1,4 @@
+- [Benk native aura/channel partial](investigations/follower-data.md#benk-native-aurachannel-partial--2026-10-22) — native3/3,12requests/Honey aura/Wing channel-area/reset/copy-credit; actual model preserved, child-controller gaps retained.
 - [Aldryr outgoing partial](investigations/follower-data.md#aldryr-outgoing-partial--2026-10-22) — native3-case composite proof,15requests/damage/reset/copy-credit; phase controllers remain gaps.
 - [Ki'katal source-clock partial](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22) — native3/3 Normal/Follower request/effect/reset/copy-credit proof; controller gaps retained.
 - [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.

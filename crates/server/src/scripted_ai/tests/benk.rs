@@ -62,7 +62,6 @@ fn assert_native_wing_channel(h: &mut Harness, boss: Entity, map: InMap) {
 }
 
 #[test]
-#[ignore = "native Benk source proof pending"]
 fn encounter_coverage_benk_first_snack_uses_current_lua_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = benk_copy(difficulty);
@@ -86,7 +85,6 @@ fn encounter_coverage_benk_first_snack_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "native Benk ongoing aura/area/channel proof pending"]
 fn encounter_coverage_benk_ongoing_native_aura_channel_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = benk_copy(difficulty);
@@ -221,7 +219,6 @@ fn encounter_coverage_benk_ongoing_native_aura_channel_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "native Benk evade/rearm proof pending"]
 fn encounter_coverage_benk_evade_rearms_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = benk_copy(difficulty);

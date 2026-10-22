@@ -1,3 +1,7 @@
+## 2026-10-22 — Benk aura/channel partial
+
+[Benk](investigations/follower-data.md#benk-native-aurachannel-partial--2026-10-22): native98df3/3GREEN84.13s, Normal1/Follower20512requests/realHoney aura-expiry/Wing1.5s cast→2s channel/area lifecycle/reset/actualcopy-credit/corpse proof. Producer1/1 preserves actual120557 model/source/native data; no fabricated bee/Honey children, area damage or whole-fight claim. Tests enabled after proof.
+
 ## 2026-10-22 — Aldryr outgoing partial
 
 [Aldryr](investigations/follower-data.md#aldryr-outgoing-partial--2026-10-22): retained native7343first/reset2PASS plus corrected ongoing98df1/1GREEN80.59s, each Normal1/Follower205. Fifteen90s requests/nativeKeg-Belch damage/actualcopy-credit/corpse pass; producer1/1 preserves source. Enabled tests; phase/dummy/external-destination gaps retained, canonical untouched.
