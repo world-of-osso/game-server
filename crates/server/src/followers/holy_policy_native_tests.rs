@@ -156,6 +156,114 @@ fn casts(group: &GroupFixture, spell: u32) -> usize {
         .count()
 }
 
+fn cast_binding_source(group: &mut GroupFixture, spell: u32, target: Entity) {
+    super::kit_clearcasting_tests::wait_for_gcd(&mut group.h, group.priest, spell);
+    creature_cast(
+        group.h.app.world_mut(),
+        group.priest,
+        spell,
+        Some(target),
+        false,
+    )
+    .unwrap();
+    group.h.advance(200);
+}
+
+#[test]
+fn holy_binding_heals_native90_other_heal_copies_pre_overheal_amount_once() {
+    let mut group = native_group();
+    assert!(own_aura(&group.h, group.priest, 368275).is_some());
+    // Authored percent-health damage wounds both Henry and the recipient.
+    apply_pressure(&mut group, 1);
+    let owner = group.h.caster;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    cast_binding_source(&mut group, 2061, owner);
+    let events = &group.h.app.world().resource::<ObservedCombatEvents>().0[start..];
+    let source = events
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(group.priest.to_bits())
+                && event.target == Some(owner.to_bits())
+                && event.spell_id == Some(2061)
+        })
+        .expect("ordinary Flash Heal must land on the other patient");
+    assert!(source.amount > 0);
+    assert!(
+        source.overflow > 0,
+        "native heal must cross the overheal boundary: {source:?}"
+    );
+    let children: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Heal
+                && event.source == Some(group.priest.to_bits())
+                && event.spell_id == Some(368276)
+        })
+        .collect();
+    assert_eq!(
+        children.len(),
+        1,
+        "Binding Heals must execute one native child: {events:?}"
+    );
+    let child = children[0];
+    assert_eq!(child.target, Some(group.priest.to_bits()));
+    assert_eq!(
+        child.amount,
+        source.amount / 5,
+        "TC GetHeal, not GetEffectiveHeal"
+    );
+    assert!(!child.periodic);
+}
+
+#[test]
+fn holy_binding_heals_native90_self_heal_does_not_transfer() {
+    let mut group = native_group();
+    apply_pressure(&mut group, 2);
+    let priest = group.priest;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    cast_binding_source(&mut group, 2061, priest);
+    let events = &group.h.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(2061))
+    );
+    assert!(!events.iter().any(|event| event.spell_id == Some(368276)));
+}
+
+#[test]
+fn holy_binding_heals_native90_renew_periodic_mask_does_not_transfer() {
+    let mut group = native_group();
+    apply_pressure(&mut group, 2);
+    let owner = group.h.caster;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    cast_binding_source(&mut group, 139, owner);
+    let events = &group.h.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(events.iter().any(|event| event.kind == CombatLogKind::Heal
+        && event.spell_id == Some(139)
+        && event.periodic));
+    assert!(!events.iter().any(|event| event.spell_id == Some(368276)));
+}
+
 #[test]
 fn holy_policy_native90_fixture_has_real_group_damage_and_native_stats() {
     let mut group = native_group();
