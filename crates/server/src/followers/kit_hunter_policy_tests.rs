@@ -174,7 +174,6 @@ fn rotation_fidelity_253_barbed_shot_targets_engaged_undotted_secondary() {
 }
 
 #[test]
-#[ignore = "native foreign-owned DoT target qualification"]
 fn rotation_fidelity_253_barbed_shot_does_not_count_another_hunters_dot() {
     let (mut h, caster, secondary, _) = spawn_barbed_targets();
     let profile = h
@@ -203,7 +202,6 @@ fn rotation_fidelity_253_barbed_shot_does_not_count_another_hunters_dot() {
 }
 
 #[test]
-#[ignore = "native range preflight target qualification"]
 fn rotation_fidelity_253_barbed_shot_skips_out_of_range_minimum() {
     let (mut h, caster, secondary, _) = spawn_barbed_targets();
     let distant = spawn_engaged_target(&mut h, 80.0);
@@ -217,7 +215,6 @@ fn rotation_fidelity_253_barbed_shot_skips_out_of_range_minimum() {
 }
 
 #[test]
-#[ignore = "native breakable control target qualification"]
 fn rotation_fidelity_253_barbed_shot_preserves_native_breakable_control() {
     let (mut h, caster, secondary, _) = spawn_barbed_targets();
     let protected = spawn_engaged_target(&mut h, 2.0);

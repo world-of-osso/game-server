@@ -1,3 +1,7 @@
+## 2026-10-21 — Barbed native ownership, control and range proof
+
+[Target boundaries](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21):4PASS62.29s at0eff6315f proves original secondary shot, foreign DoT not own, actual Polymorph protected and owner-selected80yd target excluded. Only BM3 affected production-stat samples refreshed,3PASS65.31s; ST/3T1045.342/1031.508, pet16935/16542, unpaired starter samples—not a causal DPS comparison. Broader APL and lead gates remain open.
+
 ## 2026-10-21 — Barbed Shot secondary target minimum
 
 [Native targeting](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21): actual primaryDoT starves engaged undotted secondary, RED47.19s. Generic per-entry own-aura minimum with native preflight/CC protection and253 policy yields GREEN56.39s; unengaged target untouched. Producer2PASS, single stable-key interval; native ownership/CC/range controls, affected BM metrics and broader APL remain open.
