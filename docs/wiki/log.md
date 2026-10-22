@@ -5,6 +5,29 @@
 ## 2026-10-22 — Frozen-view native gate and terminal player continuation
 
 [Bridge/source boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): c04ecc5b9/P2abc7fa gives native5GREEN158.48s, all-targetcheck28.85s/fmt/0warnings after inherited duplicatePetControlPlugin startup failure2PASS/3FAIL and exact sibling597d harness repair. Frozen8-case continuation completes without source drift or positive-output qualification:64/265/577/581 exact source rules,268 native InvalidTarget,251/1480 strict parent-node rejections,267 raw300s/6000decisions/61Felhunter casts/0damage/pet.present=false(primary-pet lookup only). New v2 inventory40rows:10 historical qualified,16source/castblocks,3stricttraits,1zero-output failure,10missing selected references. Report hashes and10 existing factor ledgers' source hashes/conservation checked; no extra factor partition, production fix, zero-DPS acceptance or three-target parity claim. Older receipts remain intact; parent gates producer integration and subsequent CombatRefs-conditioned3-target runs separately.
+## 2026-10-22 — Native target Earthquake consequence GREEN
+
+[Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): source-matched target462620 now uses existing61882 field/knockdown pipeline. OrdinaryAI77478damage1PASS18.75s plus reticle/orphan/targetcenter-overlap-expiry3PASS28.85s atdfcbc1a3c, zero warnings; proved2 enabled115b26005. Only affected native70ST/3T2PASS37.46s,836.683/1212.550DPS/actual3T77478damage17481, labelled unpaired not causal-total-gain proof. Latestc0f560ebb merge requires parent integration validation; whole Elemental efficiency/fullAPL stays open.
+
+## 2026-10-22 — Elemental70 decomposition and target Earthquake RED
+
+[Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): native2 measurements PASS31.84s, source-scoped770.85/714.367 DPS vs SimC caster965.019/1550.704 plus owned guardians130.905/129.465; actualstat mismatch and Azure duty remain explicit.3T14 completed462620 casts produce no77478; native AI consequence RED1/16.49s/zero warnings. Shared existing61882 field path extended to native target variant at3de3f1131; center/overlap/native-clock control and GREEN pending. Frozen Feel packet31b remains distinct.
+
+## 2026-10-22 — CritterGUID shared runtime and source90/150
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): lifecycle8bb2cba0a and selectorsb8580b258 follow genuine corrected7RED/3PASS77.05s. Real persisted-journal RPC/native51149+26571+261 cases10GREEN92.58s; retained four Coyote+99104slot6+census6GREEN45.93s. Source Companion-only current actor/matching removal, shared authored positive slots and explicit90/implicit150; no ownership scan/guardian substitution. Pipeline543 unchanged,exact25 reason changes; Crab retains74 and all per-toy script/visual gaps persist. Relevant check pending; no native toy-action/rendering claim. First40693a25a failure was fixture-only and excluded.
+
+## 2026-10-22 — CritterGUID source and slot audit
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): source Companion-title GUID setter/matching removal,90explicit identity/no self default and150auto lookup. Journal3221/5028/5085 slot5 versus legacy0/5/6 means no blanket slot6/cross-slot removal or older-actor restoration. Hidden344 has ordinary Ally title0, not critter/guardian; three journal roots lack effects even raw70448. Test-firsta955bb1b2 adds real owned-journal RPC +native Coyote/Hare/three-Skeleton lifecycle/negative cases; RED pending, no implementation/admission claim.
+- [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
+## 2026-10-22 — Feel the Burn targeted GREEN and affected samples
+
+[Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): native11GREEN41.86s/c43cc8dcb/zero warnings includes4Feel cases plus7 ordinary proc/cadence controls; proved4 enabled25c4d4fb4. Only affected Fire StatsPlugin3PASS86.45s,90ST/3T3261.958/3011.958 DPS and final mastery_points13/11, explicitly unpaired starter samples. Later996ec234 merge requires integration proof. New Elemental70 diagnostic2PASS31.84s atsamecompiledscope; analysis separatescaster/guardian attribution and actualstat mismatch rather than declaring parity.
+
+## 2026-10-22 — Feel the Burn native eligibility and async stack RED
+
+[Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): actualFireBlast2mastery4s positive; actualFireballwrongproc and independent4s application2vs1 are genuine2RED/21.74s. [Generic native490](systems/auras.md#native-asynchronous-stack-expirations--2026-10-22) has pinned SimC authority plus exact70448 flag, no guessed per-spell timer. Runtimeac5eb241d/source/spec committed; GREEN pending, cases remain ignored. Frozen Ascendance entry packetb11 unchanged.
 ## 2026-10-22 — Native power receipt observability
 ## 2026-10-22 — Utility Attr4 master refresh
 
@@ -17,6 +40,10 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Midnight identity/population recheck
+
+[Updated native evidence](investigations/follower-data.md#updated-native-identityplacement-evidence--verified2026-10-22): b365fd5f2 pre-packet census adds19 exact unique JEC/TDB joins/11 single-floor encounter XYs; blanket candidate-only identity gaps superseded for qualified actors. Canonical11:25CDT source/runtime counts: MurderRow2/2,Den217/217,Maisara376/376,other6maps0/0. Placement publication and missing server-clock anchors remain separate; no external guide authority used.
+
 ## 2026-10-22 — Midnight clock authority
 
 [Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
@@ -3855,6 +3882,13 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+## 2026-10-22 — Server test performance profile
+
+[Server test performance](investigations/server-test-performance.md): copied fu913 baseline plus49Hz sample identifies unoptimized server-instantiated generic ECS/iterator paths despite optimized dependencies. Add test-only server opt2/debug1, preserving assertions/overflow checks. Baseline/optimized CPU, wall, RSS and complete900s union acceptance remain pending; shared-host swapping is recorded, not attributed to code.
+
+Pruner investigation: unconditional leading-lib stripping split libc/libm/libloading/libsqlite3_sys dep-info from library groups, defeating third-party retention and cascading94-crate rebuilds. Lead deployed extension-aware grouping; standalone aged-filesystem regression8RED→3GREEN. Same-petgate manifest/lock diff empty, flags/features stable. Separate ft923 pygate cold-check history remains unproven.
+
+Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0→opt2 timer31.133876→7.695305s,CPU23.252883→7.635607s,debug1/assertions/overflow retained. Separate current3casePASS includes fullStockade73.885s; historical source comparison remains explicitly confounded. Second cache cause: relativevendor/root missed slash-prefixed guard, evicting Replication/Replicon/Recast and rebuilding4registryLightyearconsumers. Lead deployed path-component matching; native relative artifact classification and aged-filesystem RED1→4GREEN. Union/currentmaster/canonicalbackup/RSS qualification remains open.
 - 2026-10-22: Recorded Ruby entrance artifact/formation root causes, pushed native23s overlap RED and approved per-party slot policy; GREEN/gates pending. See [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
 
 - 2026-10-22: Ruby per-party follow slots qualified: pushed ignoredRED→native23sGREEN; integrated8a1faab214 controls464PASS/27ignored, defaultStockade+Henry3-boss simulator clears, be88079ef native-metadata fixture1PASS/all-targets/fmtPASS,0compiler warnings. Source snapshot unchanged6bf39eb8; see [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
