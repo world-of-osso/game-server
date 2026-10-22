@@ -85,10 +85,17 @@ pub(super) fn command_beast(world: &mut World, caster: Entity, target: Entity, d
 /// HUNTER_WILD_THRASH_PET_CHILD_SIMC, hunter7562–7563/6796–6837.
 /// Native child target selection determines which real pets can reach the target.
 pub(super) fn wild_thrash(world: &mut World, caster: Entity, target: Entity, depth: u8) {
-    let child = world.resource::<SpellStore>().get(WILD_THRASH_PET)
-        .expect("native Wild Thrash requires pet child1264355").clone();
-    let pets: Vec<_> = world.query::<(Entity, &crate::hunter_pet::HunterPet)>()
-        .iter(world).filter(|(_, pet)| pet.owner == caster).map(|(unit, _)| unit).collect();
+    let child = world
+        .resource::<SpellStore>()
+        .get(WILD_THRASH_PET)
+        .expect("native Wild Thrash requires pet child1264355")
+        .clone();
+    let pets: Vec<_> = world
+        .query::<(Entity, &crate::hunter_pet::HunterPet)>()
+        .iter(world)
+        .filter(|(_, pet)| pet.owner == caster)
+        .map(|(unit, _)| unit)
+        .collect();
     for pet in pets {
         if !targets::is_alive(world, pet) {
             continue;
@@ -107,11 +114,17 @@ fn cast_pet_command(world: &mut World, caster: Entity, target: Entity, spell: u3
     }
 }
 
-fn cast_owned_pet_command(world: &mut World, caster: Entity, pet: Entity, target: Entity, spell: u32, depth: u8) {
+fn cast_owned_pet_command(
+    world: &mut World,
+    caster: Entity,
+    pet: Entity,
+    target: Entity,
+    spell: u32,
+    depth: u8,
+) {
     if world
-        world
-            .get::<crate::hunter_pet::HunterPet>(pet)
-            .is_some_and(|pet| pet.owner == caster)
+        .get::<crate::hunter_pet::HunterPet>(pet)
+        .is_some_and(|pet| pet.owner == caster)
     {
         spell_cast::cast_triggered(world, pet, spell, Some(target), depth + 1);
     }
