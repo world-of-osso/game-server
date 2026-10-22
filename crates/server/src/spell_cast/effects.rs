@@ -28,6 +28,9 @@ mod aura_stat_spell_tests;
 #[cfg(test)]
 #[path = "bypass_armor_tests.rs"]
 mod bypass_armor_tests;
+#[cfg(test)]
+#[path = "caster_ability_crit_tests.rs"]
+mod caster_ability_crit_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
