@@ -146,6 +146,8 @@ pub const MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH: u32 = 354;
 pub const MOD_SPELL_CRIT_CHANCE: u32 = 57;
 pub const MOD_EXPERTISE: u32 = 240;
 pub const MOD_IGNORE_TARGET_RESIST: u32 = 269;
+/// TC a352b1fa Unit.cpp1697–1703: signed sum on the target, matching aura caster.
+pub const BYPASS_ARMOR_FOR_CASTER: u32 = 345;
 /// The three versatility ratings share one value in our CombatRatings component.
 pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
@@ -456,6 +458,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_SPELL_CRIT_CHANCE
         | MOD_EXPERTISE
         | MOD_IGNORE_TARGET_RESIST
+        | BYPASS_ARMOR_FOR_CASTER
         | MASTERY
         | MOD_STAT_BONUS_PCT
         | MOD_BONUS_ARMOR_PCT

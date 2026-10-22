@@ -89,7 +89,6 @@ fn assert_effective_armor(h: &mut Harness, expected: f32) {
 }
 
 #[test]
-#[ignore = "census-tail345 RED before native caster armor bypass consumer"]
 fn census_tail_345_native_find_weakness_bypasses_full_armor_fraction_and_removes() {
     let mut h = fixture();
     let before = physical_hit(&h);
@@ -106,7 +105,6 @@ fn census_tail_345_native_find_weakness_bypasses_full_armor_fraction_and_removes
 }
 
 #[test]
-#[ignore = "census-tail345 RED before native caster armor bypass consumer"]
 fn census_tail_345_native_sum_not_product_and_hundred_percent_cap() {
     let mut h = fixture();
     let caster = h.caster;
@@ -124,7 +122,6 @@ fn census_tail_345_native_sum_not_product_and_hundred_percent_cap() {
 }
 
 #[test]
-#[ignore = "census-tail345 RED before native caster armor bypass consumer"]
 fn census_tail_345_native_foreign_caster_and_attacker_side_aura_do_not_bypass() {
     let mut h = fixture();
     let before = physical_hit(&h);
@@ -138,7 +135,6 @@ fn census_tail_345_native_foreign_caster_and_attacker_side_aura_do_not_bypass() 
 }
 
 #[test]
-#[ignore = "census-tail345 RED before native caster armor bypass consumer"]
 fn census_tail_345_native_bypass_precedes_ignore_floor_and_capped_penetration() {
     let mut h = fixture();
     let caster = h.caster;
@@ -173,7 +169,6 @@ fn next_swing(h: &mut Harness) -> i32 {
 }
 
 #[test]
-#[ignore = "census-tail345 RED before native caster armor bypass consumer"]
 fn census_tail_345_native_autoswing_obeys_recipient_bypass_and_removal() {
     let mut h = fixture();
     let caster = h.caster;

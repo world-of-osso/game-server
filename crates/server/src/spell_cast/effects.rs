@@ -746,6 +746,11 @@ fn armor_reduced(
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_bypass(
+        world.get::<crate::auras::ActiveAuras>(target),
+        caster,
+        armor,
+    );
     let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,

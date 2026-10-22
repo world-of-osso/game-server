@@ -219,6 +219,8 @@ fn read_swing_projection(
         target_health,
     );
     let armor = read_armor(world, tank, &source_scaling, &target_scaling);
+    let armor =
+        crate::auras::combat_stats::armor_after_bypass(target_auras, attacker.entity, armor);
     let blocked_pct = blocked_pct(
         victim,
         &source_scaling,

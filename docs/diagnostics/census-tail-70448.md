@@ -65,6 +65,12 @@ Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege
 
 **AURA_359_TC_CONSUMER_TYPE_CONFLICT**: native391381 Desperate Times authors359+10 against state25. Pinned `SpellAuraEffects.cpp:431` comments that359 is implemented in SpellHealingPctDone, but actual `Unit.cpp:7496–7500` reads303 there; complete server search finds359 only in its declarations and Baleroc's Vital Flame apply/remove script hooks. Do not silently substitute359 for303 or claim its comment proves a generic consumer. Existing computable target state supports15 only, not native25. Preserve this source conflict pending an authoritative decision.
 
+## Aura345 BYPASS_ARMOR_FOR_CASTER
+
+TC `Unit.cpp:1697–1703` sums recipient345 belonging to this attacker, caps above100, and reduces full armor before269 ignore/floor and280 capped penetration. Shared pure reader feeds existing physical-spell armor, autoswing armor and generic-creature forecast armor; no new target/stat subsystem or canonical data.
+
+Ignored RED13c45fc65 `census_tail_345 --include-ignored`:0PASS/6FAIL34.26s, compile2m41s/no warnings, `345-red.log`. Native91021+20 leaves spell mitigation unchanged;50+30 retains2000 armor instead400;269/280 ordering control leaves280705 instead329193 damage at explicit one-million input. Actual fixed100/AP0 autoswing remains30 instead100 under native108126; foreign-caster/attacker-side exclusions pass before own-source increase fails. Ordinary native Stockade46249→follower forecast remains expected35.73/largest51 instead increasing under its own345; foreign-source forecast exclusion passes. GREEN pending.
+
 ## Aura50 MOD_CRITICAL_HEALING_AMOUNT
 
 TC `Unit.cpp:7331–7342` adds CritDamageAndHealing-modified bonus to the original heal, then multiplies the whole critical amount by every caster-owned50 without filtering MiscValue school bits; returns integer healing. Existing heal-only `with_crit` callers share this step; physical/magical damage uses separate `with_damage_crit`. Ordinary noncritical returns precede50; native CANT_CRIT still prevents the roll.

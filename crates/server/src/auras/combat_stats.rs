@@ -27,6 +27,23 @@ fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInf
     })
 }
 
+/// TC a352b1fa Unit.cpp1697–1703: recipient345 sums only this attacker's bypass.
+pub(crate) fn armor_after_bypass(auras: Option<&ActiveAuras>, attacker: Entity, armor: f32) -> f32 {
+    let bypass = auras.map_or(0.0, |auras| {
+        auras
+            .iter()
+            .filter(|aura| aura.caster == attacker)
+            .flat_map(|aura| {
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.aura_type == handlers::BYPASS_ARMOR_FOR_CASTER)
+                    .map(move |effect| effect.amount * aura.stack_multiplier())
+            })
+            .sum::<f32>()
+    });
+    armor * (100.0 - bypass.min(100.0)) / 100.0
+}
+
 /// Unit.cpp1712-1716: physical269 filters the spell, then floors armor per effect.
 pub(crate) fn armor_after_ignore(
     world: &World,

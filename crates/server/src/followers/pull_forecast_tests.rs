@@ -256,7 +256,6 @@ fn tank_pull_forecast_lifetime_does_not_blanket_refuse_for_a_pure_native_hot() {
 }
 
 #[test]
-#[ignore = "census-tail345 RED before native caster armor bypass consumer"]
 fn census_tail_345_native_forecast_uses_only_source_casters_armor_bypass() {
     let (mut h, tank, enemy) = source_fixture(46249);
     let before = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
@@ -275,6 +274,7 @@ fn census_tail_345_native_forecast_uses_only_source_casters_armor_bypass() {
     let other = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
     assert_eq!(other.expected_hit, before.expected_hit);
     assert_eq!(other.largest_hit, before.largest_hit);
+    assert_eq!(other.valid_until, before.valid_until);
     crate::auras::remove_auras(
         h.app.world_mut(),
         tank,
@@ -292,6 +292,21 @@ fn census_tail_345_native_forecast_uses_only_source_casters_armor_bypass() {
         },
     );
     let bypassed = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    let expiry = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 108126 && aura.caster == enemy)
+        .unwrap()
+        .expires_at
+        .expect("native Colossus Smash has a finite duration");
+    assert_eq!(
+        bypassed.valid_until,
+        Some(expiry),
+        "armor bypass expiry changes the forecast"
+    );
     assert!(
         bypassed.expected_hit > before.expected_hit,
         "before={before:?}, bypassed={bypassed:?}"
