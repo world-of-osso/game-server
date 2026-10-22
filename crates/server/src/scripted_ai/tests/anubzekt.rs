@@ -6,6 +6,8 @@ const MAP: u32 = 2660;
 const BIT: u32 = 1;
 const IMPALE: u32 = 435012;
 const INFESTATION: u32 = 433740;
+const BURROW: u32 = 439506;
+const EYE: u32 = 433766;
 
 fn anubzekt_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(ANUBZEKT, MAP, BIT, difficulty, None);
@@ -31,10 +33,12 @@ fn encounter_coverage_anubzekt_native_infestation_periodic_damage_qualifies() {
         let (mut h, boss, _) = anubzekt_copy(difficulty);
         let player = h.player();
         h.engage(boss);
+        h.advance(0.1);
+        let before = completed_casts(&h, boss, INFESTATION);
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, INFESTATION, Some(boss), false)
             .expect("ordinary native433740 area aura");
         h.advance(2.0);
-        assert_eq!(completed_casts(&h, boss, INFESTATION), 1);
+        assert_eq!(completed_casts(&h, boss, INFESTATION), before + 1);
         assert!(
             h.inbox(0)
                 .log
@@ -76,5 +80,135 @@ fn encounter_coverage_anubzekt_first_impale_uses_current_lua_clock() {
         );
         h.advance(4.1);
         assert_eq!(completed_casts(&h, boss, IMPALE), 1);
+    }
+}
+
+#[test]
+#[ignore = "native ongoing source lanes and isolated lifecycle before combat port"]
+fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map) = anubzekt_copy(difficulty);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
+        h.engage(boss);
+        h.advance(105.0);
+        let attempts = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        eprintln!("ANUBZEKT difficulty{difficulty} {attempts:?}");
+        for (spell, minimum) in [(IMPALE, 10), (INFESTATION, 8), (BURROW, 2), (EYE, 1)] {
+            let lane: Vec<_> = attempts.iter().filter(|a| a.spell == spell).collect();
+            assert!(
+                lane.len() >= minimum,
+                "ongoing sourced lane{spell}: {lane:?}"
+            );
+            assert!(
+                lane.iter().all(|a| a.result.is_ok()),
+                "native admission lane{spell}: {lane:?}"
+            );
+            assert_eq!(completed_casts(&h, boss, spell), lane.len());
+        }
+        assert!(
+            attempts
+                .iter()
+                .all(|a| [IMPALE, INFESTATION, BURROW, EYE].contains(&a.spell)),
+            "no invented child forwarding or adds"
+        );
+        assert!(
+            h.inbox(0)
+                .log
+                .iter()
+                .any(|event| event.kind == CombatLogKind::Damage
+                    && event.amount > 0
+                    && event.spell_id == Some(INFESTATION)
+                    && event.source == Some(boss.to_bits())
+                    && event.target == Some(h.player().to_bits()))
+        );
+        assert!(h.inbox(1).spell_gos.is_empty());
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            0
+        );
+        let player = h.player();
+        crate::combat::kill_unit(h.app.world_mut(), player, boss);
+        h.advance(0.1);
+        assert_eq!(
+            get_boss_state(h.app.world_mut(), map, BIT),
+            Some(EncounterState::Done)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            1 << BIT
+        );
+        assert!(
+            h.inbox(0)
+                .ends
+                .iter()
+                .any(|end| end.encounter_id == 2906 && end.success)
+        );
+        assert!(h.inbox(1).ends.is_empty());
+        let casts = h.inbox(0).spell_gos.len();
+        h.advance(20.0);
+        assert_eq!(h.inbox(0).spell_gos.len(), casts, "corpse cannot cast");
+    }
+}
+
+#[test]
+#[ignore = "native source reset/rearm before combat port"]
+fn encounter_coverage_anubzekt_evade_rearms_initial_combo_without_credit() {
+    for difficulty in [1, 205] {
+        let (mut h, boss, map) = anubzekt_copy(difficulty);
+        h.engage(boss);
+        h.advance(45.0);
+        assert!(completed_casts(&h, boss, EYE) > 0);
+        let player = h.player();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
+        crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
+        h.advance(5.0);
+        assert_eq!(
+            get_boss_state(h.app.world_mut(), map, BIT),
+            Some(EncounterState::NotStarted)
+        );
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            0
+        );
+        let casts = h.inbox(0).spell_gos.len();
+        h.advance(40.0);
+        assert_eq!(
+            h.inbox(0).spell_gos.len(),
+            casts,
+            "evade retires all old lanes"
+        );
+        let mut near = *h.app.world().get::<Position>(boss).unwrap();
+        near.x += 3.0;
+        h.app.world_mut().entity_mut(player).insert(near);
+        let before = completed_casts(&h, boss, IMPALE);
+        h.engage(boss);
+        h.advance(4.4);
+        assert!(h.app.world().get::<CastState>(boss).is_none());
+        h.advance(0.3);
+        assert_eq!(
+            h.app.world().get::<CastState>(boss).unwrap().spell_id,
+            IMPALE
+        );
+        h.advance(4.1);
+        assert_eq!(completed_casts(&h, boss, IMPALE), before + 1);
     }
 }
