@@ -8,6 +8,12 @@ mod healer_group_cancel_tests;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;
+#[cfg(test)]
+mod holy_policy_native_tests;
+#[cfg(test)]
+mod holy_priest_tests;
+#[cfg(test)]
+mod holy_threat_tests;
 mod kit;
 mod kit_ai;
 mod kit_area;
@@ -115,13 +121,17 @@ impl Follower {
         entity: Entity,
         level: u8,
         dungeon_difficulty: u32,
+        display_id: u32,
     ) -> crate::group::OnlineMember {
         crate::group::OnlineMember {
             entity: entity.to_bits(),
             name: self.profile.name.clone(),
             class: self.profile.class_id,
             level,
-            portrait: Default::default(),
+            portrait: shared::protocol::GroupPortraitAppearance {
+                creature_display_id: Some(display_id),
+                ..Default::default()
+            },
             dungeon_difficulty,
             raid_difficulty: Default::default(),
         }

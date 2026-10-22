@@ -15,6 +15,12 @@ pub(super) fn inspect_unit(world: &World, guid: Option<u32>, actor: Entity) -> s
         .map(|aura| serde_json::json!({"spell": aura.spell_id, "expires_at": aura.expires_at, "caster": aura.caster.to_bits()})).collect();
     serde_json::json!({"guid": guid, "entity": actor.to_bits(), "exists": world.get_entity(actor).is_ok(),
         "name": world.get::<shared::components::Npc>(actor).map(|npc| &npc.name),
+        "follower_spec": world.get::<crate::followers::Follower>(actor).map(|follower| follower.profile.spec_id),
+        "level": world.get::<shared::components::Level>(actor).map(|level| level.0),
+        "map": format!("{:?}", world.get::<crate::maps::InMap>(actor)),
+        "faction": world.get::<shared::components::UnitFactionTemplate>(actor).map(|faction| faction.0),
+        "powers": format!("{:?}", world.get::<crate::spell_cast::powers::PowerPools>(actor)),
+        "mana": world.get::<shared::components::Mana>(actor).map(|mana| [mana.current, mana.max]),
         "health": health.map(|health| [health.current, health.max]),
         "position": position.map(|position| [position.x, position.y, position.z]),
         "state": format!("{:?}", world.get::<crate::creature_ai::CreatureState>(actor)),

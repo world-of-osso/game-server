@@ -109,7 +109,15 @@ pub(super) fn join_native_party(h: &mut Harness, members: &[Entity]) {
                 .unwrap()
                 .0;
             let id = super::Follower::member_id(unit);
-            online.insert(id, follower.online(unit, level, 1));
+            online.insert(
+                id,
+                follower.online(
+                    unit,
+                    level,
+                    1,
+                    super::native_fixture::template_display(follower.profile.entry),
+                ),
+            );
             (id, follower.profile.role)
         })
         .collect();
