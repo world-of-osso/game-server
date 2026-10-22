@@ -1,7 +1,8 @@
 //! Full native ordering for Azure seed1's isolated owner at the Bubbling Sapling.
-use super::super::{diagnostics, movement};
+use super::super::{Space, diagnostics, movement};
 use super::{MAX_TICKS, spawn_run};
-use shared::components::Health;
+use bevy::prelude::Vec3;
+use shared::components::{Health, Position};
 
 #[test]
 #[ignore = "explicit Azure70 seed1 native Sapling engagement and isolated-owner Death"]
@@ -21,9 +22,25 @@ fn seed_one_keeps_the_native_leader_alive_through_the_sapling_fight() {
             let party: Vec<_> = run
                 .members()
                 .map(|unit| {
+                    let world = run.app.world();
+                    let from = world.get::<Position>(unit).unwrap();
+                    let to = world.get::<Position>(sapling).unwrap();
+                    let path = world
+                        .resource::<Space>()
+                        .route(
+                            Vec3::new(from.x, from.y, from.z),
+                            Vec3::new(to.x, to.y, to.z),
+                        )
+                        .map(|points| {
+                            points
+                                .into_iter()
+                                .map(|point| point.to_array())
+                                .collect::<Vec<_>>()
+                        });
                     serde_json::json!({
-                        "unit": diagnostics::inspect_unit(run.app.world(), None, unit),
-                        "travel": movement::inspect_travel(run.app.world(), unit),
+                        "unit": diagnostics::inspect_unit(world, None, unit),
+                        "travel": movement::inspect_travel(world, unit),
+                        "fresh_path_to_sapling": path,
                     })
                 })
                 .collect();
