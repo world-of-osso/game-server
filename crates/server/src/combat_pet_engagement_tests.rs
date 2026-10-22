@@ -11,11 +11,10 @@ fn fixture() -> (Harness, Entity) {
         .world_mut()
         .entity_mut(owner)
         .insert(ThreatTable::default());
-    h.app.world_mut().entity_mut(h.npc).insert((
-        UnitSummonedBy(owner.to_bits()),
-        UnitIsPet(true),
-        shared::components::UnitFlags(crate::faction::UNIT_FLAG_PLAYER_CONTROLLED),
-    ));
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((UnitSummonedBy(owner.to_bits()), UnitIsPet(true)));
     end_all_combat(h.app.world_mut(), h.caster);
     (h, owner)
 }
@@ -69,6 +68,32 @@ fn pet_combat_owner_direct_damage_engages_owner_without_damage_threat() {
     let (mut h, owner) = fixture();
     crate::combat::deal_direct_damage(h.app.world_mut(), h.caster, h.npc, 1.0);
     assert_owner_engaged(&h, owner);
+}
+
+#[test]
+#[ignore = "RED: lethal direct hit omits owner engagement before pet death"]
+fn pet_combat_owner_lethal_hit_engages_owner_before_pet_combat_ends() {
+    let (mut h, owner) = fixture();
+    let damage = h
+        .app
+        .world()
+        .get::<shared::components::Health>(h.npc)
+        .unwrap()
+        .current;
+    crate::combat::deal_direct_damage(h.app.world_mut(), h.caster, h.npc, damage);
+    assert_eq!(h.health(h.npc), 0.0, "ordinary hit actually kills the pet");
+    assert!(
+        active_opponents(h.app.world(), owner).any(|enemy| enemy == h.caster),
+        "owner engagement survives the attacked pet's native death cleanup"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<ThreatTable>(owner)
+            .unwrap()
+            .threat_for(h.caster.to_bits()),
+        0.0
+    );
 }
 
 #[test]
