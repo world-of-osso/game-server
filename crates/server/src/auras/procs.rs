@@ -119,6 +119,8 @@ pub struct AuraEvent {
     /// Damage the event dealt to `target` after absorbs, in its health units (level
     /// scaling); 0 for no damage.
     pub damage: f32,
+    /// Resolved healing before overheal, or None when this hit did not heal.
+    pub heal: Option<f32>,
     /// `PROC_HIT_REFLECT`: `target` reflected the actor's spell (`ProcReflectDelayed`,
     /// Spell.cpp:2412-2436). Only reflect auras proc off it, and only off it.
     pub reflected: bool,

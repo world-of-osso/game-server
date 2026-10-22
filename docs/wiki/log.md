@@ -28,6 +28,24 @@
 ## 2026-10-21 — Native DPS parity adapter
 
 [Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement now pass all3 opt-in300s qualifications atd698d1d3b (Hunter76petcasts, Demo50petcasts,10waves/20distinctadds); source/stat/rotation parity remains unproved. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. Original18 SimC runs retained; expanded reference coverage now60 benchmarks across30 selected profiles, with actual three-target recipient evidence. Eight actor-aware factor ledgers expose missing output/per-hit/count differences and excess FoF pulses; conditional guardian means need whole-player sample weighting. Current16/16 native execution cases pass, but timed-three reveals a real passive-dummy multi-enemy admission gap: follower AI does not count CombatRefs-only targets, and only the main dummy is the owner's victim. No fake threat/flags or AI edits. Bounded113-spell/206-base-effect comparison agrees70391/70448 in16 fields; effective multipliers remain unisolated. Health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
+## 2026-10-22 — Continuous-edge cohorts and disconnected chase
+
+[Archived5f7 qualification](systems/dungeon-simulator.md#continuous-edge-seeded-qualification-2026-10-22): Stockade50/50,150boss Deaths,0failures;1–49batch3083.914376s plus retained50 individual124.597531s. Azure10requested yields9process panics/missingreports and1valid tank-absence block,1323.826085s. [Separate Rune blocked-chase parity](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22) now has an ignored native book-hop regression; no synthetic connector, policy exception or timer. RED pending.
+
+## 2026-10-22 — Ascendance samples and current-master gate boundary
+
+[Measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): only Elemental3 affected samples refreshed,3PASS29.75s; real1219480 cast1/up12.458% on both90 scenarios, none at32. Source revisioncacbac0b0/base0c2 preserved with exact ledger/hashes. Laterfc5e87cc1 aura/stat/power changes merged as317ae34b7; current integration gate remains pending, not replaced by pre-merge proof. Entry Shock/Lava Burst and complete APL remain open.
+
+## 2026-10-22 — Native Elemental Ascendance action and timing
+
+[Projection](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): native-description/SimC action1219480 added only after parent114050 learns51, with real Stormkeeper cooldown>15s condition. Genuine missing-aura RED28.25s then3GREEN36.50s atcacbac0b0; native50 and real sync-window controls retain ordinary damage. Source projection1PASS, fresh export1PASS, single qualified added key; entry Flame Shock/Lava Burst and full APL remain open.
+
+## 2026-10-22 — Qualified added-action publication
+
+[Stable-key publication](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): native producer-qualified new actions can be inserted idempotently without removing/renaming existing intervals. Genuine added-key RED, then4GREEN0.364s at4b49e7097; complete-state oracle corrected to include additions, original source/unrelated-table/refusal guards retained. Pending Ascendance projection/runtime is not claimed complete.
+## 2026-10-22 — Binding Heals native transfer
+
+[Binding Heals](investigations/holy-priest-follower-ai.md#binding-heals-native-transfer--2026-10-22): actual Henry90 Flash Heal12778/overheal4958 missing-child RED; native resolved-heal payload, pinned TC priest-family6/mask0x1800 and20%368276 child give6GREEN34.76s at a1f941b13, including self/periodic/foreign-family/unlearned controls and enabled PoH lifetime regression. Post-master167612f27 passes10native cases37.16s/checkEXIT0/1m15s/no warnings/fmtPASS; [exact ledger](../../docs/handoffs/healer-binding-heals-proof-ledger.md). No Holy policy, canonical DB or invented mastery changes; Echo producer remains open.
 
 ## 2026-10-22 — Amani mask source cancellation boundary
 
