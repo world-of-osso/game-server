@@ -59,6 +59,10 @@ fn toy_coverage_spotlight_native_target57_rejects_foreign_ally_before_cast() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("raid57.redb"));
     install_visual_source(&mut h);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
     let foreign = spawn_spotlight_friend(&mut h, character + 1, 2.0);
     let owner = h.caster;
     let result = crate::spell_cast::creature_cast(
@@ -102,6 +106,10 @@ fn toy_coverage_spotlight_native_target21_still_accepts_foreign_ally() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("ally21.redb"));
     install_visual_source(&mut h);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
     let foreign = spawn_spotlight_friend(&mut h, character + 1, 2.0);
     let owner = h.caster;
     let result = crate::spell_cast::creature_cast(
@@ -218,6 +226,10 @@ fn toy_coverage_spotlight_foreign_ally_refuses_without_caster_substitution_or_re
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup(&dir.path().join("spotlight-foreign.redb"));
     install_visual_source(&mut h);
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert(ClientId(character));
     let foreign = spawn_spotlight_friend(&mut h, character + 1, 2.0);
     learn_effect_toy(&mut h, character, SPOTLIGHT);
     h.select(Some(foreign));
