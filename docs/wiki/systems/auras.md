@@ -1,5 +1,9 @@
 # Auras
 
+## Fists of Fury SimC cadence — 2026-10-21
+
+`FISTS_OF_FURY_SIMC_TICK_CADENCE` overrides only the base period for113656's117418 damage trigger to1000ms before ordinary period modifiers. Native70448's166ms PERIODIC_DUMMY heartbeat previously produced25 damage hits per4s channel. SimC76f8118 `monk/sc_monk.cpp1789–1796` supplies1s ticks with tick0 (five over4s); native Attributes5 already supplies the initial tick. The control heartbeat120086, native damage/cost/duration and generic226 toy bridge stay unchanged. TC a352b1fa has no FoF script; `SpellAuraEffects.cpp1324–1326` leaves226 handled via scripts. Ignored native RED confirms25vs5; enabled GREEN pending. [Contract](../../specs/auras.md#fists-of-fury-damage-cadence); test `followers/kit_proc_fidelity_tests.rs::dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits`.
+
 ## Census generic resource, state, duration and sanctuary — 2026-10-20
 
 |Family|Native behavior / boundary|Pinned TC a352b1fa source|

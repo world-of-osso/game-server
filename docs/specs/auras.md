@@ -13,6 +13,10 @@ Pinned TC a352b1fa and native70448, without spell-ID branches:
 
 [Source matrix, remaining dependencies and proof](../wiki/systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20).
 
+## Fists of Fury damage cadence
+
+`FISTS_OF_FURY_SIMC_TICK_CADENCE` governs only113656's117418 damage trigger: base1s periodic ticks including tick0, five hits over the native4s channel, before ordinary period/duration modifiers. Keep native damage coefficients, costs, target selection and the166ms control heartbeat unchanged; do not change generic226 toy behavior. Source: SimC76f8118 `monk/sc_monk.cpp1789–1796`. TC has no FoF script and its226 dummy is handled via scripts, so this is an explicit project policy rather than a DB2 timer correction. [Implementation and proof](../wiki/systems/auras.md#fists-of-fury-simc-cadence--2026-10-21).
+
 ## Computed target aura state
 
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).

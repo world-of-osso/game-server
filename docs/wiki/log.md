@@ -1,3 +1,7 @@
+## 2026-10-21 — FoF named SimC cadence
+
+[Auras](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21):113656/117418 uses the approved1s damage cadence/tick0 from SimC76f8118, not every native166ms dummy heartbeat. Source TC has no FoF script and leaves226 to scripts. Ignored native25-hit RED reproduced; enabled GREEN pending; generic toy bridge unchanged.
+
 ## 2026-10-21 — Native cast-while-casting admission
 
 [Spell casting](systems/spell-casting.md#cast-while-casting--2026-10-21): actual Fire Blast108853 Attr4/0x80 previously failed creature, kit and player admission. One native predicate now controls the in-progress veto, queue delay and kit precheck; original casts and native costs/history stay intact. Three ignored RED reproduced; enabled GREEN pending.

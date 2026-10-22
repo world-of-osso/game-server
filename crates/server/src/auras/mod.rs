@@ -616,6 +616,19 @@ pub(crate) fn maximum_duration_ms(
     Some(duration_ms(world, &application, &spell))
 }
 
+/// FISTS_OF_FURY_SIMC_TICK_CADENCE: SimC76f8118 monk/sc_monk.cpp1789–1796
+/// uses1s damage ticks, including tick0 (five over4s). TC has no FoF script;
+/// its generic226 handler does nothing. Preserve the approved toy trigger bridge.
+fn periodic_base_interval_ms(spell: &SpellInfo, effect: &SpellEffect) -> u32 {
+    const FISTS_OF_FURY: u32 = 113656;
+    const FISTS_OF_FURY_DAMAGE: u32 = 117418;
+    if spell.id == FISTS_OF_FURY && effect.trigger_spell == FISTS_OF_FURY_DAMAGE {
+        1000
+    } else {
+        effect.aura_period_ms
+    }
+}
+
 fn build_effect(
     world: &World,
     caster: Entity,
@@ -632,13 +645,14 @@ fn build_effect(
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
-    let period_ms = if effect.aura_period_ms > 0 {
+    let base_period_ms = periodic_base_interval_ms(spell, effect);
+    let period_ms = if base_period_ms > 0 {
         spell_mods::modify(
             world,
             caster,
             spell,
             SpellModOp::Period,
-            effect.aura_period_ms as f32,
+            base_period_ms as f32,
         )
         .max(1.0) as u32
     } else {

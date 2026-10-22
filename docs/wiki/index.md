@@ -1,3 +1,4 @@
+- [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED, GREEN pending.
 - [Cast while casting](systems/spell-casting.md#cast-while-casting--2026-10-21) — native Attr4 admission shared by creature/player/kit paths, without delaying Fire Blast behind the active cast; three native RED reproduced, GREEN pending.
 - [Follower mastery amounts](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21) — Player-only amount/refresh gate excluded approved class-stat followers; native AP/damage RED reproduced, generic fix committed with GREEN pending.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.

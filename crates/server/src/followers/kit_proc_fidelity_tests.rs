@@ -49,7 +49,6 @@ pub(super) fn complete_cast(h: &mut Harness, caster: Entity, spell: u32, target:
 }
 
 #[test]
-#[ignore = "DPS parity RED: FoF166ms dummy heartbeat produces25 damage hits"]
 fn dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits() {
     let (mut h, caster) = prepare(227734);
     let target = h.npc;
