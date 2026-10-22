@@ -236,7 +236,11 @@ fn encounter_coverage_orator_ongoing_two_energy_phases_native_damage_and_copy_cr
                 "actual native damage{spell}, difficulty{difficulty}"
             );
         }
-        assert!(h.inbox(1).spell_gos.is_empty());
+        assert!(
+            h.inbox(1).spell_gos.is_empty(),
+            "peer SpellGo evidence: {:?}",
+            h.inbox(1).spell_gos
+        );
         assert!(
             h.inbox(1)
                 .log
