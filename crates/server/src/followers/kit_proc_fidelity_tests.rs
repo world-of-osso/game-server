@@ -281,6 +281,46 @@ fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
 }
 
 #[test]
+#[ignore = "native async-cap positive control pending GREEN"]
+fn proc_fidelity_63_feel_the_burn_native_cap_replaces_oldest_application() {
+    let (mut h, caster) = prepare(209059);
+    // Native child casts isolate the authored100-stack cap, not producer frequency.
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 383395, Some(caster), 1);
+    }
+    let initial = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(initial.stacks, 100);
+    let first_expiry = initial.expires_at.unwrap();
+    h.advance(10);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let refreshed = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(refreshed.stacks, 100);
+    let latest_expiry = refreshed.expires_at.unwrap();
+    assert!(latest_expiry > first_expiry);
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > first_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < latest_expiry);
+    let remaining = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(
+        remaining.stacks, 1,
+        "the later real Fire Blast replaces only the oldest expiry at the native cap"
+    );
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > latest_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(!has_aura(h.app.world(), caster, 383395));
+}
+
+#[test]
 fn proc_fidelity_262_surge_earned_during_lava_burst_survives_that_cast() {
     let (mut h, caster) = at_level(209053, 32, |_| {});
     let target = h.npc;
