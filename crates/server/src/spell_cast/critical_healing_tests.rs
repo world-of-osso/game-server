@@ -9,7 +9,7 @@ const VINDICATOR: u32 = 200_376;
 const PVP_TEST_BUFF: u32 = 154_429;
 const BIO_SPORES: u32 = 154_611;
 const UNWIND_INJURY: u32 = 394_806;
-const HEALING_STORM: u32 = 215_257;
+const GUARDIAN_SHELL: u32 = 310_443;
 const LAY_ON_HANDS: u32 = 633;
 
 fn fixture(critical: bool) -> Harness {
@@ -21,7 +21,7 @@ fn fixture(critical: bool) -> Harness {
             PVP_TEST_BUFF,
             BIO_SPORES,
             UNWIND_INJURY,
-            HEALING_STORM,
+            GUARDIAN_SHELL,
             LAY_ON_HANDS,
         ],
         5,
@@ -112,10 +112,10 @@ fn census_tail_50_native_signed_modifiers_compose_multiplicatively_and_remove() 
 #[ignore = "census-tail50 RED before native critical healing consumer"]
 fn census_tail_50_native_small_heal_truncates_after_whole_critical_multiplier() {
     let mut h = fixture(true);
-    assert_eq!(heal(&mut h, HEALING_STORM), (10, true));
+    assert_eq!(heal(&mut h, GUARDIAN_SHELL), (10, true));
     let caster = h.caster;
     apply(&mut h, CRITICAL_POWER, 0, caster);
-    assert_eq!(heal(&mut h, HEALING_STORM), (11, true));
+    assert_eq!(heal(&mut h, GUARDIAN_SHELL), (11, true));
 }
 
 #[test]
