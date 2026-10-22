@@ -1286,8 +1286,9 @@ pub(super) fn damage_before_mitigation(
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
     } * done
-        * taken)
-        .max(0.0)
+        * taken
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
 }
 
 fn deal_damage_and_report(

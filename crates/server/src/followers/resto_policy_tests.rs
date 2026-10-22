@@ -452,6 +452,16 @@ fn resto_policy_learned_germination_adds_second_native_hot_to_pressured_tank() {
 #[test]
 fn resto_policy_marks_every_living_native_party_member_before_safe_filler() {
     let (mut h, healer, party) = super::super::kit_abundance_tests::native_party(32);
+    // Raid-buff maintenance is OOC-only; end actual combat references/attacks.
+    for actor in party.into_iter().chain([h.npc]) {
+        crate::combat::combat_stop(h.app.world_mut(), actor);
+    }
+    assert!(party.iter().all(|member| {
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(*member)
+            .is_none_or(|status| !status.0)
+    }));
     for _ in 0..200 {
         decide(&mut h, healer, &party);
         h.advance(1);

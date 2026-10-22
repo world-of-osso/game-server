@@ -2078,6 +2078,9 @@ fn validate_target(
     };
     let target = match explicit {
         Some(target) if targets::relation_matches(world, caster, target, relation) => target,
+        // TC InitExplicitTargets defaults an absent non-enemy target to self,
+        // but a supplied foreign raid target must fail CheckExplicitTarget.
+        None if relation == Relation::Raid => caster,
         _ if relation == Relation::Ally => caster,
         Some(_) => return Err(CastFailure::InvalidTarget),
         None => return Err(CastFailure::NoTarget),

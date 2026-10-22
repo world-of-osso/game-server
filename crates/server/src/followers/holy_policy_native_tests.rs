@@ -1,4 +1,5 @@
 //! Real 70448 percentage damage on a native level90 group, not a trivial Stockade overlevel.
+mod echo_of_light;
 use super::kit_clearcasting_tests::{complete_real_cast, frame_seconds, mana_cost, own_aura};
 use super::kit_tests::{at_level, uses_spell};
 use crate::auras::{ActiveAuras, has_aura};

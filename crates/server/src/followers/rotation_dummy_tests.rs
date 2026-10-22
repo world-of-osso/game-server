@@ -38,6 +38,10 @@ struct DummyMeasurement {
     stat_source: &'static str,
     initial_stats: serde_json::Value,
     final_stats: serde_json::Value,
+    reported_damage_sources: Vec<u64>,
+    known_spells: Vec<u32>,
+    summon_owners: BTreeMap<u64, u64>,
+    combat_events: Vec<shared::protocol::CombatLogEvent>,
 }
 
 fn prepare_dummies(h: &mut Harness, count: usize) -> Vec<Entity> {
@@ -377,6 +381,11 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
     let initial_stats = snapshot_stats(&h, caster);
     let begin = aura_now(h.app.world());
     let first_log = h.inbox.log.len();
+    let mut summon_query = h
+        .app
+        .world_mut()
+        .query::<(Entity, &shared::components::UnitSummonedBy)>();
+    let mut summon_owners = BTreeMap::new();
     let mut dots = BTreeMap::new();
     let mut buffs = BTreeMap::new();
     let mut observer = ProcObserver::new(spec, caster);
@@ -388,6 +397,9 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         super::update_ai(h.app.world_mut());
         let after_ai = proc_snapshots(h.app.world(), caster, spec);
         h.advance(1);
+        for (entity, owner) in summon_query.iter(h.app.world()) {
+            summon_owners.insert(entity.to_bits(), owner.0);
+        }
         let now = aura_now(h.app.world());
         let current = proc_snapshots(h.app.world(), caster, spec);
         let receipts = &h.inbox.go[first_go..];
@@ -457,6 +469,14 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         .iter()
         .map(|(&spell, &seconds)| (spell, seconds / elapsed / count as f64))
         .collect();
+    let mut known_spells: Vec<_> = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .expect("native follower retains its actual selected book")
+        .iter()
+        .collect();
+    known_spells.sort_unstable();
     let report = DummyMeasurement {
         spec,
         level,
@@ -477,7 +497,38 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
         stat_source: "production_stats_plugin_ungeared_starter",
         initial_stats,
         final_stats: snapshot_stats(&h, caster),
+        reported_damage_sources: sources,
+        known_spells,
+        summon_owners,
+        combat_events: events
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event.kind,
+                    CombatLogKind::Damage
+                        | CombatLogKind::CastSuccess
+                        | CombatLogKind::Summon
+                        | CombatLogKind::Energize
+                )
+            })
+            .cloned()
+            .collect(),
     };
+    let observed_damage: i64 = report
+        .combat_events
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event
+                    .source
+                    .is_some_and(|source| report.reported_damage_sources.contains(&source))
+        })
+        .map(|event| i64::from(event.amount))
+        .sum();
+    assert_eq!(
+        observed_damage, report.damage,
+        "exported actual events must reconstruct the reported source-scoped damage"
+    );
     let json = serde_json::to_string_pretty(&report).unwrap();
     println!("ROTATION_DUMMY {json}");
     if let Some(directory) = std::env::var_os("ROTATION_FIDELITY_OUTPUT") {
@@ -523,6 +574,14 @@ fn rotation_dummy_262_single_target_120s() {
 #[test]
 fn rotation_dummy_262_three_targets_120s() {
     measure_dummy(209053, 262, 3, 90, DURATION_SECONDS);
+}
+#[test]
+fn rotation_dummy_262_level70_single_target_60s() {
+    measure_dummy(209053, 262, 1, 70, 60.0);
+}
+#[test]
+fn rotation_dummy_262_level70_three_targets_60s() {
+    measure_dummy(209053, 262, 3, 70, 60.0);
 }
 #[test]
 fn rotation_dummy_262_level32_smoke() {
