@@ -187,7 +187,11 @@ pub(super) fn class_stats(
     };
     let stats = crate::stats::compute_character_stats(&input, None)
         .ok_or("unsupported follower class level")?;
-    let table = world.resource::<PowerTypeTable>();
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        let message = "follower native powers unavailable: PowerTypeTable is not installed";
+        warn!("{message}");
+        return Err(message.to_owned());
+    };
     let pools = PowerPools::from_table(
         table,
         table.class_powers(class.class_id, &class.power_types),
