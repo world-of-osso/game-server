@@ -10,7 +10,7 @@ import subprocess
 
 import retail_content
 from follower_placement_sources import (digest, read_cached_npc, read_db2,
-    read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
+    read_source_floor_support, read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
 
 PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
@@ -36,6 +36,18 @@ def query_route(executable, nav, start, end):
     return dict(argv=argv, exit_code=result.returncode, corners=corners, stderr=result.stderr)
 
 
+def select_surface_query(record, marker, queries):
+    if 'source_floor_surface_height' in record:
+        selected = [q for q in queries if abs(q['height'] - record['source_floor_surface_height']) < 0.000001]
+        if len(selected) != 1 or marker['floor'] != record['source_floor']:
+            raise ValueError('approved source-floor surface no longer matches baked geometry')
+        return selected[0]
+    if len(queries) == 1:
+        return queries[0]
+    reachable = {tuple(q['corners'][-1]): q for q in queries if q['exit_code'] == 0 and q['corners']}
+    return next(iter(reachable.values())) if len(reachable) == 1 else None
+
+
 def derive_placement(record, manifest, tables, cache, polygons, route, nav, entrance):
     page = read_cached_npc(cache, record['entry'])
     if page['cache_sha256'] != record['cache_sha256'] or len(page['markers']) != 1:
@@ -43,26 +55,21 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
     marker = page['markers'][0]
     assignments = select_assignment(tables, manifest['map_id'], marker)
     x, y = transform_marker(marker, assignments)
-    heights = sample_surfaces(polygons, x, y, assignments)
+    all_heights = sample_surfaces(polygons, x, y, assignments)
+    heights = read_source_floor_support(record, marker, assignments, all_heights)
     start = [entrance['LocX'], entrance['LocZ'], -entrance['LocY']]
     queries = [dict(height=z, **query_route(route, nav, start, [x, z, -y])) for z in heights]
-    reachable = {tuple(q['corners'][-1]): q for q in queries if q['exit_code'] == 0 and q['corners']}
+    selected = select_surface_query(record, marker, queries)
     placement = dict(entry=record['entry'], page=page, marker=marker,
-                     assignments=assignments, wow_xy=[x, y], surface_queries=queries,
-                     status='UNIQUE_REACHABLE_SURFACE' if len(reachable) == 1 else 'MISSING_OR_AMBIGUOUS_SURFACE')
-    if 'source_floor_surface_height' in record:
-        selected = [q for q in queries if abs(q['height'] - record['source_floor_surface_height']) < 0.000001]
-        if len(selected) != 1 or marker['floor'] != record['source_floor']:
-            raise ValueError('approved source-floor surface no longer matches baked geometry')
-        placement['wow_xyz'] = [x, y, selected[0]['height']]
+                     assignments=assignments, wow_xy=[x, y], all_surface_heights=all_heights,
+                     surface_queries=queries, status='MISSING_OR_AMBIGUOUS_SURFACE')
+    if 'source_floor_evidence' in record:
         placement['source_floor_evidence'] = record['source_floor_evidence']
-        if selected[0]['exit_code'] != 0:
-            placement['status'] = 'SOURCE_FLOOR_ROUTE_GAP'
-            placement['navigation_gap'] = record['navigation_gap']
-        else:
-            placement['status'] = 'UNIQUE_REACHABLE_SURFACE'
-    elif len(reachable) == 1:
-        placement['wow_xyz'] = [x, y, next(iter(reachable.values()))['height']]
+    if selected is not None:
+        placement['wow_xyz'] = [x, y, selected['height']]
+        placement['status'] = 'UNIQUE_REACHABLE_SURFACE' if selected['exit_code'] == 0 else 'SOURCE_FLOOR_ROUTE_GAP'
+        if selected['exit_code'] != 0:
+            placement['navigation_gap'] = record.get('navigation_gap', f"FOLLOWER_ROUTE_INCOMPLETE_{manifest['map_id']}_{record['entry']}")
     return placement
 
 
@@ -127,8 +134,8 @@ def write_placements(target, manifest, placements, bindings):
         guid = manifest['guid_base'] + manifest['map_id'] * 1000 + ordinal
         x, y, z = placement['wow_xyz']
         comment = f"{PLACEMENT_POLICY}; {placement['page']['url']}; floor={placement['marker']['floor']}; percent={placement['marker']['percent']}"
-        existing = target.execute('SELECT id1,map,Comment FROM content_creature WHERE guid=?', (guid,)).fetchone()
-        if existing is not None and tuple(existing) != (record['entry'], manifest['map_id'], comment):
+        existing = target.execute('SELECT id1,map,Comment,position_x,position_y,position_z FROM content_creature WHERE guid=?', (guid,)).fetchone()
+        if existing is not None and tuple(existing) != (record['entry'], manifest['map_id'], comment, x, y, z):
             raise ValueError(f'reserved placement GUID collision at{guid}')
         target.execute('INSERT OR IGNORE INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
                        (guid, record['entry'], manifest['map_id'], x, y, z, '1', comment))
