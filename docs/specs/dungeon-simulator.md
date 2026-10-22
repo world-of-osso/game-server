@@ -54,7 +54,7 @@ Evading actors must travel frozen edges at their native speed to the native home
 
 ## Native pet utility
 
-Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs normal pet actions/AI. The immutable catalog moves between cached seeded worlds; pet commands, owners and cast state never do. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
+Production `HunterPetPlugin` and `PetControlPlugin` load native pet family/specialization/learned-spell definitions and run normal pet lifecycle/actions/AI. Immutable catalogs move between cached seeded worlds; stables, summoned pets, commands, owners and cast state never do. A transport-free leader retains the ordinary runtime-only stable initialized while it has follower identity; never invent a persistent character or transport connection to summon its pet. Native source templates remain required. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
 
 ## How it works
 

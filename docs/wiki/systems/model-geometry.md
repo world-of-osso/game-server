@@ -22,4 +22,4 @@ Native Shadowguard Champion122403/display124440 has no model-info row. At f62618
 
 ## See Also
 
-- [Follower dungeons](follower-dungeons.md) — follower pursuit uses the same model reach.
+- [Follower utility](follower-utility.md) — follower pursuit uses the same model reach.

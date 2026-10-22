@@ -36,6 +36,20 @@ pub(crate) fn first_melee_stat_expiry(unit: Entity, auras: &ActiveAuras) -> Opti
     })
 }
 
+pub(crate) fn first_armor_bypass_expiry(attacker: Entity, auras: &ActiveAuras) -> Option<f64> {
+    let current = combat_stats::armor_after_bypass(Some(auras), attacker, 1.0);
+    let expiries = auras
+        .iter()
+        .filter(|aura| aura.caster == attacker)
+        .filter_map(|aura| aura.expires_at);
+    expiries
+        .filter(|&at| {
+            let future = build_unexpired_snapshot(auras, at);
+            current != combat_stats::armor_after_bypass(Some(&future), attacker, 1.0)
+        })
+        .min_by(f64::total_cmp)
+}
+
 fn build_unexpired_snapshot(auras: &ActiveAuras, at: f64) -> ActiveAuras {
     ActiveAuras {
         auras: auras

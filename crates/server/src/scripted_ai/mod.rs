@@ -27,6 +27,7 @@ mod broggok;
 mod bromach;
 pub(crate) mod caster_chase;
 pub mod creature_text;
+mod dailcry;
 mod doragosa;
 mod emberon;
 pub mod event_map;
@@ -45,6 +46,7 @@ pub mod movement;
 pub mod murder_row;
 pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
+pub(crate) mod orator;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
 mod scripted_alerts;
@@ -120,6 +122,7 @@ impl Plugin for ScriptedAiPlugin {
             .add_systems(Startup, azure_vault::register_aura_scripts)
             .add_systems(Startup, blood_furnace::register_aura_scripts)
             .add_systems(Startup, shattered_halls::register_aura_scripts)
+            .add_systems(Startup, orator::register_aura_scripts)
             .add_systems(FixedPreUpdate, trigger_just_appeared)
             .add_systems(FixedPostUpdate, hellfire_ramparts::update_instance_resets)
             .add_systems(FixedPostUpdate, hellfire_ramparts::liquid_fire::update)
@@ -266,7 +269,7 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
-    /// Only explicitly sourced boss-mod-Lua scripts opt into real-clock alerts.
+    /// Explicit source-owned script schedules opt into real-clock alerts.
     fn encounter_schedule(&self) -> Option<&EventMap> {
         None
     }
@@ -378,8 +381,14 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
+    if script_name == orator::SCRIPT {
+        return orator::creature_ai(world, creature);
+    }
     if script_name == kikatal::SCRIPT {
         return kikatal::creature_ai(world, creature);
+    }
+    if script_name == dailcry::SCRIPT {
+        return dailcry::creature_ai(world, creature);
     }
     if script_name == talondras::SCRIPT {
         return talondras::creature_ai(world, creature);
@@ -451,7 +460,9 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == talondras::SCRIPT
         || script_name == emberon::SCRIPT
         || script_name == anubzekt::SCRIPT
+        || script_name == orator::SCRIPT
         || script_name == kikatal::SCRIPT
+        || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
