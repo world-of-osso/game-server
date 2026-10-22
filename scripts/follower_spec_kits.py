@@ -209,12 +209,22 @@ BATTLEFIELD_DAMAGE_PRIORITIES = dict.fromkeys((8042, 11366, 22568, 23922, 31935,
     356995, 1264359), 110)
 
 
+def damage_hits_only_caster(facts):
+    damage = [row for row in facts['closure_effects'] if 'damage' in effect_roles(row)]
+    # Native caster selectors1/120 with no second selector are self damage,
+    # not evidence for an enemy-targeted DPS action (e.g. Burning Rush).
+    return bool(damage) and all(row['ImplicitTarget_0'] in {1, 120}
+                                and row['ImplicitTarget_1'] == 0 for row in damage)
+
+
 def read_combat_policy(catalog, spec, name, spell, dispel_effects, control_effects):
     facts = catalog.read_role(spell)
     selected = combat_policy(spec, name, spell, dispel_effects, control_effects)
     if selected is not None:
         return selected
     if facts['intrinsic'] in {'damage', 'mixed'}:
+        if damage_hits_only_caster(facts):
+            return policy('utility', 1000)
         return policy('attack', BATTLEFIELD_DAMAGE_PRIORITIES.get(spell, 150))
     if facts['intrinsic'] == 'heal':
         direct = [row for row in facts['root_effects'] if 'heal' in effect_roles(row)]
