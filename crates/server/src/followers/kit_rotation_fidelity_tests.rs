@@ -35,6 +35,44 @@ fn rotation_selection_63_native_book_reaches_fireball() {
 }
 
 #[test]
+fn rotation_selection_262_native_target_earthquake_deals_periodic_damage() {
+    let (mut h, caster, targets) = prepare_at_level(209053, 3, 70);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(462620)
+    );
+    let first = h.inbox.log.len();
+    uses_spell(&mut h, caster, 462620);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::CastSuccess
+                && event.spell_id == Some(462620)
+                && event.source == Some(caster.to_bits())
+        }),
+        "real selected native target Earthquake must complete before checking its consequences"
+    );
+    // No further AI casts: let the actual native6s field run to natural expiry.
+    h.advance(140);
+    assert!(targets.iter().all(|&target| h.health(target) > 0.0));
+    let hits: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(77478)
+                && event.source == Some(caster.to_bits())
+                && event.amount > 0
+        })
+        .collect();
+    assert!(
+        !hits.is_empty(),
+        "native462620 explicitly names actual77478 damage but completed casts currently create no damaging field"
+    );
+}
+
+#[test]
 fn rotation_selection_262_native_book_applies_flame_shock() {
     let (mut h, caster, _) = prepare(209053, 1);
     uses_spell(&mut h, caster, 470057);
