@@ -30,6 +30,8 @@ mod kit_overrides;
 #[cfg(test)]
 mod fire_efficiency_tests;
 #[cfg(test)]
+mod formation_tests;
+#[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
 mod kit_rotation_fidelity_tests;
@@ -208,6 +210,8 @@ impl Plugin for FollowerPlugin {
 mod catalog_tests;
 #[cfg(test)]
 mod cc_tests;
+#[cfg(test)]
+mod combat_refs_tests;
 #[cfg(test)]
 mod control_cast_stop_tests;
 #[cfg(test)]

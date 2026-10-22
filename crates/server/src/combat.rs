@@ -1,6 +1,6 @@
 use crate::random as rand;
 use bevy::ecs::system::SystemParam;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use bevy::prelude::*;
 use lightyear::prelude::*;
@@ -43,7 +43,7 @@ const MOD_ENEMY_DODGE: u32 = 251;
 /// Non-player expertise (`Unit::GetUnitDodgeChance`/`GetUnitParryChance`).
 /// A swing of one hand pushes the other hand's timer to at least this
 /// (`ATTACK_DISPLAY_DELAY`, Unit.h:643; Unit::AttackerStateUpdate, Unit.cpp:2203-2230).
-const ATTACK_DISPLAY_DELAY: f32 = 0.2;
+const ATTACK_DISPLAY_DELAY: Duration = Duration::from_millis(200);
 /// Base melee damage per swing of units without ExpectedStat damage.
 const BASE_DAMAGE: f32 = 10.0;
 /// Retail rage per second of swing time for each auto-attack dealt (SimC
@@ -132,16 +132,16 @@ impl Plugin for CombatPlugin {
 /// its selection (`Player::SetTarget` is a no-op, Player.h:1920).
 #[derive(Component, Debug, Clone)]
 pub struct AutoAttack {
-    pub timer: f32,
-    pub off_hand_timer: f32,
+    pub timer: Duration,
+    pub off_hand_timer: Duration,
     pub victim: Entity,
 }
 
 impl AutoAttack {
     pub fn new(victim: Entity) -> Self {
         Self {
-            timer: 0.0,
-            off_hand_timer: 0.0,
+            timer: Duration::ZERO,
+            off_hand_timer: Duration::ZERO,
             victim,
         }
     }
@@ -498,8 +498,9 @@ pub(crate) fn rescale_creature_swing_timers(
     }
     if let Some(mut attack) = world.get_mut::<AutoAttack>(unit) {
         let multiplier = current / previous;
-        attack.timer *= multiplier;
-        attack.off_hand_timer *= multiplier;
+        attack.timer = melee::attack_timer_duration(attack.timer.as_secs_f32() * multiplier);
+        attack.off_hand_timer =
+            melee::attack_timer_duration(attack.off_hand_timer.as_secs_f32() * multiplier);
     }
 }
 
@@ -652,7 +653,7 @@ fn auto_attack_unit(
     time: Res<Time>,
     mut params: AutoAttackParams,
 ) {
-    let dt = time.delta_secs();
+    let dt = time.delta();
     let mut swings = Vec::new();
     let mut redirect_health = HashMap::new();
     // Release the attacker's read of ActiveAuras before mutating the victim's
@@ -752,7 +753,7 @@ struct SwingSnapshot {
 fn snapshot_attacker(
     attackers: &mut AutoAttackers,
     entity: Entity,
-    dt: f32,
+    dt: Duration,
 ) -> Option<SwingSnapshot> {
     let (
         _,
@@ -763,8 +764,8 @@ fn snapshot_attacker(
         (stat_mods, casting, auras),
         (creature, flags, summon, attack_time),
     ) = attackers.get_mut(entity).ok()?;
-    auto_attack.timer -= dt;
-    auto_attack.off_hand_timer -= dt;
+    auto_attack.timer = auto_attack.timer.saturating_sub(dt);
+    auto_attack.off_hand_timer = auto_attack.off_hand_timer.saturating_sub(dt);
     // Unit::DoMeleeAttackIfReady: timers run even while casting or controlled.
     if casting || auras.is_some_and(|auras| auras.cannot_auto_attack()) {
         return None;
@@ -1431,7 +1432,7 @@ fn try_swing(
         Hand::Main => auto_attack.timer,
         Hand::Off => auto_attack.off_hand_timer,
     };
-    if timer > 0.0 {
+    if !timer.is_zero() {
         return None;
     }
     let weapon = attacker.weapon(hand)?;
@@ -1644,8 +1645,8 @@ fn reset_swing_timers(auto_attack: &mut AutoAttack, hand: Hand, swing_time: f32)
         Hand::Main => (&mut auto_attack.timer, &mut auto_attack.off_hand_timer),
         Hand::Off => (&mut auto_attack.off_hand_timer, &mut auto_attack.timer),
     };
-    *swung = swing_time;
-    *other = other.max(ATTACK_DISPLAY_DELAY);
+    *swung = melee::attack_timer_duration(swing_time);
+    *other = (*other).max(ATTACK_DISPLAY_DELAY);
 }
 
 /// TC IsWithinMeleeRangeAt: nominal range plus attacker-owned aura153 yards.

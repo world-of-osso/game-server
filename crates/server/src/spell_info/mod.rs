@@ -106,6 +106,9 @@ pub struct SpellInfo {
     /// Completed native empower stage passed into release spell/effect snapshots.
     #[serde(skip)]
     pub(crate) cast_empower_level: Option<u8>,
+    /// Scripted effectiveness on this cast's damage only, retained through flight.
+    #[serde(skip)]
+    pub(crate) cast_damage_multiplier: Option<f32>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
