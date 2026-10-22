@@ -1002,4 +1002,4 @@ Debug logs and root cause analyses.
 
 - [Census effect77](systems/spell-casting.md#census-effect77--2026-10-20) —44-root source mapping, Subduing Grasp E1 partial port; unmatched slots stay named gaps.
 
-- [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots, gates pending.
+- [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots; native23s GREEN,464controlsPASS, Stockade/Henry simulator clears and all-targets/fmtPASS.
