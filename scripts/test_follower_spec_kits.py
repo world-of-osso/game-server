@@ -16,6 +16,7 @@ from scripts.follower_spec_kits import prepare, read_periodic_description_child
 ROOT = Path(__file__).resolve().parents[1]
 DB2 = Path('/home/osso/Projects/world-of-osso/game-engine/data/db2/active')
 SOURCE = Path(os.environ['FOLLOWER_KIT_SOURCE_OUTPUT'])
+WORLD_DB = Path(os.environ['FOLLOWER_KIT_TEST_WORLD_DB'])
 TC_CHILD_ARTIFACT = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/tc-script-child-edges-a352b1fa.json')
 
 
@@ -23,7 +24,7 @@ class DescriptionReferenceTests(unittest.TestCase):
     def setUp(self):
         self.db = sqlite3.connect(':memory:', uri=True)
         self.addCleanup(self.db.close)
-        native = (ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro'
+        native = WORLD_DB.resolve().as_uri() + '?mode=ro'
         self.db.execute('ATTACH DATABASE ? AS native', (native,))
         self.db.execute('CREATE TABLE spell AS SELECT ID,Description_lang FROM native.spell WHERE ID=8921')
         self.db.execute('CREATE TABLE spell_name AS SELECT ID,Name_lang FROM native.spell_name WHERE ID IN(8921,164812,155625)')
@@ -53,7 +54,7 @@ class DescriptionReferenceTests(unittest.TestCase):
 class FollowerKitProducerTests(unittest.TestCase):
     def command(self, output, receipt, diff, world_db=None, source=None):
         return [sys.executable, str(ROOT / 'scripts/follower_spec_kits.py'),
-                '--world-db', str(world_db or ROOT / 'data/world.db'), '--db2-root', str(DB2),
+                '--world-db', str(world_db or WORLD_DB), '--db2-root', str(DB2),
                 '--source-json', str(source or SOURCE), '--tc-child-edges', str(TC_CHILD_ARTIFACT),
                 '--output-db', str(output),
                 '--receipt', str(receipt), '--sqldiff', str(diff)]
@@ -62,7 +63,7 @@ class FollowerKitProducerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             output, receipt, diff = [root / name for name in ['world.db', 'receipt.json', 'kit.sql']]
-            source = (ROOT / 'data/world.db').resolve()
+            source = WORLD_DB.resolve()
             with source.open('rb') as stream:
                 original_sha = hashlib.file_digest(stream, 'sha256').hexdigest()
             result = subprocess.run(self.command(output, receipt, diff), capture_output=True, text=True)
@@ -123,7 +124,7 @@ class FollowerKitProducerTests(unittest.TestCase):
         directory_root.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=directory_root) as directory:
             root = Path(directory)
-            source = (ROOT / 'data/world.db').resolve()
+            source = WORLD_DB.resolve()
             owned = [66, 73, 103, 266, 269]
             prepare(SimpleNamespace(world_db=source, db2_root=DB2, source_json=SOURCE,
                                     tc_child_edges=TC_CHILD_ARTIFACT,
@@ -162,7 +163,7 @@ class FollowerKitProducerTests(unittest.TestCase):
     def test_refuses_source_database_output(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            result = subprocess.run(self.command(ROOT / 'data/world.db', root / 'receipt.json', root / 'kit.sql'), capture_output=True, text=True)
+            result = subprocess.run(self.command(WORLD_DB, root / 'receipt.json', root / 'kit.sql'), capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('refusing', result.stderr.lower())
 

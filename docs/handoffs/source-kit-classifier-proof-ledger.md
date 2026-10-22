@@ -23,6 +23,8 @@ Lead-approved: replace the role NAME whitelist with classification from native e
 
 `follower_spec_kits.py` requires `--tc-child-edges <artifact>`; `kit_rows` receives that path explicitly. No slot-local diagnostic alias or alternate search path. Receipts record the artifact and classifier/policy SHA-256s. The initial integration probe failed on an absent slot-local artifact path before assertions; it is a setup failure, not behavioral RED.
 
+Copy-producer tests require `FOLLOWER_KIT_TEST_WORLD_DB` and a source JSON whose `world_db` names that same immutable snapshot. The first8-test integration probe had7 passes and one explicit input-SHA drift refusal while canonical publication ran concurrently (`E/source-role-copy-producer-controls.*`); not an output/idempotence failure. The production source hash guard is unchanged. Only the failed case needs a bounded rerun against the frozen input; preserve the other exact command receipts and their input qualifications.
+
 ## Approved policy boundary
 
 `role_slot` is also an executable action policy. Lead approved retaining small cited APL exclusions separately from generic source classification. Arcane Explosion stays intrinsically damaging but utility1000/AI-disabled under its Fire APL contract. Read-only audit found32 existing utility roots with sourced damage/heal reachability, including self-damaging Burning Rush, pet-only healing and conditional crowd-control damage. Intrinsic reachability alone must not invent enemy targeting or unconditional APL use; distinguish classification-driven changes from policy-retained rows in the full delta.
