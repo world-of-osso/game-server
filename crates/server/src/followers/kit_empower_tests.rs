@@ -275,6 +275,79 @@ fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
     );
 }
 
+#[test]
+fn native_empower_tip_scales_snapshots_max_rank_before_consuming_one_use() {
+    let (mut h, caster) = prepare(90);
+    let tip = 370553;
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, tip, Some(caster), false).unwrap();
+    h.advance(3);
+    assert!(crate::auras::has_aura(h.app.world(), caster, tip));
+    let fire = super::kit_overrides::resolve_action(h.app.world(), caster, FIRE_BREATH).unwrap();
+    crate::spell_cast::creature_cast_empowered(h.app.world_mut(), caster, fire, Some(caster), 1)
+        .unwrap();
+    assert!(
+        !crate::auras::has_aura(h.app.world(), caster, tip),
+        "native one-use duration modifier must be consumed by the admitted empower"
+    );
+    h.advance(3);
+    assert!(
+        h.app.world().get::<CastState>(caster).is_none(),
+        "native duration reduction must be snapshotted before consuming Tip"
+    );
+    let dot = h
+        .app
+        .world()
+        .get::<ActiveAuras>(h.npc)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == FIRE_DAMAGE && aura.caster == caster)
+        .unwrap();
+    assert_eq!(
+        dot.duration_ms, 6_000,
+        "Tip must release Font rank4 despite a stage1 request: native base2s plus Blast Furnace4s"
+    );
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id == Some(FIRE_DAMAGE)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+
+    // Let the ordinary finish GCD expire, without restoring any cooldown or aura.
+    h.advance(12);
+    let surge =
+        super::kit_overrides::resolve_action(h.app.world(), caster, ETERNITY_SURGE).unwrap();
+    crate::spell_cast::creature_cast_empowered(h.app.world_mut(), caster, surge, Some(h.npc), 1)
+        .unwrap();
+    h.advance(3);
+    assert!(
+        h.app.world().get::<CastState>(caster).is_some(),
+        "consumed Tip must not make the next empower instant"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id == Some(SURGE_DAMAGE)
+                && event.kind == CombatLogKind::Damage)
+    );
+    h.advance(20);
+    assert!(h.app.world().get::<CastState>(caster).is_none());
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id == Some(SURGE_DAMAGE)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0)
+    );
+}
+
 fn complete_empower(h: &mut Harness, caster: Entity, base: u32) {
     let spell = super::kit_overrides::resolve_action(h.app.world(), caster, base).unwrap();
     let target = if base == FIRE_BREATH { caster } else { h.npc };
