@@ -32,6 +32,7 @@ mod damage_shield_tests;
 pub(crate) mod damage_transfer;
 mod earthen_rage;
 pub(crate) mod ebon_might;
+mod echo_of_light;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fel_devastation;
@@ -56,6 +57,8 @@ pub(crate) mod power_amount_trigger;
 pub mod procs;
 mod refresh;
 pub(crate) mod reward_mods;
+#[cfg(test)]
+mod rolling_periodic_tests;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;
@@ -1068,7 +1071,7 @@ pub(crate) fn apply_aura_with_spell(
     if instance.effects.is_empty() {
         return;
     }
-    refresh::prepare_application(world, target, &mut instance);
+    refresh::prepare_application(world, target, &mut instance, spell);
     log_unhandled_types(world, &instance);
     ensure_aura_components(world, target);
     mechanic_immunity::remove_matching(world, target, &instance);

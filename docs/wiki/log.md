@@ -6,6 +6,7 @@
 
 [Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): native2 measurements PASS31.84s, source-scoped770.85/714.367 DPS vs SimC caster965.019/1550.704 plus owned guardians130.905/129.465; actualstat mismatch and Azure duty remain explicit.3T14 completed462620 casts produce no77478; native AI consequence RED1/16.49s/zero warnings. Shared existing61882 field path extended to native target variant at3de3f1131; center/overlap/native-clock control and GREEN pending. Frozen Feel packet31b remains distinct.
 
+- [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
 ## 2026-10-22 — Feel the Burn targeted GREEN and affected samples
 
 [Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): native11GREEN41.86s/c43cc8dcb/zero warnings includes4Feel cases plus7 ordinary proc/cadence controls; proved4 enabled25c4d4fb4. Only affected Fire StatsPlugin3PASS86.45s,90ST/3T3261.958/3011.958 DPS and final mastery_points13/11, explicitly unpaired starter samples. Later996ec234 merge requires integration proof. New Elemental70 diagnostic2PASS31.84s atsamecompiledscope; analysis separatescaster/guardian attribution and actualstat mismatch rather than declaring parity.
@@ -25,6 +26,10 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Midnight identity/population recheck
+
+[Updated native evidence](investigations/follower-data.md#updated-native-identityplacement-evidence--verified2026-10-22): b365fd5f2 pre-packet census adds19 exact unique JEC/TDB joins/11 single-floor encounter XYs; blanket candidate-only identity gaps superseded for qualified actors. Canonical11:25CDT source/runtime counts: MurderRow2/2,Den217/217,Maisara376/376,other6maps0/0. Placement publication and missing server-clock anchors remain separate; no external guide authority used.
+
 ## 2026-10-22 — Midnight clock authority
 
 [Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
@@ -3863,6 +3868,13 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+## 2026-10-22 — Server test performance profile
+
+[Server test performance](investigations/server-test-performance.md): copied fu913 baseline plus49Hz sample identifies unoptimized server-instantiated generic ECS/iterator paths despite optimized dependencies. Add test-only server opt2/debug1, preserving assertions/overflow checks. Baseline/optimized CPU, wall, RSS and complete900s union acceptance remain pending; shared-host swapping is recorded, not attributed to code.
+
+Pruner investigation: unconditional leading-lib stripping split libc/libm/libloading/libsqlite3_sys dep-info from library groups, defeating third-party retention and cascading94-crate rebuilds. Lead deployed extension-aware grouping; standalone aged-filesystem regression8RED→3GREEN. Same-petgate manifest/lock diff empty, flags/features stable. Separate ft923 pygate cold-check history remains unproven.
+
+Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0→opt2 timer31.133876→7.695305s,CPU23.252883→7.635607s,debug1/assertions/overflow retained. Separate current3casePASS includes fullStockade73.885s; historical source comparison remains explicitly confounded. Second cache cause: relativevendor/root missed slash-prefixed guard, evicting Replication/Replicon/Recast and rebuilding4registryLightyearconsumers. Lead deployed path-component matching; native relative artifact classification and aged-filesystem RED1→4GREEN. Union/currentmaster/canonicalbackup/RSS qualification remains open.
 - 2026-10-22: Recorded Ruby entrance artifact/formation root causes, pushed native23s overlap RED and approved per-party slot policy; GREEN/gates pending. See [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
 
 - 2026-10-22: Ruby per-party follow slots qualified: pushed ignoredRED→native23sGREEN; integrated8a1faab214 controls464PASS/27ignored, defaultStockade+Henry3-boss simulator clears, be88079ef native-metadata fixture1PASS/all-targets/fmtPASS,0compiler warnings. Source snapshot unchanged6bf39eb8; see [[follower-data#Ruby entrance follow and formation — 2026-10-22]].

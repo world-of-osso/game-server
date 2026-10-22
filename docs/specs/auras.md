@@ -2,6 +2,24 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Native rolling periodic refresh
+
+TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
+This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
+
+- [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
+- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
+- [x] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
+- [x] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
+- [x] Ordinary native child aura/cast execution gains this behavior automatically; class producers still own their sourced incoming amount.
+- [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.
+
+Generic native boundary assertions:
+`crates/server/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
+`crates/server/src/followers/holy_policy_native_tests/echo_of_light.rs`.
+Existing Barbed and335467 regressions remain required controls. This does not
+certify all native flagged spell producers or change periodic-clock ownership.
+
 ## Census generic resource/state/duration slice (2026-10-20)
 
 Pinned TC a352b1fa and native70448, without spell-ID branches:

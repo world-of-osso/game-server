@@ -475,6 +475,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        super::echo_of_light::ECHO_MASTERY,
+        AuraScript {
+            check_proc: Some(super::echo_of_light::check_heal),
+            on_damage_proc: Some(super::echo_of_light::apply_echo),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         super::binding_heals::BINDING_HEALS,
         AuraScript {
             check_proc: Some(super::binding_heals::check_heal),
