@@ -16,6 +16,7 @@ from follower_placement_sources import (digest, read_cached_npc, read_db2,
 PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS'
 JOURNAL_PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
 LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
+NATIVE_BINDING_POLICY = 'FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
 MAP_TUNING_POLICY = 'FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY'
 TABLE_KEYS = {'content_creature_template': ('entry',),
@@ -98,8 +99,13 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
             raise ValueError('same-room anchor evidence differs from current source XY')
     all_heights = sample_surfaces(polygons, x, y, assignments)
     heights = read_source_floor_support(record, marker, assignments, all_heights)
-    start = [entrance['LocX'], entrance['LocZ'], -entrance['LocY']]
-    queries = [dict(height=z, **query_route(route, nav, start, [x, z, -y])) for z in heights]
+    if entrance is None:
+        if len(all_heights) != 1:
+            raise ValueError('entrance-unsourced placement requires one baked surface at journal XY')
+        queries = [dict(height=z, exit_code=None, corners=[], status='NOT_QUERIED_ENTRANCE_UNSOURCED') for z in heights]
+    else:
+        start = [entrance['LocX'], entrance['LocZ'], -entrance['LocY']]
+        queries = [dict(height=z, **query_route(route, nav, start, [x, z, -y])) for z in heights]
     selected = select_surface_query(record, marker, queries)
     placement = dict(entry=record['entry'], page=page, marker=marker,
                      assignments=assignments, wow_xy=[x, y], all_surface_heights=all_heights,
@@ -110,8 +116,12 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
         placement['source_floor_evidence'] = record['source_floor_evidence']
     if selected is not None:
         placement['wow_xyz'] = [x, y, selected['height']]
-        placement['status'] = 'UNIQUE_REACHABLE_SURFACE' if selected['exit_code'] == 0 else 'SOURCE_FLOOR_ROUTE_GAP'
-        if selected['exit_code'] != 0:
+        if entrance is None:
+            placement['status'] = 'SOURCE_PLACEMENT_ENTRANCE_UNSOURCED'
+            placement['entrance_gap'] = f"FOLLOWER_ENTRANCE_UNSOURCED_{manifest['map_id']}"
+        else:
+            placement['status'] = 'UNIQUE_REACHABLE_SURFACE' if selected['exit_code'] == 0 else 'SOURCE_FLOOR_ROUTE_GAP'
+        if entrance is not None and selected['exit_code'] != 0:
             placement['navigation_gap'] = record.get('navigation_gap', f"FOLLOWER_ROUTE_INCOMPLETE_{manifest['map_id']}_{record['entry']}")
     return placement
 
@@ -145,7 +155,27 @@ def validate_lua_primary_identity(identity, inventory, encounter, map_id, entry,
         raise ValueError('Lua source does not identify this primary entry, encounter and journal')
 
 
+def derive_exact_native_binding(source, tables, map_id, entry, identity):
+    journal = next(row for row in tables['JournalEncounter'] if int(row['ID']) == identity['journal_encounter_id'])
+    dungeon = next(row for row in tables['DungeonEncounter'] if row['ID'] == journal['DungeonEncounterID'])
+    name = source.execute('SELECT name FROM tdb_creature_template WHERE entry=?', (entry,)).fetchone()[0]
+    displays = {row[0] for row in source.execute('SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (entry,))}
+    actors = [row for row in tables['JournalEncounterCreature'] if row['JournalEncounterID'] == journal['ID']
+              and row['Name_lang'] == name and int(row['CreatureDisplayInfoID']) in displays]
+    if len(actors) != 1 or int(dungeon['MapID']) != map_id or int(actors[0]['ID']) != identity['journal_actor_id']:
+        raise ValueError('require one journal actor with exact native name and display on the source map')
+    actor = actors[0]
+    candidates = source.execute('SELECT DISTINCT t.entry FROM tdb_creature_template t JOIN tdb_creature_template_model m '
+                                'ON m.CreatureID=t.entry WHERE t.name=? AND m.CreatureDisplayID=?',
+                                (name, int(actor['CreatureDisplayInfoID']))).fetchall()
+    if {row[0] for row in candidates} != {entry}:
+        raise ValueError('exact native name and display has ambiguous template entries')
+    return (map_id, entry, int(dungeon['ID']), int(dungeon['Bit']), int(journal['ID']), int(actor['ID']), int(actor['CreatureDisplayInfoID']))
+
+
 def derive_binding(source, inventory, tables, map_id, entry, identity=None):
+    if identity is not None and identity['policy'] == NATIVE_BINDING_POLICY:
+        return derive_exact_native_binding(source, tables, map_id, entry, identity)
     encounter = next(e for e in inventory['encounters'] if e['MapID'] == map_id and entry in e['enabled_entries'])
     dungeon = next(r for r in tables['DungeonEncounter'] if int(r['ID']) == encounter['encounter']['ID'])
     journal = next(r for r in tables['JournalEncounter'] if int(r['ID']) in encounter['journal_ids'])
@@ -357,7 +387,12 @@ def prepare(args):
         backup(source, baseline_path)
     with closing(open_readonly(baseline_path)) as baseline:
         baseline.row_factory = sqlite3.Row
-        entrance = dict(baseline.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=? AND MapID=?', (manifest['entrance_id'], manifest['map_id'])).fetchone())
+        if manifest['entrance_id'] is None:
+            if manifest.get('entrance_gap') != f"FOLLOWER_ENTRANCE_UNSOURCED_{manifest['map_id']}":
+                raise ValueError('missing entrance requires the explicit named entrance-source gap')
+            entrance = None
+        else:
+            entrance = dict(baseline.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=? AND MapID=?', (manifest['entrance_id'], manifest['map_id'])).fetchone())
         if regional_records:
             cursor = baseline.execute('SELECT * FROM map_difficulty WHERE MapID=? AND DifficultyID=1', (manifest['map_id'],))
             native_maps = [{key: str(value) for key, value in dict(row).items()} for row in cursor]
@@ -379,6 +414,7 @@ def prepare(args):
                        native_room_anchors=native_room_anchors, source_gaps=manifest.get('source_gaps', []),
                        source_database=str(args.source_db.resolve()), baseline_sha256=digest(baseline_path), canonical_modified=False)
         receipt['navigation_gaps'] = [p['navigation_gap'] for p in placements if 'navigation_gap' in p]
+        receipt['entrance_gaps'] = sorted({p['entrance_gap'] for p in placements if 'entrance_gap' in p})
         receipt['source_findings'] = [dict(entry=p['entry'], **p['wowhead_comparison']) for p in placements
                                       if 'finding' in p.get('wowhead_comparison', {})]
         if any('wow_xyz' not in p for p in placements):
@@ -406,7 +442,11 @@ def prepare(args):
                             raise ValueError(f'SQL replay differs for{table}')
                     replay.executescript(sql)
             (args.output / 'delta.sql').write_text(sql)
-            status = 'PREPARED_WITH_NAVIGATION_GAPS' if receipt['navigation_gaps'] else 'PREPARED_NOT_PUBLISHED'
+            status = 'PREPARED_NOT_PUBLISHED'
+            if receipt['entrance_gaps']:
+                status = 'PREPARED_WITH_ENTRANCE_GAPS'
+            elif receipt['navigation_gaps']:
+                status = 'PREPARED_WITH_NAVIGATION_GAPS'
             receipt.update(status=status, sql_sha256=digest(args.output / 'delta.sql'),
                            replayed_sha256=digest(replay_path), sql_replay_count=3,
                            guid_range=[manifest['guid_base'] + manifest['map_id'] * 1000,
