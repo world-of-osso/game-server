@@ -27,6 +27,43 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
+#[ignore = "native RED: source class4 Energy pool missing at ordinary spawn"]
+fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration() {
+    use shared::components::PowerType;
+    for difficulty in [1, 205] {
+        let (mut h, boss, _) = anubzekt_copy(difficulty);
+        let player = h.player();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
+        assert!(
+            h.app.world().get::<Mana>(boss).is_none(),
+            "source class4 is not Mana"
+        );
+        assert_eq!(
+            crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
+            Some((100.0, 100.0)),
+            "native ChrClasses4.DisplayPower3 and70448 NPC Energy initialization"
+        );
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, EYE, Some(boss), false)
+            .expect("ordinary source100Energy Eye, no scripted power grant");
+        assert_eq!(
+            crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
+            Some((0.0, 100.0))
+        );
+        h.advance(2.0);
+        let energy = crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy)
+            .unwrap()
+            .0;
+        assert!(
+            (energy - 20.0).abs() < 0.1,
+            "sourced PowerType Energy10/s regeneration: {energy}"
+        );
+        h.advance(5.2);
+        assert_eq!(completed_casts(&h, boss, EYE), 1);
+        assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+    }
+}
+
+#[test]
 #[ignore = "native70448 qualification before local combat port"]
 fn encounter_coverage_anubzekt_native_infestation_periodic_damage_qualifies() {
     for difficulty in [1, 205] {
