@@ -7,7 +7,9 @@ use std::collections::BTreeMap;
 
 const MAX_TICKS: usize = 72_000;
 const STALL_SECONDS: f64 = 60.0;
-const BOSS_ENTRIES: [u32; 3] = [46383, 46264, 46254];
+
+#[path = "positioning_tests.rs"]
+mod positioning_tests;
 
 #[derive(Component)]
 pub(super) struct MoveIntent(pub Vec3);
@@ -21,7 +23,7 @@ pub(super) struct MemberSample {
     max_health: Option<f32>,
     mana: Option<f32>,
     max_mana: Option<f32>,
-    position: Option<[f32; 2]>,
+    position: Option<[f32; 3]>,
 }
 
 #[derive(Serialize)]
@@ -50,6 +52,563 @@ pub(super) struct Report {
     pub pulls: Vec<PullDecision>,
     pub performance: serde_json::Value,
     pub terminal_units: serde_json::Value,
+}
+
+#[test]
+#[ignore = "explicit Azure2515/205 environment qualification"]
+fn azure_simulator_uses_requested_follower_copy_and_native_population() {
+    let run = spawn_run(1, &mut None).unwrap();
+    let world = run.app.world();
+    let copy = *world.get::<crate::maps::InMap>(run.party.owner).unwrap();
+    assert_eq!(
+        copy.map_id, 2515,
+        "requested Azure map, never Stockade substitution"
+    );
+    assert_eq!(
+        world
+            .get::<crate::maps::DungeonDifficulty>(run.party.owner)
+            .unwrap()
+            .0,
+        205
+    );
+    for entry in [186644, 186739, 186737, 186738] {
+        assert!(
+            run.actors.values().any(|actor| world
+                .get::<shared::components::Npc>(*actor)
+                .is_some_and(|npc| npc.template_id == entry)),
+            "native boss{entry} must spawn"
+        );
+    }
+}
+
+#[test]
+#[ignore = "explicit Azure2515/205 environment qualification"]
+fn azure_book_moves_genuine_native_party_without_resource_or_copy_changes() {
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(
+        run.graph.map_id, 2515,
+        "explicit Azure qualification environment"
+    );
+    let owner = run.party.owner;
+    let book = run.actors[&29001868];
+    let endpoint = *run
+        .app
+        .world()
+        .get::<Position>(run.actors[&29001870])
+        .unwrap();
+    let source = *run.app.world().get::<Position>(book).unwrap();
+    let members: Vec<_> = run.members().collect();
+    let before: Vec<_> = members
+        .iter()
+        .map(|unit| {
+            let world = run.app.world();
+            (
+                *world.get::<crate::maps::InMap>(*unit).unwrap(),
+                world.get::<Health>(*unit).unwrap().current,
+                world.get::<Mana>(*unit).map(|mana| mana.current),
+            )
+        })
+        .collect();
+    run.app.world_mut().entity_mut(owner).insert(source);
+    assert_eq!(
+        crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
+        Ok(5)
+    );
+    for (unit, (copy, health, mana)) in members.into_iter().zip(before) {
+        let world = run.app.world();
+        assert_eq!(world.get::<Position>(unit), Some(&endpoint));
+        assert_eq!(world.get::<crate::maps::InMap>(unit), Some(&copy));
+        assert_eq!(world.get::<Health>(unit).unwrap().current, health);
+        assert_eq!(world.get::<Mana>(unit).map(|pool| pool.current), mana);
+    }
+}
+
+#[test]
+#[ignore = "explicit Azure2515/205 native sight/history qualification"]
+fn azure_stalker_ingress_during_authored_opening_has_native_proximity_receipts() {
+    let subscriber = bevy::log::tracing_subscriber::fmt()
+        .with_env_filter("game_server::creature_sight=debug,game_server::creature_aggro=debug")
+        .with_test_writer()
+        .finish();
+    let _logger = bevy::log::tracing::subscriber::set_default(subscriber);
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let stalker = run.actors[&29001806];
+    let owner = run.party.owner;
+    let geometry =
+        super::diagnostics::inspect_aggro_pair(run.app.world_mut(), stalker, owner).unwrap();
+    println!(
+        "STALKER_INGRESS source29001806={} owner={} native_geometry={geometry}",
+        stalker.to_bits(),
+        owner.to_bits()
+    );
+    let members: Vec<_> = run.members().collect();
+    let chasing_party = |world: &World| {
+        matches!(world.get::<crate::creature_ai::CreatureState>(stalker),
+        Some(crate::creature_ai::CreatureState::Pursuing {target}) if members.iter().any(|member|member.to_bits()==*target))
+    };
+    for _ in 0..600 {
+        run.control().unwrap();
+        run.app.update();
+        if chasing_party(run.app.world()) {
+            break;
+        }
+    }
+    assert!(
+        chasing_party(run.app.world()),
+        "authored movement must produce native pursuit of a party member"
+    );
+}
+
+#[test]
+#[ignore = "explicit Azure2515/205 native history qualification"]
+fn azure_unattackable_sight_source_does_not_hold_a_cleared_party_forever() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_run(3, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let stalker = run.actors[&29001806];
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    let members: Vec<_> = run.members().collect();
+    let guids = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == run.graph.route[0].pack)
+        .unwrap()
+        .spawns
+        .iter()
+        .map(|spawn| spawn.guid)
+        .collect();
+    crate::followers::simulator::pull(run.app.world_mut(), tank, &guids).unwrap();
+    crate::combat::deal_direct_damage(run.app.world_mut(), stalker, owner, 100.0);
+    for member in &members {
+        assert!(!crate::spell_cast::targets::relation_matches(
+            run.app.world(),
+            *member,
+            stalker,
+            crate::spell_cast::targets::Relation::Enemy
+        ));
+    }
+    let valid = run.actors[&29001791];
+    assert!(
+        crate::spell_cast::targets::relation_matches(
+            run.app.world(),
+            tank,
+            valid,
+            crate::spell_cast::targets::Relation::Enemy
+        ),
+        "native clearable-enemy control"
+    );
+    crate::combat::deal_direct_damage(run.app.world_mut(), tank, valid, 100.0);
+    assert!(
+        crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "clearable enemy positive control"
+    );
+    crate::combat::kill_unit(run.app.world_mut(), tank, valid);
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        stalker
+    ));
+    assert!(
+        !crate::followers::simulator::has_uncleared_fight(run.app.world(), run.party.owner),
+        "alive but invalid attack targets cannot keep a cleared party held forever"
+    );
+    let pending = run.actors[&29001801];
+    crate::combat_refs::set_in_combat_with(run.app.world_mut(), tank, pending);
+    assert!(
+        crate::followers::simulator::has_uncleared_fight(run.app.world(), owner),
+        "valid native pre-impact combat must still hold, even before a damage receipt"
+    );
+}
+
+fn spawn_azure_gate_after_first_member_death() -> Run {
+    let mut run = spawn_run(3, &mut None).unwrap();
+    let first = run.actors[&29001816];
+    let remaining = run.actors[&29001823];
+    let gate = run
+        .graph
+        .route
+        .iter()
+        .position(|step| step.pack == 29001816)
+        .unwrap();
+    run.graph.route.drain(..gate);
+    // Production admission initializes this party's run history before any Death.
+    let guids = run
+        .graph
+        .packs
+        .iter()
+        .find(|pack| pack.id == 29001816)
+        .unwrap()
+        .spawns
+        .iter()
+        .map(|spawn| spawn.guid)
+        .collect();
+    crate::followers::simulator::pull(run.app.world_mut(), run.party.tank, &guids).unwrap();
+    let at = *run.app.world().get::<Position>(first).unwrap();
+    let members: Vec<_> = run.members().collect();
+    for member in members {
+        run.app.world_mut().entity_mut(member).insert(at);
+    }
+    crate::combat::kill_unit(run.app.world_mut(), run.party.owner, first);
+    run.app.update();
+    assert!(!crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        first
+    ));
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        remaining
+    ));
+    assert_eq!(run.next_pack().unwrap().1, remaining);
+    run
+}
+
+#[test]
+#[ignore = "explicit Azure70 native gate-first-member death and remaining formation approach"]
+fn azure_corridor_advances_to_the_living_gate_member_after_the_first_member_dies() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_azure_gate_after_first_member_death();
+    let remaining = run.actors[&29001823];
+    let point = |world: &World, actor| {
+        let position = world.get::<Position>(actor).unwrap();
+        Vec3::new(position.x, position.y, position.z)
+    };
+    let target = point(run.app.world(), remaining);
+    let before = point(run.app.world(), run.party.owner).distance(target);
+    for _ in 0..400 {
+        run.control().unwrap();
+        run.app.update();
+    }
+    let after = point(run.app.world(), run.party.owner).distance(target);
+    assert!(
+        after < before - 2.0,
+        "after actual first gate Death, approach the living same-formation member: before={before}, after={after}"
+    );
+}
+
+#[test]
+#[ignore = "explicit Azure70 native first191164 Death then living-member admission"]
+fn azure_remaining_formation_member_reaches_native_admission_after_leader_death() {
+    let _rng_scope = crate::random::seed_scope(3);
+    let mut run = spawn_azure_gate_after_first_member_death();
+    let remaining = run.actors[&29001823];
+    let at = *run.app.world().get::<Position>(remaining).unwrap();
+    let members: Vec<_> = run.members().collect();
+    for member in members {
+        run.app.world_mut().entity_mut(member).insert(at);
+    }
+    run.control().unwrap();
+    let pull = run
+        .report
+        .pulls
+        .last()
+        .expect("native surviving-member admission decision");
+    assert_eq!(
+        pull.pack, 29001816,
+        "source formation identity remains unchanged"
+    );
+    assert!(
+        !pull.decision.starts_with("Unavailable:"),
+        "native leader Death must not leave a missing projected GUID in the living member's pull: {}",
+        pull.decision
+    );
+    assert!(crate::spell_cast::targets::is_alive(
+        run.app.world(),
+        remaining
+    ));
+}
+
+#[test]
+#[ignore = "explicit Stockade32 Henry roster; opening200sim_s native movement reproduction"]
+fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
+    let _rng_scope = crate::random::seed_scope(6);
+    let mut run = spawn_run(6, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 34);
+    let healer = run.party.members[1];
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::followers::Follower>(healer)
+            .unwrap()
+            .profile
+            .entry,
+        215011,
+        "qualify the explicit Henry roster, never silently test Crenna"
+    );
+    let origin = *run.app.world().get::<Position>(healer).unwrap();
+    let started = std::time::Instant::now();
+    // Frozen cohort seed6 first separates the native tank by40yd at175.5s.
+    // Keep the batch observation order and bound the reproduction to200s.
+    for tick in 0..4000 {
+        if tick % 10 == 0 {
+            run.sample();
+        }
+        assert!(
+            !run.finished(),
+            "opening fixture ended: {}",
+            run.report.detail
+        );
+        run.control().unwrap();
+        run.app.update();
+        if tick % 1000 == 0 {
+            run.write_progress(
+                tick + 1,
+                started,
+                std::time::Duration::ZERO,
+                &[std::time::Duration::ZERO; 3],
+            )
+            .unwrap();
+        }
+    }
+    let tank = super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank);
+    let state = super::diagnostics::inspect_unit(run.app.world(), None, healer);
+    println!(
+        "NATIVE_HEALER_MOVEMENT at={} tank={tank} healer={state}",
+        run.now()
+    );
+    assert!(
+        !run.report.pulls.is_empty(),
+        "the real route controller must have admitted opening combat"
+    );
+    assert_ne!(
+        run.app.world().get::<Position>(run.party.tank).unwrap(),
+        &origin,
+        "the tank must have actually left the entrance"
+    );
+    assert_ne!(
+        run.app.world().get::<Position>(healer).unwrap(),
+        &origin,
+        "Henry must accompany the native route instead of remaining at the entrance while the tank fights out of healing range"
+    );
+}
+
+#[test]
+fn simulator_leader_does_not_pursue_through_unpulled_native_sight() {
+    let _rng_scope = crate::random::seed_scope(28);
+    let mut run = spawn_run(28, &mut None).unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let owner = run.party.owner;
+    let origin = *run.app.world().get::<Position>(owner).unwrap();
+    let enemy = run.actors[&20375735];
+    // Native source coordinates put idle20375698/20375677 on this approach.
+    // Engage the actual Slag Fury without moving the party or granting spells.
+    crate::creature_aggro::attack_start(run.app.world_mut(), enemy, owner);
+    for _ in 0..40 {
+        run.app.update();
+    }
+    println!(
+        "LEADER_APPROACH {}",
+        super::diagnostics::inspect_unit(run.app.world(), None, owner)
+    );
+    assert_eq!(
+        run.app.world().get::<Position>(owner).unwrap(),
+        &origin,
+        "the autonomous leader must respect the same idle native sight hold as non-tank followers"
+    );
+}
+
+#[test]
+#[ignore = "explicit current Stockade32 seed28 native Slag Fury isolated-leader Death"]
+fn stockade_seed_twenty_eight_keeps_the_native_leader_alive_through_the_route() {
+    let report = run(28).unwrap();
+    runtime::write_report(&report).unwrap();
+    runtime::print_report(&report);
+    let owner = report.samples.last().unwrap().members.last().unwrap();
+    assert!(
+        owner.health.is_some_and(|health| health > 0.0),
+        "native owner must not die isolated from the admitted party: {}",
+        report.detail
+    );
+    assert_eq!(report.status, "cleared");
+}
+
+#[test]
+#[ignore = "explicit Stockade corridor seed2 native isolated leader death reproduction"]
+fn stockade_corridor_seed_two_keeps_native_party_with_the_approaching_leader() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_run(2, &mut None).unwrap();
+    let earth = run.actors[&20375677];
+    let mut diagnosed = false;
+    let started = std::time::Instant::now();
+    for tick in 0..MAX_TICKS {
+        if tick % 10 == 0 {
+            run.sample();
+        }
+        if run.finished() {
+            return;
+        }
+        run.control().unwrap();
+        run.app.update();
+        if tick % 1000 == 0 {
+            run.write_progress(
+                tick + 1,
+                started,
+                std::time::Duration::ZERO,
+                &[std::time::Duration::ZERO; 3],
+            )
+            .unwrap();
+        }
+        let owner_health = run
+            .app
+            .world()
+            .get::<shared::components::Health>(run.party.owner)
+            .unwrap();
+        if !diagnosed
+            && owner_health.current < owner_health.max / 2.0
+            && run
+                .app
+                .world()
+                .get::<CombatStatus>(earth)
+                .is_some_and(|status| status.0)
+        {
+            diagnosed = true;
+            let tank = super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank);
+            println!("ISOLATED_LEADER at={} tank={tank:?}", run.now());
+            println!(
+                "TANK_MOVEMENT {:?}",
+                crate::followers::simulator::inspect_tank_movement(
+                    run.app.world_mut(),
+                    run.party.tank
+                )
+            );
+            let decision = crate::followers::simulator::inspect_follower_decision(
+                run.app.world_mut(),
+                run.party.tank,
+            );
+            println!("TANK_DECISION {decision}");
+            let healer = crate::followers::simulator::inspect_follower_decision(
+                run.app.world_mut(),
+                run.party.members[1],
+            );
+            println!("HEALER_DECISION {healer}");
+        }
+        assert!(
+            crate::spell_cast::targets::is_alive(run.app.world(), run.party.owner),
+            "native party must accompany the corridor approach, not leave the leader dying alone"
+        );
+        assert!(!run.stalled(), "native run stalled: {}", run.report.detail);
+    }
+    panic!("seed2 must complete within the unchanged one-hour bound");
+}
+
+#[test]
+#[ignore = "explicit Stockade32 roster with native230861 Demonology follower"]
+fn native_pet_last_hit_evade_finishes_frozen_home_travel_and_native_arrival() {
+    let _rng_scope = crate::random::seed_scope(12);
+    let mut run = spawn_run(12, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 34);
+    let enemy = run.actors[&20375744];
+    let warlock = *run
+        .party
+        .members
+        .iter()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<crate::followers::Follower>(**unit)
+                .unwrap()
+                .profile
+                .entry
+                == 230861
+        })
+        .expect("explicit native Demonology roster");
+    crate::spell_cast::creature_cast(run.app.world_mut(), warlock, 30146, Some(warlock), false)
+        .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), warlock).expect("native Felguard");
+    let spawn = run
+        .app
+        .world()
+        .get::<crate::creature_ai::SpawnPoint>(enemy)
+        .unwrap();
+    let home = run
+        .app
+        .world()
+        .get::<crate::creature_ai::HomePosition>(enemy)
+        .map_or(
+            Position {
+                x: spawn.x,
+                y: spawn.y,
+                z: spawn.z,
+            },
+            |home| home.position,
+        );
+    let displaced = Position {
+        x: home.x - 10.0,
+        ..home
+    };
+    run.app.world_mut().entity_mut(enemy).insert(displaced);
+    run.app.world_mut().entity_mut(pet).insert(displaced);
+    crate::combat::deal_direct_damage(run.app.world_mut(), pet, enemy, 100.0);
+    assert!(
+        run.app
+            .world()
+            .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+            .0
+            .iter()
+            .any(
+                |event| event.kind == shared::protocol::CombatLogKind::Damage
+                    && event.source == Some(pet.to_bits())
+                    && event.target == Some(enemy.to_bits())
+                    && event.amount > 0
+            )
+    );
+    crate::creature_aggro::enter_evade_mode(run.app.world_mut(), enemy);
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(enemy),
+        Some(&crate::creature_ai::CreatureState::Returning)
+    );
+    let entrance = Position {
+        x: run.graph.entrance[0],
+        y: run.graph.entrance_height,
+        z: run.graph.entrance[1],
+    };
+    run.app.world_mut().entity_mut(pet).insert(entrance);
+    crate::pet_control::order_companion_pet(run.app.world_mut(), warlock, None);
+    for _ in 0..800 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(enemy)
+            == Some(&crate::creature_ai::CreatureState::Idle)
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(enemy),
+        Some(&crate::creature_ai::CreatureState::Idle),
+        "native evade must finish instead of remaining Returning forever"
+    );
+    let at = *run.app.world().get::<Position>(enemy).unwrap();
+    assert!(
+        Vec3::new(at.x, at.y, at.z).distance(Vec3::new(home.x, home.y, home.z)) < 0.0001,
+        "actual frozen travel must reach home"
+    );
+    assert_eq!(
+        run.app
+            .world()
+            .get::<shared::components::CreatureMotion>(enemy),
+        Some(&shared::components::CreatureMotion::Still),
+        "native home arrival must stop replicated movement"
+    );
+    assert!(
+        !run.app
+            .world()
+            .get::<CombatStatus>(enemy)
+            .is_some_and(|combat| combat.0)
+    );
 }
 
 #[test]
@@ -334,6 +893,37 @@ fn native_scripted_vanish_is_not_a_cleared_party_or_another_pull() {
         }
     }
     panic!("native scripted damage boundary did not execute Moloch Vanish");
+}
+
+#[test]
+fn living_unattackable_required_boss_does_not_block_another_pullable_pack() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_run(2, &mut None).unwrap();
+    let boss = run.actors[&20375766];
+    run.app
+        .world_mut()
+        .entity_mut(boss)
+        .insert(shared::components::UnitFlags(
+            shared::components::UnitFlags::NOT_SELECTABLE,
+        ));
+    let next = run.next_pack().expect("other native packs remain pullable");
+    assert_ne!(next.1, boss);
+    run.control().unwrap();
+    assert_eq!(run.current_pack, Some(next.0));
+    assert!(run.app.world().get::<MoveIntent>(run.party.owner).is_some());
+    assert!(run.report.bosses_killed.is_empty());
+}
+
+#[test]
+fn absent_required_boss_without_a_death_is_not_a_clear_or_an_endless_hold() {
+    let _rng_scope = crate::random::seed_scope(2);
+    let mut run = spawn_isolated_moloch(2);
+    let boss = run.actors[&20375766];
+    run.app.world_mut().despawn(boss);
+    assert!(run.next_pack().is_none());
+    assert!(run.control().is_err());
+    assert!(run.report.bosses_killed.is_empty());
+    assert!(!run.finished());
 }
 
 #[test]
@@ -684,6 +1274,67 @@ fn sampling_retains_a_member_after_native_dead_summon_despawn() {
     assert!(absent.position.is_none());
 }
 
+#[test]
+#[ignore = "explicit alternate-roster qualification; use Bo/Lantha party entries"]
+fn alternate_roster_attackers_participate_in_the_first_native_fight() {
+    let _scope = crate::random::seed_scope(11);
+    let mut run = spawn_run(11, &mut None).unwrap();
+    for _ in 0..600 {
+        run.control().unwrap();
+        run.app.update();
+    }
+    let actors: Vec<_> = run.members().collect();
+    for actor in actors {
+        println!(
+            "ACTOR {}",
+            super::diagnostics::inspect_unit(run.app.world(), None, actor)
+        );
+        if run
+            .app
+            .world()
+            .get::<crate::followers::Follower>(actor)
+            .is_some()
+        {
+            println!(
+                "DECISION {}",
+                crate::followers::simulator::inspect_follower_decision(run.app.world_mut(), actor)
+            );
+        }
+    }
+    let monk = run
+        .party
+        .members
+        .iter()
+        .copied()
+        .find(|unit| {
+            run.app
+                .world()
+                .get::<crate::followers::Follower>(*unit)
+                .is_some_and(|follower| follower.profile.spec_id == 269)
+        })
+        .expect("fixture requires explicit Bo party entry");
+    let events = &run
+        .app
+        .world()
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let dealt_damage = |unit: Entity| {
+        events.iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.source == Some(unit.to_bits())
+                && event.amount > 0
+        })
+    };
+    assert!(
+        dealt_damage(run.party.tank),
+        "real native engagement must occur before asserting attacker participation"
+    );
+    assert!(
+        dealt_damage(monk),
+        "Bo must pursue and execute native attacks in the actual opening fight, not remain idle for the whole campaign"
+    );
+}
+
 struct Run {
     app: App,
     graph: Graph,
@@ -773,7 +1424,7 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
         copy,
         Position {
             x: graph.entrance[0],
-            y: 0.0,
+            y: graph.entrance_height,
             z: graph.entrance[1],
         },
     )?;
@@ -790,7 +1441,8 @@ fn spawn_run(seed: u64, catalogs: &mut Option<super::catalogs::Catalogs>) -> Res
             "frozen graph contains sources absent from production Normal population: {missing:?}"
         ));
     }
-    let last_owner_position = Vec3::new(graph.entrance[0], 0.0, graph.entrance[1]);
+    let last_owner_position =
+        Vec3::new(graph.entrance[0], graph.entrance_height, graph.entrance[1]);
     Ok(Run {
         app,
         graph,
@@ -836,8 +1488,11 @@ impl Run {
             "update_wall_seconds": timings[2].as_secs_f64(),
             "allocated_entity_slots": self.app.world().entities().len(),
             "live_entities": self.app.world().entities().count_spawned(),
-            "source_map_actors": self.actors.len(),
+            "source_map_actors": self.actors.len(), "map_id": self.graph.map_id,
+            "difficulty_id":self.graph.difficulty_id(),
+            "party_levels":self.members().map(|unit|self.app.world().get::<shared::components::Level>(unit).map(|level|level.0)).collect::<Vec<_>>(),
             "observed_events": self.app.world().resource::<crate::spell_cast::test_harness::ObservedCombatEvents>().0.len(),
+            "holy_metrics": self.app.world().resource::<crate::spell_cast::holy_metrics::HolyMetrics>(),
             "samples": self.report.samples.len(), "memory": super::diagnostics::read_process_memory()})
     }
 
@@ -866,14 +1521,25 @@ impl Run {
                 self.party.tank
             ));
         println!(
-            "PROGRESS seed={} ticks={} sim_s={:.2} ratio={} steady_ratio={} entities={} events={}",
+            "PROGRESS seed={} ticks={} sim_s={:.2} ratio={} steady_ratio={} entities={} events={} pack={:?} owner_intent={:?} owner_state={:?} tank_state={:?}",
             self.report.seed,
             ticks,
             self.now(),
             performance["sim_per_wall"],
             performance["steady_sim_per_wall"],
             performance["live_entities"],
-            performance["observed_events"]
+            performance["observed_events"],
+            self.current_pack,
+            self.app
+                .world()
+                .get::<MoveIntent>(self.party.owner)
+                .map(|intent| intent.0),
+            self.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(self.party.owner),
+            self.app
+                .world()
+                .get::<crate::creature_ai::CreatureState>(self.party.tank),
         );
         let directory = super::runtime::output_directory();
         std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
@@ -919,7 +1585,7 @@ impl Run {
                     max_health: health.map(|health| health.max),
                     mana: mana.map(|mana| mana.current),
                     max_mana: mana.map(|mana| mana.max),
-                    position: position.map(|position| [position.x, position.z]),
+                    position: position.map(|position| [position.x, position.y, position.z]),
                 }
             })
             .collect();
@@ -931,8 +1597,11 @@ impl Run {
 
     fn finished(&mut self) -> bool {
         let world = self.app.world();
-        self.report.bosses_killed = BOSS_ENTRIES
-            .into_iter()
+        self.report.bosses_killed = self
+            .graph
+            .boss_entries()
+            .iter()
+            .copied()
             .filter(|entry| {
                 self.graph
                     .packs
@@ -951,9 +1620,12 @@ impl Run {
                     })
             })
             .collect();
-        if self.report.bosses_killed.len() == BOSS_ENTRIES.len() {
+        if self.report.bosses_killed.len() == self.graph.boss_entries().len() {
             self.report.status = "cleared".into();
-            self.report.detail = "all three source boss actors died".into();
+            self.report.detail = format!(
+                "all{} source boss actors died",
+                self.graph.boss_entries().len()
+            );
             return true;
         }
         if self
@@ -968,14 +1640,7 @@ impl Run {
     }
 
     fn control(&mut self) -> Result<(), String> {
-        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner)
-            || self.members().any(|member| {
-                self.app
-                    .world()
-                    .get::<CombatStatus>(member)
-                    .is_some_and(|status| status.0)
-            })
-        {
+        if crate::followers::simulator::has_uncleared_fight(self.app.world(), self.party.owner) {
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
@@ -983,12 +1648,22 @@ impl Run {
             return Ok(());
         }
         let Some((pack_id, target)) = self.next_pack() else {
+            if self.has_living_required_boss() {
+                self.app
+                    .world_mut()
+                    .entity_mut(self.party.owner)
+                    .remove::<MoveIntent>();
+                return Ok(());
+            }
             return Err(
                 "no living hostile source pack remains, but boss deaths are incomplete".into(),
             );
         };
         self.current_pack = Some(pack_id);
         let target_position = *self.app.world().get::<Position>(target).unwrap();
+        if self.approach_translocation(target_position)? {
+            return Ok(());
+        }
         let tank_position = *self.app.world().get::<Position>(self.party.tank).ok_or(
             "admitted tank is absent; route anchor remains known, but no native opener can cast",
         )?;
@@ -1000,12 +1675,18 @@ impl Run {
             .iter()
             .find(|step| step.pack == pack_id)
             .unwrap();
-        if (target_position.x - tank_position.x).hypot(target_position.z - tank_position.z) > range
-        {
+        let from = Vec3::new(tank_position.x, tank_position.y, tank_position.z);
+        let to = Vec3::new(target_position.x, target_position.y, target_position.z);
+        if from.distance(to) > range {
+            let approach = if self.actors.get(&pack_id) == Some(&target) {
+                Vec3::from_array(step.anchor)
+            } else {
+                to
+            };
             self.app
                 .world_mut()
                 .entity_mut(self.party.owner)
-                .insert(MoveIntent(Vec3::new(step.anchor[0], 0.0, step.anchor[1])));
+                .insert(MoveIntent(approach));
             return Ok(());
         }
         self.app
@@ -1020,6 +1701,9 @@ impl Run {
             .unwrap()
             .spawns
             .iter()
+            .filter(|spawn| {
+                crate::spell_cast::targets::is_alive(self.app.world(), self.actors[&spawn.guid])
+            })
             .map(|spawn| spawn.guid)
             .collect();
         let (allowed, decision) = match crate::followers::simulator::pull(
@@ -1059,6 +1743,59 @@ impl Run {
         }
     }
 
+    fn approach_translocation(&mut self, target: Position) -> Result<bool, String> {
+        if self.graph.teleports.is_empty() {
+            return Ok(false);
+        }
+        let from = *self
+            .app
+            .world()
+            .get::<Position>(self.party.owner)
+            .ok_or("translocation reader absent")?;
+        let edge = self
+            .app
+            .world()
+            .resource::<super::Space>()
+            .next_translocation(
+                Vec3::new(from.x, from.y, from.z),
+                Vec3::new(target.x, target.y, target.z),
+            )?;
+        let Some((source, destination)) = edge else {
+            return Ok(false);
+        };
+        let book = *self
+            .actors
+            .get(&source)
+            .ok_or("translocation source actor absent")?;
+        let at = *self
+            .app
+            .world()
+            .get::<Position>(book)
+            .ok_or("translocation book lacks position")?;
+        if Vec3::new(from.x, from.y, from.z).distance(Vec3::new(at.x, at.y, at.z)) > 0.1 {
+            self.app
+                .world_mut()
+                .entity_mut(self.party.owner)
+                .insert(MoveIntent(Vec3::new(at.x, at.y, at.z)));
+            return Ok(true);
+        }
+        crate::npc_interaction::azure_translocation::traverse(
+            self.app.world_mut(),
+            self.party.owner,
+            book,
+        )?;
+        super::movement::forget_party_travel(self.app.world_mut(), self.party.owner);
+        self.app
+            .world_mut()
+            .entity_mut(self.party.owner)
+            .remove::<MoveIntent>();
+        self.record_pull(
+            source,
+            format!("AZURE_TRANSLOCATION_BOOK_ENDPOINTS {source}->{destination}"),
+        );
+        Ok(true)
+    }
+
     fn next_pack(&self) -> Option<(u32, Entity)> {
         let world = self.app.world();
         self.graph.route.iter().find_map(|step| {
@@ -1072,9 +1809,24 @@ impl Run {
                         && world
                             .get::<crate::creature_aggro::AggroRange>(*actor)
                             .is_some()
-                        && crate::spell_cast::targets::is_hostile(world, self.party.owner, *actor)
+                        && crate::spell_cast::targets::relation_matches(
+                            world,
+                            self.party.owner,
+                            *actor,
+                            crate::spell_cast::targets::Relation::Enemy,
+                        )
                 })?;
             Some((pack.id, target))
+        })
+    }
+
+    fn has_living_required_boss(&self) -> bool {
+        let world = self.app.world();
+        self.actors.values().any(|actor| {
+            crate::spell_cast::targets::is_alive(world, *actor)
+                && world
+                    .get::<shared::components::Npc>(*actor)
+                    .is_some_and(|npc| self.graph.boss_entries().contains(&npc.template_id))
         })
     }
 
@@ -1138,7 +1890,7 @@ impl Run {
         });
         self.event_cursor = events.len();
         let position = world.get::<Position>(self.party.owner).unwrap();
-        let position = Vec3::new(position.x, 0.0, position.z);
+        let position = Vec3::new(position.x, position.y, position.z);
         if damage || position != self.last_owner_position || resource_gain {
             self.last_progress = self.now();
         }

@@ -1,5 +1,24 @@
 # Boss scripts
 
+## Deios source ingress boundary
+
+- Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
+- `DEIOS_PC_IMMUNITY_INGRESS_UNSOURCED`: actual source/runtime flags320 retain PC immunity0x100; source spawn9004522 and native spells exist, but no authored unlock/controller is available in pinned TC a352b1fa. Native ordinary threat ingress is blocked with no threat table. Preserve flags and do not manufacture engaged state, timer GREEN, death/kill-credit or a completed fight. Ordinary outgoing Wing damage qualification is separate from combat ingress; keep the first-Wing RED ignored until authentic ingress exists.
+
+## Emberon current Lua partial
+
+- Producer `--encounter emberon` installs only local `boss_emberon` and primary184422/2558/map2451bit3 (Journal2476/5404/display107816). Keep source spawn9004496, actual model107816, addon369101, stats/flags/population/difficulties and native spell data unchanged; no fabricated205 rows.
+- Current LittleWigs2777a9d `Emberon.lua:53–65,99–106,120–143,167–191` supplies Normal1/Follower205 initial Clap3690614.5s, Embers36911012.1s, Purging36899038.5s; source repeats23/11.7s have counts2/3 before phase,2/4 after. Resume after phase with Embers1.2s/Clap5.4s/nextPurging37.7s. Below10% disables future Purging and removes normal-lane count limits.
+- Explicit parent policy `EMBERON_NORMAL_PURGING_24P3S_LUA`: end the ordinary native indefinite368990 channel24.3s from cast start for Normal1/Follower205 only, following Lua105–106 fixed-time comment/CastBar; do not modify DB2 duration/effects. Other difficulties, energy/center movement/wards/add-controller, Unstable Embers dummy369116 consequences and absent native395681 periodic child remain named gaps. Require genuine native RED→GREEN clocks/channel/periodic damage/reset/copy-credit proof before enabling combat tests.
+
+## Talondras current Lua partial
+
+- Explicit parent-approved boundary `TALONDRAS_LUA_DB2_CATEGORY_1152_CONFLICT`: keep all sourced requests and ordinary native category cooldowns. DB2 Shards3s/Stomp5s share1152, so first5.1s Stomp is denied after4.5s Shards; later requests mix accepted/OnCooldown outcomes. Prove exact accepted/denied requests and real damage/reset/credit, never clear cooldowns or use triggered flags without an authored TC boss script. TC a352b1fa `SpellHistory.cpp:263–275,381–391,678–694,1135–1142` is the common creature/player category path.
+
+- Current LittleWigs2777a9d `SentinelTalondras.lua` explicitly binds184124↔2557/map2451bit2. Normal1 and Follower205 use Shards372718 first4.5/repeat9.7s and Stomp372701 first5.1/repeat12.1s; native70448 owns direct/DOT/area/knockback effects and cast occupancy. BigWigs `Normal()` includes205; no non-Normal Titanic30.4s request is invented here.
+- `TALONDRAS_ROLE_STUN_TIMELINE_CONTEXT`, `TALONDRAS_ORB_INITIAL_CLOCK_GAP` and `TALONDRAS_INEXORABLE_ENERGY_PHASE_SCRIPT_GAP` retain unavailable alert-role/stun correction/Orb first-time/energy/stacks/transitions. Current victim is native explicit-enemy default for Shards; no guessed random selector. Preserve real template addons372717/372600/372775/372778.
+- Producer `--encounter talondras` changes only local ScriptName and primary binding (Journal2484/5356/display106790). Keep actual TDB/runtime model109735, actor stats/flags/addons/population/difficulties unchanged; never substitute journal thumbnail for the runtime model or manufacture205 rows. Require native Normal/Follower clocks/damage/reset/copy-credit proof; full Orb/energy fight remains uncertified.
+
 ## Bromach current Lua partial
 
 - Current LittleWigs2777a9d `Bromach.lua` authenticates184018/map2451/2556bit1 and initial Call3696055.1s, Slam36970312.1s, Totem38230320.4s, Bloodlust36975427.9s. Consume current source-order repeats: Call28→37.8s, Totem/Bloodlust30.3→40.1s, Slam14.7→28s only after native success. A canceled Slam must not arm its repeat.
