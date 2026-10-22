@@ -1,3 +1,7 @@
+## 2026-10-21 — Recorded late-healer route boundary
+
+[Native seed50 path qualification](systems/dungeon-simulator.md#recorded-late-healer-route-boundary-2026-10-21): two post-mm871 RED regressions prove a stationary healer on a native-sphere-safe frozen path and reproduce full-route tank loss. Positioning now qualifies actual route legs rather than the endpoint chord; GREEN and seeded acceptance pending.
+
 ## 2026-10-21 — Native leader and shared-model qualification
 
 [Autonomous leader sight hold](systems/dungeon-simulator.md#autonomous-leader-native-sight-hold-2026-10-21): native focused RED8.50s→GREEN7.31s, three retained controls GREEN21.92s, exactseed28 now clears; extended rolecandidate49/50 leaves seed50 tank Death open. [Shared model defaults unblock Henry](systems/dungeon-simulator.md#henry-movement-after-shared-model-defaults-2026-10-21): mainmerge5d464ebcb, nativebuild8m58/no warnings, Henry200s+two reach consumer controls3GREEN64.58s. No overall dungeon-reliability claim.

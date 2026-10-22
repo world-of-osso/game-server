@@ -28,6 +28,12 @@ Extending candidatefa7ce6714 to disjoint Stockade seeds11–50 yields38clears,1s
 
 Evidence: `stockade-candidate-fa7ce6714-seeds11-50/`, `isolated-leader28-{red,motion,role-green}.log`, and `leader-sight-{red,green,native-controls}.log` under the existing proof-ledger directory. [Contract](../../specs/dungeon-simulator.md#authored-route).
 
+## Recorded late-healer route boundary —2026-10-21
+
+After shared model defaults, revisiona55ce7383 reproduces Stockade seed50's tank loss at2360.60sim_s with two boss Deaths (65.037s wall). The reduced fixture uses its recorded healer/owner positions and four surviving idle watchers. Native acquisition geometry confirms the straight endpoint chord crosses all four spheres while `Space.route` avoids them; the healer nevertheless remains stationary. Both ignored regressions fail in76.66s. This isolates an incorrect chord check in `followers/positioning.rs`, not missing native geometry or an authored-route defect.
+
+Positioning now checks complete movement-path legs using the same frozen route as simulator movement. Ordinary runtime reads authored navigation asynchronously under `SightApproach`, separate from hostile-field `Approach` queries, and holds while pending or unavailable. Native radii and role-based tank exemption are unchanged. GREEN and seeded acceptance remain pending; this is not a dungeon-clear claim. Evidence: `stockade50-native-path-red-command.json` and `.log` in the existing proof-ledger directory.
+
 ## Required-boss phase hold —2026-10-21
 
 A source can be alive but currently unattackable without counting as a completed boss. The route still selects other pullable packs first. If no such pack remains and a required boss actor is alive, the controller holds rather than returning an incomplete-boss error; when attackability returns, normal route selection resumes. An absent boss with no native Death receipt remains an error. No boss credit is fabricated.
