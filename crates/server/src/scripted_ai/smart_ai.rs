@@ -164,7 +164,7 @@ const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.e
      s.event_param5, s.action_type, s.action_param1, s.action_param2, s.action_param3, \
      s.action_param4, s.action_param5, s.action_param6, s.action_param7, s.target_type, \
      s.source_type, s.target_param1, s.target_param2, s.target_param3, s.target_param4, \
-     s.target_x, s.target_y, s.target_z, s.target_o FROM tdb_smart_scripts s \
+     s.target_x, s.target_y, s.target_z, s.target_o FROM ai_scripts s \
      WHERE s.source_type = 9 OR (s.source_type = 0 AND s.entryorguid > 0 AND EXISTS \
      (SELECT 1 FROM content_creature_template t WHERE t.entry=s.entryorguid AND t.AIName='SmartAI')) \
      ORDER BY s.entryorguid, s.id";
@@ -172,7 +172,23 @@ const SMART_QUERY: &str = "SELECT s.entryorguid, s.id, s.link, s.event_type, s.e
 pub(crate) fn load_smart_scripts(path: &Path) -> rusqlite::Result<SmartScripts> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     log_unsupported_types(&conn)?;
-    let mut statement = conn.prepare(SMART_QUERY)?;
+    // TDB tuples remain authentic; optional project-authored rows use the same
+    // interpreter and template admission, not a second scheduler.
+    let has_content: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='content_smart_scripts')",
+        [],
+        |row| row.get(0),
+    )?;
+    let sources = if has_content {
+        "SELECT * FROM tdb_smart_scripts UNION ALL \
+         SELECT c.* FROM content_smart_scripts c WHERE NOT EXISTS \
+         (SELECT 1 FROM tdb_smart_scripts t \
+          WHERE t.entryorguid=c.entryorguid AND t.source_type=c.source_type)"
+    } else {
+        "SELECT * FROM tdb_smart_scripts"
+    };
+    let query = format!("WITH ai_scripts AS ({sources}) {SMART_QUERY}");
+    let mut statement = conn.prepare(&query)?;
     let rows = statement.query_map([], |row| {
         let int = |index: usize| row.get::<_, u32>(index);
         Ok((

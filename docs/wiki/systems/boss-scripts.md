@@ -1,5 +1,15 @@
 # Boss scripts
 
+## Follower trash kit projection — 2026-10-22
+
+[Contract](../../specs/follower-trash-ai.md). `scripts/follower_trash_ai.py` inventories source bindings and prepares project-authored `content_smart_scripts` rows. The native SmartAI loader unions those rows with authentic `tdb_smart_scripts`; an authored TDB entry/list takes precedence over the project entry/list. Both use the same interpreter, cast admission and native Spell* payloads. No second scheduler or per-entry Rust registry is introduced. Project SQL replaces only owned `FOLLOWER_TRASH_*` rows at stable creature/spell keys and never mutates authentic TDB tuples. Templates with existing authored scripts are preserved.
+
+Native RED at Rust scope f8f3b7963: real Azure Conjured Lasher196102 never casts sourced387564; Stockade Riverpaw Shaman46252 never casts cached NPC-abilities12167. Both source actors spawn through the production creature path, run ordinary threat ingress and observe native cast messages. Runtime union/projected-copy GREEN and broad controls are pending; source census is not combat certification. SQL publication belongs to the lead.
+
+`FOLLOWER_TRASH_SIMILAR_CREATURE_KIT` records a same-dungeon sourced donor and matching evidence. `FOLLOWER_TRASH_UNSOURCED_CADENCE_MS=10000` is the sole approved cadence default when no recovery exists; actual cast times, ranges and cooldown/category admission stay native70448. Passive addons never establish an active cast kit. Census and per-batch SQL/receipts live in engine `data/diagnostics/follower-trash-ai-2026-10-22/`.
+
+Sources: [producer](../../../scripts/follower_trash_ai.py), [loader](../../../crates/server/src/scripted_ai/smart_ai.rs), [native controls](../../../crates/server/src/scripted_ai/tests/trash_kits.rs), [source/projection controls](../../../scripts/tests/test_follower_trash_ai.py). See also [[dungeon-simulator]].
+
 ## Deios source ingress boundary — 2026-10-21
 
 LittleWigs2777a9d `ChronoLordDeios.lua` binds184125/2559/map2451bit4 (Journal2479/5379/display106056). Actual TDB/runtime flags320 include PC immunity0x100; genuine spawn9004522 exists. Production `AggroMode::for_template` makes PC-immune actors Passive and omits their threat table; ordinary `add_threat` cannot engage them. Native source-preserving tests atf56c055a9 give2PASS/firstWing0vs1FAIL34.10s: ordinary Wing376049 area damage qualifies in Normal1/Follower205, while real threat ingress stays absent and credit stays0. The ignored6.3sWing test remains a genuine RED, not a timer implementation.

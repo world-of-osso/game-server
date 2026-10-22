@@ -3601,3 +3601,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Emberon currentLua Normal/Follower partial: ignored firstClapRED→composite7GREEN; native indefinite-aura cap root cause and approved24.3s lifecycle, source-counted resumed/second phase, reset/copy-credit/death. Copy-only producer1PASS; missing395681/controller gaps retained.
 
 - 2026-10-21: Deios source qualification2PASS/firstWingRED34.10s Normal/Follower: preservedflags320 block ordinary threat ingress; outgoingWing damage is not engagement/credit proof. Named source unlock gap, no combat port or fabricated state.
+
+## 2026-10-22 — Follower trash source projection
+
+[Boss scripts](systems/boss-scripts.md#follower-trash-kit-projection--2026-10-22): current622-spawn-entry census, Lua/Wowhead/donor policy, content-only stable-key SmartAI producer, sole approved10s cadence default; native real Azure/Stockade2RED before loader union. Projected-copy GREEN and controls pending; lead publishes.
