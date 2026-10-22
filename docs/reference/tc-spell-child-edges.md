@@ -27,7 +27,7 @@ Multiple script bindings or multiple calls may yield the same parent/child pair.
 |---|---|---|
 |Ordinary target-first CastSpell/CastCustomSpell|Spell expression is argument2|Native enum fixture and literal5176 fixture|
 |Three literal coordinates before the spell|Spell expression is argument4|Literal-coordinate133 fixture|
-|Explicit enum integer and integer const/constexpr declarations|Resolve same-file constant IDs; conflicting definitions fail|Native Shield Charge385952→385954 fixture|
+|Explicit enum integer and integer const/constexpr declarations|Resolve same-file constant IDs; conflicting definitions fail|Native Shield Charge385952→385953 fixture; native385953 effect96 then triggers385954 outside this TC-only artifact|
 |Literal positive decimal/hex child IDs|Emit direct cited edge|Literal fixture|
 |Dynamic TriggerSpell/function/variable expressions|Record unresolved; no invented child|Dynamic TriggerSpell fixture|
 |Comments and ordinary quoted literals|Blank while preserving offsets/line numbers; not calls|Comment/string counterexamples in the fixture|

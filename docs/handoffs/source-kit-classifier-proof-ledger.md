@@ -7,7 +7,7 @@ Lead-approved: replace the role NAME whitelist with classification from native e
 ## Reproduced input boundary
 
 - Current source796e0e7c9, native snapshot464fbb46:73DPS54569.60/103DPS49373.95, both18/20adds, no Shield Charge/Frenzy casts.
--385952 exists61–90 but `utility`/priority1000 is skipped by AI. Parent Dummy3/trigger0; native description references damage385954. TC a352b1fa `spell_warrior.cpp:1773–1789` casts that child.
+-385952 exists61–90 but `utility`/priority1000 is skipped by AI. Parent Dummy3/trigger0; native description references damage385954. TC a352b1fa `spell_warrior.cpp:1773–1789` casts385953; native385953 effect96 triggers damage385954. The full chain is385952→TC385953→DB2385954, not a direct TC damage-child cast.
 -274837 exists only55–56 as utility1000. Native starter export learns1243807 from57 through90 instead. TraitDefinition138989 explicitly sets1243807 OverridesSpellID274837; default replacement is real, not arbitrary clipping. Preserve canonical family availability with selected-variant resolution, not an unearned base talent grant. Native Frenzy description names274838 damage; pinned SimC `sc_druid.cpp:4114–4140` supplies its scripted child behavior. TC has no indexed named Frenzy script.
 - Existing producer `combat_policy` is a name-based role/priority policy with final utility1000; `kit_rows` intersects only the selected starter books and compresses their actual observed levels. Both layers explain the failure.
 

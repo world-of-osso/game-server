@@ -10,7 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = '''static constexpr uint32 FIREBALL = 133;
 enum WarriorSpells {
-    SPELL_WARRIOR_SHIELD_CHARGE_EFFECT = 385954,
+    SPELL_WARRIOR_SHIELD_CHARGE_EFFECT = 385953,
 };
 class spell_warr_shield_charge : public SpellScript {
     void HandleDummy() {
@@ -64,7 +64,7 @@ class TcSpellChildrenTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         data = json.loads(output.read_text())
         pairs = {(row['parent_spell_id'], row['child_spell_id']) for row in data['edges']}
-        self.assertEqual(pairs, {(385952, 385954), (10, 5176), (10, 133), (12, 133)})
+        self.assertEqual(pairs, {(385952, 385953), (10, 5176), (10, 133), (12, 133)})
         edge = next(row for row in data['edges'] if row['parent_spell_id'] == 385952)
         self.assertEqual(edge['file'], 'spell_warrior.cpp')
         self.assertEqual(edge['cast_line'], 7)
