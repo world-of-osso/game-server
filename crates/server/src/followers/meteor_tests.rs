@@ -7,10 +7,30 @@ use shared::protocol::CombatLogKind;
 const METEOR: u32 = 153561;
 const IMPACT: u32 = 351140;
 
+fn prepare_meteor(
+    count: usize,
+) -> (
+    crate::spell_cast::test_harness::Harness,
+    Entity,
+    Vec<Entity>,
+) {
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let path = std::env::var_os("FOLLOWER_KIT_DB")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(crate::test_data::world_db_path);
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
+    h.app
+        .insert_resource(crate::spell_cast::area_trigger::load_aura_field_catalog(&db).unwrap());
+    let targets = prepare_dummies(&mut h, count);
+    (h, caster, targets)
+}
+
 #[test]
 fn fire_meteor_native70_single_target_kit_admits_authored_meteor() {
-    let (mut h, caster) = prepare_follower(209059, 63, 70);
-    let target = prepare_dummies(&mut h, 1)[0];
+    let (mut h, caster, targets) = prepare_meteor(1);
+    let target = targets[0];
     h.app
         .world_mut()
         .entity_mut(target)
@@ -30,8 +50,7 @@ fn fire_meteor_native70_single_target_kit_admits_authored_meteor() {
 
 #[test]
 fn fire_meteor_native70_ordinary_three_target_cast_deals_delayed_impact_damage() {
-    let (mut h, caster) = prepare_follower(209059, 63, 70);
-    let targets = prepare_dummies(&mut h, 3);
+    let (mut h, caster, targets) = prepare_meteor(3);
     for target in &targets {
         h.app
             .world_mut()

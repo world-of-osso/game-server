@@ -124,6 +124,7 @@ pub(super) fn update(world: &mut World, entity: Entity) {
     match script {
         None => update_actions(world, entity, &trigger),
         Some(FieldScript::VaultRune) => super::vault_rune::update(world, entity, &trigger),
+        Some(FieldScript::MeteorBurn) => update_actions(world, entity, &trigger),
     }
 }
 
