@@ -12,6 +12,7 @@ pub(crate) struct PendingTriggers(BTreeMap<u64, VecDeque<QueuedTrigger>>);
 enum QueuedCastKind {
     CostedTrigger,
     NormalForce,
+    FullTrigger,
 }
 
 struct QueuedTrigger {
@@ -92,6 +93,32 @@ pub(super) fn schedule_force_cast(
         .push_back(trigger);
 }
 
+/// Scripted FULL_MASK callback, sharing the ordinary owner/target lifetime checks.
+pub(super) fn schedule_full_trigger(
+    world: &mut World,
+    ctx: &super::EffectCtx,
+    target: Entity,
+    spell_id: u32,
+    delay_ms: u32,
+) {
+    let due_ms = now_ms(world) + u64::from(delay_ms);
+    let trigger = QueuedTrigger {
+        kind: QueuedCastKind::FullTrigger,
+        caster: ctx.caster,
+        target,
+        destination: None,
+        spell_id,
+        depth: ctx.depth + 1,
+        item_level: ctx.spell.cast_item_level,
+    };
+    world
+        .resource_mut::<PendingTriggers>()
+        .0
+        .entry(due_ms)
+        .or_default()
+        .push_back(trigger);
+}
+
 /// Remove one event before invoking it; nested zero-delay events follow it.
 pub(crate) fn resolve_due(world: &mut World) {
     let now_ms = now_ms(world);
@@ -113,6 +140,18 @@ pub(crate) fn resolve_due(world: &mut World) {
                     trigger.item_level,
                     trigger.destination,
                 );
+            }
+            QueuedCastKind::FullTrigger => {
+                if !super::cast_triggered_with_item_level(
+                    world,
+                    trigger.caster,
+                    trigger.spell_id,
+                    Some(trigger.target),
+                    trigger.depth,
+                    trigger.item_level,
+                ) {
+                    warn!("Delayed scripted spell {} refused", trigger.spell_id);
+                }
             }
             QueuedCastKind::NormalForce => {
                 if let Err(failure) = super::creature::creature_cast(

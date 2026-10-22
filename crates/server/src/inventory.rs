@@ -26,7 +26,7 @@ use crate::persistence::inventory_store::{
     InventoryRecord, load_inventory_record, save_inventory_record,
 };
 use crate::persistence::{self, GameDatabase};
-use crate::stats::EquippedItems;
+use crate::stats::{EquippedItemModifiers, EquippedItems};
 
 #[path = "inventory_model.rs"]
 pub(crate) mod inventory_model;
@@ -255,7 +255,9 @@ fn send_initial_inventory(
             SentInventoryView(model.view()),
             AppearanceSourceItems(model.appearance_sources()),
         ));
-        commands.entity(link.0).insert(model.equipped_items());
+        commands
+            .entity(link.0)
+            .insert((model.equipped_items(), model.equipped_modifiers()));
         // Persist placements chosen for previously unplaced items.
         save_inventory_record(db, in_world.character_id, &model.into_record());
     }
@@ -625,7 +627,14 @@ fn send_inventory_deltas(
     mut updates: ResMut<GoldUpdateQueue>,
     store: InventoryStore,
     mut connections: DeltaConnections,
-    mut players: Query<(&mut EquipmentAppearance, Option<&mut EquippedItems>), With<Player>>,
+    mut players: Query<
+        (
+            &mut EquipmentAppearance,
+            Option<&mut EquippedItems>,
+            Option<&mut EquippedItemModifiers>,
+        ),
+        With<Player>,
+    >,
     dirty_queue: Option<Res<ReplicationDirtyQueue>>,
     mut senders: Query<(
         &mut MessageSender<InventoryDelta>,
@@ -653,6 +662,7 @@ fn send_inventory_deltas(
             .insert(AppearanceSourceItems(model.appearance_sources()));
         let appearance = model.appearance().clone();
         let equipped = model.equipped_items();
+        let instance_modifiers = model.equipped_modifiers();
         save_inventory_record(db, in_world.character_id, &model.into_record());
         let changes = diff_views(&sent.0, &view);
         if !changes.is_empty()
@@ -664,11 +674,16 @@ fn send_inventory_deltas(
             sender.send::<InventoryChannel>(InventoryDelta { changes });
             sent.0 = view;
         }
-        let Ok((mut current, current_equipped)) = players.get_mut(link.0) else {
+        let Ok((mut current, current_equipped, current_modifiers)) = players.get_mut(link.0) else {
             continue;
         };
         if let Some(mut current_equipped) = current_equipped {
             current_equipped.set_if_neq(equipped);
+        }
+        if let Some(mut current_modifiers) = current_modifiers {
+            current_modifiers.set_if_neq(instance_modifiers);
+        } else {
+            commands.entity(link.0).insert(instance_modifiers);
         }
         if *current != appearance {
             *current = appearance;

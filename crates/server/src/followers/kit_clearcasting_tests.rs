@@ -127,7 +127,11 @@ fn finish_native_lifebloom(
 }
 
 fn earn_native_clearcasting() -> (Harness, Entity) {
-    let (mut h, caster) = at_level(CRENNA, 15, |_| {});
+    earn_native_clearcasting_at_level(15)
+}
+
+pub(super) fn earn_native_clearcasting_at_level(level: u8) -> (Harness, Entity) {
+    let (mut h, caster) = at_level(CRENNA, level, |_| {});
     assert!(has_aura(h.app.world(), caster, OMEN));
     let store = h.app.world().resource::<SpellStore>();
     let omen = store.get(OMEN).unwrap();

@@ -36,6 +36,7 @@ fn record(name: &str, guid: u64) -> InventoryRecord {
         nonvisual_equipped: Vec::new(),
         instances: HashMap::from([(guid, ItemInstanceData { soulbound: false })]),
         crafting_origins: HashMap::new(),
+        item_modifiers: HashMap::new(),
         item_durability: HashMap::new(),
         definition_sources: HashMap::new(),
         appearance_account: None,
@@ -144,6 +145,137 @@ fn item_sources_model_duplicate_split_and_partial_take_keep_provenance() {
     for guid in [601, 602, 603, 604] {
         assert_eq!(load_item_definition_source(&db, guid), Forever70205);
     }
+}
+
+fn native_equipped_record(guid: u64) -> InventoryRecord {
+    let mut record = record("ParityOwned", guid);
+    record.character.class = 2;
+    record.character.race = 6;
+    record.character.level = 90;
+    let mut item = record.inventory.items.pop().unwrap();
+    item.item_id = 237832;
+    item.name = "Spellbreaker's Cover".into();
+    item.quality = 4;
+    item.required_level = 90;
+    record.equipped.push(EquippedItem {
+        slot: shared::components::EquipmentVisualSlot::Head,
+        item,
+    });
+    record.definition_sources.insert(guid, Retail);
+    record
+}
+
+fn native_modifiers() -> server::item_instance::ItemInstanceModifiers {
+    server::item_instance::ItemInstanceModifiers {
+        bonus_list: vec![8960, 12384, 13750, 13751, 13836, 9627],
+        item_level_override: Some(334),
+        enchant: 7961,
+        gems: vec![240983],
+        crafted_stats: vec![32, 36],
+    }
+}
+
+#[test]
+fn item_instance_preexisting_character_without_modifier_table_reopens_as_unmodified() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = Database::create(file.path()).unwrap();
+    super::super::create_tables(&db);
+    let record = native_equipped_record(41);
+    save_inventory_record(&db, 1, &record);
+    let txn = db.begin_write().unwrap();
+    assert!(
+        txn.delete_table(server::item_instance::store::ITEM_MODIFIERS)
+            .unwrap()
+    );
+    txn.commit().unwrap();
+    drop(db);
+
+    let db = Database::open(file.path()).unwrap();
+    let loaded = load_inventory_record(&db, 1).expect("pre-existing character remains loadable");
+    assert_eq!(loaded.equipped, record.equipped);
+    assert!(loaded.item_modifiers.is_empty());
+    let standalone = server::item_instance::store::load_modifiers(&db, 41).unwrap();
+    assert_eq!(standalone, Default::default());
+    assert!(
+        matches!(
+            db.begin_read()
+                .unwrap()
+                .open_table(server::item_instance::store::ITEM_MODIFIERS),
+            Err(redb::TableError::TableDoesNotExist(_))
+        ),
+        "reading legacy data must not create a table"
+    );
+}
+
+#[test]
+fn item_instance_inventory_record_hydrates_guid_modifiers_after_database_reopen() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    let db = Database::create(file.path()).unwrap();
+    super::super::create_tables(&db);
+    let initial = native_equipped_record(41);
+    let modifiers = native_modifiers();
+    let txn = db.begin_write().unwrap();
+    write_inventory_record(&txn, 1, &initial);
+    server::item_instance::store::write_modifiers(&txn, 41, &modifiers).unwrap();
+    txn.commit().unwrap();
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    let mut loaded = load_inventory_record(&db, 1).unwrap();
+    assert_eq!(loaded.item_modifiers.get(&41), Some(&modifiers));
+    let mut changed = modifiers.clone();
+    changed.item_level_override = Some(344);
+    loaded.item_modifiers.insert(41, changed.clone());
+    save_inventory_record(&db, 1, &loaded);
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    let mut sender = load_inventory_record(&db, 1).unwrap();
+    assert_eq!(sender.item_modifiers.get(&41), Some(&changed));
+    let mut receiver = record("ParityReceiver", 42);
+    receiver.inventory.items.clear();
+    receiver.character.class = 2;
+    receiver.character.race = 6;
+    receiver.character.level = 90;
+    receiver.equipped = std::mem::take(&mut sender.equipped);
+    let txn = db.begin_write().unwrap();
+    write_inventory_record(&txn, 1, &sender);
+    write_inventory_record(&txn, 2, &receiver);
+    txn.commit().unwrap();
+    drop(db);
+    let db = Database::open(file.path()).unwrap();
+    assert_eq!(
+        load_inventory_record(&db, 2)
+            .unwrap()
+            .item_modifiers
+            .get(&41),
+        Some(&changed)
+    );
+    assert!(
+        load_inventory_record(&db, 1)
+            .unwrap()
+            .item_modifiers
+            .is_empty()
+    );
+}
+
+#[test]
+fn item_instance_inventory_model_projects_owned_native_modifiers_to_stats_input() {
+    let mut record = native_equipped_record(41);
+    let modifiers = native_modifiers();
+    record.item_modifiers.insert(41, modifiers.clone());
+    let path = std::env::var_os("DPS_PARITY_WORLD_DB")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(crate::test_data::world_db_path);
+    let templates = crate::item_templates::load_item_templates(&path).unwrap();
+    let model = crate::inventory::inventory_model::InventoryModel::from_record(
+        record,
+        &templates,
+        &mut || 42,
+    );
+    // This is the concrete input consumed by the separately proved StatsPlugin path.
+    assert_eq!(
+        model.equipped_modifiers().items,
+        vec![(shared::protocol::EquipmentSlot::Head, modifiers)]
+    );
 }
 
 #[test]

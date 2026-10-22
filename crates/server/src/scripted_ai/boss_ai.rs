@@ -133,7 +133,8 @@ impl BossAi {
 }
 
 /// `BossAI::UpdateAI`: events tick only while the boss has a victim, and wait
-/// while it casts. Alert schedules live separately in the boss-mod catalog.
+/// while it casts. Explicit Lua-backed scripts expose this same clock to alerts;
+/// other scripts retain the separate sourced boss-mod catalog.
 pub fn boss_update_ai<S: BossScript>(script: &mut S, ctx: &mut Ctx, diff_ms: u32) {
     if !ctx.update_victim() {
         return;

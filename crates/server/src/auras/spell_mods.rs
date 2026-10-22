@@ -102,12 +102,17 @@ pub(crate) fn class_mask_affects(
     effect: &AuraEffectState,
     spell: &SpellInfo,
 ) -> bool {
+    class_mask_matches(aura.class_set, &effect.class_mask, spell)
+}
+
+/// Same native mask relation for an unapplied source record (e.g. form overrides).
+pub(crate) fn class_mask_matches(class_set: u32, mask: &[u32; 4], spell: &SpellInfo) -> bool {
     let Some(options) = spell.class_options.as_ref() else {
         return false;
     };
-    aura.class_set != 0
-        && options.spell_class_set == aura.class_set
-        && (0..4).any(|word| options.spell_class_mask[word] & effect.class_mask[word] != 0)
+    class_set != 0
+        && options.spell_class_set == class_set
+        && (0..4).any(|word| options.spell_class_mask[word] & mask[word] != 0)
 }
 
 /// `Unit::HasAuraTypeWithAffectMask` (Unit.cpp:4852-4858): `unit` has an `aura_type`
@@ -145,9 +150,12 @@ fn matching<'a>(
     })
 }
 
+// Native accumulated next-spell uses, not multiplied modifier magnitude.
+// SimC76f8118 sc_monk.cpp1422 decrements one Combo Breaker stack per Blackout Kick.
+const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768];
+
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
-    //Tidal Waves/Backdraft stacks are next-spell uses, not magnitude.
-    let stacks = if matches!(aura.spell_id, 53390 | 117828) {
+    let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {
         1.0
     } else {
         aura.stack_multiplier()
@@ -188,6 +196,30 @@ pub(crate) fn snapshot_charged_modifiers(
         .collect()
 }
 
+/// SimC76f8118 cat_attack_t: Tiger's Fury persists for the applied bleed.
+/// Keep this source-qualified exception separate from other live periodic mods.
+fn snapshots_periodic_modifier(aura: &AuraInstance, op: SpellModOp) -> bool {
+    aura.spell_id == 5217 && op == SpellModOp::PeriodicHealingAndDamage
+}
+
+pub(crate) fn snapshot_periodic_amount(
+    world: &World,
+    caster: Entity,
+    spell: &SpellInfo,
+    amount: f32,
+) -> f32 {
+    let Some(auras) = world.get::<ActiveAuras>(caster) else {
+        return amount;
+    };
+    let op = SpellModOp::PeriodicHealingAndDamage;
+    let (flat, multiplier) = matching(auras, spell, op)
+        .filter(|(aura, _)| snapshots_periodic_modifier(aura, op))
+        .fold((0.0, 1.0), |sum, (aura, effect)| {
+            add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
+        });
+    (amount + flat) * multiplier
+}
+
 /// `base` modified by `caster`'s spell modifiers for `op` on `spell`.
 pub fn modify(world: &World, caster: Entity, spell: &SpellInfo, op: SpellModOp, base: f32) -> f32 {
     let (flat, mult) = modifier_totals(world, caster, spell, op);
@@ -217,6 +249,7 @@ fn modifier_totals(world: &World, caster: Entity, spell: &SpellInfo, op: SpellMo
         });
     world.get::<ActiveAuras>(caster).map_or(frozen, |auras| {
         matching(auras, spell, op)
+            .filter(|(aura, _)| !snapshots_periodic_modifier(aura, op))
             .filter(|(aura, _)| spell.cast_charge_mods.is_none() || aura.charges == 0)
             .fold(frozen, |sum, (aura, effect)| {
                 add_modifier(sum, stacked_amount(aura, effect), is_pct(effect.aura_type))
@@ -235,6 +268,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
         .iter()
         .filter(|aura| {
             aura.charges > 0
+                && !crate::spell_cast::scripts::preserve_unadmitted_proc(spell, aura)
                 && aura
                     .effects
                     .iter()
@@ -250,7 +284,7 @@ pub fn consume_charges(world: &mut World, caster: Entity, spell: &SpellInfo) {
     }
 }
 
-///53390/117828 grant accumulated next-spell uses with one native proc charge.
+/// Named accumulated next-spell uses share one native proc charge.
 ///Keep that charge while another stack remains; final use follows normal removal.
 fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool {
     let Some(mut auras) = world.get_mut::<ActiveAuras>(caster) else {
@@ -259,7 +293,9 @@ fn consume_stacked_use(world: &mut World, caster: Entity, instance: u32) -> bool
     let Some(aura) = auras.get_mut(instance) else {
         return false;
     };
-    if !matches!(aura.spell_id, 53390 | 117828) || aura.stacks <= 1 {
+    if !(STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) || aura.spell_id == 359618)
+        || aura.stacks <= 1
+    {
         return false;
     }
     aura.stacks -= 1;

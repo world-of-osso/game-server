@@ -92,6 +92,10 @@ pub struct SpellInfo {
     /// Successful-launch charged modifiers; None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
+    /// Script-owned cast-time proc instances that actually modified admission.
+    /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
+    #[serde(skip)]
+    pub(crate) cast_proc_mods: Vec<u32>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,

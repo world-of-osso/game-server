@@ -95,8 +95,23 @@ fn toy_coverage_visual_compass_applies_replicates_and_cancels_source_permanent_a
 }
 
 #[test]
+fn toy_coverage_visual_popcorn_source_ten_second_aura_replicates_and_cancels() {
+    assert_cancellable_source_visual(162539, 202432, 10_000, 60_000);
+}
+
+#[test]
+fn toy_coverage_visual_burning_blade_banner_source_ten_minute_aura_replicates_and_cancels() {
+    assert_cancellable_source_visual(168014, 295037, 600_000, 3_600_000);
+}
+
+#[test]
 fn toy_coverage_visual_payload_or_absent_visual_refuses_without_effects() {
-    for (item, spell) in [(201927, 395705), (202711, 399041)] {
+    for (item, spell) in [
+        (201927, 395705),
+        (202711, 399041),
+        (162539, 202432),
+        (168014, 295037),
+    ] {
         for absent_visual in [true, false] {
             let dir = tempfile::tempdir().unwrap();
             let (mut h, character) = setup(&dir.path().join("visual-refusal.redb"));

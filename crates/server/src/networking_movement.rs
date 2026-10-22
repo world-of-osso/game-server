@@ -458,7 +458,8 @@ fn input_motion(input: &PlayerInput, current: PlayerMotion) -> PlayerMotion {
     let can_adv_fly = current.contains(PlayerMotion::CAN_ADV_FLY);
     let flying = input.flying && can_fly;
     let length = direction_length(&input.direction);
-    let mut flags = 0;
+    // Input replaces movement directions, not the server-owned aura409 ability.
+    let mut flags = current.0 & crate::auras::handlers::CAN_TURN_WHILE_FALLING_MOTION;
     if length > 0.001 {
         let forward = facing_alignment(input.facing_yaw, &input.direction, length);
         let right = right_alignment(input.facing_yaw, &input.direction, length);
