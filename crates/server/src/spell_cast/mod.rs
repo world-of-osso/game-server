@@ -890,6 +890,13 @@ fn attributes(spell: &SpellInfo, index: usize) -> u32 {
     spell.misc.as_ref().map_or(0, |misc| misc.attributes[index])
 }
 
+/// TC a352b1fa Spell.cpp530–531 sets IGNORE_CAST_IN_PROGRESS from Attr4.
+/// This does not waive costs, GCD, cooldowns or other native cast checks.
+pub(crate) fn allows_cast_while_casting(spell: &SpellInfo) -> bool {
+    const ALLOW_CAST_WHILE_CASTING: u32 = 0x0000_0080;
+    attributes(spell, 4) & ALLOW_CAST_WHILE_CASTING != 0
+}
+
 pub(crate) fn is_channeled(spell: &SpellInfo) -> bool {
     attributes(spell, 1) & SPELL_ATTR1_CHANNELED != 0
 }
@@ -1594,9 +1601,13 @@ struct QueuedSpellCast {
 }
 
 fn cast_queue_delay(world: &World, caster: Entity, spell: &SpellInfo) -> f64 {
-    let cast_remaining = world.get::<CastState>(caster).map_or(0.0, |cast| {
-        f64::from((cast.duration - cast.elapsed).max(0.0))
-    });
+    let cast_remaining = if allows_cast_while_casting(spell) {
+        0.0
+    } else {
+        world.get::<CastState>(caster).map_or(0.0, |cast| {
+            f64::from((cast.duration - cast.elapsed).max(0.0))
+        })
+    };
     let gcd_ready_at = world
         .get::<SpellHistory>(caster)
         .and_then(|history| history.gcd_ready_at.get(&gcd_category(spell)))
@@ -1611,7 +1622,7 @@ fn start_queued_casts(world: &mut World) {
     let ready: Vec<_> = pending
         .iter(world)
         .filter(|(caster, queued)| {
-            world.get::<CastState>(*caster).is_none()
+            (world.get::<CastState>(*caster).is_none() || allows_cast_while_casting(&queued.spell))
                 && cast_queue_delay(world, *caster, &queued.spell) == 0.0
         })
         .map(|(caster, _)| caster)
@@ -1847,7 +1858,9 @@ fn validate_start_with_policy(
     mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
-    if check == StartCheck::Native && world.get::<CastState>(caster).is_some() {
+    let casting_blocks_start =
+        world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
+    if check == StartCheck::Native && casting_blocks_start {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell, check)?;
@@ -2251,13 +2264,14 @@ fn begin_validated_cast(
 ) -> Result<(), CastFailure> {
     let mut admitted = spell.clone();
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
-    let spell = &admitted;
-    crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
-    if !spell.empower_stages.is_empty() {
-        return empower::begin(world, caster, spell, target);
+    crate::stand_state::stand_to_cast(world, caster, attributes(&admitted, 0));
+    if !admitted.empower_stages.is_empty() {
+        return empower::begin(world, caster, &admitted, target);
     }
-    start_gcd(world, caster, spell);
-    let cast_ms = cast_time_ms(world, caster, spell);
+    start_gcd(world, caster, &admitted);
+    let cast_ms = cast_time_ms(world, caster, &admitted);
+    admitted.cast_was_hardcast = cast_ms > 0;
+    let spell = &admitted;
     if cast_ms > 0 {
         let mut cast = CastState::normal(
             spell.id,
@@ -2432,9 +2446,9 @@ pub(crate) fn execute_cast(
     crate::profession::check_cast_items(world, caster, spell)?;
     disenchant::check_cast(world, caster, spell)?;
     let mut prepared = resources::snapshot(world, caster, spell, &costs);
-    prepared.cast_charge_mods = Some(spell_mods::snapshot_charged_modifiers(
-        world, caster, &prepared,
-    ));
+    let mut launch_modifiers = spell_mods::snapshot_charged_modifiers(world, caster, &prepared);
+    launch_modifiers.extend(scripts::pyroclasm_damage_modifier(world, caster, &prepared));
+    prepared.cast_charge_mods = Some(launch_modifiers);
     let spell = &prepared;
     let plan = plan_targets(world, caster, spell, explicit, false)?;
     if spell.id == shared::battleground::AZERITE_GATHERING_SPELL {

@@ -10,9 +10,17 @@ pub(super) fn spawn_members(
     profiles: &[Profile],
 ) -> Result<Vec<Entity>, String> {
     let mut members = Vec::with_capacity(profiles.len());
-    for profile in profiles {
+    for (slot, profile) in profiles.iter().enumerate() {
         match spawn(world, owner, profile.clone()) {
-            Ok(unit) => members.push(unit),
+            Ok(unit) => {
+                world
+                    .entity_mut(unit)
+                    .insert(crate::creature_ai::PartyFollowSlot::new(
+                        slot,
+                        profiles.len(),
+                    ));
+                members.push(unit);
+            }
             Err(error) => {
                 unsummon_members(world, &members);
                 return Err(error);

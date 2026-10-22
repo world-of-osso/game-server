@@ -52,12 +52,15 @@ pub struct PowerTypeInfo {
 
 /// `PowerTypeFlags::SetToMaxOnLevelUp` (DBCEnums.h).
 const POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP: i64 = 0x1000;
+const POWER_TYPE_FLAG_DEFAULT_ON_INIT: i64 = 0x0020;
+const POWER_TYPE_FLAG_USED_BY_NPCS: i64 = 0x0080;
 
 /// `power_type` rows by `PowerTypeEnum`, plus `chr_classes.DisplayPower`.
 #[derive(Resource, Debug, Default)]
 pub struct PowerTypeTable {
     powers: HashMap<PowerType, PowerTypeInfo>,
     display_power: HashMap<u8, i32>,
+    creature_initial_power: HashMap<PowerType, i32>,
 }
 
 impl PowerTypeTable {
@@ -70,6 +73,7 @@ impl PowerTypeTable {
         Self {
             powers: infos.into_iter().map(|info| (info.power, info)).collect(),
             display_power: HashMap::new(),
+            creature_initial_power: HashMap::new(),
         }
     }
 
@@ -79,6 +83,18 @@ impl PowerTypeTable {
             .get(&class_id)
             .copied()
             .and_then(PowerType::from_db)
+    }
+
+    /// TC Creature::SelectLevel / Unit::SetPowerType(onInit): native class Energy.
+    pub(crate) fn initial_creature_energy(&self, class_id: u8) -> Option<PowerPools> {
+        let power = self.display_power(class_id)?;
+        if power != PowerType::Energy {
+            return None;
+        }
+        let initial = *self.creature_initial_power.get(&power)?;
+        let mut pools = PowerPools::from_table(self, vec![power]);
+        pools.get_mut(power)?.current = initial as f32;
+        Some(pools)
     }
 
     /// Class powers, primary (`DisplayPower`) first, then ascending DB ID.
@@ -120,24 +136,39 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
         ))
     })?;
     let mut powers = HashMap::new();
+    let mut creature_initial_power = HashMap::new();
     for row in rows {
         let (id, min, max, center, default, display, interrupt, peace, combat, flags) = row?;
         let Some(power) = PowerType::from_db(id) else {
             continue;
         };
         // First row per enum wins (the three ALTERNATE rows share nothing we use).
-        powers.entry(power).or_insert(PowerTypeInfo {
+        if powers.contains_key(&power) {
+            continue;
+        }
+        if flags & POWER_TYPE_FLAG_USED_BY_NPCS != 0 {
+            let initial = if flags & POWER_TYPE_FLAG_DEFAULT_ON_INIT != 0 {
+                default
+            } else {
+                max
+            };
+            creature_initial_power.insert(power, initial);
+        }
+        powers.insert(
             power,
-            min_power: min,
-            max_base_power: max,
-            center_power: center,
-            default_power: default,
-            display_modifier: display,
-            regen_interrupt_ms: interrupt,
-            regen_peace: peace,
-            regen_combat: combat,
-            set_to_max_on_level_up: flags & POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP != 0,
-        });
+            PowerTypeInfo {
+                power,
+                min_power: min,
+                max_base_power: max,
+                center_power: center,
+                default_power: default,
+                display_modifier: display,
+                regen_interrupt_ms: interrupt,
+                regen_peace: peace,
+                regen_combat: combat,
+                set_to_max_on_level_up: flags & POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP != 0,
+            },
+        );
     }
     let mut stmt = conn.prepare("SELECT ID, DisplayPower FROM chr_classes")?;
     let display_power = stmt
@@ -148,6 +179,7 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
     Ok(PowerTypeTable {
         powers,
         display_power,
+        creature_initial_power,
     })
 }
 

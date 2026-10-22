@@ -77,17 +77,37 @@ actions+=/judgment,if=holy_power<5
         self.assertIn("json=/evidence/66.three.json", packs)
 
     def test_selected_talents_keep_source_node_entry_and_rank_not_name_guesses(self):
-        selected = PARITY.parse_selected_talents('''0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
-0.000 Parity adding specialization talent Shield (node=103002 entry=128002 rank=2/2)
-0.000 Parity adding hero talent Light (node=103003 entry=128003 rank=1/1)
-0.000 Parity adding class talent Hammer (node=103001 entry=128001 rank=1/1)
-0.000 Parity ordinary spell damage 200
-''')
+        selected = PARITY.parse_selected_talents(json.dumps([
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
+            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2, "max_ranks": 2, "active_ranks": 2},
+            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
+        ]))
         self.assertEqual(selected, [
-            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1},
-            {"tree": "specialization", "node_id": 103002, "entry_id": 128002, "ranks": 2},
-            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1},
+            {"tree": "class", "node_id": 103001, "entry_id": 128001, "ranks": 1, "active_ranks": 1},
+            {"tree": "spec", "node_id": 103002, "entry_id": 128002, "ranks": 2, "active_ranks": 2},
+            {"tree": "hero", "node_id": 103003, "entry_id": 128003, "ranks": 1, "active_ranks": 1},
         ])
+
+    def test_selected_tiered_talents_use_allocated_entries_not_consumed_debug_rank(self):
+        rows = [
+            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2, "max_ranks": 2, "active_ranks": 2},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1, "max_ranks": 1, "active_ranks": 1},
+        ]
+        selected = PARITY.parse_selected_talents(json.dumps(rows))
+        self.assertEqual(selected, [
+            {"tree": "spec", "node_id": 110418, "entry_id": 137021, "ranks": 2, "active_ranks": 2},
+            {"tree": "spec", "node_id": 110418, "entry_id": 137022, "ranks": 1, "active_ranks": 1},
+        ])
+
+    def test_selected_metadata_keeps_disabled_hero_allocation_and_effective_rank(self):
+        # Pinned Feral allocates Wildshape Mastery in hero21 while selecting22;
+        # create_talent_obj disables that allocation without deleting player_traits.
+        row = {"tree": "hero", "node_id": 94610, "entry_id": 117207,
+               "ranks": 1, "max_ranks": 1, "active_ranks": 0}
+        self.assertEqual(PARITY.parse_selected_talents(json.dumps([row])), [
+            {"tree": "hero", "node_id": 94610, "entry_id": 117207,
+             "ranks": 1, "active_ranks": 0}])
 
     def test_missing_selected_talent_metadata_does_not_become_default_talents(self):
         with self.assertRaisesRegex(ValueError, "selected talent"):
@@ -112,6 +132,33 @@ actions+=/judgment,if=holy_power<5
         self.assertEqual(rows[1]["average_hit"], 50)
         self.assertAlmostEqual(rows[0]["share_pct"], 100 / 3)
         self.assertEqual(result["buffs"], {"test_buff": 25.0})
+
+    def test_stats_first_comparison_flags_strictly_over_five_percent(self):
+        rows = PARITY.compare_stat_sheets(
+            {"attribute": {"strength": 100}, "stats": {"attack_power": 200, "crit_rating": 40}},
+            {"attribute": {"strength": 110}, "stats": {"attack_power": 190, "crit_rating": 40}})
+        self.assertEqual(rows, [
+            {"stat": "attribute.strength", "reference": 100, "server": 110,
+             "delta_pct": 10.0, "flag": True, "status": "measured"},
+            {"stat": "stats.attack_power", "reference": 200, "server": 190,
+             "delta_pct": -5.0, "flag": False, "status": "measured"},
+            {"stat": "stats.crit_rating", "reference": 40, "server": 40,
+             "delta_pct": 0.0, "flag": False, "status": "measured"},
+        ])
+
+    def test_missing_and_zero_reference_stats_never_become_fake_percentages(self):
+        rows = PARITY.compare_stat_sheets(
+            {"attribute": {"intellect": 100}, "stats": {"attack_power": 0, "spell_power": 0}},
+            {"attribute": {"agility": 50}, "stats": {"attack_power": 25, "spell_power": 0}})
+        self.assertEqual([row["status"] for row in rows],
+                         ["missing_reference", "missing_server", "zero_reference", "measured"])
+        self.assertEqual([row["delta_pct"] for row in rows], [None, None, None, 0.0])
+        self.assertEqual([row["flag"] for row in rows], [True, True, True, False])
+
+    def test_nonfinite_stats_fail_explicitly_before_delta_classification(self):
+        with self.assertRaisesRegex(ValueError, "finite"):
+            PARITY.compare_stat_sheets({"stats": {"attack_power": 10}},
+                                      {"stats": {"attack_power": float("nan")}})
 
     def test_malformed_gear_fails_instead_of_dropping_identity(self):
         with self.assertRaisesRegex(ValueError, "item.*id"):
