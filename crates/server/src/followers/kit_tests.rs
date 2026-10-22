@@ -143,7 +143,49 @@ fn follower_kit_kybel32_verdant_embrace() {
 #[test]
 fn follower_kit_bo32_blackout_kick() {
     let (mut h, unit) = level32(227734);
+    // This test needs a living Chi-spender target, not a creature eligible for
+    // ToD's legitimate earlier execute (SimC76f8118 APL269, class2674–2703).
+    let stronger_health = h.app.world().get::<Health>(unit).unwrap().max * 2.0;
+    h.app.world_mut().entity_mut(h.npc).insert(Health {
+        current: stronger_health,
+        max: stronger_health,
+    });
     uses_spell(&mut h, unit, 100784);
+}
+
+#[test]
+fn follower_kit_bo32_selects_touch_of_death_before_blackout_on_weaker_creature() {
+    let (mut h, unit) = level32(227734);
+    assert!(
+        h.health(h.npc) < h.app.world().get::<Health>(unit).unwrap().max,
+        "native weaker-creature execute precondition"
+    );
+    uses_spell(&mut h, unit, 322109);
+    let casts: Vec<_> = h
+        .inbox
+        .go
+        .iter()
+        .filter(|event| event.caster == unit.to_bits())
+        .map(|event| event.spell_id)
+        .collect();
+    let execute = casts.iter().position(|spell| *spell == 322109).unwrap();
+    assert!(
+        !casts[..execute].contains(&100784),
+        "non-Patchwerk APL selects eligible ToD before lower-priority BoK: {casts:?}"
+    );
+    let landed = h.inbox.log.iter().any(|event| {
+        event.source == Some(unit.to_bits())
+            && event.target == Some(h.npc.to_bits())
+            && event.spell_id == Some(322109)
+            && event.kind == shared::protocol::CombatLogKind::Damage
+    });
+    if landed {
+        assert_eq!(
+            h.health(h.npc),
+            0.0,
+            "landed native execute kills the weaker fixture target"
+        );
+    }
 }
 
 #[test]

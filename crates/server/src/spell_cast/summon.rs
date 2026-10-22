@@ -661,8 +661,9 @@ fn roll_summon_level(
     dest: super::targets::Dest,
 ) -> Option<SelectedSummonLevel> {
     let owner_level = read_summoner_level(world, owner)?;
-    let uses_native_level =
-        properties.is_guardian() || (properties.control == CONTROL_WILD && properties.title == 0);
+    let wild_default = properties.control == CONTROL_WILD && properties.title == 0;
+    let preserves_creature_level = properties.flags & USE_CREATURE_LEVEL != 0;
+    let uses_native_level = preserves_creature_level || properties.is_guardian() || wild_default;
     if !uses_native_level {
         return Some(SelectedSummonLevel {
             difficulty: 0,
