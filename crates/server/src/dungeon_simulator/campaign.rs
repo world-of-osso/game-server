@@ -8,6 +8,9 @@ use std::collections::BTreeMap;
 const MAX_TICKS: usize = 72_000;
 const STALL_SECONDS: f64 = 60.0;
 
+#[path = "positioning_tests.rs"]
+mod positioning_tests;
+
 #[derive(Component)]
 pub(super) struct MoveIntent(pub Vec3);
 
