@@ -26,6 +26,8 @@ mod kit_empower_tests;
 mod kit_hunter_policy_tests;
 mod kit_interrupt;
 mod kit_overrides;
+#[cfg(test)]
+mod native_book_tests;
 
 #[cfg(test)]
 mod fire_efficiency_tests;
