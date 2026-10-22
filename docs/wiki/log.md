@@ -1,3 +1,7 @@
+## 2026-10-22 — Emberdawn source-selected single Z / no admission
+
+[Emberdawn source-floor](investigations/follower-data.md#windrunner-emberdawn-source-floor-placement--2026-10-22):unique231606/JEC5764/Journal2655, all4assigned groups checked, group74248up90.026/90.229 selects90.35608/rejects87.95608. Lead allows hashed consensus-qualified single candidate without entrance; actual old gateRED→source/raw-single2GREEN0.533s and missingbossRED→actual-copy+SQL2GREEN0.014s at7ce001c68. Fresh-copy fourINSERTs/replay3×, native0CT0/ownmods/model, factiononly; no entrance/route claim, other identities unresolved.
+
 ## 2026-10-22 — Legacy source gaps / Gutshot encounter-add exclusion
 
 [Legacy trash audit](investigations/follower-data.md#legacy-trash-source-qualification--2026-10-22):117exact own pages/one observed hyena point. Lead held Bracken packet; authenticated JournalSection24719+native SpellEffect384827/28/Misc194745+LittleWigs2777a9d confirm Gutshot summoned add. Excluded static194745 with retained proof/marker gap: actual-markerRED1→zero static points1GREEN0.837s at8280f2746. Historical four-row packet is NEVER_PUBLISH; geometry/native/replay proof did not establish trash classification. Nokhud34/Nelt19/Halls16/Dawn15 pages all genuine empty mappers; no static trash qualifies. Next Windrunner/Xenas bosses first, then trash, no identity/floor relaxation. Lead also confirmed Murder128spawns/23templates/65models PUBLISHED/replayidentical.
