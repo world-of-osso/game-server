@@ -1,50 +1,211 @@
 """Behavioral source extraction and stable-key projection controls."""
+
 import json
 import sys
+import sqlite3
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import follower_trash_ai as trash
 
-LW = Path('/home/osso/Repos/LittleWigs')
+LW = Path("/home/osso/Repos/LittleWigs")
 
 
 class TrashSources(unittest.TestCase):
     def test_lua_cast_events_belong_to_registered_named_actor(self):
         kits = trash.read_lua_kits(LW)
-        self.assertEqual(kits[196102]['spells'], [387564])
-        self.assertEqual(kits[187159]['spells'], [370225, 397726])
-        self.assertEqual(kits[187155]['spells'], [377488])
-        self.assertNotIn(194602, kits, 'transport books have no combat kit')
-        self.assertNotIn(375649, kits[191164]['spells'], 'periodic damage is not a cast')
+        self.assertEqual(kits[196102]["spells"], [387564])
+        self.assertEqual(kits[187159]["spells"], [370225, 397726])
+        self.assertEqual(kits[187155]["spells"], [377488])
+        self.assertNotIn(194602, kits, "transport books have no combat kit")
+        self.assertNotIn(
+            375649, kits[191164]["spells"], "periodic damage is not a cast"
+        )
 
     def test_wowhead_abilities_only_not_loot_or_related_spells(self):
         page = """new Listview({template: 'item', id: 'drops', data: [{"id":7}]});
 new Listview({template: 'spell', id: 'abilities', data: [{"id":387564,"name":"Mystic Vapors",modes:{"mode":[1,2,23]}},{"id":317898,"name":"Blinding Sleet",modes:{"mode":[1]}}]});"""
         self.assertEqual(trash.read_wowhead_abilities(page), [317898, 387564])
-        self.assertEqual(trash.read_wowhead_abilities(json.dumps(page)), [317898, 387564])
-        self.assertEqual(trash.read_wowhead_abilities('<html>No abilities</html>'), [])
+        self.assertEqual(
+            trash.read_wowhead_abilities(json.dumps(page)), [317898, 387564]
+        )
+        self.assertEqual(trash.read_wowhead_abilities("<html>No abilities</html>"), [])
 
     def test_similar_kit_is_named_policy_with_donor_not_new_spell(self):
         actors = [
-            dict(entry=187160, name='Crystal Fury', family=0, models=[106135], maps=[2515], spells=[], classification='none'),
-            dict(entry=196116, name='Crystal Fury', family=0, models=[106135], maps=[2515], spells=[370764], classification='Lua-only'),
+            dict(
+                entry=187160,
+                name="Crystal Fury",
+                family=0,
+                models=[106135],
+                maps=[2515],
+                spells=[],
+                classification="none",
+            ),
+            dict(
+                entry=196116,
+                name="Crystal Fury",
+                family=0,
+                models=[106135],
+                maps=[2515],
+                spells=[370764],
+                classification="Lua-only",
+            ),
         ]
         trash.infer_similar_kits(actors)
-        self.assertEqual(actors[0]['spells'], [370764])
-        self.assertEqual(actors[0]['donor_entry'], 196116)
-        self.assertEqual(actors[0]['policy'], 'FOLLOWER_TRASH_SIMILAR_CREATURE_KIT')
-        self.assertEqual(actors[0]['classification'], 'inferred')
+        self.assertEqual(actors[0]["spells"], [370764])
+        self.assertEqual(actors[0]["donor_entry"], 196116)
+        self.assertEqual(actors[0]["policy"], "FOLLOWER_TRASH_SIMILAR_CREATURE_KIT")
+        self.assertEqual(actors[0]["classification"], "inferred")
 
     def test_no_cross_dungeon_or_zero_family_match(self):
         actors = [
-            dict(entry=187160, name='Crystal Fury', family=0, models=[], maps=[2515], spells=[], classification='none'),
-            dict(entry=196116, name='Unrelated', family=0, models=[], maps=[2521], spells=[370764], classification='Lua-only'),
+            dict(
+                entry=187160,
+                name="Crystal Fury",
+                family=0,
+                models=[],
+                maps=[2515],
+                spells=[],
+                classification="none",
+            ),
+            dict(
+                entry=196116,
+                name="Unrelated",
+                family=0,
+                models=[],
+                maps=[2521],
+                spells=[370764],
+                classification="Lua-only",
+            ),
         ]
         trash.infer_similar_kits(actors)
-        self.assertEqual(actors[0]['classification'], 'none')
+        self.assertEqual(actors[0]["classification"], "none")
 
 
-if __name__ == '__main__':
+class TrashProjection(unittest.TestCase):
+    def setUp(self):
+        self.world = sqlite3.connect(":memory:")
+        self.world.row_factory = sqlite3.Row
+        source = sqlite3.connect(
+            "file:/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db?mode=ro",
+            uri=True,
+        )
+        for table in [
+            "content_creature_template",
+            "tdb_smart_scripts",
+            "spell_misc",
+            "spell_effect",
+            "spell_cooldowns",
+            "spell_cast_times",
+            "spell_range",
+        ]:
+            schema = source.execute(
+                "SELECT sql FROM sqlite_master WHERE name=?", (table,)
+            ).fetchone()[0]
+            self.world.execute(schema)
+            if table in ["content_creature_template", "tdb_smart_scripts"]:
+                key = "entry" if table == "content_creature_template" else "entryorguid"
+                rows = source.execute(
+                    f"SELECT * FROM {table} WHERE {key} IN (476,191164,196102)"
+                ).fetchall()
+            elif table in ["spell_cast_times", "spell_range"]:
+                rows = source.execute(f"SELECT * FROM {table}").fetchall()
+            else:
+                rows = source.execute(
+                    f"SELECT * FROM {table} WHERE SpellID=387564"
+                ).fetchall()
+            if rows:
+                self.world.executemany(
+                    f"INSERT INTO {table} VALUES ({','.join('?' for _ in rows[0])})",
+                    rows,
+                )
+        schema = source.execute(
+            "SELECT sql FROM sqlite_master WHERE name='tdb_smart_scripts'"
+        ).fetchone()[0]
+        self.world.execute(
+            schema.replace("tdb_smart_scripts", "content_smart_scripts", 1)
+        )
+        source.close()
+        self.actor = dict(
+            entry=196102,
+            name="Conjured Lasher",
+            spells=[387564],
+            classification="Lua-only",
+            sources=["LittleWigs2777a9d:Dragonflight/TheAzureVault/Trash.lua"],
+            maps=[2515],
+        )
+
+    def tearDown(self):
+        self.world.close()
+
+    def test_projection_is_content_only_replayable_and_preserves_authored_ai(self):
+        before = self.world.execute("SELECT * FROM tdb_smart_scripts").fetchall()
+        sql, receipt = trash.prepare_projection(self.world, [self.actor])
+        self.world.executescript(sql)
+        self.world.executescript(sql)
+        self.assertEqual(
+            self.world.execute("SELECT COUNT(*) FROM content_smart_scripts").fetchone()[
+                0
+            ],
+            1,
+        )
+        self.assertEqual(
+            self.world.execute(
+                "SELECT action_param1 FROM content_smart_scripts WHERE entryorguid=196102"
+            ).fetchone()[0],
+            387564,
+        )
+        self.assertEqual(
+            self.world.execute(
+                "SELECT AIName FROM content_creature_template WHERE entry=196102"
+            ).fetchone()[0],
+            "SmartAI",
+        )
+        self.assertEqual(
+            self.world.execute("SELECT * FROM tdb_smart_scripts").fetchall(), before
+        )
+        self.assertEqual(receipt["casts"][0]["spell"], 387564)
+
+    def test_unsourced_cadence_is_one_named_default_native_metadata_is_recorded(self):
+        sql, receipt = trash.prepare_projection(self.world, [self.actor])
+        self.world.executescript(sql)
+        self.assertEqual(
+            self.world.execute("SELECT COUNT(*) FROM content_smart_scripts").fetchone()[
+                0
+            ],
+            1,
+        )
+        self.assertEqual(
+            self.world.execute(
+                "SELECT event_param1,event_param3,target_type FROM content_smart_scripts"
+            ).fetchone()[:],
+            (10000, 10000, 1),
+        )
+        cast = receipt["casts"][0]
+        self.assertEqual(cast["cadence_policy"], "FOLLOWER_TRASH_UNSOURCED_CADENCE_MS")
+        native_time = self.world.execute(
+            "SELECT Base FROM spell_cast_times WHERE ID=19"
+        ).fetchone()[0]
+        self.assertEqual(cast["cast_time_ms"], native_time)
+        self.assertEqual(cast["range_index"], 6)
+
+    def test_existing_tc_script_is_not_silently_replaced(self):
+        actor = dict(self.actor, entry=191164, name="Arcane Tender")
+        sql, receipt = trash.prepare_projection(self.world, [actor])
+        self.world.executescript(sql)
+        self.assertEqual(
+            self.world.execute(
+                "SELECT ScriptName FROM content_creature_template WHERE entry=191164"
+            ).fetchone()[0],
+            "npc_arcane_tender",
+        )
+        self.assertEqual(receipt["casts"], [])
+        self.assertEqual(
+            receipt["skipped"], [dict(entry=191164, reason="existing_authored_ai")]
+        )
+
+
+if __name__ == "__main__":
     unittest.main()
