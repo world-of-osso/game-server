@@ -46,18 +46,27 @@ fn warlock(level: u8) -> (Harness, Entity) {
     (h, owner)
 }
 
+fn owned_imps(world: &mut World, owner: Entity) -> std::collections::HashSet<Entity> {
+    world
+        .query::<(Entity, &SummonedCreature)>()
+        .iter(world)
+        .filter(|(_, summon)| summon.owner == owner && summon.spell_id == 104317)
+        .map(|(entity, _)| entity)
+        .collect()
+}
+
 fn summon_imp(h: &mut Harness, owner: Entity) -> Entity {
+    let previous = owned_imps(h.app.world_mut(), owner);
     assert!(
         crate::spell_cast::try_cast_triggered(h.app.world_mut(), owner, 104317, Some(owner), 0),
         "actual native104317 must summon its authenticated55659"
     );
-    let world = h.app.world_mut();
-    world
-        .query::<(Entity, &SummonedCreature)>()
-        .iter(world)
-        .find(|(_, summon)| summon.owner == owner && summon.spell_id == 104317)
-        .map(|(entity, _)| entity)
-        .expect("real native Wild Imp actor")
+    let spawned: Vec<_> = owned_imps(h.app.world_mut(), owner)
+        .difference(&previous)
+        .copied()
+        .collect();
+    assert_eq!(spawned.len(), 1, "one new actual native Wild Imp actor");
+    spawned[0]
 }
 
 fn first_firebolt(h: &mut Harness, imp: Entity) -> Option<i32> {
