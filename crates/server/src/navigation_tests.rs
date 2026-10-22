@@ -190,6 +190,31 @@ fn navigation_brackenhide_partial_corridors_walk_and_repath_three_bosses() {
     }
 }
 
+#[test]
+#[ignore = "requires canonical2527 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_halls_partial_corridors_walk_and_repath_two_bosses() {
+    // Exact halls-packet-3 WoW coordinates, converted with the existing axis adapter.
+    let entrance = wow(-0.370431, 228.269, 20.8162);
+    for (entry, target) in [
+        (189722, wow(-353.12274, -155.7234, -67.9066)),
+        (189727, wow(-315.97385, 161.89757, -100.404625)),
+    ] {
+        eprintln!("Halls source placement entry={entry}");
+        assert_canonical_route_arrives(2527, entrance, target);
+    }
+}
+
+#[test]
+#[ignore = "requires canonical2526 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_vexamus_partial_corridor_walks_and_repaths() {
+    // Exact vexamus-packet-3 inputs; no placement or search-bound changes.
+    assert_canonical_route_arrives(
+        2526,
+        wow(1410.22, -2771.71, 955.637),
+        wow(1815.2512, -2783.9756, 904.01917),
+    );
+}
+
 fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     // Arrival is at the existing native projection, not an invented tighter XY bound.
