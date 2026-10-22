@@ -2,24 +2,27 @@
 use super::*;
 
 fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
-    let mut app = stockade_app_with(data().expect("source world.db"), |app| {
-        if entry == 196102 {
-            app.add_plugins(bevy::log::LogPlugin {
-                filter: "warn,game_server::spell_cast=debug".into(),
-                level: bevy::log::Level::DEBUG,
-                ..Default::default()
-            });
-        }
-    });
+    let mut app = stockade_app(data().expect("source world.db"));
     app.insert_resource(crate::test_data::world_data().clone());
     let source = crate::spell_cast::test_harness::world_db().unwrap();
-    app.insert_resource(SpellStore::fixture(vec![
-        source
-            .store
-            .get(spell)
-            .expect("70448 trash ability")
-            .clone(),
-    ]));
+    // TC Wild Eruption's dummy hook casts375650, whose DB2 effect32 triggers375647.
+    let spells = if spell == 375652 {
+        vec![spell, 375650, 375647]
+    } else {
+        vec![spell]
+    };
+    app.insert_resource(SpellStore::fixture(
+        spells
+            .into_iter()
+            .map(|id| {
+                source
+                    .store
+                    .get(id)
+                    .expect("70448 trash ability/child")
+                    .clone()
+            })
+            .collect(),
+    ));
     app.insert_resource(smart_ai::load_smart_scripts(&world_db_path()).unwrap());
     let maps = app.world().resource::<MapStore>().clone();
     let mut instances = crate::maps::InstanceManager::default();
@@ -112,7 +115,7 @@ fn assert_native_trash_cast(entry: u32, map: u32, spell: u32) {
                     .filter(|go| go.caster == actor.to_bits() && go.spell_id == spell)
                     .collect();
                 assert!(
-                    h.casts(0, actor, spell) > 0,
+                    !gos.is_empty(),
                     "native cast completion missing; actual SpellGo={gos:?}, state={:?}, health={:?}",
                     h.app.world().get::<CastState>(actor),
                     h.health(actor)
@@ -134,6 +137,34 @@ fn follower_trash_azure_conjured_lasher_natively_casts_mystic_vapors() {
 fn follower_trash_azure_arcane_tender_natively_casts_tc_wild_eruption() {
     // TC a352b1fa boss_leymor.cpp npc_arcane_tender: Wild Eruption at12s.
     assert_native_trash_cast(191164, 2515, 375652);
+}
+
+#[test]
+fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
+    let (mut h, actor) = trash_actor(191164, 2515, 375652);
+    let before = h.health(h.player()).current;
+    h.engage(actor);
+    // TC first12s + native1500ms cast and native missile travel; no clock bypass.
+    h.advance(15.0);
+    assert!(
+        h.inbox(0)
+            .spell_gos
+            .iter()
+            .any(|go| go.caster == actor.to_bits() && go.spell_id == 375652),
+        "ordinary source parent cast must complete before child assertion"
+    );
+    assert!(
+        h.inbox(0)
+            .log
+            .iter()
+            .any(|event| event.source == Some(actor.to_bits())
+                && event.target == Some(h.player().to_bits())
+                && event.spell_id == Some(375647)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "source375650 missile must release native375647 damage"
+    );
+    assert!(h.health(h.player()).current < before);
 }
 
 #[test]
