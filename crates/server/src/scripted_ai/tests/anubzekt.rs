@@ -12,6 +12,11 @@ const EYE: u32 = 433766;
 fn anubzekt_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(ANUBZEKT, MAP, BIT, difficulty, None);
     assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
+    let wdt = h.app.world().resource::<MapStore>().maps[&MAP].wdt_file_data_id;
+    h.app.insert_resource(crate::ground::GroundMap::new(
+        &crate::ground::ground_data_dir(),
+        std::collections::HashMap::from([(MAP, wdt)]),
+    ));
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
