@@ -16,8 +16,8 @@ pub(super) enum InterruptPhase {
     IncludingDamage,
 }
 
-/// `true` means an ordinary source-valid interrupt cast was accepted, not that
-/// the hit is guaranteed to land. Never retarget, pursue or alter navigation.
+/// Test entry for the complete native kick set; production selects a phase explicitly.
+#[cfg(test)]
 pub(super) fn try_interrupt_candidates(
     world: &mut World,
     unit: Entity,
@@ -33,6 +33,8 @@ pub(super) fn try_interrupt_candidates(
     )
 }
 
+/// `true` means an ordinary source-valid interrupt cast was accepted, not that
+/// the hit is guaranteed to land. Never retarget, pursue or alter navigation.
 pub(super) fn try_interrupt_candidates_in_phase(
     world: &mut World,
     unit: Entity,
