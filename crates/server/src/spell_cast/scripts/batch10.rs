@@ -103,7 +103,8 @@ pub(super) fn energize_judgment(world: &mut World, caster: Entity, target: Entit
 }
 
 ///105174m1*86040m1. The native root costs three whole shards (30 raw),
-///matching s1=3; imp actors and optional Doom are not inferred from damage.
+///matching s1=3. SimC76f8118 actions2730–2756 schedules one Imp per shard;
+///this native book has fixed three-shard spending, not variable1–3 spending.
 pub(super) fn launch_guldan_meteor(world: &mut World, caster: Entity, target: Entity, depth: u8) {
     if depth >= spell_cast::effects::MAX_TRIGGER_DEPTH {
         warn!("Hand of Guldan trigger depth exhausted");
@@ -125,6 +126,35 @@ pub(super) fn launch_guldan_meteor(world: &mut World, caster: Entity, target: En
             .collect();
     }
     spell_cast::missiles::launch(world, caster, &child, plan, depth + 1);
+    schedule_guldan_imps(world, caster, depth);
+}
+
+fn schedule_guldan_imps(world: &mut World, caster: Entity, depth: u8) {
+    use crate::random::Rng;
+    let root = world
+        .resource::<SpellStore>()
+        .get(HAND_OF_GULDAN)
+        .unwrap()
+        .clone();
+    let count = root
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .base_points as u32;
+    let ctx = spell_cast::effects::EffectCtx {
+        caster,
+        spell: &root,
+        depth,
+        dest: None,
+        chain_multiplier: 1.0,
+    };
+    // Current Midnight source explicitly replaces the old180ms Imp spacing.
+    let mut delay_ms = 0;
+    for _ in 0..count {
+        delay_ms += crate::random::thread_rng().gen_range(1..=2);
+        spell_cast::queued_triggers::schedule_full_trigger(world, &ctx, caster, 104317, delay_ms);
+    }
 }
 
 ///188196's343725s1 awards six Maelstrom once, after the actual bolt hits.

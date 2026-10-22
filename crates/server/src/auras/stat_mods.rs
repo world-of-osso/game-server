@@ -23,6 +23,10 @@ const FRENZY: u32 = 1_264_934;
 pub struct AuraStatMods {
     /// MOD_DAMAGE_PERCENT_DONE 79 per school bit (MiscValue school mask).
     pub damage_done_mult: [f32; SCHOOL_COUNT],
+    /// Native280 sum; Player-only, clamped when physical armor is reduced.
+    pub armor_penetration_pct: f32,
+    /// TC Unit.cpp1248/1468: attacker-owned638, only when victim blocks critically.
+    pub critical_block_amount_mult: f32,
     ///168: (creature-type mask, percent multiplier), independent of school.
     pub damage_done_versus_mods: Vec<(u32, f32)>,
     /// MOD_DAMAGE_PERCENT_TAKEN 87 per school bit.
@@ -68,6 +72,8 @@ pub struct AuraStatMods {
     /// MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 by DB2 power type, summed raw
     /// units (TrinityCore `HandleStatFlatModifier(UNIT_MOD_POWER_START + misc, TOTAL_VALUE)`).
     pub max_power_flat: Vec<(i32, f32)>,
+    /// Player-only178 matching non-Mana TOTAL_PCT factors; Mana goes to StatModifiers.
+    pub max_power_mult: Vec<(i32, f32)>,
     /// SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore): the 1-based combo point
     /// indexes in MiscValue are charged (retail `GetUnitChargedPowerPoints`), ascending.
     pub charged_power_points: Vec<u8>,
@@ -79,10 +85,9 @@ pub struct AuraStatMods {
     pub movement_speed: f32,
     /// REDUCE_PUSHBACK 149: additive percent, clamped when damage is received.
     pub pushback_reduction_pct: f32,
-    /// Flight speed multiplier (`UpdateSpeed(MOVE_FLIGHT)`, Unit.cpp:8846-8850): under a
-    /// MOUNTED 78 aura strongest MOD_INCREASE_MOUNTED_FLIGHT_SPEED 207 × every
-    /// MOD_MOUNTED_FLIGHT_SPEED_ALWAYS 208; then the slow and immobile rules of
-    /// `movement_speed`. Unmounted flight speed auras (206) are not modelled.
+    /// Flight multiplier (TC Unit.cpp8833–8854): controlled NPCs take strongest206;
+    /// mounted units take strongest207 × every209; otherwise sum206+208.
+    /// Strongest211, normalization and slows apply afterward.
     pub flight_speed: f32,
     /// Existing swim modifiers, normalized against the swim base speed for aura 191.
     pub swim_speed: f32,
@@ -117,6 +122,8 @@ impl Default for AuraStatMods {
     fn default() -> Self {
         Self {
             damage_done_mult: [1.0; SCHOOL_COUNT],
+            armor_penetration_pct: 0.0,
+            critical_block_amount_mult: 1.0,
             damage_done_versus_mods: Vec::new(),
             damage_taken_mult: [1.0; SCHOOL_COUNT],
             critical_damage_mods: Vec::new(),
@@ -138,6 +145,7 @@ impl Default for AuraStatMods {
             power_regen_flat: Vec::new(),
             power_regen_prevention_mask: 0,
             max_power_flat: Vec::new(),
+            max_power_mult: Vec::new(),
             charged_power_points: Vec::new(),
             movement_speed: 1.0,
             pushback_reduction_pct: 0.0,
@@ -232,6 +240,13 @@ impl AuraStatMods {
             .product()
     }
 
+    pub fn max_power_multiplier(&self, power_type: i32) -> f32 {
+        self.max_power_mult
+            .iter()
+            .find(|(power, _)| *power == power_type)
+            .map_or(1.0, |(_, factor)| *factor)
+    }
+
     pub fn max_power_flat(&self, power_type: i32) -> f32 {
         self.max_power_flat
             .iter()
@@ -307,6 +322,9 @@ struct Accumulator {
     always_mounted: f32,
     mounted_not_stack: f32,
     fastest_flight: f32,
+    normal_flight: f32,
+    vehicle_flight: f32,
+    fastest_vehicle_flight: f32,
     fastest_swim: f32,
     always_flight: f32,
     flight_not_stack: f32,
@@ -322,7 +340,7 @@ struct Accumulator {
 
 /// Aura stat changes (additive percentages, as `StatModifiers` defines them)
 /// and combat multipliers of `auras`.
-pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
+pub fn compute(auras: &ActiveAuras, player_controlled_npc: bool) -> (StatModifiers, AuraStatMods) {
     let mut acc = Accumulator {
         always: 1.0,
         always_mounted: 1.0,
@@ -332,14 +350,12 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     for aura in auras.iter() {
         apply_aura(&mut acc, aura);
     }
-    let (run, flight) = if acc.mounted {
-        (
-            pct(acc.fastest_mounted) * acc.always_mounted.max(pct(acc.mounted_not_stack)),
-            pct(acc.fastest_flight) * acc.always_flight.max(pct(acc.flight_not_stack)),
-        )
+    let run = if acc.mounted {
+        pct(acc.fastest_mounted) * acc.always_mounted.max(pct(acc.mounted_not_stack))
     } else {
-        (pct(acc.fastest) * acc.always, pct(acc.flight_not_stack))
+        pct(acc.fastest) * acc.always
     };
+    let flight = compute_flight_speed(&acc, player_controlled_npc);
     // TC Unit.cpp8826–8829: swim is independent of run and mounted bonuses.
     let swim = pct(acc.fastest_swim);
     // Unit::UpdateSpeed applies normalization before the strongest slow.
@@ -365,6 +381,18 @@ pub fn compute(auras: &ActiveAuras) -> (StatModifiers, AuraStatMods) {
     acc.combat.swim_speed = slowed(capped(swim, BASE_SWIM_SPEED));
     acc.stats.haste_pct += acc.haste_not_stack;
     (acc.stats, acc.combat)
+}
+
+/// TC Unit.cpp8833–8854 selects the unit's flight branch before applying211.
+fn compute_flight_speed(acc: &Accumulator, player_controlled_npc: bool) -> f32 {
+    let (main, stacking) = if player_controlled_npc {
+        (acc.fastest_vehicle_flight, 1.0_f32)
+    } else if acc.mounted {
+        (acc.fastest_flight, acc.always_flight)
+    } else {
+        (acc.normal_flight + acc.vehicle_flight, 1.0_f32)
+    };
+    pct(main) * stacking.max(pct(acc.flight_not_stack))
 }
 
 /// TC a352b1fa SpellAuraEffects.cpp3981 validates one Stats index; negatives are not "all".
@@ -451,6 +479,7 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_BONUS_ARMOR_PCT => {
                 stats.bonus_armor_pct += amount * (1.0 + stats.bonus_armor_pct / 100.0);
             }
+            MOD_RESISTANCE if misc & 1 != 0 => stats.total_armor_flat += amount,
             MOD_BASE_RESISTANCE_PCT => {
                 if misc & 1 != 0 {
                     // Native independent aura factors multiply; retain a percentage value.
@@ -497,6 +526,16 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     amount * (1.0 + stats.ranged_attack_power_pct / 100.0);
             }
             MOD_RATING_PCT => stats.rating_percent_mods.push((misc as u32, amount)),
+            MOD_COMBAT_RATING_FROM_COMBAT_RATING
+                if crate::stats::supports_rating_conversion(
+                    misc as u32,
+                    effect.misc_values[1] as u32,
+                ) =>
+            {
+                stats
+                    .rating_from_rating
+                    .push((misc as u32, effect.misc_values[1] as u32, amount));
+            }
             CONVERT_CRIT_RATING_PCT_TO_PARRY_RATING => {
                 stats.crit_to_parry_pct += amount * (1.0 + stats.crit_to_parry_pct / 100.0);
             }
@@ -569,6 +608,10 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }
             MOD_MANA_REGEN_PCT => multiply_entry(&mut combat.power_regen_mult, 0, pct(amount)),
             MOD_INCREASE_ENERGY | MOD_MAX_POWER => combat.max_power_flat.push((misc, amount)),
+            MOD_MAX_POWER_PCT if misc == PowerType::Mana as i32 => {
+                stats.max_mana_pct += amount * (1.0 + stats.max_mana_pct / 100.0);
+            }
+            MOD_MAX_POWER_PCT => multiply_entry(&mut combat.max_power_mult, misc, pct(amount)),
             SET_POWER_POINT_CHARGE => {
                 if let Ok(point) = u8::try_from(misc)
                     && point > 0
@@ -578,6 +621,8 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
                     combat.charged_power_points.sort_unstable();
                 }
             }
+            MOD_ARMOR_PENETRATION_PCT => combat.armor_penetration_pct += amount,
+            MOD_CRITICAL_BLOCK_AMOUNT => combat.critical_block_amount_mult *= pct(amount),
             MOD_INCREASE_SPEED => acc.fastest = acc.fastest.max(amount),
             MOD_INCREASE_SWIM_SPEED => acc.fastest_swim = acc.fastest_swim.max(amount),
             MOD_SPEED_ALWAYS => acc.always *= pct(amount),
@@ -589,13 +634,18 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             MOD_MOUNTED_SPEED_NOT_STACK => {
                 acc.mounted_not_stack = acc.mounted_not_stack.max(amount)
             }
+            MOD_INCREASE_VEHICLE_FLIGHT_SPEED => {
+                acc.vehicle_flight += amount;
+                acc.fastest_vehicle_flight = acc.fastest_vehicle_flight.max(amount);
+            }
+            MOD_INCREASE_FLIGHT_SPEED => acc.normal_flight += amount,
             MOD_INCREASE_MOUNTED_FLIGHT_SPEED => {
                 acc.fastest_flight = acc.fastest_flight.max(amount)
             }
             MOD_MOUNTED_FLIGHT_SPEED_ALWAYS => acc.always_flight *= pct(amount),
             MOD_FLIGHT_SPEED_NOT_STACK => acc.flight_not_stack = acc.flight_not_stack.max(amount),
             MOD_DECREASE_SPEED => acc.slowest = acc.slowest.min(amount),
-            MOD_ROOT | MOD_ROOT_2 | MOD_STUN => acc.immobile = true,
+            MOD_ROOT | MOD_ROOT_2 | MOD_STUN | MOD_STUN_DISABLE_GRAVITY => acc.immobile = true,
             MOD_HIT_CHANCE => combat.melee_hit_chance_pct += amount,
             MOD_SPEED_SLOW_ALL => combat.attack_cast_time_mult *= time_percent_mod(amount),
             MOD_MELEE_HASTE_3 => combat.attack_time_mult *= time_percent_mod(amount),
