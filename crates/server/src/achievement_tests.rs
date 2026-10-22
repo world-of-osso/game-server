@@ -3093,6 +3093,7 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
             .earned_ids
             .contains(&4899)
     );
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     let saved = persistence::load_achievements(&world.resource::<GameDatabase>().db, second);
     assert_eq!(saved, contributions[1]);
     assert!(

@@ -527,6 +527,7 @@ fn achievements_real_quest_reward_grants_only_after_turn_in_and_survives_relog()
             .count(),
         1
     );
+    crate::test_data::drain_persistence(app.world().resource::<GameDatabase>());
     let saved = persistence::load_achievements(db(&app), client.character_id);
     assert!(saved.earned_ids.contains(&2357));
     assert_eq!(saved.criteria_progress[&8905], 1);
