@@ -3681,6 +3681,10 @@ fn complete_cast(world: &mut World, caster: Entity, spell_id: u32, target: Optio
     if let Err(failure) = execute_and_channel(world, caster, &spell, target) {
         crate::crafting_orders::interrupt(world, caster);
         debug!("Cast of {spell_id} by {caster} failed on completion: {failure:?}");
+        #[cfg(test)]
+        if spell_id == 433766 {
+            eprintln!("ANUBZEKT_NATIVE_COMPLETION_FAILURE {failure:?}");
+        }
         // Equip errors use SPELL_FAILED_DONT_REPORT, never a fabricated spell failure.
         if let Ok((reason, _)) = failure.to_contract() {
             send_spell_failure(world, caster, spell_id, reason, None);
