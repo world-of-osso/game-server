@@ -1,5 +1,11 @@
 # Dungeon simulator
 
+## Wild Thrash pet dispatch —2026-10-22
+
+Named [Wild Thrash contract](../../specs/dps-parity.md#wild-thrash-owned-pet-child-policy) binds only1264359 e0 to actual living owned controlled pets. Each pet's unchanged1264355 target plan must include the primary enemy before the existing owned-pet forwarding casts its child; ordinary area/copy selection and native1.91AP/radius10 remain authoritative. No blanket Dummy forwarding, synthetic pet or coefficient/timer change. SimC76f8118 hunter7562–7563/6796–6837 supplies the named policy where TC lacks a script and DB2 has no parent trigger; Beast Cleave and conditional multipliers remain explicit separate gaps.
+
+Direct native pet-child qualification atbbd4eeae8 passes37.92s: actual pet gap9.440317/native10yd, attributed damage1899. Only afterward, pushed ignored parentca0fe552c reaches actual root CastSuccess/qualified pet geometry then fails missing pet damage47.19s. Implementation follows that RED; GREEN pending. Inputs are one actual dummy; no earlier invalid three-target/AoE measurement is promoted.
+
 ## Power receipts —2026-10-22
 
 The [DPS adapter](../../specs/dps-parity.md#measurement) reads authoritative `PowerPools`/`Mana`, preserving fractional current/max and the last native tick's `regen_per_sec`; existing engagement samples include actual controlled-pet pools. Actor stat snapshots and final pet receipts retain these values too. Combat accounting groups existing Energize events by source, recipient and spell, exposing requested integer amount, overflow, effective gain and count. These are raw logged integers, not exact fractional grants, power-type attribution or integrated realized regeneration. No gameplay power logic changes.
@@ -164,6 +170,10 @@ The archived Azure panic maps mover164v0 to unselectable Polymorphic Rune195638/
 The original55c880f8a fixture fails its setup assertion, not movement: first hop29001868→29001870 lands on the Rune's same508yd component. Corrected ignored539b08c09 uses native second book29002007→29001886 (508→426yd). Genuine RED11.79s identifies source29001884 at[-5353.02,508.083,-1117.58] chasing[-5336.61,426.341,-1113.19] and panics at movement's disconnected-component boundary. No fabricated positions or links are needed.
 
 Simulator movement now records failure through the same production `mark_chase_blocked` helper and runs the actual `no_path_evade_system` after movement. Reachable travel removes the flag; native home arrival remains unchanged. No physical-navigation plugin, duplicate timer or Rune-specific policy is installed. Candidate1bf739d7a/protocol2abc7fa/frozen40d95b0 passes the corrected native Rune regression16.62s (build6m05, no warnings). Retained controls: Stockade50+safe-path2PASS127.01s, Azure1 Sapling1PASS128.30s, edge3PASS, graph4PASS/2extractors ignored, hazards7PASS22.16s, leader/watcher/passive/book/living-approach/admission6PASS. Stockade50 clears3bosses at2438.65sim_s/114.473run-wall_s; no full-cohort acceptance follows. The optional production `navigation_no_path_` family has3FAIL/1PASS, identically reproduced by the retained pre-parity executable; it is not green evidence and is not changed here. New seeded qualification is running. No hazard-policy change was made for sm909's separately confirmed canonical kit-parser drift. Receipts: engine `data/diagnostics/sim-azure-evade-2026-10-22/{inputs.json,controls-ledger.json,native-controls-ledger.json,pre-parity-native-nopath.log}`.
+
+## Abort-safe run evidence —2026-10-22
+
+Ignored0becd7e14 drives a real gameplay FixedUpdate unwind after an actual native tank Damage receipt. Genuine RED10.13s escapes the campaign loop and never reaches final report/export. The campaign now catches recoverable Rust unwind and loop errors, marks `aborted` with the original reason, then uses the ordinary final native sampling/event path. Initialization errors before retaining a gameplay world are labelled separately with initialization_complete=false. Timeout retains its unchanged horizon and reason. Every final report writes a separate `combat-events-SEED.json` containing ordered events plus status/reason; both native and process summaries count aborted separately from missing reports. Write failures remain explicit errors; no guarantee is claimed for process kill, hardware failure or abort-on-panic builds. GREEN pending. Receipts: engine `data/diagnostics/sim-azure-evade-2026-10-22/abort-red.log`.
 
 ## Native evade releases pending pull history —2026-10-22
 
