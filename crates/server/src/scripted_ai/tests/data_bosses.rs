@@ -117,6 +117,8 @@ mod omor_pushback;
 mod omor_slay;
 #[path = "omrogg.rs"]
 mod omrogg;
+#[path = "orator.rs"]
+mod orator;
 #[path = "porung.rs"]
 mod porung;
 #[path = "talondras.rs"]
