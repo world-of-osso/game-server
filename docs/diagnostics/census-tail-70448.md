@@ -75,6 +75,12 @@ Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege
 
 **AURA_359_TC_CONSUMER_TYPE_CONFLICT**: native391381 Desperate Times authors359+10 against state25. Pinned `SpellAuraEffects.cpp:431` comments that359 is implemented in SpellHealingPctDone, but actual `Unit.cpp:7496–7500` reads303 there; complete server search finds359 only in its declarations and Baleroc's Vital Flame apply/remove script hooks. Do not silently substitute359 for303 or claim its comment proves a generic consumer. Existing computable target state supports15 only, not native25. Preserve this source conflict pending an authoritative decision.
 
+## Aura308 MOD_CRIT_CHANCE_FOR_CASTER_WITH_ABILITIES
+
+TC `Unit.cpp:7264–7270` sums matching recipient308 from this caster with native family/effect-mask checks, after caster chance calculation. Actual consumer only executes for Magic defense1: NONE returns0 earlier and melee/ranged paths have no308 reader elsewhere in pinned server source, despite the comment suggesting it was already added. Keep those exclusions; no new weapon critical subsystem.
+
+Ignored RED444c6301b `census_tail_308 --include-ignored`:0PASS/4FAIL28.99s, compile8m01s/no warnings, `308-red.log`. Native1266748+15 leaves chance0 instead15 for Vivify/Sheilun masks; nativeHunter37895730+24821210 leaves matching Magic Wildfire0 instead40; foreign-source exclusions pass before own-source comparison fails. Actual246733+1000 leaves Riptide chance0 instead1000 after native Annihilation creates missing health. Same tests require actual critical heal receipt/overheal, removal, different Shaman/Mage masks and ranged/defense0 exclusion. GREEN pending. No native amount, chance RNG or catalog edits.
+
 ## Aura345 BYPASS_ARMOR_FOR_CASTER
 
 TC `Unit.cpp:1697–1703` sums recipient345 belonging to this attacker, caps above100, and reduces full armor before269 ignore/floor and280 capped penetration. Shared pure reader feeds existing physical-spell armor, autoswing armor and generic-creature forecast armor; no new target/stat subsystem or canonical data.

@@ -27,6 +27,39 @@ fn affects_spell(aura: &AuraInstance, effect: &AuraEffectState, spell: &SpellInf
     })
 }
 
+/// TC a352b1fa Unit.cpp7264–7270: recipient308 matches healer/attacker and family mask.
+pub(crate) fn caster_ability_critical_chance(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    const SPELL_DAMAGE_CLASS_MAGIC: u32 = 1;
+    if spell
+        .categories
+        .as_ref()
+        .map(|category| category.defense_type)
+        != Some(SPELL_DAMAGE_CLASS_MAGIC)
+    {
+        return 0.0;
+    }
+    world.get::<ActiveAuras>(target).map_or(0.0, |auras| {
+        auras
+            .iter()
+            .filter(|aura| aura.caster == caster)
+            .flat_map(|aura| {
+                aura.effects
+                    .iter()
+                    .filter(|effect| {
+                        effect.aura_type == handlers::MOD_CRIT_CHANCE_FOR_CASTER_WITH_ABILITIES
+                            && affects_spell(aura, effect, spell)
+                    })
+                    .map(move |effect| effect.amount * aura.stack_multiplier())
+            })
+            .sum()
+    })
+}
+
 /// TC a352b1fa Unit.cpp1697–1703: recipient345 sums only this attacker's bypass.
 pub(crate) fn armor_after_bypass(auras: Option<&ActiveAuras>, attacker: Entity, armor: f32) -> f32 {
     let bypass = auras.map_or(0.0, |auras| {

@@ -844,7 +844,9 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
     } else {
         0.0
     };
-    (chance + modifier).max(0.0)
+    let caster_ability =
+        crate::auras::combat_stats::caster_ability_critical_chance(world, caster, target, spell);
+    (chance + modifier + caster_ability).max(0.0)
 }
 
 fn with_crit(

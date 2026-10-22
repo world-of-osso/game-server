@@ -72,7 +72,6 @@ fn chance(h: &Harness, spell_id: u32) -> f32 {
 }
 
 #[test]
-#[ignore = "census-tail308 RED before caster ability-filtered critical chance"]
 fn census_tail_308_native_vital_clarity_reads_both_mask_words_and_removes() {
     let mut h = fixture();
     assert_eq!(chance(&h, VIVIFY), 0.0);
@@ -91,7 +90,6 @@ fn census_tail_308_native_vital_clarity_reads_both_mask_words_and_removes() {
 }
 
 #[test]
-#[ignore = "census-tail308 RED before caster ability-filtered critical chance"]
 fn census_tail_308_native_matching_factors_sum_and_exclude_ranged_and_none() {
     let mut h = fixture();
     let caster = h.caster;
@@ -106,7 +104,6 @@ fn census_tail_308_native_matching_factors_sum_and_exclude_ranged_and_none() {
 }
 
 #[test]
-#[ignore = "census-tail308 RED before caster ability-filtered critical chance"]
 fn census_tail_308_native_foreign_caster_and_wrong_recipient_do_not_grant_chance() {
     let mut h = fixture();
     let caster = h.caster;
@@ -122,7 +119,6 @@ fn census_tail_308_native_foreign_caster_and_wrong_recipient_do_not_grant_chance
 }
 
 #[test]
-#[ignore = "census-tail308 RED before caster ability-filtered critical chance"]
 fn census_tail_308_native_riptide_marker_guarantees_real_heal_not_other_shaman_heals() {
     let mut h = fixture();
     let caster = h.caster;

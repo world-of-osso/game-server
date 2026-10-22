@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Caster-and-ability critical chance slice — 2026-10-22
+
+- Native308 on the recipient sums chance only for the aura's caster and matching native class-family/effect mask. Pinned TC's actual308 consumer is Magic defense1; do not invent a melee/ranged/defense0 consumer from its comment. Preserve native CANT_CRIT and existing base/spell/script chance rules.
+- Native1266748 Vital Clarity+15 matches Vivify116670 and Sheilun's Gift399491 through separate mask words. Native378957+30 and248212+10 sum for matching Magic Wildfire Bomb, not ranged Aimed Shot/Serpent Sting or defense0 Kill Command. Actual246733 marker+1000 guarantees Riptide's direct critical healing without changing RNG, but not other Shaman heals. Removal and foreign-caster/recipient independence remain required. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Caster-owned armor bypass slice — 2026-10-22
 
 - Native345 on the physical victim sums only effects whose caster matches the attacker, capped above at100%. Apply that fraction to the full current armor after native level scaling, before269 ignore/floor and280 level-capped penetration. Do not turn the sum into independent products, add a lower clamp, or consume an aura on the attacker instead.
