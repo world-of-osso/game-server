@@ -33,6 +33,22 @@ That first run was stopped after917.28s user+2.44s system CPU when its embedded 
 
 Both safe sides use a private SQLite online backup created before the safe baseline executed:886865920bytes, SHA256`09dac63b0337dee505bd704ad7766abe2bc3cf6a71dfbf3acd84de5690ef12f0`, mode0444, under the private target. Other asset directories remain read-only source links. This freezes canonical imports without mutating source data. The optimized build is admitted separately after the safe baseline finishes; initial compile remains pending.
 
+## Repeated dependency compilation
+
+Lead gates `az914b`, `sa920`, `ra922` and `to917` repeatedly begin with the same four roots: `libc`, `libm`, `libloading`, `libsqlite3-sys`, followed by their dependency cascade. Installed housekeeping had a deterministic artifact-grouping defect, not evidence that every third-party feature changed:
+
+- `artifact_stem()` stripped leading `lib` from every filename. Thus `libc-HASH.d` became group `c-HASH`, whereas `liblibc-HASH.rlib` became `libc-HASH`.
+- The first group's third-party guard looked for nonexistent `c-HASH.d`, so an aged real dep-info file was deleted. Depending on directory ordering, the library group was then deleted too, or survived until the fingerprint repair could no longer find its dep-info. Either route invalidated an otherwise reusable dependency and its transitive consumers.
+- The lead deployed the correction in `/home/osso/.worktrees/logs/prune-target-deps.py`: strip the library prefix only for `.rlib`, `.rmeta` and `.so`, never `.d` or executable names. Already missing dependencies need one rebuilding pass; the fix prevents subsequent housekeeping invalidation.
+
+`logs/test_prune_target_deps.py` exercises actual aged filesystem artifacts/fingerprints for all four `lib*` roots in both file-creation orders, retains vendored libraries, and still removes expired workspace libraries. The lead ran the same standalone unittest against a copy differing only by legacy prefix stripping: **8 failing subcases before,3 test methods OK after**. This is filesystem behavior proof, not a source-string or grouping-shape assertion. Installed housekeeping remains lead-owned; this branch does not replace it.
+
+Alternative checks: `git diff 31ce2d6db..dd5702f88` is empty for `Cargo.lock` and root/server/navigation/client/integration-test manifests between the same petgate's az914b and sa920 heads. Both use `--workspace` without feature flags; they do not alternate `-p server --bin` with workspace selection. `agent-run` sets TMPDIR and scheduling priority, not RUSTFLAGS. Captured libc fingerprints have `rustflags=[]`, unchanged feature sets and profile/config keys; test/check variants coexist under distinct stable unit hashes. These observations do not support lock/feature/flag churn as the repeated four-root cause.
+
+`gate-ft923-land.log` is different: its paths name `game-server-pygate` and it starts with proc-macro2/unicode-ident/cfg-if plus broad check-only artifacts. Prior warm state for that tree is unproven; do not label its entire cold-looking check as the four-root cascade. Ordinary first test/check builds and actual manifest/feature changes remain legitimate compilation.
+
+Evidence: `pruner-artifact-classification.json`, `same-petgate-dependency-config.diff` (empty), `gate-libc-fingerprints.json`, the installed pruner and adjacent standalone unittest. Logs count108–112 total compile events including workspace/path crates, not108–112 registry crates.
+
 ## Gate invocation and remaining slow cases
 
 Pending measured execution and memory comparison. Keep the existing six-thread libtest invocation available: its process-wide fixtures are shared, unlike nextest's per-test processes. Nextest supplies isolated per-case timing here; process isolation is not assumed faster for thousands of cold-data cases. No timeout, retry or ignored-test policy is changed to manufacture a passing budget.
@@ -45,7 +61,8 @@ The reported audit identifies campaign12, Nethekurse6, Omor3, and Azure combat/K
 - [Simulator manual clock and loaders](../../../crates/server/src/dungeon_simulator/runtime.rs).
 - [Simulator catalog ownership](../../../crates/server/src/dungeon_simulator/catalogs.rs).
 - [Canonical fixture ownership](../../../crates/server/src/test_data.rs).
-- Evidence: `baseline-binary.json`, `baseline-union-census.json`, `baseline-copied.jsonl`, `baseline-full-stockade.perf` and `baseline-full-stockade-hotspots.txt` in the directory above.
+- Evidence: `baseline-binary.json`, `baseline-union-census.json`, `baseline-safe.jsonl`, `baseline-safe.time`, `baseline-safe-processes.json`, `frozen-world.json`, `baseline-full-stockade.perf` and `baseline-full-stockade-hotspots.txt` in the directory above.
+- Lead-owned housekeeping: `/home/osso/.worktrees/logs/{prune-target-deps.py,disk-housekeeping.sh,test_prune_target_deps.py}`; the four gate scripts and their recorded heads.
 
 ## See Also
 

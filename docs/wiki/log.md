@@ -3701,3 +3701,5 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-22 — Server test performance profile
 
 [Server test performance](investigations/server-test-performance.md): copied fu913 baseline plus49Hz sample identifies unoptimized server-instantiated generic ECS/iterator paths despite optimized dependencies. Add test-only server opt2/debug1, preserving assertions/overflow checks. Baseline/optimized CPU, wall, RSS and complete900s union acceptance remain pending; shared-host swapping is recorded, not attributed to code.
+
+Pruner investigation: unconditional leading-lib stripping split libc/libm/libloading/libsqlite3_sys dep-info from library groups, defeating third-party retention and cascading94-crate rebuilds. Lead deployed extension-aware grouping; standalone aged-filesystem regression8RED→3GREEN. Same-petgate manifest/lock diff empty, flags/features stable. Separate ft923 pygate cold-check history remains unproven.
