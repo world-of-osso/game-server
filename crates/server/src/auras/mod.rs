@@ -22,6 +22,7 @@ pub(crate) mod area_avoidance;
 pub(crate) mod augmentation;
 pub(crate) mod aura_state;
 pub(crate) mod base_armor;
+mod binding_heals;
 mod charred_warblades;
 pub(crate) mod combat_stats;
 pub(crate) mod damage_shield;
@@ -151,6 +152,7 @@ impl Plugin for AuraPlugin {
                     init_unit_auras,
                     mount::apply_flight_style,
                     sync_passive_auras,
+                    crate::equipment_effects::sync_equipment_effects,
                     update_auras,
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
@@ -178,6 +180,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Native on-equip/enchant spell owned by this physical equipment slot.
+    Equipment(shared::protocol::EquipmentSlot),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }
@@ -238,6 +242,8 @@ pub struct AuraInstance {
     pub spell_id: u32,
     pub caster: Entity,
     pub source: AuraSource,
+    /// Item-level snapshot of the applied aura effects.
+    pub cast_item_level: Option<u16>,
     pub from_player: bool,
     pub effects: Vec<AuraEffectState>,
     /// Full duration in ms; 0 is permanent.
@@ -618,6 +624,19 @@ pub(crate) fn maximum_duration_ms(
     Some(duration_ms(world, &application, &spell))
 }
 
+/// FISTS_OF_FURY_SIMC_TICK_CADENCE: SimC76f8118 monk/sc_monk.cpp1789–1796
+/// uses1s damage ticks, including tick0 (five over4s). TC has no FoF script;
+/// its generic226 handler does nothing. Preserve the approved toy trigger bridge.
+fn periodic_base_interval_ms(spell: &SpellInfo, effect: &SpellEffect) -> u32 {
+    const FISTS_OF_FURY: u32 = 113656;
+    const FISTS_OF_FURY_DAMAGE: u32 = 117418;
+    if spell.id == FISTS_OF_FURY && effect.trigger_spell == FISTS_OF_FURY_DAMAGE {
+        1000
+    } else {
+        effect.aura_period_ms
+    }
+}
+
 fn build_effect(
     world: &World,
     caster: Entity,
@@ -634,13 +653,14 @@ fn build_effect(
     };
     let amount = scripts::snapshot_periodic_amount(world, caster, spell, effect, amount);
     let amount = augmentation::snapshot_amount(world, caster, spell.id, effect.index, amount);
-    let period_ms = if effect.aura_period_ms > 0 {
+    let base_period_ms = periodic_base_interval_ms(spell, effect);
+    let period_ms = if base_period_ms > 0 {
         spell_mods::modify(
             world,
             caster,
             spell,
             SpellModOp::Period,
-            effect.aura_period_ms as f32,
+            base_period_ms as f32,
         )
         .max(1.0) as u32
     } else {
@@ -733,6 +753,7 @@ fn build_instance(
         spell_id: spell.id,
         caster,
         source: application.source,
+        cast_item_level: spell.cast_item_level,
         from_player: world.get::<Player>(caster).is_some(),
         effects,
         duration_ms,
@@ -780,7 +801,6 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
@@ -798,7 +818,6 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             effect.aura_type != handlers::MOD_RESISTANCE || effect.misc_values[0] & !1 == 0;
         let handled = handlers::is_handled(effect.aura_type)
             && [
-                supported_amount,
                 duration_supported,
                 immunity_supported,
                 rating_supported,
@@ -843,12 +862,7 @@ fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
             )
         };
     }
-    if linked::is_linked(effect.aura_type) {
-        format!(
-            "nonzero linked amount {} for child {} remains a source gap",
-            effect.amount, effect.trigger_spell
-        )
-    } else if mechanic_duration::invalid_mechanic_source_gap(effect) {
+    if mechanic_duration::invalid_mechanic_source_gap(effect) {
         format!(
             "duration mechanic {} does not fit the pinned mask; source gap",
             effect.misc_values[0]
@@ -2054,7 +2068,7 @@ pub fn channel_ended(world: &mut World, caster: Entity, spell_id: u32) {
     }
 }
 
-fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
+pub(crate) fn aura_can_be_dispelled(aura: &AuraInstance, hostile: bool, dispel_type: u32) -> bool {
     !aura.passive
         && aura.dispel_type != 0
         && (dispel_type == DISPEL_ALL || u32::from(aura.dispel_type) == dispel_type)

@@ -185,7 +185,7 @@ impl EntryProjection {
         self.apply_equipment(&mut actor);
         self.apply_pose(&mut actor);
         self.apply_mount_and_path(&mut actor);
-        self.apply_mana(&mut actor);
+        self.apply_powers(&mut actor);
         self.apply_regeneration(&mut actor);
         self.update_template_string_id(&mut actor);
         self.update_movement_rates(&mut actor);
@@ -312,7 +312,7 @@ impl EntryProjection {
         }
     }
 
-    fn apply_mana(&self, actor: &mut EntityWorldMut<'_>) {
+    fn apply_powers(&self, actor: &mut EntityWorldMut<'_>) {
         if let Some(max) = self.mana {
             actor.insert((
                 Mana { current: max, max },
@@ -323,7 +323,29 @@ impl EntryProjection {
             ));
         } else {
             actor.remove::<(Mana, crate::spell_cast::powers::PowerPools)>();
+            if self.template.unit_class == 4 {
+                self.apply_class_energy(actor);
+            }
         }
+    }
+
+    fn apply_class_energy(&self, actor: &mut EntityWorldMut<'_>) {
+        // Zone-only worlds also spawn creatures without installing SpellCastPlugin.
+        // Preserve source stats/identity but leave power absent, never invent a pool.
+        let Some(table) = actor
+            .world()
+            .get_resource::<crate::spell_cast::powers::PowerTypeTable>()
+        else {
+            warn!(
+                "Creature{} class4 Energy unavailable: PowerTypeTable is not installed",
+                self.template.entry
+            );
+            return;
+        };
+        let pools = table
+            .initial_creature_energy(self.template.unit_class)
+            .expect("Creature class4 requires native NPC-eligible Energy DisplayPower data");
+        actor.insert(pools);
     }
 
     fn apply_regeneration(&self, actor: &mut EntityWorldMut<'_>) {
