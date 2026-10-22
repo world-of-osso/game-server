@@ -177,6 +177,8 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+#[cfg(test)]
+mod periodic_healing_taken_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
