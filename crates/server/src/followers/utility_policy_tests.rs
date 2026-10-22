@@ -184,20 +184,7 @@ fn follower_utility_policy_party_danger_precedes_kicker_range_and_identity() {
     } else {
         (second, unit)
     };
-    let damage = h.npc;
-    let control = spawn_npc(&mut h.app, 80.0);
-    for (actor, x) in [(near, 0.0), (far, 80.0), (damage, 0.0)] {
-        h.app.world_mut().get_mut::<Position>(actor).unwrap().x = x;
-    }
-    for (caster, victim, spell) in [(damage, near, 133), (control, far, 118)] {
-        utility_tests::prepare_enemy_spec(&mut h, caster, 63);
-        h.app
-            .world_mut()
-            .entity_mut(caster)
-            .insert(crate::networking::CombatTarget(Some(victim)));
-        crate::spell_cast::creature_cast(h.app.world_mut(), caster, spell, Some(victim), false)
-            .unwrap();
-    }
+    let (damage, control) = start_separated_native_casts(&mut h, near, far);
     let context = h.app.world().get::<super::Follower>(unit).unwrap().clone();
     let candidates = super::utility_interrupt::ordered_casts(
         h.app.world(),
@@ -225,6 +212,48 @@ fn follower_utility_policy_party_danger_precedes_kicker_range_and_identity() {
             .get::<shared::casting::CastState>(damage)
             .is_some(),
         "lower-danger Fireball must remain after the first party opportunity"
+    );
+}
+
+fn start_separated_native_casts(h: &mut Harness, near: Entity, far: Entity) -> (Entity, Entity) {
+    let damage = h.npc;
+    let control = spawn_npc(&mut h.app, 80.0);
+    for (actor, x) in [(near, 0.0), (far, 80.0), (damage, 0.0)] {
+        h.app.world_mut().get_mut::<Position>(actor).unwrap().x = x;
+    }
+    for (caster, victim, spell) in [(damage, near, 133), (control, far, 118)] {
+        utility_tests::prepare_enemy_spec(h, caster, 63);
+        h.app
+            .world_mut()
+            .entity_mut(caster)
+            .insert(crate::networking::CombatTarget(Some(victim)));
+        crate::spell_cast::creature_cast(h.app.world_mut(), caster, spell, Some(victim), false)
+            .unwrap();
+    }
+    (damage, control)
+}
+
+#[test]
+fn follower_utility_policy_party_danger_precedes_primary_vs_secondary_kick_phase() {
+    let (mut h, far) = at_level(209057, 26, |_| {});
+    let near = add_follower(&mut h, 209059);
+    let (damage, control) = start_separated_native_casts(&mut h, near, far);
+    let context = h.app.world().get::<super::Follower>(far).unwrap().clone();
+    super::kit_ai::update(h.app.world_mut(), far, &context, &[near, far], Some(damage));
+    h.advance(10);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(control)
+            .is_none(),
+        "source-level26 Shield must cover the highest-danger cast before a distant Mage spends Counterspell on Fireball"
+    );
+    assert!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(damage)
+            .is_some(),
+        "preserving emergency-heal priority must not reorder enemy cast danger"
     );
 }
 
