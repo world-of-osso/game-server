@@ -87,19 +87,38 @@ class TrashSourceControls(unittest.TestCase):
 
 @unittest.skipUnless('FOLLOWER_TRASH_DB' in os.environ, 'requires explicit private/prepared DB fixture')
 class MagistersTrashAcceptance(unittest.TestCase):
-    def test_three_unique_surface_markers_are_independent_native_template_spawns(self):
+    def test_qualified_independent_markers_keep_own_native_templates(self):
         path = Path(os.environ['FOLLOWER_TRASH_DB']).resolve()
         expected = [(63811100, 232369, 11443.16612, -5037.9, 91.92210097074138),
                     (63811101, 234089, 11562.92, -4962.4, 164.19668309117662),
                     (63811102, 234089, 11462.670297, -5024.6875, 91.8625331085667)]
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
-            self.assertEqual(db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature WHERE map=2811 AND guid BETWEEN 63811100 AND 63811999 ORDER BY guid').fetchall(), expected)
-            for entry in (232369, 234089):
+            actual_spawns = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature WHERE map=2811 AND guid BETWEEN 63811100 AND 63811999 ORDER BY guid').fetchall()
+            self.assertEqual(len(actual_spawns), 161)
+            self.assertEqual(actual_spawns[:3], expected)
+            self.assertEqual(len({row[1] for row in actual_spawns}), 9)
+            self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=232106').fetchone(), (16,))
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2811 AND id1=232106').fetchone(), (1,))
+            for entry in {row[1] for row in actual_spawns}:
                 native = db.execute('SELECT t.unit_class,d.ContentTuningID,d.HealthModifier,d.DamageModifier,d.ArmorModifier,d.ManaModifier FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry WHERE t.entry=? AND d.DifficultyID=0', (entry,)).fetchone()
                 actual = db.execute('SELECT unit_class,ContentTuningID,HealthModifier,DamageModifier,ArmorModifier,ManaModifier FROM content_creature_template WHERE entry=? AND faction=16', (entry,)).fetchone()
                 self.assertEqual(actual, native)
                 self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall(), db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall())
             self.assertEqual(db.execute('SELECT creature_entry FROM raid_encounter_creature WHERE map_id=2811 AND creature_entry IN(232369,234089)').fetchall(), [])
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        self.assertEqual(receipt['marker_count'], 1344)
+        self.assertEqual(len(receipt['placements']), 161)
+        self.assertEqual(sum(g['status'] == 'FOLLOWER_TRASH_FLOOR_UNRESOLVED' for g in receipt['source_gaps']), 1183)
+        self.assertEqual(sum(g['status'] == 'FOLLOWER_TRASH_INDIVIDUAL_MARKERS_MISSING' for g in receipt['source_gaps']), 10)
+        self.assertFalse(receipt['pack_groups_created'])
+        groups = receipt['preserved_group_tables']
+        self.assertEqual(groups['baseline'], groups['prepared'])
+        self.assertEqual(groups['baseline'], groups['replayed'])
+        update = receipt['guarded_faction_updates'][0]
+        self.assertEqual((update['entry'], update['before']['faction'], update['after']['faction']), (232106, 0, 16))
+        self.assertEqual({k: v for k, v in update['before'].items() if k != 'faction'},
+                         {k: v for k, v in update['after'].items() if k != 'faction'})
+        self.assertEqual(receipt['sql_replay_count'], 3)
 
 
 if __name__ == '__main__':

@@ -437,7 +437,17 @@ def calibrate(source, entries, tables, cache):
     return controls
 
 
-def make_sql(baseline, prepared):
+def make_faction_update_sql(prepared, columns, before, after):
+    faction = columns.index('faction')
+    if before[faction] != 0 or after[faction] != 16 or any(a != b for index, (a, b) in enumerate(zip(before, after)) if index != faction):
+        raise ValueError('guarded correction permits only native-zero faction16 with every other column unchanged')
+    quote = lambda value: prepared.execute('SELECT quote(?)', (value,)).fetchone()[0]
+    unchanged = ' AND '.join(f'{name} IS {quote(value)}' for index, (name, value) in enumerate(zip(columns, before)) if index != faction)
+    return [f'INSERT INTO follower_placement_guard SELECT EXISTS(SELECT 1 FROM content_creature_template WHERE {unchanged} AND (faction IS 0 OR faction IS 16));',
+            f'UPDATE content_creature_template SET faction=16 WHERE {unchanged} AND faction IS 0;']
+
+
+def make_sql(baseline, prepared, faction_update_entries=()):
     statements = ['BEGIN IMMEDIATE;', 'CREATE TEMP TABLE follower_placement_guard(ok INTEGER CHECK(ok=1));']
     changed = {}
     for table, keys in TABLE_KEYS.items():
@@ -449,7 +459,10 @@ def make_sql(baseline, prepared):
             key = tuple(row[i] for i in indexes)
             if key in original:
                 if row != original[key]:
-                    raise ValueError(f'placement packet must not replace existing {table}{key}')
+                    if table != 'content_creature_template' or key[0] not in faction_update_entries:
+                        raise ValueError(f'placement packet must not replace existing {table}{key}')
+                    statements.extend(make_faction_update_sql(prepared, columns, original[key], row))
+                    inserted.append(key)
                 continue
             quote = lambda v: prepared.execute('SELECT quote(?)', (v,)).fetchone()[0]
             where = ' AND '.join(f'{k}={quote(row[columns.index(k)])}' for k in keys)
