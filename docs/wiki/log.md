@@ -1,3 +1,7 @@
+## 2026-10-22 — Native pet diagnostic history
+
+[Pet samples](systems/dungeon-simulator.md#pet-diagnostic-history-2026-10-22): realpet/Death/evade/despawn RED12.76s→4baGREEN11.66s.0.5s samples/terminal nowretainnativepetidentity,HP/position/refs/threatandrelatedopponentresetstates,includingzero-threatacquisitionandexplicitunavailablevaluesafterdespawn. Diagnostic-only, noAI/heal/threatmutation. Retainedabort/export+summary2PASS; single seed7capturequeued, notReliability.
+
 ## 2026-10-22 — Abort-safe native simulator evidence
 
 [Recoverable aborts](systems/dungeon-simulator.md#abort-safe-run-evidence-2026-10-22): native FixedUpdate unwind RED10.13s→544GREEN21.36s preserves291ordered events in final aborted report and separate status/reason export. Native summary1PASS/process runner3PASS; real invalid-level initialization writesbothfiles/aborted1 beforeexpectedclear-assertionexit101. No silent clear, invented events or SIGKILL guarantee. [Pending history](systems/dungeon-simulator.md#native-evade-releases-pending-pull-history-2026-10-22) bounded native reset RED→3cebGREEN; oldseed7stall retired afterformation integration.
