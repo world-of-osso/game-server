@@ -56,6 +56,8 @@ pub(crate) mod power_amount_trigger;
 pub mod procs;
 mod refresh;
 pub(crate) mod reward_mods;
+#[cfg(test)]
+mod rolling_periodic_tests;
 pub mod scripts;
 pub mod shapeshift;
 pub mod spell_mods;

@@ -262,7 +262,6 @@ fn holy_echo_of_light_native90_two_native_priests_keep_separate_patient_pools() 
 }
 
 #[test]
-#[ignore = "ECHO_ROLLING_POOL: qualify producer before testing the refresh boundary"]
 fn holy_echo_of_light_native90_reheal_preserves_unpaid_pool_and_tick_phase() {
     let mut group = native_group();
     let percent = native_mastery_percent(&group);
