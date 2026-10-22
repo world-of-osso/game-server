@@ -3850,7 +3850,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 ## 2026-10-22 — Native immutable fixture sharing
 
-[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Qualified matching workspace-graph cohort19/19PASS: summed isolated CPU787.220→554.693s; prepared3-App RSS3161604→1283496KiB, with explicitly higher cold-case RSS. Six-thread union stops at global RAM floor after1000PASS/0FAIL; four-thread retry and full900s/~8GiB qualification remain open. Package-only exploratory measurements are excluded.
+[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Qualified matching workspace-graph cohort19/19PASS: summed isolated CPU787.220→554.693s; prepared3-App RSS3161604→1283496KiB, with explicitly higher cold-case RSS. Completed quiet six-thread union2856PASS/87ignored/zero coverage drift:1348.305s,4757.822CPU,6.15GiBRSS/7.08GiBswap;900s remains unmet. Module-process batching is approved next. Package-only exploratory measurements are excluded.
 
 ## 2026-10-22 — Server test performance profile
 

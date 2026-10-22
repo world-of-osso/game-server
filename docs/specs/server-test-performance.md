@@ -7,7 +7,7 @@ The server's standard lead gate must retain its native coverage while completing
 ### Execution and coverage
 
 - [ ] Execute the union of the `fu913`, `sm894` and `rd912` gate filters within900s wall at approximately8GiB peak RSS with no swap; report compilation separately.
-- [ ] Preserve test cases, existing ignore status, assertions and native simulation steps; scheduling may separate heavy tests without dropping coverage.
+- [x] Preserve test cases, existing ignore status, assertions and native simulation steps; the complete native union accounts for2856 enabled/87 ignored without missing/extra identities.
 - [ ] Module-process batching must preserve the exact selected case/ignore inventory and report per-module CPU/wall plus aggregate peak RSS, using at most six concurrent test threads.
 - [x] Retain debug assertions and overflow checks in optimized server tests; the compiler artifact and same-source controlled route receipt assert these settings.
 
@@ -42,7 +42,7 @@ The server's standard lead gate must retain its native coverage while completing
 
 ## Known gaps (current cycle)
 
-- [ ] Historical profile-only union takes37m58s and swaps; the current after-cache union has not completed qualification, so the performance goal remains open.
+- [ ] Completed after-cache union takes22m28s at6.15GiB peakRSS with7.08GiB swap;900s/no-swap performance remains open.
 - [x] Native loader/storage integration, targeted live-App isolation and compilation pass; the matching19-case workspace-graph before/after measurements are recorded.
 - [ ] Memory-weighted heavy-test scheduling and final complete gate proof remain open.
 
