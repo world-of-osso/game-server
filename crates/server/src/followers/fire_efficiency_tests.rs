@@ -167,7 +167,7 @@ fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
         .find(|effect| effect.index == 0)
         .unwrap()
         .aura_period_ms;
-    let ticks = dot.duration.unwrap().duration_ms as u32 / period;
+    let ticks = dot.misc.as_ref().unwrap().duration.unwrap().duration_ms as u32 / period;
     assert_eq!((period, ticks), (1000, 9), "native12654 clock");
     let start = h.inbox.log.len();
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)

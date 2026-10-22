@@ -20,7 +20,7 @@ pub(super) fn check_damage(_world: &World, _aura: &AuraInstance, event: &AuraEve
 
 fn native_tick_count(world: &World) -> Option<u32> {
     let dot = world.resource::<SpellStore>().get(IGNITE)?;
-    let duration = dot.duration?.duration_ms;
+    let duration = dot.misc.as_ref()?.duration?.duration_ms;
     let period = dot
         .effects
         .iter()
@@ -47,18 +47,7 @@ pub(super) fn apply_damage(
         error!("Native Ignite12654 has no positive periodic tick count");
         return;
     };
-    // snapshot_proc_modifiers admits only HS/LavaSurge. The latter's native
-    // cast-time mask does not affect Pyroblast/Flamestrike, so this is HS's
-    // actual launch marker, even after the aura was spent or a missile flew.
-    let hot_streak = event.cast_used_proc_modifier
-        && matches!(
-            event.spell_id,
-            Some(PYROBLAST | FLAMESTRIKE | NATIVE_FLAMESTRIKE)
-        );
-    let percent = effect.amount * if hot_streak { 2.0 } else { 1.0 };
-    // TC DamageInfo::GetDamage is uint32 before CalculatePct.
-    let damage = event.damage as u32;
-    let amount = damage as f32 * percent / 100.0 / ticks as f32;
+    let amount = calculate_tick_amount(effect.amount, event, ticks);
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,
@@ -67,4 +56,19 @@ pub(super) fn apply_damage(
         1,
         amount,
     );
+}
+
+fn calculate_tick_amount(percent: f32, event: &AuraEvent, ticks: u32) -> f32 {
+    // snapshot_proc_modifiers admits only HS/LavaSurge. The latter's native
+    // cast-time mask does not affect Pyroblast/Flamestrike, so this is HS's
+    // actual launch marker, even after the aura was spent or a missile flew.
+    let hot_streak = event.cast_used_proc_modifier
+        && matches!(
+            event.spell_id,
+            Some(PYROBLAST | FLAMESTRIKE | NATIVE_FLAMESTRIKE)
+        );
+    let percent = percent * if hot_streak { 2.0 } else { 1.0 };
+    // TC DamageInfo::GetDamage is uint32 before CalculatePct.
+    let damage = event.damage as u32;
+    damage as f32 * percent / 100.0 / ticks as f32
 }
