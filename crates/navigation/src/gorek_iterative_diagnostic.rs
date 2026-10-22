@@ -7,11 +7,23 @@ use std::io::Write;
 fn neltharus_gorek_production_path_preserves_walkable_progress() {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     let mut nav = NavigationMap::open(&root.join("2519")).unwrap();
-    nav.path(
-        Vec3::new(70.6448, 72.6027, 779.064),
-        Vec3::new(-264.45807, 125.19722, 503.5),
-    )
-    .expect("nonempty Gorek corridor must remain available for movement and repathing");
+    let start = Vec3::new(70.6448, 72.6027, 779.064);
+    let target = Vec3::new(-264.45807, 125.19722, 503.5);
+    let path = nav
+        .path(start, target)
+        .expect("nonempty Gorek corridor must remain available for movement and repathing");
+    assert!(!path.complete, "the first segment is not the entire route");
+    assert!(path.points.len() > 2);
+    let endpoint = *path.points.last().unwrap();
+    assert!(endpoint.distance(start) > 100.0);
+    assert!(
+        endpoint.distance(target) > 50.0,
+        "do not pull a partial corridor to the requested target"
+    );
+    assert!(
+        path.into_complete().is_err(),
+        "admission must not mistake partial movement for full connectivity"
+    );
 }
 
 #[test]

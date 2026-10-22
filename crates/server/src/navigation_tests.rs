@@ -168,17 +168,40 @@ fn ready_step(nav: &mut Navigation, entity: Entity, request: MoveRequest) -> Ste
 #[test]
 #[ignore = "requires canonical2519 assets and FOLLOWER_NAV_CANONICAL"]
 fn navigation_gorek_partial_corridors_walk_and_repath_to_target() {
+    assert_canonical_route_arrives(
+        2519,
+        Vec3::new(70.6448, 72.6027, 779.064),
+        Vec3::new(-264.45807, 125.19722, 503.5),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2520 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_brackenhide_partial_corridors_walk_and_repath_three_bosses() {
+    // Exact authored XY/source-floor Z from brackenhide-packet-2/receipt.json.
+    let entrance = Vec3::new(-3300.65, 0.129981, -4681.51);
+    for (entry, target) in [
+        (186116, Vec3::new(-3168.1669, 100.49736, -3960.1665)),
+        (186120, Vec3::new(-3650.2505, 99.49241, -3961.558)),
+        (186121, Vec3::new(-3344.54, 111.17662, -3663.96)),
+    ] {
+        eprintln!("Brackenhide source placement entry={entry}");
+        assert_canonical_route_arrives(2520, entrance, target);
+    }
+}
+
+fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     let mut nav = Navigation::new(&root);
     let actor = Entity::from_bits(99);
-    let mut from = Vec3::new(70.6448, 72.6027, 779.064);
-    let target = Vec3::new(-264.45807, 125.19722, 503.5);
     let mut arrived = false;
     for _ in 0..10_000 {
-        let mut movement = request(2519, from, target);
+        let mut movement = request(map_id, from, target);
         movement.distance = 1.0;
         movement.reach = 0.0;
-        match ready_step(&mut nav, actor, movement) {
+        let step = nav.advance(actor, movement);
+        nav.drain_until_idle();
+        match step {
             Step::Moved { position, reached } => {
                 let next = point(position);
                 assert!(next.distance(from) < 3.0, "no segment-end teleport");
@@ -190,13 +213,15 @@ fn navigation_gorek_partial_corridors_walk_and_repath_to_target() {
                 }
             }
             Step::Pending => {}
-            Step::Blocked => panic!("Gorek mover blocked before reaching target at {from:?}"),
-            Step::Unbaked => panic!("canonical Neltharus bake missing"),
+            Step::Blocked => {
+                panic!("map{map_id} mover blocked before reaching {target:?} at {from:?}")
+            }
+            Step::Unbaked => panic!("canonical map{map_id} bake missing"),
         }
     }
     assert!(
         arrived,
-        "Gorek mover failed to arrive in bounded walk: {from:?}"
+        "map{map_id} mover failed to arrive in bounded walk: {from:?}"
     );
 }
 
@@ -224,7 +249,9 @@ fn navigation_disconnected_partial_walk_stops_and_stays_blocked() {
     for _ in 0..100 {
         let mut movement = request(12, from, target);
         movement.reach = 0.0;
-        match ready_step(&mut nav, actor, movement) {
+        let step = nav.advance(actor, movement);
+        nav.drain_until_idle();
+        match step {
             Step::Moved { position, reached } => {
                 assert!(!reached, "disconnected prefix must never report arrival");
                 let next = point(position);
