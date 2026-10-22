@@ -317,7 +317,6 @@ fn proc_fidelity_63_feel_the_burn_native_cap_replaces_oldest_application() {
 }
 
 #[test]
-#[ignore = "native Inundate non-utility resource RED before implementation"]
 fn proc_fidelity_262_inundate_native_lightning_does_not_generate_utility_resource() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 378776));
@@ -343,7 +342,6 @@ fn proc_fidelity_262_inundate_native_lightning_does_not_generate_utility_resourc
 }
 
 #[test]
-#[ignore = "native Inundate actual interrupt positive control pending GREEN"]
 fn proc_fidelity_262_inundate_native_wind_shear_interrupt_grants_once() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 378776));
@@ -385,7 +383,6 @@ fn proc_fidelity_262_inundate_native_wind_shear_interrupt_grants_once() {
 }
 
 #[test]
-#[ignore = "native Inundate removed-passive utility control pending GREEN"]
 fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_resource() {
     let (mut h, caster) = prepare(209053);
     assert!(has_aura(h.app.world(), caster, 378776));
