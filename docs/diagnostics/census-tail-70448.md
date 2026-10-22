@@ -12,6 +12,12 @@ Canonical diagnostics are lead-owned. Isolated artifacts staged under `/home/oss
 
 At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compiled-binary probe1PASS/0FAIL884.09s/exit0,7827 exact: **7104PASS/723FAIL**, versus first7090/737. All ten owned cause warning counts are0. New298/377/423/67/121 yield15 membership promotions. One additional observed FAIL is72/23881 Bloodthirst: this receipt contains native184362 Enrage AuraApplied plus443/458 warnings; the first has no Enrage event. Existing `scripts.rs:1103–1107` rolls native30% on Bloodthirst; no scripts/procs source change exists between89fdf21ac and a7eaa7ef5. This stochastic exposure is retained, not hidden by rerunning or counted as a new branch behavior regression. Relative frozen7071/756,36 promotions/3 observed regressions include the prior two target148 boundaries. Isolated `round-2/` preserves full command/protocol/receipts/classified cases/delta/log/exit beside the first artifacts; canonical publication remains lead-owned.
 
+### Third five-cause refresh
+
+At Ruste7fffe2da / docs9f9800704, compiled-binary probe1PASS/0FAIL1110.87s/exit0, exactly7827 memberships/40 specs: **7111PASS/716FAIL**. Five new causes638/178/198/205/22 yield six promotions versus round2:62/190740,70/383228,71+73/429638,104/231065,1473/360827. All fifteen owned cause warning counts are0. Bloodthirst72/23881 also returns PASS without this round's Enrage warning exposure; this seventh transition is stochastic, not a repaired proc. Relative frozen7071/756:42 promotions/two retained target148 regressions. No baseline or source data edited; dispatch PASS still does not certify complete abilities.
+
+Valid evidence is isolated `round-3-retry/`, including exact command/binary SHA, full receipts, frozen classification, delta/cause/spec matrices, exit/log and `round-2-transitions.json`. Earlier `round-3/` is **INVALID**: an admission job omitted by compaction launched concurrently with a second run against the same file, corrupting two lines and duplicating five tail keys. Both processes exited; preserve raw evidence and `INVALID.md`, do not repair/dedupe or publish it. Retry verified no probe process, used a distinct newly-created directory and one synchronous execution. Canonical publication remains lead-owned.
+
 ## Named gaps
 
 | Cause | Roots | Disposition and evidence |
