@@ -35,10 +35,11 @@ fn pet_only_enemy(h: &mut Harness, pet: Entity) -> Entity {
         .get::<shared::components::Position>(pet)
         .unwrap();
     let enemy = spawn_npc(&mut h.app, at.x);
-    h.app
-        .world_mut()
-        .entity_mut(enemy)
-        .insert((at, ThreatTable::default()));
+    h.app.world_mut().entity_mut(enemy).insert((
+        at,
+        ThreatTable::default(),
+        crate::creature_ai::CreatureState::Idle,
+    ));
     crate::creature_aggro::attack_start(h.app.world_mut(), enemy, pet);
     assert_eq!(
         h.app
