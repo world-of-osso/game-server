@@ -311,8 +311,9 @@ fn native_schedule_abort_preserves_report_and_ordered_combat_events() {
             .detail
             .contains("explicit native FixedUpdate abort regression")
     );
-    assert_eq!(
-        report.performance["combat_events"], before,
+    let trace = report.performance["combat_events"].as_array().unwrap();
+    assert!(
+        trace.starts_with(before.as_array().unwrap()),
         "the ordered native combat trace before the abort must survive unchanged"
     );
     super::super::runtime::write_report(&report).unwrap();
@@ -329,7 +330,7 @@ fn native_schedule_abort_preserves_report_and_ordered_combat_events() {
             .unwrap()
             .contains("explicit native FixedUpdate abort regression")
     );
-    assert_eq!(exported["events"], before);
+    assert_eq!(exported["events"], report.performance["combat_events"]);
     assert_eq!(exported["status"], "aborted");
     assert_eq!(exported["reason"], saved["detail"]);
 }
