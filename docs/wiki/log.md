@@ -5,6 +5,43 @@
 ## 2026-10-22 — Native blocked-chase parity and Azure horizon
 
 [Shared native evade](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22): original first-book fixture failed setup; corrected second-book539bRED11.79s→1bfGREEN16.62s. Reuses production marker/no-path system, no new clock or physical navigation. Retained simulator controls23PASS. [Fresh Azure10](systems/dungeon-simulator.md#post-evade-azure-qualification-2026-10-22) yields8valid1h timeouts/2tankabsence blocks,8Leymor Deaths,1239.244563s wall, no missing reports. Live trash remains at the horizon; seed4 tank dies near active healer under4native melee actors. SamecodeStockade49+retained50 qualifies50/50clears/150boss Deaths, fresh49batch3319.356736s plus retained50individual114.473154s; no Azure/live acceptance.
+## 2026-10-22 — Active party combat references
+
+Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. Full genuine Henry roster also clears3/3 at2384.60sim_s with all5alive on approved authentic6bf39eb8 input. Final master merge carries later schema/population-oracle updates; check/integration proof is recorded separately.
+
+## 2026-10-22 — Native Ascendance entry targeted GREEN
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22):2GREEN16.60s at1e7f8cebb proves six caster-owned shocks/actual half-bursts, idle/80yd exclusions and ordinary-full-damage control during Ascendance. One unused import removed without suppression at1bda89dad; proved cases enabled. Affected Ele StatsPlugin3PASS37.49s, ST/3T3836.858/3032.125 DPS labelled unpaired starter samples. New master60f31 aura/proc/mastery/cast changes require parent integration proof; no historical-to-current promotion.
+
+## 2026-10-22 — Native Ascendance entry RED and bounded selection policy
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22): actual1219480 self aura/full285452 control pass, owned188389 absent0vs6/entry burst missing; corrected combat-only native2RED22.84s/zero warnings. Approved named Flame-Shock-eligibility project policy, not Retail radius. Entry script/per-cast50% multiplier pushed; GREEN remains pending. Earlier projection d79 landed through lead ra922/Python21PASS and its single kit row is published.
+## 2026-10-22 — Exact attack countdowns
+
+## 2026-10-22 — BM engage Auto Shot and exact shared attack timers
+
+Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarget and selection-only negative. Separate0d4 Duration/native-ms executor correction passes shared40×50ms RED→GREEN and retained melee/offhand/AutoShot/range/math scopes; forecast7 passes after selected-catalog fixture repair. See [follower data](investigations/follower-data.md#bm-auto-shot-engage-policy--2026-10-22). No fullAPL/DPS/proc parity claim.
+
+[Shared timer](systems/spell-casting.md#exact-attack-countdowns--2026-10-22): real production40tick RED, native millisecond resets/Duration countdown for both melee hands and autorepeat; no epsilon/tolerance widening. GREEN pending.
+
+## 2026-10-22 — BM Auto Shot engage policy
+
+[BM start decision](investigations/follower-data.md#bm-auto-shot-engage-policy--2026-10-22): named SimC/native75 policy, genuine zero-shot RED; preserve native timer/selection boundary, GREEN pending; proc-mask mechanics separate.
+
+## 2026-10-22 — Player DPS bridge and fixed-time receipt inventory
+
+[Bridge and fixture boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): unchanged pinned authored decisions drive real Players; exact unknown-rule/cast failures remain blockers. Historical564d46598 health/player controls2GREEN and10policy-on300s single-target executions retained, including Fury72/Enhancement263. New40-row receipt inventory verifies report hashes and distinguishes11blocks/10missing references/6unattempted/trait rejection/Human regression/source-invalid retry; no new simulations. Only269 changes cast counts under health policy;66alsochanges hits/per-hit output, no isolated causality. Process source-view RED→GREEN proves readonly snapshot isolation only; post-master native source/Human/check gates pending. Prior adapter metrics remain historical, not current-master acceptance.
+
+## 2026-10-21 — Native DPS parity adapter
+
+[Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement now pass all3 opt-in300s qualifications atd698d1d3b (Hunter76petcasts, Demo50petcasts,10waves/20distinctadds); source/stat/rotation parity remains unproved. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. Original18 SimC runs retained; expanded reference coverage now60 benchmarks across30 selected profiles, with actual three-target recipient evidence. Eight actor-aware factor ledgers expose missing output/per-hit/count differences and excess FoF pulses; conditional guardian means need whole-player sample weighting. Current16/16 native execution cases pass, but timed-three reveals a real passive-dummy multi-enemy admission gap: follower AI does not count CombatRefs-only targets, and only the main dummy is the owner's victim. No fake threat/flags or AI edits. Bounded113-spell/206-base-effect comparison agrees70391/70448 in16 fields; effective multipliers remain unisolated. Health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
+## 2026-10-22 — Class4 zone-only ingress
+
+[Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
+
+## 2026-10-21 — Remaining follower boss ingress
+
+[Source inventory](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21): read-only27maps/98Normalencounters with2777a9d Lua/70448 journal/source placements. RemainingDF17 have no placed primaries; City blanks retainPCimmunity. Lead excludes unplaced/fake-unlock combat; Anub'zekt ignoredRED→native76ca45582 GREEN5/5: source Energy and four encounter cases in Normal1/Follower205; enabled after proof, absent-ground fixture cause corrected with authored terrain. Thirty-three requests, first Eye spend, later Energy denial, DOT/reset/copy-credit/corpse behavior proven; whole-fight/controller gaps retained.
 
 ## 2026-10-21 — Pyroclasm named trigger/consumer policy
 
@@ -3762,6 +3799,9 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+- 2026-10-22: Recorded Ruby entrance artifact/formation root causes, pushed native23s overlap RED and approved per-party slot policy; GREEN/gates pending. See [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
+
+- 2026-10-22: Ruby per-party follow slots qualified: pushed ignoredRED→native23sGREEN; integrated8a1faab214 controls464PASS/27ignored, defaultStockade+Henry3-boss simulator clears, be88079ef native-metadata fixture1PASS/all-targets/fmtPASS,0compiler warnings. Source snapshot unchanged6bf39eb8; see [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
 ## 2026-10-22 — Brackenhide source-floor packet
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.

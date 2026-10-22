@@ -1,4 +1,5 @@
 //! Explicit transport-free simulator seam; real initializer and kit controller.
+pub(crate) use super::catalog::load_catalog as load_parity_catalog;
 use super::*;
 use bevy::ecs::system::RunSystemOnce;
 use shared::components::{Level, Player, Position, UnitFactionTemplate};
@@ -140,42 +141,15 @@ pub(crate) fn spawn_party(
         .difficulty_id;
     let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
-    let owner = world
-        .spawn((
-            Player {
-                name: leader.name.clone(),
-                race: 1,
-                class: leader.class_id,
-                appearance: default(),
-            },
-            Level(configuration.level),
-            shared::components::UnitLevel(configuration.level),
-            UnitFactionTemplate(1),
-            at,
-            copy,
-            crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(difficulty_id),
-            crate::networking::CombatTarget::default(),
-            crate::networking::Moving(false),
-            shared::components::UnitPowers::default(),
-        ))
-        .id();
-    // Run native Player initialization before the profile installs PowerPools;
-    // otherwise its Without<PowerPools> query never installs health regeneration.
-    world
-        .run_system_once(crate::spell_cast::powers::init_player_powers)
-        .map_err(|error| {
-            format!("initialize simulator leader through native player powers: {error}")
-        })?;
-    spawning::initialize(world, owner, owner, leader.clone())?;
-    // Preserve the native runtime-only stable before removing NPC ownership.
-    // This headless player has no transport InWorld/character identity.
-    crate::hunter_pet::init_pet_stable(world, owner)
-        .ok_or("initialize simulator leader runtime pet stable")?;
-    world
-        .entity_mut(owner)
-        .remove::<(Follower, shared::components::UnitSummonedBy)>()
-        .insert(LeaderProfile(leader));
+    let owner = initialize_player_owner(
+        world,
+        &leader,
+        configuration.level,
+        copy,
+        at,
+        crate::maps::DungeonDifficulty(difficulty_id),
+    )?;
+    world.entity_mut(owner).insert(LeaderProfile(leader));
     let members = spawning::spawn_members(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
     world
@@ -197,6 +171,190 @@ pub(crate) fn spawn_party(
         tank,
         members,
     })
+}
+
+pub(crate) enum ParityActor {
+    Follower,
+    Player { race: u8 },
+}
+
+/// One real attacker, without unrelated party damage or buff sources.
+pub(crate) fn spawn_parity_attacker(
+    world: &mut World,
+    spec_id: u32,
+    level: u8,
+    copy: crate::maps::InMap,
+    actor: ParityActor,
+) -> Result<Entity, String> {
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
+    let difficulty = crate::maps::DungeonDifficulty(difficulty_id);
+    if let ParityActor::Player { race } = actor {
+        return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
+    }
+    let profile = world
+        .resource::<FollowerCatalog>()
+        .profiles
+        .iter()
+        .find(|profile| profile.spec_id == spec_id)
+        .cloned()
+        .ok_or_else(|| format!("native follower spec{spec_id} absent"))?;
+    let owner = initialize_player_owner(
+        world,
+        &profile,
+        level,
+        copy,
+        Position {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        difficulty,
+    )?;
+    let unit = spawning::spawn(world, owner, profile)?;
+    // A living native owner can maintain /startattack without landing out-of-range swings.
+    // No LeaderProfile is installed: the owner runs no follower rotation.
+    world.entity_mut(owner).insert(Position {
+        x: 20.0,
+        y: 0.0,
+        z: 0.0,
+    });
+    // advance_runs removes followers without a real or admitted diagnostic run.
+    world
+        .entity_mut(owner)
+        .insert(stockade_diagnostic::DiagnosticParty {
+            copy,
+            members: vec![unit],
+            player_role: shared::group::GroupRole::Dps,
+        });
+    Ok(unit)
+}
+
+fn spawn_parity_player(
+    world: &mut World,
+    spec_id: u32,
+    level: u8,
+    race: u8,
+    copy: crate::maps::InMap,
+    difficulty: crate::maps::DungeonDifficulty,
+) -> Result<Entity, String> {
+    let class = world
+        .resource::<crate::spell_info::ClassSpells>()
+        .classes
+        .iter()
+        .find(|class| class.specs.iter().any(|spec| spec.spec_id == spec_id))
+        .ok_or_else(|| format!("native player spec{spec_id} absent"))?
+        .class_id;
+    let player = world
+        .spawn((
+            Player {
+                name: format!("Parity{spec_id}"),
+                race,
+                class,
+                appearance: default(),
+            },
+            Level(level),
+            shared::components::UnitLevel(level),
+            crate::class_progression::ActiveSpec(spec_id),
+            UnitFactionTemplate(crate::faction::faction_template_for_race(race)),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            copy,
+            crate::persistence::ClientId(1),
+            difficulty,
+            crate::networking::CombatTarget::default(),
+            crate::networking::Moving(false),
+            shared::components::PlayerStandState::default(),
+        ))
+        .id();
+    install_parity_player_stat_components(world, player);
+    Ok(player)
+}
+
+fn install_parity_player_stat_components(world: &mut World, player: Entity) {
+    // These initial full ratios are replaced by native Stats before measurement.
+    // Player powers, passives and regeneration initialize through ordinary plugins.
+    world.entity_mut(player).insert((
+        shared::components::Health {
+            current: 1.0,
+            max: 1.0,
+        },
+        shared::components::Mana {
+            current: 1.0,
+            max: 1.0,
+        },
+        shared::components::UnitStats::default(),
+        shared::components::CombatRatings::default(),
+        shared::components::DerivedStats::default(),
+    ));
+}
+
+fn initialize_player_owner(
+    world: &mut World,
+    profile: &Profile,
+    level: u8,
+    copy: crate::maps::InMap,
+    at: Position,
+    difficulty: crate::maps::DungeonDifficulty,
+) -> Result<Entity, String> {
+    let owner = spawn_player_identity(world, profile, level, copy, at, difficulty);
+    // Run native Player initialization before the profile installs PowerPools;
+    // otherwise its Without<PowerPools> query never installs health regeneration.
+    world
+        .run_system_once(crate::spell_cast::powers::init_player_powers)
+        .map_err(|error| {
+            format!("initialize simulator leader through native player powers: {error}")
+        })?;
+    spawning::initialize(world, owner, owner, profile.clone())?;
+    // Preserve the native runtime-only stable before removing NPC ownership.
+    // This headless player has no transport InWorld/character identity.
+    crate::hunter_pet::init_pet_stable(world, owner)
+        .ok_or("initialize simulator leader runtime pet stable")?;
+    world
+        .entity_mut(owner)
+        .remove::<(Follower, shared::components::UnitSummonedBy)>();
+    Ok(owner)
+}
+
+fn spawn_player_identity(
+    world: &mut World,
+    profile: &Profile,
+    level: u8,
+    copy: crate::maps::InMap,
+    at: Position,
+    difficulty: crate::maps::DungeonDifficulty,
+) -> Entity {
+    world
+        .spawn((
+            Player {
+                name: profile.name.clone(),
+                race: 1,
+                class: profile.class_id,
+                appearance: default(),
+            },
+            Level(level),
+            shared::components::UnitLevel(level),
+            UnitFactionTemplate(1),
+            at,
+            copy,
+            crate::persistence::ClientId(1),
+            difficulty,
+            crate::networking::CombatTarget::default(),
+            crate::networking::Moving(false),
+            shared::components::UnitPowers::default(),
+        ))
+        .id()
 }
 
 pub(crate) fn update_leader(world: &mut World) {

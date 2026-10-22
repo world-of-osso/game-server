@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Optional power-runtime boundaries — 2026-10-22
+
+- An App may retain native PowerPools while SpellCastPlugin/PowerTypeTable is absent. Unrelated aura application/removal, including native44521 preparation at world-port ACK, must not panic, replace the catalog with an empty table, or invent maximum/current power. Native178 capacity recalculation warns and leaves existing non-Mana pools unchanged when the native catalog is unavailable.
+- The same missing catalog must explicitly refuse pet spawning, follower initialization and follower resource conditions before mutating their existing state: warn and return None, an error or false respectively. With a real catalog, keep native definitions, display divisors and existing capacity/regen rules. [Regression proof and caller audit](../diagnostics/census-tail-70448.md).
+
 ## Periodic-healing taken slice — 2026-10-22
 
 - Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.
