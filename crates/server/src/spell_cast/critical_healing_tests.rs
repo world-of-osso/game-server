@@ -27,6 +27,15 @@ fn fixture(critical: bool) -> Harness {
         5,
     )
     .unwrap();
+    let caster = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(caster)
+        .insert(crate::class_progression::KnownSpells::fixture(Vec::new()));
+    h.advance(3);
+    auras::remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |_| true);
+    h.advance(3);
+    assert!(!auras::has_aura(h.app.world(), caster, CRITICAL_POWER));
     if critical {
         let caster = h.caster;
         apply(&mut h, BIO_SPORES, 2, caster);
