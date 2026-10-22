@@ -81,6 +81,17 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Active party combat references
+
+Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. Full genuine Henry roster also clears3/3 at2384.60sim_s with all5alive on approved authentic6bf39eb8 input. Final master merge carries later schema/population-oracle updates; check/integration proof is recorded separately.
+
+## 2026-10-22 — Native Ascendance entry targeted GREEN
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22):2GREEN16.60s at1e7f8cebb proves six caster-owned shocks/actual half-bursts, idle/80yd exclusions and ordinary-full-damage control during Ascendance. One unused import removed without suppression at1bda89dad; proved cases enabled. Affected Ele StatsPlugin3PASS37.49s, ST/3T3836.858/3032.125 DPS labelled unpaired starter samples. New master60f31 aura/proc/mastery/cast changes require parent integration proof; no historical-to-current promotion.
+
+## 2026-10-22 — Native Ascendance entry RED and bounded selection policy
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22): actual1219480 self aura/full285452 control pass, owned188389 absent0vs6/entry burst missing; corrected combat-only native2RED22.84s/zero warnings. Approved named Flame-Shock-eligibility project policy, not Retail radius. Entry script/per-cast50% multiplier pushed; GREEN remains pending. Earlier projection d79 landed through lead ra922/Python21PASS and its single kit row is published.
 ## 2026-10-22 — Exact attack countdowns
 
 ## 2026-10-22 — BM engage Auto Shot and exact shared attack timers
