@@ -2,7 +2,7 @@
 
 Target (2026-10-22): the union of the lead's `fu913`, `sm894` and `rd912` server gate filters must finish in at most900s execution wall with approximately8GiB peak RSS. Test cases, existing ignores, gameplay steps and assertions are preserved. Compilation and capacity-queue time are reported separately. **Acceptance remains open until the complete union has a passing measured receipt.**
 
-Controlled same-source route initialization is **3.045× faster in CPU and4.046× in wall time** with the server override; all5437 discovered case identities and ignore statuses are unchanged. Full native Stockade passes in73.885s. Complete union wall/RSS qualification remains pending.
+Controlled same-source route initialization is **3.045× faster in CPU and4.046× in wall time** with the server override; all5437 discovered case identities and ignore statuses are unchanged. Full native Stockade passes in73.885s. Complete union wall/RSS qualification remains pending. The first integrated union was stopped after1470.72s with incompatible snapshot permissions/layout and216 observed failures; this is not a passing acceptance receipt.
 
 ## Baseline and cause
 
@@ -65,7 +65,17 @@ Alternative checks: `git diff 31ce2d6db..dd5702f88` is empty for `Cargo.lock` an
 
 Evidence: `pruner-artifact-classification.json`, `same-petgate-dependency-config.diff` (empty), `gate-libc-fingerprints.json`, the installed pruner and adjacent standalone unittest. Logs count108–112 total compile events including workspace/path crates, not108–112 registry crates.
 
-### Relative vendor roots and the four-crate Lightyear cascade
+## Integrated union input correction
+
+Atad56be4e8 (merged masterdb57e5364), workspace discovery selects2815 enabled/81 already-ignored cases. The server artifact isopt2/debug1 with debug assertions and overflow checks. Build12m03s is recorded separately. The first union uses four shared-process libtest threads but a faulty frozen-input harness: mode0444 propagates into fixture `fs::copy` destinations that must be writable, and the flat snapshot directory breaks loaders resolving sibling `game_object_locks.json`/DB2 paths from the database realpath. Resulting fixture/cache-poison cascades invalidate the run; assertions and production code were not changed.
+
+The process was stopped after1470.72s elapsed,3006.49user+904.70system CPU;1751 passes,216 failures and79 ignores had been observed shortly beforehand. Summed-tree peakRSS8368468KiB and peak swap11519200KiB are separate maxima. These are diagnostic partial observations, not a full-suite pass, not a valid budget measurement, and not evidence that the profile alone meets900s. Raw files are retained under `union-invalid-input/`.
+
+Correction preserves the source directory structure in a private `data/server-world/world.db` view with canonical sibling assets, uses mode0644 so private fixture copies remain writable, and checks the source snapshot's SHA before/after rather than inheritable write protection. A fresh snapshot has SHA256`a2e815a2cbffc58366151808cf423ab8eedc2df8f9ef86324d470be341ee1fe5`. No `FOLLOWER_KIT_DB` override. Bounded copy/layout, Holy Smite/Fists and qualified Leymor-frontal preflights precede any corrected union. The two gameplay-timing failures are not classified as regressions before isolated rechecks; load can affect those native boundaries.
+
+The frontal case runs separately and serially with lead-qualified `GAME_SERVER_GROUND_DIR=/home/osso/.worktrees/bot-harness-2026-10-15/azure-tank-fixture-assets` and `AZURE_TANK_BAKE_RECEIPT_SHA256=1780fed3e150cdcd3ba3ccc42da7b2305205044421652563308a1a8502569b8a`. The original private bake receipt's14 output hashes match its assets; canonical runtime tile hashes also match, but its two report.txt files differ, so those report files are not described as exact copies. No fake receipt or weakened assertion is used.
+
+## Relative vendor roots and the four-crate Lightyear cascade
 
 The separate13796 verbose log reports four registry consumers Dirty because `lightyear_replication` was rebuilt. The root itself actually compiles at log line332, without its own Dirty report. `lightyear`, interpolation, frame-interpolation and prediction are registry crates; `lightyear_replication` is the checkout-local patched vendor crate, not a git dependency.
 
