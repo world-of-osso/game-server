@@ -216,14 +216,26 @@ fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_re
     } else {
         2.0 // TC BASE_ATTACK_TIME when no ranged main hand supplies the clock.
     };
-    let frame_seconds = match h.app.world().resource::<bevy::time::TimeUpdateStrategy>() {
-        bevy::time::TimeUpdateStrategy::ManualDuration(step) => step.as_secs_f32(),
+    let frame_step = match h.app.world().resource::<bevy::time::TimeUpdateStrategy>() {
+        bevy::time::TimeUpdateStrategy::ManualDuration(step) => *step,
         _ => panic!("native fixture requires its manual frame clock"),
     };
-    let interval_frames = crate::melee::swing_time(base, stats.haste_pct) / frame_seconds;
-    let interval = interval_frames.floor() as usize..=interval_frames.ceil() as usize;
-    let mut shots = Vec::new();
-    for frame in 0..200 {
+    let interval =
+        crate::melee::attack_timer_duration(crate::melee::swing_time(base, stats.haste_pct));
+    assert_eq!(interval.as_nanos() % frame_step.as_nanos(), 0);
+    // The direct AI call executes before advance; its receipt is drained only
+    // afterward. Timestamp that initial execution, not its later delivery frame.
+    let started_at = h.app.world().resource::<Time>().elapsed();
+    let first = h.inbox.go.len();
+    super::update_ai(h.app.world_mut());
+    h.advance(1);
+    let initial_shots = h.inbox.go[first..]
+        .iter()
+        .filter(|event| event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT)
+        .count();
+    assert_eq!(initial_shots, 1, "initial ordinary Auto Shot receipt");
+    let mut shots = vec![started_at];
+    for frame in 1..200 {
         if frame == 10 {
             h.select(Some(next_target));
             h.attack(next_target);
@@ -231,8 +243,9 @@ fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_re
         let first = h.inbox.go.len();
         super::update_ai(h.app.world_mut());
         h.advance(1);
+        let now = h.app.world().resource::<Time>().elapsed();
         shots.extend(h.inbox.go[first..].iter().filter_map(|event| {
-            (event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT).then_some(frame)
+            (event.caster == caster.to_bits() && event.spell_id == AUTO_SHOT).then_some(now)
         }));
     }
     assert!(
@@ -240,9 +253,10 @@ fn rotation_fidelity_253_engagement_starts_native_auto_shot_without_resetting_re
         "engaged native BM must start and repeat Auto Shot: {shots:?}"
     );
     for pair in shots.windows(2) {
-        assert!(
-            interval.contains(&(pair[1] - pair[0])),
-            "native ranged clock, not AI-tick recasts: {shots:?}"
+        assert_eq!(
+            pair[1] - pair[0],
+            interval,
+            "native ranged execution clock, not receipt-frame labels: {shots:?}"
         );
     }
     assert!(

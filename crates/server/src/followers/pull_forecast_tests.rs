@@ -169,11 +169,12 @@ fn tank_pull_forecast_smartai_and_named_boss_have_no_numeric_forecast() {
 }
 
 fn read_native_healer_profile() -> super::Profile {
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
+    let kit_db = std::env::var_os("FOLLOWER_KIT_DB")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(crate::test_data::world_db_path);
+    let db =
+        rusqlite::Connection::open_with_flags(kit_db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
     super::catalog::load_catalog(&db)
         .unwrap()
         .profiles
