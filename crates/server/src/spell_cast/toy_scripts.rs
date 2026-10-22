@@ -123,6 +123,10 @@ fn unsupported_coin(world: &World, spell: &SpellInfo) -> Option<String> {
 }
 
 pub(crate) fn unsupported(world: &World, spell: &SpellInfo) -> Option<String> {
+    // Build70448's Battle Horn also promises a native-Pandaria audience; no binding.
+    if spell.id == 126318 {
+        return Some("Battle Horn requires sourced Pandaria-native creature audience".into());
+    }
     if [super::toy_coyote::HAT, super::toy_coyote::DESPAWN].contains(&spell.id) {
         return super::toy_coyote::unsupported(world, spell);
     }

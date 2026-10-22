@@ -1,3 +1,7 @@
+- [Effect63/Kvaldir source boundary](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21) — source raw threat/cap49; post-master8GREEN/check/fmt,535→536 exact+Kvaldir; Battle Horn native-audience gap retained.
+- [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
+- [Emberon current Lua partial](systems/boss-scripts.md#emberon-current-lua-partial--2026-10-21) — firstClapRED→composite7GREEN Normal/Follower; native24.3s aura cap, ongoing counts/second phase/reset/copy-credit; absent395681/controller gaps explicit.
+- [Talondras current Lua partial](systems/boss-scripts.md#talondras-current-lua-partial--2026-10-21) — ignoredRED→native5GREEN Normal/Follower; exact category1152 successes/rejections, native damage/reset/credit, no cooldown bypass; model/Orb/energy boundaries explicit.
 - [Model geometry](systems/model-geometry.md) — explicit scaled TC player defaults for missing native model-info; authored geometry wins, native aggro/radius proof in progress.
 - [Scoped kit delta composition](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21) —20stable owned keys, actual a3 both-order replay,22PythonGREEN/no warnings; legacy rowid delta superseded.
 - [Windwalker finite-target starter oracle](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21) — v4 executes the weaker fixture before BoK; real0.30s kill, no frame-time stall or timeout widening; patched-copy GREEN pending.
@@ -695,7 +699,7 @@
 - [Adventure Guide realm service](../specs/adventure-guide.md) — pinned source catalogs, monthly persisted criteria and authoritative query/tracking; implementation/proof linked to the shared system page.
 - [Zone population](../zone-population-counts.md) —371-zone ranked TDB/content census,43-map copy promotion,12 additional hosts; both-skin three rewarded quests/paid taxi, explicit navigation/appearance/surface gaps.
 - [Fixed-output crafting orders](systems/crafting-orders.md) —89 authored catalog rows, copy-only import, durable escrow/claims and effect24→mail lifecycle; explicit fee/duration/content gaps.
-- [Boss-mod data import](systems/bossmod-data.md) — static AST/locale extraction, copy-only authority and actual-cast reconciliation; hosted7/7 and both-skin private two-encounter proof pass, native-input schedule coverage remains open.
+- [Boss-mod data import](systems/bossmod-data.md) — six explicit current-Lua EventMap clocks, sourced warnings;2/2 behavioralGREEN and real private Kokia205 both-skin1920 native proof; copy-only addon authority and native-text/condition gaps retained.
 
 - [SmartAI escort coverage](systems/boss-scripts.md#smartai-escort-coverage-2026-10-11) — private overlay, timed gates, summon lifecycle and three reproduced movement conflicts; both-skin legacy private escort proof, mixed-Retail source/vocabulary gaps in [census](../smartai-census.md).
 - [Non-visual equipment](systems/inventory.md#non-visual-equipment--verified-2026-10-11) — additive redb migration, DB2 unique/category rules, paired slots and both-skin private paid purchase/stat/restart proof.

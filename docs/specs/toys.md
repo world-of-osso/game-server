@@ -56,6 +56,14 @@ A dummy aura counts as satisfied at server scope only when all four conditions h
 
 No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
 
+## Sourced threat effects and Kvaldir audience
+
+- [x] Effect63 adds its computed source amount to an eligible living creature's threat list, ignoring school/taunt threat multipliers without dealing damage or forcing a taunt. The EffectThreat handler skips its addition for dead casters, creatures without threat lists and source no-threat flags. Ordinary threat generation retains its modifiers. These handler guards do not certify every generic hostile-hit bookkeeping path; Kvaldir's source no-threat flags are zero.
+- [x] Kvaldir Raiding Horn129111/197828 retains its1500ms cast,40-yard hostile source-area selection, literal MaxTargetLevel49 and120000ms item recovery. Ineligible levels must be filtered before zero-threat hit/combat bookkeeping; MaxTargetLevel0 remains uncapped. Prove actual bag learning/UseToy, no early effect, eligible combat acquisition and range/map-copy/dead/friendly controls.
+- [x] Battle Horn86565/126318 remains unavailable after generic63 support: its source description additionally promises a Pandaria-native audience, but canonical data supplies no complete audience binding. Do not infer native creature identity from current map or invent entry lists.
+
+Sources: TC a352b1fa `SpellEffects.cpp:2948–2964`, `ThreatManager.cpp:382–409`; build70448 SpellTargetRestrictions28425, SpellRadius23, SpellCastTimes16, ContentTuning2067 and ItemEffect26627. The level cap is a DB2-backed project behavior, not a claim that pinned TC consumes MaxTargetLevel at runtime. Native sound, unrepresented threat redirects and natural full120-second reuse remain outside this proof. [Source/proof status](../wiki/systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21).
+
 ## Source-owned temporary summon targets
 
 - [x] Implicit-target condition33 target0/other-target1/relationOwnedBy3 compares the real cast's caster with source ownership of represented temporary summons. Minion and ordinary Ally ownership qualify; an ordinary Wild summoner alone does not. Existing object-entry/StringId conditions, source radius and map-copy boundaries remain effective. Corrected real Coyote51149 selection and legacy/current entry control pass2/2. Other ownership representations are not certified by this bounded mechanism.
