@@ -195,6 +195,64 @@ fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
     }));
 }
 
+#[test]
+#[ignore = "native Ascendance half-effectiveness Lava Burst RED before implementation"]
+fn rotation_selection_262_native_ascendance_entry_uses_half_lava_burst_damage() {
+    let (mut h, caster, _) = prepare(209053, 1);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 188389, Some(h.npc), 1);
+    h.advance(1);
+    let first = h.inbox.log.len();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 285452, Some(h.npc), 1);
+    h.advance(1);
+    let full = h.inbox.log[first..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("native ordinary Lava Burst control must actually damage its Flame-Shocked target")
+        .clone();
+    assert!(full.crit && full.amount > 0);
+    let first = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 1219480, Some(caster), false)
+        .unwrap();
+    h.advance(20);
+    assert!(crate::auras::has_aura(h.app.world(), caster, 1219480));
+    let half = h.inbox.log[first..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("native Ascendance must launch actual Lava Burst damage");
+    assert!(
+        half.crit,
+        "entry Flame Shock precedes the Lava Burst crit decision"
+    );
+    let damage = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(285452)
+        .unwrap();
+    let variance = f64::from(damage.effects[0].variance) / 2.0;
+    // Independent real variance draws, not paired RNG: both native rounding bounds count.
+    let minimum = ((f64::from(full.amount) - 0.5) * 0.5 * (1.0 - variance) / (1.0 + variance) - 0.5)
+        .floor() as i32;
+    let maximum = ((f64::from(full.amount) + 0.5) * 0.5 * (1.0 + variance) / (1.0 - variance) + 0.5)
+        .ceil() as i32;
+    assert!(
+        (minimum..=maximum).contains(&half.amount),
+        "native1219480s10=50%: full={}, half={}, expected={minimum}..={maximum}",
+        full.amount,
+        half.amount
+    );
+}
+
 fn stormkeeper_within_sync_window(h: &Harness, caster: Entity) -> bool {
     let world = h.app.world();
     let spell = world
