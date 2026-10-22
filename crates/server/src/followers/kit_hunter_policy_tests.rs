@@ -82,6 +82,74 @@ fn check_native_duck(level: u8) {
 }
 
 #[test]
+#[ignore = "native Barbed Shot shortest-own-DoT secondary-target counterexample"]
+fn rotation_fidelity_253_barbed_shot_targets_engaged_undotted_secondary() {
+    use crate::spell_cast::test_harness::spawn_npc;
+    use shared::components::{Health, ThreatTable};
+
+    let (mut h, caster, _) = prepare_native_duck(21);
+    let primary = h.npc;
+    let secondary = spawn_npc(&mut h.app, 4.0);
+    // Inside native shot range, outside ordinary creature proximity aggro.
+    let unengaged = spawn_npc(&mut h.app, 30.0);
+    for target in [primary, secondary, unengaged] {
+        h.app.world_mut().entity_mut(target).insert(Health {
+            current: 1_000_000_000.0,
+            max: 1_000_000_000.0,
+        });
+    }
+    let mut threat = ThreatTable::default();
+    threat.add_threat(h.caster.to_bits(), 1.0);
+    h.app.world_mut().entity_mut(secondary).insert(threat);
+    // Let the real Call Pet GCD expire; do not reset charges or resources.
+    h.advance(40);
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 217200, Some(primary), false)
+        .unwrap();
+    h.advance(10);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(primary)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 217200 && aura.caster == caster),
+        "first ordinary Barbed Shot must actually apply this hunter's native DoT"
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), secondary, 217200));
+    assert!(!crate::auras::has_aura(h.app.world(), unengaged, 217200));
+    let before = h.inbox.go.len();
+    for _ in 0..80 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        if h.inbox.go[before..]
+            .iter()
+            .any(|event| event.caster == caster.to_bits() && event.spell_id == 217200)
+        {
+            break;
+        }
+    }
+    let shot = h.inbox.go[before..]
+        .iter()
+        .find(|event| event.caster == caster.to_bits() && event.spell_id == 217200);
+    assert_eq!(
+        shot.and_then(|event| event.target),
+        Some(secondary.to_bits()),
+        "SimC Barbed target_if=min:dot.barbed_shot.remains must use the engaged undotted secondary, not wait for the primary or pull an unengaged creature"
+    );
+    h.advance(20);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::auras::ActiveAuras>(secondary)
+            .unwrap()
+            .iter()
+            .any(|aura| aura.spell_id == 217200 && aura.caster == caster),
+        "secondary selection must produce its real native DoT"
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), unengaged, 217200));
+}
+
+#[test]
 fn rotation_fidelity_253_level90_prepares_native_simc_default_duck_via_call_pet() {
     check_native_duck(90);
 }
