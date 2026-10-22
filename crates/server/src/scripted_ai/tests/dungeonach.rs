@@ -57,7 +57,11 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
     assert_initial_dungeon2_progress(&mut h, connection, peer_connection);
     drain::<DungeonProgress>(h.app.world_mut(), other_connection);
     let mut mask = 0;
+    let mut release_credit_writer = None;
     for (index, &(encounter, _, bit)) in ordered.iter().enumerate() {
+        if index == ordered.len() - 1 {
+            release_credit_writer = Some(hold_dungeon_credit_writer(&h));
+        }
         let (entry, boss_id) = match encounter {
             1144 => (NPC_HOGGER, DATA_HOGGER),
             1145 => (NPC_LORD_OVERHEAT, DATA_LORD_OVERHEAT),
@@ -188,16 +192,20 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
     );
     let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
     assert_eq!(state.criteria_progress[&18527], 1);
-    let db = &h
-        .app
-        .world()
-        .resource::<crate::persistence::GameDatabase>()
-        .db;
+    let database = h.app.world().resource::<crate::persistence::GameDatabase>();
     let mut character_state = state.clone();
     assert!(character_state.account.take().is_some());
+    let before_commit = crate::persistence::load_achievements(&database.db, 1001);
+    release_credit_writer.take().unwrap().send(()).unwrap();
+    crate::test_data::drain_persistence(database);
+    let after_commit = crate::persistence::load_achievements(&database.db, 1001);
     assert_eq!(
-        crate::persistence::load_achievements(db, 1001),
-        character_state
+        after_commit, character_state,
+        "native queued credit must become durable after its FIFO fence"
+    );
+    assert_eq!(
+        before_commit, character_state,
+        "pre-existing final assertion races the native asynchronous writer"
     );
     assert!(
         !h.app
@@ -311,6 +319,25 @@ fn assert_initial_dungeon2_progress(h: &mut Harness, connection: Entity, peer: E
         drain::<AchievementCatalogPage>(h.app.world_mut(), connection).is_empty(),
         "catalog is request-only"
     );
+}
+
+fn hold_dungeon_credit_writer(h: &Harness) -> std::sync::mpsc::Sender<()> {
+    let (release, wait_for_release) = std::sync::mpsc::channel();
+    let (entered, wait_until_held) = std::sync::mpsc::channel();
+    h.app
+        .world()
+        .resource::<crate::persistence::GameDatabase>()
+        .writer
+        .enqueue("Stockade fixture holds queued kill credit", move |_| {
+            entered.send(()).map_err(|error| error.to_string())?;
+            wait_for_release
+                .recv_timeout(std::time::Duration::from_secs(30))
+                .map_err(|error| error.to_string())
+        });
+    wait_until_held
+        .recv_timeout(std::time::Duration::from_secs(30))
+        .unwrap();
+    release
 }
 
 fn reconnect_dungeon2_player(
