@@ -34,7 +34,6 @@ At that exact revision, the policy-on single-target cohort has10 execution-quali
 
 The current single-target receipt inventory is `all-spec-fixed-time-health-comparison-v2.{json,md}` under sibling `game-engine/data/diagnostics/dps-parity-2026-10-21/`:10 execution-qualified historical measurements,16 source/cast blocks, three strict-trait rejections, one full300s zero-output failure and10 without selected references. No selected-reference case remains unattempted. Earlier inventory versions and raw attempts remain intact. Companion JSON hashes each attempt/report/factor receipt, retaining the invalid-source64 and race-adapter251 attempts as history rather than acceptance. `fixed-time-inventory-consolidation-v2.proof.json` checks40 rows, the eight continuation snapshots/report hashes and all10 existing factor ledgers' input hashes/conservation. No new factor ledger is warranted for the eight blocked/nonqualified attempts; no causal mechanics fix or current-master DPS parity is claimed.
 
-Startup readers use absolute worldDB aliases, so environment/cwd alone cannot freeze their source. `scripts/dps_parity_native.py` runs the compiled fixture in a bubblewrap read-only snapshot mount over the resolved startup path, with no unsandboxed alternate path. The process regression observed mutable data before the fix, then frozen/read-only bytes with unchanged host/snapshot files. Native file-identity/Human input tests and post-master integrated gates remain pending; no Rust pass is claimed from the Python boundary proof. The Human adapter now requires native row1, matching pinned SimC; row33 is ThinHuman rather than another valid Human match.
 ## Continuous-edge seeded qualification —2026-10-22
 
 Archived5f7d4ff85/P03cebdb/frozen40d95b0 clears **Stockade50/50,150native boss Deaths,0failures**, with actual34/1/level32 validated in all reports. Fresh seeds1–49/jobs2 take3083.914376s batch wall; separately retained same-code50 takes124.597531s individual wall. No contiguous50-run wall is claimed. `stockade-continuous-edge-5f7d4ff85-combined-summary.json` preserves source paths/hashes and both timing receipts.
@@ -53,9 +52,11 @@ The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized sing
 |268|Touch of Death322109 rejected by native admission as InvalidTarget|Actual admission refusal, no invented predicate/target health|
 |577,581|Rules21553 and21486 respectively, both type12|Explicit source-rule error|
 |251,1480|Node76073 requires76072 fully ranked; node108144 requires110172 fully ranked respectively|Strict reference-trait rejection; Human lookup no longer blocks251|
-|267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and no pet|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
+|267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and `pet.present=false`|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
 
 Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls and awaits the parent-owned CombatRefs admission integration.
+
+For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact;96d695ee6 passes the unchanged test1/1 with no warnings. That unit proof covers accounting, not actual3-target execution. `pet.present=false` elsewhere is the primary-pet lookup result, not proof that no guardian entity existed.
 
 ## Qualified path-candidate Stockade cohort —2026-10-21
 

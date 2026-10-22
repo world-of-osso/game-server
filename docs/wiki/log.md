@@ -97,6 +97,28 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Native parity recipient accounting
+
+[Recipient boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): existing combat JSON discarded victims, preventing actual3-target output proof. Concrete77e8b0623 RED1/1 at the missing recipient field preserves600existing damage; unchanged testGREEN1/1 at96d695ee6/0warnings; new additive `damage_by_target` totals/hits retain retired and zero-output target IDs while excluding heals/off-target/targetless events. Actor/spell/cast totals and mechanics unchanged. Collector unit proof and CombatRefs-conditioned three-target execution remain separate; actual3-target runs still pending, old receipts untouched.
+
+## 2026-10-22 — Frozen-view native gate and terminal player continuation
+
+[Bridge/source boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): c04ecc5b9/P2abc7fa gives native5GREEN158.48s, all-targetcheck28.85s/fmt/0warnings after inherited duplicatePetControlPlugin startup failure2PASS/3FAIL and exact sibling597d harness repair. Frozen8-case continuation completes without source drift or positive-output qualification:64/265/577/581 exact source rules,268 native InvalidTarget,251/1480 strict parent-node rejections,267 raw300s/6000decisions/61Felhunter casts/0damage/pet.present=false(primary-pet lookup only). New v2 inventory40rows:10 historical qualified,16source/castblocks,3stricttraits,1zero-output failure,10missing selected references. Report hashes and10 existing factor ledgers' source hashes/conservation checked; no extra factor partition, production fix, zero-DPS acceptance or three-target parity claim. Older receipts remain intact; parent gates producer integration and subsequent CombatRefs-conditioned3-target runs separately.
+## 2026-10-22 — Native target Earthquake consequence GREEN
+
+[Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): source-matched target462620 now uses existing61882 field/knockdown pipeline. OrdinaryAI77478damage1PASS18.75s plus reticle/orphan/targetcenter-overlap-expiry3PASS28.85s atdfcbc1a3c, zero warnings; proved2 enabled115b26005. Only affected native70ST/3T2PASS37.46s,836.683/1212.550DPS/actual3T77478damage17481, labelled unpaired not causal-total-gain proof. Latestc0f560ebb merge requires parent integration validation; whole Elemental efficiency/fullAPL stays open.
+
+## 2026-10-22 — Elemental70 decomposition and target Earthquake RED
+
+[Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): native2 measurements PASS31.84s, source-scoped770.85/714.367 DPS vs SimC caster965.019/1550.704 plus owned guardians130.905/129.465; actualstat mismatch and Azure duty remain explicit.3T14 completed462620 casts produce no77478; native AI consequence RED1/16.49s/zero warnings. Shared existing61882 field path extended to native target variant at3de3f1131; center/overlap/native-clock control and GREEN pending. Frozen Feel packet31b remains distinct.
+
+## 2026-10-22 — CritterGUID shared runtime and source90/150
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): lifecycle8bb2cba0a and selectorsb8580b258 follow genuine corrected7RED/3PASS77.05s. Real persisted-journal RPC/native51149+26571+261 cases10GREEN92.58s; retained four Coyote+99104slot6+census6GREEN45.93s. Source Companion-only current actor/matching removal, shared authored positive slots and explicit90/implicit150; no ownership scan/guardian substitution. Pipeline543 unchanged,exact25 reason changes; Crab retains74 and all per-toy script/visual gaps persist. Relevant check pending; no native toy-action/rendering claim. First40693a25a failure was fixture-only and excluded.
+
+## 2026-10-22 — CritterGUID source and slot audit
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): source Companion-title GUID setter/matching removal,90explicit identity/no self default and150auto lookup. Journal3221/5028/5085 slot5 versus legacy0/5/6 means no blanket slot6/cross-slot removal or older-actor restoration. Hidden344 has ordinary Ally title0, not critter/guardian; three journal roots lack effects even raw70448. Test-firsta955bb1b2 adds real owned-journal RPC +native Coyote/Hare/three-Skeleton lifecycle/negative cases; RED pending, no implementation/admission claim.
 - [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
 ## 2026-10-22 — Feel the Burn targeted GREEN and affected samples
 
@@ -245,6 +267,7 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Orb affinity passives are normal specialization state
 
 [Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): source136928/127850 isolated44rows/26tables/two models; earlier missing-root-helper interpretation withdrawn.137031/2/3 are actual Holy/Disc/Shadow spec passives with source auto-cast flag, not new toy effects. Test-first3e2537dca requires normal KnownSpells→AuraPlugin passive application and source affinity before actualUseToy; First01ce988b7 run censusRED1/control2PASS plus3excludedfixture-spec-lookup failures60.03s; lightweight harness intentionally strips specs. Fixture-onlybf9f138a3 keeps full nativeClassSpells fromloader;correctedRED pending, no admission/GREEN/native color/class-login claim. Source5min aura/10min recovery and Priest/level11 guard retained; census539 unchanged.
+- [Orator TC energy partial](systems/boss-scripts.md#orator-tc-energy-controller-partial--2026-10-22) — 2026-10-22: native100-vsTC0 RED→4GREEN56.12s, exact source/native energy/parent/child/copy lifecycle; strict preappearance packet isolation, binding producer1GREEN and explicit controller gaps.
 - [rd902 Imp fixture identities](investigations/follower-data.md#rd902-native-roster-fixture-identities--2026-10-22) — native handles1-versus3 RED→parallel11GREEN66.08s; signed3001 joined Guardian1GREEN/retained3GREEN, zero native/toy references; tests/fixtures only.
 - [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→merged11GREEN106.38s; retained guardian11GREEN35.07s; merged ST/3T8864/13204 reports equal91cf, no Demonbolt/Core sample or isolated/statistical claim.
 - [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
