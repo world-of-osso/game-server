@@ -129,6 +129,28 @@ fn encounter_coverage_vexamus_projected_evade_rearms_first_expulsion() {
             instance_script::get_boss_state(h.app.world_mut(), map, 0),
             Some(EncounterState::NotStarted)
         );
+        // Native add_threat refuses Returning actors; wait for actual home arrival.
+        // Move only the projected player, not the boss's pose/state/health.
+        let player = h.player();
+        h.app.world_mut().get_mut::<Position>(player).unwrap().x += 500.0;
+        for _ in 0..100 {
+            if h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+                != Some(&crate::creature_ai::CreatureState::Returning)
+            {
+                break;
+            }
+            h.advance(0.1);
+        }
+        assert_ne!(
+            h.app.world().get::<crate::creature_ai::CreatureState>(boss),
+            Some(&crate::creature_ai::CreatureState::Returning),
+            "real home arrival"
+        );
+        let position = *h.app.world().get::<Position>(boss).unwrap();
+        *h.app.world_mut().get_mut::<Position>(player).unwrap() = Position {
+            x: position.x + 3.0,
+            ..position
+        };
         h.engage(boss);
         h.advance(4.8);
         assert!(h.app.world().get::<CastState>(boss).is_none());

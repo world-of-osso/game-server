@@ -7,6 +7,7 @@ use super::{CreatureAi, Ctx};
 
 pub(super) const SCRIPT: &str = "boss_vexamus";
 const ARCANE_EXPULSION: u32 = 385958;
+const MANA_BOMBS: u32 = 386173;
 
 pub(super) fn creature_ai(boss: BossAi) -> Box<dyn CreatureAi> {
     Box::new(Vexamus { boss })
@@ -28,6 +29,7 @@ impl CreatureAi for Vexamus {
     fn just_engaged_with(&mut self, ctx: &mut Ctx, _who: Entity) {
         self.boss.just_engaged_with(ctx);
         self.boss.events.schedule(ARCANE_EXPULSION, 5_000);
+        self.boss.events.schedule(MANA_BOMBS, 15_000);
     }
 
     fn just_died(&mut self, ctx: &mut Ctx, _killer: Option<Entity>) {
@@ -45,9 +47,11 @@ impl BossScript for Vexamus {
     }
 
     fn execute_event(&mut self, ctx: &mut Ctx, event: u32) {
-        if event == ARCANE_EXPULSION {
-            ctx.do_cast_victim(ARCANE_EXPULSION);
-            self.boss.events.repeat(18_000);
+        match event {
+            ARCANE_EXPULSION => ctx.do_cast_victim(ARCANE_EXPULSION),
+            MANA_BOMBS => ctx.do_cast_self(MANA_BOMBS),
+            _ => return,
         }
+        self.boss.events.repeat(18_000);
     }
 }
