@@ -144,6 +144,30 @@ fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> V
     from
 }
 
+fn handle_unreachable_movement(
+    world: &mut World,
+    unit: Entity,
+    from: Vec3,
+    to: Vec3,
+    error: String,
+) -> Result<(), String> {
+    if let Some(crate::creature_ai::CreatureState::Pursuing { target }) =
+        world.get::<crate::creature_ai::CreatureState>(unit)
+    {
+        crate::creature_ai::mark_chase_blocked(world, unit, *target);
+        let position = *world.get::<Position>(unit).unwrap();
+        crate::creature_ai::move_follower(world, unit, position, 0.0);
+        return Ok(());
+    }
+    Err(format!(
+        "{error}; source={:?} from={from:?} to={to:?} state={:?}",
+        world
+            .get::<crate::zones::CreatureOrigin>(unit)
+            .map(|origin| origin.guid),
+        world.get::<crate::creature_ai::CreatureState>(unit),
+    ))
+}
+
 fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     if !can_move(world, unit) {
         return Ok(());
@@ -157,11 +181,18 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         .take::<Travel>()
         .filter(|travel| travel.destination == to);
     if travel.is_none() {
+        let legs = match read_legs(world.resource::<Space>(), from, to) {
+            Ok(legs) => legs,
+            Err(error) => return handle_unreachable_movement(world, unit, from, to, error),
+        };
         travel = Some(Travel {
             destination: to,
-            legs: read_legs(world.resource::<Space>(), from, to)?,
+            legs,
         });
     }
+    world
+        .entity_mut(unit)
+        .remove::<crate::creature_ai::CannotReachTarget>();
     let mut travel = travel.unwrap();
     let speed = read_speed(world, unit);
     let next = advance(from, &mut travel, speed * dt, reach);
