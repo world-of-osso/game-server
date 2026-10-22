@@ -1,5 +1,10 @@
 # Boss scripts
 
+## Native creature class-power ingress
+
+- Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
+- Preserve actual regenerate-power flag0x800. Native PowerType rates apply only when the source creature permits regeneration. Anub'zekt's flag is absent: initialEnergy100 is valid, forced regeneration or repeated energy grants are not. Missing native class4 power metadata must fail explicitly rather than invent a pool.
+
 ## Anub'zekt current Lua partial
 
 - Use actual215405/map2660/2906bit1, source spawn10004042 with authored `1,2,8,23,205`, Journal2584 primary5726/display115723. Bloodstained Webmage5744 is not another primary. Preserve actor flags64, stats/models/addons/difficulties/population and native70448 data. Producer `--encounter anubzekt` installs only `littlewigs_anubzekt` and the authenticated binding on independent copies.

@@ -53,9 +53,9 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
         let energy = crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy)
             .unwrap()
             .0;
-        assert!(
-            (energy - 20.0).abs() < 0.1,
-            "sourced PowerType Energy10/s regeneration: {energy}"
+        assert_eq!(
+            energy, 0.0,
+            "actual source unit_flags2 lacks regenerate-power0x800"
         );
         h.advance(5.2);
         assert_eq!(completed_casts(&h, boss, EYE), 1);
