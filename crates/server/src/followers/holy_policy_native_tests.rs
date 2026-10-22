@@ -102,7 +102,8 @@ fn form_native_party(h: &mut Harness, members: &[Entity], level: u8) {
     for &unit in members.iter().filter(|&&unit| unit != owner) {
         let follower = h.app.world().get::<super::Follower>(unit).unwrap();
         let member = super::Follower::member_id(unit);
-        view.insert(member, follower.online(unit, level, 1));
+        let display_id = template_display(follower.profile.entry);
+        view.insert(member, follower.online(unit, level, 1, display_id));
         companions.push((member, follower.profile.role));
     }
     let mut groups = GroupRegistry::default();
@@ -889,4 +890,20 @@ fn holy_policy_native90_incoming_self_damage_uses_desperate_prayer() {
     let before = group.h.health(group.priest);
     uses_spell(&mut group.h, group.priest, 19236);
     assert!(group.h.health(group.priest) > before);
+}
+
+/// The fixture spawns without zone visuals, so read the authentic template display.
+fn template_display(entry: u32) -> u32 {
+    rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap()
+    .query_row(
+        "SELECT CreatureDisplayID FROM content_creature_template_model
+         WHERE CreatureID=?1 ORDER BY Idx LIMIT 1",
+        [entry],
+        |row| row.get::<_, u32>(0),
+    )
+    .expect("authentic follower template display")
 }

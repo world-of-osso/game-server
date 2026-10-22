@@ -621,6 +621,16 @@ pub(crate) fn add_school_threat(
                 })
         });
     let amount = amount * threat_multiplier(world, attacker, school) * taunt_multiplier;
+    add_unmodified_threat(world, creature, attacker, amount);
+}
+
+/// TC AddThreat(ignoreModifiers=true): preserve engagement, bypass amount multipliers.
+pub(crate) fn add_unmodified_threat(
+    world: &mut World,
+    creature: Entity,
+    attacker: Entity,
+    amount: f32,
+) {
     if creature == attacker || !can_engage(world, creature) {
         return;
     }
@@ -634,6 +644,10 @@ pub(crate) fn add_school_threat(
     {
         let _ = current_victim(world, creature);
     }
+    engage_after_threat(world, creature, attacker);
+}
+
+fn engage_after_threat(world: &mut World, creature: Entity, attacker: Entity) {
     let engages = world.get::<CreatureState>(creature) == Some(&CreatureState::Idle);
     if engages {
         let mut entity = world.entity_mut(creature);

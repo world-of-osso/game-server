@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 #[path = "azure_extraction.rs"]
 mod azure_extraction;
+#[path = "corridor_inputs.rs"]
+mod corridor_inputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Spawn {
@@ -32,7 +34,7 @@ pub(super) struct Edge {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct RouteStep {
     pub pack: u32,
-    pub anchor: [f32; 2],
+    pub anchor: [f32; 3],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -43,7 +45,6 @@ pub(super) struct Graph {
     pub entrance_pack: u32,
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
-    #[serde(default)]
     pub teleports: Vec<Edge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
@@ -397,7 +398,7 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
         assert!(seen.insert(pack), "duplicate authored pack{pack}");
         assert!(graph.packs.iter().any(|entry| entry.id == pack));
         let anchor = step["anchor"].as_array().unwrap();
-        assert_eq!(anchor.len(), 2);
+        assert_eq!(anchor.len(), 3);
         assert!(
             anchor
                 .iter()
@@ -407,7 +408,6 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
 }
 
 #[test]
-#[ignore = "AZURE_SIMULATOR_GRAPH_PENDING: extract the private baked graph and author its route"]
 fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_route() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../content/dungeons/azure-vault-2515.json");
@@ -432,10 +432,6 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
         "complete native205 alias uses Normal source population"
     );
     assert!(!graph.edges.is_empty(), "real frozen navigation distances");
-    let opening = graph.route.first().unwrap().pack;
-    assert!(graph.packs.iter().any(|pack| pack.id == opening
-        && pack.spawns.iter().any(|spawn| spawn.entry == 196102)),
-        "open on a sourced Conjured Lasher, not the live capture's transient entity ID");
     let mut route_ids = BTreeSet::new();
     for step in &graph.route {
         assert!(
@@ -445,13 +441,24 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
         assert!(step.anchor.into_iter().all(f32::is_finite));
         assert!(graph.packs.iter().any(|pack| pack.id == step.pack));
     }
-    for boss in [186644, 186739, 186737, 186738] {
-        assert!(
-            graph.packs.iter().any(|pack| route_ids.contains(&pack.id)
-                && pack.spawns.iter().any(|spawn| spawn.entry == boss)),
-            "authored route must include boss{boss}"
-        );
-    }
+    let bosses = [186644, 186739, 186737, 186738];
+    let actual_bosses: Vec<_> = graph
+        .route
+        .iter()
+        .flat_map(|step| {
+            &graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == step.pack)
+                .unwrap()
+                .spawns
+        })
+        .filter_map(|spawn| bosses.contains(&spawn.entry).then_some(spawn.entry))
+        .collect();
+    assert_eq!(
+        actual_bosses, bosses,
+        "sourced encounter order, not an arbitrary opening pack"
+    );
 }
 
 #[test]
@@ -489,15 +496,8 @@ fn extract_stockade_graph() {
         entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
-        route: {
-            #[derive(Deserialize)]
-            struct AuthoredRoute {
-                route: Vec<RouteStep>,
-            }
-            serde_json::from_slice::<AuthoredRoute>(&std::fs::read(graph_path()).unwrap())
-                .expect("preserve authored pull order across topology extraction")
-                .route
-        },
+        // Topology extraction is followed by native radius capture and the generic route author.
+        route: Vec::new(),
         teleports: Vec::new(),
         packs,
         edges,

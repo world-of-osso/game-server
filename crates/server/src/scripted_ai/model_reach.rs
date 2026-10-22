@@ -4,6 +4,10 @@ use bevy::prelude::*;
 use shared::components::{ModelDisplay, Player, Position, UnitScale};
 use std::collections::HashMap;
 
+#[cfg(test)]
+#[path = "model_reach_tests.rs"]
+mod tests;
+
 /// `DEFAULT_PLAYER_COMBAT_REACH`, scaled by `Player::SetObjectScale` (Player.cpp:1577).
 pub(crate) const PLAYER_COMBAT_REACH: f32 = 1.5;
 /// TC a352b1fa ObjectDefines.h:39, rounded to its f32 representation.

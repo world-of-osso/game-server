@@ -1409,6 +1409,7 @@ pub(crate) fn cast_item_spell(
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
+pub(crate) mod toy_coyote;
 mod toy_facing;
 mod toy_flag;
 pub(crate) mod toy_requirements;
@@ -2628,6 +2629,7 @@ fn plan_targets(
                 units
             }
         };
+        effects::retain_threat_level_targets(world, spell, effect, &mut units);
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
         }
