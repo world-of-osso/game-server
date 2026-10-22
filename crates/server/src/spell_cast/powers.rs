@@ -358,7 +358,10 @@ fn non_mana_percent_changes(
     let Some(pools) = world.get::<PowerPools>(unit) else {
         return Vec::new();
     };
-    let table = world.resource::<PowerTypeTable>();
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!("Unit{unit:?} max-power recalculation unavailable: PowerTypeTable is not installed");
+        return Vec::new();
+    };
     let previous = world.get::<crate::auras::AuraStatMods>(unit);
     pools
         .pools

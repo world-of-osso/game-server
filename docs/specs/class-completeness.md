@@ -15,6 +15,11 @@
 - Native504 on the recipient multiplies direct and periodic healing only from that aura's caster. Multiply independent signed amounts, without a school/family filter or strongest-only aggregation. Honor the existing259 sign permissions from native attr6/13; other healers and recipients remain independent, and removal restores prior healing.
 - Native357556+50,411036+10 and1271318−9.0909 qualify multiplication, ownership/removal and ignored/negative-permitted healing. Native366155 Reversion's authored0 is identity, not an inferred Golden Hour bonus. This slice does not change283 or Reversion scripts. [Source and proof](../diagnostics/census-tail-70448.md).
 
+## Optional power-runtime boundaries — 2026-10-22
+
+- An App may retain native PowerPools while SpellCastPlugin/PowerTypeTable is absent. Unrelated aura application/removal, including native44521 preparation at world-port ACK, must not panic, replace the catalog with an empty table, or invent maximum/current power. Native178 capacity recalculation warns and leaves existing non-Mana pools unchanged when the native catalog is unavailable.
+- The same missing catalog must explicitly refuse pet spawning, follower initialization and follower resource conditions before mutating their existing state: warn and return None, an error or false respectively. With a real catalog, keep native definitions, display divisors and existing capacity/regen rules. [Regression proof and caller audit](../diagnostics/census-tail-70448.md).
+
 ## Periodic-healing taken slice — 2026-10-22
 
 - Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.

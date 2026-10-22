@@ -2484,6 +2484,7 @@ pub(crate) fn execute_cast(
             can_proc: true,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         },
     );
@@ -2810,6 +2811,7 @@ fn resolve_effects(
             spell_id: spell.id,
             depth,
             damage: Vec::new(),
+            healing: Vec::new(),
             blocked: plan
                 .iter()
                 .flat_map(|effect| effect.blocked_units.iter().copied())
@@ -2929,11 +2931,14 @@ fn resolve_effects(
     for unit in hit_units(plan) {
         crate::scripted_ai::spell_hit(world, unit, caster, spell.id);
     }
-    let damage = world
+    let (damage, healing) = world
         .get_resource_mut::<ResolvingHits>()
         .and_then(|mut resolving| resolving.0.pop())
-        .map_or_else(Vec::new, |frame| frame.damage);
-    push_hit_events(world, caster, spell, plan, depth, &damage);
+        .map_or_else(
+            || (Vec::new(), Vec::new()),
+            |frame| (frame.damage, frame.healing),
+        );
+    push_hit_events(world, caster, spell, plan, depth, &damage, &healing);
 }
 
 /// `Spell::PreprocessSpellLaunch` (Spell.cpp:8538-8541) puts the caster in combat with
@@ -3028,6 +3033,7 @@ struct HitFrame {
     spell_id: u32,
     depth: u8,
     damage: Vec<(Entity, f32)>,
+    healing: Vec<(Entity, f32)>,
     blocked: HashSet<Entity>,
 }
 
@@ -3074,6 +3080,32 @@ pub(crate) fn record_hit_damage(
     true
 }
 
+/// Record resolved direct healing in the same per-recipient hit as damage.
+/// Preserve pre-overheal healing, including a fully overhealing hit.
+pub(crate) fn record_hit_heal(
+    world: &mut World,
+    caster: Entity,
+    spell_id: u32,
+    target: Entity,
+    amount: f32,
+) -> bool {
+    let Some(mut resolving) = world.get_resource_mut::<ResolvingHits>() else {
+        return false;
+    };
+    let Some(frame) = resolving
+        .0
+        .last_mut()
+        .filter(|frame| frame.caster == caster && frame.spell_id == spell_id)
+    else {
+        return false;
+    };
+    match frame.healing.iter_mut().find(|(unit, _)| *unit == target) {
+        Some((_, total)) => *total += amount,
+        None => frame.healing.push((target, amount)),
+    }
+    true
+}
+
 /// One proc event per distinct unit the spell landed on, with the direct damage it
 /// took (TAKE_ANY_DAMAGE when above 0); damage to a unit outside the plan gets a
 /// damage-only event.
@@ -3084,6 +3116,7 @@ fn push_hit_events(
     plan: &TargetPlan,
     depth: u8,
     damage: &[(Entity, f32)],
+    healing: &[(Entity, f32)],
 ) {
     let hit = hit_units(plan);
     let damage_to = |unit: Entity| {
@@ -3104,6 +3137,7 @@ fn push_hit_events(
                 can_proc: depth == 0,
                 periodic: false,
                 damage: amount,
+                heal: None,
                 reflected: false,
             },
         );
@@ -3134,6 +3168,10 @@ fn push_hit_events(
                 can_proc: depth == 0,
                 periodic: false,
                 damage,
+                heal: healing
+                    .iter()
+                    .find(|(unit, _)| *unit == target)
+                    .map(|(_, amount)| *amount),
                 reflected: false,
             },
         );

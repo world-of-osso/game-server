@@ -259,6 +259,7 @@ pub(super) fn conditions_met(
 ) -> bool {
     let condition = &entry.conditions;
     if !action_history_allows(world, unit, entry)
+        || !cooldown_allows(world, unit, entry)
         || !entry
             .conditions
             .resources
@@ -283,13 +284,31 @@ pub(super) fn conditions_met(
             || super::kit_area::allows(world, unit, target, enemies, entry))
 }
 
+fn cooldown_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
+    let Some(threshold) = &entry.conditions.cooldown_remaining_above else {
+        return true;
+    };
+    let Some(history) = world.get::<crate::spell_cast::SpellHistory>(unit) else {
+        return false;
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(threshold.spell_id)
+        .expect("kit cooldown predicate requires native spell metadata");
+    let deadline = crate::spell_cast::history_now(world) + threshold.seconds;
+    history.on_cooldown(spell, deadline)
+}
+
 fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> bool {
     use crate::spell_cast::powers::{PowerTypeTable, power_value};
     let Some((current, maximum)) = power_value(world, unit, rule.power) else {
         return false;
     };
-    let scale = world
-        .resource::<PowerTypeTable>()
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!("Follower{unit:?} resource condition unavailable: PowerTypeTable is not installed");
+        return false;
+    };
+    let scale = table
         .get(rule.power)
         .expect("rotation resource requires native PowerType metadata")
         .display_modifier;
