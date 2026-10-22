@@ -1762,6 +1762,27 @@ pub(crate) fn read_targets_include(
     Ok(false)
 }
 
+/// Re-plan only the active cast's recipients; no effects, resources or cooldowns execute.
+/// Use its prepared spell so requested destinations and native modifiers are retained.
+pub(crate) fn read_active_direct_heal_targets(
+    world: &mut World,
+    caster: Entity,
+    explicit: Option<Entity>,
+) -> Result<Vec<Entity>, CastFailure> {
+    let spell = world
+        .get::<PendingCastSpell>(caster)
+        .map(|pending| pending.spell.clone())
+        .ok_or_else(|| {
+            CastFailure::Unsupported("active heal lacks its prepared native spell".into())
+        })?;
+    let plan = plan_targets(world, caster, &spell, explicit, false)?;
+    Ok(plan
+        .into_iter()
+        .filter(|planned| spell.effects[planned.index].effect == 10)
+        .flat_map(|planned| planned.units)
+        .collect())
+}
+
 fn read_periodic_trigger(
     world: &World,
     effect: &crate::spell_info::SpellEffect,
