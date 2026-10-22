@@ -6,11 +6,13 @@ use crate::spell_info::{SpellEffect, SpellInfo};
 /// These descriptions promise only a visual/attachment/sound, not a scripted
 /// action. Both the audit AND current DB2 shape must agree; metadata drift blocks.
 const VISUAL_ONLY_SPELLS: &[u32] = &[
-    45416, 45418,  // Dancing Insoles, Fire Festival Batons
-    71909,  // The Heartbreaker's authored sob animations/heart attachment
-    91743,  // Fountain of Knowledge: source10s ordinary ground model253570.
-    128327, // Iron Belly Spirits (friendly-target mug/refreshment visual)
-    128328, // Ken-Ken's Mask (friendly-target attachment)
+    45416, 45418,   // Dancing Insoles, Fire Festival Batons
+    71909,   // The Heartbreaker's authored sob animations/heart attachment
+    91743,   // Fountain of Knowledge: source10s ordinary ground model253570.
+    1303320, // Ancient Amani Mask: source10min owner visual; voluntary cancellation forbidden.
+    127850,  // Thaumaturgist's Orb: existing priest spec passives select owner appearance.
+    128327,  // Iron Belly Spirits (friendly-target mug/refreshment visual)
+    128328,  // Ken-Ken's Mask (friendly-target attachment)
     131317, 131318, // Alliance / Horde fireworks
     148538, // Blackflame Daggers
     171352, // Blazing Diamond Pendant: source120s ground magma, area group4031.
