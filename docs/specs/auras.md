@@ -2,6 +2,17 @@
 
 Server-side aura runtime in `crates/server/src/auras/`: aura instances on active units, periodic effects, procs, spell and stat modifiers, removal and `UnitAuras` replication. See [auras](../wiki/systems/auras.md).
 
+## Native hit proc masks
+
+TC a352b1fa `Spell.cpp:2343–2400`: melee/ranged defense classes keep their
+weapon ability masks. Other spells select helpful/harmful periodic masks for
+native Attr3 TreatAsPeriodic, else ability masks for Attr0 IsAbility, else spell
+masks. DefenseType0 alone must not force an ability mask. Native Word of Glory's
+real helpful hit must therefore reach Light of the Titans' native proc mask.
+Preserve family masks, proc chance, triggered eligibility and charges. Record the
+native catalog eligibility diff and a changed non-Paladin source control; no
+spell-ID exception or blanket proc certification.
+
 ## Native rolling periodic refresh
 
 TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
