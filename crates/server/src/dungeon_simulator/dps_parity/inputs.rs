@@ -256,7 +256,28 @@ pub(super) fn install_traits(
 
 #[test]
 #[ignore = "requires the read-only native parity database with Human1 and ThinHuman33"]
-fn native_reference_human_race_uses_the_pinned_source_id() {
+fn dps_parity_input_human_race_uses_the_pinned_source_id() {
     assert_eq!(read_reference_race("human").unwrap(), 1);
     assert!(read_reference_race("not_an_installed_race").is_err());
+}
+
+#[cfg(unix)]
+#[test]
+#[ignore = "requires scripts/dps_parity_native.py frozen source view and private parity inputs"]
+fn dps_parity_input_startup_loaders_share_the_prepared_database() {
+    use std::os::unix::fs::MetadataExt;
+    let prepared = std::env::var_os("DPS_PARITY_WORLD_DB").expect("prepared native database");
+    let expected = std::fs::metadata(PathBuf::from(prepared)).unwrap();
+    for startup in [
+        crate::test_data::world_db_path(),
+        PathBuf::from(crate::spell_info::WORLD_DB_PATH),
+    ] {
+        let actual = std::fs::metadata(&startup).unwrap();
+        assert_eq!(
+            (actual.dev(), actual.ino()),
+            (expected.dev(), expected.ino()),
+            "startup loader {} must read the prepared snapshot, not a live canonical database",
+            startup.display()
+        );
+    }
 }
