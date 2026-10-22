@@ -79,7 +79,7 @@ impl SummonProperties {
 
     pub(crate) fn is_guardian(self) -> bool {
         matches!(self.title, TITLE_GUARDIAN | TITLE_MINION | TITLE_RUNEBLADE)
-            || (self.title == 0 && self.joins_summoner_spawn_group())
+            || self.joins_summoner_spawn_group()
     }
 
     /// TC Map::SummonCreature: Guardian and Companion masks inherit Minion ownership.
@@ -92,6 +92,12 @@ impl SummonProperties {
             },
             _ => false,
         }
+    }
+
+    /// Minion ownership and EffectSummonType's ordinary Ally SetOwnerGUID;
+    /// a plain Wild TempSummon's summoner is not its source owner.
+    pub(crate) fn has_source_owner(self) -> bool {
+        self.is_minion() || self.control == CONTROL_ALLY
     }
 
     /// TC EffectSummonType's default title branch and Map::SummonCreature's
@@ -118,7 +124,8 @@ impl SummonProperties {
         match self.control {
             CONTROL_PET => true,
             CONTROL_WILD | CONTROL_ALLY => {
-                self.uses_default_lifecycle()
+                self.joins_summoner_spawn_group()
+                    || self.uses_default_lifecycle()
                     || matches!(
                         self.title,
                         0 | TITLE_PET
@@ -907,6 +914,16 @@ pub(super) fn expire_summons(world: &mut World) {
         .map(|(entity, _, _)| entity)
         .collect();
     for entity in expired {
+        let summon = world.get::<SummonedCreature>(entity).unwrap();
+        if summon.spell_id == 104317
+            && summon.expires_at.is_some_and(|expiry| now >= expiry)
+            && world
+                .get::<Npc>(entity)
+                .is_some_and(|npc| npc.template_id == 55659)
+        {
+            let owner = summon.owner;
+            super::guardian::core::on_natural_fade(world, owner);
+        }
         despawn_summon(world, entity);
     }
 }
@@ -928,6 +945,7 @@ pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
             "Despawn summon {entity}: spell {}, properties {}",
             summon.spell_id, summon.properties_id
         );
+        super::guardian::tyrant::on_despawn(world, entity);
     }
     crate::combat::combat_stop(world, entity);
     world.entity_mut(entity).despawn();

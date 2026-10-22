@@ -10,8 +10,8 @@ use rand::Rng;
 pub struct EventMap {
     /// `_time`, ms.
     time: u64,
-    /// `_eventMap`: (due time ms, event id), sorted by due time, stable.
-    events: Vec<(u64, u32)>,
+    /// `_eventMap`: (due time ms, event id, selected duration ms), stable.
+    events: Vec<(u64, u32, u64)>,
     /// `_lastEvent`: what `repeat` schedules again.
     last_event: u32,
     last_due: u64,
@@ -60,8 +60,9 @@ impl EventMap {
     }
 
     fn insert(&mut self, due: u64, event_id: u32) {
-        let at = self.events.partition_point(|&(time, _)| time <= due);
-        self.events.insert(at, (due, event_id));
+        let at = self.events.partition_point(|&(time, _, _)| time <= due);
+        self.events
+            .insert(at, (due, event_id, due.saturating_sub(self.time)));
     }
 
     /// `ScheduleEvent(eventId, time)`.
@@ -73,13 +74,20 @@ impl EventMap {
     pub(crate) fn remaining_ms(&self, event_id: u32) -> Option<u64> {
         self.events
             .iter()
-            .find(|(_, id)| *id == event_id)
-            .map(|(due, _)| due.saturating_sub(self.time))
+            .find(|(_, id, _)| *id == event_id)
+            .map(|(due, _, _)| due.saturating_sub(self.time))
+    }
+
+    /// Read selected requests without advancing, rolling or dispatching the clock.
+    pub(super) fn pending_events(&self) -> impl Iterator<Item = (u32, u64, u64, u64)> + '_ {
+        self.events
+            .iter()
+            .map(|&(due, event, duration)| (event, due, due.saturating_sub(self.time), duration))
     }
 
     /// `CancelEvent`: remove all queued instances without changing clock/repeat state.
     pub fn cancel(&mut self, event_id: u32) {
-        self.events.retain(|&(_, id)| id != event_id);
+        self.events.retain(|&(_, id, _)| id != event_id);
     }
 
     /// `RescheduleEvent`: cancel every queued event of this id before scheduling.
@@ -115,7 +123,7 @@ impl EventMap {
     /// `ExecuteEvent`: the first due event, removed; `None` (TrinityCore 0) when
     /// none is due.
     pub fn execute_event(&mut self) -> Option<u32> {
-        let &(due, event_id) = self.events.first()?;
+        let &(due, event_id, _) = self.events.first()?;
         if due > self.time {
             return None;
         }
@@ -149,7 +157,7 @@ impl EventMap {
     /// Scheduled event ids in due order (tests).
     #[cfg(test)]
     pub fn pending(&self) -> Vec<u32> {
-        self.events.iter().map(|&(_, id)| id).collect()
+        self.events.iter().map(|&(_, id, _)| id).collect()
     }
 }
 

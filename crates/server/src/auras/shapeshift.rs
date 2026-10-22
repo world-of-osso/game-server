@@ -108,6 +108,30 @@ pub(super) fn remove_other_forms(world: &mut World, unit: Entity, keep_instance:
     });
 }
 
+/// TC a352b1fa SpellAuraEffects.cpp1513–1516/1570–1617: native form2 boosts.
+const TREE_OF_LIFE_FORM: i32 = 2;
+const TREE_BOOSTS: &[u32] = &[5420, 81097];
+
+pub(super) fn apply_form_boosts(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura_form(aura) != Some(TREE_OF_LIFE_FORM) {
+        return;
+    }
+    for &spell in TREE_BOOSTS {
+        if !crate::spell_cast::try_cast_triggered(world, unit, spell, Some(unit), 1) {
+            warn!(?unit, spell, "Native Tree of Life form boost refused");
+        }
+    }
+}
+
+pub(super) fn remove_form_boosts(world: &mut World, unit: Entity, aura: &AuraInstance) {
+    if aura_form(aura) != Some(TREE_OF_LIFE_FORM) {
+        return;
+    }
+    super::remove_auras(world, unit, RemoveReason::Cancelled, |boost| {
+        boost.caster == unit && TREE_BOOSTS.contains(&boost.spell_id)
+    });
+}
+
 /// `Unit::CalculateDisplayPowerType`: fixed forms precede aura179 and class power.
 fn display_power(form: Option<i32>, class_display: Option<PowerType>) -> Option<PowerType> {
     match form {

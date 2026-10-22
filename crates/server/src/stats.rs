@@ -67,10 +67,14 @@ pub struct StatModifiers {
     pub ratings_flat: CombatRatings,
     /// Aura405: ordered rating mask/percent pairs; truncation occurs per effect.
     pub rating_percent_mods: Vec<(u32, f32)>,
+    /// Aura198: source rating mask, destination rating mask, percent of highest base rating.
+    pub rating_from_rating: Vec<(u32, u32, f32)>,
     /// Aura463: composed percentage of base melee crit rating added to parry.
     pub crit_to_parry_pct: f32,
     /// Aura419: composed BASE_PCT mana modifier; never changes create-mana costs.
     pub base_mana_pct: f32,
+    /// Aura178: composed TOTAL_PCT Mana modifier, separate from419 BASE_PCT.
+    pub max_mana_pct: f32,
     /// Aura404: presence replaces both AP bases, including an authored zero.
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
@@ -98,6 +102,8 @@ pub struct StatModifiers {
     pub armor_from_primary_stat_pct: f32,
     /// Aura142: composed base/gear armor percentage, excluding stat-derived armor.
     pub base_armor_pct: f32,
+    /// Aura22 physical: signed TOTAL_VALUE armor, after BASE_PCT and stat-derived armor.
+    pub total_armor_flat: f32,
     /// Aura466: composed final armor percentage, applied after stat-derived armor.
     pub bonus_armor_pct: f32,
     /// Aura101 physical: composed armor TOTAL_PCT, applied after stat-derived armor.
@@ -154,7 +160,7 @@ pub struct CharacterStats {
     /// Create mana (gtBaseMP), 0 for classes without mana. `PowerCostPct`
     /// costs use this unmodified basis, not the effective maximum.
     pub base_mana: f32,
-    /// Effective mana maximum after aura419's BASE_PCT modifier.
+    /// Effective mana maximum after419 BASE_PCT and178 TOTAL_PCT modifiers.
     pub max_mana: f32,
     /// Damage spell power: Intellect when the main stat is Intellect, else 0
     /// (Unit::SpellBaseDamageBonusDone, Unit.cpp:7118-7119).
@@ -362,9 +368,54 @@ fn armor_from_stats(primary: &UnitStats, main: Option<PrimaryStat>, mods: &StatM
     (explicit + main_value * mods.armor_from_primary_stat_pct) / 100.0
 }
 
+/// Native unified rating fields cannot represent a destination-only sub-rating.
+pub(crate) fn supports_rating_conversion(source: u32, target: u32) -> bool {
+    if source == 0 || target == 0 {
+        return false;
+    }
+    let mut empty = CombatRatings::default();
+    let masks = rating_fields(&mut empty).map(|(mask, _)| mask);
+    let known = masks.iter().fold(0, |known, mask| known | *mask);
+    if source & !known != 0 || target & !known != 0 {
+        return false;
+    }
+    masks
+        .iter()
+        .all(|mask| target & *mask == 0 || target & *mask == *mask)
+}
+
+/// TC Player.cpp5256–5269 reads only the original base ratings, before405.
+fn apply_rating_conversions(
+    base: CombatRatings,
+    ratings: &mut CombatRatings,
+    conversions: &[(u32, u32, f32)],
+) {
+    for &(source, target, percent) in conversions {
+        let mut raw = base;
+        let highest = rating_fields(&mut raw)
+            .into_iter()
+            .filter(|(mask, _)| source & mask != 0)
+            .map(|(_, value)| *value)
+            .reduce(f32::max);
+        if let Some(highest) = highest {
+            let bonus = (highest * percent / 100.0).trunc();
+            add_rating_bonus(ratings, target, bonus);
+        }
+    }
+}
+
+fn add_rating_bonus(ratings: &mut CombatRatings, target: u32, bonus: f32) {
+    for (mask, value) in rating_fields(ratings) {
+        if target & mask != 0 {
+            *value += bonus;
+        }
+    }
+}
+
 /// TC Player.cpp5271-5279: sequential integer rating changes, then base crit conversion.
 fn modified_ratings(base: CombatRatings, mods: &StatModifiers) -> CombatRatings {
     let mut ratings = base;
+    apply_rating_conversions(base, &mut ratings, &mods.rating_from_rating);
     for &(mask, percent) in &mods.rating_percent_mods {
         for (bits, value) in rating_fields(&mut ratings) {
             if mask & bits != 0 {
@@ -461,7 +512,11 @@ pub fn compute_character_stats(
             + mods.max_health_flat)
             .floor(),
         base_mana: base_mana.unwrap_or(0.0),
-        max_mana: (base_mana.unwrap_or(0.0) * (1.0 + mods.base_mana_pct / 100.0)).round(),
+        max_mana: (base_mana.unwrap_or(0.0)
+            * (1.0 + mods.base_mana_pct / 100.0)
+            * (1.0 + mods.max_mana_pct / 100.0))
+            .round()
+            .max(0.0),
         spell_power,
         healing_power,
         attack_power,
@@ -476,7 +531,8 @@ pub fn compute_character_stats(
         avoidance_pct: tertiary_rating_value(ratings.avoidance, AVOIDANCE_RATING[level]),
         speed_pct: tertiary_rating_value(ratings.speed, SPEED_RATING[level]),
         armor: ((ratings.armor * (1.0 + mods.base_armor_pct / 100.0)
-            + armor_from_stats(&primary, input.primary_stat, &mods))
+            + armor_from_stats(&primary, input.primary_stat, &mods)
+            + mods.total_armor_flat)
             * (1.0 + mods.total_armor_pct / 100.0)
             * (1.0 + mods.bonus_armor_pct / 100.0))
             .floor(),

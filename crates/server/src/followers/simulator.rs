@@ -13,6 +13,24 @@ pub(crate) struct Party {
     pub members: Vec<Entity>,
 }
 
+/// NPC followers execute level-gated kit rows; they do not carry Player KnownSpells.
+pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
+    let follower = world
+        .get::<Follower>(unit)
+        .expect("initialized native follower");
+    let level = world
+        .get::<Level>(unit)
+        .expect("initialized follower level")
+        .0;
+    world
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| entry.available(follower.profile.spec_id, level))
+        .map(|entry| entry.spell_id)
+        .collect()
+}
+
 const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
 
 struct PartyConfiguration {
@@ -116,9 +134,21 @@ pub(crate) fn spawn_party(
     at: Position,
 ) -> Result<Party, String> {
     let configuration = PartyConfiguration::read()?;
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
     let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
-    let owner = initialize_player_owner(world, &leader, configuration.level, copy, at)?;
+    let owner = initialize_player_owner(
+        world,
+        &leader,
+        configuration.level,
+        copy,
+        at,
+        crate::maps::DungeonDifficulty(difficulty_id),
+    )?;
     world.entity_mut(owner).insert(LeaderProfile(leader));
     let members = spawning::spawn_members(world, owner, &profiles[..4])?;
     party::join_members(world, owner, shared::group::GroupRole::Dps, &members)?;
@@ -156,8 +186,14 @@ pub(crate) fn spawn_parity_attacker(
     copy: crate::maps::InMap,
     actor: ParityActor,
 ) -> Result<Entity, String> {
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
+    let difficulty = crate::maps::DungeonDifficulty(difficulty_id);
     if let ParityActor::Player { race } = actor {
-        return spawn_parity_player(world, spec_id, level, race, copy);
+        return spawn_parity_player(world, spec_id, level, race, copy, difficulty);
     }
     let profile = world
         .resource::<FollowerCatalog>()
@@ -176,6 +212,7 @@ pub(crate) fn spawn_parity_attacker(
             y: 0.0,
             z: 0.0,
         },
+        difficulty,
     )?;
     let unit = spawning::spawn(world, owner, profile)?;
     // A living native owner can maintain /startattack without landing out-of-range swings.
@@ -202,6 +239,7 @@ fn spawn_parity_player(
     level: u8,
     race: u8,
     copy: crate::maps::InMap,
+    difficulty: crate::maps::DungeonDifficulty,
 ) -> Result<Entity, String> {
     let class = world
         .resource::<crate::spell_info::ClassSpells>()
@@ -234,7 +272,7 @@ fn spawn_parity_player(
             },
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            difficulty,
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::PlayerStandState::default(),
@@ -268,8 +306,9 @@ fn initialize_player_owner(
     level: u8,
     copy: crate::maps::InMap,
     at: Position,
+    difficulty: crate::maps::DungeonDifficulty,
 ) -> Result<Entity, String> {
-    let owner = spawn_player_identity(world, profile, level, copy, at);
+    let owner = spawn_player_identity(world, profile, level, copy, at, difficulty);
     // Run native Player initialization before the profile installs PowerPools;
     // otherwise its Without<PowerPools> query never installs health regeneration.
     world
@@ -290,6 +329,7 @@ fn spawn_player_identity(
     level: u8,
     copy: crate::maps::InMap,
     at: Position,
+    difficulty: crate::maps::DungeonDifficulty,
 ) -> Entity {
     world
         .spawn((
@@ -305,7 +345,7 @@ fn spawn_player_identity(
             at,
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            difficulty,
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::UnitPowers::default(),
@@ -339,6 +379,51 @@ pub(crate) fn pull(
     let decision = pull_admission::read_pull_budget(world, tank, guids, 1)?;
     let allowed = matches!(decision, pull_budget::Decision::Allow { .. });
     Ok((allowed, format!("{decision:?}")))
+}
+
+pub(crate) fn inspect_follower_decision(world: &mut World, unit: Entity) -> serde_json::Value {
+    let follower = world.get::<Follower>(unit).unwrap().clone();
+    let party = ai::party_units(world, follower.owner);
+    let enemies = ai::engaged_enemies(world, &follower, unit, &party);
+    let target = enemies
+        .iter()
+        .map(|(enemy, _)| *enemy)
+        .find(|enemy| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
+    let level = world.get::<Level>(unit).unwrap().0;
+    let entries: Vec<_> = world
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| {
+            entry.available(follower.profile.spec_id, level)
+                && entry.slot == super::kit::Slot::Attack
+        })
+        .cloned()
+        .collect();
+    let mut decisions = Vec::new();
+    if let Some(target) = target {
+        for entry in entries {
+            let conditions =
+                super::kit_ai::conditions_met(world, unit, target, &party, &enemies, &entry);
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(entry.spell_id)
+                .unwrap()
+                .clone();
+            let native = format!(
+                "{:?}",
+                crate::spell_cast::read_native_cast_start(world, unit, &spell, target)
+            );
+            decisions.push(
+                serde_json::json!({"spell":entry.spell_id,"conditions":conditions,"native":native}),
+            );
+        }
+    }
+    serde_json::json!({"unit":unit.to_bits(),"spec":follower.profile.spec_id,"target":target.map(Entity::to_bits),
+        "enemies":enemies.iter().map(|(enemy,_)| enemy.to_bits()).collect::<Vec<_>>(),
+        "self_hazard":super::hazards::target_is_hazardous(world,unit,unit),
+        "approach":target.map(|target| super::hazards::approach_is_unsafe(world,unit,target)),
+        "offense":decisions})
 }
 
 pub(crate) fn inspect_tank_movement(

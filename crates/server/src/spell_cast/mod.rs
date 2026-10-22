@@ -31,6 +31,10 @@ mod aura_spell_restrictions;
 pub(crate) mod auto_repeat;
 #[cfg(test)]
 mod auto_shot_repeat_tests;
+#[cfg(test)]
+pub(crate) mod holy_metrics;
+#[cfg(test)]
+mod holy_words_tests;
 pub(crate) use aura_spell_restrictions::check_target as check_target_aura_restrictions;
 #[cfg(test)]
 mod autoattack_range_tests;
@@ -71,6 +75,8 @@ mod census_three_tests;
 pub(crate) mod charge;
 #[cfg(test)]
 mod charge_rate_tests;
+#[cfg(test)]
+mod charge_type_mask_tests;
 #[cfg(test)]
 mod chrono_flame_tests;
 #[cfg(test)]
@@ -153,6 +159,10 @@ mod dummy9_tests;
 #[cfg(test)]
 mod dummy_tests;
 pub mod effects;
+pub(crate) mod efflorescence;
+mod empower;
+#[cfg(test)]
+mod empower_input_tests;
 #[cfg(test)]
 mod excluded_aura_spell_tests;
 #[cfg(test)]
@@ -175,6 +185,8 @@ mod impending_victory_tests;
 mod interruptibility;
 #[cfg(test)]
 mod invigorating_fury_tests;
+#[cfg(test)]
+mod periodic_healing_taken_tests;
 mod sanctuary;
 pub(crate) use interruptibility::can_interrupt_cast;
 #[cfg(test)]
@@ -291,8 +303,9 @@ use crate::networking::{CombatTarget, Moving, PlayerLink};
 use crate::spell_info::{SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 pub(crate) use creature::{
-    AiTarget, ai_spell_target, creature_cast, creature_cast_ignoring_cooldowns,
-    creature_cast_ignoring_in_progress, creature_cast_interrupting_self,
+    AiTarget, ai_spell_target, creature_cast, creature_cast_empowered,
+    creature_cast_ignoring_cooldowns, creature_cast_ignoring_in_progress,
+    creature_cast_interrupting_self,
 };
 use effects::{EffectCtx, UnhandledEffects};
 use targets::{Dest, Relation};
@@ -367,7 +380,12 @@ impl Plugin for SpellCastPlugin {
             .add_systems(FixedPreUpdate, charge::release_finished)
             .add_systems(
                 Update,
-                (receive_cast_requests, receive_stop_requests).chain(),
+                (
+                    receive_cast_requests,
+                    empower::receive_release_requests,
+                    receive_stop_requests,
+                )
+                    .chain(),
             )
             .add_systems(Update, history_store::queue_restore)
             .add_systems(
@@ -746,7 +764,7 @@ impl SpellHistory {
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
             state.retime(now, mods.recovery_mult);
         }
-        // Aura453 has no immediate handler: only future consumption changes.
+        // Flat453/205 have no immediate handler: only future consumption changes.
         state.recovery_ms = recovery_ms;
         state.recovery_mult = mods.recovery_mult;
         Some(state)
@@ -755,7 +773,8 @@ impl SpellHistory {
 
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
-    crate::auras::charge_mods(world, caster, category)
+    let type_mask = spell.categories.as_ref().map_or(0, |c| c.charge_type_mask);
+    crate::auras::charge_mods(world, caster, category, type_mask)
 }
 
 /// Refresh existing category clocks/maxima, never discover known spells here.
@@ -908,7 +927,7 @@ pub(crate) fn interrupt_channel_with_flags(world: &mut World, caster: Entity, fl
 }
 
 /// TC Unit::CanCastSpellWhileMoving:330 uses a family mask;307 uses Misc0
-/// SpellLabel without a family constraint. Neither selector depends on amount.
+/// SpellLabel without a family constraint;377 permits every spell. None depends on amount.
 fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool {
     const NO_DISABLE_MOVEMENT_INTERRUPT: u32 = 0x0800_0000;
     if attributes(spell, 13) & NO_DISABLE_MOVEMENT_INTERRUPT != 0 {
@@ -922,13 +941,15 @@ fn aura_allows_moving(world: &World, caster: Entity, spell: &SpellInfo) -> bool 
     ) || world
         .get::<crate::auras::ActiveAuras>(caster)
         .is_some_and(|auras| {
-            auras.iter().any(|aura| {
-                aura.effects.iter().any(|effect| {
-                    effect.aura_type == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
-                        && u32::try_from(effect.misc_values[0])
-                            .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+            auras.has_type(crate::auras::handlers::CAST_WHILE_WALKING_ALL)
+                || auras.iter().any(|aura| {
+                    aura.effects.iter().any(|effect| {
+                        effect.aura_type
+                            == crate::auras::handlers::CAST_WHILE_WALKING_BY_SPELL_LABEL
+                            && u32::try_from(effect.misc_values[0])
+                                .is_ok_and(|label| spell.labels.binary_search(&label).is_ok())
+                    })
                 })
-            })
         })
 }
 
@@ -1405,6 +1426,7 @@ pub(crate) fn cast_item_spell(
 /// Toy casts use ItemEffect overrides (>=0) or SpellCooldowns (-1), including
 /// the per-item recovery omitted by the older consumable-item path.
 pub(crate) mod toy_area;
+pub(crate) mod toy_coyote;
 mod toy_facing;
 mod toy_flag;
 pub(crate) mod toy_requirements;
@@ -1698,7 +1720,6 @@ fn validate_start(
 }
 
 /// Read ordinary native cast eligibility without casting, retargeting or spending.
-#[cfg(test)]
 pub(crate) fn read_native_cast_start(
     world: &mut World,
     caster: Entity,
@@ -1759,6 +1780,27 @@ pub(crate) fn read_targets_include(
         }
     }
     Ok(false)
+}
+
+/// Re-plan only the active cast's recipients; no effects, resources or cooldowns execute.
+/// Use its prepared spell so requested destinations and native modifiers are retained.
+pub(crate) fn read_active_direct_heal_targets(
+    world: &mut World,
+    caster: Entity,
+    explicit: Option<Entity>,
+) -> Result<Vec<Entity>, CastFailure> {
+    let spell = world
+        .get::<PendingCastSpell>(caster)
+        .map(|pending| pending.spell.clone())
+        .ok_or_else(|| {
+            CastFailure::Unsupported("active heal lacks its prepared native spell".into())
+        })?;
+    let plan = plan_targets(world, caster, &spell, explicit, false)?;
+    Ok(plan
+        .into_iter()
+        .filter(|planned| spell.effects[planned.index].effect == 10)
+        .flat_map(|planned| planned.units)
+        .collect())
 }
 
 fn read_periodic_trigger(
@@ -2149,7 +2191,8 @@ pub(crate) fn applicable_costs(
             None => school_modified,
         };
         let modified = if pool == CostPool::Power(PowerType::Mana) {
-            scripts::mana_cost(world, caster, spell, modified)
+            let modified = scripts::mana_cost(world, caster, spell, modified);
+            school_costs::modify_mana_cost(world, caster, modified)
         } else {
             modified
         };
@@ -2166,6 +2209,11 @@ pub(crate) fn applicable_costs(
             }
         } else {
             0.0
+        };
+        let optional = if pool == CostPool::Power(PowerType::Mana) {
+            school_costs::modify_mana_cost(world, caster, optional).max(0.0)
+        } else {
+            optional
         };
         let amount = amount + optional.min((current - amount).max(0.0));
         costs.push((pool, amount, current));
@@ -2201,6 +2249,9 @@ fn begin_validated_cast(
     admitted.cast_proc_mods = scripts::snapshot_proc_modifiers(world, caster, spell);
     let spell = &admitted;
     crate::stand_state::stand_to_cast(world, caster, attributes(spell, 0));
+    if !spell.empower_stages.is_empty() {
+        return empower::begin(world, caster, spell, target);
+    }
     start_gcd(world, caster, spell);
     let cast_ms = cast_time_ms(world, caster, spell);
     if cast_ms > 0 {
@@ -2432,7 +2483,9 @@ pub(crate) fn execute_cast(
             reflected: false,
         },
     );
+    let previous_efflo_summons = efflorescence::read_previous_summons(world, caster, spell.id);
     missiles::launch(world, caster, spell, plan, 0);
+    efflorescence::initialize_new_summons(world, caster, previous_efflo_summons);
     scripts::refund_execute(world, caster, spell, explicit, &costs);
     if let Some(hook) = scripts::after_cast(spell.id) {
         hook(world, caster, spell);
@@ -2624,8 +2677,12 @@ fn plan_targets(
                 units
             }
         };
+        effects::retain_threat_level_targets(world, spell, effect, &mut units);
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
+        }
+        if spell.id == efflorescence::HEAL && effect.index == 0 {
+            efflorescence::filter_heal_targets(world, caster, &mut units);
         }
         warrior_stuns::filter_storm_bolt_targets(
             world, caster, spell, effect, explicit, &mut units,
@@ -3543,8 +3600,11 @@ fn send_spell_failure(
 
 /// Remove an active cast without reporting it: a channel ran out or handed over.
 pub(crate) fn end_cast(world: &mut World, caster: Entity) -> Option<CastState> {
+    empower::cancel(world, caster);
     crate::crafting_orders::interrupt(world, caster);
-    world.entity_mut(caster).remove::<PendingCastSpell>();
+    world
+        .entity_mut(caster)
+        .remove::<(PendingCastSpell, empower::EmpowerProgress)>();
     world
         .entity_mut(caster)
         .remove::<crate::profession::CraftQueue>();
@@ -3635,6 +3695,9 @@ pub(crate) fn advance_casts(world: &mut World) {
 }
 
 fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
+    if empower::advance(world, caster, dt) {
+        return;
+    }
     let Some(mut cast) = world.get_mut::<CastState>(caster) else {
         return;
     };
@@ -3647,21 +3710,23 @@ fn tick_and_resolve_cast(world: &mut World, caster: Entity, dt: f32) {
     match result {
         // Channel periodic effects tick as auras (`crate::auras`).
         CastTickResult::InProgress | CastTickResult::ChannelTick => {}
-        CastTickResult::ChannelComplete => {
-            crate::auras::channel_completed(world, caster, spell_id);
-            end_cast(world, caster);
-            crate::scripted_ai::dispatch(
-                world,
-                caster,
-                crate::scripted_ai::Hook::ChannelFinished { spell_id },
-            );
-        }
+        CastTickResult::ChannelComplete => finish_channel(world, caster, spell_id),
         CastTickResult::Completed => {
             debug!(caster = ?caster, spell_id, target = ?target, "Cast state completed");
             world.entity_mut(caster).remove::<CastState>();
             complete_cast(world, caster, spell_id, target);
         }
     }
+}
+
+fn finish_channel(world: &mut World, caster: Entity, spell_id: u32) {
+    crate::auras::channel_completed(world, caster, spell_id);
+    end_cast(world, caster);
+    crate::scripted_ai::dispatch(
+        world,
+        caster,
+        crate::scripted_ai::Hook::ChannelFinished { spell_id },
+    );
 }
 
 /// The spell snapshot belonging to a cast bar, including casting-item scaling.

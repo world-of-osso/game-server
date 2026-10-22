@@ -1,8 +1,13 @@
-//! Frozen 2D topology. Only the explicit extraction test opens navigation data.
+//! Frozen native-height topology. Only explicit extraction tests open navigation data.
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+
+#[path = "azure_extraction.rs"]
+mod azure_extraction;
+#[path = "corridor_inputs.rs"]
+mod corridor_inputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Spawn {
@@ -15,6 +20,7 @@ pub(super) struct Spawn {
 pub(super) struct Pack {
     pub id: u32,
     pub position: [f32; 2],
+    pub height: f32,
     pub spawns: Vec<Spawn>,
 }
 
@@ -28,33 +34,71 @@ pub(super) struct Edge {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct RouteStep {
     pub pack: u32,
-    pub anchor: [f32; 2],
+    pub anchor: [f32; 3],
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(super) struct Graph {
     pub map_id: u32,
     pub entrance: [f32; 2],
+    pub entrance_height: f32,
     pub entrance_pack: u32,
     pub packs: Vec<Pack>,
     pub edges: Vec<Edge>,
+    pub teleports: Vec<Edge>,
     pub unreachable: Vec<u32>,
     pub route: Vec<RouteStep>,
 }
+
+#[path = "walk_route.rs"]
+mod walk_route;
 
 #[derive(Resource)]
 pub(crate) struct Space(pub(super) Graph);
 
 impl Space {
     pub(crate) fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
+        let mut points: Vec<_> = self
+            .walk_legs(from, to)?
+            .into_iter()
+            .map(|(point, _)| point)
+            .collect();
+        if points.is_empty() {
+            points.push(to);
+        }
+        Ok(points)
+    }
+
+    pub(super) fn walk_legs(
+        &self,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
+        walk_route::read(&self.0, from, to)
+    }
+
+    pub(super) fn next_translocation(
+        &self,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<Option<(u32, u32)>, String> {
+        let nodes = self.path_nodes(from, to)?;
+        Ok(nodes.windows(2).find_map(|pair| {
+            self.0
+                .teleports
+                .iter()
+                .find(|edge| edge.from == pair[0] && edge.to == pair[1])
+                .map(|edge| (edge.from, edge.to))
+        }))
+    }
+
+    fn path_nodes(&self, from: Vec3, to: Vec3) -> Result<Vec<u32>, String> {
         let nearest = |point: Vec3| {
             self.0
                 .packs
                 .iter()
                 .min_by(|a, b| {
-                    let distance = |pack: &Pack| {
-                        Vec2::from_array(pack.position).distance(Vec2::new(point.x, point.z))
-                    };
+                    let distance = |pack: &Pack| pack.point().distance(point);
                     distance(a).total_cmp(&distance(b)).then(a.id.cmp(&b.id))
                 })
                 .map(|pack| pack.id)
@@ -74,10 +118,17 @@ impl Space {
                 break;
             }
             visited.insert(node);
-            for edge in &self.0.edges {
+            for edge in self
+                .0
+                .edges
+                .iter()
+                .map(|edge| (edge, false))
+                .chain(self.0.teleports.iter().map(|edge| (edge, true)))
+            {
+                let (edge, directed) = edge;
                 let next = if edge.from == node {
                     edge.to
-                } else if edge.to == node {
+                } else if !directed && edge.to == node {
                     edge.from
                 } else {
                     continue;
@@ -99,21 +150,50 @@ impl Space {
             nodes.push(previous[nodes.last().unwrap()]);
         }
         nodes.reverse();
-        let mut points: Vec<_> = nodes
-            .into_iter()
-            .skip(1)
-            .map(|id| {
-                let pack = self.0.packs.iter().find(|pack| pack.id == id).unwrap();
-                Vec3::new(pack.position[0], 0.0, pack.position[1])
-            })
-            .collect();
-        points.push(to);
-        Ok(points)
+        Ok(nodes)
+    }
+}
+
+impl Pack {
+    pub(super) fn point(&self) -> Vec3 {
+        Vec3::new(self.position[0], self.height, self.position[1])
+    }
+}
+
+impl Graph {
+    pub(super) fn difficulty_id(&self) -> u32 {
+        match self.map_id {
+            34 => 1,
+            2515 => 205,
+            other => panic!("unsupported simulator map{other}"),
+        }
+    }
+
+    pub(super) fn boss_entries(&self) -> &'static [u32] {
+        match self.map_id {
+            34 => &[46383, 46264, 46254],
+            2515 => &[186644, 186739, 186737, 186738],
+            other => panic!("unsupported simulator map{other}"),
+        }
     }
 }
 
 pub(super) fn graph_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../content/dungeons/stockade-34.json")
+    let map = std::env::var_os("DUNGEON_SIMULATOR_MAP")
+        .map(|value| {
+            value
+                .into_string()
+                .expect("DUNGEON_SIMULATOR_MAP must be UTF-8")
+        })
+        .unwrap_or_else(|| "34".into());
+    let file = match map.as_str() {
+        "34" => "stockade-34.json",
+        "2515" => "azure-vault-2515.json",
+        _ => panic!("unsupported DUNGEON_SIMULATOR_MAP={map}"),
+    };
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../content/dungeons")
+        .join(file)
 }
 
 pub(super) fn read_graph() -> Result<Graph, String> {
@@ -123,9 +203,9 @@ pub(super) fn read_graph() -> Result<Graph, String> {
     serde_json::from_slice(&bytes).map_err(|error| format!("parse {}: {error}", path.display()))
 }
 
-fn source_packs(data: &crate::world_data::WorldData) -> Vec<Pack> {
+fn source_packs(data: &crate::world_data::WorldData, map_id: u16) -> Vec<Pack> {
     let mut packs = BTreeMap::<u32, Vec<Spawn>>::new();
-    for &index in &data.spawns_by_map[&34] {
+    for &index in &data.spawns_by_map[&map_id] {
         let spawn = &data.spawns[index];
         if !spawn.spawns_at(crate::maps::store::DIFFICULTY_NORMAL) {
             continue;
@@ -152,6 +232,7 @@ fn source_packs(data: &crate::world_data::WorldData) -> Vec<Pack> {
             Pack {
                 id,
                 position,
+                height: source_point(data, id).y,
                 spawns,
             }
         })
@@ -159,16 +240,21 @@ fn source_packs(data: &crate::world_data::WorldData) -> Vec<Pack> {
 }
 
 fn source_point(data: &crate::world_data::WorldData, guid: u32) -> Vec3 {
+    if guid == 7116 {
+        // Authenticated70448 AreaPOI7116; qualified inside Umbrelskul's component.
+        let point = crate::npc_interaction::azure_translocation::FINAL_POI_WOW;
+        return Vec3::new(point.x, point.z, -point.y);
+    }
     let spawn = data.spawns.iter().find(|spawn| spawn.guid == guid).unwrap();
     Vec3::new(spawn.position_x, spawn.position_z, -spawn.position_y)
 }
 
-fn query_edges(data: &crate::world_data::WorldData, packs: &[Pack]) -> Vec<Edge> {
-    let directory = crate::test_data::world_db_path()
-        .parent()
-        .unwrap()
-        .join("ground/navmesh/34");
-    let mut nav = ::navigation::NavigationMap::open(&directory).expect("source map34 nav bake");
+fn query_edges(
+    data: &crate::world_data::WorldData,
+    packs: &[Pack],
+    directory: &std::path::Path,
+) -> Vec<Edge> {
+    let mut nav = ::navigation::NavigationMap::open(directory).expect("qualified source nav bake");
     let mut edges = Vec::new();
     for (index, from) in packs.iter().enumerate() {
         for to in &packs[index + 1..] {
@@ -248,6 +334,55 @@ fn unreachable(packs: &[Pack], edges: &[Edge], entrance: u32) -> Vec<u32> {
         .collect()
 }
 
+fn stacked_fixture() -> Space {
+    let pack = |id, x, height| Pack {
+        id,
+        position: [x, 0.0],
+        height,
+        spawns: Vec::new(),
+    };
+    Space(Graph {
+        map_id: 34,
+        entrance: [0.0, 0.0],
+        entrance_height: 100.0,
+        entrance_pack: 2,
+        packs: vec![pack(1, 0.0, 0.0), pack(2, 0.0, 100.0), pack(3, 10.0, 100.0)],
+        edges: vec![Edge {
+            from: 2,
+            to: 3,
+            yards: 10.0,
+        }],
+        teleports: vec![Edge {
+            from: 1,
+            to: 2,
+            yards: 0.0,
+        }],
+        unreachable: Vec::new(),
+        route: Vec::new(),
+    })
+}
+
+#[test]
+fn stacked_floor_routes_choose_native_height_not_the_lower_xy_alias() {
+    let space = stacked_fixture();
+    let goal = Vec3::new(10.0, 100.0, 0.0);
+    let route = space
+        .route(Vec3::new(0.0, 100.0, 0.0), goal)
+        .expect("upper-floor walk stays connected");
+    assert_eq!(route.last(), Some(&goal));
+    assert!(route.iter().all(|point| point.y == 100.0));
+}
+
+#[test]
+fn translocation_edges_are_directed_and_never_ordinary_walking() {
+    let space = stacked_fixture();
+    let lower = Vec3::ZERO;
+    let upper = Vec3::new(10.0, 100.0, 0.0);
+    assert!(space.route(lower, upper).is_err());
+    assert_eq!(space.next_translocation(lower, upper), Ok(Some((1, 2))));
+    assert!(space.next_translocation(upper, lower).is_err());
+}
+
 #[test]
 fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
     let bytes = std::fs::read(graph_path()).unwrap();
@@ -263,7 +398,7 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
         assert!(seen.insert(pack), "duplicate authored pack{pack}");
         assert!(graph.packs.iter().any(|entry| entry.id == pack));
         let anchor = step["anchor"].as_array().unwrap();
-        assert_eq!(anchor.len(), 2);
+        assert_eq!(anchor.len(), 3);
         assert!(
             anchor
                 .iter()
@@ -273,7 +408,6 @@ fn frozen_graph_contains_an_explicit_unique_anchored_pull_order() {
 }
 
 #[test]
-#[ignore = "AZURE_SIMULATOR_GRAPH_PENDING: extract the private baked graph and author its route"]
 fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_route() {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../content/dungeons/azure-vault-2515.json");
@@ -298,10 +432,6 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
         "complete native205 alias uses Normal source population"
     );
     assert!(!graph.edges.is_empty(), "real frozen navigation distances");
-    let opening = graph.route.first().unwrap().pack;
-    assert!(graph.packs.iter().any(|pack| pack.id == opening
-        && pack.spawns.iter().any(|spawn| spawn.entry == 196102)),
-        "open on a sourced Conjured Lasher, not the live capture's transient entity ID");
     let mut route_ids = BTreeSet::new();
     for step in &graph.route {
         assert!(
@@ -311,20 +441,31 @@ fn azure_follower_graph_covers_native_normal_population_and_has_an_authored_rout
         assert!(step.anchor.into_iter().all(f32::is_finite));
         assert!(graph.packs.iter().any(|pack| pack.id == step.pack));
     }
-    for boss in [186644, 186739, 186737, 186738] {
-        assert!(
-            graph.packs.iter().any(|pack| route_ids.contains(&pack.id)
-                && pack.spawns.iter().any(|spawn| spawn.entry == boss)),
-            "authored route must include boss{boss}"
-        );
-    }
+    let bosses = [186644, 186739, 186737, 186738];
+    let actual_bosses: Vec<_> = graph
+        .route
+        .iter()
+        .flat_map(|step| {
+            &graph
+                .packs
+                .iter()
+                .find(|pack| pack.id == step.pack)
+                .unwrap()
+                .spawns
+        })
+        .filter_map(|spawn| bosses.contains(&spawn.entry).then_some(spawn.entry))
+        .collect();
+    assert_eq!(
+        actual_bosses, bosses,
+        "sourced encounter order, not an arbitrary opening pack"
+    );
 }
 
 #[test]
 #[ignore = "explicit one-time extraction from native world.db and nav bake"]
 fn extract_stockade_graph() {
     let data = crate::test_data::world_data();
-    let packs = source_packs(data);
+    let packs = source_packs(data, 34);
     let db = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -344,15 +485,20 @@ fn extract_stockade_graph() {
         })
         .unwrap()
         .id;
-    let edges = select_edges(&packs, query_edges(data, &packs));
+    let directory = crate::test_data::world_db_path()
+        .parent()
+        .unwrap()
+        .join("ground/navmesh/34");
+    let edges = select_edges(&packs, query_edges(data, &packs, &directory));
     let graph = Graph {
         map_id: 34,
         entrance: [entrance.x, entrance.z],
+        entrance_height: entrance.y,
         entrance_pack: nearest,
         unreachable: unreachable(&packs, &edges, nearest),
-        route: read_graph()
-            .expect("preserve the authored pull route during graph extraction")
-            .route,
+        // Topology extraction is followed by native radius capture and the generic route author.
+        route: Vec::new(),
+        teleports: Vec::new(),
         packs,
         edges,
     };
