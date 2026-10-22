@@ -988,3 +988,5 @@ Debug logs and root cause analyses.
 - [Aura world/XP native70448](systems/auras.md#aura-worldxp-native70448--2026-10-20) — generic200/291/348 reward consumers,144/58/179 consumers and server-only world flags; native15GREEN, explicit TCNULL/client gaps.
 
 - [Census effect77](systems/spell-casting.md#census-effect77--2026-10-20) —44-root source mapping, Subduing Grasp E1 partial port; unmatched slots stay named gaps.
+
+- [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots, gates pending.
