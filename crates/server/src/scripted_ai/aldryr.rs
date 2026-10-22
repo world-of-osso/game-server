@@ -10,12 +10,12 @@ const ENTRY: u32 = 210271;
 const KEG_SMASH: u32 = 432229;
 const THROW_CINDERBREW: u32 = 432179;
 const BLAZING_BELCH: u32 = 432198;
-const KEG_FIRST_MS: u32 = 5_100;
-const KEG_REPEAT_MS: u32 = 14_500;
-const THROW_FIRST_MS: u32 = 10_000;
-const THROW_REPEAT_MS: u32 = 18_200;
-const BELCH_FIRST_MS: u32 = 14_400;
-const BELCH_REPEAT_MS: u32 = 23_000;
+const KEG_FIRST_MS: u64 = 5_100;
+const KEG_REPEAT_MS: u64 = 14_500;
+const THROW_FIRST_MS: u64 = 10_000;
+const THROW_REPEAT_MS: u64 = 18_200;
+const BELCH_FIRST_MS: u64 = 14_400;
+const BELCH_REPEAT_MS: u64 = 23_000;
 
 pub(super) fn creature_ai(world: &World, actor: Entity) -> Option<Box<dyn CreatureAi>> {
     let map = *world.get::<crate::maps::InMap>(actor)?;
