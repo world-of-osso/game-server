@@ -175,6 +175,7 @@ fn holy_binding_heals_native90_other_heal_copies_pre_overheal_amount_once() {
     assert!(own_aura(&group.h, group.priest, 368275).is_some());
     // Authored percent-health damage wounds both Henry and the recipient.
     apply_pressure(&mut group, 1);
+    let priest_health = group.h.health(group.priest);
     let owner = group.h.caster;
     let start = group
         .h
@@ -220,6 +221,7 @@ fn holy_binding_heals_native90_other_heal_copies_pre_overheal_amount_once() {
         "TC GetHeal, not GetEffectiveHeal"
     );
     assert!(!child.periodic);
+    assert!(group.h.health(group.priest) > priest_health);
 }
 
 #[test]

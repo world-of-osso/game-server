@@ -1,3 +1,7 @@
+## 2026-10-22 — Binding Heals native transfer
+
+[Binding Heals](investigations/holy-priest-follower-ai.md#binding-heals-native-transfer--2026-10-22): actual Henry90 Flash Heal12778/overheal4958 missing-child RED; native resolved-heal payload, pinned TC priest-family6/mask0x1800 and20%368276 child give6GREEN34.76s at a1f941b13, including self/periodic/foreign-family/unlearned controls and enabled PoH lifetime regression. No Holy policy, canonical DB or invented mastery changes; post-master proof follows separately, Echo producer remains open.
+
 - [rd902 Imp fixture identities](investigations/follower-data.md#rd902-native-roster-fixture-identities--2026-10-22) — native handles1-versus3 RED→parallel11GREEN66.08s; signed3001 joined Guardian1GREEN/retained3GREEN, zero native/toy references; tests/fixtures only.
 - [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→merged11GREEN106.38s; retained guardian11GREEN35.07s; merged ST/3T8864/13204 reports equal91cf, no Demonbolt/Core sample or isolated/statistical claim.
 - [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
