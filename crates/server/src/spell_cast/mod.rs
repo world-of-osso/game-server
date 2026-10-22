@@ -179,6 +179,8 @@ mod fel_devastation_tests;
 mod fount_strength_tests;
 #[cfg(test)]
 mod full_trigger_dead_target_tests;
+#[cfg(test)]
+mod generic_empower_tests;
 pub(crate) mod guardian;
 #[cfg(test)]
 mod guardian_tests;
