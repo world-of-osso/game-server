@@ -16,6 +16,7 @@
 //! See `docs/specs/boss-scripts.md`.
 
 use crate::random as rand;
+mod aldryr;
 mod algethar_academy;
 mod anubzekt;
 pub(crate) mod azure_vault;
@@ -385,6 +386,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == dailcry::SCRIPT {
         return dailcry::creature_ai(world, creature);
     }
+    if script_name == aldryr::SCRIPT {
+        return aldryr::creature_ai(world, creature);
+    }
     if script_name == talondras::SCRIPT {
         return talondras::creature_ai(world, creature);
     }
@@ -457,6 +461,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == anubzekt::SCRIPT
         || script_name == kikatal::SCRIPT
         || script_name == dailcry::SCRIPT
+        || script_name == aldryr::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
