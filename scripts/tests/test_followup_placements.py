@@ -51,6 +51,12 @@ class FollowupPlacementAcceptance(unittest.TestCase):
         self.assertEqual([g['name'] for g in receipt['source_gaps']], ['FOLLOWER_PLACEMENT_NO_INDIVIDUAL_SOURCE_190484'])
         self.assertEqual(receipt['source_findings'][0]['entry'], 190485)
         self.assertGreater(receipt['source_findings'][0]['distance_yards'], 5)
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2521_190485'])
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            self.assertEqual(db.execute('SELECT id1,map,position_x,position_y,position_z FROM content_creature '
+                                        'WHERE guid=63521000').fetchone(),
+                             (190485, 2521, 1773.8755744402401, 18.689396737716038, 313.12299999999993))
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2521 AND id1=190484').fetchone(), (0,))
 
     def test_nokhud_four_source_supported_primaries_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2516, (186151, 186338, 186615, 186616))
