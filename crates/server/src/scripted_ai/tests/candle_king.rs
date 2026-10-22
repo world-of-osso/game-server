@@ -69,7 +69,6 @@ fn create_peer_copy(h: &mut Harness, difficulty: u32) -> InMap {
 }
 
 #[test]
-#[ignore = "RED: TC InitExplicitTargets must remove redundant self before EXCLUDE_CASTER"]
 fn encounter_coverage_candle_king_native_redundant_self_and_explicit_enemy_control() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = candle_copy(difficulty);
@@ -100,7 +99,6 @@ fn encounter_coverage_candle_king_native_redundant_self_and_explicit_enemy_contr
 }
 
 #[test]
-#[ignore = "RED: TC Candle King handler not ported"]
 fn encounter_coverage_candle_king_first_molds_normal_and_projected205_tc_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = candle_copy(difficulty);
@@ -124,7 +122,6 @@ fn encounter_coverage_candle_king_first_molds_normal_and_projected205_tc_clock()
 }
 
 #[test]
-#[ignore = "RED: TC Candle King handler not ported"]
 fn encounter_coverage_candle_king_ongoing_cooldowns_fear_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = candle_copy(difficulty);
@@ -241,7 +238,6 @@ fn encounter_coverage_candle_king_ongoing_cooldowns_fear_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "RED: TC Candle King handler not ported"]
 fn encounter_coverage_candle_king_evade_rearms_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = candle_copy(difficulty);

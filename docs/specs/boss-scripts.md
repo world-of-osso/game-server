@@ -3,7 +3,7 @@
 ## Native creature explicit-unit normalization
 
 - TC a352b1fa `Spell.cpp:621–678` removes a supplied unit object when the spell needs neither an explicit unit nor corpse; this occurs before target exclusion checks. Native raw target flags, implicit target reference/object types and effect missing-target masks determine necessity, not SpellID exceptions. Preserve required unit/corpse objects and authored gameobject inputs. Implicit candidate filtering still enforces EXCLUDE_CASTER.
-- When that redundant object supplies a required destination, retain its original position in the per-cast snapshot before dropping the unit object. Source destination slot order, offsets and ground support remain authoritative. Qualify native Molds420659 self exclusion, explicit-enemy116 rejection and actual Fast Jump1281788 destination/landing alongside existing creature/self-cast and target controls.
+- When that redundant object supplies a required destination, retain its original position in the per-cast snapshot before dropping the unit object. Source destination slot order, offsets and ground support remain authoritative. Qualify native Molds420659 self exclusion, explicit-enemy116 rejection and actual native Jump4336 destination/landing (1281788's face-unit arrival option stays unsupported) alongside existing creature/self-cast and target controls.
 
 ## TWW Candle King TC parent-request partial
 
