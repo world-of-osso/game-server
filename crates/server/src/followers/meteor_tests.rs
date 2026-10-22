@@ -127,6 +127,58 @@ fn fire_meteor_native70_delay_burn_entry_exit_and_expiry_use_native_clocks() {
 }
 
 #[test]
+fn fire_meteor_native70_tc_expiry_rejects_impact_while_follower_hardcasts() {
+    let (mut h, caster, targets) = prepare_meteor(1);
+    let target = targets[0];
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert((Level(70), UnitLevel(70)));
+    let start = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, METEOR, Some(target), false)
+        .unwrap();
+    h.advance(50);
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 133, Some(target), false).unwrap();
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .spell_id,
+        133,
+        "actual ordinary Fireball begins during the native Meteor delay"
+    );
+    h.advance(10);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(caster)
+            .unwrap()
+            .spell_id,
+        133,
+        "Meteor expiry must not cancel the admitted hardcast"
+    );
+    h.advance(60);
+    assert!(
+        h.inbox.log[start..].iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(133)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "the original Fireball completes normally"
+    );
+    assert!(
+        !h.inbox.log[start..].iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && matches!(event.spell_id, Some(IMPACT | BURN))
+                && event.kind == CombatLogKind::Damage
+        }),
+        "TC ordinary153564 admission must reject the concurrent hardcast, not FULL_MASK through it"
+    );
+}
+
+#[test]
 fn fire_meteor_native70_ordinary_three_target_cast_deals_delayed_impact_damage() {
     let (mut h, caster, targets) = prepare_meteor(3);
     for target in &targets {
