@@ -196,8 +196,25 @@ fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
     let (mut h, actor) = trash_actor(191164, 2515, 375652);
     let before = h.health(h.player()).current;
     h.engage(actor);
-    // TC first12s + native1500ms cast and native missile travel; no clock bypass.
-    h.advance(15.0);
+    // Source12s plus DB2 cast/minimum flight, then two real fixed observation ticks.
+    let store = h.app.world().resource::<SpellStore>();
+    let cast_seconds =
+        crate::spell_cast::cast_time_ms(h.app.world(), actor, store.get(375652).unwrap()) as f32
+            / 1000.0;
+    let minimum_flight = store
+        .get(375650)
+        .unwrap()
+        .misc
+        .as_ref()
+        .unwrap()
+        .min_duration;
+    let step = h
+        .app
+        .world()
+        .resource::<Time<Fixed>>()
+        .timestep()
+        .as_secs_f32();
+    h.advance(12.0 + cast_seconds + minimum_flight + step * 2.0);
     assert!(
         h.inbox(0)
             .spell_gos

@@ -3189,7 +3189,20 @@ pub(crate) fn cast_triggered_at_destination(
         return;
     };
     spell.cast_destination = Some(position.to_array());
-    launch_triggered_spell(world, caster, &spell, None, depth);
+    // TC Spell.cpp634–660: an NPC destination cast still supplies GetVictim
+    // when the native row requires an enemy object (e.g. destination53).
+    let explicit =
+        if targets::explicit_requirement(handled_effects(&spell)) == Some(Relation::Enemy) {
+            match world.get::<crate::creature_ai::CreatureState>(caster) {
+                Some(crate::creature_ai::CreatureState::Pursuing { target }) => {
+                    Entity::try_from_bits(*target)
+                }
+                _ => None,
+            }
+        } else {
+            None
+        };
+    launch_triggered_spell(world, caster, &spell, explicit, depth);
 }
 
 fn load_triggered_spell(world: &World, spell_id: u32, depth: u8) -> Option<SpellInfo> {

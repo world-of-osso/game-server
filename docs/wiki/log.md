@@ -3640,3 +3640,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-22 — Native trash casts GREEN, Wild Eruption child RED
 
 [Trash projection](systems/boss-scripts.md#follower-trash-kit-projection--2026-10-22):8cd47160e native3GREEN/child1RED30.71s. Actual replicated LightningBolt12167/MysticVapors387564/WildEruption375652 complete; source child case passes parent Go before missing375647 damage. TC375652 effect0 per-hit destination→375650 hook implemented after that RED; native DB2 missile/damage pipeline retained, child GREEN pending.
+
+## 2026-10-22 — Destination-triggered NPC victim
+
+[Trash projection](systems/boss-scripts.md#follower-trash-kit-projection--2026-10-22): existing native375652→375650 childRED plus observed valid parent destination/missing effect32 destination localizes omitted NPC object target. TC Spell.cpp634–660 InitExplicitTargets supplies actualGetVictim for required enemy object; generic destination-trigger API now preserves that source resolution. Direct native375650/min-flight regression added; combined direct/integratedGREEN pending. No DB2 target/timer/coordinate edits.
