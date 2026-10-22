@@ -17,6 +17,12 @@ fn prepare_hunter_and_pet() -> (Run, Entity) {
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
+    cast_native_call_pet(&mut run);
+    let pet = wait_for_native_pet(&mut run);
+    (run, pet)
+}
+
+fn cast_native_call_pet(run: &mut Run) {
     for _ in 0..200 {
         match crate::spell_cast::creature_cast(
             run.app.world_mut(),
@@ -25,11 +31,15 @@ fn prepare_hunter_and_pet() -> (Run, Entity) {
             None,
             false,
         ) {
-            Ok(()) => break,
+            Ok(()) => return,
             Err(crate::spell_cast::CastFailure::OnGlobalCooldown) => run.app.update(),
             Err(error) => panic!("native Call Pet admission: {error:?}"),
         }
     }
+    panic!("native Call Pet GCD did not recover");
+}
+
+fn wait_for_native_pet(run: &mut Run) -> Entity {
     for _ in 0..200 {
         let world = run.app.world();
         let cobra = world
@@ -40,25 +50,14 @@ fn prepare_hunter_and_pet() -> (Run, Entity) {
         let on_gcd = world
             .get::<crate::spell_cast::SpellHistory>(run.actor)
             .is_some_and(|history| history.on_gcd(cobra, now));
-        if crate::hunter_pet::summoned_pet(world, run.actor).is_some() && !on_gcd {
-            break;
+        if let Some(pet) = crate::hunter_pet::summoned_pet(world, run.actor)
+            && !on_gcd
+        {
+            return pet;
         }
         run.app.update();
     }
-    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
-        .expect("native learned Call Pet must produce the provisioned Duck");
-    let world = run.app.world();
-    let spell = world
-        .resource::<crate::spell_info::SpellStore>()
-        .get(COBRA_SHOT)
-        .unwrap();
-    println!(
-        "POWER_SETUP actor={:?} target={:?} cobra_range={:?}",
-        world.get::<shared::components::Position>(run.actor),
-        world.get::<shared::components::Position>(run.targets[0]),
-        crate::spell_cast::targets::spell_range(spell, true)
-    );
-    (run, pet)
+    panic!("native pet/GCD did not reach readiness");
 }
 
 fn assert_focus_snapshot(snapshot: &Value, world: &World, unit: Entity) {
@@ -199,4 +198,33 @@ fn dps_parity_power_receipt_attributes_native_energize_and_capped_overflow() {
         owner_event.amount > owner_event.overflow,
         "real Cobra cost must leave room for actual gain"
     );
+}
+
+#[test]
+#[ignore = "opt-in native Mana receipt; requires prepared parity inputs"]
+fn dps_parity_power_receipt_reads_authoritative_mana_in_stat_snapshots() {
+    let (profile, traits) = read_reference(66).unwrap();
+    let run = prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    let world = run.app.world();
+    let mana = world.get::<shared::components::Mana>(run.actor).unwrap();
+    let native_rate = world
+        .get::<PowerPools>(run.actor)
+        .unwrap()
+        .mana_regen_per_sec;
+    let receipt = report::stats(world, run.actor);
+    let pool = receipt["powers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|pool| pool["power_type"] == PowerType::Mana as i32)
+        .unwrap();
+    assert_eq!(pool["current"].as_f64(), Some(f64::from(mana.current)));
+    assert_eq!(pool["max"].as_f64(), Some(f64::from(mana.max)));
+    assert_eq!(pool["regen_per_sec"].as_f64(), Some(f64::from(native_rate)));
 }
