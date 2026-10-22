@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Orator TC energy-controller partial — 2026-10-22
+
+TC a352b1fa `CityOfThreads/boss_orator_krix_vizk.cpp:111–269,359–397` authenticates216619/map2669/2907bit1; native70448 Journal2594/5620/display116692 and spawn10002880 are preserved. Producer `--encounter orator` changes only the primary binding on independent copies: RED missing import →1GREEN9.296s, full actor/native/population preservation plus idempotence/conflict. Follower205 fixtures explicitly project the authored Normal actor, not205 stat/spawn rows. Source/native/SQL receipts live in `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/`.
+
+Actual nativeRED75acd0e9a shows full class4 initialization100 versus missing TC JustAppeared0; independent native Subjugate damage/aura/copy qualification passes (composite1PASS/1FAIL36.81s). `orator.rs` then ports source Oration/0, actual+4 energy at1s then1.2/.8 alternating,100-triggered native1s cast/4s channel and its real periodic434832/removal434923→0 hooks. Subjugate/Terrorize repeats follow source alternating counters; Terrorize hit triggers434779, with only TC IGNORE_CAST_IN_PROGRESS. Native casts/costs/effects and copy identity remain authoritative; no fixture power or cooldown bypass. Ignored ongoing/reset tests were pushed before implementation; current native GREEN is pending.
+
+[Contract and named gaps](../../specs/boss-scripts.md#tww-orator-source-admission): Chains440310 controller, Lingering32026 scale/area controller, barrier35803, display527 and TC evade despawn remain unported. Same-actor generic reset retains real power and only rearms clocks/counters; it must not forge TC respawn Energy0. No Mythic Shadows or whole-fight/native-clear claim.
+
 ## Deios source ingress boundary — 2026-10-21
 
 LittleWigs2777a9d `ChronoLordDeios.lua` binds184125/2559/map2451bit4 (Journal2479/5379/display106056). Actual TDB/runtime flags320 include PC immunity0x100; genuine spawn9004522 exists. Production `AggroMode::for_template` makes PC-immune actors Passive and omits their threat table; ordinary `add_threat` cannot engage them. Native source-preserving tests atf56c055a9 give2PASS/firstWing0vs1FAIL34.10s: ordinary Wing376049 area damage qualifies in Normal1/Follower205, while real threat ingress stays absent and credit stays0. The ignored6.3sWing test remains a genuine RED, not a timer implementation.
