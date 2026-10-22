@@ -35,6 +35,17 @@ fn prepare_hunter_and_pet() -> (Run, Entity) {
     }
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
         .expect("native learned Call Pet must produce the provisioned Duck");
+    let world = run.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(COBRA_SHOT)
+        .unwrap();
+    println!(
+        "POWER_SETUP actor={:?} target={:?} cobra_range={:?}",
+        world.get::<shared::components::Position>(run.actor),
+        world.get::<shared::components::Position>(run.targets[0]),
+        crate::spell_cast::targets::spell_range(spell, true)
+    );
     (run, pet)
 }
 
