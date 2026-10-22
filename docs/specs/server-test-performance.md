@@ -12,9 +12,9 @@ The server's standard lead gate must retain its native coverage while completing
 
 ### Immutable fixture inputs
 
-- [ ] Reuse decoded immutable definitions without querying SQLite again for the same database path and content.
-- [ ] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
-- [ ] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
+- [x] Reuse decoded immutable definitions without querying SQLite again for the same database path and content.
+- [x] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
+- [x] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
 - [ ] App-local catalog mutations must leave sibling Apps and retained input definitions unchanged.
 - [ ] Production catalog behavior and owned collection representation must remain unchanged; fixture sharing is test-only.
 
@@ -26,13 +26,15 @@ The server's standard lead gate must retain its native coverage while completing
 ## Implementation inventory
 
 - `Cargo.toml` — server test optimization profile.
-- `crates/server/src/test_data/catalog_cache.rs` — fixture catalog loading boundary under development.
+- `crates/server/src/test_data/catalog_cache.rs` — immutable typed definitions keyed by source path/content.
+- `crates/server/src/catalog_data.rs` — production-owned/test-shared collection backing; live edits detach.
 - `crates/server/src/test_data/catalog_cache_tests.rs` — real SQLite read capability, concurrency and source isolation fixtures, included by the lightweight library test target.
 
 ## Tests asserting this spec
 
 - `crates/server/src/test_data/catalog_cache_tests.rs` — immutable input reuse, concurrent read capability and path/content isolation.
 - `crates/server/src/test_data.rs` — existing live-App catalog/creature/prepared-source isolation.
+- `crates/server/src/test_data/catalog_data_tests.rs` — local edits/iteration and serialized collection values.
 - Native gate discovery/execution inventories and compiler artifact receipts linked from the investigation.
 
 ## Known gaps (current cycle)

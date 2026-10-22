@@ -11,3 +11,7 @@ pub mod raid_history_store;
 #[cfg(test)]
 #[path = "test_data/catalog_cache_tests.rs"]
 mod native_catalog_cache_tests;
+
+#[cfg(test)]
+#[path = "test_data/catalog_data_tests.rs"]
+mod native_catalog_data_tests;
