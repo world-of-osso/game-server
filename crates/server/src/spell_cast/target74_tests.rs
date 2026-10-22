@@ -9,10 +9,15 @@ const CRAB: u32 = 289330;
 const THWAP: u32 = 453588;
 const BLOOD_AND_THUNDER: u32 = 128206;
 const FORCE_JUMP: u32 = 140575;
+const DEATHFORGE_MINE: u32 = 38107;
 
 fn scene() -> (Harness, Position) {
-    let mut h = harness(Vec::new(), &[CRAB, THWAP, BLOOD_AND_THUNDER, FORCE_JUMP], 1)
-        .expect("native source74 fixture");
+    let mut h = harness(
+        Vec::new(),
+        &[CRAB, THWAP, BLOOD_AND_THUNDER, FORCE_JUMP, DEATHFORGE_MINE],
+        1,
+    )
+    .expect("native source74 fixture");
     let origin = super::target148_tests::place_on_native_ground(&mut h);
     h.app.world_mut().entity_mut(h.npc).insert(Rotation {
         x: 0.0,
@@ -109,6 +114,20 @@ fn toy_coverage_target74_targeta_uses_its_own_radius_not_unused_targetb_radius()
 }
 
 #[test]
+fn toy_coverage_target74_missing_b_radius_inherits_a_target_identity_and_fixed_radius() {
+    let (mut h, origin) = scene();
+    // Native38107 [6,74]/A15/B0: CalcRadius inherits A6, not random target74.
+    // The direction is random but the radius is the fixed source3.
+    for _ in 0..SAMPLES {
+        let actual = destination(&mut h, DEATHFORGE_MINE, 0);
+        assert!(
+            (horizontal_distance(actual, origin) - 3.0).abs() < 0.001,
+            "{actual:?}"
+        );
+    }
+}
+
+#[test]
 fn toy_coverage_target74_missing_explicit_or_foreign_map_never_defaults_destination() {
     let (mut h, _) = scene();
     let spell = world_db().unwrap().store.get(CRAB).unwrap().clone();
@@ -194,12 +213,10 @@ fn toy_coverage_target74_crab_ride_contract_stays_unavailable_without_source_act
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .unwrap();
-    let markers = crate::toy_interaction::load(&conn).unwrap();
-    assert!(
-        markers
-            .get(&166662)
-            .is_some_and(|gaps| gaps.contains("source battle-pet ride interaction")),
-        "{:?}",
-        markers.get(&166662)
+    let catalog = crate::toy_catalog::load(&conn).unwrap();
+    let reason = catalog.0[&166662].snapshot.unavailable_reason.as_deref();
+    assert_eq!(
+        reason,
+        Some("unimplemented toy interaction: source battle-pet ride interaction")
     );
 }
