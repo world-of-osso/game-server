@@ -166,6 +166,41 @@ fn ready_step(nav: &mut Navigation, entity: Entity, request: MoveRequest) -> Ste
 }
 
 #[test]
+#[ignore = "requires canonical2519 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_gorek_partial_corridors_walk_and_repath_to_target() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut nav = Navigation::new(&root);
+    let actor = Entity::from_bits(99);
+    let mut from = Vec3::new(70.6448, 72.6027, 779.064);
+    let target = Vec3::new(-264.45807, 125.19722, 503.5);
+    let mut arrived = false;
+    for _ in 0..10_000 {
+        let mut movement = request(2519, from, target);
+        movement.distance = 1.0;
+        movement.reach = 0.0;
+        match ready_step(&mut nav, actor, movement) {
+            Step::Moved { position, reached } => {
+                let next = point(position);
+                assert!(next.distance(from) < 3.0, "no segment-end teleport");
+                from = next;
+                if reached {
+                    assert!(from.distance(target) < 0.5, "partial end is not arrival");
+                    arrived = true;
+                    break;
+                }
+            }
+            Step::Pending => {}
+            Step::Blocked => panic!("Gorek mover blocked before reaching target at {from:?}"),
+            Step::Unbaked => panic!("canonical Neltharus bake missing"),
+        }
+    }
+    assert!(
+        arrived,
+        "Gorek mover failed to arrive in bounded walk: {from:?}"
+    );
+}
+
+#[test]
 fn navigation_unbaked_map_is_explicit_legacy_boundary() {
     let dir = tempfile::tempdir().unwrap();
     let mut nav = Navigation::new(dir.path());

@@ -3,6 +3,18 @@ use super::*;
 use std::io::Write;
 
 #[test]
+#[ignore = "requires canonical2519 assets"]
+fn neltharus_gorek_production_path_preserves_walkable_progress() {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut nav = NavigationMap::open(&root.join("2519")).unwrap();
+    nav.path(
+        Vec3::new(70.6448, 72.6027, 779.064),
+        Vec3::new(-264.45807, 125.19722, 503.5),
+    )
+    .expect("nonempty Gorek corridor must remain available for movement and repathing");
+}
+
+#[test]
 #[ignore = "requires canonical2519 assets and FOLLOWER_GOREK_DIAGNOSTICS output directory"]
 fn neltharus_gorek_iterative_existing_pool_probe() {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
