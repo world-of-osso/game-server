@@ -86,6 +86,57 @@ fn summarize_events(
 }
 
 #[test]
+fn fire_efficiency_native70_ordinary_fireball_earns_native_ignite() {
+    let _seed = crate::random::seed_scope(1);
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let targets = prepare_dummies(&mut h, 1);
+    let target = targets[0];
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert((Level(70), UnitLevel(70)));
+    let mastery = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12846)
+        .unwrap();
+    assert!(
+        mastery
+            .effects
+            .iter()
+            .any(|effect| effect.index == 0 && effect.amount > 0.0)
+    );
+    let start = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)
+        .unwrap();
+    h.advance(100);
+    assert!(
+        h.inbox.log[start..].iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(FIREBALL)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "ordinary native Fireball must land before testing its earned consequence"
+    );
+    assert!(
+        h.inbox.log[start..].iter().any(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(12654)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+                && event.amount > 0
+        }),
+        "native12846 positive ordinary hit must earn actual12654 periodic damage"
+    );
+}
+
+#[test]
 #[ignore = "measurement: explicit FIRE_EFFICIENCY_OUTPUT and frozen loadout required"]
 fn fire_efficiency_native70_single_target_60s() {
     let output = std::env::var("FIRE_EFFICIENCY_OUTPUT").unwrap();
