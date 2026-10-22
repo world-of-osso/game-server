@@ -17,8 +17,19 @@ fn prepare_hunter_and_pet() -> (Run, Entity) {
         crate::followers::simulator::ParityActor::Follower,
     )
     .unwrap();
-    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, CALL_PET, None, false)
-        .unwrap();
+    for _ in 0..200 {
+        match crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            run.actor,
+            CALL_PET,
+            None,
+            false,
+        ) {
+            Ok(()) => break,
+            Err(crate::spell_cast::CastFailure::OnGlobalCooldown) => run.app.update(),
+            Err(error) => panic!("native Call Pet admission: {error:?}"),
+        }
+    }
     for _ in 0..200 {
         run.app.update();
     }
