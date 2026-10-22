@@ -132,7 +132,9 @@ fn linked_polygons(
         let mut index = (*poly).firstLink;
         while index != DT_NULL_LINK {
             assert!(index < (*(*tile).header).maxLinkCount as u32);
-            let link = &*(*tile).links.add(index as usize);
+            // Detour's serialized sections use four-byte alignment, while
+            // 64-bit dtPolyRef makes Rust's dtLink alignment eight bytes.
+            let link = std::ptr::read_unaligned((*tile).links.add(index as usize));
             if link.ref_ != 0 {
                 let (_, neighbor) = tile_and_poly(nav, link.ref_);
                 let flags = (*neighbor).flags;
