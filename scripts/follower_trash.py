@@ -11,7 +11,8 @@ import sqlite3
 
 from follower_placements import (PLACEMENT_POLICY, TRASH_HOSTILITY_POLICY, TABLE_KEYS,
     backup, make_sql, open_readonly, prepare_templates, read_mdt_enemy_table, read_table_rows)
-from follower_trash_density import DENSITY_POLICY, apply_mdt_density
+from follower_trash_density import DENSITY_POLICY, apply_mdt_density, marker_key
+from follower_trash_ownership import load_owned_spawns
 from follower_placement_sources import (SINGLE_FRAME_POLICY, digest, read_cached_npc, read_db2, read_json_payload,
     read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
 
@@ -85,11 +86,16 @@ def read_trash_markers(manifest, tables, cache, polygons):
     return pages, points, gaps
 
 
-def write_trash_spawns(target, manifest, placements):
+def write_trash_spawns(target, manifest, placements, owned_guids=None):
     lower = manifest['guid_base'] + manifest['map_id'] * 1000
     if manifest['first_trash_ordinal'] != 100 or len(placements) > 900:
         raise ValueError('trash markers must fit the explicitly reserved map ordinals100–999')
-    expected = {lower + 100 + index: point for index, point in enumerate(placements)}
+    if owned_guids is None:
+        expected = {lower + 100 + index: point for index, point in enumerate(placements)}
+    else:
+        expected = {owned_guids[marker_key(point)]: point for point in placements}
+        if any(not lower + 100 <= guid <= lower + 999 for guid in expected):
+            raise ValueError('retained actor lies outside the proved owned namespace')
     occupied = target.execute('SELECT guid FROM content_creature WHERE guid BETWEEN ? AND ?', (lower + 100, lower + 999)).fetchall()
     if any(row[0] not in expected for row in occupied):
         raise ValueError('reserved trash namespace overlaps unrelated content')
@@ -110,6 +116,16 @@ def fingerprint_group_tables(db):
         table = row[0]
         columns = [column[1] for column in db.execute(f'PRAGMA table_info({table})')]
         rows = [tuple(r) for r in db.execute(f"SELECT * FROM {table} ORDER BY {','.join(columns)}")]
+        result[table] = dict(count=len(rows), sha256=hashlib.sha256(json.dumps(rows, separators=(',', ':')).encode()).hexdigest())
+    return result
+
+
+def fingerprint_unchanged_tables(db):
+    result = {}
+    for table in TABLE_KEYS:
+        if table == 'content_creature':
+            continue
+        rows = read_table_rows(db, table)
         result[table] = dict(count=len(rows), sha256=hashlib.sha256(json.dumps(rows, separators=(',', ':')).encode()).hexdigest())
     return result
 
@@ -149,6 +165,7 @@ def prepare(args):
     tables, authentication = read_db2(args.db2, ('MapDifficulty', 'MapChallengeMode'))
     polygons = read_surface_polygons(args.surfaces)
     pages, placements, gaps = read_trash_markers(manifest, tables, args.cache, polygons)
+    qualified = placements
     density = None
     if density_policy is not None:
         if manifest['density_source']['policy'] != DENSITY_POLICY:
@@ -187,15 +204,40 @@ def prepare(args):
                 raise ValueError('declared trash-map entrance is not sourced')
             receipt['entrance'], receipt['entrance_gaps'] = dict(entrance), []
         before_groups = fingerprint_group_tables(baseline)
+        owned, owned_guids, deleted = None, None, []
+        deleted_guids = set()
+        if 'supersedes' in manifest:
+            if density is None or updates:
+                raise ValueError('owned cleanup requires density selection and no template updates')
+            owned, ownership = load_owned_spawns(baseline, manifest['map_id'], qualified, manifest['supersedes'])
+            selected_keys = {marker_key(point) for point in placements}
+            owned_guids = {key: row['guid'] for key, row in owned.items()}
+            deleted = [row for key, row in owned.items() if key not in selected_keys]
+            deleted_guids = {row['guid'] for row in deleted}
+            receipt['ownership'] = ownership
+            receipt['ownership_loader_sha256'] = digest(Path(__file__).with_name('follower_trash_ownership.py'))
+            receipt['deleted_owned_spawns'] = deleted
+            unchanged_before = fingerprint_unchanged_tables(baseline)
         for point in placements:
             if baseline.execute('SELECT 1 FROM tdb_creature_template WHERE entry=?', (point['entry'],)).fetchone() is None:
                 raise ValueError('qualified trash marker lacks its own native template')
         backup(baseline, prepared_path)
         records = [r for r in manifest['entries'] if r['entry'] in {p['entry'] for p in placements}]
         with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
-            receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, records, args.cache, tables)
-            write_trash_spawns(prepared, manifest, placements)
-            sql, receipt['changed_keys'] = make_sql(baseline, prepared, set(updates))
+            if owned is None:
+                receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, records, args.cache, tables)
+            else:
+                receipt['donors'], receipt['source_difficulties'] = [], []
+                receipt['template_policy'] = 'Previously published templates/models unchanged; source provenance pinned by ownership reference'
+                prepared.executemany('DELETE FROM content_creature WHERE guid=?', [(row['guid'],) for row in deleted])
+            write_trash_spawns(prepared, manifest, placements, owned_guids)
+            if owned is not None:
+                unchanged_prepared = fingerprint_unchanged_tables(prepared)
+                expected_creatures = [row for row in read_table_rows(baseline, 'content_creature') if row[0] not in deleted_guids]
+                if unchanged_prepared != unchanged_before or read_table_rows(prepared, 'content_creature') != expected_creatures:
+                    raise ValueError('owned density correction changed anything besides the declared spawn deletions')
+            sql, receipt['changed_keys'] = make_sql(baseline, prepared, set(updates),
+                                                  spawn_deletion_guids=deleted_guids)
             receipt['guarded_faction_updates'] = []
             for entry in updates:
                 before = dict(baseline.execute('SELECT * FROM content_creature_template WHERE entry=?', (entry,)).fetchone())
@@ -214,6 +256,11 @@ def prepare(args):
                 if any(read_table_rows(replay, table) != rows for table, rows in expected.items()):
                     raise ValueError('trash SQL replay differs from prepared copy')
             replay_groups = fingerprint_group_tables(replay)
+            if owned is not None:
+                unchanged_replayed = fingerprint_unchanged_tables(replay)
+                if unchanged_replayed != unchanged_before:
+                    raise ValueError('owned cleanup replay changed templates/models/bindings')
+                receipt['correction_unchanged_tables'] = dict(baseline=unchanged_before, prepared=unchanged_prepared, replayed=unchanged_replayed)
             if replay_groups != before_groups:
                 raise ValueError('SQL replay changed spawn-group rows')
         receipt['preserved_group_tables'] = dict(baseline=before_groups, prepared=prepared_groups, replayed=replay_groups)

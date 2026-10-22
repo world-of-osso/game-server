@@ -248,5 +248,42 @@ class VoidscarDensityAcceptance(unittest.TestCase):
         self.assertEqual(receipt['sql_replay_count'], 3)
 
 
+@unittest.skipUnless('BLINDING_DENSITY_DB' in os.environ, 'requires published803/prepared215 correction fixture')
+class BlindingDensityCorrection(unittest.TestCase):
+    def test_only588_owned_rows_are_deleted_and215_keep_their_complete_original_rows(self):
+        path = Path(os.environ['BLINDING_DENSITY_DB']).resolve()
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute('SELECT * FROM content_creature WHERE guid BETWEEN 63859100 AND 63859999 ORDER BY guid').fetchall()
+            self.assertEqual(len(rows), 215)
+            receipt = json.loads((path.parent / 'receipt.json').read_text())
+            reference_path = Path(receipt['ownership']['reference_receipt'])
+            old = json.loads(reference_path.read_text())
+            with closing(sqlite3.connect((reference_path.parent / 'replayed.sqlite').as_uri() + '?mode=ro', uri=True)) as original:
+                before = {row[0]: row for row in original.execute('SELECT * FROM content_creature WHERE guid BETWEEN 63859100 AND 63859999')}
+                for row in rows:
+                    self.assertEqual(row, before[row[0]])
+                self.assertEqual(db.execute('SELECT * FROM content_creature WHERE guid=63859000').fetchone(),
+                                 original.execute('SELECT * FROM content_creature WHERE guid=63859000').fetchone())
+            remaining = {row[0] for row in rows}
+            self.assertEqual(set(before) - remaining, {row['guid'] for row in receipt['deleted_owned_spawns']})
+            self.assertEqual(len(receipt['deleted_owned_spawns']), 588)
+            self.assertEqual(receipt['changed_keys']['content_creature_template'], [])
+            self.assertEqual(receipt['changed_keys']['content_creature_template_model'], [])
+            self.assertEqual(receipt['changed_keys']['raid_encounter_creature'], [])
+            self.assertEqual({key[0] for key in receipt['changed_keys']['content_creature']}, set(before) - remaining)
+        oracle_path = reference_path.parent.parent / 'mdt-density-selection-reference.json'
+        oracle = next(row for row in json.loads(oracle_path.read_text()) if row['map_id'] == 2859)
+        self.assertEqual([[p['entry'], p['marker_index']] for p in receipt['placements']], oracle['selected_marker_keys'])
+        old_by_key = {(p['entry'], p['marker_index']): p for p in old['placements']}
+        for point in receipt['placements']:
+            self.assertEqual(point['guid'], old_by_key[(point['entry'], point['marker_index'])]['guid'])
+        self.assertEqual((receipt['density']['qualified_count'], receipt['density']['selected_count'], receipt['density']['excluded_count']), (803, 215, 588))
+        self.assertEqual(sum(row['shortfall'] for row in receipt['density']['per_npc']), 55)
+        self.assertFalse(receipt['pack_groups_created'])
+        self.assertEqual(receipt['preserved_group_tables']['baseline'], receipt['preserved_group_tables']['replayed'])
+        self.assertEqual(receipt['correction_unchanged_tables']['baseline'], receipt['correction_unchanged_tables']['replayed'])
+        self.assertEqual(receipt['sql_replay_count'], 3)
+
+
 if __name__ == '__main__':
     unittest.main()
