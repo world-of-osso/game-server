@@ -15,6 +15,12 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
 - [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
 
+## Dense-map bake capacity
+
+- Start each map with the published4×4 spatial grid. Only a proven Recast16-bit contour-vertex capacity overflow may trigger deterministic whole-map power-of-two refinement. Never change voxel/body/clearance/slope/region/simplification values or add map-specific settings to make geometry fit.
+- Preserve ordinary4×4 payload bytes. Read spatial grid width from validated encoded Detour bounds; reject mixed grids and retain explicit errors for empty/invalid/unreachable navigation, without a direct-route substitution.
+- Prove real2669tile31_37 RED→GREEN, mixed-grid rejection, refined cross-tile connectivity, and ordinary-grid byte identity before publishing refined maps. [Grid contract](../wiki/design/navigation-worker.md#encoded-navigation-grid-contract).
+
 ## Nonblocking server queries
 
 - [x] Server fixed systems never perform navigation directory/tile reads, decoding or Detour queries; a worker exclusively owns its NavigationMaps.

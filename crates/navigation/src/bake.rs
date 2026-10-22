@@ -3,15 +3,7 @@ use crate::*;
 use glam::{Vec3, Vec3Swizzles};
 use recastnavigation_sys::*;
 
-const TILE_CELLS: u32 = 2048;
 pub const VERTEX_CAPACITY_ERROR: &str = "RECAST_VERTEX_CAPACITY_EXCEEDED";
-
-pub fn grid_subtile_size(subdivisions: u32) -> Result<f32, String> {
-    if !subdivisions.is_power_of_two() || !(SUBDIVISIONS..=TILE_CELLS).contains(&subdivisions) {
-        return Err(format!("invalid navigation grid {subdivisions}"));
-    }
-    Ok(TILE_SIZE / subdivisions as f32)
-}
 const BORDER_CELLS: i32 = RADIUS_CELLS + 3;
 const HEIGHT_CELLS: i32 = ceil_cells(AGENT_HEIGHT, CELL_HEIGHT);
 const CLIMB_CELLS: i32 = (AGENT_CLIMB / CELL_HEIGHT) as i32;
@@ -307,20 +299,7 @@ impl RecastBuild {
             .filter(|c| c.nverts >= 3)
             .map(|c| c.nverts - 2)
             .sum();
-        let mut unique = std::collections::HashMap::<(u16, u16), Vec<u16>>::new();
-        for contour in contours.iter().filter(|c| c.nverts >= 3) {
-            // SAFETY: successful contour construction owns four ints per vertex.
-            let verts =
-                unsafe { std::slice::from_raw_parts(contour.verts, contour.nverts as usize * 4) };
-            for vertex in verts.chunks_exact(4) {
-                let (x, y, z) = (vertex[0] as u16, vertex[1] as u16, vertex[2] as u16);
-                let heights = unique.entry((x, z)).or_default();
-                if !heights.iter().rev().any(|height| height.abs_diff(y) <= 2) {
-                    heights.push(y);
-                }
-            }
-        }
-        let unique_vertices: usize = unique.values().map(Vec::len).sum();
+        let unique_vertices = count_merged_contour_vertices(contours);
         let limit = if vertices >= 0xfffe {
             VERTEX_CAPACITY_ERROR
         } else {
@@ -393,6 +372,24 @@ impl Drop for RecastBuild {
             }
         }
     }
+}
+
+fn count_merged_contour_vertices(contours: &[rcContour]) -> usize {
+    let mut unique = std::collections::HashMap::<(u16, u16), Vec<u16>>::new();
+    for contour in contours.iter().filter(|c| c.nverts >= 3) {
+        // SAFETY: successful contour construction owns four ints per vertex.
+        let verts =
+            unsafe { std::slice::from_raw_parts(contour.verts, contour.nverts as usize * 4) };
+        for vertex in verts.chunks_exact(4) {
+            let (x, y, z) = (vertex[0] as u16, vertex[1] as u16, vertex[2] as u16);
+            let heights = unique.entry((x, z)).or_default();
+            // Match pinned Recast addVertex's coordinate/height deduplication.
+            if !heights.iter().rev().any(|height| height.abs_diff(y) <= 2) {
+                heights.push(y);
+            }
+        }
+    }
+    unique.values().map(Vec::len).sum()
 }
 
 fn require(ok: bool, step: &str) -> Result<(), String> {

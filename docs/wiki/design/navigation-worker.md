@@ -42,8 +42,19 @@ First RED: real baked tile read held at its actual IO boundary while an App adva
 
 No timeout, bake, Detour algorithm, geometry, LOS/ground IO, unrelated actor, protocol or sight/faction CPU changes. `SIGHT_FACTION_MAIN_THREAD_CPU` remains a separately measured next candidate. No claim this slice alone cures historical ten-second gaps.
 
+## Encoded navigation grid contract
+
+Verified geometry failure: City of Threads map2669/tile31_37/Detour(106,127) has69452 contour vertices,68202 after pinned Recast vertex deduplication, exceeding `rcBuildPolyMesh`'s16-bit `0xfffe` capacity. Removing the guard would corrupt indices. The real authored-tile regression reproduces this failure; first-pass bakes also fail the same stage on2660,2874,2859. Receipts and pre-fix hashes live in `game-engine/data/diagnostics/follower-dungeons-2026-10-21/`.
+
+Lead-approved refinement starts each complete map at the existing4×4 grid. Only the explicit Recast contour-vertex capacity error doubles subdivisions per axis and restarts the entire map; no tile may retain a different grid. Allocation, geometry and other Recast errors remain fatal. Refinement is bounded by the existing2048 voxel cells per WoW tile, not a map-specific setting. Voxel size/height, body radius/height, climb, slope, region sizes and contour/detail simplification remain unchanged. Ordinary4×4 `.nav` payloads must remain byte-identical.
+
+`OSSONAV3` retains its packet framing. Each existing Detour packet already encodes bounds and grid coordinates. The worker initializes its map's Detour tile width from the first validated nonempty packet, normalizes only floating-point coordinate-rounding error to the encoded power-of-two grid, and rejects any subsequently loaded packet with a different grid. Packet-count validation is bounded by actual artifact length, not the former16-packet assumption. Empty tiles do not select a grid or permit a direct route. A wholly empty loaded map fails explicitly before a Detour query. No simulation-thread IO/query path is introduced.
+
+Required acceptance: real2669 authored bake/query RED→GREEN, generated refined-grid routes crossing a WoW tile boundary in both directions, explicit mixed-grid rejection, and unchanged4×4 real-asset hashes. Refinement implementation is committed before GREEN; fresh full-map staging and final proof remain pending until recorded in the receipts. Partial failed maps are not publishable.
+
 ## Sources
 
 - `crates/server/src/navigation.rs` and production/test callers listed above — synchronous ownership and consumers at the requested base.
-- `crates/navigation/src/query.rs` — exclusively owned Send mesh/query and actual tile-read boundary.
+- `crates/navigation/src/query.rs` — exclusively owned Send mesh/query, actual tile-read boundary and encoded grid validation.
+- `crates/navigation/src/bake.rs`, `src/bin/nav-bake.rs`, `tests/dense_authored_tile.rs`, `tests/refined_grid.rs` — fixed-voxel map refinement and behavioral regressions; pinned `vendor/recastnavigation-sys/recastnavigation/Recast/Source/RecastMesh.cpp` documents the16-bit capacity.
 - Lead-approved pending-route decisions and joint capture receipts under `game-engine/data/diagnostics/server-live-frame-cost-2026-10-16/`.
