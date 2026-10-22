@@ -2625,6 +2625,7 @@ fn plan_targets(
                 units
             }
         };
+        effects::retain_threat_level_targets(world, spell, effect, &mut units);
         if let Some(filter) = scripts::area_target_filter(spell.id, effect.index) {
             filter(world, spell, explicit, &mut units);
         }
