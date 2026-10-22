@@ -2466,6 +2466,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-22: Ordered Midnight entrance audit retains all eight unsourced-interior gaps after native teleport/exit rows, authenticated AreaTrigger/UiMapLink/JournalInstance and pinned approved Wowhead caches. No route pairs invented. [Evidence](investigations/follower-data.md#midnight-ordered-entrance-source-audit--2026-10-22).
+
 - 2026-10-22: Journal-bound hostility policy + three exact unique single-Z packets; source3GREEN, fresh-copy replay3× and actual-copy acceptance, native models/stats retained, no admission/route claim. [Evidence](investigations/follower-data.md#journal-bound-hostility-project-admission--2026-10-22).
 
 -2026-10-19: Impending Victory202168→202166 then own32216 removal: five native qualifications4+1 first, pushed ignored69af7bb76→fiveRED/one control14.11s; minimal existing AfterCast/FULL-trigger/remove consumerf041d6b70→fresh ignored sixGREEN13.06s/0warnings before enabling; initial eleven-case composite then masterdfdd71578 merged d1af4b8a7→fresh targeted elevenGREEN14.64s/0warnings; lead gate pending. VICTORIOUS_KILL_PRODUCER_UNIMPLEMENTED/direct-native32216 removal-only boundary preserved. See [spell casting](systems/spell-casting.md#impending-victory-consequence--2026-10-19).
