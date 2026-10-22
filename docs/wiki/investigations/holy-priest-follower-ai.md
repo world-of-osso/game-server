@@ -273,9 +273,13 @@ At16dc69af8/P2abc7fa, ordinary Henry90 Flash Heal12778/overheal4958 produced no
 child: genuine RED23.23s, while self-heal/Renew controls passed. At production
 revision a1f941b13, transfer/amount/one-child, self, Renew, nonmatching Serenity,
 level29 unlearned-talent controls and the re-enabled Prayer of Healing lifetime
-regression all passed:6/34.76s. Post-master integration proof is recorded separately
-in the evidence ledger; no simulator effectiveness or survival improvement claimed.
-Evidence: game-engine `data/diagnostics/healer-ai-2026-10-21/binding-heals/`.
+regression all passed:6/34.76s. Post-master167612f27 adds actual Henry health
+recovery and passes10native cases37.16s including four shared-proc controls;
+check exits0/1m15s with no warnings, format passes. See the
+[proof ledger](../../handoffs/healer-binding-heals-proof-ledger.md) for exact
+scope/revisions and retained environment failures. No simulator effectiveness or
+survival improvement claimed. Evidence: game-engine
+`data/diagnostics/healer-ai-2026-10-21/binding-heals/`.
 
 Echo77485→77489 remains separate: native amount depends on mastery points, and the
 inspected `auras/mastery.rs::effect_bonus` admitted Players only. The shared
