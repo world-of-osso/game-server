@@ -372,9 +372,9 @@ fn encounter_fixture(
     inputs.install(&mut app);
     // Keep producer-authenticated map/binding inputs already installed in this app.
     let mut maps = app.world().resource::<MapStore>().clone();
-    if matches!(entry, 234648 | 215405) {
+    if matches!(entry, 234648 | 215405 | 216619) {
         // Install production ground before source addon application or combat.
-        // Mirror Image, Blink and Eye use native grounded destinations.
+        // Mirror Image, Blink, Eye and the Orator source arena use real ground.
         let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
         app.insert_resource(crate::ground::GroundMap::new(
             &crate::ground::ground_data_dir(),

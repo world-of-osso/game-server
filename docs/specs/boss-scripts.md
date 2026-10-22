@@ -1,5 +1,10 @@
 # Boss scripts
 
+## TWW Orator source admission
+
+- TC a352b1fa `KhazAlgar/CityOfThreads/boss_orator_krix_vizk.cpp` identifies primary216619/map2669/2907bit1, native70448 Journal2594/actor5620/display116692. Producer `--encounter orator` admits only that binding, preserving `boss_orator_krix_vizk`, class4/flags64/flags2=0, spawn10002880 and every actor/stat/model/addon/difficulty/population/native spell row. Follower205 fixtures explicitly project the authored Normal placement, not205 stat/spawn rows.
+- Use the shared sourceclass4 Energy ingress. TC JustAppeared then casts native Oration454689 and sets actual Energy0; fixtures must not forge that state. Normal/Follower Subjugate434722 first4.5s uses native1.25s cast and victim target, with17.1/12s alternating repeats; Terrorize selector434808 first9.4s repeats8.1/21.1s in source order. No Mythic-only Shadows448560 request is invented. Native Subjugate damage/aura and copy isolation must qualify separately from source appearance/clocks. Push/execute ignored native RED before combat implementation.
+
 ## Native creature class-power ingress
 
 - Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
