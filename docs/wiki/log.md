@@ -1,3 +1,7 @@
+## 2026-10-21 — Native empower charge cancellation
+
+[Fire recovery](investigations/follower-data.md#native-empower-pipeline--2026-10-21): real cancel preserves native2456 one-charge/30s recovery, rejects immediate retry after finish GCD and permits real damage after natural recovery;1PASS35.31s at200168553, zero warnings, no production change. Current Deva empowers have no applicable Mana cost; paid-power coverage remains conditional rather than manufactured.
+
 ## 2026-10-21 — Native empower modifier snapshot
 
 [Tip the Scales](investigations/follower-data.md#native-empower-pipeline--2026-10-21): actual370553 consumed after duration snapshot, selected-stage1 Font Fire releases max rank4 with6000ms DoT; following Surge retains ordinary timing and native delayed missile impact. Corrected1PASS32.37s at601053452, zero warnings, production unchanged. Initial impact-window failure is not a feature RED; cancellation paid-power/charge proofs remain open.

@@ -35,7 +35,8 @@ Player and follower empowers use native build70448 stage metadata and release re
 
 ## Known gaps (current cycle)
 
-- [ ] Prove actual paid-power refund and retained charge recovery independently of normal-cooldown cancellation. Matching player-release/selected-stage and protocol/client consumers already have scoped proof; a running physical Godot-to-server key-up capture remains unproved.
+- [ ] Prove actual paid-power refund independently of normal-cooldown cancellation. Current70448 Surge has no SpellPower rows; Fire's Mana cost requires Preservation356810, absent the selected Devastation book, so no paid resource is invented for this fixture. Matching player-release/selected-stage and protocol/client consumers already have scoped proof; a running physical Godot-to-server key-up capture remains unproved.
+- [x] Cancelled Fire Breath retains its native one-charge/30s category2456 recovery: retry after finish GCD reports NoCharges, while natural recovery permits the next real release.
 - [x] Follower single-target Fire Breath releases rank1 after the native first-stage threshold. Cancelled Surge removes its ordinary cooldown, applies finish GCD and never releases damage.
 - [x] Matching authenticated player release waits for native stage1 then fires the20s DoT. Wrong-spell and unauthenticated requests do not release; StopSpellCast still cancels without damage.
 - [ ] Complete optional Legacy of the Lifebinder/Volatility purchased-rank branches; current starter book lacks those talents, so they remain unqualified rather than inferred from spell presence.

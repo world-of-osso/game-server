@@ -1,3 +1,4 @@
+- [Empower cancellation charge recovery](investigations/follower-data.md#native-empower-pipeline--2026-10-21) — actual Fire NoCharges after cancel, natural30s recovery then real damage1PASS35.31s; conditional paid-power proof remains named.
 - [Tip the Scales snapshot](investigations/follower-data.md#native-empower-pipeline--2026-10-21) — native one-use modifier/instant Font rank4 and subsequent ordinary Surge timing1PASS32.37s; initial missile-window fixture failure is not feature RED.
 - [Four-spec defensive choices](investigations/follower-data.md#four-spec-native-defensive-choices--2026-10-21) — native Barrier/Shift/Turtle/Scales cast+selfAura and owner-victim negative controls4PASS50.73s; existing policy unchanged.
 - [Scoped kit delta composition](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21) —20stable owned keys, actual a3 both-order replay,22PythonGREEN/no warnings; legacy rowid delta superseded.
