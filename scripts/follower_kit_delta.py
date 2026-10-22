@@ -83,8 +83,8 @@ def prepare(args):
     with closing(open_readonly(args.world_db)) as source, closing(open_readonly(args.prepared_db)) as prepared:
         original, desired = read_rows(source), read_rows(prepared)
         sql, changed = make_delta(source, original, desired, specs)
-        expected = {key: desired[key] if key[0] in specs else row
-                    for key, row in original.items()}
+        expected = {key: row for key, row in original.items() if key[0] not in specs}
+        expected.update({key: row for key, row in desired.items() if key[0] in specs})
         for path in outputs:
             path.parent.mkdir(parents=True, exist_ok=True)
         backup_and_patch(source, args.output_db, sql, expected)
