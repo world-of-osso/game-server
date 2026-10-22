@@ -26,6 +26,7 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
@@ -119,6 +120,7 @@ pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u
         && batch13::effect_enabled(spell, index)
         && batch15::effect_enabled(world, caster, spell, index)
         && batch23::effect_enabled(world, caster, spell, index)
+        && super::guardian::effect_enabled(world, caster, spell, index)
 }
 
 use bevy::prelude::*;
@@ -522,6 +524,18 @@ pub(crate) fn preserve_unadmitted_proc(
 }
 
 /// `SpellCastFn` on `AfterCast`: runs once on the caster after the spell resolved.
+pub(super) type EmpowerCompleteHook =
+    fn(&mut World, Entity, &SpellInfo, Option<Entity>) -> Result<(), super::CastFailure>;
+
+pub(super) fn empower_completion(spell_id: u32) -> Option<EmpowerCompleteHook> {
+    match spell_id {
+        357208 | 382266 | 359073 | 382411 => Some(empower_evoker::release),
+        _ => None,
+    }
+}
+
+pub(super) use empower_evoker::damage_bonus as empower_damage_bonus;
+
 pub type AfterCastHook = fn(&mut World, Entity, &SpellInfo);
 
 pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {

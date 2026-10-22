@@ -219,8 +219,14 @@ pub const MOD_MELEE_RANGED_HASTE: u32 = 192;
 pub const MELEE_SLOW: u32 = 193;
 pub const LEARN_SPELL: u32 = 195;
 pub const FLY: u32 = 201;
+/// TC Unit.cpp1725: Player-only physical armor penetration.
+pub const MOD_ARMOR_PENETRATION_PCT: u32 = 280;
+/// TC HandleAuraModStunAndDisableGravity.
+pub const MOD_STUN_DISABLE_GRAVITY: u32 = 298;
+pub const MOD_INCREASE_VEHICLE_FLIGHT_SPEED: u32 = 206;
 pub const MOD_INCREASE_MOUNTED_FLIGHT_SPEED: u32 = 207;
-pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 208;
+pub const MOD_INCREASE_FLIGHT_SPEED: u32 = 208;
+pub const MOD_MOUNTED_FLIGHT_SPEED_ALWAYS: u32 = 209;
 /// TC Unit.cpp8854: strongest positive flight bonus.
 pub const MOD_FLIGHT_SPEED_NOT_STACK: u32 = 211;
 pub const ADV_FLYING: u32 = 446;
@@ -245,6 +251,8 @@ pub const MOD_SPEED_SLOW_ALL: u32 = 252;
 pub const MOD_MELEE_HASTE_3: u32 = 319;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
+/// TC a352b1fa Unit.cpp7512–7550: periodic healing received, strongest each sign.
+pub const MOD_HOT_PCT: u32 = 259;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
 pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
 /// TC a352b1fa Unit.cpp7056/8178: victim aura owner and incoming school mask.
@@ -275,6 +283,7 @@ pub const PREVENT_REGENERATE_POWER: u32 = 294;
 pub const MOD_CHARGE_RECOVERY_RATE: u32 = 148;
 pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
+pub const MOD_CHARGE_RECOVERY_BY_TYPE_MASK: u32 = 205;
 pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
 /// TC a352b1fa SpellHistory::GetChargeRecoveryTime: category-scoped ModHasteRegen.
 pub const CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN: u32 = 457;
@@ -307,6 +316,16 @@ pub const MOD_BASE_RESISTANCE_PCT: u32 = 142;
 pub const MOD_RESISTANCE_PCT: u32 = 101;
 pub const MOD_MINIMUM_SPEED: u32 = 305;
 pub const CAST_WHILE_WALKING: u32 = 330;
+pub const CAST_WHILE_WALKING_ALL: u32 = 377;
+/// TC additive global mana-cost percentage, after ordinary spell mods.
+pub const MOD_MANA_COST_PCT: u32 = 423;
+/// Pinned TC reads this multiplier from the attacker during a critical block.
+pub const MOD_CRITICAL_BLOCK_AMOUNT: u32 = 638;
+/// Player-only TOTAL_PCT capacity, preserving absolute missing power.
+pub const MOD_MAX_POWER_PCT: u32 = 178;
+pub const MOD_COMBAT_RATING_FROM_COMBAT_RATING: u32 = 198;
+/// Physical bit adds TOTAL_VALUE armor; other school pools are unrepresented.
+pub const MOD_RESISTANCE: u32 = 22;
 /// TC Unit::CanCastSpellWhileMoving: Misc0 SpellLabel, no family mask.
 pub const CAST_WHILE_WALKING_BY_SPELL_LABEL: u32 = 307;
 pub const MOD_IGNORE_SHAPESHIFT: u32 = 275;
@@ -369,7 +388,9 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         LINKED_SUMMON => LinkedSummon,
         CREATE_AREATRIGGER => AreaTrigger,
         LINKED | LINKED_2 => Linked,
-        CAST_WHILE_WALKING | CAST_WHILE_WALKING_BY_SPELL_LABEL => CastMovement,
+        CAST_WHILE_WALKING | CAST_WHILE_WALKING_BY_SPELL_LABEL | CAST_WHILE_WALKING_ALL => {
+            CastMovement
+        }
         MOD_IGNORE_SHAPESHIFT => IgnoreShapeshift,
         ABILITY_IGNORE_AURASTATE => CastRestriction,
         TRIGGER_SPELL_ON_POWER_AMOUNT => PowerTrigger,
@@ -415,6 +436,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MELEE_SLOW
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
+        | MOD_HOT_PCT
         | MOD_CRIT_PCT
         | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING
@@ -457,6 +479,8 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_INCREASE_MOUNTED_SPEED
         | MOD_MOUNTED_SPEED_ALWAYS
         | MOD_MOUNTED_SPEED_NOT_STACK
+        | MOD_INCREASE_VEHICLE_FLIGHT_SPEED
+        | MOD_INCREASE_FLIGHT_SPEED
         | MOD_MOUNTED_FLIGHT_SPEED_ALWAYS
         | MOD_FLIGHT_SPEED_NOT_STACK
         | MOD_DODGE_PERCENT
@@ -466,7 +490,12 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_VERSATILITY
         | MOD_ATTACK_POWER_PCT
         | MOD_RANGED_ATTACK_POWER_PCT
-        | MOD_DAMAGE_DONE_VERSUS => StatMod,
+        | MOD_DAMAGE_DONE_VERSUS
+        | MOD_ARMOR_PENETRATION_PCT
+        | MOD_CRITICAL_BLOCK_AMOUNT
+        | MOD_MAX_POWER_PCT
+        | MOD_COMBAT_RATING_FROM_COMBAT_RATING
+        | MOD_RESISTANCE => StatMod,
         MOD_INVISIBILITY
         | MOD_STEALTH
         | MOD_STEALTH_LEVEL
@@ -479,6 +508,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | WATER_WALK
         | HOVER
         | DISABLE_GRAVITY
+        | MOD_STUN_DISABLE_GRAVITY
         | MOD_MOVEMENT_FORCE_MAGNITUDE
         | TRACK_CREATURES
         | STORE_TELEPORT_RETURN_POINT
@@ -504,7 +534,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_RECOVERY_RATE
         | MOD_RECOVERY_RATE_BY_SPELL_LABEL => SpellMod,
         PROC_TRIGGER_SPELL | PROC_TRIGGER_SPELL_WITH_VALUE => ProcTrigger,
-        MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST => PowerCost,
+        MOD_POWER_COST_SCHOOL_PCT | MOD_ADDITIONAL_POWER_COST | MOD_MANA_COST_PCT => PowerCost,
         ALLOW_TALENT_SWAPPING => TalentSwap,
         SCHOOL_ABSORB | SCHOOL_ABSORB_OVERKILL => Absorb,
         SCHOOL_IMMUNITY => SchoolImmunity,
@@ -518,6 +548,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD
+        | MOD_CHARGE_RECOVERY_BY_TYPE_MASK
         | CHARGE_RECOVERY_MULTIPLIER
         | CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,

@@ -36,6 +36,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     300104, 300144, // War Banner: source CurrentPvpFaction condition and combat interrupts
     302273, // Heart of a Champion
     318452, // Aqir Egg Cluster's missile-triggered swarm attachments
+    318571, // All-Seeing Eyes: source10min owner attachment; race/gender/shape visual variants.
     302730, // Brewfest Chowdown Trophy's champion animation aura (visual88525)
     383065, // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
     // Audited build70448 complete model/positioner/animation/sound chains;
@@ -54,6 +55,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     447446,  // Cherry Blossom Trail
     455023,  // Filmless Camera
     462145,  // Lampyridae Lure
+    465642, 1215495, // Coldflame Ring/Cyrce's Circlet: permanent owner attachments.
     1269949, // Valdekar's Special
     1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory

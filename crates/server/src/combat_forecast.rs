@@ -289,6 +289,7 @@ fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32
         &projection.source_scaling,
         &projection.target_scaling,
         world.get_resource::<ArmorConstants>(),
+        projection.attacker.mods,
     )
 }
 
