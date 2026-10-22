@@ -122,6 +122,8 @@ Pull candidates must pass native `relation_matches(Enemy)` selection/attackabili
 
 `SCRIPTED_BOSS_PULL_WHEN_READY` (user, 2026-10-20): a scripted boss is pulled alone, without overlap or chained adds, once every admitted party member is out of combat at full HP/mana and the healer is alive. Preserve the tank's 30% HP reserve; no numerical boss forecast is required. A boss forecast refusal in this cleared, ready state is a bug.
 
+Native enemy evade ends its pending engagement in pull history without granting a source Death or boss credit. Its living source remains available for the authored route; do not confuse a real evade/reset with temporary detection loss or scripted Vanish.
+
 `CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` (user, 2026-10-20): after all engaged party-attackable enemies die, a ready party must pull the next single pack. Forecast/budget rejection may prevent overlap or chaining, never leave a cleared ready party waiting for measurements or a forecast. Legitimate waits are bounded HP/mana recovery, a dead member awaiting resurrection/corpse run, or an explicit hazard. This is a named single-pack admission path, not invented throughput or a scripted numeric estimate.
 
 Clearance qualification (user, 2026-10-21): an alive enemy that fails native `relation_matches(Enemy)` for every living same-copy party member is not something the party can clear. Such enemies and their otherwise-real combat references cannot block next-pull readiness. Preserve valid pre-impact combat references, actual damage/healing, resource recovery and observed Death receipts. Never mark an invalid target dead, remove its authored presence, or invent a per-entry passive-react exception; watcher-side sight acquisition remains native.
