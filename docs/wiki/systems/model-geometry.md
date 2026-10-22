@@ -10,7 +10,7 @@ World reach-adjusted distance and ordinary proximity aggro share `model_reach::c
 
 ## Proof
 
-Native Shadowguard Champion122403/display124440 has no model-info row. At f626188b8, real nearby-player acquisition and scaled default/source-precedence tests both fail (5.15s). Reach then passes2/2 at c08b8a2ea; the new scaled radius/boundary case genuinely fails on the missing native radius (4.03s composite:2PASS/1FAIL). All three GREEN at a25c38d2e (5.56s). Merged source251e1c768 retains these production files unchanged; retained geometry/aggro/toy tests, check and Bo requalification remain pending.
+Native Shadowguard Champion122403/display124440 has no model-info row. At f626188b8, real nearby-player acquisition and scaled default/source-precedence tests both fail (5.15s). Reach then passes2/2 at c08b8a2ea; the new scaled radius/boundary case genuinely fails on the missing native radius (4.03s composite:2PASS/1FAIL). All three GREEN at a25c38d2e (5.56s). Merged bbc4c9e1e (master655258480) passes20/20 retained cases in54.26s: the three new cases, six attack-distance controls, four Gold-follow movement/cast/root controls, four actual toy-facing controls and three external-data controls. Format check passes; scoped check and Bo simulator requalification remain pending.
 
 ## Sources
 
