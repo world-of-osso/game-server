@@ -1,3 +1,7 @@
+## 2026-10-22 — Target74 paired destination/recipient proof
+
+[Toys](systems/toys.md#target74-and-cranky-crab-source-action-boundary-2026-10-22): sourceMax/inheritedA identity, explicit-target reference/direct geometry and one sampled center cached with recipients per processed group. Generic49f4476e8 follows9RED/control8PASS44.14s plus native86088 ordering1RED/control1PASS26.25s; exact166662 ride-gap ca56cd3f4 is separate. Composite34GREEN111.78s retains148 physical/selector, critter, Coyote,99104slot6,21,dummy and census controls. Pipeline543 unchanged;onlyCrab target74 becomes source battle-pet ride interaction gap. Fmt0/manual readability;check pending. No live player-cast default/native playback/Crab ride certificate. Initial compile-only fixture failure and no-admission capacity attempt are excluded and retained separately.
+
 ## 2026-10-22 — Target74 and Cranky Crab source action audit
 
 [Toys](systems/toys.md#target74-and-cranky-crab-source-action-boundary-2026-10-22):74 centers explicit object, not the independently selected150 critter; source B421 Radius3/Min3/Max6 must use Max6 before Max-Min sampling. SourceCrab289330 promises a battle-pet ride but149189 lacks a sourced vehicle/AI/script binding. Generic destination support must retain that named action gap, not false-admit scenery. Native70448 geometry/authority and ride-marker tests added; RED pending.
