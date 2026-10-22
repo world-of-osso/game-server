@@ -152,7 +152,7 @@ fn census_tail_280_native_npc_does_not_gain_player_armor_penetration() {
 
 #[test]
 fn census_tail_22_native_npc_physical_mitigation_uses_flat_then_total_armor() {
-    let mut h = fixture(&[28790, 52022]);
+    let mut h = fixture(&[34881, 52022]);
     let target = h.npc;
     let spell = world_db().unwrap().store.get(12294).unwrap();
     let conn = rusqlite::Connection::open_with_flags(
@@ -167,7 +167,7 @@ fn census_tail_22_native_npc_physical_mitigation_uses_flat_then_total_armor() {
         .entity_mut(target)
         .insert(CreatureArmor(300.0));
     let before = armor_reduced(h.app.world(), h.caster, target, 1000.0, spell);
-    for spell_id in [28790, 52022] {
+    for spell_id in [34881, 52022] {
         apply_aura(
             h.app.world_mut(),
             &AuraApplication {
@@ -181,15 +181,19 @@ fn census_tail_22_native_npc_physical_mitigation_uses_flat_then_total_armor() {
     }
     let armored = armor_reduced(h.app.world(), h.caster, target, 1000.0, spell);
     assert!(armored < before);
+    assert!(
+        armored > 150.0,
+        "stay below the85%armor cap so ordering remains observable"
+    );
     remove_auras(h.app.world_mut(), target, RemoveReason::Cancelled, |_| true);
     h.app
         .world_mut()
         .entity_mut(target)
-        .insert(CreatureArmor(1200.0));
+        .insert(CreatureArmor(480.0));
     assert_eq!(
         armored,
         armor_reduced(h.app.world(), h.caster, target, 1000.0, spell),
-        "(native300+700)×1.20 reaches armor mitigation"
+        "(native300+100DemonArmor)×1.20 reaches armor mitigation"
     );
 }
 
