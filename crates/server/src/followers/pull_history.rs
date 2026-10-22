@@ -387,6 +387,15 @@ fn observe_event(
     }
 }
 
+/// Native evade ends this engagement without recording a Death or clearing its source.
+/// The actor remains in the authored route and may be pulled again after recovery.
+pub(crate) fn record_evade(world: &mut World, enemy: Entity) {
+    let mut histories = world.query::<&mut PullHistory>();
+    for mut history in histories.iter_mut(world) {
+        history.active_enemies.remove(&enemy);
+    }
+}
+
 fn effective(event: &CombatLogEvent) -> f64 {
     f64::from(event.amount.saturating_sub(event.overflow.max(0)).max(0))
 }

@@ -70,6 +70,7 @@ pub enum Relation {
     Enemy,
     Ally,
     Raid,
+    Minipet,
     Any,
 }
 
@@ -122,6 +123,8 @@ enum Selector {
     Summoner,
     /// The caster's summoned pet.
     Pet,
+    ///150: current Companion-title minion, independent of explicit selection.
+    Critter,
     /// Area center = the caster's position moved `angle` (radians from its facing) by
     /// the effect radius, else `DEFAULT_TOTEM_DISTANCE`.
     CasterOffset(f32),
@@ -147,6 +150,8 @@ fn selector(id: u32) -> Option<Selector> {
         1 | 120 => Selector::Caster,
         56 => Selector::RaidArea,
         5 => Selector::Pet,
+        90 => Selector::Explicit(Minipet),
+        150 => Selector::Critter,
         119 => Selector::RaidCorpses,
         121 => Selector::ExplicitCorpseAlly,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
@@ -237,6 +242,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                     | Selector::ChannelTarget
                     | Selector::Summoner
                     | Selector::Pet
+                    | Selector::Critter
                     | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
                     | Selector::DynObj(_)
@@ -310,6 +316,9 @@ pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
 }
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
+    if relation == Relation::Minipet {
+        return super::summon::current_critter(world, caster) == Some(target);
+    }
     let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if caster == target {
         return relation != Relation::Enemy;
@@ -474,7 +483,8 @@ pub fn select_targets(
             Selector::Explicit(relation) => {
                 selected_any = true;
                 if let Some(target) = explicit.filter(|&target| {
-                    ignore_relation || relation_matches(world, caster, target, relation)
+                    let bypass_relation = ignore_relation && relation != Relation::Minipet;
+                    bypass_relation || relation_matches(world, caster, target, relation)
                 }) {
                     units.push(target);
                     units.extend(chain_targets(
@@ -577,6 +587,10 @@ pub fn select_targets(
             Selector::Pet => {
                 selected_any = true;
                 units.extend(crate::hunter_pet::summoned_pet(world, caster));
+            }
+            Selector::Critter => {
+                selected_any = true;
+                units.extend(super::summon::current_critter(world, caster));
             }
             Selector::CasterOffset(angle) => {
                 center = caster_offset(world, caster, angle, radius(effect, slot));

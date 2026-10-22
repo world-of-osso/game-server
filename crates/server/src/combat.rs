@@ -834,6 +834,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
         ],
         spell_id: None,
         can_proc: true,
+        cast_used_proc_modifier: false,
         periodic: false,
         damage: outcome.scaled_loss,
         heal: None,
@@ -847,6 +848,7 @@ fn swing_aura_events(attacker: Entity, target: Entity, outcome: &SwingOutcome) -
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
             can_proc: true,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
             heal: None,
@@ -1488,6 +1490,12 @@ fn try_swing(
         * armor
             .1
             .map_or(1.0, CharacterStats::versatility_damage_taken_multiplier);
+    let raw_armor = target_armor(armor, &target, &attacker_scaling);
+    let bypassed_armor = crate::auras::combat_stats::armor_after_bypass(
+        avoidance.1.as_deref(),
+        attacker.entity,
+        raw_armor,
+    );
     let armored = armor_mitigated(
         swing_damage(
             attacker,
@@ -1501,7 +1509,7 @@ fn try_swing(
                     .taken_multiplier(attacker.entity, avoidance.1.as_deref())
                 * versus,
         ),
-        target_armor(armor, &target, &attacker_scaling),
+        bypassed_armor,
         &attacker_scaling,
         &target,
         context.armor_constants,
