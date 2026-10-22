@@ -25,6 +25,9 @@
 #[cfg(test)]
 #[path = "aura_stat_spell_tests.rs"]
 mod aura_stat_spell_tests;
+#[cfg(test)]
+#[path = "bypass_armor_tests.rs"]
+mod bypass_armor_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
