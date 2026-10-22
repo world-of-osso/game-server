@@ -127,6 +127,9 @@ fn ruby_resource_limited_tail_native_component_probe() {
     let (entrance_ref, _) = nav.nearest(entrance, &filter).unwrap();
     let (target_ref, end_pos) = nav.nearest(target, &filter).unwrap();
     let parents = connected_polygons(&nav, entrance_ref, &filter);
+    let mut loaded: Vec<_> = nav.loaded.iter().copied().collect();
+    loaded.sort_unstable();
+    writeln!(trace, "loaded_wow_tiles={loaded:?}").unwrap();
     writeln!(
         trace,
         "entrance_component_polygons={} target_in_component={}",
