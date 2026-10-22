@@ -11,6 +11,22 @@
       "source_url": "db2:12.1.5.70448/JournalEncounter#2559",
       "journal_encounter_id": 2559,
       "cache_sha256": "d109eb1739ac19ffccdb26ac77821aadfd976bb6dbb717f95fc673e91fff17ed",
+      "source_floor": 0,
+      "source_floor_reference_height": 56.68354978731017,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS",
+        "approval": "Lead-approved Blazikon-only extension, maximum8yd rather than Vexamus5yd; no global widening.",
+        "marker_wow_xy": [406.77750715, -155.2714289],
+        "maximum_horizontal_distance_yards": 8,
+        "maximum_vertical_difference_yards": 1,
+        "anchors": [
+          {"guid": 10002729, "entry": 210913, "name": "Invisible stalker", "map_id": 2651, "wow_xyz": [408.878, -154.658, 56.9833]},
+          {"guid": 10002730, "entry": 211228, "name": "Blazing Fiend", "map_id": 2651, "wow_xyz": [410.117, -149.065, 57.006]}
+        ],
+        "rejected_surface_heights": [0.2, 34.2, 105.20760790547207],
+        "method": "Both exact native room anchors agree within1yd on only baked56.683550 at unchanged journalXY; other levels do not agree. Source room-group upward hits span34/56 and remain ambiguous without these anchors."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2651_208743",
       "journal_actor_source": {
         "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
         "path": "/home/osso/Repos/LittleWigs/WarWithin/DarkflameCleft/Blazikon.lua",
@@ -25,6 +41,32 @@
       "source_url": "db2:12.1.5.70448/JournalEncounter#2561",
       "journal_encounter_id": 2561,
       "cache_sha256": "fa52ee0ff553507c4cd677c6f4ed5b63f994e1688dd8ca60948ffbfb5f06864b",
+      "source_floor": 0,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS",
+        "db2_assignment_id": 67854,
+        "wmo_group_id": 70171,
+        "placement_unique_id": 44107304,
+        "wmo_root_fdid": 5162358,
+        "wmo_group_fdid": 5216589,
+        "maximum_height_difference_yards": 1.0,
+        "triangles": [
+          {"triangle_index": 56, "world_vertices": [[196.01202392578125,-541.26416015625,59.157711029052734],[187.9409942626953,-541.2547607421875,59.17353820800781],[187.9409942626953,-555.4979858398438,60.209957122802734]]},
+          {"triangle_index": 331, "world_vertices": [[191.45877075195312,-527.0267944335938,103.77780342102051],[195.51809692382812,-550.8222045898438,98.27069520950317],[186.53187561035156,-550.8222045898438,112.67410469055176]]},
+          {"triangle_index": 5116, "world_vertices": [[186.99441528320312,-552.8473510742188,103.27884769439697],[188.33949279785156,-547.7528686523438,105.5751600265503],[192.3450469970703,-548.5374145507812,99.47406196594238]]},
+          {"triangle_index": 5612, "world_vertices": [[184.90162658691406,-547.9059448242188,99.88053894042969],[191.09963989257812,-545.4600219726562,116.80921936035156],[188.53823852539062,-552.4348754882812,116.78694915771484]]},
+          {"triangle_index": 15292, "world_vertices": [[201.1823272705078,-555.7633666992188,82.58407211303711],[188.13294982910156,-555.804931640625,94.84008622169495],[188.80381774902344,-520.2730102539062,93.40784031152725]]},
+          {"triangle_index": 16464, "world_vertices": [[190.63943481445312,-555.4817504882812,61.01410484313965],[190.63943481445312,-541.2619018554688,60.030540466308594],[185.2242889404297,-541.2619018554688,60.03052520751953]]}
+        ],
+        "source_files": [
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5217425.wdt", "sha256": "9c60693bd42d07c9050fcab800c7a3d51dcbdf6abe4fbbb77ee0f5e7a146ccfe"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/5219098.adt", "sha256": "731262b512fc6c2afb8bfba99db6da171450f2653e0476826260bc219f7d2a79"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5162358.wmo", "sha256": "f79c7178d2a930b5067b2903ddb7eec619fd68c7449c992a2d30bcae8a96d725"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/5216589.wmo", "sha256": "1516c34c355d91aa89846f508df851cbdcf84adbde74362d87b266f44ec36c79"}
+        ],
+        "transform": "MODF position[17066.666015625,92.86903381347656,17066.666015625], rotation[0,0,0], scale1. File XYZ becomes world WoW[-X,-Y,Z+92.86903381347656]. All six group hits retained: two upward59.649956/60.483952 agree only on baked59.8 within1yd; four downward ceilings rejected. Final Z remains baked."
+      },
+      "navigation_gap": "FOLLOWER_ROUTE_INCOMPLETE_2651_208747",
       "journal_actor_source": {
         "policy": "FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR",
         "path": "/home/osso/Repos/LittleWigs/WarWithin/DarkflameCleft/TheDarkness.lua",

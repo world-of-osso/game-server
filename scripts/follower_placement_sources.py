@@ -154,12 +154,14 @@ def match_upward_source_floor(evidence, marker, assignments, heights):
         height = triangle_height((x, -y), bevy)
         if height is not None:
             upward.append(height)
-    if len(upward) != 1:
+    if not upward:
+        raise ValueError('source floor group has no upward triangle at source XY')
+    if evidence['policy'] == 'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE' and len(upward) != 1:
         raise ValueError('source floor group requires exactly one upward triangle at source XY')
     tolerance = evidence['maximum_height_difference_yards']
     if not math.isfinite(tolerance) or tolerance <= 0:
         raise ValueError('source floor matching tolerance must be finite and positive')
-    matched = [z for z in heights if abs(z - upward[0]) <= tolerance]
+    matched = [z for z in heights if all(abs(z - height) <= tolerance for height in upward)]
     if len(matched) != 1:
         raise ValueError('source upward floor requires exactly one baked candidate within tolerance')
     return matched
@@ -167,8 +169,9 @@ def match_upward_source_floor(evidence, marker, assignments, heights):
 
 def read_source_floor_support(record, marker, assignments, heights):
     evidence = record.get('source_floor_evidence')
-    triangle_policy = (isinstance(evidence, dict) and evidence.get('policy') ==
-                       'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE')
+    triangle_policy = (isinstance(evidence, dict) and evidence.get('policy') in (
+        'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE',
+        'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS'))
     if 'source_floor_z_bounds' not in record and not triangle_policy:
         return heights
     if marker['floor'] != record['source_floor']:

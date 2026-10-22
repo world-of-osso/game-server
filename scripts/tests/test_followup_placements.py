@@ -199,6 +199,22 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'evidence changed'):
                     derive_binding(source, inventory, tables, manifest['map_id'], entry, dict(identity, sha256='0' * 64))
 
+    def test_blazikon_native_room_uses_only_its_explicit_eight_yard_limit(self):
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/darkflame-cleft.json'
+        manifest = json.loads(manifest_path.read_text())
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source:
+            proofs = validate_native_room_anchors(source, manifest)
+            self.assertEqual([p['entry'] for p in proofs], [208743])
+            distances = [a['horizontal_distance_yards'] for a in proofs[0]['anchors']]
+            self.assertLess(distances[0], 3)
+            self.assertGreater(distances[1], 7)
+            self.assertLess(distances[1], 8)
+            narrowed = copy.deepcopy(manifest)
+            narrowed['entries'][0]['source_floor_evidence']['maximum_horizontal_distance_yards'] = 5
+            with self.assertRaisesRegex(ValueError, 'do not agree'):
+                validate_native_room_anchors(source, narrowed)
+
     def test_native_room_policy_refuses_single_moved_or_ambiguous_anchors(self):
         path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
         manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/vexamus.json'

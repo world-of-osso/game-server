@@ -1,3 +1,7 @@
+## 2026-10-22 — Darkflame floor consensus and bounded anchors
+
+[Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22): initial packet refused ambiguous floors; source-consensus RED showed old reader returned all levels. Approved all-upward-hit consensus selects Darkness59.8; Blazikon alone uses two native room anchors within8yd for56.683550, not a global limit change. Waxbeard unique reachable86.600006. New proof pending.
+
 ## 2026-10-22 — Darkflame source manifests
 
 [Darkflame sources](investigations/follower-data.md#darkflame-native-primary-sources--2026-10-22): actual missing-primary RED; pinned journal/Lua sources for Blazikon1, Darkness0 and Waxbeard0; Massive Candle helper excluded, existing Candle King preserved. Native-chain fixture1GREEN0.010s ataca4f122e proves source0 import/CT0 refusal/no synthetic1. Packet pending.

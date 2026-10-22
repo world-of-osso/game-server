@@ -87,6 +87,23 @@ class FollowerPlacementSources(unittest.TestCase):
                 self.assertEqual(result['page']['source_table'], 'JournalEncounter')
                 self.assertEqual(result['page']['source_row']['ID'], str(journal_id))
 
+    def test_darkness_upward_consensus_requires_every_hit_and_one_baked_candidate(self):
+        from follower_placements import read_binding_tables
+        from follower_placement_sources import read_journal_marker
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/darkflame-cleft.json'
+        record = next(r for r in json.loads(manifest_path.read_text())['entries'] if r['entry'] == 208747)
+        binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        _, marker, assignments = read_journal_marker(self.tables | binding_tables, 2651, 208747, 2561)
+        observed = [0.2, 59.8, 87.64274795119454]
+        self.assertEqual(read_source_floor_support(record, marker, assignments, observed), [59.8])
+        with self.assertRaisesRegex(ValueError, 'one baked candidate'):
+            read_source_floor_support(record, marker, assignments, observed + [59.7])
+        separated = copy.deepcopy(record)
+        for vertex in separated['source_floor_evidence']['triangles'][-1]['world_vertices']:
+            vertex[2] += 22
+        with self.assertRaisesRegex(ValueError, 'one baked candidate'):
+            read_source_floor_support(separated, marker, assignments, observed)
+
     def test_nokhud_journal_uses_explicit_uimap_without_inventing_a_group_floor(self):
         from follower_placements import derive_placement, read_binding_tables
         binding_tables, _ = read_binding_tables(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
