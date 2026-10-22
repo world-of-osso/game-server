@@ -4,6 +4,7 @@ use super::*;
 fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
     let mut app = stockade_app(data().expect("source world.db"));
     app.insert_resource(crate::test_data::world_data().clone());
+    app.insert_resource(crate::test_data::ground_map());
     let source = crate::spell_cast::test_harness::world_db().unwrap();
     // TC Wild Eruption's dummy hook casts375650, whose DB2 effect32 triggers375647.
     let spells = if spell == 375652 {
@@ -97,6 +98,20 @@ fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
         players: vec![(player, connection, Inbox::default())],
     };
     h.advance(0.05);
+    if spell == 375652 {
+        for unit in [actor, player] {
+            let position = *h.app.world().get::<Position>(unit).unwrap();
+            let probe = h
+                .app
+                .world_mut()
+                .resource_mut::<crate::ground::GroundMap>()
+                .ground_in(map, Vec3::new(position.x, position.y, position.z));
+            assert!(
+                matches!(probe, crate::ground::GroundProbe::Supported(_)),
+                "native Azure caster/victim ground prerequisite: {position:?}: {probe:?}"
+            );
+        }
+    }
     (h, actor)
 }
 
