@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 const MAX_TICKS: usize = 72_000;
 const STALL_SECONDS: f64 = 60.0;
 
+#[path = "azure_positioning_tests.rs"]
+mod azure_positioning_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
 
