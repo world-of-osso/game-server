@@ -1,6 +1,6 @@
 ## 2026-10-22 — Active party combat references
 
-Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix committed, GREEN/current-master controls pending.
+Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. One stale population-oracle failure and pending fullHenry/check are explicit, not a complete gate claim.
 
 ## 2026-10-21 — Continuous frozen walk endpoints
 
