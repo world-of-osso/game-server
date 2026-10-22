@@ -1,3 +1,7 @@
+## 2026-10-22 — Native Ascendance entry RED and bounded selection policy
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22): actual1219480 self aura/full285452 control pass, owned188389 absent0vs6/entry burst missing; corrected combat-only native2RED22.84s/zero warnings. Approved named Flame-Shock-eligibility project policy, not Retail radius. Entry script/per-cast50% multiplier pushed; GREEN remains pending. Earlier projection d79 landed through lead ra922/Python21PASS and its single kit row is published.
+
 ## 2026-10-22 — Ascendance samples and current-master gate boundary
 
 [Measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): only Elemental3 affected samples refreshed,3PASS29.75s; real1219480 cast1/up12.458% on both90 scenarios, none at32. Source revisioncacbac0b0/base0c2 preserved with exact ledger/hashes. Laterfc5e87cc1 aura/stat/power changes merged as317ae34b7; current integration gate remains pending, not replaced by pre-merge proof. Entry Shock/Lava Burst and complete APL remain open.

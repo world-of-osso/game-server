@@ -171,6 +171,16 @@ Only affected Elemental production-StatsPlugin samples were refreshed:3PASS29.75
 
 Engine evidence is `data/diagnostics/rotation-fidelity-2026-10-21/{rotation-a3-ascendance-*,delta-a3-ascendance.sql,receipt-a3-ascendance.json,world-rotation-a3-ascendance.db}`. `rotation-a3-ascendance-proof-ledger.json` records exact revisions/scope/artifact hashes; canonical application is lead-owned. This proves projection/readiness/aura only: described six-target entry Flame Shock/50%-effectiveness Lava Burst, MID2/fight-remains exceptions, and complete APL fidelity remain open. No obsolete Lava Beam or Lava Burst cooldown-removal behavior is assumed.
 
+### Elemental Ascendance entry — 2026-10-22
+
+Projection/readiness landed as d79f586c1 after lead gate ra922 EXIT0/Python21PASS; the qualified single action interval is now published. That gate did not implement entry consequences.
+
+Native70448 spell1219480 explicitly names entry188389 Flame Shock and50%-effectiveness Lava Burst on up to6 enemies (effects6/9). SimC76f8118 `sc_shaman.cpp:8639–8668` orders Flame Shock before Lava Burst; its ordinary Ascendance Lava Burst variant omits the native50% multiplier, so the current native description wins. `ELEMENTAL_ASCENDANCE_ENTRY_USES_FLAME_SHOCK_ELIGIBILITY` is approved **project selection policy**, not a Retail radius: living same-map in-combat hostiles passing actual Flame Shock range/LOS/target validation, nearest-first, then native cap6. No exact Retail distance or SimC ordering is asserted.
+
+Genuine native entry RED at7d29d20a9:2FAIL18.41s, actual self aura/full Lava Burst crit-control prerequisites pass; owned Flame Shocks0vs6 and entry damage absent. After the combat-only policy was approved, corrected972feb997 fixture creates actual combat references for7 nearby enemies and an80yd control, leaves a nearer idle control, and reproduces2FAIL22.84s/zero warnings. These policy controls are unproved until GREEN. Implementation0f8292126 casts native children and snapshots a damage multiplier on only the entry285452 cast, before native rounding/mitigation; ordinary casts retain their own unmodified data.348cbb8ce adds a subsequent ordinary-full-damage control while Ascendance remains active. Targeted GREEN is pending; no entry-completion or new DPS claim.
+
+Evidence: engine `data/diagnostics/rotation-fidelity-2026-10-21/{ascendance-entry-goal.json,ascendance-entry-source.json,ascendance-entry-proof-ledger.json,rotation-a3-ascendance-entry-policy-red.log}`. Mastery extra-overloads, MID2/fight-remains exceptions and complete APL remain open.
+
 ### Barbed Shot secondary targets — 2026-10-21
 
 SimC76f8118 `apl_hunter.cpp:104,109,119,132` selects minimum own Barbed Shot DoT remaining. The previous253 policy only required missing217200 on the single primary enemy. Real native Duck21 plus an actual primary DoT and an engaged undotted secondary gives genuine RED47.19s atc85029524: no second shot within4s, despite another available native charge. An unengaged30-yard enemy remains a negative control.
