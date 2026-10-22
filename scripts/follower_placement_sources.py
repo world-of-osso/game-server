@@ -17,13 +17,13 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def read_db2(directory):
+def read_db2(directory, additional_tables=()):
     directory = Path(directory)
     receipt = json.loads((directory / "receipt.json").read_text())
     if receipt["identity"]["build"] != BUILD or receipt["identity"]["extraction_source"] != "authenticated-local-CASC-content-root":
         raise ValueError("require authenticated local CASC build70448")
     tables, proof = {}, {}
-    for table in TABLES:
+    for table in (*TABLES, *additional_tables):
         path = directory / f"{table}.csv"
         metadata = receipt["tables"][table]
         if not metadata["content_authenticated"] or metadata["unreadable_records"] or digest(path) != metadata["csv_sha256"]:

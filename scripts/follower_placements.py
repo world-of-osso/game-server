@@ -17,6 +17,7 @@ PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS'
 JOURNAL_PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
 LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
+MAP_TUNING_POLICY = 'FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY'
 TABLE_KEYS = {'content_creature_template': ('entry',),
               'content_creature_template_model': ('CreatureID', 'Idx'),
               'content_creature': ('guid',),
@@ -164,6 +165,28 @@ def derive_binding(source, inventory, tables, map_id, entry, identity=None):
     return (map_id, entry, int(dungeon['ID']), int(dungeon['Bit']), int(journal['ID']), int(actor['ID']), int(actor['CreatureDisplayInfoID']))
 
 
+def qualify_map_content_tuning(target, record):
+    """TC Creature.cpp3122–3150: noncritter CT0 uses its native map difficulty."""
+    if record.get('content_tuning_policy') != MAP_TUNING_POLICY:
+        return None
+    creature_type = target.execute('SELECT type FROM tdb_creature_template WHERE entry=?', (record['entry'],)).fetchone()[0]
+    if creature_type == 8:
+        return None
+    cursor = target.execute('SELECT * FROM map_difficulty WHERE MapID=? AND DifficultyID=1', (record['map_id'],))
+    columns = [column[0] for column in cursor.description]
+    rows = [dict(zip(columns, row)) for row in cursor]
+    if len(rows) != 1 or rows[0]['ContentTuningID'] <= 0:
+        return None
+    selected = rows[0]
+    levels = target.execute('SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=?', (selected['ContentTuningID'],)).fetchone()
+    if levels is None:
+        return None
+    return dict(policy=MAP_TUNING_POLICY, source='TrinityCore a352b1fa Creature.cpp3122–3150',
+                map_difficulty_row=selected, content_tuning_id=selected['ContentTuningID'],
+                runtime_level_range=list(levels), creature_type=creature_type,
+                native_creature_row_preserved=True)
+
+
 def stage_source_difficulties(target, records):
     requested = [(r['entry'], 1) for r in records]
     resolved = retail_content.resolve_difficulty_rows(target, requested)
@@ -178,12 +201,20 @@ def stage_source_difficulties(target, records):
     cursor = target.execute('SELECT * FROM temp.tdb_difficulty ORDER BY Entry')
     columns = [c[0] for c in cursor.description]
     rows = [dict(zip(columns, row)) for row in cursor]
+    proofs = []
+    by_entry = {record['entry']: record for record in records}
     for row in rows:
-        levels = target.execute('SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=?', (row['ContentTuningID'],)).fetchone()
-        if row['ContentTuningID'] <= 0 or levels is None:
+        proof = dict(entry=row['Entry'], requested_difficulty_id=1, source_difficulty_id=row['DifficultyID'],
+                     policy='FOLLOWER_PLACEMENT_SOURCE_DIFFICULTY_CHAIN', source_row=row)
+        if row['ContentTuningID'] == 0:
+            regional = qualify_map_content_tuning(target, by_entry[row['Entry']])
+            if regional is None:
+                raise ValueError(f"FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_{row['Entry']}")
+            proof['effective_content_tuning'] = regional
+        elif target.execute('SELECT 1 FROM content_tuning_level WHERE ID=?', (row['ContentTuningID'],)).fetchone() is None:
             raise ValueError(f"FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_{row['Entry']}")
-    return [dict(entry=r['Entry'], requested_difficulty_id=1, source_difficulty_id=r['DifficultyID'],
-                 policy='FOLLOWER_PLACEMENT_SOURCE_DIFFICULTY_CHAIN', source_row=r) for r in rows]
+        proofs.append(proof)
+    return proofs
 
 
 def prepare_templates(target, records, cache):
@@ -314,7 +345,10 @@ def prepare(args):
     manifest = json.loads(args.manifest.read_text())
     if manifest['placement_policy'] not in (PLACEMENT_POLICY, JOURNAL_PLACEMENT_POLICY) or manifest['faction_policy'] != FACTION_POLICY:
         raise ValueError('manifest policies differ from approved placement policy')
-    tables, auth = read_db2(args.db2)
+    regional_records = [r for r in manifest['entries'] if 'content_tuning_policy' in r]
+    if any(r['content_tuning_policy'] != MAP_TUNING_POLICY or r['map_id'] != manifest['map_id'] for r in regional_records):
+        raise ValueError('map tuning policy or actor map differs from placement manifest')
+    tables, auth = read_db2(args.db2, ('MapDifficulty',) if regional_records else ())
     binding_tables, binding_auth = read_binding_tables(args.db2)
     inventory = json.loads(args.inventory.read_text())
     polygons = read_surface_polygons(args.surfaces)
@@ -324,6 +358,13 @@ def prepare(args):
     with closing(open_readonly(baseline_path)) as baseline:
         baseline.row_factory = sqlite3.Row
         entrance = dict(baseline.execute('SELECT * FROM tdb_world_safe_locs WHERE ID=? AND MapID=?', (manifest['entrance_id'], manifest['map_id'])).fetchone())
+        if regional_records:
+            cursor = baseline.execute('SELECT * FROM map_difficulty WHERE MapID=? AND DifficultyID=1', (manifest['map_id'],))
+            native_maps = [{key: str(value) for key, value in dict(row).items()} for row in cursor]
+            authenticated_maps = [row for row in tables['MapDifficulty']
+                                  if int(row['MapID']) == manifest['map_id'] and row['DifficultyID'] == '1']
+            if len(native_maps) != 1 or native_maps != authenticated_maps:
+                raise ValueError('native map difficulty differs from authenticated DB2')
         native_room_anchors = validate_native_room_anchors(baseline, manifest)
         placements = [derive_placement(r, manifest, tables | binding_tables, args.cache, polygons, args.route, args.nav, entrance) for r in manifest['entries']]
         receipt = dict(map_id=manifest['map_id'], policy=manifest['placement_policy'], db2_authentication=auth | binding_auth,
