@@ -231,6 +231,9 @@ fn classify(
 
 fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
     use crate::auras::handlers::{AuraKind, TRANSFORM};
+    if crate::spell_cast::toy_scripts::supports_effect(spell_id, effect) {
+        return true;
+    }
     if effect.aura == TRANSFORM {
         if effect.misc_values[0] == 0 {
             return crate::auras::supports_zero_entry_costume(spell_id);
@@ -281,7 +284,6 @@ fn supports_effect(world: &World, spell_id: u32, effect: &SpellEffect) -> bool {
                 .any(|radius| radius.radius > 0.0 || radius.radius_max > 0.0);
     }
     crate::spell_cast::effects::is_handled(effect)
-        || crate::spell_cast::toy_scripts::supports_effect(spell_id, effect)
 }
 
 pub(crate) fn unavailable(toy: &Toy, world: &World) -> Option<String> {

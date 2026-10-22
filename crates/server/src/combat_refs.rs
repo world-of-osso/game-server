@@ -36,6 +36,16 @@ pub(crate) const PVP_COMBAT_TIMEOUT_SECS: f64 = 5.0;
 #[derive(Component, Debug, Default)]
 pub(crate) struct CombatRefs(HashMap<Entity, CombatRef>);
 
+/// The actual, non-suppressed opponents putting this unit in combat.
+pub(crate) fn active_opponents(world: &World, unit: Entity) -> impl Iterator<Item = Entity> + '_ {
+    world.get::<CombatRefs>(unit).into_iter().flat_map(|refs| {
+        refs.0
+            .iter()
+            .filter(|(_, reference)| !reference.suppressed)
+            .map(|(other, _)| *other)
+    })
+}
+
 /// One side of a combat reference.
 #[derive(Clone, Copy, Debug)]
 struct CombatRef {
