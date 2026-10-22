@@ -173,6 +173,14 @@
 ## 2026-10-21 — Holy native policy boundary
 
 [Holy Priest](investigations/holy-priest-follower-ai.md): native temporary-threat2GREEN and native90 damage/stat controlGREEN atf53b75c0b; six policy REDs justify the real-context adapter. Integration GREEN pending; target118 Fortitude coverage ignored pending generic correction, never replaced by individual buffs.
+## 2026-10-22 — Class4 zone-only ingress
+
+[Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
+
+## 2026-10-21 — Remaining follower boss ingress
+
+[Source inventory](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21): read-only27maps/98Normalencounters with2777a9d Lua/70448 journal/source placements. RemainingDF17 have no placed primaries; City blanks retainPCimmunity. Lead excludes unplaced/fake-unlock combat; Anub'zekt ignoredRED→native76ca45582 GREEN5/5: source Energy and four encounter cases in Normal1/Follower205; enabled after proof, absent-ground fixture cause corrected with authored terrain. Thirty-three requests, first Eye spend, later Energy denial, DOT/reset/copy-credit/corpse behavior proven; whole-fight/controller gaps retained.
+
 ## 2026-10-21 — Actual scripted boss alert clocks
 
 [Boss alerts](systems/bossmod-data.md#scripted-clock-continuation--2026-10-21): explicit six current-Lua scripts publish selected EventMap requests with source labels/colors/counts; other SmartAI-only clocks stay excluded. Canonical catalog absent; retained private Kokia legacy clocks cannot supply current requests. Real Kokia missing-snapshot RED→post-master2/2GREEN; actual private5981 Kokia205 both-skin1920 countdown/actual warnings/kill-clear accepted with ten inspected originals; source gaps retained.
