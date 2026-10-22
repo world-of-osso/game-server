@@ -29,7 +29,7 @@ pub(super) fn summarize(reports: &[Report]) -> serde_json::Value {
     };
     serde_json::json!({"runs": reports.len(), "seeds": reports.iter().map(|report| report.seed).collect::<Vec<_>>(),
         "cleared": count("cleared"), "wiped": count("wiped"), "stalled": count("stalled"),
-        "blocked": count("blocked"), "timed_out": count("timeout"),
+        "blocked": count("blocked"), "timed_out": count("timeout"), "aborted": count("aborted"),
         "failed_runs": reports.len() - count("cleared"), "packs": packs})
 }
 
@@ -94,18 +94,21 @@ fn batch_summary_counts_wipes_per_reached_pack_and_retains_stalls() {
         report(1, "cleared", None, &[10, 20]),
         report(2, "wiped", Some(20), &[10, 20]),
         report(3, "stalled", Some(10), &[10]),
+        report(4, "aborted", Some(20), &[10, 20]),
     ];
     let summary = summarize(&reports);
-    assert_eq!(summary["runs"], 3);
+    assert_eq!(summary["runs"], 4);
+    assert_eq!(summary["aborted"], 1);
     assert_eq!(summary["cleared"], 1);
     assert_eq!(summary["wiped"], 1);
     assert_eq!(
-        summary["failed_runs"], 2,
+        summary["failed_runs"], 3,
         "no-wipe stalls must not masquerade as clears"
     );
-    assert_eq!(summary["packs"]["10"]["runs_reaching"], 3);
+    assert_eq!(summary["packs"]["10"]["runs_reaching"], 4);
     assert_eq!(summary["packs"]["10"]["wipes"], 0);
     assert_eq!(summary["packs"]["10"]["failures"], 1);
-    assert_eq!(summary["packs"]["20"]["runs_reaching"], 2);
-    assert_eq!(summary["packs"]["20"]["wipe_rate"], 0.5);
+    assert_eq!(summary["packs"]["20"]["runs_reaching"], 3);
+    assert_eq!(summary["packs"]["20"]["failures"], 2);
+    assert_eq!(summary["packs"]["20"]["wipe_rate"], 1.0 / 3.0);
 }

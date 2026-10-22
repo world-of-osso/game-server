@@ -20,12 +20,13 @@ time.sleep(0.25)
 (out / f'interval-{seed}.json').write_text(json.dumps([started, time.monotonic()]))
 if seed == int(os.environ.get('FIXTURE_MISSING_SEED', '-1')):
     sys.exit(3)
-report = {'seed': seed, 'status': 'stalled' if seed == 2 else 'cleared',
-          'failed_pack': 20 if seed == 2 else None,
+aborted = seed == int(os.environ.get('FIXTURE_ABORTED_SEED', '-1'))
+report = {'seed': seed, 'status': 'aborted' if aborted else ('stalled' if seed == 2 else 'cleared'),
+          'failed_pack': 20 if seed == 2 or aborted else None,
           'pulls': [{'pack': 10}, {'pack': 20}]}
 (out / f'run-{seed}.json').write_text(json.dumps(report))
 (out / 'summary.json').write_text(json.dumps({'runs': 1, 'seeds': [seed]}))
-sys.exit(101 if seed == 2 else 0)
+sys.exit(101 if seed == 2 or aborted else 0)
 '''
 
 
@@ -60,6 +61,20 @@ class RunnerProcesses(unittest.TestCase):
         self.assertEqual(self.run_batch(1, serial).returncode, 101)
         for seed in range(1, 5):
             self.assertEqual(json.loads((parallel / f"run-{seed}.json").read_text()), json.loads((serial / f"run-{seed}.json").read_text()))
+
+    def test_aborted_native_report_is_retained_and_counted_separately(self):
+        import os
+        output = self.root / "aborted"
+        result = self.run_batch(2, output, os.environ | {"FIXTURE_ABORTED_SEED": "3"})
+        self.assertEqual(result.returncode, 101)
+        summary = json.loads((output / "summary.json").read_text())
+        self.assertEqual(summary["runs"], 4)
+        self.assertEqual(summary["aborted"], 1)
+        self.assertEqual(summary["stalled"], 1)
+        self.assertEqual(summary["failed_runs"], 2)
+        self.assertEqual(summary["missing_seeds"], [])
+        self.assertEqual(summary["packs"]["20"]["failures"], 2)
+        self.assertEqual(json.loads((output / "run-3.json").read_text())["status"], "aborted")
 
     def test_missing_process_report_cannot_reuse_stale_seed_success(self):
         import os

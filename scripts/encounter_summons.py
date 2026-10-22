@@ -703,9 +703,29 @@ def import_kyrioss_schedule(connection):
     return [209230]
 
 
+def import_orator(connection):
+    """TC a352b1fa primary216619 binding only; keep actual class4/flags and actors."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2669, entry=216619, encounter_id=2907, bit=1,
+                   script='boss_orator_krix_vizk', ai='', journal_id=2594,
+                   actor_id=5620, display_id=116692, spawn_guid=10002880,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_class,unit_flags,unit_flags2
+        FROM content_creature_template WHERE entry=216619''').fetchone()
+    if runtime != ("Orator Krix'vizk", '', 'boss_orator_krix_vizk', 4, 64, 0):
+        raise ValueError('Orator runtime identity or source class/flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [216619]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -731,6 +751,8 @@ def main():
                 entries = import_kyrioss_schedule(conn)
             elif args.encounter == 'anubzekt':
                 entries = import_anubzekt(conn)
+            elif args.encounter == 'orator':
+                entries = import_orator(conn)
             elif args.encounter == 'kikatal':
                 entries = import_kikatal(conn)
             elif args.encounter == 'dailcry':

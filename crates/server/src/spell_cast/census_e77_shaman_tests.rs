@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 
 const EARTHQUAKE: u32 = 61882;
+const TARGET_EARTHQUAKE: u32 = 462620;
 const TICK: u32 = 77478;
 const KNOCKDOWN: u32 = 77505;
 const CENTER: Vec3 = Vec3::new(20.0, 0.0, 0.0);
@@ -80,6 +81,61 @@ fn census_e77_shaman_native_knockdown_is_once_per_target_per_owned_field() {
         knockdowns(&h),
         before,
         "no stun after authored field expiry"
+    );
+}
+
+#[test]
+fn census_e77_shaman_target_earthquake_preserves_native_center_overlap_and_expiry() {
+    let mut h = fixture();
+    let target = spawn_npc(&mut h.app, CENTER.x);
+    let ally = spawn_player(&mut h.app, 7, CENTER.x);
+    let first = h.inbox.log.len();
+    super::cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        TARGET_EARTHQUAKE,
+        Some(target),
+        0,
+    );
+    h.advance(20);
+    super::cast_triggered(
+        h.app.world_mut(),
+        h.caster,
+        TARGET_EARTHQUAKE,
+        Some(target),
+        0,
+    );
+    h.advance(140);
+    let hits: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == shared::protocol::CombatLogKind::Damage
+                && event.spell_id == Some(TICK)
+                && event.source == Some(h.caster.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        12,
+        "two actual native6s/1000ms fields overlap without replacing one another"
+    );
+    assert!(
+        hits.iter()
+            .all(|event| event.target == Some(target.to_bits()) && event.amount > 0)
+    );
+    assert_eq!(
+        h.health(h.npc),
+        5000.0,
+        "target-centered8yd field does not move to caster or its10yd original target"
+    );
+    assert_eq!(h.health(ally), 1000.0);
+    let first = h.inbox.log.len();
+    h.advance(40);
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(TICK)),
+        "natural field expiry stops damage"
     );
 }
 

@@ -260,6 +260,9 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
+            Some(crate::scripted_ai::orator::terrorize_hit)
+        }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
@@ -311,6 +314,7 @@ pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
         (batch14::BLIZZARD_DAMAGE, 0) => Some(batch14::slow_blizzard),
         (batch14::SURVIVAL_COMMAND, 0) => Some(batch14::command_pet),
         (KILL_COMMAND, 0) => Some(batch14::command_beast),
+        (batch14::WILD_THRASH, 0) => Some(batch14::wild_thrash),
         (batch14::WILDFIRE_BOMB, 2) => Some(batch14::bomb_primary),
         (batch14::CONSUME, 0) => Some(batch14::consume_fury),
         (batch13::REND, 0) => Some(batch13::apply_rend_bleed),

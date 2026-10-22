@@ -27,7 +27,7 @@ Generic guardian actors and native damage transfer have a separate [contract](sp
 
 - [x] Gorefiend's Grasp108199E1 applies native454824 only when its caster owns454822, using TC's limited triggered flags; foreign/absent talent does not apply it. Unmatched E0 remains a named gap, not whole-spell support.
 - [x] Shadow Word: Death32379E3 is consumed execute-bonus data, with native strict E2 threshold and E3 multiplier; classify it handled without target selection or no-op dispatch. Unmatched Shockwave46968E1 must still report unsupported77.
-- [x] Earthquake77478E1 supplies the native knockdown chance; actual field-owned hits may cast77505 once per target per61882 field. A fresh field can stun prior targets; orphan ticks retain damage without knockdown, outside/ally targets are excluded, and expired fields stop producing stuns.
+- [x] Earthquake77478E1 supplies the native knockdown chance; actual field-owned hits may cast77505 once per target per61882/462620 field. A fresh field can stun prior targets; orphan ticks retain damage without knockdown, outside/ally targets are excluded, and expired fields stop producing stuns.
 
 Source: TC a352b1fa `spell_dk.cpp1328–1358`, `spell_priest.cpp4483–4487`, `spell_shaman.cpp1006–1034`, native70448 read-only rows. Tests: `spell_cast/census_e77_{dk,priest,shaman}_tests.rs`. [All44 roots, named gaps and per-spec deltas](../diagnostics/census-e77-70448.md); [runtime](../wiki/systems/spell-casting.md#census-effect77--2026-10-20). No generic77 handler, whole-ability parity, or full-census rerun is implied.
 
@@ -220,7 +220,7 @@ These ten paths are bounded, not whole-ability parity. Reap soul collection/opti
 ### Ninth-batch locally derived paths
 
 - [x] Healing Rain73920 pulses73921 at its fixed requested ground center every authored2000ms, for the catalog18000ms, healing at most six injured allies inside the authored11yd radius. Recasting replaces only that caster's previous field.
-- [x] Earthquake61882 pulses77478's damage at the requested ground center every1000ms for six seconds in the authored8yd radius; separate casts overlap. Knockdown is not substituted with damage or an invented stun.
+- [x] Earthquake61882 pulses77478's damage at the requested ground center; native target variant462620 uses the target-selected destination instead (target53, not reticle87). Both retain the same native1000ms period, six-second duration and8yd radius; separate casts overlap. Knockdown is not substituted with damage or an invented stun.
 - [x] Emerald Blossom355913 anchors at its selected ally's original location, then after1500ms heals at most three injured allies within its authored10yd radius through355916.
 - [x] Remorseless Winter196770 damage child196771 applies211793's base20% slow only to enemies actually hit; the slow expires natively. Missing local child radius remains an uncertified range boundary.
 - [x] Scourge Strike55090 applies191587's base periodic effect if this caster has no existing Virulent Plague on its enemy; existing marks are not refreshed as a substitute for spreading.
@@ -229,7 +229,7 @@ These ten paths are bounded, not whole-ability parity. Reap soul collection/opti
 - [x] Radiance194509 applies194384 Atonement to its selected allies for60% of normal duration (9000ms), keeping foreign marks independent.
 - [x] Tranquility740's self shield absorbs up to its named60% of caster maximum health, ending with the channel. Shield depletion does not stop the channel's healing.
 
-Rain, Earthquake and Void Step require a finite requested destination within the native spell range; missing or invalid destinations fail before cost/cooldown rather than silently centering on the caster.
+Rain, reticle Earthquake61882 and Void Step require a finite requested destination within the native spell range; missing or invalid destinations fail before cost/cooldown rather than silently centering on the caster.
 
 These nine paths do not certify whole abilities. Rain tooltip total-healing expression references six two-second intervals while current native duration is18sec; native duration/period drive this bounded path. Rain's14/magic-reduction markers and1298679 child; Quake chance/knockdown; Blossom child markers/talent variations; Winter absent child radius and root25 marker; Scourge plague eruption/spread and3 marker; Fracture souls/root marker and Meta periodic marker; Atonement transfer and other Dummy fields; Tranquility soft-cap/HoT extension/ally marker remain unresolved. Sources are only local Mainline DB2/imported read-only rows and inherited TDB1210 routing, not unavailable TrinityCore C++ bodies. [Scope and proof](../wiki/systems/spell-casting.md#ninth-batch-local-mainline-ground-fields-and-owned-marks).
 
