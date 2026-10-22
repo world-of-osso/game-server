@@ -63,6 +63,14 @@ Valid evidence is isolated `round-3-retry/`, including exact command/binary SHA,
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura259 MOD_HOT_PCT — periodic healing received
+
+TC `Unit.cpp:7512–7550` multiplies strongest negative and positive259 only for periodic healing taken. Native attr6 IGNORE_HEALING_MODIFIERS suppresses both signs unless attr13 ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS permits negatives; positive remains suppressed. Read live recipient ActiveAuras through the existing shared periodic-heal resolution, without changing118/283 or copied fixed-heal paths.
+
+Ignored tests577b898ea, corrected3ea71f48e await actual native209140 cast completion before Renew receipts. Source RED `census_tail_259 --include-ignored`:1PASS/3FAIL22.98s, compile4m49s/no warnings, `259-red-native-clock.log`. Actual Renew initially61 then remains61 instead91 under native116849+50;100-point resolution remains100 instead150 under native50/25 strongest-positive and ordinary/ignored-spell comparison. Direct/foreign and native70691/108359 ignore checks pass. Initial shared-protocol compile failure is not behavior RED; merged master61770fc38 fixes GroupPortraitAppearance schema. Earlier Renew fixture's premature damage observation is not feature evidence.
+
+Implementation retains authored amounts; no native negative259 source row exists, so negative selection/permission is source-backed but not native behavior-qualified. GREEN pending. Native116849 zero absorb sibling/script behavior remains unqualified.
+
 ## Aura22 RESISTANCE — physical armor
 
 TC `SpellAuraEffects.cpp:3651–3660` adds matching-school TOTAL_VALUE. Physical armor uses `StatSystem.cpp:255–276`: base armor×142, stat-derived contribution, then22 flat value, then101/466 total factors. Existing Player armor and NPC physical-damage/autoattack armor consumers share that ordering; NPC pet BASE_PCT remains pet-only. No resistance subsystem or source catalog change.

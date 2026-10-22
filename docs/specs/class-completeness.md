@@ -1,5 +1,11 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Periodic-healing taken slice — 2026-10-22
+
+- Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.
+- Respect native attr6 IGNORE_HEALING_MODIFIERS and attr13 ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS for259. Direct healing, other recipients and positive modifiers on ignored heals remain unchanged. Existing118/283 behavior is outside this slice.
+- Native116849 Life Cocoon+50,145384+25, real Renew ticks and native70691/108359 attribute controls qualify the positive path. No native negative259 row exists in current source, so the source-backed negative branch has no native behavioral qualification; no fabricated row or full Life Cocoon/script claim. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Physical resistance/armor slice — 2026-10-21
 
 - Native22 physical school adds signed TOTAL_VALUE armor after base142/stat-derived armor and before total101/bonus466. Use the same flat value for Player stats and NPC physical mitigation/autoattack armor paths. Removal restores prior values; native360827's authored0 remains0.

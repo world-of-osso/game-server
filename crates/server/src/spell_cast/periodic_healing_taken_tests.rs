@@ -83,7 +83,6 @@ fn next_renew_tick(h: &mut Harness) -> i32 {
 }
 
 #[test]
-#[ignore = "census-tail259 RED before native periodic-taken consumer"]
 fn census_tail_259_native_renew_ticks_use_live_recipient_modifier_then_removal() {
     let mut h = fixture();
     crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, 209_140, Some(h.caster), false)
@@ -109,7 +108,6 @@ fn census_tail_259_native_renew_ticks_use_live_recipient_modifier_then_removal()
 }
 
 #[test]
-#[ignore = "census-tail259 RED before native periodic-taken consumer"]
 fn census_tail_259_native_strongest_positive_is_not_sum_or_product() {
     let mut h = fixture();
     let target = h.caster;
@@ -123,7 +121,6 @@ fn census_tail_259_native_strongest_positive_is_not_sum_or_product() {
 }
 
 #[test]
-#[ignore = "census-tail259 RED before native periodic-taken consumer"]
 fn census_tail_259_native_direct_and_foreign_recipient_are_unmodified() {
     let mut h = fixture();
     let foreign = h.npc;
@@ -135,7 +132,6 @@ fn census_tail_259_native_direct_and_foreign_recipient_are_unmodified() {
 }
 
 #[test]
-#[ignore = "census-tail259 RED before native periodic-taken consumer"]
 fn census_tail_259_native_ignore_healing_suppresses_positive_even_allow_negative() {
     let mut h = fixture();
     let target = h.caster;

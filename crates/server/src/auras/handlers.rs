@@ -251,6 +251,8 @@ pub const MOD_SPEED_SLOW_ALL: u32 = 252;
 pub const MOD_MELEE_HASTE_3: u32 = 319;
 /// TC a352b1fa: HandleNoImmediateEffect; MiscValue0 is ScreenEffect.db2 ID.
 pub const SCREEN_EFFECT: u32 = 260;
+/// TC a352b1fa Unit.cpp7512–7550: periodic healing received, strongest each sign.
+pub const MOD_HOT_PCT: u32 = 259;
 /// TC a352b1fa SpellAuraEffects.cpp:340; Player::UpdateArmor uses live stats.
 pub const MOD_ARMOR_PCT_FROM_STAT: u32 = 268;
 /// TC a352b1fa Unit.cpp7056/8178: victim aura owner and incoming school mask.
@@ -434,6 +436,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MELEE_SLOW
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
+        | MOD_HOT_PCT
         | MOD_CRIT_PCT
         | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING

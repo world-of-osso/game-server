@@ -1529,7 +1529,13 @@ pub fn apply_heal(
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster)
         * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
-    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
+    let periodic_taken = if periodic {
+        crate::auras::combat_stats::periodic_healing_taken_multiplier(world, target, ctx.spell)
+    } else {
+        1.0
+    };
+    let taken =
+        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult) * periodic_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,
