@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+### Fire70 Ignite producer and controlled baseline — 2026-10-22
+
+Controlled naked70 single-target60s seed1 at99eafbe7b produces743.9667DPS versus supplied pinnedSimC1369.2046 mean:54.3357%, not the historical52.36% Azure/SimC ratio. Exact56 starter configuration and79 live known spells match the supplied source; native initialSP152.25/crit7/haste2/mastery5.313 nearly matches reference152/7/2/5.313. Sampled after-AI idle is0.05s, so blanket idle/stat-budget explanations are unsupported. Default nohero SimC routes SF with unset SF Flamestrike thresholds and executes11.303 STFlamestrikes; retain that reference qualification rather than copying it into native policy. Full reproducible decomposition is `game-engine/data/diagnostics/rotation-fidelity-2026-10-21/fire70-baseline-decomposition.{md,json}`.
+
+Actual12846 positive percentage plus ordinaryFireball damage reaches genuine missing12654 periodic damage RED1/9.37s atbd01. The per-spell AuraScript879c produces native12654 using live percentage and9000/1000ms=9ticks, with no own-child recursion. Local AuraEvent carries whether existing launch cast_proc_mods were used: an admitted HotStreak Pyroblast/Flamestrike doubles the share after its aura was consumed/missile flew; no wire state. Shared generic Attr10 ROLLING_PERIODIC from13191 aeeaa1b87 is merged at628983c0d, not forked. At8f222d517 four native tests pass7.43s: ordinary producer, exact finite9tick/no-cascade, actual earned/spentHS missile double and actual secondFireball unpaid carry. Retained rolling2/Echo6/Fireproc2+3ignored/Pyroclasm4 pass explicit bounded scopes.
+
+Integrated60s measurement at8f222 yields869.2167DPS (52153damage), Ignite8639/58ticks; original44638damage. Main casts change Fireball26→27/Pyro7→6/FireBlast10→10. This is an integrated single-seed observation after a master/shared-carry merge, not an isolated causal Ignite recovery or statistical parity claim. MeteorST gate, IntensifyingFlame/Burnout, spread and reference/nohero/precombat/execute-health differences remain. Feel-the-Burn13400-owned and unchanged; canonical DB/officialSimC untouched. Source: TC a352b1fa spell_mage.cpp1292–1328 and shared SpellAuraEffects.cpp832–840.
+
 ## Active party combat-reference admission — 2026-10-22
 
 Native31146 has no threat table/victim. Three actual party combat references previously admitted only the owner's primary dummy: ignored `b8496050f` RED reports1 instead3. Enemy admission now also reads active party references; selection ordering, tank lost-threat priority, native dummy metadata and area-pull protection remain unchanged.
