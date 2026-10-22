@@ -42,6 +42,13 @@ pub(super) struct ResourceCondition {
     pub min_deficit: Option<f32>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct CooldownThreshold {
+    pub spell_id: u32,
+    pub seconds: f64,
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub(super) struct Conditions {
@@ -54,6 +61,7 @@ pub(super) struct Conditions {
     pub tank_defensive_sequence: bool,
     pub no_repeat_group: Vec<u32>,
     pub resources: Vec<ResourceCondition>,
+    pub cooldown_remaining_above: Option<CooldownThreshold>,
 
     pub required_self_aura: Option<u32>,
     pub refreshable_aura: Option<u32>,

@@ -52,6 +52,150 @@ fn computed(h: &Harness, ratings: CombatRatings) -> CharacterStats {
 }
 
 #[test]
+fn census_tail_198_native_lightning_reflexes_uses_base_crit_then_removes() {
+    let mut h = fixture(&[231065]);
+    let ratings = CombatRatings {
+        crit: 1234.0,
+        dodge: 100.0,
+        haste: 500.0,
+        ..Default::default()
+    };
+    apply(&mut h, 231065, 0);
+    let actual = computed(&h, ratings).ratings;
+    assert_eq!(actual.dodge, 1334.0);
+    assert_eq!(actual.crit, 1234.0);
+    assert_eq!(actual.haste, 500.0);
+    let caster = h.caster;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 231065
+    });
+    assert_eq!(computed(&h, ratings).ratings.dodge, 100.0);
+}
+
+#[test]
+fn census_tail_198_native_conversion_precedes_source_and_target_percentages() {
+    let mut h = fixture(&[231065, 117216, 299744]);
+    let ratings = CombatRatings {
+        crit: 1234.0,
+        dodge: 100.0,
+        ..Default::default()
+    };
+    apply(&mut h, 231065, 0);
+    apply(&mut h, 117216, 1);
+    apply(&mut h, 299744, 0);
+    let actual = computed(&h, ratings).ratings;
+    assert_eq!(actual.crit, 1357.0);
+    assert_eq!(
+        actual.dodge, 1667.0,
+        "(100+1234)+trunc(1334×25%), not converted1357"
+    );
+}
+
+#[test]
+fn census_tail_198_native_evasive_reads_selected_base_rating_and_truncates() {
+    let mut h = fixture(&[315607]);
+    let ratings = CombatRatings {
+        crit: 5000.0,
+        haste: 1234.0,
+        avoidance: 200.0,
+        ..Default::default()
+    };
+    apply(&mut h, 315607, 0);
+    let actual = computed(&h, ratings).ratings;
+    assert_eq!(actual.avoidance, 298.0);
+    assert_eq!(actual.crit, 5000.0);
+    assert_eq!(actual.haste, 1234.0);
+}
+
+#[test]
+fn census_tail_198_native_split_versatility_destination_is_not_applied_to_all_versatility() {
+    let mut h = fixture(&[304775]);
+    let caster = h.caster;
+    apply(&mut h, 304775, 0);
+    assert_eq!(
+        computed(
+            &h,
+            CombatRatings {
+                versatility: 100.0,
+                ..Default::default()
+            }
+        )
+        .ratings
+        .versatility,
+        100.0
+    );
+    assert!(take_unhandled_auras(h.app.world_mut()).contains(&(304775, 198)));
+    assert!(has_aura(h.app.world(), caster, 304775));
+}
+
+#[test]
+fn census_tail_22_native_physical_resistance_adds_signed_armor_then_removes() {
+    let mut h = fixture(&[360827, 28790, 5480]);
+    let ratings = CombatRatings {
+        armor: 1000.0,
+        crit: 1234.0,
+        ..Default::default()
+    };
+    apply(&mut h, 360827, 0);
+    assert_eq!(
+        computed(&h, ratings).armor,
+        1000.0,
+        "nativeBlisteringScales22 amount0 is not invented armor"
+    );
+    apply(&mut h, 28790, 0);
+    assert_eq!(computed(&h, ratings).armor, 1700.0);
+    apply(&mut h, 5480, 0);
+    assert_eq!(computed(&h, ratings).armor, 1500.0);
+    assert_eq!(computed(&h, ratings).ratings.crit, 1234.0);
+    let caster = h.caster;
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 5480
+    });
+    assert_eq!(computed(&h, ratings).armor, 1700.0);
+    remove_auras(h.app.world_mut(), caster, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 28790
+    });
+    assert_eq!(computed(&h, ratings).armor, 1000.0);
+}
+
+#[test]
+fn census_tail_22_native_flat_armor_preserves_base_and_total_percentage_order() {
+    let mut h = fixture(&[360827, 28790, 52022]);
+    apply(&mut h, 360827, 1);
+    apply(&mut h, 28790, 0);
+    apply(&mut h, 52022, 0);
+    let actual = computed(
+        &h,
+        CombatRatings {
+            armor: 1000.0,
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        actual.armor, 2280.0,
+        "(1000×1.20+700)×1.20, not scaling700byBASE_PCT"
+    );
+}
+
+#[test]
+fn census_tail_22_native_fire_resistance_retains_unrepresented_school_warning() {
+    let mut h = fixture(&[29127]);
+    apply(&mut h, 29127, 0);
+    assert_eq!(
+        computed(
+            &h,
+            CombatRatings {
+                armor: 1000.0,
+                ..Default::default()
+            }
+        )
+        .armor,
+        1000.0
+    );
+    assert!(take_unhandled_auras(h.app.world_mut()).contains(&(29127, 22)));
+}
+
+#[test]
 fn aura_stat_native_405_scales_selected_ratings_not_percent_chance() {
     let mut h = fixture(&[117216, 417489, 1262442]);
     let ratings = CombatRatings {

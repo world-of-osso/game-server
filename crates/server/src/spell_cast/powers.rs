@@ -52,12 +52,15 @@ pub struct PowerTypeInfo {
 
 /// `PowerTypeFlags::SetToMaxOnLevelUp` (DBCEnums.h).
 const POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP: i64 = 0x1000;
+const POWER_TYPE_FLAG_DEFAULT_ON_INIT: i64 = 0x0020;
+const POWER_TYPE_FLAG_USED_BY_NPCS: i64 = 0x0080;
 
 /// `power_type` rows by `PowerTypeEnum`, plus `chr_classes.DisplayPower`.
 #[derive(Resource, Debug, Default)]
 pub struct PowerTypeTable {
     powers: HashMap<PowerType, PowerTypeInfo>,
     display_power: HashMap<u8, i32>,
+    creature_initial_power: HashMap<PowerType, i32>,
 }
 
 impl PowerTypeTable {
@@ -70,6 +73,7 @@ impl PowerTypeTable {
         Self {
             powers: infos.into_iter().map(|info| (info.power, info)).collect(),
             display_power: HashMap::new(),
+            creature_initial_power: HashMap::new(),
         }
     }
 
@@ -79,6 +83,18 @@ impl PowerTypeTable {
             .get(&class_id)
             .copied()
             .and_then(PowerType::from_db)
+    }
+
+    /// TC Creature::SelectLevel / Unit::SetPowerType(onInit): native class Energy.
+    pub(crate) fn initial_creature_energy(&self, class_id: u8) -> Option<PowerPools> {
+        let power = self.display_power(class_id)?;
+        if power != PowerType::Energy {
+            return None;
+        }
+        let initial = *self.creature_initial_power.get(&power)?;
+        let mut pools = PowerPools::from_table(self, vec![power]);
+        pools.get_mut(power)?.current = initial as f32;
+        Some(pools)
     }
 
     /// Class powers, primary (`DisplayPower`) first, then ascending DB ID.
@@ -120,24 +136,39 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
         ))
     })?;
     let mut powers = HashMap::new();
+    let mut creature_initial_power = HashMap::new();
     for row in rows {
         let (id, min, max, center, default, display, interrupt, peace, combat, flags) = row?;
         let Some(power) = PowerType::from_db(id) else {
             continue;
         };
         // First row per enum wins (the three ALTERNATE rows share nothing we use).
-        powers.entry(power).or_insert(PowerTypeInfo {
+        if powers.contains_key(&power) {
+            continue;
+        }
+        if flags & POWER_TYPE_FLAG_USED_BY_NPCS != 0 {
+            let initial = if flags & POWER_TYPE_FLAG_DEFAULT_ON_INIT != 0 {
+                default
+            } else {
+                max
+            };
+            creature_initial_power.insert(power, initial);
+        }
+        powers.insert(
             power,
-            min_power: min,
-            max_base_power: max,
-            center_power: center,
-            default_power: default,
-            display_modifier: display,
-            regen_interrupt_ms: interrupt,
-            regen_peace: peace,
-            regen_combat: combat,
-            set_to_max_on_level_up: flags & POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP != 0,
-        });
+            PowerTypeInfo {
+                power,
+                min_power: min,
+                max_base_power: max,
+                center_power: center,
+                default_power: default,
+                display_modifier: display,
+                regen_interrupt_ms: interrupt,
+                regen_peace: peace,
+                regen_combat: combat,
+                set_to_max_on_level_up: flags & POWER_TYPE_FLAG_SET_TO_MAX_ON_LEVEL_UP != 0,
+            },
+        );
     }
     let mut stmt = conn.prepare("SELECT ID, DisplayPower FROM chr_classes")?;
     let display_power = stmt
@@ -148,6 +179,7 @@ pub fn load_power_type_table(conn: &Connection) -> rusqlite::Result<PowerTypeTab
     Ok(PowerTypeTable {
         powers,
         display_power,
+        creature_initial_power,
     })
 }
 
@@ -316,6 +348,106 @@ pub(crate) fn init_player_powers(
     }
 }
 
+/// Collect178 changes before replacing the old aura modifiers, without changing resources.
+pub(crate) fn max_power_percent_changes(
+    world: &World,
+    unit: Entity,
+    stats: &crate::stats::StatModifiers,
+    mods: &crate::auras::AuraStatMods,
+) -> Vec<(PowerType, f32)> {
+    if world.get::<Player>(unit).is_none() {
+        return Vec::new();
+    }
+    mana_percent_change(world, unit, stats)
+        .into_iter()
+        .chain(non_mana_percent_changes(world, unit, mods))
+        .collect()
+}
+
+fn mana_percent_change(
+    world: &World,
+    unit: Entity,
+    stats: &crate::stats::StatModifiers,
+) -> Option<(PowerType, f32)> {
+    let previous = world
+        .get::<crate::stats::StatModifiers>(unit)
+        .map_or(0.0, |mods| mods.max_mana_pct);
+    if previous == stats.max_mana_pct || world.get::<Mana>(unit).is_none() {
+        return None;
+    }
+    let base = world.get::<crate::stats::CharacterStats>(unit)?.base_mana;
+    let max = (base * (1.0 + stats.base_mana_pct / 100.0) * (1.0 + stats.max_mana_pct / 100.0))
+        .round()
+        .max(0.0);
+    Some((PowerType::Mana, max))
+}
+
+fn non_mana_percent_changes(
+    world: &World,
+    unit: Entity,
+    mods: &crate::auras::AuraStatMods,
+) -> Vec<(PowerType, f32)> {
+    let Some(pools) = world.get::<PowerPools>(unit) else {
+        return Vec::new();
+    };
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!("Unit{unit:?} max-power recalculation unavailable: PowerTypeTable is not installed");
+        return Vec::new();
+    };
+    let previous = world.get::<crate::auras::AuraStatMods>(unit);
+    pools
+        .pools
+        .iter()
+        .filter_map(|pool| {
+            let power = pool.power as i32;
+            let old = previous.map_or(1.0, |mods| mods.max_power_multiplier(power));
+            let next = mods.max_power_multiplier(power);
+            if old == next {
+                return None;
+            }
+            let base = table
+                .get(pool.power)
+                .expect("player pool has a native power definition")
+                .max_base_power as f32;
+            Some((
+                pool.power,
+                ((base + mods.max_power_flat(power)) * next)
+                    .round()
+                    .max(0.0),
+            ))
+        })
+        .collect()
+}
+
+/// TC HandleAuraModMaxPowerPct updates maximum first, then ModifyPower by its delta.
+/// Called after storing modifiers so threshold-triggered casts cannot repeat the old delta.
+pub(crate) fn apply_max_power_percent_changes(
+    world: &mut World,
+    unit: Entity,
+    changes: Vec<(PowerType, f32)>,
+) {
+    for (power, max) in changes {
+        let old = power_value(world, unit, power)
+            .expect("collected native power pool")
+            .1;
+        if power == PowerType::Mana {
+            world
+                .get_mut::<Mana>(unit)
+                .expect("collected mana pool")
+                .max = max;
+        } else {
+            world
+                .get_mut::<PowerPools>(unit)
+                .expect("collected power pools")
+                .get_mut(power)
+                .expect("collected native power pool")
+                .max = max;
+        }
+        change_power(world, unit, power, max - old).expect("collected native power pool");
+        super::mark_dirty(world, unit);
+    }
+}
+
 /// `Player::UpdateMaxPower`: `MaxBasePower` plus MOD_INCREASE_ENERGY and MOD_MAX_POWER
 /// (TOTAL_VALUE flat), rounded; `SetMaxPower` clamps the current value.
 pub(super) fn update_max_powers(
@@ -330,7 +462,9 @@ pub(super) fn update_max_powers(
             let Some(info) = table.get(pool.power) else {
                 continue;
             };
-            let max = (info.max_base_power as f32 + mods.max_power_flat(pool.power as i32)).round();
+            let max = ((info.max_base_power as f32 + mods.max_power_flat(pool.power as i32))
+                * mods.max_power_multiplier(pool.power as i32))
+            .round();
             if pool.max != max {
                 pool.max = max.max(0.0);
                 pool.current = pool.current.min(pool.max);
