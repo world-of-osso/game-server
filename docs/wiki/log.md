@@ -1,6 +1,6 @@
-## 2026-10-22 — Utility/native-policy integration RED
+## 2026-10-22 — Utility/native-policy integration
 
-[Utility admission](systems/follower-utility.md#integration-with-native-defensive-admission): matched master40812PASS versus utility12FAIL, plus shared missing Leymor receipt. Retain authored defensive health/victim/major admission and healer ownership; correction implemented, targeted GREEN pending. Metric snapshots unchanged.
+[Utility admission](systems/follower-utility.md#integration-with-native-defensive-admission): matched master40812PASS versus utility12FAIL, plus shared missing Leymor receipt. Preserve authored defensive admission/healer ownership; owned Holy/Resto harm-first dispels2RED→GREEN. Approved native OOC Mark and actual ready-kick/cooldown-spent Overheat cases pass. Final native95PASS103.55s at1afc510b6/mastere5f37f774; no paired metric rerun or Leymor frontal/nav qualification.
 
 ## 2026-10-21 — Follower utility and scoped geometry
 

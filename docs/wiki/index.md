@@ -1,4 +1,4 @@
-- [Follower utility](systems/follower-utility.md) — generic native cast coordination/support, ordinary follower/player resurrection, shared model geometry and backend-aligned matched-trace proof.
+- [Follower utility](systems/follower-utility.md) — native cast coordination/support, resurrection, shared geometry and matched-trace limits; native-policy integration95PASS, shared Leymor receipt prerequisite retained.
 - [Ordinary model-info gap](investigations/ordinary-model-info-gap.md) —1051 used displays absent from native source; production consumer matrix, real spawned examples, no generic policy widening.
 - [Ascendance revision-scoped measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22) — Ele StatsPlugin3PASS29.75s/real ASC+SK uptimes; laterfc5 master merge awaits integration gate, entry effects/full APL remain open.
 - [Elemental Ascendance projection](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22) — native parent114050→actual1219480, SK>15s aura/learn/sync-window RED→3GREEN36.50s; entry damage/complete APL still open.
