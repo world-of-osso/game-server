@@ -55,7 +55,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "native Treemouth input qualification"]
 fn encounter_coverage_treemouth_projected_native_damage_and_isolation() {
     for difficulty in [1, 205] {
         for spell in [WHIP, SPRAY] {
@@ -87,7 +86,6 @@ fn encounter_coverage_treemouth_projected_native_damage_and_isolation() {
 }
 
 #[test]
-#[ignore = "RED before native Treemouth scripting"]
 fn encounter_coverage_treemouth_projected_first_whip_source_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = projected_treemouth(difficulty);
@@ -107,7 +105,6 @@ fn encounter_coverage_treemouth_projected_first_whip_source_clock() {
 }
 
 #[test]
-#[ignore = "RED before native Treemouth scripting"]
 fn encounter_coverage_treemouth_projected_finite_lanes_credit_and_corpse() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_treemouth(difficulty);
@@ -175,7 +172,6 @@ fn encounter_coverage_treemouth_projected_finite_lanes_credit_and_corpse() {
 }
 
 #[test]
-#[ignore = "RED before native Treemouth scripting"]
 fn encounter_coverage_treemouth_projected_evade_rearms_first_whip() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = projected_treemouth(difficulty);
