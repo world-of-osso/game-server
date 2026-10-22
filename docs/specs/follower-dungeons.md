@@ -1,5 +1,7 @@
 # Follower dungeons
 
+Follower party roster portraits carry the spawned NPC's actual template-selected `ModelDisplay.display_id`, independent of replication interest. They remain NPC heads; race0 combat-stat inputs must not become synthetic player portrait customization. Ordinary player roster portraits retain canonical customization and head equipment. [Engine portrait contract](../../../game-engine/docs/specs/group-frames.md).
+
 ## Admin harness party staging
 
 `stage-follower-party <owner> <map> <x> <y> <z>` is admin-socket-only setup, not gameplay
@@ -208,6 +210,8 @@ Native build12.1.5.70448 inputs: SpecializationSpells, SpellLevels, SkillLineAbi
 ### Rotation fidelity (2026-10-21)
 
 Published kit deltas must address `(spec_id, spell_id, min_level)` primary keys, never rowids. A scoped preparation changes only the requested specs; disjoint spec patches must produce identical kit state in either application order, preserving all other specs. Preparation and replay proofs operate on fresh database backups, never the canonical database.
+
+Learned Dance of Chi-Ji325201 rolls on ordinary native Chi-resource action admission, including discounted free Chi actions, not Energy Tiger Palm or each triggered/channel damage child. Preserve native RPPM values. One ordinary Spinning Crane Kick101546 consumes one real325202 use after the Chi-action proc roll; native cumulative2 is uses, not doubled modifier magnitude. No invented legacy damage bonus.
 
 Learned Windwalker Hit Combo196740 must build native196741 on different ordinary combo actions and reset on a repeated combo action. Rejected casts and triggered children do not advance it. Learned Combo Breaker137384 rolls its native effect0 chance only on landed Tiger Palm, applying real116768; ordinary Blackout Kick uses the native free-cost modifier and consumes one use. No synthetic proc grants.
 

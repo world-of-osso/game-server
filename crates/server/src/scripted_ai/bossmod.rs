@@ -201,6 +201,11 @@ pub fn engage(world: &mut World, unit: Entity) {
     let Some(encounter) = super::instance_script::active_encounter_id(world, map, unit) else {
         return;
     };
+    // Explicit current-Lua scripts publish their selected EventMap requests.
+    // An imported (possibly legacy) clock must not overwrite those snapshots.
+    if super::scripted_alerts::owns_clock(encounter) {
+        return;
+    }
     // TC script schedule (partial; Retail 12.1 timeline inputs unavailable).
     // Lead-authorized TC combat does not authorize Golden Retail alert clocks.
     if encounter == super::kings_rest::GOLDEN_SERPENT_ENCOUNTER {
@@ -219,10 +224,12 @@ pub fn engage(world: &mut World, unit: Entity) {
 }
 
 pub fn disengage(world: &mut World, unit: Entity) {
+    super::scripted_alerts::disengage(world, unit);
     world.entity_mut(unit).remove::<Schedule>();
 }
 
 pub fn cast_event(world: &mut World, event: &shared::protocol::CombatLogEvent) {
+    super::scripted_alerts::cast_event(world, event);
     use shared::protocol::CombatLogKind;
     let Some(spell_id) = event.spell_id else {
         return;

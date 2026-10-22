@@ -87,6 +87,11 @@ impl Plugin for MapPlugin {
             .add_observer(track_player_removed_from_map)
             .add_systems(PostStartup, load_instance_locks)
             .add_systems(
+                PostStartup,
+                crate::world_area_triggers::spawn_hosted_continents
+                    .run_if(resource_exists::<MapStore>),
+            )
+            .add_systems(
                 Update,
                 (
                     transfer::receive_world_port_acks,
