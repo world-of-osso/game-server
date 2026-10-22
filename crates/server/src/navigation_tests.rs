@@ -192,6 +192,11 @@ fn navigation_brackenhide_partial_corridors_walk_and_repath_three_bosses() {
 
 fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    // Arrival is at the existing native projection, not an invented tighter XY bound.
+    let mut map = navigation::NavigationMap::open(&root.join(map_id.to_string())).unwrap();
+    let target_floor = map.complete_path(target, target).unwrap();
+    let projected_target = *target_floor.last().unwrap();
+    eprintln!("map{map_id} authored_target={target:?} native_projection={projected_target:?}");
     let mut nav = Navigation::new(&root);
     let actor = Entity::from_bits(99);
     let mut arrived = false;
@@ -207,7 +212,10 @@ fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
                 assert!(next.distance(from) < 3.0, "no segment-end teleport");
                 from = next;
                 if reached {
-                    assert!(from.distance(target) < 0.5, "partial end is not arrival");
+                    assert!(
+                        from.distance(projected_target) < 0.001,
+                        "partial end is not arrival: feet={from:?} projected_target={projected_target:?} authored_target={target:?}"
+                    );
                     arrived = true;
                     break;
                 }
