@@ -10,6 +10,10 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Midnight identity/population recheck
+
+[Updated native evidence](investigations/follower-data.md#updated-native-identityplacement-evidence--verified2026-10-22): b365fd5f2 pre-packet census adds19 exact unique JEC/TDB joins/11 single-floor encounter XYs; blanket candidate-only identity gaps superseded for qualified actors. Canonical11:25CDT source/runtime counts: MurderRow2/2,Den217/217,Maisara376/376,other6maps0/0. Placement publication and missing server-clock anchors remain separate; no external guide authority used.
+
 ## 2026-10-22 — Midnight clock authority
 
 [Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
