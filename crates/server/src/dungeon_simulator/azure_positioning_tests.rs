@@ -94,7 +94,9 @@ fn native_rune_unreachable_chase_after_book_hop_evades_without_crossing_componen
     assert_eq!(run.graph.map_id, 2515);
     let owner = run.party.owner;
     let rune = run.actors[&29001884];
-    let book = run.actors[&29001868];
+    // The first hop lands beside this Rune on the same508yd component.
+    // The next native book hop is the disconnected508→426yd chase boundary.
+    let book = run.actors[&29002007];
     let origin = *run.app.world().get::<Position>(rune).unwrap();
     let source = *run.app.world().get::<Position>(book).unwrap();
     assert!(
