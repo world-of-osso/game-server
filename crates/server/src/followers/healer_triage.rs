@@ -435,7 +435,7 @@ fn normal_direct_heal(spell: &SpellInfo) -> bool {
     !spell_cast::is_channeled(spell) && spell.effects.iter().any(|effect| effect.effect == 10)
 }
 
-fn cancel_topped_cast(world: &mut World, caster: Entity) {
+pub(super) fn cancel_topped_cast(world: &mut World, caster: Entity) {
     let Some(cast) = world.get::<CastState>(caster) else {
         return;
     };
