@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Effect63 and Kvaldir source boundary (2026-10-21)
+
+[Contract](../../specs/toys.md#sourced-threat-effects-and-kvaldir-audience). TC a352b1fa `SpellEffects.cpp:2948–2964` adds EffectThreat's computed value with ignoreModifiers=true; `ThreatManager.cpp:382–409` retains no-threat flags before bypassing modifiers. This is threat, not damage or a forced taunt. Both remaining source63 toy roots are audited: Kvaldir129111/197828 and Battle Horn86565/126318. Build70448 authors source-area hostile radius40,1500ms cast, amount1 and120000ms item recovery. Kvaldir's target row28425 caps49, matching description token ctrmax2067 and ContentTuning2067 max49. Pinned TC loads but does not consume that cap; implementation/proof must label this DB2-backed behavior, not existing TC runtime parity.
+
+Battle Horn additionally promises enemies native to Pandaria. No complete canonical audience binding was found; generic threat support must not silently certify that root. No guessed continent/native-entry policy. Source snapshots and SHA256: kvaldir-source-rows.json, kvaldir-70448-source.json, kvaldir-source-hashes.json; three core file Git blobs independently match the pinned a352b1fa tree.
+
+Implementation/GREEN pending. Testc02f11221 gives actualUseToy UnsupportedEffect63, resolver0vs1 and census refusal RED; fourth case failed fixture setup because Provoke116189's aura is slot1, not slot0. Corrected73c4e6d1c uses source mask2 and tests the untaunted victim before applying Provoke. Its handler RED is pending shared-capacity admission; do not count the setup failure as mechanism proof. No production changes, census remains535. Evidence: kvaldir-red.log (three genuine failures plus one setup failure,52.23s), kvaldir-red-command.json. Native sound, unrepresented redirects and full120-second reuse are not certified.
+
 ## Popcorn and Burning Blade Banner visual-only source slice (2026-10-21)
 
 Source162539/202432 promises only eating/holding popcorn;168014/295037 only wearing the Burning Blade banner. Both roots have zero gameplay payload and complete authored build70448 visual chains:102 rows/29 tables, five resident ordinary models, resolved positioner/curve/matrix/animation/bone-parent/quality/sound/bus metadata. The sound-bus override's PlayerCondition48728→ModifierTree12108/12109 is a source raid mixer limit, not a toy gameplay action. Numeric animation/bone selectors remain source values, not invented poses. Evidence: visual-pair-popcorn-banner-70448.json with row/table SHA256.

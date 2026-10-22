@@ -1,3 +1,4 @@
+- [Effect63/Kvaldir source boundary](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21) — actual-use/resolver/census RED; source cap49, Battle Horn native-audience gap; implementation/GREEN pending.
 - [Scoped kit delta composition](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21) —20stable owned keys, actual a3 both-order replay,22PythonGREEN/no warnings; legacy rowid delta superseded.
 - [Windwalker finite-target starter oracle](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21) — v4 executes the weaker fixture before BoK; real0.30s kill, no frame-time stall or timeout widening; patched-copy GREEN pending.
 - [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21) — native TF snapshot/late-buff, WW natural two-use ComboBreaker/HitCombo and LastStand46/47; merged21GREEN0warnings/fmtPASS; full APL/healer import still open.
