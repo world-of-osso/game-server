@@ -297,6 +297,103 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
     );
 }
 
+fn land_fireball(
+    h: &mut crate::spell_cast::test_harness::Harness,
+    caster: Entity,
+    target: Entity,
+) -> i32 {
+    let start = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)
+        .unwrap();
+    for _ in 0..100 {
+        h.advance(1);
+        if let Some(event) = h.inbox.log[start..].iter().find(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(FIREBALL)
+                && event.kind == CombatLogKind::Damage
+        }) {
+            return event.amount;
+        }
+    }
+    panic!("ordinary native Fireball did not land within5s");
+}
+
+#[test]
+fn fire_efficiency_native70_ordinary_ignite_refresh_keeps_unpaid_native_damage() {
+    let _seed = crate::random::seed_scope(1);
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let target = prepare_dummies(&mut h, 1)[0];
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert((Level(70), UnitLevel(70)));
+    land_fireball(&mut h, caster, target);
+    let old = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12654 && aura.caster == caster)
+        .unwrap()
+        .clone();
+    let old_amount = old
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let percent = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12846)
+        .unwrap()
+        .effects[0]
+        .amount;
+    let start = h.inbox.log.len();
+    let second_damage = land_fireball(&mut h, caster, target);
+    let paid = h.inbox.log[start..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(12654)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+        })
+        .count();
+    assert!(
+        paid > 0 && paid < 9,
+        "actual old bank paid ticks before refresh: {paid}"
+    );
+    let aura = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12654 && aura.caster == caster)
+        .unwrap();
+    let refreshed = aura
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    let new_amount = second_damage as f32 * percent / 100.0 / 9.0;
+    let unpaid = old_amount * (9 - paid) as f32;
+    assert_eq!(
+        refreshed,
+        new_amount + unpaid / 9.0,
+        "ordinary producer must enter the shared nativeROLLING_PERIODIC carry once"
+    );
+    assert!(refreshed > new_amount);
+}
+
 #[test]
 #[ignore = "measurement: explicit FIRE_EFFICIENCY_OUTPUT and frozen loadout required"]
 fn fire_efficiency_native70_single_target_60s() {
