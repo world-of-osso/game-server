@@ -523,6 +523,14 @@ fn native_efflo_party() -> (Harness, Entity, [Entity; 5]) {
     );
     h.app
         .insert_resource(crate::test_data::world_data().clone());
+    let source = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app.insert_resource(
+        crate::spell_cast::area_trigger::load_aura_field_catalog(&source).unwrap(),
+    );
     let center = shared::components::Position {
         x: 12.0,
         y: 0.0,
