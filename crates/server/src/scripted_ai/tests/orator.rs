@@ -217,7 +217,8 @@ fn encounter_coverage_orator_ongoing_two_energy_phases_native_damage_and_copy_cr
             0,
             "no Mythic-only Shadows in Normal/projected205"
         );
-        for (spell, count) in [(SUBJUGATE, 6), (434779, 6), (434832, 8)] {
+        // Native434829 Attr5=512 EXTRA_INITIAL_PERIOD adds tick0 to each4s channel.
+        for (spell, count) in [(SUBJUGATE, 6), (434779, 6), (434832, 10)] {
             let hits = h
                 .inbox(0)
                 .log
