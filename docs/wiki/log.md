@@ -1,6 +1,6 @@
 ## 2026-10-21 — Recorded late-healer route boundary
 
-[Native seed50 path qualification](systems/dungeon-simulator.md#recorded-late-healer-route-boundary-2026-10-21): two post-mm871 RED regressions prove a stationary healer on a native-sphere-safe frozen path and reproduce full-route tank loss. Positioning now qualifies actual route legs rather than the endpoint chord; GREEN and seeded acceptance pending.
+[Native seed50 path qualification](systems/dungeon-simulator.md#recorded-late-healer-route-boundary-2026-10-21): two post-mm871 RED regressions prove a stationary healer on a native-sphere-safe frozen path and reproduce full-route tank loss. Positioning now qualifies actual route legs rather than the endpoint chord. At2f443fb5a both regressions pass94.01s; seed50 clears3bosses with tank alive. Three retained sight controls, seven hostile-field controls and eight deferred-navigation controls pass. Fresh seeded acceptance pending.
 
 ## 2026-10-21 — Native leader and shared-model qualification
 
