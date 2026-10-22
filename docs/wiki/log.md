@@ -109,6 +109,17 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Partial corridor continuation
+
+[Navigation](systems/navigation.md#partial-corridor-continuation--2026-10-22): Gorek native graph26936polygons connected; unchanged8192pool reaches in296/263/84polygons over three queries. Production library+mover RED reproduce discarded partial corridor/immediate Blocked. Typed resource-limited partial paths and segment-end repath keep asset/pool/tolerance values; completed-search disconnects stay immediately Blocked. At884178a15 Gorek path/mover and three Brackenhide movers GREEN, genuine-disconnect/complete-leg controls GREEN; combined48controls40PASS/8existing ignored Stockade/current-victim FAIL. Baseline/follower/check gates pending, no overall acceptance.
+## 2026-10-22 — Inundate native targeted GREEN, known foreign FoF flake
+
+[Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): Inundate3GREEN at329a06527 inside13PASS/1FAIL44.51s/zero warnings; failedFoF Damage-only4vs5 is lead-confirmed known Miss/Dodge oracle issue owned14179, not suppressed here. Proved3 enabled5074f1354. Affected Ele70samples2PASS37.46s/native378777events0/ST666.900/3T1007.367DPS, unpaired not causal-total proof. Newmaster6e73cc9b5 integrated043b63a88 requires current parent gate; full efficiency remains open.
+
+## 2026-10-22 — Inundate native resource RED and source policy
+
+[Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): actualLightningwrong378777 gain is genuineRED, actualWindShearinterrupt grantsnative8positive;1PASS1FAIL23.95s/zero warnings. PinnedTCscript and signedTDBspell_proc row absent (168534positive parser control), so approved named native-description successful-utility/combat policy, not invented family mask.978da27ef committed; removed-passive control48c9f1219/GREEN pending. No utilityAI rewrite or broadAPL certificate.
+
 ## 2026-10-22 — Existing three-spec stat/coverage/formula evidence
 
 [Decomposition](systems/dungeon-simulator.md#existing-three-spec-stat-coverage-and-formula-decomposition-2026-10-22) preserves32b2a678f receipts: level90 matches,47 item identities match,45 explicit plus2 bonus-derived levels match; AP/SP budgets differ2.93–10.19%, with secondary/redirected-stat differences unresolved. Power-only hypothetical scaling does not close5–16x DPS gaps. Conserved channel/count/per-hit accounting is not causal attribution;42 non-Meteor base-effect rows agree while effective modifiers remain unproved. Partial recipient coverage remains open. Meteor handed to13122; no duplicated mechanism work, builds, simulations or production edits.
@@ -214,6 +225,10 @@
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
 ## 2026-10-22 — Active party combat references
+
+## 2026-10-22 — Fire Ignite producer and shared rolling integration
+
+Ordinary Fireball→Ignite RED precedes per-spell producer; native4GREEN covers exact9ticks, no self-cascade, consumed HotStreak doubling and actual unpaid refresh. Shared flag-driven carry reused from13191, not forked. Controlled naked70 baseline/decomposition and integrated single-seed observation qualify stats, idle and nohero reference differences. See [Fire70](investigations/follower-data.md#fire70-ignite-producer-and-controlled-baseline--2026-10-22).
 
 Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. Full genuine Henry roster also clears3/3 at2384.60sim_s with all5alive on approved authentic6bf39eb8 input. Final master merge carries later schema/population-oracle updates; check/integration proof is recorded separately.
 
