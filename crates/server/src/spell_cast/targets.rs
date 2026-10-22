@@ -1473,6 +1473,18 @@ pub fn shared_selection_checks_radius(effect: &SpellEffect) -> bool {
     })
 }
 
+/// Native effect cardinality, not a list of class/group-heal spell IDs.
+pub(crate) fn selects_multiple_units(effect: &SpellEffect) -> bool {
+    effect.chain_targets > 1
+        || shared_selection_checks_radius(effect)
+        || effect.implicit_targets.iter().any(|&id| {
+            matches!(
+                selector(id),
+                Some(Selector::AllyOrRaid | Selector::RaidArea)
+            )
+        })
+}
+
 /// Radius of the effect's first target slot (`SpellEffectInfo::CalcRadius`).
 pub fn effect_radius(effect: &SpellEffect) -> f32 {
     radius(effect, 0)

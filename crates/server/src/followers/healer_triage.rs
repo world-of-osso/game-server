@@ -435,23 +435,57 @@ fn normal_direct_heal(spell: &SpellInfo) -> bool {
     !spell_cast::is_channeled(spell) && spell.effects.iter().any(|effect| effect.effect == 10)
 }
 
-fn cancel_topped_cast(world: &mut World, caster: Entity) {
+pub(super) fn cancel_topped_cast(world: &mut World, caster: Entity) {
     let Some(cast) = world.get::<CastState>(caster) else {
         return;
     };
     if cast.cast_type != CastType::Normal {
         return;
     }
-    let direct_heal = world
+    let target = Entity::try_from_bits(cast.target);
+    let Some(spell) = world
         .resource::<SpellStore>()
         .get(cast.spell_id)
-        .is_some_and(normal_direct_heal);
-    let topped = Entity::try_from_bits(cast.target)
-        .and_then(|target| world.get::<Health>(target))
-        .is_none_or(|health| health.current <= 0.0 || health.current >= health.max);
-    if direct_heal && topped {
+        .filter(|spell| normal_direct_heal(spell))
+    else {
+        return;
+    };
+    let group_heal = spell
+        .effects
+        .iter()
+        .any(|effect| effect.effect == 10 && spell_cast::targets::selects_multiple_units(effect));
+    let topped = if group_heal {
+        let Some(topped) = group_heal_is_topped(world, caster, target) else {
+            return;
+        };
+        topped
+    } else {
+        target
+            .and_then(|target| world.get::<Health>(target))
+            .is_none_or(|health| health.current <= 0.0 || health.current >= health.max)
+    };
+    if topped {
         spell_cast::cancel_cast(world, caster);
     }
+}
+
+fn group_heal_is_topped(world: &mut World, caster: Entity, target: Option<Entity>) -> Option<bool> {
+    let targets = match spell_cast::read_active_direct_heal_targets(world, caster, target) {
+        Ok(targets) => targets,
+        Err(error) => {
+            warn!(
+                ?caster,
+                ?error,
+                "Cannot inspect native group-heal recipients"
+            );
+            return None;
+        }
+    };
+    Some(!targets.iter().any(|unit| {
+        world
+            .get::<Health>(*unit)
+            .is_some_and(|health| health.current > 0.0 && health.current < health.max)
+    }))
 }
 
 fn execute(world: &mut World, caster: Entity, follower: &Follower, decision: Decision) -> bool {

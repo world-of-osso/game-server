@@ -66,7 +66,7 @@ pub(super) fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
     (h, healer, patients)
 }
 
-fn join_native_party(h: &mut Harness, members: &[Entity]) {
+pub(super) fn join_native_party(h: &mut Harness, members: &[Entity]) {
     use crate::group::{GroupRegistry, OnlineMember, OnlineView};
     use shared::group::GroupRole;
     let owner = h.caster;
