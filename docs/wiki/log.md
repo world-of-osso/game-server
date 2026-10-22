@@ -3554,3 +3554,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Lost Dwarves currentLua/70448 partial plus explicit living10% surrender policy: ignoredRED→native7GREEN Normal/Follower; all-three isolatedcredit, preservedflags/faction, nativehealth-regen/reset restoration and old-pull credit exclusion. Sourceproducer onlybinds3authoredactors. [Boss scripts](systems/boss-scripts.md#lost-dwarves-lua-surrender--2026-10-21).
 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
+
+## 2026-10-22 — Qualified follower utility comparison
+
+[Follower utility](systems/follower-utility.md#backend-aligned-matched-outcomes): native global range/phase priority2RED→79-case utility/healer/retainedGREEN (one existing ignored). Backend-aligned frozen-input20+20 runs: landed interrupts655→691, dangerous completions14→23, native party Deaths1→0, clears19→20; no improved-cast-suppression or statistical survival claim. Source/prerequisite boundaries and earlier failed candidates retained in linked receipts.
