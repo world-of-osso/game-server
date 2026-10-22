@@ -619,19 +619,32 @@ fn encounter_coverage_omor_shield_cast_emits_authored_emote_once() {
     crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30686, Some(player), false)
         .expect("actual source cast occupies caster");
     assert_eq!(
-        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), false),
+        crate::spell_cast::creature_cast(h.app.world_mut(), boss, 30686, Some(player), false),
         Err(crate::spell_cast::CastFailure::InProgress),
-        "no admission bypass"
+        "unflagged source cast still cannot bypass admission"
     );
+    // Native31901 Attr4/0x80 permits this shield during the source cast;
+    // TC Spell.cpp530–531 ignores only cast-in-progress, not its completion.
+    crate::spell_cast::creature_cast(h.app.world_mut(), boss, 31901, Some(boss), false)
+        .expect("native shield permits casting while casting");
     h.advance(0.05);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::casting::CastState>(boss)
+            .unwrap()
+            .spell_id,
+        30686,
+        "parallel shield must preserve the original source cast"
+    );
     assert_eq!(
         h.inbox(0)
             .chat
             .iter()
             .filter(|line| line.channel == shared::protocol::ChatType::MonsterEmote(boss.to_bits()))
             .count(),
-        3,
-        "rejected shield cast cannot speak"
+        4,
+        "rejected unflagged cast stays silent; successful parallel shield speaks once"
     );
     assert!(
         h.inbox(1).chat.is_empty(),

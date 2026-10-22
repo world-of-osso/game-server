@@ -1,5 +1,18 @@
 # Boss scripts
 
+## Native creature class-power ingress
+
+- Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
+- Preserve actual regenerate-power flag0x800. Native PowerType rates apply only when the source creature permits regeneration. Anub'zekt's flag is absent: initialEnergy100 is valid, forced regeneration or repeated energy grants are not. Zone-only worlds without SpellCastPlugin/PowerTypeTable must keep spawning source stats/identity with power absent and an explicit warning; never fabricate a pool or register an empty power table. When the table exists, missing native class4 metadata remains an explicit error. Full spell-runtime startup loads the native table before ordinary zone spawning.
+
+## Anub'zekt current Lua partial
+
+- Use actual215405/map2660/2906bit1, source spawn10004042 with authored `1,2,8,23,205`, Journal2584 primary5726/display115723. Bloodstained Webmage5744 is not another primary. Preserve actor flags64, stats/models/addons/difficulties/population and native70448 data. Producer `--encounter anubzekt` installs only `littlewigs_anubzekt` and the authenticated binding on independent copies.
+- Current LittleWigs2777a9d `WarWithin/AraKara/Anubzekt.lua` is unbranched. Normal1/Follower205: immediate Infestation433740, Impale435012 first4.6s/repeat8.5s, Burrow439506 first14.3s with one initial request, Eye433766 first29.1s/repeat78.9s. Actual accepted Burrow restarts Impale4.8s; that combo Impale repeats5.8s before returning to8.5s. Eye restarts Impale10.9s/Burrow46.9s and permits two Burrows30.2s apart. Native cast occupancy remains ordinary.
+- Infestation's actual successful casts repeat10.1s before Eye,8.5s after Eye; Eye starts its7.3s countdown. Lead-approved `ANUBZEKT_INFESTATION_MINIMUM_ALERT_CONTEXT`: source non-Mythic healer5s/9.8s lower-bound/range alerts remain context, not invented exact/random alternate intervals. Do not invent a random target: native22/15 area selection and500ms DOT remain authoritative. Scope only1/205; Mythic actors/timers are not assigned here.
+- `ANUBZEKT_IMPALE_DUMMY_CHILD_UNSOURCED`, `ANUBZEKT_BURROW_SELECTOR_MOVEMENT_CHILD_UNSOURCED`, `ANUBZEKT_EYE_CENTER_AREA_PHASE_EXIT_UNSOURCED` and `ANUBZEKT_WEBMAGE_CONTROLLER_UNSOURCED` retain missing dummy forwarding, charge destinations, center movement, Eye area/aura434408 ingress/exit and add controller. Never manufacture those actions or infer25s phase exit from the warning duration. Lua outgoing countdown updates are a declared partial, not certification of the absent controller or whole fight.
+- Ignored native RED must be pushed/executed before combat implementation. Require native Normal/Follower ongoing request/effect/reset/rearm/copy-credit/corpse proof and producer preservation/idempotence/conflict tests before gate packet. Final integration/publication remains lead-owned.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
