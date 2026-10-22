@@ -25,6 +25,16 @@ class IntrinsicSpellRoleTests(unittest.TestCase):
                 self.assertEqual(facts['intrinsic'], 'damage')
                 self.assertIn(child, {row['spell_id'] for row in facts['role_evidence']})
 
+    def test_scripted_commands_and_area_creation_keep_sourced_child_roles(self):
+        cases = ((204019, 204301, 'damage'), (34026, 83381, 'damage'),
+                 (1264359, 1264355, 'damage'), (355913, 355916, 'heal'))
+        for spell, child, role in cases:
+            with self.subTest(spell=spell):
+                with closing(sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
+                    facts = SpellRoleCatalog(db, read_tc_child_artifact(TC_EDGES)).read_role(spell)
+                self.assertEqual(facts['intrinsic'], role)
+                self.assertIn(child, {row['spell_id'] for row in facts['role_evidence']})
+
     def test_native_health_leech_keeps_damage_and_self_heal_roles(self):
         # Exact native direct/periodic effects isolate the hit+heal contract from scripts.
         for spell, effect in ((3108, 927), (234153, 353731)):
