@@ -2492,6 +2492,7 @@ pub(crate) fn execute_cast(
             target_mask: [0; 2],
             spell_id: Some(spell.id),
             can_proc: true,
+            cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
             periodic: false,
             damage: 0.0,
             heal: None,
@@ -3145,6 +3146,7 @@ fn push_hit_events(
                 target_mask: [procs::PROC_TAKE_ANY_DAMAGE, 0],
                 spell_id: Some(spell.id),
                 can_proc: depth == 0,
+                cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
                 periodic: false,
                 damage: amount,
                 heal: None,
@@ -3176,6 +3178,7 @@ fn push_hit_events(
                 target_mask: [target_mask, 0],
                 spell_id: Some(spell.id),
                 can_proc: depth == 0,
+                cast_used_proc_modifier: !spell.cast_proc_mods.is_empty(),
                 periodic: false,
                 damage,
                 heal: healing

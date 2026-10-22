@@ -457,6 +457,14 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         },
     );
     scripts.0.insert(
+        super::ignite::MASTERY_IGNITE,
+        AuraScript {
+            check_proc: Some(super::ignite::check_damage),
+            on_damage_proc: Some(super::ignite::apply_damage),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         super::binding_heals::BINDING_HEALS,
         AuraScript {
             check_proc: Some(super::binding_heals::check_heal),
