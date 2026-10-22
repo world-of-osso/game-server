@@ -2466,6 +2466,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-22: Remaining eight exact actor source/nav-state recheck; no native spawn/summon positions, six unchanged nav hashes, six pinned TC script blobs yield no new target positions. Header identity differences retained without aliasing. [Evidence](investigations/follower-data.md#remaining-eight-placement-gaps-rechecked--2026-10-22).
+
 - 2026-10-22: Ordered Midnight entrance audit retains all eight unsourced-interior gaps after native teleport/exit rows, authenticated AreaTrigger/UiMapLink/JournalInstance and pinned approved Wowhead caches. No route pairs invented. [Evidence](investigations/follower-data.md#midnight-ordered-entrance-source-audit--2026-10-22).
 
 - 2026-10-22: Journal-bound hostility policy + three exact unique single-Z packets; source3GREEN, fresh-copy replay3× and actual-copy acceptance, native models/stats retained, no admission/route claim. [Evidence](investigations/follower-data.md#journal-bound-hostility-project-admission--2026-10-22).
