@@ -185,6 +185,71 @@ fn rotation_fidelity_wild_imp_exhausts_native_energy_without_regeneration_and_de
 }
 
 #[test]
+fn rotation_fidelity_tyrant_demonic_power_tracks_real_owned_imp_lifecycle() {
+    let (mut h, owner) = warlock(32);
+    let imps: Vec<_> = (0..3).map(|_| summon_imp(&mut h, owner)).collect();
+    crate::spell_cast::creature_cast(h.app.world_mut(), owner, 265187, Some(owner), false)
+        .expect("actual native Tyrant summon with three living owned Imps");
+    let mut tyrant = None;
+    for _ in 0..80 {
+        h.advance(1);
+        let world = h.app.world_mut();
+        tyrant = world
+            .query::<(Entity, &SummonedCreature, &shared::components::Npc)>()
+            .iter(world)
+            .find(|(_, summon, npc)| {
+                summon.owner == owner && summon.spell_id == 265187 && npc.template_id == 135002
+            })
+            .map(|(actor, _, _)| actor);
+        if tyrant.is_some() {
+            break;
+        }
+    }
+    let tyrant = tyrant.expect("real base Tyrant actor");
+    let stacks = |world: &World| {
+        world
+            .get::<crate::auras::ActiveAuras>(tyrant)
+            .and_then(|auras| auras.iter().find(|aura| aura.spell_id == 1276788))
+            .map_or(0, |aura| aura.stacks)
+    };
+    assert_eq!(
+        stacks(h.app.world()),
+        3,
+        "native Demonic Power must count actual owned Imps at Tyrant arise"
+    );
+    let later = summon_imp(&mut h, owner);
+    assert_eq!(
+        stacks(h.app.world()),
+        4,
+        "actual later Imp arise increments active Tyrant roster"
+    );
+    for _ in 0..240 {
+        h.advance(1);
+        if imps
+            .iter()
+            .all(|imp| h.app.world().get_entity(*imp).is_err())
+        {
+            break;
+        }
+    }
+    assert!(
+        imps.iter()
+            .all(|imp| h.app.world().get_entity(*imp).is_err()),
+        "natural energy fades"
+    );
+    assert!(
+        h.app.world().get_entity(tyrant).is_ok(),
+        "Tyrant still within native15s duration"
+    );
+    let remaining = u8::from(h.app.world().get_entity(later).is_ok());
+    assert_eq!(
+        stacks(h.app.world()),
+        remaining,
+        "natural Imp fades decrement active native Demonic Power"
+    );
+}
+
+#[test]
 fn rotation_fidelity_tyrant_base_actor_uses_sourced_native_demonfire() {
     let (mut h, owner) = warlock(32);
     crate::spell_cast::creature_cast(h.app.world_mut(), owner, 265187, Some(owner), false)
