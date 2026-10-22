@@ -82,6 +82,27 @@ class NativeMapTuning(unittest.TestCase):
 
 @unittest.skipUnless('FOLLOWER_MAP_PLACEMENT_DB' in os.environ, 'requires explicit placement database')
 class RegionalPlacementAcceptance(unittest.TestCase):
+    def test_anub_keeps_native_zero_tuning_and_explicit_terrain_project_selection(self):
+        path = Path(os.environ['FOLLOWER_MAP_PLACEMENT_DB']).resolve(strict=True)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            actual = db.execute('SELECT c.guid,t.faction,t.unit_class,t.ContentTuningID,t.HealthModifier,'
+                                'c.position_x,c.position_y,c.position_z,m.CreatureDisplayID,r.display_id '
+                                'FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 '
+                                'JOIN content_creature_template_model m ON m.CreatureID=c.id1 '
+                                'JOIN raid_encounter_creature r ON r.map_id=c.map AND r.creature_entry=c.id1 '
+                                'WHERE c.map=2662 AND c.id1=211089').fetchall()
+            self.assertEqual(actual, [(63662001, 16, 4, 0, 35.0, 1896.8120528718662, 987.4777805024102,
+                                       124.99189880457607, 114315, 114315)], 'missing sourced Anub primary')
+            self.assertEqual(db.execute('SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty WHERE Entry=211089').fetchall(), [(0, 0)])
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        evidence = receipt['placements'][0]['source_floor_evidence']
+        self.assertEqual(evidence['policy'], 'FOLLOWER_PLACEMENT_Z_FROM_AUTHORED_TERRAIN_TRIANGLE')
+        self.assertEqual(evidence['selection_scope'], 'PROJECT_SELECTION_NOT_TC_SPAWN_Z')
+        self.assertEqual(receipt['source_difficulties'][0]['effective_content_tuning']['map_difficulty_row']['ID'], 5283)
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2662_211089'])
+        self.assertEqual(receipt['donors'][0]['donor_entry'], 188252)
+        self.assertEqual({gap['entry'] for gap in receipt['source_gaps']}, {211087, 213937})
+
     def test_swampface_keeps_native_model_and_zero_ct_with_twenty_yard_room_provenance(self):
         path = Path(os.environ['FOLLOWER_MAP_PLACEMENT_DB']).resolve(strict=True)
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:

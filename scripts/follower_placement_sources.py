@@ -5,6 +5,7 @@ import json
 import math
 from pathlib import Path
 import re
+import struct
 
 from wowhead_forever import percent_to_world
 
@@ -197,8 +198,100 @@ def match_upward_source_floor(evidence, marker, assignments, heights):
     return matched
 
 
+def read_binary_chunks(data):
+    offset = 0
+    while offset < len(data):
+        if offset + 8 > len(data):
+            raise ValueError('truncated source chunk header')
+        size = struct.unpack_from('<I', data, offset + 4)[0]
+        end = offset + 8 + size
+        if end > len(data):
+            raise ValueError('truncated source chunk payload')
+        yield data[offset:offset + 4][::-1], data[offset + 8:end]
+        offset = end
+
+
+def sample_authored_terrain_cell(payload, x, y):
+    # wow-adt882b2fc McnkHeader/parse_terrain_height_chunks; los/bake/adt.rs141–180.
+    corner_x, corner_y, base = struct.unpack_from('<3f', payload, 104)
+    unit = (1600 / 3) / 128
+    if not (corner_x - 8 * unit <= x <= corner_x and corner_y - 8 * unit <= y <= corner_y):
+        return []
+    row = min(7, int((corner_x - x) / unit))
+    col = min(7, int((corner_y - y) / unit))
+    flags = struct.unpack_from('<I', payload)[0]
+    if flags & 0x10000:
+        hole = struct.unpack_from('<Q', payload, 20)[0] >> (row * 8 + col) & 1
+    else:
+        hole = struct.unpack_from('<H', payload, 60)[0] >> ((row // 2) * 4 + col // 2) & 1
+    if hole:
+        return []
+    heights = struct.unpack('<145f', dict(read_binary_chunks(payload[128:]))[b'MCVT'])
+    def vertex(r, c, height):
+        return (corner_x - r * unit, base + height, -(corner_y - c * unit))
+    def outer(r, c):
+        return vertex(r, c, heights[r * 17 + c])
+    tl, tr = outer(row, col), outer(row, col + 1)
+    bl, br = outer(row + 1, col), outer(row + 1, col + 1)
+    center = vertex(row + 0.5, col + 0.5, heights[row * 17 + 9 + col])
+    triangles = ((tl, tr, center), (tr, br, center), (br, bl, center), (bl, tl, center))
+    return [height for triangle in triangles if (height := triangle_height((x, -y), triangle)) is not None]
+
+
+def validate_covering_wmo_audit(evidence, verified):
+    report = json.loads(Path(evidence['covering_wmo_report']).read_text())
+    roots = evidence['covering_wmo_roots']
+    expected = {placement['model'] for placement in report['placements']}
+    if report['missing_group_files'] or not expected or expected != {int(Path(root['path']).stem) for root in roots}:
+        raise ValueError('covering WMO audit incomplete')
+    for root in roots:
+        path = Path(root['path'])
+        chunks = dict(read_binary_chunks(path.read_bytes()))
+        groups = {row[0] for row in struct.iter_unpack('<I', chunks[b'GFID'])} - {0}
+        required = {str(path), *(str(path.with_name(f'{fdid}.wmo')) for fdid in groups)}
+        if groups != set(root['checked_group_file_ids']) or not required <= verified:
+            raise ValueError('covering WMO audit incomplete')
+    return report
+
+
+def match_authored_terrain_floor(record, marker, assignments, heights):
+    evidence = record['source_floor_evidence']
+    if record['entry'] != 211089 or evidence['selection_scope'] != 'PROJECT_SELECTION_NOT_TC_SPAWN_Z' or evidence['maximum_height_difference_yards'] != 1:
+        raise ValueError('terrain ground selection is approved only for Anub within1yd, not TC spawn-Z')
+    if marker['floor'] != record['source_floor']:
+        raise ValueError('source terrain floor differs from the journal floor')
+    verified = set()
+    for artifact in evidence['source_files']:
+        if digest(artifact['path']) != artifact['sha256']:
+            raise ValueError('source terrain evidence file changed')
+        verified.add(artifact['path'])
+    if not {evidence['terrain_file'], evidence['covering_wmo_report']} <= verified:
+        raise ValueError('terrain and covering WMO report require source hashes')
+    report = validate_covering_wmo_audit(evidence, verified)
+    x, y = transform_marker(marker, assignments)
+    for group in report['groups']:
+        for hit in group['hits'].get(str(record['entry']), []):
+            a, b, c = hit['world_vertices']
+            normal = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            height = triangle_height((x, -y), [(v[0], v[2], -v[1]) for v in (a, b, c)])
+            if normal > 0 and height is not None and any(abs(height - z) <= 1 for z in heights):
+                raise ValueError('covering source has an upward WMO floor near a baked candidate')
+    ground = []
+    for tag, payload in read_binary_chunks(Path(evidence['terrain_file']).read_bytes()):
+        if tag == b'MCNK':
+            ground.extend(sample_authored_terrain_cell(payload, x, y))
+    if len(ground) != 1:
+        raise ValueError('require a unique authored non-hole terrain triangle at source XY')
+    selected = [height for height in heights if abs(height - ground[0]) <= 1]
+    if len(selected) != 1:
+        raise ValueError('authored terrain requires exactly one baked candidate within1yd')
+    return selected
+
+
 def read_source_floor_support(record, marker, assignments, heights):
     evidence = record.get('source_floor_evidence')
+    if isinstance(evidence, dict) and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_AUTHORED_TERRAIN_TRIANGLE':
+        return match_authored_terrain_floor(record, marker, assignments, heights)
     triangle_policy = (isinstance(evidence, dict) and evidence.get('policy') in (
         'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_GROUP_UPWARD_TRIANGLE',
         'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS'))
