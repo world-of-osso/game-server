@@ -798,7 +798,6 @@ fn record_swing(
     else {
         return;
     };
-    crate::combat_refs::set_in_combat_with(world, attacker_entity, target_entity);
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), target_entity);
     // Procs default to normal and critical hits (SpellMgr::LoadSpellProcs
     // HitMask 0); dodge- and parry-triggered procs are not modelled.
@@ -1875,6 +1874,8 @@ fn commit_melee_loss(
         return false;
     }
     let before = health.current;
+    crate::combat_refs::engage_attacked_target(world, attacker, victim);
+    let health = world.get::<Health>(victim).expect("living melee victim");
     let scripted_loss = crate::scripted_ai::limit_scripted_loss(
         world.get::<crate::scripted_ai::CreatureScriptName>(victim),
         world
@@ -1932,6 +1933,7 @@ pub(crate) fn deal_health_damage(
     if !crate::spell_cast::targets::is_alive(world, victim) {
         return;
     }
+    crate::combat_refs::engage_attacked_target(world, attacker, victim);
     let (attacker_scaling, victim_scaling) = (
         UnitScaling::of(world, attacker),
         UnitScaling::of(world, victim),
@@ -1963,7 +1965,6 @@ pub(crate) fn deal_health_damage(
     mark_replication_changed(world.get_resource::<ReplicationDirtyQueue>(), victim);
     world.entity_mut(victim).insert(LastDamager(attacker));
     crate::stand_state::stand_on_damage(world, victim);
-    crate::combat_refs::set_in_combat_with(world, attacker, victim);
     if loss > 0.0 {
         crate::creature_aggro::note_damage_taken(world, victim);
     }

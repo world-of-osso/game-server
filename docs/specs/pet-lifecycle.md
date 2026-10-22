@@ -4,6 +4,7 @@ Retail Mainline behavior applies to every client art skin. Hunter taming is exis
 
 ## Requirements
 
+- An actual attack/hit against a controlled unit also engages its direct owner before lethal damage cleanup. Threat-capable owners receive zero-amount native engagement, never transferred pet damage threat. Missile launch alone retains target-side suppression and does not engage that owner. The shared rule covers melee, direct damage and missile impact; it does not change follower tank/healer policy or pet stats.
 - Hunter Call Pet 1–5, Dismiss, Revive, Mend and locally supported Feed Pet operate on the character's owned pets. A dead pet stays dead until revived; relogging must not heal it.
 - Stable Master interaction exposes the Retail active/stabled slots, moves/swaps, rename, abandon and pet specialization selection. Slot capacity and spell identities come from the installed Retail data/UI, never estimates.
 - Character-scoped redb storage preserves health, name, specialization and summoned/dismissed state through logout/relog and death. Existing stable records migrate without losing identity, slots or stance.

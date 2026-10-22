@@ -43,7 +43,6 @@ fn assert_owner_engaged(h: &Harness, owner: Entity) {
 }
 
 #[test]
-#[ignore = "RED: melee attack on controlled unit omits owner engagement"]
 fn pet_combat_owner_native_melee_hit_engages_owner_without_damage_threat() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, owner) = fixture();
@@ -63,7 +62,6 @@ fn pet_combat_owner_native_melee_hit_engages_owner_without_damage_threat() {
 }
 
 #[test]
-#[ignore = "RED: direct damage on controlled unit omits owner engagement"]
 fn pet_combat_owner_direct_damage_engages_owner_without_damage_threat() {
     let (mut h, owner) = fixture();
     crate::combat::deal_direct_damage(h.app.world_mut(), h.caster, h.npc, 1.0);
@@ -71,7 +69,6 @@ fn pet_combat_owner_direct_damage_engages_owner_without_damage_threat() {
 }
 
 #[test]
-#[ignore = "RED: lethal direct hit omits owner engagement before pet death"]
 fn pet_combat_owner_lethal_hit_engages_owner_before_pet_combat_ends() {
     let (mut h, owner) = fixture();
     let damage = h
@@ -97,7 +94,6 @@ fn pet_combat_owner_lethal_hit_engages_owner_before_pet_combat_ends() {
 }
 
 #[test]
-#[ignore = "RED: native missile impact on controlled unit omits owner engagement"]
 fn pet_combat_owner_native_missile_engages_owner_only_at_impact() {
     let _seed = crate::random::seed_scope(1);
     let (mut h, owner) = fixture();

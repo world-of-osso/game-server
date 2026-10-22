@@ -73,6 +73,28 @@ pub(crate) fn set_in_combat_with(world: &mut World, a: Entity, b: Entity) {
     begin_combat(world, a, b, false);
 }
 
+/// TC a352b1fa Unit.cpp:2271,9281-9287: an actual attack engages the target
+/// and its direct owner before damage can kill it. Owner engagement is zero threat,
+/// not a transfer of the pet's damage threat. Launch-only references bypass this.
+pub(crate) fn engage_attacked_target(world: &mut World, attacker: Entity, target: Entity) {
+    if !can_begin_combat(world, attacker, target) {
+        return;
+    }
+    set_in_combat_with(world, attacker, target);
+    let owner = world
+        .get::<shared::components::UnitSummonedBy>(target)
+        .and_then(|owner| Entity::try_from_bits(owner.0));
+    let Some(owner) = owner.filter(|owner| world.get_entity(*owner).is_ok()) else {
+        return;
+    };
+    if world.get::<ThreatTable>(owner).is_some() {
+        // Unit::EngageWithTarget (:8511-8520) delegates to native AddThreat(0).
+        crate::creature_aggro::add_threat(world, owner, attacker, 0.0);
+    } else {
+        set_in_combat_with(world, owner, attacker);
+    }
+}
+
 /// `SetInCombatWith(b, addSecondUnitSuppressed = true)` (CombatManager.cpp:191-218): a new
 /// reference puts only `a` in combat; `b` holds it suppressed. An existing reference is
 /// refreshed instead, which lifts both sides' suppression.
