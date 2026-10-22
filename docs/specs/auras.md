@@ -76,7 +76,7 @@ Actual active77756 rolls its native effect0 chance from real own188389 periodic 
 
 ## Fire Ignite
 
-Native12846 positive eligible damage procs ordinary12654 on the damaged target. Derive each new tick amount from the live effect0 percentage and native12654 duration/period tick count; an actually admitted Hot Streak Pyroblast/Flamestrike doubles that percentage even after the proc is consumed. Preserve the existing native proc masks/chance/trigger filtering, owner identity and generic flag-driven ROLLING_PERIODIC unpaid carry; Ignite must not feed itself. No granted proc, stat scalar or fixed invented tick schedule. Source: TC a352b1fa `spell_mage.cpp1292–1328`, `SpellAuraEffects.cpp832–840`. Producer RED first; carry integration and complete GREEN remain pending.
+Native12846 positive eligible damage procs ordinary12654 on the damaged target. Derive each new tick amount from the live effect0 percentage and native12654 duration/period tick count; an actually admitted Hot Streak Pyroblast/Flamestrike doubles that percentage even after the proc is consumed. Preserve the existing native proc masks/chance/trigger filtering, owner identity and generic flag-driven ROLLING_PERIODIC unpaid carry; Ignite must not feed itself. No granted proc, stat scalar or fixed invented tick schedule. Source: TC a352b1fa `spell_mage.cpp1292–1328`, `SpellAuraEffects.cpp832–840`. Native70 ordinary-hit RED atbd01d38e0 precedes producer879c22515. Integrated8f222d517 passes ordinary Fireball production, exact nine native ticks/no self-cascade, consumed Hot Streak missile doubling, and actual second-Fireball unpaid carry through the shared flag-driven path. Broader spread/Intensifying Flame/Burnout and full Fire parity remain unproved.
 
 ## Fire Hot Streak
 
