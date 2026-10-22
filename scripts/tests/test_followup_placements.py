@@ -46,6 +46,42 @@ class FollowupPlacementAcceptance(unittest.TestCase):
 
     def test_halls_three_source_supported_primaries_keep_own_native_identity_and_budget(self):
         self.assert_source_primaries(2527, (189719, 189722, 189727))
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            poses = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature '
+                               'WHERE map=2527 AND guid BETWEEN 63527000 AND 63527999 ORDER BY guid').fetchall()
+            self.assertEqual(poses, [
+                (63527000, 189719, -2.162094289251968, -210.6418370698127, -35.49920222451337),
+                (63527001, 189722, -353.12273242499987, -155.72340692500006, -67.90659723069882),
+                (63527002, 189727, -315.9738499750001, 161.897570825, -100.40462215402596),
+            ])
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2527 AND id1=189729').fetchone(), (0,))
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2527_189722',
+                                                       'FOLLOWER_ROUTE_INCOMPLETE_2527_189727'])
+        self.assertEqual([g['name'] for g in receipt['source_gaps']], ['FOLLOWER_PLACEMENT_FLOOR_UNRESOLVED_2527_189729'])
+
+    def test_packet_sql_preserves_later_combat_owner_and_refuses_changed_pose(self):
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        sql = (path.parent / 'delta.sql').read_text()
+        placement = receipt['placements'][0]
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source, closing(sqlite3.connect(':memory:')) as replay:
+            for table in ('content_creature_template', 'content_creature_template_model', 'content_creature', 'raid_encounter_creature'):
+                replay.execute(source.execute('SELECT sql FROM sqlite_master WHERE name=?', (table,)).fetchone()[0])
+            replay.executescript(sql)
+            replay.execute("UPDATE content_creature_template SET ScriptName='separate_combat_owner' WHERE entry=?", (placement['entry'],))
+            replay.commit()
+            replay.executescript(sql)
+            self.assertEqual(replay.execute('SELECT ScriptName FROM content_creature_template WHERE entry=?',
+                                            (placement['entry'],)).fetchone(), ('separate_combat_owner',))
+            replay.execute('UPDATE content_creature SET position_x=position_x+1 WHERE guid=?', (placement['guid'],))
+            replay.commit()
+            with self.assertRaises(sqlite3.IntegrityError):
+                replay.executescript(sql)
+            replay.rollback()
+            self.assertEqual(replay.execute('SELECT position_x FROM content_creature WHERE guid=?',
+                                            (placement['guid'],)).fetchone(), (placement['wow_xyz'][0] + 1,))
 
     @unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ, 'requires authenticated journal CSVs')
     def test_lua_primary_identity_keeps_native_and_journal_displays_separate(self):
