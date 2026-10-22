@@ -14,7 +14,40 @@ import unittest
 from contextlib import closing
 
 
+@unittest.skipUnless('FOLLOWER_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')
 class NeltharusPlacementAcceptance(unittest.TestCase):
+    def test_all_four_primaries_keep_source_floor_templates_and_bindings(self):
+        database = Path(os.environ['FOLLOWER_PLACEMENT_DB']).resolve(strict=True)
+        expected_xy = {181861: (-211.1, -932.7), 189340: (-232.125, -674.9625),
+                       189478: (-264.4580637024, -503.5), 189901: (-380.025, -772.8375)}
+        with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute(
+                'SELECT c.id1,c.guid,c.position_x,c.position_y,c.position_z,t.faction,t.unit_class,'
+                's.unit_class,t.minlevel,t.maxlevel,t.ContentTuningID,t.HealthModifier,d.HealthModifier,'
+                'r.display_id,m.CreatureDisplayID,c.Comment '
+                'FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 '
+                'JOIN tdb_creature_template s ON s.entry=c.id1 '
+                'JOIN tdb_creature_template_difficulty d ON d.Entry=c.id1 AND d.DifficultyID=1 '
+                'JOIN raid_encounter_creature r ON r.map_id=c.map AND r.creature_entry=c.id1 '
+                'JOIN content_creature_template_model m ON m.CreatureID=c.id1 '
+                'WHERE c.map=2519 AND c.id1 IN(181861,189340,189478,189901) ORDER BY c.id1'
+            ).fetchall()
+        self.assertEqual(len(rows), 4)
+        self.assertEqual({row[0] for row in rows}, set(expected_xy))
+        self.assertEqual([row[1] for row in rows], [63519000, 63519001, 63519002, 63519003])
+        for row in rows:
+            entry, guid, x, y, z, faction, unit_class, native_class, low, high, tuning, health, native_health, display, native_display, comment = row
+            with self.subTest(entry=entry):
+                self.assertAlmostEqual(x, expected_xy[entry][0], places=6)
+                self.assertAlmostEqual(y, expected_xy[entry][1], places=6)
+                self.assertEqual((faction, unit_class, low, high, tuning), (16, native_class, 70, 70, 2156))
+                self.assertEqual(health, native_health)
+                self.assertEqual(display, native_display)
+                self.assertIn('FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS', comment)
+                self.assertIn(f'https://www.wowhead.com/npc={entry}', comment)
+                if entry == 189478:
+                    self.assertAlmostEqual(z, 125.19722023743995, places=6)
+
     def test_all_four_primary_bosses_have_normal_spawns_reachable_from_source_entrance(self):
         database = Path(os.environ["FOLLOWER_PLACEMENT_DB"]).resolve(strict=True)
         with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as db:

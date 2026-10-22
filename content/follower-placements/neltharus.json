@@ -27,7 +27,11 @@
       "source_url": "https://www.wowhead.com/npc=189478",
       "cache_sha256": "059fb2e6000f2ebc9fbd0dce6578e0ff796e0def73a31976206ab911b01625fd",
       "faction_donor": 184124,
-      "donor_reason": "DF giant boss; same hostile A/H reaction; source class1/stats retained"
+      "donor_reason": "DF giant boss; same hostile A/H reaction; source class1/stats retained",
+      "source_floor": 1,
+      "source_floor_surface_height": 125.19722023743995,
+      "source_floor_evidence": "Lead approved 2026-10-22: Wowhead floor1 / DB2 UiMap2081 selects the supported125.197220 surface, not base0.2 or roof197.98; source placement and navigation are separate gates. Baked geometry result retained in neltharus-packet-1/receipt.json.",
+      "navigation_gap": "NELTHARUS_GOREK_ROUTE_INCOMPLETE"
     },
     {
       "entry": 189901,

@@ -8,6 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from follower_placement_sources import read_cached_npc, read_db2, select_assignment, transform_marker
 
 
+@unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ and 'FOLLOWER_PLACEMENT_CACHE' in os.environ,
+                     'requires the authenticated70448 and cached NPC evidence paths')
 class FollowerPlacementSources(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

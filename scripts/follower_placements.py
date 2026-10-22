@@ -50,7 +50,18 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
     placement = dict(entry=record['entry'], page=page, marker=marker,
                      assignments=assignments, wow_xy=[x, y], surface_queries=queries,
                      status='UNIQUE_REACHABLE_SURFACE' if len(reachable) == 1 else 'MISSING_OR_AMBIGUOUS_SURFACE')
-    if len(reachable) == 1:
+    if 'source_floor_surface_height' in record:
+        selected = [q for q in queries if abs(q['height'] - record['source_floor_surface_height']) < 0.000001]
+        if len(selected) != 1 or marker['floor'] != record['source_floor']:
+            raise ValueError('approved source-floor surface no longer matches baked geometry')
+        placement['wow_xyz'] = [x, y, selected[0]['height']]
+        placement['source_floor_evidence'] = record['source_floor_evidence']
+        if selected[0]['exit_code'] != 0:
+            placement['status'] = 'SOURCE_FLOOR_ROUTE_GAP'
+            placement['navigation_gap'] = record['navigation_gap']
+        else:
+            placement['status'] = 'UNIQUE_REACHABLE_SURFACE'
+    elif len(reachable) == 1:
         placement['wow_xyz'] = [x, y, next(iter(reachable.values()))['height']]
     return placement
 
@@ -199,7 +210,8 @@ def prepare(args):
                        surface_file=str(args.surfaces), surface_sha256=digest(args.surfaces),
                        route_binary_sha256=digest(args.route), entrance=entrance, placements=placements,
                        source_database=str(args.source_db.resolve()), baseline_sha256=digest(baseline_path), canonical_modified=False)
-        if any(p['status'] != 'UNIQUE_REACHABLE_SURFACE' for p in placements):
+        receipt['navigation_gaps'] = [p['navigation_gap'] for p in placements if 'navigation_gap' in p]
+        if any('wow_xyz' not in p for p in placements):
             receipt['status'] = 'BLOCKED_SURFACE_AMBIGUITY_OR_NO_ROUTE'
         else:
             bindings = [derive_binding(baseline, inventory, binding_tables, manifest['map_id'], r['entry']) for r in manifest['entries']]
@@ -219,13 +231,14 @@ def prepare(args):
                             raise ValueError(f'SQL replay differs for{table}')
                     replay.executescript(sql)
             (args.output / 'delta.sql').write_text(sql)
-            receipt.update(status='PREPARED_NOT_PUBLISHED', sql_sha256=digest(args.output / 'delta.sql'),
+            status = 'PREPARED_WITH_NAVIGATION_GAPS' if receipt['navigation_gaps'] else 'PREPARED_NOT_PUBLISHED'
+            receipt.update(status=status, sql_sha256=digest(args.output / 'delta.sql'),
                            replayed_sha256=digest(replay_path), sql_replay_count=3,
                            guid_range=[manifest['guid_base'] + manifest['map_id'] * 1000,
                                        manifest['guid_base'] + manifest['map_id'] * 1000 + 999])
     (args.output / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
     print(receipt['status'])
-    return 0 if receipt['status'] == 'PREPARED_NOT_PUBLISHED' else 2
+    return 0 if receipt['status'].startswith('PREPARED_') else 2
 
 
 def main():
