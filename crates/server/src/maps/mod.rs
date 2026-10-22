@@ -88,7 +88,8 @@ impl Plugin for MapPlugin {
             .add_systems(PostStartup, load_instance_locks)
             .add_systems(
                 PostStartup,
-                crate::world_area_triggers::spawn_hosted_continents,
+                crate::world_area_triggers::spawn_hosted_continents
+                    .run_if(resource_exists::<MapStore>),
             )
             .add_systems(
                 Update,
