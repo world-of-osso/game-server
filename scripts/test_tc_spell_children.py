@@ -8,7 +8,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = '''enum WarriorSpells {
+SOURCE = '''static constexpr uint32 FIREBALL = 133;
+enum WarriorSpells {
     SPELL_WARRIOR_SHIELD_CHARGE_EFFECT = 385954,
 };
 class spell_warr_shield_charge : public SpellScript {
@@ -19,7 +20,13 @@ class spell_warr_shield_charge : public SpellScript {
     }
 };
 class literal_cast : public SpellScript {
-    void Hit() { GetCaster()->CastSpell(GetHitUnit(), 5176, true); }
+    void Hit() {
+        GetCaster()->CastSpell(GetHitUnit(), 5176, true);
+        GetCaster()->CastSpell(GetHitUnit(), FIREBALL);
+    }
+};
+class coordinate_cast_script : public SpellScript {
+    void Hit() { GetCaster()->CastSpell(1.0f, 2.0f, 3.0f, 133, true); }
 };
 class dynamic_cast_script : public SpellScript {
     void Hit() { GetCaster()->CastSpell(GetHitUnit(), GetEffectInfo(EFFECT_0).TriggerSpell, true); }
@@ -39,7 +46,8 @@ class TcSpellChildrenTests(unittest.TestCase):
             'revision': 'a352b1fa', 'sha256': hashlib.sha256(self.cpp.read_bytes()).hexdigest(),
         }}))
         self.index = self.root / 'index.json'
-        rows = {385952: 'spell_warr_shield_charge', 10: 'literal_cast', 11: 'dynamic_cast_script'}
+        rows = {385952: 'spell_warr_shield_charge', 10: 'literal_cast',
+                11: 'dynamic_cast_script', 12: 'coordinate_cast_script'}
         self.index.write_text(json.dumps({str(root): [{'file': 'spell_warrior.cpp',
             'class': name, 'base': 'SpellScript'}] for root, name in rows.items()}))
 
@@ -56,10 +64,10 @@ class TcSpellChildrenTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         data = json.loads(output.read_text())
         pairs = {(row['parent_spell_id'], row['child_spell_id']) for row in data['edges']}
-        self.assertEqual(pairs, {(385952, 385954), (10, 5176)})
+        self.assertEqual(pairs, {(385952, 385954), (10, 5176), (10, 133), (12, 133)})
         edge = next(row for row in data['edges'] if row['parent_spell_id'] == 385952)
         self.assertEqual(edge['file'], 'spell_warrior.cpp')
-        self.assertEqual(edge['cast_line'], 6)
+        self.assertEqual(edge['cast_line'], 7)
         self.assertEqual(edge['script_class'], 'spell_warr_shield_charge')
         self.assertEqual(data['schema_version'], 1)
         self.assertEqual(data['source_revision'], 'a352b1fa')

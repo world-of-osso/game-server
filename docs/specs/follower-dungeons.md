@@ -36,6 +36,12 @@ Elemental's native Ascendance talent114050 at level51 exposes the actual self-ca
 
 Kit publication must preserve unrelated specializations. Each scoped delta must reproduce the prepared intervals on a fresh canonical database copy, retain native interval identities and provide source/output/SQL hashes plus the changed interval keys. Source-qualified prepared cast actions may add stable keys; removing or renaming existing intervals remains an error. Replaying an added action is idempotent and must preserve unrelated specs/tables. Validate composition with other pending kit publications before canonical application.
 
+## Source-derived kit role inputs
+
+Intrinsic damage/healing/utility classification must come from native effects, DB2 trigger edges and cited scripted-child evidence, not a spell-name role whitelist. Keep cited APL conditions/exclusions and source-ambiguous decisions separate; disabling an APL action must not be mislabeled as absence of native damage. Prepared-copy receipts must distinguish classification-driven changes from policy-retained rows and report full per-spec role deltas.
+
+The reusable pinned-TC child artifact must preserve each constant cast's parent/child IDs, exact source hash/class/line, and every unresolved dynamic call without inventing a child. Its versioned [JSON contract](../reference/tc-spell-child-edges.md) is shared with census consumers. Constant source edges are not runtime dispatch/effectiveness proof.
+
 ## Hunter pet source policy
 
 `FOLLOWER_HUNTER_PET_SIMC_DEFAULT` selects native tameable Waterfowl/Duck174884 for spec253 Austin, following SimC76f8118 `sc_hunter.cpp:1052` (lead-approved2026-10-21). This is a named policy, not an authored Retail Austin-pet claim. Normal content import must include that TDB template/model without adding world spawns or fabricating stats. Runtime must provision a real runtime-only StoredPet/PetStable with no player/character identity, then cast actual learned Call Pet883 through the ordinary controlled-pet path. Native family/default specialization, level scaling and pet abilities remain authoritative; no arbitrary direct pet spawn or historical Barbed Shot Frenzy stacks.
