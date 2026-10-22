@@ -5,7 +5,8 @@
   db2.py import  [--build B] [--csv-root DIR] [--db PATH]
 
 CSVs live in <csv-root>/<build>/<Table>.csv. Import replaces every DB2 table
-listed in TABLES inside one transaction (non-DB2 tables are untouched), checks
+listed in TABLES plus the native item-instance tables inside one transaction
+(non-DB2 tables are untouched), checks
 each CSV header against scripts/db2_schema.sql, and updates only its tables'
 build receipts in `db2_build`. The pinned local Forever Skyborne overlay is reapplied in that
 same transaction (skyborne_data.py), along with the already-authored Zephras
@@ -23,6 +24,7 @@ import sys
 from pathlib import Path
 
 import db2_casc
+import item_instance_data
 import skyborne_data
 import zephras_content
 
@@ -269,6 +271,7 @@ def import_tables(build, csv_root, db_path, source_dir):
                 "ON CONFLICT(table_name) DO UPDATE SET build=excluded.build", (name, build)
             )
             counts[name] = len(rows)
+        counts.update(item_instance_data.import_catalog(conn, csv_dir))
         skyborne_data.import_rows(conn, skyborne_rows)
         reapply_zephras_factions(conn)
         conn.execute("COMMIT")

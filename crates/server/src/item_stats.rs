@@ -191,6 +191,15 @@ fn startup_load_item_scaling_tables(mut commands: Commands) {
         tables.rand_prop_points.len()
     );
     commands.insert_resource(tables);
+    let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .expect("open native item-instance tables");
+    commands.insert_resource(crate::stats::NativeItemInstances {
+        bonuses: server::item_instance::load::load_bonus_tables(&conn)
+            .expect("load native ItemBonus and scaling tables; run scripts/item_instance_data.py"),
+        enchants: server::item_instance::load::load_enchantment_tables(&conn).expect(
+            "load native enchantments and GemProperties; run scripts/item_instance_data.py",
+        ),
+    });
     let forever = load_forever_item_scaling_tables(path).unwrap_or_else(|error| {
         panic!(
             "load isolated Forever scaling from {}: {error}; run scripts/skyborne_scaling_data.py",

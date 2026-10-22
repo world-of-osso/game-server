@@ -21,6 +21,14 @@ Do not add these three Toy rows until a real contract is established and approve
 
 Sources: TC a352b1fa `SpellAuraEffects.cpp:2969–2983`, `Unit.cpp:13933–13961`, `MovementInfo.h:71`. This server-state boundary does not certify native steering, rendering, or all other contracts on mixed-aura toys.
 
+## Source-native companion levels
+
+- [x] SummonProperties UseCreatureLevel0x100 selects source-native creature level/difficulty before dependent stats even for non-guardian companions; it must not silently inherit the caster's level.
+- [x] Native99104 effect28/properties3141/creature53453/display38340 preserves source-native regional birth: actual map1220/area7558 selects tuning332/native45 despite caster10. Follow designation, immunity, permanent lifetime, slot replacement and owner-map cleanup remain unchanged.
+- [x] Admitted flagged actors Keg Pony71137 and Stored Wisdom192485 retain tuning73/native30 in real Northshire, rather than caster80, and preserve source3/5-minute lifetimes.
+
+Sources: TC a352b1fa `DBCEnums.h:2780`, `TemporarySummon.cpp:240–253`, `Creature.cpp:1128–1143,1610–1618,3122–3173`. Missing destination-area context remains a refusal, not a guessed level. Ordinary temporary zone spawning currently skips regional tuning; its birth1 is not a valid source oracle. This mechanism proof does not certify that separate parity gap, the unimplemented99104 target43/dummy4 cast, or arbitrary native rendering.
+
 ## Native default TempSummon title dispatch
 
 - [x] Ordinary Wild/Ally titles use TC a352b1fa's default TempSummon branch unless they select an explicit guardian/companion/totem/vehicle path or joined spawn-group route (`SpellEffects.cpp:1957–2024`, `Object.cpp:1191–1265`). A Construct7/Name27/new61 label is not itself a missing control implementation.
@@ -37,7 +45,9 @@ A dummy aura counts as satisfied at server scope only when all four conditions h
 
 - [x] Gleaming Arcanocrystal201927/395705: hold/refract the source crystal; complete70448 visual119030/event/kit/ordinary models/positioners/animation and sound graph, source20000ms owner aura and120000ms recovery.
 - [x] Lost Compass202711/399041: hold out the source compass; complete70448 visual125287/event/kit/model/positioner/AnimKit graph, source indefinite owner aura and1000ms recovery. This does not admit Wayfinder's Compass388275 or implement navigation.
-- [x] Both use the existing strict visual-only pipeline, real bag learning/UseToy, owner-only aura replication, real cancellation and unchanged health/body/position. Missing visual or changed nonzero payload still refuses without effects/cooldown.
+- [x] Hot Buttered Popcorn162539/202432: eating/held-popcorn visual only, source10000ms owner aura and60000ms recovery. Retain the hidden-aura-icon flag; it is not an invented gameplay effect.
+- [x] Banner of the Burning Blade168014/295037: wear the source banner, source600000ms owner aura and3600000ms recovery. No summon, faction change or full-hour reuse claim.
+- [x] These source-complete identities use the existing strict visual-only pipeline, real bag learning/UseToy, owner-only aura replication, real cancellation and unchanged health/body/position. Missing visual or changed nonzero payload still refuses without effects/cooldown.
 
 No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
 

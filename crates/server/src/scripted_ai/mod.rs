@@ -23,9 +23,11 @@ mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
 mod broggok;
+mod bromach;
 pub(crate) mod caster_chase;
 pub mod creature_text;
 mod doragosa;
+mod emberon;
 pub mod event_map;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
@@ -33,6 +35,7 @@ pub(crate) mod jump_movement;
 pub(crate) mod kargath;
 pub mod kings_rest;
 mod kokia;
+mod lost_dwarves;
 pub(crate) mod maraudon;
 mod melidrussa;
 pub(crate) mod model_reach;
@@ -42,8 +45,10 @@ pub(crate) mod nethekurse;
 pub(crate) mod nethekurse_intro;
 pub(crate) mod ragefire_chasm;
 pub(crate) mod ruby_life_pools;
+mod scripted_alerts;
 pub(crate) mod shattered_halls;
 pub mod smart_ai;
+mod talondras;
 pub mod the_stockade;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
@@ -259,6 +264,10 @@ pub enum Hook {
 /// TrinityCore `CreatureAI` virtuals the Stockade scripts override. Defaults do
 /// what `CreatureAI`/`ScriptedAI` do when a script does not override them.
 pub trait CreatureAi: Send + Sync + 'static {
+    /// Only explicitly sourced boss-mod-Lua scripts opt into real-clock alerts.
+    fn encounter_schedule(&self) -> Option<&EventMap> {
+        None
+    }
     /// Read-only script requests, not impact-time or damage-amount predictions.
     fn scheduled_damage(&self) -> Vec<ScheduledDamage> {
         Vec::new()
@@ -361,6 +370,18 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if azure_vault::is_creature_script(script_name) {
         return azure_vault::creature_ai(world, creature, script_name);
     }
+    if script_name == emberon::SCRIPT {
+        return emberon::creature_ai(world, creature);
+    }
+    if script_name == talondras::SCRIPT {
+        return talondras::creature_ai(world, creature);
+    }
+    if script_name == bromach::SCRIPT {
+        return bromach::creature_ai(world, creature);
+    }
+    if script_name == lost_dwarves::SCRIPT {
+        return lost_dwarves::creature_ai(world, creature);
+    }
     if algethar_academy::is_creature_script(script_name) {
         return algethar_academy::creature_ai(world, creature, script_name);
     }
@@ -417,6 +438,10 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || azure_vault::is_creature_script(script_name)
         || algethar_academy::is_creature_script(script_name)
         || ruby_life_pools::is_creature_script(script_name)
+        || script_name == lost_dwarves::SCRIPT
+        || script_name == bromach::SCRIPT
+        || script_name == talondras::SCRIPT
+        || script_name == emberon::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
@@ -659,6 +684,9 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
         Hook::QuestRewarded { player, quest_id } => ai.quest_rewarded(&mut ctx, player, quest_id),
         Hook::SpellHit { caster, spell_id } => ai.spell_hit(&mut ctx, caster, spell_id),
     }
+    if let Some(events) = ai.encounter_schedule() {
+        scripted_alerts::publish_schedule(ctx.world, me, events);
+    }
 }
 
 /// Pure source-script interception, separate from queued reaction hooks. It must
@@ -666,13 +694,16 @@ fn run_hook(world: &mut World, me: Entity, ai: &mut dyn CreatureAi, hook: Hook) 
 pub(crate) fn limit_scripted_loss(
     name: Option<&CreatureScriptName>,
     herald_unkillable: bool,
-    health: f32,
+    health: &Health,
     loss: f32,
 ) -> f32 {
+    if name.is_some_and(|name| name.0 == lost_dwarves::SCRIPT) {
+        return lost_dwarves::limit_loss(health, loss);
+    }
     let animated_gold = name.is_some_and(|name| name.0 == kings_rest::ANIMATED_GOLD_SCRIPT);
     let protected = herald_unkillable || animated_gold;
-    if protected && loss >= health {
-        (health - 1.0).max(0.0)
+    if protected && loss >= health.current {
+        (health.current - 1.0).max(0.0)
     } else {
         loss
     }
