@@ -51,6 +51,12 @@ At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compil
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura205 CHARGE_RECOVERY_BY_TYPE_MASK
+
+TC `SpellHistory.cpp:985–994` adds matching205 amount (milliseconds) where MiscA intersects the charge category's TypeMask, before existing454/haste/rate factors. Actual TypeMask was absent from SpellCategories despite source column presence; load it from the existing native/TDB category joins, then use it in existing ChargeMods. No new category cache, source producer or canonical data write. Keep source453 matching category ID, not type bits. Like453,205 has no immediate handler: pending clocks retain their launch duration, future consumption reads updated modifiers.
+
+Ignored RED9e92b1daa `census_tail_205 --include-ignored`1PASS/3FAIL38.85s. Native383228 effect0 authors mask32/−2000ms; Judgment20271 category1663 TypeMask37 stays11000 instead9000. Crusader Strike35395 category1627 TypeMask5 must be untouched by205 while actual sibling453/−2000ms changes6000→4000. Native clock case confirms old11000 remains after application then fails at next expected9000; foreign-recipient control passes. `/home/osso/.worktrees/logs/census-tail/205-red.log`; native compile11m42s/no warnings. Minimal source-loading/consumer changes and enabled four cases committed; GREEN pending.
+
 ## Aura198 COMBAT_RATING_FROM_COMBAT_RATING
 
 TC `Player.cpp:5254–5274` reads original base ratings selected by MiscA, takes their maximum, adds truncated amount% to MiscB destinations, then applies405. Existing stat-rating conversion and463 ordering reused; no per-spell case. The source statistic is not consumed and modified ratings do not feed back into198.

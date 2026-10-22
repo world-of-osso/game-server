@@ -54,7 +54,6 @@ fn cast(h: &mut Harness, spell_id: u32) -> SpellChargesUpdate {
 }
 
 #[test]
-#[ignore = "RED: native205 TypeMask32 reduces Judgment category37 by2000ms"]
 fn census_tail_205_native_swift_justice_reduces_only_matching_category_type() {
     let mut h = fixture();
     let caster = h.caster;
@@ -66,7 +65,6 @@ fn census_tail_205_native_swift_justice_reduces_only_matching_category_type() {
 }
 
 #[test]
-#[ignore = "RED: native205 and453 use independent type-mask/category selectors"]
 fn census_tail_205_native_whole_swift_justice_keeps_both_authored_fields() {
     let mut h = fixture();
     let caster = h.caster;
@@ -77,7 +75,6 @@ fn census_tail_205_native_whole_swift_justice_keeps_both_authored_fields() {
 }
 
 #[test]
-#[ignore = "RED:205 no-immediate handler preserves active clocks and removal changes future spend"]
 fn census_tail_205_native_change_keeps_pending_charge_then_changes_future_consumption() {
     let mut h = fixture();
     let first = cast(&mut h, JUDGMENT);
@@ -121,7 +118,6 @@ fn census_tail_205_native_change_keeps_pending_charge_then_changes_future_consum
 }
 
 #[test]
-#[ignore = "RED control: another recipient's205 cannot change this caster's recovery"]
 fn census_tail_205_native_foreign_swift_justice_does_not_modify_caster() {
     let mut h = fixture();
     let npc = h.npc;

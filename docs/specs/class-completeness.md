@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Charge recovery type-mask slice — 2026-10-21
+
+- Native205 adds signed recovery milliseconds when its MiscValue mask intersects actual SpellCategory.TypeMask, before existing charge multipliers/haste. Keep category-specific453 independent. Load TypeMask for native DB2 and TDB spells through their existing category joins; no substitute category cache or inferred masks.
+- Native383228 Swift Justice205 reduces Judgment20271 from11s to9s, not Crusader Strike35395; its separate453 reduces Crusader Strike6s→4s. Existing pending charge clocks are not retimed by205; later consumption reflects application/removal. Foreign recipients cannot modify this caster. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Base-rating conversion slice — 2026-10-21
 
 - Native198 adds truncated percentage of the highest selected original base rating to each selected destination rating, before405 percentage changes. Do not consume source rating or feed already converted/percentage-modified ratings back into conversion. Preserve existing463 ordering and removal.

@@ -1935,14 +1935,28 @@ pub enum CastBlock {
 pub struct ChargeMods {
     /// MOD_MAX_CHARGES 411.
     pub extra_charges: i32,
-    /// CHARGE_RECOVERY_MOD 453, ms.
+    /// Category453 and TypeMask205 flat recovery milliseconds.
     pub recovery_flat_ms: f32,
     /// CHARGE_RECOVERY_MULTIPLIER 454, haste457 and category rate148.
     pub recovery_mult: f32,
 }
 
-/// Charge auras of `unit` whose MiscValue is `charge_category`.
-pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeMods {
+fn charge_effect_matches(effect: &AuraEffectState, category: u32, type_mask: u32) -> bool {
+    let selector = effect.misc_values[0] as u32;
+    if effect.aura_type == handlers::MOD_CHARGE_RECOVERY_BY_TYPE_MASK {
+        selector & type_mask != 0
+    } else {
+        selector == category
+    }
+}
+
+/// Charge auras matching the native category ID, or205 intersecting its TypeMask.
+pub fn charge_mods(
+    world: &World,
+    unit: Entity,
+    charge_category: u32,
+    charge_type_mask: u32,
+) -> ChargeMods {
     let mut mods = ChargeMods {
         extra_charges: 0,
         recovery_flat_ms: 0.0,
@@ -1966,12 +1980,14 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
         for effect in aura
             .effects
             .iter()
-            .filter(|effect| effect.misc_values[0] as u32 == charge_category)
+            .filter(|effect| charge_effect_matches(effect, charge_category, charge_type_mask))
         {
             let amount = effect.amount * stacks;
             match effect.aura_type {
                 handlers::MOD_MAX_CHARGES => mods.extra_charges += amount.round() as i32,
-                handlers::CHARGE_RECOVERY_MOD => mods.recovery_flat_ms += amount,
+                handlers::CHARGE_RECOVERY_MOD | handlers::MOD_CHARGE_RECOVERY_BY_TYPE_MASK => {
+                    mods.recovery_flat_ms += amount
+                }
                 handlers::CHARGE_RECOVERY_MULTIPLIER => mods.recovery_mult *= 1.0 + amount / 100.0,
                 handlers::MOD_CHARGE_RECOVERY_RATE => {
                     mods.recovery_mult *= 100.0 / (100.0 + amount.max(-99.0));

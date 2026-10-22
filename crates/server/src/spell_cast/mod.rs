@@ -748,7 +748,7 @@ impl SpellHistory {
         if !state.pending.is_empty() && state.recovery_mult != mods.recovery_mult {
             state.retime(now, mods.recovery_mult);
         }
-        // Aura453 has no immediate handler: only future consumption changes.
+        // Flat453/205 have no immediate handler: only future consumption changes.
         state.recovery_ms = recovery_ms;
         state.recovery_mult = mods.recovery_mult;
         Some(state)
@@ -757,7 +757,8 @@ impl SpellHistory {
 
 fn charge_mods(world: &World, caster: Entity, spell: &SpellInfo) -> ChargeMods {
     let category = spell.categories.as_ref().map_or(0, |c| c.charge_category);
-    crate::auras::charge_mods(world, caster, category)
+    let type_mask = spell.categories.as_ref().map_or(0, |c| c.charge_type_mask);
+    crate::auras::charge_mods(world, caster, category, type_mask)
 }
 
 /// Refresh existing category clocks/maxima, never discover known spells here.

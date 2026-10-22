@@ -281,6 +281,7 @@ pub const PREVENT_REGENERATE_POWER: u32 = 294;
 pub const MOD_CHARGE_RECOVERY_RATE: u32 = 148;
 pub const MOD_MAX_CHARGES: u32 = 411;
 pub const CHARGE_RECOVERY_MOD: u32 = 453;
+pub const MOD_CHARGE_RECOVERY_BY_TYPE_MASK: u32 = 205;
 pub const CHARGE_RECOVERY_MULTIPLIER: u32 = 454;
 /// TC a352b1fa SpellHistory::GetChargeRecoveryTime: category-scoped ModHasteRegen.
 pub const CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN: u32 = 457;
@@ -541,6 +542,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         MOD_MAX_CHARGES
         | MOD_CHARGE_RECOVERY_RATE
         | CHARGE_RECOVERY_MOD
+        | MOD_CHARGE_RECOVERY_BY_TYPE_MASK
         | CHARGE_RECOVERY_MULTIPLIER
         | CHARGE_RECOVERY_AFFECTED_BY_HASTE_REGEN => ChargeMod,
         REFLECT_SPELLS | REFLECT_SPELLS_SCHOOL => Reflect,
