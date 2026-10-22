@@ -760,7 +760,7 @@ fn spawn_from_row(row: &Row) -> rusqlite::Result<CreatureSpawn> {
 }
 
 /// `ObjectMgr::ParseSpawnDifficulties`: comma-separated `Difficulty.db2` IDs.
-fn parse_spawn_difficulties(text: &str) -> Vec<u32> {
+pub(crate) fn parse_spawn_difficulties(text: &str) -> Vec<u32> {
     text.split(',')
         .map(|token| {
             token
