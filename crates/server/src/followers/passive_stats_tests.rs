@@ -85,21 +85,18 @@ fn assert_native_mastery_attack_power(entry: u32, mastery: u32) {
 }
 
 #[test]
-#[ignore = "DPS parity RED: follower mastery is incorrectly Player-only"]
 fn dps_parity_follower_native_paladin_mastery_updates_attack_power() {
     //70448 Mastery: Divine Bulwark76671 e1:166, coefficient1 per raw point.
     assert_native_mastery_attack_power(209057, 76671);
 }
 
 #[test]
-#[ignore = "DPS parity RED: follower mastery is incorrectly Player-only"]
 fn dps_parity_follower_native_warrior_mastery_updates_attack_power() {
     //70448 Mastery: Critical Block76857 e4:166, coefficient1 per raw point.
     assert_native_mastery_attack_power(215517, 76857);
 }
 
 #[test]
-#[ignore = "DPS parity RED: follower mastery is incorrectly Player-only"]
 fn dps_parity_follower_native_elemental_mastery_modifies_damage_and_refreshes() {
     let (mut h, unit) = mastery_follower(209053);
     crate::auras::remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {

@@ -1,6 +1,8 @@
 //! TC a352b1fa SpellInfo.cpp600 and StatSystem.cpp549: mastery is raw points;
 //! Attr8 MasteryAffectsPoints adds BonusCoefficient*points, then effect modifiers.
+//! Approved followers share class-derived stats; ordinary NPCs do not gain mastery.
 use super::ActiveAuras;
+use crate::followers::Follower;
 use crate::spell_info::{SpellEffect, SpellInfo, SpellStore};
 use crate::stats::CharacterStats;
 use bevy::prelude::*;
@@ -21,7 +23,9 @@ pub(crate) fn effect_bonus(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    if !affects_points(spell) || world.get::<Player>(caster).is_none() {
+    let has_class_stats =
+        world.get::<Player>(caster).is_some() || world.get::<Follower>(caster).is_some();
+    if !affects_points(spell) || !has_class_stats {
         return 0.0;
     }
     world
@@ -107,7 +111,7 @@ pub(super) fn refresh_amounts(world: &mut World) {
     let now = super::aura_now(world);
     let units: Vec<_> = world
         .query_filtered::<Entity, (
-            With<Player>,
+            Or<(With<Player>, With<Follower>)>,
             Or<(Changed<CharacterStats>, Changed<ActiveAuras>)>,
         )>()
         .iter(world)
