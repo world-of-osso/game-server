@@ -1,3 +1,5 @@
+- [Class4 zone-only ingress](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22) — shared entry tolerates absent spell-runtime metadata without fabricated pools.
+- [Remaining follower boss ingress](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21) — all27 maps/98 Normal encounters inventoried; remainingDF17 placement blocks and CityPC-immunity retained, Anub'zekt native partial5/5 proven, controller gaps retained.
 - [Pyroclasm policy](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21) — named SimC trigger/hardcast consumer on native15%/230%/two-stack data; launch snapshot preserves consumed bonus; native RED2, GREEN pending.
 - [RPPM haste rows](systems/auras.md#rppm-haste-modifiers--2026-10-21) — native Type1 Param/Coeff scaling, not Flags; actual learned55 Dance RED reproduced, enabled GREEN pending; other modifier types remain gaps.
 - [FoF SimC cadence](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21) — named113656/117418 damage-period policy preserves native coefficients and generic toy bridge;25vs5 native RED, GREEN pending.
@@ -1024,3 +1026,5 @@ Debug logs and root cause analyses.
 - [Aura world/XP native70448](systems/auras.md#aura-worldxp-native70448--2026-10-20) — generic200/291/348 reward consumers,144/58/179 consumers and server-only world flags; native15GREEN, explicit TCNULL/client gaps.
 
 - [Census effect77](systems/spell-casting.md#census-effect77--2026-10-20) —44-root source mapping, Subduing Grasp E1 partial port; unmatched slots stay named gaps.
+
+- [Ruby entrance follow/formation](investigations/follower-data.md#ruby-entrance-follow-and-formation--2026-10-22) — absent runtime bake freezes admission; native23s RED proves identical pet follow points independently stack all4. Approved deterministic party slots; native23s GREEN,464controlsPASS, Stockade/Henry simulator clears and all-targets/fmtPASS.

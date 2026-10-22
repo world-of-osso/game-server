@@ -39,6 +39,13 @@ fn follower205_summoned_vault_rune_inherits_normal_stats_not_base_zero() {
     )
     .expect("actual template can be summoned without terrain");
     queue.apply(&mut world);
+    assert!(
+        world
+            .get::<crate::spell_cast::powers::PowerPools>(rune)
+            .is_none(),
+        "zone-only world without native power metadata must not invent Energy"
+    );
+    assert!(world.get::<shared::components::Mana>(rune).is_none());
     let scaling = world
         .get::<LevelScaling>(rune)
         .expect("205 must inherit Normal tuning, not untuned base0");

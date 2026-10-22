@@ -65,6 +65,14 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Class4 zone-only ingress
+
+[Optional power metadata](investigations/follower-data.md#class4-zone-only-ingress--2026-10-22): az914b real205 VaultRune summon exposed a shared zone-entry resource panic. Production now preserves source stats/identity and explicitly warns/leaves power absent when SpellCastPlugin is not installed; no fake pools or fixture-only patch. Present-table native initialization is unchanged. Native832762da4 reproof: real failingRune1/1 (17.91s), present-table class4Energy+Anub4 controls5/5 (70.99s); no duplicate broad gate.
+
+## 2026-10-21 — Remaining follower boss ingress
+
+[Source inventory](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21): read-only27maps/98Normalencounters with2777a9d Lua/70448 journal/source placements. RemainingDF17 have no placed primaries; City blanks retainPCimmunity. Lead excludes unplaced/fake-unlock combat; Anub'zekt ignoredRED→native76ca45582 GREEN5/5: source Energy and four encounter cases in Normal1/Follower205; enabled after proof, absent-ground fixture cause corrected with authored terrain. Thirty-three requests, first Eye spend, later Energy denial, DOT/reset/copy-credit/corpse behavior proven; whole-fight/controller gaps retained.
+
 ## 2026-10-21 — Pyroclasm named trigger/consumer policy
 
 [Auras](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21): true admitted HS spends roll native269650 chance; hardcast11366/1254851 snapshots native269651 damage and spends one stack, instant casts retain it. SimC supplies semantics where TC/DB2 have no proc script/data;70448 supplies15%/230%/two stacks. Native RED2 reproduced; instant-control crit oracle corrected; four enabled cases pass in13-case2ba4ec43a GREEN.
@@ -3821,6 +3829,9 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+- 2026-10-22: Recorded Ruby entrance artifact/formation root causes, pushed native23s overlap RED and approved per-party slot policy; GREEN/gates pending. See [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
+
+- 2026-10-22: Ruby per-party follow slots qualified: pushed ignoredRED→native23sGREEN; integrated8a1faab214 controls464PASS/27ignored, defaultStockade+Henry3-boss simulator clears, be88079ef native-metadata fixture1PASS/all-targets/fmtPASS,0compiler warnings. Source snapshot unchanged6bf39eb8; see [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
 ## 2026-10-22 — Brackenhide source-floor packet
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
