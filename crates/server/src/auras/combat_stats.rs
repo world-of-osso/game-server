@@ -52,18 +52,54 @@ pub(crate) fn armor_after_ignore(
     })
 }
 
-/// TC a352b1fa Unit.cpp7512–7550: strongest259 of each allowed sign.
-pub(crate) fn periodic_healing_taken_multiplier(
-    world: &World,
-    target: Entity,
-    spell: &SpellInfo,
-) -> f32 {
+/// TC a352b1fa Unit.cpp7514–7515: independently allow each healing-modifier sign.
+fn healing_modifier_permissions(spell: &SpellInfo) -> (bool, bool) {
     const IGNORE_HEALING_MODIFIERS: u32 = 0x0800_0000;
     const ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS: u32 = 0x0400_0000;
     let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
     let allow_positive = attributes[6] & IGNORE_HEALING_MODIFIERS == 0;
     let allow_negative =
         allow_positive || attributes[13] & ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS != 0;
+    (allow_positive, allow_negative)
+}
+
+/// TC a352b1fa Unit.cpp7579–7594: every504 factor belongs to this healer.
+pub(crate) fn caster_healing_taken_multiplier(
+    world: &World,
+    caster: Entity,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    let (allow_positive, allow_negative) = healing_modifier_permissions(spell);
+    let Some(auras) = world.get::<ActiveAuras>(target) else {
+        return 1.0;
+    };
+    auras
+        .iter()
+        .filter(|aura| aura.caster == caster)
+        .flat_map(|aura| {
+            aura.effects
+                .iter()
+                .filter(|effect| {
+                    let allowed = if effect.amount > 0.0 {
+                        allow_positive
+                    } else {
+                        allow_negative
+                    };
+                    effect.aura_type == handlers::MOD_HEALING_TAKEN_FROM_CASTER && allowed
+                })
+                .map(move |effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
+        })
+        .product()
+}
+
+/// TC a352b1fa Unit.cpp7512–7550: strongest259 of each allowed sign.
+pub(crate) fn periodic_healing_taken_multiplier(
+    world: &World,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    let (allow_positive, allow_negative) = healing_modifier_permissions(spell);
     let Some(auras) = world.get::<ActiveAuras>(target) else {
         return 1.0;
     };

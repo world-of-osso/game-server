@@ -76,7 +76,6 @@ fn healed_amount(h: &mut Harness, spell_id: u32, periodic: bool) -> i32 {
 }
 
 #[test]
-#[ignore = "census-tail504 RED before native caster-owned healing consumer"]
 fn census_tail_504_native_direct_and_periodic_healing_follow_aura_caster_and_remove() {
     let mut h = fixture();
     let target = h.caster;
@@ -89,7 +88,6 @@ fn census_tail_504_native_direct_and_periodic_healing_follow_aura_caster_and_rem
 }
 
 #[test]
-#[ignore = "census-tail504 RED before native caster-owned healing consumer"]
 fn census_tail_504_native_independent_signed_modifiers_multiply_not_sum_or_max() {
     let mut h = fixture();
     let target = h.caster;
@@ -105,7 +103,6 @@ fn census_tail_504_native_independent_signed_modifiers_multiply_not_sum_or_max()
 }
 
 #[test]
-#[ignore = "census-tail504 RED before native caster-owned healing consumer"]
 fn census_tail_504_native_foreign_caster_and_other_recipient_do_not_apply() {
     let mut h = fixture();
     let target = h.caster;
@@ -119,7 +116,6 @@ fn census_tail_504_native_foreign_caster_and_other_recipient_do_not_apply() {
 }
 
 #[test]
-#[ignore = "census-tail504 RED before native caster-owned healing consumer"]
 fn census_tail_504_native_ignore_healing_flags_keep_only_permitted_negative() {
     let mut h = fixture();
     let target = h.caster;
@@ -131,7 +127,6 @@ fn census_tail_504_native_ignore_healing_flags_keep_only_permitted_negative() {
 }
 
 #[test]
-#[ignore = "census-tail504 RED before native caster-owned healing consumer"]
 fn census_tail_504_native_zero_reversion_does_not_invent_healing_bonus() {
     let mut h = fixture();
     let target = h.caster;

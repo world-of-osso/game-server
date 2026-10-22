@@ -263,6 +263,8 @@ pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
 /// TC a352b1fa Unit.cpp8213–8219: white swings (no spell) from the aura owner.
 pub const MOD_MELEE_DAMAGE_FROM_CASTER: u32 = 343;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
+/// TC a352b1fa Unit.cpp7579–7594: healing from the aura's caster only.
+pub const MOD_HEALING_TAKEN_FROM_CASTER: u32 = 504;
 pub const MOD_CRIT_PCT: u32 = 290;
 pub const OVERRIDE_SPELLS: u32 = 293;
 pub const MASTERY: u32 = 318;
@@ -436,6 +438,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MELEE_SLOW
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
+        | MOD_HEALING_TAKEN_FROM_CASTER
         | MOD_HOT_PCT
         | MOD_CRIT_PCT
         | MOD_WEAPON_CRIT_PERCENT

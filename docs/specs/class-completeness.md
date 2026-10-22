@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Caster-owned healing taken slice — 2026-10-22
+
+- Native504 on the recipient multiplies direct and periodic healing only from that aura's caster. Multiply independent signed amounts, without a school/family filter or strongest-only aggregation. Honor the existing259 sign permissions from native attr6/13; other healers and recipients remain independent, and removal restores prior healing.
+- Native357556+50,411036+10 and1271318−9.0909 qualify multiplication, ownership/removal and ignored/negative-permitted healing. Native366155 Reversion's authored0 is identity, not an inferred Golden Hour bonus. This slice does not change283 or Reversion scripts. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Periodic-healing taken slice — 2026-10-22
 
 - Native259 changes only periodic healing received by its owner. Multiply strongest negative and strongest positive contributions independently, not every aura or their sum; removal updates subsequent ticks of an already-running HoT.

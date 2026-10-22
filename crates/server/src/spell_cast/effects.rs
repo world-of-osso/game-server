@@ -1536,8 +1536,12 @@ pub fn apply_heal(
     } else {
         1.0
     };
-    let taken =
-        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult) * periodic_taken;
+    let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
+        world, ctx.caster, target, ctx.spell,
+    );
+    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
+        * periodic_taken
+        * caster_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,

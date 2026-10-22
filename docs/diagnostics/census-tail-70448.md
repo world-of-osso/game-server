@@ -63,6 +63,12 @@ Valid evidence is isolated `round-3-retry/`, including exact command/binary SHA,
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura504 MOD_HEALING_TAKEN_FROM_CASTER
+
+TC `Unit.cpp:7579–7594` multiplies every allowed504 on the healing recipient whose caster matches the healer; no school/family filter, direct/periodic distinction or strongest-only aggregation. Reuse259's independent attr6/13 sign permissions, without changing283 or fixed/copy-heal handling.
+
+Ignored RED9d0adb77e `census_tail_504 --include-ignored`:1PASS/4FAIL25.79s, compile4m50s/no warnings, `504-red.log`. Native357556+50 leaves100 instead150 for direct/periodic own-caster healing;411036+10 composition leaves100 instead165; actual1271318−9.0909 leaves ignored-negative-permitted healing100 instead91. Foreign-caster/recipient exclusions pass before their own-caster comparison fails; native366155 zero control passes. GREEN pending. Native0 Reversion stays0; no Golden Hour/script reconstruction or canonical data mutation.
+
 ## Aura259 MOD_HOT_PCT — periodic healing received
 
 TC `Unit.cpp:7512–7550` multiplies strongest negative and positive259 only for periodic healing taken. Native attr6 IGNORE_HEALING_MODIFIERS suppresses both signs unless attr13 ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS permits negatives; positive remains suppressed. Read live recipient ActiveAuras through the existing shared periodic-heal resolution, without changing118/283 or copied fixed-heal paths.
