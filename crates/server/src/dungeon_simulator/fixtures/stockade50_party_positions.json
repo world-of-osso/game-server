@@ -1,0 +1,12 @@
+{
+  "source": {
+    "revision": "865989982",
+    "seed": 50,
+    "at_simulated_seconds": 2272.5,
+    "report_sha256": "e57fa3f441fad5e76fa46286ddfbb762c826bcf2c5fc01d75bf7702a893d7ad0",
+    "world_db_sha256": "40d95b0a21a243edcf12dc9a1fa1ca56ad4b45f2828026622d609d62fab5cca5"
+  },
+  "healer": [115.9099, -26.620268, 6.0851297],
+  "owner": [119.77, -33.8563, 81.5856],
+  "idle_watchers": [20375698, 20375747, 20375753, 20375755]
+}

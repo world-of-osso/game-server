@@ -6,6 +6,29 @@
 
 [Toys](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21): source175140/318571 isolated279rows/26tables/one resident ordinary model,27 visual conditions/32 ModifierTrees. Test-firsta6546659a/doc219450110 RED2/control3PASS59.00s: actualUseToy/censusUnsupportedAura4, drift/Compass/Gadgetzan retained. One exact318571 registry entrya270fee70/mastere5112781e GREEN6/6 (33.00s), checkEXIT0/37.73s/fmtPASS; owner amount0/replication/cancel/invariants/CDrefusal and drift/Compass/Gadgetzan/Seed controls. Reconciled536→537 exactly175140/zero other changes,636gaps; inherited unused-function warning retained. Shape/race/gender visual selectors do not imply new gameplay; Smolderheart's separate343642 heating stacks remain a gap. Native selection/10-minute expiry/30-minute reuse unproved. After master0828d1bdc merge548508311, final10/10GREEN59.85s at6403f001c covers Eyes+Kvaldir/controls; checkEXIT0/25.87s/no warnings emitted/fmtPASS, census unchanged537. Earlier warning fixed upstream670ea430c, not suppressed here.
 
+## 2026-10-21 — Recorded late-healer route boundary
+
+[Native seed50 path qualification](systems/dungeon-simulator.md#recorded-late-healer-route-boundary-2026-10-21): two post-mm871 RED regressions prove a stationary healer on a native-sphere-safe frozen path and reproduce full-route tank loss. Positioning now qualifies actual route legs rather than the endpoint chord. At2f443fb5a both regressions pass94.01s; seed50 clears3bosses with tank alive. Three retained sight controls, seven hostile-field controls and eight deferred-navigation controls pass. Fresh seeded acceptance pending.
+
+## 2026-10-21 — Native leader and shared-model qualification
+
+[Autonomous leader sight hold](systems/dungeon-simulator.md#autonomous-leader-native-sight-hold-2026-10-21): native focused RED8.50s→GREEN7.31s, three retained controls GREEN21.92s, exactseed28 now clears; extended rolecandidate49/50 leaves seed50 tank Death open. [Shared model defaults unblock Henry](systems/dungeon-simulator.md#henry-movement-after-shared-model-defaults-2026-10-21): mainmerge5d464ebcb, nativebuild8m58/no warnings, Henry200s+two reach consumer controls3GREEN64.58s. No overall dungeon-reliability claim.
+
+## 2026-10-21 — Surviving formation native admission
+
+[Native first191164 Death→living-member admission](systems/dungeon-simulator.md#surviving-formation-admission-boundary-2026-10-21): corrected initial-admission ordering gives genuine missing-GUID RED5.89s→two native GREEN22.52s. Candidate51c652a82/frozen40d95b0 retainsStockade10/10;Azure0/10 but6Leymor Deaths, no missing-leader refusals. In-range full-mana Crenna is actively healing before tank Death; no inactivity/balance inference.
+
+## 2026-10-21 — Required-boss phase hold
+
+[Native Moloch Vanish boundary](systems/dungeon-simulator.md#required-boss-phase-hold-2026-10-21): genuine no-next-pack error RED reproduced; required-boss alive→hold fix15447ad03 committed, other-pullable and absent-boss native controls pass pre-fix. Focused GREEN and fresh seeded acceptance pending. No geometry implementation duplicated; shared model-default work remains lead-owned.
+
+## 2026-10-21 — Frozen boss-path corridor
+
+[Native corridor qualification](systems/dungeon-simulator.md#boss-path-corridor-qualification-2026-10-21): actual party-radius captures, deterministic Stockade99→59/Azure179→66 pulls and seven focused route tests GREEN. Native Felguard evade-arrival RED reproduced; shared reset/frozen travel implemented, fresh native and seeded qualification pending.
+
+## 2026-10-21 — Azure translocation policy
+
+[Source book gossip and qualified endpoint derivation](systems/azure-translocation.md): nine directed links from13 source books, including authenticated AreaPOI7116 in the final component; missing ActionSets remain named. Native ingress three REDs before implementation; GREEN pending.
 ## 2026-10-21 — Effect63/Kvaldir source and RED boundary
 
 [Toys](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21): TC computed raw threat plus70448 Kvaldir radius40/cast1500ms/targetcap49/recovery120000ms. ActualUseToy, uncapped resolver and census RED atc02f11221; fourth setup failure corrected73c4e6d1c to Provoke's authored slot1. Corrected handler RED atfec87749a (61.92s) fails missingEffectThreat. Generic63/raw engagement and DB2 recipient cap implemented; d4ebff4df7/7GREEN43.66s/check/fmt, pipeline536exact+129111/BattleHornstillgap. Post-master5d5affcfc composite8/8GREEN72.55s ate01d07823,checkEXIT0/39.36s/fmtPASS; reconciled536/1173,637gaps,exact+129111/zero removals/BattleHornnamedgaponly. Inherited unusedhas_uncleared_fight warning retained, not suppressed. Battle Horn's additional Pandaria-native audience has no complete binding; no guessed policy/native sound/full reuse claim.
@@ -3609,3 +3632,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Emberon currentLua Normal/Follower partial: ignored firstClapRED→composite7GREEN; native indefinite-aura cap root cause and approved24.3s lifecycle, source-counted resumed/second phase, reset/copy-credit/death. Copy-only producer1PASS; missing395681/controller gaps retained.
 
 - 2026-10-21: Deios source qualification2PASS/firstWingRED34.10s Normal/Follower: preservedflags320 block ordinary threat ingress; outgoingWing damage is not engagement/credit proof. Named source unlock gap, no combat port or fabricated state.
+
+## 2026-10-22 — Trading Post residue classification
+
+[Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.

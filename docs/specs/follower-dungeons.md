@@ -80,7 +80,9 @@ Pull candidates must pass native `relation_matches(Enemy)` selection/attackabili
 
 `SCRIPTED_BOSS_PULL_WHEN_READY` (user, 2026-10-20): a scripted boss is pulled alone, without overlap or chained adds, once every admitted party member is out of combat at full HP/mana and the healer is alive. Preserve the tank's 30% HP reserve; no numerical boss forecast is required. A boss forecast refusal in this cleared, ready state is a bug.
 
-`CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` (user, 2026-10-20): after all engaged enemies die, a ready party must pull the next single pack. Forecast/budget rejection may prevent overlap or chaining, never leave a cleared ready party waiting for measurements or a forecast. Legitimate waits are bounded HP/mana recovery, a dead member awaiting resurrection/corpse run, or an explicit hazard. This is a named single-pack admission path, not invented throughput or a scripted numeric estimate.
+`CLEARED_STATE_ALWAYS_PULLS_NEXT_PACK` (user, 2026-10-20): after all engaged party-attackable enemies die, a ready party must pull the next single pack. Forecast/budget rejection may prevent overlap or chaining, never leave a cleared ready party waiting for measurements or a forecast. Legitimate waits are bounded HP/mana recovery, a dead member awaiting resurrection/corpse run, or an explicit hazard. This is a named single-pack admission path, not invented throughput or a scripted numeric estimate.
+
+Clearance qualification (user, 2026-10-21): an alive enemy that fails native `relation_matches(Enemy)` for every living same-copy party member is not something the party can clear. Such enemies and their otherwise-real combat references cannot block next-pull readiness. Preserve valid pre-impact combat references, actual damage/healing, resource recovery and observed Death receipts. Never mark an invalid target dead, remove its authored presence, or invent a per-entry passive-react exception; watcher-side sight acquisition remains native.
 
 `TANK_PULL_BUDGET` USER-approved values (verbatim):
 - observation window for measured group DPS and healing: 10 s of active combat (user clarification, 2026-10-20). Pause this clock out of combat and retain the most recent ten active seconds across travel, recovery and admission holds. Measurements are current-run only; reset at dungeon start and on a full-party wipe. Resetting measurements does not erase observed source-spawn deaths in the same copy. Out-of-combat recovery healing does not count as combat throughput; the separate five-second party-HP stability window remains wall-clock time.
@@ -210,6 +212,8 @@ Native build12.1.5.70448 inputs: SpecializationSpells, SpellLevels, SkillLineAbi
 ### Rotation fidelity (2026-10-21)
 
 Published kit deltas must address `(spec_id, spell_id, min_level)` primary keys, never rowids. A scoped preparation changes only the requested specs; disjoint spec patches must produce identical kit state in either application order, preserving all other specs. Preparation and replay proofs operate on fresh database backups, never the canonical database.
+
+Learned Dance of Chi-Ji325201 rolls on ordinary native Chi-resource action admission, including discounted free Chi actions, not Energy Tiger Palm or each triggered/channel damage child. Preserve native RPPM values. One ordinary Spinning Crane Kick101546 consumes one real325202 use after the Chi-action proc roll; native cumulative2 is uses, not doubled modifier magnitude. No invented legacy damage bonus.
 
 Learned Windwalker Hit Combo196740 must build native196741 on different ordinary combo actions and reset on a repeated combo action. Rejected casts and triggered children do not advance it. Learned Combo Breaker137384 rolls its native effect0 chance only on landed Tiger Palm, applying real116768; ordinary Blackout Kick uses the native free-cost modifier and consumes one use. No synthetic proc grants.
 
