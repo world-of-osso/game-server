@@ -127,6 +127,7 @@ impl Navigation {
                 reach: request.reach,
                 path: points,
                 complete,
+                partial_endpoint_reached: false,
                 partial_endpoints,
             },
         );
@@ -220,7 +221,8 @@ impl Navigation {
         let reach = if complete { route.reach } else { 0.0 };
         let (next, reached) = corners.advance(from, request.distance, reach, route.last_target);
         route.expected_from = next;
-        if pending || (reached && !complete) {
+        route.partial_endpoint_reached = reached && !complete;
+        if pending || route.partial_endpoint_reached {
             if pending && next == from {
                 return Step::Pending;
             }

@@ -280,6 +280,36 @@ fn navigation_disconnected_partial_walk_stops_and_stays_blocked() {
 }
 
 #[test]
+fn navigation_complete_terminal_leg_tracks_a_nearby_moving_victim() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut nav = Navigation::new(dir.path());
+    let actor = Entity::from_bits(99);
+    let from = Vec3::ZERO;
+    let target = Vec3::new(10.0, 0.0, 0.0);
+    let mut movement = request(12, from, target);
+    movement.distance = 8.0;
+    nav.adopt_candidate_route(actor, movement, vec![from, target]);
+    let Step::Moved {
+        position: at,
+        reached: true,
+    } = nav.advance(actor, movement)
+    else {
+        panic!("complete route must reach the ordinary two-yard sphere");
+    };
+    movement.from = at;
+    movement.to = position(Vec3::new(10.5, 0.0, 0.0));
+    movement.distance = 1.0;
+    let Step::Moved {
+        position: next,
+        reached: true,
+    } = nav.advance(actor, movement)
+    else {
+        panic!("sub-yard target motion must reuse the complete terminal leg");
+    };
+    assert!((next.x - 8.5).abs() < 0.001);
+}
+
+#[test]
 fn navigation_unbaked_map_is_explicit_legacy_boundary() {
     let dir = tempfile::tempdir().unwrap();
     let mut nav = Navigation::new(dir.path());

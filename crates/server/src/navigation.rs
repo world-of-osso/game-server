@@ -56,6 +56,7 @@ struct Route {
     expected_from: Vec3,
     path: Result<Corners, String>,
     complete: bool,
+    partial_endpoint_reached: bool,
     partial_endpoints: HashSet<[u32; 3]>,
     reach: f32,
 }
@@ -156,12 +157,7 @@ impl Route {
         };
         let position_is_current =
             horizontal(self.expected_from - point(request.from)) <= TELEPORT_DISTANCE;
-        let partial_exhausted = !self.complete
-            && self
-                .path
-                .as_ref()
-                .is_ok_and(|corners| corners.next == corners.points.len());
-        same_goal && target_is_current && position_is_current && !partial_exhausted
+        same_goal && target_is_current && position_is_current && !self.partial_endpoint_reached
     }
 }
 
@@ -190,7 +186,6 @@ impl Corners {
                     at.y = corner.y;
                 }
                 if last || (in_reach_leg && within_reach(at, target, reach)) {
-                    self.next = self.points.len();
                     return (at, true);
                 }
                 budget -= remaining;
