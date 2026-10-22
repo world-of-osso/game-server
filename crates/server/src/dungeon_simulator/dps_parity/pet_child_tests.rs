@@ -138,7 +138,7 @@ fn dps_parity_wild_thrash_parent_commands_actual_owned_pet_damage() {
         .0
         .iter()
         .any(|event| {
-            event.kind == CombatLogKind::Miss
+            matches!(event.kind, CombatLogKind::Miss(_))
                 && event.source == Some(pet.to_bits())
                 && event.target == Some(target.to_bits())
                 && event.spell_id == Some(WILD_THRASH_PET)
