@@ -14,7 +14,8 @@ pub(super) fn stats(world: &World, actor: Entity) -> Value {
         "ranged_attack_power": sheet.ranged_attack_power, "spell_power": sheet.spell_power,
         "armor": sheet.armor}, "ratings": sheet.ratings,
         "main_hand": {"min": sheet.main_hand.min, "max": sheet.main_hand.max},
-        "level": world.get::<shared::components::Level>(actor).unwrap().0})
+        "level": world.get::<shared::components::Level>(actor).unwrap().0,
+        "powers": power_snapshot(world, actor)})
 }
 
 pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Value {
@@ -38,7 +39,9 @@ pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Va
         "damage_to_targets": damage,
         "actor_is_player": world.get::<shared::components::Player>(actor).is_some(),
         "owner_is_player": owner.map(|owner| world.get::<shared::components::Player>(owner).is_some()),
-        "first_events": events.iter().take(16).collect::<Vec<_>>()})
+        "first_events": events.iter().take(16).collect::<Vec<_>>(),
+        "powers": power_snapshot(world, actor),
+        "pet_powers": crate::hunter_pet::summoned_pet(world, actor).map(|pet| power_snapshot(world, pet))})
 }
 
 fn is_target_damage(event: &shared::protocol::CombatLogEvent, targets: &[Entity]) -> bool {
@@ -72,7 +75,8 @@ pub(super) fn pet(world: &World, actor: Entity, targets: &[Entity]) -> Value {
     json!({"present": true, "entity": pet.to_bits(), "casts": casts, "damage": damage,
         "entry": world.get::<shared::components::Npc>(pet).map(|npc| npc.template_id),
         "level": world.get::<shared::components::UnitLevel>(pet).map(|level| level.0),
-        "action_bar": world.get::<crate::pet_control::PetCharm>(pet).map(|charm| charm.action_bar)})
+        "action_bar": world.get::<crate::pet_control::PetCharm>(pet).map(|charm| charm.action_bar),
+        "powers": power_snapshot(world, pet)})
 }
 
 pub(super) fn sample_buffs(world: &World, actor: Entity, counts: &mut BTreeMap<u32, u32>) {
@@ -109,7 +113,53 @@ pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
             "share_pct": if total > 0 { damage as f64 * 100.0 / total as f64 } else { 0.0 }})
     }).collect();
     json!({"dps": total as f64 / seconds, "total_damage": total, "actions": actions,
-        "event_count": events.len()})
+        "event_count": events.len(), "energize": energize_receipts(events),
+        "energize_units": "raw_logged_integer"})
+}
+
+/// Authoritative raw pools, including fractional current values. Rates describe
+/// the last native tick, not integrated realized regeneration or cap losses.
+fn power_snapshot(world: &World, unit: Entity) -> Value {
+    use crate::spell_cast::powers::{PowerPools, power_value};
+    use shared::components::PowerType;
+    let Some(pools) = world.get::<PowerPools>(unit) else {
+        return Value::Null;
+    };
+    let values: Vec<_> = pools.order.iter().map(|&power| {
+        let (current, max) = power_value(world, unit, power)
+            .expect("native receipt pool order requires an authoritative value");
+        let regen = if power == PowerType::Mana {
+            pools.mana_regen_per_sec
+        } else {
+            pools.get(power).expect("native receipt non-mana pool exists").regen_per_sec
+        };
+        json!({"power_type": power as i32, "current": current, "max": max, "regen_per_sec": regen})
+    }).collect();
+    json!(values)
+}
+
+/// Combat logs omit power type and truncate amounts: preserve those limits
+/// instead of guessing an effect selector or equating these grants with regen.
+fn energize_receipts(events: &[shared::protocol::CombatLogEvent]) -> Vec<Value> {
+    let mut gains = BTreeMap::<(Option<u64>, Option<u64>, Option<u32>), (i64, i64, u64)>::new();
+    for event in events
+        .iter()
+        .filter(|event| event.kind == CombatLogKind::Energize)
+    {
+        let total = gains
+            .entry((event.source, event.target, event.spell_id))
+            .or_default();
+        total.0 += i64::from(event.amount);
+        total.1 += i64::from(event.overflow);
+        total.2 += 1;
+    }
+    gains
+        .into_iter()
+        .map(|((source, target, spell), (amount, overflow, count))| {
+            json!({"source": source, "target": target, "spell_id": spell, "amount": amount,
+            "overflow": overflow, "effective_gain": amount - overflow, "events": count})
+        })
+        .collect()
 }
 
 pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<String> {

@@ -27,6 +27,7 @@ mod broggok;
 mod bromach;
 pub(crate) mod caster_chase;
 pub mod creature_text;
+mod dailcry;
 mod doragosa;
 mod emberon;
 pub mod event_map;
@@ -381,6 +382,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == kikatal::SCRIPT {
         return kikatal::creature_ai(world, creature);
     }
+    if script_name == dailcry::SCRIPT {
+        return dailcry::creature_ai(world, creature);
+    }
     if script_name == talondras::SCRIPT {
         return talondras::creature_ai(world, creature);
     }
@@ -452,6 +456,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == emberon::SCRIPT
         || script_name == anubzekt::SCRIPT
         || script_name == kikatal::SCRIPT
+        || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
