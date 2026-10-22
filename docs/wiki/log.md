@@ -1,3 +1,7 @@
+## 2026-10-22 — Avanoxx and Taah'bat packet qualification
+
+[TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22):68d67b7dc assignment/journal/anchor5GREEN0.572s;207d6b03e actual-copy Avanoxx2GREEN0.021s and Taah'bat2GREEN0.017s. Each fresh-copy4-row packet replays3× exactly; native0/CT2977 Avanoxx137.09528 has complete entrance route, native1/CT2718 Taah'bat998.269351 remains incomplete. Raw67assignments/native lowestOrderIndex, instance12yd limit and unchanged A'wazj corroboration retained. Soul-Scribe scaling gap remains; publication pending. Lead confirmed Cinderbrew8rows published/integrityOK.
+
 ## 2026-10-22 — Avanoxx equivalent bounds and Taah'bat anchors
 
 [TWW source packets](investigations/follower-data.md#remaining-positive-scaling-tww-placement-sources--2026-10-22): actual Avanoxx reader refused submillimeter assignment differences. Approved every-component0.001yd equivalence selects exact native lowestOrderIndex without averaging, retaining raw67rows/spread/ID. Taah'bat alone permits12yd two-native-anchor support for998.269351; A'wazj corroborates, remains unmoved. New proofs pending.
