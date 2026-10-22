@@ -49,8 +49,12 @@ mod bromach;
 mod celebras;
 #[path = "crawth.rs"]
 mod crawth;
+#[path = "deios.rs"]
+mod deios;
 #[path = "doragosa.rs"]
 mod doragosa;
+#[path = "emberon.rs"]
+mod emberon;
 #[path = "gargolmar.rs"]
 mod gargolmar;
 #[path = "gargolmar_speech.rs"]
@@ -113,6 +117,8 @@ mod omor_slay;
 mod omrogg;
 #[path = "porung.rs"]
 mod porung;
+#[path = "talondras.rs"]
+mod talondras;
 #[path = "the_maker.rs"]
 mod the_maker;
 #[path = "theradras.rs"]
