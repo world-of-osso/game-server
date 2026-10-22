@@ -18,6 +18,11 @@
 
 [Current cohort](systems/dungeon-simulator.md#combatrefs-integrated-three-target-receipts-2026-10-22): cbf70f94f/P2abc7fa includes landed admission/suppression fixes and other parent-owned mechanics. Source/snapshot/profile hashes sealed;6nativecontrolsGREEN149.08s/check46.67s/fmt/0warnings. Authorized8three-target cells all300s/final30positive/owner0/10waves20adds, but recipient coverage differs:66/262/266all20adds,26918adds/8completewaves,73/63/253/103zeroadds. No AoE/equal-condition parity from execution; DPS82.98–97.02% below pinned references. Eight actor-aware gap partitions conserve damage with raw guardian weighting, exact source/report hashes and descriptive historical count deltas; no isolated CombatRefs attribution or extra single/reference runs. Comparison and40-rowv3receipt index preserve historicalsingle and currentthree proof separately. Parent notified; full parity remains open.
 
+## 2026-10-22 — Prismatic Echoes learned bonus
+
+[Prismatic Echoes](investigations/holy-priest-follower-ai.md#prismatic-echoes-learned-bonus--2026-10-22): separate871560575 native61 tick81vs85 RED/control60PASS37.36s→97a246aa5 actualowned5% new-contribution multiplier. Merged53a0ee990 passes15native cases84.14s; rawmastery/Renew/oldpool/AI unchanged. Frozen cf561ec943 candidate remains separate; no effectiveness claim.
+
+- [Echo/native rolling carry](investigations/holy-priest-follower-ai.md#echo-of-light-producer-and-shared-rolling-carry--2026-10-22) — live mastery producer and one flag-driven damage/heal unpaid-pool refresh; native RED→19GREEN, Barbed/335467 normalization preserved; Ignite producer/effectiveness separate.
 ## 2026-10-22 — Native parity recipient accounting
 
 [Recipient boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): existing combat JSON discarded victims, preventing actual3-target output proof. Concrete77e8b0623 RED1/1 at the missing recipient field preserves600existing damage; unchanged testGREEN1/1 at96d695ee6/0warnings; new additive `damage_by_target` totals/hits retain retired and zero-output target IDs while excluding heals/off-target/targetless events. Actor/spell/cast totals and mechanics unchanged. Collector unit proof and CombatRefs-conditioned three-target execution remain separate; actual3-target runs still pending, old receipts untouched.
