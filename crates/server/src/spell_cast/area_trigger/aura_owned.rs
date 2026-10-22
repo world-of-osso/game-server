@@ -251,7 +251,7 @@ fn remove_field(world: &mut World, entity: Entity) {
         .expect("created field has a supported source definition")
         .script;
     match script {
-        None => {
+        None | Some(FieldScript::MeteorBurn) => {
             for &unit in &trigger.inside {
                 undo_action(world, &trigger, unit);
             }

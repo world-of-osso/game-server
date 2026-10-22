@@ -63,15 +63,19 @@ pub(super) fn remove_exited(world: &mut World, trigger: &SpellAreaTrigger, insid
         return;
     }
     for unit in trigger.inside.iter().filter(|unit| !inside.contains(unit)) {
-        let instances: Vec<_> = world
-            .get::<ActiveAuras>(*unit)
-            .into_iter()
-            .flat_map(|auras| auras.iter())
-            .filter(|aura| aura.spell_id == BURN_DAMAGE && aura.caster == trigger.caster)
-            .map(|aura| aura.instance_id)
-            .collect();
-        for instance in instances {
+        for instance in find_owned_burn_instances(world, *unit, trigger.caster) {
             crate::auras::remove_instance(world, *unit, instance, RemoveReason::Expired);
         }
     }
+}
+
+fn find_owned_burn_instances(world: &World, unit: Entity, caster: Entity) -> Vec<u32> {
+    let Some(auras) = world.get::<ActiveAuras>(unit) else {
+        return Vec::new();
+    };
+    auras
+        .iter()
+        .filter(|aura| aura.spell_id == BURN_DAMAGE && aura.caster == caster)
+        .map(|aura| aura.instance_id)
+        .collect()
 }
