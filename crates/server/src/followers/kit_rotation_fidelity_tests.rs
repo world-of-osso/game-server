@@ -143,6 +143,95 @@ fn rotation_selection_262_native_ascendance_after_stormkeeper() {
     );
 }
 
+fn stormkeeper_within_sync_window(h: &Harness, caster: Entity) -> bool {
+    let world = h.app.world();
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(191634)
+        .unwrap();
+    let history = world
+        .get::<crate::spell_cast::SpellHistory>(caster)
+        .unwrap();
+    let now = crate::spell_cast::history_now(world);
+    history.on_cooldown(spell, now) && !history.on_cooldown(spell, now + 15.0)
+}
+
+#[test]
+#[ignore = "native Ascendance learn boundary qualification"]
+fn rotation_selection_262_native_ascendance_unavailable_before_talent() {
+    let (mut h, caster, _) = prepare_at_level(209053, 3, 50);
+    assert!(
+        !h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(114050)
+    );
+    for _ in 0..200 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 191634)
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 1219480));
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480)
+    );
+}
+
+#[test]
+#[ignore = "native Ascendance Stormkeeper synchronization window qualification"]
+fn rotation_selection_262_native_ascendance_held_in_stormkeeper_sync_window() {
+    let (mut h, caster, _) = prepare(209053, 3);
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 191634, Some(caster), false)
+        .unwrap();
+    h.advance(60);
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 191634)
+    );
+    // Advance the actual native clock, never reset cooldowns or invent a timer.
+    for _ in 0..1600 {
+        if stormkeeper_within_sync_window(&h, caster) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(stormkeeper_within_sync_window(&h, caster));
+    for _ in 0..120 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+    }
+    assert!(
+        stormkeeper_within_sync_window(&h, caster),
+        "control must remain inside the real synchronization window, without earned resets"
+    );
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 470057),
+        "ordinary Voltaic Blaze must execute while the major cooldown is held"
+    );
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 1219480));
+    assert!(
+        !h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480),
+        "Ascendance must wait when native Stormkeeper cooldown is at most15s"
+    );
+}
+
 #[test]
 fn rotation_selection_262_voltaic_blaze_damage_precedes_delayed_flame_shock() {
     let (mut h, caster, targets) = prepare(209053, 3);
