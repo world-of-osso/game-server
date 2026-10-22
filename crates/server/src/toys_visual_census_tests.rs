@@ -182,11 +182,11 @@ fn toy_coverage_visual_kite_ribbon_census_retains_unsourced_dummy_gaps() {
         "TOY_VISUAL_KITE_RIBBON_REPORT",
     );
     let rows = report["toys"].as_array().unwrap();
-    for item in [202022, 242323] {
+    for item in [202022, 242323, 210411] {
         let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
         assert!(row["unavailable"].is_null(), "{row}");
     }
-    for item in [18986, 210411] {
+    for item in [18986] {
         let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
         assert!(!row["unavailable"].is_null(), "{row}");
     }
