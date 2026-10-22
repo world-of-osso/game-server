@@ -21,7 +21,7 @@ struct SpellTotals {
 fn observe_clock(world: &World, caster: Entity, begin: f64) -> serde_json::Value {
     let now = crate::spell_cast::history_now(world);
     let spell = world
-        .resource::<crate::spell_cast::SpellStore>()
+        .resource::<crate::spell_info::SpellStore>()
         .get(FIREBALL)
         .unwrap();
     let gcd = world
