@@ -154,6 +154,9 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-22 — Granyth finite pre-Lance partial
 
 [Granyth](systems/boss-scripts.md#granyth-finite-pre-lance-partial--2026-10-22): ignoredRED firstShards/finite/reset before10.6/23.9Shards+15.5Stomp. Post-master25f9ffe17 native4GREEN62.73s Normal1/projectedFollower205, real area damage/copy-credit/corpse/native-home reset; producer1GREEN and stable-key SQL receipt. EruptionEnergy/Lance/reload/Mythicadds remain named gaps, no whole-fight/publication claim.
+## 2026-10-22 — Treemouth non-Mythic partial
+
+[Treemouth](systems/boss-scripts.md#treemouth-non-mythic-partial--2026-10-22): ignored firstWhip/Spit/reset RED before source3lanes/namedlowerhold policy. Post-master5c2efe459 native4GREEN48.84s Normal1/projectedFollower205, real cone damage/native-home/reset/copy-credit/corpse; stable-key SQL fresh-copy receipt. Energy/Consume/slime/selector context remains gaps, no whole-fight/publication claim.
 
 ## 2026-10-22 — Class4 zone-only ingress
 

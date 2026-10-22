@@ -133,6 +133,8 @@ mod talondras;
 mod the_maker;
 #[path = "theradras.rs"]
 mod theradras;
+#[path = "treemouth.rs"]
+mod treemouth;
 #[path = "tww_kyrioss.rs"]
 mod tww_kyrioss;
 #[path = "umbrelskul.rs"]
@@ -471,7 +473,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230, 215405, 215407, 216619, 207946, 194181, 186616,
+            209230, 215405, 215407, 216619, 207946, 194181, 186616, 186120,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)

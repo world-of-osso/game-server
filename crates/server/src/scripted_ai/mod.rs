@@ -55,6 +55,7 @@ pub(crate) mod shattered_halls;
 pub mod smart_ai;
 mod talondras;
 pub mod the_stockade;
+mod treemouth;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
 mod vexamus;
@@ -383,6 +384,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == granyth::SCRIPT {
         return granyth::creature_ai(world, creature);
     }
+    if script_name == treemouth::SCRIPT {
+        return treemouth::creature_ai(world, creature);
+    }
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
@@ -467,6 +471,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == anubzekt::SCRIPT
         || script_name == orator::SCRIPT
         || script_name == granyth::SCRIPT
+        || script_name == treemouth::SCRIPT
         || script_name == kikatal::SCRIPT
         || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
