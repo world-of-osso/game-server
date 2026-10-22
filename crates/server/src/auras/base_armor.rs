@@ -9,7 +9,18 @@ pub(crate) fn total_multiplier(modifiers: Option<&StatModifiers>) -> f32 {
     modifiers.map_or(1.0, |mods| 1.0 + mods.total_armor_pct / 100.0)
 }
 
-pub(crate) fn pet_multiplier(
+/// Native creature armor before target-level scaling: pet BASE_PCT, then22 TOTAL_VALUE.
+pub(crate) fn unscaled_armor(
+    base: f32,
+    modifiers: Option<&StatModifiers>,
+    hunter: Option<&HunterPet>,
+    summon: Option<&SummonedCreature>,
+) -> f32 {
+    base * pet_multiplier(modifiers, hunter, summon)
+        + modifiers.map_or(0.0, |mods| mods.total_armor_flat)
+}
+
+fn pet_multiplier(
     modifiers: Option<&StatModifiers>,
     hunter: Option<&HunterPet>,
     summon: Option<&SummonedCreature>,
