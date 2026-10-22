@@ -40,9 +40,30 @@ The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized sing
 |251,1480|Node76073 requires76072 fully ranked; node108144 requires110172 fully ranked respectively|Strict reference-trait rejection; Human lookup no longer blocks251|
 |267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and `pet.present=false`|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
 
-Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls and awaits the parent-owned CombatRefs admission integration.
+Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls; the later parent-authorized CombatRefs cohort is recorded below.
 
 For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact;96d695ee6 passes the unchanged test1/1 with no warnings. That unit proof covers accounting, not actual3-target execution. `pet.present=false` elsewhere is the primary-pet lookup result, not proof that no guardian entity existed.
+
+## CombatRefs-integrated three-target receipts —2026-10-22
+
+Parent-authorized reruns usecbf70f94f/P2abc7fa, including landed party CombatRefs admissionf69574f05 and suppressed-launch exclusion4405dca61, first-five mechanics, Rune evade, BM Auto Shot and the additive recipient collector. The exact snapshot remains1f7e953e; all eight original profiles/effective-trait inputs retain their hashes. No new single-target/reference simulations were run. Six current native controls pass149.08s, all-target check46.67s and formatting pass, with no warnings; binary/source identity is sealed separately from historical executables.
+
+All eight300s native execution cells pass: full clock, positive final30s output, zero out-of-range controller damage,10waves/20distinct retired adds and conserved recipient/action damage and hit totals. Actual add coverage is a separate observation:
+
+| Spec | Native DPS | Reference DPS | Positive adds | Both adds positive waves |
+|---|---:|---:|---:|---:|
+|66|20563.28|223262.07|20/20|10/10|
+|73|14272.79|214978.87|0/20|0/10|
+|262|36896.59|319420.50|20/20|10/10|
+|63|22298.16|371058.54|0/20|0/10|
+|253|14244.22|259612.50|0/20|0/10|
+|103|42160.52|247748.82|0/20|0/10|
+|266|12536.73|420736.29|20/20|10/10|
+|269|35050.52|376559.68|18/20|8/10|
+
+The main dummy receives positive damage over the whole fight in every case; its receipt is not per-wave/simultaneous-hit evidence. Windwalker lacks damage to the second add of waves at90s and270s. Protection Warrior, Fire, Beast Mastery and Feral execute but show no add damage; the source admission fix alone does not establish an authored AoE rotation. Even complete20-add coverage does not prove reference timing/selection/APL. Current native DPS remains82.98–97.02% below these references; this is descriptive one-seed versus1000-iteration output, not statistical agreement.
+
+`combatrefs-three-comparison.{json,md,proof.json}` and eight `native-combatrefs-three-v1/<spec>.three-factor-decomposition.{json,md}` preserve stat snapshots, source-weighted actor channels, counts/per-hit residuals, recipient coverage and exact input/report hashes. The eight partitions conserve the full reference-minus-native damage gap; unobserved output is not automatically missing rotation or absent class support. Historical/native deltas combine multiple mechanics, global-health policy and startup-source changes, so none is labeled an isolated CombatRefs effect. `all-spec-parity-receipt-index-v3.{json,md,proof.json}` links all40 mixed-revision rows without upgrading historical single-target proof or hiding blocked/unexecuted cases.
 
 ## Continuous-edge seeded qualification —2026-10-22
 
