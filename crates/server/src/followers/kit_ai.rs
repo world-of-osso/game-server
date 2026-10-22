@@ -88,10 +88,17 @@ pub(super) fn update(
     {
         return true;
     }
-    for entry in entries
-        .iter()
-        .filter(|entry| is_generic_utility(entry.slot))
-    {
+    let triage = (follower.profile.role == shared::group::GroupRole::Healer)
+        .then(|| super::healer_triage::update(world, unit, follower, party, &entries));
+    if triage.as_ref().is_some_and(|outcome| outcome.acted) {
+        return true;
+    }
+    for entry in entries.iter().filter(|entry| {
+        is_generic_utility(entry.slot)
+            && !triage
+                .as_ref()
+                .is_some_and(|outcome| outcome.owned.contains(&entry.spell_id))
+    }) {
         let target = if entry.slot == Slot::Control {
             candidates.first().copied()
         } else {
@@ -100,11 +107,6 @@ pub(super) fn update(
         if try_entry(world, unit, follower, party, target, &enemies, entry) {
             return true;
         }
-    }
-    let triage = (follower.profile.role == shared::group::GroupRole::Healer)
-        .then(|| super::healer_triage::update(world, unit, follower, party, &entries));
-    if triage.as_ref().is_some_and(|outcome| outcome.acted) {
-        return true;
     }
     if super::utility::try_support(world, unit, follower, party, &enemies) {
         return true;
@@ -327,15 +329,7 @@ pub(super) fn patient_is_eligible(
             crate::spell_cast::check_target_aura_restrictions(world, unit, Some(target), spell)
                 .is_ok()
         });
-    let defensive_eligible = entry.slot != Slot::Defensive
-        || (super::utility::projected_death(world, target)
-            && !super::utility::active_defensive(world, target));
-    same_map
-        && missing_requested_aura
-        && correct_role
-        && can_remove_aura
-        && native_target_eligible
-        && defensive_eligible
+    same_map && missing_requested_aura && correct_role && can_remove_aura && native_target_eligible
 }
 
 pub(super) fn is_tank(world: &World, unit: Entity) -> bool {
@@ -378,8 +372,9 @@ pub(super) fn conditions_met(
         return false;
     }
     if entry.slot == Slot::Defensive
-        && (!super::utility::projected_death(world, target)
-            || super::utility::active_defensive(world, target))
+        && (super::utility::active_defensive(world, target)
+            || (condition.health_below.is_none()
+                && !super::utility::projected_death(world, target)))
     {
         return false;
     }
@@ -437,9 +432,9 @@ fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
 }
 
 fn health_allows(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
-    // Generic defensives already passed the observed3s death/active-protection
-    // admission above; a second legacy50% gate would contradict that policy.
-    if entry.slot == Slot::Defensive {
+    // Observed lethal decline adds admission above authored health thresholds;
+    // without it, retain the native kit's existing health/major-sequence policy.
+    if entry.slot == Slot::Defensive && super::utility::projected_death(world, target) {
         return true;
     }
     if entry.conditions.tank_defensive_sequence {
@@ -635,7 +630,12 @@ pub(super) fn combat_allows(
     } else {
         target
     };
-    if condition.attacked && !enemies.iter().any(|(_, victim)| *victim == Some(protected)) {
+    let lethal_decline =
+        entry.slot == Slot::Defensive && super::utility::projected_death(world, protected);
+    if condition.attacked
+        && !lethal_decline
+        && !enemies.iter().any(|(_, victim)| *victim == Some(protected))
+    {
         return false;
     }
     if condition.lost_threat

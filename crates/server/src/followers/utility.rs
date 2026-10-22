@@ -111,10 +111,6 @@ pub(super) fn normalize_entry(mut entry: Entry) -> Entry {
     if is_raid_buff(id) {
         entry.conditions.target = Target::Party;
     }
-    if entry.slot == Slot::Defensive {
-        entry.conditions.health_below = None;
-        entry.conditions.attacked = false;
-    }
     entry
 }
 
