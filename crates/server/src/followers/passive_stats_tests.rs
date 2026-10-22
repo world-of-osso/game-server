@@ -162,6 +162,49 @@ fn dps_parity_follower_native_elemental_mastery_modifies_damage_and_refreshes() 
     );
 }
 
+#[test]
+fn dps_parity_follower_native_mastery_does_not_grant_player_scaling_to_ordinary_npc() {
+    let (mut h, unit) = mastery_follower(GARRICK);
+    crate::auras::remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 76671
+    });
+    h.advance(6);
+    let before = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .attack_power;
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .remove::<super::Follower>();
+    apply_native_aura(&mut h, unit, 76671);
+    let attack_power = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .attack_power;
+    assert_eq!(attack_power, before);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(76671)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.aura == 166)
+        .unwrap();
+    assert_eq!(
+        crate::spell_cast::effects::modded_base_points(h.app.world(), unit, spell, effect),
+        0.0,
+        "an ordinary NPC must retain TC's no-player-mastery boundary"
+    );
+}
+
 fn spawn_level32_garrick() -> (Harness, Entity) {
     let (mut h, old_unit, profile) = spawn_profile_fixture_with_plugins(GARRICK, |app| {
         app.add_plugins(StatsPlugin);

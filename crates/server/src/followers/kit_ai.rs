@@ -11,6 +11,10 @@ use crate::networking::CombatTarget;
 const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
 
 #[cfg(test)]
+#[path = "cast_while_casting_tests.rs"]
+mod cast_while_casting_tests;
+
+#[cfg(test)]
 #[path = "healer_triage_tests.rs"]
 mod healer_triage_tests;
 
