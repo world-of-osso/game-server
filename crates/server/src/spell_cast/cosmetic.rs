@@ -39,7 +39,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     // Audited build70448 complete model/positioner/animation/sound chains;
     // no scripted/gameplay payload or alias inferred from the dummy slots.
     202432, 295037, // Hot Buttered Popcorn, Banner of the Burning Blade.
-    395705, 399041,  // Gleaming Arcanocrystal, Lost Compass (not Wayfinder's Compass).
+    395705, 399041, // Gleaming Arcanocrystal, Lost Compass (not Wayfinder's Compass).
+    396236, 1232024, // Yennu's Kite, Chowdar's Favorite Ribbon: ordinary owner attachments.
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
