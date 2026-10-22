@@ -340,6 +340,13 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        crate::spell_cast::efflorescence::DUMMY,
+        AuraScript {
+            on_periodic: Some(crate::spell_cast::efflorescence::pulse),
+            ..Default::default()
+        },
+    );
     crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
     crate::spell_cast::scripts::holy_priest::register(&mut scripts);

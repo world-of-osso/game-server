@@ -100,6 +100,12 @@ pub struct SpellInfo {
     /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
     #[serde(skip)]
     pub(crate) cast_was_hardcast: bool,
+    /// NPC-selected release rank; None holds for explicit release or native max hold.
+    #[serde(skip)]
+    pub(crate) cast_empower_to: Option<u8>,
+    /// Completed native empower stage passed into release spell/effect snapshots.
+    #[serde(skip)]
+    pub(crate) cast_empower_level: Option<u8>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
