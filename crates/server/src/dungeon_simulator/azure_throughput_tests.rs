@@ -122,8 +122,8 @@ fn native_bm_leader_summons_and_uses_its_pet_without_transport_identity() {
 }
 
 #[test]
-#[ignore = "explicit native Azure70 seed7 pet Death, Fury evade and pending-fight recovery"]
-fn seed_seven_resumes_the_native_pending_fury_after_its_pet_dies() {
+#[ignore = "explicit native Azure70 seed7 early selected-Fury Death and next-group progression"]
+fn seed_seven_advances_after_the_native_selected_fury_dies() {
     let _rng_scope = crate::random::seed_scope(7);
     let mut run = spawn_run(7, &mut None).unwrap();
     assert_eq!(run.graph.map_id, 2515);
@@ -176,8 +176,7 @@ fn seed_seven_resumes_the_native_pending_fury_after_its_pet_dies() {
                 pet_died |= pet_death;
                 selected_died |= event.target == Some(selected.to_bits());
             }
-            if pet_died
-                && selected_died
+            if selected_died
                 && event.kind == CombatLogKind::Damage
                 && event.source == Some(tank.to_bits())
                 && event.target == Some(pending.to_bits())
@@ -201,8 +200,8 @@ fn seed_seven_resumes_the_native_pending_fury_after_its_pet_dies() {
                 })
             );
             assert!(
-                pet_died && selected_died,
-                "native failure ordering must include actual pet and selected Fury Deaths"
+                selected_died,
+                "native failure ordering must include actual selected Fury Death"
             );
             panic!(
                 "native pending Fury must be resumed, not strand a fully ready party: {}",
@@ -211,4 +210,67 @@ fn seed_seven_resumes_the_native_pending_fury_after_its_pet_dies() {
         }
     }
     panic!("native pending-fight recovery must occur within the unchanged campaign bound");
+}
+
+#[test]
+#[ignore = "explicit native pet-only damage, actual pet Death and evade/home history boundary"]
+fn native_pet_only_enemy_reset_does_not_strand_the_next_authored_pull() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let owner = run.party.owner;
+    let tank = run.party.tank;
+    for _ in 0..200 {
+        run.app.update();
+        if crate::hunter_pet::summoned_pet(run.app.world(), owner).is_some() {
+            break;
+        }
+    }
+    let pet =
+        crate::hunter_pet::summoned_pet(run.app.world(), owner).expect("native CallPet input");
+    let pending = run.actors[&29001792];
+    // Initialize real history through the same admission boundary, before damage.
+    let _ =
+        crate::followers::simulator::pull(run.app.world_mut(), tank, &[29001799].into()).unwrap();
+    crate::combat::deal_direct_damage(run.app.world_mut(), pet, pending, 1.0);
+    assert!(
+        crate::followers::simulator::has_uncleared_fight(run.app.world(), owner),
+        "living pet-attacked enemy is a real pending fight before evade"
+    );
+    crate::combat::kill_unit(run.app.world_mut(), pending, pet);
+    crate::creature_aggro::enter_evade_mode(run.app.world_mut(), pending);
+    for _ in 0..200 {
+        run.app.update();
+        if run
+            .app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(pending)
+            == Some(&crate::creature_ai::CreatureState::Idle)
+        {
+            break;
+        }
+    }
+    assert_eq!(
+        run.app
+            .world()
+            .get::<crate::creature_ai::CreatureState>(pending),
+        Some(&crate::creature_ai::CreatureState::Idle)
+    );
+    assert!(
+        run.app
+            .world()
+            .get::<shared::components::Health>(pending)
+            .unwrap()
+            .current
+            > 0.0,
+        "evade is not Death or cleared-source credit"
+    );
+    let expected = run.next_pack().expect("authored native opponents remain").0;
+    run.current_pack = None;
+    run.control().unwrap();
+    assert_eq!(
+        run.current_pack,
+        Some(expected),
+        "real enemy evade/home after pet Death must release the stale pending-fight hold"
+    );
+    assert!(run.report.bosses_killed.is_empty());
 }
