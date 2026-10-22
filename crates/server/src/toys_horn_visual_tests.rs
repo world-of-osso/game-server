@@ -155,12 +155,14 @@ fn toy_coverage_horn_visual_missing_visual_or_gameplay_payload_refuses() {
 }
 
 #[test]
-fn toy_coverage_horn_visual_census_retains_unsourced_sound_and_affinity_actions() {
+fn toy_coverage_horn_visual_census_retains_unsourced_sound_and_dummy_actions() {
     let report = report_toy_census(&crate::test_data::world_db_path(), "TOY_HORN_VISUAL_REPORT");
     let rows = report["toys"].as_array().unwrap();
-    let horn = rows.iter().find(|r| r["item_id"] == HORN_ITEM).unwrap();
-    assert!(horn["unavailable"].is_null(), "{horn}");
-    for item in [136928, 205936, 18986] {
+    for item in [HORN_ITEM, 136928] {
+        let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
+        assert!(row["unavailable"].is_null(), "{row}");
+    }
+    for item in [205936, 18986] {
         let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
         assert!(!row["unavailable"].is_null(), "{row}");
     }
