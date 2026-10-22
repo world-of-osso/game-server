@@ -28,6 +28,7 @@ Server effects 28 and 179 use authentic spell/world records. Source: `crates/ser
 - `crates/server/src/spell_cast/area_trigger.rs`: area lifetime, enter/periodic trigger execution.
 - `crates/server/src/spell_cast/effects.rs`: once-per-cast dispatch.
 - `crates/server/src/spell_cast/targets.rs`: destinations and summon selectors.
+- `crates/server/src/toy_interaction.rs`: exact source-described ride/action gaps remain unavailable independently of selector support.
 - `scripts/db2.py`, `scripts/db2_schema.sql`: local SummonProperties extraction/import.
 
 ## Tests asserting this spec
