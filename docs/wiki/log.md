@@ -1,4 +1,4 @@
-- [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED; approved exact base1.0SP correction, GREEN pending; Imp1.2/other demons/AP/health unchanged.
+- [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→11GREEN89.00s; retained guardian11GREEN35.07s; production ST/3T8864/13204, no Demonbolt/Core sample or isolated/statistical claim.
 - [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
 ## 2026-10-21 — Actual scripted boss alert clocks
 
