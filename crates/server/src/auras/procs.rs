@@ -182,6 +182,7 @@ pub(super) fn process_aura_events(world: &mut World) {
             }
             handle_side(world, target, Some(event.actor), event.target_mask, &event);
         }
+        crate::spell_cast::scripts::after_dance_cast_event(world, &event);
     }
 }
 
@@ -287,6 +288,10 @@ fn effect_checks_proc(aura: &AuraInstance, effect: &AuraEffectState, event: &Aur
 }
 
 fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
+    // SimC76f8118 monk383–392 rolls once on the Chi action, not its hit children.
+    if aura.spell_id == crate::spell_cast::scripts::DANCE_OF_CHIJI {
+        return [0, PROC2_CAST_SUCCESSFUL];
+    }
     world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(aura.spell_id))

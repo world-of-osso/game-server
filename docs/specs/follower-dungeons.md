@@ -211,6 +211,8 @@ Native build12.1.5.70448 inputs: SpecializationSpells, SpellLevels, SkillLineAbi
 
 Published kit deltas must address `(spec_id, spell_id, min_level)` primary keys, never rowids. A scoped preparation changes only the requested specs; disjoint spec patches must produce identical kit state in either application order, preserving all other specs. Preparation and replay proofs operate on fresh database backups, never the canonical database.
 
+Learned Dance of Chi-Ji325201 rolls on ordinary native Chi-resource action admission, including discounted free Chi actions, not Energy Tiger Palm or each triggered/channel damage child. Preserve native RPPM values. One ordinary Spinning Crane Kick101546 consumes one real325202 use after the Chi-action proc roll; native cumulative2 is uses, not doubled modifier magnitude. No invented legacy damage bonus.
+
 Learned Windwalker Hit Combo196740 must build native196741 on different ordinary combo actions and reset on a repeated combo action. Rejected casts and triggered children do not advance it. Learned Combo Breaker137384 rolls its native effect0 chance only on landed Tiger Palm, applying real116768; ordinary Blackout Kick uses the native free-cost modifier and consumes one use. No synthetic proc grants.
 
 Tiger's Fury5217's native class-mask periodic damage modifier must persist in bleeds applied while it is active, including ticks after its expiry. Applying Tiger's Fury after a bleed must not strengthen that existing bleed. Preserve other periodic modifiers' current behavior; no blanket snapshot rule.
