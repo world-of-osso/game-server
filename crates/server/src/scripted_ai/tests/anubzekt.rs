@@ -53,7 +53,7 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             "ROOT before difficulty{difficulty} combat={:?} motion={:?} moving={:?} dormant={} state={:?}",
             h.app.world().get::<CombatStatus>(boss),
             h.app.world().get::<CreatureMotion>(boss),
-            h.app.world().get::<shared::components::Moving>(boss),
+            h.app.world().get::<crate::networking::Moving>(boss),
             h.app
                 .world()
                 .get::<crate::grid_activity::GridDormant>(boss)
@@ -74,7 +74,7 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             h.app.world().get::<CastState>(boss),
             crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
             h.app.world().get::<CombatStatus>(boss),
-            h.app.world().get::<shared::components::Moving>(boss),
+            h.app.world().get::<crate::networking::Moving>(boss),
             h.app
                 .world()
                 .get::<crate::grid_activity::GridDormant>(boss)
