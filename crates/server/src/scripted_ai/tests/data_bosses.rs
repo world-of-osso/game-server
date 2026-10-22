@@ -45,6 +45,8 @@ mod azure_telash_return;
 mod broggok;
 #[path = "bromach.rs"]
 mod bromach;
+#[path = "candle_king.rs"]
+mod candle_king;
 #[path = "celebras.rs"]
 mod celebras;
 #[path = "crawth.rs"]
