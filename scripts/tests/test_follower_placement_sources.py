@@ -45,6 +45,14 @@ class FollowerPlacementSources(unittest.TestCase):
                 self.assertAlmostEqual(actual[0], expected[0], places=6)
                 self.assertAlmostEqual(actual[1], expected[1], places=6)
 
+    def test_teera_actual_empty_mapper_is_an_explicit_source_gap_not_a_crash(self):
+        try:
+            page = read_cached_npc(self.cache, 186339)
+        except AttributeError as error:
+            self.fail(f'actual empty Wowhead mapper crashed rather than reporting no markers: {error}')
+        self.assertEqual(page['entity']['id'], 186339)
+        self.assertEqual(page['markers'], [])
+
     def test_foreign_map_marker_cannot_be_reinterpreted_as_neltharus(self):
         page = read_cached_npc(self.cache, 188252)
         with self.assertRaisesRegex(ValueError, 'does not belong'):
