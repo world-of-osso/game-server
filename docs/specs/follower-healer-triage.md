@@ -7,7 +7,7 @@
 - [x] Rank living same-copy patients using missing HP, recent effective incoming damage, tank role and remaining native periodic healing/absorb capacity; deterministic ties.
 - [x] Budget native mana and prefer efficient effective healing under low mana/low damage; prioritize rescue when projected death is within the policy emergency horizon.
 - [x] Stop a normal single-target direct heal when its patient becomes topped; reassess/retarget without restarting an already useful cast every AI tick.
-- [ ] For normal area/chain heals, cancel only if no living injured recipient remains in the prepared cast's actual native effect target set; preserve native radius/selector/chain rules and existing single-target/channel behavior.
+- [x] For normal area/chain heals, cancel only if no living injured recipient remains in the prepared cast's actual native effect target set; preserve native radius/selector/chain rules and existing single-target/channel behavior.
 - [x] Pre-apply missing HoTs/shields against exposed real encounter EventMap deadlines; never invent spell metadata or numeric damage forecasts.
 - [ ] Approach patients using native spell range, LOS, hazard and native-sight-safe movement; do not cross an unpulled sight envelope to heal.
 - [x] Permit damage only while the living party is safe.
