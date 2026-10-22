@@ -13,9 +13,16 @@ fn seed_one_keeps_the_native_leader_alive_through_the_sapling_fight() {
     let owner = run.party.owner;
     let sapling = run.actors[&29001840];
     let mut captured = false;
-    for _ in 0..MAX_TICKS {
+    for tick in 0..MAX_TICKS {
         run.control().unwrap();
         run.app.update();
+        if tick % 1000 == 0 {
+            // Match campaign progress capture: this probe enters native admission.
+            let _ = crate::followers::simulator::inspect_tank_movement(
+                run.app.world_mut(),
+                run.party.tank,
+            );
+        }
         let (current_health, max_health) = {
             let health = run.app.world().get::<Health>(owner).unwrap();
             (health.current, health.max)
