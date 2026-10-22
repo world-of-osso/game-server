@@ -11,7 +11,8 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from follower_placements import prepare_templates
-from follower_placement_sources import read_db2
+from follower_placement_sources import read_db2, read_surface_polygons
+from follower_trash import read_trash_markers
 from scripts.tests.test_followup_placements import copy_native_actor_fixture
 
 MDT = Path('/home/osso/.worktrees/mdt-0ec5f50/Midnight/MagistersTerrace.lua')
@@ -85,6 +86,35 @@ class TrashSourceControls(unittest.TestCase):
             self.assertEqual(target.execute('SELECT faction FROM content_creature_template WHERE entry=232369').fetchone(), (14,))
 
 
+@unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ and 'FOLLOWER_PLACEMENT_CACHE' in os.environ,
+                     'requires fixed marker and covering-nav source witnesses')
+class TrashMarkerProjection(unittest.TestCase):
+    def test_every_grouped_and_singleton_source_point_keeps_its_exact_candidates(self):
+        root = Path(__file__).resolve().parents[2]
+        tables, _ = read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
+        for name, filename, count in [('magisters', 'magisters-all-trash-covering-surfaces.csv', 1344),
+                                      ('blinding', 'blinding-trash-covering-surfaces.csv', 4541)]:
+            with self.subTest(map=name):
+                manifest = json.loads((root / f'content/follower-placements/{name}-trash.json').read_text())
+                witness = Path(manifest['surface_proof']['path'])
+                proof = json.loads(witness.read_text())
+                pages, placements, gaps = read_trash_markers(manifest, tables, Path(os.environ['FOLLOWER_PLACEMENT_CACHE']),
+                                                            read_surface_polygons(witness.parent / filename))
+                self.assertEqual(sum(len(page['markers']) for page in pages), count)
+                actual = {(point['entry'], point['marker_index']): point for point in placements + gaps if 'marker_index' in point}
+                self.assertEqual(len(actual), count)
+                for expected in proof['markers']:
+                    key = (expected['entry'], expected['marker_index'])
+                    if key not in actual:
+                        self.fail(f'missing source marker {key}')
+                    point = actual[key]
+                    self.assertEqual((point['wow_xy'], point['all_surface_heights']),
+                                     (expected['wow_xy'], expected['all_surface_heights']), f'{name} marker {key}')
+                    if name == 'blinding':
+                        self.assertEqual(point['observed_wowhead_floor'], 0)
+                        self.assertIsNone(point['db2_group_floor_identity'])
+
+
 @unittest.skipUnless('FOLLOWER_TRASH_DB' in os.environ, 'requires explicit private/prepared DB fixture')
 class MagistersTrashAcceptance(unittest.TestCase):
     def test_qualified_independent_markers_keep_own_native_templates(self):
@@ -125,6 +155,41 @@ class MagistersTrashAcceptance(unittest.TestCase):
         self.assertEqual((update['entry'], update['before']['faction'], update['after']['faction']), (232106, 0, 16))
         self.assertEqual({k: v for k, v in update['before'].items() if k != 'faction'},
                          {k: v for k, v in update['after'].items() if k != 'faction'})
+        self.assertEqual(receipt['sql_replay_count'], 3)
+
+
+@unittest.skipUnless('BLINDING_TRASH_DB' in os.environ, 'requires explicit Blinding prepared/source fixture')
+class BlindingTrashAcceptance(unittest.TestCase):
+    def test_all803_single_frame_markers_keep_absent_db2_floor_and_own_templates(self):
+        path = Path(os.environ['BLINDING_TRASH_DB']).resolve()
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            actual = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature WHERE map=2859 AND guid BETWEEN 63859100 AND 63859999 ORDER BY guid').fetchall()
+            self.assertEqual(len(actual), 803)
+            self.assertEqual(len({row[1] for row in actual}), 16)
+            receipt = json.loads((path.parent / 'receipt.json').read_text())
+            proof_path = Path(receipt['surface_proof']['path'])
+            self.assertEqual(hashlib.sha256(proof_path.read_bytes()).hexdigest(), receipt['surface_proof']['sha256'])
+            proof = json.loads(proof_path.read_text())
+            qualified = [point for point in proof['markers'] if point['status'] == 'UNIQUE_BAKED_SURFACE']
+            self.assertEqual(actual, [(63859100 + index, point['entry'], *point['wow_xy'], point['all_surface_heights'][0])
+                                      for index, point in enumerate(qualified)])
+            for entry in {row[1] for row in actual}:
+                native = db.execute('SELECT t.unit_class,d.ContentTuningID,d.HealthModifier,d.DamageModifier,d.ArmorModifier,d.ManaModifier FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry WHERE t.entry=? AND d.DifficultyID=0', (entry,)).fetchone()
+                self.assertEqual(db.execute('SELECT unit_class,ContentTuningID,HealthModifier,DamageModifier,ArmorModifier,ManaModifier FROM content_creature_template WHERE entry=? AND faction=16', (entry,)).fetchone(), native)
+                self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall(), db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx', (entry,)).fetchall())
+                self.assertEqual(db.execute('SELECT count(*) FROM raid_encounter_creature WHERE map_id=2859 AND creature_entry=?', (entry,)).fetchone(), (0,))
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2859 AND id1=244887').fetchone(), (1,))
+        self.assertEqual(receipt['marker_count'], 4541)
+        self.assertEqual(len(receipt['source_gaps']), 3738)
+        self.assertEqual(receipt['guarded_faction_updates'], [])
+        self.assertEqual(receipt['entrance_gaps'], ['FOLLOWER_ENTRANCE_UNSOURCED_2859'])
+        self.assertFalse(receipt['pack_groups_created'])
+        self.assertEqual(receipt['preserved_group_tables']['baseline'], receipt['preserved_group_tables']['replayed'])
+        for point in receipt['placements']:
+            self.assertEqual(point['projection_policy'], 'FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME')
+            self.assertEqual(point['observed_wowhead_floor'], 0)
+            self.assertIsNone(point['db2_group_floor_identity'])
+            self.assertEqual([r['ID'] for r in point['assignments']], ['69155'])
         self.assertEqual(receipt['sql_replay_count'], 3)
 
 
