@@ -4,13 +4,11 @@ use crate::ground::GroundMap;
 use crate::maps::InMap;
 use bevy::prelude::*;
 use shared::components::Position;
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 #[test]
-#[ignore = "RED: recorded Ruby entrance party must follow without overlapping; requires FOLLOWER_RUBY_DATA/GROUND"]
 fn ruby_entrance_party_follows_owner_and_separates() {
-    let data = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_DATA").unwrap());
-    let ground = PathBuf::from(std::env::var_os("FOLLOWER_RUBY_GROUND").unwrap());
+    let data = crate::ground::ground_data_dir();
     let (mut h, tank, _) = spawn_profile_fixture_with_plugins(209057, |_| {});
     h.app.world_mut().despawn(h.npc);
     h.app
@@ -75,7 +73,7 @@ fn ruby_entrance_party_follows_owner_and_separates() {
         HashMap::from([(2521, maps.map(2521).unwrap().wdt_file_data_id)]),
     ));
     h.app
-        .insert_resource(crate::navigation::Navigation::new(&ground.join("navmesh")));
+        .insert_resource(crate::navigation::Navigation::new(&data.join("navmesh")));
     crate::creature_ai::install_follower_follow_fixture(&mut h.app);
     let initial_gap = Vec3::new(owner.x - entrance.x, 0.0, owner.z - entrance.z).length();
     //23 seconds, matching the capture; Harness drains the real asynchronous worker.
