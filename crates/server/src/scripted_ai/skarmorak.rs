@@ -18,6 +18,8 @@ const SHELL_ENERGIZE: u32 = 429976;
 const SHELL: u32 = 423200;
 const SHELL_SELECTOR: u32 = 426181;
 const SHELL_ABSORB: u32 = 423228;
+const SHATTERED_SHELL: u32 = 423246;
+const ACTION_FORTIFIED_SHELL: i32 = 1;
 const SHELL_INDICATOR: u32 = 445409;
 const DISCHARGE: u32 = 423324;
 const DISCHARGE_STACKS: u32 = 423327;
@@ -106,6 +108,15 @@ impl CreatureAi for Skarmorak {
         self.boss.events.schedule(CHECK_ENERGY, 500);
     }
 
+    fn do_action(&mut self, ctx: &mut Ctx, action: i32) {
+        if action != ACTION_FORTIFIED_SHELL {
+            return;
+        }
+        // TC DoAction explicitly uses TRIGGERED_FULL_MASK for Shattered Shell.
+        ctx.do_cast_at(Some(ctx.me), SHATTERED_SHELL, true);
+        self.shell_ended(ctx);
+    }
+
     fn channel_finished(&mut self, ctx: &mut Ctx, spell: u32) {
         if spell == DISCHARGE {
             remove_owned_aura(ctx.world, ctx.me, SHELL_ABSORB);
@@ -175,12 +186,44 @@ struct ShellTicks {
 
 pub(super) fn register_aura_scripts(mut scripts: ResMut<AuraScripts>) {
     scripts.0.insert(
+        SHELL_ABSORB,
+        AuraScript {
+            on_remove: Some(shell_absorb_removed),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
         SHELL_ENERGIZE,
         AuraScript {
             on_periodic: Some(shell_energize_tick),
             ..Default::default()
         },
     );
+}
+
+fn shell_absorb_removed(
+    world: &mut World,
+    unit: Entity,
+    _aura: &AuraInstance,
+    reason: RemoveReason,
+) {
+    // TC Unit.cpp1933–1936 depleted absorb and4034–4039 dispel both use
+    // AURA_REMOVE_BY_ENEMY_SPELL; cleanup/expiry/death must not break Shell.
+    if !matches!(reason, RemoveReason::Consumed | RemoveReason::Dispelled) {
+        return;
+    }
+    let Some(map) = world.get::<crate::maps::InMap>(unit).copied() else {
+        return;
+    };
+    let actor = world
+        .query::<(Entity, &crate::maps::InMap, &shared::components::Npc)>()
+        .iter(world)
+        .find_map(|(actor, in_map, npc)| {
+            (*in_map == map && npc.template_id == 210156).then_some(actor)
+        });
+    if let Some(actor) = actor {
+        super::dispatch(world, actor, super::Hook::DoAction(ACTION_FORTIFIED_SHELL));
+    }
 }
 
 fn shell_energize_tick(world: &mut World, unit: Entity, aura: &AuraInstance, index: u8) {
