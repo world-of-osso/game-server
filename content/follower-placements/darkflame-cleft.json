@@ -11,7 +11,7 @@
       "source_url": "db2:12.1.5.70448/JournalEncounter#2559",
       "journal_encounter_id": 2559,
       "cache_sha256": "d109eb1739ac19ffccdb26ac77821aadfd976bb6dbb717f95fc673e91fff17ed",
-      "source_floor": 0,
+      "source_floor": null,
       "source_floor_reference_height": 56.68354978731017,
       "source_floor_evidence": {
         "policy": "FOLLOWER_PLACEMENT_Z_FROM_SAME_ROOM_NATIVE_ANCHORS",
@@ -41,7 +41,7 @@
       "source_url": "db2:12.1.5.70448/JournalEncounter#2561",
       "journal_encounter_id": 2561,
       "cache_sha256": "fa52ee0ff553507c4cd677c6f4ed5b63f994e1688dd8ca60948ffbfb5f06864b",
-      "source_floor": 0,
+      "source_floor": null,
       "source_floor_evidence": {
         "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS",
         "db2_assignment_id": 67854,

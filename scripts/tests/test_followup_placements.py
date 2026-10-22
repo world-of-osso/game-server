@@ -206,6 +206,9 @@ class FollowupPlacementAcceptance(unittest.TestCase):
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source:
             proofs = validate_native_room_anchors(source, manifest)
             self.assertEqual([p['entry'] for p in proofs], [208743])
+            record = manifest['entries'][0]
+            query = dict(height=56.68354978731017, exit_code=1, corners=[])
+            self.assertEqual(select_surface_query(record, dict(floor=None), [query]), query)
             distances = [a['horizontal_distance_yards'] for a in proofs[0]['anchors']]
             self.assertLess(distances[0], 3)
             self.assertGreater(distances[1], 7)
