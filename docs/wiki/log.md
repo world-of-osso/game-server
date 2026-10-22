@@ -1,3 +1,7 @@
+## 2026-10-22 — CritterGUID source and slot audit
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): source Companion-title GUID setter/matching removal,90explicit identity/no self default and150auto lookup. Journal3221/5028/5085 slot5 versus legacy0/5/6 means no blanket slot6/cross-slot removal or older-actor restoration. Hidden344 has ordinary Ally title0, not critter/guardian; three journal roots lack effects even raw70448. Test-firsta955bb1b2 adds real owned-journal RPC +native Coyote/Hare/three-Skeleton lifecycle/negative cases; RED pending, no implementation/admission claim.
+
 ## 2026-10-22 — Spotlight and native target57 qualified
 
 [Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): separate generic4db754ace/exact25c96a187, correctedRED4/control4PASS102.82s→8GREEN112.11s at25c96a187/protocol2abc7fa. Native1022 rejects foreign ally while21/10060 remains allowed; actual grouped recipient apply/replicate/CancelAura/invariants/recovery refusal, foreign no substitute and2drifts pass. Check133s/0warnings/fmt/readabilityPASS. Exact542→543 only230924,630 unadmitted; named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE persists in census/ledger. No outdoor/native/full30min expiry/hour reuse claim. Original379 current partition25visual/2ports/1identity/155zero-payload/196script gaps, with exact source ledgers.
