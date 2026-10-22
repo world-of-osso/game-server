@@ -21,7 +21,7 @@
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
 //!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
-//! otherwise just that ally. Target57 selects an explicit ally;120 selects the caster.
+//! otherwise just that ally. Target57 selects an explicit raid member;120 selects the caster.
 //! Every other ID is unsupported and fails the cast.
 
 mod ordered_destination;
@@ -69,6 +69,8 @@ fn implicit_target_allowed(world: &World, caster: Entity, spell: &SpellInfo, uni
 pub enum Relation {
     Enemy,
     Ally,
+    Raid,
+    Minipet,
     Any,
 }
 
@@ -121,6 +123,8 @@ enum Selector {
     Summoner,
     /// The caster's summoned pet.
     Pet,
+    ///150: current Companion-title minion, independent of explicit selection.
+    Critter,
     /// Area center = the caster's position moved `angle` (radians from its facing) by
     /// the effect radius, else `DEFAULT_TOTEM_DISTANCE`.
     CasterOffset(f32),
@@ -146,6 +150,8 @@ fn selector(id: u32) -> Option<Selector> {
         1 | 120 => Selector::Caster,
         56 => Selector::RaidArea,
         5 => Selector::Pet,
+        90 => Selector::Explicit(Minipet),
+        150 => Selector::Critter,
         119 => Selector::RaidCorpses,
         121 => Selector::ExplicitCorpseAlly,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
@@ -154,7 +160,8 @@ fn selector(id: u32) -> Option<Selector> {
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
-        21 | 57 => Selector::Explicit(Ally),
+        21 => Selector::Explicit(Ally),
+        57 => Selector::Explicit(Raid),
         118 => Selector::AllyOrRaid,
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
@@ -235,6 +242,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
                     | Selector::ChannelTarget
                     | Selector::Summoner
                     | Selector::Pet
+                    | Selector::Critter
                     | Selector::AreaAroundSrc(_)
                     | Selector::AreaAroundDest(_)
                     | Selector::DynObj(_)
@@ -308,9 +316,16 @@ pub fn is_friendly(world: &World, caster: Entity, target: Entity) -> bool {
 }
 
 pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation: Relation) -> bool {
+    if relation == Relation::Minipet {
+        return super::summon::current_critter(world, caster) == Some(target);
+    }
     let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if caster == target {
         return relation != Relation::Enemy;
+    }
+    // TC CheckExplicitTarget: a raid unit must also be a valid assist target.
+    if relation == Relation::Raid && !shares_raid(world, caster, target) {
+        return false;
     }
     if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;
@@ -468,7 +483,8 @@ pub fn select_targets(
             Selector::Explicit(relation) => {
                 selected_any = true;
                 if let Some(target) = explicit.filter(|&target| {
-                    ignore_relation || relation_matches(world, caster, target, relation)
+                    let bypass_relation = ignore_relation && relation != Relation::Minipet;
+                    bypass_relation || relation_matches(world, caster, target, relation)
                 }) {
                     units.push(target);
                     units.extend(chain_targets(
@@ -571,6 +587,10 @@ pub fn select_targets(
             Selector::Pet => {
                 selected_any = true;
                 units.extend(crate::hunter_pet::summoned_pet(world, caster));
+            }
+            Selector::Critter => {
+                selected_any = true;
+                units.extend(super::summon::current_critter(world, caster));
             }
             Selector::CasterOffset(angle) => {
                 center = caster_offset(world, caster, angle, radius(effect, slot));

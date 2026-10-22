@@ -2,6 +2,7 @@
 mod engagement_tests;
 mod inputs;
 mod player_rotation;
+mod power_tests;
 mod report;
 use bevy::prelude::*;
 use serde_json::{Value, json};

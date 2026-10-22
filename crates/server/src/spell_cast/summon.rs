@@ -184,6 +184,49 @@ pub(super) fn load_summon_properties_startup(mut commands: Commands) {
     commands.insert_resource(load_summon_properties(&conn).expect("load SummonProperties"));
 }
 
+/// TC Unit::SetMinion: one current Companion-title minion, not an ownership scan.
+#[derive(Component, Clone, Copy)]
+struct CurrentCritter(Entity);
+
+/// Shared authored slot boundary for journal actors and spell-created summons.
+#[derive(Component, Clone, Copy)]
+struct SourceSummonSlot {
+    owner: Entity,
+    slot: i32,
+}
+
+pub(crate) fn current_critter(world: &World, owner: Entity) -> Option<Entity> {
+    let actor = world.get::<CurrentCritter>(owner)?.0;
+    super::targets::same_map(world, owner, actor).then_some(actor)
+}
+
+pub(crate) fn register_source_summon(
+    world: &mut World,
+    actor: Entity,
+    owner: Entity,
+    properties: SummonProperties,
+) {
+    world.entity_mut(actor).insert(SourceSummonSlot {
+        owner,
+        slot: properties.slot,
+    });
+    if properties.is_minion() && properties.title == TITLE_COMPANION {
+        world.entity_mut(owner).insert(CurrentCritter(actor));
+    }
+}
+
+pub(crate) fn unregister_source_summon(world: &mut World, actor: Entity) {
+    let Some(slot) = world.get::<SourceSummonSlot>(actor).copied() else {
+        return;
+    };
+    if world
+        .get::<CurrentCritter>(slot.owner)
+        .is_some_and(|current| current.0 == actor)
+    {
+        world.entity_mut(slot.owner).remove::<CurrentCritter>();
+    }
+}
+
 #[derive(Component, Debug, Clone)]
 pub struct SummonedCreature {
     pub owner: Entity,
@@ -405,6 +448,7 @@ fn spawn_wild_summon(
         );
         return;
     };
+    replace_slotted_summon(world, ctx.caster, properties);
     initialize_wild_summon(world, ctx, properties_id, properties, actor, stats);
 }
 
@@ -447,6 +491,7 @@ fn initialize_wild_summon(
     }
     insert_summon_privacy(&mut entity, private_owner);
     drop(entity);
+    register_source_summon(world, actor, ctx.caster, properties);
     super::log_summon(world, ctx.caster, actor, ctx.spell);
     crate::auras::auras_changed(world, actor);
 }
@@ -590,15 +635,19 @@ fn model_display_scale(template: &crate::world_data::CreatureTemplate, display_i
         .map_or(1.0, |model| model.display_scale)
 }
 
-fn replace_slotted_summon(world: &mut World, owner: Entity, properties: SummonProperties) {
+pub(crate) fn replace_slotted_summon(
+    world: &mut World,
+    owner: Entity,
+    properties: SummonProperties,
+) {
     // Slot 0 / -1 does not claim a fixed totem slot. No persistent pet slot is touched.
     if properties.slot <= 0 {
         return;
     }
     let previous: Vec<_> = world
-        .query::<(Entity, &SummonedCreature)>()
+        .query::<(Entity, &SourceSummonSlot)>()
         .iter(world)
-        .filter(|(_, summon)| summon.owner == owner && summon.properties.slot == properties.slot)
+        .filter(|(_, summon)| summon.owner == owner && summon.slot == properties.slot)
         .map(|(entity, _)| entity)
         .collect();
     for entity in previous {
@@ -842,6 +891,7 @@ fn spawn_summon(
         ));
     }
     drop(entity);
+    register_source_summon(world, actor, owner, properties);
     // TC TemporarySummon.cpp: Guardian::InitSummon calls TempSummon::InitSummon,
     // including the creature summoner's JustSummoned (BossAI's SummonList).
     world
@@ -947,6 +997,8 @@ pub(crate) fn despawn_summon(world: &mut World, entity: Entity) {
         );
         super::guardian::tyrant::on_despawn(world, entity);
     }
+    unregister_source_summon(world, entity);
+    crate::battle_pets::forget_companion_actor(world, entity);
     crate::combat::combat_stop(world, entity);
     world.entity_mut(entity).despawn();
 }

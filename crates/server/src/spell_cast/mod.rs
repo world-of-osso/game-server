@@ -50,6 +50,8 @@ mod bonus_stat_tests;
 #[cfg(test)]
 mod cast_while_moving_tests;
 #[cfg(test)]
+mod caster_healing_taken_tests;
+#[cfg(test)]
 mod caster_school_damage_tests;
 mod casting_restriction;
 #[cfg(test)]
@@ -96,6 +98,8 @@ mod creature_trigger_dead_caster_tests;
 mod creature_type_damage_tests;
 #[cfg(test)]
 mod critical_block_tests;
+#[cfg(test)]
+mod critical_healing_tests;
 #[cfg(test)]
 mod dead_cast_progress_tests;
 #[cfg(test)]
@@ -2074,6 +2078,9 @@ fn validate_target(
     };
     let target = match explicit {
         Some(target) if targets::relation_matches(world, caster, target, relation) => target,
+        // TC InitExplicitTargets defaults an absent non-enemy target to self,
+        // but a supplied foreign raid target must fail CheckExplicitTarget.
+        None if relation == Relation::Raid => caster,
         _ if relation == Relation::Ally => caster,
         Some(_) => return Err(CastFailure::InvalidTarget),
         None => return Err(CastFailure::NoTarget),

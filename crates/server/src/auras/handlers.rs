@@ -146,6 +146,8 @@ pub const MOD_HEALING_DONE_PCT_VERSUS_TARGET_HEALTH: u32 = 354;
 pub const MOD_SPELL_CRIT_CHANCE: u32 = 57;
 pub const MOD_EXPERTISE: u32 = 240;
 pub const MOD_IGNORE_TARGET_RESIST: u32 = 269;
+/// TC a352b1fa Unit.cpp1697–1703: signed sum on the target, matching aura caster.
+pub const BYPASS_ARMOR_FOR_CASTER: u32 = 345;
 /// The three versatility ratings share one value in our CombatRatings component.
 pub const VERSATILITY_RATING_MASK: i32 = 0x7000_0000;
 /// TC Unit::GetUnitCriticalChanceTaken: victim-owned, non-ranged attacks only.
@@ -200,6 +202,8 @@ pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
 pub const MOD_REGEN_DURING_COMBAT: u32 = 116;
 pub const MOD_HEALING_PCT: u32 = 118;
+/// TC a352b1fa Unit.cpp7331–7342: multiplies the whole critical heal, all schools.
+pub const MOD_CRITICAL_HEALING_AMOUNT: u32 = 50;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
 /// TC Unit.cpp8816: strongest positive mounted bonus, not stacked with aura130.
@@ -263,7 +267,11 @@ pub const MOD_SPELL_DAMAGE_FROM_CASTER_BY_LABEL: u32 = 537;
 /// TC a352b1fa Unit.cpp8213–8219: white swings (no spell) from the aura owner.
 pub const MOD_MELEE_DAMAGE_FROM_CASTER: u32 = 343;
 pub const MOD_HEALING_RECEIVED: u32 = 283;
+/// TC a352b1fa Unit.cpp7579–7594: healing from the aura's caster only.
+pub const MOD_HEALING_TAKEN_FROM_CASTER: u32 = 504;
 pub const MOD_CRIT_PCT: u32 = 290;
+/// TC a352b1fa Unit.cpp7264–7270: recipient-owned chance, aura caster and spell mask.
+pub const MOD_CRIT_CHANCE_FOR_CASTER_WITH_ABILITIES: u32 = 308;
 pub const OVERRIDE_SPELLS: u32 = 293;
 pub const MASTERY: u32 = 318;
 /// TC a352b1fa HandleAuraModNoActions: PreventionType NO_ACTIONS (4).
@@ -422,6 +430,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_POWER_REGEN_PERCENT
         | INTERRUPT_REGEN
         | MOD_HEALING_PCT
+        | MOD_CRITICAL_HEALING_AMOUNT
         | MOD_SPEED_ALWAYS
         | USE_NORMAL_MOVEMENT_SPEED
         | REDUCE_PUSHBACK
@@ -436,8 +445,10 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MELEE_SLOW
         | HASTE_SPELLS
         | MOD_HEALING_RECEIVED
+        | MOD_HEALING_TAKEN_FROM_CASTER
         | MOD_HOT_PCT
         | MOD_CRIT_PCT
+        | MOD_CRIT_CHANCE_FOR_CASTER_WITH_ABILITIES
         | MOD_WEAPON_CRIT_PERCENT
         | MOD_RATING
         | MOD_RATING_PCT
@@ -450,6 +461,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_SPELL_CRIT_CHANCE
         | MOD_EXPERTISE
         | MOD_IGNORE_TARGET_RESIST
+        | BYPASS_ARMOR_FOR_CASTER
         | MASTERY
         | MOD_STAT_BONUS_PCT
         | MOD_BONUS_ARMOR_PCT

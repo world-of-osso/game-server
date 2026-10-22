@@ -41,6 +41,13 @@ fn mage() -> Harness {
     harness(Vec::new(), &[SLOW_FALL, NO_FEATHER_FALL], 8).unwrap()
 }
 
+fn spawn_grouped_ally(h: &mut Harness) -> Entity {
+    let ally = spawn_player(&mut h.app, 8, 2.0);
+    let owner = h.caster;
+    group_fixture_players(&mut h.app, (owner, 1), (ally, 2));
+    ally
+}
+
 fn cast_self_aura(h: &mut Harness, spell_id: u32) {
     h.cast_and_deliver(spell_id, None);
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
@@ -92,7 +99,7 @@ fn native_excluded_target_aura_spell_refuses_slow_fall_auto_self_before_mana_pay
 #[test]
 fn native_excluded_target_aura_spell_checks_selected_ally_not_caster() {
     let mut h = mage();
-    let ally = spawn_player(&mut h.app, 8, 2.0);
+    let ally = spawn_grouped_ally(&mut h);
     cast_marker_on_unit(&mut h, ally);
     h.cast_and_deliver(SLOW_FALL, Some(ally));
     assert_refused_without_launch(&h, "SPELL_FAILED_TARGET_AURASTATE");
@@ -106,7 +113,7 @@ fn native_excluded_target_aura_spell_checks_selected_ally_not_caster() {
 #[test]
 fn native_excluded_target_aura_on_caster_does_not_refuse_unmarked_ally() {
     let mut h = mage();
-    let ally = spawn_player(&mut h.app, 8, 2.0);
+    let ally = spawn_grouped_ally(&mut h);
     cast_self_aura(&mut h, NO_FEATHER_FALL);
     h.cast_and_deliver(SLOW_FALL, Some(ally));
     assert!(h.inbox.failed.is_empty(), "{:?}", h.inbox.failed);
