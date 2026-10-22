@@ -366,6 +366,7 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
             .unwrap();
         }
     }
+    write_stockade_follower_combat(&run).unwrap();
     let tank = super::diagnostics::inspect_unit(run.app.world(), None, run.party.tank);
     let state = super::diagnostics::inspect_unit(run.app.world(), None, healer);
     println!(
@@ -386,6 +387,50 @@ fn stockade_holy_healer_leaves_the_entrance_with_the_native_party() {
         &origin,
         "Henry must accompany the native route instead of remaining at the entrance while the tank fights out of healing range"
     );
+}
+
+fn write_stockade_follower_combat(run: &Run) -> Result<(), String> {
+    use shared::protocol::CombatLogKind;
+    let world = run.app.world();
+    let events = &world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0;
+    let members: Vec<_> = run
+        .party
+        .members
+        .iter()
+        .map(|unit| {
+            let follower = world.get::<crate::followers::Follower>(*unit).unwrap();
+            let mut casts = BTreeMap::<u32, usize>::new();
+            let mut damage = BTreeMap::<u32, i64>::new();
+            for event in events
+                .iter()
+                .filter(|event| event.source == Some(unit.to_bits()))
+            {
+                let spell = event.spell_id.unwrap_or(0);
+                match event.kind {
+                    CombatLogKind::CastSuccess => *casts.entry(spell).or_default() += 1,
+                    CombatLogKind::Damage => {
+                        *damage.entry(spell).or_default() += i64::from(event.amount)
+                    }
+                    _ => {}
+                }
+            }
+            let total: i64 = damage.values().sum();
+            serde_json::json!({"entry": follower.profile.entry, "spec": follower.profile.spec_id,
+            "casts": casts, "damage_by_spell": damage, "damage": total,
+            "dps": total as f64 / run.now()})
+        })
+        .collect();
+    let report = serde_json::json!({"seed": run.report.seed, "seconds": run.now(),
+        "map": run.graph.map_id, "followers": members});
+    let directory = runtime::output_directory();
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    std::fs::write(
+        directory.join("native-book-stockade-combat.json"),
+        serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())
 }
 
 #[test]
