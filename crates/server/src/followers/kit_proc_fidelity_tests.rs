@@ -194,7 +194,6 @@ fn proc_fidelity_63_native_fire_blast_crit_grants_heating_up_then_hot_streak() {
 }
 
 #[test]
-#[ignore = "qualify native Feel the Burn Fire Blast acquisition"]
 fn proc_fidelity_63_feel_the_burn_native_fire_blast_grants_mastery() {
     let (mut h, caster) = prepare(209059);
     assert!(has_aura(h.app.world(), caster, 383391));
@@ -214,7 +213,6 @@ fn proc_fidelity_63_feel_the_burn_native_fire_blast_grants_mastery() {
 }
 
 #[test]
-#[ignore = "native Feel the Burn eligibility RED before implementation"]
 fn proc_fidelity_63_feel_the_burn_native_fireball_does_not_grant_mastery() {
     let (mut h, caster) = prepare(209059);
     assert!(has_aura(h.app.world(), caster, 383391));
@@ -238,7 +236,6 @@ fn proc_fidelity_63_feel_the_burn_native_fireball_does_not_grant_mastery() {
 }
 
 #[test]
-#[ignore = "native Feel the Burn overlapping lifetimes RED before implementation"]
 fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
     let (mut h, caster) = prepare(209059);
     let target = h.npc;
@@ -273,6 +270,45 @@ fn proc_fidelity_63_feel_the_burn_native_applications_expire_independently() {
     );
     for _ in 0..200 {
         if aura_now(h.app.world()) > second_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(!has_aura(h.app.world(), caster, 383395));
+}
+
+#[test]
+fn proc_fidelity_63_feel_the_burn_native_cap_replaces_oldest_application() {
+    let (mut h, caster) = prepare(209059);
+    // Native child casts isolate the authored100-stack cap, not producer frequency.
+    for _ in 0..100 {
+        crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 383395, Some(caster), 1);
+    }
+    let initial = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(initial.stacks, 100);
+    let first_expiry = initial.expires_at.unwrap();
+    h.advance(10);
+    let target = h.npc;
+    complete_cast(&mut h, caster, 108853, target);
+    h.advance(3);
+    let refreshed = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(refreshed.stacks, 100);
+    let latest_expiry = refreshed.expires_at.unwrap();
+    assert!(latest_expiry > first_expiry);
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > first_expiry + frame_seconds(&h) {
+            break;
+        }
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < latest_expiry);
+    let remaining = super::kit_clearcasting_tests::own_aura(&h, caster, 383395).unwrap();
+    assert_eq!(
+        remaining.stacks, 1,
+        "the later real Fire Blast replaces only the oldest expiry at the native cap"
+    );
+    for _ in 0..200 {
+        if aura_now(h.app.world()) > latest_expiry + frame_seconds(&h) {
             break;
         }
         h.advance(1);
