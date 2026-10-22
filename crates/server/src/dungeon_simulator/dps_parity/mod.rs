@@ -161,6 +161,23 @@ fn target_snapshot(run: &Run) -> Vec<Value> {
         .collect()
 }
 
+/// SimC76f8118 enemy_t::health_percentage uses the global fixed-time clock,
+/// including for newly spawned adds. Production training-dummy damage stays inert.
+fn apply_fixed_time_target_health(run: &mut Run, tick: u32) -> Result<(), String> {
+    let remaining = f64::from(TICKS.saturating_sub(tick)) / f64::from(TICKS);
+    for &target in &run.targets {
+        let mut health = run
+            .app
+            .world_mut()
+            .get_mut::<shared::components::Health>(target)
+            .ok_or_else(|| {
+                format!("SIMC_FIXED_TIME_TARGET_HEALTH target{target:?} lacks native Health")
+            })?;
+        health.current = (f64::from(health.max) * remaining) as f32;
+    }
+    Ok(())
+}
+
 fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>), String> {
     let start_time = run
         .app
@@ -170,10 +187,12 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
     let mut buffs = BTreeMap::new();
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
     for tick in 1..=TICKS {
+        apply_fixed_time_target_health(run, tick)?;
         run.app.update();
         let pack_boundary = tick < TICKS && tick % ADD_WAVE_TICKS == 0;
         if pack_boundary && run.targets.len() == 3 {
             replace_add_wave(run, f64::from(tick) / 20.0)?;
+            apply_fixed_time_target_health(run, tick)?;
         }
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
@@ -205,6 +224,8 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
+        "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "global_fight",
+            "duration_seconds": 300, "initial_pct": 100, "death_pct": 0},
         "stats_before": before, "stats_after": report::stats(run.app.world(), run.actor),
         "targets_before": targets, "targets_after": target_snapshot(&run),
         "target_waves": run.target_waves, "pet": report::pet(run.app.world(), run.actor, &run.damage_targets),

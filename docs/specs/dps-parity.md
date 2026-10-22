@@ -44,6 +44,8 @@ Three-target references omit the fight-style preset: pinned SimC `sim.cpp2318` c
 - `crates/server/src/stats.rs` — production stat consumer of slot-bound instance properties.
 - `crates/server/src/{inventory,inventory_model,persistence_inventory,item_stats,persistence}.rs` — owned GUID hydration/projection, initial/delta delivery, startup catalogs and additive redb initialization.
 
+Parity updates native `Health.current` before each50ms combat tick using `SIMC_FIXED_TIME_TARGET_HEALTH`, and applies the same global time immediately to newly replaced adds. Native `Health.max`, damage logging and the production dummy script remain unchanged. Reports record the policy and actual health samples; qualification and action-count comparison remain execution-gated.
+
 The test-only attacker seam also accepts `DPS_PARITY_ACTOR=player`: native specialization metadata selects class identity, the prepared database resolves the reference race, and ordinary player power/stat/passive systems initialize the actor. Strict reference traits use that player's actual race/spec identity. No follower profile or persistent character is fabricated. Player rotation execution remains pending qualification.
 
 ## Tests asserting this spec
