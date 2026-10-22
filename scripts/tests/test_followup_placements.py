@@ -74,6 +74,19 @@ class FollowupPlacementAcceptance(unittest.TestCase):
             self.assertEqual(db.execute('SELECT Entry FROM tdb_creature_template_difficulty '
                                         'WHERE Entry IN(208747,210149) AND DifficultyID=1').fetchall(), [])
             self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2651 AND id1=212777').fetchone(), (0,))
+            self.assertEqual(db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature '
+                                        'WHERE map=2651 AND guid BETWEEN 63651000 AND 63651999 ORDER BY guid').fetchall(), [
+                (63651000, 208743, 406.77750715, -155.2714289, 56.68354978731017),
+                (63651001, 208747, 188.47888114999995, -547.817170475, 59.8),
+                (63651002, 210149, 541.8676539, 30.722493174999954, 86.600006),
+            ])
+        placements = {p['entry']: p for p in receipt['placements']}
+        self.assertTrue(all(p['marker']['floor'] is None for p in placements.values()))
+        self.assertEqual(placements[208743]['source_floor_evidence']['maximum_horizontal_distance_yards'], 8)
+        self.assertEqual(placements[208747]['source_floor_evidence']['policy'], 'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS')
+        self.assertEqual(placements[210149]['status'], 'UNIQUE_REACHABLE_SURFACE')
+        self.assertEqual(set(receipt['navigation_gaps']), {'FOLLOWER_ROUTE_INCOMPLETE_2651_208743',
+                                                         'FOLLOWER_ROUTE_INCOMPLETE_2651_208747'})
 
     def test_native_difficulty_chain_imports_source_zero_without_synthetic_normal_rows(self):
         path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
