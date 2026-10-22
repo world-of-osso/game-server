@@ -32,7 +32,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "native RED: Kikatal has no registered source clock"]
 fn encounter_coverage_kikatal_first_webs_uses_current_lua_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = kikatal_copy(difficulty);
@@ -56,7 +55,6 @@ fn encounter_coverage_kikatal_first_webs_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "native ongoing Kikatal source proof pending"]
 fn encounter_coverage_kikatal_ongoing_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = kikatal_copy(difficulty);
@@ -189,7 +187,6 @@ fn encounter_coverage_kikatal_ongoing_native_damage_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "native Kikatal evade/rearm proof pending"]
 fn encounter_coverage_kikatal_evade_rearms_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = kikatal_copy(difficulty);
