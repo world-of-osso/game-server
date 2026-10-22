@@ -19,6 +19,7 @@ JOURNAL_PLACEMENT_POLICY = 'FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP'
 LUA_BINDING_POLICY = 'FOLLOWER_BINDING_LUA_ENTRY_TO_UNIQUE_JOURNAL_ACTOR'
 NATIVE_BINDING_POLICY = 'FOLLOWER_BINDING_EXACT_NATIVE_NAME_DISPLAY_TO_JOURNAL_ACTOR'
 MDT_BOSS_BINDING_POLICY = 'BOSS_IDENTITY_FROM_PINNED_MDT_BOSS_ENTRY'
+PREVIEW_BINDING_POLICY = 'JEC_EXACT_NAME_UNIQUE_DISPLAY_PREVIEW'
 FACTION_POLICY = 'FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR'
 JOURNAL_HOSTILITY_POLICY = 'FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER'
 TRASH_HOSTILITY_POLICY = 'FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE'
@@ -182,7 +183,36 @@ def derive_exact_native_binding(source, tables, map_id, entry, identity):
     return (map_id, entry, int(dungeon['ID']), int(dungeon['Bit']), int(journal['ID']), int(actor['ID']), int(actor['CreatureDisplayInfoID']))
 
 
+def derive_preview_identity(source, tables, map_id, entry, identity):
+    journals = [r for r in tables['JournalEncounter'] if int(r['ID']) == identity['journal_encounter_id']]
+    actors = [r for r in tables['JournalEncounterCreature'] if int(r['ID']) == identity['journal_actor_id']
+              and int(r['JournalEncounterID']) == identity['journal_encounter_id']]
+    if len(journals) != 1 or len(actors) != 1:
+        raise ValueError('preview identity requires one exact journal actor')
+    journal, actor = journals[0], actors[0]
+    dungeons = [r for r in tables['DungeonEncounter'] if r['ID'] == journal['DungeonEncounterID'] and int(r['MapID']) == map_id]
+    names = source.execute('SELECT entry FROM tdb_creature_template WHERE name=?', (actor['Name_lang'],)).fetchall()
+    same_actors = [r for r in tables['JournalEncounterCreature'] if r['JournalEncounterID'] == journal['ID'] and r['Name_lang'] == actor['Name_lang']]
+    if len(dungeons) != 1 or [row[0] for row in names] != [entry] or len(same_actors) != 1:
+        raise ValueError('preview identity requires a unique native name on the exact journal map; no name aliases')
+    enemies, proof = read_mdt_enemy_table(identity['mdt_boss_source'], map_id, tables)
+    enemy = enemies.get(entry)
+    if enemy is None or not enemy['is_boss'] or enemy['name'] != actor['Name_lang']:
+        raise ValueError('preview identity requires its own pinned exact-name MDT boss entry')
+    displays = sorted(row[0] for row in source.execute('SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (entry,)))
+    if not displays:
+        raise ValueError('preview identity requires own native runtime models')
+    dungeon = dungeons[0]
+    preview = int(actor['CreatureDisplayInfoID'])
+    binding = [map_id, entry, int(dungeon['ID']), int(dungeon['Bit']), int(journal['ID']), int(actor['ID']), preview]
+    return dict(policy=PREVIEW_BINDING_POLICY, binding=binding, mdt_enemy=enemy, preview_display_id=preview,
+                native_display_ids=displays, display_mismatch=preview not in displays,
+                display_role='JOURNAL_PREVIEW_ONLY_RUNTIME_MODELS_PRESERVED', **proof)
+
+
 def derive_binding(source, inventory, tables, map_id, entry, identity=None):
+    if identity is not None and identity['policy'] == PREVIEW_BINDING_POLICY:
+        return tuple(derive_preview_identity(source, tables, map_id, entry, identity)['binding'])
     if identity is not None and identity['policy'] in (NATIVE_BINDING_POLICY, MDT_BOSS_BINDING_POLICY):
         return derive_exact_native_binding(source, tables, map_id, entry, identity)
     encounter = next(e for e in inventory['encounters'] if e['MapID'] == map_id and entry in e['enabled_entries'])
@@ -258,9 +288,9 @@ def stage_source_difficulties(target, records):
 
 def qualify_journal_hostility(target, record, tables):
     identity = record['journal_actor_source']
-    if identity['policy'] not in (NATIVE_BINDING_POLICY, MDT_BOSS_BINDING_POLICY):
+    if identity['policy'] not in (NATIVE_BINDING_POLICY, MDT_BOSS_BINDING_POLICY, PREVIEW_BINDING_POLICY):
         raise ValueError('journal hostility requires an approved exact native actor binding')
-    binding = derive_exact_native_binding(target, tables, record['map_id'], record['entry'], identity)
+    binding = derive_binding(target, {}, tables, record['map_id'], record['entry'], identity)
     follower = [row for row in tables['MapDifficulty']
                 if int(row['MapID']) == record['map_id'] and row['DifficultyID'] == '205']
     if len(follower) != 1:
@@ -276,6 +306,8 @@ def qualify_journal_hostility(target, record, tables):
     identity_proof = {}
     if identity['policy'] == MDT_BOSS_BINDING_POLICY:
         identity_proof['identity_source'] = qualify_mdt_boss_identity(target, tables, record['map_id'], record['entry'], identity)
+    elif identity['policy'] == PREVIEW_BINDING_POLICY:
+        identity_proof['identity_source'] = derive_preview_identity(target, tables, record['map_id'], record['entry'], identity)
     return dict(policy=JOURNAL_HOSTILITY_POLICY, binding=list(binding), **identity_proof,
                 rows={name: dict(row=row, sha256=hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
                       for name, row in rows.items()})
@@ -586,7 +618,7 @@ def prepare(args):
     if any(r['content_tuning_policy'] != MAP_TUNING_POLICY or r['map_id'] != manifest['map_id'] for r in regional_records):
         raise ValueError('map tuning policy or actor map differs from placement manifest')
     additional_tables = ['MapDifficulty'] if regional_records else []
-    if any(r.get('journal_actor_source', {}).get('policy') == MDT_BOSS_BINDING_POLICY for r in manifest['entries']):
+    if any(r.get('journal_actor_source', {}).get('policy') in (MDT_BOSS_BINDING_POLICY, PREVIEW_BINDING_POLICY) for r in manifest['entries']):
         additional_tables.append('MapChallengeMode')
     tables, auth = read_db2(args.db2, additional_tables)
     binding_tables, binding_auth = read_binding_tables(args.db2)
@@ -642,6 +674,9 @@ def prepare(args):
                     placement['binding_source'] = record['journal_actor_source']
                     placement['native_template_display_ids'] = [row[0] for row in baseline.execute(
                         'SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (record['entry'],))]
+                    if record['journal_actor_source']['policy'] == PREVIEW_BINDING_POLICY:
+                        placement['preview_identity'] = derive_preview_identity(baseline, tables | binding_tables,
+                            manifest['map_id'], record['entry'], record['journal_actor_source'])
             backup(baseline, prepared_path)
             with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
                 receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, manifest['entries'], args.cache, tables | binding_tables)
