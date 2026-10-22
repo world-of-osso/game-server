@@ -65,13 +65,16 @@ class TrashSourceControls(unittest.TestCase):
                     record['mdt_enemy_source']['source_line'] = 149
                 elif mutation == 'map':
                     record['map_id'] = 2993
+                    target.execute('UPDATE tdb_creature_template_difficulty SET ContentTuningID=2718 WHERE Entry=232369')
                 elif mutation == 'nonmember':
                     target.execute("UPDATE tdb_creature_template SET entry=1 WHERE entry=232369")
                     target.execute('UPDATE tdb_creature_template_difficulty SET Entry=1 WHERE Entry=232369')
                     record['entry'] = 1
                 else:
                     target.execute('UPDATE tdb_creature_template SET faction=14 WHERE entry=188252')
-                with self.assertRaises(ValueError):
+                expected = {'hash': 'approved pinned file', 'line': 'unique enemy entry', 'map': 'requested dungeon',
+                            'nonmember': 'unique enemy entry', 'donor': 'native faction16'}[mutation]
+                with self.assertRaisesRegex(ValueError, expected):
                     prepare_templates(target, [record], Path(os.environ['FOLLOWER_PLACEMENT_CACHE']), self.tables)
 
     def test_native_nonzero_is_never_replaced_by_mdt_hostility(self):
