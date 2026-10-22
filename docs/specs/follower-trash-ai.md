@@ -6,7 +6,7 @@ Every spawned trash entry in the current27 follower-dungeon maps is inventoried 
 
 Ability authority: Retail12.1.5.70448 Spell* rows, TDB1210 creature_template_spell/SmartAI/addons and TrinityCore a352b1fa scripts, then LittleWigs2777a9d trash cast events, then cached Wowhead NPC Abilities. Passive addon auras do not establish a cast kit. Warning-only aura/damage events never become casts. Wowhead requests use only the host-wide locked/cache fetcher, at most one request per10seconds.
 
-If a trash creature has no sourced kit, `FOLLOWER_TRASH_SIMILAR_CREATURE_KIT` records a single-hop sourced donor from the same dungeon or another-difficulty template. Exact name, authenticated TDB display, nonzero family, shared name stem and shared role are descending similarity evidence. Excluded actors never donate kits. Donor entry, source and basis remain inspectable. No matching donor remains `none`; no spell identity is invented.
+If a trash creature has no sourced kit, `FOLLOWER_TRASH_SIMILAR_CREATURE_KIT` records a single-hop sourced donor from the same dungeon or another-difficulty template. Exact name, authenticated TDB display, nonzero family, shared name stem and shared role are descending similarity evidence. Excluded actors never donate kits. Donor entry, source and basis remain inspectable. Bear-family inference additionally recognizes the source-linked bearmount.m2 FileData123058 and bear2.m2 FileData1266661; this is a named project inference, never an invented TDB family value. No matching donor remains `none`; no spell identity is invented.
 
 ## Execution
 

@@ -140,6 +140,37 @@ new Listview({template: 'spell', id: 'abilities', data: [{"id":387564,"name":"My
             ),
         )
 
+    def test_source_bear_model_family_supplies_warbringer_with_named_donor(self):
+        actors = [
+            dict(
+                entry=245146,
+                name="Grizzled Warbringer",
+                family=0,
+                models=[131630],
+                model_files=[123058],
+                maps=[2825],
+                spells=[],
+                classification="none",
+            ),
+            dict(
+                entry=241808,
+                name="Territorial Matriarch",
+                family=0,
+                models=[14316, 822],
+                model_files=[1266661],
+                maps=[2825],
+                spells=[1237888, 1241219],
+                classification="Wowhead-only",
+            ),
+        ]
+        trash.infer_similar_kits(actors)
+        self.assertEqual(actors[0]["spells"], [1237888, 1241219])
+        self.assertEqual(actors[0]["donor_entry"], 241808)
+        self.assertEqual(actors[0]["policy"], "FOLLOWER_TRASH_SIMILAR_CREATURE_KIT")
+        self.assertIn(
+            "bear_model_family: bearmount.m2/bear2.m2", actors[0]["inference_basis"]
+        )
+
     def test_no_cross_dungeon_or_zero_family_match(self):
         actors = [
             dict(

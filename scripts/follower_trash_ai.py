@@ -13,6 +13,10 @@ from collections import Counter
 from pathlib import Path
 
 SIMILAR_POLICY = "FOLLOWER_TRASH_SIMILAR_CREATURE_KIT"
+# Project family inference, NOT a fabricated creature_template.family value.
+# Local listfile:123058=creature/bearmount/bearmount.m2;
+# 1266661=creature/bear2/bear2.m2, linked by native70448 display/model rows.
+BEAR_MODEL_FAMILY = frozenset({123058, 1266661})
 TC = Path(
     "/home/osso/.worktrees/logs/achievements-criteria-2026-10-12/tc-source-a352b1fa/TrinityCore-a352b1fa/src/server/scripts"
 )
@@ -110,6 +114,9 @@ def infer_similar_kits(actors):
             same_name = normalize(actor["name"]) == normalize(donor["name"])
             same_model = bool(set(actor["models"]) & set(donor["models"]))
             same_family = actor["family"] != 0 and actor["family"] == donor["family"]
+            same_bear_model_family = bool(
+                set(actor.get("model_files", [])) & BEAR_MODEL_FAMILY
+            ) and bool(set(donor.get("model_files", [])) & BEAR_MODEL_FAMILY)
             words = set(normalize(actor["name"]).split()) & set(
                 normalize(donor["name"]).split()
             )
@@ -123,11 +130,19 @@ def infer_similar_kits(actors):
             )
             same_stem = len(words) >= 2 or shared_prefix
             same_role = bool(words & roles)
-            if same_name or same_model or same_family or same_stem or same_role:
+            if (
+                same_name
+                or same_model
+                or same_family
+                or same_bear_model_family
+                or same_stem
+                or same_role
+            ):
                 score = (
                     same_name,
                     same_model,
                     same_family,
+                    same_bear_model_family,
                     same_stem,
                     same_role,
                     len(words),
@@ -155,6 +170,13 @@ def infer_similar_kits(actors):
                         (
                             "same_family",
                             actor["family"] != 0 and actor["family"] == donor["family"],
+                        ),
+                        (
+                            "bear_model_family: bearmount.m2/bear2.m2",
+                            bool(set(actor.get("model_files", [])) & BEAR_MODEL_FAMILY)
+                            and bool(
+                                set(donor.get("model_files", [])) & BEAR_MODEL_FAMILY
+                            ),
                         ),
                         (
                             "same_name_stem_or_role",
@@ -296,6 +318,13 @@ def census(world, inventory, littlewigs):
             r[0]
             for r in world.execute(
                 "SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=? ORDER BY Idx",
+                (entry,),
+            )
+        ]
+        actor["model_files"] = [
+            row[0]
+            for row in world.execute(
+                "SELECT DISTINCT md.FileDataID FROM tdb_creature_template_model m JOIN creature_display_info d ON d.ID=m.CreatureDisplayID JOIN creature_model_data md ON md.ID=d.ModelID WHERE m.CreatureID=? AND md.FileDataID<>0 ORDER BY md.FileDataID",
                 (entry,),
             )
         ]
