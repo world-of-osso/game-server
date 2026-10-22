@@ -1,3 +1,7 @@
+## 2026-10-22 — Midnight pre-packet identity/placement census
+
+[28-encounter table](../handoffs/midnight-primary-placement-census.md): authenticated journalXY/all53actors/exactTDB matches,33approved-fetcher NPCpages, all8navexports decoded andLOS inventory. Focused32actor joins19unique/3ambiguous/10missing;11single baked candidates/16multilevel/1unsupported. Literal model/name drift, incomplete CDI authentication, shared markers and absent interior admissions retained; no packets/scripts/canonicalwrites.
+
 ## 2026-10-22 — Remaining Wowhead entrances and actors audited
 
 [Wowhead source boundaries](investigations/follower-data.md#remaining-wowhead-source-audit--2026-10-22): approved ten-second fetcher caches eight zones/eight linked dungeon guides/two Portal NPCs. No interior entrance coordinates: guide pins resolve outside requested instances, friendly Portal NPC mappers empty, unrelated portal-listview locations rejected. Eight remaining NPC markers retain known individual-source/floor/nav gaps; no new placement or archived TC SQL download.
