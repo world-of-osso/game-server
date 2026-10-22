@@ -14,6 +14,12 @@ The first focused attemptdd7847cda passed pre-fix because it killed the leader b
 
 The wipe and two tank-absence blocks require separate diagnosis. Immediately before tank deaths in seeds2/4/5, Crenna is full mana within1.2–2.7yd of Garrick, whose HP is338/72/1368 of40391. These three failures do not establish far-away healer positioning. Seed2's last600 native events before tank Death include9Regrowth successes,2Swiftmend,2Rejuvenation and2Lifebloom;15native411144 energizes restore375mana each. Full mana does not establish inactivity: healing continues until death against incoming native melee from three actors. No healer-policy or balance change follows from these samples alone.
 
+## Henry movement after shared model defaults —2026-10-21
+
+Frozen worldDB Henry215011 uses display121275 without a model-info row. Before the [shared model-geometry policy](model-geometry.md), native Henry remains exactly at the entrance after200sim_s while Garrick moves; focused movement RED8.63s and Henry-specific acquisition capture fails. No follower-specific geometry implementation or fabricated database row was added.
+
+Main-owned merge5d464ebcb includes sharedmm871. Its native build passes8m58s without warnings; Henry200s plus both world/aggro scaled missing-row and authored-row preservation controls pass3/3 in64.58s. Henry moves to[100.57416,-25.57767,0.28981], has4230.20/4430mana and is in combat. This certifies the movement boundary, not an entire Henry dungeon cohort or healer-policy parity. Evidence: `mm871-henry-controls-command.json` and `.log` under the existing proof-ledger directory.
+
 ## Autonomous leader native sight hold —2026-10-21
 
 Extending candidatefa7ce6714 to disjoint Stockade seeds11–50 yields38clears,1stall(seed28),1tank-absence block(seed33),118boss Deaths,1377.821s batch wall. Together with seeds1–10 this is **48/50clears,148boss Deaths**, not zero-failure acceptance. Seed28's Austin dies to Slag Fury20375735 around2145sim_s while companions remain roughly55yd behind; the run stalls2343sim_s. Exact `run(28)` reproduces that same boundary at586220889 (43.59s). Native checkpoint motion traces distinguish route MoveIntent from later AI pursuit; no synthetic positions or timers are used.

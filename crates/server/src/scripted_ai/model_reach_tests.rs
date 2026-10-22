@@ -10,7 +10,6 @@ fn read_both_reaches(world: &mut World, unit: Entity) -> (Option<f32>, Option<f3
 }
 
 #[test]
-#[ignore = "explicit missing-model-info scaled-default policy regression"]
 fn missing_native_model_info_uses_scaled_player_default_reach() {
     let mut world = World::new();
     // Source Henry215011 display121275 has no encounter model-info row.
@@ -27,7 +26,6 @@ fn missing_native_model_info_uses_scaled_player_default_reach() {
 }
 
 #[test]
-#[ignore = "explicit known-model native reach preservation control"]
 fn sourced_model_info_preserves_scaled_native_reach() {
     let mut world = World::new();
     // Source Crenna209072 display113757 has native combat reach3yd.

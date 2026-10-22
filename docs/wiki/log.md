@@ -1,3 +1,7 @@
+## 2026-10-21 — Native leader and shared-model qualification
+
+[Autonomous leader sight hold](systems/dungeon-simulator.md#autonomous-leader-native-sight-hold-2026-10-21): native focused RED8.50s→GREEN7.31s, three retained controls GREEN21.92s, exactseed28 now clears; extended rolecandidate49/50 leaves seed50 tank Death open. [Shared model defaults unblock Henry](systems/dungeon-simulator.md#henry-movement-after-shared-model-defaults-2026-10-21): mainmerge5d464ebcb, nativebuild8m58/no warnings, Henry200s+two reach consumer controls3GREEN64.58s. No overall dungeon-reliability claim.
+
 ## 2026-10-21 — Surviving formation native admission
 
 [Native first191164 Death→living-member admission](systems/dungeon-simulator.md#surviving-formation-admission-boundary-2026-10-21): corrected initial-admission ordering gives genuine missing-GUID RED5.89s→two native GREEN22.52s. Candidate51c652a82/frozen40d95b0 retainsStockade10/10;Azure0/10 but6Leymor Deaths, no missing-leader refusals. In-range full-mana Crenna is actively healing before tank Death; no inactivity/balance inference.
