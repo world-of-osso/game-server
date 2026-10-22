@@ -7,6 +7,26 @@ import unittest
 from scripts.follower_spec_kits import combat_policy, kit_rows
 
 
+class HunterSecondaryTargetPolicyTests(unittest.TestCase):
+    def test_native_barbed_rows_publish_own_aura_minimum_at_actual_learn_levels(self):
+        root = Path(__file__).resolve().parents[1]
+        export = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
+        source = json.loads(export.read_text())
+        selected = [row for row in source['loadouts'] if row['spec_id'] == 253 and row['level'] in (12, 13, 21, 90)]
+        with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
+            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        barbed = [row for row in rows if row[1] == 217200]
+        self.assertFalse(any(row[2] <= 12 <= row[3] for row in barbed))
+        for level in (13, 21, 90):
+            with self.subTest(level=level):
+                conditions = next(json.loads(row[6]) for row in barbed if row[2] <= level <= row[3])
+                self.assertEqual(conditions, dict(target='enemy', target_if_min_aura=217200))
+
+    def test_hunters_mark_keeps_its_existing_primary_target_contract(self):
+        self.assertEqual(combat_policy(253, "Hunter's Mark", 257284, [], [])[2],
+                         dict(target='enemy', missing_aura=257284))
+
+
 class WindwalkerRotationPolicyTests(unittest.TestCase):
     def test_combo_actions_publish_one_shared_no_repeat_group(self):
         spells = {
