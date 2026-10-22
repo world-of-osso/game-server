@@ -54,6 +54,10 @@ def read_cached_npc(cache, entry):
     if entity["id"] != entry:
         raise ValueError(f"NPC{entry} page identity mismatch")
     mapper = read_json_payload(source, r"g_mapperData\s*=\s*")
+    if mapper == []:
+        mapper = {}  # Wowhead serializes a genuine empty mapper as an empty JSON array.
+    if not isinstance(mapper, dict):
+        raise ValueError(f'NPC{entry} has an invalid mapper object')
     markers = []
     for zone, levels in mapper.items():
         indexed = enumerate(levels) if isinstance(levels, list) else levels.items()
