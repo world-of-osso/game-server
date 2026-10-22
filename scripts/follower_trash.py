@@ -3,7 +3,9 @@
 import argparse
 from contextlib import closing
 import hashlib
+import itertools
 import json
+import math
 from pathlib import Path
 import sqlite3
 
@@ -11,6 +13,21 @@ from follower_placements import (PLACEMENT_POLICY, TRASH_HOSTILITY_POLICY, TABLE
     backup, make_sql, open_readonly, prepare_templates, read_table_rows)
 from follower_placement_sources import (SINGLE_FRAME_POLICY, digest, read_cached_npc, read_db2, read_json_payload,
     read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
+
+
+SURFACE_CELL_YARDS = 32
+
+
+def index_surface_polygons(polygons):
+    cells = {}
+    for polygon in polygons:
+        xs = [vertex[0] for vertex in polygon]
+        zs = [vertex[2] for vertex in polygon]
+        cell_x = range(math.floor(min(xs) / SURFACE_CELL_YARDS), math.floor(max(xs) / SURFACE_CELL_YARDS) + 1)
+        cell_z = range(math.floor(min(zs) / SURFACE_CELL_YARDS), math.floor(max(zs) / SURFACE_CELL_YARDS) + 1)
+        for key in itertools.product(cell_x, cell_z):
+            cells.setdefault(key, []).append(polygon)
+    return cells
 
 
 def read_marker_reports(page):
@@ -27,7 +44,7 @@ def read_marker_reports(page):
     return reports
 
 
-def project_marker(map_id, page, index, tables, polygons, projection_policy=None):
+def project_marker(map_id, page, index, tables, polygons_by_cell, projection_policy=None):
     marker = page['markers'][index]
     point = dict(entry=page['entry'], marker_index=index, marker=marker,
                  cache_sha256=page['cache_sha256'], source_url=page['url'])
@@ -38,7 +55,8 @@ def project_marker(map_id, page, index, tables, polygons, projection_policy=None
     if projection_policy == SINGLE_FRAME_POLICY:
         point.update(projection_policy=projection_policy, observed_wowhead_floor=marker['floor'], db2_group_floor_identity=None)
     x, y = transform_marker(marker, assignments)
-    heights = sample_surfaces(polygons, x, y, assignments)
+    candidates = polygons_by_cell.get((math.floor(x / SURFACE_CELL_YARDS), math.floor(-y / SURFACE_CELL_YARDS)), [])
+    heights = sample_surfaces(candidates, x, y, assignments)
     point.update(assignments=assignments, wow_xy=[x, y], all_surface_heights=heights)
     if len(heights) != 1:
         return dict(point, status='FOLLOWER_TRASH_FLOOR_UNRESOLVED')
@@ -47,6 +65,7 @@ def project_marker(map_id, page, index, tables, polygons, projection_policy=None
 
 def read_trash_markers(manifest, tables, cache, polygons):
     pages, points, gaps = [], [], []
+    polygons_by_cell = index_surface_polygons(polygons)
     for record in manifest['entries']:
         page = read_cached_npc(cache, record['entry'])
         if page['cache_sha256'] != record['cache_sha256']:
@@ -55,7 +74,7 @@ def read_trash_markers(manifest, tables, cache, polygons):
         if not page['markers']:
             gaps.append(dict(entry=record['entry'], status='FOLLOWER_TRASH_INDIVIDUAL_MARKERS_MISSING'))
         for index in range(len(page['markers'])):
-            point = project_marker(manifest['map_id'], page, index, tables, polygons, record.get('projection_policy'))
+            point = project_marker(manifest['map_id'], page, index, tables, polygons_by_cell, record.get('projection_policy'))
             (points if 'wow_xyz' in point else gaps).append(point)
     return pages, points, gaps
 
