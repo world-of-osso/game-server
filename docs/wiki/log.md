@@ -2532,6 +2532,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-22: Blinding density correction588guarded own-row DELETEs keeps215 complete old rows/GUIDs; old-packet ownership2GREEN/full correction1GREEN/replay3×, independent whole selection oracle, no template/model/group/Magisters changes. Voidscar196 publication confirmed. [Evidence](investigations/follower-data.md#blinding-stable-guid-density-correction--2026-10-22).
+
 - 2026-10-22: MDT clone-count density policy selects196 Voidscar observed points from5884qualified,13shortfall;254INSERTs/replay3×, full196+SQL2GREEN and count/selection/deletion/faction13GREEN. Magisters exempt; separate Blinding stable-GUID cleanup remains next. [Evidence](investigations/follower-data.md#mdt-count-density-and-voidscar-population--2026-10-22).
 
 - 2026-10-22: Blinding direct-marker packet803spawns/16native types/838INSERTs; exact singleton-frame provenance,3738floor gaps, source2GREEN/whole803+SQL2GREEN/replay3×. All5885point candidate equivalence retained while test time135.100→1.901s with spatial/frame reuse. Magisters publication confirmed. [Evidence](investigations/follower-data.md#blinding-vale-singleton-frame-trash-packet--2026-10-22).
