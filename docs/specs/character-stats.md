@@ -14,6 +14,10 @@ Players get retail 12.x stats on the server. See [character stats](../wiki/syste
 - [x] Rescale existing characters' persisted health on login without changing the redb format.
 - [x] Deliberate deviation from TrinityCore: its `Unit::SetMaxHealth` only clamps the current value and its login sets `min(saved, max)` (Player.cpp:18736); here ordinary max changes keep the percentage, at login and in session; MOD_INCREASE_HEALTH 34 instead follows TrinityCore's equal current/max bonus semantics. Retail keeps the percentage for in-session max-health changes (TrinityCore too, for MOD_INCREASE_HEALTH_PERCENT), and characters saved with the old 100-health placeholder rely on it. A level change still refills (Player::GiveLevel).
 
+## Mastery on approved followers
+
+`MasteryAffectsPoints` effects must use the caster's live raw mastery points for players and approved NPC followers with class-derived stats. Refresh amounts when those points or active auras change, without restarting duration, stacks or periodic phase. Ordinary NPCs must not acquire player mastery scaling. Native70448 coefficients remain authoritative, including76671/76857 AP and168534 damage modifiers.
+
 ## How it works
 
 - [Character stats](../wiki/systems/character-stats.md)

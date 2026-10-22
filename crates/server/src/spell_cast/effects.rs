@@ -1456,6 +1456,7 @@ fn push_damage_event(
             can_proc: ctx.depth == 0,
             periodic,
             damage,
+            heal: None,
             reflected: false,
         },
     );
@@ -1482,6 +1483,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             can_proc,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: false,
         },
     );
@@ -1603,6 +1605,7 @@ fn apply_resolved_heal(
     event.periodic = periodic;
     log_event(world, event);
     if !periodic {
+        super::record_hit_heal(world, ctx.caster, ctx.spell.id, target, amount);
         super::scripts::heal_beacon(world, ctx, target, effective);
         super::scripts::cast_expel_harm_damage(world, ctx, amount);
     }
@@ -1618,6 +1621,7 @@ fn apply_resolved_heal(
                 can_proc: ctx.depth == 0,
                 periodic: true,
                 damage: 0.0,
+                heal: Some(amount),
                 reflected: false,
             },
         );

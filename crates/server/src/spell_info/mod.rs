@@ -89,13 +89,17 @@ pub struct SpellInfo {
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
     pub(crate) cast_ignore_cooldowns: bool,
-    /// Successful-launch charged modifiers; None means not yet snapshotted.
+    /// Successful-launch consumed modifiers (charges or scripted stacks).
+    /// None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
     /// Script-owned cast-time proc instances that actually modified admission.
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub(crate) cast_proc_mods: Vec<u32>,
+    /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
+    #[serde(skip)]
+    pub(crate) cast_was_hardcast: bool,
     /// NPC-selected release rank; None holds for explicit release or native max hold.
     #[serde(skip)]
     pub(crate) cast_empower_to: Option<u8>,
@@ -252,10 +256,18 @@ pub struct SpellAuraOptions {
     pub proc_type_mask: [u32; 2],
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ProcsPerMinute {
     pub base_proc_rate: f32,
     pub flags: u32,
+    /// SpellProcsPerMinuteMod Type1; never infer haste scaling from Flags.
+    pub haste_modifiers: Vec<ProcsPerMinuteHasteModifier>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct ProcsPerMinuteHasteModifier {
+    pub parameter: u32,
+    pub coefficient: f32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

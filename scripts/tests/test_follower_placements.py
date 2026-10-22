@@ -10,8 +10,13 @@ import os
 from pathlib import Path
 import sqlite3
 import subprocess
+import sys
+import json
 import unittest
 from contextlib import closing
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from follower_placements import write_placements
 
 
 @unittest.skipUnless('FOLLOWER_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')
@@ -49,6 +54,26 @@ class NeltharusPlacementAcceptance(unittest.TestCase):
                 self.assertIn(f'https://www.wowhead.com/npc={entry}', comment)
                 if entry == 189478:
                     self.assertAlmostEqual(z, 125.19722023743995, places=6)
+
+    def test_preparer_refuses_existing_same_key_with_changed_source_position(self):
+        database = Path(os.environ['FOLLOWER_PLACEMENT_DB']).resolve(strict=True)
+        packet = database.parent
+        receipt = json.loads((packet / 'receipt.json').read_text())
+        self.assertEqual(receipt['map_id'], 2519)
+        manifest_path = Path(__file__).resolve().parents[2] / 'content/follower-placements/neltharus.json'
+        manifest = json.loads(manifest_path.read_text())
+        with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as source, closing(sqlite3.connect(':memory:')) as target:
+            for table in ('content_creature', 'raid_encounter_creature'):
+                target.execute(source.execute('SELECT sql FROM sqlite_master WHERE name=?', (table,)).fetchone()[0])
+                where = 'map=2519 AND guid BETWEEN 63519000 AND 63519003' if table == 'content_creature' else 'map_id=2519'
+                rows = source.execute(f'SELECT * FROM {table} WHERE {where}').fetchall()
+                target.executemany(f"INSERT INTO {table} VALUES({','.join('?' for _ in rows[0])})", rows)
+            before = target.execute('SELECT * FROM content_creature ORDER BY guid').fetchall()
+            write_placements(target, manifest, receipt['placements'], [tuple(p['binding']) for p in receipt['placements']])
+            self.assertEqual(target.execute('SELECT * FROM content_creature ORDER BY guid').fetchall(), before)
+            target.execute('UPDATE content_creature SET position_x=position_x+1 WHERE guid=63519000')
+            with self.assertRaisesRegex(ValueError, 'reserved placement GUID collision'):
+                write_placements(target, manifest, receipt['placements'], [tuple(p['binding']) for p in receipt['placements']])
 
     def test_sql_reapplication_preserves_combat_owner_and_refuses_guid_collision(self):
         database = Path(os.environ['FOLLOWER_PLACEMENT_DB']).resolve(strict=True)
