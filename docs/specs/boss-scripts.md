@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Anub'zekt current Lua partial
+
+- Use actual215405/map2660/2906bit1, source spawn10004042 with authored `1,2,8,23,205`, Journal2584 primary5726/display115723. Bloodstained Webmage5744 is not another primary. Preserve actor flags64, stats/models/addons/difficulties/population and native70448 data. Producer `--encounter anubzekt` installs only `littlewigs_anubzekt` and the authenticated binding on independent copies.
+- Current LittleWigs2777a9d `WarWithin/AraKara/Anubzekt.lua` is unbranched. Normal1/Follower205: immediate Infestation433740, Impale435012 first4.6s/repeat8.5s, Burrow439506 first14.3s with one initial request, Eye433766 first29.1s/repeat78.9s. Actual accepted Burrow restarts Impale4.8s; that combo Impale repeats5.8s before returning to8.5s. Eye restarts Impale10.9s/Burrow46.9s and permits two Burrows30.2s apart. Native cast occupancy remains ordinary.
+- Infestation's actual successful casts repeat10.1s before Eye,8.5s after Eye; Eye starts its7.3s countdown. Source non-Mythic Impale/Burrow healer countdown adjustments retain their5s/9.8s minimums. Do not invent a random target: native22/15 area selection and500ms DOT remain authoritative. Scope only1/205; Mythic actors/timers are not assigned here.
+- `ANUBZEKT_IMPALE_DUMMY_CHILD_UNSOURCED`, `ANUBZEKT_BURROW_SELECTOR_MOVEMENT_CHILD_UNSOURCED`, `ANUBZEKT_EYE_CENTER_AREA_PHASE_EXIT_UNSOURCED` and `ANUBZEKT_WEBMAGE_CONTROLLER_UNSOURCED` retain missing dummy forwarding, charge destinations, center movement, Eye area/aura434408 ingress/exit and add controller. Never manufacture those actions or infer25s phase exit from the warning duration. Lua outgoing countdown updates are a declared partial, not certification of the absent controller or whole fight.
+- Ignored native RED must be pushed/executed before combat implementation. Require native Normal/Follower ongoing request/effect/reset/rearm/copy-credit/corpse proof and producer preservation/idempotence/conflict tests before gate packet. Final integration/publication remains lead-owned.
+
 ## Deios source ingress boundary
 
 - Current LittleWigs2777a9d `ChronoLordDeios.lua` authenticates184125/2559/map2451bit4, first Wing3760496.3s/Sand37572712.1s/Rewind37620839.1s. Normal1/Follower205 must not invent non-Normal Time Sink debuffs. Lua warmup16.9s and defeated-health>1 check do not establish an immunity-removal action or surrender/credit controller.
