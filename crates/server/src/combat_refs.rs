@@ -55,6 +55,16 @@ struct CombatRef {
     suppressed: bool,
 }
 
+/// TC a352b1fa Unit.h:1071 / CombatManager.cpp:236-243 identify the pair;
+/// HasPvECombat/GetAnyTarget (:155-187) exclude references suppressed for this unit.
+/// A missile target engages on impact, not launch (Spell.cpp:2763-2764).
+pub(crate) fn has_active_reference_to(world: &World, unit: Entity, other: Entity) -> bool {
+    world
+        .get::<CombatRefs>(unit)
+        .and_then(|refs| refs.0.get(&other))
+        .is_some_and(|reference| !reference.suppressed)
+}
+
 /// `CombatManager::SetInCombatWith`: `a` and `b` are in combat with each other, and a
 /// timed reference between them restarts its timeout (`RefreshTimer`). Refused like
 /// `CombatManager::CanBeginCombat` (CombatManager.cpp:24-58) for the same unit twice, a
