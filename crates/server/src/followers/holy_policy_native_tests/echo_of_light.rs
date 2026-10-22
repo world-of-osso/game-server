@@ -26,6 +26,19 @@ fn native_mastery_percent(group: &GroupFixture) -> f32 {
     amount
 }
 
+fn expected_echo_percent(group: &GroupFixture) -> f32 {
+    let base = native_mastery_percent(group);
+    let extra = own_aura(&group.h, group.priest, 390967)
+        .and_then(|aura| {
+            aura.effects
+                .iter()
+                .find(|effect| effect.index == 0)
+                .map(|effect| effect.amount)
+        })
+        .unwrap_or(0.0);
+    base * (1.0 + extra / 100.0)
+}
+
 fn owned_echo(group: &GroupFixture, patient: Entity) -> Option<AuraInstance> {
     group
         .h
@@ -94,10 +107,68 @@ fn echo_ticks(group: &GroupFixture, patient: Entity, start: usize) -> Vec<Combat
         .collect()
 }
 
+fn qualify_prismatic_at(level: u8, learned: bool) {
+    let mut group = native_group_at(level);
+    let raw_mastery = native_mastery_percent(&group);
+    let talent = own_aura(&group.h, group.priest, 390967);
+    assert_eq!(
+        talent.is_some(),
+        learned,
+        "native selected-kit admission at{level}"
+    );
+    let extra = talent.as_ref().map_or(0.0, |aura| {
+        aura.effects
+            .iter()
+            .find(|effect| effect.index == 0)
+            .unwrap()
+            .amount
+    });
+    if learned {
+        assert!(extra > 0.0);
+    }
+    apply_pressure(&mut group, 1);
+    let patient = group.h.caster;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    let direct = complete_flash_hit(&mut group, patient);
+    let echo = owned_echo(&group, patient).expect("qualified native Echo producer");
+    finish_echo(&mut group, &echo);
+    let ticks = echo_ticks(&group, patient, start);
+    assert_eq!(ticks.len(), 2);
+    let expected =
+        (direct.amount as f32 * raw_mastery / 100.0 * (1.0 + extra / 100.0) / 2.0).round() as i32;
+    for tick in ticks {
+        assert!(
+            (tick.amount - expected).abs() <= 1,
+            "actual talent{extra}% changes Echo, not the original heal or raw mastery: expected{expected}, {tick:?}"
+        );
+    }
+    assert_eq!(
+        native_mastery_percent(&group),
+        raw_mastery,
+        "Prismatic must not rewrite shared mastery points"
+    );
+}
+
+#[test]
+fn holy_prismatic_echoes_native61_learned_bonus_scales_actual_echo_ticks() {
+    qualify_prismatic_at(61, true);
+}
+
+#[test]
+fn holy_prismatic_echoes_native60_unlearned_bonus_keeps_base_echo_amount() {
+    qualify_prismatic_at(60, false);
+}
+
 #[test]
 fn holy_echo_of_light_native90_direct_overheal_produces_two_native_ticks_and_expires() {
     let mut group = native_group();
-    let percent = native_mastery_percent(&group);
+    let percent = expected_echo_percent(&group);
     apply_pressure(&mut group, 1);
     let patient = group.h.caster;
     let start = group
@@ -230,7 +301,7 @@ fn holy_echo_of_light_native90_two_native_priests_keep_separate_patient_pools() 
     complete_flash_hit(&mut group, patient);
     owned_echo(&group, patient).expect("first real priest owns an Echo");
     group.priest = second_priest;
-    let second_percent = native_mastery_percent(&group);
+    let second_percent = expected_echo_percent(&group);
     let second_direct = complete_flash_hit(&mut group, patient);
     let second_echo = owned_echo(&group, patient).expect("second priest owns a distinct Echo");
     group.priest = first_priest;
@@ -264,7 +335,7 @@ fn holy_echo_of_light_native90_two_native_priests_keep_separate_patient_pools() 
 #[test]
 fn holy_echo_of_light_native90_reheal_preserves_unpaid_pool_and_tick_phase() {
     let mut group = native_group();
-    let percent = native_mastery_percent(&group);
+    let percent = expected_echo_percent(&group);
     apply_pressure(&mut group, 2);
     let patient = group.h.caster;
     let first = complete_flash_hit(&mut group, patient);
