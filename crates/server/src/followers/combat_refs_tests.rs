@@ -11,6 +11,13 @@ const METEOR: u32 = 153_561;
 
 fn native_dummies() -> (Harness, Entity, [Entity; 3]) {
     let (mut h, unit, _) = spawn_profile_fixture_with_plugins(MEREDY, |_| {});
+    let db = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    h.app
+        .insert_resource(super::catalog::load_catalog(&db).unwrap());
     h.app.world_mut().despawn(h.npc);
     let native = load_native_creature_world(&[TRAINING_DUMMY]);
     h.app
