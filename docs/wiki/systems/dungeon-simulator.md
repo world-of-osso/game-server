@@ -1,5 +1,11 @@
 # Dungeon simulator
 
+## Wild Thrash pet dispatch —2026-10-22
+
+Named [Wild Thrash contract](../../specs/dps-parity.md#wild-thrash-owned-pet-child-policy) binds only1264359 e0 to actual living owned controlled pets. Each pet's unchanged1264355 target plan must include the primary enemy before the existing owned-pet forwarding casts its child; ordinary area/copy selection and native1.91AP/radius10 remain authoritative. No blanket Dummy forwarding, synthetic pet or coefficient/timer change. SimC76f8118 hunter7562–7563/6796–6837 supplies the named policy where TC lacks a script and DB2 has no parent trigger; Beast Cleave and conditional multipliers remain explicit separate gaps.
+
+Direct native pet-child qualification atbbd4eeae8 passes37.92s: actual pet gap9.440317/native10yd, attributed damage1899. Only afterward, pushed ignored parentca0fe552c reaches actual root CastSuccess/qualified pet geometry then fails missing pet damage47.19s. Implementation follows that RED; GREEN pending. Inputs are one actual dummy; no earlier invalid three-target/AoE measurement is promoted.
+
 ## Power receipts —2026-10-22
 
 The [DPS adapter](../../specs/dps-parity.md#measurement) reads authoritative `PowerPools`/`Mana`, preserving fractional current/max and the last native tick's `regen_per_sec`; existing engagement samples include actual controlled-pet pools. Actor stat snapshots and final pet receipts retain these values too. Combat accounting groups existing Energize events by source, recipient and spell, exposing requested integer amount, overflow, effective gain and count. These are raw logged integers, not exact fractional grants, power-type attribution or integrated realized regeneration. No gameplay power logic changes.
