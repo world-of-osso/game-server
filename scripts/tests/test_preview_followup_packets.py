@@ -63,6 +63,7 @@ class PreviewFollowupAcceptance(unittest.TestCase):
         path = Path(os.environ['PREVIEW_FOLLOWUP_DB']).resolve(strict=True)
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
             self.assertEqual(db.execute('SELECT guid,position_x,position_y,position_z FROM content_creature WHERE map=? AND id1=?', (map_id,entry)).fetchall(), [(guid,x,y,z)])
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2805 AND guid BETWEEN 63805100 AND 63805999').fetchone(), (129,))
             self.assertEqual(db.execute('SELECT HealthModifier,faction,ContentTuningID FROM content_creature_template WHERE entry=?', (entry,)).fetchone(), (health,16,0))
             self.assertEqual(db.execute('SELECT t.unit_class,d.ContentTuningID,d.HealthModifier,d.DamageModifier,d.ArmorModifier,d.ManaModifier FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry WHERE t.entry=? AND d.DifficultyID=0', (entry,)).fetchone(),
                              db.execute('SELECT unit_class,ContentTuningID,HealthModifier,DamageModifier,ArmorModifier,ManaModifier FROM content_creature_template WHERE entry=?', (entry,)).fetchone())
