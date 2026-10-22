@@ -101,6 +101,11 @@ fn generic_rolling_periodic_native_damage_keeps_unpaid_amount_and_original_tick_
         .period_ms;
     let total = initial.duration_ms / period;
     assert_eq!(total, 2);
+    let mid_period = aura_now(h.app.world()) + f64::from(period) / 2_000.0;
+    while aura_now(h.app.world()) < mid_period {
+        h.advance(1);
+    }
+    assert!(aura_now(h.app.world()) < initial.expires_at.unwrap());
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
     cast_native_child(&mut h, target, LANGUISH);
     let refreshed = native_aura(&h, target, LANGUISH);
