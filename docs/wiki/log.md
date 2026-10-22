@@ -1,3 +1,7 @@
+## 2026-10-21 — Path-candidate Stockade qualification
+
+[Stockade current cohort](systems/dungeon-simulator.md#current-path-candidate-stockade-qualification-2026-10-21): same-code2f443fb5a/P03cebdb/frozen40d95b0 clears50/50,150native boss Deaths,0failures. Fresh1–49 batch2575.069794s plus retained native seed50 receipt83.707545s; no invented contiguous50wall. Actual34/1/level32 verified for all50. Azure and live acceptance remain open.
+
 ## 2026-10-21 — Post-path Azure qualification
 
 [Azure candidate](systems/dungeon-simulator.md#post-path-azure-qualification-2026-10-21): same frozen inputs2f443fb5a,seeds1–10/jobs2 gives0clear/7DeadMember stalls/3tankabsence blocks/0boss Deaths,all10reports,570.406761s wall. Seed1 native Sapling29001840 kills isolated Austin while healer remains behind. Native-order movement diagnostic regression added; no further production fix or reliability claim.
