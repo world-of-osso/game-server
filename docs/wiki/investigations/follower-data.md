@@ -21,6 +21,12 @@ Native5b036e1ea proves3/3 (57.40s), each in Normal1/Follower205: first Webs6.1s/
 
 Singularity7.3s minimum/range alerts remain context, not exact alternate casts. Webs dummy children, GraspingBlood population/controller and Singularity escape/controller remain unsourced; no fabricated adds/destinations/energy grants. No whole-fight or Mythic certification. [Contract](../../specs/boss-scripts.md#kikatal-current-lua-partial).
 
+### Aldryr outgoing partial — 2026-10-22
+
+Native7343d186d firstKeg5.1s/native1.5s cast and evade/rearm cases passed in both Normal1/Follower205. Its ongoing oracle missed native Keg occupancy after Belch; corrected ongoing at98df0a1cc passed1/1 (80.59s), both difficulties. Fifteen90s requests complete: Keg5.1/19.6/34.1/48.6/63.4/77.9; Throw10/28.2/46.4/64.9/83.1; Belch14.4/37.4/60.4/84.6. Actual Keg/Belch damage, actual second-copy/coincident-peer damage/credit isolation,2900bit0 primary credit and corpse silence pass. Test players enter the source actor's forward cone; actor pose/rotation are never changed. Composite proof enables all3 tests without repeating unchanged first/reset cases. NativeREDeb1 missingKeg preceded implementation. Binding-only producer1/1 (8.569s) preserves actual models/stats/addons/population/native spells and foreign bindings, is idempotent and refuses conflicts. Source Normal tags remain unchanged; approved Normal-population bridge supports205.
+
+Evidence: engine `data/diagnostics/df-bosses-2-2026-10-21/{aldryr-native-7343d186d,aldryr-ongoing-native-98df0a1cc,aldryr-first-keg-native-red-eb1fc573f,aldryr-producer-green}.log` and exact revision/argv ledger. HappyHour/bar-jump/patrons/controller, Throw dummy forwarding and external Belch destination remain named gaps; no fabricated phases/adds/destinations or whole-fight certification. [Contract](../../specs/boss-scripts.md#brew-master-aldryr-current-lua-partial).
+
 ### Font of Magic selection oracle — 2026-10-21
 
 Merged native selection casts382266/382411 rather than357208/359073 after learned411212 Font of Magic57. Native aura332 effects1077606/1077607 explicitly map those roots; this is valid action resolution, not Azure filler starvation. The max-level oracle now requires both replacement SpellGo receipts and the actual passive; a level56 control requires both unreplaced roots. Empowered release/damage remains unimplemented and is not certified by these selection tests.

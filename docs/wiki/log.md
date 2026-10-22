@@ -1,3 +1,7 @@
+## 2026-10-22 — Aldryr outgoing partial
+
+[Aldryr](investigations/follower-data.md#aldryr-outgoing-partial--2026-10-22): retained native7343first/reset2PASS plus corrected ongoing98df1/1GREEN80.59s, each Normal1/Follower205. Fifteen90s requests/nativeKeg-Belch damage/actualcopy-credit/corpse pass; producer1/1 preserves source. Enabled tests; phase/dummy/external-destination gaps retained, canonical untouched.
+
 ## 2026-10-22 — Ki'katal source-clock partial
 
 [Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
