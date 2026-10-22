@@ -12,14 +12,13 @@ const EYE: u32 = 433766;
 fn anubzekt_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     let (mut h, boss, map) = bound_boss_at_difficulty(ANUBZEKT, MAP, BIT, difficulty, None);
     assert_eq!(h.app.world().get::<UnitFlags>(boss).unwrap().0, 64);
-    let wdt = h.app.world().resource::<MapStore>().maps[&MAP].wdt_file_data_id;
-    h.app.insert_resource(crate::ground::GroundMap::new(
-        &crate::ground::ground_data_dir(),
-        std::collections::HashMap::from([(MAP, wdt)]),
-    ));
     let mut visibility = crate::interest::NetworkVisibility::default();
     visibility.gain_visibility(h.players[0].1);
     h.app.world_mut().entity_mut(boss).insert(visibility);
+    let mut near = *h.app.world().get::<Position>(boss).unwrap();
+    near.x += 3.0;
+    let player = h.player();
+    h.app.world_mut().entity_mut(player).insert(near);
     (h, boss, map)
 }
 
@@ -39,11 +38,9 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
         let (mut h, boss, _) = anubzekt_copy(difficulty);
         let player = h.player();
         h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
-        crate::creature_aggro::enter_evade_mode(h.app.world_mut(), boss);
-        h.advance(5.0);
         assert!(
             !h.app.world().get::<CombatStatus>(boss).unwrap().0,
-            "real evade/home must finish before idle outgoing qualification"
+            "source actor stays idle until explicitly engaged"
         );
         assert!(
             h.app.world().get::<Mana>(boss).is_none(),
@@ -167,10 +164,11 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
         let initial_infestations = completed_casts(&h, boss, INFESTATION);
-        assert!(
-            h.has_aura(h.player(), INFESTATION),
-            "source immediate-on-pull aura is already real before fixture observer"
+        assert_eq!(
+            initial_infestations, 0,
+            "no casts before native threat ingress"
         );
+        assert!(!h.has_aura(h.player(), INFESTATION));
         let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
         h.app
             .insert_resource(super::cast_admission::CastAdmissions {
@@ -179,7 +177,12 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
                 entries: Vec::new(),
             });
         h.engage(boss);
-        h.advance(130.0);
+        h.advance(0.1);
+        assert!(
+            h.has_aura(h.player(), INFESTATION),
+            "actual immediate-on-pull native aura"
+        );
+        h.advance(129.9);
         let attempts = &h
             .app
             .world()
@@ -190,24 +193,24 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
             (
                 IMPALE,
                 &[
-                    4.55, 13.05, 21.85, 27.65, 42.55, 51.05, 59.55, 68.05, 76.55, 85.35, 91.15,
-                    99.65, 108.15, 116.95, 122.75,
+                    4.6, 13.1, 21.9, 27.7, 42.6, 51.1, 59.6, 68.1, 76.6, 85.4, 91.2, 99.7, 108.2,
+                    117.0, 122.8,
                 ][..],
             ),
             (
                 INFESTATION,
                 &[
-                    10.1, 21.05, 38.95, 47.45, 55.95, 64.45, 72.95, 84.55, 95.15, 103.65, 116.15,
-                    126.75,
+                    0.05, 10.15, 21.1, 39.0, 47.5, 56.0, 64.5, 73.0, 84.6, 95.2, 103.7, 116.2,
+                    126.8,
                 ][..],
             ),
-            (BURROW, &[17.05, 80.55, 112.15][..]),
-            (EYE, &[31.65, 112.15][..]),
+            (BURROW, &[17.1, 80.6, 112.2][..]),
+            (EYE, &[31.7, 112.2][..]),
         ];
         assert_eq!(
             attempts.len(),
-            32,
-            "all sourced requests, including ordinary second-Eye rejection"
+            33,
+            "all sourced requests including immediate ingress and ordinary second-Eye rejection"
         );
         for (spell, times) in lanes {
             let lane: Vec<_> = attempts.iter().filter(|a| a.spell == spell).collect();
@@ -327,6 +330,14 @@ fn encounter_coverage_anubzekt_evade_rearms_initial_combo_without_credit() {
         near.x += 3.0;
         h.app.world_mut().entity_mut(player).insert(near);
         let before = completed_casts(&h, boss, IMPALE);
+        let before_eye = completed_casts(&h, boss, EYE);
+        let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
+        h.app
+            .insert_resource(super::cast_admission::CastAdmissions {
+                actor: boss,
+                origin,
+                entries: Vec::new(),
+            });
         h.engage(boss);
         h.advance(4.4);
         assert!(h.app.world().get::<CastState>(boss).is_none());
@@ -337,5 +348,32 @@ fn encounter_coverage_anubzekt_evade_rearms_initial_combo_without_credit() {
         );
         h.advance(4.1);
         assert_eq!(completed_casts(&h, boss, IMPALE), before + 1);
+        h.advance(26.2);
+        let attempts = &h
+            .app
+            .world()
+            .resource::<super::cast_admission::CastAdmissions>()
+            .entries;
+        let eyes: Vec<_> = attempts.iter().filter(|a| a.spell == EYE).collect();
+        assert_eq!(
+            eyes.len(),
+            1,
+            "reset rearms actual first-Eye request without fabricating energy"
+        );
+        assert!((eyes[0].time - 31.7).abs() <= 0.15);
+        assert!(matches!(
+            eyes[0].result,
+            Err(crate::spell_cast::CastFailure::NotEnoughPower(
+                shared::components::PowerType::Energy
+            ))
+        ));
+        assert_eq!(completed_casts(&h, boss, EYE), before_eye);
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(map),
+            0
+        );
     }
 }
