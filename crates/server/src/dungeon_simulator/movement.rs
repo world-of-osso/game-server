@@ -159,7 +159,15 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
     if travel.is_none() {
         travel = Some(Travel {
             destination: to,
-            legs: read_legs(world.resource::<Space>(), from, to)?,
+            legs: read_legs(world.resource::<Space>(), from, to).map_err(|error| {
+                format!(
+                    "{error}; source={:?} from={from:?} to={to:?} state={:?}",
+                    world
+                        .get::<crate::zones::CreatureOrigin>(unit)
+                        .map(|origin| origin.guid),
+                    world.get::<crate::creature_ai::CreatureState>(unit),
+                )
+            })?,
         });
     }
     let mut travel = travel.unwrap();

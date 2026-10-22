@@ -1,3 +1,7 @@
+## 2026-10-22 — Continuous-edge cohorts and disconnected chase
+
+[Archived5f7 qualification](systems/dungeon-simulator.md#continuous-edge-seeded-qualification-2026-10-22): Stockade50/50,150boss Deaths,0failures;1–49batch3083.914376s plus retained50 individual124.597531s. Azure10requested yields9process panics/missingreports and1valid tank-absence block,1323.826085s. [Separate Rune blocked-chase parity](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22) now has an ignored native book-hop regression; no synthetic connector, policy exception or timer. RED pending.
+
 ## 2026-10-21 — Continuous frozen walk endpoints
 
 [Native endpoint/time boundary](systems/dungeon-simulator.md#continuous-frozen-walk-endpoints-2026-10-21): full Azure1 ownerDeath RED106.58s plus two exact recorded-position REDs0.12s prove goal-anchor overshoot and full-edge-time restart. Walking now shares continuous existing-edge endpoints/proportional native yards between safety qualification and movement; no new component links or changed book hops. At5f7d4ff85 recorded controls2GREEN0.01s, fullnative Azure1 Sapling GREEN110.78s, Stockade safe-path+full50 bothGREEN135.84s, graph4+weighted1+six retained native movement controls GREEN. New seeded qualification pending; prior2f443Stockade50/50 is not current proof after this geometry change.

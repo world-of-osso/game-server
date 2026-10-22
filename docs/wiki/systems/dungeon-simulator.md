@@ -2,6 +2,12 @@
 
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
+## Continuous-edge seeded qualification —2026-10-22
+
+Archived5f7d4ff85/P03cebdb/frozen40d95b0 clears **Stockade50/50,150native boss Deaths,0failures**, with actual34/1/level32 validated in all reports. Fresh seeds1–49/jobs2 take3083.914376s batch wall; separately retained same-code50 takes124.597531s individual wall. No contiguous50-run wall is claimed. `stockade-continuous-edge-5f7d4ff85-combined-summary.json` preserves source paths/hashes and both timing receipts.
+
+Azure requests ten runs but finishes with **nine process panics/missing reports and one valid tank-absence block (seed7,1963sim_s)**,0clears,1323.826085s batch wall. All nine panic logs identify mover164v0 and disconnected frozen walk components after post-Leymor progression; do not count these as nine timeouts or nine valid reports. Evidence: `azure-continuous-edge-5f7d4ff85-seeds1-10/{summary.json,seed-*.log}`. The cohorts used a verified immutable executable, so the later449096a75/protocol2abc7fa integration did not mix their inputs.
+
 ## Qualified path-candidate Stockade cohort —2026-10-21
 
 Production2f443fb5a, protocol03cebdb, frozen worldDB40d95b0, unchanged native Stockade32/default five: **50/50clears,150native boss Deaths,0failures**, with actual34/1/level32 verified in every report. Fresh seeds1–49/jobs2 clear49/49 in2575.069794s batch wall; same-code seed50 was already qualified by the full native regression (83.707545s individual wall) and is retained without rerunning it. There is no contiguous50-run batch wall. This qualifies that simulator cohort, not Azure or live acceptance. The subsequent mid-edge walking correction intersects these paths, so this is historical2f443fb5a evidence, not qualification of that correction.
@@ -45,6 +51,12 @@ Seed1's sample at1802.5sim_s shows Austin dead after native Bubbling Sapling2900
 Native seed1 Sapling owner-Death RED106.58s is followed by two recorded-position REDs ated5e93e8c (0.12s): the follow path enters29001853's18yd sphere at10.055763yd, and the mover does not arrive after its remaining81.82497native-yard budget. Both use the exact1765.4sim_s capture, not fabricated positions or elapsed combat time.
 
 Walking now attaches endpoints to the closest full3D existing walk edge or node. An edge attachment contributes its proportional native distance to each endpoint; shortest-path search can connect those attachments directly along the same edge or through existing nodes. Timed movement and safety queries consume the same resulting legs. It no longer assigns an entire edge's distance after a partial-edge retarget. Isolated nodes remain candidates, so a nearby edge in a different component is not an invented connector. Directed book planning is separate and unchanged. Only sub0.01yd f32 projection roundoff is absorbed while retaining the actual endpoint positions; recorded errors were below0.002yd. At5f7d4ff85 the same-profile native build passes5m43 without warnings; both recorded-edge controls pass0.01s and are enabled as default regressions. Native Azure1 now survives through the Sapling's Death (110.78s test), while Stockade's recorded safe follow and fullseed50 both pass135.84s; seed50 clears all3bosses at2386.75sim_s. Four graph controls retain stacked native heights, walking disconnection and directed translocation behavior; the weighted-time control and six native leader/sight/passive/book/living-formation controls also pass. Fresh Stockade/Azure seeded qualification remains pending; this is bounded counterexample proof, not reliability.
+
+## Disconnected chase parity —2026-10-22
+
+The archived Azure panic maps mover164v0 to unselectable Polymorphic Rune195638/source29001884. Before the first book hop it remains on the508yd floor; the party crosses to the425yd walking component. Ordinary server chase movement treats a failed route as `Step::Blocked`, records `CannotReachTarget` and runs the existing five-second `no_path_evade_system` before native home arrival. The simulator omits those physical-navigation systems and currently turns a failed frozen path into a process panic.
+
+A separate ignored native fixture qualifies the real disconnected29001868→29001870 book hop, starts the actual Rune's chase and requires blocked-state→native evade→home arrival without fabricated links or a new timer. Diagnostic movement errors now retain source identity, endpoints and creature state. RED and parity implementation are pending; no hazard-policy change was made for sm909's separately confirmed canonical kit-parser drift.
 
 ## Recorded late-healer route boundary —2026-10-21
 
