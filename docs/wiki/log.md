@@ -1,3 +1,7 @@
+## 2026-10-22 — Initial respawn admission packet qualification
+
+[Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22):db89ce7cc source2GREEN0.193s and actual-copy2GREEN0.042s; fresh-copy safeLoc81002649/81002669 packet replays3× exactly, all unrelated rows preserved. Exact POI coordinates/first-trash facing, uniqueness/unconditional/auth controls, native portal gaps and12.964433..50.685356yd calibration retained. Accepted staging baseline deleted; publication pending. No captured native entrance or dungeon-completion claim.
+
 ## 2026-10-22 — Initial respawn project-admission policy
 
 [Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22): approved City2669/POI8072 and Priory2649/8073 only, unique/unconditional, exact native POI coordinates plus sourced-trash facing. Native portal provenance gaps and13–51yd calibration finding retained; conditional checkpoints rejected. Actual missing-two RED0.028s; GREEN pending. Lead confirmed Avanoxx/Taah8rows published/integrityOK.
