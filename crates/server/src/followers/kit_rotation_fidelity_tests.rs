@@ -93,7 +93,6 @@ fn rotation_selection_1467_three_targets_before_font_use_native_roots() {
 }
 
 #[test]
-#[ignore = "native Elemental Ascendance action projection and Stormkeeper sequencing"]
 fn rotation_selection_262_native_ascendance_after_stormkeeper() {
     let (mut h, caster, _) = prepare(209053, 3);
     let known = h
@@ -157,7 +156,6 @@ fn stormkeeper_within_sync_window(h: &Harness, caster: Entity) -> bool {
 }
 
 #[test]
-#[ignore = "native Ascendance learn boundary qualification"]
 fn rotation_selection_262_native_ascendance_unavailable_before_talent() {
     let (mut h, caster, _) = prepare_at_level(209053, 3, 50);
     assert!(
@@ -187,7 +185,6 @@ fn rotation_selection_262_native_ascendance_unavailable_before_talent() {
 }
 
 #[test]
-#[ignore = "native Ascendance Stormkeeper synchronization window qualification"]
 fn rotation_selection_262_native_ascendance_held_in_stormkeeper_sync_window() {
     let (mut h, caster, _) = prepare(209053, 3);
     crate::spell_cast::creature_cast(h.app.world_mut(), caster, 191634, Some(caster), false)
