@@ -1,5 +1,10 @@
 # Boss scripts
 
+## TWW Skarmorak source admission
+
+- TC a352b1fa `KhazAlgar/TheStoneVault/boss_skarmorak.cpp` identifies primary210156/map2652/2880bit1, independently joined to native70448 Journal2579/actor5608/display118714. Producer `--encounter skarmorak` admits only that binding, keeping source `boss_skarmorak`, class4/flags64/flags2=0, spawn10002291, actual addons429974/422359 and every actor/stat/model/difficulty/population/native spell row unchanged. Follower205 fixtures explicitly project the authored Normal placement, not unauthored205 rows.
+- Consume the shared sourceclass4 Energy ingress; never synthesize Mana, grant fixture power or duplicate that implementation. Actual Smash422233 and Crash423538 each cost25 native Energy; source class4 initializes100, and flags2=0 does not authorize regeneration. Native qualification must show actual cost-on-completion and copy-local damage before timer certification. Ignored TC4.6s first-Smash RED must be pushed/executed before implementing combat; TC owns repeat17s, Crash10.5→19.4s and energy-check0.5→5s, not guessed Lua substitutes.
+
 ## Native creature class-power ingress
 
 - Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
