@@ -99,6 +99,8 @@ mod creature_type_damage_tests;
 #[cfg(test)]
 mod critical_block_tests;
 #[cfg(test)]
+mod critical_healing_tests;
+#[cfg(test)]
 mod dead_cast_progress_tests;
 #[cfg(test)]
 mod dead_caster_channel_tests;
