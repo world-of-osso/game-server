@@ -60,6 +60,36 @@ pub(super) fn spawn_profile_fixture_with_plugins(
 }
 
 #[test]
+fn powers_follower_initialization_without_catalog_returns_error_without_mutation() {
+    let (mut h, unit, profile) = spawn_profile_fixture(209057);
+    let owner = h.caster;
+    let before = h
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(unit)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .remove_resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .unwrap();
+    let error = spawning::initialize(h.app.world_mut(), owner, unit, profile).unwrap_err();
+    assert!(error.contains("PowerTypeTable"), "{error}");
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(unit)
+            .unwrap(),
+        &before
+    );
+    assert!(
+        !h.app
+            .world()
+            .contains_resource::<crate::spell_cast::powers::PowerTypeTable>()
+    );
+}
+
+#[test]
 fn follower_selection_is_not_engagement_but_native_attack_is() {
     let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(209059, |_| {});
     let enemy = h.npc;

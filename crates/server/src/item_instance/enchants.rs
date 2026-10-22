@@ -52,8 +52,13 @@ pub fn enchantment_stats(
             3 => result
                 .equip_spells
                 .push(u32::try_from(effect.argument).map_err(|e| e.to_string())?),
+            // TC a352b1fa Player.cpp13509–13531: physical-school resistance is armor.
+            4 if effect.argument == 0 => {
+                result.stats.secondary.armor +=
+                    scaled_amount(enchant, effect, level)?.trunc().max(1.0);
+            }
             5 => {
-                let amount = scaled_amount(enchant, effect, level)?;
+                let amount = scaled_amount(enchant, effect, level)?.round();
                 add_stat(&mut result.stats, effect.argument, amount)?;
             }
             kind => {
@@ -95,7 +100,7 @@ fn scaled_amount(enchant: &Enchantment, effect: &EnchantEffect, level: u8) -> Re
     let row = scaling_data::SPELL_SCALING
         .get(index)
         .ok_or_else(|| format!("enchantment scaling level {level} absent"))?;
-    Ok((row[column] * effect.coefficient).round())
+    Ok(row[column] * effect.coefficient)
 }
 
 fn scaling_column(class: i32) -> Result<usize, String> {
@@ -222,6 +227,70 @@ mod tests {
         let contribution = enchantment_stats(8039, 90, &native()).unwrap();
         assert_eq!(contribution.equip_spells, vec![1236742]);
         assert_eq!(contribution.stats, ItemStatBlock::default());
+    }
+
+    #[test]
+    fn item_instance_native_armor_enchant_keeps_primary_and_physical_resistance() {
+        let mut tables = native();
+        // Native70448 SpellItemEnchantment8163: type4/school0 and type5/hybrid72.
+        tables.enchants.insert(
+            8163,
+            Enchantment {
+                effects: [
+                    EnchantEffect {
+                        kind: 4,
+                        argument: 0,
+                        coefficient: 0.802820027,
+                        points: 0,
+                    },
+                    EnchantEffect {
+                        kind: 5,
+                        argument: 72,
+                        coefficient: 1.2191,
+                        points: 0,
+                    },
+                    EnchantEffect::default(),
+                ],
+                scaling_class: -7,
+                min_level: 0,
+                max_level: 80,
+            },
+        );
+        let stats = enchantment_stats(8163, 90, &tables).unwrap().stats;
+        assert_eq!(stats.secondary.armor, 27.0);
+        assert_eq!(stats.primary.strength, 41.0);
+        assert_eq!(stats.primary.agility, 41.0);
+        assert_eq!(stats.primary.intellect, 0.0);
+    }
+
+    #[test]
+    fn item_instance_native_armor_enchant_truncates_and_preserves_unscaled_amounts() {
+        let mut tables = native();
+        // Native70448 entries18/85, not fabricated scaling coefficients.
+        for (id, coefficient, scaling_class, max_level, points, expected) in
+            [(18, 0.129999995, -1, 25, 32, 1.0), (85, 0.0, 0, 0, 3, 3.0)]
+        {
+            tables.enchants.insert(
+                id,
+                Enchantment {
+                    effects: [
+                        EnchantEffect {
+                            kind: 4,
+                            argument: 0,
+                            coefficient,
+                            points,
+                        },
+                        EnchantEffect::default(),
+                        EnchantEffect::default(),
+                    ],
+                    scaling_class,
+                    min_level: 0,
+                    max_level,
+                },
+            );
+            let stats = enchantment_stats(id, 90, &tables).unwrap().stats;
+            assert_eq!(stats.secondary.armor, expected);
+        }
     }
 
     #[test]
