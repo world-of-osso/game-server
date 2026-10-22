@@ -1,5 +1,13 @@
 # Boss scripts
 
+## Skarmorak TC Shell-controller partial — 2026-10-22
+
+Actual210156/map2652/2880bit1 is authenticated by TC a352b1fa `TheStoneVault/boss_skarmorak.cpp`, source spawn10002291 and native70448 Journal2579/5608/display118714. Sourceclass4/flags64/flags2=0/addons429974/422359 and all actor/native/population data remain intact. Independent producer `--encounter skarmorak` RED→1GREEN7.658s proves binding-only preservation/idempotence/conflict; stable-key delta receipt verifies twice-replayed fresh copy. Follower205 fixtures explicitly project the authored Normal placement, not205 stat/spawn rows. Receipts: `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/skarmorak-*`.
+
+Actual nativeREDca58c21bb: first4.6s Smash missing, while independent native Smash25Energy cost-on-completion/damage/copy-isolation passes (1PASS/1FAIL19.15s). Ignored ongoing180s Shell/refill/120s-channel/rearm/copy lifecycle and generic reset testsf0d16ec44 were pushed before implementation. `skarmorak.rs` then ports TC one-event-per-update scheduling, native25Energy attack costs, source17/17/16 periodic Shell refill, true6s Shell and2s+120s Discharge channel, then source natural-channel-end cleanup/rearm. Sharedclass4 ingress owns initial100; no fabricated power allocation or unsourced regeneration. Implementationabd8c1364 is committed; native GREEN pending capacity.
+
+[Contract and named gaps](../../specs/boss-scripts.md#tww-skarmorak-source-admission) retain sourced-but-unported shard/fragment selectors, fortified visual/absorb-stack controller, enemy-absorb removal/Shattered Shell, unstable fragment area and TC evade despawn. Parent requests are not full-fight/native-clear certification. Generic same-actor reset preserves remaining native Energy rather than pretending another source respawn.
+
 ## Orator TC energy-controller partial — 2026-10-22
 
 TC a352b1fa `CityOfThreads/boss_orator_krix_vizk.cpp:111–269,359–397` authenticates216619/map2669/2907bit1; native70448 Journal2594/5620/display116692 and spawn10002880 are preserved. Producer `--encounter orator` changes only the primary binding on independent copies: RED missing import →1GREEN9.296s, full actor/native/population preservation plus idempotence/conflict. Follower205 fixtures explicitly project the authored Normal actor, not205 stat/spawn rows. Source/native/SQL receipts live in `game-engine/data/diagnostics/follower-bosses-tww-2026-10-22/`.
