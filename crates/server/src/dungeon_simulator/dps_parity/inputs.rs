@@ -101,6 +101,17 @@ fn read_reference_race(name: &str) -> Result<u8, String> {
             matches.push(id);
         }
     }
+    if expected == "human" {
+        // Pinned SimC76f8118 util.cpp1989-1994 maps RACE_HUMAN to1.
+        // Native70448 also calls ThinHuman33 "Human"; display names are not IDs.
+        const SIMC_HUMAN_RACE_ID: u8 = 1;
+        return matches
+            .contains(&SIMC_HUMAN_RACE_ID)
+            .then_some(SIMC_HUMAN_RACE_ID)
+            .ok_or_else(|| {
+                format!("reference human source race1 absent from native matches {matches:?}")
+            });
+    }
     match matches.as_slice() {
         [id] => Ok(*id),
         _ => Err(format!(
@@ -241,4 +252,11 @@ pub(super) fn install_traits(
         evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;
     world.entity_mut(unit).insert((known, traits));
     Ok(())
+}
+
+#[test]
+#[ignore = "requires the read-only native parity database with Human1 and ThinHuman33"]
+fn native_reference_human_race_uses_the_pinned_source_id() {
+    assert_eq!(read_reference_race("human").unwrap(), 1);
+    assert!(read_reference_race("not_an_installed_race").is_err());
 }
