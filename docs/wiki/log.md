@@ -1,6 +1,6 @@
 ## 2026-10-21 — All-Seeing Eyes source boundary
 
-[Toys](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21): source175140/318571 isolated279rows/26tables/one resident ordinary model,27 visual conditions/32 ModifierTrees. Test-firsta6546659a/doc219450110 RED2/control3PASS59.00s: actualUseToy/censusUnsupportedAura4, drift/Compass/Gadgetzan retained. One exact318571 registry entry implemented; GREEN pending. Shape/race/gender visual selectors do not imply new gameplay; Smolderheart's separate343642 heating stacks remain a gap. Native selection/10-minute expiry/30-minute reuse unproved.
+[Toys](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21): source175140/318571 isolated279rows/26tables/one resident ordinary model,27 visual conditions/32 ModifierTrees. Test-firsta6546659a/doc219450110 RED2/control3PASS59.00s: actualUseToy/censusUnsupportedAura4, drift/Compass/Gadgetzan retained. One exact318571 registry entrya270fee70/mastere5112781e GREEN6/6 (33.00s), checkEXIT0/37.73s/fmtPASS; owner amount0/replication/cancel/invariants/CDrefusal and drift/Compass/Gadgetzan/Seed controls. Reconciled536→537 exactly175140/zero other changes,636gaps; inherited unused-function warning retained. Shape/race/gender visual selectors do not imply new gameplay; Smolderheart's separate343642 heating stacks remain a gap. Native selection/10-minute expiry/30-minute reuse unproved.
 
 ## 2026-10-21 — Effect63/Kvaldir source and RED boundary
 
