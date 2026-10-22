@@ -713,7 +713,6 @@ fn moderate_group_with_spent_words() -> GroupFixture {
 }
 
 #[test]
-#[ignore = "FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS: shared cast lifetime RED e9697c1db"]
 fn holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_words() {
     let mut group = moderate_group_with_spent_words();
     let priest = group.priest;
