@@ -15,8 +15,8 @@ The server's standard lead gate must retain its native coverage while completing
 - [x] Reuse decoded immutable definitions without querying SQLite again for the same database path and content.
 - [x] Permit one source reader to supply concurrent Apps; do not serialize repeated database decoding behind a shared global lock.
 - [x] Keep prepared paths distinct from canonical authority, even when initial bytes match; changed content at the same path must load the changed definitions.
-- [ ] App-local catalog mutations must leave sibling Apps and retained input definitions unchanged.
-- [ ] Production catalog behavior and owned collection representation must remain unchanged; fixture sharing is test-only.
+- [x] App-local catalog mutations must leave sibling Apps and retained input definitions unchanged.
+- [x] Production catalog behavior and owned collection representation must remain unchanged; fixture sharing is test-only.
 
 ## How it works
 
@@ -40,8 +40,8 @@ The server's standard lead gate must retain its native coverage while completing
 
 ## Known gaps (current cycle)
 
-- [ ] Current profile-only union takes37m58s and swaps; the performance goal is not met.
-- [ ] Native loader/storage integration is implemented; targeted live-App isolation, compilation and matching before/after measurements remain open.
+- [ ] Historical profile-only union takes37m58s and swaps; the current after-cache union has not completed qualification, so the performance goal remains open.
+- [x] Native loader/storage integration, targeted live-App isolation and compilation pass; the matching19-case workspace-graph before/after measurements are recorded.
 - [ ] Memory-weighted heavy-test scheduling and final complete gate proof remain open.
 
 ## Out of scope
