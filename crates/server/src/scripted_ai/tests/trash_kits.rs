@@ -7,7 +7,7 @@ fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
     let source = crate::spell_cast::test_harness::world_db().unwrap();
     // TC Wild Eruption's dummy hook casts375650, whose DB2 effect32 triggers375647.
     let spells = if spell == 375652 {
-        vec![spell, 375650, 375647]
+        vec![spell, 375650, 375647, 375649]
     } else {
         vec![spell]
     };
@@ -24,6 +24,11 @@ fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
             .collect(),
     ));
     app.insert_resource(smart_ai::load_smart_scripts(&world_db_path()).unwrap());
+    let source_connection =
+        Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    app.insert_resource(
+        crate::spell_cast::area_trigger::load_aura_field_catalog(&source_connection).unwrap(),
+    );
     let maps = app.world().resource::<MapStore>().clone();
     let mut instances = crate::maps::InstanceManager::default();
     let map = instances
@@ -141,23 +146,8 @@ fn follower_trash_azure_arcane_tender_natively_casts_tc_wild_eruption() {
 
 #[test]
 fn follower_trash_destination_trigger_uses_actual_npc_enemy_victim() {
-    let _ = bevy::log::tracing_subscriber::fmt()
-        .with_max_level(bevy::log::tracing::Level::WARN)
-        .with_test_writer()
-        .try_init();
     let (mut h, actor) = trash_actor(191164, 2515, 375652);
     h.engage(actor);
-    eprintln!(
-        "destination victim state={:?}",
-        h.app
-            .world()
-            .get::<crate::creature_ai::CreatureState>(actor)
-    );
-    eprintln!(
-        "native missile={:?}; child={:?}",
-        h.app.world().resource::<SpellStore>().get(375650),
-        h.app.world().resource::<SpellStore>().get(375647)
-    );
     let position = *h.app.world().get::<Position>(actor).unwrap();
     let before = h.health(h.player()).current;
     let minimum_flight = h
@@ -188,21 +178,23 @@ fn follower_trash_destination_trigger_uses_actual_npc_enemy_victim() {
         !h.inbox(0)
             .log
             .iter()
-            .any(|event| event.spell_id == Some(375647) && event.kind == CombatLogKind::Damage),
+            .any(|event| event.spell_id == Some(375649) && event.kind == CombatLogKind::Damage),
         "native minimum missile duration is retained"
     );
     h.advance(step * 2.0);
-    eprintln!("events after flight={:?}", h.inbox(0).log);
+    assert_wild_eruption_field_at_victim(&mut h, actor);
+    // Source375649 owns a native1000ms periodic clock after AT entry.
+    h.advance(1.0 + step * 2.0);
     assert!(
         h.inbox(0)
             .log
             .iter()
             .any(|event| event.source == Some(actor.to_bits())
                 && event.target == Some(h.player().to_bits())
-                && event.spell_id == Some(375647)
+                && event.spell_id == Some(375649)
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0),
-        "NPC destination-triggered53 must use the actual victim and release native375647"
+        "NPC destination-triggered53 must apply source AT action375649 to the actual victim"
     );
     assert!(h.health(h.player()).current < before);
 }
@@ -212,7 +204,7 @@ fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
     let (mut h, actor) = trash_actor(191164, 2515, 375652);
     let before = h.health(h.player()).current;
     h.engage(actor);
-    // Source12s plus DB2 cast/minimum flight, then two real fixed observation ticks.
+    // Source12s plus DB2 cast/minimum flight and native1000ms aura tick.
     let store = h.app.world().resource::<SpellStore>();
     let cast_seconds =
         crate::spell_cast::cast_time_ms(h.app.world(), actor, store.get(375652).unwrap()) as f32
@@ -230,7 +222,8 @@ fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
         .resource::<Time<Fixed>>()
         .timestep()
         .as_secs_f32();
-    h.advance(12.0 + cast_seconds + minimum_flight + step * 2.0);
+    h.advance(12.0 + cast_seconds + minimum_flight + 1.0 + step * 2.0);
+    assert_wild_eruption_field_at_victim(&mut h, actor);
     assert!(
         h.inbox(0)
             .spell_gos
@@ -244,16 +237,41 @@ fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
             .iter()
             .any(|event| event.source == Some(actor.to_bits())
                 && event.target == Some(h.player().to_bits())
-                && event.spell_id == Some(375647)
+                && event.spell_id == Some(375649)
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0),
-        "source375650 missile must release native375647 damage; gos={:?}; actor_position={:?}; player_position={:?}; health={:?}",
+        "source375650 missile must create375647 AT with native375649 periodic damage; gos={:?}; actor_position={:?}; player_position={:?}; health={:?}",
         h.inbox(0).spell_gos,
         h.app.world().get::<Position>(actor),
         h.app.world().get::<Position>(h.player()),
         h.health(h.player()),
     );
     assert!(h.health(h.player()).current < before);
+}
+
+fn assert_wild_eruption_field_at_victim(h: &mut Harness, actor: Entity) {
+    let player = h.player();
+    let victim_position = *h.app.world().get::<Position>(player).unwrap();
+    let world = h.app.world_mut();
+    let fields: Vec<_> = world
+        .query::<(
+            &crate::spell_cast::area_trigger::SpellAreaTrigger,
+            &Position,
+        )>()
+        .iter(world)
+        .filter(|(field, _)| field.caster == actor && field.spell_id == 375647)
+        .collect();
+    assert_eq!(
+        fields.len(),
+        1,
+        "one native375647 field after missile flight"
+    );
+    let (field, position) = fields[0];
+    assert_eq!(
+        *position, victim_position,
+        "destination53 selects actual victim, not caster destination"
+    );
+    assert!(field.expires_at.is_some(), "native field lifetime retained");
 }
 
 #[test]
