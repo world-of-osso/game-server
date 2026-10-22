@@ -334,3 +334,69 @@ fn native_schedule_abort_preserves_report_and_ordered_combat_events() {
     assert_eq!(exported["status"], "aborted");
     assert_eq!(exported["reason"], saved["detail"]);
 }
+
+#[test]
+#[ignore = "explicit native pet diagnostic samples, provenance, reset and disappearance"]
+fn native_pet_samples_retain_health_provenance_and_the_enemy_reset() {
+    let _rng_scope = crate::random::seed_scope(7);
+    let mut run = spawn_run(7, &mut None).unwrap();
+    let owner = run.party.owner;
+    for _ in 0..200 {
+        run.app.update();
+        if crate::hunter_pet::summoned_pet(run.app.world(), owner).is_some() {
+            break;
+        }
+    }
+    let pet =
+        crate::hunter_pet::summoned_pet(run.app.world(), owner).expect("native CallPet input");
+    let enemy = run.actors[&29001792];
+    crate::combat::deal_direct_damage(run.app.world_mut(), pet, enemy, 1.0);
+    run.sample();
+    let first = serde_json::to_value(run.report.samples.last().unwrap()).unwrap();
+    let pets = first["pets"]
+        .as_array()
+        .expect("sample must expose actual controlled pets");
+    let observed = pets
+        .iter()
+        .find(|row| row["pet"]["entity"] == pet.to_bits())
+        .unwrap();
+    assert_eq!(observed["owner"], owner.to_bits());
+    assert_eq!(observed["pet"]["hunter_pet_owner"], owner.to_bits());
+    assert_eq!(observed["pet"]["npc_entry"], 174884);
+    assert_eq!(observed["pet"]["unit_level"], 70);
+    assert!(observed["pet"]["health"][0].as_f64().unwrap() > 0.0);
+    assert!(
+        observed["opponents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["entity"] == enemy.to_bits())
+    );
+    crate::combat::kill_unit(run.app.world_mut(), enemy, pet);
+    crate::creature_aggro::enter_evade_mode(run.app.world_mut(), enemy);
+    run.sample();
+    let returning = serde_json::to_value(run.report.samples.last().unwrap()).unwrap();
+    let observed = &returning["pets"][0];
+    assert_eq!(observed["pet"]["health"][0], 0.0);
+    assert!(
+        observed["opponents"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["entity"] == enemy.to_bits()
+                && row["state"].as_str().unwrap().contains("Returning"))
+    );
+    run.app.world_mut().despawn(pet);
+    run.sample();
+    let absent = serde_json::to_value(run.report.samples.last().unwrap()).unwrap();
+    assert_eq!(absent["pets"][0]["pet"]["entity"], pet.to_bits());
+    assert_eq!(absent["pets"][0]["pet"]["exists"], false);
+    assert_eq!(absent["pets"][0]["pet"]["health"], serde_json::Value::Null);
+    assert!(
+        run.inspect_units()
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["entity"] == pet.to_bits() && row["exists"] == false)
+    );
+}
