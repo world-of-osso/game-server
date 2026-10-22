@@ -20,7 +20,7 @@ class VexamusBindingTests(unittest.TestCase):
                 actor[columns.index('ScriptName')] = 'boss_vexamus'
                 preserved = [
                     'SELECT * FROM content_creature WHERE map=2526 ORDER BY guid',
-                    'SELECT * FROM content_creature_template_difficulty WHERE entry=194181 ORDER BY difficulty_id',
+                    'SELECT * FROM content_creature_template_difficulty WHERE entry=194181',
                     'SELECT * FROM content_creature_template_model WHERE CreatureID=194181',
                     'SELECT * FROM raid_encounter_creature WHERE creature_entry<>194181 ORDER BY map_id,creature_entry',
                     'SELECT * FROM spell_effect WHERE SpellID IN(385958,386173,388537) ORDER BY SpellID,DifficultyID,EffectIndex',
