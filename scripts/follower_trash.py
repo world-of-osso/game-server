@@ -44,12 +44,15 @@ def read_marker_reports(page):
     return reports
 
 
-def project_marker(map_id, page, index, tables, polygons_by_cell, projection_policy=None):
+def project_marker(map_id, page, index, tables, polygons_by_cell, assignments_by_frame, projection_policy=None):
     marker = page['markers'][index]
     point = dict(entry=page['entry'], marker_index=index, marker=marker,
                  cache_sha256=page['cache_sha256'], source_url=page['url'])
     try:
-        assignments = select_assignment(tables, map_id, marker, projection_policy)
+        frame = (map_id, marker['zone'], marker['floor'], projection_policy)
+        if frame not in assignments_by_frame:
+            assignments_by_frame[frame] = select_assignment(tables, map_id, marker, projection_policy)
+        assignments = assignments_by_frame[frame]
     except ValueError as error:
         return dict(point, status='FOLLOWER_TRASH_MARKER_PROJECTION_UNRESOLVED', reason=str(error))
     if projection_policy == SINGLE_FRAME_POLICY:
@@ -66,6 +69,7 @@ def project_marker(map_id, page, index, tables, polygons_by_cell, projection_pol
 def read_trash_markers(manifest, tables, cache, polygons):
     pages, points, gaps = [], [], []
     polygons_by_cell = index_surface_polygons(polygons)
+    assignments_by_frame = {}
     for record in manifest['entries']:
         page = read_cached_npc(cache, record['entry'])
         if page['cache_sha256'] != record['cache_sha256']:
@@ -74,7 +78,7 @@ def read_trash_markers(manifest, tables, cache, polygons):
         if not page['markers']:
             gaps.append(dict(entry=record['entry'], status='FOLLOWER_TRASH_INDIVIDUAL_MARKERS_MISSING'))
         for index in range(len(page['markers'])):
-            point = project_marker(manifest['map_id'], page, index, tables, polygons_by_cell, record.get('projection_policy'))
+            point = project_marker(manifest['map_id'], page, index, tables, polygons_by_cell, assignments_by_frame, record.get('projection_policy'))
             (points if 'wow_xyz' in point else gaps).append(point)
     return pages, points, gaps
 
