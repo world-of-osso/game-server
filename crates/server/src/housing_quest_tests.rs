@@ -94,7 +94,6 @@ fn housing_quest_uses_authored_acquisition_criteria_and_never_auto_completes_emp
 }
 
 #[test]
-#[ignore = "RED: installed70448 quest-root IsForQuest annotation is rejected"]
 fn housing_quest_installed_quest_root_annotation_allows_only_matching_paid_item_credit() {
     let (source, mut quests) = fixture();
     // Local70448 CriteriaTree216882: IsForQuest0x1000; TC a352b1fa DBCEnums.h.
@@ -137,7 +136,6 @@ fn housing_quest_installed_quest_root_annotation_allows_only_matching_paid_item_
 }
 
 #[test]
-#[ignore = "RED companion: IsForQuest must not authorize other tree flags"]
 fn housing_quest_root_annotation_does_not_allow_faction_or_unknown_flags() {
     for flags in [0x1200, 0x1400, 0x9000] {
         let (source, mut quests) = fixture();
