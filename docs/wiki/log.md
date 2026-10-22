@@ -9,6 +9,14 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Midnight clock authority
+
+[Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
+
+## 2026-10-22 — Dailcry native channel boundary
+
+[Dailcry](investigations/follower-data.md#captain-dailcry-native-channel-boundary--2026-10-22): eb1native first/reset pass; ongoing oracle expected instant Mauling but actual70448 is a30s channel. Corrected670739696 ongoing1/1GREEN168.22s preserves full native occupancy and proves12requests/native damage/actualcopy-credit/corpse across Normal1/Follower205; retained first/reset2PASS yields3-case composite proof, tests enabled. Binding producer1/1GREEN preserves source; Normal population bridge supports205 without fabricated rows. No production timer/cancellation change.
+
 ## 2026-10-22 — Spotlight and native target57 qualified
 
 [Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): separate generic4db754ace/exact25c96a187, correctedRED4/control4PASS102.82s→8GREEN112.11s at25c96a187/protocol2abc7fa. Native1022 rejects foreign ally while21/10060 remains allowed; actual grouped recipient apply/replicate/CancelAura/invariants/recovery refusal, foreign no substitute and2drifts pass. Check133s/0warnings/fmt/readabilityPASS. Exact542→543 only230924,630 unadmitted; named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE persists in census/ledger. No outdoor/native/full30min expiry/hour reuse claim. Original379 current partition25visual/2ports/1identity/155zero-payload/196script gaps, with exact source ledgers.
