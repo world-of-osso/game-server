@@ -164,12 +164,31 @@ def derive_binding(source, inventory, tables, map_id, entry, identity=None):
     return (map_id, entry, int(dungeon['ID']), int(dungeon['Bit']), int(journal['ID']), int(actor['ID']), int(actor['CreatureDisplayInfoID']))
 
 
+def stage_source_difficulties(target, records):
+    requested = [(r['entry'], 1) for r in records]
+    resolved = retail_content.resolve_difficulty_rows(target, requested)
+    missing = [entry for entry, difficulty in requested if (entry, difficulty) not in resolved]
+    if missing:
+        raise ValueError(f'placement actors lack native difficulty-chain rows: {missing}')
+    target.execute('CREATE TEMP TABLE follower_source_difficulty(entry INTEGER PRIMARY KEY, source_difficulty INTEGER)')
+    target.executemany('INSERT INTO temp.follower_source_difficulty VALUES(?,?)',
+                       [(entry, resolved[(entry, difficulty)]) for entry, difficulty in requested])
+    target.execute('CREATE TEMP TABLE tdb_difficulty AS SELECT d.* FROM tdb_creature_template_difficulty d '
+                   'JOIN temp.follower_source_difficulty s ON s.entry=d.Entry AND s.source_difficulty=d.DifficultyID')
+    cursor = target.execute('SELECT * FROM temp.tdb_difficulty ORDER BY Entry')
+    columns = [c[0] for c in cursor.description]
+    rows = [dict(zip(columns, row)) for row in cursor]
+    for row in rows:
+        levels = target.execute('SELECT minlevel,maxlevel FROM content_tuning_level WHERE ID=?', (row['ContentTuningID'],)).fetchone()
+        if row['ContentTuningID'] <= 0 or levels is None:
+            raise ValueError(f"FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_{row['Entry']}")
+    return [dict(entry=r['Entry'], requested_difficulty_id=1, source_difficulty_id=r['DifficultyID'],
+                 policy='FOLLOWER_PLACEMENT_SOURCE_DIFFICULTY_CHAIN', source_row=r) for r in rows]
+
+
 def prepare_templates(target, records, cache):
     entries = ','.join(str(r['entry']) for r in records)
-    target.execute(f'CREATE TEMP TABLE tdb_difficulty AS SELECT * FROM tdb_creature_template_difficulty WHERE Entry IN({entries}) AND DifficultyID=1')
-    count = target.execute('SELECT count(*) FROM temp.tdb_difficulty').fetchone()[0]
-    if count != len(records):
-        raise ValueError('every first-map actor requires its own sourced Normal1 difficulty')
+    difficulties = stage_source_difficulties(target, records)
     target.create_function('health_expansion', 1, retail_content.health_expansion, deterministic=True)
     retail_content.insert_tdb_templates(target, f'SELECT Entry FROM temp.tdb_difficulty')
     donors = []
@@ -186,7 +205,7 @@ def prepare_templates(target, records, cache):
         donors.append(dict(entry=record['entry'], donor_entry=record['faction_donor'], donor_page=donor,
                            faction=faction, policy=FACTION_POLICY, reason=record['donor_reason']))
     target.execute(f'INSERT OR IGNORE INTO content_creature_template_model SELECT * FROM tdb_creature_template_model WHERE CreatureID IN({entries})')
-    return donors
+    return donors, difficulties
 
 
 def write_placements(target, manifest, placements, bindings):
@@ -332,7 +351,7 @@ def prepare(args):
                         'SELECT CreatureDisplayID FROM tdb_creature_template_model WHERE CreatureID=?', (record['entry'],))]
             backup(baseline, prepared_path)
             with closing(sqlite3.connect(prepared_path)) as prepared, prepared:
-                receipt['donors'] = prepare_templates(prepared, manifest['entries'], args.cache)
+                receipt['donors'], receipt['source_difficulties'] = prepare_templates(prepared, manifest['entries'], args.cache)
                 write_placements(prepared, manifest, placements, bindings)
                 sql, changed = make_sql(baseline, prepared)
                 receipt['changed_keys'] = changed

@@ -1,3 +1,7 @@
+## 2026-10-22 — Native difficulty-chain source selection
+
+[Source difficulty chain](investigations/follower-data.md#native-source-difficulty-chain--2026-10-22): approved source0 selection through existing TC resolver, explicit source row receipts, no synthetic Normal1 records. Actual Waxbeard native0/CT2718 fixture reproduced strict-Normal1 refusal; CT0 is an explicit scaling gap. GREEN pending. Lead confirmed Nokhud12 + Ruby4 rows published/integrityOK and route relay.
+
 ## 2026-10-22 — Erkhart packet proof
 
 [Ruby native faction](investigations/follower-data.md#ruby-erkhart-native-faction--2026-10-22):9b36fb602 fresh-copy4row packet/replay3× exact, native faction16 without donors;6714e0961 actual-copy native stats/model/faction/precise pose/source-finding/SQL owner+collision2GREEN0.022s. Journal-vs-Wowhead30.438463yd finding preserved; Kyrakka unsourced, Erkhart route incomplete. Prepared only, not dungeon completion.

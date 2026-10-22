@@ -10,7 +10,27 @@ import copy
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from follower_placements import derive_binding, read_binding_tables, select_surface_query, validate_native_room_anchors
+from follower_placements import derive_binding, prepare_templates, read_binding_tables, select_surface_query, validate_native_room_anchors
+
+
+def copy_native_actor_fixture(source, entry):
+    target = sqlite3.connect(':memory:')
+    tables = {
+        'tdb_creature_template': f'entry={entry}',
+        'tdb_creature_template_difficulty': f'Entry={entry}',
+        'tdb_creature_template_model': f'CreatureID={entry}',
+        'content_tuning_level': 'ID=2718',
+        'difficulty': '1',
+        'creature_template': '0',
+        'content_creature_template': '0',
+        'content_creature_template_model': '0',
+    }
+    for table, where in tables.items():
+        target.execute(source.execute('SELECT sql FROM sqlite_master WHERE name=?', (table,)).fetchone()[0])
+        rows = source.execute(f'SELECT * FROM {table} WHERE {where}').fetchall()
+        if rows:
+            target.executemany(f"INSERT INTO {table} VALUES({','.join('?' for _ in rows[0])})", rows)
+    return target
 
 
 @unittest.skipUnless('FOLLOWUP_PLACEMENT_DB' in os.environ, 'requires an explicit prepared database copy')
@@ -42,6 +62,25 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                                            189729: 106934, 194181: 107525, 186151: 107680,
                                            186338: 105722, 186615: 107145, 186616: 105823,
                                            190485: 108318}[entry])
+
+    def test_native_difficulty_chain_imports_source_zero_without_synthetic_normal_rows(self):
+        path = Path(os.environ['FOLLOWUP_PLACEMENT_DB']).resolve(strict=True)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source:
+            for tuning in (2718, 0):
+                with self.subTest(tuning=tuning), closing(copy_native_actor_fixture(source, 210149)) as target:
+                    target.execute('UPDATE tdb_creature_template_difficulty SET ContentTuningID=? WHERE Entry=210149', (tuning,))
+                    if tuning == 0:
+                        with self.assertRaisesRegex(ValueError, 'FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_210149'):
+                            prepare_templates(target, [dict(entry=210149)], Path('unused'))
+                        continue
+                    donors, proof = prepare_templates(target, [dict(entry=210149)], Path('unused'))
+                    self.assertEqual(donors, [])
+                    self.assertEqual([(p['entry'], p['source_difficulty_id'], p['policy']) for p in proof],
+                                     [(210149, 0, 'FOLLOWER_PLACEMENT_SOURCE_DIFFICULTY_CHAIN')])
+                    self.assertEqual(target.execute('SELECT faction,unit_class,HealthModifier,ContentTuningID '
+                                                    'FROM content_creature_template WHERE entry=210149').fetchone(),
+                                     (16, 1, 25.0, 2718))
+                    self.assertEqual(target.execute('SELECT DifficultyID FROM tdb_creature_template_difficulty WHERE Entry=210149').fetchall(), [(0,)])
 
     def test_ruby_erkhart_keeps_own_native_faction_model_and_budget(self):
         self.assert_source_primaries(2521, (190485,))
