@@ -19,6 +19,10 @@ struct Doragosa {
 }
 
 impl CreatureAi for Doragosa {
+    fn encounter_schedule(&self) -> Option<&super::EventMap> {
+        Some(&self.boss.events)
+    }
+
     fn reset(&mut self, ctx: &mut Ctx) {
         self.boss.reset(ctx);
     }
