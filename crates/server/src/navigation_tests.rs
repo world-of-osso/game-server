@@ -192,7 +192,7 @@ fn navigation_brackenhide_partial_corridors_walk_and_repath_three_bosses() {
 
 #[test]
 #[ignore = "requires canonical2527 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_halls_partial_corridors_walk_and_repath_two_bosses() {
+fn navigation_halls_completed_search_disconnections_remain_blocked() {
     // Exact halls-packet-3 WoW coordinates, converted with the existing axis adapter.
     let entrance = wow(-0.370431, 228.269, 20.8162);
     for (entry, target) in [
@@ -200,15 +200,15 @@ fn navigation_halls_partial_corridors_walk_and_repath_two_bosses() {
         (189727, wow(-315.97385, 161.89757, -100.404625)),
     ] {
         eprintln!("Halls source placement entry={entry}");
-        assert_canonical_route_arrives(2527, entrance, target);
+        assert_canonical_route_blocked(2527, entrance, target);
     }
 }
 
 #[test]
 #[ignore = "requires canonical2526 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_vexamus_partial_corridor_walks_and_repaths() {
-    // Exact vexamus-packet-3 inputs; no placement or search-bound changes.
-    assert_canonical_route_arrives(
+fn navigation_vexamus_completed_search_disconnection_remains_blocked() {
+    // Exact vexamus-packet-3 inputs; native PARTIAL without OUT_OF_NODES.
+    assert_canonical_route_blocked(
         2526,
         wow(1410.22, -2771.71, 955.637),
         wow(1815.2512, -2783.9756, 904.01917),
@@ -217,16 +217,32 @@ fn navigation_vexamus_partial_corridor_walks_and_repaths() {
 
 #[test]
 #[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_nokhud_partial_corridors_walk_and_repath_three_bosses() {
-    let entrance = wow(-570.405, 2189.37, 431.296);
-    for (entry, target) in [
-        (186151, wow(-536.05316, 4163.211, 381.20233)),
-        (186338, wow(-2095.4968, 4335.8853, 536.04694)),
-        (186616, wow(-1167.5642, 1356.6361, 390.72348)),
-    ] {
-        eprintln!("Nokhud source placement entry={entry}");
-        assert_canonical_route_arrives(2516, entrance, target);
-    }
+fn navigation_nokhud_186151_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2516,
+        wow(-570.405, 2189.37, 431.296),
+        wow(-536.05316, 4163.211, 381.20233),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_nokhud_186338_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2516,
+        wow(-570.405, 2189.37, 431.296),
+        wow(-2095.4968, 4335.8853, 536.04694),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2516 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_nokhud_186616_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2516,
+        wow(-570.405, 2189.37, 431.296),
+        wow(-1167.5642, 1356.6361, 390.72348),
+    );
 }
 
 #[test]
@@ -241,8 +257,8 @@ fn navigation_ruby_partial_corridor_walks_and_repaths() {
 
 #[test]
 #[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_darkflame_208743_partial_corridor_walks_and_repaths() {
-    assert_canonical_route_arrives(
+fn navigation_darkflame_208743_completed_search_disconnection_remains_blocked() {
+    assert_canonical_route_blocked(
         2651,
         wow(239.839, 75.8715, 94.7386),
         wow(406.7775, -155.27142, 56.68355),
@@ -251,8 +267,8 @@ fn navigation_darkflame_208743_partial_corridor_walks_and_repaths() {
 
 #[test]
 #[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_darkflame_208747_partial_corridor_walks_and_repaths() {
-    assert_canonical_route_arrives(
+fn navigation_darkflame_208747_completed_search_disconnection_remains_blocked() {
+    assert_canonical_route_blocked(
         2651,
         wow(239.839, 75.8715, 94.7386),
         wow(188.47888, -547.81714, 59.8),
@@ -261,11 +277,29 @@ fn navigation_darkflame_208747_partial_corridor_walks_and_repaths() {
 
 #[test]
 #[ignore = "requires canonical2661 assets and FOLLOWER_NAV_CANONICAL"]
-fn navigation_cinderbrew_goldie_partial_corridor_walks_and_repaths() {
-    assert_canonical_route_arrives(
+fn navigation_cinderbrew_goldie_completed_search_disconnection_remains_blocked() {
+    assert_canonical_route_blocked(
         2661,
         wow(2650.88, -4835.88, 101.042),
         wow(2649.0535, -5013.1484, 110.600006),
+    );
+}
+
+fn assert_canonical_route_blocked(map_id: u32, from: Vec3, target: Vec3) {
+    let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
+    let mut nav = Navigation::new(&root);
+    let actor = Entity::from_bits(99);
+    let movement = request(map_id, from, target);
+    assert!(matches!(nav.advance(actor, movement), Step::Pending));
+    nav.drain_until_idle();
+    for _ in 0..5 {
+        assert!(
+            matches!(nav.advance(actor, movement), Step::Blocked),
+            "map{map_id} completed-search disconnect must stay stationary/Blocked: {from:?} -> {target:?}"
+        );
+    }
+    eprintln!(
+        "map{map_id} retained named route gap at unchanged entrance={from:?}, target={target:?}"
     );
 }
 
