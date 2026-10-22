@@ -1,6 +1,6 @@
 ## 2026-10-21 — Corrected ring modifier source typing
 
-[Toys](systems/toys.md#ring-modifier-interpretation-and-source-boundary-2026-10-21): earlier missingrace56 gap was an audit typing error; ModifierTree9/asset56 tests TRANSFORM aura, not ChrRaces. Corrected Coldflame/Cyrce graph95rows/29tables/two resident models/zero missingrefs, existing Arm Upgrade customization choices resolved. Tests929660d7f committed before production; owner/permanent/source120s-vs-zero recovery/reuse and four drift cases queued/running RED. No admission/native rendering claim; census537 unchanged.
+[Toys](systems/toys.md#ring-modifier-interpretation-and-source-boundary-2026-10-21): earlier missingrace56 gap was an audit typing error; ModifierTree9/asset56 tests TRANSFORM aura, not ChrRaces. Corrected Coldflame/Cyrce graph95rows/29tables/two resident models/zero missingrefs, existing Arm Upgrade customization choices resolved. Tests929660d7f committed before production; actual twoUseToy/censusUnsupportedAura4 RED3/control3PASS637.43s (all16 drift cases retained) at929660d7f. Two exact registry entries implemented; owner/permanent/source120s-vs-zero recovery/reuse GREEN pending. No native rendering claim; qualified census537 unchanged.
 
 ## 2026-10-21 — All-Seeing Eyes source boundary
 

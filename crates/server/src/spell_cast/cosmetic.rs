@@ -55,6 +55,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     447446,  // Cherry Blossom Trail
     455023,  // Filmless Camera
     462145,  // Lampyridae Lure
+    465642, 1215495, // Coldflame Ring/Cyrce's Circlet: permanent owner attachments.
     1269949, // Valdekar's Special
     1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory

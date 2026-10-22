@@ -10,7 +10,7 @@ Earlier ring audit's missing ChrRaces56 claim was wrong: TC a352b1fa ModifierTre
 
 Corrected metadata95 rows/29 tables/two resident ordinary models6029055/6210863/zero missing references. Preserve the erroneous old audit as superseded evidence, not a remaining source-data gap. Artifacts: visual-rings-corrected-70448.json,rings-modifier-type-correction.json,rings-source-provenance.json. Native choice/shape visual evaluation remains separate from server owner-aura proof.
 
-Tests929660d7f precede production: both owner lifecycles, source zero-CD reuse, source census gaps and four new drift cases in the existing shared fixture. RED batch is running; no ring admission/GREEN claim. Current qualified census537.
+Tests929660d7f precede production: both owner lifecycles, source zero-CD reuse, source census gaps and four new drift cases in the existing shared fixture. At929660d7f, both actualUseToy calls and census fail UnsupportedAura4: RED3/control3PASS637.43s under a slow shared host. All16 drift cases (four new) and real Eyes/Gadgetzan controls pass. Two exact registry entries now use the existing strict visual-only predicate; no new dummy executor/cooldown code. GREEN/check/fmt pending; actual Cyrce reuse is not yet certified. Current qualified census537. Evidence: rings-visual-red.log/command JSON.
 
 ## All-Seeing Eyes source boundary (2026-10-21)
 
