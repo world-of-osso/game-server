@@ -162,7 +162,11 @@ fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
                 && event.spell_id == Some(375647)
                 && event.kind == CombatLogKind::Damage
                 && event.amount > 0),
-        "source375650 missile must release native375647 damage"
+        "source375650 missile must release native375647 damage; gos={:?}; actor_position={:?}; player_position={:?}; health={:?}",
+        h.inbox(0).spell_gos,
+        h.app.world().get::<Position>(actor),
+        h.app.world().get::<Position>(h.player()),
+        h.health(h.player()),
     );
     assert!(h.health(h.player()).current < before);
 }
