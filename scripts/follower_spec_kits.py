@@ -301,15 +301,40 @@ SIMC_TALENT_CAST_ACTIONS = {
 }
 
 
-def project_loadout_actions(loadout):
+def read_native_override_families(db):
+    families = defaultdict(set)
+    for replacement, base in db.execute('''SELECT SpellID,OverridesSpellID
+            FROM trait_definition WHERE OverridesSpellID<>0
+            UNION SELECT SpellID,OverridesSpellID
+            FROM specialization_spells WHERE OverridesSpellID<>0'''):
+        families[replacement].add(base)
+    return families
+
+
+def project_loadout_actions(loadout, override_families):
+    # These are controller aliases, not native KnownSpells or talent grants.
     known = dict(loadout['known'])
+    pending = [int(spell) for spell, passive in known.items() if not passive]
+    visited = set(pending)
+    while pending:
+        replacement = pending.pop()
+        for base in sorted(override_families[replacement]):
+            if base not in visited:
+                visited.add(base)
+                known.setdefault(str(base), False)
+                pending.append(base)
     for parent, action, replacements in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
-        if str(parent) in known and not any(str(spell) in known for spell in replacements):
+        if any(str(spell) in loadout['known'] for spell in replacements):
+            # Explicit APL retirement (Berserk/Incarnation) remains separate
+            # from the native family reachability above.
+            known.pop(str(action), None)
+        elif str(parent) in loadout['known']:
             known.setdefault(str(action), False)
     return known
 
 
 def kit_rows(db, source):
+    override_families = read_native_override_families(db)
     availability = defaultdict(list)
     description_links = {}
     reference_rows = {}
@@ -323,7 +348,7 @@ def kit_rows(db, source):
         controls[spell].append((target_a, target_b))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
-        for spell_text, passive in project_loadout_actions(loadout).items():
+        for spell_text, passive in project_loadout_actions(loadout, override_families).items():
             spell = int(spell_text)
             native = db.execute('SELECT n.Name_lang,COALESCE(l.SpellLevel,0) FROM spell_name n LEFT JOIN spell_levels l ON l.SpellID=n.ID AND l.DifficultyID=0 WHERE n.ID=?', (spell,)).fetchone()
             if not native:
