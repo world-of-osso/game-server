@@ -67,7 +67,8 @@ def project_marker(map_id, page, index, tables, polygons_by_cell, assignments_by
 
 
 def read_trash_markers(manifest, tables, cache, polygons):
-    pages, points, gaps = [], [], []
+    pages, points = [], []
+    gaps = list(manifest.get('source_gaps', []))
     polygons_by_cell = index_surface_polygons(polygons)
     assignments_by_frame = {}
     for record in manifest['entries']:

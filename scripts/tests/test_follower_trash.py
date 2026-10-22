@@ -89,6 +89,15 @@ class TrashSourceControls(unittest.TestCase):
 @unittest.skipUnless('FOLLOWER_PLACEMENT_DB2' in os.environ and 'FOLLOWER_PLACEMENT_CACHE' in os.environ,
                      'requires fixed marker and covering-nav source witnesses')
 class TrashMarkerProjection(unittest.TestCase):
+    def test_missing_own_mapper_remains_an_explicit_unknown_count_gap(self):
+        gap = dict(entry=255000, status='FOLLOWER_TRASH_OWN_MAPPER_VARIABLE_MISSING', marker_count=None)
+        manifest = dict(map_id=2923, entries=[], source_gaps=[gap])
+        pages, placements, gaps = read_trash_markers(manifest, {}, Path('/unused-cache'), [])
+        self.assertEqual(pages, [])
+        self.assertEqual(placements, [])
+        self.assertEqual(gaps, [gap])
+        self.assertIsNone(gaps[0]['marker_count'])
+
     def test_every_grouped_and_singleton_source_point_keeps_its_exact_candidates(self):
         root = Path(__file__).resolve().parents[2]
         tables, _ = read_db2(Path(os.environ['FOLLOWER_PLACEMENT_DB2']))
