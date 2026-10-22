@@ -1,3 +1,7 @@
+## 2026-10-22 — Transport-free leader pet ownership
+
+[Native pet wiring](systems/dungeon-simulator.md#transport-free-leader-pet-initialization-2026-10-22): actual BM leader CallPet/damage RED22.81s→fresh/cached GREEN12.52s after native runtime-only stable/HunterPetPlugin/PetCatalog integration.0b includes mastery'sa4; build8m05/no warnings and5retained controls pass. Authentic Duck fixture input only, no canonical data writes, fake character, AP/rotation or class-script change. Actual WildThrash3casts/0childdamage after summon remains a mechanics-owner gap. New pet-enabled Azure cohort pending.
+
 ## 2026-10-22 — Native blocked-chase parity and Azure horizon
 
 [Shared native evade](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22): original first-book fixture failed setup; corrected second-book539bRED11.79s→1bfGREEN16.62s. Reuses production marker/no-path system, no new clock or physical navigation. Retained simulator controls23PASS. [Fresh Azure10](systems/dungeon-simulator.md#post-evade-azure-qualification-2026-10-22) yields8valid1h timeouts/2tankabsence blocks,8Leymor Deaths,1239.244563s wall, no missing reports. Live trash remains at the horizon; seed4 tank dies near active healer under4native melee actors. SamecodeStockade49+retained50 qualifies50/50clears/150boss Deaths, fresh49batch3319.356736s plus retained50individual114.473154s; no Azure/live acceptance.
