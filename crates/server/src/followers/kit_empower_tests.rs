@@ -243,6 +243,53 @@ fn native_empower_cancel_resets_surge_cooldown_without_release_damage() {
 }
 
 #[test]
+fn native_empower_cancel_preserves_fire_charge_recovery_until_natural_recharge() {
+    let (mut h, caster) = prepare(21);
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIRE_BREATH, Some(caster), false)
+        .unwrap();
+    h.advance(10);
+    crate::spell_cast::cancel_cast(h.app.world_mut(), caster);
+    h.advance(12);
+    let retry = crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        caster,
+        FIRE_BREATH,
+        Some(caster),
+        false,
+    );
+    assert_eq!(
+        retry,
+        Err(crate::spell_cast::CastFailure::NoCharges),
+        "TC ResetCooldown on cancelled empower must not invent RestoreCharge"
+    );
+    assert!(
+        !h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id == Some(FIRE_DAMAGE)
+                && event.kind == CombatLogKind::Damage),
+        "cancelled Fire must not release while its charge recovers"
+    );
+
+    // Native charge category2456 recovers in30s; no cooldown or resource reset.
+    h.advance(600);
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIRE_BREATH, Some(caster), false)
+        .unwrap();
+    h.advance(80);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.source == Some(caster.to_bits())
+                && event.spell_id == Some(FIRE_DAMAGE)
+                && event.kind == CombatLogKind::Damage
+                && event.amount > 0),
+        "natural charge recovery must permit the next ordinary native Fire release"
+    );
+}
+
+#[test]
 fn native_empower_follower_single_target_releases_fire_breath_at_rank_one() {
     let (mut h, caster) = prepare(21);
     let mut begun = false;
