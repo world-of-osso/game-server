@@ -208,6 +208,60 @@ fn holy_echo_of_light_native9_unlearned_mastery_does_not_produce_echo() {
 }
 
 #[test]
+fn holy_echo_of_light_native90_two_native_priests_keep_separate_patient_pools() {
+    let mut group = native_group();
+    let first_priest = group.priest;
+    let patient = group.h.caster;
+    // A second real Henry is a friendly caster, not a claim of six-member
+    // follower-party admission. No stats, aura amounts or spells are granted.
+    let second_priest =
+        crate::followers::native_fixture::spawn(group.h.app.world_mut(), patient, super::HENRY)
+            .expect("second native Henry fixture");
+    group.h.advance(3);
+    native_mastery_percent(&group);
+    apply_pressure(&mut group, 2);
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    complete_flash_hit(&mut group, patient);
+    owned_echo(&group, patient).expect("first real priest owns an Echo");
+    group.priest = second_priest;
+    let second_percent = native_mastery_percent(&group);
+    let second_direct = complete_flash_hit(&mut group, patient);
+    let second_echo = owned_echo(&group, patient).expect("second priest owns a distinct Echo");
+    group.priest = first_priest;
+    complete_flash_hit(&mut group, patient);
+    let first_refresh = owned_echo(&group, patient).expect("first priest refresh remains owned");
+    group.priest = second_priest;
+    let second_after = owned_echo(&group, patient).expect("other caster's aura survives refresh");
+    assert_eq!(second_after.expires_at, second_echo.expires_at);
+    assert!(first_refresh.expires_at.unwrap() >= second_echo.expires_at.unwrap());
+    finish_echo(&mut group, &first_refresh);
+    let ticks = echo_ticks(&group, patient, start);
+    let period = second_echo
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .period_ms;
+    let count = second_echo.duration_ms / period;
+    let expected =
+        (second_direct.amount as f32 * second_percent / 100.0 / count as f32).round() as i32;
+    assert_eq!(ticks.len(), count as usize);
+    for tick in ticks {
+        assert!(
+            (tick.amount - expected).abs() <= 1,
+            "first priest's refresh must not borrow or replace the second pool: {tick:?}"
+        );
+    }
+    assert!(owned_echo(&group, patient).is_none());
+}
+
+#[test]
 #[ignore = "ECHO_ROLLING_POOL: qualify producer before testing the refresh boundary"]
 fn holy_echo_of_light_native90_reheal_preserves_unpaid_pool_and_tick_phase() {
     let mut group = native_group();
