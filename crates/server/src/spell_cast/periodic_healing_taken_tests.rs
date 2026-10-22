@@ -76,6 +76,8 @@ fn next_renew_tick(h: &mut Harness) -> i32 {
         if let Some(event) = h.inbox.log[before..].iter().find(|event| {
             event.kind == CombatLogKind::Heal && event.spell_id == Some(RENEW) && event.periodic
         }) {
+            assert_eq!(event.target, Some(h.caster.to_bits()));
+            assert_eq!(event.overflow, 0, "each native tick heals missing health");
             return event.amount;
         }
     }
@@ -104,7 +106,6 @@ fn census_tail_259_native_renew_ticks_use_live_recipient_modifier_then_removal()
     assert_eq!(next_renew_tick(&mut h), 91);
     remove(&mut h, LIFE_COCOON, target);
     assert_eq!(next_renew_tick(&mut h), 61);
-    assert_eq!(h.health(target), 413.0);
 }
 
 #[test]
