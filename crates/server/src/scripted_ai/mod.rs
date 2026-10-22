@@ -21,6 +21,7 @@ mod algethar_academy;
 mod anubzekt;
 pub(crate) mod azure_vault;
 mod azureblade;
+mod benk;
 mod blood_furnace;
 pub mod boss_ai;
 pub mod bossmod;
@@ -389,6 +390,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == aldryr::SCRIPT {
         return aldryr::creature_ai(world, creature);
     }
+    if script_name == benk::SCRIPT {
+        return benk::creature_ai(world, creature);
+    }
     if script_name == talondras::SCRIPT {
         return talondras::creature_ai(world, creature);
     }
@@ -462,6 +466,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == kikatal::SCRIPT
         || script_name == dailcry::SCRIPT
         || script_name == aldryr::SCRIPT
+        || script_name == benk::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
         || blood_furnace::is_creature_script(script_name)
         || shattered_halls::is_creature_script(script_name)
