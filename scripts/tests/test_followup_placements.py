@@ -219,6 +219,11 @@ class FollowupPlacementAcceptance(unittest.TestCase):
         with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as source, closing(sqlite3.connect(':memory:')) as replay:
             for table in ('content_creature_template', 'content_creature_template_model', 'content_creature', 'raid_encounter_creature'):
                 replay.execute(source.execute('SELECT sql FROM sqlite_master WHERE name=?', (table,)).fetchone()[0])
+            for update in receipt.get('guarded_faction_updates', []):
+                columns = [column[1] for column in source.execute('PRAGMA table_info(content_creature_template)')]
+                replay.execute(f"INSERT INTO content_creature_template VALUES({','.join('?' for _ in columns)})",
+                               [update['before'][column] for column in columns])
+            replay.commit()
             replay.executescript(sql)
             replay.execute("UPDATE content_creature_template SET ScriptName='separate_combat_owner' WHERE entry=?", (placement['entry'],))
             replay.commit()
