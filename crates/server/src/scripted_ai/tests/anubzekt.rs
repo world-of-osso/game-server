@@ -19,6 +19,8 @@ fn anubzekt_copy(difficulty: u32) -> (Harness, Entity, InMap) {
     near.x += 3.0;
     let player = h.player();
     h.app.world_mut().entity_mut(player).insert(near);
+    let peer = h.players[1].0;
+    h.app.world_mut().entity_mut(peer).insert(near);
     (h, boss, map)
 }
 
@@ -39,7 +41,10 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
         let player = h.player();
         h.app.world_mut().get_mut::<Position>(player).unwrap().x += 1000.0;
         assert!(
-            !h.app.world().get::<CombatStatus>(boss).unwrap().0,
+            !h.app
+                .world()
+                .get::<CombatStatus>(boss)
+                .is_some_and(|status| status.0),
             "source actor stays idle until explicitly engaged"
         );
         assert!(
@@ -51,38 +56,14 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             Some((100.0, 100.0)),
             "native ChrClasses4.DisplayPower3 and70448 NPC Energy initialization"
         );
-        eprintln!(
-            "ROOT before difficulty{difficulty} combat={:?} motion={:?} moving={:?} dormant={} state={:?}",
-            h.app.world().get::<CombatStatus>(boss),
-            h.app.world().get::<CreatureMotion>(boss),
-            h.app.world().get::<crate::networking::Moving>(boss),
-            h.app
-                .world()
-                .get::<crate::grid_activity::GridDormant>(boss)
-                .is_some(),
-            h.app.world().get::<crate::creature_ai::CreatureState>(boss)
-        );
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, EYE, Some(boss), false)
             .expect("ordinary source100Energy Eye, no scripted power grant");
-        eprintln!("ROOT admitted {:?}", h.app.world().get::<CastState>(boss));
         assert_eq!(
             crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
             Some((100.0, 100.0)),
             "ordinary native cast charges power on completion, not admission"
         );
         h.advance(7.2);
-        eprintln!(
-            "ROOT after difficulty{difficulty} cast={:?} energy={:?} combat={:?} moving={:?} dormant={} gos={:?}",
-            h.app.world().get::<CastState>(boss),
-            crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
-            h.app.world().get::<CombatStatus>(boss),
-            h.app.world().get::<crate::networking::Moving>(boss),
-            h.app
-                .world()
-                .get::<crate::grid_activity::GridDormant>(boss)
-                .is_some(),
-            h.inbox(0).spell_gos
-        );
         assert_eq!(completed_casts(&h, boss, EYE), 1);
         assert_eq!(
             crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
@@ -102,7 +83,7 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
 }
 
 #[test]
-#[ignore = "native70448 qualification before local combat port"]
+#[ignore = "native source proof with coincident peer pending"]
 fn encounter_coverage_anubzekt_native_infestation_periodic_damage_qualifies() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = anubzekt_copy(difficulty);
@@ -135,7 +116,7 @@ fn encounter_coverage_anubzekt_native_infestation_periodic_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "native RED: current Lua4.6s Impale, no combat script yet"]
+#[ignore = "native source proof with coincident peer pending"]
 fn encounter_coverage_anubzekt_first_impale_uses_current_lua_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = anubzekt_copy(difficulty);
@@ -159,10 +140,44 @@ fn encounter_coverage_anubzekt_first_impale_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "native ongoing source lanes and isolated lifecycle before combat port"]
+#[ignore = "native source proof with real second-copy credit pending"]
 fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
+        let maps = h.app.world().resource::<MapStore>().clone();
+        let peer_map = h
+            .app
+            .world_mut()
+            .resource_mut::<crate::maps::InstanceManager>()
+            .create_map(
+                &maps,
+                MAP,
+                crate::maps::instances::InstanceEntrant {
+                    character_id: 2002,
+                    leader: 2002,
+                    difficulty_id: difficulty,
+                    raid_difficulty: crate::maps::RaidDifficulty {
+                        primary: difficulty,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                crate::maps::instances::Now {
+                    elapsed: 0.0,
+                    unix: 0,
+                },
+            )
+            .unwrap()
+            .map;
+        let peer = h.players[1].0;
+        h.app
+            .world_mut()
+            .entity_mut(peer)
+            .insert((peer_map, crate::persistence::ClientId(2002)));
+        assert_ne!(
+            peer_map, map,
+            "native manager creates a separate actual copy"
+        );
         let initial_infestations = completed_casts(&h, boss, INFESTATION);
         assert_eq!(
             initial_infestations, 0,
@@ -290,6 +305,14 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
                 .any(|end| end.encounter_id == 2906 && end.success)
         );
         assert!(h.inbox(1).ends.is_empty());
+        assert_eq!(
+            h.app
+                .world()
+                .resource::<crate::maps::InstanceManager>()
+                .completed_encounters(peer_map),
+            0,
+            "primary death cannot credit the other actual native instance"
+        );
         let casts = h.inbox(0).spell_gos.len();
         h.advance(20.0);
         assert_eq!(h.inbox(0).spell_gos.len(), casts, "corpse cannot cast");
@@ -297,7 +320,7 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "native source reset/rearm before combat port"]
+#[ignore = "native source proof with coincident peer pending"]
 fn encounter_coverage_anubzekt_evade_rearms_initial_combo_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
