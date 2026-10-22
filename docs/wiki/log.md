@@ -4088,3 +4088,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-22: Coil259446/Taz238887 preview identity +single-Z private packets, current post-Windrunner129 base, preserved prior populations and SQL proof; Windrunner129 publication confirmed.
 
 - 2026-10-22: Xenas Kasreth/Loth bounded native controller/summon/target-position recheck0sources, exactChiefname0, pinnedTCpaths0; navhashesunchanged/no redundant geometry run; source gaps retained.
+
+- 2026-10-22: Nine preview-floor source qualifications: Zaen consensus/private packet2GREEN; seven zero WMO assignments, Degentrius1yd consensus failure/bounds decision pending; Coil/Taz publication confirmed.
