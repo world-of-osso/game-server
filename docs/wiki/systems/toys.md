@@ -8,7 +8,7 @@ Account-wide toy learning/favourites are separate from the legacy per-character 
 
 ModifierTree types9/11 test existing aura effects36(shapeshift)/56(transform);25 tests race and97 gender (TC a352b1fa DBCEnums.h1700–1800, operators2107–2113; SpellAuraDefines.h123/143). These select appearance variants, not new gameplay effects or missing root-applied helper auras. Native visual-condition evaluation remains unproved. By contrast, Smolderheart's visual selectors depend on separate343642 stacks4/8/10; its heating lifecycle stays a named gap, not inferred from ordinary model residency.
 
-Tests a6546659a committed before production: actual source owner lifecycle, two drift refusals and census retention of Smolderheart/Orb/BattleHorn/Gadgetzan gaps. RED is capacity-queued; no production admission, no GREEN/native/long-duration claim. Current qualified census remains536.
+Tests a6546659a committed before production: actual source owner lifecycle, two drift refusals and census retention of Smolderheart/Orb/BattleHorn/Gadgetzan gaps. At219450110, actualUseToy UnsupportedAura4 and census refusal RED2/control3PASS59.00s (two drift cases plus Compass/Gadgetzan controls). One exact318571 entry now uses the existing strict visual-only registry; no generic dummy executor or visual-selector implementation. GREEN/check/fmt pending, current qualified census remains536. Evidence: eyes-visual-red.log and command JSON; no native/long-duration claim.
 
 ## Effect63 and Kvaldir source boundary (2026-10-21)
 
