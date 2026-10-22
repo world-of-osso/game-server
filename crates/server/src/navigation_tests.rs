@@ -239,6 +239,26 @@ fn navigation_ruby_partial_corridor_walks_and_repaths() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_darkflame_208743_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2651,
+        wow(239.839, 75.8715, 94.7386),
+        wow(406.7775, -155.27142, 56.68355),
+    );
+}
+
+#[test]
+#[ignore = "requires canonical2651 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_darkflame_208747_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2651,
+        wow(239.839, 75.8715, 94.7386),
+        wow(188.47888, -547.81714, 59.8),
+    );
+}
+
 fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     // Arrival is at the existing native projection, not an invented tighter XY bound.

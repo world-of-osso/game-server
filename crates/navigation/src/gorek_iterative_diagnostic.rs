@@ -33,7 +33,7 @@ fn authored_placement_native_status_probe() {
     let output = PathBuf::from(std::env::var_os("FOLLOWER_GOREK_DIAGNOSTICS").unwrap());
     let mut trace =
         std::fs::File::create(output.join("authored-placement-native-status.txt")).unwrap();
-    let wow = |x, y, z| Vec3::new(x, z, -y);
+    let wow = |x: f32, y: f32, z: f32| Vec3::new(x, z, -y);
     let halls = wow(-0.370431, 228.269, 20.8162);
     let nokhud = wow(-570.405, 2189.37, 431.296);
     for (map_id, entry, start, end) in [
@@ -53,6 +53,18 @@ fn authored_placement_native_status_probe() {
             190485,
             wow(1386.2, -169.719, 131.0),
             wow(1773.8756, 18.689396, 313.123),
+        ),
+        (
+            2651,
+            208743,
+            wow(239.839, 75.8715, 94.7386),
+            wow(406.7775, -155.27142, 56.68355),
+        ),
+        (
+            2651,
+            208747,
+            wow(239.839, 75.8715, 94.7386),
+            wow(188.47888, -547.81714, 59.8),
         ),
     ] {
         let mut nav = NavigationMap::open(&root.join(map_id.to_string())).unwrap();
