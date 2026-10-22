@@ -1,3 +1,7 @@
+## 2026-10-22 — Spotlight and native target57 qualified
+
+[Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): separate generic4db754ace/exact25c96a187, correctedRED4/control4PASS102.82s→8GREEN112.11s at25c96a187/protocol2abc7fa. Native1022 rejects foreign ally while21/10060 remains allowed; actual grouped recipient apply/replicate/CancelAura/invariants/recovery refusal, foreign no substitute and2drifts pass. Check133s/0warnings/fmt/readabilityPASS. Exact542→543 only230924,630 unadmitted; named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE persists in census/ledger. No outdoor/native/full30min expiry/hour reuse claim. Original379 current partition25visual/2ports/1identity/155zero-payload/196script gaps, with exact source ledgers.
+
 ## 2026-10-22 — Authored removal lifecycle and source-classification reconciliation
 
 [Visual rule](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21) fourth criterion now follows source-authored removal: successful CancelAura where allowed, otherwise real refusal plus natural expiry. Documents landed Amani behavior without changing code or source flags. Exact final ledger admission sets/proof tips reconcile21 stale original379 source rows:20visual plus Coyote core port. Current542 partition24visual/2ports/1identity/156zero-payload/196script gaps; no native/universal lifecycle claim. Spotlight remains pending GREEN.
