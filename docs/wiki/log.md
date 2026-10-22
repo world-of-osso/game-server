@@ -1,6 +1,6 @@
 ## 2026-10-22 — Ikuzz packet with explicit entrance gap
 
-[Ikuzz source placement](investigations/follower-data.md#midnight-source-placement-without-admission--2026-10-22): actual missing-four/no-entrance/empty-Lua RED→source2GREEN2.436s ate6da24f06; fresh-copy4rows/replay3× and actual-copy2GREEN0.014s at775c11029. NativeCT0/modifiers/class/model unchanged, mapCT separate, faction-only hostile-react donor. Unique72.491532 support; null entrance/named admission gap/no route query. Publication pending; three other single-Z actors lack hostile reaction source, not defaulted.
+[Ikuzz source placement](investigations/follower-data.md#midnight-source-placement-without-admission--2026-10-22): actual missing-four/no-entrance/empty-Lua RED→source2GREEN2.436s ate6da24f06; fresh-copy4rows/replay3× and actual-copy2GREEN0.014s at775c11029. NativeCT0/modifiers/class/model unchanged, mapCT separate, faction-only hostile-react donor. Unique72.491532 support; null entrance/named admission gap/no route query. Lead confirmed4inserts published/integrityOK, no entrance or route; three other single-Z actors lack hostile reaction source, not defaulted.
 
 ## 2026-10-22 — Midnight pre-packet identity/placement census
 
