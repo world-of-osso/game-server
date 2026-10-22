@@ -7,11 +7,12 @@ Server-side aura runtime in `crates/server/src/auras/`: aura instances on active
 TC a352b1fa `SpellAuraEffects.cpp:832–873` supplies the rolling-amount rule.
 This is shared aura execution, not an Echo/Ignite proc or learned-spell grant.
 
-- [ ] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
-- [ ] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
-- [ ] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
-- [ ] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
-- [ ] Ordinary native child aura/cast execution gains this behavior automatically, including flagged12654; class producers still own their sourced incoming amount.
+- [x] Native Attr10 `ROLLING_PERIODIC` selects one shared carry path for periodic damage/healing, including335467 leech.
+- [x] Settle old due ticks once, then add the same caster/spell/effect's unpaid stored amount over the refreshed scheduled ticks; retain the existing native phase.
+- [x] Preserve Barbed's authored five-amount normalization and seven-initial/six-refreshed clock; never apply its normalization to other spells or carry its old pool twice.
+- [x] Unflagged periodic healing and foreign caster pools remain independent; preserve existing fractional snapshots and payment rounding rather than requantizing them during refresh.
+- [x] Ordinary native child aura/cast execution gains this behavior automatically; class producers still own their sourced incoming amount.
+- [ ] Qualify actual12654 producer integration separately; its flag uses the same shared path, but the Ignite producer belongs to another slice.
 
 Generic native boundary assertions:
 `crates/server/src/auras/rolling_periodic_tests.rs`; native Echo/ownership assertions:
@@ -82,6 +83,12 @@ Native12846 positive eligible damage procs ordinary12654 on the damaged target. 
 
 Native-kit followers retain their actual level-gated selected spell IDs in KnownSpells, including non-aura passives, without a Player or player-only grants. Actual known native195283 (Effect3, not an aura) enables ordinary landed direct Fireball133, Fire Blast108853/319836, Pyroblast11366 and Scorch2948 hits to produce Heating Up48107 on a crit, convert existing Heating Up to Hot Streak48108 on the next crit, or clear Heating Up on a noncrit (TC a352b1fa `spell_mage.cpp:1037–1100`; current eligible actions: SimC76f8118). Periodic/copy/triggered damage must not enter this ordinary-hit bridge. Snapshot actual native cast-time-modifier instances at cast admission; only Pyroblast/Flamestrike1254851 admitted with48108 consume that instance after successful cast, before missile impact. Hot Streak earned during a hardcast belongs to the next cast (TC marker `m_appliedMods`; SimC `sc_mage.cpp:2427`). Additional Ignite/Pyroclasm/scorch-finish/talent and other-trigger consequences remain separate gaps.
 
+## Feel the Burn and asynchronous stacks
+
+Native383391 procs383395 only from actual Fire Blast108853, not arbitrary harmful spells (native70448 description; SimC76f8118 `sc_mage.cpp:4583`). Retain its native100ms proc recovery,2 mastery per stack,4s duration and100-stack cap. Each application expires independently rather than refreshing every existing stack.
+
+For finite stacking auras with native attribute490 (`Attributes_15 & 0x400`, SimC `data_enums.hh:1910`, `buff.cpp:777–782`), retain each applied stack's absolute expiry. Partial expiry decrements stacks and refreshes derived stats/replicated views; final expiry uses ordinary aura removal. A new application exceeding the native cap replaces the oldest expiration slots (`buff.cpp:2649–2692`). Unflagged stacking auras retain ordinary refresh semantics. This does not certify every flag490 spell's producer, amounts or consumption behavior.
+
 ## Pyroclasm Hot Streak policy
 
 `MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` rolls the actual active269650 effect0 chance when a cast truly spends its admitted Hot Streak. Trigger native269651, retaining its native duration and two-stack cap. Ordinary Pyroblast11366/Flamestrike1254851 admitted with positive cast time use269651 effect0 damage percentage and consume one live stack at completion; instant casts neither spend nor receive that hardcast-only bonus. Retain the numeric bonus through missile impact after consumption.70448 supplies chance15 and bonus230%; SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies trigger/consumer semantics. TC has no Pyroclasm script and DB2 has no269650 proc row, so this is an explicit project policy. Other set/talent consequences remain outside this slice. [Implementation and proof](../wiki/systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21).
@@ -101,7 +108,7 @@ Actual learned403521 replaces Omen113043's proc chance with its native effect2 v
 ## What it must do
 
 - [x] Apply aura effects (6, 35, 65) as one instance per target and resolution, with per-effect amounts from base points, SP/AP coefficients and the caster's spell modifiers.
-- [x] Stack and refresh: same caster refreshes duration and adds a stack up to `CumulativeAura`; other casters coexist for harmful, periodic or DoT-stacking-rule auras, else replace.
+- [x] Stack and refresh: same caster normally refreshes duration and adds a stack up to `CumulativeAura`; native asynchronous-stack auras retain each application's expiry. Other casters coexist for harmful, periodic or DoT-stacking-rule auras, else replace.
 - [x] Expire on duration (0/-1 permanent); remove on death (except passives and allow-while-dead), `CancelAura` (own positive non-passive cancelable auras), dispel (effect 38 by dispel type), channel end, charge/absorb depletion, unlearned passives and despawned casters.
 - [x] Remove auras on the interrupt flags that have a system: hostile action received, damage, non-periodic damage, action (cast), moving, attacking, entering/leaving combat, spec change.
 - [x] Tick periodic damage/heal/energize/trigger/dummy effects every period until expiry. Each deadline follows the original application/owning-area phase plus its native period ordinal; fractional-second periods must not accumulate drift or lose a tick at exact expiry across repeated lifetimes. Preserve refresh phase, ExtraInitialPeriod's application tick, area alignment, native periods/expiry and callback order.

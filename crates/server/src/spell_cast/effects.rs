@@ -25,6 +25,12 @@
 #[cfg(test)]
 #[path = "aura_stat_spell_tests.rs"]
 mod aura_stat_spell_tests;
+#[cfg(test)]
+#[path = "bypass_armor_tests.rs"]
+mod bypass_armor_tests;
+#[cfg(test)]
+#[path = "caster_ability_crit_tests.rs"]
+mod caster_ability_crit_tests;
 
 use crate::random as rand;
 use std::collections::HashSet;
@@ -754,6 +760,11 @@ fn armor_reduced(
         (None, Some(stats)) => stats.armor,
         (None, None) => 0.0,
     };
+    let armor = crate::auras::combat_stats::armor_after_bypass(
+        world.get::<crate::auras::ActiveAuras>(target),
+        caster,
+        armor,
+    );
     let armor = crate::auras::combat_stats::armor_after_ignore(world, caster, spell, armor);
     crate::combat::armor_mitigated(
         amount,
@@ -833,7 +844,9 @@ fn crit_chance(world: &World, caster: Entity, target: Entity, spell: &SpellInfo)
     } else {
         0.0
     };
-    (chance + modifier).max(0.0)
+    let caster_ability =
+        crate::auras::combat_stats::caster_ability_critical_chance(world, caster, target, spell);
+    (chance + modifier + caster_ability).max(0.0)
 }
 
 fn with_crit(
@@ -854,7 +867,8 @@ fn with_crit(
         SpellModOp::CritDamageAndHealing,
         amount,
     );
-    (amount + bonus, true)
+    let multiplier = crate::auras::combat_stats::critical_healing_multiplier(world, caster);
+    (((amount + bonus) * multiplier).trunc(), true)
 }
 
 fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
@@ -1552,8 +1566,12 @@ pub fn apply_heal(
     } else {
         1.0
     };
-    let taken =
-        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult) * periodic_taken;
+    let caster_taken = crate::auras::combat_stats::caster_healing_taken_multiplier(
+        world, ctx.caster, target, ctx.spell,
+    );
+    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult)
+        * periodic_taken
+        * caster_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,

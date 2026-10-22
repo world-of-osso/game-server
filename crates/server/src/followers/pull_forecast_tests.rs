@@ -260,6 +260,94 @@ fn tank_pull_forecast_lifetime_does_not_blanket_refuse_for_a_pure_native_hot() {
 }
 
 #[test]
+fn census_tail_345_native_forecast_uses_only_source_casters_armor_bypass() {
+    let (mut h, tank, enemy) = source_fixture(46249);
+    let constants = h
+        .app
+        .world()
+        .resource::<WorldData>()
+        .expected_stats
+        .armor_constants();
+    let level = h.app.world().get::<UnitLevel>(enemy).unwrap().0;
+    assert!(constants.at(level).unwrap() > 0.0);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::level_scaling::CreatureArmor>(tank)
+            .unwrap()
+            .0
+            > 0.0
+    );
+    h.app.insert_resource(constants);
+    let before = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    let foreign = h.caster;
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: foreign,
+            target: tank,
+            spell_id: 108126,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    assert!(crate::auras::has_aura(h.app.world(), tank, 108126));
+    let other = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    assert_eq!(other.expected_hit, before.expected_hit);
+    assert_eq!(other.largest_hit, before.largest_hit);
+    assert_eq!(other.valid_until, before.valid_until);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        tank,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 108126,
+    );
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &crate::auras::AuraApplication {
+            caster: enemy,
+            target: tank,
+            spell_id: 108126,
+            effect_mask: 1,
+            source: crate::auras::AuraSource::Cast,
+        },
+    );
+    let bypassed = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    let expiry = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(tank)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 108126 && aura.caster == enemy)
+        .unwrap()
+        .expires_at
+        .expect("native Colossus Smash has a finite duration");
+    assert_eq!(
+        bypassed.valid_until,
+        Some(expiry),
+        "armor bypass expiry changes the forecast"
+    );
+    assert!(
+        bypassed.expected_hit > before.expected_hit,
+        "before={before:?}, bypassed={bypassed:?}"
+    );
+    assert!(
+        bypassed.largest_hit > before.largest_hit,
+        "before={before:?}, bypassed={bypassed:?}"
+    );
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        tank,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 108126,
+    );
+    let restored = forecast::read_generic_creature(h.app.world(), enemy, tank).unwrap();
+    assert_eq!(restored.expected_hit, before.expected_hit);
+    assert_eq!(restored.largest_hit, before.largest_hit);
+}
+
+#[test]
 fn tank_pull_forecast_dead_or_other_copy_enemy_is_not_a_candidate() {
     let (mut h, tank, enemy) = source_fixture(46249);
     assert!(forecast::read_generic_creature(h.app.world(), enemy, tank).is_ok());
