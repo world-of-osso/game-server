@@ -42,6 +42,12 @@ pub(crate) fn drain_persistence(db: &crate::persistence::GameDatabase) {
     }
 }
 
+/// Consume a committed operation's queued credits, then fence its durable writes.
+pub(crate) fn advance_and_drain_persistence(app: &mut bevy::prelude::App) {
+    app.update();
+    drain_persistence(app.world().resource::<crate::persistence::GameDatabase>());
+}
+
 /// Immutable canonical input, parsed once per test process. Apps clone before editing.
 /// Prepared/mutable database copies must use their own loaders, never this cache.
 pub(crate) fn world_data() -> &'static crate::world_data::WorldData {

@@ -123,6 +123,7 @@ fn prove_race_achievement(owner_race: u8, achievement: u32, opposite: u32, races
         .as_ref()
         .unwrap()
         .earned_at[&achievement];
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     let db = &world.resource::<GameDatabase>().db;
     let saved = crate::persistence::load_achievements(db, players[0].0);
     drop(world.remove_resource::<GameDatabase>().unwrap());
