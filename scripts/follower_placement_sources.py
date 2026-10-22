@@ -118,6 +118,27 @@ def triangle_height(point, triangle):
     return wa * a[1] + wb * b[1] + wc * c[1]
 
 
+def read_source_floor_support(record, marker, assignments, heights):
+    if 'source_floor_z_bounds' not in record:
+        return heights
+    evidence = record['source_floor_evidence']
+    if marker['floor'] != record['source_floor']:
+        raise ValueError('source WMO floor differs from the cached marker floor')
+    matching = [a for a in assignments if int(a['WMOGroupID']) == evidence['wmo_group_id']
+                and int(a['WMODoodadPlacementID']) == evidence['placement_unique_id']]
+    if not matching:
+        raise ValueError('source WMO group/placement is not assigned to this DB2 floor')
+    for artifact in evidence['source_files']:
+        if digest(artifact['path']) != artifact['sha256']:
+            raise ValueError('source WMO floor evidence file changed')
+    if evidence['rotation_degrees'][0] != 0 or evidence['rotation_degrees'][2] != 0:
+        raise ValueError('floor bounds require an explicit vertical transform for tilted placements')
+    bounds = [evidence['placement_position_z'] + z * evidence['scale'] for z in evidence['group_local_z']]
+    if bounds != record['source_floor_z_bounds'] or not all(math.isfinite(z) for z in bounds) or bounds[0] >= bounds[1]:
+        raise ValueError('source floor bounds differ from the recorded WMO transform')
+    return [z for z in heights if bounds[0] <= z <= bounds[1]]
+
+
 def sample_surfaces(polygons, x, y, assignments):
     heights = set()
     for polygon in polygons:

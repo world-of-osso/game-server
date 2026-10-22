@@ -1,5 +1,13 @@
 # Retail follower data and approved spec bridge
 
+## Brackenhide source floors and route gaps — 2026-10-22
+
+`brackenhide-packet-2` in engine `data/diagnostics/follower-placements-2026-10-22/` prepares24stable-key rows for all six boss actors186116/186120/186121/186122/186124/186125. Own TDB Normal1 class/budget/CT2550/models and70448 journal bindings are retained; only absent faction uses approved same-react DF donors. [Manifest](../../../content/follower-placements/brackenhide.json) pins all six Wowhead bodies. The three War-band pages explicitly share36/40.5 on floor0, so their derived positions coincide; no unsupported actor offsets were invented.
+
+A uniquely supported baked surface is a valid sourced placement even when navigation is disconnected. Gutshot100.497357 and Treemouth99.492412 each have exactly one support. Wratheye floor1 maps to UiMap2106/assignment66809, WMO placement37344450/group66864; the authored MODF translationZ137.534866 and un-tilted unit-scale MOGP bounds−28.011087..62.843563 give world group bounds109.523779..200.378429. These exclude outdoor surfaces246.99/263.10 and leave baked111.176622. Group bounds select the floor; they never supply the placement height. Four original asset hashes, transform and group identity are validated and retained in the manifest/receipt.
+
+Actual missing-six RED→six-primary stats/models/bindings GREEN0.023s; fresh canonical-copy SQL replay3× preserves all other content. War-band routes pass; `FOLLOWER_ROUTE_INCOMPLETE_2520_186116`, `_186120`, `_186121` remain incomplete-corridor gaps, not grounds to move the bosses. [Source reader](../../../scripts/follower_placement_sources.py), [producer](../../../scripts/follower_placements.py), [contract](../../specs/follower-dungeons.md#derived-missing-source-placements-2026-10-22). No whole-dungeon or all-route completion claim.
+
 ## Interior portals as derived entrances — 2026-10-22
 
 The18map entrance audit finds no interior TDB safe location/spell destination or70448 AreaTrigger/WaypointSafeLocs/JournalInstanceEntrance destination rows. Seven related JournalInstanceEntrance rows are exterior2552/2601 coordinates, not instance admission destinations. Approved `FOLLOWER_ENTRANCE_FROM_EXIT_PORTAL` instead uses the exact Normal/base-phase TDB Instance Portal object coordinates for eight maps2651/2652/2660/2661/2662/2773/2825/2830. Collision-checked safe-location IDs81000000+mapID retain native GO GUID in each Comment; no native source row is replaced.
