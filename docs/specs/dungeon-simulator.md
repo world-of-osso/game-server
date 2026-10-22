@@ -23,9 +23,32 @@ Simulator party: Garrick (Protection), Crenna (Restoration), Shuja (Elemental), 
 - [ ] Run Azure seeds1–10 with `--jobs`, unchanged Garrick/Crenna/Shuja/Meredy/Austin roster and native205 ContentTuning2155 maximum level70; report every clear/wipe/stall/block and root cause.
 - [x] Rerun Stockade seeds1–10 after generic source-height preservation: native-height batch12 all10 clear/30boss Deaths/0failures.
 
+## Clearable opponents
+
+- [ ] Use the ordinary native enemy-target relation for every party member: an alive source that no living same-copy member can attack must not hold the history or next-pull controller forever. Do not mark it dead or invent a per-entry passive exclusion.
+- [ ] Preserve pre-impact combat holds for valid native combat references, even before the first damage event. Unattackable-only references do not veto clear readiness.
+- [ ] Preserve actual damage/healing measurements, fatal-hit output and observed Death receipts while filtering clearable-opponent identity.
+
+## Boss-path corridor authoring
+
+`FOLLOWER_ROUTE_BOSS_PATH_CORRIDOR` (user,2026-10-21): freeze a deterministic route per map. Visit Azure bosses in Leymor→Azureblade→Telash→Umbrelskul order and use the qualified books for translocation hops. Preserve Stockade's qualified Moloch→Hogger→Overheat encounter order and completion equivalence.
+
+- [ ] Compute shortest paths on the frozen native-height graph, with directed zero-distance teleport edges; a teleport exposes no intervening physical corridor.
+- [ ] Plan only packs whose native acquisition sphere intersects a walked path segment, plus sourced boss-gate packs. Skip other packs. Qualification uses the map's fixed baseline party/level, never a per-seed route recomputation.
+- [ ] Source Leymor's three191164 tenders/formation29001816 as an explicit prerequisite before the boss; do not clear every post-boss wing first.
+- [ ] Keep the1h diagnostic bound. Prove Stockade seeds1–10 and report Azure seeds1–10 after generic route integration.
+
 ## Authored route
 
-Stockade's committed `route` lists a unique99-hostile-pack sequence and graph-source 2D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). The authored order comes from a rooted walk of the frozen topology; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank.
+Stockade's committed `route` lists a unique59-pull boss-path corridor and full3D anchor for every pull (friendly guards, prisoners and noncombat stalkers remain topology nodes, not pulls). Azure's route lists66 pulls. Deterministic authoring uses shortest frozen boss paths, native acquisition spheres and sourced gates; runtime never chooses the nearest pack or regenerates order. Only pull pace/chaining varies. Handle accidental combat first, then skip already-dead packs in the route. Within a source formation, a dead or unselectable leader must not strand remaining living opponents: approach the selected living member's actual position, retaining source formation identity and the initial leader's frozen corridor anchor. The subsequent pull footprint contains only living formation members: an observed-dead leader must not be resubmitted as a missing source GUID after approach. Opening qualification must prove actual accidental engagement, positive damage, native Death and route skipping, not forbid accidental aggro. If no pullable pack remains while a required boss is alive but temporarily unattackable, hold until it becomes attackable again; never invent boss credit. Other pullable packs still take precedence. A required boss permanently absent without an observed Death remains an explicit error. Anchors remain available if the tank despawns; no native opener is fabricated for an absent tank. The autonomous DPS leader obeys the same non-tank native idle-sight approach hold as its companions, even though it carries `LeaderProfile` rather than `Follower`. Tank exemption follows the actual follower role or active specialization, not the presence of that component. Non-tank sight qualification follows the actual complete movement path, not its endpoint chord: frozen graph legs in the simulator, authored navigation in production. Pending or unavailable path geometry holds movement; it never declares an unsafe or unknown approach clear.
+
+## Native evade movement
+
+Evading actors must travel frozen edges at their native speed to the native home destination (explicit HomePosition, then escort home, then spawn). Arrival must leave Returning, stop motion, restore home facing and run the same native mana/health/addon/pose/JustReachedHome behavior as production; regenerating actors do not receive an invented instant full heal. No runtime physical-navigation system may be installed to satisfy arrival.
+
+## Native pet utility
+
+Production `PetControlPlugin` initializes real `PetLevelupSpells` and runs normal pet actions/AI. The immutable catalog moves between cached seeded worlds; pet commands, owners and cast state never do. Native Felguard30146 must expose learned Axe Toss89766 at the selected level in both first and cached worlds. No player spell grant or invented Hunter pet is permitted. Harness initialization omissions cannot qualify production utility coverage.
 
 ## How it works
 
