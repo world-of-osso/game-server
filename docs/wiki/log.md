@@ -3601,3 +3601,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Emberon currentLua Normal/Follower partial: ignored firstClapRED→composite7GREEN; native indefinite-aura cap root cause and approved24.3s lifecycle, source-counted resumed/second phase, reset/copy-credit/death. Copy-only producer1PASS; missing395681/controller gaps retained.
 
 - 2026-10-21: Deios source qualification2PASS/firstWingRED34.10s Normal/Follower: preservedflags320 block ordinary threat ingress; outgoingWing damage is not engagement/credit proof. Named source unlock gap, no combat port or fabricated state.
+
+## 2026-10-22 — Trading Post residue classification
+
+[Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
