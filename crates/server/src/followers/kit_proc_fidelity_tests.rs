@@ -413,6 +413,69 @@ fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_r
 }
 
 #[test]
+#[ignore = "native Stormkeeper guaranteed Elemental Overload RED before implementation"]
+fn proc_fidelity_262_native_stormkeeper_lightning_bolt_triggers_overload_damage() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(30);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(188196)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "actual Stormkeeper-affected native Lightning Bolt must land"
+    );
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(45284)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.amount > 0
+        }),
+        "real native Stormkeeper-affected cast guarantees actual45284 Elemental Overload, not a synthetic scalar on Lightning Bolt"
+    );
+}
+
+#[test]
+#[ignore = "native missing-Mastery overload ownership positive control pending GREEN"]
+fn proc_fidelity_262_native_stormkeeper_without_mastery_does_not_invent_overload() {
+    let (mut h, caster) = prepare(209053);
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 168534,
+    );
+    assert!(!has_aura(h.app.world(), caster, 168534));
+    complete_cast(&mut h, caster, 191634, caster);
+    assert!(has_aura(h.app.world(), caster, 191634));
+    let target = h.npc;
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 188196, target);
+    h.advance(30);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Damage
+            && event.spell_id == Some(188196)
+            && event.source == Some(caster.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(45284) || event.source != Some(caster.to_bits())),
+        "Stormkeeper cannot invent the removed Mastery passive"
+    );
+}
+
+#[test]
 fn proc_fidelity_262_surge_earned_during_lava_burst_survives_that_cast() {
     let (mut h, caster) = at_level(209053, 32, |_| {});
     let target = h.npc;
