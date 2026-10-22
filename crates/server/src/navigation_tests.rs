@@ -259,6 +259,16 @@ fn navigation_darkflame_208747_partial_corridor_walks_and_repaths() {
     );
 }
 
+#[test]
+#[ignore = "requires canonical2661 assets and FOLLOWER_NAV_CANONICAL"]
+fn navigation_cinderbrew_goldie_partial_corridor_walks_and_repaths() {
+    assert_canonical_route_arrives(
+        2661,
+        wow(2650.88, -4835.88, 101.042),
+        wow(2649.0535, -5013.1484, 110.600006),
+    );
+}
+
 fn assert_canonical_route_arrives(map_id: u32, mut from: Vec3, target: Vec3) {
     let root = PathBuf::from(std::env::var_os("FOLLOWER_NAV_CANONICAL").unwrap());
     // Arrival is at the existing native projection, not an invented tighter XY bound.
