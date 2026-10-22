@@ -12,6 +12,17 @@ const ORB_DURATION_MS: u32 = 300_000;
 const ORB_RECOVERY_MS: u32 = 600_000;
 const AFFINITIES: &[(u32, u32)] = &[(257, 137031), (256, 137032), (258, 137033)];
 
+fn install_orb_sources(h: &mut Harness) {
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    // The lightweight cast harness intentionally strips specs from its ClassSpells.
+    let (store, classes) = crate::spell_info::load_spell_data(&conn).unwrap();
+    h.app.insert_resource(store).insert_resource(classes);
+}
+
 fn find_source_affinity_passive(classes: &ClassSpells, spec_id: u32, passive_id: u32) -> u32 {
     let priest = classes
         .classes
@@ -68,7 +79,7 @@ fn toy_coverage_orb_real_priest_affinities_preserve_native_passive_and_owner_con
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) =
             setup_for_race_class(&dir.path().join("priest-orb.redb"), 1, PRIEST);
-        install_visual_source(&mut h);
+        install_orb_sources(&mut h);
         prepare_priest_affinity(&mut h, spec_id, passive_id);
         let owner = h.caster;
         for &(_, other_passive) in AFFINITIES {
@@ -154,7 +165,7 @@ fn toy_coverage_orb_real_priest_affinities_preserve_native_passive_and_owner_con
 fn toy_coverage_orb_account_ownership_does_not_bypass_priest_class_restriction() {
     let dir = tempfile::tempdir().unwrap();
     let (mut h, character) = setup_for_race_class(&dir.path().join("orb-class.redb"), 1, PRIEST);
-    install_visual_source(&mut h);
+    install_orb_sources(&mut h);
     prepare_priest_affinity(&mut h, 257, 137031);
     learn_effect_toy(&mut h, character, ORB);
     h.app
@@ -177,7 +188,7 @@ fn toy_coverage_orb_source_eligible_visual_or_amount_drift_refuses_without_effec
         let dir = tempfile::tempdir().unwrap();
         let (mut h, character) =
             setup_for_race_class(&dir.path().join("orb-drift.redb"), 1, PRIEST);
-        install_visual_source(&mut h);
+        install_orb_sources(&mut h);
         prepare_priest_affinity(&mut h, 257, 137031);
         learn_effect_toy(&mut h, character, ORB);
         let mut changed = h
