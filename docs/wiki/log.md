@@ -1,3 +1,7 @@
+## 2026-10-22 — Inundate native targeted GREEN, known foreign FoF flake
+
+[Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): Inundate3GREEN at329a06527 inside13PASS/1FAIL44.51s/zero warnings; failedFoF Damage-only4vs5 is lead-confirmed known Miss/Dodge oracle issue owned14179, not suppressed here. Proved3 enabled5074f1354. Affected Ele70samples2PASS37.46s/native378777events0/ST666.900/3T1007.367DPS, unpaired not causal-total proof. Newmaster6e73cc9b5 integrated043b63a88 requires current parent gate; full efficiency remains open.
+
 ## 2026-10-22 — Inundate native resource RED and source policy
 
 [Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): actualLightningwrong378777 gain is genuineRED, actualWindShearinterrupt grantsnative8positive;1PASS1FAIL23.95s/zero warnings. PinnedTCscript and signedTDBspell_proc row absent (168534positive parser control), so approved named native-description successful-utility/combat policy, not invented family mask.978da27ef committed; removed-passive control48c9f1219/GREEN pending. No utilityAI rewrite or broadAPL certificate.
