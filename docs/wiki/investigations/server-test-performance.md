@@ -49,6 +49,14 @@ Both executables use550c4b453, protocol2abc7fa, the same09dac63b frozen database
 
 Both pass. These give the controlled3.045× CPU/4.046× wall result, not a claimed full-suite speedup. The opt2 snapshot SHA256 is `041973351cb9195b6c86683462a1081b67b6599cbc4cf2643487cc173b0c1263`. The opt0 build takes7m but also repairs already-pruned vendor/Lightyear dependencies, so its compilation duration is not an isolated optimization comparison. `controlled-profiles.log`, both `controlled-opt*.time`/`-processes.json`/`-census.json` files and the opt0 compiler artifact preserve raw proof.
 
+## Compile-cost tradeoff and approved opt1 experiment
+
+Same masterad70bc3d7, workspace feature graph, frozen protocol2abc7fa, six compile jobs and `CARGO_INCREMENTAL=0`; third-party/vendor dependencies are warm. Oldserveropt0/debug2 takes310.083425s wall/900.357398s CPU/8360048KiB peakRSS. Landedopt2/debug1 takes574.902121s/2635.382310s/9214992KiB: observed+264.819s (4m25),1.854×wall and2.927×CPU. Old invocation has16 fresh server-related targets versus the new invocation's2, so this is a gate-build observation, not a normalized single-rustc benchmark. Both fresh main test artifacts retain debug assertions/overflow checks.
+
+The lead accepted that cost, then authorized one opt1 experiment with no codegen-units/LTO changes. Opt1/debug1 takes578.283337s wall/2764.096300s CPU/10170644KiB peakRSS (16fresh targets), demonstrating **no compile saving** in this experiment. All five runtime cases pass on the same source/input: routeCPUopt0=21.210423s,opt1=6.641264s,opt2=6.574692s; opt1 retains99.55%of the controlled route CPU saving. FullStockadeCPUopt1=126.786769s versusopt2=104.711449s (+21.1%); bodywall127.860s versus110.151s. No costly opt0 full-dungeon rerun. Snapshot hash stays unchanged.
+
+Recommendation: keepopt2. Opt1 has no demonstrated compile benefit and costs more CPU in the full scenario; target-count/load differences prevent stronger compile-time causality claims. Raw command/artifact/timing inventories are `compile-compare-summary.json`, `compile-*.time` and `opt1-experiment/{summary,runtime-receipts}.json`. The isolated route's speedup is not a claim that the full gate has reached15minutes.
+
 ## Repeated dependency compilation
 
 Lead gates `az914b`, `sa920`, `ra922` and `to917` repeatedly begin with the same four roots: `libc`, `libm`, `libloading`, `libsqlite3-sys`, followed by their dependency cascade. Installed housekeeping had a deterministic artifact-grouping defect, not evidence that every third-party feature changed:
@@ -123,6 +131,29 @@ All ten pass. Durations are per-test wall under concurrency, not isolated CPU at
 | `scripted_ai::tests::data_bosses::herald_liquid_fire::encounter_coverage_herald_liquid_fire_heroic_cone` |32.927|Heroic Herald source frontal lane|
 
 Only the first five exceed60s. Apart from the intentional real-time readiness test and full scenario timelines, exact residual loader/clone versus simulation contributions need isolated measurements; no tick counts will be shortened based on wall time alone. The lead approved a bounded nextest RSS cohort (these ten plus cache-heavy/native-copy controls), explicitly **not a global largest-RSS census**. That ranking and a memory-weighted scheduling policy follow; process-wide cached RSS cannot be assigned to individual overlapping tests from this run.
+
+## Bounded per-case RSS cohort before caches
+
+At masterad70bc3d7, all19 selected cases pass with the samea2e815 source hash before/after. Two independent nextest processes run at most concurrently, each with one test; the exact opt2 Stockade receipt from the approved experiment is reused rather than rerun. Fresh per-case timers record child `ru_maxrss` and CPU, including importer children; this is a **19-case cohort ranking, not an exhaustive global RSS census**. It includes the ten longest union cases and nine cache-heavy/native-copy/failure controls. The restored arena proof recheck passes0.126s; Holy/FoF also pass isolated again.
+
+| Exact case | PeakRSS KiB | Subsystem exercised |
+|---|---:|---|
+| `scripted_ai::tests::data_bosses::prepared_input_tests::prepared_encounter_profiles_and_live_difficulties_keep_app_edits_local` |3161604|Three simultaneous native prepared/difficulty Apps and input isolation|
+| `scripted_ai::tests::data_bosses::lost_dwarves::encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completions` |2183064|Three-actor encounter, full source lanes/credit|
+| `scripted_ai::tests::data_bosses::kokia::boss_alerts_opted_lua_scripts_publish_real_initial_requests_only` |2176848|Multiple prepared boss profiles and alert lanes|
+| `toys::tests::toyfx14_stationary_source_summons_learn_spawn_and_expire` |1822944|Native toy learning/summon/expiry|
+| `scripted_ai::tests::data_bosses::herald_liquid_fire::encounter_coverage_herald_liquid_fire_heroic_cone` |1770872|Prepared Heroic Herald frontal lane|
+| `scripted_ai::tests::data_bosses::herald_liquid_fire::encounter_coverage_herald_liquid_fire_heroic_fireball` |1738264|Prepared Heroic Herald Fireball lane|
+| `followers::rotation_imp_tests::rotation_fidelity_tyrant_demonic_power_tracks_real_owned_imp_lifecycle` |1067240|Native prepared Warlock/Imp lifecycle|
+| `followers::kit_proc_fidelity_tests::dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits` |929564|Native channel/proc fixture|
+| `followers::holy_priest_tests::holy_priest_native_two_surge_uses_keep_half_cost_then_spend_one` |929080|Native Holy proc acquisition/consumption|
+| `test_data::native_fixture_copies_do_not_share_mutable_catalogs_or_creatures` |709076|Canonical creature/class/achievement input isolation|
+
+Longest is not largest: SurvivalInstincts takes126.205s isolated but peaks584124KiB. Prepared multi-App/profile cases dominate this cohort's memory instead. Four overlapping measured heavy cases can exceed8GiB even before accumulated process caches; scheduling must use these memory weights rather than CPU count alone. Exact19-case selection, output, CPU/wall/RSS receipts and ranking are `rss-before-cache/{selection,ranking,top10-rss,summary}.json` and adjacent per-case files. Swap is not attributed per case by `ru_maxrss`; the full union's separate sampled swap counter remains the no-swap acceptance evidence.
+
+## Cache implementation boundary (in progress)
+
+The [performance contract](../../specs/server-test-performance.md) and `crates/server/src/test_data/catalog_cache_tests.rs` introduce real SQLite read-capability/concurrency, distinct-path authority, content-change and App-copy isolation fixtures. The initial `test_data/catalog_cache.rs` boundary intentionally still calls today's uncached reader so denied repeat/concurrent SQL access can reproduce RED before implementation. No production startup path is changed by that scaffold. Test-only BLAKE3 uses the already-present locked dependency for content identity; rusqlite's test-only `hooks` feature enables actual SQLite authorization, not mocked method-call assertions.
 
 ## Gate invocation
 
