@@ -139,9 +139,7 @@ pub(super) fn point_route_crosses_hostile_field(
 fn read_route_hazard(world: &mut World, unit: Entity, to: Position, goal: Goal) -> Option<bool> {
     let fields = hostile_fields(world, unit);
     if fields.is_empty() {
-        if let Some(mut nav) = world.get_resource_mut::<Navigation>() {
-            nav.cancel_query(unit, goal);
-        }
+        // Idle-sight qualification shares this approach probe even without fields.
         return Some(false);
     }
     let (Some(from), Some(map)) = (
