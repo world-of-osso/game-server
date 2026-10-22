@@ -9,6 +9,7 @@ use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 
 #[path = "arcane_tender.rs"]
 mod arcane_tender;
+pub(crate) use arcane_tender::{WILD_ERUPTION, hit_wild_eruption};
 
 use crate::auras::{
     AuraInstance, RemoveReason, handlers,

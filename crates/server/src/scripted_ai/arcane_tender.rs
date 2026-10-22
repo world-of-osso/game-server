@@ -7,9 +7,29 @@ use super::super::{CreatureAi, Ctx, EventMap};
 pub(super) const SCRIPT: &str = "npc_arcane_tender";
 const STASIS_RITUAL: u32 = 375732;
 const ERRATIC_GROWTH: u32 = 375596;
-const WILD_ERUPTION: u32 = 375652;
+pub(crate) const WILD_ERUPTION: u32 = 375652;
+const WILD_ERUPTION_MISSILE: u32 = 375650;
 const EVENT_ERRATIC_GROWTH: u32 = 1;
 const EVENT_WILD_ERUPTION: u32 = 2;
+
+/// TC boss_leymor.cpp:398–415, spell_wild_eruption OnEffectHitTarget.
+pub(crate) fn hit_wild_eruption(
+    world: &mut World,
+    ctx: &crate::spell_cast::effects::EffectCtx,
+    _effect: &crate::spell_info::SpellEffect,
+    _target: Entity,
+) {
+    let destination = ctx
+        .dest
+        .expect("Wild Eruption375652 requires its native hit destination");
+    crate::spell_cast::cast_triggered_at_destination(
+        world,
+        ctx.caster,
+        WILD_ERUPTION_MISSILE,
+        destination.position,
+        ctx.depth + 1,
+    );
+}
 
 #[derive(Default)]
 pub(super) struct ArcaneTender {

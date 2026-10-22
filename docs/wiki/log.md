@@ -3636,3 +3636,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-22 — TC Arcane Tender source exception
 
 [Trash projection](systems/boss-scripts.md#follower-trash-kit-projection--2026-10-22): actual191164 native WildEruption RED precedes pinned TC CreatureAi hooks, appearance/home Stasis Ritual and12s/22s attempt clocks. Source ScriptName remains, no TC SmartAI-row translation. Lasher began native cast; owner-only CastSuccess was wrong observer oracle, replaced by actual SpellGo. Source child375650→375647 native damage test added before callback implementation; GREEN pending.
+
+## 2026-10-22 — Native trash casts GREEN, Wild Eruption child RED
+
+[Trash projection](systems/boss-scripts.md#follower-trash-kit-projection--2026-10-22):8cd47160e native3GREEN/child1RED30.71s. Actual replicated LightningBolt12167/MysticVapors387564/WildEruption375652 complete; source child case passes parent Go before missing375647 damage. TC375652 effect0 per-hit destination→375650 hook implemented after that RED; native DB2 missile/damage pipeline retained, child GREEN pending.

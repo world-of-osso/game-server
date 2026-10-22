@@ -86,6 +86,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (crate::scripted_ai::azure_vault::WILD_ERUPTION, 0) {
+        return Some(crate::scripted_ai::azure_vault::hit_wild_eruption);
+    }
     if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
         return Some(super::toy_coyote::despawn);
     }
