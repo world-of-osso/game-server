@@ -1,3 +1,7 @@
+## 2026-10-21 — All-Seeing Eyes source boundary
+
+[Toys](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21): source175140/318571 isolated279rows/26tables/one resident ordinary model,27 visual conditions/32 ModifierTrees. Test-firsta6546659a awaits RED capacity; no admission/GREEN yet. Shape/race/gender visual selectors do not imply new gameplay; Smolderheart's separate343642 heating stacks remain a gap. Native selection/10-minute expiry/30-minute reuse unproved.
+
 ## 2026-10-21 — Effect63/Kvaldir source and RED boundary
 
 [Toys](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21): TC computed raw threat plus70448 Kvaldir radius40/cast1500ms/targetcap49/recovery120000ms. ActualUseToy, uncapped resolver and census RED atc02f11221; fourth setup failure corrected73c4e6d1c to Provoke's authored slot1. Corrected handler RED atfec87749a (61.92s) fails missingEffectThreat. Generic63/raw engagement and DB2 recipient cap implemented; d4ebff4df7/7GREEN43.66s/check/fmt, pipeline536exact+129111/BattleHornstillgap. Post-master5d5affcfc composite8/8GREEN72.55s ate01d07823,checkEXIT0/39.36s/fmtPASS; reconciled536/1173,637gaps,exact+129111/zero removals/BattleHornnamedgaponly. Inherited unusedhas_uncleared_fight warning retained, not suppressed. Battle Horn's additional Pandaria-native audience has no complete binding; no guessed policy/native sound/full reuse claim.

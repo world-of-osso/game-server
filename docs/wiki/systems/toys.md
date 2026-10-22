@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## All-Seeing Eyes source boundary (2026-10-21)
+
+[Visual contract](../../specs/toys.md#server-scope-visual-only-census-rule). Exact175140/318571 promises only N'Zoth's All-Seeing Eyes. Isolated build70448 graph:279 rows/26 tables, one resident ordinary model3055106,27 visual PlayerConditions and32 ModifierTree rows, zero missing references. The root is one self aura4, zero trigger/misc/item/mechanic/amount, instant cast,600000ms duration and1800000ms item recovery/category0/condition0. Evidence: visual-eyes-70448.json and eyes-root-source.json; no canonical writes.
+
+ModifierTree types9/11 test existing aura effects36(shapeshift)/56(transform);25 tests race and97 gender (TC a352b1fa DBCEnums.h1700–1800, operators2107–2113; SpellAuraDefines.h123/143). These select appearance variants, not new gameplay effects or missing root-applied helper auras. Native visual-condition evaluation remains unproved. By contrast, Smolderheart's visual selectors depend on separate343642 stacks4/8/10; its heating lifecycle stays a named gap, not inferred from ordinary model residency.
+
+Tests a6546659a committed before production: actual source owner lifecycle, two drift refusals and census retention of Smolderheart/Orb/BattleHorn/Gadgetzan gaps. RED is capacity-queued; no production admission, no GREEN/native/long-duration claim. Current qualified census remains536.
+
 ## Effect63 and Kvaldir source boundary (2026-10-21)
 
 [Contract](../../specs/toys.md#sourced-threat-effects-and-kvaldir-audience). TC a352b1fa `SpellEffects.cpp:2948–2964` adds EffectThreat's computed value with ignoreModifiers=true; `ThreatManager.cpp:382–409` retains no-threat flags before bypassing modifiers. This is threat, not damage or a forced taunt. Both remaining source63 toy roots are audited: Kvaldir129111/197828 and Battle Horn86565/126318. Build70448 authors source-area hostile radius40,1500ms cast, amount1 and120000ms item recovery. Kvaldir's target row28425 caps49, matching description token ctrmax2067 and ContentTuning2067 max49. Pinned TC loads but does not consume that cap; implementation/proof must label this DB2-backed behavior, not existing TC runtime parity.

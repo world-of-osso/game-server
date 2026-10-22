@@ -1,3 +1,4 @@
+- [All-Seeing Eyes source boundary](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21) —279rows/26tables/ordinary model; race/gender/shape selectors, test-first owner contract; RED pending capacity, no admission.
 - [Effect63/Kvaldir source boundary](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21) — source raw threat/cap49; post-master8GREEN/check/fmt,535→536 exact+Kvaldir; Battle Horn native-audience gap retained.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
 - [Emberon current Lua partial](systems/boss-scripts.md#emberon-current-lua-partial--2026-10-21) — firstClapRED→composite7GREEN Normal/Follower; native24.3s aura cap, ongoing counts/second phase/reset/copy-credit; absent395681/controller gaps explicit.
