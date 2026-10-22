@@ -360,7 +360,7 @@ impl ActiveAuras {
 
     /// Under a `SPELL_AURA_MOD_STUN` effect (AzerothCore `UNIT_STATE_STUNNED`).
     pub fn is_stunned(&self) -> bool {
-        self.has_type(handlers::MOD_STUN)
+        self.has_type(handlers::MOD_STUN) || self.has_type(handlers::MOD_STUN_DISABLE_GRAVITY)
     }
 
     /// Under a `SPELL_AURA_MOD_CONFUSE` effect (TrinityCore `UNIT_STATE_CONFUSED`).
@@ -790,10 +790,23 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
                 .immunity
                 .as_ref()
                 .is_some_and(|definition| !definition.has_unmodeled_fields());
+        let rating_supported = effect.aura_type != handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING
+            || crate::stats::supports_rating_conversion(
+                effect.misc_values[0] as u32,
+                effect.misc_values[1] as u32,
+            );
+        let resistance_supported =
+            effect.aura_type != handlers::MOD_RESISTANCE || effect.misc_values[0] & !1 == 0;
         let handled = handlers::is_handled(effect.aura_type)
-            && supported_amount
-            && duration_supported
-            && immunity_supported;
+            && [
+                supported_amount,
+                duration_supported,
+                immunity_supported,
+                rating_supported,
+                resistance_supported,
+            ]
+            .into_iter()
+            .all(|supported| supported);
         if handled
             || scripts::consumes_named_field(aura.spell_id, effect.index)
             || crate::scripted_ai::kings_rest::handles_molten_gold_effect(aura.spell_id, effect)
@@ -812,6 +825,12 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
 }
 
 fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
+    if effect.aura_type == handlers::MOD_RESISTANCE {
+        return "has nonphysical resistance schools without runtime resistance pools".into();
+    }
+    if effect.aura_type == handlers::MOD_COMBAT_RATING_FROM_COMBAT_RATING {
+        return "has unrepresented source or split destination rating masks".into();
+    }
     if effect.aura_type == handlers::MECHANIC_IMMUNITY_MASK {
         return if effect.immunity.is_some() {
             format!(
@@ -1109,9 +1128,12 @@ pub(crate) fn apply_aura_with_spell(
 }
 
 fn stuns(aura: &AuraInstance) -> bool {
-    aura.effects
-        .iter()
-        .any(|effect| effect.aura_type == handlers::MOD_STUN)
+    aura.effects.iter().any(|effect| {
+        matches!(
+            effect.aura_type,
+            handlers::MOD_STUN | handlers::MOD_STUN_DISABLE_GRAVITY
+        )
+    })
 }
 
 /// TC Unit::SetControlled(UNIT_STATE_STUNNED) stops the current cast only when
@@ -1559,11 +1581,13 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     let previous_threat = world
         .get::<AuraStatMods>(unit)
         .map_or(0.0, |mods| mods.temporary_threat);
+    let player_controlled_npc = world.get::<Npc>(unit).is_some()
+        && crate::faction::player_affected(false, world.get::<shared::components::UnitFlags>(unit));
     let Some(mut auras) = world.get_mut::<ActiveAuras>(unit) else {
         return;
     };
     auras.dirty = true;
-    let (mut stats, mut combat) = stat_mods::compute(&auras);
+    let (mut stats, mut combat) = stat_mods::compute(&auras, player_controlled_npc);
     stats.max_health_pct += scripts::fount_max_health_pct(unit, &auras);
     let growth = scripts::protective_growth_multiplier(unit, &auras);
     let primary_support = ebon_might::primary_bonus(&auras);
@@ -1571,11 +1595,18 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     // NPCs that happen to carry the follower class-stat bridge.
     if world.get::<Player>(unit).is_none() {
         stats.primary_base_pct = UnitStats::default();
+        // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
+        combat.armor_penetration_pct = 0.0;
+        stats.max_mana_pct = 0.0;
+        stats.rating_from_rating.clear();
+        combat.max_power_mult.clear();
     }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
+    let max_power_changes =
+        crate::spell_cast::powers::max_power_percent_changes(world, unit, &stats, &combat);
     if let Some(mut stored) = world.get_mut::<AuraStatMods>(unit)
         && *stored != combat
     {
@@ -1589,6 +1620,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
+    crate::spell_cast::powers::apply_max_power_percent_changes(world, unit, max_power_changes);
     let current_threat = world
         .get::<AuraStatMods>(unit)
         .map_or(0.0, |mods| mods.temporary_threat);
@@ -1881,7 +1913,9 @@ pub fn cast_blocker(world: &World, caster: Entity, spell: &SpellInfo) -> Option<
         .categories
         .as_ref()
         .map_or(0, |categories| categories.prevention_type);
-    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_STUNNED == 0 && has(&[handlers::MOD_STUN]) {
+    if attributes(spell, 5) & ATTR5_ALLOW_WHILE_STUNNED == 0
+        && has(&[handlers::MOD_STUN, handlers::MOD_STUN_DISABLE_GRAVITY])
+    {
         return Some(CastBlock::Stunned);
     }
     if prevention & PREVENTION_SILENCE != 0
@@ -1922,14 +1956,28 @@ pub enum CastBlock {
 pub struct ChargeMods {
     /// MOD_MAX_CHARGES 411.
     pub extra_charges: i32,
-    /// CHARGE_RECOVERY_MOD 453, ms.
+    /// Category453 and TypeMask205 flat recovery milliseconds.
     pub recovery_flat_ms: f32,
     /// CHARGE_RECOVERY_MULTIPLIER 454, haste457 and category rate148.
     pub recovery_mult: f32,
 }
 
-/// Charge auras of `unit` whose MiscValue is `charge_category`.
-pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeMods {
+fn charge_effect_matches(effect: &AuraEffectState, category: u32, type_mask: u32) -> bool {
+    let selector = effect.misc_values[0] as u32;
+    if effect.aura_type == handlers::MOD_CHARGE_RECOVERY_BY_TYPE_MASK {
+        selector & type_mask != 0
+    } else {
+        selector == category
+    }
+}
+
+/// Charge auras matching the native category ID, or205 intersecting its TypeMask.
+pub fn charge_mods(
+    world: &World,
+    unit: Entity,
+    charge_category: u32,
+    charge_type_mask: u32,
+) -> ChargeMods {
     let mut mods = ChargeMods {
         extra_charges: 0,
         recovery_flat_ms: 0.0,
@@ -1953,12 +2001,14 @@ pub fn charge_mods(world: &World, unit: Entity, charge_category: u32) -> ChargeM
         for effect in aura
             .effects
             .iter()
-            .filter(|effect| effect.misc_values[0] as u32 == charge_category)
+            .filter(|effect| charge_effect_matches(effect, charge_category, charge_type_mask))
         {
             let amount = effect.amount * stacks;
             match effect.aura_type {
                 handlers::MOD_MAX_CHARGES => mods.extra_charges += amount.round() as i32,
-                handlers::CHARGE_RECOVERY_MOD => mods.recovery_flat_ms += amount,
+                handlers::CHARGE_RECOVERY_MOD | handlers::MOD_CHARGE_RECOVERY_BY_TYPE_MASK => {
+                    mods.recovery_flat_ms += amount
+                }
                 handlers::CHARGE_RECOVERY_MULTIPLIER => mods.recovery_mult *= 1.0 + amount / 100.0,
                 handlers::MOD_CHARGE_RECOVERY_RATE => {
                     mods.recovery_mult *= 100.0 / (100.0 + amount.max(-99.0));
@@ -2403,6 +2453,8 @@ fn receive_cancel_aura(world: &mut World) {
 
 #[cfg(test)]
 mod combat_stat_tests;
+#[cfg(test)]
+mod max_power_pct_tests;
 #[cfg(test)]
 mod periodic_deadline_tests;
 #[cfg(test)]

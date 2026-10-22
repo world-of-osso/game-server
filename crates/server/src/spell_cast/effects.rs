@@ -57,6 +57,7 @@ pub const EFFECT_POWER_DRAIN: u32 = 8;
 pub const EFFECT_POWER_BURN: u32 = 62;
 pub const EFFECT_HEALTH_LEECH: u32 = 9;
 pub const EFFECT_HEAL: u32 = 10;
+pub const EFFECT_HEAL_MAX_HEALTH: u32 = 67;
 pub const EFFECT_QUEST_COMPLETE: u32 = 16;
 pub const EFFECT_KILL_CREDIT_PERSONAL: u32 = 90;
 pub const EFFECT_KILL_CREDIT: u32 = 134;
@@ -120,6 +121,7 @@ pub fn handler(effect_id: u32) -> Option<EffectHandler> {
         EFFECT_HEALTH_LEECH => health_leech,
         EFFECT_KILL_CREDIT_PERSONAL | EFFECT_KILL_CREDIT => quest_kill_credit,
         EFFECT_HEAL => heal,
+        EFFECT_HEAL_MAX_HEALTH => heal_max_health,
         crate::death::resurrection::EFFECT_RESURRECT
         | crate::death::resurrection::EFFECT_RESURRECT_WITH_AURA => {
             crate::death::resurrection::send_offer
@@ -313,7 +315,15 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
             .get::<crate::hunter_pet::SummonedDemon>(unit)
             .is_some()
         {
-            return demon_power_stats(world, summon.owner);
+            let entry = world
+                .get::<shared::components::Npc>(unit)
+                .map(|npc| npc.template_id);
+            let spell_share = match (summon.spell_id, entry) {
+                (104317, Some(55659)) => WILD_IMP_OWNER_SPELL_POWER,
+                (265187, Some(135002)) => TYRANT_OWNER_SPELL_POWER,
+                _ => DEMON_OWNER_SPELL_POWER,
+            };
+            return demon_power_stats(world, summon.owner, spell_share);
         }
     }
     if let Some(pet) = world.get::<crate::hunter_pet::HunterPet>(unit) {
@@ -324,7 +334,7 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
         {
             // TC StatSystem.cpp1358: controlled SUMMON_PET uses the IsPet branch.
             // Water Elemental's separate40% branch is for non-pet guardians, not56.
-            return demon_power_stats(world, pet.owner);
+            return demon_power_stats(world, pet.owner, DEMON_OWNER_SPELL_POWER);
         }
         return (0.0, hunter_pet_attack_power(world, pet.owner));
     }
@@ -342,17 +352,20 @@ pub(crate) fn power_stats(world: &World, unit: Entity, healing: bool) -> (f32, f
 
 /// Guardian::UpdateAttackPowerAndDamage (TC StatSystem.cpp:1358-1367): demons
 /// inherit 15% spell bonus and 57% AP from the owner's fire/shadow spell power.
+/// Source-qualified Wild Imp and base Tyrant use their explicit SimC SP policies.
 /// CharacterStats currently exposes one spell-power value, not school-specific values.
-fn demon_power_stats(world: &World, owner: Entity) -> (f32, f32) {
+fn demon_power_stats(world: &World, owner: Entity, spell_share: f32) -> (f32, f32) {
     let power = world
         .get::<CharacterStats>(owner)
         .map_or(0.0, |stats| stats.spell_power.max(0.0));
-    (
-        power * DEMON_OWNER_SPELL_POWER,
-        power * DEMON_OWNER_ATTACK_POWER,
-    )
+    (power * spell_share, power * DEMON_OWNER_ATTACK_POWER)
 }
 
+// WARLOCK_WILD_IMP_OWNER_SP_SIMC: constructor705 overrides base19.
+// Keep native104318 coefficient; do not adopt SimC's unvalidated AP share.
+const WILD_IMP_OWNER_SPELL_POWER: f32 = 1.2;
+// WARLOCK_TYRANT_OWNER_SP_SIMC: constructor1510 retains base19 SP1.0.
+const TYRANT_OWNER_SPELL_POWER: f32 = 1.0;
 const DEMON_OWNER_SPELL_POWER: f32 = 0.15;
 const DEMON_OWNER_ATTACK_POWER: f32 = 0.57;
 
@@ -728,13 +741,14 @@ fn armor_reduced(
         world.get::<CharacterStats>(target),
     ) {
         (Some(armor), _) => {
-            let multiplier = crate::auras::base_armor::pet_multiplier(
-                world.get::<crate::stats::StatModifiers>(target),
+            let modifiers = world.get::<crate::stats::StatModifiers>(target);
+            let armor = crate::auras::base_armor::unscaled_armor(
+                armor.0,
+                modifiers,
                 world.get::<crate::hunter_pet::HunterPet>(target),
                 world.get::<super::summon::SummonedCreature>(target),
             );
-            let modifiers = world.get::<crate::stats::StatModifiers>(target);
-            target_scaling.armor_against(armor.0 * multiplier, &caster_scaling)
+            target_scaling.armor_against(armor, &caster_scaling)
                 * crate::auras::base_armor::total_multiplier(modifiers)
         }
         (None, Some(stats)) => stats.armor,
@@ -747,6 +761,7 @@ fn armor_reduced(
         &caster_scaling,
         &target_scaling,
         world.get_resource::<ArmorConstants>(),
+        world.get::<crate::auras::AuraStatMods>(caster),
     )
 }
 
@@ -1170,7 +1185,10 @@ fn mechanic_damage_multiplier(
 fn spell_block_damage(world: &World, ctx: &EffectCtx, target: Entity, amount: f32) -> (f32, f32) {
     let mut percent = spell_block_percent(world, ctx.caster, target).trunc();
     if crate::combat::roll_critical_block(world.get::<crate::auras::ActiveAuras>(target)) {
-        percent *= 2.0;
+        // TC Unit.cpp1248 reads638 on the attacker, not the blocking recipient.
+        let multiplier =
+            stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.critical_block_amount_mult);
+        percent = (percent * 2.0 * multiplier).trunc();
     }
     let blocked = (amount * percent / 100.0).trunc().min(amount);
     (amount - blocked, blocked)
@@ -1479,6 +1497,27 @@ fn heal(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity
     apply_heal(world, ctx, target, amount, crit, false);
 }
 
+/// TC EffectHealMaxHealth: zero value selects caster max; nonzero selects missing HP.
+/// This effect does not call SpellHealingBonusDone/Taken before shared heal resolution.
+fn heal_max_health(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
+    let Some(health) = world
+        .get::<Health>(target)
+        .filter(|health| health.current > 0.0)
+    else {
+        return;
+    };
+    let amount = if roll_base_points(world, ctx.caster, ctx.spell, effect).trunc() == 0.0 {
+        world
+            .get::<Health>(ctx.caster)
+            .map_or(0.0, |health| health.max)
+    } else {
+        health.max - health.current
+    };
+    let amount = amount * ctx.chain_multiplier;
+    let (amount, crit) = with_crit(world, ctx.caster, target, ctx.spell, amount);
+    apply_resolved_heal(world, ctx, target, amount, crit, false);
+}
+
 /// 136 HEAL_PCT: BasePoints% of the target's max health.
 fn heal_pct(world: &mut World, ctx: &EffectCtx, effect: &SpellEffect, target: Entity) {
     let max = world.get::<Health>(target).map_or(0.0, |health| health.max);
@@ -1505,7 +1544,13 @@ pub fn apply_heal(
     let done = stat_mods(world, ctx.caster).map_or(1.0, |mods| mods.healing_done_mult)
         * versatility_multiplier(world, ctx.caster)
         * crate::auras::combat_stats::healing_multiplier(world, ctx.caster, target, ctx.spell);
-    let taken = stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult);
+    let periodic_taken = if periodic {
+        crate::auras::combat_stats::periodic_healing_taken_multiplier(world, target, ctx.spell)
+    } else {
+        1.0
+    };
+    let taken =
+        stat_mods(world, target).map_or(1.0, |mods| mods.healing_taken_mult) * periodic_taken;
     let named = super::scripts::healing_multiplier(world, ctx.caster, ctx.spell)
         * super::scripts::soul_of_the_forest_direct_multiplier(
             world, ctx.caster, ctx.spell, periodic,

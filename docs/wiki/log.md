@@ -1,3 +1,18 @@
+- [rd902 Imp fixture identities](investigations/follower-data.md#rd902-native-roster-fixture-identities--2026-10-22) — native handles1-versus3 RED→parallel11GREEN66.08s; signed3001 joined Guardian1GREEN/retained3GREEN, zero native/toy references; tests/fixtures only.
+- [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→merged11GREEN106.38s; retained guardian11GREEN35.07s; merged ST/3T8864/13204 reports equal91cf, no Demonbolt/Core sample or isolated/statistical claim.
+- [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
+## 2026-10-21 — Continuous frozen walk endpoints
+
+[Native endpoint/time boundary](systems/dungeon-simulator.md#continuous-frozen-walk-endpoints-2026-10-21): full Azure1 ownerDeath RED106.58s plus two exact recorded-position REDs0.12s prove goal-anchor overshoot and full-edge-time restart. Walking now shares continuous existing-edge endpoints/proportional native yards between safety qualification and movement; no new component links or changed book hops. At5f7d4ff85 recorded controls2GREEN0.01s, fullnative Azure1 Sapling GREEN110.78s, Stockade safe-path+full50 bothGREEN135.84s, graph4+weighted1+six retained native movement controls GREEN. New seeded qualification pending; prior2f443Stockade50/50 is not current proof after this geometry change.
+
+## 2026-10-21 — Path-candidate Stockade qualification
+
+[Stockade current cohort](systems/dungeon-simulator.md#qualified-path-candidate-stockade-cohort-2026-10-21): same-code2f443fb5a/P03cebdb/frozen40d95b0 clears50/50,150native boss Deaths,0failures. Fresh1–49 batch2575.069794s plus retained native seed50 receipt83.707545s; no invented contiguous50wall. Actual34/1/level32 verified for all50. Azure and live acceptance remain open.
+
+## 2026-10-21 — Post-path Azure qualification
+
+[Azure candidate](systems/dungeon-simulator.md#post-path-azure-qualification-2026-10-21): same frozen inputs2f443fb5a,seeds1–10/jobs2 gives0clear/7DeadMember stalls/3tankabsence blocks/0boss Deaths,all10reports,570.406761s wall. Seed1 native Sapling29001840 kills isolated Austin while healer remains behind. Native-order movement diagnostic regression added; no further production fix or reliability claim.
+
 ## 2026-10-21 — Stockade queued credit versus durable reconnect reads
 
 [Durability boundary](systems/dungeon-achievements.md#stockade-reconnect-durability-boundary--2026-10-21): debug-profile held-writer reproduction preserves live633 and native criterion credit; full durable equality passes after the real FIFO receipt fence, while the old pre-fence equality fails31.19s. Offline fixture reads now fence at reconnect and final comparison; no production credit, death, timing or resource change. Combined Restoration/group-cancel source1ed0df205 gives34debug-profile native passes78.29s including the previously failing exact Stockade case; format passes. The held-writer control proves pending credit directly, not merely a favorable optimized timing.
