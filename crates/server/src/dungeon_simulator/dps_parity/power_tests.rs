@@ -31,6 +31,18 @@ fn prepare_hunter_and_pet() -> (Run, Entity) {
         }
     }
     for _ in 0..200 {
+        let world = run.app.world();
+        let cobra = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(COBRA_SHOT)
+            .unwrap();
+        let now = crate::spell_cast::history_now(world);
+        let on_gcd = world
+            .get::<crate::spell_cast::SpellHistory>(run.actor)
+            .is_some_and(|history| history.on_gcd(cobra, now));
+        if crate::hunter_pet::summoned_pet(world, run.actor).is_some() && !on_gcd {
+            break;
+        }
         run.app.update();
     }
     let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
