@@ -36,6 +36,8 @@ mod kit_rotation_tests;
 mod pack_identity;
 mod party;
 mod positioning;
+#[cfg(test)]
+mod power_budget_tests;
 mod pull_admission;
 #[cfg(test)]
 mod pull_admission_tests;
