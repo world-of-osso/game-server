@@ -1,3 +1,7 @@
+## 2026-10-22 — Midnight clock authority
+
+[Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
+
 ## 2026-10-22 — Dailcry native channel boundary
 
 [Dailcry](investigations/follower-data.md#captain-dailcry-native-channel-boundary--2026-10-22): eb1native first/reset pass; ongoing oracle expected instant Mauling but actual70448 is a30s channel. Corrected oracle preserves full native occupancy and remains pending. Binding producer1/1GREEN preserves source; Normal population bridge supports205 without fabricated rows. No production timer/cancellation change.

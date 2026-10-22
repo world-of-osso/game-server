@@ -27,6 +27,19 @@ Source207946/map2649/2847bit1 uses real10001094/flags64 and journal2571/5714/dis
 
 Literal source masks1/2/8/23 are not a205 population blocker: existing `followers::population_difficulty` and `CreatureSpawn::spawns_at` use the [approved Normal population bridge](../../specs/follower-dungeons.md) while copy/template/spell/loot identity remains205. Preserve source tags, never manufacture205 rows. Mauling energy/shield repetition, external Spear destination and miniboss controller remain explicit partial gaps. Baron207939 and Prioress207940 retain actual PC-immunity832 with no pinnedTC unlock; no artificial engagement. [Boss contract](../../specs/boss-scripts.md#captain-dailcry-current-lua-partial).
 
+### Midnight clock authority — 2026-10-22
+
+All31 pinned LittleWigs2777a9d Midnight boss modules consume `ENCOUNTER_TIMELINE_EVENT_ADDED`; none has `RegisterEnableMob` or `OnEngage`. Their duration classifiers identify incoming bars, not encounter-start anchors, insertion/repeat order or pause/cancel controllers. Native70448 `EncounterEvent.csv` has160 rows across all31 (spell/severity/broadcast text/flags/icon/encounter); no clock/sequence fields. No active `*Timeline*` CSV or imported server-clock table was found. PinnedTC new-map instance registrations locate MurderRow; its only boss C++ implementation is Kystia. Old ZulAman Nalorakk is not new Den authority. This is source-gap evidence, not native completion or permission to invent schedules.
+
+|Scope|Exact coverage|Authority/remaining gap|Proof level|
+|---|---|---|---|
+|Kystia3101|234648; source2813 population2 includes Nibbles|Existing TC boss/instance/header and native handler; no new full-fight claim here|Retained implementation/source inspection|
+|Other MurderRow3|Zaen3102→234649, Xathuux3103→234647, Lithiel3105→237415|TC header authenticates primaries; actual TDB templates but no placements/runtime actors or boss C++ clocks|Source only; placement and clock gaps|
+|Six empty maps/21 encounters|Windrunner2805, Magisters2811, Voidscar2923, Nexus2915, BlindingVale2859, Altar2993|Zero source population; no authored clock anchors/sequence in current modules|Source only; no artificial combat fixtures|
+|Den/Maisara6 encounters|2825 population217;2874 population376|Model-map joins remain candidates, not authenticated primary identity; clock anchor/sequence still absent|Source only; no alias binding or timing fabrication|
+
+Evidence: engine `data/diagnostics/df-bosses-2-2026-10-21/midnight-clock-authority.json` stores all31 module hashes,160 EncounterEvent rows/CSV hash, source population snapshot and TC header hash; [original inventory](#remaining-boss-source-ingress--2026-10-21) records baseline joins. `MIDNIGHT_CLOCK_ANCHOR_SEQUENCE_UNSOURCED`, primary-identity and authored-placement gaps stay open across the other30, not silently narrowed away. [Contract](../../specs/boss-scripts.md#midnight-clock-authority-boundary).
+
 ### Font of Magic selection oracle — 2026-10-21
 
 Merged native selection casts382266/382411 rather than357208/359073 after learned411212 Font of Magic57. Native aura332 effects1077606/1077607 explicitly map those roots; this is valid action resolution, not Azure filler starvation. The max-level oracle now requires both replacement SpellGo receipts and the actual passive; a level56 control requires both unreplaced roots. Empowered release/damage remains unimplemented and is not certified by these selection tests.

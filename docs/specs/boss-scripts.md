@@ -5,6 +5,11 @@
 - Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
 - Preserve actual regenerate-power flag0x800. Native PowerType rates apply only when the source creature permits regeneration. Anub'zekt's flag is absent: initialEnergy100 is valid, forced regeneration or repeated energy grants are not. Missing native class4 power metadata must fail explicitly rather than invent a pool.
 
+## Midnight clock authority boundary
+
+- The31 LittleWigs2777a9d Midnight modules consume incoming encounter timeline events; none supplies `RegisterEnableMob` or `OnEngage` clocks. `MIDNIGHT_CLOCK_ANCHOR_SEQUENCE_UNSOURCED` retains missing authored start anchors, insertion/repeat order and pause/cancel controllers for new ports. Duration classifiers are not authored initial/repeat schedules. Native70448 EncounterEvent's160 rows for these31 encounters authenticate spell-alert associations, not clocks or creature identities.
+- Existing Kystia234648 has pinnedTC C++ clock/identity authority and stays separate from the other30. Murder Row's other3 primaries are authenticated by its header but unplaced; six other Midnight maps have no source population. Den/Maisara model-map candidates are not authenticated primary identities. Keep named identity/placement gaps; never fabricate actors, coordinates, alias bindings or timing. [Source matrix](../wiki/investigations/follower-data.md#midnight-clock-authority--2026-10-22).
+
 ## Captain Dailcry current Lua partial
 
 - LittleWigs2777a9d `WarWithin/PrioryOfTheSacredFlame/CaptainDailcry.lua` authenticates207946/map2649/2847bit1. Native70448 journal2571/primary5714/display118879 matches actual source spawn10001094/flags64. Producer `--encounter dailcry` changes only local `littlewigs_dailcry` ScriptName and primary binding; preserve all actual stats/models/addons/flags/population/difficulties/native spells and companion actors. Source placement and template difficulties retain1/2/8/23; Follower205 uses the existing [approved same-map Normal population bridge](follower-dungeons.md), not fabricated205 rows. This AI slice does not certify a full-map/live run.
@@ -75,7 +80,7 @@
 
 ## Dragonflight current-Retail Lua policy
 
-- User follower priority: Ruby Life Pools2521 → Algethar Academy2526 → Uldaman2451, then other Dragonflight dungeons after their source population lands. War Within is excluded from this task.
+- User follower priority: Ruby Life Pools2521 → Algethar Academy2526 → Uldaman2451, then other Dragonflight dungeons after their source population lands. That earlier DF ordering does not exclude War Within or Midnight from the current27 follower-map scope.
 - Explicit lead instruction: use current Retail Lua, not legacy handlers. Where Retail uses timeline conditionals unavailable to this server, keep ongoing requests by consuming the Lua's listed durations in source order and record the unexecutable condition context as a named gap. This is a declared partial scheduling policy, not claimed execution of Blizzard's timeline.
 - Take ordinary child spell requests, implicit targets, radii, triggers and effects from70448. Missing selectors become named gaps; do not invent alternate IDs, targets, effects, stats or follower205 difficulty rows. Require native Normal1 and Follower205 behavior proof per boss.
 
