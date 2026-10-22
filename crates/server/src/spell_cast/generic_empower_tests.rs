@@ -75,25 +75,21 @@ fn early_release(spell_id: u32, class: u8, stage_one_frames: usize, total_durati
 }
 
 #[test]
-#[ignore = "generic empower RED before optional callback lifecycle"]
 fn census_empower_native_consumption_three_stages_and_early_release() {
     early_release(CONSUMPTION, 6, 15, 3.25);
 }
 
 #[test]
-#[ignore = "generic empower RED before optional callback lifecycle"]
 fn census_empower_native_slicing_winds_four_stages_and_early_release() {
     early_release(SLICING_WINDS, 10, 7, 2.4);
 }
 
 #[test]
-#[ignore = "generic empower RED before optional callback lifecycle"]
 fn census_empower_native_upheaval_three_stages_and_early_release() {
     early_release(UPHEAVAL, 13, 20, 3.5);
 }
 
 #[test]
-#[ignore = "generic empower RED before optional callback lifecycle"]
 fn census_empower_native_unhandled_release_waits_all_stages_and_maximum_hold() {
     let mut h = fixture(SLICING_WINDS, 10);
     // Four350ms native stages plus TC1000ms hold; no automatic stage-one shortcut.
@@ -108,7 +104,6 @@ fn census_empower_native_unhandled_release_waits_all_stages_and_maximum_hold() {
 }
 
 #[test]
-#[ignore = "generic empower RED before optional callback lifecycle"]
 fn census_empower_native_cancellation_is_not_an_early_release() {
     let mut h = fixture(CONSUMPTION, 6);
     h.app
