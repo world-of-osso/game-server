@@ -2,6 +2,16 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Ring modifier interpretation and source boundary (2026-10-21)
+
+[Visual contract](../../specs/toys.md#server-scope-visual-only-census-rule). Coldflame228789/465642 and Cyrce235041/1215495 promise ring appearance, not gear/stat replacement. Build70448 authors instant self aura4/zero payload/permanent Duration21, ItemEffect recovery120000ms and-1 respectively; Cyrce has no spell/category recovery, so zero is native behavior, not a cleared clock.
+
+Earlier ring audit's missing ChrRaces56 claim was wrong: TC a352b1fa ModifierTreeType9 is PlayerHasAuraEffect, and asset56 is TRANSFORM (asset36 is SHAPESHIFT). Type73 references another modifier tree;323 tests existing customization choice. PlayerCondition132790 selects the ordinary hand variant without choices3536/3537/3600/3601;132792 selects the alternate Arm Upgrade appearance with one of those choices while untransformed/unshapeshifted. Actual choice rows, options366/374 and requirement141 resolve. ChrCustomization157 identifies Arm Upgrade/Race37; no invented race row or gameplay helper aura is needed.
+
+Corrected metadata95 rows/29 tables/two resident ordinary models6029055/6210863/zero missing references. Preserve the erroneous old audit as superseded evidence, not a remaining source-data gap. Artifacts: visual-rings-corrected-70448.json,rings-modifier-type-correction.json,rings-source-provenance.json. Native choice/shape visual evaluation remains separate from server owner-aura proof.
+
+Tests929660d7f precede production: both owner lifecycles, source zero-CD reuse, source census gaps and four new drift cases in the existing shared fixture. RED batch is running; no ring admission/GREEN claim. Current qualified census537.
+
 ## All-Seeing Eyes source boundary (2026-10-21)
 
 [Visual contract](../../specs/toys.md#server-scope-visual-only-census-rule). Exact175140/318571 promises only N'Zoth's All-Seeing Eyes. Isolated build70448 graph:279 rows/26 tables, one resident ordinary model3055106,27 visual PlayerConditions and32 ModifierTree rows, zero missing references. The root is one self aura4, zero trigger/misc/item/mechanic/amount, instant cast,600000ms duration and1800000ms item recovery/category0/condition0. Evidence: visual-eyes-70448.json and eyes-root-source.json; no canonical writes.
