@@ -27,7 +27,7 @@ SOURCE_TABLES = {
     'TraitCond': 'trait_cond', 'TraitNode': 'trait_node', 'TraitNodeEntry': 'trait_node_entry',
     'TraitNodeXTraitNodeEntry': 'trait_node_x_trait_node_entry',
 }
-SCHEMA = '''CREATE TABLE follower_spec_kit (
+SCHEMA = '''CREATE TABLE IF NOT EXISTS follower_spec_kit (
     spec_id INTEGER NOT NULL, spell_id INTEGER NOT NULL,
     min_level INTEGER NOT NULL CHECK(min_level BETWEEN 1 AND 90),
     max_level INTEGER NOT NULL CHECK(max_level BETWEEN min_level AND 90),
@@ -45,6 +45,14 @@ def digest(path):
 def policy(slot, priority, target='enemy', **conditions):
     return slot, priority, dict(target=target, **conditions)
 
+
+# SimC76f8118 sc_monk.cpp:325-377 and apl_monk.cpp:264-294,300-325.
+# IDs resolve to these actions in native70448; no SimC70391 numeric spell data.
+WINDWALKER_COMBO_ACTIONS = (100780, 100784, 107428, 113656, 101546, 392983, 322109)
+WINDWALKER_PRIORITIES = {
+    113656: 105, 392983: 106, 107428: 110, 322109: 111,
+    101546: 115, 100784: 120, 100780: 150,
+}
 
 def dps_rotation_policy(spec, name):
     """Bounded SimC76f8118 decisions on the actual selected native70448 book."""
@@ -78,6 +86,39 @@ def dps_rotation_policy(spec, name):
 
 def combat_policy(spec, name, spell, dispel_effects, control_effects):
     """Editable project decisions; names resolve only from the sourced spellbook."""
+    if spec == 269 and spell in WINDWALKER_COMBO_ACTIONS:
+        conditions = dict(no_repeat_group=list(WINDWALKER_COMBO_ACTIONS))
+        if name == 'Tiger Palm':
+            conditions['resources'] = [dict(power='Chi', min_deficit=2)]
+        if name == 'Spinning Crane Kick':
+            return policy('aoe', WINDWALKER_PRIORITIES[spell],
+                          min_enemies=3, source_center=True, **conditions)
+        return policy('attack', WINDWALKER_PRIORITIES[spell], **conditions)
+    # SimC76f8118 druid_feral.simc finisher/aoe_finisher; native default103
+    # has no Apex Predator's Craving talent, so no unearned proc exemption.
+    if spec == 103 and name in {'Rip', 'Ferocious Bite', 'Primal Wrath'}:
+        resources = [dict(power='ComboPoints', min=5)]
+        if name == 'Rip':
+            return policy('attack', 100, missing_aura=spell, refresh_fraction=0.30, resources=resources)
+        if name == 'Primal Wrath':
+            return policy('aoe', 90, min_enemies=2, source_center=True, resources=resources)
+        return policy('attack', 110, resources=resources)
+    if spec == 103 and name == 'Rake':
+        return policy('attack', 100, missing_aura=spell, refresh_fraction=0.30)
+    if spec == 73 and name == 'Shield Block':
+        return policy('mitigation', 40, 'self', attacked=True,
+                      missing_aura=132404, refresh_seconds=10)
+    if spec == 66 and name == 'Shield of the Righteous':
+        return policy('mitigation', 40, min_enemies=1, source_center=True)
+    if spec in {66, 73} and name in {'Ardent Defender', 'Guardian of Ancient Kings', 'Shield Wall'}:
+        return policy('defensive', 30, 'self', health_below=0.50,
+                      attacked=True, tank_defensive_sequence=True)
+    # Common combat branches in both pinned Demonology hero APLs. They are
+    # starter-kit adaptations; missing hero-tree grants are never invented.
+    if spec == 266 and name == 'Demonbolt':
+        return policy('attack', 110, required_aura=264173,
+                      resources=[dict(power='SoulShards', below=4)])
+
     rotation = dps_rotation_policy(spec, name)
     if rotation is not None:
         return rotation
@@ -119,6 +160,8 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('interrupt', 5)
     if name in {'Mark of the Wild', 'Arcane Intellect', 'Power Word: Fortitude', 'Battle Shout', 'Blessing of the Bronze', 'Skyfury', 'Lightning Shield', 'Defensive Stance'}:
         return policy('buff', 75, 'self', missing_aura=spell)
+    if spec == 103 and name in {'Berserk', 'Incarnation: Avatar of Ashamane'}:
+        return policy('buff', 80, 'self', combat=True, missing_aura=spell, required_aura=5217)
     if name in {'Avenging Wrath', 'Combustion', 'Dragonrage', 'Zenith', 'Bestial Wrath', "Tiger's Fury", 'Stormkeeper', 'Summon Demonic Tyrant', 'Divine Toll', 'Mirror Image'}:
         return policy('buff', 80, 'self', combat=True, missing_aura=spell)
     if name in {'Consecration', 'Earthquake', 'Flamestrike', 'Meteor'}:
@@ -128,6 +171,8 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
                       source_center=name not in {'Chain Lightning', 'Azure Strike', 'Pyre'})
     if name in {'Moonfire', 'Sunfire', 'Flame Shock', 'Holy Fire', 'Barbed Shot', 'Rake', 'Rip', 'Corruption', 'Curse of Weakness', "Hunter's Mark"}:
         return policy('attack', 100, missing_aura=spell)
+    if name == "Hand of Gul'dan" and spec == 266:
+        return policy('attack', 110, resources=[dict(power='SoulShards', min=3)])
     if name in {"Avenger's Shield", 'Shield Slam', 'Lava Burst', 'Pyroblast', 'Fire Blast', 'Kill Command', 'Wild Thrash', 'Disintegrate', 'Fire Breath', 'Eternity Surge', 'Fists of Fury', 'Rising Sun Kick', 'Strike of the Windlord', 'Blackout Kick', 'Ferocious Bite', 'Demonbolt', 'Call Dreadstalkers', 'Summon Vilefiend', 'Demonic Strength', 'Execute', 'Touch of Death', 'Earth Shock'}:
         return policy('attack', 110)
     if name in {'Judgment', 'Crusader Strike', 'Blessed Hammer', 'Devastate', 'Wrath', 'Smite', 'Fireball', 'Lightning Bolt', 'Cobra Shot', 'Steady Shot', 'Living Flame', 'Tiger Palm', 'Shadow Bolt', 'Shred'}:
@@ -234,6 +279,25 @@ def read_description_reference_sources(db2, references):
     return evidence
 
 
+# SimC76f8118 engine/class_modules/warlock/sc_warlock_init.cpp:245-250.
+# Native70448 has the same talent/action identities; only those actually learned
+# in the selected native loadout enable the named cast actions.
+# Native TraitDefinition108167 VisibleSpellID106951 and108183 OverridesSpellID106951;
+# SimC sc_druid.cpp3933-3946,10699 suppresses Berserk when Incarnation is learned.
+SIMC_TALENT_CAST_ACTIONS = {
+    266: ((1250273, 105174, ()), (426115, 264178, ())),
+    103: ((343223, 106951, (102543,)),),
+}
+
+
+def project_loadout_actions(loadout):
+    known = dict(loadout['known'])
+    for parent, action, replacements in SIMC_TALENT_CAST_ACTIONS.get(loadout['spec_id'], ()):
+        if str(parent) in known and not any(str(spell) in known for spell in replacements):
+            known.setdefault(str(action), False)
+    return known
+
+
 def kit_rows(db, source):
     availability = defaultdict(list)
     description_links = {}
@@ -248,7 +312,7 @@ def kit_rows(db, source):
         controls[spell].append((target_a, target_b))
     for loadout in source['loadouts']:
         spec, level = loadout['spec_id'], loadout['level']
-        for spell_text, passive in loadout['known'].items():
+        for spell_text, passive in project_loadout_actions(loadout).items():
             spell = int(spell_text)
             native = db.execute('SELECT n.Name_lang,COALESCE(l.SpellLevel,0) FROM spell_name n LEFT JOIN spell_levels l ON l.SpellID=n.ID AND l.DifficultyID=0 WHERE n.ID=?', (spell,)).fetchone()
             if not native:
@@ -267,17 +331,7 @@ def kit_rows(db, source):
                 link = description_links[spell]
                 rule[2]['missing_aura'] = link['child_spell_id']
                 reference_rows[(spec, spell)] = dict(spec_id=spec, **link)
-            # SoTR's armor aura is named literally by its source tooltip; the
-            # native effect64 children are NOT that armor aura.
-            if name == 'Shield of the Righteous' and not passive:
-                description = db.execute('SELECT Description_lang FROM spell WHERE ID=?', (spell,)).fetchone()[0]
-                references = {int(value) for value in re.findall(r'\$(\d+)[sd]', description)}
-                armor = [value for value in references if db.execute(
-                    'SELECT 1 FROM spell_name n JOIN spell_effect e ON e.SpellID=n.ID WHERE n.ID=? AND n.Name_lang=? AND e.EffectAura=268', (value, name)).fetchone()]
-                if len(armor) != 1:
-                    raise ValueError('SoTR tooltip must name exactly one native armor aura')
-                rule[2]['missing_aura'] = armor[0]
-            elif rule[2].get('missing_aura') == spell and not db.execute(
+            if rule[2].get('missing_aura') == spell and not db.execute(
                     'SELECT 1 FROM spell_effect WHERE SpellID=? AND DifficultyID=0 AND Effect=6', (spell,)).fetchone():
                 children = db.execute('''SELECT DISTINCT e.EffectTriggerSpell FROM spell_effect e
                     JOIN spell_effect child ON child.SpellID=e.EffectTriggerSpell AND child.DifficultyID=0 AND child.Effect=6
@@ -303,6 +357,21 @@ def kit_rows(db, source):
     return rows, inventory, list(reference_rows.values())
 
 
+def replace_kit_scope(output, rows, spec_ids):
+    output.execute(SCHEMA)
+    generated = {row[0] for row in rows}
+    published = {row[0] for row in output.execute('SELECT DISTINCT spec_id FROM follower_spec_kit')}
+    scope = set(spec_ids) if spec_ids is not None else generated | published
+    if not scope or (spec_ids is not None and not scope.issubset(generated)):
+        raise ValueError(f'unknown or empty follower spec scope: {sorted(scope)}')
+    scope = sorted(scope)
+    selected = [row for row in rows if row[0] in scope]
+    placeholders = ','.join('?' for _ in scope)
+    output.execute(f'DELETE FROM follower_spec_kit WHERE spec_id IN({placeholders})', scope)
+    output.executemany('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', selected)
+    return selected, scope
+
+
 def prepare(args):
     inputs = [args.world_db.resolve(), args.source_json.resolve()]
     outputs = [args.output_db.resolve(), args.receipt.resolve(), args.sqldiff.resolve()]
@@ -322,11 +391,12 @@ def prepare(args):
         reference_sources = read_description_reference_sources(args.db2_root, references)
         with closing(sqlite3.connect(args.output_db)) as output:
             db.backup(output)
-            output.execute('DROP TABLE IF EXISTS follower_spec_kit')
-            output.execute(SCHEMA)
-            output.executemany('INSERT INTO follower_spec_kit VALUES (?,?,?,?,?,?,?,?)', rows)
+            rows, scope = replace_kit_scope(output, rows, args.spec_ids)
             output.commit()
-    diff = subprocess.run(['sqldiff', str(args.world_db), str(args.output_db)], capture_output=True, text=True, check=True).stdout
+            output_rows = output.execute('SELECT COUNT(*) FROM follower_spec_kit').fetchone()[0]
+    diff = subprocess.run(['sqldiff', '--primarykey', '--table', 'follower_spec_kit',
+                           str(args.world_db), str(args.output_db)], capture_output=True, text=True, check=True).stdout
+    diff = f'BEGIN IMMEDIATE;\n{diff}COMMIT;\n' if diff.strip() else ''
     args.sqldiff.write_text(diff)
     if digest(args.world_db) != before:
         raise ValueError('input database changed during preparation; discard this copy')
@@ -334,19 +404,21 @@ def prepare(args):
                    producer_sha256=digest(__file__), source_database=str(args.world_db.resolve()),
                    source_database_sha256=before, output_database=str(args.output_db.resolve()),
                    output_database_sha256=digest(args.output_db), source_json_sha256=digest(args.source_json),
-                   changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), sources=evidence,
+                   changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), output_rows=output_rows,
+                   spec_ids=scope, key_columns=['spec_id', 'spell_id', 'min_level'], sources=evidence,
                    chosen_loadouts=source['loadouts'], trait_source_trees=source['trees'], level32_inventory=inventory,
                    aura_reference_rows=references, description_reference_sources=reference_sources,
                    selected_source_rows=selected_source_rows(args.db2_root, source),
                    sqldiff=str(args.sqldiff.resolve()), sqldiff_sha256=digest(args.sqldiff))
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
-    print(f'Prepared {len(rows)} kit intervals in COPY {args.output_db}; canonical unchanged')
+    print(f'Prepared {len(rows)} kit intervals for specs {scope} in COPY {args.output_db}; canonical unchanged')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['world-db', 'db2-root', 'source-json', 'output-db', 'receipt', 'sqldiff']:
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--spec-ids', type=int, nargs='+', help='Replace only these owned spec kits; omitted replaces the complete kit')
     prepare(parser.parse_args())
 
 

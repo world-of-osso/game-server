@@ -7,7 +7,11 @@ use shared::components::{Health, ThreatTable};
 use shared::protocol::CombatLogKind;
 
 fn prepare(entry: u32, count: usize) -> (Harness, Entity, Vec<Entity>) {
-    let (mut h, caster) = at_level(entry, 90, |_| {});
+    prepare_at_level(entry, count, 90)
+}
+
+fn prepare_at_level(entry: u32, count: usize, level: u8) -> (Harness, Entity, Vec<Entity>) {
+    let (mut h, caster) = at_level(entry, level, |_| {});
     let mut targets = vec![h.npc];
     targets.extend((1..count).map(|index| spawn_npc(&mut h.app, index as f32)));
     for &target in &targets {
@@ -45,9 +49,8 @@ fn rotation_selection_262_native_book_applies_flame_shock() {
     );
 }
 
-#[test]
-fn rotation_selection_1467_three_targets_use_empower_and_spender() {
-    let (mut h, caster, _) = prepare(215240, 3);
+fn kybel_actions(level: u8) -> (Harness, Entity, Vec<u32>) {
+    let (mut h, caster, _) = prepare_at_level(215240, 3, level);
     for _ in 0..600 {
         super::update_ai(h.app.world_mut());
         h.advance(1);
@@ -59,14 +62,34 @@ fn rotation_selection_1467_three_targets_use_empower_and_spender() {
         .filter(|go| go.caster == caster.to_bits())
         .map(|go| go.spell_id)
         .collect();
+    (h, caster, actions)
+}
+
+#[test]
+fn rotation_selection_1467_three_targets_use_empower_and_spender() {
+    let (h, caster, actions) = kybel_actions(90);
+    assert!(crate::auras::has_aura(h.app.world(), caster, 411212));
+    // Native411212 effects1077606/1077607 replace both empower roots.
     assert!(
-        actions.contains(&357208),
-        "Azure filler must not starve native Fire Breath: {actions:?}"
+        actions.contains(&382266) && actions.contains(&382411),
+        "learned Font of Magic must cast native empowered variants: {actions:?}"
     );
+    assert!(!actions.contains(&357208) && !actions.contains(&359073));
     assert!(
         actions.iter().any(|spell| matches!(spell, 356995 | 357211)),
         "Azure filler must not starve native Essence spenders: {actions:?}"
     );
+}
+
+#[test]
+fn rotation_selection_1467_three_targets_before_font_use_native_roots() {
+    let (h, caster, actions) = kybel_actions(56);
+    assert!(!crate::auras::has_aura(h.app.world(), caster, 411212));
+    assert!(
+        actions.contains(&357208) && actions.contains(&359073),
+        "before native Font of Magic57, both base empower roots must cast: {actions:?}"
+    );
+    assert!(!actions.contains(&382266) && !actions.contains(&382411));
 }
 
 #[test]

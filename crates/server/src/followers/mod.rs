@@ -12,6 +12,8 @@ mod kit_area;
 #[cfg(test)]
 mod kit_hunter_policy_tests;
 mod kit_interrupt;
+mod kit_overrides;
+
 #[cfg(test)]
 mod kit_proc_fidelity_tests;
 #[cfg(test)]
@@ -62,6 +64,7 @@ mod rotation_dummy_tests;
 pub(crate) mod simulator;
 mod spawning;
 mod stockade_diagnostic;
+mod tank_defense;
 mod tank_frontal;
 mod tank_planner;
 #[cfg(test)]
@@ -236,6 +239,16 @@ mod passive_stats_tests;
 mod pet_tests;
 #[cfg(test)]
 mod profile_behavior_tests;
+#[cfg(test)]
+mod rotation_defense_tests;
+#[cfg(test)]
+mod rotation_override_tests;
+#[cfg(test)]
+mod rotation_proc_tests;
+#[cfg(test)]
+mod rotation_refresh_tests;
+#[cfg(test)]
+mod rotation_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
