@@ -142,6 +142,59 @@ fn rotation_selection_262_native_ascendance_after_stormkeeper() {
     );
 }
 
+#[test]
+#[ignore = "native Ascendance entry effects RED before implementation"]
+fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
+    let (mut h, caster, targets) = prepare(209053, 7);
+    assert!(
+        targets
+            .iter()
+            .all(|&target| !crate::auras::has_aura(h.app.world(), target, 188389,))
+    );
+    let first = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 1219480, Some(caster), false)
+        .unwrap();
+    h.advance(20);
+    assert!(crate::auras::has_aura(h.app.world(), caster, 1219480));
+    let shocked: Vec<_> = targets
+        .iter()
+        .copied()
+        .filter(|&target| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(target)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 188389 && aura.caster == caster)
+                })
+        })
+        .collect();
+    assert_eq!(
+        shocked.len(),
+        6,
+        "native1219480s7 must apply six actual owned Flame Shocks"
+    );
+    let burst_hits: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        burst_hits.len(),
+        6,
+        "entry must launch real native Lava Burst damage once per selected enemy"
+    );
+    assert!(shocked.iter().all(|target| {
+        burst_hits
+            .iter()
+            .any(|hit| hit.target == Some(target.to_bits()))
+    }));
+}
+
 fn stormkeeper_within_sync_window(h: &Harness, caster: Entity) -> bool {
     let world = h.app.world();
     let spell = world
