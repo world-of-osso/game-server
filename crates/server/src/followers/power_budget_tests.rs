@@ -1,6 +1,6 @@
 //! FOLLOWER_EXPECTED_STAT_PLAYER_BUDGET is project policy, not Retail NPC gear.
 use bevy::prelude::*;
-use shared::components::{CombatRatings, Level};
+use shared::components::{CombatRatings, DerivedStats, Level, UnitStats};
 
 use super::profile_behavior_tests::spawn_profile_fixture_with_plugins;
 use crate::spell_cast::test_harness::{harness, world_db};
@@ -57,6 +57,11 @@ fn follower_power_budget_survives_passive_refresh_and_recomputes_on_level_change
         app.add_plugins(StatsPlugin);
     });
     h.app.world_mut().get_mut::<Level>(h.caster).unwrap().0 = 70;
+    h.app.world_mut().entity_mut(h.caster).insert((
+        UnitStats::default(),
+        CombatRatings::default(),
+        DerivedStats::default(),
+    ));
     super::spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
     assert_eq!(
         h.app
@@ -77,6 +82,16 @@ fn follower_power_budget_survives_passive_refresh_and_recomputes_on_level_change
             .intellect,
         375.046387_f32,
         "ordinary passive refresh must not revert to naked class Intellect"
+    );
+    assert_eq!(
+        h.app
+            .world()
+            .get::<CharacterStats>(h.caster)
+            .unwrap()
+            .primary
+            .intellect,
+        145.0,
+        "the owner's naked player sheet must not receive the follower policy"
     );
     h.app.world_mut().get_mut::<Level>(unit).unwrap().0 = 35;
     h.advance(3);
