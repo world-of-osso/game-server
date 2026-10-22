@@ -137,35 +137,38 @@ fn load_sphere_properties(connection: &Connection, id: u32) -> Result<SphereProp
          ,Shape,ShapeData1,MoveCurveId,MorphCurveId,FacingCurveId \
          FROM tdb_areatrigger_create_properties WHERE Id=?1 AND IsCustom=0",
             [id],
-            |row| {
-                Ok(SphereProperties {
-                    template: row.get(0)?,
-                    custom: row.get(1)?,
-                    radius: row.get(2)?,
-                    curve: row.get(3)?,
-                    time_to_scale_ms: row.get(4)?,
-                    script_name: row.get(5)?,
-                    flags: row.get(6)?,
-                    shape: row.get(7)?,
-                    target_radius: row.get(8)?,
-                    motion_curves: [row.get(9)?, row.get(10)?, row.get(11)?],
-                })
-            },
+            decode_sphere_properties,
         )
         .map_err(|error| {
             format!(
                 "Properties {id}: missing source definition: {error}"
             )
         })?;
-    validate_stationary_sphere(connection, id, &properties)?;
+    validate_stationary_sphere(id, &properties)?;
+    if read_source_movement(connection, id)? {
+        return Err(format!(
+            "Properties {id}: unsupported spline/orbit movement"
+        ));
+    }
     Ok(properties)
 }
 
-fn validate_stationary_sphere(
-    connection: &Connection,
-    id: u32,
-    properties: &SphereProperties,
-) -> Result<(), String> {
+fn decode_sphere_properties(row: &rusqlite::Row<'_>) -> rusqlite::Result<SphereProperties> {
+    Ok(SphereProperties {
+        template: row.get(0)?,
+        custom: row.get(1)?,
+        radius: row.get(2)?,
+        curve: row.get(3)?,
+        time_to_scale_ms: row.get(4)?,
+        script_name: row.get(5)?,
+        flags: row.get(6)?,
+        shape: row.get(7)?,
+        target_radius: row.get(8)?,
+        motion_curves: [row.get(9)?, row.get(10)?, row.get(11)?],
+    })
+}
+
+fn validate_stationary_sphere(id: u32, properties: &SphereProperties) -> Result<(), String> {
     if properties.shape != 0 || properties.radius != properties.target_radius {
         return Err(format!(
             "Properties {id}: unsupported shape {}/radius {}→{}",
@@ -187,16 +190,14 @@ fn validate_stationary_sphere(
             properties.flags
         ));
     }
-    let moving: bool = connection.query_row(
+    Ok(())
+}
+
+fn read_source_movement(connection: &Connection, id: u32) -> Result<bool, String> {
+    connection.query_row(
         "SELECT EXISTS(SELECT 1 FROM tdb_areatrigger_create_properties_spline_point WHERE AreaTriggerCreatePropertiesId=?1 AND IsCustom=0) OR EXISTS(SELECT 1 FROM tdb_areatrigger_create_properties_orbit WHERE AreaTriggerCreatePropertiesId=?1 AND IsCustom=0)",
         [id], |row| row.get(0),
-    ).map_err(|error| format!("Properties {id}: missing source movement metadata: {error}"))?;
-    if moving {
-        return Err(format!(
-            "Properties {id}: unsupported spline/orbit movement"
-        ));
-    }
-    Ok(())
+    ).map_err(|error| format!("Properties {id}: missing source movement metadata: {error}"))
 }
 
 fn select_script(id: u32, properties: &SphereProperties) -> Result<Option<FieldScript>, String> {
