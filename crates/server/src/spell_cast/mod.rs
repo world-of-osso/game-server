@@ -1816,10 +1816,9 @@ fn validate_start_with_policy(
     mobile_banking::check_cast(world, caster, spell.id)?;
     crate::game_objects::cooking_focus::check_cast(world, caster, spell.id)?;
     teleport::check_destination(world, caster, spell)?;
-    if check == StartCheck::Native
-        && world.get::<CastState>(caster).is_some()
-        && !allows_cast_while_casting(spell)
-    {
+    let casting_blocks_start =
+        world.get::<CastState>(caster).is_some() && !allows_cast_while_casting(spell);
+    if check == StartCheck::Native && casting_blocks_start {
         return Err(CastFailure::InProgress);
     }
     validate_history(world, caster, spell, check)?;

@@ -166,7 +166,19 @@ fn load_procs_per_minute(conn: &Connection) -> rusqlite::Result<HashMap<u32, Pro
         },
     )?;
     let mut entries: HashMap<_, _> = entries.into_iter().collect();
-    let modifiers = collect(
+    let modifiers = load_ppm_haste_modifiers(conn)?;
+    for (id, modifier) in modifiers {
+        if let Some(entry) = entries.get_mut(&id) {
+            entry.haste_modifiers.push(modifier);
+        }
+    }
+    Ok(entries)
+}
+
+fn load_ppm_haste_modifiers(
+    conn: &Connection,
+) -> rusqlite::Result<Vec<(u32, ProcsPerMinuteHasteModifier)>> {
+    collect(
         conn,
         "SELECT SpellProcsPerMinuteID, Param, Coeff FROM spell_procs_per_minute_mod WHERE Type=1 ORDER BY ID",
         |row| {
@@ -178,13 +190,7 @@ fn load_procs_per_minute(conn: &Connection) -> rusqlite::Result<HashMap<u32, Pro
                 },
             ))
         },
-    )?;
-    for (id, modifier) in modifiers {
-        if let Some(entry) = entries.get_mut(&id) {
-            entry.haste_modifiers.push(modifier);
-        }
-    }
-    Ok(entries)
+    )
 }
 
 fn lookup<T: Clone>(table: &HashMap<u32, T>, id: u32) -> Option<T> {

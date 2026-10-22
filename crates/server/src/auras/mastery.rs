@@ -23,9 +23,9 @@ pub(crate) fn effect_bonus(
     spell: &SpellInfo,
     effect: &SpellEffect,
 ) -> f32 {
-    let has_class_stats =
+    let uses_class_mastery =
         world.get::<Player>(caster).is_some() || world.get::<Follower>(caster).is_some();
-    if !affects_points(spell) || !has_class_stats {
+    if !affects_points(spell) || !uses_class_mastery {
         return 0.0;
     }
     world
