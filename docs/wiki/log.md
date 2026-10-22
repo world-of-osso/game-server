@@ -1,3 +1,15 @@
+## 2026-10-22 — Native power receipt observability
+## 2026-10-22 — Utility Attr4 master refresh
+
+[Utility master integration](systems/follower-utility.md#master-attr4-integration-refresh): master23c75e20e/sourcee83a4a831 retains pursuit plus native no-clipping parallel casts. Exact prior95 cases95PASS149.10s; no source-input or paired metric changes.
+
+## 2026-10-22 — Utility/native-policy integration
+
+[Utility admission](systems/follower-utility.md#integration-with-native-defensive-admission): matched master40812PASS versus utility12FAIL, plus shared missing Leymor receipt. Preserve authored defensive admission/healer ownership; owned Holy/Resto harm-first dispels2RED→GREEN. Approved native OOC Mark and actual ready-kick/cooldown-spent Overheat cases pass. Final native95PASS103.55s at1afc510b6/mastere5f37f774; no paired metric rerun or Leymor frontal/nav qualification.
+
+## 2026-10-21 — Follower utility and scoped geometry
+
+[Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
 ## 2026-10-22 — Midnight clock authority
 
 [Source matrix](investigations/follower-data.md#midnight-clock-authority--2026-10-22):31 incoming-timeline LittleWigs modules lack authored start/repeat anchors;160 native EncounterEvent alert rows do not provide them. Existing Kystia TC authority retained; other30 remain explicit clock/identity/placement gaps, not fabricated schedules. Historical DF-only task exclusion corrected for current27-map scope.
@@ -49,7 +61,7 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 
 ## 2026-10-22 — Player DPS bridge and fixed-time receipt inventory
 
-[Bridge and fixture boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): unchanged pinned authored decisions drive real Players; exact unknown-rule/cast failures remain blockers. Historical564d46598 health/player controls2GREEN and10policy-on300s single-target executions retained, including Fury72/Enhancement263. New40-row receipt inventory verifies report hashes and distinguishes11blocks/10missing references/6unattempted/trait rejection/Human regression/source-invalid retry; no new simulations. Only269 changes cast counts under health policy;66alsochanges hits/per-hit output, no isolated causality. Process source-view RED→GREEN proves readonly snapshot isolation only; post-master native source/Human/check gates pending. Prior adapter metrics remain historical, not current-master acceptance.
+[DPS power receipts](systems/dungeon-simulator.md#power-receipts--2026-10-22) preserve actual actor/pet raw pools and tick rates, plus source/recipient/spell-attributed Energize requested/overflow/effective integer gains. No inferred total regeneration or gameplay change. Native profile/pet/Cobra/grant RED2 at a8365f874 precedes receipt implementation; integrated14e20fbca GREEN3/3 includes native66 Mana, with retained source/parallel6PASS and all-target check/fmtPASS. No resource mechanics or300s parity claim.
 
 ## 2026-10-21 — Native DPS parity adapter
 
@@ -81,6 +93,17 @@ Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarge
 ## 2026-10-21 — Approved follower mastery amounts
 
 [Character stats](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21): native76671/76857 AP and168534 damage modifiers exposed the Player-only gate in mastery construction/refresh. Ignored RED3 reproduced; same raw-point calculation now admits approved followers, preserving ordinary NPC exclusion. Native coefficients unchanged; enabled mastery/NPC controlsGREEN at2ba4ec43a. First-five composite controls2030PASS/16existing ignored, all-targets check/fmtPASS at5368e1070; 300s parity remains unmeasured.
+## 2026-10-22 — Frozen-view native gate and terminal player continuation
+
+[Bridge/source boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): c04ecc5b9/P2abc7fa gives native5GREEN158.48s, all-targetcheck28.85s/fmt/0warnings after inherited duplicatePetControlPlugin startup failure2PASS/3FAIL and exact sibling597d harness repair. Frozen8-case continuation completes without source drift or positive-output qualification:64/265/577/581 exact source rules,268 native InvalidTarget,251/1480 strict parent-node rejections,267 raw300s/6000decisions/61Felhunter casts/0damage/no pet. New v2 inventory40rows:10 historical qualified,16source/castblocks,3stricttraits,1zero-output failure,10missing selected references. Report hashes and10 existing factor ledgers' source hashes/conservation checked; no extra factor partition, production fix, zero-DPS acceptance or three-target parity claim. Older receipts remain intact; parent gates producer integration and subsequent CombatRefs-conditioned3-target runs separately.
+
+## 2026-10-22 — Player DPS bridge and fixed-time receipt inventory
+
+[Bridge and fixture boundary](systems/dungeon-simulator.md#real-player-dps-bridge-and-fixed-time-health-2026-10-22): unchanged pinned authored decisions drive real Players; exact unknown-rule/cast failures remain blockers. Historical564d46598 health/player controls2GREEN and10policy-on300s single-target executions retained, including Fury72/Enhancement263. New40-row receipt inventory verifies report hashes and distinguishes11blocks/10missing references/6unattempted/trait rejection/Human regression/source-invalid retry; no new simulations. Only269 changes cast counts under health policy;66alsochanges hits/per-hit output, no isolated causality. Process source-view RED→GREEN proves readonly snapshot isolation only; post-master native source/Human/check gates pending. Prior adapter metrics remain historical, not current-master acceptance.
+
+## 2026-10-21 — Native DPS parity adapter
+
+[Adapter](systems/dungeon-simulator.md#native-dps-parity-adapter--2026-10-21): source-qualified instance/linked effects and physical armor enchants; separate allocated/effective SimC traits. Real NPC follower and native living out-of-range controller avoid first-tick-only false acceptance. Merged24controls GREEN; actual pet absence/no learned casts and missing30s add replacement give three explicit ignored REDs. Existing pet systems/native metadata and timed native summon retirement now pass all3 opt-in300s qualifications atd698d1d3b (Hunter76petcasts, Demo50petcasts,10waves/20distinctadds); source/stat/rotation parity remains unproved. Stable-key Duck174884 SQL/receipt only, no canonical mutation or fabricated stats. Original18 SimC runs retained; expanded reference coverage now60 benchmarks across30 selected profiles, with actual three-target recipient evidence. Eight actor-aware factor ledgers expose missing output/per-hit/count differences and excess FoF pulses; conditional guardian means need whole-player sample weighting. Current16/16 native execution cases pass, but timed-three reveals a real passive-dummy multi-enemy admission gap: follower AI does not count CombatRefs-only targets, and only the main dummy is the owner's victim. No fake threat/flags or AI edits. Bounded113-spell/206-base-effect comparison agrees70391/70448 in16 fields; effective multipliers remain unisolated. Health-phase/consumable/item-option differences and whole40-spec acceptance remain open.
 ## 2026-10-22 — Continuous-edge cohorts and disconnected chase
 
 [Archived5f7 qualification](systems/dungeon-simulator.md#continuous-edge-seeded-qualification-2026-10-22): Stockade50/50,150boss Deaths,0failures;1–49batch3083.914376s plus retained50 individual124.597531s. Azure10requested yields9process panics/missingreports and1valid tank-absence block,1323.826085s. [Separate Rune blocked-chase parity](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22) now has an ignored native book-hop regression; no synthetic connector, policy exception or timer. RED pending.
@@ -3784,6 +3807,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Missing-model project geometry policy
 
 [Model geometry](systems/model-geometry.md): approved generic runtime defaults replace follower-only sizing; actual Champion124440 acquisition/scaled precedence RED2/5.15s. Source rows and effective scale preserved; radius and GREEN proof pending.
+
+## 2026-10-21 — Utility integration and reproducible pet census
+
+[Follower utility](systems/follower-utility.md): native healer triage ownership retained during utility integration; old follower-only sizing references/oracle replaced by shared model-geometry contract. Pet census producer now emits native family29 actions30213/30151/89766 with levels1/14/17 and explicit rotation/movement/stopping categories; Python2RED→2GREEN0.331s at77be85c3e. Six actual companion-party buff cases are committed, native RED pending capacity.
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): native TF and WW fourRED→GREEN; retained refresh/defense/form20PASS, LastStand source-attribution oracle corrected; full measurements remain open.
 
 - 2026-10-21: [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21): merged1c4df4250 native21PASS26.07s/0warnings/fmtPASS, including real two-use ComboBreaker and StatsPlugin LastStand46/47; full APL/healer import remain open.
@@ -3800,6 +3827,9 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
 
+## 2026-10-22 — Qualified follower utility comparison
+
+[Follower utility](systems/follower-utility.md#backend-aligned-matched-outcomes): native global range/phase priority2RED→79-case utility/healer/retainedGREEN (one existing ignored). Backend-aligned frozen-input20+20 runs: landed interrupts655→691, dangerous completions14→23, native party Deaths1→0, clears19→20; no improved-cast-suppression or statistical survival claim. Source/prerequisite boundaries and earlier failed candidates retained in linked receipts.
 - 2026-10-21: [Encoded navigation grid](design/navigation-worker.md#encoded-navigation-grid-contract): real2669tile31_37 capacity RED (69452contour/68202unique vertices); generic uniform whole-map refinement and encoded-width runtime support at84b5a36ba. Body/voxel/region/simplification unchanged; real2669CLI/query, refined cross-tile and mixed-grid3/3GREEN, patchedAzurefour4×4 payload hashes byte-identical. Four full-map repairs20/49/30/15tiles uniformly8×8 pass;27requested maps staged1100nav/LOS/M2tiles each,19119packets unchangedbodyparams,3300-file publication manifest. Sanity8/20PASS,18noentrance/4nobossspawn gaps explicit. After147bab495 merge, navigationunit8PASS/5existingassetignores/defaultcheck/fullfmtPASS; targeted3GREEN proofscope unchanged, no redundant rerun. Publication/runtime rollout remainslead-owned.
 - 2026-10-21: Talondras currentLua/native70448 partial: originalignoredRED→parent-approved native5GREEN; all20source requests, exact11native successes/9category1152rejections perNormal/Follower run, nativeDamage/DOT/reset/isolatedcredit. Runtime109735model kept; Orb/energy/category mismatch gaps explicit, no cooldown bypass. [Boss scripts](systems/boss-scripts.md#talondras-current-lua-partial--2026-10-21).
 
@@ -3818,6 +3848,13 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+## 2026-10-22 — Server test performance profile
+
+[Server test performance](investigations/server-test-performance.md): copied fu913 baseline plus49Hz sample identifies unoptimized server-instantiated generic ECS/iterator paths despite optimized dependencies. Add test-only server opt2/debug1, preserving assertions/overflow checks. Baseline/optimized CPU, wall, RSS and complete900s union acceptance remain pending; shared-host swapping is recorded, not attributed to code.
+
+Pruner investigation: unconditional leading-lib stripping split libc/libm/libloading/libsqlite3_sys dep-info from library groups, defeating third-party retention and cascading94-crate rebuilds. Lead deployed extension-aware grouping; standalone aged-filesystem regression8RED→3GREEN. Same-petgate manifest/lock diff empty, flags/features stable. Separate ft923 pygate cold-check history remains unproven.
+
+Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0→opt2 timer31.133876→7.695305s,CPU23.252883→7.635607s,debug1/assertions/overflow retained. Separate current3casePASS includes fullStockade73.885s; historical source comparison remains explicitly confounded. Second cache cause: relativevendor/root missed slash-prefixed guard, evicting Replication/Replicon/Recast and rebuilding4registryLightyearconsumers. Lead deployed path-component matching; native relative artifact classification and aged-filesystem RED1→4GREEN. Union/currentmaster/canonicalbackup/RSS qualification remains open.
 - 2026-10-22: Recorded Ruby entrance artifact/formation root causes, pushed native23s overlap RED and approved per-party slot policy; GREEN/gates pending. See [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
 
 - 2026-10-22: Ruby per-party follow slots qualified: pushed ignoredRED→native23sGREEN; integrated8a1faab214 controls464PASS/27ignored, defaultStockade+Henry3-boss simulator clears, be88079ef native-metadata fixture1PASS/all-targets/fmtPASS,0compiler warnings. Source snapshot unchanged6bf39eb8; see [[follower-data#Ruby entrance follow and formation — 2026-10-22]].
