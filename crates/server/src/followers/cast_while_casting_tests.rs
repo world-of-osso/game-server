@@ -43,7 +43,6 @@ fn assert_fire_blast_preserved_fireball(h: &mut Harness, caster: Entity, target:
 }
 
 #[test]
-#[ignore = "DPS parity RED: native Attr4 cast-while-casting is ignored"]
 fn dps_parity_cast_while_casting_native_creature_preserves_active_fireball() {
     let (mut h, caster) = crate::followers::kit_proc_fidelity_tests::prepare(209059);
     let target = h.npc;
@@ -55,7 +54,6 @@ fn dps_parity_cast_while_casting_native_creature_preserves_active_fireball() {
 }
 
 #[test]
-#[ignore = "DPS parity RED: follower precheck ignores Attr4 cast-while-casting"]
 fn dps_parity_cast_while_casting_follower_kit_executes_without_self_interrupt() {
     let (mut h, caster) = crate::followers::kit_proc_fidelity_tests::prepare(209059);
     let target = h.npc;
@@ -79,7 +77,6 @@ fn dps_parity_cast_while_casting_follower_kit_executes_without_self_interrupt() 
 }
 
 #[test]
-#[ignore = "DPS parity RED: player queue must not delay cast-while-casting"]
 fn dps_parity_cast_while_casting_player_requests_bypass_only_active_cast_delay() {
     for near_completion in [false, true] {
         let mut h = harness(Vec::new(), &[FIREBALL, FIRE_BLAST], 8).unwrap();

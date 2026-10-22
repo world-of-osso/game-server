@@ -1,3 +1,4 @@
+- [Cast while casting](systems/spell-casting.md#cast-while-casting--2026-10-21) — native Attr4 admission shared by creature/player/kit paths, without delaying Fire Blast behind the active cast; three native RED reproduced, GREEN pending.
 - [Follower mastery amounts](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21) — Player-only amount/refresh gate excluded approved class-stat followers; native AP/damage RED reproduced, generic fix committed with GREEN pending.
 - [Deios source ingress boundary](systems/boss-scripts.md#deios-source-ingress-boundary--2026-10-21) — native outgoingWing/control2PASS, first6.3sWingRED; source PC immunity320 preserved, no invented unlock or combat proof.
 - [Emberon current Lua partial](systems/boss-scripts.md#emberon-current-lua-partial--2026-10-21) — firstClapRED→composite7GREEN Normal/Follower; native24.3s aura cap, ongoing counts/second phase/reset/copy-credit; absent395681/controller gaps explicit.
