@@ -266,7 +266,18 @@ fn follower_trash_azure_wild_eruption_releases_native_missile_damage() {
 
 fn assert_wild_eruption_field_at_victim(h: &mut Harness, actor: Entity) {
     let player = h.player();
-    let victim_position = *h.app.world().get::<Position>(player).unwrap();
+    let mut victim_position = *h.app.world().get::<Position>(player).unwrap();
+    let map = *h.app.world().get::<InMap>(player).unwrap();
+    let point = Vec3::new(victim_position.x, victim_position.y, victim_position.z);
+    let probe = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::ground::GroundMap>()
+        .ground_in(map, point);
+    let crate::ground::GroundProbe::Supported(height) = probe else {
+        panic!("native selector138 ground projection unavailable: {probe:?}");
+    };
+    victim_position.y = height;
     let world = h.app.world_mut();
     let fields: Vec<_> = world
         .query::<(
@@ -284,7 +295,7 @@ fn assert_wild_eruption_field_at_victim(h: &mut Harness, actor: Entity) {
     let (field, position) = fields[0];
     assert_eq!(
         *position, victim_position,
-        "destination53 selects actual victim, not caster destination"
+        "destination53 selects victim XY and138 retains exact native floor projection"
     );
     assert!(field.expires_at.is_some(), "native field lifetime retained");
 }
