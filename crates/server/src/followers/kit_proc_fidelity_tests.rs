@@ -49,6 +49,31 @@ pub(super) fn complete_cast(h: &mut Harness, caster: Entity, spell: u32, target:
 }
 
 #[test]
+fn dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits() {
+    let (mut h, caster) = prepare(227734);
+    let target = h.npc;
+    // Earn actual native Chi using Tiger Palm; no pool/cooldown/clock overrides.
+    complete_cast(&mut h, caster, 100780, target);
+    complete_cast(&mut h, caster, 100780, target);
+    let first = h.inbox.log.len();
+    complete_cast(&mut h, caster, 113656, target);
+    h.advance(200);
+    let hits = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(target.to_bits())
+                && event.spell_id == Some(117418)
+        })
+        .count();
+    assert_eq!(
+        hits, 5,
+        "FISTS_OF_FURY_SIMC_TICK_CADENCE: one native4s channel, tick0 then1s ticks; not one hit each166ms dummy heartbeat"
+    );
+}
+
+#[test]
 fn proc_fidelity_1467_native_dragonrage_azure_grants_and_spends_essence_burst() {
     let (mut h, caster) = prepare(215240);
     let target = h.npc;

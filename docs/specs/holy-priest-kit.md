@@ -204,6 +204,14 @@ Your healing on allies with your Renew is increased by $s1%.
 
 $s1% of $?c1[Flash Heal or Shadow Mend][Flash Heal] healing on other targets also heals you.
 
+Native execution must use learned368275 effect0's percentage and the resolved
+pre-overheal healing amount, then execute native368276 on the healing actor.
+Self-heals, periodic healing and spells outside the pinned TC priest-family6
+mask0x1800 must not transfer. TC a352b1fa `spell_priest.cpp:859–889` and
+`sql/old/11.x/world/25101_2026_01_14/2025_12_30_01_world.sql` supply the script and
+heal-only/family eligibility; the aura's DB2 proc mask/chance still apply.
+No follower-only health mutation or policy grant substitutes for the native child.
+
 ### Everlasting Light (1249233)
 
 Surge of Light occurs up to $s1% more often based on your missing mana.
