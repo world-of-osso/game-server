@@ -1707,7 +1707,6 @@ fn validate_start(
 }
 
 /// Read ordinary native cast eligibility without casting, retargeting or spending.
-#[cfg(test)]
 pub(crate) fn read_native_cast_start(
     world: &mut World,
     caster: Entity,

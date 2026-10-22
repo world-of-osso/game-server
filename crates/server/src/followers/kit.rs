@@ -57,6 +57,7 @@ pub(super) struct Conditions {
 
     pub required_self_aura: Option<u32>,
     pub refreshable_aura: Option<u32>,
+    pub target_if_min_aura: Option<u32>,
     pub min_enemies: usize,
     pub min_injured: usize,
     pub attacked: bool,
