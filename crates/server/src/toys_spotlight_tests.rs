@@ -29,25 +29,29 @@ fn invite_spotlight_friend(h: &mut Harness, character: u64, recipient: Entity) {
             (recipient_id, recipient, "SpotFriend"),
         ]
         .into_iter()
-        .map(|(id, entity, name)| {
-            (
-                id,
-                OnlineMember {
-                    entity: entity.to_bits(),
-                    name: name.into(),
-                    class: 8,
-                    level: 80,
-                    portrait: default(),
-                    dungeon_difficulty: 1,
-                    raid_difficulty: default(),
-                },
-            )
-        }),
+        .map(|(id, entity, name)| (id, spotlight_online_member(h, entity, name))),
     );
     let mut groups = h.app.world_mut().resource_mut::<GroupRegistry>();
     groups.invite(character, "SpotFriend", &online);
     groups.respond_invite(recipient_id, true);
     assert!(groups.is_in_same_group(character, recipient_id));
+}
+
+fn spotlight_online_member(h: &Harness, entity: Entity, name: &str) -> OnlineMember {
+    OnlineMember {
+        entity: entity.to_bits(),
+        name: name.into(),
+        class: h
+            .app
+            .world()
+            .get::<shared::components::Player>(entity)
+            .unwrap()
+            .class,
+        level: h.app.world().get::<Level>(entity).unwrap().0,
+        portrait: default(),
+        dungeon_difficulty: 1,
+        raid_difficulty: default(),
+    }
 }
 
 #[test]
@@ -57,11 +61,12 @@ fn toy_coverage_spotlight_native_target57_rejects_foreign_ally_before_cast() {
     install_visual_source(&mut h);
     let foreign = spawn_spotlight_friend(&mut h, character + 1, 2.0);
     let owner = h.caster;
-    let result = crate::spell_cast::cast_creature(
+    let result = crate::spell_cast::creature_cast(
         h.app.world_mut(),
         owner,
         BLESSING_OF_PROTECTION,
         Some(foreign),
+        false,
     );
     assert!(
         matches!(result, Err(crate::spell_cast::CastFailure::InvalidTarget)),
@@ -99,8 +104,13 @@ fn toy_coverage_spotlight_native_target21_still_accepts_foreign_ally() {
     install_visual_source(&mut h);
     let foreign = spawn_spotlight_friend(&mut h, character + 1, 2.0);
     let owner = h.caster;
-    let result =
-        crate::spell_cast::cast_creature(h.app.world_mut(), owner, POWER_INFUSION, Some(foreign));
+    let result = crate::spell_cast::creature_cast(
+        h.app.world_mut(),
+        owner,
+        POWER_INFUSION,
+        Some(foreign),
+        false,
+    );
     assert!(result.is_ok(), "{result:?}");
     h.advance(5);
     assert!(crate::auras::has_aura(
