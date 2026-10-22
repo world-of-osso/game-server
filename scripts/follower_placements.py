@@ -103,8 +103,11 @@ def derive_placement(record, manifest, tables, cache, polygons, route, nav, entr
     all_heights = sample_surfaces(polygons, x, y, assignments)
     heights = read_source_floor_support(record, marker, assignments, all_heights)
     if entrance is None:
-        if len(all_heights) != 1:
-            raise ValueError('entrance-unsourced placement requires one baked surface at journal XY')
+        source_consensus_single = (isinstance(evidence, dict)
+            and evidence.get('policy') == 'FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS'
+            and len(heights) == 1)
+        if len(all_heights) != 1 and not source_consensus_single:
+            raise ValueError('entrance-unsourced placement requires one raw or source-consensus-qualified baked surface at journal XY')
         queries = [dict(height=z, exit_code=None, corners=[], status='NOT_QUERIED_ENTRANCE_UNSOURCED') for z in heights]
     else:
         start = [entrance['LocX'], entrance['LocZ'], -entrance['LocY']]
