@@ -52,6 +52,7 @@ mod talondras;
 pub mod the_stockade;
 pub(crate) mod tww_rookery;
 mod umbrelskul;
+mod vexamus;
 pub(crate) mod wailing_caverns;
 pub mod waypoint_path;
 
