@@ -4,6 +4,9 @@ use super::*;
 use crate::auras::ActiveAuras;
 use shared::components::{Health, ModelDisplay, UnitAuras};
 
+#[path = "toys_seed_visual_tests.rs"]
+mod seed_visual;
+
 fn install_visual_source(h: &mut Harness) {
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
