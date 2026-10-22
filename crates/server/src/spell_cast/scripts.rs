@@ -26,6 +26,7 @@ mod batch8;
 mod batch9;
 mod chrono_flame;
 mod clearcasting;
+mod elemental_ascendance;
 mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
@@ -259,6 +260,9 @@ pub(super) fn consumes_effect_value(spell_id: u32, effect_index: u8) -> bool {
 
 pub fn on_effect_hit(spell_id: u32, effect_index: u8) -> Option<EffectHitHook> {
     match (spell_id, effect_index) {
+        (crate::scripted_ai::orator::TERRORIZE_SELECTOR, 0) => {
+            Some(crate::scripted_ai::orator::terrorize_hit)
+        }
         (voltaic_blaze::ROOT, 0) => Some(voltaic_blaze::cast_damage),
         (49_576, 0) => Some(death_grip),
         (108_199, 1) => Some(cast_subduing_grasp),
@@ -1376,6 +1380,7 @@ pub(super) fn on_hit_with_context(spell_id: u32) -> Option<ContextHitHook> {
 
 pub fn on_hit(spell_id: u32) -> Option<HitHook> {
     match spell_id {
+        elemental_ascendance::ASCENDANCE => Some(elemental_ascendance::cast_entry),
         100780 => Some(windwalker::tiger_palm_hit),
 
         lava_surge::PROC => Some(lava_surge::restore_on_proc_hit),

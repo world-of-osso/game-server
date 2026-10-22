@@ -35,6 +35,44 @@ fn rotation_selection_63_native_book_reaches_fireball() {
 }
 
 #[test]
+fn rotation_selection_262_native_target_earthquake_deals_periodic_damage() {
+    let (mut h, caster, targets) = prepare_at_level(209053, 3, 70);
+    assert!(
+        h.app
+            .world()
+            .get::<crate::class_progression::KnownSpells>(caster)
+            .unwrap()
+            .contains(462620)
+    );
+    let first = h.inbox.log.len();
+    uses_spell(&mut h, caster, 462620);
+    assert!(
+        h.inbox.log[first..].iter().any(|event| {
+            event.kind == CombatLogKind::CastSuccess
+                && event.spell_id == Some(462620)
+                && event.source == Some(caster.to_bits())
+        }),
+        "real selected native target Earthquake must complete before checking its consequences"
+    );
+    // No further AI casts: let the actual native6s field run to natural expiry.
+    h.advance(140);
+    assert!(targets.iter().all(|&target| h.health(target) > 0.0));
+    let hits: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(77478)
+                && event.source == Some(caster.to_bits())
+                && event.amount > 0
+        })
+        .collect();
+    assert!(
+        !hits.is_empty(),
+        "native462620 explicitly names actual77478 damage but completed casts currently create no damaging field"
+    );
+}
+
+#[test]
 fn rotation_selection_262_native_book_applies_flame_shock() {
     let (mut h, caster, _) = prepare(209053, 1);
     uses_spell(&mut h, caster, 470057);
@@ -139,6 +177,157 @@ fn rotation_selection_262_native_ascendance_after_stormkeeper() {
             .go
             .iter()
             .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480)
+    );
+}
+
+#[test]
+fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
+    let (mut h, caster, targets) = prepare(209053, 7);
+    for &target in &targets {
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, target);
+    }
+    assert!(targets.iter().all(|&target| {
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(target)
+            .is_some_and(|status| status.0)
+    }));
+    let idle = spawn_npc(&mut h.app, 0.25);
+    let distant = spawn_npc(&mut h.app, 80.0);
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, distant);
+    assert!(
+        targets
+            .iter()
+            .all(|&target| !crate::auras::has_aura(h.app.world(), target, 188389,))
+    );
+    let first = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 1219480, Some(caster), false)
+        .unwrap();
+    h.advance(20);
+    assert!(crate::auras::has_aura(h.app.world(), caster, 1219480));
+    let shocked: Vec<_> = targets
+        .iter()
+        .copied()
+        .filter(|&target| {
+            h.app
+                .world()
+                .get::<ActiveAuras>(target)
+                .is_some_and(|auras| {
+                    auras
+                        .iter()
+                        .any(|aura| aura.spell_id == 188389 && aura.caster == caster)
+                })
+        })
+        .collect();
+    assert_eq!(
+        shocked.len(),
+        6,
+        "native1219480s7 must apply six actual owned Flame Shocks"
+    );
+    let burst_hits: Vec<_> = h.inbox.log[first..]
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+        })
+        .collect();
+    assert_eq!(
+        burst_hits.len(),
+        6,
+        "entry must launch real native Lava Burst damage once per selected enemy"
+    );
+    assert!(shocked.iter().all(|target| {
+        burst_hits
+            .iter()
+            .any(|hit| hit.target == Some(target.to_bits()))
+    }));
+    for excluded in [idle, distant] {
+        assert!(!crate::auras::has_aura(h.app.world(), excluded, 188389));
+        assert!(
+            burst_hits
+                .iter()
+                .all(|hit| hit.target != Some(excluded.to_bits()))
+        );
+    }
+}
+
+#[test]
+fn rotation_selection_262_native_ascendance_entry_uses_half_lava_burst_damage() {
+    let (mut h, caster, _) = prepare(209053, 1);
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 188389, Some(h.npc), 1);
+    h.advance(1);
+    let first = h.inbox.log.len();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 285452, Some(h.npc), 1);
+    h.advance(1);
+    let full = h.inbox.log[first..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("native ordinary Lava Burst control must actually damage its Flame-Shocked target")
+        .clone();
+    assert!(full.crit && full.amount > 0);
+    let first = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 1219480, Some(caster), false)
+        .unwrap();
+    h.advance(20);
+    assert!(crate::auras::has_aura(h.app.world(), caster, 1219480));
+    let half = h.inbox.log[first..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("native Ascendance must launch actual Lava Burst damage");
+    assert!(
+        half.crit,
+        "entry Flame Shock precedes the Lava Burst crit decision"
+    );
+    let damage = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(285452)
+        .unwrap();
+    let variance = f64::from(damage.effects[0].variance) / 2.0;
+    // Independent real variance draws, not paired RNG: both native rounding bounds count.
+    let minimum = ((f64::from(full.amount) - 0.5) * 0.5 * (1.0 - variance) / (1.0 + variance) - 0.5)
+        .floor() as i32;
+    let maximum = ((f64::from(full.amount) + 0.5) * 0.5 * (1.0 + variance) / (1.0 - variance) + 0.5)
+        .ceil() as i32;
+    assert!(
+        (minimum..=maximum).contains(&half.amount),
+        "native1219480s10=50%: full={}, half={}, expected={minimum}..={maximum}",
+        full.amount,
+        half.amount
+    );
+    let first = h.inbox.log.len();
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, 285452, Some(h.npc), 1);
+    h.advance(1);
+    let ordinary = h.inbox.log[first..]
+        .iter()
+        .find(|event| {
+            event.kind == CombatLogKind::Damage
+                && event.spell_id == Some(285452)
+                && event.source == Some(caster.to_bits())
+                && event.target == Some(h.npc.to_bits())
+        })
+        .expect("ordinary native Lava Burst still damages during Ascendance");
+    assert!(ordinary.crit);
+    let minimum =
+        ((f64::from(full.amount) - 0.5) * (1.0 - variance) / (1.0 + variance) - 0.5).floor() as i32;
+    let maximum =
+        ((f64::from(full.amount) + 0.5) * (1.0 + variance) / (1.0 - variance) + 0.5).ceil() as i32;
+    assert!(
+        (minimum..=maximum).contains(&ordinary.amount),
+        "only the entry cast is half-effectiveness; ordinary damage={}",
+        ordinary.amount
     );
 }
 
