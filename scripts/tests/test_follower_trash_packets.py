@@ -124,5 +124,40 @@ class MurderTrashAcceptance(unittest.TestCase):
         self.assertEqual(receipt['sql_replay_count'], 3)
 
 
+@unittest.skipUnless('BRACKEN_TRASH_DB' in os.environ, 'requires explicit Bracken source/prepared fixture')
+class BrackenTrashAcceptance(unittest.TestCase):
+    def test_one_individual_hyena_observation_preserves_native_models_and_bosses(self):
+        path = Path(os.environ['BRACKEN_TRASH_DB']).resolve(strict=True)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature '
+                              'WHERE map=2520 AND guid BETWEEN 63520100 AND 63520999').fetchall()
+            self.assertEqual(rows, [(63520100, 194745, -3168.16685808, 3960.1664759, 100.49735707741905)])
+            receipt = json.loads((path.parent / 'receipt.json').read_text())
+            own = db.execute('SELECT t.unit_class,d.ContentTuningID,d.HealthModifier,d.DamageModifier,d.ArmorModifier,d.ManaModifier '
+                             'FROM tdb_creature_template t JOIN tdb_creature_template_difficulty d ON d.Entry=t.entry '
+                             'WHERE t.entry=194745 AND d.DifficultyID=1').fetchone()
+            self.assertEqual(db.execute('SELECT unit_class,ContentTuningID,HealthModifier,DamageModifier,ArmorModifier,ManaModifier '
+                                        'FROM content_creature_template WHERE entry=194745 AND faction=16').fetchone(), own)
+            self.assertEqual(db.execute('SELECT * FROM content_creature_template_model WHERE CreatureID=194745 ORDER BY Idx').fetchall(),
+                             db.execute('SELECT * FROM tdb_creature_template_model WHERE CreatureID=194745 ORDER BY Idx').fetchall())
+            self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE guid BETWEEN 63520000 AND 63520005 AND map=2520').fetchone(), (6,))
+            self.assertEqual(db.execute('SELECT position_x,position_y,position_z FROM content_creature WHERE guid=63520000 AND id1=186116').fetchone(), rows[0][2:])
+        self.assertEqual(receipt['placements'][0]['marker'], dict(zone=13991, floor=0, percent=[59, 29.6]))
+        self.assertEqual(receipt['placements'][0]['all_surface_heights'], [100.49735707741905])
+        self.assertEqual(receipt['marker_count'], 1)
+        self.assertEqual(len(receipt['source_gaps']), 32)
+        self.assertTrue(all(g['status'] == 'FOLLOWER_TRASH_INDIVIDUAL_MARKERS_MISSING' for g in receipt['source_gaps']))
+        self.assertEqual((receipt['density']['qualified_count'], receipt['density']['selected_count'], receipt['density']['excluded_count']), (1, 1, 0))
+        self.assertEqual(sum(r['shortfall'] for r in receipt['density']['per_npc']), 359)
+        self.assertEqual(next(r for r in receipt['density']['per_npc'] if r['entry'] == 194745)['mdt_enemy']['clone_count'], 2)
+        self.assertEqual(receipt['guarded_faction_updates'], [])
+        self.assertEqual(receipt['changed_keys']['raid_encounter_creature'], [])
+        self.assertEqual(receipt['entrance']['ID'], 100024)
+        self.assertEqual(receipt['route_queries'], [])
+        self.assertFalse(receipt['pack_groups_created'])
+        self.assertEqual(receipt['preserved_group_tables']['baseline'], receipt['preserved_group_tables']['replayed'])
+        self.assertEqual(receipt['sql_replay_count'], 3)
+
+
 if __name__ == '__main__':
     unittest.main()

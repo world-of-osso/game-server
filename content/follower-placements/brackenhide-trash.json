@@ -1,0 +1,572 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+  "guid_base": 61000000,
+  "first_trash_ordinal": 100,
+  "guarded_faction_updates": [],
+  "density_policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+  "map_id": 2520,
+  "entrance_id": 100024,
+  "density_source": {
+    "policy": "FOLLOWER_TRASH_DENSITY_FROM_MDT_COUNT",
+    "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+    "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+    "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f"
+  },
+  "entries": [
+    {
+      "entry": 185691,
+      "map_id": 2520,
+      "cache_sha256": "34ed7fdb051b24ac70225845b4c9fca79cdb89bcc88f4f312e6fb507a5424760",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 172
+      }
+    },
+    {
+      "entry": 185534,
+      "map_id": 2520,
+      "cache_sha256": "2d28d9064f7b1ee2a215e99a51cc379df6ddb9f772740ce8e4aa989298ba4718",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 378
+      }
+    },
+    {
+      "entry": 186206,
+      "map_id": 2520,
+      "cache_sha256": "c255f67d5888a63c564b2e77a20327294e9c0cbd1bdb62cfd484a09a3761da8a",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 715
+      }
+    },
+    {
+      "entry": 185508,
+      "map_id": 2520,
+      "cache_sha256": "c2e45332923bda7b150e265f83302006a745b1b46dfe51a5fdcea89334ae2a92",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 881
+      }
+    },
+    {
+      "entry": 185529,
+      "map_id": 2520,
+      "cache_sha256": "fed9841a480a2d590810a9f86076a4d78deb880a266918a2d18d52c466fa6ee9",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 1111
+      }
+    },
+    {
+      "entry": 185528,
+      "map_id": 2520,
+      "cache_sha256": "006f5496cd615e3c6e473901d9d3b6f2735a8946172043ff2801e57ef5d2f127",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 1728
+      }
+    },
+    {
+      "entry": 195135,
+      "map_id": 2520,
+      "cache_sha256": "cdc0bc057560c5be546498e4ecacd47363548df4221ed7b0b761f401a6c189b1",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 1911
+      }
+    },
+    {
+      "entry": 186191,
+      "map_id": 2520,
+      "cache_sha256": "6258bf49f340a8fcdf03466149c59d001c8dbfd8104e2b129f9c5ea2ccb34ae6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 1948
+      }
+    },
+    {
+      "entry": 191926,
+      "map_id": 2520,
+      "cache_sha256": "31a48773fc3cbaaa8a985ad4b08995ca240633802c716cf54338cc203b222a59",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 2029
+      }
+    },
+    {
+      "entry": 189299,
+      "map_id": 2520,
+      "cache_sha256": "ec4fd54f37e1dc8b699531bcbc13aaac9353321b30e926994f9eb7768392852c",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 2189
+      }
+    },
+    {
+      "entry": 186220,
+      "map_id": 2520,
+      "cache_sha256": "95a506dfbb75cd83c90992a45395bde178fc52f84bc92dc70433f3816f2571d6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 2346
+      }
+    },
+    {
+      "entry": 189531,
+      "map_id": 2520,
+      "cache_sha256": "1dd389b241862dcc4f337c9eb485c6875b062acc30eae0a280cbc6ae07e764d1",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 2521
+      }
+    },
+    {
+      "entry": 186226,
+      "map_id": 2520,
+      "cache_sha256": "49a6977211e3c8b072c3d12ad9e57b9ae102e5a77d0fb6e6af61f6b34387057a",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 2677
+      }
+    },
+    {
+      "entry": 186229,
+      "map_id": 2520,
+      "cache_sha256": "12708f994bb9ee90d2dda4da4ec007b6fda4394f5da84be9788e276dd198c691",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 2853
+      }
+    },
+    {
+      "entry": 186227,
+      "map_id": 2520,
+      "cache_sha256": "0203df7b1b19a35b99d9e729405af515d03ad3a9ab1bb3c7996c8d9db3911c95",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3075
+      }
+    },
+    {
+      "entry": 189363,
+      "map_id": 2520,
+      "cache_sha256": "e619c2aff8ff176a12eb57b3d9db1f780b2117a975e8089144adbb236b79c176",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3167
+      }
+    },
+    {
+      "entry": 187033,
+      "map_id": 2520,
+      "cache_sha256": "3aba872408573b48c0ae4770720cf0d6ecce363a6eabc61708fae288e90dd0b0",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3478
+      }
+    },
+    {
+      "entry": 186242,
+      "map_id": 2520,
+      "cache_sha256": "a45207ca59f68184c3648eeead1bbf792f3be36b493f711cbafd342af68bf265",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3570
+      }
+    },
+    {
+      "entry": 189318,
+      "map_id": 2520,
+      "cache_sha256": "c58463f4dd693f2069733afcbb506e3d6b454730a7d8d9530e3bbcb47fcef330",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3680
+      }
+    },
+    {
+      "entry": 187192,
+      "map_id": 2520,
+      "cache_sha256": "cca809634f8946fbe6ca1eeee4ecebdaca9eca0aa6da3906ce649e3499d307dc",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3701
+      }
+    },
+    {
+      "entry": 186208,
+      "map_id": 2520,
+      "cache_sha256": "153c1d0f9c5a1355ab379a14f76aea6dca5d55a466fe0cdc0e3c99ee88d2f46d",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3736
+      }
+    },
+    {
+      "entry": 186246,
+      "map_id": 2520,
+      "cache_sha256": "f4b34999a99d53cab8d9f2806525196891d01238b9433f89eb0595264b09d858",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 3971
+      }
+    },
+    {
+      "entry": 186284,
+      "map_id": 2520,
+      "cache_sha256": "497f031a923dea61efdb921d44c8d32b0d0708e0d0a350c7acd3ef9106dcf999",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4124
+      }
+    },
+    {
+      "entry": 194745,
+      "map_id": 2520,
+      "cache_sha256": "eda8f7a1cc62177603a3a2f4240bfac92a9e3a116c731d5108a2c6a2c11936f4",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4311
+      }
+    },
+    {
+      "entry": 197857,
+      "map_id": 2520,
+      "cache_sha256": "3b8e2a037aa63294f241458e397082417613fe091e6e8965611e4569cdb5ccc6",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4372
+      }
+    },
+    {
+      "entry": 187231,
+      "map_id": 2520,
+      "cache_sha256": "ec54aa2701c77fc1c2d97db8612b42fbba04656fe751d9524677253dbfecbca4",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4451
+      }
+    },
+    {
+      "entry": 185656,
+      "map_id": 2520,
+      "cache_sha256": "fd4f75d2cda8ff2ef924b2739238043be5e5ae79bb4b5714ba402a079f84fe23",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4612
+      }
+    },
+    {
+      "entry": 187238,
+      "map_id": 2520,
+      "cache_sha256": "f60a63ef9117af7fff6d4b3b8124d8dd200abc28234927c974bacce0d8dbc03e",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4705
+      }
+    },
+    {
+      "entry": 187224,
+      "map_id": 2520,
+      "cache_sha256": "2cff27cfb62da93be6d6efea648521ef25ddff00dcac41db0061147f37a303b9",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4830
+      }
+    },
+    {
+      "entry": 187315,
+      "map_id": 2520,
+      "cache_sha256": "1081207c598c38aae916525da53b8cc13d0e1676ab8fc2b7f496030d08d09a67",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 4939
+      }
+    },
+    {
+      "entry": 194241,
+      "map_id": 2520,
+      "cache_sha256": "afaa1fee2bd8aefd7fe8f52121707240b4d8d27f62e23760db1ca79d59036934",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 5012
+      }
+    },
+    {
+      "entry": 194469,
+      "map_id": 2520,
+      "cache_sha256": "6fde92d7f89792b1b60a7b57b439ddd9e7e793c97f5e9dabb3bcbe2d5df410b3",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 5043
+      }
+    },
+    {
+      "entry": 194487,
+      "map_id": 2520,
+      "cache_sha256": "cd2f38b69ac607fa9ce543f5f03aecb71321b18ae1fe94af6ee2098b6bffdc46",
+      "faction_policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+      "faction_donor": 188252,
+      "donor_reason": "Pinned own Legacy MDT enemy membership qualifies native0 hostile; same-map native bosses are faction0; Melidrussa188252 donates faction16 only.",
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "mdt_enemy_source": {
+        "policy": "FOLLOWER_TRASH_HOSTILE_FROM_MDT_ENEMY_TABLE",
+        "path": "/home/osso/.worktrees/mdt-c6cccca/Dragonflight/BrackenhideHollow.lua",
+        "sha256": "562756d4fd3a2568c185cb2cb7888019b70662cf5751df2c9f7f4e358b59aab2",
+        "revision": "c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f",
+        "source_line": 5102
+      }
+    }
+  ],
+  "source_gaps": [],
+  "surface_sha256": "2e71c03416b3a0261ccfe83ca9f4155b9286f8dc6e1047640c9ec6b05b119612",
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/brackenhide-trash-surface-preflight.json",
+    "sha256": "d61ce7364885ea7a796b1755ca7a43c5bb925d9a6d5dbf3df38203d7d9f843b0",
+    "full_stream_sha256": "624219e4e6097fe129f0cb0ab0e712705b94215d55afb6ee31a3da69fe628524",
+    "full_polygon_count": 811732
+  },
+  "nav_files_sha256": {
+    "23_38.nav": "3f73c548d83ce742752e8b62d92fb8a38d889a6362d2f79a19b9e65e9abd62f1",
+    "25_38.nav": "44eeb99b13bf981fb4c5c5f6b04b82224335081b511540d709b52acb981d11b5",
+    "26_39.nav": "6f2d1901f8b66748d70ae9110ab5b40b1655f171202c3e9a335a00da1b9c5312",
+    "25_37.nav": "deea11d8e353e853416feb4bf32caff666056d0e56e9e93cc1c4a1a8659ad0fa",
+    "24_40.nav": "219322760b698a276523c895d5e4419c72a7c0a378e708276b8287d8861f7009",
+    "26_37.nav": "787a00fb1d4574e3af5ebc844e322ce490bd74dd1adc9fcccbe78260735abf77",
+    "24_38.nav": "1f96eda57fa22df12d85c88cda309e299d802667a859f812ca034cac1d5bea93",
+    "25_40.nav": "84bcd98b0d5ae96774764bcbc6ad01e1385f5fd363958db7d5ac847b3e93ddbf",
+    "26_40.nav": "0000e3c647cc52284805a7eaf1b3f8815d65b002e303fb46713fcaf3639b71e0",
+    "23_39.nav": "5b0f0ecdb865811d723bf98af5a0ecf8926cb627710a589ad6fd7e1c571adf01",
+    "25_39.nav": "65becce60e6b51aad219fa1b82110e2e1d8013b9edfcc4d2e1a2a77690deb83f",
+    "24_37.nav": "cbd15517b213e2d3495511b14ed32683cd4ab797c211f401da5e23095d25bb08",
+    "23_37.nav": "4522fee430b23ee55bcf42e2a893b74281cbaf1c89fafdf1cb8de78e692e3153",
+    "24_39.nav": "60c899349b039af701bc6d50458b8453d4bcea2c3acdf78343769523f73a6323",
+    "26_38.nav": "58083fbd36afcbaacdef1fc95320d43c61959e5b14efa7480605604c823a8392",
+    "23_40.nav": "c997f3396bd775aa4484938c1f1ef18200b109baa23e5c5cdc0abc1d1015e0d8"
+  }
+}
