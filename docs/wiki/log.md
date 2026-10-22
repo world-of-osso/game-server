@@ -1,6 +1,6 @@
 ## 2026-10-22 — Swampface source room packet
 
-[Swampface](investigations/follower-data.md#swampface-native-room-and-regional-tuning--2026-10-22): actual missing-primary RED→source2GREEN0.078s/actual-copy2GREEN0.017s at33932c243. Fresh-copy4stable rows/replay3×; native CT0/modifiers/runtime model124283 retained, journal115575 separate, map CT provenance only. Approved20yd anchors at13.34/19.02yd plus third corroboration select335.20258. Staging copies deleted; publication pending, route gap explicit.
+[Swampface](investigations/follower-data.md#swampface-native-room-and-regional-tuning--2026-10-22): actual missing-primary RED→source2GREEN0.078s/actual-copy2GREEN0.017s at33932c243. Fresh-copy4stable rows/replay3×; native CT0/modifiers/runtime model124283 retained, journal115575 separate, map CT provenance only. Approved20yd anchors at13.34/19.02yd plus third corroboration select335.20258. Staging copies deleted; lead confirmed4inserts published/integrityOK and route relay.
 
 ## 2026-10-22 — CT0 native map tuning and Gorren source floor
 
