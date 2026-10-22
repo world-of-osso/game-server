@@ -1,5 +1,11 @@
 # Dungeon simulator
 
+## Power receipts —2026-10-22
+
+The [DPS adapter](../../specs/dps-parity.md#measurement) reads authoritative `PowerPools`/`Mana`, preserving fractional current/max and the last native tick's `regen_per_sec`; existing engagement samples include actual controlled-pet pools. Actor stat snapshots and final pet receipts retain these values too. Combat accounting groups existing Energize events by source, recipient and spell, exposing requested integer amount, overflow, effective gain and count. These are raw logged integers, not exact fractional grants, power-type attribution or integrated realized regeneration. No gameplay power logic changes.
+
+Native253/profile/Duck883/Cobra193455/energize1282660 tests at a8365f874 reach genuine missing-snapshot and missing-Energize RED2 in90.93s, then GREEN2/2 at29eaf963d in116.80s. Initial duplicate-plugin/GCD fixture failures and an obsolete executable's zero-test run are not behavioral RED. After integrating mastera4b2398f1 and producerc04ecc5b9, current14e20fbca passes all three native receipt cases in110.93s, including repeated-owner grants and native66 Mana. Six disjoint source/parallel controls remain qualified at487a; all-target check/fmt pass at14e20fbca with stable protocol2abc7fa, warning-free. Source-preserving fixture setup stops at actual pet/GCD readiness rather than idling through native follow movement. Diagnostics `dps-parity-fix-2026-10-21/power-*`; broad DPS/resource-mechanics parity remains separate.
+
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
 ## Native DPS parity adapter — 2026-10-21
@@ -26,14 +32,31 @@ The test-only bridge adds a real Player path for specs without follower kits. It
 
 At that exact revision, the policy-on single-target cohort has10 execution-qualified measurements: eight existing followers plus Fury72 and Enhancement263 players. Fury produces24346.17DPS with241Whirlwind casts; Enhancement3522.27DPS with200Windfury Weapon casts and one Lightning Shield. These are observed decisions/outputs, not authored rotation parity. Against the eight original health baselines, only Windwalker269 changes cast counts (Touch of Death322109:0→1); Protection66 and269 change hit counts. Protection's DPS delta includes per-hit differences, so two fewer endpoint hits alone do not explain it.
 
-`all-spec-fixed-time-health-comparison.{json,md}` under sibling `game-engine/data/diagnostics/dps-parity-2026-10-21/` consolidates all40 rows without rerunning measurements:10 execution-qualified,11 source/cast-blocked,10 without selected references, six unattempted, one strict-trait rejection, Frost251 awaiting its Human adapter regression, and Frost64 requiring source-stability retry. Companion JSON hashes each attempt/report/factor receipt. Ten actor-aware factor ledgers reconcile channel/count/per-hit accounting; they do not isolate causal mechanics defects. Old reports remain historical, not current-master qualification.
+The current single-target receipt inventory is `all-spec-fixed-time-health-comparison-v2.{json,md}` under sibling `game-engine/data/diagnostics/dps-parity-2026-10-21/`:10 execution-qualified historical measurements,16 source/cast blocks, three strict-trait rejections, one full300s zero-output failure and10 without selected references. No selected-reference case remains unattempted. Earlier inventory versions and raw attempts remain intact. Companion JSON hashes each attempt/report/factor receipt, retaining the invalid-source64 and race-adapter251 attempts as history rather than acceptance. `fixed-time-inventory-consolidation-v2.proof.json` checks40 rows, the eight continuation snapshots/report hashes and all10 existing factor ledgers' input hashes/conservation. No new factor ledger is warranted for the eight blocked/nonqualified attempts; no causal mechanics fix or current-master DPS parity is claimed.
 
-Startup readers use absolute worldDB aliases, so environment/cwd alone cannot freeze their source. `scripts/dps_parity_native.py` runs the compiled fixture in a bubblewrap read-only snapshot mount over the resolved startup path, with no unsandboxed alternate path. The process regression observed mutable data before the fix, then frozen/read-only bytes with unchanged host/snapshot files. Native file-identity/Human input tests and post-master integrated gates remain pending; no Rust pass is claimed from the Python boundary proof. The Human adapter now requires native row1, matching pinned SimC; row33 is ThinHuman rather than another valid Human match.
 ## Continuous-edge seeded qualification —2026-10-22
 
 Archived5f7d4ff85/P03cebdb/frozen40d95b0 clears **Stockade50/50,150native boss Deaths,0failures**, with actual34/1/level32 validated in all reports. Fresh seeds1–49/jobs2 take3083.914376s batch wall; separately retained same-code50 takes124.597531s individual wall. No contiguous50-run wall is claimed. `stockade-continuous-edge-5f7d4ff85-combined-summary.json` preserves source paths/hashes and both timing receipts.
 
 Azure requests ten runs but finishes with **nine process panics/missing reports and one valid tank-absence block (seed7,1963sim_s)**,0clears,1323.826085s batch wall. All nine panic logs identify mover164v0 and disconnected frozen walk components after post-Leymor progression; do not count these as nine timeouts or nine valid reports. Evidence: `azure-continuous-edge-5f7d4ff85-seeds1-10/{summary.json,seed-*.log}`. The cohorts used a verified immutable executable, so the later449096a75/protocol2abc7fa integration did not mix their inputs.
+
+## Native DPS frozen source view —2026-10-22
+
+Startup readers use absolute worldDB aliases, so environment/cwd alone cannot freeze their source. `scripts/dps_parity_native.py` runs the compiled fixture in a bubblewrap read-only snapshot mount over the resolved startup path, with no unsandboxed alternate path. The process regression observed mutable data before the fix, then frozen/read-only bytes with unchanged host/snapshot files. Atc04ecc5b9, using isolated protocol2abc7fa (the then-landed canonical/master protocol), all five native controls pass158.48s: Human1, source file identity, full health clock/add replacement, explicit player rule gap and real-player gear/spawn. Locked all-target server check passes28.85s and formatting passes, with no warnings. The first post-merge native run had2passes/3startup failures because common and optional-pet paths registered PetControlPlugin twice; the existing sibling harness-only fix597d30ded was reused as c04ecc5b9, preserving one common registration. This changes no production pet mechanics. The Human adapter now requires native row1, matching pinned SimC; row33 is ThinHuman rather than another valid Human match.
+
+The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized single-target player cases, with unchanged input hashes and stable prepared snapshot throughout. All eight fail qualification; no repeat of the earlier10 positive-output cases was performed.
+
+| Specs | Observed boundary | Proof level |
+|---|---|---|
+|64,265|Rule4512/type11; rule14223/type18 respectively|Explicit source-rule error;64 now has valid frozen-source provenance|
+|268|Touch of Death322109 rejected by native admission as InvalidTarget|Actual admission refusal, no invented predicate/target health|
+|577,581|Rules21553 and21486 respectively, both type12|Explicit source-rule error|
+|251,1480|Node76073 requires76072 fully ranked; node108144 requires110172 fully ranked respectively|Strict reference-trait rejection; Human lookup no longer blocks251|
+|267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and `pet.present=false`|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
+
+Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls and awaits the parent-owned CombatRefs admission integration.
+
+For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact;96d695ee6 passes the unchanged test1/1 with no warnings. That unit proof covers accounting, not actual3-target execution. `pet.present=false` elsewhere is the primary-pet lookup result, not proof that no guardian entity existed.
 
 ## Qualified path-candidate Stockade cohort —2026-10-21
 

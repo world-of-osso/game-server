@@ -20,6 +20,8 @@ mod pennant_visual;
 mod ring_visual;
 #[path = "toys_seed_visual_tests.rs"]
 mod seed_visual;
+#[path = "toys_spotlight_tests.rs"]
+mod spotlight;
 
 fn install_visual_source(h: &mut Harness) {
     let conn = rusqlite::Connection::open_with_flags(
