@@ -1,5 +1,11 @@
 # Retail follower data and approved spec bridge
 
+## Interior portals as derived entrances — 2026-10-22
+
+The18map entrance audit finds no interior TDB safe location/spell destination or70448 AreaTrigger/WaypointSafeLocs/JournalInstanceEntrance destination rows. Seven related JournalInstanceEntrance rows are exterior2552/2601 coordinates, not instance admission destinations. Approved `FOLLOWER_ENTRANCE_FROM_EXIT_PORTAL` instead uses the exact Normal/base-phase TDB Instance Portal object coordinates for eight maps2651/2652/2660/2661/2662/2773/2825/2830. Collision-checked safe-location IDs81000000+mapID retain native GO GUID in each Comment; no native source row is replaced.
+
+[Producer](../../../scripts/follower_entrances.py) writes only a fresh copied DB plus stable-key SQL/receipt. Facing is derived toward the closest sourced faction16 trash in seven maps; Dawnbreaker explicitly faces source Path Helper211151/guid10001505 as a route approximation, not captured entry facing. Angles are degrees in WorldSafeLoc, not portal orientation radians. `game-engine/data/diagnostics/follower-placements-2026-10-22/entrance-portals-packet-1/` retains every portal/anchor row, source-copy hash and replayed DB. Genuine missing-eight RED→two real-coordinate/facing/reserved-key/collision/idempotence GREEN; three full-table SQL replays preserve unrelated safe locations. Remaining10maps stay source gaps; navigation qualification is separate and lead-owned publication remains required. [Contract](../../specs/follower-dungeons.md#derived-missing-source-placements-2026-10-22).
+
 ## Derived Neltharus placement packet — 2026-10-22
 
 `FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS` derives approximate missing placements from cached Wowhead markers, authenticated70448 AreaTable/UiMapAssignment and UiMapGroupMember floors. Fetching is restricted to the host-wide10second `wowhead-fetch.py` cache. Formula swaps/reverses screen axes: worldX uses mapV, worldY uses mapU. Ruby controls188252/189232 retain measured native residuals(−2.130,+10.338) and(+1.753,−0.383) yards: markers are not captured spawn coordinates or decimal-rounding-exact. No XY correction is applied.

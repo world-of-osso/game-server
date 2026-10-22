@@ -1,3 +1,4 @@
+- [Portal-derived interior entrances](investigations/follower-data.md#interior-portals-as-derived-entrances--2026-10-22) — eight exact native Instance Portal positions, named facing/ID policies, missing8RED→twoGREEN and replay3×; ten entrance-source gaps remain.
 - [Derived Neltharus placements](investigations/follower-data.md#derived-neltharus-placement-packet--2026-10-22) — cached Wowhead/70448 floor transforms, own source stats and donor faction, four stable-key primaries; placement2GREEN and replay3×, Gorek route gap explicit.
 - [Azure translocation](systems/azure-translocation.md) — explicit book/POI endpoint policy, source gossip derivation, staged-nav components and native interaction RED/GREEN ledger.
 - [Effect63/Kvaldir source boundary](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21) — source raw threat/cap49; post-master8GREEN/check/fmt,535→536 exact+Kvaldir; Battle Horn native-audience gap retained.
