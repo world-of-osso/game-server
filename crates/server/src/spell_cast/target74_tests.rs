@@ -29,7 +29,7 @@ fn scene() -> (Harness, Position) {
     let origin = super::target148_tests::place_on_native_ground(&mut h);
     h.app.world_mut().entity_mut(h.npc).insert(Rotation {
         x: 0.0,
-        y: TARGET_YAW,
+        y: TARGET_YAW + std::f32::consts::FRAC_PI_2,
         z: 0.0,
     });
     (h, origin)
