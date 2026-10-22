@@ -93,6 +93,57 @@ fn rotation_selection_1467_three_targets_before_font_use_native_roots() {
 }
 
 #[test]
+#[ignore = "native Elemental Ascendance action projection and Stormkeeper sequencing"]
+fn rotation_selection_262_native_ascendance_after_stormkeeper() {
+    let (mut h, caster, _) = prepare(209053, 3);
+    let known = h
+        .app
+        .world()
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .unwrap();
+    assert!(
+        known.contains(114050) && known.contains(191634),
+        "fixture must retain the actual selected native Ascendance talent and Stormkeeper"
+    );
+    for _ in 0..200 {
+        super::update_ai(h.app.world_mut());
+        h.advance(1);
+        if crate::auras::has_aura(h.app.world(), caster, 1219480) {
+            break;
+        }
+    }
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 191634),
+        "ordinary native Stormkeeper must precede the Ascendance decision"
+    );
+    let world = h.app.world();
+    let stormkeeper = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(191634)
+        .unwrap();
+    assert!(
+        world
+            .get::<crate::spell_cast::SpellHistory>(caster)
+            .unwrap()
+            .on_cooldown(stormkeeper, crate::spell_cast::history_now(world) + 15.0),
+        "actual Stormkeeper cooldown must satisfy the sourced greater-than15s branch"
+    );
+    assert!(
+        crate::auras::has_aura(world, caster, 1219480),
+        "native known114050 must expose actual1219480 Ascendance, not remain an unused utility parent"
+    );
+    assert!(
+        h.inbox
+            .go
+            .iter()
+            .any(|go| go.caster == caster.to_bits() && go.spell_id == 1219480)
+    );
+}
+
+#[test]
 fn rotation_selection_262_voltaic_blaze_damage_precedes_delayed_flame_shock() {
     let (mut h, caster, targets) = prepare(209053, 3);
     let begin = aura_now(h.app.world());
