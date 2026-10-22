@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start = parse_point(&args[2..5])?;
     let end = parse_point(&args[5..8])?;
     let mut map = NavigationMap::open(Path::new(&args[1]))?;
-    for corner in map.path(start, end)? {
+    for corner in map.complete_path(start, end)? {
         println!("{},{},{}", corner.x, corner.y, corner.z);
     }
     Ok(())

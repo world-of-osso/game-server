@@ -78,6 +78,17 @@ impl Navigation {
         request: MoveRequest,
         result: Result<Option<Output>, String>,
     ) {
+        let mut partial_endpoints = self
+            .routes
+            .get(&entity)
+            .filter(|route| {
+                route.map_id == request.map_id
+                    && route.goal == request.goal
+                    && route.destination == point(request.to)
+            })
+            .map(|route| route.partial_endpoints.clone())
+            .unwrap_or_default();
+        let mut complete = false;
         let points = match result {
             Ok(None) => {
                 if self.unbaked.insert(request.map_id) {
@@ -91,7 +102,11 @@ impl Navigation {
                 self.routes.remove(&entity);
                 return;
             }
-            Ok(Some(Output::Path(points))) => Ok(Corners::new(points)),
+            Ok(Some(Output::Path(path))) => {
+                complete = path.complete;
+                remember_partial_endpoint(&path, &mut partial_endpoints)
+                    .map(|()| Corners::new(path.points))
+            }
             Ok(Some(_)) => Err("navigation route returned a non-path result".into()),
             Err(error) => Err(error),
         };
@@ -111,6 +126,8 @@ impl Navigation {
                 expected_from: point(request.from),
                 reach: request.reach,
                 path: points,
+                complete,
+                partial_endpoints,
             },
         );
     }
@@ -145,7 +162,14 @@ impl Navigation {
         }
         self.cancel_query(entity, request.goal);
         self.cancel_route(entity);
-        self.publish_route(entity, request, Ok(Some(Output::Path(points))));
+        self.publish_route(
+            entity,
+            request,
+            Ok(Some(Output::Path(::navigation::NavigationPath {
+                points,
+                complete: true,
+            }))),
+        );
     }
 
     #[cfg(test)]
@@ -192,11 +216,12 @@ impl Navigation {
             route.last_target = point(request.to);
             route.reach = request.reach;
         }
-        let (target, reach) = (route.last_target, route.reach);
-        let (next, reached) = corners.advance(from, request.distance, reach, target);
+        let complete = route.complete;
+        let reach = if complete { route.reach } else { 0.0 };
+        let (next, reached) = corners.advance(from, request.distance, reach, route.last_target);
         route.expected_from = next;
-        if pending {
-            if next == from {
+        if pending || (reached && !complete) {
+            if pending && next == from {
                 return Step::Pending;
             }
             // An old route may advance while new work is in flight. The latest
@@ -211,7 +236,7 @@ impl Navigation {
         }
         Step::Moved {
             position: position(next),
-            reached: reached && !pending,
+            reached: reached && complete && !pending,
         }
     }
 
@@ -221,6 +246,22 @@ impl Navigation {
             self.publish_ready_routes(None);
             std::thread::yield_now();
         }
+    }
+}
+
+fn remember_partial_endpoint(
+    path: &::navigation::NavigationPath,
+    endpoints: &mut HashSet<[u32; 3]>,
+) -> Result<(), String> {
+    if path.complete {
+        return Ok(());
+    }
+    let endpoint = path.points.last().ok_or("empty partial corridor")?;
+    let is_new = endpoints.insert(endpoint.to_array().map(f32::to_bits));
+    if is_new {
+        Ok(())
+    } else {
+        Err("unreachable target (repeated partial corridor endpoint)".into())
     }
 }
 
