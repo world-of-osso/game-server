@@ -59,6 +59,31 @@ new Listview({template: 'spell', id: 'abilities', data: [{"id":387564,"name":"My
         self.assertEqual(actors[0]["policy"], "FOLLOWER_TRASH_SIMILAR_CREATURE_KIT")
         self.assertEqual(actors[0]["classification"], "inferred")
 
+    def test_same_name_stem_records_the_actual_sourced_donor(self):
+        actors = [
+            dict(
+                entry=46249,
+                name="Riverpaw Slayer",
+                family=0,
+                models=[],
+                maps=[34],
+                spells=[],
+                classification="none",
+            ),
+            dict(
+                entry=46252,
+                name="Riverpaw Shaman",
+                family=0,
+                models=[],
+                maps=[34],
+                spells=[12167, 23381],
+                classification="Wowhead-only",
+            ),
+        ]
+        trash.infer_similar_kits(actors)
+        self.assertEqual(actors[0]["spells"], [12167, 23381])
+        self.assertEqual(actors[0]["donor_entry"], 46252)
+
     def test_no_cross_dungeon_or_zero_family_match(self):
         actors = [
             dict(
@@ -114,7 +139,7 @@ class TrashProjection(unittest.TestCase):
                 rows = source.execute(f"SELECT * FROM {table}").fetchall()
             else:
                 rows = source.execute(
-                    f"SELECT * FROM {table} WHERE SpellID=387564"
+                    f"SELECT * FROM {table} WHERE SpellID IN (387564,317898)"
                 ).fetchall()
             if rows:
                 self.world.executemany(
@@ -190,6 +215,22 @@ class TrashProjection(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual(cast["cast_time_ms"], native_time)
         self.assertEqual(cast["range_index"], 6)
+
+    def test_refresh_removes_only_superseded_project_kit_spells(self):
+        old = dict(self.actor, spells=[317898], classification="Wowhead-only")
+        sql, _ = trash.prepare_projection(self.world, [old])
+        self.world.executescript(sql)
+        sql, _ = trash.prepare_projection(self.world, [self.actor])
+        self.world.executescript(sql)
+        self.assertEqual(
+            [
+                row[0]
+                for row in self.world.execute(
+                    "SELECT action_param1 FROM content_smart_scripts WHERE entryorguid=196102"
+                )
+            ],
+            [387564],
+        )
 
     def test_existing_tc_script_is_not_silently_replaced(self):
         actor = dict(self.actor, entry=191164, name="Arcane Tender")

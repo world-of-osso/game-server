@@ -111,7 +111,15 @@ def infer_similar_kits(actors):
             words = set(normalize(actor["name"]).split()) & set(
                 normalize(donor["name"]).split()
             )
-            same_stem = len(words) >= 2
+            actor_words = normalize(actor["name"]).split()
+            donor_words = normalize(donor["name"]).split()
+            shared_prefix = (
+                len(actor_words) > 1
+                and len(donor_words) > 1
+                and actor_words[0] == donor_words[0]
+                and actor_words[0] not in {"the", "a", "an"}
+            )
+            same_stem = len(words) >= 2 or shared_prefix
             same_role = bool(words & roles)
             if same_name or same_model or same_family or same_stem or same_role:
                 score = (
@@ -120,6 +128,7 @@ def infer_similar_kits(actors):
                     same_family,
                     same_stem,
                     same_role,
+                    len(words),
                     -donor["entry"],
                 )
                 candidates.append((score, donor))
@@ -441,6 +450,9 @@ def prepare_projection(world, actors):
     )
     for actor in actors:
         entry = actor["entry"]
+        statements.append(
+            f"DELETE FROM content_smart_scripts WHERE entryorguid={entry} AND source_type=0 AND comment GLOB 'FOLLOWER_TRASH_*';"
+        )
         if actor.get("excluded_reason") or not actor["spells"]:
             continue
         template = world.execute(
@@ -518,9 +530,8 @@ def prepare_projection(world, actors):
                 world.execute("SELECT quote(?)", (value,)).fetchone()[0]
                 for value in values
             ]
-            updates = ",".join(f"{column}=excluded.{column}" for column in columns[4:])
             statements.append(
-                f"INSERT INTO content_smart_scripts ({','.join(columns)}) VALUES ({','.join(encoded)}) ON CONFLICT(entryorguid,source_type,id,link) DO UPDATE SET {updates};"
+                f"INSERT INTO content_smart_scripts ({','.join(columns)}) VALUES ({','.join(encoded)});"
             )
             admitted.append(spell)
             receipt["casts"].append({"entry": entry, **metadata, **provenance})
@@ -540,9 +551,31 @@ def main():
         "--littlewigs", type=Path, default=Path("/home/osso/Repos/LittleWigs")
     )
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--delta", type=Path, help="Write project SmartAI SQL; never apply it"
+    )
+    parser.add_argument(
+        "--project-map", type=int, action="append", help="Limit SQL batch, not census"
+    )
     args = parser.parse_args()
     with sqlite3.connect(args.world.resolve().as_uri() + "?mode=ro", uri=True) as world:
+        world.execute("BEGIN")
         report = census(world, json.loads(args.inventory.read_text()), args.littlewigs)
+        report["world_source"] = str(args.world.resolve())
+        report["inventory_sha256"] = hashlib.sha256(
+            args.inventory.read_bytes()
+        ).hexdigest()
+        if args.delta:
+            actors = [
+                actor
+                for actor in report["actors"]
+                if not args.project_map or set(actor["maps"]) & set(args.project_map)
+            ]
+            sql, receipt = prepare_projection(world, actors)
+            args.delta.write_text(sql)
+            args.delta.with_suffix(".receipt.json").write_text(
+                json.dumps(receipt, indent=2) + "\n"
+            )
     write_census(report, args.output)
     print(json.dumps(report["counts"], indent=2))
 
