@@ -27,9 +27,19 @@ fn trash_actor(entry: u32, map_id: u32, spell: u32) -> (Harness, Entity) {
     app.insert_resource(smart_ai::load_smart_scripts(&world_db_path()).unwrap());
     let source_connection =
         Connection::open_with_flags(world_db_path(), OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
-    app.insert_resource(
-        crate::spell_cast::area_trigger::load_aura_field_catalog(&source_connection).unwrap(),
-    );
+    let catalog =
+        crate::spell_cast::area_trigger::load_aura_field_catalog(&source_connection).unwrap();
+    static AT_CENSUS: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    AT_CENSUS.get_or_init(|| {
+        let census = catalog.destination_census(&source_connection).unwrap();
+        let admitted = census.iter().filter(|(_, reason)| reason.is_none()).count();
+        eprintln!("effect179 admission: {admitted} admitted / {} skipped", census.len() - admitted);
+        if let Some(path) = std::env::var_os("FOLLOWER_TRASH_AT_CENSUS") {
+            let report = serde_json::json!({"admitted": admitted, "skipped": census.len() - admitted, "properties": census});
+            std::fs::write(path, serde_json::to_string_pretty(&report).unwrap()).unwrap();
+        }
+    });
+    app.insert_resource(catalog);
     let maps = app.world().resource::<MapStore>().clone();
     let mut instances = crate::maps::InstanceManager::default();
     let map = instances
@@ -189,6 +199,14 @@ fn follower_trash_destination_trigger_uses_actual_npc_enemy_victim() {
         0,
     );
     h.advance(minimum_flight - step);
+    let world = h.app.world_mut();
+    assert!(
+        world
+            .query::<&crate::spell_cast::area_trigger::SpellAreaTrigger>()
+            .iter(world)
+            .all(|field| field.spell_id != 375647),
+        "no source field before native minimum missile duration"
+    );
     assert!(
         !h.inbox(0)
             .log
@@ -298,6 +316,45 @@ fn assert_wild_eruption_field_at_victim(h: &mut Harness, actor: Entity) {
         "destination53 selects victim XY and138 retains exact native floor projection"
     );
     assert!(field.expires_at.is_some(), "native field lifetime retained");
+}
+
+#[test]
+fn follower_trash_effect179_source_actionless_sphere_has_native_radius_and_lifetime() {
+    // Native102793/property314/template3020: a source actionless8yd sphere.
+    let (mut h, actor) = trash_actor(191164, 2515, 375652);
+    let spell = crate::spell_cast::test_harness::world_db()
+        .unwrap()
+        .store
+        .get(102793)
+        .unwrap()
+        .clone();
+    let lifetime = spell.misc.as_ref().unwrap().duration.unwrap().duration_ms as f32 / 1000.0;
+    h.app.insert_resource(SpellStore::fixture(vec![spell]));
+    let position = *h.app.world().get::<Position>(actor).unwrap();
+    crate::spell_cast::cast_triggered_at_destination(
+        h.app.world_mut(),
+        actor,
+        102793,
+        Vec3::new(position.x, position.y, position.z),
+        0,
+    );
+    let world = h.app.world_mut();
+    let fields: Vec<_> = world
+        .query::<(Entity, &crate::spell_cast::area_trigger::SpellAreaTrigger)>()
+        .iter(world)
+        .filter(|(_, field)| field.caster == actor && field.spell_id == 102793)
+        .map(|(entity, field)| (entity, field.radius))
+        .collect();
+    assert_eq!(fields.len(), 1);
+    let (field, radius) = fields[0];
+    assert_eq!(radius, 8.0, "source geometry, not missing DB2 spell radius");
+    h.advance(lifetime - 0.05);
+    assert!(h.app.world().get_entity(field).is_ok());
+    h.advance(0.1);
+    assert!(
+        h.app.world().get_entity(field).is_err(),
+        "native source field expires without an invented periodic action"
+    );
 }
 
 #[test]

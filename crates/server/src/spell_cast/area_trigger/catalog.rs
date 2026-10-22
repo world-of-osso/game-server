@@ -1,4 +1,4 @@
-//! Source-defined aura395 spheres and the finite Frozen Ground effect179 binding. Unsupported scripts, shapes and curve modes
+//! Source-defined aura395 and effect179 spheres. Unsupported scripts, shapes and curve modes
 //! remain explicit errors; they never acquire a guessed radius or curve type.
 use std::collections::HashMap;
 
@@ -32,13 +32,41 @@ struct SphereProperties {
     time_to_scale_ms: u32,
     script_name: String,
     flags: u32,
+    shape: u32,
+    target_radius: f32,
+    motion_curves: [u32; 3],
 }
 
 impl AuraFieldCatalog {
+    pub(super) fn destination_definition(
+        &self,
+        properties: u32,
+    ) -> Result<&FieldDefinition, String> {
+        let definition = self.definition(properties)?;
+        if definition.script.is_some() {
+            return Err(format!(
+                "Properties {properties}: script requires aura-effect ownership"
+            ));
+        }
+        Ok(definition)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn destination_census(
+        &self,
+        connection: &Connection,
+    ) -> rusqlite::Result<Vec<(u32, Option<String>)>> {
+        let mut statement = connection.prepare("SELECT DISTINCT EffectMiscValue_0 FROM spell_effect WHERE Effect=179 AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0")?;
+        statement
+            .query_map([], |row| row.get::<_, u32>(0))?
+            .map(|row| row.map(|id| (id, self.destination_definition(id).err())))
+            .collect()
+    }
+
     pub(super) fn definition(&self, properties: u32) -> Result<&FieldDefinition, String> {
         self.0
             .get(&properties)
-            .ok_or_else(|| format!("Missing aura395 create-properties {properties}"))?
+            .ok_or_else(|| format!("Missing source create-properties {properties}"))?
             .as_ref()
             .map_err(Clone::clone)
     }
@@ -64,7 +92,7 @@ impl FieldDefinition {
 pub(crate) fn load_catalog(connection: &Connection) -> rusqlite::Result<AuraFieldCatalog> {
     let mut statement = connection.prepare(
         "SELECT DISTINCT EffectMiscValue_0 FROM spell_effect \
-         WHERE (EffectAura=395 OR (Effect=179 AND SpellID=387149 AND EffectMiscValue_0=26505)) \
+         WHERE (EffectAura=395 OR Effect=179) \
          AND EffectMiscValue_0>0 ORDER BY EffectMiscValue_0",
     )?;
     let properties = statement
@@ -103,12 +131,11 @@ fn load_definition(connection: &Connection, id: u32) -> Result<FieldDefinition, 
 }
 
 fn load_sphere_properties(connection: &Connection, id: u32) -> Result<SphereProperties, String> {
-    connection
+    let properties = connection
         .query_row(
             "SELECT AreaTriggerId,IsAreatriggerCustom,ShapeData0,ScaleCurveId,TimeToTargetScale,ScriptName,Flags \
-         FROM tdb_areatrigger_create_properties \
-         WHERE Id=?1 AND IsCustom=0 AND Shape=0 AND ShapeData0=ShapeData1 \
-         AND MoveCurveId=0 AND MorphCurveId=0 AND FacingCurveId=0",
+         ,Shape,ShapeData1,MoveCurveId,MorphCurveId,FacingCurveId \
+         FROM tdb_areatrigger_create_properties WHERE Id=?1 AND IsCustom=0",
             [id],
             |row| {
                 Ok(SphereProperties {
@@ -119,14 +146,57 @@ fn load_sphere_properties(connection: &Connection, id: u32) -> Result<SphereProp
                     time_to_scale_ms: row.get(4)?,
                     script_name: row.get(5)?,
                     flags: row.get(6)?,
+                    shape: row.get(7)?,
+                    target_radius: row.get(8)?,
+                    motion_curves: [row.get(9)?, row.get(10)?, row.get(11)?],
                 })
             },
         )
         .map_err(|error| {
             format!(
-                "Aura395 properties {id}: missing or unsupported fixed sphere: {error}"
+                "Properties {id}: missing source definition: {error}"
             )
-        })
+        })?;
+    validate_stationary_sphere(connection, id, &properties)?;
+    Ok(properties)
+}
+
+fn validate_stationary_sphere(
+    connection: &Connection,
+    id: u32,
+    properties: &SphereProperties,
+) -> Result<(), String> {
+    if properties.shape != 0 || properties.radius != properties.target_radius {
+        return Err(format!(
+            "Properties {id}: unsupported shape {}/radius {}→{}",
+            properties.shape, properties.radius, properties.target_radius
+        ));
+    }
+    if properties.motion_curves != [0, 0, 0] {
+        return Err(format!(
+            "Properties {id}: unsupported move/morph/facing curves {:?}",
+            properties.motion_curves
+        ));
+    }
+    // TC AreaTriggerTemplate.h: VisualAnimIsDecay and absolute facing do not
+    // change fixed-sphere collision; other flags remain unsupported.
+    const SUPPORTED_FIXED_SPHERE_FLAGS: u32 = 0x2 | 0x4;
+    if properties.flags & !SUPPORTED_FIXED_SPHERE_FLAGS != 0 {
+        return Err(format!(
+            "Properties {id}: unsupported flags {}",
+            properties.flags
+        ));
+    }
+    let moving: bool = connection.query_row(
+        "SELECT EXISTS(SELECT 1 FROM tdb_areatrigger_create_properties_spline_point WHERE AreaTriggerCreatePropertiesId=?1 AND IsCustom=0) OR EXISTS(SELECT 1 FROM tdb_areatrigger_create_properties_orbit WHERE AreaTriggerCreatePropertiesId=?1 AND IsCustom=0)",
+        [id], |row| row.get(0),
+    ).map_err(|error| format!("Properties {id}: missing source movement metadata: {error}"))?;
+    if moving {
+        return Err(format!(
+            "Properties {id}: unsupported spline/orbit movement"
+        ));
+    }
+    Ok(())
 }
 
 fn select_script(id: u32, properties: &SphereProperties) -> Result<Option<FieldScript>, String> {
@@ -163,7 +233,16 @@ fn load_action(
     validate_template(connection, properties.template, properties.custom)?;
     let actions = load_actions(connection, properties.template, properties.custom)?;
     match (script, actions.as_slice()) {
-        (None, [(0, spell, 2)]) if *spell != 0 => Ok((*spell, Relation::Enemy)),
+        (None, []) => Ok((0, Relation::Any)),
+        (None, [(0, spell, target)]) if *spell != 0 => match target {
+            0 => Ok((*spell, Relation::Any)),
+            1 => Ok((*spell, Relation::Ally)),
+            2 => Ok((*spell, Relation::Enemy)),
+            _ => Err(format!(
+                "Template {}: unsupported CAST target {target}",
+                properties.template
+            )),
+        },
         (Some(FieldScript::VaultRune), [(0, super::vault_rune::PROTECTION, 1)]) => {
             Ok((super::vault_rune::PROTECTION, Relation::Ally))
         }

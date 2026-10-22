@@ -1,5 +1,5 @@
-//! Native387149/26505/30679: fixed destination, source scale and CAST387150/ENEMY.
-//! The applied aura owns its periodic clock; entry never invents a damage tick.
+//! Source-backed effect179 destination spheres: shared scale, actions and lifecycle.
+//! Applied auras own periodic clocks; entry never invents a damage tick.
 use super::catalog::AuraFieldCatalog;
 use super::{SpellAreaTrigger, aura_owned};
 use crate::maps::InMap;
@@ -8,21 +8,27 @@ use bevy::prelude::*;
 use shared::components::Position;
 use std::collections::HashSet;
 
-pub(super) const SPELL: u32 = 387149;
-pub(super) const CREATE_PROPERTIES: i32 = 26505;
-
 #[derive(Component, Clone, Copy)]
-pub(super) struct FrozenGround {
+pub(super) struct DestinationField {
+    properties: u32,
     created_at: f64,
 }
 
-pub(super) fn create(world: &mut World, ctx: &EffectCtx, destination: Vec3) -> Result<(), String> {
+pub(super) fn create(
+    world: &mut World,
+    ctx: &EffectCtx,
+    destination: Vec3,
+    properties: u32,
+) -> Result<(), String> {
     let map = *world.get::<InMap>(ctx.caster).ok_or("caster has no map")?;
     let now = crate::auras::aura_now(world);
-    let trigger = build_trigger(world, ctx, now)?;
+    let trigger = build_trigger(world, ctx, now, properties)?;
     let entity = world
         .spawn((
-            FrozenGround { created_at: now },
+            DestinationField {
+                properties,
+                created_at: now,
+            },
             trigger,
             Position {
                 x: destination.x,
@@ -36,11 +42,16 @@ pub(super) fn create(world: &mut World, ctx: &EffectCtx, destination: Vec3) -> R
     Ok(())
 }
 
-fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTrigger, String> {
+fn build_trigger(
+    world: &World,
+    ctx: &EffectCtx,
+    now: f64,
+    properties: u32,
+) -> Result<SpellAreaTrigger, String> {
     let definition = world
         .get_resource::<AuraFieldCatalog>()
         .ok_or("source field catalog not loaded")?
-        .definition(CREATE_PROPERTIES as u32)?;
+        .destination_definition(properties)?;
     let duration = crate::spell_cast::duration_ms(world, ctx.caster, ctx.spell);
     Ok(SpellAreaTrigger {
         caster: ctx.caster,
@@ -48,8 +59,6 @@ fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTr
         trigger_spell: definition.trigger_spell,
         radius: definition.radius_at(0.0),
         expires_at: (duration >= 0).then_some(now + f64::from(duration) / 1000.0),
-        period_ms: 0,
-        next_tick_at: now,
         relation: definition.relation,
         depth: ctx.depth + 1,
         cast_item_level: ctx.spell.cast_item_level,
@@ -58,23 +67,20 @@ fn build_trigger(world: &World, ctx: &EffectCtx, now: f64) -> Result<SpellAreaTr
 }
 
 pub(super) fn radius_at(world: &World, entity: Entity, at: f64) -> Option<f32> {
-    let binding = world.get::<FrozenGround>(entity)?;
+    let binding = world.get::<DestinationField>(entity)?;
     Some(
         world
             .resource::<AuraFieldCatalog>()
-            .definition(CREATE_PROPERTIES as u32)
-            .expect("created Frozen Ground has supported source definition")
+            .destination_definition(binding.properties)
+            .expect("created destination field has supported source definition")
             .radius_at(at - binding.created_at),
     )
 }
 
 pub(super) fn update(world: &mut World, entity: Entity) {
-    let binding = *world
-        .get::<FrozenGround>(entity)
-        .expect("Frozen Ground binding");
     let trigger = world
         .get::<SpellAreaTrigger>(entity)
-        .expect("Frozen Ground trigger")
+        .expect("source destination trigger")
         .clone();
     let now = crate::auras::aura_now(world);
     let expired = trigger.expires_at.is_some_and(|expiry| now >= expiry);
@@ -83,13 +89,11 @@ pub(super) fn update(world: &mut World, entity: Entity) {
         remove(world, entity, &trigger);
         return;
     }
-    let radius = world
-        .resource::<AuraFieldCatalog>()
-        .definition(CREATE_PROPERTIES as u32)
-        .expect("created Frozen Ground has supported source definition")
-        .radius_at(now - binding.created_at);
+    let radius = radius_at(world, entity, now).expect("source destination field binding");
     world.get_mut::<SpellAreaTrigger>(entity).unwrap().radius = radius;
-    aura_owned::update_actions(world, entity, &trigger);
+    if trigger.trigger_spell != 0 {
+        aura_owned::update_actions(world, entity, &trigger);
+    }
 }
 
 fn remove(world: &mut World, entity: Entity, trigger: &SpellAreaTrigger) {

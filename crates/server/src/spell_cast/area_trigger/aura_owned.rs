@@ -60,20 +60,18 @@ fn create_field(
         properties,
         created_at: now,
     };
-    let trigger = build_trigger(aura, definition, now);
+    let trigger = build_trigger(aura, definition);
     world.spawn((binding, trigger, position, map));
     Ok(())
 }
 
-fn build_trigger(aura: &AuraInstance, definition: &FieldDefinition, now: f64) -> SpellAreaTrigger {
+fn build_trigger(aura: &AuraInstance, definition: &FieldDefinition) -> SpellAreaTrigger {
     SpellAreaTrigger {
         caster: aura.caster,
         spell_id: aura.spell_id,
         trigger_spell: definition.trigger_spell,
         radius: definition.radius_at(0.0),
         expires_at: aura.expires_at,
-        period_ms: 0,
-        next_tick_at: now,
         relation: definition.relation,
         depth: 1,
         cast_item_level: None,
@@ -212,17 +210,21 @@ fn living_units_in_map(world: &mut World, map: InMap) -> Vec<(Entity, Position)>
 }
 
 pub(super) fn update_actions(world: &mut World, entity: Entity, previous: &SpellAreaTrigger) {
+    if previous.trigger_spell == 0 {
+        return;
+    }
     let inside = eligible_units(world, entity, previous);
     for &unit in previous.inside.difference(&inside) {
         undo_action(world, previous, unit);
     }
     for &unit in inside.difference(&previous.inside) {
-        crate::spell_cast::cast_triggered(
+        crate::spell_cast::cast_triggered_with_item_level(
             world,
             previous.caster,
             previous.trigger_spell,
             Some(unit),
             previous.depth,
+            previous.cast_item_level,
         );
     }
     if let Some(mut stored) = world.get_mut::<SpellAreaTrigger>(entity) {
