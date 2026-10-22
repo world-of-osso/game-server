@@ -113,6 +113,7 @@ fn read_spell(row: &Row, lookups: &Lookups, id: u32) -> rusqlite::Result<SpellIn
             procs_per_minute: (proc_ppm != 0.0).then_some(ProcsPerMinute {
                 base_proc_rate: proc_ppm,
                 flags: 0,
+                ..Default::default()
             }),
             proc_type_mask: [col_u32(row, "ProcFlags")?, col_u32(row, "ProcFlags2")?],
         }),

@@ -11,6 +11,197 @@ const GARRICK: u32 = 209057;
 const AEGIS_OF_LIGHT: u32 = 353367;
 const RIGHTEOUS_FURY: u32 = 25780;
 
+fn mastery_follower(entry: u32) -> (Harness, Entity) {
+    let (mut h, unit, profile) = spawn_profile_fixture_with_plugins(entry, |app| {
+        app.add_plugins(StatsPlugin);
+    });
+    h.app
+        .world_mut()
+        .entity_mut(h.caster)
+        .insert((Level(90), UnitLevel(90)));
+    super::spawning::initialize(h.app.world_mut(), h.caster, unit, profile).unwrap();
+    h.advance(6);
+    assert!(
+        h.app
+            .world()
+            .get::<shared::components::Player>(unit)
+            .is_none()
+    );
+    (h, unit)
+}
+
+fn apply_native_aura(h: &mut Harness, unit: Entity, spell_id: u32) {
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)
+        .unwrap();
+    let effect_mask = crate::auras::aura_effect_mask(spell);
+    crate::auras::apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster: unit,
+            target: unit,
+            spell_id,
+            effect_mask,
+            source: AuraSource::KnownSpell,
+        },
+    );
+    h.advance(6);
+}
+
+fn assert_native_mastery_attack_power(entry: u32, mastery: u32) {
+    let (mut h, unit) = mastery_follower(entry);
+    crate::auras::remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == mastery
+    });
+    h.advance(6);
+    let base = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .attack_power;
+    apply_native_aura(&mut h, unit, mastery);
+    let current = h.app.world().get::<CharacterStats>(unit).unwrap();
+    let expected = base * (1.0 + current.mastery_points / 100.0);
+    assert!(
+        (current.attack_power - expected).abs() < 0.01,
+        "native follower{entry} mastery{mastery}: AP{} expected{expected} from base{base}, points{}",
+        current.attack_power,
+        current.mastery_points
+    );
+    //70448 Elemental Blast: Mastery173184 supplies3 actual raw mastery points.
+    // Existing mastery auras must recalculate without being removed/reapplied.
+    apply_native_aura(&mut h, unit, 173184);
+    let current = h.app.world().get::<CharacterStats>(unit).unwrap();
+    let expected = base * (1.0 + current.mastery_points / 100.0);
+    assert!(
+        (current.attack_power - expected).abs() < 0.01,
+        "live mastery refresh: AP{} expected{expected}",
+        current.attack_power
+    );
+}
+
+#[test]
+fn dps_parity_follower_native_paladin_mastery_updates_attack_power() {
+    //70448 Mastery: Divine Bulwark76671 e1:166, coefficient1 per raw point.
+    assert_native_mastery_attack_power(209057, 76671);
+}
+
+#[test]
+fn dps_parity_follower_native_warrior_mastery_updates_attack_power() {
+    //70448 Mastery: Critical Block76857 e4:166, coefficient1 per raw point.
+    assert_native_mastery_attack_power(215517, 76857);
+}
+
+#[test]
+fn dps_parity_follower_native_elemental_mastery_modifies_damage_and_refreshes() {
+    let (mut h, unit) = mastery_follower(209053);
+    crate::auras::remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 168534
+    });
+    h.advance(6);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(188196)
+        .unwrap()
+        .clone();
+    let modify = |h: &Harness| {
+        crate::auras::spell_mods::modify(
+            h.app.world(),
+            unit,
+            &spell,
+            crate::auras::SpellModOp::HealingAndDamage,
+            100.0,
+        )
+    };
+    let base = modify(&h);
+    let coefficient = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(168534)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.index == 2)
+        .unwrap()
+        .bonus_coefficient;
+    apply_native_aura(&mut h, unit, 168534);
+    let points = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .mastery_points;
+    let expected = base * (1.0 + points * coefficient / 100.0);
+    assert!(
+        (modify(&h) - expected).abs() < 0.01,
+        "native Lightning Bolt damage modifier{} expected{expected}",
+        modify(&h)
+    );
+    apply_native_aura(&mut h, unit, 173184);
+    let points = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .mastery_points;
+    let expected = base * (1.0 + points * coefficient / 100.0);
+    assert!(
+        (modify(&h) - expected).abs() < 0.01,
+        "live Lightning Bolt modifier{} expected{expected}",
+        modify(&h)
+    );
+}
+
+#[test]
+fn dps_parity_follower_native_mastery_does_not_grant_player_scaling_to_ordinary_npc() {
+    let (mut h, unit) = mastery_follower(GARRICK);
+    crate::auras::remove_auras(h.app.world_mut(), unit, RemoveReason::Cancelled, |aura| {
+        aura.spell_id == 76671
+    });
+    h.advance(6);
+    let before = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .attack_power;
+    h.app
+        .world_mut()
+        .entity_mut(unit)
+        .remove::<super::Follower>();
+    apply_native_aura(&mut h, unit, 76671);
+    let attack_power = h
+        .app
+        .world()
+        .get::<CharacterStats>(unit)
+        .unwrap()
+        .attack_power;
+    assert_eq!(attack_power, before);
+    let spell = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(76671)
+        .unwrap();
+    let effect = spell
+        .effects
+        .iter()
+        .find(|effect| effect.aura == 166)
+        .unwrap();
+    assert_eq!(
+        crate::spell_cast::effects::modded_base_points(h.app.world(), unit, spell, effect),
+        0.0,
+        "an ordinary NPC must retain TC's no-player-mastery boundary"
+    );
+}
+
 fn spawn_level32_garrick() -> (Harness, Entity) {
     let (mut h, old_unit, profile) = spawn_profile_fixture_with_plugins(GARRICK, |app| {
         app.add_plugins(StatsPlugin);

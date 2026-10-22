@@ -141,6 +141,7 @@ pub(super) fn proc_reflector(world: &mut World, caster: Entity, reflector: Entit
             can_proc: true,
             periodic: false,
             damage: 0.0,
+            heal: None,
             reflected: true,
         },
     );

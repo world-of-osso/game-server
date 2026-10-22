@@ -90,6 +90,7 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_p
         (
             crate::followers::simulator::update_leader,
             super::movement::update,
+            crate::creature_ai::no_path_evade_system,
         )
             .chain()
             .after(crate::followers::update_ai),

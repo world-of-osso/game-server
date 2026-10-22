@@ -599,6 +599,31 @@ def import_porung_binding(connection):
     return [primary['entry']]
 
 
+def import_anubzekt(connection):
+    """Local2777a9d Lua binding; preserve actual215405 population/native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2660, entry=215405, encounter_id=2906, bit=1,
+                   script='', ai='', journal_id=2584, actor_id=5726, display_id=115723,
+                   spawn_guid=10004042, spawn_difficulties='1,2,8,23,205')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=215405'
+    ).fetchone()
+    if runtime not in [("Anub'zekt", '', '', 64), ("Anub'zekt", '', 'littlewigs_anubzekt', 64)]:
+        raise ValueError('Anubzekt runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,EffectAura,EffectAuraPeriod,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=433740 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (6, 3, 500, 22, 15):
+        raise ValueError('Anubzekt native Infestation433740 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_anubzekt' WHERE entry=215405")
+    return [215405]
+
+
 def import_kyrioss_schedule(connection):
     """LittleWigs2777a9d5 Kyrioss: explicit local schedule, never a claimed TC AI.
 
@@ -628,7 +653,7 @@ def import_kyrioss_schedule(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -652,6 +677,8 @@ def main():
                 entries = import_porung_binding(conn)
             elif args.encounter == 'kyrioss':
                 entries = import_kyrioss_schedule(conn)
+            elif args.encounter == 'anubzekt':
+                entries = import_anubzekt(conn)
             elif args.encounter == 'azureblade':
                 entries = import_azureblade(conn)
             elif args.encounter == 'umbrelskul':

@@ -13,6 +13,14 @@ Pinned TC a352b1fa and native70448, without spell-ID branches:
 
 [Source matrix, remaining dependencies and proof](../wiki/systems/auras.md#census-generic-resource-state-duration-and-sanctuary--2026-10-20).
 
+## Data-driven RPPM haste
+
+For positive native RPPM rates, `SpellProcsPerMinuteMod` Type1 must scale the effective rate using its actual Param/Coeff rows before both attempt probability and bad-luck interval calculations. Params1–5 read the existing unified derived haste representation; do not infer scaling from `SpellProcsPerMinute.Flags`. Keep native timers, cooldowns, proc masks and charges unchanged. Native325201/PPM57/mod221 and learned1272685 haste30 provide the regression. Non-haste modifier types remain unimplemented, not certified by this slice. [Implementation and proof](../wiki/systems/auras.md#rppm-haste-modifiers--2026-10-21).
+
+## Fists of Fury damage cadence
+
+`FISTS_OF_FURY_SIMC_TICK_CADENCE` governs only113656's117418 damage trigger: base1s periodic ticks including tick0, five hits over the native4s channel, before ordinary period/duration modifiers. Keep native damage coefficients, costs, target selection and the166ms control heartbeat unchanged; do not change generic226 toy behavior. Source: SimC76f8118 `monk/sc_monk.cpp1789–1796`. TC has no FoF script and its226 dummy is handled via scripts, so this is an explicit project policy rather than a DB2 timer correction. [Implementation and proof](../wiki/systems/auras.md#fists-of-fury-simc-cadence--2026-10-21).
+
 ## Computed target aura state
 
 TargetAuraState/ExcludeTargetAuraState checks use only sourced, computable states. State15 (Druid periodic heal) derives from active aura source class family7 with mask0&0x50 or mask1&0x04000000, after TC's category1133 classification. Any caster's matching active aura qualifies:15 is not in TC's per-caster mask14/16. Owner-target and modelled vehicle-caster exemptions, plus affecting aura262, bypass state checks only, not other spell/type restrictions. Unknown states remain `TARGET_AURA_STATE_UNCOMPUTED`, never a reason to refuse a spell. Charmer and unmodelled vehicle representations remain explicit gaps; do not synthesize them. Follower owner mapping is [named project policy](follower-dungeons.md#full-spec-follower-kits-user-decision-2026-10-18).
@@ -52,6 +60,10 @@ Actual active77756 rolls its native effect0 chance from real own188389 periodic 
 ## Fire Hot Streak
 
 Native-kit followers retain their actual level-gated selected spell IDs in KnownSpells, including non-aura passives, without a Player or player-only grants. Actual known native195283 (Effect3, not an aura) enables ordinary landed direct Fireball133, Fire Blast108853/319836, Pyroblast11366 and Scorch2948 hits to produce Heating Up48107 on a crit, convert existing Heating Up to Hot Streak48108 on the next crit, or clear Heating Up on a noncrit (TC a352b1fa `spell_mage.cpp:1037–1100`; current eligible actions: SimC76f8118). Periodic/copy/triggered damage must not enter this ordinary-hit bridge. Snapshot actual native cast-time-modifier instances at cast admission; only Pyroblast/Flamestrike1254851 admitted with48108 consume that instance after successful cast, before missile impact. Hot Streak earned during a hardcast belongs to the next cast (TC marker `m_appliedMods`; SimC `sc_mage.cpp:2427`). Additional Ignite/Pyroclasm/scorch-finish/talent and other-trigger consequences remain separate gaps.
+
+## Pyroclasm Hot Streak policy
+
+`MAGE_PYROCLASM_SIMC_HOT_STREAK_TRIGGER` rolls the actual active269650 effect0 chance when a cast truly spends its admitted Hot Streak. Trigger native269651, retaining its native duration and two-stack cap. Ordinary Pyroblast11366/Flamestrike1254851 admitted with positive cast time use269651 effect0 damage percentage and consume one live stack at completion; instant casts neither spend nor receive that hardcast-only bonus. Retain the numeric bonus through missile impact after consumption.70448 supplies chance15 and bonus230%; SimC76f8118 `sc_mage.cpp2326–2428,6444–6446` supplies trigger/consumer semantics. TC has no Pyroclasm script and DB2 has no269650 proc row, so this is an explicit project policy. Other set/talent consequences remain outside this slice. [Implementation and proof](../wiki/systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21).
 
 ## Devastation Essence Burst
 
