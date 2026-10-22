@@ -1,3 +1,7 @@
+## 2026-10-22 — Elemental70 decomposition and target Earthquake RED
+
+[Decomposition](investigations/follower-data.md#elemental70-efficiency-decomposition--2026-10-22): native2 measurements PASS31.84s, source-scoped770.85/714.367 DPS vs SimC caster965.019/1550.704 plus owned guardians130.905/129.465; actualstat mismatch and Azure duty remain explicit.3T14 completed462620 casts produce no77478; native AI consequence RED1/16.49s/zero warnings. Shared existing61882 field path extended to native target variant at3de3f1131; center/overlap/native-clock control and GREEN pending. Frozen Feel packet31b remains distinct.
+
 ## 2026-10-22 — Feel the Burn targeted GREEN and affected samples
 
 [Native boundaries](investigations/follower-data.md#feel-the-burn-native-eligibility-and-overlap--2026-10-22): native11GREEN41.86s/c43cc8dcb/zero warnings includes4Feel cases plus7 ordinary proc/cadence controls; proved4 enabled25c4d4fb4. Only affected Fire StatsPlugin3PASS86.45s,90ST/3T3261.958/3011.958 DPS and final mastery_points13/11, explicitly unpaired starter samples. Later996ec234 merge requires integration proof. New Elemental70 diagnostic2PASS31.84s atsamecompiledscope; analysis separatescaster/guardian attribution and actualstat mismatch rather than declaring parity.
