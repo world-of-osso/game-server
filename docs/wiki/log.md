@@ -1,3 +1,7 @@
+## 2026-10-22 — Ascendance samples and current-master gate boundary
+
+[Measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): only Elemental3 affected samples refreshed,3PASS29.75s; real1219480 cast1/up12.458% on both90 scenarios, none at32. Source revisioncacbac0b0/base0c2 preserved with exact ledger/hashes. Laterfc5e87cc1 aura/stat/power changes merged as317ae34b7; current integration gate remains pending, not replaced by pre-merge proof. Entry Shock/Lava Burst and complete APL remain open.
+
 ## 2026-10-22 — Native Elemental Ascendance action and timing
 
 [Projection](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): native-description/SimC action1219480 added only after parent114050 learns51, with real Stormkeeper cooldown>15s condition. Genuine missing-aura RED28.25s then3GREEN36.50s atcacbac0b0; native50 and real sync-window controls retain ordinary damage. Source projection1PASS, fresh export1PASS, single qualified added key; entry Flame Shock/Lava Burst and full APL remain open.
