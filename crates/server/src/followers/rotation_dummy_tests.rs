@@ -407,7 +407,10 @@ fn measure_dummy(entry: u32, spec: u32, count: usize, level: u8, seconds: f64) {
             .filter(|event| {
                 matches!(
                     event.kind,
-                    CombatLogKind::Damage | CombatLogKind::CastSuccess | CombatLogKind::Summon
+                    CombatLogKind::Damage
+                        | CombatLogKind::CastSuccess
+                        | CombatLogKind::Summon
+                        | CombatLogKind::Energize
                 )
             })
             .cloned()
