@@ -120,6 +120,14 @@ fn encounter_coverage_gulping_goliath_projected_lanes_credit_and_corpse() {
                 "first sourced lane{spell}"
             );
         }
+        h.advance(37.0);
+        for spell in [CROAK, TOXIC, 385551, 385531] {
+            assert_eq!(
+                completed_casts(&h, boss, spell),
+                2,
+                "second sourced lane{spell}: Croak47.2/Gulp65.4/Toxic57/Belly77.6"
+            );
+        }
         assert!(
             h.inbox(0)
                 .starts
