@@ -1,3 +1,7 @@
+## 2026-10-22 — Nokhud partial packet and no-co-location boundary
+
+[Nokhud journal identity](investigations/follower-data.md#nokhud-journal-uimap-identity--2026-10-22): source8GREEN0.540s;163522cf4 actual-copy Balakar/Maruuk/Granyth2GREEN0.029s with12stable-key inserts/replay3× exact. Native stats/models retained; all three entrance routes remain incomplete. Tempest has no support at sourceXY; Teera and Kyrakka require individual source points, not fabricated shared-marker co-location. Lead confirmed Halls/Vexamus16inserts published/integrityOK; Nokhud publication pending.
+
 ## 2026-10-22 — Nokhud explicit journal UiMap
 
 [Nokhud journal identity](investigations/follower-data.md#nokhud-journal-uimap-identity--2026-10-22): actual Balakar comparison failed because exact journal UiMap2093 lacks UiMapGroupMember; comparison now uses the sourced UiMap bounds with no invented floor. Missing four-primary data RED retained; next packet pending.
