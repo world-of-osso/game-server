@@ -33,7 +33,6 @@ fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
 }
 
 #[test]
-#[ignore = "native RED: source class4 Energy pool missing at ordinary spawn"]
 fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration() {
     use shared::components::PowerType;
     for difficulty in [1, 205] {
@@ -83,7 +82,6 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
 }
 
 #[test]
-#[ignore = "native source proof with coincident peer pending"]
 fn encounter_coverage_anubzekt_native_infestation_periodic_damage_qualifies() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = anubzekt_copy(difficulty);
@@ -116,7 +114,6 @@ fn encounter_coverage_anubzekt_native_infestation_periodic_damage_qualifies() {
 }
 
 #[test]
-#[ignore = "native source proof with coincident peer pending"]
 fn encounter_coverage_anubzekt_first_impale_uses_current_lua_clock() {
     for difficulty in [1, 205] {
         let (mut h, boss, _) = anubzekt_copy(difficulty);
@@ -140,7 +137,6 @@ fn encounter_coverage_anubzekt_first_impale_uses_current_lua_clock() {
 }
 
 #[test]
-#[ignore = "native source proof with real second-copy credit pending"]
 fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
@@ -203,7 +199,6 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
             .world()
             .resource::<super::cast_admission::CastAdmissions>()
             .entries;
-        eprintln!("ANUBZEKT difficulty{difficulty} {attempts:?}");
         let lanes = [
             (
                 IMPALE,
@@ -320,7 +315,6 @@ fn encounter_coverage_anubzekt_ongoing_lanes_native_damage_and_copy_credit() {
 }
 
 #[test]
-#[ignore = "native source proof with coincident peer pending"]
 fn encounter_coverage_anubzekt_evade_rearms_initial_combo_without_credit() {
     for difficulty in [1, 205] {
         let (mut h, boss, map) = anubzekt_copy(difficulty);
