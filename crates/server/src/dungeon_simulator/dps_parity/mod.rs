@@ -79,6 +79,17 @@ fn read_reference(spec_id: u32) -> Result<(inputs::Profile, Vec<inputs::Allocate
 
 fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
     let (profile, traits) = read_reference(spec_id)?;
+    let identity = inputs::read_actor(&profile)?;
+    prepare_reference(profile, &traits, count, identity)
+}
+
+fn prepare_reference(
+    profile: inputs::Profile,
+    traits: &[inputs::AllocatedTrait],
+    count: usize,
+    identity: crate::followers::simulator::ParityActor,
+) -> Result<Run, String> {
+    let spec_id = profile.spec_id;
     let mut app = super::runtime::build_pet_app();
     inputs::install_reference_catalogs(&mut app)?;
     let copy = super::runtime::create_copy(&mut app);
@@ -86,7 +97,6 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
         .level
         .parse()
         .map_err(|error| format!("reference level: {error}"))?;
-    let identity = inputs::read_actor(&profile)?;
     let actor = crate::followers::simulator::spawn_parity_attacker(
         app.world_mut(),
         spec_id,
@@ -95,7 +105,7 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
         identity,
     )?;
     inputs::equip(app.world_mut(), actor, &profile)?;
-    inputs::install_traits(app.world_mut(), actor, &traits)?;
+    inputs::install_traits(app.world_mut(), actor, traits)?;
     let targets = spawn_targets(&mut app, actor, count)?;
     let target_waves = vec![
         json!({"at": 0.0, "entities": targets.iter().map(|unit| unit.to_bits()).collect::<Vec<_>>()}),
@@ -312,6 +322,63 @@ fn dps_parity_native_bis_dummy_records_300s() {
         "NATIVE_DPS spec{spec} targets{count}: {}",
         report["combat"]["dps"]
     );
+}
+
+#[test]
+#[ignore = "opt-in real300s dummy clock and add replacement; requires private parity inputs"]
+fn dps_parity_fixture_fixed_time_target_health_follows_global_clock() {
+    let _seed_scope = crate::random::seed_scope(70_448);
+    let (profile, traits) = read_reference(66).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        3,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    engage(&mut run);
+    let (seconds, _, samples) = advance_combat(&mut run).unwrap();
+    assert!((seconds - 300.0).abs() < 0.001);
+    let expected = [
+        100.0,
+        100.0 * 5999.0 / 6000.0,
+        100.0 * 5980.0 / 6000.0,
+        10.0,
+        0.0,
+    ];
+    assert_eq!(samples.len(), expected.len());
+    for (sample, expected_pct) in samples.iter().zip(expected) {
+        for target in sample["targets"].as_array().unwrap() {
+            let health = target["state"]["health"].as_array().unwrap();
+            let observed = health[0].as_f64().unwrap() * 100.0 / health[1].as_f64().unwrap();
+            assert!(
+                (observed - expected_pct).abs() < 0.001,
+                "SIMC_FIXED_TIME_TARGET_HEALTH expected{expected_pct}% but observed{observed}%: {target}"
+            );
+        }
+    }
+    assert_eq!(run.target_waves.len(), 10);
+}
+
+#[test]
+#[ignore = "opt-in exact-BiS player authored decision or explicit source gap; requires private parity inputs"]
+fn dps_parity_fixture_player_uses_authored_decision_or_records_rule_gap() {
+    match measure(71, 1) {
+        Ok(report) => {
+            assert_eq!(report["actor_kind"], "player");
+            assert_eq!(report["driver"], "NATIVE_ASSISTED_COMBAT_70448");
+            assert!(report["assisted_decisions"].as_u64().unwrap() > 0);
+        }
+        Err(error) => {
+            assert!(error.starts_with("NATIVE_ASSISTED_COMBAT_GAP:"), "{error}");
+            let lowercase = error.to_lowercase();
+            assert!(
+                lowercase.contains("rule") && lowercase.contains("unverified"),
+                "{error}"
+            );
+            eprintln!("AUTHORED_PLAYER_RULE_GAP: {error}");
+        }
+    }
 }
 
 #[test]
