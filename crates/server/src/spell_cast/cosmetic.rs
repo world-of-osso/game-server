@@ -24,6 +24,8 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     196783, // Darkshard Fragment (crystal growth attachments)
     203657, // Noble's Eternal Elementium Signet
     217708, // Gravil Goldbraid's Famous Sausage Hat
+    219708,
+    219871, // DH Skull of Corruption/Fel Focusing Crystal: permanent contemplation visuals.
     223143, // Prismatic Bauble: source20s ordinary rainbow attachment1417024.
     231129, 231142, 231143, 231144, // Falcosaur accessories
     239560, // Akazamzarak's Spare Hat (hat/rabbit visual models, not a summon)
@@ -34,13 +36,17 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     300104, 300144, // War Banner: source CurrentPvpFaction condition and combat interrupts
     302273, // Heart of a Champion
     318452, // Aqir Egg Cluster's missile-triggered swarm attachments
+    318571, // All-Seeing Eyes: source10min owner attachment; race/gender/shape visual variants.
     302730, // Brewfest Chowdown Trophy's champion animation aura (visual88525)
     383065, // Duck-Stuffed Duck Lovie (authored nap animation/attachment/sound)
     // Audited build70448 complete model/positioner/animation/sound chains;
     // no scripted/gameplay payload or alias inferred from the dummy slots.
     202432, 295037, // Hot Buttered Popcorn, Banner of the Burning Blade.
-    395705, 399041,  // Gleaming Arcanocrystal, Lost Compass (not Wayfinder's Compass).
+    395705, 399041, // Gleaming Arcanocrystal, Lost Compass (not Wayfinder's Compass).
+    396236, 1232024, // Yennu's Kite, Chowdar's Favorite Ribbon: ordinary owner attachments.
+    425503,  // Fast-Growing Seed: source3s planting cast/30s ordinary growth visual.
     405634,  // A Drake's Big Basket of Eggs (conditional mount attachment)
+    406077,  // Obsidian Battle Horn: source500ms peaceful cast/5s visual and sound.
     406870,  // Mallard Mortar (targeted squeak, not damage)
     409891,  // Blazing Shadowflame Cinder
     408067,  // B.B.F. Fist's selected-target animations/hand attachment
@@ -49,6 +55,7 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
     447446,  // Cherry Blossom Trail
     455023,  // Filmless Camera
     462145,  // Lampyridae Lure
+    465642, 1215495, // Coldflame Ring/Cyrce's Circlet: permanent owner attachments.
     1269949, // Valdekar's Special
     1280563, // Lil' Scoots' Pillow
     1237584, 1271973, 1298433, // Etheric / Dominating / Corrosive Victory
@@ -81,6 +88,11 @@ const VISUAL_ONLY_SPELLS: &[u32] = &[
 pub(crate) fn is_visual_aura(spell: &SpellInfo, effect: &SpellEffect) -> bool {
     let expected_amount = match (spell.id, effect.index) {
         (127803 | 128150, 0) => 1.0,
+        // Exact70448 seasonal pennants: ordinary model/race-sex visual selection,
+        // authored amount1 is not a generic zero-payload dummy exemption.
+        (412530 | 412912 | 425994 | 430508 | 456798 | 460082 | 460083 | 1217166 | 1233142, 0) => {
+            1.0
+        }
         (128151 | 128152 | 1220867, 0) => 0.0,
         // TC taunt-flag script casts51657: native sixty-second corpse marker;
         // the sibling effect76 creates the actual authored flag object.

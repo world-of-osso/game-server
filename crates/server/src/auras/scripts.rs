@@ -224,6 +224,9 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == crate::spell_cast::blooming_infusion::BLOOMING_INFUSION
             && effect_index == 0)
         || (spell_id == crate::spell_cast::control_dream::CONTROL_OF_THE_DREAM && effect_index == 0)
+        || (spell_id == 109186 && effect_index == 0)
+        || (spell_id == 200183 && effect_index == 0)
+        || (spell_id == 390994 && effect_index == 1)
         || (spell_id == PROTECTIVE_GROWTH && effect_index == 0)
         || (spell_id == LINGERING_HEALING && effect_index == 1)
         || (spell_id == FOUNT_OF_STRENGTH && effect_index == 2)
@@ -236,6 +239,7 @@ pub(super) fn consumes_named_field(spell_id: u32, effect_index: u8) -> bool {
         || (spell_id == 47788 && effect_index == 2)
         || (spell_id == crate::spell_cast::scripts::prayer_of_mending::WARD && effect_index == 0)
         || (spell_id == 288733 && effect_index == 1)
+        || (spell_id == crate::spell_cast::toy_coyote::HAT && effect_index == 0)
 }
 
 /// Mainline740s6 supplies the caster's Tranquility shield cap.
@@ -336,7 +340,16 @@ pub(super) fn effect_enabled(
 }
 
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        crate::spell_cast::efflorescence::DUMMY,
+        AuraScript {
+            on_periodic: Some(crate::spell_cast::efflorescence::pulse),
+            ..Default::default()
+        },
+    );
+    crate::spell_cast::toy_coyote::register(&mut scripts);
     super::abundance::register(&mut scripts);
+    crate::spell_cast::scripts::holy_priest::register(&mut scripts);
     crate::spell_cast::scripts::prayer_of_mending::register(&mut scripts);
     super::earthen_rage::register(&mut scripts);
     super::spirit_wolf::register(&mut scripts);
@@ -376,6 +389,13 @@ pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
         AuraScript {
             on_apply: Some(crate::spell_cast::scripts::replace_lifebloom),
             on_remove: Some(crate::spell_cast::scripts::bloom_lifebloom),
+            ..Default::default()
+        },
+    );
+    scripts.0.insert(
+        crate::spell_cast::scripts::DANCE_OF_CHIJI,
+        AuraScript {
+            check_proc: Some(crate::spell_cast::scripts::check_dance_proc),
             ..Default::default()
         },
     );

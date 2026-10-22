@@ -96,6 +96,7 @@ fn achievements_criteria_loot_money_group_shares_are_actual_awards_and_cap_failu
     }
     let corpse = h.kill_kobold();
     h.open(corpse, true);
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     for character in [h.looter.character_id, other.character_id] {
         let db = &h.app.world().resource::<GameDatabase>().db;
         assert_eq!(persistence::load_inventory(db, character).gold, 5);
@@ -113,6 +114,7 @@ fn achievements_criteria_loot_money_group_shares_are_actual_awards_and_cap_failu
     persistence::save_inventory(db, other.character_id, &inventory);
     let corpse2 = h.kill_kobold();
     h.open(corpse2, true);
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     let db = &h.app.world().resource::<GameDatabase>().db;
     assert_eq!(
         persistence::load_inventory(db, h.looter.character_id).gold,

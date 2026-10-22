@@ -103,9 +103,6 @@ fn collect_candidates(world: &World, creature: Entity) -> Vec<Candidate> {
 
 /// TC ThreatManager.cpp773-790: reversible flat modifier, never base threat.
 fn temporary_threat(world: &World, unit: Entity) -> f32 {
-    if world.get::<Player>(unit).is_none() {
-        return 0.0;
-    }
     world
         .get::<crate::auras::AuraStatMods>(unit)
         .map_or(0.0, |mods| mods.temporary_threat)

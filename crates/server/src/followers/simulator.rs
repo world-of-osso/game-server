@@ -12,6 +12,24 @@ pub(crate) struct Party {
     pub members: Vec<Entity>,
 }
 
+/// NPC followers execute level-gated kit rows; they do not carry Player KnownSpells.
+pub(crate) fn available_kit_spells(world: &World, unit: Entity) -> Vec<u32> {
+    let follower = world
+        .get::<Follower>(unit)
+        .expect("initialized native follower");
+    let level = world
+        .get::<Level>(unit)
+        .expect("initialized follower level")
+        .0;
+    world
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| entry.available(follower.profile.spec_id, level))
+        .map(|entry| entry.spell_id)
+        .collect()
+}
+
 const DEFAULT_PARTY: [u32; 5] = [209057, 209072, 209053, 209059, 209065];
 
 struct PartyConfiguration {
@@ -115,6 +133,11 @@ pub(crate) fn spawn_party(
     at: Position,
 ) -> Result<Party, String> {
     let configuration = PartyConfiguration::read()?;
+    let difficulty_id = world
+        .resource::<crate::maps::InstanceManager>()
+        .copy_difficulty(copy)
+        .ok_or("simulator copy lacks native difficulty")?
+        .difficulty_id;
     let profiles = read_party_profiles(world, configuration.entries)?;
     let leader = profiles[4].clone();
     let owner = world
@@ -131,7 +154,7 @@ pub(crate) fn spawn_party(
             at,
             copy,
             crate::persistence::ClientId(1),
-            crate::maps::DungeonDifficulty(1),
+            crate::maps::DungeonDifficulty(difficulty_id),
             crate::networking::CombatTarget::default(),
             crate::networking::Moving(false),
             shared::components::UnitPowers::default(),
@@ -198,6 +221,51 @@ pub(crate) fn pull(
     let decision = pull_admission::read_pull_budget(world, tank, guids, 1)?;
     let allowed = matches!(decision, pull_budget::Decision::Allow { .. });
     Ok((allowed, format!("{decision:?}")))
+}
+
+pub(crate) fn inspect_follower_decision(world: &mut World, unit: Entity) -> serde_json::Value {
+    let follower = world.get::<Follower>(unit).unwrap().clone();
+    let party = ai::party_units(world, follower.owner);
+    let enemies = ai::engaged_enemies(world, &follower, unit, &party);
+    let target = enemies
+        .iter()
+        .map(|(enemy, _)| *enemy)
+        .find(|enemy| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
+    let level = world.get::<Level>(unit).unwrap().0;
+    let entries: Vec<_> = world
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| {
+            entry.available(follower.profile.spec_id, level)
+                && entry.slot == super::kit::Slot::Attack
+        })
+        .cloned()
+        .collect();
+    let mut decisions = Vec::new();
+    if let Some(target) = target {
+        for entry in entries {
+            let conditions =
+                super::kit_ai::conditions_met(world, unit, target, &party, &enemies, &entry);
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(entry.spell_id)
+                .unwrap()
+                .clone();
+            let native = format!(
+                "{:?}",
+                crate::spell_cast::read_native_cast_start(world, unit, &spell, target)
+            );
+            decisions.push(
+                serde_json::json!({"spell":entry.spell_id,"conditions":conditions,"native":native}),
+            );
+        }
+    }
+    serde_json::json!({"unit":unit.to_bits(),"spec":follower.profile.spec_id,"target":target.map(Entity::to_bits),
+        "enemies":enemies.iter().map(|(enemy,_)| enemy.to_bits()).collect::<Vec<_>>(),
+        "self_hazard":super::hazards::target_is_hazardous(world,unit,unit),
+        "approach":target.map(|target| super::hazards::approach_is_unsafe(world,unit,target)),
+        "offense":decisions})
 }
 
 pub(crate) fn inspect_tank_movement(

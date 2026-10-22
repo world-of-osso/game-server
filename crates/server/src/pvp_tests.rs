@@ -801,6 +801,8 @@ fn native_flag_match_in_world(
     world.insert_resource(load_achievement_catalog(&conn).unwrap());
     world.init_resource::<crate::maps::ServerClock>();
     world.init_resource::<Time<Fixed>>();
+    // Native damage logs include aura/follower accounting on TimePlugin's virtual clock.
+    world.init_resource::<Time<Virtual>>();
     let map = InMap {
         map_id: template.map_id,
         instance_id: 17,
