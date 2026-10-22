@@ -9,7 +9,7 @@ import sqlite3
 
 from follower_placements import (PLACEMENT_POLICY, TRASH_HOSTILITY_POLICY, TABLE_KEYS,
     backup, make_sql, open_readonly, prepare_templates, read_table_rows)
-from follower_placement_sources import (digest, read_cached_npc, read_db2, read_json_payload,
+from follower_placement_sources import (SINGLE_FRAME_POLICY, digest, read_cached_npc, read_db2, read_json_payload,
     read_surface_polygons, sample_surfaces, select_assignment, transform_marker)
 
 
@@ -27,14 +27,16 @@ def read_marker_reports(page):
     return reports
 
 
-def project_marker(map_id, page, index, tables, polygons):
+def project_marker(map_id, page, index, tables, polygons, projection_policy=None):
     marker = page['markers'][index]
     point = dict(entry=page['entry'], marker_index=index, marker=marker,
                  cache_sha256=page['cache_sha256'], source_url=page['url'])
     try:
-        assignments = select_assignment(tables, map_id, marker)
+        assignments = select_assignment(tables, map_id, marker, projection_policy)
     except ValueError as error:
         return dict(point, status='FOLLOWER_TRASH_MARKER_PROJECTION_UNRESOLVED', reason=str(error))
+    if projection_policy == SINGLE_FRAME_POLICY:
+        point.update(projection_policy=projection_policy, observed_wowhead_floor=marker['floor'], db2_group_floor_identity=None)
     x, y = transform_marker(marker, assignments)
     heights = sample_surfaces(polygons, x, y, assignments)
     point.update(assignments=assignments, wow_xy=[x, y], all_surface_heights=heights)
@@ -53,7 +55,7 @@ def read_trash_markers(manifest, tables, cache, polygons):
         if not page['markers']:
             gaps.append(dict(entry=record['entry'], status='FOLLOWER_TRASH_INDIVIDUAL_MARKERS_MISSING'))
         for index in range(len(page['markers'])):
-            point = project_marker(manifest['map_id'], page, index, tables, polygons)
+            point = project_marker(manifest['map_id'], page, index, tables, polygons, record.get('projection_policy'))
             (points if 'wow_xyz' in point else gaps).append(point)
     return pages, points, gaps
 
@@ -111,6 +113,8 @@ def prepare(args):
         raise ValueError('published nav changed since the covering witness')
     if any(record['map_id'] != manifest['map_id'] for record in manifest['entries']):
         raise ValueError('trash template map differs from placement map')
+    if any(record.get('projection_policy') not in (None, SINGLE_FRAME_POLICY) for record in manifest['entries']):
+        raise ValueError('trash marker projection policy is not approved')
     tables, authentication = read_db2(args.db2, ('MapDifficulty', 'MapChallengeMode'))
     polygons = read_surface_polygons(args.surfaces)
     pages, placements, gaps = read_trash_markers(manifest, tables, args.cache, polygons)

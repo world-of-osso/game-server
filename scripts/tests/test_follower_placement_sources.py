@@ -176,6 +176,26 @@ class FollowerPlacementSources(unittest.TestCase):
         self.assertEqual(page['entity']['id'], 186339)
         self.assertEqual(page['markers'], [])
 
+    def test_single_assignment_ungrouped_frame_keeps_observed_floor_separate(self):
+        marker = read_cached_npc(self.cache, 244887)['markers'][0]
+        self.assertEqual(marker, dict(zone=16359, floor=0, percent=[52.8, 57.3]))
+        policy = 'FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME'
+        assignments = select_assignment(self.tables, 2859, marker, policy)
+        self.assertEqual([(row['ID'], row['UiMapID']) for row in assignments], [('69155', '2500')])
+        for mutation in ('duplicate_assignment', 'known_group_floor', 'observed_nonzero_floor', 'foreign_zone'):
+            with self.subTest(mutation=mutation):
+                tables, changed = copy.deepcopy(self.tables), dict(marker)
+                if mutation == 'duplicate_assignment':
+                    tables['UiMapAssignment'].append(dict(assignments[0], ID='0'))
+                elif mutation == 'known_group_floor':
+                    tables['UiMapGroupMember'].append(dict(tables['UiMapGroupMember'][0], ID='0', UiMapID='2500', FloorIndex='0'))
+                elif mutation == 'observed_nonzero_floor':
+                    changed['floor'] = 1
+                else:
+                    changed['zone'] = 14971
+                with self.assertRaises(ValueError):
+                    select_assignment(tables, 2859, changed, policy)
+
     def test_foreign_map_marker_cannot_be_reinterpreted_as_neltharus(self):
         page = read_cached_npc(self.cache, 188252)
         with self.assertRaisesRegex(ValueError, 'does not belong'):

@@ -11,6 +11,7 @@ from wowhead_forever import percent_to_world
 
 BUILD = "12.1.5.70448"
 TABLES = ("AreaTable", "UiMap", "UiMapAssignment", "UiMapGroupMember")
+SINGLE_FRAME_POLICY = 'FOLLOWER_PLACEMENT_SINGLE_ASSIGNMENT_UIMAP_FRAME'
 
 
 def digest(path):
@@ -71,11 +72,19 @@ def read_cached_npc(cache, entry):
                 cache_body=str(body), cache_sha256=digest(body), cache_metadata=metadata)
 
 
-def select_assignment(tables, map_id, marker):
+def select_assignment(tables, map_id, marker, policy=None):
     area = next(row for row in tables["AreaTable"] if int(row["ID"]) == marker["zone"])
     if int(area["ContinentID"]) != map_id:
         raise ValueError("Wowhead zone does not belong to requested DB2 map")
     assignments = [row for row in tables["UiMapAssignment"] if int(row["MapID"]) == map_id]
+    if policy == SINGLE_FRAME_POLICY:
+        if len(assignments) != 1 or marker['floor'] != 0:
+            raise ValueError('single-frame policy requires exactly one map assignment and observed floor0')
+        if any(row['UiMapID'] == assignments[0]['UiMapID'] for row in tables['UiMapGroupMember']):
+            raise ValueError('single-frame policy requires absent DB2 group-floor identity')
+        return assignments
+    if policy is not None:
+        raise ValueError('unknown explicit marker projection policy')
     map_ids = {row["UiMapID"] for row in assignments}
     floors = {row["UiMapID"] for row in tables["UiMapGroupMember"]
               if row["UiMapID"] in map_ids and int(row["FloorIndex"]) == marker["floor"]}
