@@ -79,7 +79,9 @@ def infer_similar_kits(actors):
     donors = [
         actor
         for actor in actors
-        if actor["spells"] and actor["classification"] not in ("none", "inferred")
+        if actor["spells"]
+        and actor["classification"] not in ("none", "inferred")
+        and not actor.get("excluded_reason")
     ]
     roles = {
         "mage",
@@ -181,6 +183,48 @@ def cached_abilities(entry):
     )
 
 
+def read_tc_combat_kit(path, script):
+    """Read only literal Engage→event→cast→repeat lanes, never infer C++ clocks."""
+    text = path.read_text()
+    actor = re.search(
+        r"(?:struct|class)\s+" + re.escape(script) + r"\s*:[^{]+\{(.*?)\n\};",
+        text,
+        re.S,
+    )
+    if actor is None:
+        return None
+    engage = re.search(r"void JustEngagedWith[^\{]*\{(.*?)\n    \}", actor[1], re.S)
+    if engage is None:
+        return None
+    symbols = {
+        name: int(value)
+        for name, value in re.findall(r"\b(SPELL_\w+)\s*=\s*(\d+)", text)
+    }
+    initial = {
+        event: int(value) * (1000 if unit == "s" else 1)
+        for event, value, unit in re.findall(
+            r"ScheduleEvent\((EVENT_\w+),\s*(\d+)(ms|s)\)", engage[1]
+        )
+    }
+    lanes = re.findall(
+        r"case\s+(EVENT_\w+):\s*DoCast(?:AOE|Self|Victim)\((SPELL_\w+)\);\s*_events.ScheduleEvent\(\1,\s*(\d+)(ms|s)\);",
+        actor[1],
+    )
+    schedules = {
+        str(symbols[spell]): dict(
+            initial_ms=initial[event],
+            repeat_ms=int(value) * (1000 if unit == "s" else 1),
+        )
+        for event, spell, value, unit in lanes
+        if event in initial and spell in symbols
+    }
+    if not schedules:
+        return None
+    return dict(
+        spells=sorted(int(spell) for spell in schedules), spell_schedules=schedules
+    )
+
+
 def source_script_files():
     result = {}
     for path in TC.rglob("*.cpp"):
@@ -216,7 +260,13 @@ def census(world, inventory, littlewigs):
             f"SELECT creature_entry FROM raid_encounter_creature WHERE map_id IN ({ids})"
         )
     }
+    uncertain_encounters = set()
     for encounter in inventory["encounters"]:
+        for journal_actor in encounter.get("journal_actors", []):
+            uncertain_encounters.update(
+                candidate["entry"]
+                for candidate in journal_actor.get("source_map_model_candidates", [])
+            )
         bosses.update(encounter["enabled_entries"])
         for actor in encounter["actors"]:
             if actor.get("bindings"):
@@ -252,6 +302,8 @@ def census(world, inventory, littlewigs):
         actor.update(classification="none", spells=[], sources=[])
         if entry in bosses:
             actor["excluded_reason"] = "boss_or_encounter_actor"
+        elif entry in uncertain_encounters:
+            actor["excluded_reason"] = "uncertain_encounter_candidate"
         elif (
             actor["type"] in (8, 10, 12, 13)
             or actor["npcflag"]
@@ -298,6 +350,12 @@ def census(world, inventory, littlewigs):
             actor["sources"].append("TDB1210:creature_template_spell")
         if actor["source_script"] in cpp:
             actor["sources"].append("TCa352b1fa:" + cpp[actor["source_script"]])
+            tc_kit = read_tc_combat_kit(
+                TC / cpp[actor["source_script"]], actor["source_script"]
+            )
+            if tc_kit:
+                actor["spells"] = sorted(set(actor["spells"] + tc_kit["spells"]))
+                actor["spell_schedules"] = tc_kit["spell_schedules"]
         if actor["addon_auras"]:
             actor["sources"].append(
                 "TDB1210:creature_template_addon (passive auras only)"

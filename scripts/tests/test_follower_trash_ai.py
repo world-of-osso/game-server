@@ -100,6 +100,46 @@ new Listview({template: 'spell', id: 'abilities', data: [{"id":387564,"name":"My
         self.assertEqual(actors[0]["spells"], [12167, 23381])
         self.assertEqual(actors[0]["donor_entry"], 46252)
 
+    def test_uncertain_encounter_candidate_is_not_a_donor(self):
+        actors = [
+            dict(
+                entry=187160,
+                name="Crystal Fury",
+                family=0,
+                models=[106135],
+                maps=[2515],
+                spells=[],
+                classification="none",
+            ),
+            dict(
+                entry=196116,
+                name="Crystal Fury",
+                family=0,
+                models=[106135],
+                maps=[2515],
+                spells=[370764],
+                classification="Lua-only",
+                excluded_reason="uncertain_encounter_candidate",
+            ),
+        ]
+        trash.infer_similar_kits(actors)
+        self.assertEqual(actors[0]["spells"], [])
+
+    def test_tc_tender_combat_kit_retains_source_clocks(self):
+        kit = trash.read_tc_combat_kit(
+            trash.TC / "DragonIsles/AzureVault/boss_leymor.cpp", "npc_arcane_tender"
+        )
+        self.assertEqual(
+            kit,
+            dict(
+                spells=[375596, 375652],
+                spell_schedules={
+                    "375596": dict(initial_ms=22000, repeat_ms=22000),
+                    "375652": dict(initial_ms=12000, repeat_ms=12000),
+                },
+            ),
+        )
+
     def test_no_cross_dungeon_or_zero_family_match(self):
         actors = [
             dict(
