@@ -310,6 +310,7 @@ retaining existing payment rounding without a spell exception or weakened test.
 
 Post-masteraeeaa1b87 passes19native cases77.83s: generic2, Echo6 including self
 actual healing/rolling/two casters, Barbed4,3354671, Binding5 and enabled PoH1.
+Helper check exits0/1m27s with no warnings, format passes at the same code.
 This is native mechanic evidence, not healer policy effectiveness, simulator
 survival or live-pixel acceptance. Prismatic Echoes390967's separate bonus remains
 a named gap. Full exact revisions and limitations:

@@ -38,7 +38,12 @@ Evidence root D: game-engine
 
 Current19-case proof covers generic2, Echo6, Barbed4,3354671, Binding5, PoH1.
 No unchanged broad suites rerun. Later docs-only commits do not invalidate code
-proof. Check/fmt/readability receipts are recorded separately when terminal.
+proof. At the same codeaeeaa1b87, helper default server check exits0/1m27s with
+no warnings emitted (`final-check.log`); `cargo fmt --all --check` exits0
+(`format-check.log`). Manual main-thread readability reports no in-scope changes
+(`readability-review.md`), not independent verification. Six critical S/T/helper
+source hashes match and frozen DB is unchanged (`integrated-inputs.json`);
+helper native paths alias the checkout, not an independent source copy.
 
 ## Shared interface and limits
 
