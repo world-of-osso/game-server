@@ -29,7 +29,7 @@ fn fixture(level: u8) -> (Harness, Entity) {
     (h, paladin)
 }
 
-fn earn_word(h: &mut Harness, paladin: Entity) {
+fn earn_word(h: &mut Harness, paladin: Entity) -> f32 {
     let world = h.app.world();
     let spell = world
         .resource::<crate::spell_info::SpellStore>()
@@ -52,7 +52,7 @@ fn earn_word(h: &mut Harness, paladin: Entity) {
             .0
             >= required
         {
-            return;
+            return required;
         }
         let enemy = h.npc;
         match creature_cast(h.app.world_mut(), paladin, JUDGMENT, Some(enemy), false) {
@@ -120,8 +120,8 @@ fn qualify_word_target(self_target: bool, hostile_dot: bool) {
         .unwrap()
         .amount;
     assert!(percent > 0.0);
-    earn_word(&mut h, paladin);
     pressure(&mut h);
+    let required = earn_word(&mut h, paladin);
     let target = if self_target { paladin } else { h.caster };
     let bonus = if hostile_dot {
         let enemy = h.npc;
@@ -150,6 +150,13 @@ fn qualify_word_target(self_target: bool, hostile_dot: bool) {
         0.0
     };
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
+    let power = power_value(h.app.world(), paladin, PowerType::HolyPower)
+        .unwrap()
+        .0;
+    assert!(
+        power >= required,
+        "earned native Word budget{required} must still exist at submission: {power}"
+    );
     let direct = cast_heal(&mut h, paladin, target, WORD_OF_GLORY);
     assert!(direct.amount > 0);
     let hot = owned_hot(&h, paladin, target)
@@ -212,8 +219,8 @@ fn light_of_titans_native41_other_word_does_not_borrow_caster_dot_bonus() {
 fn light_of_titans_native40_unlearned_talent_does_not_produce_hot() {
     let (mut h, paladin) = fixture(40);
     assert!(own_aura(&h, paladin, LIGHT_OF_TITANS).is_none());
-    earn_word(&mut h, paladin);
     pressure(&mut h);
+    earn_word(&mut h, paladin);
     let direct = cast_heal(&mut h, paladin, paladin, WORD_OF_GLORY);
     assert!(direct.amount > 0);
     assert!(owned_hot(&h, paladin, paladin).is_none());
