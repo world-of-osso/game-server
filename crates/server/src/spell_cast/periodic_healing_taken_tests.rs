@@ -88,7 +88,15 @@ fn census_tail_259_native_renew_ticks_use_live_recipient_modifier_then_removal()
     let mut h = fixture();
     crate::spell_cast::creature_cast(h.app.world_mut(), h.npc, 209_140, Some(h.caster), false)
         .unwrap();
-    h.advance(3);
+    let frame_seconds = h.app.world().resource::<Time>().delta_secs();
+    let frames = h
+        .app
+        .world()
+        .get::<shared::casting::CastState>(h.npc)
+        .map_or(0, |cast| {
+            ((cast.duration - cast.elapsed).max(0.0) / frame_seconds).ceil() as usize
+        });
+    h.advance(frames + 3);
     assert_eq!(h.health(h.caster), 200.0);
     let target = h.caster;
     apply(&mut h, RENEW, 0, target);
