@@ -123,20 +123,6 @@ fn toy_kvaldir_effect63_bypasses_source_school_and_taunt_modifiers_without_taunt
     let npc = threat_creature(&mut h, 20.0, 49);
     let rival = spawn_player(&mut h.app, 8, 22.0);
     crate::creature_aggro::add_threat(h.app.world_mut(), npc, rival, 100.0);
-    // Actual Righteous Fury950% physical-school modifier and Provoke800% target modifier.
-    for (spell_id, target) in [(25780, owner), (116189, npc)] {
-        crate::auras::apply_aura(
-            h.app.world_mut(),
-            &crate::auras::AuraApplication {
-                caster: owner,
-                target,
-                spell_id,
-                effect_mask: 1,
-                source: crate::auras::AuraSource::Cast,
-            },
-        );
-        assert!(crate::auras::has_aura(h.app.world(), target, spell_id));
-    }
     let spell = h
         .app
         .world()
@@ -159,17 +145,51 @@ fn toy_kvaldir_effect63_bypasses_source_school_and_taunt_modifiers_without_taunt
         crate::creature_aggro::current_victim(h.app.world_mut(), npc),
         Some(rival)
     );
+    // Source Righteous Fury effect0 and Provoke effect1: the taunt also owns victim choice.
+    for (spell_id, target, effect_mask) in [(25780, owner, 1), (116189, npc, 2)] {
+        crate::auras::apply_aura(
+            h.app.world_mut(),
+            &crate::auras::AuraApplication {
+                caster: owner,
+                target,
+                spell_id,
+                effect_mask,
+                source: crate::auras::AuraSource::Cast,
+            },
+        );
+        assert!(crate::auras::has_aura(h.app.world(), target, spell_id));
+    }
+    handler(h.app.world_mut(), &ctx, &spell.effects[0], npc);
+    assert_eq!(threat(&h, npc, owner), 2.0);
     crate::creature_aggro::add_threat(h.app.world_mut(), npc, owner, 1.0);
     assert_eq!(
         threat(&h, npc, owner),
-        95.5,
+        96.5,
         "ordinary threat retains10.5x9 modifiers"
     );
+    let idle = threat_creature(&mut h, 25.0, 49);
+    for (attribute, mask) in [(1, 0x400), (2, 0x400000)] {
+        let mut no_threat = spell.clone();
+        no_threat.misc.as_mut().unwrap().attributes[attribute] |= mask;
+        let suppressed = crate::spell_cast::effects::EffectCtx {
+            spell: &no_threat,
+            ..ctx
+        };
+        handler(h.app.world_mut(), &suppressed, &no_threat.effects[0], idle);
+        assert!(
+            h.app
+                .world()
+                .get::<ThreatTable>(idle)
+                .unwrap()
+                .entries()
+                .is_empty()
+        );
+    }
     h.app.world_mut().get_mut::<Health>(owner).unwrap().current = 0.0;
     handler(h.app.world_mut(), &ctx, &spell.effects[0], npc);
     assert_eq!(
         threat(&h, npc, owner),
-        95.5,
+        96.5,
         "dead caster generates no EffectThreat"
     );
 }
