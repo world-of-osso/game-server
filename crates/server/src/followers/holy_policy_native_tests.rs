@@ -245,6 +245,51 @@ fn holy_binding_heals_native90_self_heal_does_not_transfer() {
 }
 
 #[test]
+fn holy_binding_heals_native90_serenity_outside_source_family_mask_does_not_transfer() {
+    let mut group = native_group();
+    apply_pressure(&mut group, 2);
+    let owner = group.h.caster;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    cast_binding_source(&mut group, 2050, owner);
+    let events = &group.h.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(2050))
+    );
+    assert!(!events.iter().any(|event| event.spell_id == Some(368276)));
+}
+
+#[test]
+fn holy_binding_heals_native29_unlearned_talent_does_not_transfer() {
+    let mut group = native_group_at(29);
+    assert!(own_aura(&group.h, group.priest, 368275).is_none());
+    apply_pressure(&mut group, 2);
+    let owner = group.h.caster;
+    let start = group
+        .h
+        .app
+        .world()
+        .resource::<ObservedCombatEvents>()
+        .0
+        .len();
+    cast_binding_source(&mut group, 2061, owner);
+    let events = &group.h.app.world().resource::<ObservedCombatEvents>().0[start..];
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal && event.spell_id == Some(2061))
+    );
+    assert!(!events.iter().any(|event| event.spell_id == Some(368276)));
+}
+
+#[test]
 fn holy_binding_heals_native90_renew_periodic_mask_does_not_transfer() {
     let mut group = native_group();
     apply_pressure(&mut group, 2);
