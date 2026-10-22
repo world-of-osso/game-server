@@ -1,4 +1,5 @@
 //! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
+mod engagement_tests;
 mod inputs;
 mod player_rotation;
 mod report;
