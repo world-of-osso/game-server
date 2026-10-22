@@ -1,5 +1,6 @@
 //! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
 mod inputs;
+mod player_rotation;
 mod report;
 use bevy::prelude::*;
 use serde_json::{Value, json};
@@ -19,6 +20,7 @@ struct Run {
     target_waves: Vec<Value>,
     profile: inputs::Profile,
     gaps: Vec<String>,
+    player_rotation: Option<player_rotation::PlayerRotation>,
 }
 
 fn spawn_dummy(app: &mut App, actor: Entity, index: usize) -> Result<Entity, String> {
@@ -119,7 +121,11 @@ fn prepare_reference(
     for _ in 0..4 {
         app.update();
     }
-    let gaps = report::gaps(&profile);
+    let is_player = app
+        .world()
+        .get::<shared::components::Player>(actor)
+        .is_some();
+    let gaps = report::gaps(&profile, is_player);
     Ok(Run {
         app,
         actor,
@@ -128,16 +134,21 @@ fn prepare_reference(
         target_waves,
         profile,
         gaps,
+        player_rotation: None,
     })
 }
 
 fn engage(run: &mut Run) {
     let world = run.app.world_mut();
-    let owner = world
-        .get::<crate::followers::Follower>(run.actor)
-        .unwrap()
-        .owner;
-    // The noncombat owner selects the pull. Only its real follower/pets can deal damage.
+    let owner = if world.get::<shared::components::Player>(run.actor).is_some() {
+        run.actor
+    } else {
+        world
+            .get::<crate::followers::Follower>(run.actor)
+            .unwrap()
+            .owner
+    };
+    // A player selects its target directly; a follower retains its quiet controller.
     world.entity_mut(owner).insert((
         crate::networking::CombatTarget(Some(run.targets[0])),
         crate::combat::AutoAttack::new(run.targets[0]),
@@ -190,8 +201,20 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
         .world()
         .resource::<Time<Virtual>>()
         .elapsed_secs_f64();
+    if run
+        .app
+        .world()
+        .get::<shared::components::Player>(run.actor)
+        .is_some()
+    {
+        run.player_rotation = Some(player_rotation::PlayerRotation::load(
+            run.profile.spec_id,
+            start_time,
+        )?);
+    }
     let mut buffs = BTreeMap::new();
     let mut samples = vec![report::engagement(run.app.world(), run.actor, &run.targets)];
+    drive_player(run)?;
     for tick in 1..=TICKS {
         apply_fixed_time_target_health(run, tick)?;
         run.app.update();
@@ -199,6 +222,9 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
         if pack_boundary && run.targets.len() == 3 {
             replace_add_wave(run, f64::from(tick) / 20.0)?;
             apply_fixed_time_target_health(run, tick)?;
+        }
+        if tick < TICKS {
+            drive_player(run)?;
         }
         report::sample_buffs(run.app.world(), run.actor, &mut buffs);
         if matches!(tick, 1 | 20 | LAST_30S_START | TICKS) {
@@ -218,6 +244,13 @@ fn advance_combat(run: &mut Run) -> Result<(f64, BTreeMap<u32, f64>, Vec<Value>)
     Ok((seconds, buff_uptimes, samples))
 }
 
+fn drive_player(run: &mut Run) -> Result<(), String> {
+    if let Some(rotation) = &mut run.player_rotation {
+        rotation.drive(run.app.world_mut(), run.actor, run.targets[0])?;
+    }
+    Ok(())
+}
+
 fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let _seed_scope = crate::random::seed_scope(70_448);
     let mut run = prepare(spec_id, count)?;
@@ -229,6 +262,9 @@ fn measure(spec_id: u32, count: usize) -> Result<Value, String> {
     let combat = report::combat(run.app.world(), &run.damage_targets, seconds);
     Ok(
         json!({"spec_id": spec_id, "target_count": count, "simulated_seconds": seconds,
+        "actor_kind": if run.player_rotation.is_some() { "player" } else { "follower" },
+        "driver": if run.player_rotation.is_some() { "NATIVE_ASSISTED_COMBAT_70448" } else { "NATIVE_FOLLOWER_KIT" },
+        "assisted_decisions": run.player_rotation.as_ref().map_or(0, |rotation| rotation.decisions),
         "wall_seconds": started.elapsed().as_secs_f64(), "seed": 70448, "combat": combat,
         "target_health_policy": {"name": "SIMC_FIXED_TIME_TARGET_HEALTH", "clock": "global_fight",
             "duration_seconds": 300, "initial_pct": 100, "death_pct": 0},
@@ -314,26 +350,34 @@ fn dps_parity_native_bis_dummy_records_300s() {
         );
     }
     let samples = report["engagement_samples"].as_array().unwrap();
-    assert_eq!(
-        samples[0]["actor_is_player"], false,
-        "measured follower stays an NPC"
-    );
-    assert_eq!(
-        samples[0]["owner_is_player"], true,
-        "owner uses native player initialization"
-    );
-    let owner = samples[0]["owner"]["entity"].as_u64().unwrap();
-    let owner_damage: u64 = report["combat"]["actions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|action| action["actor"].as_u64() == Some(owner))
-        .map(|action| action["damage"].as_u64().unwrap())
-        .sum();
-    assert_eq!(
-        owner_damage, 0,
-        "out-of-range controller must not contribute damage"
-    );
+    if report["actor_kind"] == "player" {
+        assert_eq!(samples[0]["actor_is_player"], true);
+        assert!(
+            samples[0]["owner"].is_null(),
+            "player has no synthetic controller"
+        );
+    } else {
+        assert_eq!(
+            samples[0]["actor_is_player"], false,
+            "measured follower stays an NPC"
+        );
+        assert_eq!(
+            samples[0]["owner_is_player"], true,
+            "owner uses native player initialization"
+        );
+        let owner = samples[0]["owner"]["entity"].as_u64().unwrap();
+        let owner_damage: u64 = report["combat"]["actions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|action| action["actor"].as_u64() == Some(owner))
+            .map(|action| action["damage"].as_u64().unwrap())
+            .sum();
+        assert_eq!(
+            owner_damage, 0,
+            "out-of-range controller must not contribute damage"
+        );
+    }
     let end_damage = samples.last().unwrap()["damage_to_targets"]
         .as_i64()
         .unwrap();

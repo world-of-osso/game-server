@@ -20,8 +20,7 @@ pub(super) fn stats(world: &World, actor: Entity) -> Value {
 pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Value {
     let owner = world
         .get::<crate::followers::Follower>(actor)
-        .unwrap()
-        .owner;
+        .map(|follower| follower.owner);
     let inspect = |unit| super::super::diagnostics::inspect_unit(world, None, unit);
     let target_states: Vec<_> = targets.iter().map(|&target| {
         json!({"state": inspect(target), "can_attack": crate::spell_cast::targets::relation_matches(
@@ -35,10 +34,10 @@ pub(super) fn engagement(world: &World, actor: Entity, targets: &[Entity]) -> Va
         .filter(|event| is_target_damage(event, targets))
         .map(|event| i64::from(event.amount))
         .sum();
-    json!({"actor": inspect(actor), "owner": inspect(owner), "targets": target_states,
+    json!({"actor": inspect(actor), "owner": owner.map(inspect), "targets": target_states,
         "damage_to_targets": damage,
         "actor_is_player": world.get::<shared::components::Player>(actor).is_some(),
-        "owner_is_player": world.get::<shared::components::Player>(owner).is_some(),
+        "owner_is_player": owner.map(|owner| world.get::<shared::components::Player>(owner).is_some()),
         "first_events": events.iter().take(16).collect::<Vec<_>>()})
 }
 
@@ -113,11 +112,19 @@ pub(super) fn combat(world: &World, targets: &[Entity], seconds: f64) -> Value {
         "event_count": events.len()})
 }
 
-pub(super) fn gaps(profile: &super::inputs::Profile) -> Vec<String> {
-    let mut gaps = vec![
-        format!("FOLLOWER_RACE0_VS_REFERENCE_{}", profile.race),
-        "NATIVE_FOLLOWER_KIT_VS_SIMC_APL: rotation changes are lead-owned".into(),
-    ];
+pub(super) fn gaps(profile: &super::inputs::Profile, is_player: bool) -> Vec<String> {
+    let mut gaps = if is_player {
+        vec![
+            "NATIVE_ASSISTED_COMBAT_70448_VS_SIMC_APL".into(),
+            "NATIVE_PLAYER_DECISION_INTERVAL_50MS".into(),
+            "NATIVE_TARGET_ADMISSION_FOR_RANGE_FACTS".into(),
+        ]
+    } else {
+        vec![
+            format!("FOLLOWER_RACE0_VS_REFERENCE_{}", profile.race),
+            "NATIVE_FOLLOWER_KIT_VS_SIMC_APL: rotation changes are lead-owned".into(),
+        ]
+    };
     gaps.extend(profile.reference_gap.iter().cloned());
     if profile.omnium_talents.is_some() {
         gaps.push("SIMC_OMNIUM_TALENTS_UNMODELED".into());
