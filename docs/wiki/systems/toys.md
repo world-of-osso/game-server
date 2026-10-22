@@ -2,6 +2,12 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Native target57 raid-recipient correction (2026-10-22)
+
+TC a352b1fa SpellInfo.cpp305 defines57 as TARGET_UNIT_TARGET_RAID, not ordinary ally21. CheckExplicitTarget2533–2567 requires IsInRaidWith plus a valid assist target; InitExplicitTargets retains the absent non-enemy self default. Current server previously aliased21|57 to Explicit(Ally), allowing foreign allies. At6bdac3cf8, actual native1022 Blessing of Protection returns Ok on an ungrouped friendly player: genuine target57 RED. Native10060 Power Infusion target21 control passes; source Spotlight actualUseToy/census/foreign assertion separately refuse UnsupportedAura4. Composite4RED/control4PASS102.82s; first0611502ac compile-only wrong API errors are excluded.
+
+Relation::Raid now represents57 directly and uses existing shared raid-membership plus assist checks. Invalid explicitly supplied raid targets are not replaced by caster; absent raid targets retain the source self default. Creature default targeting treats Raid as friendly rather than choosing an enemy victim. This is a separate generic correction, not a Spotlight-specific condition or a new ownership model. GREEN pending. Spotlight has no registry entry yet; actual group recipient proof follows separately. Mixed explicit-target masks and all controlled-unit ownership parity are not certified here.
+
 ## Ancient Amani Mask source cancellation boundary (2026-10-22)
 
 [Contract](../../specs/toys.md#server-scope-visual-only-census-rule). Published279052/1303320 authors one zero-payload self aura4, source600000ms duration and900000ms inherited spell recovery. Attr0=-2147483648 is unsigned0x80000000, TC a352b1fa SharedDefines.h467 NO_AURA_CANCEL: players cannot voluntarily remove the aura. Existing native receive_cancel_aura already enforces that flag; do not invent a removal script or make this mask cancellable. Complete70448 visual closure72rows/28tables/four resident ordinary models4550068/6195676/6163854/6163853, zero missing references. Source artifacts visual-amani-mask-isolated-70448.json and visual-next-three-root-source.json.

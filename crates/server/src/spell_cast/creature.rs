@@ -144,7 +144,7 @@ fn default_scripted_target(
                 world.get::<shared::components::Health>(target).is_some()
                     && targets::relation_matches(world, caster, target, relation)
             })
-    } else if relation == targets::Relation::Ally {
+    } else if matches!(relation, targets::Relation::Ally | targets::Relation::Raid) {
         None
     } else {
         victim(world, caster)

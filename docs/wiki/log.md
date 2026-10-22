@@ -1,3 +1,7 @@
+## 2026-10-22 — Native target57 raid-recipient correction
+
+[Toys](systems/toys.md#native-target57-raid-recipient-correction-2026-10-22): source57 raid relation was aliased to ordinary ally21; actual1022 on foreign ally returnsOk, while21/10060 control passes. Corrected6bdac3cf8 batch4RED/control4PASS102.82s, including separate Spotlight preflight REDs; compile-only0611502ac API errors excluded. Generic Raid relation now checks existing membership/assist and rejects explicit foreign targets without caster substitution; GREEN pending. No Spotlight entry yet, no mixed-mask/universal controlled-unit claim.
+
 ## 2026-10-22 — Amani mask source cancellation boundary
 
 [Toys](systems/toys.md#ancient-amani-mask-source-cancellation-boundary-2026-10-22): complete72row28table4model visual metadata, literal Attr0 NO_AURA_CANCEL and source10min aura/15min recovery. ActualUseToy/censusRED2/control4PASS72.40s at47322144f; exact1303320 registry entry only. Atbff34c2bc/protocol2abc7fa6GREEN63.44s proves actual no-cancel/natural10min expiry/15min recovery reuse, owner invariants/replication/drift plus retained Orb/Cyrce/Gadgetzan. Check9.35s/no warnings/fmt/readabilityPASS; census541→542 only279052. No canonical writes/native pixels claim.
