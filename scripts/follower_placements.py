@@ -444,7 +444,11 @@ def read_preserved_placement_entries(target, manifest):
             raise ValueError('preserved placement receipt belongs to a different map')
         for point in receipt['placements']:
             guid = point['guid']
-            comment = f"{receipt['policy']}; {point['page']['url']}; floor={point['marker']['floor']}; percent={point['marker']['percent']}"
+            if receipt.get('faction_policy') == TRASH_HOSTILITY_POLICY:
+                url, suffix = point['source_url'], '; independent trash'
+            else:
+                url, suffix = point['page']['url'], ''
+            comment = f"{receipt['policy']}; {url}; floor={point['marker']['floor']}; percent={point['marker']['percent']}{suffix}"
             row = target.execute('SELECT id1,map,position_x,position_y,position_z,Comment FROM content_creature WHERE guid=?', (guid,)).fetchone()
             expected = (point['entry'], manifest['map_id'], *point['wow_xyz'], comment)
             if not lower <= guid <= lower + 999 or row is None or tuple(row) != expected or guid in preserved:
