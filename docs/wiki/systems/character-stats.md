@@ -10,7 +10,7 @@ Ordinary NPCs without `CharacterStats` still have no class-derived spell power, 
 
 ## Follower mastery amount refresh — 2026-10-21
 
-`auras/mastery.rs` originally admitted only `Player`, although approved followers already had `CharacterStats.mastery_points`. This left native76671/76857 aura166 AP bonuses and168534 aura108 damage modifiers at zero on the NPC bridge. The same attribute-driven calculation and amount refresh now admit `Player` or `Follower`; an arbitrary NPC carrying `CharacterStats` remains excluded. Source: TC a352b1fa `SpellInfo.cpp600` / `StatSystem.cpp549`, extended only by the existing [follower class-stat policy](../investigations/follower-data.md).70448 coefficients are unchanged. Native ignored RED reproduced AP620 vs669.6 and Lightning Bolt modifier157.5 vs166.118; enabled GREEN proof pending. Tests: `followers/passive_stats_tests.rs` (`dps_parity_follower_native_*`).
+`auras/mastery.rs` originally admitted only `Player`, although approved followers already had `CharacterStats.mastery_points`. This left native76671/76857 aura166 AP bonuses and168534 aura108 damage modifiers at zero on the NPC bridge. The same attribute-driven calculation and amount refresh now admit `Player` or `Follower`; an arbitrary NPC carrying `CharacterStats` remains excluded. Source: TC a352b1fa `SpellInfo.cpp600` / `StatSystem.cpp549`, extended only by the existing [follower class-stat policy](../investigations/follower-data.md).70448 coefficients are unchanged. Native ignored RED reproduced AP620 vs669.6 and Lightning Bolt modifier157.5 vs166.118; enabled mastery/NPC controls pass in the13-case2ba4ec43a GREEN (22.04s). Tests: `followers/passive_stats_tests.rs` (`dps_parity_follower_native_*`).
 
 ## Sources
 

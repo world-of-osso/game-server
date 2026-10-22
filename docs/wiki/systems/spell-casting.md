@@ -2,7 +2,7 @@
 
 ## Cast while casting — 2026-10-21
 
-TC a352b1fa `Spell.cpp530–531` derives `TRIGGERED_IGNORE_CAST_IN_PROGRESS` from native Attr4/0x80. `allows_cast_while_casting` now supplies that predicate to ordinary native validation, player queue timing and follower kit admission. Instant108853 executes without replacing or interrupting the existing133 cast; near-completion requests are not incorrectly held behind that cast. Native costs, GCD, cooldown and charge checks remain unchanged. An urgent kit action with the attribute uses ordinary casting rather than the self-interruption path. Ignored native RED reproduced all three admission failures; enabled GREEN pending. [Contract](../../specs/cast-while-casting.md); tests `followers/cast_while_casting_tests.rs`.
+TC a352b1fa `Spell.cpp530–531` derives `TRIGGERED_IGNORE_CAST_IN_PROGRESS` from native Attr4/0x80. `allows_cast_while_casting` now supplies that predicate to ordinary native validation, player queue timing and follower kit admission. Instant108853 executes without replacing or interrupting the existing133 cast; near-completion requests are not incorrectly held behind that cast. Native costs, GCD, cooldown and charge checks remain unchanged. An urgent kit action with the attribute uses ordinary casting rather than the self-interruption path. Ignored native RED reproduced all three admission failures; enabled cases pass within13-case2ba4ec43a GREEN. After merging enemy-count policy, the one-target follower-kit fixture passes again at5368e1070. [Contract](../../specs/cast-while-casting.md); tests `followers/cast_while_casting_tests.rs`.
 
 ## Ordered target148 destination — 2026-10-21
 

@@ -1,22 +1,22 @@
 ## 2026-10-21 — Pyroclasm named trigger/consumer policy
 
-[Auras](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21): true admitted HS spends roll native269650 chance; hardcast11366/1254851 snapshots native269651 damage and spends one stack, instant casts retain it. SimC supplies semantics where TC/DB2 have no proc script/data;70448 supplies15%/230%/two stacks. Native RED2 reproduced; instant-control crit oracle corrected; enabled GREEN pending.
+[Auras](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21): true admitted HS spends roll native269650 chance; hardcast11366/1254851 snapshots native269651 damage and spends one stack, instant casts retain it. SimC supplies semantics where TC/DB2 have no proc script/data;70448 supplies15%/230%/two stacks. Native RED2 reproduced; instant-control crit oracle corrected; four enabled cases pass in13-case2ba4ec43a GREEN.
 
 ## 2026-10-21 — Generic native RPPM haste rows
 
-[Auras](systems/auras.md#rppm-haste-modifiers--2026-10-21): load Type1 Param/Coeff rows and scale the RPPM rate before probability/bad-luck math. Donor native325201/PPM57/mod221 with real learned55 haste30 gives RED94.78624 expected vs42.625 actual. No Flags inference or timer changes; GREEN pending; non-haste types remain gaps.
+[Auras](systems/auras.md#rppm-haste-modifiers--2026-10-21): load Type1 Param/Coeff rows and scale the RPPM rate before probability/bad-luck math. Donor native325201/PPM57/mod221 with real learned55 haste30 gives RED94.78624 expected vs42.625 actual. No Flags inference or timer changes; donorGREEN atdfe5ff537 and2ba4ec43a controls; non-haste types remain gaps.
 
 ## 2026-10-21 — FoF named SimC cadence
 
-[Auras](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21):113656/117418 uses the approved1s damage cadence/tick0 from SimC76f8118, not every native166ms dummy heartbeat. Source TC has no FoF script and leaves226 to scripts. Ignored native25-hit RED reproduced; enabled GREEN pending; generic toy bridge unchanged.
+[Auras](systems/auras.md#fists-of-fury-simc-cadence--2026-10-21):113656/117418 uses the approved1s damage cadence/tick0 from SimC76f8118, not every native166ms dummy heartbeat. Source TC has no FoF script and leaves226 to scripts. Ignored native25-hit RED reproduced; enabled cadenceGREEN at2ba4ec43a; generic toy bridge unchanged.
 
 ## 2026-10-21 — Native cast-while-casting admission
 
-[Spell casting](systems/spell-casting.md#cast-while-casting--2026-10-21): actual Fire Blast108853 Attr4/0x80 previously failed creature, kit and player admission. One native predicate now controls the in-progress veto, queue delay and kit precheck; original casts and native costs/history stay intact. Three ignored RED reproduced; enabled GREEN pending.
+[Spell casting](systems/spell-casting.md#cast-while-casting--2026-10-21): actual Fire Blast108853 Attr4/0x80 previously failed creature, kit and player admission. One native predicate now controls the in-progress veto, queue delay and kit precheck; original casts and native costs/history stay intact. Three ignored RED reproduced; enabledGREEN at2ba4ec43a, affected one-target kit retestGREEN at5368e1070.
 
 ## 2026-10-21 — Approved follower mastery amounts
 
-[Character stats](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21): native76671/76857 AP and168534 damage modifiers exposed the Player-only gate in mastery construction/refresh. Ignored RED3 reproduced; same raw-point calculation now admits approved followers, preserving ordinary NPC exclusion. Native coefficients unchanged; GREEN pending.
+[Character stats](systems/character-stats.md#follower-mastery-amount-refresh--2026-10-21): native76671/76857 AP and168534 damage modifiers exposed the Player-only gate in mastery construction/refresh. Ignored RED3 reproduced; same raw-point calculation now admits approved followers, preserving ordinary NPC exclusion. Native coefficients unchanged; enabled mastery/NPC controlsGREEN at2ba4ec43a. First-five composite controls2030PASS/16existing ignored, all-targets check/fmtPASS at5368e1070; 300s parity remains unmeasured.
 ## 2026-10-21 — Stockade queued credit versus durable reconnect reads
 
 [Durability boundary](systems/dungeon-achievements.md#stockade-reconnect-durability-boundary--2026-10-21): debug-profile held-writer reproduction preserves live633 and native criterion credit; full durable equality passes after the real FIFO receipt fence, while the old pre-fence equality fails31.19s. Offline fixture reads now fence at reconnect and final comparison; no production credit, death, timing or resource change. Combined Restoration/group-cancel source1ed0df205 gives34debug-profile native passes78.29s including the previously failing exact Stockade case; format passes. The held-writer control proves pending credit directly, not merely a favorable optimized timing.
