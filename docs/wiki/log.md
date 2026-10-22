@@ -1,3 +1,7 @@
+## 2026-10-22 — Remaining Wowhead entrances and actors audited
+
+[Wowhead source boundaries](investigations/follower-data.md#remaining-wowhead-source-audit--2026-10-22): approved ten-second fetcher caches eight zones/eight linked dungeon guides/two Portal NPCs. No interior entrance coordinates: guide pins resolve outside requested instances, friendly Portal NPC mappers empty, unrelated portal-listview locations rejected. Eight remaining NPC markers retain known individual-source/floor/nav gaps; no new placement or archived TC SQL download.
+
 ## 2026-10-22 — Anub-only terrain project floor qualification
 
 [Anub](investigations/follower-data.md#anub-authored-terrain-project-selection--2026-10-22): actual missing-primary/source RED→source6GREEN0.612s/actual-copy2GREEN0.012s atf6f7982c3. Unique non-hole authored125.175820 fan/all345 covering WMO groups select baked124.991899 within1yd; project choice, not TC spawn-Z. Native CT0/modifiers/model retained; fresh-copy4rows/replay3×, staging copies removed. Lead confirmed4inserts published/integrityOK and route relay; other-actor floor gaps retained.
