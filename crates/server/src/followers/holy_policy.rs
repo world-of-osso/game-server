@@ -196,12 +196,10 @@ fn choose_mass_dispel(ctx: &TriageContext<'_>) -> Option<Decision> {
 }
 
 fn choose_purify(ctx: &TriageContext<'_>) -> Option<Decision> {
-    ctx.patients.iter().find_map(|patient| {
-        ready(ctx, PURIFY, patient.entity).then_some(Decision {
-            spell_id: PURIFY,
-            target: patient.entity,
-            urgent: false,
-        })
+    ctx.choose_dispel_target(PURIFY).map(|target| Decision {
+        spell_id: PURIFY,
+        target,
+        urgent: false,
     })
 }
 
