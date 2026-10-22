@@ -1,0 +1,18 @@
+{
+  "map_id": 2526,
+  "entrance_id": 100018,
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 194181,
+      "ordinal": 0,
+      "source_url": "https://www.wowhead.com/npc=194181",
+      "cache_sha256": "66163f27b3822b520fd2985e5594248ee452604423014357bc198f27530287fc",
+      "faction_donor": 190609,
+      "donor_reason": "Same-Academy Normal1 boss Echo of Doragosa faction16 with matching sourced hostile A/H react; own Vexamus class, ContentTuning and budget retained."
+    }
+  ],
+  "calibration_entries": [188252, 189232]
+}
