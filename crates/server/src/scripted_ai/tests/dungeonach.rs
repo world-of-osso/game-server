@@ -188,6 +188,9 @@ fn dungeon2_stockade_entry_kills_reconnect_and_earned_category() {
     );
     let state = h.app.world().get::<PlayerAchievementState>(player).unwrap();
     assert_eq!(state.criteria_progress[&18527], 1);
+    crate::test_data::drain_persistence(
+        h.app.world().resource::<crate::persistence::GameDatabase>(),
+    );
     let db = &h
         .app
         .world()
@@ -318,6 +321,9 @@ fn reconnect_dungeon2_player(
     player: Entity,
     connection: Entity,
 ) -> (Entity, Entity) {
+    crate::test_data::drain_persistence(
+        h.app.world().resource::<crate::persistence::GameDatabase>(),
+    );
     let state = crate::persistence::load_achievements(
         &h.app
             .world()

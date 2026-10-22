@@ -6,6 +6,39 @@
 
 [Toys](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21): source175140/318571 isolated279rows/26tables/one resident ordinary model,27 visual conditions/32 ModifierTrees. Test-firsta6546659a/doc219450110 RED2/control3PASS59.00s: actualUseToy/censusUnsupportedAura4, drift/Compass/Gadgetzan retained. One exact318571 registry entrya270fee70/mastere5112781e GREEN6/6 (33.00s), checkEXIT0/37.73s/fmtPASS; owner amount0/replication/cancel/invariants/CDrefusal and drift/Compass/Gadgetzan/Seed controls. Reconciled536→537 exactly175140/zero other changes,636gaps; inherited unused-function warning retained. Shape/race/gender visual selectors do not imply new gameplay; Smolderheart's separate343642 heating stacks remain a gap. Native selection/10-minute expiry/30-minute reuse unproved. After master0828d1bdc merge548508311, final10/10GREEN59.85s at6403f001c covers Eyes+Kvaldir/controls; checkEXIT0/25.87s/no warnings emitted/fmtPASS, census unchanged537. Earlier warning fixed upstream670ea430c, not suppressed here.
 
+## 2026-10-21 — Barbed native ownership, control and range proof
+
+[Target boundaries](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21):4PASS62.29s at0eff6315f proves original secondary shot, foreign DoT not own, actual Polymorph protected and owner-selected80yd target excluded. Only BM3 affected production-stat samples refreshed,3PASS65.31s; ST/3T1045.342/1031.508, pet16935/16542, unpaired starter samples—not a causal DPS comparison. Broader APL and lead gates remain open.
+
+## 2026-10-21 — Barbed Shot secondary target minimum
+
+[Native targeting](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21): actual primaryDoT starves engaged undotted secondary, RED47.19s. Generic per-entry own-aura minimum with native preflight/CC protection and253 policy yields GREEN56.39s; unengaged target untouched. Producer2PASS, single stable-key interval; native ownership/CC/range controls, affected BM metrics and broader APL remain open.
+
+## 2026-10-21 — Native empower charge cancellation
+
+[Fire recovery](investigations/follower-data.md#native-empower-pipeline--2026-10-21): real cancel preserves native2456 one-charge/30s recovery, rejects immediate retry after finish GCD and permits real damage after natural recovery;1PASS35.31s at200168553, zero warnings, no production change. Current Deva empowers have no applicable Mana cost; paid-power coverage remains conditional rather than manufactured.
+
+## 2026-10-21 — Native empower modifier snapshot
+
+[Tip the Scales](investigations/follower-data.md#native-empower-pipeline--2026-10-21): actual370553 consumed after duration snapshot, selected-stage1 Font Fire releases max rank4 with6000ms DoT; following Surge retains ordinary timing and native delayed missile impact. Corrected1PASS32.37s at601053452, zero warnings, production unchanged. Initial impact-window failure is not a feature RED; cancellation paid-power/charge proofs remain open.
+
+## 2026-10-21 — Native defensive choices and quantitative empower proof
+
+[Defenses](investigations/follower-data.md#four-spec-native-defensive-choices--2026-10-21): existing wounded-and-attacked policy produces native casts/auras for all four specs, not on owner-only threat;4PASS50.73s. [Empower](investigations/follower-data.md#native-empower-pipeline--2026-10-21): later positive proofs close Animosity new-instance reset, Blast Furnace learn/rank duration, converted tick damage, Font rank4 outcomes and native Scouring count. Optional talent ranks/modifier timing remain open; no new production edits.
+
+## 2026-10-21 — Explicit empower input, Animosity and production-stat measurements
+
+[Native empower](investigations/follower-data.md#native-empower-pipeline--2026-10-21): selected-stage/cancel2GREEN33.47s; explicit authenticated player-release3GREEN18.52s and nine-case native integration24.32s. Matched186134 protocol/92b766 client has hold2PASS, wire1PASS, extension buildPASS; no physical key-up capture or stage UI claim. Native Animosity RED0-vs5000ms→GREEN5000/3750ms34.78s.
+
+[Production-stat metrics](investigations/follower-data.md#production-stat-dummy-measurements--2026-10-21): real1459 aura with620→620 Intellect proves missing StatsPlugin; constructor fix14PASS73.04s and initial/final sheets. Only affected Evoker3 cases refreshed after Animosity. Ungeared starter samples are not equal-gear SimC parity; Fire mastery endpoint growth remains a sourced, unqualified Feel-the-Burn eligibility/overlap gap.
+
+## 2026-10-21 — Native empower release boundaries
+
+[Pipeline](investigations/follower-data.md#native-empower-pipeline--2026-10-21): four native REDs precede DB2-stage/TC maximum-hold implementation. Native Fire rank3 DoT, Surge3-of4/Span6-of7 and single-resolver Font dispatch pass; actual Fortitude dispel without Scouring gives new RED, then source gate2GREEN21.75s. Optional client stage UI remains excluded; explicit player release, selected-stage/cancel and quantitative damage remain open.
+
+## 2026-10-21 — Native Frenzy and petless hunter kit
+
+[Native cadence](investigations/follower-data.md#native-frenzy-pet-cadence--2026-10-21): native20% owner passive reaches actual controlled-pet melee interval, not owner/guardian clocks. Genuine41-vs41-frame RED→four hunter GREEN55.74s, two native speed/cast-time controls GREEN33.27s; six proc/four selection controls also pass on the scoped canonical backup. [Pet-preparation failure](investigations/follower-data.md#pet-preparation-failure-starvation--2026-10-21) reports once and leaves native healing/attacks available; Exhilaration's native level9 oracle retained.
 ## 2026-10-21 — Recorded late-healer route boundary
 
 [Native seed50 path qualification](systems/dungeon-simulator.md#recorded-late-healer-route-boundary-2026-10-21): two post-mm871 RED regressions prove a stationary healer on a native-sphere-safe frozen path and reproduce full-route tank loss. Positioning now qualifies actual route legs rather than the endpoint chord. At2f443fb5a both regressions pass94.01s; seed50 clears3bosses with tank alive. Three retained sight controls, seven hostile-field controls and eight deferred-navigation controls pass. Fresh seeded acceptance pending.
@@ -3627,6 +3660,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 - 2026-10-21: Bromach currentLua/native70448 partial: ignoredfirstCallRED→fresh postmerge5GREEN Normal/Follower; real186696summons/sourceaddon, ongoing source-order requests, success-onlySlam/cancel/nativeDamage/reset/isolatedcredit. Sourceproducer preserves all population/stats and adds only actual totem projections. [Boss scripts](systems/boss-scripts.md#bromach-current-lua-partial--2026-10-21).
 
+- 2026-10-21: [Encoded navigation grid](design/navigation-worker.md#encoded-navigation-grid-contract): real2669tile31_37 capacity RED (69452contour/68202unique vertices); generic uniform whole-map refinement and encoded-width runtime support at84b5a36ba. Body/voxel/region/simplification unchanged; real2669CLI/query, refined cross-tile and mixed-grid3/3GREEN, patchedAzurefour4×4 payload hashes byte-identical. Four full-map repairs20/49/30/15tiles uniformly8×8 pass;27requested maps staged1100nav/LOS/M2tiles each,19119packets unchangedbodyparams,3300-file publication manifest. Sanity8/20PASS,18noentrance/4nobossspawn gaps explicit. After147bab495 merge, navigationunit8PASS/5existingassetignores/defaultcheck/fullfmtPASS; targeted3GREEN proofscope unchanged, no redundant rerun. Publication/runtime rollout remainslead-owned.
 - 2026-10-21: Talondras currentLua/native70448 partial: originalignoredRED→parent-approved native5GREEN; all20source requests, exact11native successes/9category1152rejections perNormal/Follower run, nativeDamage/DOT/reset/isolatedcredit. Runtime109735model kept; Orb/energy/category mismatch gaps explicit, no cooldown bypass. [Boss scripts](systems/boss-scripts.md#talondras-current-lua-partial--2026-10-21).
 
 - 2026-10-21: Emberon currentLua Normal/Follower partial: ignored firstClapRED→composite7GREEN; native indefinite-aura cap root cause and approved24.3s lifecycle, source-counted resumed/second phase, reset/copy-credit/death. Copy-only producer1PASS; missing395681/controller gaps retained.
