@@ -15,11 +15,12 @@ pub(super) fn spawn_profile_fixture_with_plugins(
     entry: u32,
     configure: impl FnOnce(&mut App),
 ) -> (Harness, Entity, Profile) {
-    let db = rusqlite::Connection::open_with_flags(
-        crate::test_data::world_db_path(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
+    let kit_db = std::env::var_os("FOLLOWER_KIT_DB")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(crate::test_data::world_db_path);
+    let db =
+        rusqlite::Connection::open_with_flags(kit_db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
     let profile = catalog::load_catalog(&db)
         .unwrap()
         .profiles
@@ -56,6 +57,36 @@ pub(super) fn spawn_profile_fixture_with_plugins(
         .unwrap()
         .0 = Some(h.npc);
     (h, unit, profile)
+}
+
+#[test]
+fn powers_follower_initialization_without_catalog_returns_error_without_mutation() {
+    let (mut h, unit, profile) = spawn_profile_fixture(209057);
+    let owner = h.caster;
+    let before = h
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(unit)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .remove_resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .unwrap();
+    let error = spawning::initialize(h.app.world_mut(), owner, unit, profile).unwrap_err();
+    assert!(error.contains("PowerTypeTable"), "{error}");
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(unit)
+            .unwrap(),
+        &before
+    );
+    assert!(
+        !h.app
+            .world()
+            .contains_resource::<crate::spell_cast::powers::PowerTypeTable>()
+    );
 }
 
 #[test]

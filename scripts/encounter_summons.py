@@ -599,6 +599,83 @@ def import_porung_binding(connection):
     return [primary['entry']]
 
 
+def import_anubzekt(connection):
+    """Local2777a9d Lua binding; preserve actual215405 population/native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2660, entry=215405, encounter_id=2906, bit=1,
+                   script='', ai='', journal_id=2584, actor_id=5726, display_id=115723,
+                   spawn_guid=10004042, spawn_difficulties='1,2,8,23,205')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=215405'
+    ).fetchone()
+    if runtime not in [("Anub'zekt", '', '', 64), ("Anub'zekt", '', 'littlewigs_anubzekt', 64)]:
+        raise ValueError('Anubzekt runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,EffectAura,EffectAuraPeriod,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=433740 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (6, 3, 500, 22, 15):
+        raise ValueError('Anubzekt native Infestation433740 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_anubzekt' WHERE entry=215405")
+    return [215405]
+
+
+def import_kikatal(connection):
+    """Local2777a9d Lua binding; preserve actual215407 population/native data."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2660, entry=215407, encounter_id=2901, bit=0,
+                   script='', ai='', journal_id=2585, actor_id=5632, display_id=117473,
+                   spawn_guid=10004111, spawn_difficulties='1,2,8,23,205')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=215407'
+    ).fetchone()
+    if runtime not in [("Ki'katal the Harvester", '', '', 64),
+                       ("Ki'katal the Harvester", '', 'littlewigs_kikatal', 64)]:
+        raise ValueError('Kikatal runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=432130 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (3, 1, 0):
+        raise ValueError('Kikatal native Erupting Webs432130 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_kikatal' WHERE entry=215407")
+    return [215407]
+
+
+def import_dailcry(connection):
+    """Local2777a9d Lua binding; preserve source placement excluding205."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2649, entry=207946, encounter_id=2847, bit=1,
+                   script='', ai='', journal_id=2571, actor_id=5714, display_id=118879,
+                   spawn_guid=10001094, spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute(
+        'SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=207946'
+    ).fetchone()
+    if runtime not in [('Captain Dailcry', '', '', 64),
+                       ('Captain Dailcry', '', 'littlewigs_dailcry', 64)]:
+        raise ValueError('Dailcry runtime binding or source flags changed')
+    native = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1
+        FROM spell_effect WHERE SpellID=424414 AND DifficultyID=0 AND EffectIndex=0''').fetchone()
+    if native != (2, 6, 0):
+        raise ValueError('Dailcry native Pierce Armor424414 identity changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='littlewigs_dailcry' WHERE entry=207946")
+    return [207946]
+
+
 def import_kyrioss_schedule(connection):
     """LittleWigs2777a9d5 Kyrioss: explicit local schedule, never a claimed TC AI.
 
@@ -626,9 +703,29 @@ def import_kyrioss_schedule(connection):
     return [209230]
 
 
+def import_orator(connection):
+    """TC a352b1fa primary216619 binding only; keep actual class4/flags and actors."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2669, entry=216619, encounter_id=2907, bit=1,
+                   script='boss_orator_krix_vizk', ai='', journal_id=2594,
+                   actor_id=5620, display_id=116692, spawn_guid=10002880,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_class,unit_flags,unit_flags2
+        FROM content_creature_template WHERE entry=216619''').fetchone()
+    if runtime != ("Orator Krix'vizk", '', 'boss_orator_krix_vizk', 4, 64, 0):
+        raise ValueError('Orator runtime identity or source class/flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [216619]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -652,6 +749,14 @@ def main():
                 entries = import_porung_binding(conn)
             elif args.encounter == 'kyrioss':
                 entries = import_kyrioss_schedule(conn)
+            elif args.encounter == 'anubzekt':
+                entries = import_anubzekt(conn)
+            elif args.encounter == 'orator':
+                entries = import_orator(conn)
+            elif args.encounter == 'kikatal':
+                entries = import_kikatal(conn)
+            elif args.encounter == 'dailcry':
+                entries = import_dailcry(conn)
             elif args.encounter == 'azureblade':
                 entries = import_azureblade(conn)
             elif args.encounter == 'umbrelskul':
