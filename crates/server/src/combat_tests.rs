@@ -102,7 +102,7 @@ fn run_attack_tick(app: &mut App) {
          summon_modifiers: crate::auras::summon_damage::SummonDamageModifiers,
          armor_constants: Option<Res<ArmorConstants>>,
          sight: SwingSight| {
-            let dt = time.delta_secs();
+            let dt = time.delta();
             let context = SwingContext {
                 scaling: &scaling,
                 summon_modifiers: &summon_modifiers,
@@ -118,8 +118,8 @@ fn run_attack_tick(app: &mut App) {
             let mut redirect_health = std::collections::HashMap::new();
             for (entity, mut aa, position, stats) in &mut attackers {
                 let te = aa.victim;
-                aa.timer -= dt;
-                aa.off_hand_timer -= dt;
+                aa.timer = aa.timer.saturating_sub(dt);
+                aa.off_hand_timer = aa.off_hand_timer.saturating_sub(dt);
                 let attacker = Attacker {
                     entity,
                     position,
@@ -292,11 +292,7 @@ fn test_auto_attack_timer_resets() {
     run_attack_tick(&mut app);
 
     let auto = app.world().entity(player).get::<AutoAttack>().unwrap();
-    assert!(
-        (auto.timer - AUTO_ATTACK_INTERVAL).abs() < 0.01,
-        "timer should reset to {AUTO_ATTACK_INTERVAL}, got {}",
-        auto.timer
-    );
+    assert_eq!(auto.timer, std::time::Duration::from_secs(2));
 }
 
 #[test]
@@ -320,7 +316,7 @@ fn auto_attack_fires_at_correct_interval() {
         .entity_mut(attacker)
         .get_mut::<AutoAttack>()
         .unwrap()
-        .timer = 0.0;
+        .timer = std::time::Duration::ZERO;
 
     // Third tick: timer expired, swings again
     run_attack_tick(&mut app);
@@ -369,7 +365,7 @@ fn auto_attack_stops_when_target_dies() {
         .entity_mut(attacker)
         .get_mut::<AutoAttack>()
         .unwrap()
-        .timer = 0.0;
+        .timer = std::time::Duration::ZERO;
     run_attack_tick(&mut app);
     let hp = app.world().entity(target).get::<Health>().unwrap().current;
     assert_eq!(hp, 0.0, "no damage dealt to dead target");
@@ -400,7 +396,7 @@ fn auto_attack_stops_when_out_of_melee_range() {
         .entity_mut(attacker)
         .get_mut::<AutoAttack>()
         .unwrap()
-        .timer = 0.0;
+        .timer = std::time::Duration::ZERO;
     run_attack_tick(&mut app);
     assert_eq!(
         app.world().entity(target).get::<Health>().unwrap().current,
@@ -984,7 +980,7 @@ fn human_melee_on_training_dummy_logs_every_swing_and_never_kills_it() {
         .id();
     app.world_mut().run_schedule(FixedUpdate);
     for _ in 0..3 {
-        app.world_mut().get_mut::<AutoAttack>(player).unwrap().timer = 0.0;
+        app.world_mut().get_mut::<AutoAttack>(player).unwrap().timer = std::time::Duration::ZERO;
         app.world_mut().run_schedule(FixedUpdate);
     }
 

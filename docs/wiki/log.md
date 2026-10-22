@@ -1,3 +1,7 @@
+## 2026-10-22 — Exact attack countdowns
+
+[Shared timer](systems/spell-casting.md#exact-attack-countdowns--2026-10-22): real production40tick RED, native millisecond resets/Duration countdown for both melee hands and autorepeat; no epsilon/tolerance widening. GREEN pending.
+
 ## 2026-10-22 — BM Auto Shot engage policy
 
 [BM start decision](investigations/follower-data.md#bm-auto-shot-engage-policy--2026-10-22): named SimC/native75 policy, genuine zero-shot RED; preserve native timer/selection boundary, GREEN pending; proc-mask mechanics separate.

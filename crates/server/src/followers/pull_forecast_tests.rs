@@ -117,7 +117,7 @@ fn tank_pull_forecast_uses_native_front_arc_after_master_facing_integration() {
 fn tank_pull_forecast_reads_generic_source_stats_and_actual_swing_timer_without_mutation() {
     let (mut h, tank, enemy) = source_fixture(46249);
     let mut attack = AutoAttack::new(tank);
-    attack.timer = 1.25;
+    attack.timer = std::time::Duration::from_millis(1250);
     h.app.world_mut().entity_mut(enemy).insert(attack);
     let health = h.health(enemy);
     let level = h.app.world().get::<UnitLevel>(enemy).unwrap().0;
@@ -131,7 +131,10 @@ fn tank_pull_forecast_reads_generic_source_stats_and_actual_swing_timer_without_
     assert_eq!(estimate.level, level);
     assert_eq!(estimate.rank, rank);
     assert_eq!(h.health(enemy), health);
-    assert_eq!(h.app.world().get::<AutoAttack>(enemy).unwrap().timer, 1.25);
+    assert_eq!(
+        h.app.world().get::<AutoAttack>(enemy).unwrap().timer,
+        std::time::Duration::from_millis(1250)
+    );
     assert_eq!(h.app.world().get::<AutoAttack>(enemy).unwrap().victim, tank);
 }
 
