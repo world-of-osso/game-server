@@ -1,6 +1,6 @@
 ## 2026-10-22 — Anub-only terrain project floor qualification
 
-[Anub](investigations/follower-data.md#anub-authored-terrain-project-selection--2026-10-22): actual missing-primary/source RED→source6GREEN0.612s/actual-copy2GREEN0.012s atf6f7982c3. Unique non-hole authored125.175820 fan/all345 covering WMO groups select baked124.991899 within1yd; project choice, not TC spawn-Z. Native CT0/modifiers/model retained; fresh-copy4rows/replay3×, staging copies removed. Publication requested; route and other-actor floor gaps retained.
+[Anub](investigations/follower-data.md#anub-authored-terrain-project-selection--2026-10-22): actual missing-primary/source RED→source6GREEN0.612s/actual-copy2GREEN0.012s atf6f7982c3. Unique non-hole authored125.175820 fan/all345 covering WMO groups select baked124.991899 within1yd; project choice, not TC spawn-Z. Native CT0/modifiers/model retained; fresh-copy4rows/replay3×, staging copies removed. Lead confirmed4inserts published/integrityOK and route relay; other-actor floor gaps retained.
 
 ## 2026-10-22 — Historical Ruby MDT source rejected
 
