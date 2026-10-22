@@ -191,7 +191,48 @@ fn follower_kit_bo32_selects_touch_of_death_before_blackout_on_weaker_creature()
 #[test]
 fn follower_kit_ralia32_ferocious_bite() {
     let (mut h, unit) = level32(232800);
+    // TDB31146: Heroic Training Dummy, CT328/HealthModifier100/npc_training_dummy.
+    // Native template health and dummy lifetime replace the finite kobold fixture;
+    // no follower stats, energy or combo points are granted for the finisher.
+    let native = crate::spell_cast::test_harness::load_native_creature_world(&[31146]);
+    h.app
+        .world_mut()
+        .resource_mut::<crate::world_data::WorldData>()
+        .templates
+        .extend(native.templates);
+    let old_target = h.npc;
+    let position = *h
+        .app
+        .world()
+        .get::<shared::components::Position>(old_target)
+        .unwrap();
+    let (x, y, z) = crate::terrain_height::bevy_to_wow(position.x, position.y, position.z);
+    let owner = h.caster;
+    let dummy = crate::zones::summon_creature(h.app.world_mut(), owner, 31146, [x, y, z, 0.0])
+        .expect("source Heroic Training Dummy template");
+    assert!(
+        h.app
+            .world()
+            .get::<crate::creature_scripts::TrainingDummy>(dummy)
+            .is_some()
+    );
+    assert!(h.health(dummy) > h.health(old_target));
+    h.app.world_mut().despawn(old_target);
+    h.npc = dummy;
+    h.select(Some(dummy));
+    h.attack(dummy);
     uses_spell(&mut h, unit, 22568);
+    h.advance(3);
+    assert!(
+        h.inbox.log.iter().any(|event| {
+            event.source == Some(unit.to_bits())
+                && event.target == Some(dummy.to_bits())
+                && event.spell_id == Some(22568)
+                && event.kind == shared::protocol::CombatLogKind::Damage
+                && event.amount > 0
+        }),
+        "native Ferocious Bite must deal damage to the sourced dummy"
+    );
 }
 
 #[test]
