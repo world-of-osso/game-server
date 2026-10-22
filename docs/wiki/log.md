@@ -1,3 +1,7 @@
+## 2026-10-22 — Elemental Overload actual-cast RED
+
+[Cast boundary](investigations/follower-data.md#elemental-overload-native-cast-boundary--2026-10-22): actualownMastery/SK/Lightning damage passes,45284absent; genuine1RED/removedMastery1positive8.51s/zero warnings. TC400ms/defaultNONE callback and native effect amounts qualified; first188196→45284 consequence445c3ccc6 uses actual charged-modifier provenance, no livebuff guess. Timingcontrolbf4098b52 and targetedGREEN pending; other roots/additionaloverloads/fullAPL remain open. Inundate prior packet landed through leadin962.
+
 ## 2026-10-22 — Inundate native targeted GREEN, known foreign FoF flake
 
 [Eligibility](investigations/follower-data.md#inundate-resource-eligibility--2026-10-22): Inundate3GREEN at329a06527 inside13PASS/1FAIL44.51s/zero warnings; failedFoF Damage-only4vs5 is lead-confirmed known Miss/Dodge oracle issue owned14179, not suppressed here. Proved3 enabled5074f1354. Affected Ele70samples2PASS37.46s/native378777events0/ST666.900/3T1007.367DPS, unpaired not causal-total proof. Newmaster6e73cc9b5 integrated043b63a88 requires current parent gate; full efficiency remains open.
