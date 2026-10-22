@@ -1,3 +1,7 @@
+## 2026-10-22 — Spotlight source recipient boundary
+
+[Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): source230924/467730 selected raid recipient/30min aura/1h recovery;95rows27tables6residentmodels,10raw identity/clock/effect snapshots. Exact visual entry follows separate generic57 correction4db754ace; correctedRED4/control4PASS102.82s, GREEN pending. Lead permits pipeline admission with named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE census/ledger gap; no fake indoor state/outdoor eligibility/native pixels/full-hour reuse claim. Qualified census542 retained until proof.
+
 ## 2026-10-22 — Native target57 raid-recipient correction
 
 [Toys](systems/toys.md#native-target57-raid-recipient-correction-2026-10-22): source57 raid relation was aliased to ordinary ally21; actual1022 on foreign ally returnsOk, while21/10060 control passes. Corrected6bdac3cf8 batch4RED/control4PASS102.82s, including separate Spotlight preflight REDs; compile-only0611502ac API errors excluded. Generic Raid relation now checks existing membership/assist and rejects explicit foreign targets without caster substitution; GREEN pending. No Spotlight entry yet, no mixed-mask/universal controlled-unit claim.

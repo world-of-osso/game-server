@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Spotlight source recipient and environmental boundary (2026-10-22)
+
+[Contract](../../specs/toys.md#server-scope-visual-only-census-rule). Spotlight Materializer1000 230924/467730 authors an instant zero-payload aura4 on selected raid target57 for1800000ms,3600000ms source recovery and AuraUnique. Complete95rows/27tables/six resident ordinary models253324/999904/309571/2924122/1901155/250006, zero missing references; source raid-mixer condition48728 is audio metadata, not another toy action. Ten raw identity/clock/effect CSV snapshots are retained in spotlight-source-provenance.json.
+
+Generic target57 correction4db754ace is separate from this exact467730 registry entry. Corrected RED6bdac3cf8 gives four failures and four controls passing102.82s: actual ordinary1022 accepts a foreign ally; Spotlight use/census/foreign assertion refuse Aura4. Native21/10060, two eligible drift cases and retained Orb/Gadgetzan controls pass. Fixture-only0203f8f60 also retains the actual owner character ID in ungrouped cases. GREEN pending: actual grouped selected recipient, owner/foreign no substitute, recipient replication/cancellation/invariants and source recovery refusal. Source peaceful and AuraUnique handling remain native; no native spotlight pixels/full-hour reuse claim.
+
+Source Attr0=0x10008000 also includes ONLY_OUTDOORS. TC Spell.cpp5827–5835 checks that only when vmap LOS is enabled; current server has no indoor/outdoor state or enforcement. Lead explicitly permits pipeline admission with named generic gap `SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE` in census and ledger. Do not fabricate indoor state or claim outdoor eligibility parity. Source bit remains unchanged; qualified census remains542 until GREEN.
+
 ## Native target57 raid-recipient correction (2026-10-22)
 
 TC a352b1fa SpellInfo.cpp305 defines57 as TARGET_UNIT_TARGET_RAID, not ordinary ally21. CheckExplicitTarget2533–2567 requires IsInRaidWith plus a valid assist target; InitExplicitTargets retains the absent non-enemy self default. Current server previously aliased21|57 to Explicit(Ally), allowing foreign allies. At6bdac3cf8, actual native1022 Blessing of Protection returns Ok on an ungrouped friendly player: genuine target57 RED. Native10060 Power Infusion target21 control passes; source Spotlight actualUseToy/census/foreign assertion separately refuse UnsupportedAura4. Composite4RED/control4PASS102.82s; first0611502ac compile-only wrong API errors are excluded.
