@@ -18,6 +18,17 @@
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
 
+## 2026-10-22 — Amani mask source cancellation boundary
+
+[Toys](systems/toys.md#ancient-amani-mask-source-cancellation-boundary-2026-10-22): complete72row28table4model visual metadata, literal Attr0 NO_AURA_CANCEL and source10min aura/15min recovery. ActualUseToy/censusRED2/control4PASS72.40s at47322144f; exact1303320 registry entry only. Atbff34c2bc/protocol2abc7fa6GREEN63.44s proves actual no-cancel/natural10min expiry/15min recovery reuse, owner invariants/replication/drift plus retained Orb/Cyrce/Gadgetzan. Check9.35s/no warnings/fmt/readabilityPASS; census541→542 only279052. No canonical writes/native pixels claim.
+
+## 2026-10-22 — Orb source-affinity owner contract
+
+[Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): corrected actualUseToy RED3/control3PASS49.69s → integrated5916e4f22/protocol2abc7fa focused9GREEN49.05s. All three genuine KnownSpell Priest affinity passives precede use and survive owner aura cancellation; exact source duration/recovery, replication/invariants/class/drift guards retained. Only127850 registry entry; no native color/full5-minute expiry/10-minute reuse/login claim. Census539→541 includes own136928 plus inherited131900 from master39e58b27a; no other row/reason changes. Final checkPASS88s/no warnings; fmtPASS. Readability changed-line audit found no violations.
+
+## 2026-10-21 — Orb affinity passives are normal specialization state
+
+[Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): source136928/127850 isolated44rows/26tables/two models; earlier missing-root-helper interpretation withdrawn.137031/2/3 are actual Holy/Disc/Shadow spec passives with source auto-cast flag, not new toy effects. Test-first3e2537dca requires normal KnownSpells→AuraPlugin passive application and source affinity before actualUseToy; First01ce988b7 run censusRED1/control2PASS plus3excludedfixture-spec-lookup failures60.03s; lightweight harness intentionally strips specs. Fixture-onlybf9f138a3 keeps full nativeClassSpells fromloader;correctedRED pending, no admission/GREEN/native color/class-login claim. Source5min aura/10min recovery and Priest/level11 guard retained; census539 unchanged.
 - [rd902 Imp fixture identities](investigations/follower-data.md#rd902-native-roster-fixture-identities--2026-10-22) — native handles1-versus3 RED→parallel11GREEN66.08s; signed3001 joined Guardian1GREEN/retained3GREEN, zero native/toy references; tests/fixtures only.
 - [Base Tyrant owner SP](investigations/follower-data.md#base-tyrant-owner-spell-power--2026-10-21) — native270481 actual7vs47.305897 RED→merged11GREEN106.38s; retained guardian11GREEN35.07s; merged ST/3T8864/13204 reports equal91cf, no Demonbolt/Core sample or isolated/statistical claim.
 - [Native Wild Imp binding/SP](investigations/follower-data.md#wild-imp-binding-and-owner-sp--2026-10-21) — actual104317/55659→104318 and constructor1.2SP; genuine2RED→2GREEN25.48s plus retained11GREEN13.66s, no HoG/Core/Tyrant/lifetime parity; copy-only template closure.
