@@ -6,7 +6,7 @@ use crate::spell_cast::powers::power_value;
 use crate::spell_cast::test_harness::{Harness, ObservedCombatEvents};
 use crate::spell_cast::{CastFailure, creature_cast};
 use bevy::prelude::*;
-use shared::components::PowerType;
+use shared::components::{Level, PowerType, UnitLevel};
 use shared::protocol::{CombatLogEvent, CombatLogKind};
 
 const GARRICK: u32 = 209_057;
@@ -20,6 +20,10 @@ fn fixture(level: u8) -> (Harness, Entity) {
     let (mut h, paladin) = at_level(GARRICK, level, |app| {
         app.init_resource::<ObservedCombatEvents>();
     });
+    h.app
+        .world_mut()
+        .entity_mut(h.npc)
+        .insert((Level(level), UnitLevel(level)));
     h.stop_attack();
     h.advance(3);
     (h, paladin)
@@ -106,7 +110,7 @@ fn owned_hot(h: &Harness, paladin: Entity, target: Entity) -> Option<AuraInstanc
         .cloned()
 }
 
-fn qualify_word_target(self_target: bool) {
+fn qualify_word_target(self_target: bool, hostile_dot: bool) {
     let (mut h, paladin) = fixture(41);
     let talent = own_aura(&h, paladin, LIGHT_OF_TITANS).expect("native41 learned talent");
     let percent = talent
@@ -119,6 +123,32 @@ fn qualify_word_target(self_target: bool) {
     earn_word(&mut h, paladin);
     pressure(&mut h);
     let target = if self_target { paladin } else { h.caster };
+    let bonus = if hostile_dot {
+        let enemy = h.npc;
+        creature_cast(h.app.world_mut(), enemy, 23268, Some(paladin), false).unwrap();
+        h.advance(3);
+        assert!(
+            h.app
+                .world()
+                .get::<ActiveAuras>(paladin)
+                .unwrap()
+                .iter()
+                .any(|aura| { aura.spell_id == 23268 && aura.harmful && aura.caster == enemy }),
+            "actual hostile periodic damage prerequisite"
+        );
+        if self_target {
+            talent
+                .effects
+                .iter()
+                .find(|effect| effect.index == 1)
+                .unwrap()
+                .amount
+        } else {
+            0.0
+        }
+    } else {
+        0.0
+    };
     let start = h.app.world().resource::<ObservedCombatEvents>().0.len();
     let direct = cast_heal(&mut h, paladin, target, WORD_OF_GLORY);
     assert!(direct.amount > 0);
@@ -146,7 +176,8 @@ fn qualify_word_target(self_target: bool) {
         })
         .collect();
     assert_eq!(ticks.len(), count as usize);
-    let expected = (direct.amount as f32 * percent / 100.0 / count as f32).round() as i32;
+    let expected = (direct.amount as f32 * percent / 100.0 * (1.0 + bonus / 100.0) / count as f32)
+        .round() as i32;
     for tick in ticks {
         assert!(tick.periodic);
         assert!(
@@ -159,12 +190,22 @@ fn qualify_word_target(self_target: bool) {
 
 #[test]
 fn light_of_titans_native41_word_on_other_patient_produces_owned_periodic_heal() {
-    qualify_word_target(false);
+    qualify_word_target(false, false);
 }
 
 #[test]
 fn light_of_titans_native41_self_word_without_hostile_dot_keeps_base_amount() {
-    qualify_word_target(true);
+    qualify_word_target(true, false);
+}
+
+#[test]
+fn light_of_titans_native41_self_word_with_actual_hostile_dot_uses_native_bonus() {
+    qualify_word_target(true, true);
+}
+
+#[test]
+fn light_of_titans_native41_other_word_does_not_borrow_caster_dot_bonus() {
+    qualify_word_target(false, true);
 }
 
 #[test]
