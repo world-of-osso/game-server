@@ -385,6 +385,37 @@ fn proc_fidelity_262_inundate_native_wind_shear_interrupt_grants_once() {
 }
 
 #[test]
+#[ignore = "native Inundate removed-passive utility control pending GREEN"]
+fn proc_fidelity_262_inundate_native_wind_shear_without_passive_does_not_grant_resource() {
+    let (mut h, caster) = prepare(209053);
+    assert!(has_aura(h.app.world(), caster, 378776));
+    crate::auras::remove_auras(
+        h.app.world_mut(),
+        caster,
+        crate::auras::RemoveReason::Cancelled,
+        |aura| aura.spell_id == 378776,
+    );
+    assert!(!has_aura(h.app.world(), caster, 378776));
+    let first = h.inbox.log.len();
+    super::utility_tests::start_enemy_fireball(&mut h, caster);
+    let enemy = h.npc;
+    complete_cast(&mut h, caster, 57994, enemy);
+    h.advance(3);
+    assert!(h.inbox.log[first..].iter().any(|event| {
+        event.kind == CombatLogKind::Interrupt
+            && event.spell_id == Some(57994)
+            && event.extra_spell_id == Some(133)
+            && event.source == Some(caster.to_bits())
+    }));
+    assert!(
+        h.inbox.log[first..]
+            .iter()
+            .all(|event| event.spell_id != Some(378777) || event.source != Some(caster.to_bits())),
+        "a successful native utility cast does not invent its removed Inundate driver"
+    );
+}
+
+#[test]
 fn proc_fidelity_262_surge_earned_during_lava_burst_survives_that_cast() {
     let (mut h, caster) = at_level(209053, 32, |_| {});
     let target = h.npc;
