@@ -11,8 +11,15 @@ use crate::networking::CombatTarget;
 const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
 
 #[cfg(test)]
+#[path = "cast_while_casting_tests.rs"]
+mod cast_while_casting_tests;
+
+#[cfg(test)]
 #[path = "healer_triage_tests.rs"]
 mod healer_triage_tests;
+#[cfg(test)]
+#[path = "resto_policy_tests.rs"]
+mod resto_policy_tests;
 
 pub(super) fn update(
     world: &mut World,
@@ -86,11 +93,17 @@ pub(super) fn update(
         };
         let mut entry = entry.clone();
         entry.spell_id = spell_id;
+        let enemy = match (entry.conditions.target, entry.conditions.target_if_min_aura) {
+            (Target::Enemy, Some(aura)) => {
+                select_min_own_aura_enemy(world, unit, &enemies, spell_id, aura)
+            }
+            _ => enemy,
+        };
         let Some(target) = select_target(world, unit, party, enemy, &entry) else {
             continue;
         };
         if conditions_met(world, unit, target, party, &enemies, &entry)
-            && attempt_cast(world, unit, target, follower, &entry)
+            && attempt_cast(world, unit, target, follower, &entry, enemies.len())
         {
             return true;
         }
@@ -106,6 +119,44 @@ pub(super) fn update(
         ai::hold_combat(world, unit);
     }
     true
+}
+
+fn select_min_own_aura_enemy(
+    world: &mut World,
+    unit: Entity,
+    enemies: &[(Entity, Option<Entity>)],
+    spell_id: u32,
+    aura_id: u32,
+) -> Option<Entity> {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)?
+        .clone();
+    enemies
+        .iter()
+        .filter_map(|&(target, _)| {
+            let protected = crate::auras::has_breakable_by_damage_cc(world, target);
+            let eligible = !protected
+                && crate::spell_cast::read_native_cast_start(world, unit, &spell, target).is_ok();
+            eligible.then(|| (target, own_aura_remaining(world, unit, target, aura_id)))
+        })
+        .min_by(|left, right| left.1.total_cmp(&right.1))
+        .map(|(target, _)| target)
+}
+
+fn own_aura_remaining(world: &World, unit: Entity, target: Entity, aura_id: u32) -> f64 {
+    world
+        .get::<crate::auras::ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == aura_id && aura.caster == unit)
+        })
+        .map_or(0.0, |aura| {
+            aura.expires_at.map_or(f64::INFINITY, |expiry| {
+                (expiry - crate::auras::aura_now(world)).max(0.0)
+            })
+        })
 }
 
 fn health_fraction(world: &World, unit: Entity) -> Option<f32> {
@@ -212,6 +263,7 @@ pub(super) fn conditions_met(
 ) -> bool {
     let condition = &entry.conditions;
     if !action_history_allows(world, unit, entry)
+        || !cooldown_allows(world, unit, entry)
         || !entry
             .conditions
             .resources
@@ -234,6 +286,21 @@ pub(super) fn conditions_met(
     enough_injured
         && (condition.min_enemies == 0
             || super::kit_area::allows(world, unit, target, enemies, entry))
+}
+
+fn cooldown_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
+    let Some(threshold) = &entry.conditions.cooldown_remaining_above else {
+        return true;
+    };
+    let Some(history) = world.get::<crate::spell_cast::SpellHistory>(unit) else {
+        return false;
+    };
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(threshold.spell_id)
+        .expect("kit cooldown predicate requires native spell metadata");
+    let deadline = crate::spell_cast::history_now(world) + threshold.seconds;
+    history.on_cooldown(spell, deadline)
 }
 
 fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> bool {
@@ -483,6 +550,7 @@ fn attempt_cast(
     target: Entity,
     follower: &Follower,
     entry: &Entry,
+    enemies: usize,
 ) -> bool {
     // An already admitted heal must finish; selecting it again is not a new
     // emergency. Re-starting it each tick would consume no mana and heal nobody.
@@ -499,7 +567,12 @@ fn attempt_cast(
                 .conditions
                 .health_below
                 .is_some_and(|health| health <= PROJECT_URGENT_HEAL_THRESHOLD));
-    if world.get::<CastState>(unit).is_some() && !urgent {
+    let allows_parallel_cast = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(entry.spell_id)
+        .is_some_and(crate::spell_cast::allows_cast_while_casting);
+    let may_start_while_casting = urgent || allows_parallel_cast;
+    if world.get::<CastState>(unit).is_some() && !may_start_while_casting {
         return false;
     }
     if target != unit
@@ -514,13 +587,17 @@ fn attempt_cast(
     {
         return false;
     }
-    let result = if urgent {
+    let result = if urgent && !allows_parallel_cast {
         crate::spell_cast::creature_cast_interrupting_self(
             world,
             unit,
             entry.spell_id,
             Some(target),
         )
+    } else if let Some(stage) =
+        super::empower_policy::selected_stage(world, unit, entry.spell_id, enemies)
+    {
+        crate::spell_cast::creature_cast_empowered(world, unit, entry.spell_id, Some(target), stage)
     } else {
         crate::spell_cast::creature_cast(world, unit, entry.spell_id, Some(target), false)
     };

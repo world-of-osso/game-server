@@ -4,6 +4,23 @@ use super::*;
 use crate::auras::ActiveAuras;
 use shared::components::{Health, ModelDisplay, UnitAuras};
 
+#[path = "toys_amani_mask_tests.rs"]
+mod amani_mask;
+#[path = "toys_dh_visual_tests.rs"]
+mod dh_visual;
+#[path = "toys_eyes_visual_tests.rs"]
+mod eyes_visual;
+#[path = "toys_horn_visual_tests.rs"]
+mod horn_visual;
+#[path = "toys_orb_visual_tests.rs"]
+mod orb_visual;
+#[path = "toys_pennant_visual_tests.rs"]
+mod pennant_visual;
+#[path = "toys_ring_visual_tests.rs"]
+mod ring_visual;
+#[path = "toys_seed_visual_tests.rs"]
+mod seed_visual;
+
 fn install_visual_source(h: &mut Harness) {
     let conn = rusqlite::Connection::open_with_flags(
         crate::test_data::world_db_path(),
@@ -15,8 +32,19 @@ fn install_visual_source(h: &mut Harness) {
 }
 
 fn assert_cancellable_source_visual(item: u32, spell: u32, duration_ms: u32, recovery_ms: u32) {
+    assert_cancellable_source_visual_on(item, spell, duration_ms, recovery_ms, (1, 8));
+}
+
+fn assert_cancellable_source_visual_on(
+    item: u32,
+    spell: u32,
+    duration_ms: u32,
+    recovery_ms: u32,
+    race_class: (u8, u8),
+) {
     let dir = tempfile::tempdir().unwrap();
-    let (mut h, character) = setup(&dir.path().join("visual.redb"));
+    let (mut h, character) =
+        setup_for_race_class(&dir.path().join("visual.redb"), race_class.0, race_class.1);
     install_visual_source(&mut h);
     let owner = h.caster;
     let other = h.npc;
@@ -36,6 +64,15 @@ fn assert_cancellable_source_visual(item: u32, spell: u32, duration_ms: u32, rec
         .iter()
         .find(|a| a.spell_id == spell)
         .unwrap();
+    let source_amount = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell)
+        .unwrap()
+        .effects[0]
+        .base_points;
+    assert_eq!(aura.effects[0].amount, source_amount);
     assert_eq!(aura.duration_ms, duration_ms);
     assert_eq!(aura.expires_at.is_none(), duration_ms == 0);
     assert!(
@@ -53,12 +90,21 @@ fn assert_cancellable_source_visual(item: u32, spell: u32, duration_ms: u32, rec
             .get::<UnitAuras>(other)
             .is_some_and(|auras| auras.auras.iter().any(|a| a.spell_id == spell))
     );
-    assert!(
-        h.inbox
-            .cooldowns
-            .iter()
-            .any(|cd| cd.spell_id == spell && cd.duration_ms == recovery_ms && !cd.is_gcd)
-    );
+    if recovery_ms == 0 {
+        assert!(
+            h.inbox
+                .cooldowns
+                .iter()
+                .all(|cd| cd.spell_id != spell || cd.duration_ms == 0)
+        );
+    } else {
+        assert!(
+            h.inbox
+                .cooldowns
+                .iter()
+                .any(|cd| cd.spell_id == spell && cd.duration_ms == recovery_ms && !cd.is_gcd)
+        );
+    }
     h.app
         .world_mut()
         .get_mut::<MessageSender<shared::protocol::CancelAura>>(h.connection)
@@ -78,10 +124,33 @@ fn assert_cancellable_source_visual(item: u32, spell: u32, duration_ms: u32, rec
     assert_eq!(h.app.world().get::<Health>(owner), Some(&health));
     assert_eq!(h.app.world().get::<ModelDisplay>(owner).copied(), model);
     assert_eq!(h.app.world().get::<Position>(owner), Some(&position));
-    assert_eq!(
-        activate(&mut h, item)[0].error.as_deref(),
-        Some("OnCooldown")
-    );
+    let previous_casts = h.inbox.go.iter().filter(|go| go.spell_id == spell).count();
+    let reused = activate(&mut h, item);
+    if recovery_ms == 0 {
+        assert_eq!(reused[0].error, None);
+        assert!(crate::auras::has_aura(h.app.world(), owner, spell));
+        assert!(
+            h.app
+                .world()
+                .get::<UnitAuras>(owner)
+                .unwrap()
+                .auras
+                .iter()
+                .any(|a| a.spell_id == spell)
+        );
+        assert_eq!(
+            h.inbox.go.iter().filter(|go| go.spell_id == spell).count(),
+            previous_casts + 1
+        );
+        assert!(
+            h.inbox
+                .cooldowns
+                .iter()
+                .all(|cd| cd.spell_id != spell || cd.duration_ms == 0)
+        );
+    } else {
+        assert_eq!(reused[0].error.as_deref(), Some("OnCooldown"));
+    }
 }
 
 #[test]
@@ -105,12 +174,43 @@ fn toy_coverage_visual_burning_blade_banner_source_ten_minute_aura_replicates_an
 }
 
 #[test]
+fn toy_coverage_visual_yennu_kite_source_five_minute_aura_and_one_hour_recovery() {
+    assert_cancellable_source_visual(202022, 396236, 300_000, 3_600_000);
+}
+
+#[test]
+fn toy_coverage_visual_chowdar_ribbon_source_ten_minute_aura_and_zero_cooldown_reuse() {
+    assert_cancellable_source_visual(242323, 1232024, 600_000, 0);
+}
+
+#[test]
+fn toy_coverage_visual_kite_ribbon_census_retains_unsourced_dummy_gaps() {
+    let report = report_toy_census(
+        &crate::test_data::world_db_path(),
+        "TOY_VISUAL_KITE_RIBBON_REPORT",
+    );
+    let rows = report["toys"].as_array().unwrap();
+    for item in [202022, 242323, 210411] {
+        let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
+        assert!(row["unavailable"].is_null(), "{row}");
+    }
+    for item in [18986] {
+        let row = rows.iter().find(|r| r["item_id"] == item).unwrap();
+        assert!(!row["unavailable"].is_null(), "{row}");
+    }
+}
+
+#[test]
 fn toy_coverage_visual_payload_or_absent_visual_refuses_without_effects() {
     for (item, spell) in [
         (201927, 395705),
         (202711, 399041),
         (162539, 202432),
         (168014, 295037),
+        (202022, 396236),
+        (242323, 1232024),
+        (228789, 465642),
+        (235041, 1215495),
     ] {
         for absent_visual in [true, false] {
             let dir = tempfile::tempdir().unwrap();

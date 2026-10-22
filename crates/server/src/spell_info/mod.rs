@@ -89,13 +89,23 @@ pub struct SpellInfo {
     /// CheckCast skips SpellHistory::IsReady; HandleCooldowns does no writes.
     #[serde(skip)]
     pub(crate) cast_ignore_cooldowns: bool,
-    /// Successful-launch charged modifiers; None means not yet snapshotted.
+    /// Successful-launch consumed modifiers (charges or scripted stacks).
+    /// None means not yet snapshotted.
     #[serde(skip)]
     pub(crate) cast_charge_mods: Option<Vec<ChargedSpellModifier>>,
     /// Script-owned cast-time proc instances that actually modified admission.
     /// Retained through hardcasts/missiles; triggered casts do not acquire markers.
     #[serde(skip)]
     pub(crate) cast_proc_mods: Vec<u32>,
+    /// Whether this ordinary cast had positive cast time at admission, not its DB2 base.
+    #[serde(skip)]
+    pub(crate) cast_was_hardcast: bool,
+    /// NPC-selected release rank; None holds for explicit release or native max hold.
+    #[serde(skip)]
+    pub(crate) cast_empower_to: Option<u8>,
+    /// Completed native empower stage passed into release spell/effect snapshots.
+    #[serde(skip)]
+    pub(crate) cast_empower_level: Option<u8>,
     /// Every `spell_power` row, sorted by `OrderIndex`.
     pub power_costs: Vec<SpellPowerCost>,
     pub aura_options: Option<Box<SpellAuraOptions>>,
@@ -243,10 +253,18 @@ pub struct SpellAuraOptions {
     pub proc_type_mask: [u32; 2],
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ProcsPerMinute {
     pub base_proc_rate: f32,
     pub flags: u32,
+    /// SpellProcsPerMinuteMod Type1; never infer haste scaling from Flags.
+    pub haste_modifiers: Vec<ProcsPerMinuteHasteModifier>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct ProcsPerMinuteHasteModifier {
+    pub parameter: u32,
+    pub coefficient: f32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
@@ -264,6 +282,8 @@ pub struct SpellCategories {
     pub max_charges: u32,
     /// `spell_category.ChargeRecoveryTime` of `charge_category`, ms per charge.
     pub charge_recovery_ms: u32,
+    /// Native SpellCategory.TypeMask, used by aura205 (not the category ID).
+    pub charge_type_mask: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

@@ -129,6 +129,14 @@ fn census_tail_118_native_henry_fortitude_buffs_actual_companion_party() {
             .find(|profile| profile.entry == entry)
             .unwrap()
             .clone();
+        let display_id = conn
+            .query_row(
+                "SELECT CreatureDisplayID FROM content_creature_template_model
+                 WHERE CreatureID=?1 ORDER BY Idx LIMIT 1",
+                [entry],
+                |row| row.get::<_, u32>(0),
+            )
+            .expect("authentic follower template display");
         let unit = spawn_player(&mut h.app, profile.class_id, 10.0);
         let follower = super::Follower { owner, profile };
         h.app
@@ -141,13 +149,14 @@ fn census_tail_118_native_henry_fortitude_buffs_actual_companion_party() {
                     name: follower.profile.name.clone(),
                 },
                 follower.clone(),
+                shared::components::ModelDisplay { display_id },
                 shared::components::UnitSummonedBy(owner.to_bits()),
             ));
         let member = super::Follower::member_id(unit);
         if entry == 209_065 {
             outsider = Some(unit);
         } else {
-            view.insert(member, follower.online(unit, 80, 1));
+            view.insert(member, follower.online(unit, 80, 1, display_id));
             companions.push((member, follower.profile.role));
             units.push(unit);
         }

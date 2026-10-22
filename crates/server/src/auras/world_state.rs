@@ -55,7 +55,7 @@ pub(super) fn reconcile(world: &mut World, unit: Entity) {
         hover: auras.has_type(handlers::HOVER),
         disable_gravity: auras.has_type(handlers::DISABLE_GRAVITY)
             || auras.has_type(297)
-            || auras.has_type(298),
+            || auras.has_type(handlers::MOD_STUN_DISABLE_GRAVITY),
         tracked_creatures,
         movement_force_multiplier,
     };

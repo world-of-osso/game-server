@@ -2800,6 +2800,7 @@ fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cas
             .get(&6155),
         Some(&1)
     );
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     assert_eq!(
         persistence::load_achievements(&h.app.world().resource::<GameDatabase>().db, character)
             .criteria_progress
@@ -3092,6 +3093,7 @@ fn achievements2_account_quests_migrate_across_characters_without_changing_chara
             .earned_ids
             .contains(&4899)
     );
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     let saved = persistence::load_achievements(&world.resource::<GameDatabase>().db, second);
     assert_eq!(saved, contributions[1]);
     assert!(

@@ -1,73 +1,101 @@
 # Follower healer triage
 
-`FOLLOWER_HEALER_TRIAGE_POLICY` is project-authored decision policy, not a SimC healer APL or a Retail rotation claim. Spell identities, learned level intervals, effect amounts, durations, ranges, resource costs and proc mechanics remain the local 70448/server catalog and ordinary spell executor. This page tracks implementation and proof separately; pending items below are design, not shipped behavior.
+verified: 2026-10-21
 
-## Policy design (pending RED→GREEN)
+`FOLLOWER_HEALER_TRIAGE_POLICY` is project-authored selection over native70448 execution, not a SimC healer APL or Retail rotation claim. [Contract](../../specs/follower-healer-triage.md), [complete107-row Crenna inventory](../reference/follower-resto-70448-kit.md), [follower data](../investigations/follower-data.md), [simulator constraints](dungeon-simulator.md).
 
-- Rank same-copy living patients by uncovered missing health plus a three-second projection of effective incoming damage over the last ten wall seconds. Tank weight1.25; ties by entity bits. Existing active periodic-heal ticks and depleted school-absorb pools count only while their actual aura remains valid. Observed damage is not invented future boss damage.
-- Emergency means projected survival at most three seconds, or health at most25% when recent damage is unavailable. At or below30% healer mana, or low incoming damage, prefer native effective healing per native mana over raw throughput. Never rewrite costs or grant mana/procs. Emergency response favors healing before the predicted death rather than a fixed per-spell HP ladder.
-- Preserve an admitted useful cast. Cancel a normal direct heal when its living target is topped, then reassess; do not cancel a party-healing channel merely because its selected anchor is full. A new genuine emergency may interrupt damage or redirect a heal.
-- Prepare missing HoTs/absorbs inside a five-second project-policy window of an exposed actual encounter EventMap deadline, using the script's real spell/target semantics. No numeric damage forecast is synthesized. Unexposed timers remain a named coverage gap.
-- Pursue patients through native movement/range/LOS and existing hazard/native-sight safety. A blocked approach holds instead of crossing unpulled sight circles. Damage-weaving is allowed only while every living patient is covered and not projected into danger.
+## Common decisions
 
-## Shared specialization boundary (pending implementation)
+- Rank living same-copy patients by uncovered missing health plus three seconds of recent effective incoming damage. Damage history covers ten seconds, converted through native health-loss scaling. Tank weight1.25; deterministic entity ties. Actual remaining HoT ticks and depleted absorb pools count only while valid.
+- Emergency means projected survival≤3s or HP≤25%; mana≤30% or no incoming damage favors effective native healing/native mana. These are policy thresholds, not altered spell effects. No resource/proc grants.
+- Reject/cancel topped normal direct heals, preserving useful friendly casts and group-healing channels. Cancel an admitted hostile cast while party pressure is unsafe even when no heal is affordable.
+- Prepare missing HoTs inside a five-second policy window of an exposed real EventMap request deadline. Hogger exposes Vicious Slice/victim and Maddening Call/source-area clocks; request time is not guaranteed impact time. Other scripts remain unexposed, not guessed forecasts.
+- Use actual native-radius injury clusters, existing pursuit/range/LOS/hazard controllers and native-sight safety. The simulator's frozen-plane navigation does not prove production navigation or pixels.
 
-Common triage captures ranked patients/positions/projected death, native heal candidates, emergency state, safe-to-DPS and known upcoming scripted damage. A pure per-spec `decide(&TriageContext)` runs next, before generic ordered rows; read-only World/caster/party provide actual aura, cooldown and resource state.
+`TriageContext` exposes ranked patients, native heal candidates, upcoming requests, injury clusters, enemies, actual owned auras and learned/native recovery readiness. Readiness ignores transient GCD only, not costs, charges, school or cooldowns.
 
-The contract is `SpecVerdict::Cast { decision, owned: SpellSet } | Defer { owned: SpellSet }`, where `SpellSet` is a static slice of spell IDs. Both outcomes retain ownership even if native casting refuses the chosen action: common candidate fallback and generic rows must skip owned spells. Returning no action must never resurrect an older missing-aura/HP-threshold row. Resto and Holy use the same dispatch boundary; no runtime trait-object registry is required.
+`SpecVerdict::Cast { decision, owned: SpellSet } | Defer { owned: SpellSet }` always retains its static owned-ID slice. Native refusal or no chosen action must not resurrect generic owned rows. Both105 and257 use this shared pure decision boundary; Holy policy is separately owned.
 
-## Restoration105 ownership
+## Restoration decisions
 
-Crenna209072 uses the whole local default follower kit, level gated; the census below is not a grant of all abilities at level32. Holy257 specialization decisions are maintained separately on the shared framework.
+Native level intervals remain authoritative: a level32 benchmark does not learn high-level abilities. Ordinary costs, cast times, effects, aura restrictions and modifiers remain native.
 
-Supported mechanics to integrate: own Lifebloom maintenance and near-expiry bloom refresh; own Rejuvenation/Germination and actual Abundance threshold; Swiftmend/158478→114108 Soul of the Forest consumption; Omen113043→16870 Clearcasting→native free Regrowth; Nature's Swiftness132158; stacked-ally Efflorescence145205; group Wild Growth48438/Tranquility740; Ironbark102342, Innervate29166, Tree of Life33891; Nature's Cure88423; actual Rebirth20484/Revive50769; Mark1126; owned Moonfire164812/Sunfire164815 then Wrath5176 only when safe.
+| Capability | Selection / native boundary | Proof |
+|---|---|---|
+| Ironbark / Barkskin | Authored attacked/HP/missing-aura conditions before throughput; personal rows stay self-targeted | Actual threat victim and scaled native damage GREEN |
+| Lifebloom | Living tank own-aura upkeep; refresh inside inclusive30% native bloom window; no settled-OOC spam | Actual late refresh and native33778 bloom GREEN |
+| Nature's Swiftness | Learned132158 before emergency cast-time Regrowth; re-read native costs after buff | Level13 aura→useful Regrowth GREEN |
+| Nature's Cure | Actual eligible native harmful aura before routine healing | Magic589 removal and native Dispel GREEN |
+| Swiftmend / Soul | Urgent real eligible low HP; routine use requires native prerequisite, not owner waiver exploitation | Eligible-HoT rescue, no Rejuv starvation, earned114108→useful Regrowth and expiry/consumption distinctions GREEN |
+| Clearcasting | Native earned16870 supports useful free Regrowth; no topped recipient | Natural acquisition, native costs and partial charge-spend telemetry GREEN |
+| Rejuvenation / Abundance | Useful primary774 may complete actual207383 threshold; native207640 supplies discount | Fifth primary HoT and actual cost reduction GREEN |
+| Germination | Learned155675, existing owned primary and absent secondary, stable uncovered demand; waive only project primary-missing condition | Ordinary774 creates real155777 GREEN |
+| Innervate | Learned29166 under actual healing demand/low mana | Native self aura GREEN; it is periodic mana regeneration, not a zero-cost aura |
+| Tranquility | Caster-anchored cluster and native caster survival longer than channel; cast on caster (native target1/range0) | Useful157982 child healing and unsafe-channel rejection GREEN |
+| Tree of Life | Learned33891 under sustained authored group injury after safe Tranquility opportunity; preserve useful casts | Actual5420/81097 boosts→immediate useful Regrowth→boost removal/ordinary cast time restored GREEN |
+| Mark | Native1126 and actual GroupRegistry/ClientId companion membership | All five living native members GREEN |
+| Damage weaving | Generic native attack/area rows only while party safe | Unsafe admitted hostile cancellation with no affordable heal GREEN |
 
-[Complete107-row native kit/talent/utility inventory](../reference/follower-resto-70448-kit.md), including exact learned level intervals and existing authored conditions.
+`FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: existing native bonus supports Regrowth/Rejuvenation/Germination, not a qualified Wild Growth bonus.70448 dummy effects158478/221440 and114108/127235 have zero masks; those rows prove neither WG inclusion nor exclusion. Do not derive an affected-spell multiplier from tooltip prose or unrelated labels.
 
-Convoke is **not present in Crenna's local105 kit**: `FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`. Do not add a spell solely because an example rotation mentions it. Current70448 Abundance207383 is a threshold-driven207640 buff, not old per-Rejuvenation stacks; see the native aura implementation. `FOLLOWER_RESTO_SOTF_WILD_GROWTH_BONUS_UNIMPLEMENTED`: existing Soul-of-the-Forest script boosts Regrowth/Rejuvenation/Germination, not Wild Growth. AI must use supported empowered heals without pretending the missing Wild Growth multiplier exists.
+`FOLLOWER_RESTO_CONVOKE_NOT_LEARNED`: no local105 kit row; never grant it for a rotation example. `UTILITY_LAYER_REZ_PENDING`: Rebirth20484 is reserved/vetoed here but never selected; utility owns decisions and native NPC-caster execution. No healer-local fake resurrection offer. Other manual-only controls/forms/utilities remain enumerated in the linked inventory, not claimed automated.
 
-Additional native-consumer gaps found by source inspection (not yet behavioral qualification): `FOLLOWER_RESTO_NPC_RESURRECTION_OFFER_UNIMPLEMENTED` — `death/resurrection.rs::build_offer` requires a Player caster, while Crenna is an NPC; `FOLLOWER_RESTO_EFFLORESCENCE_HEALING_UNQUALIFIED` — native145205 summons47649, but no existing qualified Efflorescence healing consumer/placement fixture was found. Do not replace either with direct HP grants. Tree-of-Life/utility coverage remains pending native behavioral qualification; enumeration alone is not support.
+## Efflorescence
 
-## Initial common slice (five core regressions GREEN)
+The existing `retail_content.CLASS_SUMMON_ENTRIES` reaches47649 through trait108116→145205; no closure override is needed. Lead published33 authentic class-summon templates,45 models and4 addons, inserts only with sqldiff/integrity proof. Source producer/idempotency/no-spawn test PASS1/6.838s. Never edit canonical DB from the healer worktree.
 
-`healer_triage.rs` now records target-health-unit damage at the ordinary log boundary, ranks patient risk, subtracts live native HoT/shield coverage, compares effective healing/native mana, reads native charge/cooldown readiness, cancels topped normal direct casts, and gates damage. `healer_policy.rs` dispatches pure105/257 hooks with explicit owned-spell vetoes. Resto initially chooses common ranked candidates; Holy has an empty-ownership seam for the separate policy agent. The finite framework slice excludes upcoming timers, source-radius clusters and full Restoration policy depth.
+TC a352b1fa `spell_druid.cpp719–778` initializes new145205 summons with81262, whose periodic dummy asks the owner to cast81269 at the summon. `Spell.cpp::SelectRandomInjuredTargets` ranks injury→player→actual group, randomly caps the boundary tier at3, and keeps full-health recipients eligible. Native70448 supplies period/radius/coefficients. Ordinary child checks are retained: source DONT_REPORT_CAST_ERROR is not FULL_MASK.
 
-## Shared context slice (native GREEN)
+Runtime qualification is GREEN for ordinary145205→actual47649 at patient placement→81262→owner-attributed81269 useful healing. Source effect2 removes only the caster's previous145205 area trigger before replacement; actual old-entity/moved-position recast fixture is GREEN. Stable-field AI admission uses learned readiness, authored HP/min-injury conditions and actual native-radius geometry, skipping a covered active owned field. Its genuine zero-direct-heal-estimate RED is GREEN without synthesizing a heal estimate.
 
-`CreatureAi::scheduled_damage` defaults to no exposed schedules. Hogger exposes the actual queued Vicious Slice/victim and Maddening Call/source-area request deadlines via read-only `EventMap::remaining_ms`; clocks, dispatch, repeats and effects are untouched. Common context only reads engaged same-copy sources and native spell radii; a five-second preparation policy permits missing HoTs before damage without synthesizing numeric damage. These are request deadlines, not promised impact times (cast delays and native refusals still apply). Other scripts/random-target schedules are unexposed coverage, not guessed timers.
+The synchronous before/after summon snapshot substitutes for TC's per-cast ExecuteLog receipt. Replace it if the runtime gains that receipt or Efflo gets deferred/nested same-spell summons. NPC static-flag4 treat-as-raid priority has no producer; that priority subcase remains unqualified. Area-trigger replacement does not authorize deleting native summons.
 
-`TriageContext.upcoming` contains source/spell/request-ms/affected-patients. `clusters` contains spell/anchor/injured members, using captured actual patient positions and native/script-owned radius. Group-heal admission requires the anchor's local cluster, never a map-wide injury count. Both new behavioral cases were observed RED before implementation: actual Hogger engagement/full-health tank preparation7.65s and scattered-versus-stacked Wild Growth6.33s. Integrated T134f81bd3/P03ceb module filter `followers::kit_ai::healer_triage_tests`:9PASS/0FAIL/1 explicitlyignored NS-depth regression14.38s, no test-build warnings. The preparation case additionally checks actual1–2s/3–4s source request ranges, read-only observation and Reset deadline removal. Scoped sim package checkPASS23.42s; only pre-existing `has_uncleared_fight` warning remains (13179-owned, explicitly excluded by lead). Changed-source formatting passes. Evidence: `data/diagnostics/healer-ai-2026-10-21/context-{green,check}.log`.
+## Observations and paired inputs
 
-Six observed RED cases at simulator22f7bfa65/P03cebdb, server opt1/deps3,135.22s: five patient/cost/cast assertions and the missing benchmark observation schema. Failures were behavioral assertions, not compile/setup errors. Candidate0caa78225 integrated at simulator de4d815aa/P03cebdb: `followers::kit_ai::healer_triage_tests`, seven cases,6PASS/1FAIL in11.91s. All five core regressions GREEN: tank weight, recent damage, native HoT coverage, low-mana Swiftmend and topped-cast cancellation. Naturally earned Clearcasting→useful free Regrowth also GREEN. Nature's Swiftness-before-emergency-Regrowth is genuine RED (native aura132158 absent). Exact evidence: `data/diagnostics/healer-ai-2026-10-21/framework-native.log`. Unused speculative snapshot fields/helpers were removed from the finite framework pending real consumers. Post-master integration module filter6PASS/0FAIL/3 explicit next-slice ignores19.96s, zero build warnings. Scoped production check found a pre-existing simulator-only `has_uncleared_fight` warning; its fix is owned by agent13179, excluded here at the lead's request.
+Test-only recorder samples after app update every0.05s. Pull end is a source pack's actual last native Death after party Damage exchange, not corpse disappearance, party OOC or next-pull recovery. Mana/current max/life state come from that frame; absent components stay null. Existing0.5s samples preserve the mana curve.
 
-Holy agent13119's topped-target starvation hypothesis reproduced with native damage → native other heal topping the patient → repeated policy updates: the native Regrowth cast restarted despite full HP (genuine RED6.65s). A shared normal-direct-heal classification now rejects that full-target admission and governs cancellation; channels and preparatory HoTs are not excluded by this check. Finite ddf9396da integrated T395b2431f/P03ceb: module filter7PASS/0FAIL/3 next-slice ignores12.67s, including the fresh-injury positive control; scoped production checkPASS6.81s and zero build/check warnings before the requested exclusion of13179's helper change. Helper exclusion does not alter triage/native test behavior. Finite framework is not the full Restoration policy/final benchmark gate.
+Tank coverage integrates actual own active native periodic-heal auras over alive-tank combat time; combat and alive-tank denominators remain separate. Native aura receipts distinguish application, charge gain, overcap refresh, partial2→1 spend, actual Consumed, expiry and other removal. No opportunity means null/N/A. Optional receipts never alter effects, resources or RNG. NPC kit availability comes from initialized level-gated rows, not nonexistent Player KnownSpells.
 
-## Evidence / limitations
+Lead-selected control is landed framework/master655258480 with identical frozen inputs, not historical legacy AI. Baseline181b44bb0 adds only the same seven-file passive observer. Candidate2d4dc7856 contains the Restoration slice. Six observer files match byte-for-byte; parent `auras/mod.rs` differs only by native Tree apply/remove hooks, not callbacks. Protocol03cebdb971894aa1fa69b2e4ba7e7fae2702d515; sim server opt1/deps3; Stockade level32, seeds1–20, jobs2.
 
-Initial base c6be257c5, frozen protocol03cebdb. Own simulator baseline e479f2de9; same seeds1–20 and source root for before/after. Baseline build underway; no success/metrics claim yet. Simulator has frozen-plane navigation rather than production LOS/nav; native movement proofs are required separately. Level32 cannot measure talents only learned later; absent gains must be reported as N/A, not 0% proc use.
+Evidence root: `game-engine/data/diagnostics/healer-ai-2026-10-21/`. `paired-input-manifest.json` pins source revisions, observer files, graph and frozen SQLite SHA2566b8b5e96b2a1f0caac05df74abce559516cacae9279d85e669d97edfd0dd7f2c; `paired-stockade-ground-hashes.json` pins40 geometry/LOS files. Rehash after each batch. Raw reports preserve all failures; never discard uncleared runs from denominators.
 
-## Sources
+Baseline20 completed:11cleared/8timeout/1stalled,1party death, no missing reports;905.95s. Native healer overheal50.875%; weighted tank HoT uptime Lifebloom78.52%, Rejuvenation68.23%, Regrowth80.78%; Clearcasting2153/2429 charges, Soul2947/2963. `baseline-framework-metrics-summary.json` and `baseline-framework-655258480/` are source evidence, not a candidate improvement claim. Candidate20 completed:10cleared/9timeout/1stalled,1party death, no missing reports;900.73s. No clear-rate or mortality improvement is demonstrated. Native overheal51.673%; tank HoT uptime Lifebloom95.76%, Rejuvenation74.85%, Regrowth81.47%; Clearcasting2676/2949 charges, Soul2903/2917. Median observed pull-end mana87.84%→89.35%,10th-percentile58.91%→64.20%; per-run mean minimum2.15%→4.55%. `paired-healer-metrics.json`, `paired-runs.csv`, `paired-mana-curve.csv` (283223samples) and `paired-pull-end-mana.csv` (3040pack ends) preserve denominators and all40run outcomes. Native combat/proc RNG uses thread_rng, so equal scenario seeds are not common random numbers. These descriptive measurements support better HoT coverage, not causal survival/efficiency improvement; overheal rose0.80percentage points. DB/40geometry hashes stayed unchanged after both batches.
 
-- `data/world.db`: `follower_profiles` entry209072; all `follower_spec_kit` spec105 rows; resolved native spell tables (read-only70448 inputs).
-- `crates/server/src/followers/{kit_ai,kit,spawning}.rs` — original ladder, kit loading and learned-spell initialization.
-- `crates/server/src/auras/{abundance,lifebloom}.rs`, `spell_cast/scripts/{clearcasting,soul_of_the_forest,swiftmend}.rs` — existing native synergy behavior.
-- [Follower data](../investigations/follower-data.md) — native spell qualification/proc receipts.
-- [Dungeon simulator](dungeon-simulator.md) — benchmark constraints and positioning proof.
+## Proof ledger
 
-## See Also
+Historical finite framework2468b84fd landed ed677e53e:285followers/campaign passes, separate qualified-asset Leymor1pass, scoped check/fmt PASS. Gate fixes retained authored defense priority, genuine Swiftmend eligibility and paid native1126 mana-recovery precondition; they did not change native spell effects.
 
-- [[follower-data]]
-- [[dungeon-simulator]]
-- [[spell-casting]]
+Depth receipts are separate scopes, not one fresh aggregate run:
 
-## Gate regression continuation (native GREEN)
+| Receipt | Result / scope |
+|---|---|
+| `resto-native-depth-frozen-first.log` |4PASS: NS, Innervate, Cure, unsafe damage cancel; eight fixture setup failures subsequently corrected |
+| `resto-native-party-level-corrected.log` |6PASS: Ironbark, late Lifebloom, Mark, Abundance, unsafe channel, Soul; two subsequent native REDs |
+| `resto-native-tranquility-self-and-efflo-inputs.log` | Tranquility PASS; Efflo genuine81262 RED after real summon/placement |
+| `resto-efflo-hook-and-remaining-depth-red.log` | Efflo native chain PASS; five genuine decision/lifecycle REDs |
+| `resto-four-fixes-and-native-tree-red.log` |4PASS: stable Efflo/Barkskin/Germination/area replacement; native Tree boost genuine RED |
+| `resto-native-tree-and-defensive-channel-green.log` |4PASS: Tree boosts/activation, affected Ironbark/Tranquility |
+| `baseline-framework-observer-contract.log` | Native accounting contract PASS1/80.91s |
 
-Gateha847 exposed real policy regressions beyond the initial core tests. A context+starvation native replay retained five RED cases (Ironbark, Rejuvenation, no-reapply setup, eligible-HoT Swiftmend and the mana fixture); Henry's Magic dispel was already GREEN after the topped-start fix. The corrected six-case replay plus common regressions gives15PASS/0FAIL/1 NS-depth ignore24.05s (`gate-regressions-targeted.log`).
+Fixture errors are not behavioral REDs: Harness owner exposes Level, not UnitLevel; native party-target spells need real companion GroupRegistry; narrow creature fixtures omit summon-level tables, so Efflo uses full frozen native WorldData. Attack fixtures assert a real ThreatTable/Idle→AddThreat victim; native damage is scaled to recipient-health units and asserted before policy checks.
 
-After merging masterff190cb1 into finite5cf87d561 (integrated simulatorT486527611/P03ceb), requested `followers::` and `dungeon_simulator::campaign::` filters give285PASS/0FAIL/9 existing-or-next-depth ignores206.38s, threads4. Leymor runs separately with the lead-qualified private2515 asset view/receipt and gives1PASS17.46s, threads1. Scoped sim server checkPASS8.61s; only the lead-excluded13179-owned `has_uncleared_fight` warning remains, with no unused triage API. Changed-source format checkPASS; delta readability audited directly, no suppression. Evidence: `regression-full-followers-campaign.log`, `regression-leymor-private-assets.log`, `regression-final-check.log` under `data/diagnostics/healer-ai-2026-10-21/`. This does not qualify the unimplemented Restoration-depth/paired-benchmark slices.
+Integration after candidate2d4 merges newer master rotation/native work separately; frozen comparison must retain its exact source provenance rather than attribute unrelated party-AI changes to Restoration.
 
-Ironbark is not a zero-throughput heal: its class decision now observes the authored attacked/health/missing-aura conditions and native readiness before ordinary healing. Shared `Patient.projected_death_seconds` is restored and prioritizes the most threatened eligible defensive recipient; Holy can reuse that exact forecast. `TriageContext.ready(spell_id)` reads learned rows plus native cooldowns/charges/school/costs, ignoring only transient GCD.
+## Sources / see also
 
-Swiftmend urgent admission retains its authored HP window and native target restriction, even when forecast HoTs would cover the deficit later. Routine cost ranking only spends Swiftmend when the actual native prerequisite state exists; it does not exploit the controlled-caster owner waiver to replace Rejuvenation on a70%-HP un-HoTed owner. Ordinary direct spell execution and that native waiver are unchanged.
+- Native70448 resolved tables and kit intervals in the frozen read-only DB; source observations use ordinary executor paths.
+- TC a352b1fa `spell_druid.cpp719–778`, `Spell.cpp::SelectRandomInjuredTargets`, `SpellAuraEffects.cpp1513–1516,1570–1617`; archived under the evidence root.
+- [[follower-data]], [[dungeon-simulator]], [[spell-casting]].
 
-The OOC mana-progress fixture previously cast a normal direct Regrowth on an already-full caster. Required topped-cast cancellation prevented the spend, so its intended recovery precondition never occurred. It now casts a learned native instant Mark1126 and asserts actual mana expenditure before retaining the unchanged60-second recovery/stall observations; no damage, fake mana grant or altered production recovery is introduced.
+## Master integration gate
+
+Source06cd80b2b includes masterc6bc60006 and the final native Efflo cap/injured-player-priority fixture. Focused `kit_ai`, companion group buffs, Germination, Abundance and observation contract:39PASS/0FAIL/0ignored58.74s, compile5m15s. Scoped sim server checkEXIT0/45.12s; sole inherited `has_uncleared_fight` warning remains explicitly lead-excluded/13179-owned. `cargo fmt --all --check` PASS. Changed Rust manually audited for readability (analysis CLI unavailable); no new suppressions, synthetic effects or unrelated fixes. Evidence `resto-final-master-integration-{targeted,check}.log`, `resto-final-format-check.log`. Documentation-only qualification updates do not invalidate that code proof.
+
+## Native multi-recipient heal completion
+
+Lead13605 isolated `FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS`: actual596 anchor tops at2.30s of2.306s while three recipients still need healing, so the old shared effect10 single-target cancellation aborts the area heal. Own exact ignored `holy_policy_native90_prayer_of_healing_covers_moderate_cluster_with_spent_words` at af2608e50 is genuine RED7.80s after successful compile, not a fixture/setup error (`group-cancel/holy-poh-exact-red.log`).
+
+The shared decision now distinguishes native area/group selectors and chain cardinality, then asks the ordinary native target planner for the prepared active cast's direct-heal recipients. This retains actual radius, target restrictions, target cap, chain selection, scripting and requested destination. No spell-ID whitelist or map-wide party injury count. Single-target cancellation and channel exclusion remain unchanged. Planning errors are explicit diagnostics and leave lifetime to native completion rather than guessing an alternate footprint. This query executes no heal, resource spend, cooldown or cast action. Five new native controls cover a near-finish topped596anchor, injured1064chain jumps, injured-only-outside-radius negative case, Wild Growth periodic targets and full-caster Tranquility. All five plus existing single-target topped-cancel/no-restart controls PASS7/19.01s on f2517f099. The exact ignored13605 full-party counterexample is GREEN1/25.44s at af2608e50 + the shared fix (private proof b1179b382), after own RED1/7.80s. This closes `FOLLOWER_GROUP_HEAL_TOPPED_ANCHOR_CANCELS`; no Holy policy was changed.
+
+Scoped sim server checkEXIT0/13.46s, solely inherited lead-excluded `has_uncleared_fight` warning; cargo fmt --all --check PASS, changed Rust manually reviewed. Evidence: `group-cancel/holy-poh-exact-{red,green}.log`, `group-cancel/native-group-and-single-controls.log`, `group-cancel/final-check.log`, `group-cancel/format-check.log`. No unchanged broad gate rerun.
