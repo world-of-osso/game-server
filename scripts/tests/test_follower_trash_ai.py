@@ -195,7 +195,7 @@ class TrashProjection(unittest.TestCase):
                 rows = source.execute(f"SELECT * FROM {table}").fetchall()
             else:
                 rows = source.execute(
-                    f"SELECT * FROM {table} WHERE SpellID IN (387564,317898)"
+                    f"SELECT * FROM {table} WHERE SpellID IN (387564,317898,375596,375652)"
                 ).fetchall()
             if rows:
                 self.world.executemany(
@@ -286,6 +286,37 @@ class TrashProjection(unittest.TestCase):
                 )
             ],
             [387564],
+        )
+
+    def test_literal_tc_combat_lanes_preserve_script_name_and_source_clocks(self):
+        kit = trash.read_tc_combat_kit(
+            trash.TC / "DragonIsles/AzureVault/boss_leymor.cpp", "npc_arcane_tender"
+        )
+        actor = dict(
+            self.actor,
+            entry=191164,
+            name="Arcane Tender",
+            source_script="npc_arcane_tender",
+            classification="sourced-kit",
+            **kit,
+        )
+        sql, receipt = trash.prepare_projection(self.world, [actor])
+        self.world.executescript(sql)
+        rows = [
+            tuple(row)
+            for row in self.world.execute(
+                "SELECT action_param1,event_param1,event_param3 FROM content_smart_scripts ORDER BY action_param1"
+            )
+        ]
+        self.assertEqual(rows, [(375596, 22000, 22000), (375652, 12000, 12000)])
+        self.assertEqual(
+            self.world.execute(
+                "SELECT ScriptName FROM content_creature_template WHERE entry=191164"
+            ).fetchone()[0],
+            "npc_arcane_tender",
+        )
+        self.assertTrue(
+            all(cast["cadence_policy"] is None for cast in receipt["casts"])
         )
 
     def test_existing_tc_script_is_not_silently_replaced(self):
