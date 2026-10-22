@@ -10,6 +10,8 @@ mod dh_visual;
 mod eyes_visual;
 #[path = "toys_horn_visual_tests.rs"]
 mod horn_visual;
+#[path = "toys_orb_visual_tests.rs"]
+mod orb_visual;
 #[path = "toys_pennant_visual_tests.rs"]
 mod pennant_visual;
 #[path = "toys_ring_visual_tests.rs"]
