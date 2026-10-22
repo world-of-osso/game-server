@@ -44,7 +44,7 @@ fn late_healer_follows_the_safe_frozen_path_without_recruiting_idle_sources() {
     for _ in 0..PREPARATION_TICKS {
         run.app.update();
     }
-    let position = |[x, y, z]| Position { x, y, z };
+    let position = |[x, y, z]: [f32; 3]| Position { x, y, z };
     let healer = run.party.members[1];
     let owner = run.party.owner;
     let members: Vec<_> = run.members().collect();
