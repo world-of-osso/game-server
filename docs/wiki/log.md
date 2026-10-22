@@ -1,3 +1,7 @@
+## 2026-10-22 — Utility Attr4 master refresh
+
+[Utility master integration](systems/follower-utility.md#master-attr4-integration-refresh): master23c75e20e/sourcee83a4a831 retains pursuit plus native no-clipping parallel casts. Exact prior95 cases95PASS149.10s; no source-input or paired metric changes.
+
 ## 2026-10-22 — Utility/native-policy integration
 
 [Utility admission](systems/follower-utility.md#integration-with-native-defensive-admission): matched master40812PASS versus utility12FAIL, plus shared missing Leymor receipt. Preserve authored defensive admission/healer ownership; owned Holy/Resto harm-first dispels2RED→GREEN. Approved native OOC Mark and actual ready-kick/cooldown-spent Overheat cases pass. Final native95PASS103.55s at1afc510b6/mastere5f37f774; no paired metric rerun or Leymor frontal/nav qualification.
