@@ -1,44 +1,44 @@
-//! Real authored collision regression for dense multi-level dungeon tiles.
+//! Real authored City of Threads tile through the production map-bake executable.
 #![cfg(feature = "bake")]
 
-use navigation::{NavigationMap, bake::bake_collected, read_walkable_polygons};
+use navigation::{NavigationMap, read_walkable_polygons};
 use std::path::PathBuf;
+use std::process::Command;
 
 #[test]
 #[ignore = "requires FOLLOWER_NAV_DATA and FOLLOWER_NAV_WORLD_DB local assets"]
 fn city_of_threads_dense_authored_tile_bakes_walkable_navigation() {
     let data = PathBuf::from(std::env::var_os("FOLLOWER_NAV_DATA").unwrap());
-    let db = rusqlite::Connection::open_with_flags(
-        std::env::var_os("FOLLOWER_NAV_WORLD_DB").unwrap(),
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
-    let wdt = db
-        .query_row("SELECT WdtFileDataID FROM map WHERE ID=2669", [], |row| {
-            row.get(0)
-        })
-        .unwrap();
-    let mut baker = los::bake::Baker::for_navigation(&data);
-    let tiles = baker.map_tiles(wdt).unwrap();
-    let tile = (31, 37);
-    let (geometry, _) = baker.collect_tile(&tiles, tile).unwrap().unwrap();
-    let water = baker
-        .collect_water(tiles[(tile.1 * 64 + tile.0) as usize])
+    let world = std::env::var_os("FOLLOWER_NAV_WORLD_DB").unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let selection = dir.path().join("selection");
+    std::fs::create_dir(&selection).unwrap();
+    // The existing baker reads only LOS filenames for terrain-tile selection.
+    // All geometry still comes from this real tile's authored WDT/ADT/WMO/M2 inputs.
+    std::fs::write(selection.join("31_37.los"), []).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_nav-bake"))
+        .arg("--data")
+        .arg(data)
+        .arg("--world-db")
+        .arg(world)
+        .arg("--out")
+        .arg(dir.path())
+        .args(["--map", "2669", "--los-tiles"])
+        .arg(selection)
+        .output()
         .unwrap();
     assert!(
-        baker.problems.is_empty(),
-        "asset gaps: {:?}",
-        baker.problems
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
     );
-    let bytes = bake_collected(&geometry, &water, tile).expect(
-        "complete authored City of Threads tile must bake without changing agent parameters",
+    let nav_dir = dir.path().join("navmesh/2669");
+    let polygons = read_walkable_polygons(&nav_dir).unwrap();
+    assert!(
+        !polygons.is_empty(),
+        "authored walkable floors must survive"
     );
-    assert!(!bytes.is_empty(), "authored walkable floors must survive");
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("31_37.nav"), bytes).unwrap();
-    let polygons = read_walkable_polygons(dir.path()).unwrap();
-    assert!(!polygons.is_empty());
-    let mut nav = NavigationMap::open(dir.path()).unwrap();
+    let mut nav = NavigationMap::open(&nav_dir).unwrap();
     let polygon = &polygons[polygons.len() / 2];
     let center = polygon
         .iter()

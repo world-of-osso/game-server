@@ -3,7 +3,15 @@ use crate::*;
 use glam::{Vec3, Vec3Swizzles};
 use recastnavigation_sys::*;
 
-const SUBTILE_CELLS: i32 = 512;
+const TILE_CELLS: u32 = 2048;
+pub const VERTEX_CAPACITY_ERROR: &str = "RECAST_VERTEX_CAPACITY_EXCEEDED";
+
+pub fn grid_subtile_size(subdivisions: u32) -> Result<f32, String> {
+    if !subdivisions.is_power_of_two() || !(SUBDIVISIONS..=TILE_CELLS).contains(&subdivisions) {
+        return Err(format!("invalid navigation grid {subdivisions}"));
+    }
+    Ok(TILE_SIZE / subdivisions as f32)
+}
 const BORDER_CELLS: i32 = RADIUS_CELLS + 3;
 const HEIGHT_CELLS: i32 = ceil_cells(AGENT_HEIGHT, CELL_HEIGHT);
 const CLIMB_CELLS: i32 = (AGENT_CLIMB / CELL_HEIGHT) as i32;
@@ -30,6 +38,16 @@ pub fn bake_collected(
     water: &[(Vec3, Vec3)],
     tile: (u32, u32),
 ) -> Result<Vec<u8>, String> {
+    bake_collected_on_grid(geometry, water, tile, SUBDIVISIONS)
+}
+
+pub fn bake_collected_on_grid(
+    geometry: &los::bake::CollectedGeometry,
+    water: &[(Vec3, Vec3)],
+    tile: (u32, u32),
+    subdivisions: u32,
+) -> Result<Vec<u8>, String> {
+    let subtile_size = grid_subtile_size(subdivisions)?;
     let triangles = &geometry.triangles;
     let obstacles: std::collections::HashSet<_> =
         geometry.obstacles.iter().map(triangle_key).collect();
@@ -38,18 +56,18 @@ pub fn bake_collected(
     }
     let (x, z) = tile_bounds(tile);
     let mut packets = Vec::new();
-    for row in 0..SUBDIVISIONS {
-        for col in 0..SUBDIVISIONS {
+    for row in 0..subdivisions {
+        for col in 0..subdivisions {
             let min = Vec3::new(
-                x + col as f32 * SUBTILE_SIZE,
+                x + col as f32 * subtile_size,
                 0.0,
-                z + row as f32 * SUBTILE_SIZE,
+                z + row as f32 * subtile_size,
             );
             let coords = (
-                (63 - tile.1) * SUBDIVISIONS + col,
-                tile.0 * SUBDIVISIONS + row,
+                (63 - tile.1) * subdivisions + col,
+                tile.0 * subdivisions + row,
             );
-            let packet = bake_subtile(triangles, &obstacles, water, min, coords)
+            let packet = bake_subtile(triangles, &obstacles, water, min, coords, subdivisions)
                 .map_err(|error| format!("tile {tile:?}, Detour subtile {coords:?}: {error}"))?;
             if !packet.is_empty() {
                 packets.push(packet);
@@ -69,6 +87,7 @@ pub fn bake_collected(
 }
 
 struct RasterInput {
+    cells: i32,
     vertices: Vec<f32>,
     indices: Vec<i32>,
     areas: Vec<u8>,
@@ -81,13 +100,16 @@ impl RasterInput {
         triangles: &[[Vec3; 3]],
         obstacles: &std::collections::HashSet<[u32; 9]>,
         origin: Vec3,
+        subdivisions: u32,
     ) -> Self {
         let border = BORDER_CELLS as f32 * CELL_SIZE;
         let mut min = origin - Vec3::new(border, 0.0, border);
-        let mut max = origin + Vec3::new(SUBTILE_SIZE + border, 0.0, SUBTILE_SIZE + border);
+        let size = TILE_SIZE / subdivisions as f32;
+        let mut max = origin + Vec3::new(size + border, 0.0, size + border);
         min.y = f32::MAX;
         max.y = f32::MIN;
         let mut input = Self {
+            cells: (TILE_CELLS / subdivisions) as i32,
             vertices: Vec::new(),
             indices: Vec::new(),
             areas: Vec::new(),
@@ -165,7 +187,7 @@ impl RecastBuild {
     }
 
     fn rasterize(&self, input: &RasterInput) -> Result<(), String> {
-        let side = SUBTILE_CELLS + 2 * BORDER_CELLS;
+        let side = input.cells + 2 * BORDER_CELLS;
         // SAFETY: buffers are complete triangle soup; indices address those vertices.
         unsafe {
             require(
@@ -300,7 +322,7 @@ impl RecastBuild {
         }
         let unique_vertices: usize = unique.values().map(Vec::len).sum();
         let limit = if vertices >= 0xfffe {
-            "contour vertex capacity: maxVertices >= 0xfffe"
+            VERTEX_CAPACITY_ERROR
         } else {
             "internal polygonization/allocation failure (not contour vertex capacity)"
         };
@@ -395,8 +417,9 @@ fn bake_subtile(
     water: &[(Vec3, Vec3)],
     origin: Vec3,
     coords: (u32, u32),
+    subdivisions: u32,
 ) -> Result<Vec<u8>, String> {
-    let input = RasterInput::clipped(triangles, obstacles, origin);
+    let input = RasterInput::clipped(triangles, obstacles, origin, subdivisions);
     if input.areas.is_empty() {
         return Ok(Vec::new());
     }
