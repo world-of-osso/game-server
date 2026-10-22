@@ -103,6 +103,14 @@ class MidnightPlacementAcceptance(unittest.TestCase):
         self.assertEqual(proof['source_row']['ContentTuningID'], 0)
         self.assertEqual(proof['effective_content_tuning']['map_difficulty_row']['MapID'], map_id)
         self.assertEqual(receipt['sql_replay_count'], 3)
+        if entry in (231864, 239008, 259445):
+            proof = receipt['donors'][0]['hostility_source']
+            self.assertEqual(proof['policy'], 'FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER')
+            self.assertEqual(proof['binding'][0:2], [map_id, entry])
+            self.assertEqual(int(proof['rows']['JournalEncounter']['row']['ID']), journal_id)
+            self.assertEqual(proof['rows']['MapDifficulty']['row']['DifficultyID'], '205')
+            self.assertEqual(int(proof['rows']['MapDifficulty']['row']['MapID']), map_id)
+            self.assertEqual(len(receipt['placements'][0]['all_surface_heights']), 1)
 
 
 if __name__ == '__main__':
