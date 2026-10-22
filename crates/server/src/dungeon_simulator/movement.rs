@@ -111,43 +111,7 @@ fn read_legs(
     from: Vec3,
     destination: Vec3,
 ) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
-    let points = space.route(from, destination)?;
-    let mut previous = from;
-    points
-        .into_iter()
-        .map(|next| {
-            let nearest = |point: Vec3| {
-                space
-                    .0
-                    .packs
-                    .iter()
-                    .min_by(|a, b| {
-                        let distance =
-                            |pack: &super::graph::Pack| pack.point().distance_squared(point);
-                        distance(a).total_cmp(&distance(b))
-                    })
-                    .unwrap()
-                    .id
-            };
-            let a = nearest(previous);
-            let b = nearest(next);
-            let yards = if a == b {
-                previous.distance(next)
-            } else {
-                space
-                    .0
-                    .edges
-                    .iter()
-                    .find(|edge| {
-                        (edge.from == a && edge.to == b) || (edge.from == b && edge.to == a)
-                    })
-                    .ok_or_else(|| format!("route leg pack{a}->pack{b} lacks a frozen edge"))?
-                    .yards
-            };
-            previous = next;
-            Ok((next, yards))
-        })
-        .collect()
+    space.walk_legs(from, destination)
 }
 
 fn advance(mut from: Vec3, travel: &mut Travel, mut yards: f32, reach: f32) -> Vec3 {

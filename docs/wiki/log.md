@@ -1,6 +1,10 @@
+## 2026-10-21 — Continuous frozen walk endpoints
+
+[Native endpoint/time boundary](systems/dungeon-simulator.md#continuous-frozen-walk-endpoints-2026-10-21): full Azure1 ownerDeath RED106.58s plus two exact recorded-position REDs0.12s prove goal-anchor overshoot and full-edge-time restart. Walking now shares continuous existing-edge endpoints/proportional native yards between safety qualification and movement; no new component links or changed book hops. GREEN and new seeded qualification pending; prior2f443Stockade50/50 is not current proof after this geometry change.
+
 ## 2026-10-21 — Path-candidate Stockade qualification
 
-[Stockade current cohort](systems/dungeon-simulator.md#current-path-candidate-stockade-qualification-2026-10-21): same-code2f443fb5a/P03cebdb/frozen40d95b0 clears50/50,150native boss Deaths,0failures. Fresh1–49 batch2575.069794s plus retained native seed50 receipt83.707545s; no invented contiguous50wall. Actual34/1/level32 verified for all50. Azure and live acceptance remain open.
+[Stockade current cohort](systems/dungeon-simulator.md#qualified-path-candidate-stockade-cohort-2026-10-21): same-code2f443fb5a/P03cebdb/frozen40d95b0 clears50/50,150native boss Deaths,0failures. Fresh1–49 batch2575.069794s plus retained native seed50 receipt83.707545s; no invented contiguous50wall. Actual34/1/level32 verified for all50. Azure and live acceptance remain open.
 
 ## 2026-10-21 — Post-path Azure qualification
 
