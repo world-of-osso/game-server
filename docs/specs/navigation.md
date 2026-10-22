@@ -15,6 +15,12 @@ Phase-1 baked obstacle-aware creature movement in `crates/navigation` and server
 - [x] Never substitute straight movement on a baked map with a missing tile, invalid artifact or unreachable endpoint. Entirely unbaked maps log that boundary explicitly and retain current movement.
 - [x] Stockade chase and home return detour around actual walls; every path segment is clear under the existing LOS query. Stormwind ground fixtures and unreachable-target evade have behavioral proof.
 
+## Dense-map bake capacity
+
+- [x] Start each map with the published4×4 spatial grid. Only a proven Recast16-bit contour-vertex capacity overflow may trigger deterministic whole-map power-of-two refinement. Never change voxel/body/clearance/slope/region/simplification values or add map-specific settings to make geometry fit.
+- [x] Preserve ordinary4×4 payload bytes. Read spatial grid width from validated encoded Detour bounds; reject mixed grids and retain explicit errors for empty/invalid/unreachable navigation, without a direct-route substitution.
+- [x] Prove real2669tile31_37 RED→GREEN, mixed-grid rejection, refined cross-tile connectivity, and ordinary-grid byte identity before publishing refined maps. [Grid contract](../wiki/design/navigation-worker.md#encoded-navigation-grid-contract).
+
 ## Nonblocking server queries
 
 - [x] Server fixed systems never perform navigation directory/tile reads, decoding or Detour queries; a worker exclusively owns its NavigationMaps.
@@ -75,6 +81,9 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 ## Tests asserting this spec
 
+- `crates/navigation/tests/dense_authored_tile.rs` — productionCLI real2669tile31_37 capacity RED→GREEN plus querying the authored baked floor.
+- `crates/navigation/tests/refined_grid.rs` — generated refined-grid cross-WoW-tile routes in both directions and explicit mixed-grid rejection. Recorded patchedAzure4×4 payload hashes remain identical; four full repaired-map outputs are uniformly8×8 with unchanged encoded body parameters.
+
 - `crates/server/src/followers/hazard_reaction_tests.rs` and native Azure prediction/escape controls — +50ms source-curve contact, no early movement before250ms, first-ready-tick movement, actual held-worker standing inside, predicted escape and actual aura cleanup. Requested policy cohort passes33/0fail/0ignored; merged-master acceptance remains lead-owned.
 
 - `crates/navigation/src/worker_tests.rs` — worker coalescing/cancel/error/death and real query variants; current dispatch recheck passes all six controls.
@@ -90,9 +99,8 @@ Source and implementation: [smooth script waypoints](../wiki/systems/navigation.
 
 ## Known gaps (current cycle)
 
-- [ ] Lead-owned release/publication; local full LOS-tile bake coverage is complete.
+- [ ] Lead-owned release/publication; requested27 follower maps are staged with complete LOS/M2/nav tile coverage, not full gameplay reachability. Their20authored entrance→boss queries yield8PASS/12unavailable;18maps lack an authored entrance and4lack Normal boss spawns. [Receipts/grid boundary](../wiki/design/navigation-worker.md#encoded-navigation-grid-contract).
 - [ ] Lead must preserve vendored native build/config inputs in the release snapshot; see [deployment boundary](../wiki/systems/navigation.md#lead-owned-shipping).
-- [ ] Full workspace formatting has an unchanged inherited module-order failure; only changed-file formatting is passing.
 
 ## Out of scope
 
