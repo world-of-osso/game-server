@@ -1,4 +1,5 @@
 //! Native 300s dummy qualification. This measures the existing kit, not a new rotation.
+mod engagement_tests;
 mod inputs;
 mod player_rotation;
 mod power_tests;
@@ -64,6 +65,7 @@ fn replace_add_wave(run: &mut Run, at: f64) -> Result<(), String> {
         run.targets.push(unit);
         run.damage_targets.push(unit);
     }
+    engage_fixture_opponents(run);
     let retired_still_present = retired
         .iter()
         .filter(|&&unit| run.app.world().get_entity(unit).is_ok())
@@ -139,16 +141,28 @@ fn prepare_reference(
     })
 }
 
-fn engage(run: &mut Run) {
-    let world = run.app.world_mut();
-    let owner = if world.get::<shared::components::Player>(run.actor).is_some() {
+fn fixture_player(run: &Run) -> Entity {
+    let world = run.app.world();
+    if world.get::<shared::components::Player>(run.actor).is_some() {
         run.actor
     } else {
         world
             .get::<crate::followers::Follower>(run.actor)
             .unwrap()
             .owner
-    };
+    }
+}
+
+fn engage_fixture_opponents(run: &mut Run) {
+    let owner = fixture_player(run);
+    for &target in &run.targets {
+        crate::combat_refs::set_in_combat_with(run.app.world_mut(), owner, target);
+    }
+}
+
+fn engage(run: &mut Run) {
+    let owner = fixture_player(run);
+    let world = run.app.world_mut();
     // A player selects its target directly; a follower retains its quiet controller.
     world.entity_mut(owner).insert((
         crate::networking::CombatTarget(Some(run.targets[0])),
@@ -158,6 +172,7 @@ fn engage(run: &mut Run) {
         .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
         .0
         .clear();
+    engage_fixture_opponents(run);
 }
 
 fn target_snapshot(run: &Run) -> Vec<Value> {
