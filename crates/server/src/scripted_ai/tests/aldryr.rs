@@ -114,8 +114,10 @@ fn encounter_coverage_aldryr_ongoing_native_damage_and_copy_credit() {
             .entries;
         let lanes = [
             (KEG_SMASH, &[5.1, 19.6, 34.1, 48.6, 63.4, 77.9][..]),
-            (THROW, &[10.0, 28.2, 46.4, 64.6, 82.8][..]),
-            (BELCH, &[14.4, 37.4, 60.4, 84.3][..]),
+            // Belch60.4 occupies3s, then due Keg63.4 occupies1.5s.
+            // Throw64.6 waits until64.9; its next83.1 cast defers Belch84.6.
+            (THROW, &[10.0, 28.2, 46.4, 64.9, 83.1][..]),
+            (BELCH, &[14.4, 37.4, 60.4, 84.6][..]),
         ];
         assert_eq!(
             attempts.len(),
