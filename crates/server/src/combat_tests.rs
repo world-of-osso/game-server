@@ -332,6 +332,28 @@ fn auto_attack_fires_at_correct_interval() {
 }
 
 #[test]
+fn auto_attack_two_second_timer_fires_on_exact_fortieth_native_tick() {
+    let mut app = setup_app();
+    let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 100.0);
+    spawn_attacker(&mut app, pos(0.0, 0.0, 0.0), target);
+    // Exercise the production countdown, not run_attack_tick's duplicate implementation.
+    auto_attack_system(app.world_mut());
+    assert_eq!(app.world().get::<Health>(target).unwrap().current, 90.0);
+    for tick in 1..=80 {
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(50));
+        auto_attack_system(app.world_mut());
+        let expected = 90.0 - (tick / 40) as f32 * 10.0;
+        assert_eq!(
+            app.world().get::<Health>(target).unwrap().current,
+            expected,
+            "native2s timer at50ms tick{tick}, including exact40/80 boundaries"
+        );
+    }
+}
+
+#[test]
 fn auto_attack_stops_when_target_dies() {
     let mut app = setup_app();
     let target = spawn_target(&mut app, pos(1.0, 0.0, 0.0), 10.0); // 10 HP = dies in 1 hit
