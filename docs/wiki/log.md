@@ -1,6 +1,6 @@
 ## 2026-10-22 — Muro placement / native Nekraxx binding-only packet
 
-[Maisara duo](investigations/follower-data.md#muro-placement-and-native-nekraxx-binding-only--2026-10-22): actual2missing RED0.007s→source2GREEN0.204s/actual-copy2GREEN0.019s atce8bc6ece. Fresh-copy5stable rows/replay3×: only Muro gains spawn/template/model; authored Nekraxx runtime31000176 pose/masks/Verified66431 remain unchanged, binding-only. Both native0CT5071/faction16/class4/health27 retained; independent rounded page markers and precise journalXY recorded separately. Null entrance/named gap/no route query, publication pending.
+[Maisara duo](investigations/follower-data.md#muro-placement-and-native-nekraxx-binding-only--2026-10-22): actual2missing RED0.007s→source2GREEN0.204s/actual-copy2GREEN0.019s atce8bc6ece. Fresh-copy5stable rows/replay3×: only Muro gains spawn/template/model; authored Nekraxx runtime31000176 pose/masks/Verified66431 remain unchanged, binding-only. Both native0CT5071/faction16/class4/health27 retained; independent rounded page markers and precise journalXY recorded separately. Null entrance/named gap/no route query; lead confirmed5inserts published and canonical sqldiff identical to replayed copy.
 
 ## 2026-10-22 — Ikuzz packet with explicit entrance gap
 
