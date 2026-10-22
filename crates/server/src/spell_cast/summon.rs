@@ -94,6 +94,12 @@ impl SummonProperties {
         }
     }
 
+    /// Minion ownership and EffectSummonType's ordinary Ally SetOwnerGUID;
+    /// a plain Wild TempSummon's summoner is not its source owner.
+    pub(crate) fn has_source_owner(self) -> bool {
+        self.is_minion() || self.control == CONTROL_ALLY
+    }
+
     /// TC EffectSummonType's default title branch and Map::SummonCreature's
     /// UNIT_MASK_SUMMON. A title label alone is not a distinct control/runtime.
     /// Joined spawn groups select the separate guardian route, not this branch.
@@ -661,8 +667,9 @@ fn roll_summon_level(
     dest: super::targets::Dest,
 ) -> Option<SelectedSummonLevel> {
     let owner_level = read_summoner_level(world, owner)?;
-    let uses_native_level =
-        properties.is_guardian() || (properties.control == CONTROL_WILD && properties.title == 0);
+    let wild_default = properties.control == CONTROL_WILD && properties.title == 0;
+    let preserves_creature_level = properties.flags & USE_CREATURE_LEVEL != 0;
+    let uses_native_level = preserves_creature_level || properties.is_guardian() || wild_default;
     if !uses_native_level {
         return Some(SelectedSummonLevel {
             difficulty: 0,

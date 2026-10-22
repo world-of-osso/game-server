@@ -164,6 +164,75 @@ fn rotation_fidelity_windwalker_natural_combo_breaker_pays_no_chi_and_spends_one
     );
 }
 
+#[test]
+fn rotation_fidelity_windwalker_dance_rejects_non_chi_tiger_palm() {
+    let (mut h, unit) = monk(41);
+    let target = h.npc;
+    assert!(
+        has_aura(h.app.world(), unit, 325201),
+        "actual learned native Dance"
+    );
+    for _ in 0..160 {
+        cast_native(&mut h, unit, 100780, target);
+        assert!(
+            !has_aura(h.app.world(), unit, 325202),
+            "native325201 requires spending Chi; Tiger Palm spends Energy, not Chi"
+        );
+    }
+}
+
+fn dance_regenerated(h: &Harness, unit: Entity, from: usize) -> bool {
+    h.inbox.log[from..].iter().any(|event| {
+        event.source == Some(unit.to_bits())
+            && event.spell_id == Some(325202)
+            && matches!(
+                event.kind,
+                CombatLogKind::AuraApplied | CombatLogKind::AuraRefreshed
+            )
+    })
+}
+
+#[test]
+fn rotation_fidelity_windwalker_dance_natural_proc_pays_no_chi_and_spends_one_use() {
+    let (mut h, unit) = monk(41);
+    let target = h.npc;
+    for _ in 0..480 {
+        cast_native(&mut h, unit, 100780, target);
+        let chi = crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
+            .unwrap()
+            .0;
+        if chi < 1.0 && !has_aura(h.app.world(), unit, 116768) {
+            continue; // A real missed Palm did not supply Chi; never grant it.
+        }
+        cast_native(&mut h, unit, 100784, target);
+        if !has_aura(h.app.world(), unit, 325202) {
+            continue;
+        }
+        let before = crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
+            .unwrap()
+            .0;
+        let uses = stacks(&h, unit, 325202);
+        let start = h.inbox.log.len();
+        cast_native(&mut h, unit, 101546, target);
+        if dance_regenerated(&h, unit, start) {
+            continue; // An actual immediate re-proc is not failed consumption.
+        }
+        let after = crate::spell_cast::powers::power_value(h.app.world(), unit, PowerType::Chi)
+            .unwrap()
+            .0;
+        assert_eq!(before, after, "native325202 makes actual SCK free");
+        assert_eq!(
+            stacks(&h, unit, 325202),
+            uses - 1,
+            "one ordinary SCK consumes one Dance use"
+        );
+        return;
+    }
+    panic!(
+        "480 natural Palm/Chi-spender episodes produced no usable native Dance lifecycle; no forced RNG/buff/resource grants"
+    );
+}
+
 fn ordinary_ticks(h: &Harness, unit: Entity, from: usize) -> Vec<i32> {
     h.inbox.log[from..]
         .iter()

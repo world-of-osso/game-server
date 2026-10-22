@@ -300,13 +300,41 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
     let spell = world_db().unwrap().store.get(99104).unwrap();
     assert_eq!(spell.effects[0].misc_values, [53453, 3141]);
     assert!(super::summon::unsupported_reason(h.app.world(), &spell.effects[0]).is_none());
+    // TC Creature::Create initializes terrain area before SelectLevel. Normal53453
+    // has tuning0/delta0; real area7558 supplies tuning332 with levels10–45.
+    super::test_harness::place_toy_caster_on_source_map_area(
+        &mut h,
+        1220,
+        955950,
+        [4584.0, 6450.666],
+        7558,
+    );
+    let position = *h.app.world().get::<Position>(h.caster).unwrap();
+    let position = Vec3::new(position.x, position.y, position.z);
+    let (area_tuning, maximum): (u32, u8) = conn
+        .query_row(
+            "SELECT a.ContentTuningID, c.maxlevel FROM area_table a
+         JOIN content_tuning_level c ON c.ID = a.ContentTuningID WHERE a.ID = 7558",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((area_tuning, maximum), (332, 45));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<shared::components::Level>(h.caster)
+            .unwrap()
+            .0,
+        10
+    );
     let ctx = super::effects::EffectCtx {
         caster: h.caster,
         spell,
         depth: 0,
         // Target43 selection is outside this companion lifecycle boundary.
         dest: Some(super::targets::Dest {
-            position: Vec3::ZERO,
+            position,
             orientation: 0.0,
         }),
         chain_multiplier: 1.0,
@@ -351,8 +379,11 @@ fn toyfx_companion_fixture_follows_is_immune_and_replaces_slot() {
             .display_id,
         38340
     );
-    // Companion level scaling is a separate contract, not an unconditional level1.
-    // TC TemporarySummon.cpp240–253 clamps owner level against source scaling.
+    assert_eq!(
+        world.get::<shared::components::UnitLevel>(summon),
+        Some(&shared::components::UnitLevel(maximum)),
+        "UseCreatureLevel must preserve native regional birth instead of caster level"
+    );
     assert!(
         world
             .get::<super::summon::SummonedCreature>(summon)

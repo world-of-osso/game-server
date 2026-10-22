@@ -324,6 +324,7 @@ pub struct MapStore {
     /// Unambiguous CASC journal → TDB map/display joins: (map, creature) → encounter bit.
     pub raid_creature_encounters: HashMap<(u32, u32), u32>,
     pub area_triggers: HashMap<u32, Vec<AreaTriggerTeleport>>,
+    pub(crate) world_area_triggers: crate::world_area_triggers::Catalog,
     pub safe_locs: HashMap<u32, WorldLocation>,
     /// Nonzero WorldSafeLocs.TransportSpawnId: location coordinates are ship-relative.
     pub safe_loc_transports: HashMap<u32, u32>,
@@ -495,6 +496,7 @@ pub fn load_map_store(conn: &Connection) -> rusqlite::Result<MapStore> {
     let safe_locs = load_safe_locs(conn)?;
     Ok(MapStore {
         maps: load_maps(conn)?,
+        world_area_triggers: crate::world_area_triggers::load_catalog(conn)?,
         difficulties: load_difficulties(conn)?,
         difficulty_conditions: load_difficulty_conditions(conn)?,
         difficulty_entries: load_difficulty_entries(conn)?,

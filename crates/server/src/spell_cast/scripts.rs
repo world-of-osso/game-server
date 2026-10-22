@@ -30,6 +30,7 @@ mod empower_evoker;
 mod essence_burst;
 pub(crate) use clearcasting::{OMEN, check_omen_proc};
 mod germination;
+pub(crate) mod holy_priest;
 mod hot_streak;
 mod lava_surge;
 pub(super) use germination::redirect_rejuvenation;
@@ -46,7 +47,9 @@ mod windwalker;
 
 mod voltaic_blaze;
 pub(crate) use chrono_flame::record_health_change;
-pub(crate) use windwalker::ordinary_combo_cast;
+pub(crate) use windwalker::{
+    DANCE_OF_CHIJI, after_dance_cast_event, check_dance_proc, ordinary_combo_cast,
+};
 
 pub(super) use batch9::update_ground_pulses;
 pub(crate) use batch9::{ground_pulse_radius, hostile_ground_fields, owned_ground_fields};
@@ -84,6 +87,9 @@ pub(super) fn cast_effect(spell: u32, index: u8) -> Option<super::effects::CastE
 }
 /// Native per-unit scripts replace the default effect handler before dispatch.
 pub(super) fn effect_handler(spell: u32, index: u8) -> Option<super::effects::EffectHandler> {
+    if (spell, index) == (super::toy_coyote::DESPAWN, 0) {
+        return Some(super::toy_coyote::despawn);
+    }
     if (spell, index) == (super::toy_flag::TARGETING, 0) {
         return Some(super::toy_flag::plant);
     }
@@ -533,6 +539,8 @@ pub fn after_cast(spell_id: u32) -> Option<AfterCastHook> {
         return Some(hook);
     }
     match spell_id {
+        holy_priest::APOTHEOSIS => Some(holy_priest::restore_holy_words),
+        prayer_of_mending::PRAYER => Some(holy_priest::reduce_word_on_mending),
         essence_burst::AZURE_STRIKE | essence_burst::LIVING_FLAME => {
             Some(essence_burst::roll_essence_burst)
         }
@@ -989,11 +997,22 @@ fn reduce_cooldown(world: &mut World, caster: Entity, spell_id: u32, seconds: f6
         .get(spell_id)
         .and_then(|spell| spell.categories.as_ref())
         .map_or(0, |category| category.charge_category);
-    let Some(mut history) = world.get_mut::<super::SpellHistory>(caster) else {
+    #[cfg(test)]
+    let before = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+    let reduced = world
+        .get_mut::<super::SpellHistory>(caster)
+        .map(|mut history| {
+            reduce_running_timers(&mut history, charge_category, spell_id, now, seconds)
+        });
+    #[cfg(test)]
+    {
+        let after = super::holy_metrics::read_recharge(world, caster, charge_category, now);
+        let applied = (before - after).max(0.0).min(seconds);
+        super::holy_metrics::record_reduction(world, caster, spell_id, seconds, applied);
+    }
+    let Some((charges, remaining_ms)) = reduced else {
         return;
     };
-    let (charges, remaining_ms) =
-        reduce_running_timers(&mut history, charge_category, spell_id, now, seconds);
     if let Some(charges) = charges {
         super::send_to_owner(world, caster, charges);
     }

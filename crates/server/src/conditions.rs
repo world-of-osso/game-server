@@ -7,7 +7,10 @@
 //! (`IsObjectMeetToConditionList`), each negated by `NegativeCondition`; an effect
 //! without conditions takes every unit. Object-entry conditions (current51 and
 //! source-supported legacy31) without a spawn id and creature StringId (58) are
-//! modelled for units/players; other conditions are unmet and reported when loaded.
+//! modelled for units/players. Relation33 target0/target1/OwnedBy3 reads the real
+//! caster and represented temporary-summon ownership, not any summoner association.
+//! Other ownership representations/forms remain unmodelled; unsupported forms
+//! are reported when loaded.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -23,6 +26,8 @@ const CONDITION_OBJECT_ENTRY_GUID: u32 = 51;
 const CONDITION_OBJECT_ENTRY_GUID_LEGACY: u32 = 31;
 /// `CONDITION_STRING_ID`.
 const CONDITION_STRING_ID: i64 = 58;
+const CONDITION_RELATION_TO: i64 = 33;
+const RELATION_OWNED_BY: u32 = 3;
 /// `TypeID` values `CONDITION_OBJECT_ENTRY_GUID` compares (ObjectGuid.h).
 const TYPEID_UNIT: u32 = 5;
 const TYPEID_PLAYER: u32 = 6;
@@ -35,6 +40,8 @@ enum Check {
     ObjectEntry { type_id: u32, entry: u32 },
     /// `ConditionStringValue1`: `Creature::HasStringId`.
     StringId(String),
+    /// ConditionTarget0 is a represented temporary summon owned by caster target1.
+    SummonOwnedByCaster,
     /// A condition type or form not modelled: never met.
     Unsupported,
 }
@@ -54,6 +61,32 @@ struct Condition {
 pub(crate) struct SpellTargetConditions(HashMap<(u32, u8), Vec<Condition>>);
 
 impl SpellTargetConditions {
+    /// Exact owned-entry conjunction required by source Coyote removal52173.
+    pub(crate) fn has_owned_entry_filter(&self, spell: u32, effect: u8, entry: u32) -> bool {
+        let Some(conditions) = self.0.get(&(spell, effect)) else {
+            return false;
+        };
+        let source_group = conditions.iter().all(|condition| {
+            !condition.negative
+                && condition.else_group == 0
+                && condition.effect_mask == (1 << effect)
+        });
+        if conditions.len() != 2 || !source_group {
+            return false;
+        }
+        let entry_check = Check::ObjectEntry {
+            type_id: TYPEID_UNIT,
+            entry,
+        };
+        let has_entry = conditions
+            .iter()
+            .any(|condition| condition.check == entry_check);
+        let has_owner = conditions
+            .iter()
+            .any(|condition| condition.check == Check::SummonOwnedByCaster);
+        has_entry && has_owner
+    }
+
     pub(crate) fn share_targets(&self, spell: u32, first: u8, second: u8) -> bool {
         self.0.get(&(spell, first)) == self.0.get(&(spell, second))
     }
@@ -66,13 +99,14 @@ impl SpellTargetConditions {
         spell_id: u32,
         effect_index: u8,
         unit: Entity,
+        caster: Entity,
     ) -> bool {
         let Some(conditions) = self.0.get(&(spell_id, effect_index)) else {
             return true;
         };
         let mut groups: HashMap<u32, bool> = HashMap::new();
         for condition in conditions {
-            let met = condition_meets(world, &condition.check, unit) != condition.negative;
+            let met = condition_meets(world, &condition.check, unit, caster) != condition.negative;
             *groups.entry(condition.else_group).or_insert(true) &= met;
         }
         groups.values().any(|&met| met)
@@ -80,7 +114,7 @@ impl SpellTargetConditions {
 }
 
 /// `Condition::Meets` (ConditionMgr.cpp:213-), condition target 0 being `unit`.
-fn condition_meets(world: &World, check: &Check, unit: Entity) -> bool {
+fn condition_meets(world: &World, check: &Check, unit: Entity, caster: Entity) -> bool {
     match *check {
         Check::ObjectEntry { type_id, entry } => {
             let (unit_type, unit_entry) = match world.get::<Npc>(unit) {
@@ -93,6 +127,9 @@ fn condition_meets(world: &World, check: &Check, unit: Entity) -> bool {
         Check::StringId(ref id) => world
             .get::<crate::zones::CreatureStringIds>(unit)
             .is_some_and(|ids| ids.has(id)),
+        Check::SummonOwnedByCaster => world
+            .get::<crate::spell_cast::summon::SummonedCreature>(unit)
+            .is_some_and(|summon| summon.owner == caster && summon.properties.has_source_owner()),
         Check::Unsupported => false,
     }
 }
@@ -150,6 +187,9 @@ pub(crate) fn load_spell_target_conditions(path: &Path) -> rusqlite::Result<Spel
         let check = match kind {
             _ if target != 0 => Check::Unsupported,
             CONDITION_STRING_ID => Check::StringId(text),
+            CONDITION_RELATION_TO if [value1, value2, value3] == [1, RELATION_OWNED_BY, 0] => {
+                Check::SummonOwnedByCaster
+            }
             _ if value3 == 0 => decode_object_entry(kind, value1, value2),
             _ => Check::Unsupported,
         };

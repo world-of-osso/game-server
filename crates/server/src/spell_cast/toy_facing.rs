@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use shared::components::{ModelDisplay, Player, Rotation, UnitScale};
 
 use super::{CastFailure, targets, toy_requirements::ToyCastingRequirements};
+use crate::scripted_ai::model_reach::{PLAYER_BOUNDING_RADIUS, scaled_model_dimension};
 
 const MIN_MELEE_REACH: f32 = 2.0;
-const PLAYER_BOUNDING_RADIUS: f32 = 0.389;
 const IN_FRONT: u32 = 1;
 const PET_BOUNDING_RADIUS: f32 = 1.0;
 
@@ -26,13 +26,12 @@ fn bounding_radius(world: &World, target: Entity) -> Result<f32, CastFailure> {
         .facing
         .model_radii
         .get(&display.display_id)
-        .ok_or_else(|| {
-            CastFailure::Unsupported(format!(
-                "facing target display{} has no TDB bounding radius",
-                display.display_id
-            ))
-        })?;
-    Ok(radius * scale)
+        .copied();
+    Ok(scaled_model_dimension(
+        radius,
+        PLAYER_BOUNDING_RADIUS,
+        scale,
+    ))
 }
 
 pub(super) fn check_cast(
@@ -73,6 +72,34 @@ fn in_front(yaw: f32, offset: Vec3) -> bool {
     let relative_angle =
         (angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
     relative_angle.abs() <= std::f32::consts::FRAC_PI_2
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_model_info_radius_scales_defaults_and_preserves_authored_radius() {
+        let mut world = World::new();
+        world.insert_resource(super::super::toy_requirements::fixture());
+        let missing = world
+            .spawn((ModelDisplay { display_id: 124440 }, UnitScale(10.0)))
+            .id();
+        assert_eq!(bounding_radius(&world, missing).unwrap(), 0.389 * 10.0);
+        let sourced = world
+            .spawn((ModelDisplay { display_id: 42247 }, UnitScale(2.0)))
+            .id();
+        assert_eq!(bounding_radius(&world, sourced).unwrap(), 12.0);
+        let caster = world.spawn(crate::maps::InMap::continent(0)).id();
+        world
+            .entity_mut(missing)
+            .insert(crate::maps::InMap::continent(0));
+        assert!(check_boundary(&world, caster, missing, 9.0).is_ok());
+        assert!(matches!(
+            check_boundary(&world, caster, missing, 16.0),
+            Err(CastFailure::NotInFront)
+        ));
+    }
 }
 
 fn check_boundary(

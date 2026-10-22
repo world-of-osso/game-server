@@ -9,11 +9,39 @@ struct Travel {
     legs: std::collections::VecDeque<(Vec3, f32)>,
 }
 
+pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
+    let mut units: Vec<_> = world
+        .query::<(Entity, &crate::followers::Follower)>()
+        .iter(world)
+        .filter(|(_, follower)| follower.owner == owner)
+        .map(|(unit, _)| unit)
+        .collect();
+    units.push(owner);
+    let pets: Vec<_> = units
+        .iter()
+        .filter_map(|unit| crate::hunter_pet::summoned_pet(world, *unit))
+        .collect();
+    units.extend(pets);
+    for unit in units {
+        world.entity_mut(unit).remove::<Travel>();
+    }
+}
+
 fn point(position: &Position) -> Vec3 {
-    Vec3::new(position.x, 0.0, position.z)
+    Vec3::new(position.x, position.y, position.z)
 }
 
 fn destination(world: &World, unit: Entity, from: Vec3) -> Option<(Vec3, f32)> {
+    if world.get::<crate::creature_ai::CreatureState>(unit)
+        == Some(&crate::creature_ai::CreatureState::Returning)
+    {
+        let home = crate::creature_ai::return_home_position(
+            world.get::<crate::creature_ai::SpawnPoint>(unit)?,
+            world.get::<crate::creature_ai::HomePosition>(unit),
+            world.get::<crate::scripted_ai::movement::ScriptedPath>(unit),
+        );
+        return Some((point(&home), 0.0));
+    }
     if let Some(intent) = world.get::<MoveIntent>(unit) {
         return Some((intent.0, 0.0));
     }
@@ -79,10 +107,8 @@ fn read_legs(
                     .packs
                     .iter()
                     .min_by(|a, b| {
-                        let distance = |pack: &super::graph::Pack| {
-                            Vec3::new(pack.position[0], 0.0, pack.position[1])
-                                .distance_squared(point)
-                        };
+                        let distance =
+                            |pack: &super::graph::Pack| pack.point().distance_squared(point);
                         distance(a).total_cmp(&distance(b))
                     })
                     .unwrap()
@@ -165,7 +191,7 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
         unit,
         Position {
             x: next.x,
-            y: 0.0,
+            y: next.y,
             z: next.z,
         },
         speed,
@@ -177,7 +203,22 @@ fn move_one(world: &mut World, unit: Entity, dt: f32) -> Result<(), String> {
             z: 0.0,
         });
     }
-    world.entity_mut(unit).insert(travel);
+    let returned_home = travel.legs.is_empty()
+        && world.get::<crate::creature_ai::CreatureState>(unit)
+            == Some(&crate::creature_ai::CreatureState::Returning);
+    if returned_home {
+        if let Some(home) = world.get::<crate::creature_ai::HomePosition>(unit) {
+            let facing = home.orientation;
+            world.entity_mut(unit).insert(Rotation {
+                x: 0.0,
+                y: facing,
+                z: 0.0,
+            });
+        }
+        crate::creature_ai::finish_return_home(world, unit);
+    } else {
+        world.entity_mut(unit).insert(travel);
+    }
     Ok(())
 }
 
