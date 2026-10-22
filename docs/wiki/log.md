@@ -1,3 +1,7 @@
+## 2026-10-21 — Barbed Shot secondary target minimum
+
+[Native targeting](investigations/follower-data.md#barbed-shot-secondary-targets--2026-10-21): actual primaryDoT starves engaged undotted secondary, RED47.19s. Generic per-entry own-aura minimum with native preflight/CC protection and253 policy yields GREEN56.39s; unengaged target untouched. Producer2PASS, single stable-key interval; native ownership/CC/range controls, affected BM metrics and broader APL remain open.
+
 ## 2026-10-21 — Native empower charge cancellation
 
 [Fire recovery](investigations/follower-data.md#native-empower-pipeline--2026-10-21): real cancel preserves native2456 one-charge/30s recovery, rejects immediate retry after finish GCD and permits real damage after natural recovery;1PASS35.31s at200168553, zero warnings, no production change. Current Deva empowers have no applicable Mana cost; paid-power coverage remains conditional rather than manufactured.

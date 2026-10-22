@@ -82,7 +82,6 @@ fn check_native_duck(level: u8) {
 }
 
 #[test]
-#[ignore = "native Barbed Shot shortest-own-DoT secondary-target counterexample"]
 fn rotation_fidelity_253_barbed_shot_targets_engaged_undotted_secondary() {
     use crate::spell_cast::test_harness::spawn_npc;
     use shared::components::{Health, ThreatTable};
