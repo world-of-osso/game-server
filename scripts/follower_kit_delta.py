@@ -1,7 +1,7 @@
 """Publish selected prepared kit intervals through stable native keys, COPY only.
 
-The prepared DB must come from follower_spec_kits.py. This delta updates existing
-intervals only; changed spellbook interval identities require requalification.
+The prepared DB must come from follower_spec_kits.py, which owns qualification
+of added native cast actions. Existing intervals may not be removed or renamed.
 """
 import argparse
 from contextlib import closing
@@ -33,21 +33,29 @@ def read_rows(db):
 def make_delta(db, original, desired, specs):
     before = {key: row for key, row in original.items() if key[0] in specs}
     after = {key: row for key, row in desired.items() if key[0] in specs}
-    if before.keys() != after.keys():
-        raise ValueError('kit interval keys differ; requalify the source spellbook')
+    removed = before.keys() - after.keys()
+    if removed:
+        raise ValueError('kit interval keys differ; requalify removed or renamed source intervals')
     if {key[0] for key in after} != set(specs):
         raise ValueError('requested specialization has no prepared kit intervals')
     quote = lambda value: db.execute('SELECT quote(?)', (value,)).fetchone()[0]
     statements = []
     changed_keys = []
     for key, row in after.items():
-        if before[key] == row:
+        if before.get(key) == row:
             continue
         values = ','.join(name + '=' + quote(value)
                           for name, value in zip(COLUMNS[3:], row[3:]))
-        where = ' AND '.join(name + '=' + quote(value)
-                             for name, value in zip(COLUMNS[:3], key))
-        statements.append(f'UPDATE follower_spec_kit SET {values} WHERE {where};')
+        if key not in before:
+            fields = ','.join(COLUMNS)
+            inserted = ','.join(quote(value) for value in row)
+            identity = ','.join(COLUMNS[:3])
+            statements.append(f'INSERT INTO follower_spec_kit ({fields}) VALUES ({inserted}) '
+                              f'ON CONFLICT({identity}) DO UPDATE SET {values};')
+        else:
+            where = ' AND '.join(name + '=' + quote(value)
+                                 for name, value in zip(COLUMNS[:3], key))
+            statements.append(f'UPDATE follower_spec_kit SET {values} WHERE {where};')
         changed_keys.append(key)
     return 'BEGIN IMMEDIATE;\n' + '\n'.join(statements) + '\nCOMMIT;\n', changed_keys
 
@@ -89,6 +97,7 @@ def prepare(args):
                    output_database=str(args.output_db.resolve()), output_database_sha256=digest(args.output_db),
                    sql=str(args.sql.resolve()), sql_sha256=digest(args.sql), specs=specs,
                    changed_specs=sorted({key[0] for key in changed}), changed_interval_keys=changed,
+                   inserted_interval_keys=[key for key in changed if key not in original],
                    changed_tables=['follower_spec_kit'] if changed else [],
                    unchanged_other_specs=True)
     args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')

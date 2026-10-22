@@ -30,7 +30,7 @@ For native selected books of262/63/1467, retain these bounded SimC76f8118 decisi
 
 BM Barbed Shot217200 uses SimC76f8118's minimum own-DoT remaining target rule among already-engaged enemies that pass ordinary native cast eligibility and are not protected by damage-breakable control. Missing own auras count as zero; another caster's aura does not count as this hunter's DoT. Retain the existing primary preference on equal remaining times. Native range, sight, cooldown, charges and resource checks remain authoritative; do not pull unengaged enemies or require an absent aura before spending a ready shot. This bounded target rule does not claim complete BM hero/build APL coverage.
 
-Kit publication must preserve unrelated specializations. Each scoped delta must reproduce the prepared intervals on a fresh canonical database copy, retain native interval identities and provide source/output/SQL hashes plus the changed interval keys. Validate composition with other pending kit publications before canonical application.
+Kit publication must preserve unrelated specializations. Each scoped delta must reproduce the prepared intervals on a fresh canonical database copy, retain native interval identities and provide source/output/SQL hashes plus the changed interval keys. Source-qualified prepared cast actions may add stable keys; removing or renaming existing intervals remains an error. Replaying an added action is idempotent and must preserve unrelated specs/tables. Validate composition with other pending kit publications before canonical application.
 
 ## Hunter pet source policy
 
