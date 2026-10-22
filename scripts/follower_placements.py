@@ -272,35 +272,61 @@ def qualify_journal_hostility(target, record, tables):
                       for name, row in rows.items()})
 
 
-def qualify_mdt_hostility(target, record, tables):
-    evidence = record['mdt_enemy_source']
+def parse_mdt_enemy_table(text):
+    start = text.index('MDT.dungeonEnemies[dungeonIndex] = {')
+    enemies = {}
+    for block in re.finditer(r'^  \[(\d+)\] = \{\n(.*?)(?=^  \[\d+\] = \{|^};)', text[start:], re.M | re.S):
+        body, offset = block[2], start + block.start(2)
+        entry = re.search(r'^    \["id"\] = (\d+),', body, re.M)
+        name = re.search(r'^    \["name"\] = "(.*)",', body, re.M)
+        clones = re.search(r'^    \["clones"\] = \{\s*$', body, re.M)
+        if entry is None or name is None or clones is None:
+            raise ValueError('MDT enemy lacks a readable ID, name or static clone list')
+        tail = body[clones.end():]
+        end = re.search(r'^    },\s*$', tail, re.M)
+        if end is None:
+            raise ValueError('MDT clone list has no source closing boundary')
+        headers = list(re.finditer(r'^      \[(\d+)\] = \{', tail[:end.start()], re.M))
+        npc = int(entry[1])
+        if npc in enemies or len({h[1] for h in headers}) != len(headers):
+            raise ValueError('MDT enemy or clone identity is duplicated')
+        enemies[npc] = dict(entry=npc, name=name[1], source_line=text[:offset + entry.start()].count('\n') + 1,
+                            is_boss=bool(re.search(r'^    \["isBoss"\] = true', body, re.M)),
+                            clone_count=len(headers), clone_count_source_line=text[:offset + clones.start()].count('\n') + 1,
+                            clone_lines=[text[:offset + clones.end() + h.start()].count('\n') + 1 for h in headers])
+    if not enemies:
+        raise ValueError('MDT table has no readable enemies')
+    return enemies
+
+
+def read_mdt_enemy_table(evidence, map_id, tables):
     roots = {'0ec5f50dea16cfc19f288de91125c70fa7455961': Path('/home/osso/.worktrees/mdt-0ec5f50'),
              'c6cccca29cb2612b8303cdfa543bc6c60f0f7c7f': Path('/home/osso/.worktrees/mdt-c6cccca'),
              'cb3c6cd723698178ff8ea500b62d28ef792edce8': Path('/home/osso/.worktrees/mdt-cb3c6cd72369')}
     path = Path(evidence['path']).resolve()
     root = roots.get(evidence['revision'])
-    if evidence['policy'] != TRASH_HOSTILITY_POLICY or root is None or not path.is_relative_to(root.resolve()) or digest(path) != evidence['sha256']:
+    if root is None or not path.is_relative_to(root.resolve()) or digest(path) != evidence['sha256']:
         raise ValueError('MDT enemy source is not the approved pinned file/revision/hash')
     text = path.read_text()
     challenge = re.search(r'\bmapID = (\d+)', text)
-    maps = [r for r in tables['MapChallengeMode'] if challenge and int(r['ID']) == int(challenge[1]) and int(r['MapID']) == record['map_id']]
+    maps = [r for r in tables['MapChallengeMode'] if challenge and int(r['ID']) == int(challenge[1]) and int(r['MapID']) == map_id]
     if len(maps) != 1:
         raise ValueError('MDT challenge-mode row does not identify the requested dungeon')
-    start = text.index('MDT.dungeonEnemies[dungeonIndex] = {')
-    entries = []
-    for match in re.finditer(r'^    \["id"\] = (\d+),', text[start:], re.M):
-        if int(match[1]) == record['entry']:
-            entries.append(start + match.start())
-    if len(entries) != 1 or text[:entries[0]].count('\n') + 1 != evidence['source_line']:
+    return parse_mdt_enemy_table(text), dict(source=evidence, db2_rows=dict(MapChallengeMode=maps[0]))
+
+
+def qualify_mdt_hostility(target, record, tables):
+    evidence = record['mdt_enemy_source']
+    if evidence['policy'] != TRASH_HOSTILITY_POLICY:
+        raise ValueError('MDT hostility requires its explicit approved policy')
+    enemies, proof = read_mdt_enemy_table(evidence, record['map_id'], tables)
+    enemy = enemies.get(record['entry'])
+    if enemy is None or enemy['source_line'] != evidence['source_line']:
         raise ValueError('MDT table lacks the unique enemy entry at its pinned source line')
-    before = text[:entries[0]].splitlines()
-    name = re.fullmatch(r'    \["name"\] = "(.*)",', before[-1])
     native = target.execute('SELECT name FROM tdb_creature_template WHERE entry=?', (record['entry'],)).fetchone()
-    if name is None or native is None or name[1] != native[0]:
+    if native is None or enemy['name'] != native[0]:
         raise ValueError('MDT enemy does not match its own native template name')
-    return dict(policy=TRASH_HOSTILITY_POLICY, source=evidence,
-                mdt_enemy=dict(entry=record['entry'], name=native[0], source_line=evidence['source_line']),
-                db2_rows=dict(MapChallengeMode=maps[0]))
+    return dict(policy=TRASH_HOSTILITY_POLICY, mdt_enemy=enemy, **proof)
 
 
 def prepare_templates(target, records, cache, tables=None):
@@ -447,15 +473,30 @@ def make_faction_update_sql(prepared, columns, before, after):
             f'UPDATE content_creature_template SET faction=16 WHERE {unchanged} AND faction IS 0;']
 
 
-def make_sql(baseline, prepared, faction_update_entries=()):
+def make_spawn_deletion_sql(prepared, columns, before):
+    quote = lambda value: prepared.execute('SELECT quote(?)', (value,)).fetchone()[0]
+    guid = before[columns.index('guid')]
+    exact = ' AND '.join(f'{name} IS {quote(value)}' for name, value in zip(columns, before))
+    return [f'INSERT INTO follower_placement_guard SELECT NOT EXISTS(SELECT 1 FROM content_creature WHERE guid={quote(guid)} AND NOT({exact}));',
+            f'DELETE FROM content_creature WHERE {exact};']
+
+
+def make_sql(baseline, prepared, faction_update_entries=(), spawn_deletion_guids=()):
     statements = ['BEGIN IMMEDIATE;', 'CREATE TEMP TABLE follower_placement_guard(ok INTEGER CHECK(ok=1));']
     changed = {}
     for table, keys in TABLE_KEYS.items():
         columns = [r[1] for r in prepared.execute(f'PRAGMA table_info({table})')]
         indexes = [columns.index(k) for k in keys]
         original = {tuple(row[i] for i in indexes): row for row in read_table_rows(baseline, table)}
+        current_rows = read_table_rows(prepared, table)
+        current_keys = {tuple(row[i] for i in indexes) for row in current_rows}
         inserted = []
-        for row in read_table_rows(prepared, table):
+        for key in sorted(original.keys() - current_keys):
+            if table != 'content_creature' or key[0] not in spawn_deletion_guids:
+                raise ValueError(f'placement packet must not remove existing {table}{key}')
+            statements.extend(make_spawn_deletion_sql(prepared, columns, original[key]))
+            inserted.append(key)
+        for row in current_rows:
             key = tuple(row[i] for i in indexes)
             if key in original:
                 if row != original[key]:

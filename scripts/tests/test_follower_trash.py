@@ -56,6 +56,14 @@ class TrashSourceControls(unittest.TestCase):
             self.assertEqual(proof['mdt_enemy']['source_line'], 60)
             self.assertEqual(proof['db2_rows']['MapChallengeMode']['MapID'], '2811')
 
+    def test_pinned_enemy_density_count_uses_clones_not_kill_force_weight(self):
+        with closing(fixture(self.source)) as target:
+            donors, _ = prepare_templates(target, [self.record], Path(os.environ['FOLLOWER_PLACEMENT_CACHE']), self.tables)
+            enemy = donors[0]['hostility_source']['mdt_enemy']
+            self.assertEqual(enemy['clone_count'], 11)
+            self.assertEqual(enemy['clone_count_source_line'], 78)
+            self.assertEqual(len(enemy['clone_lines']), 11)
+
     def test_mdt_source_drift_wrong_dungeon_nonmember_and_donor_not16_refuse(self):
         for mutation in ('hash', 'line', 'map', 'nonmember', 'donor'):
             with self.subTest(mutation=mutation), closing(fixture(self.source)) as target:
