@@ -1,0 +1,40 @@
+#![cfg(feature = "bake")]
+
+use glam::Vec3;
+use los::bake::CollectedGeometry;
+use navigation::{NavigationMap, bake::bake_collected};
+
+fn horizontal_patch(x0: f32, x1: f32, y: f32) -> [[Vec3; 3]; 2] {
+    let a = Vec3::new(x0, y, 10.0);
+    let b = Vec3::new(x0, y, 190.0);
+    let c = Vec3::new(x1, y, 190.0);
+    let d = Vec3::new(x1, y, 10.0);
+    [[a, b, c], [a, c, d]]
+}
+
+#[test]
+fn low_hanging_obstacle_inside_native_climb_budget_preserves_walkable_step() {
+    let floor = horizontal_patch(10.0, 190.0, 0.0);
+    // A collision obstruction spans the whole corridor, 0.8yd above its floor.
+    // Native TC filtering carries walkability onto this climbable span before
+    // clearance filtering, rather than deleting the floor beneath it as headroom.
+    let obstruction = horizontal_patch(90.0, 110.0, 0.8);
+    let geometry = CollectedGeometry {
+        triangles: floor.into_iter().chain(obstruction).collect(),
+        obstacles: obstruction.to_vec(),
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let baked = bake_collected(&geometry, &[], (32, 31)).unwrap();
+    std::fs::write(dir.path().join("32_31.nav"), baked).unwrap();
+    let mut nav = NavigationMap::open(dir.path()).unwrap();
+    let start = Vec3::new(60.0, 0.2, 100.0);
+    let target = Vec3::new(140.0, 0.2, 100.0);
+    let points = nav
+        .complete_path(start, target)
+        .expect("climbable low-hanging collision must not disconnect the corridor");
+    assert!(points.last().unwrap().distance(target) < 0.3);
+    assert!(
+        points.iter().any(|p| p.y >= 0.8),
+        "route must step onto support, not pass through its underside: {points:?}"
+    );
+}
