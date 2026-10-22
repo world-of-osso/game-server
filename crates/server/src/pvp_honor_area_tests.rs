@@ -136,6 +136,7 @@ fn achievements_criteria_honor_area31_full_fifty_actual_recipient_areas_and_reop
     let victim = victim_at(&mut world, 1, DEPOSITS[0]);
     hit(&mut world, killer, victim, 1000.0);
     assert_eq!(counter(&world, killer, 63413), Some(51));
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     let saved =
         crate::persistence::load_achievements(&world.resource::<GameDatabase>().db, players[0].0);
     for (leaf, &count) in expected[0].iter().enumerate() {

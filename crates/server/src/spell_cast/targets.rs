@@ -838,7 +838,7 @@ fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
 }
 
 /// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
-fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
+pub(super) fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
     if caster == target {
         return true;
     }
@@ -1490,6 +1490,18 @@ pub fn shared_selection_checks_radius(effect: &SpellEffect) -> bool {
             )
         )
     })
+}
+
+/// Native effect cardinality, not a list of class/group-heal spell IDs.
+pub(crate) fn selects_multiple_units(effect: &SpellEffect) -> bool {
+    effect.chain_targets > 1
+        || shared_selection_checks_radius(effect)
+        || effect.implicit_targets.iter().any(|&id| {
+            matches!(
+                selector(id),
+                Some(Selector::AllyOrRaid | Selector::RaidArea)
+            )
+        })
 }
 
 /// Radius of the effect's first target slot (`SpellEffectInfo::CalcRadius`).

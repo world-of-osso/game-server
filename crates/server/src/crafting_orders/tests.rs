@@ -224,6 +224,7 @@ fn complete_order(kind: u8) {
             (index == usize::from(kind)).then_some(1)
         );
     }
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     let db = &h.app.world().resource::<GameDatabase>().db;
     assert_eq!(
         persistence::load_achievements(db, worker_id)
