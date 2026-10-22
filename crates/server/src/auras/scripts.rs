@@ -91,6 +91,7 @@ pub(super) fn run_periodic(world: &mut World, unit: Entity, aura: &AuraInstance,
     }
 }
 
+pub(super) const INUNDATE: u32 = 378776;
 const FEEL_THE_BURN: u32 = 383391;
 const FIRE_BLAST: u32 = 108853;
 const ASPECT_OF_THE_TURTLE: u32 = 186_265;
@@ -350,7 +351,27 @@ fn check_feel_the_burn_proc(
     event.spell_id == Some(FIRE_BLAST)
 }
 
+/// INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS:70448 description, no pinned TDB proc row.
+fn check_inundate_proc(
+    world: &World,
+    _aura: &AuraInstance,
+    event: &super::procs::AuraEvent,
+) -> bool {
+    let utility_cast = matches!(event.spell_id, Some(370 | 51886 | 5394 | 51514 | 57994));
+    let in_combat = world
+        .get::<shared::components::CombatStatus>(event.actor)
+        .is_some_and(|status| status.0);
+    utility_cast && in_combat
+}
+
 pub(super) fn register_class_scripts(mut scripts: ResMut<AuraScripts>) {
+    scripts.0.insert(
+        INUNDATE,
+        AuraScript {
+            check_proc: Some(check_inundate_proc),
+            ..Default::default()
+        },
+    );
     scripts.0.insert(
         FEEL_THE_BURN,
         AuraScript {

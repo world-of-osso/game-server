@@ -294,6 +294,11 @@ fn proc_mask(world: &World, aura: &AuraInstance) -> [u32; 2] {
     if aura.spell_id == crate::spell_cast::scripts::DANCE_OF_CHIJI {
         return [0, PROC2_CAST_SUCCESSFUL];
     }
+    // INUNDATE_NATIVE_SUCCESSFUL_UTILITY_CASTS: its explicit list includes friendly
+    // utility casts too; native harmful-hit masks do not express successful casts.
+    if aura.spell_id == scripts::INUNDATE {
+        return [0, PROC2_CAST_SUCCESSFUL];
+    }
     world
         .get_resource::<SpellStore>()
         .and_then(|store| store.get(aura.spell_id))
