@@ -11,6 +11,7 @@ use crate::stats::StatModifiers;
 
 /// School bit indexes 0 Physical .. 6 Arcane.
 pub const SCHOOL_COUNT: usize = 7;
+const FRENZY: u32 = 1_264_934;
 
 /// Aura combat multipliers of one unit, read by the damage, heal, regen and
 /// movement paths. Stat changes (primary stats, crit, haste, mastery, max
@@ -50,6 +51,8 @@ pub struct AuraStatMods {
     pub autoattack_range_bonus: f32,
     /// MOD_SUMMON_DAMAGE429: only the owner's controlled pets.
     pub pet_damage_mult: f32,
+    /// Native1264934 Dummy0: active-pet melee interval factor (SimC76f8118 hunter2177).
+    pub pet_melee_time_mult: f32,
     /// MOD_GUARDIAN_DAMAGE_DONE531: only the owner's guardians.
     pub guardian_damage_mult: f32,
     /// MOD_RAGE_FROM_DAMAGE_DEALT 213, summed percent (TrinityCore
@@ -128,6 +131,7 @@ impl Default for AuraStatMods {
             autoattack_damage_mult: 1.0,
             autoattack_range_bonus: 0.0,
             pet_damage_mult: 1.0,
+            pet_melee_time_mult: 1.0,
             guardian_damage_mult: 1.0,
             rage_from_damage_dealt_pct: 0.0,
             power_regen_mult: Vec::new(),
@@ -407,6 +411,10 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
         let combat = &mut acc.combat;
         let stats = &mut acc.stats;
         match effect.aura_type {
+            // SimC76f8118 sc_hunter.cpp2177–2178: permanent Frenzy, not Barbed Shot stacks.
+            DUMMY if aura.spell_id == FRENZY && effect.index == 0 => {
+                combat.pet_melee_time_mult /= pct(amount);
+            }
             // Only these sourced spell fields bind support540 to a stat;
             // other540 spells remain unsupported (TC's handler is NULL).
             540 if aura.spell_id == super::augmentation::PRESCIENCE_BUFF && effect.index == 0 => {

@@ -21,6 +21,10 @@ pub(crate) fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Enti
         data.templates.extend(native.templates);
         data.difficulty_templates
             .extend(native.difficulty_templates);
+        let source = crate::test_data::world_data();
+        data.class_level_base_hp = source.class_level_base_hp.clone();
+        data.class_level_base_mana = source.class_level_base_mana.clone();
+        data.armor_constants = source.armor_constants.clone();
     }
     world.insert_resource(
         crate::spell_info::load_class_spells(&db)
@@ -28,4 +32,20 @@ pub(crate) fn spawn(world: &mut World, owner: Entity, entry: u32) -> Result<Enti
     );
     world.insert_resource(catalog);
     super::spawning::spawn(world, owner, profile)
+}
+
+/// The fixture spawns without zone visuals, so read the authentic template display.
+pub(crate) fn template_display(entry: u32) -> u32 {
+    rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap()
+    .query_row(
+        "SELECT CreatureDisplayID FROM content_creature_template_model
+         WHERE CreatureID=?1 ORDER BY Idx LIMIT 1",
+        [entry],
+        |row| row.get::<_, u32>(0),
+    )
+    .expect("authentic follower template display")
 }

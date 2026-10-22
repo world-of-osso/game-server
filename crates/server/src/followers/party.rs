@@ -262,6 +262,10 @@ pub(super) fn join_members(
                     unit,
                     world.get::<UnitLevel>(unit).expect("follower level").0,
                     difficulty,
+                    world
+                        .get::<shared::components::ModelDisplay>(unit)
+                        .expect("spawned follower display")
+                        .display_id,
                 ),
             );
             (Follower::member_id(unit), follower.profile.role)
@@ -447,6 +451,13 @@ mod copy_tests {
         let members = profiles
             .iter()
             .map(|profile| {
+                let display_id = db
+                    .query_row(
+                        "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx LIMIT 1",
+                        [profile.entry],
+                        |row| row.get(0),
+                    )
+                    .unwrap();
                 app.world_mut()
                     .spawn((
                         Follower {
@@ -459,6 +470,7 @@ mod copy_tests {
                             name: profile.name.clone(),
                         },
                         UnitLevel(12),
+                        shared::components::ModelDisplay { display_id },
                         shared::components::Health {
                             current: 1000.0,
                             max: 1000.0,
@@ -545,6 +557,45 @@ mod copy_tests {
                 .all(|&member| app.world().get_entity(member).is_err()),
             "all owned summons must leave the world after their owner disconnects"
         );
+    }
+
+    #[test]
+    fn party_follower_roster_keeps_actual_template_heads_after_interest_is_lost() {
+        let (mut app, owner, run) = fixture();
+        let db = rusqlite::Connection::open_with_flags(
+            crate::test_data::world_db_path(),
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        let expected: Vec<_> = run.members.iter().map(|&unit| {
+            let profile = &app.world().get::<Follower>(unit).unwrap().profile;
+            let display_id: u32 = db.query_row(
+                "SELECT CreatureDisplayID FROM content_creature_template_model WHERE CreatureID=? ORDER BY Idx LIMIT 1",
+                [profile.entry],
+                |row| row.get(0),
+            ).unwrap();
+            let name = profile.name.clone();
+            app.world_mut().entity_mut(unit).insert(shared::components::ModelDisplay { display_id });
+            (name, display_id)
+        }).collect();
+        join_party(app.world_mut(), owner, &run, &run.members).unwrap();
+        let mut groups = app.world_mut().resource_mut::<GroupRegistry>();
+        let group = groups.group_id_of(30).unwrap();
+        let roster = groups.build_roster(group, &OnlineView::new()).unwrap();
+        assert_eq!(roster.members.len(), 5);
+        for (name, display_id) in expected {
+            let member = roster
+                .members
+                .iter()
+                .find(|member| member.name == name)
+                .unwrap();
+            assert_eq!(member.entity, None);
+            let portrait = serde_json::to_value(&member.portrait).unwrap();
+            assert_eq!(
+                portrait["creature_display_id"], display_id,
+                "real follower head: {name}"
+            );
+        }
     }
 
     #[test]

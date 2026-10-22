@@ -14,7 +14,7 @@ const ABUNDANCE: u32 = 207640;
 const REJUVENATION: u32 = 774;
 const FRIENDS: &[u32] = &[209057, 209059, 209065];
 
-fn add_native_friend(h: &mut Harness, entry: u32) -> Entity {
+pub(super) fn add_native_friend(h: &mut Harness, entry: u32) -> Entity {
     let profile = h
         .app
         .world()
@@ -37,7 +37,7 @@ fn add_native_friend(h: &mut Harness, entry: u32) -> Entity {
     unit
 }
 
-fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
+pub(super) fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
     let (mut h, healer) = at_level(CRENNA, level, |_| {});
     let native = crate::spell_cast::test_harness::load_native_creature_world(FRIENDS);
     h.app
@@ -53,6 +53,7 @@ fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
         add_native_friend(&mut h, FRIENDS[1]),
         add_native_friend(&mut h, FRIENDS[2]),
     ];
+    join_native_party(&mut h, &patients);
     let spell = h.app.world().resource::<SpellStore>().get(TALENT).unwrap();
     let threshold = spell
         .effects
@@ -63,6 +64,68 @@ fn native_party(level: u8) -> (Harness, Entity, [Entity; 5]) {
     assert_eq!(threshold, 5.0);
     assert_eq!(patients.len(), threshold as usize);
     (h, healer, patients)
+}
+
+pub(super) fn join_native_party(h: &mut Harness, members: &[Entity]) {
+    use crate::group::{GroupRegistry, OnlineMember, OnlineView};
+    use shared::group::GroupRole;
+    let owner = h.caster;
+    h.app
+        .world_mut()
+        .entity_mut(owner)
+        .insert(crate::persistence::ClientId(1));
+    let player = h
+        .app
+        .world()
+        .get::<shared::components::Player>(owner)
+        .unwrap();
+    let mut online = OnlineView::from([(
+        1,
+        OnlineMember {
+            entity: owner.to_bits(),
+            name: player.name.clone(),
+            class: player.class,
+            level: h
+                .app
+                .world()
+                .get::<shared::components::Level>(owner)
+                .unwrap()
+                .0,
+            portrait: default(),
+            dungeon_difficulty: 1,
+            raid_difficulty: default(),
+        },
+    )]);
+    let companions: Vec<_> = members
+        .iter()
+        .copied()
+        .filter(|unit| *unit != owner)
+        .map(|unit| {
+            let follower = h.app.world().get::<super::Follower>(unit).unwrap();
+            let level = h
+                .app
+                .world()
+                .get::<shared::components::Level>(unit)
+                .unwrap()
+                .0;
+            let id = super::Follower::member_id(unit);
+            online.insert(
+                id,
+                follower.online(
+                    unit,
+                    level,
+                    1,
+                    super::native_fixture::template_display(follower.profile.entry),
+                ),
+            );
+            (id, follower.profile.role)
+        })
+        .collect();
+    let mut groups = GroupRegistry::default();
+    groups
+        .create_companion_party(1, GroupRole::Dps, &companions, &online)
+        .unwrap();
+    h.app.insert_resource(groups);
 }
 
 fn own_rejuvenation_expiry(h: &Harness, caster: Entity, target: Entity) -> Option<f64> {
@@ -81,7 +144,7 @@ fn own_count(h: &Harness, caster: Entity, patients: &[Entity]) -> usize {
         .count()
 }
 
-fn cast_real_rejuvenation(h: &mut Harness, caster: Entity, target: Entity) {
+pub(super) fn cast_real_rejuvenation(h: &mut Harness, caster: Entity, target: Entity) {
     creature_cast(h.app.world_mut(), caster, REJUVENATION, Some(target), false).unwrap();
     for _ in 0..200 {
         h.advance(1);

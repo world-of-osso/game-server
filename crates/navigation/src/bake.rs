@@ -3,7 +3,7 @@ use crate::*;
 use glam::{Vec3, Vec3Swizzles};
 use recastnavigation_sys::*;
 
-const SUBTILE_CELLS: i32 = 512;
+pub const VERTEX_CAPACITY_ERROR: &str = "RECAST_VERTEX_CAPACITY_EXCEEDED";
 const BORDER_CELLS: i32 = RADIUS_CELLS + 3;
 const HEIGHT_CELLS: i32 = ceil_cells(AGENT_HEIGHT, CELL_HEIGHT);
 const CLIMB_CELLS: i32 = (AGENT_CLIMB / CELL_HEIGHT) as i32;
@@ -30,6 +30,16 @@ pub fn bake_collected(
     water: &[(Vec3, Vec3)],
     tile: (u32, u32),
 ) -> Result<Vec<u8>, String> {
+    bake_collected_on_grid(geometry, water, tile, SUBDIVISIONS)
+}
+
+pub fn bake_collected_on_grid(
+    geometry: &los::bake::CollectedGeometry,
+    water: &[(Vec3, Vec3)],
+    tile: (u32, u32),
+    subdivisions: u32,
+) -> Result<Vec<u8>, String> {
+    let subtile_size = grid_subtile_size(subdivisions)?;
     let triangles = &geometry.triangles;
     let obstacles: std::collections::HashSet<_> =
         geometry.obstacles.iter().map(triangle_key).collect();
@@ -38,18 +48,19 @@ pub fn bake_collected(
     }
     let (x, z) = tile_bounds(tile);
     let mut packets = Vec::new();
-    for row in 0..SUBDIVISIONS {
-        for col in 0..SUBDIVISIONS {
+    for row in 0..subdivisions {
+        for col in 0..subdivisions {
             let min = Vec3::new(
-                x + col as f32 * SUBTILE_SIZE,
+                x + col as f32 * subtile_size,
                 0.0,
-                z + row as f32 * SUBTILE_SIZE,
+                z + row as f32 * subtile_size,
             );
             let coords = (
-                (63 - tile.1) * SUBDIVISIONS + col,
-                tile.0 * SUBDIVISIONS + row,
+                (63 - tile.1) * subdivisions + col,
+                tile.0 * subdivisions + row,
             );
-            let packet = bake_subtile(triangles, &obstacles, water, min, coords)?;
+            let packet = bake_subtile(triangles, &obstacles, water, min, coords, subdivisions)
+                .map_err(|error| format!("tile {tile:?}, Detour subtile {coords:?}: {error}"))?;
             if !packet.is_empty() {
                 packets.push(packet);
             }
@@ -68,6 +79,7 @@ pub fn bake_collected(
 }
 
 struct RasterInput {
+    cells: i32,
     vertices: Vec<f32>,
     indices: Vec<i32>,
     areas: Vec<u8>,
@@ -80,13 +92,16 @@ impl RasterInput {
         triangles: &[[Vec3; 3]],
         obstacles: &std::collections::HashSet<[u32; 9]>,
         origin: Vec3,
+        subdivisions: u32,
     ) -> Self {
         let border = BORDER_CELLS as f32 * CELL_SIZE;
         let mut min = origin - Vec3::new(border, 0.0, border);
-        let mut max = origin + Vec3::new(SUBTILE_SIZE + border, 0.0, SUBTILE_SIZE + border);
+        let size = TILE_SIZE / subdivisions as f32;
+        let mut max = origin + Vec3::new(size + border, 0.0, size + border);
         min.y = f32::MAX;
         max.y = f32::MIN;
         let mut input = Self {
+            cells: (TILE_CELLS / subdivisions) as i32,
             vertices: Vec::new(),
             indices: Vec::new(),
             areas: Vec::new(),
@@ -164,7 +179,7 @@ impl RecastBuild {
     }
 
     fn rasterize(&self, input: &RasterInput) -> Result<(), String> {
-        let side = SUBTILE_CELLS + 2 * BORDER_CELLS;
+        let side = input.cells + 2 * BORDER_CELLS;
         // SAFETY: buffers are complete triangle soup; indices address those vertices.
         unsafe {
             require(
@@ -246,10 +261,9 @@ impl RecastBuild {
                 ),
                 "contours",
             )?;
-            require(
-                rcBuildPolyMesh(self.context, self.contours, 6, self.mesh),
-                "polygon mesh",
-            )?;
+            if !rcBuildPolyMesh(self.context, self.contours, 6, self.mesh) {
+                return Err(self.polygon_mesh_failure());
+            }
             if (*self.mesh).npolys > 0 {
                 require(
                     rcBuildPolyMeshDetail(
@@ -265,6 +279,38 @@ impl RecastBuild {
             }
         }
         Ok(())
+    }
+
+    fn polygon_mesh_failure(&self) -> String {
+        // SAFETY: contour construction succeeded; Recast owns these arrays.
+        let (contours, mesh) = unsafe { (&*self.contours, &*self.mesh) };
+        let contours = if contours.nconts > 0 {
+            unsafe { std::slice::from_raw_parts(contours.conts, contours.nconts as usize) }
+        } else {
+            &[]
+        };
+        let vertices: i32 = contours
+            .iter()
+            .filter(|c| c.nverts >= 3)
+            .map(|c| c.nverts)
+            .sum();
+        let triangles: i32 = contours
+            .iter()
+            .filter(|c| c.nverts >= 3)
+            .map(|c| c.nverts - 2)
+            .sum();
+        let unique_vertices = count_merged_contour_vertices(contours);
+        let limit = if vertices >= 0xfffe {
+            VERTEX_CAPACITY_ERROR
+        } else {
+            "internal polygonization/allocation failure (not contour vertex capacity)"
+        };
+        format!(
+            "Recast polygon mesh failed: {limit}; contour_vertices={vertices}, deduplicated_vertices={unique_vertices}, triangle_capacity={triangles}, contours={}, mesh_vertices={}, mesh_polygons={}, nvp=6",
+            contours.len(),
+            mesh.nverts,
+            mesh.npolys,
+        )
     }
 
     fn encode_detour(&self, coords: (u32, u32)) -> Result<Vec<u8>, String> {
@@ -328,6 +374,24 @@ impl Drop for RecastBuild {
     }
 }
 
+fn count_merged_contour_vertices(contours: &[rcContour]) -> usize {
+    let mut unique = std::collections::HashMap::<(u16, u16), Vec<u16>>::new();
+    for contour in contours.iter().filter(|c| c.nverts >= 3) {
+        // SAFETY: successful contour construction owns four ints per vertex.
+        let verts =
+            unsafe { std::slice::from_raw_parts(contour.verts, contour.nverts as usize * 4) };
+        for vertex in verts.chunks_exact(4) {
+            let (x, y, z) = (vertex[0] as u16, vertex[1] as u16, vertex[2] as u16);
+            let heights = unique.entry((x, z)).or_default();
+            // Match pinned Recast addVertex's coordinate/height deduplication.
+            if !heights.iter().rev().any(|height| height.abs_diff(y) <= 2) {
+                heights.push(y);
+            }
+        }
+    }
+    unique.values().map(Vec::len).sum()
+}
+
 fn require(ok: bool, step: &str) -> Result<(), String> {
     if ok {
         Ok(())
@@ -350,8 +414,9 @@ fn bake_subtile(
     water: &[(Vec3, Vec3)],
     origin: Vec3,
     coords: (u32, u32),
+    subdivisions: u32,
 ) -> Result<Vec<u8>, String> {
-    let input = RasterInput::clipped(triangles, obstacles, origin);
+    let input = RasterInput::clipped(triangles, obstacles, origin, subdivisions);
     if input.areas.is_empty() {
         return Ok(Vec::new());
     }
