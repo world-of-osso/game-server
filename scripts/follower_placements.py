@@ -134,8 +134,8 @@ def write_placements(target, manifest, placements, bindings):
         guid = manifest['guid_base'] + manifest['map_id'] * 1000 + ordinal
         x, y, z = placement['wow_xyz']
         comment = f"{PLACEMENT_POLICY}; {placement['page']['url']}; floor={placement['marker']['floor']}; percent={placement['marker']['percent']}"
-        existing = target.execute('SELECT id1,map,Comment FROM content_creature WHERE guid=?', (guid,)).fetchone()
-        if existing is not None and tuple(existing) != (record['entry'], manifest['map_id'], comment):
+        existing = target.execute('SELECT id1,map,Comment,position_x,position_y,position_z FROM content_creature WHERE guid=?', (guid,)).fetchone()
+        if existing is not None and tuple(existing) != (record['entry'], manifest['map_id'], comment, x, y, z):
             raise ValueError(f'reserved placement GUID collision at{guid}')
         target.execute('INSERT OR IGNORE INTO content_creature(guid,id1,map,position_x,position_y,position_z,spawnDifficulties,Comment) VALUES(?,?,?,?,?,?,?,?)',
                        (guid, record['entry'], manifest['map_id'], x, y, z, '1', comment))
