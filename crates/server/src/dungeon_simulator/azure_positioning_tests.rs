@@ -16,9 +16,16 @@ fn seed_one_keeps_the_native_leader_alive_through_the_sapling_fight() {
     for _ in 0..MAX_TICKS {
         run.control().unwrap();
         run.app.update();
-        let health = run.app.world().get::<Health>(owner).unwrap();
-        if !captured && run.current_pack == Some(29001840) && health.current < health.max * 0.5 {
+        let (current_health, max_health) = {
+            let health = run.app.world().get::<Health>(owner).unwrap();
+            (health.current, health.max)
+        };
+        if !captured && run.current_pack == Some(29001840) && current_health < max_health * 0.5 {
             captured = true;
+            let watcher = run.actors[&29001853];
+            let healer = run.party.members[1];
+            let geometry =
+                diagnostics::inspect_aggro_pair(run.app.world_mut(), watcher, healer).unwrap();
             let party: Vec<_> = run
                 .members()
                 .map(|unit| {
@@ -49,11 +56,13 @@ fn seed_one_keeps_the_native_leader_alive_through_the_sapling_fight() {
                 serde_json::json!({
                     "at": run.now(), "party": party,
                     "sapling": diagnostics::inspect_unit(run.app.world(), Some(29001840), sapling),
+                    "watcher": diagnostics::inspect_unit(run.app.world(), Some(29001853), watcher),
+                    "watcher_healer_geometry": geometry,
                 })
             );
         }
         assert!(
-            health.current > 0.0,
+            current_health > 0.0,
             "native owner died at{}s before Sapling29001840's Death; captured={captured}",
             run.now()
         );
