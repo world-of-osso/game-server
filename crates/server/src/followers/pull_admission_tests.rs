@@ -259,10 +259,15 @@ fn tank_pull_admission_native_bootstrap_is_one_source_pack_without_prior_rates()
         .get_mut::<Mana>(f.healer)
         .unwrap()
         .current = 0.0;
-    assert_eq!(f.read(&[f.second]).unwrap(), Decision::Wait(Reason::Healer));
+    assert_eq!(
+        f.read(&[f.second]).unwrap(),
+        Decision::Wait(Reason::Recovery)
+    );
     f.h.app.world_mut().entity_mut(f.healer).insert(mana);
     f.h.app.world_mut().remove_resource::<FollowerCatalog>();
-    assert!(f.read(&[f.second]).is_err());
+    assert!(
+        super::pull_readiness::read_ready_heal(f.h.app.world_mut(), f.tank, &f.members,).is_err()
+    );
 }
 
 #[test]
@@ -270,9 +275,25 @@ fn tank_pull_admission_native_measured_capacity_and_thirty_percent_reserve() {
     let mut f = measured_fixture();
     let decision = f.read(&[f.second]).unwrap();
     let health = *f.h.app.world().get::<Health>(f.tank).unwrap();
-    assert!(
-        matches!(decision,Decision::Allow {bootstrap:false,forecast_health:Some(value)} if value>=f64::from(health.max)*0.30)
+    assert_eq!(
+        decision,
+        Decision::Allow {
+            bootstrap: false,
+            forecast_health: None,
+        },
+        "cleared ready single pulls do not require a numerical forecast"
     );
+    let guid =
+        f.h.app
+            .world()
+            .get::<crate::zones::CreatureOrigin>(f.second)
+            .unwrap()
+            .guid;
+    let projected = BTreeSet::from([guid]);
+    let (forecast, reserve, _) =
+        pull_admission::read_forecast_health(f.h.app.world_mut(), f.tank, &projected, 1).unwrap();
+    assert_eq!(reserve, f64::from(health.max) * 0.30);
+    assert!(forecast >= reserve);
     f.h.app
         .world_mut()
         .get_mut::<Health>(f.tank)
@@ -281,7 +302,13 @@ fn tank_pull_admission_native_measured_capacity_and_thirty_percent_reserve() {
     pull_history::sample_all(f.h.app.world_mut());
     assert_eq!(
         f.read(&[f.second]).unwrap(),
-        Decision::Wait(Reason::Reserve)
+        Decision::Wait(Reason::Recovery)
+    );
+    let (forecast, reserve, _) =
+        pull_admission::read_forecast_health(f.h.app.world_mut(), f.tank, &projected, 1).unwrap();
+    assert!(
+        forecast < reserve,
+        "native debt still exceeds the30% reserve"
     );
 }
 
@@ -322,9 +349,21 @@ fn tank_pull_admission_native_stat_expiry_bounds_the_actual_measured_forecast() 
         crate::auras::aura_now(f.h.app.world()) + clear > expiry,
         "native fixture really extends beyond mitigation credit"
     );
+    let guid =
+        f.h.app
+            .world()
+            .get::<crate::zones::CreatureOrigin>(f.second)
+            .unwrap()
+            .guid;
     assert!(
-        f.read(&[f.second]).is_err(),
-        "do not extend the current mitigation snapshot past its real expiry"
+        pull_admission::read_forecast_health(
+            f.h.app.world_mut(),
+            f.tank,
+            &BTreeSet::from([guid]),
+            1,
+        )
+        .is_err(),
+        "do not extend a numerical mitigation snapshot past its real expiry"
     );
 }
 
@@ -341,13 +380,25 @@ fn tank_pull_admission_native_pure_hot_lifetime_does_not_blanket_block() {
         estimate.valid_until, None,
         "actual full-kit Rejuvenation must remain a pure-HoT control"
     );
-    assert!(matches!(
+    let guid =
+        f.h.app
+            .world()
+            .get::<crate::zones::CreatureOrigin>(f.second)
+            .unwrap()
+            .guid;
+    let (forecast, reserve, _) = pull_admission::read_forecast_health(
+        f.h.app.world_mut(),
+        f.tank,
+        &BTreeSet::from([guid]),
+        1,
+    )
+    .expect("a pureHoT expiry cannot invalidate an otherwise native forecast");
+    assert!(forecast >= reserve);
+    assert_eq!(
         f.read(&[f.second]).unwrap(),
-        Decision::Allow {
-            bootstrap: false,
-            ..
-        }
-    ));
+        Decision::Wait(Reason::Recovery),
+        "actual Rejuvenation mana spend requires recovery, not a HoT-lifetime veto"
+    );
 }
 
 #[test]
@@ -414,7 +465,7 @@ fn tank_pull_admission_native_overlap_requires_complete_stable_admitted_health()
 }
 
 #[test]
-fn tank_pull_admission_native_scripted_source_has_no_automatic_numeric_budget() {
+fn tank_pull_admission_native_scripted_source_is_pulled_without_a_numeric_budget() {
     let mut f = fixture();
     let map = *f.h.app.world().get::<InMap>(f.tank).unwrap();
     for entry in [1720, 46254] {
@@ -425,9 +476,13 @@ fn tank_pull_admission_native_scripted_source_has_no_automatic_numeric_budget() 
             .unwrap()
             .guid;
         let actor = spawn_source(&mut f.h, guid, map);
-        assert!(
-            f.read(&[actor]).is_err(),
-            "scripted entry{entry} requires an explicit pull decision"
+        assert_eq!(
+            f.read(&[actor]).unwrap(),
+            Decision::Allow {
+                bootstrap: true,
+                forecast_health: None,
+            },
+            "ready scripted entry{entry} must be pulled without an invented numeric budget"
         );
     }
 }

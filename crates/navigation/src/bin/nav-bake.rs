@@ -1,6 +1,7 @@
 //! Reproducible local-CASC bake; selection comes from the existing LOS tile directory.
 use los::bake::{Baker, DEFAULT_THICKNESS_CUTOFF, index_triangles};
-use navigation::bake::bake_collected;
+use navigation::bake::{VERTEX_CAPACITY_ERROR, bake_collected_on_grid};
+use navigation::{SUBDIVISIONS, TILE_CELLS};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -21,6 +22,19 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let args = parse_args()?;
+    let mut subdivisions = SUBDIVISIONS;
+    loop {
+        match run_on_grid(&args, subdivisions) {
+            Err(error) if error.contains(VERTEX_CAPACITY_ERROR) && subdivisions < TILE_CELLS => {
+                subdivisions *= 2;
+                eprintln!("{error}; refining whole map to {subdivisions}x{subdivisions}");
+            }
+            result => return result,
+        }
+    }
+}
+
+fn run_on_grid(args: &Args, subdivisions: u32) -> Result<(), String> {
     let db = rusqlite::Connection::open_with_flags(
         &args.world_db,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
@@ -49,7 +63,7 @@ fn run() -> Result<(), String> {
                 .collect(),
         };
         for (tile, _) in &global {
-            write_tile(&dir, *tile, &all, &[], &mut report)?;
+            write_tile(&dir, *tile, &all, &[], subdivisions, &mut report)?;
         }
         // Global-WMO support is shared with the LOS collector. The test oracle remains
         // the existing LosMap runtime, not a navigation-specific raycaster.
@@ -66,9 +80,10 @@ fn run() -> Result<(), String> {
                 .collect_tile(&tiles, tile)?
                 .ok_or_else(|| format!("LOS tile {tile:?} has no terrain"))?;
             let water = baker.collect_water(tiles[(tile.1 * 64 + tile.0) as usize])?;
-            write_tile(&dir, tile, &triangles, &water, &mut report)?;
+            write_tile(&dir, tile, &triangles, &water, subdivisions, &mut report)?;
         }
     }
+    report.push_str(&format!("\nSubdivisions per axis: {subdivisions}\n"));
     baker.problems.sort();
     baker.problems.dedup();
     report.push_str(&format!(
@@ -95,10 +110,11 @@ fn write_tile(
     tile: (u32, u32),
     geometry: &los::bake::CollectedGeometry,
     water: &[(glam::Vec3, glam::Vec3)],
+    subdivisions: u32,
     report: &mut String,
 ) -> Result<(), String> {
     let started = Instant::now();
-    let bytes = bake_collected(geometry, water, tile)?;
+    let bytes = bake_collected_on_grid(geometry, water, tile, subdivisions)?;
     // Write even empty tiles: an authored unnavigable tile is not an unbaked map.
     std::fs::write(dir.join(format!("{}_{}.nav", tile.0, tile.1)), &bytes)
         .map_err(|err| err.to_string())?;
