@@ -7,6 +7,9 @@ use shared::components::{PowerType, UnitFlags};
 
 use crate::spell_cast::powers::{PowerPools, PowerTypeTable};
 
+#[path = "arcane_tender.rs"]
+mod arcane_tender;
+
 use crate::auras::{
     AuraInstance, RemoveReason, handlers,
     scripts::{AuraScript, AuraScripts},
@@ -85,6 +88,7 @@ pub(super) fn is_creature_script(name: &str) -> bool {
         LEYMOR_SCRIPT
             | TELASH_SCRIPT
             | SPROUT_SCRIPT
+            | arcane_tender::SCRIPT
             | super::azureblade::SCRIPT
             | super::umbrelskul::SCRIPT
     )
@@ -102,6 +106,9 @@ pub(super) fn creature_ai(
     }
     if script_name == SPROUT_SCRIPT {
         return Some(Box::new(LeyLineSprout));
+    }
+    if script_name == arcane_tender::SCRIPT {
+        return Some(Box::new(arcane_tender::ArcaneTender::default()));
     }
     let boss = super::instance_script::bound_boss(world, actor)?;
     match script_name {

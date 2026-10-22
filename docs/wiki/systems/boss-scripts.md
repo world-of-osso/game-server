@@ -6,6 +6,10 @@
 
 Native RED at Rust scope f8f3b7963: real Azure Conjured Lasher196102 never casts sourced387564; Stockade Riverpaw Shaman46252 never casts cached NPC-abilities12167. Both source actors spawn through the production creature path, run ordinary threat ingress and observe native cast messages. Runtime union/projected-copy GREEN and broad controls are pending; source census is not combat certification. SQL publication belongs to the lead.
 
+The source-existing `npc_arcane_tender` exception uses [the pinned TC CreatureAi virtuals](../../../crates/server/src/scripted_ai/arcane_tender.rs), selected before the boss-binding guard. Reset, appearance/home Stasis Ritual and attempt-relative12s Wild Eruption/22s Erratic Growth clocks are preserved without project SmartAI rows or invented primary bindings. Its real native cast was RED before this port; Wild Eruption's sourced375650→375647 missile/damage boundary is a separate pending native test.
+
+The trash fixture now observes replicated `SpellGo`, not owner-only `CastSuccess`: wild-NPC self casts intentionally do not send that combat log to the observing player. This was an oracle failure after a genuine native Lasher CastState, not a production timer/stat failure.
+
 `FOLLOWER_TRASH_SIMILAR_CREATURE_KIT` records a same-dungeon sourced donor and matching evidence. `FOLLOWER_TRASH_UNSOURCED_CADENCE_MS=10000` is the sole approved cadence default when no recovery exists; actual cast times, ranges and cooldown/category admission stay native70448. Passive addons never establish an active cast kit. Census and per-batch SQL/receipts live in engine `data/diagnostics/follower-trash-ai-2026-10-22/`.
 
 Sources: [producer](../../../scripts/follower_trash_ai.py), [loader](../../../crates/server/src/scripted_ai/smart_ai.rs), [native controls](../../../crates/server/src/scripted_ai/tests/trash_kits.rs), [source/projection controls](../../../scripts/tests/test_follower_trash_ai.py). See also [[dungeon-simulator]].

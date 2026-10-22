@@ -3632,3 +3632,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-22 — Trading Post residue classification
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
+
+## 2026-10-22 — TC Arcane Tender source exception
+
+[Trash projection](systems/boss-scripts.md#follower-trash-kit-projection--2026-10-22): actual191164 native WildEruption RED precedes pinned TC CreatureAi hooks, appearance/home Stasis Ritual and12s/22s attempt clocks. Source ScriptName remains, no TC SmartAI-row translation. Lasher began native cast; owner-only CastSuccess was wrong observer oracle, replaced by actual SpellGo. Source child375650→375647 native damage test added before callback implementation; GREEN pending.
