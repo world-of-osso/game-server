@@ -2,6 +2,14 @@
 
 Account-wide toy learning/favourites are separate from the legacy per-character mount/pet collection. Toy identity comes from locally extracted Retail Toy.db2, not item names or invented lists. [Contract](../../specs/toys.md).
 
+## Thaumaturgist's Orb specialization-affinity source boundary (2026-10-21)
+
+[Visual contract](../../specs/toys.md#server-scope-visual-only-census-rule). Source136928/127850 promises attention to the priest's light/shadow affinity. Isolated44 rows/26 tables/two resident ordinary models165840/948188/zero missing visual references. The root is instant self aura4/zero payload, duration300000ms, item recovery600000ms/category0/condition0, Priest-only AllowableClass16 and required level11.
+
+Earlier missing toy-root helper-aura binding interpretation was wrong. PC39842/39843/39841 read137031 Holy Priest/137032 Discipline Priest/137033 Shadow Priest. Build70448 SpecializationSpells grants them for257/256/258; their Attr0Passive0x40 means core auto-casts them on self (TC a352b1fa SharedDefines.h442). Production ClassSpells carries the real passive flag/spec membership; KnownSpells→AuraPlugin synchronizes actual source passives. No Orb-triggered application edge should be invented. Discipline's two authored visual rows select both source visuals; native evaluation is not certified here.
+
+Tests3e2537dca seed source-validated preexisting ActiveSpec/KnownSpells at coherent level80, then require native AuraPlugin application with AuraSource::KnownSpell before actual learning/UseToy. No direct apply_aura/statless fake class marker. Tests cover all three affinity states, preserved source passive, owner lifecycle, class refusal, two eligible drift cases and census; RED queued, no production admission/GREEN claim. Character login/spec switching and full class-gameplay parity are not claimed. Artifacts: visual-orb-isolated-70448.json,orb-priest-passive-source-boundary.json,orb-root-source.json,orb-source-provenance.json.
+
 ## Ring modifier interpretation and source boundary (2026-10-21)
 
 [Visual contract](../../specs/toys.md#server-scope-visual-only-census-rule). Coldflame228789/465642 and Cyrce235041/1215495 promise ring appearance, not gear/stat replacement. Build70448 authors instant self aura4/zero payload/permanent Duration21, ItemEffect recovery120000ms and-1 respectively; Cyrce has no spell/category recovery, so zero is native behavior, not a cleared clock.
