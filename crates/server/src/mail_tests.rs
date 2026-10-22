@@ -119,6 +119,9 @@ fn achievements_criteria_postage_and_most_money_follow_committed_mail_not_reques
         .entity_mut(h.player)
         .insert(PlayerAchievementState::default());
     let progress = |h: &Harness, criterion: u32| {
+        crate::test_data::drain_persistence(
+            h.app.world().resource::<crate::persistence::GameDatabase>(),
+        );
         persistence::load_achievements(h.db(), h.character_id)
             .criteria_progress
             .get(&criterion)
@@ -144,6 +147,8 @@ fn achievements_criteria_postage_and_most_money_follow_committed_mail_not_reques
     );
     assert!(failures(&mut h).is_empty());
     assert_eq!(h.take::<MailSent>().len(), 1);
+    // Mail committed; let the next Update consume its queued achievement credits.
+    h.app.update();
     assert_eq!(h.gold(), before - 5_030);
     assert_eq!(progress(&h, 3358), Some(30));
     assert_eq!(progress(&h, 4224), Some(before - 5_030));
@@ -151,6 +156,8 @@ fn achievements_criteria_postage_and_most_money_follow_committed_mail_not_reques
 
     send(&mut h, mailbox, letter("Postb"));
     assert!(failures(&mut h).is_empty());
+    assert_eq!(h.take::<MailSent>().len(), 1);
+    h.app.update();
     assert_eq!(h.gold(), before - 5_060);
     assert_eq!(progress(&h, 3358), Some(60));
     assert_eq!(progress(&h, 4224), Some(before - 5_030));

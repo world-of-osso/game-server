@@ -32,6 +32,7 @@ catalogs! {
     spells: crate::spell_info::SpellStore,
     classes: crate::spell_info::ClassSpells,
     powers: crate::spell_cast::powers::PowerTypeTable,
+    pet_spells: crate::pet_control::PetLevelupSpells,
     item_scaling: crate::item_stats::ItemScalingTables,
     factions: crate::faction::FactionTemplates,
     maps: crate::maps::MapStore,
@@ -51,6 +52,45 @@ catalogs! {
     destinations: crate::spell_cast::teleport_positions::SpellTargetPositions,
     disenchant: crate::spell_cast::disenchant::DisenchantData,
     locks: crate::spell_cast::open_lock::ItemLocks,
+}
+
+#[test]
+fn native_felguard_learns_axe_toss_across_cached_seeded_worlds() {
+    let mut catalogs = None;
+    for _ in 0..2 {
+        let mut app = super::runtime::build_cached_app(&mut catalogs);
+        let copy = super::runtime::create_copy(&mut app);
+        let party = crate::followers::simulator::spawn_party(
+            app.world_mut(),
+            copy,
+            shared::components::Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        )
+        .unwrap();
+        let warlock =
+            crate::followers::native_fixture::spawn(app.world_mut(), party.owner, 230861).unwrap();
+        crate::spell_cast::creature_cast(app.world_mut(), warlock, 30146, Some(warlock), false)
+            .unwrap();
+        for _ in 0..200 {
+            app.update();
+        }
+        let pet =
+            crate::hunter_pet::summoned_pet(app.world(), warlock).expect("native30146 Felguard");
+        let bar = app
+            .world()
+            .get::<crate::pet_control::PetCharm>(pet)
+            .expect("native pet action bar")
+            .action_bar;
+        assert!(
+            bar.iter()
+                .any(|button| shared::protocol::pet_action_button_action(*button) == 89766),
+            "the actual level32 Felguard must expose learned Axe Toss in its native action bar, including cached worlds: {bar:?}"
+        );
+        catalogs = Some(Catalogs::take(app.world_mut()));
+    }
 }
 
 #[test]

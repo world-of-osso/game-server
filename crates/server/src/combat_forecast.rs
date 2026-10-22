@@ -59,7 +59,7 @@ fn read_estimate(
         interval_secs: f64::from(projection.attacker.swing_time(&WeaponDamage::UNARMED)),
         next_swing_secs: world
             .get::<AutoAttack>(enemy)
-            .map_or(0.0, |attack| f64::from(attack.timer.max(0.0))),
+            .map_or(0.0, |attack| attack.timer.as_secs_f64()),
         remaining_health: f64::from(tank_level_health),
         valid_until: read_stat_deadline(world, projection),
         level: world
@@ -289,6 +289,7 @@ fn armored_damage(world: &World, projection: &SwingProjection, base: f32) -> f32
         &projection.source_scaling,
         &projection.target_scaling,
         world.get_resource::<ArmorConstants>(),
+        projection.attacker.mods,
     )
 }
 

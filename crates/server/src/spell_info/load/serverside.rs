@@ -60,7 +60,8 @@ fn read_spells(
 ) -> rusqlite::Result<Vec<SpellInfo>> {
     let mut stmt = conn.prepare(&format!(
         "SELECT s.*, COALESCE(c.MaxCharges, 0) AS MaxCharges,
-                COALESCE(c.ChargeRecoveryTime, 0) AS ChargeRecoveryTime
+                COALESCE(c.ChargeRecoveryTime, 0) AS ChargeRecoveryTime,
+                COALESCE(c.TypeMask, 0) AS ChargeCategoryTypeMask
          FROM {SPELLS} s LEFT JOIN spell_category c ON c.ID = s.ChargeCategoryId
          WHERE s.DifficultyID = 0 ORDER BY s.Id"
     ))?;
@@ -112,6 +113,7 @@ fn read_spell(row: &Row, lookups: &Lookups, id: u32) -> rusqlite::Result<SpellIn
             procs_per_minute: (proc_ppm != 0.0).then_some(ProcsPerMinute {
                 base_proc_rate: proc_ppm,
                 flags: 0,
+                ..Default::default()
             }),
             proc_type_mask: [col_u32(row, "ProcFlags")?, col_u32(row, "ProcFlags2")?],
         }),
@@ -126,6 +128,7 @@ fn read_spell(row: &Row, lookups: &Lookups, id: u32) -> rusqlite::Result<SpellIn
             prevention_type: col_u32(row, "PreventionType")?,
             max_charges: col_u32(row, "MaxCharges")?,
             charge_recovery_ms: col_u32(row, "ChargeRecoveryTime")?,
+            charge_type_mask: col_u32(row, "ChargeCategoryTypeMask")?,
         }),
         cooldowns: present(SpellCooldownInfo {
             recovery_ms: col_u32(row, "RecoveryTime")?,

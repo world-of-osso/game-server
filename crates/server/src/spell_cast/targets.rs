@@ -21,7 +21,7 @@
 //! actual summoner), and 28 DEST_DYNOBJ_ENEMY (the units a persistent
 //! area aura affects, `spell_cast::area_aura`). Target56 selects the caster's group;
 //!118 UNIT_TARGET_ALLY_OR_RAID selects the group around a grouped explicit ally,
-//! otherwise just that ally. Target57 selects an explicit ally;120 selects the caster.
+//! otherwise just that ally. Target57 selects an explicit raid member;120 selects the caster.
 //! Every other ID is unsupported and fails the cast.
 
 mod ordered_destination;
@@ -69,6 +69,7 @@ fn implicit_target_allowed(world: &World, caster: Entity, spell: &SpellInfo, uni
 pub enum Relation {
     Enemy,
     Ally,
+    Raid,
     Any,
 }
 
@@ -79,6 +80,8 @@ enum Selector {
     Caster,
     /// The explicit (requested) unit target.
     Explicit(Relation),
+    ///121: explicit dead ally; living allies use their separate unit selector.
+    ExplicitCorpseAlly,
     ///118: explicit ally, expanded around that ally when grouped with the caster.
     AllyOrRaid,
     ///119: dead party/raid members selected at their stored corpse positions.
@@ -145,13 +148,15 @@ fn selector(id: u32) -> Option<Selector> {
         56 => Selector::RaidArea,
         5 => Selector::Pet,
         119 => Selector::RaidCorpses,
+        121 => Selector::ExplicitCorpseAlly,
         32 | 44 => Selector::CasterOffset(std::f32::consts::FRAC_PI_4),
         42 => Selector::CasterOffset(-3.0 * std::f32::consts::FRAC_PI_4),
         47 => Selector::CasterOffset(0.0),
         49 => Selector::CasterOffset(-std::f32::consts::FRAC_PI_2),
         50 => Selector::CasterOffset(std::f32::consts::FRAC_PI_2),
         6 => Selector::Explicit(Enemy),
-        21 | 57 => Selector::Explicit(Ally),
+        21 => Selector::Explicit(Ally),
+        57 => Selector::Explicit(Raid),
         118 => Selector::AllyOrRaid,
         25 => Selector::Explicit(Any),
         18 | 22 | 62 => Selector::CenterCaster,
@@ -213,7 +218,7 @@ pub fn explicit_requirement<'a>(
         .flat_map(|effect| effect.implicit_targets)
         .find_map(|id| match selector(id)? {
             Selector::Explicit(relation) | Selector::CenterExplicit(relation) => Some(relation),
-            Selector::AllyOrRaid => Some(Relation::Ally),
+            Selector::AllyOrRaid | Selector::ExplicitCorpseAlly => Some(Relation::Ally),
             Selector::DestTargetOffset(_) => Some(Relation::Any),
             _ => None,
         })
@@ -226,6 +231,7 @@ pub(crate) fn provides_non_caster_unit_target(effect: &SpellEffect) -> bool {
             selector(id),
             Some(
                 Selector::Explicit(_)
+                    | Selector::ExplicitCorpseAlly
                     | Selector::AllyOrRaid
                     | Selector::RaidCorpses
                     | Selector::ChannelTarget
@@ -307,6 +313,10 @@ pub fn relation_matches(world: &World, caster: Entity, target: Entity, relation:
     let arena = crate::pvp::arena_combat::relation(world, caster, target);
     if caster == target {
         return relation != Relation::Enemy;
+    }
+    // TC CheckExplicitTarget: a raid unit must also be a valid assist target.
+    if relation == Relation::Raid && !shares_raid(world, caster, target) {
+        return false;
     }
     if !crate::auras::invisibility::can_detect(world, caster, target) {
         return false;
@@ -470,6 +480,19 @@ pub fn select_targets(
                     units.extend(chain_targets(
                         world, caster, spell, effect, target, relation,
                     ));
+                }
+            }
+            Selector::ExplicitCorpseAlly => {
+                selected_any = true;
+                if let Some(target) = explicit.filter(|&target| {
+                    let dead = world
+                        .get::<Health>(target)
+                        .is_some_and(|health| health.current <= 0.0);
+                    let ally =
+                        ignore_relation || relation_matches(world, caster, target, Relation::Ally);
+                    dead && ally
+                }) {
+                    units.push(target);
                 }
             }
             Selector::AllyOrRaid => {
@@ -717,7 +740,7 @@ fn nearby_entry_unit(
     let range = spell_range(spell, negative != 0).1;
     let origin = position(world, caster)?;
     let candidates = area_units(world, caster, origin, range, Relation::Any, 0);
-    let qualifying = filter_entry_targets(world, candidates, spell.id, effect.index);
+    let qualifying = filter_entry_targets(world, caster, candidates, spell.id, effect.index);
     limit_implicit_targets(world, spell, caster, qualifying, 1)
         .into_iter()
         .next()
@@ -726,6 +749,7 @@ fn nearby_entry_unit(
 /// The spell's implicit target conditions for `effect_index` (part of TC CheckTarget).
 fn filter_entry_targets(
     world: &World,
+    caster: Entity,
     candidates: Vec<Entity>,
     spell_id: u32,
     effect_index: u8,
@@ -733,7 +757,7 @@ fn filter_entry_targets(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     candidates
         .into_iter()
-        .filter(|&unit| conditions.target_meets(world, spell_id, effect_index, unit))
+        .filter(|&unit| conditions.target_meets(world, spell_id, effect_index, unit, caster))
         .collect()
 }
 
@@ -820,7 +844,7 @@ fn raid_member_id(world: &World, unit: Entity) -> Option<u64> {
 }
 
 /// TC TARGET_CHECK_RAID uses IsInRaidWith, including a controlled unit's owner.
-fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
+pub(super) fn shares_raid(world: &World, caster: Entity, target: Entity) -> bool {
     if caster == target {
         return true;
     }
@@ -883,7 +907,8 @@ fn raid_corpses(
         })
         .collect();
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
-    bodies.retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit));
+    bodies
+        .retain(|&(_, unit)| conditions.target_meets(world, spell.id, effect.index, unit, caster));
     bodies.sort_by(|a, b| a.0.total_cmp(&b.0));
     if cap > 0 {
         bodies.truncate(cap as usize);
@@ -983,7 +1008,7 @@ fn entry_area_units(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     targets
         .into_iter()
-        .filter(|&target| conditions.target_meets(world, spell.id, effect.index, target))
+        .filter(|&target| conditions.target_meets(world, spell.id, effect.index, target, caster))
         .collect()
 }
 
@@ -1029,7 +1054,7 @@ fn cone_entry_units(
     let conditions = world.resource::<crate::conditions::SpellTargetConditions>();
     in_cone
         .into_iter()
-        .filter(|&unit| conditions.target_meets(world, spell.id, effect.index, unit))
+        .filter(|&unit| conditions.target_meets(world, spell.id, effect.index, unit, caster))
         .filter(|&unit| implicit_target_allowed(world, caster, spell, unit))
         .collect()
 }
@@ -1471,6 +1496,18 @@ pub fn shared_selection_checks_radius(effect: &SpellEffect) -> bool {
             )
         )
     })
+}
+
+/// Native effect cardinality, not a list of class/group-heal spell IDs.
+pub(crate) fn selects_multiple_units(effect: &SpellEffect) -> bool {
+    effect.chain_targets > 1
+        || shared_selection_checks_radius(effect)
+        || effect.implicit_targets.iter().any(|&id| {
+            matches!(
+                selector(id),
+                Some(Selector::AllyOrRaid | Selector::RaidArea)
+            )
+        })
 }
 
 /// Radius of the effect's first target slot (`SpellEffectInfo::CalcRadius`).

@@ -3,7 +3,7 @@
 ## Native creature class-power ingress
 
 - Source creature class4 uses70448 `ChrClasses.DisplayPower` Energy3 and the NPC-eligible PowerType initial/default/max values, through ordinary spawn/entry projection. TC a352b1fa `Creature.cpp:1642–1645` and `Unit.cpp:5714–5810` govern this ingress. Keep existing class2/8 Mana projection byte-identical; do not grant power inside individual boss scripts.
-- Preserve actual regenerate-power flag0x800. Native PowerType rates apply only when the source creature permits regeneration. Anub'zekt's flag is absent: initialEnergy100 is valid, forced regeneration or repeated energy grants are not. Missing native class4 power metadata must fail explicitly rather than invent a pool.
+- Preserve actual regenerate-power flag0x800. Native PowerType rates apply only when the source creature permits regeneration. Anub'zekt's flag is absent: initialEnergy100 is valid, forced regeneration or repeated energy grants are not. Zone-only worlds without SpellCastPlugin/PowerTypeTable must keep spawning source stats/identity with power absent and an explicit warning; never fabricate a pool or register an empty power table. When the table exists, missing native class4 metadata remains an explicit error. Full spell-runtime startup loads the native table before ordinary zone spawning.
 
 ## Midnight clock authority boundary
 
