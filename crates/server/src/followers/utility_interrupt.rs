@@ -89,6 +89,7 @@ pub(super) fn try_party(
     context: &Follower,
     party: &[Entity],
     candidates: &[Entity],
+    phase: super::kit_interrupt::InterruptPhase,
 ) -> bool {
     let owner = context.owner;
     let last = world.get::<LastKick>(owner).map(|last| last.0.to_bits());
@@ -111,7 +112,9 @@ pub(super) fn try_party(
         )
     });
     for (unit, profile) in members {
-        if super::kit_interrupt::try_interrupt_candidates(world, unit, &profile, candidates) {
+        if super::kit_interrupt::try_interrupt_candidates_in_phase(
+            world, unit, &profile, candidates, phase,
+        ) {
             world.entity_mut(owner).insert(LastKick(unit));
             return true;
         }

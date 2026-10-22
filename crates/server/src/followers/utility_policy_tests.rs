@@ -253,7 +253,8 @@ fn follower_utility_policy_rotates_ready_party_kicks() {
         first,
         &follower,
         &party,
-        &[target]
+        &[target],
+        super::kit_interrupt::InterruptPhase::IncludingDamage
     ));
     h.advance(3);
     assert_eq!(cast_count(&h, 351338), 1);

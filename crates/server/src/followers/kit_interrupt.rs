@@ -10,6 +10,12 @@ use crate::spell_info::SpellStore;
 const SPELL_EFFECT_INTERRUPT_CAST: u32 = 68;
 const DEMONOLOGY_SPEC: u32 = 266;
 
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum InterruptPhase {
+    Primary,
+    IncludingDamage,
+}
+
 /// `true` means an ordinary source-valid interrupt cast was accepted, not that
 /// the hit is guaranteed to land. Never retarget, pursue or alter navigation.
 pub(super) fn try_interrupt_candidates(
@@ -18,7 +24,23 @@ pub(super) fn try_interrupt_candidates(
     profile: &Profile,
     candidates: &[Entity],
 ) -> bool {
-    let spells = read_source_interrupt_spells(world, unit, profile);
+    try_interrupt_candidates_in_phase(
+        world,
+        unit,
+        profile,
+        candidates,
+        InterruptPhase::IncludingDamage,
+    )
+}
+
+pub(super) fn try_interrupt_candidates_in_phase(
+    world: &mut World,
+    unit: Entity,
+    profile: &Profile,
+    candidates: &[Entity],
+    phase: InterruptPhase,
+) -> bool {
+    let spells = read_source_interrupt_spells(world, unit, profile, phase);
     for &target in candidates {
         if crate::auras::has_breakable_by_damage_cc(world, target)
             || super::utility_interrupt::reserved(world, target)
@@ -51,6 +73,7 @@ fn read_source_interrupt_spells(
     world: &World,
     unit: Entity,
     profile: &Profile,
+    phase: InterruptPhase,
 ) -> Option<Vec<u32>> {
     let catalog = world.get_resource::<FollowerCatalog>()?;
     let entries: Vec<_> = catalog
@@ -68,6 +91,7 @@ fn read_source_interrupt_spells(
     let store = world.resource::<SpellStore>();
     let mut spells: Vec<_> = learned
         .filter(|entry| is_interrupt_entry(entry, store))
+        .filter(|entry| phase == InterruptPhase::IncludingDamage || entry.slot == Slot::Interrupt)
         .map(|entry| (entry.slot != Slot::Interrupt, entry.spell_id))
         .collect();
     // Stable partition preserves the source table's priority/ID ordering, but

@@ -54,7 +54,36 @@ pub(super) fn update(
         return true;
     }
     let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
-    if super::utility_interrupt::try_party(world, unit, follower, party, &candidates) {
+    if super::utility_interrupt::try_party(
+        world,
+        unit,
+        follower,
+        party,
+        &candidates,
+        super::kit_interrupt::InterruptPhase::Primary,
+    ) {
+        return true;
+    }
+    // Retain the existing emergency-heal priority above damage-spell kicks.
+    for entry in entries.iter().filter(|entry| {
+        entry.slot == Slot::Heal
+            && entry
+                .conditions
+                .health_below
+                .is_some_and(|threshold| threshold <= 0.2)
+    }) {
+        if try_entry(world, unit, follower, party, enemy, &enemies, entry) {
+            return true;
+        }
+    }
+    if super::utility_interrupt::try_party(
+        world,
+        unit,
+        follower,
+        party,
+        &candidates,
+        super::kit_interrupt::InterruptPhase::IncludingDamage,
+    ) {
         return true;
     }
     for entry in entries
