@@ -2466,6 +2466,8 @@ Corrected [immediate self hits](systems/spell-casting.md#self-hits-alongside-des
 
 # Wiki Log
 
+- 2026-10-22: Magisters direct-marker trash packet161spawns/nine own native types,179inserts+one exact guarded Brightscale0→16 UPDATE; source6GREEN/update3GREEN/whole161 acceptance+SQL owner/pose controls, fresh-copy replay3×, no group/admission/route claim. [Evidence](investigations/follower-data.md#magisters-individual-trash-marker-packet--2026-10-22).
+
 - 2026-10-22:27map trash census, five rejected zero-parameter custom-map chains, approved direct individual Wowhead markers plus native0 MDT-enemy hostility; no pack invention, producer/source-floor qualification pending. Trio boss packets lead-confirmed published15rows. [Evidence](investigations/follower-data.md#follower-trash-census-and-rejected-custom-map-chains--2026-10-22).
 
 - 2026-10-22: Remaining eight exact actor source/nav-state recheck; no native spawn/summon positions, six unchanged nav hashes, six pinned TC script blobs yield no new target positions. Header identity differences retained without aliasing. [Evidence](investigations/follower-data.md#remaining-eight-placement-gaps-rechecked--2026-10-22).
