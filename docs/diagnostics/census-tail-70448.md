@@ -69,7 +69,7 @@ TC `Unit.cpp:7512–7550` multiplies strongest negative and positive259 only for
 
 Ignored tests577b898ea, corrected3ea71f48e await actual native209140 cast completion before Renew receipts. Source RED `census_tail_259 --include-ignored`:1PASS/3FAIL22.98s, compile4m49s/no warnings, `259-red-native-clock.log`. Actual Renew initially61 then remains61 instead91 under native116849+50;100-point resolution remains100 instead150 under native50/25 strongest-positive and ordinary/ignored-spell comparison. Direct/foreign and native70691/108359 ignore checks pass. Initial shared-protocol compile failure is not behavior RED; merged master61770fc38 fixes GroupPortraitAppearance schema. Earlier Renew fixture's premature damage observation is not feature evidence.
 
-Implementation retains authored amounts; no native negative259 source row exists, so negative selection/permission is source-backed but not native behavior-qualified. GREEN pending. Native116849 zero absorb sibling/script behavior remains unqualified.
+Implementationb11748e43 retains authored amounts; no native negative259 source row exists, so negative selection/permission is source-backed but not native behavior-qualified. GREEN87951470f:4PASS/0FAIL/0ignored33.64s, compile6m48s/no warnings, `259-green-receipts.log`. Real Renew61→91→61 receipts retain explicit target and zero-overheal checks. Initial GREEN attempt already produced those amounts but an unrelated aggregate-health assertion ignored an extra20 compatible with ordinary level10 regeneration; replace only that aggregate assertion with per-tick effective receipts, without changing clocks, health, regeneration or aura amounts. Native116849 zero absorb sibling/script behavior remains unqualified.
 
 ## Aura22 RESISTANCE — physical armor
 
