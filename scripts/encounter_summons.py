@@ -439,6 +439,30 @@ def import_vexamus(connection):
     return [194181]
 
 
+
+def import_granyth(connection):
+    """Bind Lua-authenticated Granyth; preserve canonical derived actor/placement."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2516, entry=186616, encounter_id=2637, bit=3,
+                   script='', ai='', journal_id=2498, actor_id=5384, display_id=105823)
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('SELECT name,AIName,ScriptName,unit_flags FROM content_creature_template WHERE entry=186616').fetchone()
+    if runtime not in [('Granyth','','',0), ('Granyth','','boss_granyth',0)]:
+        raise ValueError('Granyth runtime binding or source flags changed')
+    for spell in [388817,385916]:
+        effect = connection.execute('''SELECT Effect,ImplicitTarget_0,ImplicitTarget_1 FROM spell_effect
+            WHERE SpellID=? AND DifficultyID=0 AND EffectIndex=0''', (spell,)).fetchone()
+        if effect != (2,18,16):
+            raise ValueError(f'Granyth native area identity changed: {spell}')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    connection.execute("UPDATE content_creature_template SET ScriptName='boss_granyth' WHERE entry=186616")
+    return [186616]
+
+
 def import_doragosa(connection):
     """Current Retail local Lua binding, no source actor or difficulty mutation."""
     import encounter_cpp_bindings
@@ -747,7 +771,7 @@ def import_orator(connection):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','vexamus','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','vexamus','granyth','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','anubzekt','kikatal','dailcry','orator'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -787,6 +811,8 @@ def main():
                 entries = import_ancient(conn)
             elif args.encounter == 'vexamus':
                 entries = import_vexamus(conn)
+            elif args.encounter == 'granyth':
+                entries = import_granyth(conn)
             elif args.encounter == 'doragosa':
                 entries = import_doragosa(conn)
             elif args.encounter == 'melidrussa':

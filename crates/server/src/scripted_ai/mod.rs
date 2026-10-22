@@ -31,6 +31,7 @@ mod dailcry;
 mod doragosa;
 mod emberon;
 pub mod event_map;
+mod granyth;
 pub(crate) mod hellfire_ramparts;
 pub mod instance_script;
 pub(crate) mod jump_movement;
@@ -379,6 +380,9 @@ fn create_ai(world: &World, creature: Entity, script_name: &str) -> Option<Box<d
     if script_name == emberon::SCRIPT {
         return emberon::creature_ai(world, creature);
     }
+    if script_name == granyth::SCRIPT {
+        return granyth::creature_ai(world, creature);
+    }
     if script_name == anubzekt::SCRIPT {
         return anubzekt::creature_ai(world, creature);
     }
@@ -462,6 +466,7 @@ pub(crate) fn insert_script_name(entity: &mut EntityCommands, script_name: &str,
         || script_name == emberon::SCRIPT
         || script_name == anubzekt::SCRIPT
         || script_name == orator::SCRIPT
+        || script_name == granyth::SCRIPT
         || script_name == kikatal::SCRIPT
         || script_name == dailcry::SCRIPT
         || hellfire_ramparts::is_creature_script(script_name)
