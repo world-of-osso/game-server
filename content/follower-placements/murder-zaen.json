@@ -1,0 +1,121 @@
+{
+  "placement_policy": "FOLLOWER_PLACEMENT_XY_FROM_JOURNAL_ENCOUNTER_UIMAP",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "calibration_entries": [
+    188252,
+    189232
+  ],
+  "map_id": 2813,
+  "entrance_id": null,
+  "entrance_gap": "FOLLOWER_ENTRANCE_UNSOURCED_2813",
+  "entries": [
+    {
+      "entry": 234649,
+      "ordinal": 1,
+      "map_id": 2813,
+      "content_tuning_policy": "FOLLOWER_PLACEMENT_CONTENT_TUNING_FROM_NATIVE_MAP_DIFFICULTY",
+      "source_url": "db2:12.1.5.70448/JournalEncounter#2680",
+      "journal_encounter_id": 2680,
+      "faction_policy": "FOLLOWER_BOSS_HOSTILE_FROM_JOURNAL_ENCOUNTER",
+      "faction_donor": 188252,
+      "donor_reason": "Exact unique native name plus pinned own MDT boss entry establishes preview-only journal binding on follower205; Melidrussa188252 donates faction16 only, own native modifiers/CT/models retained.",
+      "journal_actor_source": {
+        "policy": "JEC_EXACT_NAME_UNIQUE_DISPLAY_PREVIEW",
+        "journal_encounter_id": 2680,
+        "journal_actor_id": 5851,
+        "mdt_boss_source": {
+          "path": "/home/osso/.worktrees/mdt-0ec5f50/Midnight/MurderRow.lua",
+          "sha256": "17f37cbbe01bff722b29e87984e4b925256e9f640ac332478500ef4a38f4269b",
+          "revision": "0ec5f50dea16cfc19f288de91125c70fa7455961"
+        }
+      },
+      "source_floor": 1,
+      "source_floor_evidence": {
+        "policy": "FOLLOWER_PLACEMENT_Z_FROM_SOURCE_FLOOR_UPWARD_CONSENSUS",
+        "wmo_group_id": 74041,
+        "placement_unique_id": 59977516,
+        "maximum_height_difference_yards": 1,
+        "triangles": [
+          {
+            "triangle_index": 2146,
+            "height": 29.989988803863525,
+            "upward": true,
+            "world_vertices": [
+              [
+                8924.200988769531,
+                -4738.070053100586,
+                29.989988803863525
+              ],
+              [
+                8924.200988769531,
+                -4738.642196655273,
+                29.989988803863525
+              ],
+              [
+                8924.891761779785,
+                -4738.642196655273,
+                29.989988803863525
+              ]
+            ]
+          }
+        ],
+        "source_files": [
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/6120027.wdt",
+            "sha256": "6224f543b0961dcd81272c3c800be93d2c628f1aad31aa31997335796a2515af"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/6127148.adt",
+            "sha256": "743cc0e811be218dc41198debd19ed1d7883082fde4fd3349be570d0305a10d6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6127310.wmo",
+            "sha256": "94f46532d9325e47406aa685e6b98234866fef10789555d19d521d5fa6f3eb83"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6152469.wmo",
+            "sha256": "5dd117a44046ffe51d21e8fc06bd82db1fe67313cce6822189526f7a4edd1823"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6152470.wmo",
+            "sha256": "f954dd64af5a225cd6d363dbfcc19b18d11bdec0b7fa49f42694dc036401d043"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6152475.wmo",
+            "sha256": "6023900e89c21c54d1908ac3fc77c68bcde0e536a2c4b9a5917953e72116a6a6"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6162266.wmo",
+            "sha256": "0e0a4258fdbdb13397ee3b54dfc5b0e309ce6cc3f8c6fe84b7e6a0769a307ae0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6226338.wmo",
+            "sha256": "21bc35f62373b10f0945dd803cf16fef30191d9831defef3480392c790e8cdd0"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6326409.wmo",
+            "sha256": "d8c2ae789ebf85509b6d3a79a095a0d8445a944edfda669a77ddf3e090ae2275"
+          },
+          {
+            "path": "/home/osso/Projects/world-of-osso/game-engine/data/models/6351966.wmo",
+            "sha256": "dd8d2350daad550e451521fcaeaed9a0b9b2eff89c305d69e5af32b998a66c1e"
+          }
+        ],
+        "research_proof": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/remaining-preview-assigned-floor-research.json",
+        "research_proof_sha256": "c5ff5a7eb26c459b05d43d4546b1fb8a761d2ac56bad06e167684fb2f35441f8"
+      }
+    }
+  ],
+  "source_gaps": [],
+  "surface_proof": {
+    "path": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/midnight-2813-2680-covering-surfaces.json",
+    "sha256": "825ad048266c7f8d1ddf9c039d9516987ce73664242d446e172e1ad7116cabff"
+  },
+  "preserved_placement_sources": [
+    {
+      "receipt": "/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-placements-2026-10-22/murder-trash-packet-1/receipt.json",
+      "sha256": "cc0cab599be6d3eeb88710fbe1582e51f3c8c3ac23d85e362cb56fb351aeca71"
+    }
+  ]
+}
