@@ -21,6 +21,34 @@
 ## 2026-10-21 — Azure translocation policy
 
 [Source book gossip and qualified endpoint derivation](systems/azure-translocation.md): nine directed links from13 source books, including authenticated AreaPOI7116 in the final component; missing ActionSets remain named. Native ingress three REDs before implementation; GREEN pending.
+## 2026-10-21 — Effect63/Kvaldir source and RED boundary
+
+[Toys](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21): TC computed raw threat plus70448 Kvaldir radius40/cast1500ms/targetcap49/recovery120000ms. ActualUseToy, uncapped resolver and census RED atc02f11221; fourth setup failure corrected73c4e6d1c to Provoke's authored slot1. Corrected handler RED atfec87749a (61.92s) fails missingEffectThreat. Generic63/raw engagement and DB2 recipient cap implemented; d4ebff4df7/7GREEN43.66s/check/fmt, pipeline536exact+129111/BattleHornstillgap. Post-master5d5affcfc composite8/8GREEN72.55s ate01d07823,checkEXIT0/39.36s/fmtPASS; reconciled536/1173,637gaps,exact+129111/zero removals/BattleHornnamedgaponly. Inherited unusedhas_uncleared_fight warning retained, not suppressed. Battle Horn's additional Pandaria-native audience has no complete binding; no guessed policy/native sound/full reuse claim.
+
+## 2026-10-21 — Source-owned Coyote target condition
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): canonical52173 conditions require28267 ANDcasterownership33/3. Corrected source51149 actors RED selectsnone versusown (48.95s); target-condition evaluation now receives realcaster and reads only represented source-owned temporary summons, not plainWild summoner associations. SourceTCConditionMgr493–494/SpellEffects2027–2028; 5be76345c condition mechanism GREEN2/2 (36.92s), including legacy/current entry control. ExactHat realUseToy RED1/driftcontrol1PASS71.83s atc0b06e8d5 precedes source removal hook/52173 per-unit handler and dependency/signature/owned-filter admission. Combinedf975c73f1 GREEN11/11 (52.82s); source payload readability-only152b05e2a requalified Coyote4/4 (43.21s), unaffected seven controls retained. ActualUseToy→permanentCoyote25265→realCancelAura→observed52173→onlyownCoyote removed; otherowner/unowned controls and naturalcategory1476 reuse pass. Census534→535 exactly134019; check/fmt pass with inherited unused-function warning. No nativeHat/follow/companionlevel claim.
+
+## 2026-10-21 — Sourced Obsidian Battle Horn visual
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact204687/406077 source85rows28tables/two resident models/race visual conditions, selfzero aura4. Realcast/combat RED2/driftcontrolPASS38.25s precedes one strict registry entry. 179ba7731/masterc6bc60006 GREEN7/7 (101.04s), peaceful500ms cast/noearlyeffects/5s naturalexpiry/60s naturalrecovery+reuse, combat/drift/cancel/invariants and retained controls. Census533→534 exactly204687; check/fmt pass with inherited unused-function warning. No nativeaudio/inventedaggro claim.
+
+## 2026-10-21 — Source-eligible DH contemplation visuals
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact143544/219708+143545/219871, sourceDH mask2048 preserved, zero-payload permanent aura/30s recovery. Complete138rows28tables/three resident models/four race-sex conditions. RealNightElfDH learn/UseToy RED2/Compass controlPASS45.49s precedes two strict registry entries; fd491dbb6/masterc6bc60006 GREEN9/9 (68.52s), including wrong-class/four drift refusals, census and three source-visual/Gadgetzan controls. Census531→533 exactly143544/143545; check/fmt pass with inherited unused-function warning. No nativeanimation/full30sreuse/acquisition claim.
+
+## 2026-10-21 — Exact seasonal pennant aura slots
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): nine exact source amount1/selfaura4 identities, permanent duration/120s ItemEffect. Complete331rows26tables/nine resident models/81visualselectors/nine race-sex conditions. Actual nineUseToy RED9/Compass controlPASS67.87s precedes exact amount-aware slot admission, not zero-dummy broadening. Exactamountslotaa928af5c passes13/13 actualuse/census/controls95.33s plus18driftcases1/1PASS144.22s; check/fmt pass with inherited unused-function warning. Census522→531 exactlynine, zero removals/otherreasonchanges; nativeart/full120sreuse/acquisition excluded.
+
+## 2026-10-21 — Sourced Fast-Growing Seed visual
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): exact210411/425503 source121rows26tables/four resident ordinary models, zero-payload self aura4. Actual peaceful-cast and combat-refusal RED2/driftcontrolPASS68.28s precedes one strict registry entry. Source3s cast/30s aura/60s recovery/natural reuse and combat refusal pass7/7 (66.86s) at396438a45/masterc6bc60006, with Kite/Ribbon and Gadgetzan controls. Census521→522 exactly210411, check/fmt pass with inherited unused-function warning; no native growth-animation or gameplay plant claim.
+
+## 2026-10-21 — Sourced Kite/Ribbon visual pair
+
+[Toys](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21): source29rows/27tables/two resident ordinary models, instant self zero-payload roots. Actual learn/UseToy RED2/Compass controlPASS (59.53s) precedes two strict registry entries. Source Kite300s aura/one-hour recovery and Ribbon600s aura/truezero recovery preserved. Minimald307f1ac4→mergedmaster8e3777ef6/34feb049f GREEN9/9 (168.53s), including Ribbon immediate real cancel/reuse and six identities' twelve drift refusals. Census519→521 exactly202022/242323; check/fmt pass with inherited unused-function warning. No native/natural5/10min/full-hour claim.
+
 ## 2026-10-21 — Holy frozen policy qualification
 
 [Holy Priest](investigations/holy-priest-follower-ai.md#frozen-native-and-cohort-qualification-at-d765e1901): native d76543PASS/1named shared PoH anchor-cancellation RED41.70s; real Purify-first, aggregate596 selection/consequence and self-targetNova/safety qualified. Frozen4×20 reports/context validations complete with same catalog/profile/roster; onlyHoly production diff. Stockade deaths25→25, Azure25→34, no clears; both-source overheal/mana/CDR/procs and route/pull/death/sim taxonomy preserved. No overall-quality/live/goal-completion claim; lead gate and common lifetime blocker remain.

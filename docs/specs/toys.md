@@ -47,9 +47,34 @@ A dummy aura counts as satisfied at server scope only when all four conditions h
 - [x] Lost Compass202711/399041: hold out the source compass; complete70448 visual125287/event/kit/model/positioner/AnimKit graph, source indefinite owner aura and1000ms recovery. This does not admit Wayfinder's Compass388275 or implement navigation.
 - [x] Hot Buttered Popcorn162539/202432: eating/held-popcorn visual only, source10000ms owner aura and60000ms recovery. Retain the hidden-aura-icon flag; it is not an invented gameplay effect.
 - [x] Banner of the Burning Blade168014/295037: wear the source banner, source600000ms owner aura and3600000ms recovery. No summon, faction change or full-hour reuse claim.
+- [x] Yennu's Kite202022/396236: source300000ms owner attachment and3600000ms recovery; keep native arena/rated restriction. Actual learning/use/replication/cancellation and immediate cooldown refusal proved.
+- [x] Chowdar's Favorite Ribbon242323/1232024: source600000ms owner attachment and true zero recovery/category/GCD; real cancellation followed by immediate successful reuse reapplies and replicates the aura.
+- [x] Fast-Growing Seed210411/425503: source peaceful3000ms cast,30000ms owner visual aura and60000ms recovery retained. No aura or SpellGo before completion; natural aura expiry/recovery, actual reuse and cancellation proved. Combat and source drift refuse without starting recovery. No spawned plant entity or gameplay reward.
+- [x] Skull of Corruption143544/219708 and Fel Focusing Crystal143545/219871: source Demon Hunter-only permanent contemplation visuals,30000ms recovery. Actual source-eligible learning/use/owner replication/cancellation preserves player state; wrong class and absentvisual/payload drift refuse without effects/recovery. Native contemplation animation remains separate.
+- [x] Obsidian Battle Horn204687/406077: source peaceful500ms cast,5000ms owner visual/sound aura and60000ms item recovery. No early effect; natural expiry/recovery/reuse, real cancellation, combat/drift refusal and unchanged player state proved. No invented aggro/action or native sound-playback certificate.
 - [x] These source-complete identities use the existing strict visual-only pipeline, real bag learning/UseToy, owner-only aura replication, real cancellation and unchanged health/body/position. Missing visual or changed nonzero payload still refuses without effects/cooldown.
 
 No generic dummy executor or new per-toy script is added. Pure zero payload does not admit Gadgetzan23453, Last Relic82674, Loot-A-Rang84342, or unbound modern script aliases.
+
+## Sourced threat effects and Kvaldir audience
+
+- [x] Effect63 adds its computed source amount to an eligible living creature's threat list, ignoring school/taunt threat multipliers without dealing damage or forcing a taunt. The EffectThreat handler skips its addition for dead casters, creatures without threat lists and source no-threat flags. Ordinary threat generation retains its modifiers. These handler guards do not certify every generic hostile-hit bookkeeping path; Kvaldir's source no-threat flags are zero.
+- [x] Kvaldir Raiding Horn129111/197828 retains its1500ms cast,40-yard hostile source-area selection, literal MaxTargetLevel49 and120000ms item recovery. Ineligible levels must be filtered before zero-threat hit/combat bookkeeping; MaxTargetLevel0 remains uncapped. Prove actual bag learning/UseToy, no early effect, eligible combat acquisition and range/map-copy/dead/friendly controls.
+- [x] Battle Horn86565/126318 remains unavailable after generic63 support: its source description additionally promises a Pandaria-native audience, but canonical data supplies no complete audience binding. Do not infer native creature identity from current map or invent entry lists.
+
+Sources: TC a352b1fa `SpellEffects.cpp:2948–2964`, `ThreatManager.cpp:382–409`; build70448 SpellTargetRestrictions28425, SpellRadius23, SpellCastTimes16, ContentTuning2067 and ItemEffect26627. The level cap is a DB2-backed project behavior, not a claim that pinned TC consumes MaxTargetLevel at runtime. Native sound, unrepresented threat redirects and natural full120-second reuse remain outside this proof. [Source/proof status](../wiki/systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21).
+
+## Source-owned temporary summon targets
+
+- [x] Implicit-target condition33 target0/other-target1/relationOwnedBy3 compares the real cast's caster with source ownership of represented temporary summons. Minion and ordinary Ally ownership qualify; an ordinary Wild summoner alone does not. Existing object-entry/StringId conditions, source radius and map-copy boundaries remain effective. Corrected real Coyote51149 selection and legacy/current entry control pass2/2. Other ownership representations are not certified by this bounded mechanism.
+- [x] Don Carlos' Famous Hat134019/52172 retains the source permanent marker and real51149→28267/25265 companion. Removing the Hat aura casts its computed authored amount52173; that source child unsummons only its condition-selected temporary creatures. Root/child/owned-entry condition drift refuses before use. Real cancellation/reuse/category1476 recovery and other-owner/unowned controls proved. Native hat rendering, physical follow and companion-level parity are separate.
+
+## Exact seasonal pennant aura slots
+
+- [x] Obsidian206267/412530, Crimson206343/412912, Verdant210497/425994, Draconic211869/430508, Forged225933/456798, Unbound Legend227538/460082, Unbound Strategist227539/460083, Prized235519/1217166 and Astral242636/1233142 preserve authored self aura4 slot0 amount1, indefinite duration and120000ms item recovery.
+- [x] Actual learning/UseToy applies and replicates only the owner's amount1 aura; real cancellation removes it without changing health/body/position, immediate reuse refuses on source recovery. Missing visual or amount2 drift refuses every identity without effects/recovery.
+
+These exact slots use the existing amount-aware cosmetic-aura gate, not the zero-payload visual-only registry or a generic dummy executor. Complete70448 ordinary-model chains include source race/sex conditions. Native art selection/playback, acquisition rewards and full120-second reuse are separate; arena restrictions stay enforced.
 
 ## Flag of Ownership source script
 

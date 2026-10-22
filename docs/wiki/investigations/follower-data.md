@@ -1,5 +1,10 @@
 # Retail follower data and approved spec bridge
 
+### Windwalker Dance root-action admission and use — 2026-10-21
+
+Rebased native Dance tests atd6023913e reproduce two genuine failures6.53s/zero warnings: non-Chi Tiger Palm grants325202 and ordinary free SCK leaves1use instead0. Native learned325201/PPM57 remain authoritative. Pinned SimC monk383–392 rolls when the admitted action uses Chi, including free Chi actions;1664–1666 spends SCK after that roll. Source-qualified proc event routing now uses successful ordinary root admission and actual native Chi cost metadata, preserving the generic RPPM engine; triggered damage children/channel ticks do not multiply rolls. A post-event SCK handler spends one actual325202 stack after generic processing, and cumulative2 is a use count rather than modifier magnitude. Native root eligibility/use tests GREEN in9af (production identical09d); retained compiled rotation filter33PASS/1pre-existing ignored27.23s. The ignored253 Frenzy pet-speed case is outside this slice. No legacy damage bonus or complete RPPM/haste timing parity claim. Separately qualified native SpellProcsPerMinuteMod221(Type1/Param4/Coeff1/PPMID57) is not loaded by the current engine; actual55 Martial Agility chance-counterexample test remains unproved pending capacity and belongs to the mechanics owner. Do not infer haste semantics from PPM.Flags1. The older WIP stash was inspected but not applied because it consumed before the roll and lost parent Chi metadata on damage children.
+
+
 ### Font of Magic selection oracle — 2026-10-21
 
 Merged native selection casts382266/382411 rather than357208/359073 after learned411212 Font of Magic57. Native aura332 effects1077606/1077607 explicitly map those roots; this is valid action resolution, not Azure filler starvation. The max-level oracle now requires both replacement SpellGo receipts and the actual passive; a level56 control requires both unreplaced roots. Empowered release/damage remains unimplemented and is not certified by these selection tests.

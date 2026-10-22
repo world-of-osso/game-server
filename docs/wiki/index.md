@@ -1,4 +1,5 @@
 - [Azure translocation](systems/azure-translocation.md) — explicit book/POI endpoint policy, source gossip derivation, staged-nav components and native interaction RED/GREEN ledger.
+- [Effect63/Kvaldir source boundary](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21) — source raw threat/cap49; post-master8GREEN/check/fmt,535→536 exact+Kvaldir; Battle Horn native-audience gap retained.
 - [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — bounded43GREEN/1shared PoH lifetime RED, full frozen80-report comparisons; no clears/overall-quality claim, Azure deaths25→34,18 named script gaps retained.
 - [Follower healer triage](systems/follower-healer-triage.md) — named project policy design, pending behavioral proof; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md).
 - [Azure translocation](systems/azure-translocation.md) — explicit book/POI endpoint policy, source gossip derivation, staged-nav components and native interaction RED/GREEN ledger.
