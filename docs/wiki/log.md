@@ -4082,3 +4082,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0â
 - 2026-10-22: Xenas Nysarra pinned-MDT identity admission, conflicting254227 budget retained, four-row private packet/source6GREEN+actual-copy2GREEN; missing entrance/Kasreth/Lothraxion gaps remain.
 
 - 2026-10-22: Windrunner exact-name preview identity, duo bounds +Kroluk/Heart source floors; three private packets/native-model/SQL proof, preserved published namespace receipts; Nysarra publication confirmed.
+
+- 2026-10-22: Windrunner129 MDT-count trash packet after five published bosses; Flaming Updraft excluded with missing spell edge explicit, source/actual-row proof; Xenas1351 foreign markers rejected/noSQL.
