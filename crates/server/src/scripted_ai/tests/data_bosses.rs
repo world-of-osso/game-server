@@ -3,6 +3,8 @@ use super::*;
 
 #[path = "ancient.rs"]
 mod ancient;
+#[path = "anubzekt.rs"]
+mod anubzekt;
 #[path = "azure_absolute_zero.rs"]
 mod azure_absolute_zero;
 #[path = "azure_blade.rs"]
@@ -91,6 +93,8 @@ mod herald_reset;
 mod kargath;
 #[path = "kelidan.rs"]
 mod kelidan;
+#[path = "kikatal.rs"]
+mod kikatal;
 #[path = "kokia.rs"]
 mod kokia;
 #[path = "landslide.rs"]
@@ -368,8 +372,9 @@ fn encounter_fixture(
     inputs.install(&mut app);
     // Keep producer-authenticated map/binding inputs already installed in this app.
     let mut maps = app.world().resource::<MapStore>().clone();
-    if entry == 234648 {
-        // Mirror Image and Blink resolve their authored ground destinations.
+    if matches!(entry, 234648 | 215405 | 215407) {
+        // Install production ground before source addon application or combat.
+        // Mirror Image, Blink and Eye use native grounded destinations.
         let wdt = maps.maps.get(&map_id).unwrap().wdt_file_data_id;
         app.insert_resource(crate::ground::GroundMap::new(
             &crate::ground::ground_data_dir(),
@@ -458,7 +463,7 @@ fn encounter_fixture(
             spawn_prepared_actor(&mut app, inputs.authored_spawn(difficulty), map, difficulty);
         let near = if [
             ADAROGG, 61412, SLAGMAW, 61528, 13601, 12236, 12225, 12203, 12201, 16807, 17306, 17308,
-            209230, 216619,
+            209230, 215405, 215407, 216619,
         ]
         .contains(&entry)
             || (entry == 135322 && initial_state != EncounterState::NotStarted)
