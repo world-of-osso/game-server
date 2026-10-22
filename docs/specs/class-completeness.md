@@ -3,7 +3,7 @@
 ## Caster-owned armor bypass slice — 2026-10-22
 
 - Native345 on the physical victim sums only effects whose caster matches the attacker, capped above at100%. Apply that fraction to the full current armor after native level scaling, before269 ignore/floor and280 level-capped penetration. Do not turn the sum into independent products, add a lower clamp, or consume an aura on the attacker instead.
-- Physical spells, actual autoswings and current generic-creature melee forecasts share this reader; removal restores prior damage/estimates. Native91021+20,165944+50,316220+30 and108126+100 qualify ordering, sum/cap, ownership and lifecycle. Forecast receipts use an ordinary sourced Stockade actor and native follower profile; the separate numeric swing fixture fixes weapon100/AP0 without changing RNG or native armor constants. [Source and proof](../diagnostics/census-tail-70448.md).
+- Physical spells, actual autoswings and current generic-creature melee forecasts share this reader; removal restores prior damage/estimates. A finite matching345 must bound the forecast's validity when its expiration changes effective bypass; a foreign caster's aura cannot impose that deadline. Native91021+20,165944+50,316220+30 and108126+100 qualify ordering, sum/cap, ownership and lifecycle. Forecast receipts use an ordinary sourced Stockade actor and native follower profile; the separate numeric swing fixture fixes weapon100/AP0 without changing RNG or native armor constants. [Source and proof](../diagnostics/census-tail-70448.md).
 
 ## Critical-healing amount slice — 2026-10-22
 

@@ -339,12 +339,21 @@ fn largest_damage(world: &World, projection: &SwingProjection, base: f32) -> f64
 }
 
 fn read_stat_deadline(world: &World, projection: &SwingProjection) -> Option<f64> {
-    [projection.attacker.entity, projection.target]
+    let stat_deadline = [projection.attacker.entity, projection.target]
         .into_iter()
         .filter_map(|unit| {
             let auras = world.get::<crate::auras::ActiveAuras>(unit)?;
             crate::auras::forecast::first_melee_stat_expiry(unit, auras)
         })
+        .min_by(f64::total_cmp);
+    let bypass_deadline = world
+        .get::<crate::auras::ActiveAuras>(projection.target)
+        .and_then(|auras| {
+            crate::auras::forecast::first_armor_bypass_expiry(projection.attacker.entity, auras)
+        });
+    stat_deadline
+        .into_iter()
+        .chain(bypass_deadline)
         .min_by(f64::total_cmp)
 }
 
