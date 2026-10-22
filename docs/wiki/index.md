@@ -1,4 +1,4 @@
-- [All-Seeing Eyes source boundary](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21) —279rows/26tables/ordinary model; race/gender/shape selectors, RED2→6GREEN/check/fmt,536→537; new-master Eyes+Kvaldir composite pending; native/long-duration proof separate.
+- [All-Seeing Eyes source boundary](systems/toys.md#all-seeing-eyes-source-boundary-2026-10-21) —279rows/26tables/ordinary model; race/gender/shape selectors, RED2→6GREEN; post-master Eyes+Kvaldir10GREEN/check/fmt,536→537; native/long-duration proof separate.
 - [Effect63/Kvaldir source boundary](systems/toys.md#effect63-and-kvaldir-source-boundary-2026-10-21) — source raw threat/cap49; post-master8GREEN/check/fmt,535→536 exact+Kvaldir; Battle Horn native-audience gap retained.
 - [Holy Priest follower AI](investigations/holy-priest-follower-ai.md) — bounded43GREEN/1shared PoH lifetime RED, full frozen80-report comparisons; no clears/overall-quality claim, Azure deaths25→34,18 named script gaps retained.
 - [Follower healer triage](systems/follower-healer-triage.md) — named project policy design, pending behavioral proof; [complete Crenna70448 kit census](reference/follower-resto-70448-kit.md).
