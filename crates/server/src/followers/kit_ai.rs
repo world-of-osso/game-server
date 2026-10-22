@@ -288,8 +288,11 @@ fn resource_allows(world: &World, unit: Entity, rule: &ResourceCondition) -> boo
     let Some((current, maximum)) = power_value(world, unit, rule.power) else {
         return false;
     };
-    let scale = world
-        .resource::<PowerTypeTable>()
+    let Some(table) = world.get_resource::<PowerTypeTable>() else {
+        warn!("Follower{unit:?} resource condition unavailable: PowerTypeTable is not installed");
+        return false;
+    };
+    let scale = table
         .get(rule.power)
         .expect("rotation resource requires native PowerType metadata")
         .display_modifier;
