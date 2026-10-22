@@ -16,6 +16,7 @@ from scripts.follower_spec_kits import prepare, read_periodic_description_child
 ROOT = Path(__file__).resolve().parents[1]
 DB2 = Path('/home/osso/Projects/world-of-osso/game-engine/data/db2/active')
 SOURCE = Path(os.environ['FOLLOWER_KIT_SOURCE_OUTPUT'])
+TC_CHILD_ARTIFACT = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/tc-script-child-edges-a352b1fa.json')
 
 
 class DescriptionReferenceTests(unittest.TestCase):
@@ -53,7 +54,8 @@ class FollowerKitProducerTests(unittest.TestCase):
     def command(self, output, receipt, diff, world_db=None, source=None):
         return [sys.executable, str(ROOT / 'scripts/follower_spec_kits.py'),
                 '--world-db', str(world_db or ROOT / 'data/world.db'), '--db2-root', str(DB2),
-                '--source-json', str(source or SOURCE), '--output-db', str(output),
+                '--source-json', str(source or SOURCE), '--tc-child-edges', str(TC_CHILD_ARTIFACT),
+                '--output-db', str(output),
                 '--receipt', str(receipt), '--sqldiff', str(diff)]
 
     def test_copy_contains_level_gated_garrick_and_crenna_kits(self):
@@ -124,6 +126,7 @@ class FollowerKitProducerTests(unittest.TestCase):
             source = (ROOT / 'data/world.db').resolve()
             owned = [66, 73, 103, 266, 269]
             prepare(SimpleNamespace(world_db=source, db2_root=DB2, source_json=SOURCE,
+                                    tc_child_edges=TC_CHILD_ARTIFACT,
                                     output_db=root / 'owned.db', receipt=root / 'owned.json',
                                     sqldiff=root / 'owned.sql', spec_ids=owned))
             delta = (root / 'owned.sql').read_text()

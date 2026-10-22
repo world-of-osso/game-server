@@ -8,6 +8,7 @@ import unittest
 from scripts.follower_spec_kits import kit_rows
 
 ROOT = Path(__file__).resolve().parents[1]
+TC_CHILD_ARTIFACT = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/tc-script-child-edges-a352b1fa.json')
 EXPORT = Path('/home/osso/Projects/world-of-osso/game-engine/data/diagnostics/follower-kits-2026-10-18/native-source-v2.json')
 
 
@@ -15,7 +16,7 @@ def native_rows(spec):
     source = json.loads(EXPORT.read_text())
     selected = [row for row in source['loadouts'] if row['spec_id'] == spec]
     with closing(sqlite3.connect((ROOT / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
-        rows, _, _ = kit_rows(db, dict(loadouts=selected))
+        rows, _, _ = kit_rows(db, dict(loadouts=selected), TC_CHILD_ARTIFACT)
     return rows
 
 

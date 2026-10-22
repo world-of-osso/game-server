@@ -19,6 +19,10 @@ Lead-approved: replace the role NAME whitelist with classification from native e
 - Source-only intrinsic graph now has six explicit description-confirmed SimC child bindings in `scripts/follower_spell_role_policy.py`, separate from APL selection: Feral/Frantic Frenzy, Blessed Hammer, Kill Command, Wild Thrash and Emerald Blossom. Genuine Frenzy2-failure RED→GREEN and command/area4-failure RED→GREEN; current `bcc604b49` graph4/4 tests pass (`E/source-{frenzy-child,command-area}-role-*`). Child reachability does not certify execution or owner damage attribution.
 - Full DB before/after role census, producer integration and delta replay remain pending. Do not publish the controller aliases before authoritative native-book initialization and selected-variant resolution.
 
+## Producer input
+
+`follower_spec_kits.py` requires `--tc-child-edges <artifact>`; `kit_rows` receives that path explicitly. No slot-local diagnostic alias or alternate search path. Receipts record the artifact and classifier/policy SHA-256s. The initial integration probe failed on an absent slot-local artifact path before assertions; it is a setup failure, not behavioral RED.
+
 ## Approved policy boundary
 
 `role_slot` is also an executable action policy. Lead approved retaining small cited APL exclusions separately from generic source classification. Arcane Explosion stays intrinsically damaging but utility1000/AI-disabled under its Fire APL contract. Read-only audit found32 existing utility roots with sourced damage/heal reachability, including self-damaging Burning Rush, pet-only healing and conditional crowd-control damage. Intrinsic reachability alone must not invent enemy targeting or unconditional APL use; distinguish classification-driven changes from policy-retained rows in the full delta.

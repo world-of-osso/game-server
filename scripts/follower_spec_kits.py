@@ -22,8 +22,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.follower_spell_roles import SpellRoleCatalog, effect_roles, read_tc_child_artifact
 
-TC_CHILD_ARTIFACT = Path(__file__).resolve().parents[1] / 'data/diagnostics/tc-script-child-edges-a352b1fa.json'
-
 BUILD = '12.1.5.70448'
 POLICY = 'FOLLOWER_BATTLEFIELD_PRIORITY_V1'
 SOURCE_TABLES = {
@@ -374,8 +372,8 @@ def project_loadout_actions(loadout, override_families):
     return known
 
 
-def kit_rows(db, source):
-    roles = SpellRoleCatalog(db, read_tc_child_artifact(TC_CHILD_ARTIFACT))
+def kit_rows(db, source, tc_child_artifact):
+    roles = SpellRoleCatalog(db, read_tc_child_artifact(tc_child_artifact))
     override_families = read_native_override_families(db)
     availability = defaultdict(list)
     description_links = {}
@@ -465,7 +463,7 @@ def prepare(args):
         raise ValueError('expected native loadouts for all eleven followers, levels1..90')
     with closing(sqlite3.connect(args.world_db.resolve().as_uri() + '?mode=ro', uri=True)) as db:
         evidence = read_sources(args.db2_root, db)
-        rows, inventory, references = kit_rows(db, source)
+        rows, inventory, references = kit_rows(db, source, args.tc_child_edges)
         reference_sources = read_description_reference_sources(args.db2_root, references)
         with closing(sqlite3.connect(args.output_db)) as output:
             db.backup(output)
@@ -479,7 +477,12 @@ def prepare(args):
     if digest(args.world_db) != before:
         raise ValueError('input database changed during preparation; discard this copy')
     receipt = dict(build=BUILD, policy=POLICY, producer=str(Path(__file__).resolve()),
-                   producer_sha256=digest(__file__), source_database=str(args.world_db.resolve()),
+                   producer_sha256=digest(__file__),
+                   tc_child_artifact=str(args.tc_child_edges.resolve()),
+                   tc_child_artifact_sha256=digest(args.tc_child_edges),
+                   intrinsic_classifier_sha256=digest(Path(__file__).with_name('follower_spell_roles.py')),
+                   source_binding_policy_sha256=digest(Path(__file__).with_name('follower_spell_role_policy.py')),
+                   source_database=str(args.world_db.resolve()),
                    source_database_sha256=before, output_database=str(args.output_db.resolve()),
                    output_database_sha256=digest(args.output_db), source_json_sha256=digest(args.source_json),
                    changed_tables=['follower_spec_kit'] if diff.strip() else [], rows=len(rows), output_rows=output_rows,
@@ -494,7 +497,7 @@ def prepare(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ['world-db', 'db2-root', 'source-json', 'output-db', 'receipt', 'sqldiff']:
+    for name in ['world-db', 'db2-root', 'source-json', 'tc-child-edges', 'output-db', 'receipt', 'sqldiff']:
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--spec-ids', type=int, nargs='+', help='Replace only these owned spec kits; omitted replaces the complete kit')
     prepare(parser.parse_args())

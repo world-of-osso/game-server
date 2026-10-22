@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 import unittest
 from scripts.follower_spec_kits import combat_policy, kit_rows
-from scripts.test_follower_source_roles import action_at, native_rows
+from scripts.test_follower_source_roles import TC_CHILD_ARTIFACT, action_at, native_rows
 
 
 class HunterSecondaryTargetPolicyTests(unittest.TestCase):
@@ -15,7 +15,7 @@ class HunterSecondaryTargetPolicyTests(unittest.TestCase):
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] == 253 and row['level'] in (12, 13, 21, 90)]
         with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
-            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+            rows, _, _ = kit_rows(db, dict(loadouts=selected), TC_CHILD_ARTIFACT)
         barbed = [row for row in rows if row[1] == 217200]
         self.assertFalse(any(row[2] <= 12 <= row[3] for row in barbed))
         for level in (13, 21, 90):
@@ -59,7 +59,7 @@ class ElementalActionProjectionTests(unittest.TestCase):
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] == 262 and row['level'] in (50, 51, 90)]
         with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
-            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+            rows, _, _ = kit_rows(db, dict(loadouts=selected), TC_CHILD_ARTIFACT)
         ascendance = [row for row in rows if row[1] == 1219480]
         self.assertFalse(any(row[2] <= 50 <= row[3] for row in ascendance))
         for level in (51, 90):
@@ -79,7 +79,7 @@ class DemonologyActionProjectionTests(unittest.TestCase):
         selected = [row for row in source['loadouts'] if row['spec_id'] == 266 and row['level'] in (10, 11, 14, 15)]
         self.assertEqual(len(selected), 4)
         with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
-            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+            rows, _, _ = kit_rows(db, dict(loadouts=selected), TC_CHILD_ARTIFACT)
         available = lambda spell, level: any(row[0] == 266 and row[1] == spell and row[2] <= level <= row[3] and row[4] == 'attack' for row in rows)
         self.assertFalse(available(105174, 10))
         self.assertTrue(available(105174, 11), 'SimC init245-247 maps native1250273 to actual cast105174')
@@ -94,7 +94,7 @@ class FeralActionProjectionTests(unittest.TestCase):
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] == 103 and row['level'] in (28, 29, 58, 59)]
         with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
-            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+            rows, _, _ = kit_rows(db, dict(loadouts=selected), TC_CHILD_ARTIFACT)
         available = lambda spell, level: any(row[0] == 103 and row[1] == spell and row[2] <= level <= row[3] and row[4] == 'buff' for row in rows)
         self.assertFalse(available(106951, 28))
         self.assertTrue(available(106951, 29), 'native343223 VisibleSpellID106951, SimC spec.berserk_cat')
@@ -131,7 +131,7 @@ class RotationRefreshAndDefensePolicyTests(unittest.TestCase):
         source = json.loads(export.read_text())
         selected = [row for row in source['loadouts'] if row['spec_id'] in (66, 73, 103) and row['level'] == 32]
         with closing(sqlite3.connect((root / 'data/world.db').resolve().as_uri() + '?mode=ro', uri=True)) as db:
-            rows, _, _ = kit_rows(db, dict(loadouts=selected))
+            rows, _, _ = kit_rows(db, dict(loadouts=selected), TC_CHILD_ARTIFACT)
         conditions = {(row[0], row[1]): json.loads(row[6]) for row in rows}
         self.assertNotIn('missing_aura', conditions[66, 53600])
         self.assertFalse(conditions[66, 53600].get('attacked', False))
