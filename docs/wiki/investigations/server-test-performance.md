@@ -2,7 +2,7 @@
 
 Target (2026-10-22): the union of the lead's `fu913`, `sm894` and `rd912` server gate filters must finish in at most900s execution wall with approximately8GiB peak RSS. Test cases, existing ignores, gameplay steps and assertions are preserved. Compilation and capacity-queue time are reported separately. **Acceptance remains open until the complete union has a passing measured receipt.**
 
-Controlled same-source route initialization is **3.045× faster in CPU and4.046× in wall time** with the server override; all5437 discovered case identities and ignore statuses are unchanged. Full native Stockade passes in73.885s. Complete union wall/RSS qualification remains pending. The first integrated union was stopped after1470.72s with incompatible snapshot permissions/layout and216 observed failures; this is not a passing acceptance receipt.
+Controlled same-source route initialization is **3.045× faster in CPU and4.046× in wall time** with the server override; all5437 discovered case identities and ignore statuses are unchanged. Full native Stockade passes in73.885s. Profile-only full union **does not meet the target**:2277.819s combined wall (37m58s),6347.253s CPU,9.67GiB child peakRSS and15.25GiB sampled peak swap. All2815 enabled/81 ignored cases are accounted for; four failures are named below. Workspace check and format pass. Test-only immutable-cache/Arc work follows; the profile change alone is not completion.
 
 ## Baseline and cause
 
@@ -25,7 +25,7 @@ The lead authorized copying (not hardlinking) `game-server-verify2/target/debug/
 | Campaign authored route order, cold process |27.024s wall /20.50s sampled CPU /614624KiB HWM|8.789s /7.72s /587552KiB|both PASS; historical source confounded|
 | Full native Stockade clear |aborted after919.72s sampled CPU|73.885s /73.16s /697692KiB|after PASS; no passing before receipt|
 | Nethekurse native aggro, Normal + Heroic |48.535s wall /41.25s sampled CPU /1457520KiB HWM|15.620s /12.15s /1421772KiB|both PASS; historical source confounded|
-| Full gate-filter union |reported40–64min|pending|not accepted|
+| Full gate-filter union |reported40–64min|2277.819s combined /6347.253CPU /10135336KiB childRSS|2815 executed,4failures; budget NOT met|
 
 The copied executable's machine-readable nextest census selects2748 enabled tests in the game-server binary. Its total census contains5397 cases, including mismatches and pre-existing ignored cases. `baseline-union-census.json` and `union-filter.txt` retain exact selection semantics: `(fu913 OR sm894) minus their existing opening-admission skip`, union `rd912`. Other workspace binaries still require their own census and acceptance;2748 is not presented as the entire workspace count.
 
@@ -85,11 +85,48 @@ Both13796's and this task's real first inputs for Recast, Replication and Replic
 
 This task's subsequent same-source opt0 build also heals precisely the three vendor roots and four registry consumers after the idle period, independently showing why a supposedly warm compile can take minutes. Existing missing artifacts need that one healing build; the second fix prevents future age-only vendor eviction. Evidence: `df-lightyear-fingerprints.json`, `df-relative-vendor-prune-classification.json`, `relative-vendor-fixed-classification.json`, `relative-vendor-{red,green}.log`, the preserved pre-relative-fix pruner and13796's `dailcry-ongoing-native-vv-670739696.log`.
 
-## Gate invocation and remaining slow cases
+## Completed profile-only union
 
-Next: qualify the complete union using four libtest threads and a fresh private SQLite backup of current canonical data taken at union start. Do not set `FOLLOWER_KIT_DB`: every published kit is now canonical; the historical Demo-only copy is known to fail Barbed253. Keep libtest's shared process: its process-wide fixtures are shared, unlike nextest's per-test processes. Nextest supplies isolated per-case timing here; process isolation is not assumed faster for thousands of cold-data cases. No timeout, retry or ignored-test policy is changed to manufacture a passing budget.
+Code lineagead56be4e8 (masterdb57e5364); laterf2ed87fac changes documentation only. Protocol2abc7fa, corrected private snapshota2e815; no `FOLLOWER_KIT_DB`. Four shared-process libtest threads plus the separately qualified serial frontal case. Discovery and execution inventories agree exactly:2815 enabled cases (2811pass/4fail),81 existing ignored, zero missing/extra. Source snapshot hash remains unchanged. Workspace check passes4m23s and format check passes; no warnings reported. Workspace prebuild12m24s is separate from execution; it heals previously pruned workspace artifacts, while third-party/vendor dependencies remain reusable.
 
-The reported audit identifies campaign12, Nethekurse6, Omor3, and Azure combat/Kokia/Vyletongue2 each above60s. These are historical counts, not post-change measurements. A final receipt must enumerate the actual remaining slow names, durations and sampled causes, and compare test identities/statuses before accepting the budget.
+| Metric | Measured |
+|---|---:|
+| Batch execution wall |2261.460143s|
+| Serial frontal wall |16.358595s|
+| Combined union wall |2277.818739s|
+| Combined exact child CPU |6347.252680s|
+| Child peakRSS |10135336KiB (9.67GiB)|
+| Conservative sampled tree peakRSS |10060028KiB (9.59GiB)|
+| Sampled tree peak swap |15994032KiB (15.25GiB)|
+
+The memory maxima occur at different samples; do not sum them into a claimed simultaneous peak. RSS-only acceptance is not enough when the process swaps this much. Neither900s nor the approximately8GiB/no-swap follow-up target is met. Per-module sums measure overlapping per-test **wall**, not CPU: scriptedAI503cases/3228.701s; spell_cast1181/2774.509s; followers454/1108.823s (plus the separate frontal16.326s); combat195/482.941s; maps256/395.418s. These sums overlap and do not add to elapsed wall. Per-module CPU cannot be recovered honestly from one shared-process total without additional profiling. Full module ledger is `union-module-wall.json`.
+
+Four batch failures remain explicit: `followers::holy_priest_tests::holy_priest_native_two_surge_uses_keep_half_cost_then_spend_one` and `followers::kit_proc_fidelity_tests::dps_parity_fists_of_fury_simc_tick_cadence_preserves_five_native_damage_hits` pass individually but fail in both four-thread shared-process runs; shared-state/order cause is not yet identified. `game_objects::collision::tests::arena_live_imported_objects_require_unphased_source_until_real_phasing_exists` sees a missing hardcoded arena proof database; the lead restored it after this case executed, so an isolated recheck is required. A fourth late failure is `spell_cast::dummy8_defense_tests::dummy8_breath_burn_reduces_only_damage_to_the_owning_monk_and_expires`; it needs an isolated retained-case recheck before attribution. No assertion is removed or weakened, and no failure is silently retried into a green union.
+
+A25s49Hz midrun sample (3989samples) attributes19.28%self CPU to SQLite VM execution and13.78% to `pthread_mutex_lock`; captured callchains connect the latter through rusqlite column readers to SQLite `columnMem`. The bundled SQLite source explicitly enters `pVm->db->mutex` there. This identifies per-connection SQLite lock-acquisition overhead, **not proven cross-thread lock blocking**, and not a shared registry lock. `SpellInfo::clone` contributes2.88%self. Repeated test-App decoding/row copies and retained full spell-store copies are the next scoped targets; production SQLite safety flags stay unchanged.
+
+### Ten longest cases, current union
+
+All ten pass. Durations are per-test wall under concurrency, not isolated CPU attribution.
+
+| Exact test | Seconds | Subsystem exercised |
+|---|---:|---|
+| `spell_cast::dummy7_tests::dummy7_survival_instincts_halves_incoming_damage_and_cancellation_removes_child` |129.331|Native defensive aura, damage and cancellation lifecycle|
+| `dungeon_simulator::full_stockade_clears_all_three_bosses` |82.841|Full native Stockade route/combat; complete timeline retained|
+| `dungeon_simulator::healer_metrics_tests::healer_triage_benchmark_records_native_pull_end_mana_and_hot_uptime` |81.797|Native healer run and mana/HoT metrics|
+| `scripted_ai::tests::data_bosses::kokia::boss_alerts_opted_lua_scripts_publish_real_initial_requests_only` |66.239|Multiple source-qualified Lua boss alert lanes|
+| `spell_cast::readiness_lifetime_tests::native_readiness_real_sixty_second_owner_lifetime_survives_slow_frames` |62.111|Intentional60s REAL-time charge/readiness lifetime, not a simulator sleep bug|
+| `spell_cast::summon_damage_tests::class_completeness_native_summon_damage_changes_real_guardian_melee` |53.301|Native guardian stats/melee damage|
+| `scripted_ai::tests::data_bosses::lost_dwarves::encounter_coverage_lost_dwarves_all_actor_current_lanes_and_native_completions` |44.685|All three native boss actors and source clock lanes|
+| `toys::tests::toyfx14_stationary_source_summons_learn_spawn_and_expire` |44.476|Native toy learning/summon/expiry|
+| `scripted_ai::tests::data_bosses::herald_liquid_fire::encounter_coverage_herald_liquid_fire_heroic_fireball` |33.651|Heroic Herald source Fireball lane|
+| `scripted_ai::tests::data_bosses::herald_liquid_fire::encounter_coverage_herald_liquid_fire_heroic_cone` |32.927|Heroic Herald source frontal lane|
+
+Only the first five exceed60s. Apart from the intentional real-time readiness test and full scenario timelines, exact residual loader/clone versus simulation contributions need isolated measurements; no tick counts will be shortened based on wall time alone. The lead approved a bounded nextest RSS cohort (these ten plus cache-heavy/native-copy controls), explicitly **not a global largest-RSS census**. That ranking and a memory-weighted scheduling policy follow; process-wide cached RSS cannot be assigned to individual overlapping tests from this run.
+
+## Gate invocation
+
+Use the committed default `test` profile through ordinary `cargo test --locked --workspace --no-fail-fast -- <union filters> --skip opening_admission_does_not_recruit_unprojected_source_packs --test-threads 4`, with no kit override and a hash-frozen, writable-copy-compatible private source layout. The qualified frontal case must run separately/serially with its actual bake receipt; include its execution receipt in total coverage/time. Four threads are the **measured baseline, not an accepted final recommendation**: memory-bounded heavy-test scheduling still needs proof. Nextest supplies isolated timing/RSS here; cold per-test process isolation is not assumed faster for thousands of native fixtures. Exact full argv is preserved in `union.log`/`union-provenance.json`; filters remain the literal three-gate union. No timeout, retry, ignore or assertion policy changes to manufacture acceptance.
 
 ## Sources
 
