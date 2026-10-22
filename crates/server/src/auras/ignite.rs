@@ -56,7 +56,9 @@ pub(super) fn apply_damage(
             Some(PYROBLAST | FLAMESTRIKE | NATIVE_FLAMESTRIKE)
         );
     let percent = effect.amount * if hot_streak { 2.0 } else { 1.0 };
-    let amount = event.damage * percent / 100.0 / ticks as f32;
+    // TC DamageInfo::GetDamage is uint32 before CalculatePct.
+    let damage = event.damage as u32;
+    let amount = damage as f32 * percent / 100.0 / ticks as f32;
     crate::spell_cast::cast_triggered_with_effect0_amount(
         world,
         unit,

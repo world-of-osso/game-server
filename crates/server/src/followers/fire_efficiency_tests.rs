@@ -137,6 +137,166 @@ fn fire_efficiency_native70_ordinary_fireball_earns_native_ignite() {
 }
 
 #[test]
+fn fire_efficiency_native70_ignite_uses_native_share_and_cannot_feed_itself() {
+    let _seed = crate::random::seed_scope(1);
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let target = prepare_dummies(&mut h, 1)[0];
+    h.app
+        .world_mut()
+        .entity_mut(target)
+        .insert((Level(70), UnitLevel(70)));
+    let percent = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12846)
+        .unwrap()
+        .effects[0]
+        .amount;
+    let dot = h
+        .app
+        .world()
+        .resource::<crate::spell_info::SpellStore>()
+        .get(12654)
+        .unwrap();
+    let period = dot
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .aura_period_ms;
+    let ticks = dot.duration.unwrap().duration_ms as u32 / period;
+    assert_eq!((period, ticks), (1000, 9), "native12654 clock");
+    let start = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, FIREBALL, Some(target), false)
+        .unwrap();
+    h.advance(100);
+    let damage = h.inbox.log[start..]
+        .iter()
+        .find(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(FIREBALL)
+                && event.kind == CombatLogKind::Damage
+        })
+        .unwrap()
+        .amount;
+    let ignite = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(target)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12654 && aura.caster == caster)
+        .unwrap();
+    let amount = ignite
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(amount, damage as f32 * percent / 100.0 / ticks as f32);
+    h.advance(200);
+    let hits: Vec<_> = h.inbox.log[start..]
+        .iter()
+        .filter(|event| {
+            event.source == Some(caster.to_bits())
+                && event.spell_id == Some(12654)
+                && event.kind == CombatLogKind::Damage
+                && event.periodic
+        })
+        .collect();
+    assert_eq!(
+        hits.len(),
+        ticks as usize,
+        "one earned9tick bank, no self-proc cascade"
+    );
+    assert!(hits.iter().all(|event| event.amount == amount as i32));
+    assert!(!crate::auras::has_aura(h.app.world(), target, 12654));
+}
+
+#[test]
+fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
+    let _seed = crate::random::seed_scope(1);
+    let (mut h, caster) = prepare_follower(209059, 63, 70);
+    let targets = prepare_dummies(&mut h, 2);
+    for target in &targets {
+        h.app
+            .world_mut()
+            .entity_mut(*target)
+            .insert((Level(70), UnitLevel(70)));
+    }
+    for _ in 0..2 {
+        crate::spell_cast::creature_cast(
+            h.app.world_mut(),
+            caster,
+            108853,
+            Some(targets[0]),
+            false,
+        )
+        .unwrap();
+        h.advance(1);
+    }
+    h.advance(3);
+    assert!(
+        crate::auras::has_aura(h.app.world(), caster, 48108),
+        "two real FireBlast crits earn HotStreak"
+    );
+    let percent = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(caster)
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12846)
+        .unwrap()
+        .effects[0]
+        .amount;
+    let start = h.inbox.log.len();
+    crate::spell_cast::creature_cast(h.app.world_mut(), caster, 11366, Some(targets[1]), false)
+        .unwrap();
+    assert!(
+        h.app.world().get::<CastState>(caster).is_none(),
+        "admitted instant Pyroblast"
+    );
+    assert!(
+        !crate::auras::has_aura(h.app.world(), caster, 48108),
+        "spent before missile impact"
+    );
+    h.advance(60);
+    let damage = h.inbox.log[start..]
+        .iter()
+        .find(|event| {
+            event.source == Some(caster.to_bits())
+                && event.target == Some(targets[1].to_bits())
+                && event.spell_id == Some(11366)
+                && event.kind == CombatLogKind::Damage
+        })
+        .unwrap()
+        .amount;
+    let ignite = h
+        .app
+        .world()
+        .get::<crate::auras::ActiveAuras>(targets[1])
+        .unwrap()
+        .iter()
+        .find(|aura| aura.spell_id == 12654 && aura.caster == caster)
+        .unwrap();
+    let amount = ignite
+        .effects
+        .iter()
+        .find(|effect| effect.index == 0)
+        .unwrap()
+        .amount;
+    assert_eq!(
+        amount,
+        damage as f32 * (percent * 2.0) / 100.0 / 9.0,
+        "native HotStreak share survives its consumed aura and ordinary missile"
+    );
+}
+
+#[test]
 #[ignore = "measurement: explicit FIRE_EFFICIENCY_OUTPUT and frozen loadout required"]
 fn fire_efficiency_native70_single_target_60s() {
     let output = std::env::var("FIRE_EFFICIENCY_OUTPUT").unwrap();
