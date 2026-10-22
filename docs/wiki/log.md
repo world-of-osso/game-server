@@ -1,6 +1,6 @@
 ## 2026-10-21 — Orb affinity passives are normal specialization state
 
-[Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): source136928/127850 isolated44rows/26tables/two models; earlier missing-root-helper interpretation withdrawn.137031/2/3 are actual Holy/Disc/Shadow spec passives with source auto-cast flag, not new toy effects. Test-first3e2537dca requires normal KnownSpells→AuraPlugin passive application and source affinity before actualUseToy; RED pending, no admission/GREEN/native color/class-login claim. Source5min aura/10min recovery and Priest/level11 guard retained; census539 unchanged.
+[Toys](systems/toys.md#thaumaturgists-orb-specialization-affinity-source-boundary-2026-10-21): source136928/127850 isolated44rows/26tables/two models; earlier missing-root-helper interpretation withdrawn.137031/2/3 are actual Holy/Disc/Shadow spec passives with source auto-cast flag, not new toy effects. Test-first3e2537dca requires normal KnownSpells→AuraPlugin passive application and source affinity before actualUseToy; First01ce988b7 run censusRED1/control2PASS plus3excludedfixture-spec-lookup failures60.03s; lightweight harness intentionally strips specs. Fixture-onlybf9f138a3 keeps full nativeClassSpells fromloader;correctedRED pending, no admission/GREEN/native color/class-login claim. Source5min aura/10min recovery and Priest/level11 guard retained; census539 unchanged.
 
 ## 2026-10-21 — Corrected ring modifier source typing
 
