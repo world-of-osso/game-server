@@ -26,6 +26,11 @@ use crate::networking::{Moving, PlayerLink};
 use crate::spell_info::{ClassInfo, ClassSpells, SpellInfo, SpellStore, load_spell_data};
 use crate::stats::CharacterStats;
 
+mod assisted_parity;
+pub(crate) use assisted_parity::{
+    read_facts as read_assisted_parity_facts, read_request_window as read_assisted_request_window,
+};
+
 /// Opt-in actual server combat events, including ownerless NPC self-events.
 /// Captured before owner routing; never changes production delivery or ownership.
 #[derive(Resource, Default)]

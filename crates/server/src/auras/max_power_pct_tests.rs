@@ -56,6 +56,53 @@ fn mana(h: &Harness) -> Mana {
 }
 
 #[test]
+fn powers_missing_catalog_does_not_guess_native_max_power_or_mutate_existing_pool() {
+    let mut h = fixture(4);
+    let caster = h.caster;
+    let before = h
+        .app
+        .world()
+        .get::<crate::spell_cast::powers::PowerPools>(caster)
+        .unwrap()
+        .clone();
+    h.app
+        .world_mut()
+        .remove_resource::<crate::spell_cast::powers::PowerTypeTable>()
+        .unwrap();
+    apply_aura(
+        h.app.world_mut(),
+        &AuraApplication {
+            caster,
+            target: caster,
+            spell_id: STABILIZED_ENERGY,
+            effect_mask: 1 << 1,
+            source: AuraSource::Cast,
+        },
+    );
+    assert!(has_aura(h.app.world(), caster, STABILIZED_ENERGY));
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(caster)
+            .unwrap(),
+        &before
+    );
+    remove(&mut h, STABILIZED_ENERGY);
+    assert_eq!(
+        h.app
+            .world()
+            .get::<crate::spell_cast::powers::PowerPools>(caster)
+            .unwrap(),
+        &before
+    );
+    assert!(
+        !h.app
+            .world()
+            .contains_resource::<crate::spell_cast::powers::PowerTypeTable>()
+    );
+}
+
+#[test]
 fn census_tail_178_native_savant_preserves_missing_mana_and_removes_reversibly() {
     let mut h = fixture(8);
     let caster = h.caster;

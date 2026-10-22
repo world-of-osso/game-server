@@ -84,3 +84,71 @@ fn seed_one_keeps_the_native_leader_alive_through_the_sapling_fight() {
     }
     panic!("native Sapling engagement must finish within the unchanged campaign bound");
 }
+
+#[test]
+#[ignore = "explicit native Azure Rune chase across the sourced first book hop"]
+fn native_rune_unreachable_chase_after_book_hop_evades_without_crossing_components() {
+    use crate::creature_ai::{CannotReachTarget, CreatureState};
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let owner = run.party.owner;
+    let rune = run.actors[&29001884];
+    // The first hop lands beside this Rune on the same508yd component.
+    // The next native book hop is the disconnected508→426yd chase boundary.
+    let book = run.actors[&29002007];
+    let origin = *run.app.world().get::<Position>(rune).unwrap();
+    let source = *run.app.world().get::<Position>(book).unwrap();
+    assert!(
+        !run.app
+            .world()
+            .get::<shared::components::UnitFlags>(rune)
+            .unwrap()
+            .is_selectable()
+    );
+    run.app.world_mut().entity_mut(owner).insert(source);
+    assert_eq!(
+        crate::npc_interaction::azure_translocation::traverse(run.app.world_mut(), owner, book),
+        Ok(5)
+    );
+    movement::forget_party_travel(run.app.world_mut(), owner);
+    let target = *run.app.world().get::<Position>(owner).unwrap();
+    assert!(
+        run.app
+            .world()
+            .resource::<Space>()
+            .route(
+                Vec3::new(origin.x, origin.y, origin.z),
+                Vec3::new(target.x, target.y, target.z),
+            )
+            .is_err(),
+        "the real book hop crosses disconnected walk components"
+    );
+    crate::creature_aggro::attack_start(run.app.world_mut(), rune, owner);
+    assert_eq!(
+        run.app.world().get::<CreatureState>(rune),
+        Some(&CreatureState::Pursuing {
+            target: owner.to_bits()
+        })
+    );
+    println!("RUNE_BOOK_BOUNDARY rune={rune:?} origin={origin:?} target={target:?}");
+    let mut blocked_seen = false;
+    for _ in 0..200 {
+        run.app.update();
+        let world = run.app.world();
+        blocked_seen |= world.get::<CannotReachTarget>(rune).is_some();
+        if blocked_seen && world.get::<CreatureState>(rune) == Some(&CreatureState::Idle) {
+            assert!(world.get::<CannotReachTarget>(rune).is_none());
+            assert_eq!(world.get::<Position>(rune), Some(&origin));
+            assert!(
+                world
+                    .get::<Health>(rune)
+                    .is_some_and(|health| health.current > 0.0)
+            );
+            return;
+        }
+    }
+    panic!(
+        "native blocked chase must run its existing evade clock and home arrival, not panic or cross the book gap"
+    );
+}

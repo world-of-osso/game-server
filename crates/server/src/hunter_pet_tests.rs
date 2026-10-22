@@ -166,6 +166,25 @@ fn saved(h: &Harness) -> StoredPetStable {
 }
 
 #[test]
+fn powers_pet_spawn_without_catalog_leaves_stable_and_world_unchanged() {
+    let path = db_path();
+    seed_stable(&path, None);
+    let mut h = hunter(&path, DISEASED_YOUNG_WOLF).unwrap();
+    let owner = h.caster;
+    let position = *h.app.world().get::<Position>(owner).unwrap();
+    let before = stable(&h).unwrap().stored.clone();
+    let entities = h.app.world().entities().len();
+    h.app
+        .world_mut()
+        .remove_resource::<PowerTypeTable>()
+        .unwrap();
+    assert!(spawn_pet(h.app.world_mut(), owner, 0, position, 0.0).is_none());
+    assert_eq!(stable(&h).unwrap().stored, before);
+    assert_eq!(h.app.world().entities().len(), entities);
+    assert!(!h.app.world().contains_resource::<PowerTypeTable>());
+}
+
+#[test]
 fn hunter_tames_a_diseased_young_wolf_after_the_channel() {
     let path = db_path();
     let Some(mut h) = hunter(&path, DISEASED_YOUNG_WOLF) else {
