@@ -9,6 +9,35 @@
 ## 2026-10-21 — Follower utility and scoped geometry
 
 [Utility scheduler](systems/follower-utility.md): named project policy over actual70448 spellbooks; direct native follower/player resurrection and16-case GREEN, with later strict-OOC/source-guard requalification tracked independently. Native pet initialization RED→fresh/cached89766GREEN; Bo first-fight pursuit/damage RED→qualified player-race geometry GREEN5.32s, full identical seed11 timeout→all3bosses2646.1sim/77.84wall. [Ordinary model-info finding](investigations/ordinary-model-info-gap.md) remains separate:1051 used source gaps, no ordinary-NPC sizing extension. Final matched comparison and final integration gates remain open in the proof ledger.
+## 2026-10-22 — Spotlight and native target57 qualified
+
+[Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): separate generic4db754ace/exact25c96a187, correctedRED4/control4PASS102.82s→8GREEN112.11s at25c96a187/protocol2abc7fa. Native1022 rejects foreign ally while21/10060 remains allowed; actual grouped recipient apply/replicate/CancelAura/invariants/recovery refusal, foreign no substitute and2drifts pass. Check133s/0warnings/fmt/readabilityPASS. Exact542→543 only230924,630 unadmitted; named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE persists in census/ledger. No outdoor/native/full30min expiry/hour reuse claim. Original379 current partition25visual/2ports/1identity/155zero-payload/196script gaps, with exact source ledgers.
+
+## 2026-10-22 — Authored removal lifecycle and source-classification reconciliation
+
+[Visual rule](systems/toys.md#source-complete-visual-only-server-census-rule-2026-10-21) fourth criterion now follows source-authored removal: successful CancelAura where allowed, otherwise real refusal plus natural expiry. Documents landed Amani behavior without changing code or source flags. Exact final ledger admission sets/proof tips reconcile21 stale original379 source rows:20visual plus Coyote core port. Current542 partition24visual/2ports/1identity/156zero-payload/196script gaps; no native/universal lifecycle claim. Spotlight remains pending GREEN.
+
+## 2026-10-22 — Spotlight source recipient boundary
+
+[Toys](systems/toys.md#spotlight-source-recipient-and-environmental-boundary-2026-10-22): source230924/467730 selected raid recipient/30min aura/1h recovery;95rows27tables6residentmodels,10raw identity/clock/effect snapshots. Exact visual entry follows separate generic57 correction4db754ace; correctedRED4/control4PASS102.82s, GREEN pending. Lead permits pipeline admission with named SPELL_ATTR0_ONLY_OUTDOORS_UNENFORCED_NO_INDOOR_STATE census/ledger gap; no fake indoor state/outdoor eligibility/native pixels/full-hour reuse claim. Qualified census542 retained until proof.
+
+## 2026-10-22 — Native target57 raid-recipient correction
+
+[Toys](systems/toys.md#native-target57-raid-recipient-correction-2026-10-22): source57 raid relation was aliased to ordinary ally21; actual1022 on foreign ally returnsOk, while21/10060 control passes. Corrected6bdac3cf8 batch4RED/control4PASS102.82s, including separate Spotlight preflight REDs; compile-only0611502ac API errors excluded. Generic Raid relation now checks existing membership/assist and rejects explicit foreign targets without caster substitution; GREEN pending. No Spotlight entry yet, no mixed-mask/universal controlled-unit claim.
+## 2026-10-22 — Ki'katal source-clock partial
+
+[Ki'katal](investigations/follower-data.md#kikatal-source-clock-partial--2026-10-22): ignored native firstWebsRED→5b036e1ea3/3GREEN57.40s, eleven90s requests perNormal/Follower, nativeVolley/Singularity damage, evade/rearm, actualcopy-credit/corpse proof. Binding-only producer1/1GREEN preserves source/native/population; lower-bound alerts and absentcontrollers remain gaps. Canonical database untouched.
+## 2026-10-22 — Active party combat references
+
+Updated [follower admission](investigations/follower-data.md#active-party-combat-reference-admission--2026-10-22) and its contract: actual31146 count RED and native missile-launch RED distinguish active references from target-side suppression. Membership-only Stockade regression isolated on identical authentic data; active-pair fix4405dca61 gives native2GREEN, Stockade3/3 with all5alive,685native controls plus Leymor1PASS. Full genuine Henry roster also clears3/3 at2384.60sim_s with all5alive on approved authentic6bf39eb8 input. Final master merge carries later schema/population-oracle updates; check/integration proof is recorded separately.
+
+## 2026-10-22 — Native Ascendance entry targeted GREEN
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22):2GREEN16.60s at1e7f8cebb proves six caster-owned shocks/actual half-bursts, idle/80yd exclusions and ordinary-full-damage control during Ascendance. One unused import removed without suppression at1bda89dad; proved cases enabled. Affected Ele StatsPlugin3PASS37.49s, ST/3T3836.858/3032.125 DPS labelled unpaired starter samples. New master60f31 aura/proc/mastery/cast changes require parent integration proof; no historical-to-current promotion.
+
+## 2026-10-22 — Native Ascendance entry RED and bounded selection policy
+
+[Entry](investigations/follower-data.md#elemental-ascendance-entry--2026-10-22): actual1219480 self aura/full285452 control pass, owned188389 absent0vs6/entry burst missing; corrected combat-only native2RED22.84s/zero warnings. Approved named Flame-Shock-eligibility project policy, not Retail radius. Entry script/per-cast50% multiplier pushed; GREEN remains pending. Earlier projection d79 landed through lead ra922/Python21PASS and its single kit row is published.
 ## 2026-10-22 — Exact attack countdowns
 
 ## 2026-10-22 — BM engage Auto Shot and exact shared attack timers
