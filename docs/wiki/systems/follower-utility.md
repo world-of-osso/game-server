@@ -36,10 +36,25 @@ The metrics reader counts actual party/owned-pet Interrupt events, hostile dange
 - [[follower-data]] — source provenance and prior native fixtures.
 - [[dungeon-simulator]] — transport-free harness and its acceptance boundary.
 
+## Backend-aligned matched outcomes
+
+Twenty seeds per variant, four prescribed level32 rosters containing all eleven profiles as actual NPC companions. Baseline `5b38a7b86` and candidate `b552686de` share backend `bc09af9bd`, the same pet/geometry/home/addon prerequisites, native stats and simulator profile. `aligned-source-comparison.json` restricts runtime differences to utility integration, dispel eligibility export and follower resurrection. Both use the read-only snapshot SHA-256 `40d95b0a21a243edcf12dc9a1fa1ca56ad4b45f2828026622d609d62fab5cca5`.
+
+| Actual trace outcome | Baseline | Utility |
+|---|---:|---:|
+| Party/owned-pet landed interrupts | 655 | 691 |
+| Dangerous cast completions after CastStart | 14 | 23 |
+| Native party Death events | 1 | 0 |
+| Full three-boss clears | 19/20 | 20/20 |
+
+These observations do **not** establish improved cast suppression: dangerous completions increased. Baseline seed2 has a real tank Death followed by an absent-tank block, not a harness stall or full-party wipe; totals include unequal combat exposure from that failed clear. No statistical survival guarantee follows from twenty seeds. No cooldown/stat changes or fake history/death recovery were used.
+
+Reproduce with `scripts/follower_utility_metrics.py`, using `sim-matched-baseline-aligned` and `sim-matched-candidate-global` under the diagnostic root above; authoritative result is `matched-metrics-qualified.json`. `matched-{baseline-aligned,candidate-global}.proof.json` retain exact cohort commands/revisions/environment. Each directory's `overall-summary.json` combines all20 reports; original `summary.json` describes only its last five-seed invocation. Earlier candidate receipts remain archived, including the leader-kick regression, rather than overwritten.
+
 ## Explicitly controlled native profile identity
 
 A controller may execute an initialized native profile without a stored NPC `Follower` component (the simulator leader is a native Player). Party kick selection includes the current explicitly supplied profile while discovering other companions from their real stored components. It does not infer profiles for arbitrary players. The prior lookup dropped the leader kick: matched seed1 recorded5baseline owner Interrupts and0candidate, and the corrected native component-boundary regression fails1/5.51s when restoring only the historical stored-component predicate (archived source). Earlier assertions observed the wrong owner-routed inbox and are not qualification evidence. The corrected oracle reads actual engine Interrupt events before delivery; candidate utility24 plus retained healer9 pass33/33 (one pre-existing ignored) in25.84s. Initial candidate comparison is retained as failed evidence; corrected20-seed outcomes remain pending.
 
 ## Party-global danger priority
 
-Two native casters at0/80yards expose ordering across differently positioned kickers: a nearby Fireball must not consume the first party opportunity while another ready member can stop distant Polymorph. The second case requires a level26 Garrick native Shield for distant Polymorph while a nearby Mage has Counterspell for Fireball; existing emergency-heal-before-Shield remains intact. Both cases fail genuinely at9ffd96a8c (2FAIL16.72s). Candidate danger is now outside both member rotation and primary/secondary selection. GREEN and updated matched outcomes remain pending.
+Two native casters at0/80yards expose ordering across differently positioned kickers: a nearby Fireball must not consume the first party opportunity while another ready member can stop distant Polymorph. The second case requires a level26 Garrick native Shield for distant Polymorph while a nearby Mage has Counterspell for Fireball; existing emergency-heal-before-Shield remains intact. Both cases fail genuinely at9ffd96a8c (2FAIL16.72s). Candidate danger is now outside both member rotation and primary/secondary selection. At99cd62dcc the native utility/healer/retained composite passes79 cases in110.40s; one pre-existing Resto Nature's Swiftness depth regression remains ignored and is not claimed fixed. Backend-aligned paired outcomes are recorded below.

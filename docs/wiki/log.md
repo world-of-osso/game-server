@@ -3558,3 +3558,6 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 ## 2026-10-21 — Simulator native home-return prerequisite
 
 [Simulator](systems/dungeon-simulator.md#native-returninghome-arrival--2026-10-21): actual20375744 at-home and displaced4yd Returning2RED atfcacd14e7, Bo first-fightPASS in the same16.27s composite. Shared production home-arrival restoration and frozen Returning destination implemented; GREEN/seed12 replay pending.
+## 2026-10-22 — Qualified follower utility comparison
+
+[Follower utility](systems/follower-utility.md#backend-aligned-matched-outcomes): native global range/phase priority2RED→79-case utility/healer/retainedGREEN (one existing ignored). Backend-aligned frozen-input20+20 runs: landed interrupts655→691, dangerous completions14→23, native party Deaths1→0, clears19→20; no improved-cast-suppression or statistical survival claim. Source/prerequisite boundaries and earlier failed candidates retained in linked receipts.
