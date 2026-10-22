@@ -69,6 +69,8 @@ pub struct AuraStatMods {
     /// MOD_INCREASE_ENERGY 35 and MOD_MAX_POWER 418 by DB2 power type, summed raw
     /// units (TrinityCore `HandleStatFlatModifier(UNIT_MOD_POWER_START + misc, TOTAL_VALUE)`).
     pub max_power_flat: Vec<(i32, f32)>,
+    /// Player-only178 matching non-Mana TOTAL_PCT factors; Mana goes to StatModifiers.
+    pub max_power_mult: Vec<(i32, f32)>,
     /// SET_POWER_POINT_CHARGE 494 (NYI in TrinityCore): the 1-based combo point
     /// indexes in MiscValue are charged (retail `GetUnitChargedPowerPoints`), ascending.
     pub charged_power_points: Vec<u8>,
@@ -139,6 +141,7 @@ impl Default for AuraStatMods {
             power_regen_flat: Vec::new(),
             power_regen_prevention_mask: 0,
             max_power_flat: Vec::new(),
+            max_power_mult: Vec::new(),
             charged_power_points: Vec::new(),
             movement_speed: 1.0,
             pushback_reduction_pct: 0.0,
@@ -231,6 +234,13 @@ impl AuraStatMods {
             .filter(|(power, _)| *power == power_type)
             .map(|(_, mult)| mult)
             .product()
+    }
+
+    pub fn max_power_multiplier(&self, power_type: i32) -> f32 {
+        self.max_power_mult
+            .iter()
+            .find(|(power, _)| *power == power_type)
+            .map_or(1.0, |(_, factor)| *factor)
     }
 
     pub fn max_power_flat(&self, power_type: i32) -> f32 {
@@ -579,6 +589,10 @@ fn apply_aura(acc: &mut Accumulator, aura: &AuraInstance) {
             }
             MOD_MANA_REGEN_PCT => multiply_entry(&mut combat.power_regen_mult, 0, pct(amount)),
             MOD_INCREASE_ENERGY | MOD_MAX_POWER => combat.max_power_flat.push((misc, amount)),
+            MOD_MAX_POWER_PCT if misc == PowerType::Mana as i32 => {
+                stats.max_mana_pct += amount * (1.0 + stats.max_mana_pct / 100.0);
+            }
+            MOD_MAX_POWER_PCT => multiply_entry(&mut combat.max_power_mult, misc, pct(amount)),
             SET_POWER_POINT_CHARGE => {
                 if let Ok(point) = u8::try_from(misc)
                     && point > 0

@@ -70,6 +70,8 @@ pub struct StatModifiers {
     pub crit_to_parry_pct: f32,
     /// Aura419: composed BASE_PCT mana modifier; never changes create-mana costs.
     pub base_mana_pct: f32,
+    /// Aura178: composed TOTAL_PCT Mana modifier, separate from419 BASE_PCT.
+    pub max_mana_pct: f32,
     /// Aura404: presence replaces both AP bases, including an authored zero.
     pub attack_power_from_sp_pct: Option<f32>,
     pub crit_pct: f32,
@@ -153,7 +155,7 @@ pub struct CharacterStats {
     /// Create mana (gtBaseMP), 0 for classes without mana. `PowerCostPct`
     /// costs use this unmodified basis, not the effective maximum.
     pub base_mana: f32,
-    /// Effective mana maximum after aura419's BASE_PCT modifier.
+    /// Effective mana maximum after419 BASE_PCT and178 TOTAL_PCT modifiers.
     pub max_mana: f32,
     /// Damage spell power: Intellect when the main stat is Intellect, else 0
     /// (Unit::SpellBaseDamageBonusDone, Unit.cpp:7118-7119).
@@ -460,7 +462,11 @@ pub fn compute_character_stats(
             + mods.max_health_flat)
             .floor(),
         base_mana: base_mana.unwrap_or(0.0),
-        max_mana: (base_mana.unwrap_or(0.0) * (1.0 + mods.base_mana_pct / 100.0)).round(),
+        max_mana: (base_mana.unwrap_or(0.0)
+            * (1.0 + mods.base_mana_pct / 100.0)
+            * (1.0 + mods.max_mana_pct / 100.0))
+            .round()
+            .max(0.0),
         spell_power,
         healing_power,
         attack_power,

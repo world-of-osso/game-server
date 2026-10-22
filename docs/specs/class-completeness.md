@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Maximum-power percentage slice — 2026-10-21
+
+- Native178 is Player-only and composes matching power TOTAL_PCT factors multiplicatively. Keep Mana separate from419 BASE_PCT/create-mana cost basis. Applying/removing/recalculating178 changes current power by the maximum-capacity delta, preserving absolute deficit with ordinary clamping and power-threshold hooks.
+- Native190740 Savant uses actual mastery-scaled amount;210126 and228451 qualify Mana/419 composition and matching Energy, removal at low current and ordinary subsequent stat/power recomputation. NPCs gain no178 capacity or current power. No new power representation or canonical data change. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Critical-block amount slice — 2026-10-21
 
 - Preserve literal pinned TC owner-side semantics: victim253 determines whether a block is critical, while attacker638 multiplies the critical-block amount. Do not silently reinterpret native429638 Martial Expert as a defender-owned multiplier based on its name.

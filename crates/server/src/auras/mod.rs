@@ -1563,11 +1563,15 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
         stats.primary_base_pct = UnitStats::default();
         // TC Unit.cpp1720 excludes even player-controlled NPCs from280.
         combat.armor_penetration_pct = 0.0;
+        stats.max_mana_pct = 0.0;
+        combat.max_power_mult.clear();
     }
     ebon_might::add_primary_bonus(world, unit, primary_support, &mut stats);
     for multiplier in &mut combat.damage_taken_mult {
         *multiplier *= growth;
     }
+    let max_power_changes =
+        crate::spell_cast::powers::max_power_percent_changes(world, unit, &stats, &combat);
     if let Some(mut stored) = world.get_mut::<AuraStatMods>(unit)
         && *stored != combat
     {
@@ -1581,6 +1585,7 @@ pub fn auras_changed(world: &mut World, unit: Entity) {
     if current != stats {
         world.entity_mut(unit).insert(stats);
     }
+    crate::spell_cast::powers::apply_max_power_percent_changes(world, unit, max_power_changes);
     let current_threat = world
         .get::<AuraStatMods>(unit)
         .map_or(0.0, |mods| mods.temporary_threat);

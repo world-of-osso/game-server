@@ -56,7 +56,6 @@ fn mana(h: &Harness) -> Mana {
 }
 
 #[test]
-#[ignore = "RED: nativeSavant178 mastery changes both maximum and current Mana by max delta"]
 fn census_tail_178_native_savant_preserves_missing_mana_and_removes_reversibly() {
     let mut h = fixture(8);
     let caster = h.caster;
@@ -102,7 +101,6 @@ fn census_tail_178_native_savant_preserves_missing_mana_and_removes_reversibly()
 }
 
 #[test]
-#[ignore = "RED:178 TOTAL_PCT composes independently with419 BASE_PCT"]
 fn census_tail_178_native_familiar_composes_with_base_mana_without_regranting_419() {
     let mut h = fixture(8);
     let caster = h.caster;
@@ -145,7 +143,6 @@ fn census_tail_178_native_familiar_composes_with_base_mana_without_regranting_41
 }
 
 #[test]
-#[ignore = "RED: native178 matchingEnergy preserves deficit without changing other pools"]
 fn census_tail_178_native_stabilized_energy_updates_matching_pool_and_removal_clamps() {
     let mut h = fixture(4);
     let caster = h.caster;
@@ -186,7 +183,6 @@ fn census_tail_178_native_stabilized_energy_updates_matching_pool_and_removal_cl
 }
 
 #[test]
-#[ignore = "RED control: native178 is Player-only even with an NPC Mana pool"]
 fn census_tail_178_native_npc_does_not_gain_max_or_current_mana() {
     let mut h = fixture(8);
     let npc = h.npc;

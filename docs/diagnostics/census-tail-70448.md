@@ -51,6 +51,12 @@ At Rusta7eaa7ef5 (later commits only proof docs/ignored638 tests), second compil
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura178 MAX_POWER_PCT
+
+TC `SpellAuraEffects.cpp:4286–4326` applies Player-only matching TOTAL_PCT, then changes current power by newMax−oldMax rather than filling proportionally or only clamping. Mana uses its existing stats/create-mana basis and composes separately with419 BASE_PCT; non-Mana uses native PowerTypeTable plus existing flat modifiers. Collect native maximum changes before replacing modifiers, then store modifiers before ordinary ModifyPower/threshold hooks to prevent a nested trigger from repeating the old delta. Subsequent stats/power recomputation uses the same factors and cannot undo capacity.
+
+Ignored RED55f626f3a `census_tail_178 --include-ignored`:1PASS/3FAIL17.43s. Actual190740 Savant mastery amount gives expected Mana606/1106 from500/1000 but leaves500/1000; native210126+10 after419+5 leaves501.5/1050 instead606.5/1155; actual228451 Energy stays40/100 instead45/105. NPC exclusion passes. Tests require removal, low-current clamp and subsequent real StatsPlugin/power-system frame stability. `/home/osso/.worktrees/logs/census-tail/178-red.log`, compile1m21s/no warnings. Minimal consumers and enabled four cases committed; GREEN pending. Other unimplemented percentage-capacity aura types are not certified by this178 slice.
+
 ## Aura638 CRITICAL_BLOCK_AMOUNT
 
 Use pinned TC owner-side qualification above. Native429638 index1+20 feeds real AuraStatMods and actual autoswing/physical-spell critical blocks, not a marker. Ordinary victim253 chance and native block order remain unchanged. Auto integer blocked damage doubles, then multiplies/truncates638; spell integer blocked percentage doubles, then multiplies/truncates638 before its existing full-block cap. Native+10 critical-damage sibling is not applied in these selected-effect tests.
