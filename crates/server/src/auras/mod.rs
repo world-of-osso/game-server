@@ -31,6 +31,7 @@ mod damage_shield_tests;
 pub(crate) mod damage_transfer;
 mod earthen_rage;
 pub(crate) mod ebon_might;
+mod echo_of_light;
 pub(crate) mod effect_immunity;
 mod fear;
 mod fel_devastation;
