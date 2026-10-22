@@ -205,6 +205,51 @@ pub(crate) fn pull(
     Ok((allowed, format!("{decision:?}")))
 }
 
+pub(crate) fn inspect_follower_decision(world: &mut World, unit: Entity) -> serde_json::Value {
+    let follower = world.get::<Follower>(unit).unwrap().clone();
+    let party = ai::party_units(world, follower.owner);
+    let enemies = ai::engaged_enemies(world, &follower, unit, &party);
+    let target = enemies
+        .iter()
+        .map(|(enemy, _)| *enemy)
+        .find(|enemy| !crate::auras::has_breakable_by_damage_cc(world, *enemy));
+    let level = world.get::<Level>(unit).unwrap().0;
+    let entries: Vec<_> = world
+        .resource::<FollowerCatalog>()
+        .kits
+        .iter()
+        .filter(|entry| {
+            entry.available(follower.profile.spec_id, level)
+                && entry.slot == super::kit::Slot::Attack
+        })
+        .cloned()
+        .collect();
+    let mut decisions = Vec::new();
+    if let Some(target) = target {
+        for entry in entries {
+            let conditions =
+                super::kit_ai::conditions_met(world, unit, target, &party, &enemies, &entry);
+            let spell = world
+                .resource::<crate::spell_info::SpellStore>()
+                .get(entry.spell_id)
+                .unwrap()
+                .clone();
+            let native = format!(
+                "{:?}",
+                crate::spell_cast::read_native_cast_start(world, unit, &spell, target)
+            );
+            decisions.push(
+                serde_json::json!({"spell":entry.spell_id,"conditions":conditions,"native":native}),
+            );
+        }
+    }
+    serde_json::json!({"unit":unit.to_bits(),"spec":follower.profile.spec_id,"target":target.map(Entity::to_bits),
+        "enemies":enemies.iter().map(|(enemy,_)| enemy.to_bits()).collect::<Vec<_>>(),
+        "self_hazard":super::hazards::target_is_hazardous(world,unit,unit),
+        "approach":target.map(|target| super::hazards::approach_is_unsafe(world,unit,target)),
+        "offense":decisions})
+}
+
 pub(crate) fn inspect_tank_movement(
     world: &mut World,
     tank: Entity,
