@@ -129,6 +129,7 @@ mod tww_kyrioss;
 mod umbrelskul;
 #[path = "vazruden_slay.rs"]
 mod vazruden_slay;
+#[path = "vexamus.rs"]
 mod vexamus;
 #[path = "vyletongue.rs"]
 mod vyletongue;
