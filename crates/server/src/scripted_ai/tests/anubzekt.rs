@@ -49,14 +49,38 @@ fn encounter_coverage_creature_class4_native_energy_spawn_spend_and_regeneration
             Some((100.0, 100.0)),
             "native ChrClasses4.DisplayPower3 and70448 NPC Energy initialization"
         );
+        eprintln!(
+            "ROOT before difficulty{difficulty} combat={:?} motion={:?} moving={:?} dormant={} state={:?}",
+            h.app.world().get::<CombatStatus>(boss),
+            h.app.world().get::<CreatureMotion>(boss),
+            h.app.world().get::<shared::components::Moving>(boss),
+            h.app
+                .world()
+                .get::<crate::grid_activity::GridDormant>(boss)
+                .is_some(),
+            h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+        );
         crate::spell_cast::creature_cast(h.app.world_mut(), boss, EYE, Some(boss), false)
             .expect("ordinary source100Energy Eye, no scripted power grant");
+        eprintln!("ROOT admitted {:?}", h.app.world().get::<CastState>(boss));
         assert_eq!(
             crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
             Some((100.0, 100.0)),
             "ordinary native cast charges power on completion, not admission"
         );
         h.advance(7.2);
+        eprintln!(
+            "ROOT after difficulty{difficulty} cast={:?} energy={:?} combat={:?} moving={:?} dormant={} gos={:?}",
+            h.app.world().get::<CastState>(boss),
+            crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
+            h.app.world().get::<CombatStatus>(boss),
+            h.app.world().get::<shared::components::Moving>(boss),
+            h.app
+                .world()
+                .get::<crate::grid_activity::GridDormant>(boss)
+                .is_some(),
+            h.inbox(0).spell_gos
+        );
         assert_eq!(completed_casts(&h, boss, EYE), 1);
         assert_eq!(
             crate::spell_cast::powers::power_value(h.app.world(), boss, PowerType::Energy),
