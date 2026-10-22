@@ -236,7 +236,8 @@ fn fire_efficiency_native70_consumed_hot_streak_doubles_ignite_on_impact() {
             false,
         )
         .unwrap();
-        h.advance(1);
+        // Native108853 RecoveryTime500ms remains active between its charges.
+        h.advance(10);
     }
     h.advance(3);
     assert!(
