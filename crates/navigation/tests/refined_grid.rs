@@ -27,7 +27,9 @@ fn refined_grid_routes_across_authored_wow_tile_boundary_in_both_directions() {
     for direction in [1.0, -1.0] {
         let start = Vec3::new(TILE_SIZE - direction * 10.0, 0.0, 20.0);
         let end = Vec3::new(TILE_SIZE + direction * 10.0, 0.0, 20.0);
-        let route = nav.path(start, end).expect("connected refined-grid floor");
+        let route = nav
+            .complete_path(start, end)
+            .expect("connected refined-grid floor");
         let length: f32 = route.windows(2).map(|p| p[0].distance(p[1])).sum();
         assert!(
             (length - 20.0).abs() < 0.1,

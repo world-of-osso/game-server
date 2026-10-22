@@ -76,6 +76,7 @@ fn build_runtime_app(catalogs: &mut Option<super::catalogs::Catalogs>, include_p
         crate::creature_scripts::CreatureScriptsPlugin,
         crate::scripted_ai::ScriptedAiPlugin,
         crate::followers::FollowerPlugin,
+        crate::hunter_pet::HunterPetPlugin,
         crate::pet_control::PetControlPlugin,
         crate::stats::StatsPlugin,
     ));

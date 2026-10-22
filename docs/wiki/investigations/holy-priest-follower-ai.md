@@ -244,7 +244,6 @@ Gap names below have prefix `HOLY_`:
 | DIVINE_SERVICE_BOUNCE_SCALING | 391233:33110 amount depends on remaining41635 uses |
 | PROTECTIVE_LIGHT_SELF_FLASH_PROC | 193063: self Flash →193065 protection |
 | DIVINE_IMAGE_SUMMON_EMPOWER_COPY | 392988: Naaru lifecycle and mirrored casts |
-| PRISMATIC_ECHOES_MASTERY_BONUS | 390967: mastery-specific script scalar; ordinary Renew modifier remains data-backed |
 | LASTING_WORDS_RENEW_APPLICATION | 471504: timed139 from Serenity/Sanctify-or-Ultimate recipients |
 | TRANSLUCENT_IMAGE_FADE_EXTRA_REDUCTION | 373446: extra373447 consequence; base586 reduction remains native |
 | ANGELIC_BULWARK_THRESHOLD_SHIELD | 108945: threshold114214 shield and native recovery window |
@@ -312,9 +311,29 @@ Post-masteraeeaa1b87 passes19native cases77.83s: generic2, Echo6 including self
 actual healing/rolling/two casters, Barbed4,3354671, Binding5 and enabled PoH1.
 Helper check exits0/1m27s with no warnings, format passes at the same code.
 This is native mechanic evidence, not healer policy effectiveness, simulator
-survival or live-pixel acceptance. Prismatic Echoes390967's separate bonus remains
-a named gap. Full exact revisions and limitations:
+survival or live-pixel acceptance. Prismatic Echoes390967's separate bonus was
+qualified afterward, below. Full exact revisions and limitations:
 [Echo proof ledger](../../handoffs/healer-echo-of-light-proof-ledger.md).
+
+## Prismatic Echoes learned bonus — 2026-10-22
+
+SimC76f8118 `sc_priest.cpp:3704–3711` multiplies Holy's Echo contribution by
+`1+390967effect0/100`; local70448 supplies **5%**, not a copied historical value.
+The ordinary effect1 Renew13% modifier stays untouched. `echo_of_light.rs` reads
+the actor's actual owned talent aura and scales only the new pool contribution;
+shared raw mastery/77485 values and already-carried unpaid amounts are unchanged.
+
+Separate testtip871560575 reproduced native level61 learned Echo tick81 versus85
+expected; native60 unlearned control passed (1PASS/1FAIL37.36s). Narrow production
+97a246aa5, merged53a0ee990, passes15native cases84.14s: the level boundary plus
+Echo refresh/two-caster/self/periodic/expiry, Binding and generic carry controls.
+This later tip is separate from ec943's frozen cf561a925 Echo candidate. Helper default check exits0/1m11s with no warnings; format passes at the same
+code. Evidence: game-engine
+`data/diagnostics/healer-ai-2026-10-21/prismatic-echoes/` contains `native-red.log`,
+`native-green.log`, `final-check.log`, `format-check.log`, `readability-review.md`
+and `inputs.json` (three source-alias hash matches; frozen DB unchanged).
+No AI, native catalog, mastery points or other spell producer changed; no
+simulator effectiveness or live acceptance inferred.
 
 ## Native utility decisions
 
