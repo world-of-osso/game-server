@@ -53,7 +53,9 @@ pub(super) fn expire_delay(world: &mut World, trigger: &SpellAreaTrigger, positi
             trigger.caster,
             METEOR_MISSILE,
             position,
-            trigger.depth,
+            // TC OnRemove starts a new spell after the native3s lifetime;
+            // it is not nested inside the original effect-dispatch stack.
+            0,
         );
     }
 }
