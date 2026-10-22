@@ -11,6 +11,10 @@ use crate::networking::CombatTarget;
 const PROJECT_URGENT_HEAL_THRESHOLD: f32 = 0.40;
 
 #[cfg(test)]
+#[path = "cast_while_casting_tests.rs"]
+mod cast_while_casting_tests;
+
+#[cfg(test)]
 #[path = "healer_triage_tests.rs"]
 mod healer_triage_tests;
 #[cfg(test)]
@@ -563,7 +567,12 @@ fn attempt_cast(
                 .conditions
                 .health_below
                 .is_some_and(|health| health <= PROJECT_URGENT_HEAL_THRESHOLD));
-    if world.get::<CastState>(unit).is_some() && !urgent {
+    let allows_parallel_cast = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(entry.spell_id)
+        .is_some_and(crate::spell_cast::allows_cast_while_casting);
+    let may_start_while_casting = urgent || allows_parallel_cast;
+    if world.get::<CastState>(unit).is_some() && !may_start_while_casting {
         return false;
     }
     if target != unit
@@ -578,7 +587,7 @@ fn attempt_cast(
     {
         return false;
     }
-    let result = if urgent {
+    let result = if urgent && !allows_parallel_cast {
         crate::spell_cast::creature_cast_interrupting_self(
             world,
             unit,
