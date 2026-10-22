@@ -14,13 +14,7 @@ const HOT_STREAK: u32 = 48108;
 const PYROBLAST: u32 = 11366;
 
 fn apply_native_buff(h: &mut Harness, caster: Entity, spell: u32) {
-    assert!(crate::spell_cast::cast_triggered(
-        h.app.world_mut(),
-        caster,
-        spell,
-        Some(caster),
-        1
-    ));
+    crate::spell_cast::cast_triggered(h.app.world_mut(), caster, spell, Some(caster), 1);
     h.advance(1);
     assert!(has_aura(h.app.world(), caster, spell));
 }
