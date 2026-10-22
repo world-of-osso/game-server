@@ -21,6 +21,8 @@ class NeltharusPlacementAcceptance(unittest.TestCase):
         expected_xy = {181861: (-211.1, -932.7), 189340: (-232.125, -674.9625),
                        189478: (-264.4580637024, -503.5), 189901: (-380.025, -772.8375)}
         with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as db:
+            self.assertEqual(db.execute('SELECT guid,id1 FROM content_creature WHERE guid BETWEEN 63519000 AND 63519999 ORDER BY guid').fetchall(),
+                             [(63519000, 181861), (63519001, 189340), (63519002, 189478), (63519003, 189901)])
             rows = db.execute(
                 'SELECT c.id1,c.guid,c.position_x,c.position_y,c.position_z,t.faction,t.unit_class,'
                 's.unit_class,t.minlevel,t.maxlevel,t.ContentTuningID,t.HealthModifier,d.HealthModifier,'
@@ -47,6 +49,25 @@ class NeltharusPlacementAcceptance(unittest.TestCase):
                 self.assertIn(f'https://www.wowhead.com/npc={entry}', comment)
                 if entry == 189478:
                     self.assertAlmostEqual(z, 125.19722023743995, places=6)
+
+    def test_sql_reapplication_preserves_combat_owner_and_refuses_guid_collision(self):
+        database = Path(os.environ['FOLLOWER_PLACEMENT_DB']).resolve(strict=True)
+        sql = Path(os.environ['FOLLOWER_PLACEMENT_SQL']).read_text()
+        with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as source, closing(sqlite3.connect(':memory:')) as replay:
+            for table in ('content_creature_template', 'content_creature_template_model', 'content_creature', 'raid_encounter_creature'):
+                replay.execute(source.execute('SELECT sql FROM sqlite_master WHERE name=?', (table,)).fetchone()[0])
+            replay.executescript(sql)
+            replay.execute("UPDATE content_creature_template SET ScriptName='separate_combat_owner' WHERE entry=189478")
+            replay.commit()
+            replay.executescript(sql)
+            self.assertEqual(replay.execute('SELECT ScriptName FROM content_creature_template WHERE entry=189478').fetchone(), ('separate_combat_owner',))
+            self.assertEqual(replay.execute('SELECT count(*) FROM content_creature').fetchone(), (4,))
+            replay.execute('UPDATE content_creature SET id1=181861 WHERE guid=63519002')
+            replay.commit()
+            with self.assertRaises(sqlite3.IntegrityError):
+                replay.executescript(sql)
+            replay.rollback()
+            self.assertEqual(replay.execute('SELECT id1 FROM content_creature WHERE guid=63519002').fetchone(), (181861,))
 
     def test_all_four_primary_bosses_have_normal_spawns_reachable_from_source_entrance(self):
         database = Path(os.environ["FOLLOWER_PLACEMENT_DB"]).resolve(strict=True)

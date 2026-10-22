@@ -115,6 +115,11 @@ def prepare_templates(target, records, cache):
 
 
 def write_placements(target, manifest, placements, bindings):
+    lower = manifest['guid_base'] + manifest['map_id'] * 1000
+    expected = {lower + r['ordinal']: r['entry'] for r in manifest['entries']}
+    occupied = target.execute('SELECT guid,id1,map FROM content_creature WHERE guid BETWEEN ? AND ?', (lower, lower + 999)).fetchall()
+    if any(guid not in expected or entry != expected[guid] or map_id != manifest['map_id'] for guid, entry, map_id in occupied):
+        raise ValueError('reserved map GUID namespace overlaps unrelated content')
     for record, placement, binding in zip(manifest['entries'], placements, bindings):
         ordinal = record['ordinal']
         if not 0 <= ordinal < 1000:
