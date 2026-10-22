@@ -58,6 +58,8 @@ class FollowupPlacementAcceptance(unittest.TestCase):
                 (63516004, 186616, -1167.5642312417303, 1356.6360801056499, 390.72347992372613),
             ])
         self.assertEqual({g['entry'] for g in receipt['source_gaps']}, {186339, 186615})
+        self.assertEqual({g['name'] for g in receipt['source_gaps']},
+                         {'FOLLOWER_PLACEMENT_NO_INDIVIDUAL_SOURCE_186339', 'FOLLOWER_PLACEMENT_NO_BAKED_SUPPORT_2516_186615'})
         self.assertEqual(set(receipt['navigation_gaps']), {'FOLLOWER_ROUTE_INCOMPLETE_2516_186151',
                          'FOLLOWER_ROUTE_INCOMPLETE_2516_186338', 'FOLLOWER_ROUTE_INCOMPLETE_2516_186616'})
 

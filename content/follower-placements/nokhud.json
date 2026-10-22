@@ -55,7 +55,7 @@
     }
   ],
   "source_gaps": [
-    {"entry": 186339, "reserved_ordinal": 2, "name": "FOLLOWER_PLACEMENT_JOINT_MARKER_POLICY_PENDING_2516_186339", "reason": "Teera has no individual cached marker. Joint JournalEncounter2478 marker exists; co-location policy approval pending. No invented offset or actor alias."},
+    {"entry": 186339, "reserved_ordinal": 2, "name": "FOLLOWER_PLACEMENT_NO_INDIVIDUAL_SOURCE_186339", "reason": "Teera has no individual cached marker. A shared JournalEncounter2478 marker cannot position a separately identified actor; lead explicitly rejected co-location. Require an individual TDB, held-out-validated MDT, or Wowhead point. No invented offset or actor alias."},
     {"entry": 186615, "reserved_ordinal": 3, "name": "FOLLOWER_PLACEMENT_NO_BAKED_SUPPORT_2516_186615", "journal_encounter_id": 2497, "wow_xy": [-2469.25035560143, 2774.111445334274], "reason": "No baked walkable polygon covers precise authenticated JournalEncounter2497 XY. No source coordinate shift or height invented; initial packet receipt retains the empty support list."}
   ],
   "calibration_entries": [188252, 189232]
