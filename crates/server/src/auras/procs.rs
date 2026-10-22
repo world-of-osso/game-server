@@ -28,6 +28,10 @@
 //! (`HandleBreakableCCAuraProc`), runs the aura's script `on_proc`, then spends
 //! one charge.
 
+#[cfg(test)]
+#[path = "dance_rppm_tests.rs"]
+mod dance_rppm_tests;
+
 use crate::random as rand;
 use bevy::prelude::*;
 
