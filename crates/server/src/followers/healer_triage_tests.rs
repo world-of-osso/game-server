@@ -155,7 +155,6 @@ fn healer_triage_low_mana_prefers_available_efficient_native_swiftmend() {
 }
 
 #[test]
-#[ignore = "Resto depth: native NS-before-emergency regression observed RED"]
 fn healer_triage_resto_uses_natures_swiftness_before_emergency_regrowth() {
     let (mut h, healer) = super::super::kit_tests::at_level(209072, 13, |_| {});
     let target = h.caster;

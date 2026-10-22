@@ -50,26 +50,31 @@ pub(super) struct Graph {
     pub route: Vec<RouteStep>,
 }
 
+#[path = "walk_route.rs"]
+mod walk_route;
+
 #[derive(Resource)]
 pub(crate) struct Space(pub(super) Graph);
 
 impl Space {
     pub(crate) fn route(&self, from: Vec3, to: Vec3) -> Result<Vec<Vec3>, String> {
-        let nodes = self.path_nodes(from, to, false)?;
-        let mut points: Vec<_> = nodes
+        let mut points: Vec<_> = self
+            .walk_legs(from, to)?
             .into_iter()
-            .skip(1)
-            .map(|id| {
-                self.0
-                    .packs
-                    .iter()
-                    .find(|pack| pack.id == id)
-                    .unwrap()
-                    .point()
-            })
+            .map(|(point, _)| point)
             .collect();
-        points.push(to);
+        if points.is_empty() {
+            points.push(to);
+        }
         Ok(points)
+    }
+
+    pub(super) fn walk_legs(
+        &self,
+        from: Vec3,
+        to: Vec3,
+    ) -> Result<std::collections::VecDeque<(Vec3, f32)>, String> {
+        walk_route::read(&self.0, from, to)
     }
 
     pub(super) fn next_translocation(
@@ -77,7 +82,7 @@ impl Space {
         from: Vec3,
         to: Vec3,
     ) -> Result<Option<(u32, u32)>, String> {
-        let nodes = self.path_nodes(from, to, true)?;
+        let nodes = self.path_nodes(from, to)?;
         Ok(nodes.windows(2).find_map(|pair| {
             self.0
                 .teleports
@@ -87,12 +92,7 @@ impl Space {
         }))
     }
 
-    fn path_nodes(
-        &self,
-        from: Vec3,
-        to: Vec3,
-        include_teleports: bool,
-    ) -> Result<Vec<u32>, String> {
+    fn path_nodes(&self, from: Vec3, to: Vec3) -> Result<Vec<u32>, String> {
         let nearest = |point: Vec3| {
             self.0
                 .packs
@@ -118,13 +118,13 @@ impl Space {
                 break;
             }
             visited.insert(node);
-            for edge in self.0.edges.iter().map(|edge| (edge, false)).chain(
-                self.0
-                    .teleports
-                    .iter()
-                    .filter(|_| include_teleports)
-                    .map(|edge| (edge, true)),
-            ) {
+            for edge in self
+                .0
+                .edges
+                .iter()
+                .map(|edge| (edge, false))
+                .chain(self.0.teleports.iter().map(|edge| (edge, true)))
+            {
                 let (edge, directed) = edge;
                 let next = if edge.from == node {
                     edge.to

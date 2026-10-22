@@ -4,6 +4,8 @@ mod catalog;
 mod empower_policy;
 mod hazards;
 mod healer_context;
+#[cfg(test)]
+mod healer_group_cancel_tests;
 mod healer_policy;
 mod healer_triage;
 mod holy_policy;
@@ -262,6 +264,10 @@ mod pet_tests;
 mod profile_behavior_tests;
 #[cfg(test)]
 mod rotation_defense_tests;
+#[cfg(test)]
+mod rotation_imp_tests;
+#[cfg(test)]
+mod rotation_measurements;
 #[cfg(test)]
 mod rotation_override_tests;
 #[cfg(test)]
