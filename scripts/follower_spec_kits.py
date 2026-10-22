@@ -382,7 +382,18 @@ def project_loadout_actions(loadout, override_families):
     return known
 
 
+def native_interval_starts(source):
+    levels = defaultdict(set)
+    no_aliases = defaultdict(set)
+    for loadout in source['loadouts']:
+        for spell in project_loadout_actions(loadout, no_aliases):
+            levels[loadout['spec_id'], int(spell)].add(loadout['level'])
+    return {key: {level for level in values if level - 1 not in values}
+            for key, values in levels.items()}
+
+
 def kit_rows(db, source, tc_child_artifact):
+    native_starts = native_interval_starts(source)
     roles = SpellRoleCatalog(db, read_tc_child_artifact(tc_child_artifact))
     override_families = read_native_override_families(db)
     availability = defaultdict(list)
@@ -435,7 +446,8 @@ def kit_rows(db, source, tc_child_artifact):
         slot, priority, conditions = slots[spec, spell]
         start = end = levels[0]
         for level in levels[1:] + [None]:
-            if level is not None and level == end + 1:
+            if (level is not None and level == end + 1
+                    and level not in native_starts.get((spec, spell), set())):
                 end = level
                 continue
             rows.append((spec, spell, start, end, slot, priority, json.dumps(conditions, sort_keys=True), POLICY))
