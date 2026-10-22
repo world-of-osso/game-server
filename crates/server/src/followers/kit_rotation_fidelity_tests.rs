@@ -35,7 +35,6 @@ fn rotation_selection_63_native_book_reaches_fireball() {
 }
 
 #[test]
-#[ignore = "native target Earthquake field RED before implementation"]
 fn rotation_selection_262_native_target_earthquake_deals_periodic_damage() {
     let (mut h, caster, targets) = prepare_at_level(209053, 3, 70);
     assert!(

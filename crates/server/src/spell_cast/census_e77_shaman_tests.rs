@@ -85,7 +85,6 @@ fn census_e77_shaman_native_knockdown_is_once_per_target_per_owned_field() {
 }
 
 #[test]
-#[ignore = "native target Earthquake center overlap and expiry positive control pending GREEN"]
 fn census_e77_shaman_target_earthquake_preserves_native_center_overlap_and_expiry() {
     let mut h = fixture();
     let target = spawn_npc(&mut h.app, CENTER.x);
