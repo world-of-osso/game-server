@@ -27,6 +27,18 @@ pub(super) fn forget_party_travel(world: &mut World, owner: Entity) {
     }
 }
 
+pub(super) fn inspect_travel(world: &World, unit: Entity) -> serde_json::Value {
+    let Some(travel) = world.get::<Travel>(unit) else {
+        return serde_json::Value::Null;
+    };
+    serde_json::json!({
+        "destination": travel.destination.to_array(),
+        "legs": travel.legs.iter().map(|(point, remaining)| {
+            serde_json::json!({"to": point.to_array(), "remaining_yards": remaining})
+        }).collect::<Vec<_>>(),
+    })
+}
+
 fn point(position: &Position) -> Vec3 {
     Vec3::new(position.x, position.y, position.z)
 }

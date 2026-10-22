@@ -1,0 +1,53 @@
+//! Full native ordering for Azure seed1's isolated owner at the Bubbling Sapling.
+use super::super::{diagnostics, movement};
+use super::{MAX_TICKS, spawn_run};
+use shared::components::Health;
+
+#[test]
+#[ignore = "explicit Azure70 seed1 native Sapling engagement and isolated-owner Death"]
+fn seed_one_keeps_the_native_leader_alive_through_the_sapling_fight() {
+    let _rng_scope = crate::random::seed_scope(1);
+    let mut run = spawn_run(1, &mut None).unwrap();
+    assert_eq!(run.graph.map_id, 2515);
+    let owner = run.party.owner;
+    let sapling = run.actors[&29001840];
+    let mut captured = false;
+    for _ in 0..MAX_TICKS {
+        run.control().unwrap();
+        run.app.update();
+        let health = run.app.world().get::<Health>(owner).unwrap();
+        if !captured && run.current_pack == Some(29001840) && health.current < health.max * 0.5 {
+            captured = true;
+            let party: Vec<_> = run
+                .members()
+                .map(|unit| {
+                    serde_json::json!({
+                        "unit": diagnostics::inspect_unit(run.app.world(), None, unit),
+                        "travel": movement::inspect_travel(run.app.world(), unit),
+                    })
+                })
+                .collect();
+            println!(
+                "AZURE_SAPLING_SEPARATION {}",
+                serde_json::json!({
+                    "at": run.now(), "party": party,
+                    "sapling": diagnostics::inspect_unit(run.app.world(), Some(29001840), sapling),
+                })
+            );
+        }
+        assert!(
+            health.current > 0.0,
+            "native owner died at{}s before Sapling29001840's Death; captured={captured}",
+            run.now()
+        );
+        if run
+            .app
+            .world()
+            .get::<Health>(sapling)
+            .is_some_and(|health| health.current == 0.0)
+        {
+            return;
+        }
+    }
+    panic!("native Sapling engagement must finish within the unchanged campaign bound");
+}

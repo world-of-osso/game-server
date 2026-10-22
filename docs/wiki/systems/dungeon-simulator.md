@@ -28,6 +28,12 @@ Extending candidatefa7ce6714 to disjoint Stockade seeds11–50 yields38clears,1s
 
 Evidence: `stockade-candidate-fa7ce6714-seeds11-50/`, `isolated-leader28-{red,motion,role-green}.log`, and `leader-sight-{red,green,native-controls}.log` under the existing proof-ledger directory. [Contract](../../specs/dungeon-simulator.md#authored-route).
 
+## Post-path Azure qualification —2026-10-21
+
+Candidate2f443fb5a, protocol03cebdb and the same frozen40d95b0 database, native Azure70/205/default five/seeds1–10/jobs2: **0clears,7DeadMember stalls,3tank-absence blocks,0timeouts,0boss Deaths**, all ten reports present,570.406761s batch wall. This is not reliability and does not preserve the prior role candidate's six Leymor Deaths. Seeds1/2/4/5/6/8/10 lose Austin; seeds3/7/9 lose Garrick.
+
+Seed1's sample at1802.5sim_s shows Austin dead after native Bubbling Sapling29001840 damage, at[-5077.2725,561.16675,-1282.4409]. Crenna remains[-5057.316,581.2637,-1232.7773]; Garrick is moving on the upper floor. Nearby healer events include Regrowth and HoT healing, so full mana is again not inactivity proof. Combat-event Unix timestamps are wall time, not simulated seconds: the Death interval comes from sampled health. A native-order ignored regression captures actual states and cached frozen movement legs before this Death; diagnostic RED is pending. No further production movement change follows from these reports alone. Evidence: `azure-path-candidate-2f443fb5a-seeds1-10/` and its command receipt.
+
 ## Recorded late-healer route boundary —2026-10-21
 
 After shared model defaults, revisiona55ce7383 reproduces Stockade seed50's tank loss at2360.60sim_s with two boss Deaths (65.037s wall). The reduced fixture uses its recorded healer/owner positions and four surviving idle watchers. Native acquisition geometry confirms the straight endpoint chord crosses all four spheres while `Space.route` avoids them; the healer nevertheless remains stationary. Both ignored regressions fail in76.66s. This isolates an incorrect chord check in `followers/positioning.rs`, not missing native geometry or an authored-route defect.

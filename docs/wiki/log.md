@@ -1,3 +1,7 @@
+## 2026-10-21 — Post-path Azure qualification
+
+[Azure candidate](systems/dungeon-simulator.md#post-path-azure-qualification-2026-10-21): same frozen inputs2f443fb5a,seeds1–10/jobs2 gives0clear/7DeadMember stalls/3tankabsence blocks/0boss Deaths,all10reports,570.406761s wall. Seed1 native Sapling29001840 kills isolated Austin while healer remains behind. Native-order movement diagnostic regression added; no further production fix or reliability claim.
+
 ## 2026-10-21 — Recorded late-healer route boundary
 
 [Native seed50 path qualification](systems/dungeon-simulator.md#recorded-late-healer-route-boundary-2026-10-21): two post-mm871 RED regressions prove a stationary healer on a native-sphere-safe frozen path and reproduce full-route tank loss. Positioning now qualifies actual route legs rather than the endpoint chord. At2f443fb5a both regressions pass94.01s; seed50 clears3bosses with tank alive. Three retained sight controls, seven hostile-field controls and eight deferred-navigation controls pass. Fresh seeded acceptance pending.
