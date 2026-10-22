@@ -18,6 +18,13 @@
 
 [Current cohort](systems/dungeon-simulator.md#combatrefs-integrated-three-target-receipts-2026-10-22): cbf70f94f/P2abc7fa includes landed admission/suppression fixes and other parent-owned mechanics. Source/snapshot/profile hashes sealed;6nativecontrolsGREEN149.08s/check46.67s/fmt/0warnings. Authorized8three-target cells all300s/final30positive/owner0/10waves20adds, but recipient coverage differs:66/262/266all20adds,26918adds/8completewaves,73/63/253/103zeroadds. No AoE/equal-condition parity from execution; DPS82.98–97.02% below pinned references. Eight actor-aware gap partitions conserve damage with raw guardian weighting, exact source/report hashes and descriptive historical count deltas; no isolated CombatRefs attribution or extra single/reference runs. Comparison and40-rowv3receipt index preserve historicalsingle and currentthree proof separately. Parent notified; full parity remains open.
 
+## 2026-10-22 — Transport-free leader pet ownership
+
+[Native pet wiring](systems/dungeon-simulator.md#transport-free-leader-pet-initialization-2026-10-22): actual BM leader CallPet/damage RED22.81s→fresh/cached GREEN12.52s after native runtime-only stable/HunterPetPlugin/PetCatalog integration.0b includes mastery'sa4; build8m05/no warnings and5retained controls pass. Authentic Duck fixture input only, no canonical data writes, fake character, AP/rotation or class-script change. Actual WildThrash3casts/0childdamage after summon remains a mechanics-owner gap. New pet-enabled Azure cohort pending.
+
+## 2026-10-22 — Native blocked-chase parity and Azure horizon
+
+[Shared native evade](systems/dungeon-simulator.md#disconnected-chase-parity-2026-10-22): original first-book fixture failed setup; corrected second-book539bRED11.79s→1bfGREEN16.62s. Reuses production marker/no-path system, no new clock or physical navigation. Retained simulator controls23PASS. [Fresh Azure10](systems/dungeon-simulator.md#post-evade-azure-qualification-2026-10-22) yields8valid1h timeouts/2tankabsence blocks,8Leymor Deaths,1239.244563s wall, no missing reports. Live trash remains at the horizon; seed4 tank dies near active healer under4native melee actors. SamecodeStockade49+retained50 qualifies50/50clears/150boss Deaths, fresh49batch3319.356736s plus retained50individual114.473154s; no Azure/live acceptance.
 ## 2026-10-22 — Prismatic Echoes learned bonus
 
 [Prismatic Echoes](investigations/holy-priest-follower-ai.md#prismatic-echoes-learned-bonus--2026-10-22): separate871560575 native61 tick81vs85 RED/control60PASS37.36s→97a246aa5 actualowned5% new-contribution multiplier. Merged53a0ee990 passes15native cases84.14s; rawmastery/Renew/oldpool/AI unchanged. Frozen cf561ec943 candidate remains separate; no effectiveness claim.
