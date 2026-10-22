@@ -98,6 +98,33 @@ fn group_heal_topped_anchor_keeps_prayer_until_native_cluster_heals() {
 }
 
 #[test]
+fn group_heal_topped_anchor_keeps_native_chain_targets_injured() {
+    let (mut h, priest, party) = native_priest_group();
+    let anchor = party[1];
+    injure(&mut h, &party[1..]);
+    // Native creature-cast seam tests effect10/ChainTargets, not a Holy kit grant.
+    crate::spell_cast::creature_cast(h.app.world_mut(), priest, 1064, Some(anchor), false).unwrap();
+    advance_near_finish(&mut h, priest);
+    top_with_native_heal(&mut h, priest, anchor);
+    cancel_topped_cast(h.app.world_mut(), priest);
+    assert!(
+        h.app.world().get::<CastState>(priest).is_some(),
+        "full initial target must not cancel a native chain with injured jump recipients"
+    );
+    h.advance(5);
+    assert!(
+        h.inbox
+            .log
+            .iter()
+            .any(|event| event.kind == CombatLogKind::Heal
+                && event.spell_id == Some(1064)
+                && event.source == Some(priest.to_bits())
+                && event.target != Some(anchor.to_bits())
+                && event.amount > event.overflow)
+    );
+}
+
+#[test]
 fn group_heal_topped_anchor_cancels_when_only_outside_radius_patients_are_injured() {
     let (mut h, priest, party) = native_priest_group();
     let anchor = party[1];
