@@ -1,0 +1,164 @@
+//! Real native pools/events, not inferred resource gain from damage or elapsed time.
+use super::*;
+use crate::spell_cast::powers::PowerPools;
+use shared::components::PowerType;
+use shared::protocol::CombatLogKind;
+
+const CALL_PET: u32 = 883;
+const COBRA_SHOT: u32 = 193455;
+const PACK_TACTICS_ENERGIZE: u32 = 1282660;
+
+fn prepare_hunter_and_pet() -> (Run, Entity) {
+    let (profile, traits) = read_reference(253).unwrap();
+    let mut run = prepare_reference(
+        profile,
+        &traits,
+        1,
+        crate::followers::simulator::ParityActor::Follower,
+    )
+    .unwrap();
+    crate::spell_cast::creature_cast(run.app.world_mut(), run.actor, CALL_PET, None, false)
+        .unwrap();
+    for _ in 0..200 {
+        run.app.update();
+    }
+    let pet = crate::hunter_pet::summoned_pet(run.app.world(), run.actor)
+        .expect("native learned Call Pet must produce the provisioned Duck");
+    (run, pet)
+}
+
+fn assert_focus_snapshot(snapshot: &Value, world: &World, unit: Entity) {
+    let expected = world
+        .get::<PowerPools>(unit)
+        .unwrap()
+        .get(PowerType::Focus)
+        .unwrap();
+    let pools = snapshot
+        .as_array()
+        .expect("receipt must expose raw native power pools");
+    let focus = pools
+        .iter()
+        .find(|pool| pool["power_type"] == PowerType::Focus as i32)
+        .unwrap();
+    assert_eq!(focus["current"].as_f64(), Some(f64::from(expected.current)));
+    assert_eq!(focus["max"].as_f64(), Some(f64::from(expected.max)));
+    assert_eq!(
+        focus["regen_per_sec"].as_f64(),
+        Some(f64::from(expected.regen_per_sec))
+    );
+}
+
+#[test]
+#[ignore = "native resource receipt RED; requires prepared parity inputs"]
+fn dps_parity_power_receipt_reads_owner_pet_pools_and_live_regeneration() {
+    let (mut run, pet) = prepare_hunter_and_pet();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        COBRA_SHOT,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    run.app.update();
+    let world = run.app.world();
+    assert!(
+        world
+            .get::<PowerPools>(run.actor)
+            .unwrap()
+            .get(PowerType::Focus)
+            .unwrap()
+            .regen_per_sec
+            > 0.0
+    );
+    let owner = report::engagement(world, run.actor, &run.targets);
+    let pet_receipt = report::pet(world, run.actor, &run.targets);
+    assert_focus_snapshot(&owner["powers"], world, run.actor);
+    assert_focus_snapshot(&pet_receipt["powers"], world, pet);
+}
+
+#[test]
+#[ignore = "native resource receipt RED; requires prepared parity inputs"]
+fn dps_parity_power_receipt_attributes_native_energize_and_capped_overflow() {
+    let (mut run, pet) = prepare_hunter_and_pet();
+    run.app
+        .world_mut()
+        .resource_mut::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .clear();
+    crate::spell_cast::creature_cast(
+        run.app.world_mut(),
+        run.actor,
+        COBRA_SHOT,
+        Some(run.targets[0]),
+        false,
+    )
+    .unwrap();
+    for unit in [run.actor, pet] {
+        crate::spell_cast::creature_cast(
+            run.app.world_mut(),
+            unit,
+            PACK_TACTICS_ENERGIZE,
+            Some(unit),
+            false,
+        )
+        .unwrap();
+    }
+    let world = run.app.world();
+    let events: Vec<_> = world
+        .resource::<crate::spell_cast::test_harness::ObservedCombatEvents>()
+        .0
+        .iter()
+        .filter(|event| {
+            event.kind == CombatLogKind::Energize && event.spell_id == Some(PACK_TACTICS_ENERGIZE)
+        })
+        .collect();
+    assert_eq!(events.len(), 2);
+    let native_grant = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(PACK_TACTICS_ENERGIZE)
+        .unwrap()
+        .effects
+        .iter()
+        .find(|effect| effect.effect == 30)
+        .unwrap()
+        .base_points as i32;
+    let receipt = report::combat(world, &run.targets, 1.0);
+    let gains = receipt["energize"]
+        .as_array()
+        .expect("receipt must account for actual Energize events");
+    assert_eq!(gains.len(), 2, "owner/pet source identities must not merge");
+    for unit in [run.actor, pet] {
+        let event = events
+            .iter()
+            .find(|event| event.source == Some(unit.to_bits()))
+            .unwrap();
+        let gain = gains
+            .iter()
+            .find(|gain| gain["source"] == unit.to_bits())
+            .unwrap();
+        assert_eq!(gain["target"], unit.to_bits());
+        assert_eq!(gain["spell_id"], PACK_TACTICS_ENERGIZE);
+        assert_eq!(gain["amount"], native_grant);
+        assert_eq!(gain["overflow"], event.overflow);
+        assert_eq!(gain["effective_gain"], event.amount - event.overflow);
+        assert_eq!(gain["events"], 1);
+    }
+    let pet_event = events
+        .iter()
+        .find(|event| event.source == Some(pet.to_bits()))
+        .unwrap();
+    assert_eq!(pet_event.amount, native_grant);
+    assert_eq!(
+        pet_event.overflow, native_grant,
+        "idle native pet is full; capped grant is not realized gain"
+    );
+    let owner_event = events
+        .iter()
+        .find(|event| event.source == Some(run.actor.to_bits()))
+        .unwrap();
+    assert!(
+        owner_event.amount > owner_event.overflow,
+        "real Cobra cost must leave room for actual gain"
+    );
+}
