@@ -23,6 +23,10 @@ pub(super) fn update(world: &mut World) {
         .map(|(entity, follower)| (entity, follower.clone()))
         .collect();
     for (unit, follower) in &followers {
+        super::utility::sample_health(world, *unit);
+        super::utility::sample_health(world, follower.owner);
+    }
+    for (unit, follower) in &followers {
         if follower.profile.role == GroupRole::Tank
             && crate::spell_cast::targets::is_alive(world, *unit)
         {
@@ -320,6 +324,9 @@ pub(super) fn engaged_enemies(
         })
         .filter(|&(enemy, victim)| {
             owner_victim == Some(enemy)
+                || party.iter().any(|&member| {
+                    crate::combat_refs::has_active_reference_to(world, enemy, member)
+                })
                 || victim.is_some_and(|victim| party.contains(&victim))
                 || world
                     .get::<shared::components::ThreatTable>(enemy)

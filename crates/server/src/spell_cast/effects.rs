@@ -1286,8 +1286,9 @@ pub(super) fn damage_before_mitigation(
     } else {
         modded_amount(world, &bonus_ctx, amount, periodic)
     } * done
-        * taken)
-        .max(0.0)
+        * taken
+        * ctx.spell.cast_damage_multiplier.unwrap_or(1.0))
+    .max(0.0)
 }
 
 fn deal_damage_and_report(
@@ -1467,6 +1468,7 @@ fn push_damage_event(
             target_mask: [taken | procs::PROC_TAKE_ANY_DAMAGE, 0],
             spell_id: Some(ctx.spell.id),
             can_proc: ctx.depth == 0,
+            cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
             periodic,
             damage,
             heal: None,
@@ -1494,6 +1496,7 @@ fn kill(world: &mut World, killer: Entity, target: Entity, can_proc: bool) {
             target_mask: [procs::PROC_DEATH, 0],
             spell_id: None,
             can_proc,
+            cast_used_proc_modifier: false,
             periodic: false,
             damage: 0.0,
             heal: None,
@@ -1636,6 +1639,7 @@ fn apply_resolved_heal(
                 target_mask: [procs::PROC_TAKE_HELPFUL_PERIODIC, 0],
                 spell_id: Some(ctx.spell.id),
                 can_proc: ctx.depth == 0,
+                cast_used_proc_modifier: !ctx.spell.cast_proc_mods.is_empty(),
                 periodic: true,
                 damage: 0.0,
                 heal: Some(amount),

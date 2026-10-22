@@ -35,13 +35,61 @@ pub(super) fn update(
         .flat_map(|catalog| &catalog.kits)
         .filter(|entry| entry.available(follower.profile.spec_id, level))
         .cloned()
+        .map(super::utility::normalize_entry)
         .collect();
     if entries.is_empty() {
         return false;
     }
+    entries.sort_by_key(|entry| match entry.slot {
+        Slot::Interrupt => 0,
+        Slot::Heal
+            if entry
+                .conditions
+                .health_below
+                .is_some_and(|threshold| threshold <= 0.2) =>
+        {
+            1
+        }
+        Slot::Defensive => 2,
+        Slot::Dispel => 3,
+        Slot::Control => 4,
+        _ => 5,
+    });
     super::tank_defense::sort_major_entries(world, unit, &mut entries);
     let enemies = ai::engaged_enemies(world, follower, unit, party);
     if world.get::<CastState>(unit).is_none() && ai::prepare_pet(world, unit, follower) {
+        return true;
+    }
+    let candidates = super::utility_interrupt::ordered_casts(world, &enemies);
+    for &candidate in &candidates {
+        if super::utility_interrupt::try_party(
+            world,
+            unit,
+            follower,
+            party,
+            &[candidate],
+            super::kit_interrupt::InterruptPhase::Primary,
+        ) {
+            return true;
+        }
+        // Existing emergency heals precede damage kicks, not enemy danger.
+        if try_emergency_heal(world, unit, follower, party, enemy, &enemies, &entries) {
+            return true;
+        }
+        if super::utility_interrupt::try_party(
+            world,
+            unit,
+            follower,
+            party,
+            &[candidate],
+            super::kit_interrupt::InterruptPhase::IncludingDamage,
+        ) {
+            return true;
+        }
+    }
+    if candidates.is_empty()
+        && try_emergency_heal(world, unit, follower, party, enemy, &enemies, &entries)
+    {
         return true;
     }
     let triage = (follower.profile.role == shared::group::GroupRole::Healer)
@@ -49,9 +97,28 @@ pub(super) fn update(
     if triage.as_ref().is_some_and(|outcome| outcome.acted) {
         return true;
     }
-    let candidates: Vec<_> = enemy.into_iter().collect();
-    let mut interrupt_attempted = false;
-    for entry in &entries {
+    for entry in entries.iter().filter(|entry| {
+        is_generic_utility(entry.slot)
+            && !triage
+                .as_ref()
+                .is_some_and(|outcome| outcome.owned.contains(&entry.spell_id))
+    }) {
+        let target = if entry.slot == Slot::Control {
+            candidates.first().copied()
+        } else {
+            enemy
+        };
+        if try_entry(world, unit, follower, party, target, &enemies, entry) {
+            return true;
+        }
+    }
+    if super::utility::try_support(world, unit, follower, party, &enemies) {
+        return true;
+    }
+    for entry in entries
+        .iter()
+        .filter(|entry| !is_generic_utility(entry.slot))
+    {
         let policy_owned = triage.as_ref().is_some_and(|outcome| {
             outcome.owned.contains(&entry.spell_id)
                 || super::healer_triage::manages(entry)
@@ -60,51 +127,7 @@ pub(super) fn update(
         if policy_owned {
             continue;
         }
-        let interrupt_entry = super::kit_interrupt::is_interrupt_entry(
-            entry,
-            world.resource::<crate::spell_info::SpellStore>(),
-        );
-        let pet_interrupt = follower.profile.spec_id == 266;
-        if !interrupt_attempted && (interrupt_entry || pet_interrupt) {
-            interrupt_attempted = true;
-            if super::kit_interrupt::try_interrupt_candidates(
-                world,
-                unit,
-                &follower.profile,
-                &candidates,
-            ) {
-                return true;
-            }
-        }
-        if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
-            continue;
-        }
-        let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
-            Ok(spell) => spell,
-            Err(error) => {
-                debug!(
-                    ?unit,
-                    base = entry.spell_id,
-                    ?error,
-                    "Follower action unavailable"
-                );
-                continue;
-            }
-        };
-        let mut entry = entry.clone();
-        entry.spell_id = spell_id;
-        let enemy = match (entry.conditions.target, entry.conditions.target_if_min_aura) {
-            (Target::Enemy, Some(aura)) => {
-                select_min_own_aura_enemy(world, unit, &enemies, spell_id, aura)
-            }
-            _ => enemy,
-        };
-        let Some(target) = select_target(world, unit, party, enemy, &entry) else {
-            continue;
-        };
-        if conditions_met(world, unit, target, party, &enemies, &entry)
-            && attempt_cast(world, unit, target, follower, &entry, enemies.len())
-        {
+        if try_entry(world, unit, follower, party, enemy, &enemies, entry) {
             return true;
         }
     }
@@ -119,6 +142,70 @@ pub(super) fn update(
         ai::hold_combat(world, unit);
     }
     true
+}
+
+fn try_emergency_heal(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+    enemy: Option<Entity>,
+    enemies: &[(Entity, Option<Entity>)],
+    entries: &[Entry],
+) -> bool {
+    entries
+        .iter()
+        .filter(|entry| {
+            entry.slot == Slot::Heal
+                && entry
+                    .conditions
+                    .health_below
+                    .is_some_and(|threshold| threshold <= 0.2)
+        })
+        .any(|entry| try_entry(world, unit, follower, party, enemy, enemies, entry))
+}
+
+fn is_generic_utility(slot: Slot) -> bool {
+    matches!(slot, Slot::Defensive | Slot::Dispel | Slot::Control)
+}
+
+fn try_entry(
+    world: &mut World,
+    unit: Entity,
+    follower: &Follower,
+    party: &[Entity],
+    enemy: Option<Entity>,
+    enemies: &[(Entity, Option<Entity>)],
+    entry: &Entry,
+) -> bool {
+    if matches!(entry.slot, Slot::Passive | Slot::Utility | Slot::Interrupt) {
+        return false;
+    }
+    let spell_id = match super::kit_overrides::resolve_action(world, unit, entry.spell_id) {
+        Ok(spell) => spell,
+        Err(error) => {
+            debug!(
+                ?unit,
+                base = entry.spell_id,
+                ?error,
+                "Follower action unavailable"
+            );
+            return false;
+        }
+    };
+    let mut entry = entry.clone();
+    entry.spell_id = spell_id;
+    let enemy = match (entry.conditions.target, entry.conditions.target_if_min_aura) {
+        (Target::Enemy, Some(aura)) => {
+            select_min_own_aura_enemy(world, unit, enemies, spell_id, aura)
+        }
+        _ => enemy,
+    };
+    let Some(target) = select_target(world, unit, party, enemy, &entry) else {
+        return false;
+    };
+    conditions_met(world, unit, target, party, enemies, &entry)
+        && attempt_cast(world, unit, target, follower, &entry, enemies.len())
 }
 
 fn select_min_own_aura_enemy(
@@ -187,25 +274,42 @@ fn choose_patient(world: &World, unit: Entity, party: &[Entity], entry: &Entry) 
         .iter()
         .copied()
         .filter(|target| patient_is_eligible(world, unit, *target, entry));
-    let healer = world
-        .get::<Follower>(unit)
-        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
     let ranked = eligible.filter_map(|target| {
-        let fraction = health_fraction(world, target)?;
-        let score = if healer {
-            super::healer_triage::read_patient(world, target)?.score
-        } else {
-            1.0 - fraction
-        };
-        Some((target, score))
+        read_patient_priority(world, unit, target, entry).map(|priority| (target, priority))
     });
     ranked
         .max_by(|left, right| {
-            left.1
-                .total_cmp(&right.1)
-                .then_with(|| right.0.to_bits().cmp(&left.0.to_bits()))
+            let (left_target, (left_harm, left_score)) = left;
+            let (right_target, (right_harm, right_score)) = right;
+            left_harm
+                .cmp(right_harm)
+                .then_with(|| left_score.total_cmp(right_score))
+                .then_with(|| right_target.to_bits().cmp(&left_target.to_bits()))
         })
         .map(|(target, _)| target)
+}
+
+fn read_patient_priority(
+    world: &World,
+    unit: Entity,
+    target: Entity,
+    entry: &Entry,
+) -> Option<(u8, f32)> {
+    let fraction = health_fraction(world, target)?;
+    let healer = world
+        .get::<Follower>(unit)
+        .is_some_and(|follower| follower.profile.role == shared::group::GroupRole::Healer);
+    let score = if healer {
+        super::healer_triage::read_patient(world, target)?.score
+    } else {
+        1.0 - fraction
+    };
+    let harm = if entry.slot == Slot::Dispel {
+        super::utility_interrupt::dispel_harm(world, unit, target, &entry.conditions.dispel_types)
+    } else {
+        0
+    };
+    Some((harm, score))
 }
 
 pub(super) fn patient_is_eligible(
@@ -262,6 +366,22 @@ pub(super) fn conditions_met(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    let party_in_combat = party.iter().any(|member| {
+        world.get::<InMap>(*member) == world.get::<InMap>(unit)
+            && world
+                .get::<shared::components::CombatStatus>(*member)
+                .is_some_and(|status| status.0)
+    });
+    if super::utility::is_raid_buff(entry.spell_id) && party_in_combat {
+        return false;
+    }
+    if entry.slot == Slot::Defensive
+        && (super::utility::active_defensive(world, target)
+            || (condition.health_below.is_none()
+                && !super::utility::projected_death(world, target)))
+    {
+        return false;
+    }
     if !action_history_allows(world, unit, entry)
         || !cooldown_allows(world, unit, entry)
         || !entry
@@ -335,6 +455,11 @@ fn action_history_allows(world: &World, unit: Entity, entry: &Entry) -> bool {
 }
 
 fn health_allows(world: &World, unit: Entity, target: Entity, entry: &Entry) -> bool {
+    // Observed lethal decline adds admission above authored health thresholds;
+    // without it, retain the native kit's existing health/major-sequence policy.
+    if entry.slot == Slot::Defensive && super::utility::projected_death(world, target) {
+        return true;
+    }
     if entry.conditions.tank_defensive_sequence {
         return super::tank_defense::allows(world, unit, health_fraction(world, unit));
     }
@@ -499,6 +624,12 @@ pub(super) fn combat_allows(
     entry: &Entry,
 ) -> bool {
     let condition = &entry.conditions;
+    if super::utility::is_raid_buff(entry.spell_id) && !enemies.is_empty() {
+        return false;
+    }
+    if entry.slot == Slot::Taunt && !is_tank(world, unit) {
+        return false;
+    }
     if condition.combat && enemies.is_empty() {
         return false;
     }
@@ -522,7 +653,12 @@ pub(super) fn combat_allows(
     } else {
         target
     };
-    if condition.attacked && !enemies.iter().any(|(_, victim)| *victim == Some(protected)) {
+    let lethal_decline =
+        entry.slot == Slot::Defensive && super::utility::projected_death(world, protected);
+    if condition.attacked
+        && !lethal_decline
+        && !enemies.iter().any(|(_, victim)| *victim == Some(protected))
+    {
         return false;
     }
     if condition.lost_threat
@@ -555,6 +691,9 @@ fn attempt_cast(
     entry: &Entry,
     enemies: usize,
 ) -> bool {
+    // Native6673 is caster-centered target56/range0; missing party members
+    // choose maintenance, but must not become its explicit range-checked target.
+    let target = if entry.spell_id == 6673 { unit } else { target };
     // An already admitted heal must finish; selecting it again is not a new
     // emergency. Re-starting it each tick would consume no mana and heal nobody.
     if world
@@ -589,6 +728,12 @@ fn attempt_cast(
         )
     {
         return false;
+    }
+    if entry.conditions.target == Target::Enemy
+        && entry.slot != Slot::Control
+        && super::utility::try_movement(world, unit, target, follower, entry.spell_id)
+    {
+        return true;
     }
     let result = if urgent && !allows_parallel_cast {
         crate::spell_cast::creature_cast_interrupting_self(

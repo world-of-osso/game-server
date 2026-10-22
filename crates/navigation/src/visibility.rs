@@ -16,6 +16,7 @@ impl NavigationMap {
             polygons,
             start: current.start,
             end: current.end,
+            complete: current.complete,
         };
         // Visibility must not replace the existing preference for lower-cost areas.
         let (old_min, _) = self.area_cost_range(&current.polygons, filter)?;

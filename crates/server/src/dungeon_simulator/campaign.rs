@@ -10,6 +10,8 @@ const STALL_SECONDS: f64 = 60.0;
 
 #[path = "azure_positioning_tests.rs"]
 mod azure_positioning_tests;
+#[path = "azure_throughput_tests.rs"]
+mod azure_throughput_tests;
 #[path = "positioning_tests.rs"]
 mod positioning_tests;
 

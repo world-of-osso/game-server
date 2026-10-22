@@ -147,7 +147,8 @@ fn worker_returns_real_path_collision_and_candidate_batch() {
     let Some(Output::Path(path)) = response.result.unwrap() else {
         panic!("expected real baked path")
     };
-    assert!(path.last().unwrap().distance(to) < 0.5);
+    assert!(path.complete);
+    assert!(path.points.last().unwrap().distance(to) < 0.5);
     worker.submit(Request {
         entity: 41,
         id: 2,
@@ -158,7 +159,8 @@ fn worker_returns_real_path_collision_and_candidate_batch() {
     let Some(Output::Path(path)) = response.result.unwrap() else {
         panic!("expected smooth baked path")
     };
-    assert!(path.last().unwrap().distance(to) < 0.5);
+    assert!(path.complete);
+    assert!(path.points.last().unwrap().distance(to) < 0.5);
     worker.submit(Request {
         entity: 41,
         id: 3,
