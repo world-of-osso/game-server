@@ -166,14 +166,11 @@ fn native_creature_original_destination_survives_normalization_and_landing() {
         .expect("native destination Jump removes redundant unit but keeps its destination");
     h.advance(100);
     let position = *h.app.world().get::<Position>(caster).unwrap();
-    assert_endpoint(
-        &mut h,
-        Dest {
-            position: Vec3::new(position.x, position.y, position.z),
-            orientation: 0.0,
-        },
-        origin,
-        0.0,
+    // Target87 retains the supplied object's exact pose; unlike138 it does not
+    // re-sample terrain (the authored spawn is0.088yd above this baked floor).
+    assert_eq!(
+        position, origin,
+        "native target87 retains the original object destination"
     );
 }
 
