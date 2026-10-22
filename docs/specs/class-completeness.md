@@ -1,5 +1,10 @@
 # Level-80 class completeness audit and shared cast behavior
 
+## Critical-healing amount slice — 2026-10-22
+
+- Caster-owned native50 multiplies the whole critical heal after existing CritDamageAndHealing spell modifiers; multiply independent signed factors and truncate the resulting critical amount to native integer healing. MiscValue is not a school filter in pinned TC. Ordinary noncritical heals, native cannot-crit spells and other aura recipients remain unaffected; removal restores prior amount.
+- Actual154611 Bio Spores aura57+100 guarantees critical hits without changing RNG or stats. Native462587+15 affects Arcane394806 despite MiscValue8;200376+50 and154429−25 compose multiplicatively; native310443 heal5 demonstrates10×1.15→11 integer truncation. Existing periodic heals that never roll crit are not newly made critical. [Source and proof](../diagnostics/census-tail-70448.md).
+
 ## Caster-owned healing taken slice — 2026-10-22
 
 - Native504 on the recipient multiplies direct and periodic healing only from that aura's caster. Multiply independent signed amounts, without a school/family filter or strongest-only aggregation. Honor the existing259 sign permissions from native attr6/13; other healers and recipients remain independent, and removal restores prior healing.

@@ -200,6 +200,8 @@ pub const ADD_PCT_MODIFIER: u32 = 108;
 pub const MOD_POWER_REGEN_PERCENT: u32 = 110;
 pub const MOD_REGEN_DURING_COMBAT: u32 = 116;
 pub const MOD_HEALING_PCT: u32 = 118;
+/// TC a352b1fa Unit.cpp7331–7342: multiplies the whole critical heal, all schools.
+pub const MOD_CRITICAL_HEALING_AMOUNT: u32 = 50;
 pub const MOD_SPEED_ALWAYS: u32 = 129;
 pub const MOD_MOUNTED_SPEED_ALWAYS: u32 = 130;
 /// TC Unit.cpp8816: strongest positive mounted bonus, not stacked with aura130.
@@ -424,6 +426,7 @@ pub fn kind(aura_type: u32) -> Option<AuraKind> {
         | MOD_POWER_REGEN_PERCENT
         | INTERRUPT_REGEN
         | MOD_HEALING_PCT
+        | MOD_CRITICAL_HEALING_AMOUNT
         | MOD_SPEED_ALWAYS
         | USE_NORMAL_MOVEMENT_SPEED
         | REDUCE_PUSHBACK

@@ -84,7 +84,6 @@ fn heal(h: &mut Harness, spell_id: u32) -> (i32, bool) {
 }
 
 #[test]
-#[ignore = "census-tail50 RED before native critical healing consumer"]
 fn census_tail_50_native_critical_healing_multiplies_whole_heal_without_school_filter() {
     let mut h = fixture(true);
     assert_eq!(heal(&mut h, UNWIND_INJURY), (200, true));
@@ -96,7 +95,6 @@ fn census_tail_50_native_critical_healing_multiplies_whole_heal_without_school_f
 }
 
 #[test]
-#[ignore = "census-tail50 RED before native critical healing consumer"]
 fn census_tail_50_native_signed_modifiers_compose_multiplicatively_and_remove() {
     let mut h = fixture(true);
     let caster = h.caster;
@@ -109,7 +107,6 @@ fn census_tail_50_native_signed_modifiers_compose_multiplicatively_and_remove() 
 }
 
 #[test]
-#[ignore = "census-tail50 RED before native critical healing consumer"]
 fn census_tail_50_native_small_heal_truncates_after_whole_critical_multiplier() {
     let mut h = fixture(true);
     assert_eq!(heal(&mut h, GUARDIAN_SHELL), (10, true));
@@ -119,7 +116,6 @@ fn census_tail_50_native_small_heal_truncates_after_whole_critical_multiplier() 
 }
 
 #[test]
-#[ignore = "census-tail50 RED before native critical healing consumer"]
 fn census_tail_50_native_noncritical_and_cannot_crit_heals_remain_unchanged() {
     let mut h = fixture(false);
     let caster = h.caster;
@@ -130,7 +126,6 @@ fn census_tail_50_native_noncritical_and_cannot_crit_heals_remain_unchanged() {
 }
 
 #[test]
-#[ignore = "census-tail50 RED before native critical healing consumer"]
 fn census_tail_50_native_another_recipient_cannot_amplify_healers_critical_amount() {
     let mut h = fixture(true);
     let foreign = h.npc;

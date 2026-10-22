@@ -63,6 +63,12 @@ Valid evidence is isolated `round-3-retry/`, including exact command/binary SHA,
 
 Vehicles **do exist** (`vehicle.rs` passenger mounts and `vehicle/isle.rs` siege seats/control). Therefore206/210 cannot be dismissed as vehicle-system absent. TC `Unit.cpp:8833–8858` also uses206 on unmounted players; qualify those cases separately.
 
+## Aura50 MOD_CRITICAL_HEALING_AMOUNT
+
+TC `Unit.cpp:7331–7342` adds CritDamageAndHealing-modified bonus to the original heal, then multiplies the whole critical amount by every caster-owned50 without filtering MiscValue school bits; returns integer healing. Existing heal-only `with_crit` callers share this step; physical/magical damage uses separate `with_damage_crit`. Ordinary noncritical returns precede50; native CANT_CRIT still prevents the roll.
+
+Ignored RED7b76b08ea1PASS/4FAIL33.70s, compile10m46s/no warnings, `50-red.log`: actual394806100 heal remains critical200 instead230 under462587+15 or300 under200376+50; foreign-owner control passes before own-caster comparison fails. Actual154611 index2 supplies aura57+100 chance, without RNG/stat edits. Initial215257 small fixture had overlooked native AP0.315 and is invalid feature evidence. Correctedc3d666404 uses native310443 heal5/AP0/SP0; focused RED0PASS/1FAIL16.31s, compile55.62s/no warnings, `50-red-small-native.log`: critical10 remains10 instead11 after15%, proving the native integer boundary10×1.15=11.5→11. GREEN pending.
+
 ## Aura504 MOD_HEALING_TAKEN_FROM_CASTER
 
 TC `Unit.cpp:7579–7594` multiplies every allowed504 on the healing recipient whose caster matches the healer; no school/family filter, direct/periodic distinction or strongest-only aggregation. Reuse259's independent attr6/13 sign permissions, without changing283 or fixed/copy-heal handling.

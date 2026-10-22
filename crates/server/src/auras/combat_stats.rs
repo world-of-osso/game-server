@@ -52,6 +52,21 @@ pub(crate) fn armor_after_ignore(
     })
 }
 
+/// TC a352b1fa Unit.cpp7340: caster-owned50, with no MiscValue school mask.
+pub(crate) fn critical_healing_multiplier(world: &World, caster: Entity) -> f32 {
+    world.get::<ActiveAuras>(caster).map_or(1.0, |auras| {
+        auras
+            .iter()
+            .flat_map(|aura| {
+                aura.effects
+                    .iter()
+                    .filter(|effect| effect.aura_type == handlers::MOD_CRITICAL_HEALING_AMOUNT)
+                    .map(move |effect| 1.0 + effect.amount * aura.stack_multiplier() / 100.0)
+            })
+            .product()
+    })
+}
+
 /// TC a352b1fa Unit.cpp7514–7515: independently allow each healing-modifier sign.
 fn healing_modifier_permissions(spell: &SpellInfo) -> (bool, bool) {
     const IGNORE_HEALING_MODIFIERS: u32 = 0x0800_0000;

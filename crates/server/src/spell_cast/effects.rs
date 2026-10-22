@@ -843,7 +843,8 @@ fn with_crit(
         SpellModOp::CritDamageAndHealing,
         amount,
     );
-    (amount + bonus, true)
+    let multiplier = crate::auras::combat_stats::critical_healing_multiplier(world, caster);
+    (((amount + bonus) * multiplier).trunc(), true)
 }
 
 fn uses_weapon_crit_bonus_order(spell: &SpellInfo) -> bool {
