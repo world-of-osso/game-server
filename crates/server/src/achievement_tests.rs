@@ -2800,6 +2800,7 @@ fn achievements_criteria_known_spell_credits_real_learning_once_and_rejected_cas
             .get(&6155),
         Some(&1)
     );
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     assert_eq!(
         persistence::load_achievements(&h.app.world().resource::<GameDatabase>().db, character)
             .criteria_progress

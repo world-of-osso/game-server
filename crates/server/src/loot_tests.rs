@@ -190,6 +190,7 @@ fn achievements_criteria_loot_money_counts_committed_coins_not_refusals_or_retak
     h.stock(corpse);
     h.take_slot(corpse, 0);
     assert_eq!(h.inventory().gold, 0);
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     assert!(
         !persistence::load_achievements(
             &h.app.world().resource::<GameDatabase>().db,
@@ -201,6 +202,7 @@ fn achievements_criteria_loot_money_counts_committed_coins_not_refusals_or_retak
     h.open(corpse, false);
     h.take_slot(corpse, 0);
     assert_eq!(h.inventory().gold, 3);
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     assert_eq!(
         persistence::load_achievements(
             &h.app.world().resource::<GameDatabase>().db,
@@ -212,6 +214,7 @@ fn achievements_criteria_loot_money_counts_committed_coins_not_refusals_or_retak
     );
     h.take_slot(corpse, 0);
     h.settle();
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     assert_eq!(
         persistence::load_achievements(
             &h.app.world().resource::<GameDatabase>().db,
@@ -230,6 +233,7 @@ fn achievements_criteria_loot_money_counts_committed_coins_not_refusals_or_retak
     h.open(corpse2, false);
     h.take_slot(corpse2, 0);
     assert_eq!(h.inventory().gold, MAX_MONEY);
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     assert_eq!(
         persistence::load_achievements(
             &h.app.world().resource::<GameDatabase>().db,
@@ -1040,6 +1044,7 @@ fn achievements_criteria_loot_item_counts_only_committed_loot_slots() {
             .get(&15886),
         Some(&3)
     );
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     let db = &h.app.world().resource::<GameDatabase>().db;
     assert_eq!(
         persistence::load_achievements(db, h.looter.character_id)

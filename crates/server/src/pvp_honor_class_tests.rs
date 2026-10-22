@@ -97,6 +97,7 @@ fn achievements_criteria_honor_class52_full_thirteen_classes_and_reopen() {
         .as_ref()
         .unwrap()
         .earned_at[&245];
+    crate::test_data::drain_persistence(world.resource::<GameDatabase>());
     let saved =
         crate::persistence::load_achievements(&world.resource::<GameDatabase>().db, players[0].0);
     drop(world.remove_resource::<GameDatabase>().unwrap());
