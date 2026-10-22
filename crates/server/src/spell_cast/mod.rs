@@ -359,6 +359,8 @@ mod toy_weather;
 mod toy_wormhole;
 
 mod elemental_overload;
+#[cfg(test)]
+mod elemental_overload_tests;
 pub(crate) mod queued_triggers;
 
 pub struct SpellCastPlugin;
