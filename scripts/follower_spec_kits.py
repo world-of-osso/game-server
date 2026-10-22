@@ -16,6 +16,13 @@ from pathlib import Path
 import re
 import sqlite3
 import subprocess
+import sys
+
+# The same module is imported by tests and invoked by its documented file path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.follower_spell_roles import SpellRoleCatalog, effect_roles, read_tc_child_artifact
+
+TC_CHILD_ARTIFACT = Path(__file__).resolve().parents[1] / 'data/diagnostics/tc-script-child-edges-a352b1fa.json'
 
 BUILD = '12.1.5.70448'
 POLICY = 'FOLLOWER_BATTLEFIELD_PRIORITY_V1'
@@ -61,7 +68,9 @@ def dps_rotation_policy(spec, name):
         return policy('attack', 110, required_self_aura=48108)
     if spec == 63 and name == 'Flamestrike':
         return policy('aoe', 85, min_enemies=3, ground=True, required_self_aura=48108)
-    if spec == 63 and name == 'Arcane Explosion':
+    # This Fire APL does not choose off-school fillers or utility novas. Their
+    # intrinsic damage remains source-classified, independently of this policy.
+    if spec == 63 and spell_is_excluded_from_fire_apl(name):
         return policy('utility', 1000)
     # apl_hunter.cpp104/109/119/132: min own Barbed DoT, not a missing-only gate.
     if spec == 253 and name == 'Barbed Shot':
@@ -87,8 +96,14 @@ def dps_rotation_policy(spec, name):
     return None
 
 
+def spell_is_excluded_from_fire_apl(name):
+    # SimC76f8118 apl/mage.cpp:210-224: Fireball filler, Hot Streak spenders.
+    return name in {'Arcane Explosion', 'Frostbolt', 'Cone of Cold', 'Frost Nova',
+                    'Supernova', 'Ice Nova'}
+
+
 def combat_policy(spec, name, spell, dispel_effects, control_effects):
-    """Editable project decisions; names resolve only from the sourced spellbook."""
+    """Explicit action conditions; None delegates intrinsic role to source evidence."""
     if spec == 269 and spell in WINDWALKER_COMBO_ACTIONS:
         conditions = dict(no_repeat_group=list(WINDWALKER_COMBO_ACTIONS))
         if name == 'Tiger Palm':
@@ -181,10 +196,36 @@ def combat_policy(spec, name, spell, dispel_effects, control_effects):
         return policy('attack', 100, missing_aura=spell)
     if name == "Hand of Gul'dan" and spec == 266:
         return policy('attack', 110, resources=[dict(power='SoulShards', min=3)])
-    if name in {"Avenger's Shield", 'Shield Slam', 'Lava Burst', 'Pyroblast', 'Fire Blast', 'Kill Command', 'Wild Thrash', 'Disintegrate', 'Fire Breath', 'Eternity Surge', 'Fists of Fury', 'Rising Sun Kick', 'Strike of the Windlord', 'Blackout Kick', 'Ferocious Bite', 'Demonbolt', 'Call Dreadstalkers', 'Summon Vilefiend', 'Demonic Strength', 'Execute', 'Touch of Death', 'Earth Shock'}:
+    # Source-ambiguous spell graph: this is a guardian command, not direct
+    # owner damage. Preserve the sourced action without inventing a child ID.
+    # SimC76f8118 warlock/sc_warlock_actions.cpp:3403-3433 summons the attackers.
+    if spec == 266 and spell == 104316:
         return policy('attack', 110)
-    if name in {'Judgment', 'Crusader Strike', 'Blessed Hammer', 'Devastate', 'Wrath', 'Smite', 'Fireball', 'Lightning Bolt', 'Cobra Shot', 'Steady Shot', 'Living Flame', 'Tiger Palm', 'Shadow Bolt', 'Shred'}:
-        return policy('attack', 150)
+    return None
+
+
+# Existing FOLLOWER_BATTLEFIELD_PRIORITY_V1 priorities, not a role whitelist.
+# These only apply after damage reachability is established by source evidence.
+BATTLEFIELD_DAMAGE_PRIORITIES = dict.fromkeys((8042, 11366, 22568, 23922, 31935,
+    34026, 51505, 104316, 105174, 107428, 108853, 163201, 264178, 319836,
+    356995, 1264359), 110)
+
+
+def read_combat_policy(catalog, spec, name, spell, dispel_effects, control_effects):
+    facts = catalog.read_role(spell)
+    selected = combat_policy(spec, name, spell, dispel_effects, control_effects)
+    if selected is not None:
+        return selected
+    if facts['intrinsic'] in {'damage', 'mixed'}:
+        return policy('attack', BATTLEFIELD_DAMAGE_PRIORITIES.get(spell, 150))
+    if facts['intrinsic'] == 'heal':
+        direct = [row for row in facts['root_effects'] if 'heal' in effect_roles(row)]
+        if direct:
+            targets = {row['ImplicitTarget_0'] for row in direct}
+            if targets == {1}:
+                return policy('heal', 70, 'self', health_below=0.35)
+            if targets.issubset({21, 30, 31, 56, 57, 118}):
+                return policy('heal', 70, 'party', health_below=0.35)
     return policy('utility', 1000)
 
 
@@ -334,6 +375,7 @@ def project_loadout_actions(loadout, override_families):
 
 
 def kit_rows(db, source):
+    roles = SpellRoleCatalog(db, read_tc_child_artifact(TC_CHILD_ARTIFACT))
     override_families = read_native_override_families(db)
     availability = defaultdict(list)
     description_links = {}
@@ -356,7 +398,7 @@ def kit_rows(db, source):
             name, required = native
             if level < required:
                 continue
-            rule = policy('passive', 0, 'self') if passive else combat_policy(spec, name, spell, dispels[spell], controls[spell])
+            rule = policy('passive', 0, 'self') if passive else read_combat_policy(roles, spec, name, spell, dispels[spell], controls[spell])
             if rule[0] == 'dispel':
                 effects = dispels[spell]
                 rule[2]['dispel_types'] = sorted({row[0] for row in effects})

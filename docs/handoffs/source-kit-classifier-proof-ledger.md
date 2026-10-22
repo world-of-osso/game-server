@@ -14,9 +14,11 @@ Lead-approved: replace the role NAME whitelist with classification from native e
 ## Proof ledger
 
 - RED fixture file: `scripts/test_follower_source_roles.py`. Actual native all-level source exports and read-only native DB feed `kit_rows`; concrete output rows assert Shield Charge damage, Frenzy canonical availability through90 and existing Fireball/Regrowth/Blink roles.
-- Runtime RED pending; no production classifier implementation yet.
-- Full DB before/after role census and delta replay pending.
+- Producer RED `dd4ab3d26`: six subtest failures; existing Fireball/Regrowth/Blink control passed (`E/source-kit-classifier-red.*`). No production role-classifier integration yet.
+- Native-family projection `399469c58` reads `TraitDefinition` and `SpecializationSpells.OverridesSpellID` recursively for non-passive controller actions; does not change the native source book. Explicit Berserk/Incarnation retirement remains separate. Partial proof `E/source-family-alias-partial.*`: Frenzy canonical action now exists at55/56/57/90; six role assertions remain RED. Existing Berserk projection control passed.
+- Source-only intrinsic graph now has six explicit description-confirmed SimC child bindings in `scripts/follower_spell_role_policy.py`, separate from APL selection: Feral/Frantic Frenzy, Blessed Hammer, Kill Command, Wild Thrash and Emerald Blossom. Genuine Frenzy2-failure RED→GREEN and command/area4-failure RED→GREEN; current `bcc604b49` graph4/4 tests pass (`E/source-{frenzy-child,command-area}-role-*`). Child reachability does not certify execution or owner damage attribution.
+- Full DB before/after role census, producer integration and delta replay remain pending. Do not publish the controller aliases before authoritative native-book initialization and selected-variant resolution.
 
-## Policy boundary awaiting lead
+## Approved policy boundary
 
-`role_slot` is also an executable action policy. Arcane Explosion is intentionally disabled as utility1000 by an existing cited Fire APL contract despite native damage effects. A purely intrinsic-damage→combat-slot rewrite would activate such exclusions. Lead asked to confirm retaining small cited APL exclusions separately from generic source classification; no silent reinterpretation.
+`role_slot` is also an executable action policy. Lead approved retaining small cited APL exclusions separately from generic source classification. Arcane Explosion stays intrinsically damaging but utility1000/AI-disabled under its Fire APL contract. Read-only audit found32 existing utility roots with sourced damage/heal reachability, including self-damaging Burning Rush, pet-only healing and conditional crowd-control damage. Intrinsic reachability alone must not invent enemy targeting or unconditional APL use; distinguish classification-driven changes from policy-retained rows in the full delta.
