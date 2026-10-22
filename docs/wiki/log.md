@@ -1,3 +1,7 @@
+## 2026-10-21 — Native defensive choices and quantitative empower proof
+
+[Defenses](investigations/follower-data.md#four-spec-native-defensive-choices--2026-10-21): existing wounded-and-attacked policy produces native casts/auras for all four specs, not on owner-only threat;4PASS50.73s. [Empower](investigations/follower-data.md#native-empower-pipeline--2026-10-21): later positive proofs close Animosity new-instance reset, Blast Furnace learn/rank duration, converted tick damage, Font rank4 outcomes and native Scouring count. Optional talent ranks/modifier timing remain open; no new production edits.
+
 ## 2026-10-21 — Explicit empower input, Animosity and production-stat measurements
 
 [Native empower](investigations/follower-data.md#native-empower-pipeline--2026-10-21): selected-stage/cancel2GREEN33.47s; explicit authenticated player-release3GREEN18.52s and nine-case native integration24.32s. Matched186134 protocol/92b766 client has hold2PASS, wire1PASS, extension buildPASS; no physical key-up capture or stage UI claim. Native Animosity RED0-vs5000ms→GREEN5000/3750ms34.78s.

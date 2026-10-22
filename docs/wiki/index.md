@@ -1,3 +1,4 @@
+- [Four-spec defensive choices](investigations/follower-data.md#four-spec-native-defensive-choices--2026-10-21) — native Barrier/Shift/Turtle/Scales cast+selfAura and owner-victim negative controls4PASS50.73s; existing policy unchanged.
 - [Scoped kit delta composition](investigations/follower-data.md#scoped-kit-delta-composition--2026-10-21) —20stable owned keys, actual a3 both-order replay,22PythonGREEN/no warnings; legacy rowid delta superseded.
 - [Windwalker finite-target starter oracle](investigations/follower-data.md#windwalker-finite-target-starter-test--2026-10-21) — v4 executes the weaker fixture before BoK; real0.30s kill, no frame-time stall or timeout widening; patched-copy GREEN pending.
 - [Rotation proc lifetimes](investigations/follower-data.md#rotation-proc-lifetimes--2026-10-21) — native TF snapshot/late-buff, WW natural two-use ComboBreaker/HitCombo and LastStand46/47; merged21GREEN0warnings/fmtPASS; full APL/healer import still open.
