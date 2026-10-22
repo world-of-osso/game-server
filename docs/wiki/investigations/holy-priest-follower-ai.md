@@ -327,8 +327,11 @@ Separate testtip871560575 reproduced native level61 learned Echo tick81 versus85
 expected; native60 unlearned control passed (1PASS/1FAIL37.36s). Narrow production
 97a246aa5, merged53a0ee990, passes15native cases84.14s: the level boundary plus
 Echo refresh/two-caster/self/periodic/expiry, Binding and generic carry controls.
-This later tip is separate from ec943's frozen cf561a925 Echo candidate. Evidence:
-game-engine `data/diagnostics/healer-ai-2026-10-21/prismatic-echoes/`.
+This later tip is separate from ec943's frozen cf561a925 Echo candidate. Helper default check exits0/1m11s with no warnings; format passes at the same
+code. Evidence: game-engine
+`data/diagnostics/healer-ai-2026-10-21/prismatic-echoes/` contains `native-red.log`,
+`native-green.log`, `final-check.log`, `format-check.log`, `readability-review.md`
+and `inputs.json` (three source-alias hash matches; frozen DB unchanged).
 No AI, native catalog, mastery points or other spell producer changed; no
 simulator effectiveness or live acceptance inferred.
 
