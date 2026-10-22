@@ -615,7 +615,7 @@ def prepare(args):
         native_bindings = read_native_binding_entries(baseline, manifest)
         for proof in native_bindings:
             record = proof['source_record']
-            proof['binding'] = derive_binding(baseline, inventory, binding_tables, manifest['map_id'], record['entry'], record['journal_actor_source'])
+            proof['binding'] = derive_binding(baseline, inventory, tables | binding_tables, manifest['map_id'], record['entry'], record['journal_actor_source'])
         source_relationships = validate_sourced_duo(manifest, placements, native_bindings, args.cache)
         receipt = dict(map_id=manifest['map_id'], policy=manifest['placement_policy'], db2_authentication=auth | binding_auth,
                        producer_sha256=digest(__file__), source_reader_sha256=digest(Path(__file__).with_name('follower_placement_sources.py')),
@@ -636,7 +636,7 @@ def prepare(args):
         if any('wow_xyz' not in p for p in placements):
             receipt['status'] = 'BLOCKED_SURFACE_AMBIGUITY_OR_NO_ROUTE'
         else:
-            bindings = [derive_binding(baseline, inventory, binding_tables, manifest['map_id'], r['entry'], r.get('journal_actor_source')) for r in manifest['entries']]
+            bindings = [derive_binding(baseline, inventory, tables | binding_tables, manifest['map_id'], r['entry'], r.get('journal_actor_source')) for r in manifest['entries']]
             for record, placement in zip(manifest['entries'], placements):
                 if 'journal_actor_source' in record:
                     placement['binding_source'] = record['journal_actor_source']
