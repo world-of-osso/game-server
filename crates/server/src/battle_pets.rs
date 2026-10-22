@@ -350,6 +350,37 @@ pub(crate) fn learn_companion_from_item(
     Ok(true)
 }
 
+/// TC BattlePetMgr uses118301 only when SummonSpellID is zero. Missing effect
+/// metadata is a source gap, not permission to invent Companion title or slot5.
+fn read_companion_properties(
+    world: &World,
+    species: &Species,
+) -> Option<crate::spell_cast::summon::SummonProperties> {
+    let spell_id = if species.summon_spell_id == 0 {
+        118301
+    } else {
+        species.summon_spell_id
+    };
+    let properties = world
+        .get_resource::<crate::spell_info::SpellStore>()
+        .and_then(|store| store.get(spell_id))
+        .and_then(|spell| spell.effects.iter().find(|effect| effect.effect == 28))
+        .and_then(|effect| {
+            world
+                .get_resource::<crate::spell_cast::summon::SummonPropertiesStore>()?
+                .0
+                .get(&(effect.misc_values[1] as u32))
+                .copied()
+        });
+    if properties.is_none() {
+        warn!(
+            "Journal species{} spell{spell_id}: summon metadata unavailable; no authored critter/slot registration",
+            species.species_id
+        );
+    }
+    properties
+}
+
 fn summon_companion(world: &mut World, owner: Entity, id: u64) -> Result<Entity, String> {
     let journal = world
         .get::<AccountPetJournal>(owner)
@@ -385,6 +416,10 @@ fn summon_companion(world: &mut World, owner: Entity, id: u64) -> Result<Entity,
     if journal.summoned.is_some() {
         dismiss_companion(world, owner)?;
     }
+    let properties = read_companion_properties(world, &species);
+    if let Some(properties) = properties {
+        crate::spell_cast::summon::replace_slotted_summon(world, owner, properties);
+    }
     let entity = spawn_companion(
         world,
         owner,
@@ -392,6 +427,9 @@ fn summon_companion(world: &mut World, owner: Entity, id: u64) -> Result<Entity,
         pet.level,
         (position, rotation, map, faction),
     );
+    if let Some(properties) = properties {
+        crate::spell_cast::summon::register_source_summon(world, entity, owner, properties);
+    }
     world
         .get_mut::<AccountPetJournal>(owner)
         .expect("journal checked")
@@ -446,8 +484,39 @@ fn dismiss_companion(world: &mut World, owner: Entity) -> Result<(), String> {
         .get_mut::<AccountPetJournal>(owner)
         .ok_or("pet journal unavailable")?;
     let (_, entity) = journal.summoned.take().ok_or("no companion summoned")?;
+    crate::spell_cast::summon::unregister_source_summon(world, entity);
     world.despawn(entity);
     Ok(())
+}
+
+/// A legacy slot replacement must clear the matching journal instance and tell
+/// its owner; an older actor's removal cannot clear a newer active instance.
+pub(crate) fn forget_companion_actor(world: &mut World, actor: Entity) {
+    let Some(owner) = world
+        .get::<Companion>(actor)
+        .map(|companion| companion.owner)
+    else {
+        return;
+    };
+    let Some(mut journal) = world.get_mut::<AccountPetJournal>(owner) else {
+        return;
+    };
+    if !journal
+        .summoned
+        .is_some_and(|(_, current)| current == actor)
+    {
+        return;
+    }
+    journal.summoned = None;
+    refresh_catalog_snapshot(world, owner);
+    let mut connections = world.query::<(Entity, &PlayerLink)>();
+    let connection = connections
+        .iter(world)
+        .find(|(_, link)| link.0 == owner)
+        .map(|(connection, _)| connection);
+    if let Some(connection) = connection {
+        send_pet_update(world, connection, owner, None);
+    }
 }
 
 fn despawn_ownerless_companions(world: &mut World) {
@@ -457,11 +526,10 @@ fn despawn_ownerless_companions(world: &mut World) {
         .filter(|(_, companion, map)| world.get::<InMap>(companion.owner) != Some(*map))
         .map(|(entity, companion, _)| (entity, companion.owner))
         .collect();
-    for (entity, owner) in expired {
+    for (entity, _) in expired {
+        crate::spell_cast::summon::unregister_source_summon(world, entity);
+        forget_companion_actor(world, entity);
         world.despawn(entity);
-        if let Some(mut journal) = world.get_mut::<AccountPetJournal>(owner) {
-            journal.summoned = None;
-        }
     }
 }
 
