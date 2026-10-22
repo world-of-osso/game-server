@@ -146,6 +146,18 @@ fn rotation_selection_262_native_ascendance_after_stormkeeper() {
 #[ignore = "native Ascendance entry effects RED before implementation"]
 fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
     let (mut h, caster, targets) = prepare(209053, 7);
+    for &target in &targets {
+        crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, target);
+    }
+    assert!(targets.iter().all(|&target| {
+        h.app
+            .world()
+            .get::<shared::components::CombatStatus>(target)
+            .is_some_and(|status| status.0)
+    }));
+    let idle = spawn_npc(&mut h.app, 0.25);
+    let distant = spawn_npc(&mut h.app, 80.0);
+    crate::combat_refs::set_in_combat_with(h.app.world_mut(), caster, distant);
     assert!(
         targets
             .iter()
@@ -193,6 +205,14 @@ fn rotation_selection_262_native_ascendance_entry_hits_six_enemies() {
             .iter()
             .any(|hit| hit.target == Some(target.to_bits()))
     }));
+    for excluded in [idle, distant] {
+        assert!(!crate::auras::has_aura(h.app.world(), excluded, 188389));
+        assert!(
+            burst_hits
+                .iter()
+                .all(|hit| hit.target != Some(excluded.to_bits()))
+        );
+    }
 }
 
 #[test]
