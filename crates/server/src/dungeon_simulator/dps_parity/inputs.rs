@@ -60,6 +60,55 @@ pub(super) fn directory() -> Result<PathBuf, String> {
         .ok_or_else(|| "DPS_PARITY_OUTPUT must name the prepared profile/evidence directory".into())
 }
 
+pub(super) fn read_actor(
+    profile: &Profile,
+) -> Result<crate::followers::simulator::ParityActor, String> {
+    use crate::followers::simulator::ParityActor;
+    match std::env::var("DPS_PARITY_ACTOR") {
+        Err(std::env::VarError::NotPresent) => Ok(ParityActor::Follower),
+        Ok(mode) if mode == "follower" => Ok(ParityActor::Follower),
+        Ok(mode) if mode == "player" => Ok(ParityActor::Player {
+            race: read_reference_race(&profile.race)?,
+        }),
+        other => Err(format!("invalid DPS_PARITY_ACTOR: {other:?}")),
+    }
+}
+
+fn read_reference_race(name: &str) -> Result<u8, String> {
+    let path = std::env::var_os("DPS_PARITY_WORLD_DB").ok_or("DPS_PARITY_WORLD_DB absent")?;
+    let db =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|error| format!("read native race catalog: {error}"))?;
+    let mut statement = db
+        .prepare("SELECT ID, Name_lang FROM chr_races")
+        .map_err(|error| format!("query native race catalog: {error}"))?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, u8>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|error| format!("read native race rows: {error}"))?;
+    let normalize = |text: &str| {
+        text.chars()
+            .filter(char::is_ascii_alphanumeric)
+            .flat_map(char::to_lowercase)
+            .collect::<String>()
+    };
+    let expected = normalize(name);
+    let mut matches = Vec::new();
+    for row in rows {
+        let (id, native_name) = row.map_err(|error| format!("decode native race: {error}"))?;
+        if normalize(&native_name) == expected {
+            matches.push(id);
+        }
+    }
+    match matches.as_slice() {
+        [id] => Ok(*id),
+        _ => Err(format!(
+            "reference race {name:?} matched native races {matches:?}"
+        )),
+    }
+}
+
 pub(super) fn slot(name: &str) -> Result<EquipmentSlot, String> {
     use EquipmentSlot::*;
     match name {
@@ -152,7 +201,6 @@ pub(super) fn install_traits(
     unit: Entity,
     allocated: &[AllocatedTrait],
 ) -> Result<(), String> {
-    let follower = world.get::<crate::followers::Follower>(unit).unwrap();
     let level = world.get::<shared::components::Level>(unit).unwrap().0;
     if allocated
         .iter()
@@ -169,13 +217,28 @@ pub(super) fn install_traits(
             ranks: entry.active_ranks,
         })
         .collect();
-    let (known, traits) = crate::class_progression::evaluate_reference_traits(
-        world.resource::<crate::spell_info::ClassSpells>(),
-        &follower.profile,
-        level,
-        &purchases,
-    )
-    .map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;
+    let classes = world.resource::<crate::spell_info::ClassSpells>();
+    let evaluated = if let Some(player) = world.get::<shared::components::Player>(unit) {
+        let spec = world
+            .get::<crate::class_progression::ActiveSpec>(unit)
+            .ok_or("reference player lacks native ActiveSpec")?
+            .0;
+        crate::class_progression::evaluate_player_reference_traits(
+            classes, player, spec, level, &purchases,
+        )
+    } else {
+        let follower = world
+            .get::<crate::followers::Follower>(unit)
+            .ok_or("reference actor is neither player nor follower")?;
+        crate::class_progression::evaluate_reference_traits(
+            classes,
+            &follower.profile,
+            level,
+            &purchases,
+        )
+    };
+    let (known, traits) =
+        evaluated.map_err(|reason| format!("NATIVE_REFERENCE_TRAIT_CONFIG_REJECTED: {reason}"))?;
     world.entity_mut(unit).insert((known, traits));
     Ok(())
 }

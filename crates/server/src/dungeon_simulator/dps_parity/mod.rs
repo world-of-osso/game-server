@@ -86,8 +86,14 @@ fn prepare(spec_id: u32, count: usize) -> Result<Run, String> {
         .level
         .parse()
         .map_err(|error| format!("reference level: {error}"))?;
-    let actor =
-        crate::followers::simulator::spawn_parity_attacker(app.world_mut(), spec_id, level, copy)?;
+    let identity = inputs::read_actor(&profile)?;
+    let actor = crate::followers::simulator::spawn_parity_attacker(
+        app.world_mut(),
+        spec_id,
+        level,
+        copy,
+        identity,
+    )?;
     inputs::equip(app.world_mut(), actor, &profile)?;
     inputs::install_traits(app.world_mut(), actor, &traits)?;
     let targets = spawn_targets(&mut app, actor, count)?;

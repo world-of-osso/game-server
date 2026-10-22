@@ -551,20 +551,29 @@ pub(crate) fn evaluate_reference_traits(
     level: u8,
     allocated: &[Purchase],
 ) -> Result<(KnownSpells, TraitLoadout), String> {
-    let class_id = profile.class_id;
-    let spec_id = profile.spec_id;
-    let class = class_info(classes, class_id).ok_or("reference class absent")?;
-    let ctx = TraitContext { spec_id, level };
-    let purchases = reference_purchases(&class.traits, ctx, allocated);
-    build_config(&class.traits, ctx, &purchases)?;
-    // Pure identity input to the ordinary evaluator, not a Player entity.
+    // Followers retain the original source-neutral race0 identity.
     let identity = Player {
         name: String::new(),
-        class: class_id,
+        class: profile.class_id,
         race: 0,
         appearance: Default::default(),
     };
-    let evaluated = evaluate(classes, &identity, level, spec_id, |_| purchases);
+    evaluate_player_reference_traits(classes, &identity, profile.spec_id, level, allocated)
+}
+
+#[cfg(test)]
+pub(crate) fn evaluate_player_reference_traits(
+    classes: &ClassSpells,
+    identity: &Player,
+    spec_id: u32,
+    level: u8,
+    allocated: &[Purchase],
+) -> Result<(KnownSpells, TraitLoadout), String> {
+    let class = class_info(classes, identity.class).ok_or("reference class absent")?;
+    let ctx = TraitContext { spec_id, level };
+    let purchases = reference_purchases(&class.traits, ctx, allocated);
+    build_config(&class.traits, ctx, &purchases)?;
+    let evaluated = evaluate(classes, identity, level, spec_id, |_| purchases);
     if evaluated.traits_reset || evaluated.spec.0 != spec_id {
         return Err("native reference progression reset or changed requested spec".into());
     }

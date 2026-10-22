@@ -143,13 +143,22 @@ pub(crate) fn spawn_party(
     })
 }
 
-/// One real follower, without the dungeon party's four unrelated damage/buff sources.
+pub(crate) enum ParityActor {
+    Follower,
+    Player { race: u8 },
+}
+
+/// One real attacker, without unrelated party damage or buff sources.
 pub(crate) fn spawn_parity_attacker(
     world: &mut World,
     spec_id: u32,
     level: u8,
     copy: crate::maps::InMap,
+    actor: ParityActor,
 ) -> Result<Entity, String> {
+    if let ParityActor::Player { race } = actor {
+        return spawn_parity_player(world, spec_id, level, race, copy);
+    }
     let profile = world
         .resource::<FollowerCatalog>()
         .profiles
@@ -185,6 +194,72 @@ pub(crate) fn spawn_parity_attacker(
             player_role: shared::group::GroupRole::Dps,
         });
     Ok(unit)
+}
+
+fn spawn_parity_player(
+    world: &mut World,
+    spec_id: u32,
+    level: u8,
+    race: u8,
+    copy: crate::maps::InMap,
+) -> Result<Entity, String> {
+    let class = world
+        .resource::<crate::spell_info::ClassSpells>()
+        .classes
+        .iter()
+        .find(|class| class.specs.iter().any(|spec| spec.spec_id == spec_id))
+        .ok_or_else(|| format!("native player spec{spec_id} absent"))?
+        .class_id;
+    let player = world
+        .spawn((
+            Player {
+                name: format!("Parity{spec_id}"),
+                race,
+                class,
+                appearance: default(),
+            },
+            Level(level),
+            shared::components::UnitLevel(level),
+            crate::class_progression::ActiveSpec(spec_id),
+            UnitFactionTemplate(crate::faction::faction_template_for_race(race)),
+            Position {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            shared::components::Rotation {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            copy,
+            crate::persistence::ClientId(1),
+            crate::maps::DungeonDifficulty(1),
+            crate::networking::CombatTarget::default(),
+            crate::networking::Moving(false),
+            shared::components::PlayerStandState::default(),
+        ))
+        .id();
+    install_parity_player_stat_components(world, player);
+    Ok(player)
+}
+
+fn install_parity_player_stat_components(world: &mut World, player: Entity) {
+    // These initial full ratios are replaced by native Stats before measurement.
+    // Player powers, passives and regeneration initialize through ordinary plugins.
+    world.entity_mut(player).insert((
+        shared::components::Health {
+            current: 1.0,
+            max: 1.0,
+        },
+        shared::components::Mana {
+            current: 1.0,
+            max: 1.0,
+        },
+        shared::components::UnitStats::default(),
+        shared::components::CombatRatings::default(),
+        shared::components::DerivedStats::default(),
+    ));
 }
 
 fn initialize_player_owner(
