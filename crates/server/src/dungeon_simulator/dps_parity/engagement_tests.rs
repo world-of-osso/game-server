@@ -50,18 +50,30 @@ fn dps_parity_engagement_all_opponents_have_mutual_combat_refs() {
     }
 }
 
+fn read_multi_enemy_spells(spec: u32) -> Vec<u32> {
+    let path = std::env::var_os("DPS_PARITY_WORLD_DB").expect("prepared native database");
+    let db = rusqlite::Connection::open_with_flags(
+        std::path::PathBuf::from(path),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let mut query = db
+        .prepare(
+            "SELECT spell_id FROM follower_spec_kit WHERE spec_id=?1
+         AND min_level<=90 AND max_level>=90 AND json_extract(conditions, '$.min_enemies')>=2",
+        )
+        .unwrap();
+    query
+        .query_map([spec], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+}
+
 fn assert_native_aoe_cast(spec: u32) {
     let _seed_scope = crate::random::seed_scope(70_448);
     let mut run = prepare_follower(spec, 3);
-    let aoe_spells: Vec<_> = run
-        .app
-        .world()
-        .resource::<crate::followers::FollowerCatalog>()
-        .kits
-        .iter()
-        .filter(|entry| entry.available(spec, 90) && entry.conditions.min_enemies >= 2)
-        .map(|entry| entry.spell_id)
-        .collect();
+    let aoe_spells = read_multi_enemy_spells(spec);
     assert!(
         !aoe_spells.is_empty(),
         "fixture must have authored multi-enemy entries"
