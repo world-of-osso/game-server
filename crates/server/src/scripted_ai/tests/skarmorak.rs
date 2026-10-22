@@ -39,6 +39,42 @@ fn energy(h: &Harness, boss: Entity) -> f32 {
         .0
 }
 
+#[derive(Resource)]
+struct AbsorbRemovals {
+    original: Option<crate::auras::scripts::RemoveHook>,
+    reasons: Vec<(Entity, crate::auras::RemoveReason)>,
+}
+
+fn observe_absorb_removal(
+    world: &mut World,
+    actor: Entity,
+    aura: &crate::auras::AuraInstance,
+    reason: crate::auras::RemoveReason,
+) {
+    let original = {
+        let mut observer = world.resource_mut::<AbsorbRemovals>();
+        observer.reasons.push((actor, reason));
+        observer.original
+    };
+    if let Some(original) = original {
+        original(world, actor, aura, reason);
+    }
+}
+
+fn record_absorb_removals(h: &mut Harness) {
+    let mut scripts = h
+        .app
+        .world_mut()
+        .resource_mut::<crate::auras::scripts::AuraScripts>();
+    let hook = scripts.0.entry(423228).or_default();
+    let original = hook.on_remove;
+    hook.on_remove = Some(observe_absorb_removal);
+    h.app.insert_resource(AbsorbRemovals {
+        original,
+        reasons: Vec::new(),
+    });
+}
+
 fn completed_casts(h: &Harness, boss: Entity, spell: u32) -> usize {
     h.inbox(0)
         .spell_gos
@@ -163,6 +199,7 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
     for difficulty in [1, 205] {
         let (mut h, boss, map) = skarmorak_copy(difficulty);
         let peer_map = create_peer_copy(&mut h, difficulty);
+        record_absorb_removals(&mut h);
         let origin = h.app.world().resource::<Time>().elapsed_secs_f64();
         h.app
             .insert_resource(super::cast_admission::CastAdmissions {
@@ -194,32 +231,81 @@ fn encounter_coverage_skarmorak_source_shell_refill_channel_rearm_and_copy_credi
             100.0,
             "six sourced ticks, not unsourced regeneration"
         );
-        h.advance(140.3);
-        eprintln!(
-            "SKARMORAK end difficulty{difficulty} bossEnergy{} bossHealth{:?} playerHealth{:?} cast{:?} bossCombat{:?} state{:?}",
-            energy(&h, boss),
-            h.health(boss),
-            h.health(h.player()),
-            h.app.world().get::<shared::casting::CastState>(boss),
-            h.app.world().get::<CombatStatus>(boss),
-            h.app.world().get::<crate::creature_ai::CreatureState>(boss)
+        h.advance(2.2);
+        assert!(
+            h.has_aura(boss, 423228),
+            "actual Shell cast supplied native45-point absorb"
         );
+        assert_eq!(
+            h.app
+                .world()
+                .get::<shared::casting::CastState>(boss)
+                .unwrap()
+                .spell_id,
+            423324
+        );
+        let player = h.player();
+        let mut queue = bevy::ecs::world::CommandQueue::default();
+        let mut commands = Commands::new(&mut queue, h.app.world());
+        crate::combat::start_attack(&mut commands, player, boss, None);
+        queue.apply(h.app.world_mut());
+        let mut elapsed = 0.0;
+        while h.has_aura(boss, 423228) && elapsed < 15.0 {
+            h.advance(0.05);
+            elapsed += 0.05;
+        }
+        crate::combat::attack_stop(h.app.world_mut(), player);
+        assert!(
+            !h.has_aura(boss, 423228),
+            "native melee must consume real45-point absorb within15s; boss{:?},player{:?}",
+            h.health(boss),
+            h.health(player)
+        );
+        assert_eq!(
+            h.app.world().resource::<AbsorbRemovals>().reasons,
+            vec![(boss, crate::auras::RemoveReason::Consumed)],
+            "real absorb depletion, not fabricated removal/dispel/expiry"
+        );
+        assert!(
+            h.has_aura(boss, 423246),
+            "TC enemy-absorb removal triggers actual Shattered Shell"
+        );
+        assert!(
+            !h.has_aura(boss, 423324),
+            "TC early exit retires native Discharge aura"
+        );
+        let break_time = h.app.world().resource::<Time>().elapsed_secs_f64() - origin;
+        let damage = h
+            .inbox(0)
+            .log
+            .iter()
+            .filter(|event| {
+                event.source == Some(player.to_bits())
+                    && event.target == Some(boss.to_bits())
+                    && event.kind == CombatLogKind::Damage
+            })
+            .count();
+        assert!(
+            damage > 0,
+            "actual native autoattack damage, no fabricated hit amount"
+        );
+        h.advance(19.3);
         let attempts = &h
             .app
             .world()
             .resource::<super::cast_admission::CastAdmissions>()
             .entries;
         for (spell, expected) in [
-            (SMASH, &[4.6, 21.6, 171.65][..]),
-            (423538, &[10.5, 29.9, 177.75][..]),
-            (423324, &[39.65][..]),
+            (SMASH, vec![4.6, 21.6, break_time as f32 + 10.0]),
+            (423538, vec![10.5, 29.9, break_time as f32 + 16.1]),
+            (423324, vec![39.6]),
         ] {
             let lane: Vec<_> = attempts
                 .iter()
                 .filter(|entry| entry.spell == spell)
                 .collect();
             assert_eq!(lane.len(), expected.len(), "TC lane{spell}: {attempts:?}");
-            for (entry, time) in lane.iter().zip(expected) {
+            for (entry, time) in lane.iter().zip(&expected) {
                 assert!(
                     (entry.time - time).abs() <= 0.15,
                     "native occupancy {entry:?}, expected{time}; all{attempts:?}"
