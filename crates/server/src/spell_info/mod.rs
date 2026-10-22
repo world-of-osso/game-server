@@ -270,6 +270,8 @@ pub struct SpellCategories {
     pub max_charges: u32,
     /// `spell_category.ChargeRecoveryTime` of `charge_category`, ms per charge.
     pub charge_recovery_ms: u32,
+    /// Native SpellCategory.TypeMask, used by aura205 (not the category ID).
+    pub charge_type_mask: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]

@@ -52,6 +52,43 @@ pub(crate) fn armor_after_ignore(
     })
 }
 
+/// TC a352b1fa Unit.cpp7512–7550: strongest259 of each allowed sign.
+pub(crate) fn periodic_healing_taken_multiplier(
+    world: &World,
+    target: Entity,
+    spell: &SpellInfo,
+) -> f32 {
+    const IGNORE_HEALING_MODIFIERS: u32 = 0x0800_0000;
+    const ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS: u32 = 0x0400_0000;
+    let attributes = spell.misc.as_ref().map_or([0; 17], |misc| misc.attributes);
+    let allow_positive = attributes[6] & IGNORE_HEALING_MODIFIERS == 0;
+    let allow_negative =
+        allow_positive || attributes[13] & ALWAYS_ALLOW_NEGATIVE_HEALING_PERCENT_MODIFIERS != 0;
+    let Some(auras) = world.get::<ActiveAuras>(target) else {
+        return 1.0;
+    };
+    let amounts = auras.iter().flat_map(|aura| {
+        aura.effects
+            .iter()
+            .filter(|effect| effect.aura_type == handlers::MOD_HOT_PCT)
+            .map(move |effect| effect.amount * aura.stack_multiplier())
+    });
+    let (negative, positive) = amounts.fold((0.0_f32, 0.0_f32), |(negative, positive), amount| {
+        (negative.min(amount), positive.max(amount))
+    });
+    let negative_factor = if allow_negative {
+        1.0 + negative / 100.0
+    } else {
+        1.0
+    };
+    let positive_factor = if allow_positive {
+        1.0 + positive / 100.0
+    } else {
+        1.0
+    };
+    negative_factor * positive_factor
+}
+
 /// TC a352b1fa Unit.cpp7503-7507: each matched354 uses live missing HP.
 pub(crate) fn healing_multiplier(
     world: &World,
