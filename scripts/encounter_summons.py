@@ -626,9 +626,29 @@ def import_kyrioss_schedule(connection):
     return [209230]
 
 
+def import_candle_king(connection):
+    """TC a352b1fa primary binding only; preserve source script/actors/native spells."""
+    import encounter_cpp_bindings
+    primary = dict(map_id=2651, entry=208745, encounter_id=2787, bit=0,
+                   script='boss_the_candle_king', ai='', journal_id=2560,
+                   actor_id=5595, display_id=114508, spawn_guid=10002793,
+                   spawn_difficulties='1,2,8,23')
+    rows = encounter_cpp_bindings.prepare_bindings(connection, [primary])
+    runtime = connection.execute('''SELECT name,AIName,ScriptName,unit_flags
+        FROM content_creature_template WHERE entry=208745''').fetchone()
+    if runtime != ('The Candle King', '', 'boss_the_candle_king', 64):
+        raise ValueError('Candle King runtime identity or source flags changed')
+    connection.executemany('''INSERT INTO raid_encounter_creature
+        (map_id,creature_entry,encounter_id,bit,journal_encounter_id,journal_creature_id,display_id)
+        VALUES(?,?,?,?,?,?,?) ON CONFLICT(map_id,creature_entry) DO UPDATE SET
+        encounter_id=excluded.encounter_id,bit=excluded.bit,journal_encounter_id=excluded.journal_encounter_id,
+        journal_creature_id=excluded.journal_creature_id,display_id=excluded.display_id''', rows)
+    return [208745]
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon'],default='kystia')
+    parser.add_argument('--encounter',choices=['kystia','golden-serpent','adarogg','wailing-ritual','noxxion','celebras','theradras','omor','leymor','telash','herald','herald-nazan','nethekurse','kargath','porung','azureblade','umbrelskul','ancient','doragosa','melidrussa','kokia','kyrioss','lost-dwarves','bromach','talondras','emberon','candle-king'],default='kystia')
     parser.add_argument('--db',type=Path,required=True)
     args=parser.parse_args()
     canonical=Path('/home/osso/Projects/world-of-osso/game-engine/data/server-world/world.db')
@@ -672,6 +692,8 @@ def main():
                 entries = import_talondras(conn)
             elif args.encounter == 'emberon':
                 entries = import_emberon(conn)
+            elif args.encounter == 'candle-king':
+                entries = import_candle_king(conn)
             elif args.encounter == 'herald':
                 entries = import_herald_actors(conn)
             elif args.encounter == 'herald-nazan':
