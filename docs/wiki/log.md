@@ -1,5 +1,9 @@
 ## 2026-10-22 — Exact attack countdowns
 
+## 2026-10-22 — BM engage Auto Shot and exact shared attack timers
+
+Native BM10 passes at4f88 (16.25s): initial75, exact2s cadence, ordinary retarget and selection-only negative. Separate0d4 Duration/native-ms executor correction passes shared40×50ms RED→GREEN and retained melee/offhand/AutoShot/range/math scopes; forecast7 passes after selected-catalog fixture repair. See [follower data](investigations/follower-data.md#bm-auto-shot-engage-policy--2026-10-22). No fullAPL/DPS/proc parity claim.
+
 [Shared timer](systems/spell-casting.md#exact-attack-countdowns--2026-10-22): real production40tick RED, native millisecond resets/Duration countdown for both melee hands and autorepeat; no epsilon/tolerance widening. GREEN pending.
 
 ## 2026-10-22 — BM Auto Shot engage policy
