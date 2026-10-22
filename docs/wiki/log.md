@@ -4074,3 +4074,5 @@ Same-source550c4b453 route control: bothPASS,5437case/ignore census equal; opt0�
 ## 2026-10-22 — Brackenhide source-floor packet
 
 [Six boss placements](investigations/follower-data.md#brackenhide-source-floors-and-route-gaps--2026-10-22): exact source marker/floor transforms and own TDB stats; authored WMO group bounds disambiguate Wratheye from outdoor roofs without supplying Z. Actual missing-six RED→six-primary GREEN, replay3×; three route gaps remain separate. No unsupported War-band offsets, canonical writes or dungeon-clear claim.
+
+- 2026-10-22: Xenas Nysarra pinned-MDT identity admission, conflicting254227 budget retained, four-row private packet/source6GREEN+actual-copy2GREEN; missing entrance/Kasreth/Lothraxion gaps remain.
