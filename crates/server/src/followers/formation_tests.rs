@@ -24,14 +24,9 @@ fn ruby_entrance_party_follows_owner_and_separates() {
     )
     .unwrap();
     let profiles = super::catalog::load_catalog(&db).unwrap().profiles;
-    let native = crate::spell_cast::test_harness::load_native_creature_world(&[
-        209057, 209053, 209059, 209072,
-    ]);
+    // Native summons require the real class-level base stats as well as templates.
     h.app
-        .world_mut()
-        .resource_mut::<crate::world_data::WorldData>()
-        .templates
-        .extend(native.templates);
+        .insert_resource(crate::test_data::world_data().clone());
     h.app.world_mut().despawn(tank);
     let profiles: Vec<_> = [209057, 209053, 209059, 209072]
         .iter()
