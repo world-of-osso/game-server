@@ -8,6 +8,25 @@ use shared::components::{Npc, PowerType};
 
 use super::summon::SummonedCreature;
 
+#[path = "guardian_core.rs"]
+pub(super) mod core;
+#[path = "guardian_tyrant.rs"]
+pub(super) mod tyrant;
+
+const SUMMON_DEMONIC_TYRANT: u32 = 265187;
+const ANTORAN_ARMAMENTS: u32 = 1250921;
+
+/// SimC76f8118 pets1513: Antoran Armaments selects the alternative native root effect.
+pub(super) fn effect_enabled(world: &World, caster: Entity, spell: u32, index: u8) -> bool {
+    if spell != SUMMON_DEMONIC_TYRANT || !matches!(index, 0 | 3) {
+        return true;
+    }
+    let antoran = world
+        .get::<crate::class_progression::KnownSpells>(caster)
+        .is_some_and(|known| known.contains(ANTORAN_ARMAMENTS));
+    (index == 3) == antoran
+}
+
 #[derive(Resource, Default)]
 pub struct GuardianSpells {
     pub spells: HashMap<u32, Vec<u32>>,
@@ -91,8 +110,13 @@ pub(super) fn initialize(world: &mut World, actor: Entity) {
     if entry == 29264 {
         initialize_spirit_wolf(world, actor, owner);
     }
+    tyrant::on_spawn(world, actor);
     let summon = world.get::<SummonedCreature>(actor).unwrap();
     let spells = match (summon.spell_id, entry) {
+        // SimC76f8118 sc_warlock_pets.cpp721/867: sourced Wild Imp only.
+        (104317, 55659) => vec![104318],
+        // SimC76f8118 pets1520–1533: base Tyrant, not Antoran's Burning Cleave.
+        (SUMMON_DEMONIC_TYRANT, 135002) => vec![270481],
         // Native205180 description explicitly names $205231s1. TDB1210 has
         // no103673 creature spell row; this is not an Imp/Firebolt substitute.
         (205180, 103673) => vec![205231],
@@ -173,8 +197,38 @@ pub(super) fn update(world: &mut World) {
         .iter(world)
         .collect();
     for actor in actors {
-        cast_on_owner_target(world, actor);
+        if wild_imp_exhausted(world, actor) {
+            let owner = world.get::<SummonedCreature>(actor).unwrap().owner;
+            core::on_natural_fade(world, owner);
+            super::summon::despawn_summon(world, actor);
+        } else {
+            cast_on_owner_target(world, actor);
+        }
     }
+}
+
+fn wild_imp_exhausted(world: &World, actor: Entity) -> bool {
+    let summon = world.get::<SummonedCreature>(actor).unwrap();
+    let entry = world.get::<Npc>(actor).unwrap().template_id;
+    if (summon.spell_id, entry) != (104317, 55659)
+        || world.get::<CastState>(actor).is_some()
+        || world
+            .resource::<super::missiles::PendingSpellHits>()
+            .has_caster(actor)
+    {
+        return false;
+    }
+    let bolt = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(104318)
+        .unwrap();
+    let costs = super::applicable_costs(world, actor, bolt)
+        .expect("native Wild Imp requires its Energy pool and Fel Firebolt cost");
+    // SimC76f8118 pets.cpp833–849: dismiss when no next bolt is affordable.
+    // Existing missiles require a live source; drain them before retirement.
+    costs.iter().any(|(pool, cost, current)| {
+        *pool == super::CostPool::Power(PowerType::Energy) && current < cost
+    })
 }
 
 fn cast_on_owner_target(world: &mut World, actor: Entity) {

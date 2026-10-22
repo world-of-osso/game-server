@@ -1,0 +1,82 @@
+{
+  "map_id": 2520,
+  "entrance_id": 100024,
+  "placement_policy": "FOLLOWER_PLACEMENT_WOWHEAD_UIMAP_COORDS",
+  "faction_policy": "FOLLOWER_PLACEMENT_FACTION_FROM_REACT_AND_DONOR",
+  "guid_base": 61000000,
+  "entries": [
+    {
+      "entry": 186116,
+      "ordinal": 0,
+      "source_url": "https://www.wowhead.com/npc=186116",
+      "cache_sha256": "2a33614f14c8d242699535092459d19aab8f56b048f84d2c0441323acf8ccd35",
+      "faction_donor": 189232,
+      "donor_reason": "Sourced Dragonflight boss faction16 with matching hostile A/H react; own source class, ContentTuning and budget retained"
+    },
+    {
+      "entry": 186120,
+      "ordinal": 1,
+      "source_url": "https://www.wowhead.com/npc=186120",
+      "cache_sha256": "c020ed0bbd57e98185c8f62b935968d870b43ea0d8a650af6da1aa982825742d",
+      "faction_donor": 186644,
+      "donor_reason": "Sourced Dragonflight boss faction16 with matching hostile A/H react; own source class, ContentTuning and budget retained"
+    },
+    {
+      "entry": 186121,
+      "ordinal": 2,
+      "source_url": "https://www.wowhead.com/npc=186121",
+      "cache_sha256": "270a7c8f6e3334a6a4abf337e47a6d87ea16fdb629b490d1ca412106dcd9f332",
+      "faction_donor": 189232,
+      "donor_reason": "Sourced Dragonflight boss faction16 with matching hostile A/H react; own source class, ContentTuning and budget retained",
+      "source_floor": 1,
+      "source_floor_z_bounds": [109.52377891540527, 200.3784294128418],
+      "source_floor_evidence": {
+        "db2_assignment_id": 66809,
+        "ui_map_id": 2106,
+        "placement_unique_id": 37344450,
+        "wmo_root_fdid": 4206578,
+        "wmo_group_fdid": 4209012,
+        "wmo_group_id": 66864,
+        "placement_position_z": 137.5348663330078,
+        "rotation_degrees": [0.0, 292.5, 0.0],
+        "scale": 1.0,
+        "group_local_z": [-28.01108741760254, 62.843563079833984],
+        "method": "DB2 floor1 selects WMOGroup66864/placement37344450. Authored MOGP group bbox transformed by MODF translation and unit scale (no tilt) excludes outdoor roof surfaces246.99/263.10, leaving baked111.176622. Heights themselves remain sampled from navmesh, not bbox-derived.",
+        "source_files": [
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/4289164.wdt", "sha256": "410251f9297944729dc7b078d6849b16c77b43ddd85f018afd034142450303a7"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/terrain/4289325.adt", "sha256": "99c52d9666abaea5906ac3b9b9e8e2be7172ce7dbbf72b8282d9672e638389c5"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/4206578.wmo", "sha256": "7472e389fbafb3f6dd4183507572d59537444f778c6c794dc8cca607dd96392e"},
+          {"path": "/home/osso/Projects/world-of-osso/game-engine/data/models/4209012.wmo", "sha256": "07c26988120a69778707aa21d12f526b6ad7a4e8acfc58f583aea81b24052c63"}
+        ]
+      }
+    },
+    {
+      "entry": 186122,
+      "ordinal": 3,
+      "source_url": "https://www.wowhead.com/npc=186122",
+      "cache_sha256": "fb214da8cace06489ee8a40857ae72a850a72856943ee3e1004bb979d217f56c",
+      "faction_donor": 189232,
+      "donor_reason": "Sourced Dragonflight boss faction16 with matching hostile A/H react; own source class, ContentTuning and budget retained"
+    },
+    {
+      "entry": 186124,
+      "ordinal": 4,
+      "source_url": "https://www.wowhead.com/npc=186124",
+      "cache_sha256": "04836a71b9335d8f50342fc70a3e55d093feebe8076f492af173f65d4fcae7e3",
+      "faction_donor": 189232,
+      "donor_reason": "Sourced Dragonflight boss faction16 with matching hostile A/H react; own source class, ContentTuning and budget retained"
+    },
+    {
+      "entry": 186125,
+      "ordinal": 5,
+      "source_url": "https://www.wowhead.com/npc=186125",
+      "cache_sha256": "0cb189931cea06ad74d895b555705abd46a653f8baf19174d910bbd201f3d4e5",
+      "faction_donor": 188252,
+      "donor_reason": "Sourced Dragonflight boss faction16 with matching hostile A/H react; own source class, ContentTuning and budget retained"
+    }
+  ],
+  "calibration_entries": [
+    188252,
+    189232
+  ]
+}
