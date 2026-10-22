@@ -96,6 +96,13 @@ class MagistersTrashAcceptance(unittest.TestCase):
             actual_spawns = db.execute('SELECT guid,id1,position_x,position_y,position_z FROM content_creature WHERE map=2811 AND guid BETWEEN 63811100 AND 63811999 ORDER BY guid').fetchall()
             self.assertEqual(len(actual_spawns), 161)
             self.assertEqual(actual_spawns[:3], expected)
+            receipt = json.loads((path.parent / 'receipt.json').read_text())
+            proof_path = Path(receipt['surface_proof']['path'])
+            self.assertEqual(hashlib.sha256(proof_path.read_bytes()).hexdigest(), receipt['surface_proof']['sha256'])
+            proof = json.loads(proof_path.read_text())
+            qualified = [point for point in proof['markers'] if point['status'] == 'UNIQUE_BAKED_SURFACE']
+            self.assertEqual(actual_spawns, [(63811100 + index, point['entry'], *point['wow_xy'], point['all_surface_heights'][0])
+                                             for index, point in enumerate(qualified)])
             self.assertEqual(len({row[1] for row in actual_spawns}), 9)
             self.assertEqual(db.execute('SELECT faction FROM content_creature_template WHERE entry=232106').fetchone(), (16,))
             self.assertEqual(db.execute('SELECT count(*) FROM content_creature WHERE map=2811 AND id1=232106').fetchone(), (1,))
