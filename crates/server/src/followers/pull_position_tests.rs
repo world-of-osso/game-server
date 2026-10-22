@@ -186,8 +186,76 @@ fn overheat_fixture(whole_route: bool, selected_guid: u32) -> CasterFixture {
     }
 }
 
-#[test]
-fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachable() {
+fn spend_native_kick(f: &mut Fixture, unit: Entity, spell: u32, target: Entity) {
+    for _ in 0..40 {
+        match crate::spell_cast::creature_cast_interrupting_self(
+            f.h.app.world_mut(),
+            unit,
+            spell,
+            Some(target),
+        ) {
+            Ok(()) => return,
+            Err(crate::spell_cast::CastFailure::OnGlobalCooldown) => f.h.advance(1),
+            Err(error) => panic!("native party kick{spell} could not be spent: {error:?}"),
+        }
+    }
+    panic!("native party kick{spell} never left its ordinary GCD");
+}
+
+fn spend_party_kicks(f: &mut Fixture, caster: Entity, selected: Entity) {
+    crate::spell_cast::cancel_cast(f.h.app.world_mut(), caster);
+    let world = f.h.app.world();
+    let (_, members, _) = super::party::read_admission(world, f.h.caster).unwrap();
+    let catalog = world.resource::<super::FollowerCatalog>();
+    let store = world.resource::<crate::spell_info::SpellStore>();
+    let actions: BTreeSet<_> = members
+        .iter()
+        .flat_map(|&unit| {
+            let follower = world.get::<Follower>(unit).unwrap();
+            let level = world.get::<shared::components::Level>(unit).unwrap().0;
+            catalog
+                .kits
+                .iter()
+                .filter(move |entry| entry.available(follower.profile.spec_id, level))
+                .filter(|entry| super::kit_interrupt::is_interrupt_entry(entry, store))
+                .map(move |entry| (unit, entry.spell_id))
+        })
+        .collect();
+    assert!(
+        !actions.is_empty(),
+        "native party has learned interrupts to spend"
+    );
+    for &(unit, spell) in &actions {
+        spend_native_kick(f, unit, spell, selected);
+    }
+    // Let ordinary preparation GCDs finish; no cooldown reset or kit-row removal.
+    f.h.advance(40);
+    let world = f.h.app.world();
+    let now = crate::spell_cast::history_now(world);
+    for (unit, spell) in actions {
+        let native = world
+            .resource::<crate::spell_info::SpellStore>()
+            .get(spell)
+            .unwrap();
+        assert!(
+            world
+                .get::<crate::spell_cast::SpellHistory>(unit)
+                .unwrap()
+                .on_cooldown(native, now),
+            "native party kick{spell} must remain on its actual cooldown"
+        );
+    }
+    crate::spell_cast::creature_cast(
+        f.h.app.world_mut(),
+        caster,
+        OVERHEAT_FIREBALL,
+        Some(f.tank),
+        false,
+    )
+    .expect("actual Overheat restarts its ordinary cast after preparation");
+}
+
+fn assert_caster_coverage(spent_kicks: bool) {
     let CasterFixture {
         mut f,
         main,
@@ -196,6 +264,9 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         caster_point,
         ..
     } = overheat_fixture(true, SELECTED_TRASH_GUID);
+    if spent_kicks {
+        spend_party_kicks(&mut f, caster, main);
+    }
     let before_distance = from.distance(caster_point);
     crate::creature_ai::install_follower_follow_fixture(&mut f.h.app);
     let mut nearest = before_distance;
@@ -221,9 +292,19 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         Some(main),
         "tank collection must not force the owner's selected target"
     );
+    let (_, members, _) = super::party::read_admission(f.h.app.world(), f.h.caster).unwrap();
+    let covered = f.h.app.world().get::<CastState>(caster).is_none()
+        && f.h.inbox.log[first_event..].iter().any(|event| {
+            event.kind == shared::protocol::CombatLogKind::Interrupt
+                && event.target == Some(caster.to_bits())
+                && event.extra_spell_id == Some(OVERHEAT_FIREBALL)
+                && event
+                    .source
+                    .is_some_and(|source| members.iter().any(|unit| unit.to_bits() == source))
+        });
     assert!(
-        acquired_caster,
-        "actual native tank victim must agree with the caster chase; remaining_cast={:?}, interrupts={:?}, casts={:?}",
+        acquired_caster || (!spent_kicks && covered),
+        "unselected Overheat requires actual native caster collection or a party Interrupt; remaining_cast={:?}, interrupts={:?}, casts={:?}",
         f.h.app
             .world()
             .get::<CastState>(caster)
@@ -238,8 +319,8 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
             .collect::<Vec<_>>()
     );
     assert!(
-        nearest < before_distance,
-        "production tank stayed on reachable selected trash instead of collecting real casting Overheat: distance {before_distance}, nearest {nearest}"
+        (!spent_kicks && covered) || nearest < before_distance,
+        "uncovered Overheat requires an actual tank approach: distance {before_distance}, nearest {nearest}"
     );
     // A finished/interrupted cast must not leave an unowned chase overriding later kit work.
     crate::spell_cast::cancel_cast(f.h.app.world_mut(), caster);
@@ -250,6 +331,16 @@ fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachab
         after.distance(caster_point) >= at.distance(caster_point),
         "ended source cast left a stale caster approach instead of the reachable selected fight"
     );
+}
+
+#[test]
+fn production_tank_collects_real_overheat_caster_while_selected_trash_is_reachable() {
+    assert_caster_coverage(false);
+}
+
+#[test]
+fn production_tank_collects_uncovered_overheat_with_native_party_kicks_on_cooldown() {
+    assert_caster_coverage(true);
 }
 
 struct CasterBoundary {
