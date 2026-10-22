@@ -3624,3 +3624,7 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 - 2026-10-21: Emberon currentLua Normal/Follower partial: ignored firstClapRED→composite7GREEN; native indefinite-aura cap root cause and approved24.3s lifecycle, source-counted resumed/second phase, reset/copy-credit/death. Copy-only producer1PASS; missing395681/controller gaps retained.
 
 - 2026-10-21: Deios source qualification2PASS/firstWingRED34.10s Normal/Follower: preservedflags320 block ordinary threat ingress; outgoingWing damage is not engagement/credit proof. Named source unlock gap, no combat port or fabricated state.
+
+## 2026-10-22 — First sourced follower placement packet
+
+[Derived Neltharus placements](investigations/follower-data.md#derived-neltharus-placement-packet--2026-10-22): cached Wowhead/70448 floor provenance, baked heights, own Normal1 stats and explicit donor faction; four reserved-GUID primaries plus journal bindings. Actual missing-placement RED→placement2GREEN/fresh-copy SQL replay3×; three routes pass, Gorek sourcefloor1 remains `NELTHARUS_GOREK_ROUTE_INCOMPLETE`. No canonical publication or scripts.
