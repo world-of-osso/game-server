@@ -2339,6 +2339,9 @@ mod npc_victim_parry_tests;
 #[path = "combat_npc_weapon_crit_tests.rs"]
 mod npc_weapon_crit_tests;
 #[cfg(test)]
+#[path = "combat_pet_engagement_tests.rs"]
+mod pet_engagement_tests;
+#[cfg(test)]
 #[path = "combat_tests.rs"]
 mod tests;
 #[cfg(test)]
