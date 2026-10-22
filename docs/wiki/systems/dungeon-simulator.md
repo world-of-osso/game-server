@@ -38,11 +38,11 @@ The frozen-view continuation atc04ecc5b9 attempted exactly eight authorized sing
 |268|Touch of Death322109 rejected by native admission as InvalidTarget|Actual admission refusal, no invented predicate/target health|
 |577,581|Rules21553 and21486 respectively, both type12|Explicit source-rule error|
 |251,1480|Node76073 requires76072 fully ranked; node108144 requires110172 fully ranked respectively|Strict reference-trait rejection; Human lookup no longer blocks251|
-|267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and no pet|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
+|267|300s,6000decisions,61Summon Felhunter691 casts, zero damage and `pet.present=false`|Raw output retained; positive-damage gate fails, not an accepted0DPS comparison or isolated summon diagnosis|
 
 Reports and exact terminal proofs are `native-frozen-source-v2/<spec>.native.1.json` and `cohort-<spec>-player.proof.json`. Native3-target parity remains separate from these single-target/source-view controls and awaits the parent-owned CombatRefs admission integration.
 
-For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact; collector GREEN and actual3-target execution remain separate gates.
+For those later runs, native `combat.damage_by_target` records each measurement target's real damage and hit count, including retired adds and zero-output targets. Actor/spell action totals and casts are unchanged; heals, unrelated victims and targetless events are excluded. This is additive accounting, not an AI/admission change or proof that three spawned targets took damage. The concrete accounting test at77e8b0623 first failed on the missing recipient field, with the existing600damage total intact;96d695ee6 passes the unchanged test1/1 with no warnings. That unit proof covers accounting, not actual3-target execution. `pet.present=false` elsewhere is the primary-pet lookup result, not proof that no guardian entity existed.
 
 ## Qualified path-candidate Stockade cohort —2026-10-21
 
