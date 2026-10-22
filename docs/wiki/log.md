@@ -1,3 +1,7 @@
+## 2026-10-22 — Native power receipt observability
+
+[DPS power receipts](systems/dungeon-simulator.md#power-receipts--2026-10-22) preserve actual actor/pet raw pools and tick rates, plus source/recipient/spell-attributed Energize requested/overflow/effective integer gains. No inferred total regeneration or gameplay change. Native profile/pet/Cobra/grant RED2 at a8365f874 precedes receipt implementation; GREEN pending.
+
 ## 2026-10-21 — Pyroclasm named trigger/consumer policy
 
 [Auras](systems/auras.md#pyroclasm-hot-streak-policy--2026-10-21): true admitted HS spends roll native269650 chance; hardcast11366/1254851 snapshots native269651 damage and spends one stack, instant casts retain it. SimC supplies semantics where TC/DB2 have no proc script/data;70448 supplies15%/230%/two stacks. Native RED2 reproduced; instant-control crit oracle corrected; four enabled cases pass in13-case2ba4ec43a GREEN.

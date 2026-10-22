@@ -60,7 +60,7 @@ fn assert_focus_snapshot(snapshot: &Value, world: &World, unit: Entity) {
 }
 
 #[test]
-#[ignore = "native resource receipt RED; requires prepared parity inputs"]
+#[ignore = "opt-in native power receipt; requires prepared parity inputs"]
 fn dps_parity_power_receipt_reads_owner_pet_pools_and_live_regeneration() {
     let (mut run, pet) = prepare_hunter_and_pet();
     crate::spell_cast::creature_cast(
@@ -89,7 +89,7 @@ fn dps_parity_power_receipt_reads_owner_pet_pools_and_live_regeneration() {
 }
 
 #[test]
-#[ignore = "native resource receipt RED; requires prepared parity inputs"]
+#[ignore = "opt-in native power receipt; requires prepared parity inputs"]
 fn dps_parity_power_receipt_attributes_native_energize_and_capped_overflow() {
     let (mut run, pet) = prepare_hunter_and_pet();
     run.app

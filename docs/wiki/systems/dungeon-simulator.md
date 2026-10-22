@@ -1,5 +1,11 @@
 # Dungeon simulator
 
+## Power receipts —2026-10-22
+
+The [DPS adapter](../../specs/dps-parity.md#measurement) reads authoritative `PowerPools`/`Mana`, preserving fractional current/max and the last native tick's `regen_per_sec`; existing engagement samples include actual controlled-pet pools. Actor stat snapshots and final pet receipts retain these values too. Combat accounting groups existing Energize events by source, recipient and spell, exposing requested integer amount, overflow, effective gain and count. These are raw logged integers, not exact fractional grants, power-type attribution or integrated realized regeneration. No gameplay power logic changes.
+
+Native253/profile/Duck883/Cobra193455/energize1282660 tests at a8365f874 reach genuine missing-snapshot and missing-Energize RED2 in90.93s, after source-preserving producer merge repairs. Initial duplicate-plugin/GCD fixture failures and an obsolete executable's zero-test run are not behavioral RED. GREEN pending; diagnostics `dps-parity-fix-2026-10-21/power-*`.
+
 Transport-free Stockade qualification runs a plain Bevy App inside the server test executable. It registers real combat, spell/aura, threat, scripted creature AI and follower systems directly. The game-server entry point, ServerPlugins and ProtocolPlugin are not used. [Contract](../../specs/dungeon-simulator.md).
 
 ## Fresh post-integration baseline —2026-10-21
