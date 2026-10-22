@@ -41,6 +41,20 @@
 ## 2026-10-22 — Halls and Vexamus source-floor policies
 
 [Source-floor selection](investigations/follower-data.md#halls-and-vexamus-source-floor-selection--2026-10-22): approved unique DB2 floor-group upward triangle matching and Vexamus-only two-native-anchor selection; original ambiguous packet attempts refused SQL, Primal remains unresolved. Source/packet GREEN pending.
+## 2026-10-22 — Ascendance samples and current-master gate boundary
+
+[Measurements](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): only Elemental3 affected samples refreshed,3PASS29.75s; real1219480 cast1/up12.458% on both90 scenarios, none at32. Source revisioncacbac0b0/base0c2 preserved with exact ledger/hashes. Laterfc5e87cc1 aura/stat/power changes merged as317ae34b7; current integration gate remains pending, not replaced by pre-merge proof. Entry Shock/Lava Burst and complete APL remain open.
+
+## 2026-10-22 — Native Elemental Ascendance action and timing
+
+[Projection](investigations/follower-data.md#elemental-ascendance-projection--2026-10-22): native-description/SimC action1219480 added only after parent114050 learns51, with real Stormkeeper cooldown>15s condition. Genuine missing-aura RED28.25s then3GREEN36.50s atcacbac0b0; native50 and real sync-window controls retain ordinary damage. Source projection1PASS, fresh export1PASS, single qualified added key; entry Flame Shock/Lava Burst and full APL remain open.
+
+## 2026-10-22 — Qualified added-action publication
+
+[Stable-key publication](investigations/follower-data.md#scoped-rotation-kit-publication--2026-10-21): native producer-qualified new actions can be inserted idempotently without removing/renaming existing intervals. Genuine added-key RED, then4GREEN0.364s at4b49e7097; complete-state oracle corrected to include additions, original source/unrelated-table/refusal guards retained. Pending Ascendance projection/runtime is not claimed complete.
+## 2026-10-22 — Binding Heals native transfer
+
+[Binding Heals](investigations/holy-priest-follower-ai.md#binding-heals-native-transfer--2026-10-22): actual Henry90 Flash Heal12778/overheal4958 missing-child RED; native resolved-heal payload, pinned TC priest-family6/mask0x1800 and20%368276 child give6GREEN34.76s at a1f941b13, including self/periodic/foreign-family/unlearned controls and enabled PoH lifetime regression. Post-master167612f27 passes10native cases37.16s/checkEXIT0/1m15s/no warnings/fmtPASS; [exact ledger](../../docs/handoffs/healer-binding-heals-proof-ledger.md). No Holy policy, canonical DB or invented mastery changes; Echo producer remains open.
 
 ## 2026-10-22 — Amani mask source cancellation boundary
 
