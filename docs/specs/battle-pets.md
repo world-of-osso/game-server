@@ -11,10 +11,10 @@
 
 ## Source companion-target identity
 
-- [ ] One runtime current-critter identity is distinct from owned journal instance identity, guardian/pet state and general summoned ownership. Register only source Companion-title minions; journal actors without that authored source must not be promoted automatically. Existing journal spawn behavior is preserved; missing summon metadata remains a named gap.
-- [ ] Source temporary summon slots apply across journal and legacy actors: equal positive slots replace, different slots coexist, slot0 claims no slot. Removing the latest critter clears its identity without restoring older owned actors; removing an older actor must not clear the latest. Removed journal actors also clear their active journal snapshot.
-- [ ] Source target90 requires the explicitly selected current critter, never caster/foreign/guardian substitution. Source target150 resolves the caster's actual current critter independently of another selection. Missing/removed/other-map critters select nothing; owned-instance records alone are insufficient.
-- [ ] Real journal requests and sourced legacy summon/replacement/natural-expiry/dismiss/map-exit/owner-teardown cases prove this state boundary. This does not admit unresolved companion-toy scripts or certify native rendering/wire-field parity.
+- [x] One runtime current-critter identity is distinct from owned journal instance identity, guardian/pet state and general summoned ownership. Register only source Companion-title minions; journal actors without that authored source must not be promoted automatically. Existing journal spawn behavior is preserved; missing summon metadata remains a named gap.
+- [x] Source temporary summon slots apply across journal and legacy actors: equal positive slots replace, different slots coexist, slot0 claims no slot. Removing the latest critter clears its identity without restoring older owned actors; removing an older actor must not clear the latest. Removed journal actors also clear their active journal snapshot.
+- [x] Source target90 requires the explicitly selected current critter, never caster/foreign/guardian substitution. Source target150 resolves the caster's actual current critter independently of another selection. Missing/removed/other-map critters select nothing; owned-instance records alone are insufficient.
+- [x] Real journal requests and sourced legacy summon/replacement/natural-expiry/dismiss/map-exit/owner-teardown cases prove this state boundary. This does not admit unresolved companion-toy scripts or certify native rendering/wire-field parity.
 
 ## Owned combat state
 

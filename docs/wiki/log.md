@@ -1,3 +1,7 @@
+## 2026-10-22 — CritterGUID shared runtime and source90/150
+
+[Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): lifecycle8bb2cba0a and selectorsb8580b258 follow genuine corrected7RED/3PASS77.05s. Real persisted-journal RPC/native51149+26571+261 cases10GREEN92.58s; retained four Coyote+99104slot6+census6GREEN45.93s. Source Companion-only current actor/matching removal, shared authored positive slots and explicit90/implicit150; no ownership scan/guardian substitution. Pipeline543 unchanged,exact25 reason changes; Crab retains74 and all per-toy script/visual gaps persist. Relevant check pending; no native toy-action/rendering claim. First40693a25a failure was fixture-only and excluded.
+
 ## 2026-10-22 — CritterGUID source and slot audit
 
 [Toys](systems/toys.md#critterguid-source-identity-and-slot-boundary-2026-10-22): source Companion-title GUID setter/matching removal,90explicit identity/no self default and150auto lookup. Journal3221/5028/5085 slot5 versus legacy0/5/6 means no blanket slot6/cross-slot removal or older-actor restoration. Hidden344 has ordinary Ally title0, not critter/guardian; three journal roots lack effects even raw70448. Test-firsta955bb1b2 adds real owned-journal RPC +native Coyote/Hare/three-Skeleton lifecycle/negative cases; RED pending, no implementation/admission claim.
