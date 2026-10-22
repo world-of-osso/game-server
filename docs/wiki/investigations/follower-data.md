@@ -1,5 +1,20 @@
 # Retail follower data and approved spec bridge
 
+## Remaining boss source ingress — 2026-10-21
+
+Read-only inventory at servere5112781e covers27 difficulty205 maps,98 Normal DungeonEncounter rows and their current LittleWigs2777a9d modules plus native70448 journal actors. Receipt: engine `data/diagnostics/df-bosses-2-2026-10-21/follower-source-inventory.json`. Lua registrations are literal enabled IDs, not an exhaustive primary list; separate map/model candidates remain unqualified identities. A blank Lua registration is not proof of absent actors.
+
+|Named boundary|Observed source state|Disposition|
+|---|---|---|
+|`RUBY_KYRAKKA_ERKHART_COMBAT_ACTOR_SOURCE_GAP`|190484/190485 templates exist only in TDB; neither has a source spawn. Placed199790 has immunity832.|Do not alias199790 or invent combat placements.|
+|`NOKHUD_PRIMARY_PLACEMENT_UNSOURCED`|Map2516 has0 TDB/runtime placements; all4 encounters lack placed primaries.|No artificial encounter fixture.|
+|`BRACKENHIDE_PRIMARY_PLACEMENT_UNSOURCED`|Map2520 has0 TDB/runtime placements; all4 encounters lack placed primaries.|No artificial encounter fixture.|
+|`NELTHARUS_PRIMARY_PLACEMENT_UNSOURCED`|Map2519 has0 TDB/runtime placements; all4 encounters lack placed primaries.|No artificial encounter fixture.|
+|`HALLS_INFUSION_PRIMARY_PLACEMENT_UNSOURCED`|Map2527 has0 TDB/runtime placements; all4 encounters lack placed primaries.|No artificial encounter fixture.|
+|`CITY_THREADS_PC_IMMUNITY_INGRESS_UNSOURCED`|Coaglamation216320 flags33555264, Fangs216648/216649 flags33554752 and Izo216658 flags832 all retain PC immunity.|Source-only boundary, not a native timer/credit proof; no invented unlock.|
+
+These17 remaining Dragonflight encounter placement blocks coexist with the existing [Academy/Deios immunity boundaries](../systems/boss-scripts.md). Azure2515 already has native scripts for all4 primary templates; missing canonical raid-binding rows alone do not mean missing combat scripts. Lead explicitly excludes unplaced combat and owns source-publication decisions. Anub'zekt215405 is the next source-populated nonimmune actor (real spawn10004042 includes205, flags64); its ignored native RED is pushed, combat proof remains pending. See [boss contract](../../specs/boss-scripts.md#anubzekt-current-lua-partial).
+
 ### Font of Magic selection oracle — 2026-10-21
 
 Merged native selection casts382266/382411 rather than357208/359073 after learned411212 Font of Magic57. Native aura332 effects1077606/1077607 explicitly map those roots; this is valid action resolution, not Azure filler starvation. The max-level oracle now requires both replacement SpellGo receipts and the actual passive; a level56 control requires both unreplaced roots. Empowered release/damage remains unimplemented and is not certified by these selection tests.

@@ -1,3 +1,7 @@
+## 2026-10-21 — Remaining follower boss ingress
+
+[Source inventory](investigations/follower-data.md#remaining-boss-source-ingress--2026-10-21): read-only27maps/98Normalencounters with2777a9d Lua/70448 journal/source placements. RemainingDF17 have no placed primaries; City blanks retainPCimmunity. Lead excludes unplaced/fake-unlock combat; Anub'zekt ignoredRED pushed, native proof pending.
+
 ## 2026-10-21 — Actual scripted boss alert clocks
 
 [Boss alerts](systems/bossmod-data.md#scripted-clock-continuation--2026-10-21): explicit six current-Lua scripts publish selected EventMap requests with source labels/colors/counts; other SmartAI-only clocks stay excluded. Canonical catalog absent; retained private Kokia legacy clocks cannot supply current requests. Real Kokia missing-snapshot RED→post-master2/2GREEN; actual private5981 Kokia205 both-skin1920 countdown/actual warnings/kill-clear accepted with ten inspected originals; source gaps retained.
