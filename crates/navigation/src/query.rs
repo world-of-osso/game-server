@@ -29,6 +29,7 @@ const NEAREST_EXTENTS: [f32; 3] = [0.8, 5.0, 0.8];
 pub struct NavigationMap {
     dir: PathBuf,
     loaded: HashSet<(u32, u32)>,
+    subtile_width: Option<f32>,
     mesh: *mut dtNavMesh,
     query: *mut dtNavMeshQuery,
 }
@@ -44,27 +45,13 @@ impl NavigationMap {
             Self {
                 dir: dir.to_path_buf(),
                 loaded: HashSet::new(),
+                subtile_width: None,
                 mesh: dtAllocNavMesh(),
                 query: dtAllocNavMeshQuery(),
             }
         };
         if map.mesh.is_null() || map.query.is_null() {
             return Err("Detour allocation failed".into());
-        }
-        let params = dtNavMeshParams {
-            orig: [-32.0 * TILE_SIZE, 0.0, -32.0 * TILE_SIZE],
-            tileWidth: SUBTILE_SIZE,
-            tileHeight: SUBTILE_SIZE,
-            maxTiles: 65536,
-            maxPolys: 65536,
-        };
-        // SAFETY: pointers are non-null, params lives through init and is copied.
-        unsafe {
-            status((*map.mesh).init(&params), "mesh initialization")?;
-            status(
-                (*map.query).init(map.mesh, MAX_NODES),
-                "query initialization",
-            )?;
         }
         Ok(map)
     }
@@ -270,6 +257,9 @@ impl NavigationMap {
                 }
             }
         }
+        if self.subtile_width.is_none() {
+            return Err("navigation map has no walkable tiles".into());
+        }
         Ok(())
     }
 
@@ -288,8 +278,38 @@ impl NavigationMap {
         Ok(())
     }
 
+    fn initialize_grid(&mut self, width: f32) -> Result<(), String> {
+        if let Some(current) = self.subtile_width {
+            return if current == width {
+                Ok(())
+            } else {
+                Err(format!(
+                    "mixed navigation grids: tile widths {current} and {width}"
+                ))
+            };
+        }
+        let params = dtNavMeshParams {
+            orig: [-32.0 * TILE_SIZE, 0.0, -32.0 * TILE_SIZE],
+            tileWidth: width,
+            tileHeight: width,
+            maxTiles: 65536,
+            maxPolys: 65536,
+        };
+        // SAFETY: uniquely owned non-null pointers; init copies these parameters.
+        unsafe {
+            status((*self.mesh).init(&params), "mesh initialization")?;
+            status(
+                (*self.query).init(self.mesh, MAX_NODES),
+                "query initialization",
+            )?;
+        }
+        self.subtile_width = Some(width);
+        Ok(())
+    }
+
     fn add_packet(&mut self, bytes: &[u8]) -> Result<(), String> {
         validate_packet(bytes)?;
+        self.initialize_grid(packet_subtile_width(bytes)?)?;
         // SAFETY: validated complete trusted bake buffer; owned allocator memory is
         // transferred to mesh on success and freed here on failure.
         unsafe {
@@ -341,13 +361,41 @@ fn status(value: dtStatus, operation: &str) -> Result<(), String> {
     }
 }
 
+fn packet_subtile_width(bytes: &[u8]) -> Result<f32, String> {
+    // SAFETY: caller validated this complete POD header; byte alignment is not assumed.
+    let header = unsafe { std::ptr::read_unaligned(bytes.as_ptr().cast::<dtMeshHeader>()) };
+    let width = header.bmax[0] - header.bmin[0];
+    let height = header.bmax[2] - header.bmin[2];
+    if !width.is_finite() || !height.is_finite() || width <= 0.0 {
+        return Err("invalid navigation grid bounds".into());
+    }
+    let subdivisions = (TILE_SIZE / width).round() as u32;
+    let canonical_width = grid_subtile_size(subdivisions)?;
+    // Absolute world coordinates round to f32 before subtraction; allow their ULPs,
+    // not a geometry/agent tolerance or a different grid resolution.
+    let magnitude = header.bmin[0]
+        .abs()
+        .max(header.bmax[0].abs())
+        .max(header.bmin[2].abs())
+        .max(header.bmax[2].abs())
+        .max(width);
+    let rounding_error = magnitude * f32::EPSILON * 4.0;
+    if (width - canonical_width).abs() > rounding_error
+        || (height - canonical_width).abs() > rounding_error
+    {
+        return Err("nonuniform navigation grid bounds".into());
+    }
+    Ok(canonical_width)
+}
+
 fn decode_packets(bytes: &[u8]) -> Result<Vec<&[u8]>, String> {
     if bytes.len() < 12 || &bytes[..8] != MAGIC {
         return Err("invalid navigation artifact header".into());
     }
     let count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
-    if count > SUBDIVISIONS * SUBDIVISIONS {
-        return Err("too many subtiles".into());
+    let minimum_packet_bytes = 4 + std::mem::size_of::<dtMeshHeader>();
+    if count as usize > (bytes.len() - 12) / minimum_packet_bytes {
+        return Err("too many subtiles for navigation artifact length".into());
     }
     let mut remaining = &bytes[12..];
     let mut packets = Vec::new();

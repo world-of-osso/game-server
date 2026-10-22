@@ -356,14 +356,17 @@ fn achievements_criteria_bank_tab_purchases_set_real_counts_per_bank_type() {
     // Character criterion105270 (Safer Deposit) and Warband criterion67053.
     buy_tab(&mut h, npc, BankType::Character);
     assert!(failures(&mut h).is_empty());
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     assert_eq!((progress(&h, 105270), progress(&h, 67053)), (Some(1), None));
     // A refused purchase changes no count.
     buy_tab(&mut h, npc, BankType::Character);
     assert_eq!(failures(&mut h), vec![BankError::CantAfford]);
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     assert_eq!(progress(&h, 105270), Some(1));
     h.set_gold(10_000_000);
     buy_tab(&mut h, npc, BankType::Account);
     assert!(failures(&mut h).is_empty());
+    crate::test_data::advance_and_drain_persistence(&mut h.app);
     assert_eq!(
         (progress(&h, 105270), progress(&h, 67053)),
         (Some(1), Some(1))

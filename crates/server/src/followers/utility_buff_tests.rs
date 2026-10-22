@@ -18,6 +18,24 @@ fn read_owner(h: &Harness) -> OnlineMember {
     }
 }
 
+fn read_follower_display(h: &Harness, unit: Entity, entry: u32) -> u32 {
+    if let Some(model) = h.app.world().get::<shared::components::ModelDisplay>(unit) {
+        return model.display_id;
+    }
+    let conn = rusqlite::Connection::open_with_flags(
+        crate::test_data::world_db_path(),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .expect("read-only follower display fixture input");
+    conn.query_row(
+        "SELECT CreatureDisplayID FROM content_creature_template_model
+             WHERE CreatureID=?1 ORDER BY Idx LIMIT 1",
+        [entry],
+        |row| row.get(0),
+    )
+    .expect("authentic follower template display")
+}
+
 fn create_party(h: &mut Harness, unit: Entity) -> Vec<Entity> {
     let profile = &h.app.world().get::<Follower>(unit).unwrap().profile;
     let entries = match profile.role {
@@ -36,7 +54,12 @@ fn create_party(h: &mut Harness, unit: Entity) -> Vec<Entity> {
             (
                 Follower::member_id(*unit),
                 follower.profile.role,
-                follower.online(*unit, 32, 1),
+                follower.online(
+                    *unit,
+                    32,
+                    1,
+                    read_follower_display(h, *unit, follower.profile.entry),
+                ),
             )
         })
         .collect();

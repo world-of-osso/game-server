@@ -816,6 +816,7 @@ fn achievements_criteria_equipped_retail_item_is_actual_wear_not_bag_ownership_o
         .insert(crate::achievement::PlayerAchievementState::default());
     grant_bag_item(&app, client.character_id, 20132, "Arathor Battle Tabard");
     enter_world(&mut app, &client);
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert!(
         !persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress
@@ -830,7 +831,7 @@ fn achievements_criteria_equipped_retail_item_is_actual_wear_not_bag_ownership_o
         },
     );
     assert!(!received::<InventoryError>(&mut app, &client).is_empty());
-    app.update();
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert!(
         !persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress
@@ -838,7 +839,7 @@ fn achievements_criteria_equipped_retail_item_is_actual_wear_not_bag_ownership_o
     );
     request(&mut app, &client, EquipItem { from: bag(3) });
     assert!(received::<InventoryError>(&mut app, &client).is_empty());
-    app.update();
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(
         persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress
@@ -846,7 +847,7 @@ fn achievements_criteria_equipped_retail_item_is_actual_wear_not_bag_ownership_o
         Some(&1)
     );
     request(&mut app, &client, EquipItem { from: bag(3) });
-    app.update();
+    crate::test_data::advance_and_drain_persistence(&mut app);
     assert_eq!(
         persistence::load_achievements(db(&app), client.character_id)
             .criteria_progress

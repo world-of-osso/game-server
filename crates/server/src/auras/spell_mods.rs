@@ -152,7 +152,8 @@ fn matching<'a>(
 
 // Native accumulated next-spell uses, not multiplied modifier magnitude.
 // SimC76f8118 sc_monk.cpp1422 decrements one Combo Breaker stack per Blackout Kick.
-const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768];
+// Tidal Waves/Backdraft/Surge of Light stacks are also next-spell uses.
+const STACKED_NEXT_SPELL_USES: &[u32] = &[53390, 117828, 116768, 325202, 114255];
 
 fn stacked_amount(aura: &AuraInstance, effect: &AuraEffectState) -> f32 {
     let stacks = if STACKED_NEXT_SPELL_USES.contains(&aura.spell_id) {

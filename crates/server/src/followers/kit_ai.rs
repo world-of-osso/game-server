@@ -186,11 +186,55 @@ fn try_entry(
     };
     let mut entry = entry.clone();
     entry.spell_id = spell_id;
+    let enemy = match (entry.conditions.target, entry.conditions.target_if_min_aura) {
+        (Target::Enemy, Some(aura)) => {
+            select_min_own_aura_enemy(world, unit, enemies, spell_id, aura)
+        }
+        _ => enemy,
+    };
     let Some(target) = select_target(world, unit, party, enemy, &entry) else {
         return false;
     };
     conditions_met(world, unit, target, party, enemies, &entry)
-        && attempt_cast(world, unit, target, follower, &entry)
+        && attempt_cast(world, unit, target, follower, &entry, enemies.len())
+}
+
+fn select_min_own_aura_enemy(
+    world: &mut World,
+    unit: Entity,
+    enemies: &[(Entity, Option<Entity>)],
+    spell_id: u32,
+    aura_id: u32,
+) -> Option<Entity> {
+    let spell = world
+        .resource::<crate::spell_info::SpellStore>()
+        .get(spell_id)?
+        .clone();
+    enemies
+        .iter()
+        .filter_map(|&(target, _)| {
+            let protected = crate::auras::has_breakable_by_damage_cc(world, target);
+            let eligible = !protected
+                && crate::spell_cast::read_native_cast_start(world, unit, &spell, target).is_ok();
+            eligible.then(|| (target, own_aura_remaining(world, unit, target, aura_id)))
+        })
+        .min_by(|left, right| left.1.total_cmp(&right.1))
+        .map(|(target, _)| target)
+}
+
+fn own_aura_remaining(world: &World, unit: Entity, target: Entity, aura_id: u32) -> f64 {
+    world
+        .get::<crate::auras::ActiveAuras>(target)
+        .and_then(|auras| {
+            auras
+                .iter()
+                .find(|aura| aura.spell_id == aura_id && aura.caster == unit)
+        })
+        .map_or(0.0, |aura| {
+            aura.expires_at.map_or(f64::INFINITY, |expiry| {
+                (expiry - crate::auras::aura_now(world)).max(0.0)
+            })
+        })
 }
 
 fn health_fraction(world: &World, unit: Entity) -> Option<f32> {
@@ -619,6 +663,7 @@ fn attempt_cast(
     target: Entity,
     follower: &Follower,
     entry: &Entry,
+    enemies: usize,
 ) -> bool {
     // Native6673 is caster-centered target56/range0; missing party members
     // choose maintenance, but must not become its explicit range-checked target.
@@ -666,6 +711,10 @@ fn attempt_cast(
             entry.spell_id,
             Some(target),
         )
+    } else if let Some(stage) =
+        super::empower_policy::selected_stage(world, unit, entry.spell_id, enemies)
+    {
+        crate::spell_cast::creature_cast_empowered(world, unit, entry.spell_id, Some(target), stage)
     } else {
         crate::spell_cast::creature_cast(world, unit, entry.spell_id, Some(target), false)
     };

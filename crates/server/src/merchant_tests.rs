@@ -260,6 +260,7 @@ fn achievements_criteria_acquire_item_credits_only_committed_retail_purchase() {
             .earned_ids
             .contains(&2084)
     );
+    crate::test_data::drain_persistence(h.app.world().resource::<GameDatabase>());
     assert_eq!(
         persistence::load_achievements(
             &h.app.world().resource::<GameDatabase>().db,
