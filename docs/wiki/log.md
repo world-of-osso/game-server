@@ -3848,6 +3848,10 @@ gl728 landed protocol50517c9/server1a2f13fd4/engine51f1af4f8. Two authenticated 
 
 [Private-account residue](investigations/trading-post-residue.md): vendors1615/1608 already have October46 membership and complete70448 item/transmog rows. Cached Wowhead agrees; historical fb_tpui_mod expired ownership is test-state residue. No code, SQL, state repair or RED→GREEN claim.
 
+## 2026-10-22 — Native immutable fixture sharing
+
+[Server performance](investigations/server-test-performance.md#cache-implementation-boundary-in-progress):8b61e8bc0 shares test-only catalog/spell payloads while production aliases retain owned types. Native App isolation3/3, real SQLite cache controls6/6, spell isolation/server-side append controls4/4 pass. Exact old/current binary census5542→5543 adds only the new isolation test, with no removals/ignore drift. Matching19-case after-RSS cohort and full900s/~8GiB/no-swap acceptance remain open.
+
 ## 2026-10-22 — Server test performance profile
 
 [Server test performance](investigations/server-test-performance.md): copied fu913 baseline plus49Hz sample identifies unoptimized server-instantiated generic ECS/iterator paths despite optimized dependencies. Add test-only server opt2/debug1, preserving assertions/overflow checks. Baseline/optimized CPU, wall, RSS and complete900s union acceptance remain pending; shared-host swapping is recorded, not attributed to code.
