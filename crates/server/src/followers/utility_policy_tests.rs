@@ -440,9 +440,8 @@ fn follower_utility_policy_stun_unselected_cast_when_kick_cannot_cover() {
     );
 }
 
-#[test]
-fn follower_utility_policy_dispel_control_before_lower_health_periodic_damage() {
-    let (mut h, unit) = at_level(215011, 70, |_| {});
+fn assert_control_dispelled_before_periodic_damage(entry: u32) {
+    let (mut h, unit) = at_level(entry, 70, |_| {});
     let controlled = add_follower(&mut h, 209059);
     let patient = h.caster;
     let max = h.app.world().get::<Health>(patient).unwrap().max;
@@ -477,9 +476,19 @@ fn follower_utility_policy_dispel_control_before_lower_health_periodic_damage() 
         .log
         .iter()
         .find(|e| e.kind == CombatLogKind::Dispel && e.source == Some(unit.to_bits()))
-        .expect("native Purify dispel");
+        .expect("native healer dispel");
     assert_eq!(dispelled.target, Some(controlled.to_bits()));
     assert_eq!(dispelled.extra_spell_id, Some(118));
+}
+
+#[test]
+fn follower_utility_policy_dispel_control_before_lower_health_periodic_damage() {
+    assert_control_dispelled_before_periodic_damage(215011);
+}
+
+#[test]
+fn follower_utility_policy_resto_cure_control_before_lower_health_periodic_damage() {
+    assert_control_dispelled_before_periodic_damage(209072);
 }
 
 #[test]
