@@ -1,5 +1,6 @@
 """TC map difficulty scaling preserves native CT0 rows and their modifiers."""
 from contextlib import closing
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -59,6 +60,34 @@ class NativeMapTuning(unittest.TestCase):
                     target.execute(mutation)
                     with self.assertRaisesRegex(ValueError, 'FOLLOWER_PLACEMENT_SCALING_SOURCE_MISSING_234935'):
                         stage_source_difficulties(target, [dict(entry=234935, map_id=2830, content_tuning_policy=POLICY)])
+
+
+@unittest.skipUnless('FOLLOWER_MAP_PLACEMENT_DB' in os.environ, 'requires explicit placement database')
+class RegionalPlacementAcceptance(unittest.TestCase):
+    def test_gorren_keeps_native_zero_tuning_and_uses_sourced_map_and_floor(self):
+        path = Path(os.environ['FOLLOWER_MAP_PLACEMENT_DB']).resolve(strict=True)
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
+            rows = db.execute(
+                'SELECT c.guid,t.faction,t.unit_class,t.ContentTuningID,t.HealthModifier,t.DamageModifier,'
+                't.ArmorModifier,t.ManaModifier,c.position_x,c.position_y,c.position_z,r.display_id '
+                'FROM content_creature c JOIN content_creature_template t ON t.entry=c.id1 '
+                'JOIN raid_encounter_creature r ON r.creature_entry=c.id1 AND r.map_id=c.map '
+                'WHERE c.map=2648 AND c.id1=207205').fetchall()
+            self.assertEqual(len(rows), 1, 'missing sourced Stormguard Gorren primary')
+            native = db.execute('SELECT HealthModifier,DamageModifier,ArmorModifier,ManaModifier '
+                                'FROM tdb_creature_template_difficulty WHERE Entry=207205 AND DifficultyID=0').fetchone()
+            self.assertEqual(rows[0][:4], (63648001, 16, 2, 0))
+            self.assertEqual(rows[0][4:8], native)
+            self.assertEqual(rows[0][8:], (2805.147910485, -1643.4466778225, 142.126491995114, 114403))
+            self.assertEqual(db.execute('SELECT DifficultyID,ContentTuningID FROM tdb_creature_template_difficulty WHERE Entry=207205').fetchall(), [(0, 0)])
+        receipt = json.loads((path.parent / 'receipt.json').read_text())
+        scaling = receipt['source_difficulties'][0]
+        self.assertEqual(scaling['source_row']['ContentTuningID'], 0)
+        self.assertEqual(scaling['effective_content_tuning']['map_difficulty_row']['ID'], 5330)
+        self.assertEqual(scaling['effective_content_tuning']['content_tuning_id'], 2973)
+        self.assertEqual(receipt['placements'][0]['source_floor_evidence']['wmo_group_id'], 69610)
+        self.assertEqual(receipt['navigation_gaps'], ['FOLLOWER_ROUTE_INCOMPLETE_2648_207205'])
+        self.assertEqual(receipt['donors'][0]['donor_entry'], 209230)
 
 
 if __name__ == '__main__':

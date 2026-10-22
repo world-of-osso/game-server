@@ -1,6 +1,10 @@
+## 2026-10-22 — CT0 native map tuning and Gorren source floor
+
+[Native map tuning](investigations/follower-data.md#native-map-difficulty-tuning-for-ct0--2026-10-22): TC map-CT selection preserves native CT0/modifiers, records authenticated MapDifficulty ID/CT separately; seven-actor RED→source3GREEN0.081s. Gorren assigned-group upward consensus qualifies142.126492; actual missing-primary RED retained, private packet pending. Existing runtime regional scaling already implements this rule; no fresh runtime proof or dungeon completion claimed.
+
 ## 2026-10-22 — Initial respawn admission packet qualification
 
-[Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22):db89ce7cc source2GREEN0.193s and actual-copy2GREEN0.042s; fresh-copy safeLoc81002649/81002669 packet replays3× exactly, all unrelated rows preserved. Exact POI coordinates/first-trash facing, uniqueness/unconditional/auth controls, native portal gaps and12.964433..50.685356yd calibration retained. Accepted staging baseline deleted; publication pending. No captured native entrance or dungeon-completion claim.
+[Project admissions](investigations/follower-data.md#initial-respawn-poi-project-admissions--2026-10-22):db89ce7cc source2GREEN0.193s and actual-copy2GREEN0.042s; fresh-copy safeLoc81002649/81002669 packet replays3× exactly, all unrelated rows preserved. Exact POI coordinates/first-trash facing, uniqueness/unconditional/auth controls, native portal gaps and12.964433..50.685356yd calibration retained. Accepted staging baseline deleted; lead confirmed publication2inserts/integrityOK. No captured native entrance or dungeon-completion claim.
 
 ## 2026-10-22 — Initial respawn project-admission policy
 
