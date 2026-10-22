@@ -1,0 +1,21 @@
+{
+  "source": "world.current-c6bc6000.db read-only native TDB tables",
+  "source_snapshot_sha256": "40d95b0a21a243edcf12dc9a1fa1ca56ad4b45f2828026622d609d62fab5cca5",
+  "producer": "crates/server/tests/fixtures/prepare_class_summon_db.py via scripts/add_class_summon_templates.py",
+  "policy": "FOLLOWER_HUNTER_PET_SIMC_DEFAULT already in master c6bc6000; pinned SimC76f8118 sc_hunter.cpp1052 summon_pet_str=duck",
+  "native_template": 174884,
+  "native_family": 125,
+  "native_creature_type": 1,
+  "native_type_flags": 1,
+  "native_display": 100702,
+  "native_verified_build": 69497,
+  "delta": "dps_parity_duck_174884.sql",
+  "delta_rows": {
+    "content_creature_template": 1,
+    "content_creature_template_model": 1
+  },
+  "prepared_snapshot_sha256": "1f7e953eb15485fb938957575f3851f42780e29140afad2e040591095af6b469",
+  "prepared_snapshot_integrity": "ok",
+  "world_spawn_count_before_after": [236818, 236818],
+  "canonical_mutated": false
+}

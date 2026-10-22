@@ -152,6 +152,7 @@ impl Plugin for AuraPlugin {
                     init_unit_auras,
                     mount::apply_flight_style,
                     sync_passive_auras,
+                    crate::equipment_effects::sync_equipment_effects,
                     update_auras,
                     procs::process_aura_events,
                     health_pct_trigger::trigger_on_health_pct,
@@ -179,6 +180,8 @@ pub enum AuraSource {
     /// Passive spell in the unit's `KnownSpells` (talent passives apply
     /// once the trait system adds talent spells to `KnownSpells`).
     KnownSpell,
+    /// Native on-equip/enchant spell owned by this physical equipment slot.
+    Equipment(shared::protocol::EquipmentSlot),
     /// Authored spell_area autocast; cannot be canceled by the player.
     SpellArea,
 }
@@ -239,6 +242,8 @@ pub struct AuraInstance {
     pub spell_id: u32,
     pub caster: Entity,
     pub source: AuraSource,
+    /// Item-level snapshot of the applied aura effects.
+    pub cast_item_level: Option<u16>,
     pub from_player: bool,
     pub effects: Vec<AuraEffectState>,
     /// Full duration in ms; 0 is permanent.
@@ -748,6 +753,7 @@ fn build_instance(
         spell_id: spell.id,
         caster,
         source: application.source,
+        cast_item_level: spell.cast_item_level,
         from_player: world.get::<Player>(caster).is_some(),
         effects,
         duration_ms,
@@ -795,7 +801,6 @@ fn build_instance(
 
 fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
     for effect in &aura.effects {
-        let supported_amount = !linked::is_linked(effect.aura_type) || effect.amount == 0.0;
         let duration_gap = mechanic_duration::positive_source_gap(effect)
             || mechanic_duration::invalid_mechanic_source_gap(effect);
         let duration_supported = !duration_gap;
@@ -813,7 +818,6 @@ fn log_unhandled_types(world: &mut World, aura: &AuraInstance) {
             effect.aura_type != handlers::MOD_RESISTANCE || effect.misc_values[0] & !1 == 0;
         let handled = handlers::is_handled(effect.aura_type)
             && [
-                supported_amount,
                 duration_supported,
                 immunity_supported,
                 rating_supported,
@@ -858,12 +862,7 @@ fn describe_unhandled_aura(effect: &AuraEffectState) -> String {
             )
         };
     }
-    if linked::is_linked(effect.aura_type) {
-        format!(
-            "nonzero linked amount {} for child {} remains a source gap",
-            effect.amount, effect.trigger_spell
-        )
-    } else if mechanic_duration::invalid_mechanic_source_gap(effect) {
+    if mechanic_duration::invalid_mechanic_source_gap(effect) {
         format!(
             "duration mechanic {} does not fit the pinned mask; source gap",
             effect.misc_values[0]
